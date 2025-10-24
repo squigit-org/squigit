@@ -1,5 +1,5 @@
-name: "Prepare a static build of Qt 6 (Linux)"
-description: "Static Qt 6 builds are not readily available and have to be built from source. This action automates that for Linux."
+name: 'Prepare a static build of Qt 6 (Linux)'
+description: 'Static Qt 6 builds are not readily available and have to be built from source. This action automates that for Linux.'
 branding:
   icon: book-open
   color: green
@@ -7,92 +7,62 @@ branding:
 inputs:
   version:
     type: string
-    description: "The version of Qt which should be installed, e.g. 6.8.0"
+    description: 'The version of Qt which should be installed, e.g. 6.8.0'
     required: true
-    default: "6.8.0"
+    default: '6.8.0'
   configure-args:
     type: string
-    description: "Additional arguments passed to Qt configure, e.g. -no-dbus -no-opengl"
+    description: 'Additional arguments passed to Qt configure, e.g. -no-dbus -no-opengl'
     required: false
-    default: ""
+    default: ''
   dir:
     type: string
-    description: "The directory where Qt should be installed"
+    description: 'The directory where Qt should be installed'
     required: true
-    default: "${{ runner.temp }}/Qt-static"
+    default: '${{ runner.temp }}/Qt-static'
   submodules:
     type: string
-    description: "Comma separated list of Qt modules, e.g. qtbase,qtshadertools"
+    description: 'Comma separated list of Qt modules, e.g. qtbase,qtshadertools'
     required: true
-    default: "qtbase"
+    default: 'qtbase'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - name: "Set up Qt 6 build dependencies on Linux"
-      shell: bash
+    - name: 'Set up Qt 6 build dependencies on Linux'
       run: |
-        set -euo pipefail
         sudo apt-get update
-        # Base build tools
-        sudo apt-get install -y build-essential perl python3 cmake ninja-build git
-        # Qt/qtbase dependencies (X11/XCB, fonts, etc.)
-        sudo apt-get install -y libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
-          libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
-          libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
-          libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
-          libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
-          libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
-          libpcre2-dev libdbus-1-dev
-
-    - name: "Prepare git config to force HTTPS for common SSH submodule URLs"
+        # Install base build tools
+        sudo apt-get install -y build-essential perl python3 cmake ninja-build
+        # Install Qt dependencies for qtbase (X11/XCB, fonts, etc.)
+        sudo apt-get install -y libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 libpcre2-dev libdbus-1-dev
       shell: bash
-      run: |
-        set -euo pipefail
-        # Convert common SSH-style URLs to HTTPS so submodule fetches don't require SSH keys
-        git config --global url."https://github.com/".insteadOf "git@github.com:"
-        git config --global url."https://code.qt.io/qt/".insteadOf "git@code.qt.io:qt/"
-        git config --global url."https://git.code.sf.net/p/qt/".insteadOf "git@git.code.sf.net:p/qt/"
 
-    - name: "Clone Qt 6 repository (HTTPS) and checkout requested version"
+    - name: 'Check Git version and configuration'
+      run: |
+        git --version
+        git config --list
+      shell: bash
+
+    - name: 'Install Qt 6'
       working-directory: ${{ runner.temp }}
       shell: bash
       run: |
-        set -euo pipefail
-        echo "Cloning Qt 6 repository (https://code.qt.io/qt/qt6.git) into '${{ runner.temp }}/qt'..."
-        # Use the public Qt Git server which uses HTTPS-friendly submodule URLs
-        git -c credential.helper= clone https://code.qt.io/qt/qt6.git qt
+        echo "Cloning Qt 6 repository..."
+        git -c http.https://github.com/.extraheader= clone https://github.com/qt/qt6.git qt
         cd qt
-
-        echo "Checking out version v${{ inputs.version }}..."
-        # If the tag exists on the mirror, this will work. Otherwise user may need a matching ref.
-        git fetch --tags --prune
-        git checkout "v${{ inputs.version }}" || git checkout "refs/tags/v${{ inputs.version }}" || { echo "Failed to checkout v${{ inputs.version }}"; exit 1; }
-
-    - name: "Initialize repository and submodules (subset) using HTTPS-friendly config"
-      working-directory: ${{ runner.temp }}/qt
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "Initializing repository (module subset: ${{ inputs.submodules }})..."
-        # init-repository will prepare the modules listed; ensure it uses HTTPS variants
+        
+        echo "Checking out version ${{ inputs.version }}..."
+        git checkout v${{ inputs.version }}
+        
+        echo "Initializing repository for submodules: ${{ inputs.submodules }}"
         perl init-repository --module-subset=${{ inputs.submodules }}
-
-        echo "Initializing & updating submodules (shallow, parallel)..."
-        # Use shallow fetch and parallel jobs to speed up submodule init/update
-        git submodule update --init --recursive --jobs=$(nproc) --depth=1
-
-    - name: "Create build directory and configure Qt"
-      working-directory: ${{ runner.temp }}/qt
-      shell: bash
-      run: |
-        set -euo pipefail
-        mkdir -p build
+        
+        mkdir build
         cd build
-
+        
         echo "Configuring Qt..."
-        # Use the repo-provided configure script. Ensure the install prefix is quoted.
-        ../configure -prefix "${{ inputs.dir }}" \
+        ../configure -prefix ${{ inputs.dir }} \
           -release \
           -static \
           -opensource \
@@ -100,25 +70,9 @@ runs:
           -nomake examples \
           -nomake tests \
           ${{ inputs.configure-args }}
-
-    - name: "Build Qt (parallel) and install"
-      working-directory: ${{ runner.temp }}/qt/build
-      shell: bash
-      run: |
-        set -euo pipefail
+          
         echo "Building Qt (using $(nproc) cores)..."
         cmake --build . --parallel $(nproc)
-
-        echo "Installing Qt to ${{ inputs.dir }}..."
+        
+        echo "Installing Qt..."
         cmake --install .
-
-    - name: "Verify install"
-      shell: bash
-      run: |
-        set -euo pipefail
-        if [ -x "${{ inputs.dir }}/bin/qmake" ] || [ -x "${{ inputs.dir }}/bin/qt-cmake" ] || [ -d "${{ inputs.dir }}/lib" ]; then
-          echo "Qt appears to be installed in ${{ inputs.dir }}."
-        else
-          echo "Warning: Qt installation not found at ${{ inputs.dir }}. Please check build logs."
-          ls -la "${{ inputs.dir }}" || true
-        fi
