@@ -26,7 +26,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('packages/ycaptool/ycaptool.pro') }}-v2
+          # The key now includes a hash of the action.yml file itself.
+          # This ensures the cache is invalidated if you change the build action.
+          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v3
           restore-keys: |
             qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
 
@@ -39,8 +41,10 @@ jobs:
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
           submodules: "qtbase,qtshadertools,qtdeclarative,qttools"
 
-      - name: Upload Qt install artifact (future-proof)
-        if: always()
+      - name: Upload Qt install artifact (for transfer to next job)
+        # This 'if' condition ensures it *always* runs, even on cache-hit,
+        # so the next job can always download the artifact.
+        if: always() 
         uses: actions/upload-artifact@v4
         with:
           name: qt-install
@@ -56,12 +60,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: qt-install
+          # This path MUST match the 'dir' output from the 'needs' job
           path: ${{ needs.build-qt-static.outputs.qt-install-dir }}
 
       - name: Install additional dependencies
         run: |
           sudo apt-get update
           # Install ALL dependencies needed by the static Qt build, plus app-specific ones
+          # This ensures the build environment has the system libs Qt was compiled against.
           sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
             libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
             libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
