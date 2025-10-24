@@ -1,262 +1,57 @@
-name: Build ycaptool (Static)
+name: Prepare a static build of Qt
+description: Static Qt builds are not readily available and have to be built from source, this action automates that.
+branding:
+  icon: book-open
+  color: green
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+inputs:
+  version:
+    type: string
+    description: The version of Qt which should be installed, e.g. 6.4.2
+    required: true
+    default: 6.4.2
+  configure-args:
+    type: string
+    description: Additional arguments passed to Qt configure, consult Qt documentation for the full list
+    required: true
+    default: -opensource
+  dir:
+    type: string
+    description: The directory where Qt should be installed
+    required: true
+    default: ${{ runner.temp }}/Qt-static
+  submodules:
+    type: string
+    description: Comma separated list of Qt modules which should be included, e.g. qtbase,qtshadertools,qtdeclarative
+    required: true
+    default: essential
 
-env:
-  BUILD_TYPE: Release
-  QT_VERSION: 6.8.3
-
-jobs:
-  build-qt-static:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Install dependencies
+runs:
+  using: composite
+  steps:
+    - name: Set up X11 dependencies on Linux
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          cmake \
-          ninja-build \
-          git \
-          python3 \
-          libfontconfig1-dev \
-          libfreetype6-dev \
-          libx11-dev \
-          libx11-xcb-dev \
-          libxext-dev \
-          libxfixes-dev \
-          libxi-dev \
-          libxrender-dev \
-          libxcb1-dev \
-          libxcb-cursor-dev \
-          libxcb-glx0-dev \
-          libxcb-keysyms1-dev \
-          libxcb-image0-dev \
-          libxcb-shm0-dev \
-          libxcb-icccm4-dev \
-          libxcb-sync-dev \
-          libxcb-xfixes0-dev \
-          libxcb-shape0-dev \
-          libxcb-randr0-dev \
-          libxcb-render-util0-dev \
-          libxcb-util-dev \
-          libxcb-xinerama0-dev \
-          libxcb-xkb-dev \
-          libxkbcommon-dev \
-          libxkbcommon-x11-dev \
-          libgl1-mesa-dev \
-          libglu1-mesa-dev \
-          libdbus-1-dev \
-          libwayland-dev \
-          wayland-protocols \
-          libegl1-mesa-dev \
-          libgbm-dev \
-          libgles2-mesa-dev \
-          libpng-dev \
-          libjpeg-dev \
-          libxcb-composite0-dev \
-          libxcb-damage0-dev \
-          libxcb-dpms0-dev \
-          libxcb-dri2-0-dev \
-          libxcb-dri3-dev \
-          libxcb-ewmh-dev \
-          libxcb-present-dev \
-          libxcb-record0-dev \
-          libxcb-res0-dev \
-          libxcb-screensaver0-dev \
-          libxcb-xinput-dev \
-          libxcb-xv0-dev
+        sudo apt-get install libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 libpcre2-dev
+      shell: bash
+      if: runner.os == 'Linux'
 
-    - name: Cache Qt6 source
-      id: cache-qt6-source
-      uses: actions/cache@v4
+    - name: Set up Visual Studio shell on Windows
+      uses: egor-tensin/vs-shell@v2
       with:
-        path: qt6-source
-        key: qt6-source-${{ env.QT_VERSION }}-linux
+        arch: x64
+      if: runner.os == 'Windows'
 
-    - name: Download Qt6 source code
-      if: steps.cache-qt6-source.outputs.cache-hit != 'true'
+    - name: Install Qt
+      working-directory: ${{ runner.temp }}
+      shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
       run: |
-        echo "Downloading Qt6 ${{ env.QT_VERSION }}"
-        VERSION="${{ env.QT_VERSION }}"
-        MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1-2)
-        
-        mkdir -p qt6-source
-        cd qt6-source
-        
-        echo "Downloading qtbase..."
-        curl -L -o qtbase.tar.xz "https://download.qt.io/official_releases/qt/$MAJOR_MINOR/$VERSION/submodules/qtbase-everywhere-src-$VERSION.tar.xz"
-        tar -xf qtbase.tar.xz
-        mv qtbase-everywhere-src-$VERSION qtbase
-        rm qtbase.tar.xz
-        
-        echo "Downloading qtwayland..."
-        curl -L -o qtwayland.tar.xz "https://download.qt.io/official_releases/qt/$MAJOR_MINOR/$VERSION/submodules/qtwayland-everywhere-src-$VERSION.tar.xz"
-        tar -xf qtwayland.tar.xz
-        mv qtwayland-everywhere-src-$VERSION qtwayland
-        rm qtwayland.tar.xz
-      shell: bash
-
-    - name: Configure CMake for Qt6 Base
-      env:
-        WORKSPACE: ${{ github.workspace }}
-      run: |
-        export WORKSPACE_UNIX=${WORKSPACE//\\//}
-        mkdir -p qt6-source/build-base
-        cd qt6-source/build-base
-        cmake ../qtbase \
-          -G Ninja \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_INSTALL_PREFIX=$WORKSPACE_UNIX/qt6-install \
-          -DBUILD_SHARED_LIBS=OFF \
-          -DQT_BUILD_EXAMPLES=OFF \
-          -DQT_BUILD_TESTS=OFF \
-          -DQT_FEATURE_static=ON \
-          -DQT_FEATURE_shared=OFF \
-          -DQT_FEATURE_framework=OFF \
-          -DQT_FEATURE_dbus=ON \
-          -DQT_FEATURE_png=ON \
-          -DQT_FEATURE_jpeg=ON \
-          -DQT_FEATURE_sql=OFF \
-          -DQT_FEATURE_network=OFF \
-          -DQT_FEATURE_opengl=ON \
-          -DQT_FEATURE_printsupport=OFF \
-          -DQT_FEATURE_gui=ON \
-          -DQT_FEATURE_widgets=OFF \
-          -CMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
-      shell: bash
-
-    - name: Build Qt6 Base
-      run: |
-        cd qt6-source/build-base
-        ninja -j$(nproc)
-      shell: bash
-
-    - name: Install Qt6 Base
-      run: |
-        cd qt6-source/build-base
-        ninja install
-      shell: bash
-
-    - name: Debug CMake environment for Qt6 Wayland
-      env:
-        WORKSPACE: ${{ github.workspace }}
-      run: |
-        export WORKSPACE_UNIX=${WORKSPACE//\\//}
-        echo "CMAKE_INITIAL_CACHE_FILE: $CMAKE_INITIAL_CACHE_FILE"
-        echo "CMAKE_PREFIX_PATH: $CMAKE_PREFIX_PATH"
-        echo "CMAKE_INSTALL_PREFIX: $CMAKE_INSTALL_PREFIX"
-        echo "Checking qt6-install directory:"
-        ls -la $WORKSPACE_UNIX/qt6-install
-      shell: bash
-
-    - name: Configure CMake for Qt6 Wayland
-      env:
-        WORKSPACE: ${{ github.workspace }}
-      run: |
-        export WORKSPACE_UNIX=${WORKSPACE//\\//}
-        mkdir -p qt6-source/build-wayland
-        cd qt6-source/build-wayland
-        cmake ../qtwayland \
-          -G Ninja \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_PREFIX_PATH=$WORKSPACE_UNIX/qt6-install \
-          -DCMAKE_INSTALL_PREFIX=$WORKSPACE_UNIX/qt6-install \
-          -DBUILD_SHARED_LIBS=OFF \
-          -DQT_BUILD_EXAMPLES=OFF \
-          -DQT_BUILD_TESTS=OFF
-      shell: bash
-
-    - name: Build Qt6 Wayland
-      run: |
-        cd qt6-source/build-wayland
-        ninja -j$(nproc)
-      shell: bash
-
-    - name: Install Qt6 Wayland
-      run: |
-        cd qt6-source/build-wayland
-        ninja install
-      shell: bash
-
-    - name: Verify Qt installation
-      run: |
-        echo "Checking Qt6 static libraries and qmake..."
-        find ${{ github.workspace }}/qt6-install -name "libQt6*.a" | head -10
-        find ${{ github.workspace }}/qt6-install -name "qmake"
-        find ${{ github.workspace }}/qt6-install -name "linux-g++" -type d
-      shell: bash
-
-    - name: Create Qt6 artifact
-      run: |
-        cd ${{ github.workspace }}
-        tar -czf qt6-static-linux.tar.gz -C qt6-install .
-      shell: bash
-      
-    - name: Upload Qt6 static build
-      uses: actions/upload-artifact@v4
-      with:
-        name: qt6-static-linux
-        path: qt6-static-linux.tar.gz
-        retention-days: 1
-
-  build-ycaptool:
-    runs-on: ubuntu-latest
-    needs: build-qt-static
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Download static Qt build
-      uses: actions/download-artifact@v4
-      with:
-        name: qt6-static-linux
-        path: qt6-static
-
-    - name: Extract Qt build
-      run: |
-        mkdir -p qt-static
-        tar -xzf qt6-static/qt6-static-linux.tar.gz -C qt-static
-        rm -rf qt6-static
-      shell: bash
-
-    - name: Install build dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libgl1-mesa-dev libdbus-1-dev
-      shell: bash
-
-    - name: Build ycaptool
-      env:
-        QMAKE_SPEC: linux-g++
-      run: |
-        export PATH=$GITHUB_WORKSPACE/qt-static/bin:$PATH
-        export QMAKE=$GITHUB_WORKSPACE/qt-static/bin/qmake
-        cd packages/ycaptool
-        
-        echo "Using qmake from: $(which qmake)"
-        $QMAKE ycaptool.pro -spec $QMAKE_SPEC CONFIG+=static QTPLUGIN+=qwayland-generic,qwayland-egl
-        make -j$(nproc)
-      shell: bash
-
-    - name: Verify static binary
-      run: |
-        echo "Checking dependencies of ycaptool..."
-        ldd packages/ycaptool/ycaptool || echo "No dynamic dependencies (static binary)"
-      shell: bash
-
-    - name: Upload ycaptool binary
-      uses: actions/upload-artifact@v4
-      with:
-        name: ycaptool-linux-static
-        path: packages/ycaptool/ycaptool
-        retention-days: 7
+        git clone https://code.qt.io/qt/qt5.git qt
+        cd qt
+        git checkout v${{ inputs.version }}
+        perl init-repository --module-subset=${{ inputs.submodules }}
+        mkdir build
+        cd build
+        ../configure ${{ runner.os == 'Windows' && '-platform win32-msvc' || '' }} -prefix ${{ inputs.dir }} -release -static -static-runtime ${{ inputs.configure-args }}
+        cmake --build . --parallel 2
+        cmake --install .
