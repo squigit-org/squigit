@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-                   ♦ SpatialShot Development Launcher ♦
+                   ◆ SpatialShot Development Launcher ◆
                                      
           This script is the primary entry point for developers,
      designed to simulate and test the complete application workflow.
@@ -43,7 +43,7 @@ def get_tmp_path() -> Path:
     """
     Returns the platform-specific temporary directory path.
     """
-    tmp = "spatialshot" / "tmp"
+    tmp = Path("spatialshot") / "tmp"
     system = platform.system()
     if system == "Windows":
         return Path(os.environ.get("LOCALAPPDATA")) / tmp
@@ -303,63 +303,53 @@ def main() -> None:
     monitors = get_monitor_count()
     logger.info("Detected: %s with %d monitor(s)", env.upper(), monitors)
 
-    try:
-        tmp_path = clear_tmp()
+    tmp_path = clear_tmp()
 
-        success, expected_png_count = run_screenshot_capture(env, monitors)
-        if not success:
-            logger.error("Screenshot capture phase failed.")
-            sys.exit(1)
+    success, expected_png_count = run_screenshot_capture(env, monitors)
+    if not success:
+        logger.error("Screenshot capture phase failed.")
+        sys.exit(1)
 
-        logger.info("Waiting for %d screenshot(s)...", expected_png_count)
-        all_found = all(wait_for_file(tmp_path / f"{i}.png") for i in range(1, expected_png_count + 1))
-        if not all_found:
-            logger.error("Failed to find all required screenshots.")
-            sys.exit(1)
-                
-        logger.info("All screenshots captured!")
+    logger.info("Waiting for %d screenshot(s)...", expected_png_count)
+    all_found = all(wait_for_file(tmp_path / f"{i}.png") for i in range(1, expected_png_count + 1))
+    if not all_found:
+        logger.error("Failed to find all required screenshots.")
+        sys.exit(1)
+            
+    logger.info("All screenshots captured!")
 
-        if not launch_squiggle():
-            logger.error("Squiggle capture phase failed.")
-            sys.exit(1)
-        
-        logger.info("Waiting for Squiggle output (o*.png)...")
-        output = None
-        start_time = time.time()
-        while time.time() - start_time < 5:
-            for f in tmp_path.glob("o*.png"):
-                match = re.search(r"^o(\d+)\.png$", f.name)
-                if match:
-                    monitor_num = int(match.group(1))
-                    logger.info("Found Squiggle output: %s for monitor %d", f.name, monitor_num)
-                    output = f, monitor_num
-                    break
-            if output:
+    if not launch_squiggle():
+        logger.error("Squiggle capture phase failed.")
+        sys.exit(1)
+    
+    logger.info("Waiting for Squiggle output (o*.png)...")
+    output = None
+    start_time = time.time()
+    while time.time() - start_time < 5:
+        for f in tmp_path.glob("o*.png"):
+            match = re.search(r"^o(\d+)\.png$", f.name)
+            if match:
+                monitor_num = int(match.group(1))
+                logger.info("Found Squiggle output: %s for monitor %d", f.name, monitor_num)
+                output = f, monitor_num
                 break
-            time.sleep(0.1)
+        if output:
+            break
+        time.sleep(0.1)
 
-        if not output:
-            logger.error("Timeout: Squiggle did not produce an output file.")
-            sys.exit(1)
-        
-        output_path, _ = output
-        logger.info("Squiggle capture complete: %s", output_path)
+    if not output:
+        logger.error("Timeout: Squiggle did not produce an output file.")
+        sys.exit(1)
+    
+    output_path, _ = output
+    logger.info("Squiggle capture complete: %s", output_path)
 
-        if not launch_electron(output_path):
-            logger.error("Failed to launch Electron.")
-            sys.exit(1)
+    if not launch_electron(output_path):
+        logger.error("Failed to launch Electron.")
+        sys.exit(1)
 
-        logger.info("Development session launched successfully!")
+    logger.info("Development session launched successfully!")
 
-    finally:
-        for process in subprocess.Popen.active_children():
-            logger.info(f"Terminating process {process.pid}...")
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                logger.warning(f"Process {process.pid} did not terminate gracefully, killing it...")
-                process.kill()
 
 if __name__ == "__main__":
     main()
