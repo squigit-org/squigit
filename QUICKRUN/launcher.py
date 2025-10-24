@@ -278,6 +278,16 @@ def launch_electron(output_png: Path) -> bool:
         logger.error("Electron project not found: %s", ELECTRON_NODE)
         return False
 
+    welcome_css = ELECTRON_NODE / "pages" / "welcome" / "style.css"
+    if not welcome_css.exists():
+        logger.info("Welcome CSS not found. Running one-time Sass build...")
+        build_command = ["npm", "run", "build:css"]
+        success, _, _ = _run_process(build_command, cwd=ELECTRON_NODE)
+        if not success or not welcome_css.exists():
+            logger.error("Sass build failed.")
+            return False
+        logger.info("Sass build complete.")
+
     logger.info("Starting Electron (npm start) for: %s", output_png.name)
     command = ["npm", "start", "--", str(output_png)]
     success, _, _ = _run_process(command, cwd=ELECTRON_NODE)
