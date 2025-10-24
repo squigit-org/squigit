@@ -38,15 +38,13 @@ runs:
         sudo apt-get install -y libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 libpcre2-dev libdbus-1-dev
       shell: bash
 
-- name: 'Install Qt 6'
+    - name: 'Install Qt 6'
       working-directory: ${{ runner.temp }}
       shell: bash
       run: |
         echo "Cloning Qt 6 repository..."
-        # --- THIS IS THE FIX ---
         # Bypasses any misconfigured credential helper on the runner
         git -c credential.helper= clone https://github.com/qt/qt6.git qt
-        # ---------------------
         cd qt
         
         echo "Checking out version ${{ inputs.version }}..."
