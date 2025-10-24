@@ -7,9 +7,9 @@ branding:
 inputs:
   version:
     type: string
-    description: The version of Qt which should be installed, e.g. 6.4.2
+    description: The version of Qt which should be installed, e.g. 6.8.0
     required: true
-    default: 6.4.2
+    default: 6.8.0
   configure-args:
     type: string
     description: Additional arguments passed to Qt configure, consult Qt documentation for the full list
@@ -24,15 +24,15 @@ inputs:
     type: string
     description: Comma separated list of Qt modules which should be included, e.g. qtbase,qtshadertools,qtdeclarative
     required: true
-    default: essential
+    default: qtbase
 
 runs:
   using: composite
   steps:
-    - name: Set up X11 dependencies on Linux
+    - name: Set up X11 and DBus dependencies on Linux
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 libpcre2-dev
+        sudo apt-get install -y libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 libpcre2-dev libdbus-1-dev
       shell: bash
       if: runner.os == 'Linux'
 
