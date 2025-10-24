@@ -26,6 +26,7 @@ import shutil
 import sys
 import time
 import re
+import signal
 from pathlib import Path
 from typing import Optional, List, Tuple
 
@@ -38,12 +39,20 @@ PKGS_PATH = PRJKT_ROOT / "packages"
 PLATFORM_PATH = PKGS_PATH / "orchestrator" / "src" / "platform"
 
 # Temporary Directory
-TMP_PATH = 
-"""
-Join-Path $env:LOCALAPPDATA 'spatialshot\tmp' # windows
-"${SC_SAVE_PATH:-$HOME/Library/Caches/spatialshot/tmp}" # mac
-"${SC_SAVE_PATH:-${XDG_CACHE_HOME:-$HOME/.cache}/spatialshot/tmp}" # linux
-"""
+def get_tmp_path() -> Path:
+    """
+    Returns the platform-specific temporary directory path.
+    """
+    tmp = "spatialshot" / "tmp"
+    system = platform.system()
+    if system == "Windows":
+        return Path(os.environ.get("LOCALAPPDATA")) / tmp
+    elif system == "Darwin":
+        return Path.home() / "Library" / "Caches" / tmp
+    else:
+        return Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / tmp
+
+TMP_PATH = get_tmp_path()
 
 # Binary Paths
 YCAPTOOL_BINARY = PKGS_PATH / "ycaptool" / "dist" / "ycaptool"
@@ -116,13 +125,16 @@ def get_monitor_count() -> int:
         logger.warning("Monitor script not found: %s. Defaulting to 1.", script_path)
         return 1
 
+    success, stdout, _ = _run_process(command)
+    if not success:
+        logger.warning("Failed to get monitor count. Defaulting to 1.")
+        return 1
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-        count = int(result.stdout.strip())
+        count = int(stdout.strip())
         logger.info("Detected %d monitor(s).", count)
         return count if count >= 1 else 1
-    except (subprocess.CalledProcessError, ValueError, FileNotFoundError) as e:
-        logger.error("Failed to get monitor count from script: %s. Defaulting to 1.", e)
+    except (ValueError, FileNotFoundError) as e:
+        logger.error("Failed to parse monitor count from script: %s. Defaulting to 1.", e)
         return 1
 
 
@@ -135,7 +147,7 @@ def _run_process(
     """
     Runs a subprocess and logs its execution.
     """
-    cmd_str = " ".join(f'"{c}"' if " " in c else c for c in command)
+    cmd_str = " ".join(f'"'"{c}"'"' if " " in c else c for c in command)
     logger.debug("Running command: %s", cmd_str)
     
     process_env = os.environ.copy()
@@ -207,31 +219,7 @@ def run_screenshot_capture(
     """
     Runs the native screenshot script for the current platform.
     """
-    if env == "win32":
-        logger.info("Initiating capture: Windows")
-        if not SC_grabber_WIN.exists():
-            logger.error("Windows capture script missing: %s", SC_grabber_WIN)
-            return False, 0
-        success, _, _ = _run_process(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(SC_grabber_WIN)])
-        return success, monitor_count
-
-    elif env == "darwin":
-        logger.info("Initiating capture: macOS")
-        if not SC_grabber_MAC.exists():
-            logger.error("macOS capture script missing: %s", SC_grabber_MAC)
-            return False, 0
-        success, _, _ = _run_process(["/bin/bash", str(SC_grabber_MAC)])
-        return success, monitor_count
-
-    elif env == "x11":
-        logger.info("Initiating capture: Linux (X11)")
-        if not SC_grabber_X11.exists():
-            logger.error("X11 capture script missing: %s", SC_grabber_X11)
-            return False, 0
-        success, _, _ = _run_process(["/bin/bash", str(SC_grabber_X11)])
-        return success, monitor_count
-
-    elif env == "wayland":
+    if env == "wayland":
         logger.info("Initiating capture: Linux (Wayland)")
         if not YCAPTOOL_BINARY.exists():
             logger.error("ycaptool binary not found: %s", YCAPTOOL_BINARY)
@@ -239,8 +227,28 @@ def run_screenshot_capture(
         success, _, _ = _run_process([str(YCAPTOOL_BINARY)])
         return success, monitor_count
 
-    logger.error("Unsupported environment: %s", env)
-    return False, 0
+    script_path = None
+    command = []
+
+    if env == "win32":
+        script_path = SC_grabber_WIN
+        command = ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script_path)]
+    elif env == "darwin":
+        script_path = SC_grabber_MAC
+        command = ["/bin/bash", str(script_path)]
+    elif env == "x11":
+        script_path = SC_grabber_X11
+        command = ["/bin/bash", str(script_path)]
+    else:
+        logger.error("Unsupported environment: %s", env)
+        return False, 0
+
+    if not script_path or not script_path.exists():
+        logger.error("Screenshot script missing: %s", script_path)
+        return False, 0
+
+    success, _, _ = _run_process(command)
+    return success, monitor_count
 
 
 def launch_squiggle() -> bool:
@@ -270,48 +278,22 @@ def launch_electron(output_png: Path) -> bool:
         logger.error("Electron project not found: %s", ELECTRON_NODE)
         return False
 
-    welcome_css = ELECTRON_NODE / "pages" / "welcome" / "style.css"
-    if not welcome_css.exists():
-        logger.info("Welcome CSS not found. Running one-time Sass build...")
-        build_command = ["npm", "run", "build:css"]
-        success, _, _ = _run_process(build_command, cwd=ELECTRON_NODE)
-        if not success or not welcome_css.exists():
-            logger.error("Sass build failed.")
-            return False
-        logger.info("Sass build complete.")
-
     logger.info("Starting Electron (npm start) for: %s", output_png.name)
     command = ["npm", "start", "--", str(output_png)]
-    try:
-        subprocess.Popen(command, cwd=ELECTRON_NODE)
-        return True
-    except Exception as exc:
-        logger.error("Failed to start Electron process: %s", exc)
-        return False
-
-
-def wait_for_squiggle_output(tmp_path: Path, timeout_sec: int = 5) -> Optional[Tuple[Path, int]]:
-    """
-    Waits for a file matching `o*.png` to appear in the temp directory.
-    """
-    start_time = time.time()
-    logger.info("Waiting for Squiggle output (o*.png)...")
-    while time.time() - start_time < timeout_sec:
-        for f in tmp_path.glob("o*.png"):
-            match = re.search(r"^o(\d+)\.png$", f.name)
-            if match:
-                monitor_num = int(match.group(1))
-                logger.info("Found Squiggle output: %s for monitor %d", f.name, monitor_num)
-                return f, monitor_num
-        time.sleep(0.1)
-    
-    logger.error("Timeout: Squiggle did not produce an output file.")
-    return None
+    success, _, _ = _run_process(command, cwd=ELECTRON_NODE)
+    return success
 
 
 # Main Orchestrator
 def main() -> None:
     logger.info("SpatialShot Development Launcher Started")
+
+    def signal_handler(sig, frame):
+        logger.info("Shutting down SpatialShot...")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     env = identify_display_environment()
     if env == "unknown":
@@ -323,39 +305,61 @@ def main() -> None:
 
     try:
         tmp_path = clear_tmp()
-    except Exception:
-        sys.exit(1)
 
-    success, expected_png_count = run_screenshot_capture(env, monitors)
-    if not success:
-        logger.error("Screenshot capture phase failed.")
-        sys.exit(1)
+        success, expected_png_count = run_screenshot_capture(env, monitors)
+        if not success:
+            logger.error("Screenshot capture phase failed.")
+            sys.exit(1)
 
-    logger.info("Waiting for %d screenshot(s)...", expected_png_count)
-    all_found = all(wait_for_file(tmp_path / f"{i}.png") for i in range(1, expected_png_count + 1))
-    if not all_found:
-        logger.error("Failed to find all required screenshots.")
-        sys.exit(1)
-            
-    logger.info("All screenshots captured!")
+        logger.info("Waiting for %d screenshot(s)...", expected_png_count)
+        all_found = all(wait_for_file(tmp_path / f"{i}.png") for i in range(1, expected_png_count + 1))
+        if not all_found:
+            logger.error("Failed to find all required screenshots.")
+            sys.exit(1)
+                
+        logger.info("All screenshots captured!")
 
-    if not launch_squiggle():
-        logger.error("Squiggle capture phase failed.")
-        sys.exit(1)
-    
-    output = wait_for_squiggle_output(tmp_path)
-    if not output:
-        sys.exit(1)
-    
-    output_path, ui_monitor_num = output
-    logger.info("Squiggle capture complete: %s", output_path)
+        if not launch_squiggle():
+            logger.error("Squiggle capture phase failed.")
+            sys.exit(1)
+        
+        logger.info("Waiting for Squiggle output (o*.png)...")
+        output = None
+        start_time = time.time()
+        while time.time() - start_time < 5:
+            for f in tmp_path.glob("o*.png"):
+                match = re.search(r"^o(\d+)\.png$", f.name)
+                if match:
+                    monitor_num = int(match.group(1))
+                    logger.info("Found Squiggle output: %s for monitor %d", f.name, monitor_num)
+                    output = f, monitor_num
+                    break
+            if output:
+                break
+            time.sleep(0.1)
 
-    if not launch_electron(output_path, ui_monitor_num):
-        logger.error("Failed to launch Electron.")
-        sys.exit(1)
+        if not output:
+            logger.error("Timeout: Squiggle did not produce an output file.")
+            sys.exit(1)
+        
+        output_path, _ = output
+        logger.info("Squiggle capture complete: %s", output_path)
 
-    logger.info("Development session launched successfully!")
+        if not launch_electron(output_path):
+            logger.error("Failed to launch Electron.")
+            sys.exit(1)
 
+        logger.info("Development session launched successfully!")
+
+    finally:
+        for process in subprocess.Popen.active_children():
+            logger.info(f"Terminating process {process.pid}...")
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Process {process.pid} did not terminate gracefully, killing it...")
+                process.kill()
 
 if __name__ == "__main__":
     main()
