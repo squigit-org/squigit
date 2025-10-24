@@ -32,9 +32,11 @@ jobs:
         uses: ./.github/actions/build-qt-static
         with:
           version: ${{ env.QT_VERSION }}
+          # NOTE: do NOT pass -no-dbus here; keep DBus enabled
           configure-args: -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          submodules: qtbase,qtdbus,qtshadertools,qtdeclarative
+          # optional: don't force qtdbus here; the action will try your subset and fallback
+          submodules: qtbase,qtshadertools,qtdeclarative,qttools
 
   build-ycaptool:
     needs: build-qt-static
@@ -45,6 +47,7 @@ jobs:
       - name: Install additional dependencies
         run: |
           sudo apt-get update
+          # libdbus-1-dev is required to compile against DBus (qt dbus integration)
           sudo apt-get install -y build-essential libgl1-mesa-dev libdbus-1-dev python3 gperf bison flex
 
       - name: Build ycaptool
