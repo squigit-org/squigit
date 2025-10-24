@@ -34,6 +34,7 @@ runs:
       run: |
         set -euo pipefail
         sudo apt-get update
+        # We need libjpeg-dev for the new error
         sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
           libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
           libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
@@ -41,7 +42,7 @@ runs:
           libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
           libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
           libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
-          libpcre2-dev libdbus-1-dev libpng-dev libglib2.0-dev libwww-perl
+          libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev libwww-perl
         echo "Deps installed."
 
     - name: "Prepare git config to force HTTPS for SSH submodule URLs"
@@ -127,13 +128,17 @@ runs:
       run: |
         set -euo pipefail
         echo "Cleaning .prl files in ${{ inputs.dir }} to fix static linking..."
-        # This is the corrected step:
-        # We must remove both QMAKE_PRL_BUILD_DIR (absolute paths)
-        # and QMAKE_PRL_LIBS (references to intermediate .o files
-        # that are not part of the installation artifact).
-        find . -type f -name "*.prl" -exec sed -i \
-          -e '/^QMAKE_PRL_BUILD_DIR/d' \
-          -e '/^QMAKE_PRL_LIBS/d' {} +
+        
+        # This is the new, correct fix.
+        # We find every .prl file and run two sed commands on it:
+        # 1. Delete the line starting with QMAKE_PRL_BUILD_DIR (it contains absolute build paths)
+        # 2. On the QMAKE_PRL_LIBS line, remove any "word" that contains a '/' and ends in '.o'.
+        #    This surgically removes the object files but leaves the system libs (e.g., -lpng)
+        find . -type f -name "*.prl" | while read -r file; do
+          sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
+          sed -i -E 's| \S*/\S*\.o||g' "$file"
+        done
+        
         echo ".prl cleaning complete."
 
     - name: "Verify install"
