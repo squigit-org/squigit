@@ -26,8 +26,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          # The key now includes a hash of the action.yml file itself.
-          # This ensures the cache is invalidated if you change the build action.
+          # This key is improved: it invalidates the cache if your build-qt-static action.yml changes.
           key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v3
           restore-keys: |
             qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
@@ -42,8 +41,6 @@ jobs:
           submodules: "qtbase,qtshadertools,qtdeclarative,qttools"
 
       - name: Upload Qt install artifact (for transfer to next job)
-        # This 'if' condition ensures it *always* runs, even on cache-hit,
-        # so the next job can always download the artifact.
         if: always() 
         uses: actions/upload-artifact@v4
         with:
@@ -60,14 +57,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: qt-install
-          # This path MUST match the 'dir' output from the 'needs' job
           path: ${{ needs.build-qt-static.outputs.qt-install-dir }}
 
       - name: Install additional dependencies
         run: |
           sudo apt-get update
-          # Install ALL dependencies needed by the static Qt build, plus app-specific ones
-          # This ensures the build environment has the system libs Qt was compiled against.
+          # Install ALL system dependencies. These will be dynamically linked.
           sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
             libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
             libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
@@ -85,21 +80,32 @@ jobs:
         run: |
           export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
           export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
-          export LDFLAGS="-static"
+          
+          # === THIS LINE WAS REMOVED ===
+          # export LDFLAGS="-static" 
+          # === This was the cause of the libdbus-1 error ===
+
           echo "Setting execute permissions for Qt binaries..."
           chmod -R +x ${QT_INSTALL_DIR}/bin
           chmod -R +x ${QT_INSTALL_DIR}/libexec
           cd packages/ycaptool
+          
+          # This command is correct. It tells qmake to use the static Qt libs (.a)
+          # but allows the linker to use dynamic system libs (.so)
           qmake CONFIG+=static ycaptool.pro
+          
           make -j$(nproc)
           mkdir -p dist
           cp ycaptool dist/
           rm ycaptool
         shell: bash
 
-      - name: Verify static linking
+      - name: Verify static linking (check that Qt is not dynamic)
         run: |
-          ldd packages/ycaptool/dist/ycaptool | grep "not a dynamic executable" || echo "Warning: ycaptool is not fully statically linked"
+          # This test is new. It checks that the executable is NOT linked to any libQt*.so files.
+          # It is *expected* to be linked to system libs (libdbus, libX11, etc.).
+          # If grep finds a "libQt" entry, it exits 1 (failure). Otherwise, it passes.
+          ldd packages/ycaptool/dist/ycaptool | grep libQt && (echo "Error: ycaptool is dynamically linked to Qt"; exit 1) || echo "Success: ycaptool is statically linked to Qt"
         shell: bash
 
       - name: Upload artifact
