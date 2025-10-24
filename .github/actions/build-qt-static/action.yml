@@ -51,6 +51,25 @@ runs:
         git config --global url."https://github.com/".insteadOf "git@github.com:"
         git config --global url."https://code.qt.io/qt/".insteadOf "git@code.qt.io:qt/"
 
+    - name: "Ensure Clang/LLVM 18 (try install; fall back to skipping qttools)"
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Attempting to install clang-18 and dev libs from apt.llvm.org..."
+        # Try the apt.llvm.org helper to add the repo and install clang-18 packages.
+        if wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 18 && \
+           sudo apt-get update && \
+           sudo apt-get install -y clang-18 llvm-18-dev libclang-18-dev libclang-cpp18-dev; then
+          echo "Clang/LLVM 18 installed successfully."
+        else
+          echo "Warning: failed to install clang-18 dev packages. Will fall back to skipping qttools to continue."
+          # Signal fallback to later steps by exporting an env var for this job
+          echo "CONFIGURE_FALLBACK_SKIP_QTTOOLS=1" >> $GITHUB_ENV
+        fi
+        # show a quick check for the expected static libs (helpful for debugging)
+        echo "ls /usr/lib/llvm-18/lib || true"
+        ls -la /usr/lib/llvm-18/lib || true
+
     - name: "Clone qt5 supermodule and checkout v${{ inputs.version }}"
       working-directory: ${{ runner.temp }}
       shell: bash
@@ -97,15 +116,15 @@ runs:
         mkdir -p build
         cd build
         echo "Configuring Qt (DBus support enabled by default)..."
-        # don't pass -no-dbus; ensure DBus headers are installed on build host
-        ../configure -prefix "${{ inputs.dir }}" \
-          -release \
-          -static \
-          -opensource \
-          -confirm-license \
-          -nomake examples \
-          -nomake tests \
-          ${{ inputs.configure-args }}
+        # Build up configure args; if the clang install failed earlier we may have
+        # set CONFIGURE_FALLBACK_SKIP_QTTOOLS=1 in the job environment, so add -skip qttools.
+        CFG_ARGS="-prefix \"${{ inputs.dir }}\" -release -static -opensource -confirm-license -nomake examples -nomake tests ${{ inputs.configure-args }}"
+        if [ "${CONFIGURE_FALLBACK_SKIP_QTTOOLS:-0}" = "1" ]; then
+          echo "CONFIGURE_FALLBACK_SKIP_QTTOOLS=1 ; appending -skip qttools to configure args."
+          CFG_ARGS="$CFG_ARGS -skip qttools"
+        fi
+        # Evaluate and run configure
+        eval ../configure $CFG_ARGS
         echo "Building Qt (parallel)..."
         cmake --build . --parallel "$(nproc)"
         echo "Installing Qt to ${{ inputs.dir }}..."
