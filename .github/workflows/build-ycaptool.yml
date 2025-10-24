@@ -51,7 +51,15 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v4
+        
+        # ⬇️ ADD THIS NEW STEP ⬇️
+        - name: Download Qt install artifact
+          uses: actions/download-artifact@v4
+          with:
+            name: qt-install # Must match the upload name
+            path: ${{ needs.build-qt-static.outputs.qt-install-dir }}
   
+    
         - name: Install additional dependencies
           run: |
             sudo apt-get update
