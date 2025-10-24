@@ -41,7 +41,7 @@ runs:
           libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
           libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
           libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
-          libpcre2-dev libdbus-1-dev libdbus-1-dev  # <-- ensure DBus headers/libraries available
+          libpcre2-dev libdbus-1-dev
         echo "Deps installed."
 
     - name: "Prepare git config to force HTTPS for SSH submodule URLs"
@@ -56,18 +56,14 @@ runs:
       run: |
         set -euo pipefail
         echo "Attempting to install clang-18 and dev libs from apt.llvm.org..."
-        # Try the apt.llvm.org helper to add the repo and install clang-18 packages.
         if wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 18 && \
            sudo apt-get update && \
            sudo apt-get install -y clang-18 llvm-18-dev libclang-18-dev libclang-cpp18-dev; then
           echo "Clang/LLVM 18 installed successfully."
         else
           echo "Warning: failed to install clang-18 dev packages. Will fall back to skipping qttools to continue."
-          # Signal fallback to later steps by exporting an env var for this job
           echo "CONFIGURE_FALLBACK_SKIP_QTTOOLS=1" >> $GITHUB_ENV
         fi
-        # show a quick check for the expected static libs (helpful for debugging)
-        echo "ls /usr/lib/llvm-18/lib || true"
         ls -la /usr/lib/llvm-18/lib || true
 
     - name: "Clone qt5 supermodule and checkout v${{ inputs.version }}"
@@ -77,9 +73,7 @@ runs:
         set -euo pipefail
         QT_SRC="${{ runner.temp }}/qt"
         rm -rf "${QT_SRC}"
-        # Qt source is provided from the qt5 supermodule (use the v<version> tag/branch).
         git clone --depth 1 --branch "v${{ inputs.version }}" https://code.qt.io/qt/qt5.git "${QT_SRC}" || {
-          # fallback: shallow clone then fetch tags
           git clone --depth 1 https://code.qt.io/qt/qt5.git "${QT_SRC}"
           cd "${QT_SRC}"
           git fetch --tags --prune
@@ -93,7 +87,6 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        # If the caller passed submodules, try them but don't fail the whole job if invalid.
         if [ -n "${{ inputs.submodules }}" ]; then
           echo "Trying init-repository --module-subset=${{ inputs.submodules }} ..."
           if perl init-repository --module-subset="${{ inputs.submodules }}"; then
@@ -116,29 +109,40 @@ runs:
         mkdir -p build
         cd build
         echo "Configuring Qt (DBus support enabled by default)..."
-        # Build up configure args; if the clang install failed earlier we may have
-        # set CONFIGURE_FALLBACK_SKIP_QTTOOLS=1 in the job environment, so add -skip qttools.
         CFG_ARGS="-prefix \"${{ inputs.dir }}\" -release -static -opensource -confirm-license -nomake examples -nomake tests ${{ inputs.configure-args }}"
         if [ "${CONFIGURE_FALLBACK_SKIP_QTTOOLS:-0}" = "1" ]; then
           echo "CONFIGURE_FALLBACK_SKIP_QTTOOLS=1 ; appending -skip qttools to configure args."
           CFG_ARGS="$CFG_ARGS -skip qttools"
         fi
-        # Evaluate and run configure
         eval ../configure $CFG_ARGS
         echo "Building Qt (parallel)..."
         cmake --build . --parallel "$(nproc)"
         echo "Installing Qt to ${{ inputs.dir }}..."
         cmake --install .
 
+    - name: "Clean .prl files (remove absolute build paths and references)"
+      working-directory: ${{ inputs.dir }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Cleaning .prl files under $PWD ..."
+        # Remove QMAKE_PRL_BUILD_DIR lines (absolute build dir references)
+        find . -type f -name "*.prl" -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' -e '/^QMAKE_PRL_HOST/d' {} + || true
+        # Remove any embedded absolute references to previous runner build paths (/home/runner/work/...)
+        find . -type f -name "*.prl" -exec sed -i -e 's#/home/runner/work/[^[:space:]"]*##g' {} + || true
+        # Remove leftover double-spaces in case replacements left them
+        find . -type f -name "*.prl" -exec sed -i -e 's/  / /g' {} + || true
+        echo ".prl cleanup done."
+
     - name: "Verify install"
       shell: bash
       run: |
         set -euo pipefail
         if [ -d "${{ inputs.dir }}" ]; then
-          echo "Install dir contents:"
+          echo "Install dir contents (top-level):"
           ls -la "${{ inputs.dir }}" || true
         fi
-        if [ -x "${{ inputs.dir }}/bin/qmake" ] || [ -d "${{ inputs.dir }}/lib" ]; then
+        if [ -x "${{ inputs.dir }}/bin/qmake" ] || [ -x "${{ inputs.dir }}/bin/qmake6" ] || [ -d "${{ inputs.dir }}/lib" ]; then
           echo "Qt installation looks present at ${{ inputs.dir }}"
         else
           echo "Warning: Qt install not detected at ${{ inputs.dir }}. Check earlier logs."
