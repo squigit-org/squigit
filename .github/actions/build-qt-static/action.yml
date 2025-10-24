@@ -41,7 +41,7 @@ runs:
           libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
           libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
           libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
-          libpcre2-dev libdbus-1-dev
+          libpcre2-dev libdbus-1-dev libpng-dev libglib2.0-dev libwww-perl
         echo "Deps installed."
 
     - name: "Prepare git config to force HTTPS for SSH submodule URLs"
@@ -64,6 +64,7 @@ runs:
           echo "Warning: failed to install clang-18 dev packages. Will fall back to skipping qttools to continue."
           echo "CONFIGURE_FALLBACK_SKIP_QTTOOLS=1" >> $GITHUB_ENV
         fi
+        echo "ls /usr/lib/llvm-18/lib || true"
         ls -la /usr/lib/llvm-18/lib || true
 
     - name: "Clone qt5 supermodule and checkout v${{ inputs.version }}"
@@ -120,29 +121,24 @@ runs:
         echo "Installing Qt to ${{ inputs.dir }}..."
         cmake --install .
 
-    - name: "Clean .prl files (remove absolute build paths and references)"
+    - name: "Clean .prl files (remove absolute build paths)"
       working-directory: ${{ inputs.dir }}
       shell: bash
       run: |
         set -euo pipefail
-        echo "Cleaning .prl files under $PWD ..."
-        # Remove QMAKE_PRL_BUILD_DIR lines (absolute build dir references)
-        find . -type f -name "*.prl" -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' -e '/^QMAKE_PRL_HOST/d' {} + || true
-        # Remove any embedded absolute references to previous runner build paths (/home/runner/work/...)
-        find . -type f -name "*.prl" -exec sed -i -e 's#/home/runner/work/[^[:space:]"]*##g' {} + || true
-        # Remove leftover double-spaces in case replacements left them
-        find . -type f -name "*.prl" -exec sed -i -e 's/  / /g' {} + || true
-        echo ".prl cleanup done."
+        echo "Cleaning .prl files in ${{ inputs.dir }} to fix static linking..."
+        find . -type f -name "*.prl" -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} +
+        echo ".prl cleaning complete."
 
     - name: "Verify install"
       shell: bash
       run: |
         set -euo pipefail
         if [ -d "${{ inputs.dir }}" ]; then
-          echo "Install dir contents (top-level):"
+          echo "Install dir contents:"
           ls -la "${{ inputs.dir }}" || true
         fi
-        if [ -x "${{ inputs.dir }}/bin/qmake" ] || [ -x "${{ inputs.dir }}/bin/qmake6" ] || [ -d "${{ inputs.dir }}/lib" ]; then
+        if [ -x "${{ inputs.dir }}/bin/qmake" ] || [ -d "${{ inputs.dir }}/lib" ]; then
           echo "Qt installation looks present at ${{ inputs.dir }}"
         else
           echo "Warning: Qt install not detected at ${{ inputs.dir }}. Check earlier logs."
