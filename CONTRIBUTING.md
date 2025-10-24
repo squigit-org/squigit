@@ -37,7 +37,7 @@ This is the recommended path for most contributors, especially those working on 
 
 4.  **Place Binaries:** Extract the archives and place the executable files in their correct locations within the project structure:
 
-      * Place the `spatialshot-squiggle` executable in: `packages/squiggle/dist/`
+      * Place the `squiggle` executable in: `packages/squiggle/dist/`
       * Place the `ycaptool` and `ycap-cli` executables in: `packages/ycaptool/bin/`
 
 5.  **Run the Launcher:** Now that the binaries are in place, you can run the development launcher to test the full application flow.
