@@ -47,72 +47,39 @@ jobs:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
 
   build-ycaptool:
-    needs: build-qt-static
-    runs-on: ubuntu-latest
-    env:
-      QT_VERSION: 6.8.0
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Restore Qt install cache
-        id: restore-qt
-        uses: actions/cache@v4
-        with:
-          path: ${{ needs.build-qt-static.outputs.qt-install-dir }}
-          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('packages/ycaptool/ycaptool.pro') }}
-          restore-keys: |
-            qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
-
-      - name: Debug: list restored Qt dir
-        run: |
-          echo "Restored path: ${{ needs.build-qt-static.outputs.qt-install-dir }}"
-          ls -la "${{ needs.build-qt-static.outputs.qt-install-dir }}" || true
-
-      - name: Download Qt install artifact (fallback)
-        if: steps.restore-qt.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: qt-install
-          path: ${{ runner.temp }}/qt-static
-
-      - name: Ensure QT_INSTALL_DIR is set to restored location
-        id: set-qt-env
-        run: |
-          if [ -d "${{ needs.build-qt-static.outputs.qt-install-dir }}" ]; then
-            echo "qt-install-dir=${{ needs.build-qt-static.outputs.qt-install-dir }}" >> $GITHUB_OUTPUT
-          else
-            echo "qt-install-dir=${{ runner.temp }}/qt-static" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install additional dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libgl1-mesa-dev libdbus-1-dev python3 gperf bison flex
-
-      - name: Build ycaptool
-        env:
-          QT_INSTALL_DIR: ${{ steps.set-qt-env.outputs.qt-install-dir }}
-        run: |
-          echo "Using QT_INSTALL_DIR=${QT_INSTALL_DIR}"
-          export PATH="${QT_INSTALL_DIR}/bin:$PATH"
-          export PKG_CONFIG_PATH="${QT_INSTALL_DIR}/lib/pkgconfig:$PKG_CONFIG_PATH"
-          export LDFLAGS="-static"
-          ls -la "${QT_INSTALL_DIR}/bin" || true
-          command -v qmake6 || true
-          cd packages/ycaptool
-          qmake6 CONFIG+=static ycaptool.pro
-          make -j$(nproc)
-          mkdir -p dist
-          cp ycaptool dist/
-          rm ycaptool
-
-      - name: Verify static linking
-        run: |
-          ldd packages/ycaptool/dist/ycaptool | grep "not a dynamic executable" || echo "Warning: ycaptool is not fully statically linked"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ycaptool-linux
-          path: packages/ycaptool/dist/ycaptool
+      needs: build-qt-static
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+  
+        - name: Install additional dependencies
+          run: |
+            sudo apt-get update
+            # libdbus-1-dev is required to compile against DBus (qt dbus integration)
+            sudo apt-get install -y build-essential libgl1-mesa-dev libdbus-1-dev python3 gperf bison flex
+        - name: Build ycaptool
+          env:
+            QT_INSTALL_DIR: ${{ needs.build-qt-static.outputs.qt-install-dir }}
+          run: |
+            export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
+            export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
+            export LDFLAGS="-static"
+            cd packages/ycaptool
+            #
+            # THE FIX IS HERE:
+            #
+            qmake CONFIG+=static ycaptool.pro
+            #
+            #
+            make -j$(nproc)
+            mkdir -p dist
+            cp ycaptool dist/
+            rm ycaptool
+        - name: Verify static linking
+          run: |
+            ldd packages/ycaptool/dist/ycaptool | grep "not a dynamic executable" || echo "Warning: ycaptool is not fully statically linked"
+        - name: Upload artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: ycaptool-linux
+            path: packages/ycaptool/dist/ycaptool
