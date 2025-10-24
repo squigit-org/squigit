@@ -92,6 +92,7 @@ def build_spatialshot(base_path: str) -> bool:
     )
     if not install_success:
         return False
+    stream_command("spatialshot (npm run build:css)", ["npm", "run", "build:css"], cwd=path)[0]
     return stream_command("spatialshot (npm run build)", ["npm", "run", "build"], cwd=path)[0]
 
 
