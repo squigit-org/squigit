@@ -55,7 +55,7 @@ def stream_command(
             print(line, end="", file=sys.stderr)
             stderr_output.append(line)
 
-        process.communicate()  # Wait for the process to finish
+        process.communicate()
 
         if process.returncode != 0:
             logger.error(f"Failed to build {package}.")
