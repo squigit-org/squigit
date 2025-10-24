@@ -1,4 +1,5 @@
 name: Build ycaptool
+name: Build ycaptool
 
 on:
   push:
@@ -38,8 +39,10 @@ jobs:
 
   build-ycaptool:
     needs: build-qt-static
+    needs: build-qt-static
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/checkout@v4
 
       - name: Install additional dependencies
@@ -64,6 +67,12 @@ jobs:
       - name: Verify static linking
         run: |
           ldd packages/ycaptool/dist/ycaptool | grep "not a dynamic executable" || echo "Warning: ycaptool is not fully statically linked"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ycaptool-linux
+          path: packages/ycaptool/dist/ycaptool
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

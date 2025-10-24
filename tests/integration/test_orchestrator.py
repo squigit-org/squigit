@@ -46,7 +46,7 @@ class TestOrchestrator:
     def test_launch_squiggle_success(self, platform_system, mock_subprocess_run, mock_path_exists, tmp_path_platform, mock_platform):
         mock_platform.return_value = platform_system
         ext = ".exe" if platform_system == "Windows" else ""
-        expected_path = PRJKT_ROOT / f"packages/squiggle/dist/spatialshot-squiggle{ext}"
+        expected_path = PRJKT_ROOT / f"packages/squiggle/dist/squiggle{ext}"
         with patch("launcher.SQUIGGLE_BINARY", expected_path):
             mock_path_exists.return_value = True
             output_png = launch_squiggle(tmp_path_platform, None)
@@ -61,7 +61,7 @@ class TestOrchestrator:
     def test_launch_squiggle_with_monitor(self, platform_system, mock_subprocess_run, mock_path_exists, tmp_path_platform, mock_platform):
         mock_platform.return_value = platform_system
         ext = ".exe" if platform_system == "Windows" else ""
-        expected_path = PRJKT_ROOT / f"packages/squiggle/dist/spatialshot-squiggle{ext}"
+        expected_path = PRJKT_ROOT / f"packages/squiggle/dist/squiggle{ext}"
         with patch("launcher.SQUIGGLE_BINARY", expected_path):
             mock_path_exists.return_value = True
             output_png = launch_squiggle(tmp_path_platform, 2)

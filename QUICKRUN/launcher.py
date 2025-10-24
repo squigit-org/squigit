@@ -44,7 +44,7 @@ TMP_PATH_WIN = HOME / "AppData" / "Roaming" / "spatialshot" / "tmp"
 # Binary and Script Paths
 YCAP_BINARY = PKGS_PATH / "ycaptool" / "bin" / "ycaptool"
 SQUIGGLE_BINARY_EXT = ".exe" if platform.system() == "Windows" else ""
-SQUIGGLE_BINARY_NAME = f"spatialshot-squiggle{SQUIGGLE_BINARY_EXT}"
+SQUIGGLE_BINARY_NAME = f"squiggle{SQUIGGLE_BINARY_EXT}"
 SQUIGGLE_BINARY = PKGS_PATH / "squiggle" / "dist" / SQUIGGLE_BINARY_NAME
 ELECTRON_NODE = PKGS_PATH / "spatialshot"
 
