@@ -80,9 +80,9 @@ pub fn find_app_paths() -> Result<AppPaths> {
     let electron_exe = electron_app_dir.join(electron_exe_name);
 
     let squiggle_bin_name = if cfg!(target_os = "windows") {
-        "spatialshot-squiggle.exe"
+        "squiggle.exe"
     } else {
-        "spatialshot-squiggle"
+        "squiggle"
     };
     let squiggle_bin = bin_dir.join(squiggle_bin_name);
 
