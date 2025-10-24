@@ -1,5 +1,5 @@
-name: Prepare a static build of Qt
-description: Static Qt builds are not readily available and have to be built from source, this action automates that.
+name: 'Prepare a static build of Qt 6 (Linux)'
+description: 'Static Qt 6 builds are not readily available and have to be built from source. This action automates that for Linux.'
 branding:
   icon: book-open
   color: green
@@ -7,51 +7,69 @@ branding:
 inputs:
   version:
     type: string
-    description: The version of Qt which should be installed, e.g. 6.8.0
+    description: 'The version of Qt which should be installed, e.g. 6.8.0'
     required: true
-    default: 6.8.0
+    default: '6.8.0'
   configure-args:
     type: string
-    description: Additional arguments passed to Qt configure, consult Qt documentation for the full list
-    required: true
-    default: -opensource
+    description: 'Additional arguments passed to Qt configure, e.g. -no-dbus -no-opengl'
+    required: false
+    default: ''
   dir:
     type: string
-    description: The directory where Qt should be installed
+    description: 'The directory where Qt should be installed'
     required: true
-    default: ${{ runner.temp }}/Qt-static
+    default: '${{ runner.temp }}/Qt-static'
   submodules:
     type: string
-    description: Comma separated list of Qt modules which should be included, e.g. qtbase,qtshadertools,qtdeclarative
+    description: 'Comma separated list of Qt modules, e.g. qtbase,qtshadertools'
     required: true
-    default: qtbase
+    default: 'qtbase'
 
 runs:
-  using: composite
+  using: 'composite'
   steps:
-    - name: Set up X11 and DBus dependencies on Linux
+    - name: 'Set up Qt 6 build dependencies on Linux'
       run: |
         sudo apt-get update
+        # Install base build tools
+        sudo apt-get install -y build-essential perl python3 cmake ninja-build
+        # Install Qt dependencies for qtbase (X11/XCB, fonts, etc.)
         sudo apt-get install -y libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 libpcre2-dev libdbus-1-dev
       shell: bash
-      if: runner.os == 'Linux'
 
-    - name: Set up Visual Studio shell on Windows
-      uses: egor-tensin/vs-shell@v2
-      with:
-        arch: x64
-      if: runner.os == 'Windows'
-
-    - name: Install Qt
+    - name: 'Install Qt 6'
       working-directory: ${{ runner.temp }}
-      shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
+      shell: bash
       run: |
-        git clone https://code.qt.io/qt/qt5.git qt
+        echo "Cloning Qt 6 repository..."
+        git clone https://code.qt.io/qt/qt6.git qt
         cd qt
+        
+        echo "Checking out version ${{ inputs.version }}..."
         git checkout v${{ inputs.version }}
+        
+        echo "Initializing repository for submodules: ${{ inputs.submodules }}"
         perl init-repository --module-subset=${{ inputs.submodules }}
+        
         mkdir build
         cd build
-        ../configure ${{ runner.os == 'Windows' && '-platform win32-msvc' || '' }} -prefix ${{ inputs.dir }} -release -static -static-runtime ${{ inputs.configure-args }}
-        cmake --build . --parallel 2
+        
+        echo "Configuring Qt..."
+        # We add common flags for a static CI build:
+        # -opensource -confirm-license: Automates the license agreement
+        # -nomake examples -nomake tests: Speeds up the build significantly
+        ../configure -prefix ${{ inputs.dir }} \
+          -release \
+          -static \
+          -opensource \
+          -confirm-license \
+          -nomake examples \
+          -nomake tests \
+          ${{ inputs.configure-args }}
+          
+        echo "Building Qt (using $(nproc) cores)..."
+        cmake --build . --parallel $(nproc)
+        
+        echo "Installing Qt..."
         cmake --install .
