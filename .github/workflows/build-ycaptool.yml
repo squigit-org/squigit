@@ -131,7 +131,7 @@ jobs:
           -DQT_FEATURE_printsupport=OFF \
           -DQT_FEATURE_gui=ON \
           -DQT_FEATURE_widgets=OFF \
-          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
+          -CMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
       shell: bash
 
     - name: Build Qt6 Base
@@ -146,6 +146,18 @@ jobs:
         ninja install
       shell: bash
 
+    - name: Debug CMake environment for Qt6 Wayland
+      env:
+        WORKSPACE: ${{ github.workspace }}
+      run: |
+        export WORKSPACE_UNIX=${WORKSPACE//\\//}
+        echo "CMAKE_INITIAL_CACHE_FILE: $CMAKE_INITIAL_CACHE_FILE"
+        echo "CMAKE_PREFIX_PATH: $CMAKE_PREFIX_PATH"
+        echo "CMAKE_INSTALL_PREFIX: $CMAKE_INSTALL_PREFIX"
+        echo "Checking qt6-install directory:"
+        ls -la $WORKSPACE_UNIX/qt6-install
+      shell: bash
+
     - name: Configure CMake for Qt6 Wayland
       env:
         WORKSPACE: ${{ github.workspace }}
@@ -157,7 +169,7 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_PREFIX_PATH=$WORKSPACE_UNIX/qt6-install \
-          -CMAKE_INSTALL_PREFIX=$WORKSPACE_UNIX/qt6-install \
+          -DCMAKE_INSTALL_PREFIX=$WORKSPACE_UNIX/qt6-install \
           -DBUILD_SHARED_LIBS=OFF \
           -DQT_BUILD_EXAMPLES=OFF \
           -DQT_BUILD_TESTS=OFF
