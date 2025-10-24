@@ -38,7 +38,7 @@ This is the recommended path for most contributors, especially those working on 
 4.  **Place Binaries:** Extract the archives and place the executable files in their correct locations within the project structure:
 
       * Place the `squiggle` executable in: `packages/squiggle/dist/`
-      * Place the `ycaptool` and `ycap-cli` executables in: `packages/ycaptool/bin/`
+      * Place the `ycaptool` executables in: `packages/ycaptool/dist/` (if using Linux)
 
 5.  **Run the Launcher:** Now that the binaries are in place, you can run the development launcher to test the full application flow.
 
@@ -54,17 +54,12 @@ This path is for contributors working on the low-level packages themselves, such
 2.  **Install Build Dependencies:** You will need the specific toolchains for the package you are working on. This may include:
     * A C++ compiler (g++, clang, or MSVC)
     * A static build of the Qt6 framework
-    * Meson and Ninja build systems
     * Python 3 and `pip`
     * Node.js and `npm`
     * The Rust toolchain (`cargo`)
 3.  **Run the Build Orchestrator:** The `setup.py` script is the main build tool that compiles all the necessary binaries from source.
     ```bash
-    # Build all targets for your current platform
     python3 setup.py
-
-    # Or build a specific target
-    python3 setup.py --target squiggle
     ```
     Once the build is complete, you can run `QUICKRUN/launcher.py` to test the full application using your locally compiled binaries.
 
@@ -74,7 +69,7 @@ SpatialShot is composed of several independent packages orchestrated to work tog
 
 * `packages/orchestrator`: The final, production-ready **Rust** binary that manages the entire application flow in a lightweight, high-performance manner.
 * `packages/squiggle`: The **C++/Qt** application responsible for the "freeze" overlay and drawing interface. It is optimized for speed to provide an instant, native feel.
-* `packages/ycaptool`: A specialized **Python/C++/Gtk** utility for handling screen capture on Linux (Wayland), which has strict security protocols.
+* `packages/ycaptool`: A specialized **C++/Qt6** utility for handling screen capture on Linux (Wayland), which has strict security protocols.
 * `packages/spatialshot` (formerly `panel`): The main user interface, an **Electron/Node.js** application that displays the results from the Gemini and Lens APIs.
 * `platform`: Contains platform-specific shell scripts (`.sh`, `.ps1`) for native OS interactions like screen capture on Windows, macOS, and X11.
 * `QUICKRUN`: The **Python** development launcher used for integration testing and providing a simple entry point for contributors.
