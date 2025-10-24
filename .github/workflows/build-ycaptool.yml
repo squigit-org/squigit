@@ -26,7 +26,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('packages/ycaptool/ycaptool.pro') }}
+          # NOTE: bumped key suffix to -v2 to force a fresh build after fixing .prl cleanup
+          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('packages/ycaptool/ycaptool.pro') }}-v2
           restore-keys: |
             qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
 
@@ -47,50 +48,93 @@ jobs:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
 
   build-ycaptool:
-      needs: build-qt-static
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        
-        # ⬇️ ADD THIS NEW STEP ⬇️
-        - name: Download Qt install artifact
-          uses: actions/download-artifact@v4
-          with:
-            name: qt-install # Must match the upload name
-            path: ${{ needs.build-qt-static.outputs.qt-install-dir }}
-  
-    
-        - name: Install additional dependencies
-          run: |
-            sudo apt-get update
-            # libdbus-1-dev is required to compile against DBus (qt dbus integration)
-            sudo apt-get install -y build-essential libgl1-mesa-dev libdbus-1-dev python3 gperf bison flex
-        - name: Build ycaptool
-          env:
-            QT_INSTALL_DIR: ${{ needs.build-qt-static.outputs.qt-install-dir }}
-          run: |
-            export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
-            export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
-            export LDFLAGS="-static"
-            echo "Setting execute permissions for Qt binaries..."
-            chmod -R +x ${QT_INSTALL_DIR}/bin
-            chmod -R +x ${QT_INSTALL_DIR}/libexec
-            cd packages/ycaptool
-            #
-            # THE FIX IS HERE:
-            #
-            qmake CONFIG+=static ycaptool.pro
-            #
-            #
-            make -j$(nproc)
-            mkdir -p dist
-            cp ycaptool dist/
-            rm ycaptool
-        - name: Verify static linking
-          run: |
-            ldd packages/ycaptool/dist/ycaptool | grep "not a dynamic executable" || echo "Warning: ycaptool is not fully statically linked"
-        - name: Upload artifact
-          uses: actions/upload-artifact@v4
-          with:
-            name: ycaptool-linux
-            path: packages/ycaptool/dist/ycaptool
+    needs: build-qt-static
+    runs-on: ubuntu-latest
+    env:
+      QT_VERSION: 6.8.0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Try to restore the Qt install from cache first (fast)
+      - name: Restore Qt install cache
+        id: restore-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ needs.build-qt-static.outputs.qt-install-dir }}
+          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('packages/ycaptool/ycaptool.pro') }}-v2
+          restore-keys: |
+            qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
+
+      - name: Debug: list restored Qt dir
+        run: |
+          echo "Restored path: ${{ needs.build-qt-static.outputs.qt-install-dir }}"
+          ls -la "${{ needs.build-qt-static.outputs.qt-install-dir }}" || true
+
+      # Fallback: download the artifact uploaded by the first job (guaranteed in same run)
+      - name: Download Qt install artifact (fallback if cache miss)
+        if: steps.restore-qt.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: qt-install
+          path: ${{ runner.temp }}/qt-static
+
+      - name: Ensure QT_INSTALL_DIR is set to restored location
+        id: set-qt-env
+        run: |
+          if [ -d "${{ needs.build-qt-static.outputs.qt-install-dir }}" ]; then
+            echo "qt-install-dir=${{ needs.build-qt-static.outputs.qt-install-dir }}" >> $GITHUB_OUTPUT
+          else
+            echo "qt-install-dir=${{ runner.temp }}/qt-static" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install additional dependencies (must match Qt build deps)
+        run: |
+          sudo apt-get update
+          # Full set of system libs required at link time (match what Qt needed)
+          sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
+            libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
+            libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
+            libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
+            libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
+            libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
+            libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
+            libpcre2-dev libdbus-1-dev libpng-dev libfreetype6-dev libfontconfig1-dev \
+            libglib2.0-dev libgthread-2.0-0 pkg-config python3 gperf bison flex
+
+      - name: Build ycaptool
+        env:
+          QT_INSTALL_DIR: ${{ steps.set-qt-env.outputs.qt-install-dir }}
+        run: |
+          echo "Using QT_INSTALL_DIR=${QT_INSTALL_DIR}"
+          export PATH="${QT_INSTALL_DIR}/bin:$PATH"
+          export PKG_CONFIG_PATH="${QT_INSTALL_DIR}/lib/pkgconfig:$PKG_CONFIG_PATH"
+          export LDFLAGS="-static"
+          # Ensure executables are executable (artifact might preserve perms)
+          sudo chmod -R +x "${QT_INSTALL_DIR}/bin" || true
+          sudo chmod -R +x "${QT_INSTALL_DIR}/libexec" || true
+          ls -la "${QT_INSTALL_DIR}/bin" || true
+          command -v qmake6 || command -v qmake || true
+          cd packages/ycaptool
+          # Use qmake6 if available, otherwise fallback to qmake
+          if command -v qmake6 >/dev/null 2>&1; then
+            QMAKE_BIN=qmake6
+          else
+            QMAKE_BIN=qmake
+          fi
+          echo "Using ${QMAKE_BIN}"
+          ${QMAKE_BIN} CONFIG+=static ycaptool.pro
+          make -j$(nproc)
+          mkdir -p dist
+          cp ycaptool dist/
+          rm ycaptool
+
+      - name: Verify static linking
+        run: |
+          ldd packages/ycaptool/dist/ycaptool | grep "not a dynamic executable" || echo "Warning: ycaptool is not fully statically linked"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ycaptool-linux
+          path: packages/ycaptool/dist/ycaptool
