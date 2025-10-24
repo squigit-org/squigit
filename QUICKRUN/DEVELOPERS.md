@@ -10,7 +10,7 @@ This script enables developers to test the full application lifecycle using Pyth
 
 ### How it Works
 
-The launcher executes the entire application workflow in a precise sequence:
+The launcher executes the entire [application workflow](ARCHITECTURE) in a precise sequence:
 
 1. **Environment Detection:** The script first identifies the host operating system (Windows, macOS, or Linux) and, on Linux, distinguishes between X11 and Wayland display servers.
 2. **Directory Management:** It locates the platform-specific temporary directory and clears its contents to ensure a clean state for the current session.
