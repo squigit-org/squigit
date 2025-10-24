@@ -29,7 +29,7 @@ import re
 from pathlib import Path
 from typing import Optional, List, Tuple
 
-# --- Constants and Path Setup ---
+# Constants and Path Setup
 HOME = Path.home()
 SCRIPT_PATH = Path(__file__).resolve()
 DIR_PATH = SCRIPT_PATH.parent
@@ -37,26 +37,31 @@ PRJKT_ROOT = DIR_PATH.parent
 PKGS_PATH = PRJKT_ROOT / "packages"
 PLATFORM_PATH = PKGS_PATH / "orchestrator" / "src" / "platform"
 
-# Temporary directory paths
-TMP_PATH_UNIX = HOME / ".config" / "spatialshot" / "tmp"
-TMP_PATH_WIN = HOME / "AppData" / "Roaming" / "spatialshot" / "tmp"
+# Temporary Directory
+TMP_PATH = 
+"""
+Join-Path $env:LOCALAPPDATA 'spatialshot\tmp' # windows
+"${SC_SAVE_PATH:-$HOME/Library/Caches/spatialshot/tmp}" # mac
+"${SC_SAVE_PATH:-${XDG_CACHE_HOME:-$HOME/.cache}/spatialshot/tmp}" # linux
+"""
 
-# Binary and Script Paths
-YCAP_BINARY = PKGS_PATH / "ycaptool" / "bin" / "ycaptool"
-SQUIGGLE_BINARY_EXT = ".exe" if platform.system() == "Windows" else ""
-SQUIGGLE_BINARY_NAME = f"squiggle{SQUIGGLE_BINARY_EXT}"
-SQUIGGLE_BINARY = PKGS_PATH / "squiggle" / "dist" / SQUIGGLE_BINARY_NAME
-ELECTRON_NODE = PKGS_PATH / "spatialshot"
+# Binary Paths
+YCAPTOOL_BINARY = PKGS_PATH / "ycaptool" / "dist" / "ycaptool"
+SQUIGGLE_BINARY = ".exe" if platform.system() == "Windows" else ""
+SQUIGGLE_BINARY = f"squiggle{SQUIGGLE_BINARY}"
+SQUIGGLE_BINARY = PKGS_PATH / "squiggle" / "dist" / SQUIGGLE_BINARY
+ELECTRON_NODE   = PKGS_PATH / "spatialshot"
 
-SC_grabber_WIN = PLATFORM_PATH / "windows" / "sc-grabber.ps1"
-SC_grabber_MAC = PLATFORM_PATH / "darwin" / "sc-grabber.sh"
-SC_grabber_X11 = PLATFORM_PATH / "linux" / "sc-grabber.sh"
-HM_MONITORS_WIN = PLATFORM_PATH / "windows" / "hm-monitors.ps1"
-HM_MONITORS_MAC = PLATFORM_PATH / "darwin" / "hm-monitors.sh"
-HM_MONITORS_LINUX = PLATFORM_PATH / "linux" / "hm-monitors.sh"
+# Scripts Paths
+SC_grabber_WIN    = PLATFORM_PATH / "windows" / "sc-grabber.ps1"
+SC_grabber_MAC    = PLATFORM_PATH / "darwin"  / "sc-grabber.sh"
+SC_grabber_X11    = PLATFORM_PATH / "linux"   / "sc-grabber.sh"
+HM_MONITORS_WIN   = PLATFORM_PATH / "windows" / "hm-monitors.ps1"
+HM_MONITORS_MAC   = PLATFORM_PATH / "darwin"  / "hm-monitors.sh"
+HM_MONITORS_LINUX = PLATFORM_PATH / "linux"   / "hm-monitors.sh"
 
 
-# --- Logging Setup ---
+# Logging Setup
 logging.basicConfig(
     level=logging.INFO,
     format="[%(levelname)s] (%(name)s) %(message)s",
@@ -65,7 +70,7 @@ logging.basicConfig(
 logger = logging.getLogger("spatialshot.dev")
 
 
-# --- Environment Detection ---
+# Environment Detection
 def identify_display_environment() -> str:
     """
     Identifies the host OS and display server.
@@ -81,8 +86,8 @@ def identify_display_environment() -> str:
             return "wayland"
         if os.environ.get("DISPLAY") or xdg == "x11":
             return "x11"
-        logger.warning("Unknown Linux display environment. Falling back to x11.")
-        return "x11"
+        logger.warning("Unknown Linux display environment. Falling back to wayland.")
+        return "wayland"
     return "unknown"
 
 
@@ -121,7 +126,7 @@ def get_monitor_count() -> int:
         return 1
 
 
-# --- Core Utility Functions ---
+# Core Utility Functions
 def _run_process(
     command: List[str],
     cwd: Optional[Path] = None,
@@ -163,7 +168,7 @@ def clear_tmp() -> Path:
     """
     Clears and recreates the temporary directory for this run.
     """
-    tmp = TMP_PATH_WIN if sys.platform == "win32" else TMP_PATH_UNIX
+    tmp = TMP_PATH
     if tmp.exists():
         try:
             shutil.rmtree(tmp)
@@ -194,7 +199,7 @@ def wait_for_file(file_path: Path, timeout_sec: int = 5) -> bool:
     return True
 
 
-# --- Application Lifecycle Functions ---
+# Application Lifecycle Functions
 def run_screenshot_capture(
     env: str,
     monitor_count: int
@@ -228,35 +233,28 @@ def run_screenshot_capture(
 
     elif env == "wayland":
         logger.info("Initiating capture: Linux (Wayland)")
-        if not YCAP_BINARY.exists():
-            logger.error("ycaptool binary not found: %s", YCAP_BINARY)
+        if not YCAPTOOL_BINARY.exists():
+            logger.error("ycaptool binary not found: %s", YCAPTOOL_BINARY)
             return False, 0
-        success, _, _ = _run_process([str(YCAP_BINARY)])
-        return success, 1
+        success, _, _ = _run_process([str(YCAPTOOL_BINARY)])
+        return success, monitor_count
 
     logger.error("Unsupported environment: %s", env)
     return False, 0
 
 
-def launch_squiggle(
-    monitor_num: Optional[int],
-    current_env: str
-) -> bool:
+def launch_squiggle() -> bool:
     """
     Launches the Squiggle (C++/Qt) application. Returns True on success.
     """
     if not SQUIGGLE_BINARY.exists():
         logger.error("Squiggle binary not found: %s", SQUIGGLE_BINARY)
         return False
-
+    
     logger.info("Launching Squiggle...")
     command = [str(SQUIGGLE_BINARY)]
-    if monitor_num is not None:
-        command.extend(["--", str(monitor_num)])
+    success, _, _ = _run_process(command)
 
-    custom_env = {"QT_QPA_PLATFORM": "xcb"} if current_env == "wayland" else None
-
-    success, _, _ = _run_process(command, env=custom_env)
     if not success:
         logger.error("Squiggle application failed or was cancelled.")
         return False
@@ -264,7 +262,7 @@ def launch_squiggle(
     return True
 
 
-def launch_electron(output_png: Path, monitor_num: int) -> bool:
+def launch_electron(output_png: Path) -> bool:
     """
     Launches the Electron application in development mode.
     """
@@ -283,7 +281,7 @@ def launch_electron(output_png: Path, monitor_num: int) -> bool:
         logger.info("Sass build complete.")
 
     logger.info("Starting Electron (npm start) for: %s", output_png.name)
-    command = ["npm", "start", "--", str(output_png), f"--monitor={monitor_num}"]
+    command = ["npm", "start", "--", str(output_png)]
     try:
         subprocess.Popen(command, cwd=ELECTRON_NODE)
         return True
@@ -311,9 +309,9 @@ def wait_for_squiggle_output(tmp_path: Path, timeout_sec: int = 5) -> Optional[T
     return None
 
 
-# --- Main Orchestrator ---
+# Main Orchestrator
 def main() -> None:
-    logger.info("--- SpatialShot Development Launcher Started ---")
+    logger.info("SpatialShot Development Launcher Started")
 
     env = identify_display_environment()
     if env == "unknown":
@@ -333,33 +331,15 @@ def main() -> None:
         logger.error("Screenshot capture phase failed.")
         sys.exit(1)
 
-    monitor_arg_for_squiggle = None
-    if env == "wayland":
-        logger.info("Waiting for Wayland screenshot...")
-        png_files = []
-        timeout_start = time.time()
-        while not png_files and (time.time() - timeout_start < 5):
-            png_files = list(f for f in tmp_path.glob("*.png") if not f.name.startswith('o'))
-            if not png_files: time.sleep(0.1)
-        
-        if not png_files:
-            logger.error("Timeout: ycaptool did not produce a screenshot.")
-            sys.exit(1)
-        
-        screenshot_file = png_files[0]
-        match = re.search(r"^(\d+)\.png$", screenshot_file.name)
-        if match:
-            monitor_arg_for_squiggle = int(match.group(1))
-    else:
-        logger.info("Waiting for %d screenshot(s)...", expected_png_count)
-        all_found = all(wait_for_file(tmp_path / f"{i}.png") for i in range(1, expected_png_count + 1))
-        if not all_found:
-            logger.error("Failed to find all required screenshots.")
-            sys.exit(1)
+    logger.info("Waiting for %d screenshot(s)...", expected_png_count)
+    all_found = all(wait_for_file(tmp_path / f"{i}.png") for i in range(1, expected_png_count + 1))
+    if not all_found:
+        logger.error("Failed to find all required screenshots.")
+        sys.exit(1)
             
     logger.info("All screenshots captured!")
 
-    if not launch_squiggle(monitor_arg_for_squiggle, env):
+    if not launch_squiggle():
         logger.error("Squiggle capture phase failed.")
         sys.exit(1)
     
@@ -374,7 +354,7 @@ def main() -> None:
         logger.error("Failed to launch Electron.")
         sys.exit(1)
 
-    logger.info("--- Development session launched successfully! ---")
+    logger.info("Development session launched successfully!")
 
 
 if __name__ == "__main__":
