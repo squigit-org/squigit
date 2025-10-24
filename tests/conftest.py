@@ -4,7 +4,7 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 from pathlib import Path
-from launcher import TMP_PATH_UNIX, TMP_PATH_WIN
+from launcher import TMP_PATH
 
 @pytest.fixture
 def mock_platform():
@@ -65,10 +65,31 @@ def mock_time():
 @pytest.fixture
 def tmp_path_platform():
     """Provide platform-specific temporary path."""
-    return TMP_PATH_WIN if sys.platform == "win32" else TMP_PATH_UNIX
+    return TMP_PATH
 
 @pytest.fixture
 def mock_sys_exit():
     """Mock sys.exit to prevent tests from exiting."""
     with patch("sys.exit") as mock_exit:
         yield mock_exit
+
+@pytest.fixture
+def mock_launcher_paths():
+    """Mocks all the path constants in the launcher script."""
+    def create_mock_path(path_str):
+        mock = MagicMock(spec=Path, exists=lambda: True)
+        mock.__str__.return_value = path_str
+        return mock
+
+    with (
+        patch('launcher.YCAPTOOL_BINARY', create_mock_path('/mock/ycaptool')),
+        patch('launcher.SQUIGGLE_BINARY', create_mock_path('/mock/squiggle')),
+        patch('launcher.ELECTRON_NODE', create_mock_path('/mock/electron')),
+        patch('launcher.SC_grabber_WIN', create_mock_path('/mock/sc_grabber.ps1')),
+        patch('launcher.SC_grabber_MAC', create_mock_path('/mock/sc_grabber.sh')),
+        patch('launcher.SC_grabber_X11', create_mock_path('/mock/sc_grabber.sh')),
+        patch('launcher.HM_MONITORS_WIN', create_mock_path('/mock/hm_monitors.ps1')),
+        patch('launcher.HM_MONITORS_MAC', create_mock_path('/mock/hm_monitors.sh')),
+        patch('launcher.HM_MONITORS_LINUX', create_mock_path('/mock/hm_monitors.sh'))
+    ):
+        yield
