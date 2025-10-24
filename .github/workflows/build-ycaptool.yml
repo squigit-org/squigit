@@ -119,7 +119,6 @@ jobs:
           -DQT_FEATURE_printsupport=OFF \
           -DQT_FEATURE_gui=ON \
           -DQT_FEATURE_widgets=OFF \
-          -DQT_HOST_PATH=$WORKSPACE_UNIX/qt6-install \
           -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
       shell: bash
 
