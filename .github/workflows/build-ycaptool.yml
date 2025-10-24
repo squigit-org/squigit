@@ -72,11 +72,8 @@ jobs:
           libxcb-record0-dev \
           libxcb-res0-dev \
           libxcb-screensaver0-dev \
-          libxcb-xevie0-dev \
-          libxcb-xf86dri0-dev \
           libxcb-xinput-dev \
-          libxcb-xv0-dev \
-          libxcb-xvmc0-dev
+          libxcb-xv0-dev
 
     - name: Cache Qt6 source
       id: cache-qt6-source
@@ -160,7 +157,7 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_PREFIX_PATH=$WORKSPACE_UNIX/qt6-install \
-          -DCMAKE_INSTALL_PREFIX=$WORKSPACE_UNIX/qt6-install \
+          -CMAKE_INSTALL_PREFIX=$WORKSPACE_UNIX/qt6-install \
           -DBUILD_SHARED_LIBS=OFF \
           -DQT_BUILD_EXAMPLES=OFF \
           -DQT_BUILD_TESTS=OFF
