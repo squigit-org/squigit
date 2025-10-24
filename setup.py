@@ -1,6 +1,6 @@
-
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from typing import List, Tuple
@@ -108,6 +108,25 @@ def main():
     """Main function to build all packages."""
     base_path = os.path.dirname(os.path.abspath(__file__))
     failed_packages = []
+
+    if sys.platform == "win32":
+        logger.info("Performing Windows-specific setup...")
+        source = os.path.join(base_path, "third-party", "nircmd", "bin", "nircmd.exe")
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if not local_app_data:
+            logger.error("LOCALAPPDATA environment variable not found.")
+            sys.exit(1)
+
+        dest_dir = os.path.join(local_app_data, "spatialshot", "bin")
+        dest_path = os.path.join(dest_dir, "nircmd.exe")
+
+        try:
+            os.makedirs(dest_dir, exist_ok=True)
+            shutil.copy(source, dest_path)
+            logger.info(f"Copied nircmd.exe to {dest_path}")
+        except (IOError, OSError) as e:
+            logger.error(f"Failed to copy nircmd.exe: {e}")
+            sys.exit(1)
 
     build_functions = {
         "ycaptool": build_ycaptool,
