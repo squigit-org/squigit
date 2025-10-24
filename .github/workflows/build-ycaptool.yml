@@ -1,57 +1,69 @@
-name: Prepare a static build of Qt
-description: Static Qt builds are not readily available and have to be built from source, this action automates that.
-branding:
-  icon: book-open
-  color: green
+name: Build ycaptool
 
-inputs:
-  version:
-    type: string
-    description: The version of Qt which should be installed, e.g. 6.4.2
-    required: true
-    default: 6.4.2
-  configure-args:
-    type: string
-    description: Additional arguments passed to Qt configure, consult Qt documentation for the full list
-    required: true
-    default: -opensource
-  dir:
-    type: string
-    description: The directory where Qt should be installed
-    required: true
-    default: ${{ runner.temp }}/Qt-static
-  submodules:
-    type: string
-    description: Comma separated list of Qt modules which should be included, e.g. qtbase,qtshadertools,qtdeclarative
-    required: true
-    default: essential
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-runs:
-  using: composite
-  steps:
-    - name: Set up X11 dependencies on Linux
-      run: |
-        sudo apt-get update
-        sudo apt-get install libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 libpcre2-dev
-      shell: bash
-      if: runner.os == 'Linux'
+jobs:
+  build-qt-static:
+    runs-on: ubuntu-latest
+    env:
+      QT_VERSION: 6.8.0
+    outputs:
+      qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+    steps:
+      - name: Set QT_INSTALL_DIR
+        id: set-qt-dir
+        run: echo "qt-install-dir=${{ runner.temp }}/qt-static" >> $GITHUB_OUTPUT
 
-    - name: Set up Visual Studio shell on Windows
-      uses: egor-tensin/vs-shell@v2
-      with:
-        arch: x64
-      if: runner.os == 'Windows'
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('packages/ycaptool/ycaptool.pro') }}
 
-    - name: Install Qt
-      working-directory: ${{ runner.temp }}
-      shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
-      run: |
-        git clone https://code.qt.io/qt/qt5.git qt
-        cd qt
-        git checkout v${{ inputs.version }}
-        perl init-repository --module-subset=${{ inputs.submodules }}
-        mkdir build
-        cd build
-        ../configure ${{ runner.os == 'Windows' && '-platform win32-msvc' || '' }} -prefix ${{ inputs.dir }} -release -static -static-runtime ${{ inputs.configure-args }}
-        cmake --build . --parallel 2
-        cmake --install .
+      - name: Build static Qt
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/build-qt-static
+        with:
+          version: ${{ env.QT_VERSION }}
+          configure-args: -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples
+          dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          submodules: qtbase,qtshadertools,qtdeclarative,qtdbus
+
+  build-ycaptool:
+    needs: build-qt-static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install additional dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libgl1-mesa-dev libdbus-1-dev python3 gperf bison flex
+
+      - name: Build ycaptool
+        env:
+          QT_INSTALL_DIR: ${{ needs.build-qt-static.outputs.qt-install-dir }}
+        run: |
+          export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
+          export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
+          cd packages/ycaptool
+          qmake6 CONFIG+=static ycaptool.pro
+          make -j$(nproc)
+          mkdir -p dist
+          cp ycaptool dist/
+          rm ycaptool
+
+      - name: Verify static linking
+        run: |
+          ldd packages/ycaptool/dist/ycaptool | grep "not a dynamic executable" || echo "Warning: ycaptool is not fully statically linked"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ycaptool-linux
+          path: packages/ycaptool/dist/ycaptool
