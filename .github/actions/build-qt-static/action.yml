@@ -12,7 +12,7 @@ inputs:
     default: "6.8.0"
   configure-args:
     type: string
-    description: "Additional arguments passed to Qt configure, e.g. -no-dbus -no-opengl"
+    description: "Additional arguments passed to Qt configure, e.g. -no-pch -skip qtwebengine"
     required: false
     default: ""
   dir:
@@ -23,8 +23,8 @@ inputs:
   submodules:
     type: string
     description: "Comma separated list of Qt modules, e.g. qtbase,qtshadertools"
-    required: true
-    default: "qtbase"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -41,61 +41,77 @@ runs:
           libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
           libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
           libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
-          libpcre2-dev libdbus-1-dev
+          libpcre2-dev libdbus-1-dev libdbus-1-dev  # <-- ensure DBus headers/libraries available
         echo "Deps installed."
 
-    - name: "Clone Qt sources (use qt5 supermodule and checkout v${{ inputs.version }})"
+    - name: "Prepare git config to force HTTPS for SSH submodule URLs"
+      shell: bash
+      run: |
+        set -euo pipefail
+        git config --global url."https://github.com/".insteadOf "git@github.com:"
+        git config --global url."https://code.qt.io/qt/".insteadOf "git@code.qt.io:qt/"
+
+    - name: "Clone qt5 supermodule and checkout v${{ inputs.version }}"
       working-directory: ${{ runner.temp }}
       shell: bash
       run: |
         set -euo pipefail
-        QT_SRC_DIR="${{ runner.temp }}/qt"
-        echo "Cloning Qt sources into ${QT_SRC_DIR} ..."
-        # Try shallow HTTPS clone of the qt5 supermodule (this is the documented way for Qt6).
-        if [ -d "${QT_SRC_DIR}" ]; then
-          echo "Removing existing ${QT_SRC_DIR}"
-          rm -rf "${QT_SRC_DIR}"
-        fi
-        git clone --branch "v${{ inputs.version }}" --depth 1 https://code.qt.io/qt/qt5.git "${QT_SRC_DIR}" || {
-          echo "Branch v${{ inputs.version }} not available as branch; doing full fetch of tags and trying tag checkout..."
-          git clone --depth 1 https://code.qt.io/qt/qt5.git "${QT_SRC_DIR}"
-          cd "${QT_SRC_DIR}"
+        QT_SRC="${{ runner.temp }}/qt"
+        rm -rf "${QT_SRC}"
+        # Qt source is provided from the qt5 supermodule (use the v<version> tag/branch).
+        git clone --depth 1 --branch "v${{ inputs.version }}" https://code.qt.io/qt/qt5.git "${QT_SRC}" || {
+          # fallback: shallow clone then fetch tags
+          git clone --depth 1 https://code.qt.io/qt/qt5.git "${QT_SRC}"
+          cd "${QT_SRC}"
           git fetch --tags --prune
-          git checkout "v${{ inputs.version }}" || { echo "Failed to checkout v${{ inputs.version }}; aborting"; exit 1; }
+          git checkout "v${{ inputs.version }}" || { echo "Failed to checkout v${{ inputs.version }}"; exit 1; }
         }
-        cd "${QT_SRC_DIR}"
-        echo "Checked out: $(git rev-parse --abbrev-ref HEAD || git describe --tags --exact-match HEAD || git rev-parse --short HEAD)"
+        cd "${QT_SRC}"
+        echo "Checked out $(git describe --tags --always || git rev-parse --short HEAD)"
 
-    - name: "Prepare out-of-source build dir and configure (init submodules)"
+    - name: "Init repository (try user subset; fallback to default)"
       working-directory: ${{ runner.temp }}/qt
       shell: bash
       run: |
         set -euo pipefail
-        BUILD_DIR="$(pwd)/build"
-        mkdir -p "${BUILD_DIR}"
-        cd "${BUILD_DIR}"
-        echo "Running configure to init submodules and configure build..."
-        # The documented way: run the configure script from the source tree with -init-submodules
-        # Use -submodules to limit the set if provided.
-        if [ -n "${{ inputs.submodules }}" ] && [ "${{ inputs.submodules }}" != "qtbase" ]; then
-          ../configure -init-submodules -submodules "${{ inputs.submodules }}" -prefix "${{ inputs.dir }}" \
-            -release -static -opensource -confirm-license -nomake examples -nomake tests ${{ inputs.configure-args }}
+        # If the caller passed submodules, try them but don't fail the whole job if invalid.
+        if [ -n "${{ inputs.submodules }}" ]; then
+          echo "Trying init-repository --module-subset=${{ inputs.submodules }} ..."
+          if perl init-repository --module-subset="${{ inputs.submodules }}"; then
+            echo "init-repository succeeded with provided subset."
+          else
+            echo "Provided module-subset failed; falling back to default init-repository."
+            perl init-repository
+          fi
         else
-          ../configure -init-submodules -prefix "${{ inputs.dir }}" \
-            -release -static -opensource -confirm-license -nomake examples -nomake tests ${{ inputs.configure-args }}
+          perl init-repository
         fi
+        echo "Now updating submodules (shallow, parallel where possible)..."
+        git submodule update --init --recursive --jobs=$(nproc) --depth=1 || true
 
-    - name: "Build Qt (parallel) and install"
-      working-directory: ${{ runner.temp }}/qt/build
+    - name: "Create build dir, configure (with DBus), build, install"
+      working-directory: ${{ runner.temp }}/qt
       shell: bash
       run: |
         set -euo pipefail
-        echo "Building Qt (using $(nproc) cores)..."
+        mkdir -p build
+        cd build
+        echo "Configuring Qt (DBus support enabled by default)..."
+        # don't pass -no-dbus; ensure DBus headers are installed on build host
+        ../configure -prefix "${{ inputs.dir }}" \
+          -release \
+          -static \
+          -opensource \
+          -confirm-license \
+          -nomake examples \
+          -nomake tests \
+          ${{ inputs.configure-args }}
+        echo "Building Qt (parallel)..."
         cmake --build . --parallel "$(nproc)"
         echo "Installing Qt to ${{ inputs.dir }}..."
         cmake --install .
 
-    - name: "Simple verification"
+    - name: "Verify install"
       shell: bash
       run: |
         set -euo pipefail
@@ -103,9 +119,9 @@ runs:
           echo "Install dir contents:"
           ls -la "${{ inputs.dir }}" || true
         fi
-        if [ -x "${{ inputs.dir }}/bin/qmake" ] || [ -x "${{ inputs.dir }}/bin/qt-cmake" ] || [ -d "${{ inputs.dir }}/lib" ]; then
-          echo "Qt build & install likely succeeded."
+        if [ -x "${{ inputs.dir }}/bin/qmake" ] || [ -d "${{ inputs.dir }}/lib" ]; then
+          echo "Qt installation looks present at ${{ inputs.dir }}"
         else
-          echo "Warning: Qt install not detected at ${{ inputs.dir }}. Check earlier logs for errors."
+          echo "Warning: Qt install not detected at ${{ inputs.dir }}. Check earlier logs."
           exit 1
         fi
