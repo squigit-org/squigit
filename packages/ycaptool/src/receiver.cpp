@@ -43,7 +43,6 @@ void Receiver::handleResponse(uint response, const QVariantMap &results)
             QString fullImagePath = QUrl(uri).toLocalFile();
             qDebug() << "Full desktop image saved to:" << fullImagePath;
             QPixmap fullDesktop(fullImagePath);
-            QFile::remove(fullImagePath);
             if (fullDesktop.isNull())
             {
                 qWarning() << "Failed to load pixmap from" << fullImagePath;
@@ -52,6 +51,11 @@ void Receiver::handleResponse(uint response, const QVariantMap &results)
             else
             {
                 ok = processFullPixmap(fullDesktop);
+                if (ok) {
+                    if (!QFile::remove(fullImagePath)) {
+                        qWarning() << "Failed to remove full desktop image:" << fullImagePath;
+                    }
+                }
             }
         }
     }
