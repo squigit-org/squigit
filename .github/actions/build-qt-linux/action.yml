@@ -31,7 +31,8 @@ runs:
           libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
           libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
           libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
-          libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev
+          libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
+          libclang-18-dev llvm-18-dev # <-- ADDED THIS LINE to fix missing libclangBasic.a
 
     - name: Clone Qt source
       shell: bash
@@ -74,3 +75,4 @@ runs:
         echo "Installing Qt into ${{ inputs.dir }}"
         cd ${{ inputs.dir }}/build
         cmake --install .
+
