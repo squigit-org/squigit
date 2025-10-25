@@ -104,7 +104,7 @@ jobs:
           perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
           mkdir ../build
           cd ../build
-          ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -D LLVM_INSTALL_DIR="/c/Program Files/LLVM" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -D LLVM_INSTALL_DIR="/c/Program Files/LLVM" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
           cmake --build . --parallel
           cmake --install .
 
@@ -231,7 +231,7 @@ jobs:
           
           cd packages/squiggle
           
-          qmake6 CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
+          qmake CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
           
           make -j$(nproc)
           mkdir -p dist
@@ -248,7 +248,7 @@ jobs:
           
           qmake CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
           
-          nmake release
+          ninja
           
           mkdir dist
           copy release\squiggle.exe dist\squiggle.exe
