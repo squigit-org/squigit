@@ -1,7 +1,7 @@
-name: Build ycaptool
+name: Build ycaptool (Linux)
 
 on:
-  workflow_dispatch:
+  push:
 
 jobs:
   build-qt-static:

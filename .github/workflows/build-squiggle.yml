@@ -2,17 +2,6 @@ name: Build Squiggle (Cross-Platform)
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - 'packages/squiggle/**'
-      - '.github/workflows/build-squiggle.yml'
-      - '.github/actions/build-qt-static/action.yml'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'packages/squiggle/**'
-      - '.github/workflows/build-squiggle.yml'
-      - '.github/actions/build-qt-static/action.yml'
 
 env:
   QT_VERSION: 6.8.0
@@ -104,7 +93,7 @@ jobs:
           perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
           mkdir ../build
           cd ../build
-          ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -D LLVM_INSTALL_DIR="/c/Program Files/LLVM" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -feature-clang -feature-clangcpp -- -D LLVM_INSTALL_DIR="/c/Program Files/LLVM"
           cmake --build . --parallel
           cmake --install .
 
