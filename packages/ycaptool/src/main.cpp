@@ -30,9 +30,10 @@
 #include "utils.h"
 #include "shell.h"
 
-Q_IMPORT_PLUGIN(QWaylandIntegrationPlugin);
-Q_IMPORT_PLUGIN(QWaylandEglPlatformIntegrationPlugin);
-Q_IMPORT_PLUGIN(QWaylandXdgShellIntegrationPlugin);
+// For CI: Explicitly link static Wayland plugins
+// Q_IMPORT_PLUGIN(QWaylandIntegrationPlugin);
+// Q_IMPORT_PLUGIN(QWaylandEglPlatformIntegrationPlugin);
+// Q_IMPORT_PLUGIN(QWaylandXdgShellIntegrationPlugin);
 
 int main(int argc, char *argv[])
 {

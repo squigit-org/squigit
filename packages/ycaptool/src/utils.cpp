@@ -23,6 +23,8 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <algorithm>
+#include "shell.h"
 
 QRect desktopGeometry()
 {
@@ -74,6 +76,9 @@ bool processFullPixmap(const QPixmap &fullDesktop)
     QPixmap mutableFull = fullDesktop;
     mutableFull.setDevicePixelRatio(effectiveDpr);
     QList<QScreen *> screens = qApp->screens();
+    std::sort(screens.begin(), screens.end(), [](QScreen* a, QScreen* b) {
+        return a->name() < b->name();
+    });
     qDebug() << "Found" << screens.count() << "screen(s). Cropping...";
     QPoint minTopLeft(0, 0);
     for (QScreen *screen : screens)
@@ -111,6 +116,12 @@ bool processFullPixmap(const QPixmap &fullDesktop)
 bool tryWlroots()
 {
     qDebug() << "Trying wlroots fallback with grim and wlr-randr...";
+
+    if (!Shell::command_exists("wlr-randr") || !Shell::command_exists("grim")) {
+        qWarning() << "wlr-randr or grim not found for wlroots fallback.";
+        return false;
+    }
+
     QProcess proc;
     proc.start("wlr-randr", QStringList() << "--json");
     if (!proc.waitForFinished() || proc.exitCode() != 0)
@@ -118,6 +129,7 @@ bool tryWlroots()
         qWarning() << "wlr-randr failed to execute or returned error.";
         return false;
     }
+
     QByteArray output = proc.readAllStandardOutput();
     QJsonDocument doc = QJsonDocument::fromJson(output);
     if (!doc.isArray())
@@ -131,31 +143,60 @@ bool tryWlroots()
         qWarning() << "No monitors found in wlr-randr output.";
         return false;
     }
-    int i = 1;
+
+    QList<QScreen *> screens = qApp->screens();
+    if (screens.isEmpty()) {
+        qWarning() << "No screens found by Qt.";
+        return false;
+    }
+    std::sort(screens.begin(), screens.end(), [](QScreen* a, QScreen* b) {
+        return a->name() < b->name();
+    });
+
     bool success = true;
-    for (const QJsonValue &val : monitors)
-    {
-        QJsonObject mon = val.toObject();
-        if (mon["active"].toBool(true))
+    for (int i = 0; i < screens.size(); ++i) {
+        QScreen *screen = screens.at(i);
+        QRect screenGeom = screen->geometry();
+
+        QJsonObject targetMonitor;
+        for (const QJsonValue &val : monitors) {
+            QJsonObject mon = val.toObject();
+            if (!mon.value("active").toBool(false)) continue;
+
+            QJsonObject rect = mon.value("rect").toObject();
+            int x = rect.value("x").toInt();
+            int y = rect.value("y").toInt();
+
+            if (screenGeom.x() == x && screenGeom.y() == y) {
+                targetMonitor = mon;
+                break;
+            }
+        }
+
+        if (targetMonitor.isEmpty()) {
+            qWarning() << "Could not find matching monitor in wlr-randr for Qt screen at" << screenGeom.topLeft();
+            success = false;
+            continue;
+        }
+
+        QString name = targetMonitor.value("name").toString();
+        if (name.isEmpty()) continue;
+
+        QString fileName = QString("%1.png").arg(i + 1);
+        qDebug() << "Capturing monitor" << name << "(Qt index" << i << ") to" << fileName;
+
+        QProcess grimProc;
+        grimProc.start("grim", QStringList() << "-o" << name << fileName);
+        if (!grimProc.waitForFinished() || grimProc.exitCode() != 0)
         {
-            QString name = mon["name"].toString();
-            if (name.isEmpty())
-                continue;
-            QString fileName = QString("%1.png").arg(i);
-            qDebug() << "Capturing monitor" << name << "to" << fileName;
-            QProcess grimProc;
-            grimProc.start("grim", QStringList() << "-o" << name << fileName);
-            if (!grimProc.waitForFinished() || grimProc.exitCode() != 0)
-            {
-                qWarning() << "grim failed for monitor" << name;
-                success = false;
-            }
-            else
-            {
-                qDebug() << "Saved" << fileName;
-            }
-            i++;
+            qWarning() << "grim failed for monitor" << name;
+            success = false;
+        }
+        else
+        {
+            qDebug() << "Saved" << fileName;
         }
     }
+
     return success;
 }
