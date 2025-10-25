@@ -248,6 +248,8 @@ jobs:
         shell: bash
         run: |
           export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
+          chmod -R +x ${QT_INSTALL_DIR}/bin
+          chmod -R +x ${QT_INSTALL_DIR}/libexec
           
           cd packages/squiggle
           
