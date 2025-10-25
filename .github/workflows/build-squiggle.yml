@@ -25,13 +25,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1
+          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-v1
           restore-keys: |
             qt-static-linux-squiggle-${{ env.QT_VERSION }}-
 
       - name: Build static Qt (Linux)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        uses: ./.github/actions/build-qt-static
+        uses: ./.github/actions/build-qt-linux
         with:
           version: ${{ env.QT_VERSION }}
           configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples"

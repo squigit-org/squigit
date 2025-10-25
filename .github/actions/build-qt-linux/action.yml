@@ -1,0 +1,76 @@
+name: 'Build Static Qt (Linux)'
+description: 'Builds a static version of Qt from source on Linux'
+
+inputs:
+  version:
+    description: 'Qt version to build (e.g., 6.8.0)'
+    required: true
+  configure-args:
+    description: 'Extra arguments for the ./configure script'
+    required: false
+    default: ''
+  dir:
+    description: 'Directory to install Qt into'
+    required: true
+  submodules:
+    description: 'Comma-separated list of Qt submodules to build'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Qt build dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential perl python3 git cmake ninja-build \
+          libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
+          libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
+          libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
+          libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
+          libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
+          libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
+          libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev
+
+    - name: Clone Qt source
+      shell: bash
+      run: |
+        echo "Cloning Qt v${{ inputs.version }} into ${{ inputs.dir }}/src/qt5"
+        mkdir -p ${{ inputs.dir }}/src
+        cd ${{ inputs.dir }}/src
+        git clone https://code.qt.io/qt/qt5.git
+        cd qt5
+        git checkout v${{ inputs.version }}
+
+    - name: Initialize specified submodules
+      shell: bash
+      run: |
+        echo "Initializing submodules: ${{ inputs.submodules }}"
+        cd ${{ inputs.dir }}/src/qt5
+        # This is the critical step to limit the build scope
+        perl init-repository --module-subset=${{ inputs.submodules }} -f
+
+    - name: Configure Qt build
+      shell: bash
+      run: |
+        echo "Configuring Qt build in ${{ inputs.dir }}/build"
+        mkdir -p ${{ inputs.dir }}/build
+        cd ${{ inputs.dir }}/build
+        # Configure to build statically, use Ninja, and set the install prefix
+        ${{ inputs.dir }}/src/qt5/configure -static -prefix "${{ inputs.dir }}" -cmake-generator Ninja ${{ inputs.configure-args }}
+
+    - name: Build Qt
+      shell: bash
+      run: |
+        echo "Building Qt..."
+        cd ${{ inputs.dir }}/build
+        # Use nproc to get core count for parallel build
+        cmake --build . --parallel $(nproc)
+
+    - name: Install Qt
+      shell: bash
+      run: |
+        echo "Installing Qt into ${{ inputs.dir }}"
+        cd ${{ inputs.dir }}/build
+        cmake --install .
