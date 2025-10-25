@@ -74,12 +74,10 @@ jobs:
 
       - name: Install static Qt (Windows)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}
-          target: static
-          modules: core gui widgets imageformats
-          dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+        run: |
+          pip install aqtinstall
+          aqt install-qt windows desktop ${{ env.QT_VERSION }} win64_msvc2019_64 -m qtimageformats
+        working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
 
       - name: Upload Qt install artifact (Windows)
         uses: actions/upload-artifact@v4
@@ -107,12 +105,10 @@ jobs:
 
       - name: Install static Qt (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}
-          target: static
-          modules: core gui widgets imageformats
-          dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+        run: |
+          pip install aqtinstall
+          aqt install-qt mac desktop ${{ env.QT_VERSION }} clang_64 -m qtimageformats
+        working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
 
       - name: Upload Qt install artifact (macOS)
         uses: actions/upload-artifact@v4
