@@ -74,9 +74,11 @@ jobs:
 
       - name: Install static Qt (Windows)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        shell: bash
         run: |
+          mkdir -p "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
           pip install aqtinstall
-          aqt install-qt windows desktop ${{ env.QT_VERSION }} win64_msvc2019_64 -m qtimageformats
+          aqt install-qt windows desktop ${{ env.QT_VERSION }} win64_msvc2019_64 -m qtimageformats -O "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
         working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
 
       - name: Upload Qt install artifact (Windows)
@@ -106,8 +108,9 @@ jobs:
       - name: Install static Qt (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: |
+          mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}
           pip install aqtinstall
-          aqt install-qt mac desktop ${{ env.QT_VERSION }} clang_64 -m qtimageformats
+          aqt install-qt mac desktop ${{ env.QT_VERSION }} clang_64 -m qtimageformats -O ${{ steps.set-qt-dir.outputs.qt-install-dir }}
         working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
 
       - name: Upload Qt install artifact (macOS)

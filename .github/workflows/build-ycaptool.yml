@@ -61,7 +61,6 @@ jobs:
       - name: Install additional dependencies
         run: |
           sudo apt-get update
-          # Install ALL system dependencies. These will be dynamically linked.
           sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
             libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
             libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
@@ -70,7 +69,7 @@ jobs:
             libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
             libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
             libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
-            python3 gperf bison flex
+            python3 gperf bison flex libwayland-dev
         shell: bash
 
       - name: Build ycaptool
