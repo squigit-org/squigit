@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v5
+          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v6
           restore-keys: |
             qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
 
@@ -36,7 +36,7 @@ jobs:
           version: ${{ env.QT_VERSION }}
           configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -platform linux-g++"
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtwayland,qtimageformats,qtsvg,qtpdf"
+          submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtwayland,qtimageformats,qtsvg"
 
       - name: Upload Qt install artifact (for transfer to next job)
         if: always()
@@ -62,7 +62,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-macos-${{ env.QT_VERSION }}-modules-core-gui-widgets-imageformats-v2
+          key: qt-static-macos-${{ env.QT_VERSION }}-modules-core-gui-widgets-imageformats-v3
           restore-keys: |
             qt-static-macos-${{ env.QT_VERSION }}-
 
@@ -79,10 +79,11 @@ jobs:
         run: |
           mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
           cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
+          rm -rf qt5
           git clone https://code.qt.io/qt/qt5.git
           cd qt5
           git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats,qtsvg,qtpdf -f
+          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats,qtsvg -f
           mkdir ../build
           cd ../build
           export LLVM_DIR=$(brew --prefix llvm)
@@ -93,7 +94,7 @@ jobs:
           cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}
           find . -type f -name "*.prl" | while read -r file; do
             sed -i '' -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
-            sed -i '' -E 's| [^ ]*/[^ ]*\.o||g' "$file"
+            sed -i '' -e 's| [^ ]*\.o||g' "$file"
           done
 
       - name: Upload Qt install artifact (macOS)
