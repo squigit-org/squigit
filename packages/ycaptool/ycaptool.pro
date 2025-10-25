@@ -10,3 +10,6 @@ HEADERS += src/shell.h \
     src/audiomanager.h \
     src/utils.h \
     src/receiver.h
+LIBS += $$  [QT_INSTALL_PLUGINS]/platforms/libqwayland-generic.a \
+          $$[QT_INSTALL_PLUGINS]/platforms/libqwayland-egl.a \
+        $$[QT_INSTALL_PLUGINS]/shellintegration/libqwayland-xdg-shell.a
