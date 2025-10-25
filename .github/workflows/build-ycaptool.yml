@@ -26,7 +26,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          # This key is improved: it invalidates the cache if your build-qt-static action.yml changes.
           key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v3
           restore-keys: |
             qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
@@ -63,6 +62,7 @@ jobs:
         run: |
           sudo apt-get update
           # Install ALL system dependencies. These will be dynamically linked.
+          # ===> libjpeg-dev was added to this list <===
           sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
             libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
             libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
@@ -70,7 +70,7 @@ jobs:
             libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
             libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
             libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
-            libpcre2-dev libdbus-1-dev libpng-dev libglib2.0-dev \
+            libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
             python3 gperf bison flex
         shell: bash
 
@@ -81,17 +81,11 @@ jobs:
           export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
           export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
           
-          # === THIS LINE WAS REMOVED ===
-          # export LDFLAGS="-static" 
-          # === This was the cause of the libdbus-1 error ===
-
           echo "Setting execute permissions for Qt binaries..."
           chmod -R +x ${QT_INSTALL_DIR}/bin
           chmod -R +x ${QT_INSTALL_DIR}/libexec
           cd packages/ycaptool
           
-          # This command is correct. It tells qmake to use the static Qt libs (.a)
-          # but allows the linker to use dynamic system libs (.so)
           qmake CONFIG+=static ycaptool.pro
           
           make -j$(nproc)
@@ -102,9 +96,7 @@ jobs:
 
       - name: Verify static linking (check that Qt is not dynamic)
         run: |
-          # This test is new. It checks that the executable is NOT linked to any libQt*.so files.
-          # It is *expected* to be linked to system libs (libdbus, libX11, etc.).
-          # If grep finds a "libQt" entry, it exits 1 (failure). Otherwise, it passes.
+          # This test checks that the executable is NOT linked to any libQt*.so files.
           ldd packages/ycaptool/dist/ycaptool | grep libQt && (echo "Error: ycaptool is dynamically linked to Qt"; exit 1) || echo "Success: ycaptool is statically linked to Qt"
         shell: bash
 
