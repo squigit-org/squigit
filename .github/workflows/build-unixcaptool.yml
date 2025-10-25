@@ -73,22 +73,18 @@ jobs:
       - name: Build static Qt from source (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: |
-          mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
-          cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
-          git clone https://code.qt.io/qt/qt5.git
-          cd qt5
-          git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
-          mkdir ../build
           cd ../build
           export LLVM_DIR=$(brew --prefix llvm)
-          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON -platform macx-clang -no-framework
+
+          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON -platform macx-clang -no-framework -qt-libpng
+
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
           cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}
           find . -type f -name "*.prl" | while read -r file; do
             sed -i '' -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
-            sed -i '' -E 's| ?[^ ]*\.o||g' "$file"
+
+            sed -i '' -E 's|[^[:space:]]+\.o[[:space:]]?||g' "$file"
           done
 
       - name: Upload Qt install artifact (macOS)
