@@ -1,18 +1,7 @@
 name: Build Squiggle (Cross-Platform)
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'packages/squiggle/**'
-      - '.github/workflows/build-squiggle.yml'
-      - '.github/actions/build-qt-static/action.yml'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'packages/squiggle/**'
-      - '.github/workflows/build-squiggle.yml'
-      - '.github/actions/build-qt-static/action.yml'
+  workflow_dispatch:
 
 env:
   QT_VERSION: 6.8.0
@@ -59,9 +48,13 @@ jobs:
       qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
       qt-artifact-name: "qt-install-windows"
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set QT_INSTALL_DIR
         id: set-qt-dir
-        run: echo "qt-install-dir=${{ runner.temp }}/qt-static-windows" >> $env:GITHUB_OUTPUT
+        run: |
+          $temp = "${{ runner.temp }}".Replace('\', '/')
+          echo "qt-install-dir=$temp/qt-static-windows" >> $env:GITHUB_OUTPUT
 
       - name: Cache Qt (Windows)
         id: cache-qt
@@ -79,7 +72,6 @@ jobs:
           mkdir -p "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
           pip install aqtinstall
           aqt install-qt windows desktop ${{ env.QT_VERSION }} win64_msvc2019_64 -m qtimageformats -O "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
-        working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
 
       - name: Upload Qt install artifact (Windows)
         uses: actions/upload-artifact@v4
@@ -92,6 +84,8 @@ jobs:
       qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
       qt-artifact-name: "qt-install-macos"
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set QT_INSTALL_DIR
         id: set-qt-dir
         run: echo "qt-install-dir=${{ runner.temp }}/qt-static-macos" >> $GITHUB_OUTPUT
@@ -111,7 +105,6 @@ jobs:
           mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}
           pip install aqtinstall
           aqt install-qt mac desktop ${{ env.QT_VERSION }} clang_64 -m qtimageformats -O ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-        working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
 
       - name: Upload Qt install artifact (macOS)
         uses: actions/upload-artifact@v4
