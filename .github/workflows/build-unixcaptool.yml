@@ -1,0 +1,200 @@
+name: Build unixcaptool (Linux & macOS)
+
+on:
+  push:
+  # workflow_dispatch:
+
+env:
+  QT_VERSION: 6.8.0
+
+jobs:
+  build-qt-static-linux:
+    runs-on: ubuntu-latest
+    outputs:
+      qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+      qt-artifact-name: "qt-install-linux"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set QT_INSTALL_DIR
+        id: set-qt-dir
+        run: echo "qt-install-dir=${{ runner.temp }}/qt-static" >> $GITHUB_OUTPUT
+
+      - name: Cache Qt (restore/save)
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v4
+          restore-keys: |
+            qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
+
+      - name: Build static Qt
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/build-qt-static
+        with:
+          version: ${{ env.QT_VERSION }}
+          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples"
+          dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtwayland,qtimageformats"
+
+      - name: Upload Qt install artifact (for transfer to next job)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "qt-install-linux"
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+
+  build-qt-macos:
+    runs-on: macos-latest
+    outputs:
+      qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+      qt-artifact-name: "qt-install-macos"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set QT_INSTALL_DIR
+        id: set-qt-dir
+        run: echo "qt-install-dir=${{ runner.temp }}/qt-static-macos" >> $GITHUB_OUTPUT
+
+      - name: Cache Qt (macOS)
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          key: qt-static-macos-${{ env.QT_VERSION }}-modules-core-gui-widgets-imageformats-v1
+          restore-keys: |
+            qt-static-macos-${{ env.QT_VERSION }}-
+
+      - name: Install LLVM (macOS)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        run: brew install llvm
+
+      - name: Build static Qt from source (macOS)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        run: |
+          mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
+          cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
+          git clone https://code.qt.io/qt/qt5.git
+          cd qt5
+          git checkout v${{ env.QT_VERSION }}
+          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
+          mkdir ../build
+          cd ../build
+          export LLVM_DIR=$(brew --prefix llvm)
+          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          cmake --build . --parallel $(sysctl -n hw.ncpu)
+          cmake --install .
+
+      - name: Upload Qt install artifact (macOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: "qt-install-macos"
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+
+  build-unixcaptool-linux:
+    needs: build-qt-static-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Qt install artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "qt-install-linux"
+          path: ${{ needs.build-qt-static-linux.outputs.qt-install-dir }}
+
+      - name: Install additional dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
+            libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
+            libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
+            libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
+            libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
+            libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
+            libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
+            libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
+            python3 gperf bison flex libwayland-dev wayland-protocols
+        shell: bash
+
+      - name: Build unixcaptool
+        env:
+          QT_INSTALL_DIR: ${{ needs.build-qt-static-linux.outputs.qt-install-dir }}
+        run: |
+          export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
+          export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
+          
+          echo "Setting execute permissions for Qt binaries..."
+          chmod -R +x ${QT_INSTALL_DIR}/bin
+          chmod -R +x ${QT_INSTALL_DIR}/libexec
+          cd packages/unixcaptool
+          
+          qmake CONFIG+=static unixcaptool.pro
+          
+          make -j$(nproc)
+          mkdir -p dist
+          cp unixcaptool dist/
+          
+          echo "Stripping binary..."
+          strip dist/unixcaptool
+          
+          rm unixcaptool
+        shell: bash
+
+      - name: Verify static linking (check that Qt is not dynamic)
+        run: |
+          # This test checks that the executable is NOT linked to any libQt*.so files.
+          ldd packages/unixcaptool/dist/unixcaptool | grep libQt && (echo "Error: unixcaptool is dynamically linked to Qt"; exit 1) || echo "Success: unixcaptool is statically linked to Qt"
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unixcaptool-linux
+          path: packages/unixcaptool/dist/unixcaptool
+
+  build-unixcaptool-macos:
+    needs: build-qt-macos
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Qt install artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "qt-install-macos"
+          path: ${{ needs.build-qt-macos.outputs.qt-install-dir }}
+
+      - name: Build unixcaptool
+        env:
+          QT_INSTALL_DIR: ${{ needs.build-qt-macos.outputs.qt-install-dir }}
+        run: |
+          export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
+          export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
+          
+          echo "Setting execute permissions for Qt binaries..."
+          chmod -R +x ${QT_INSTALL_DIR}/bin
+          chmod -R +x ${QT_INSTALL_DIR}/libexec
+          cd packages/unixcaptool
+          
+          qmake CONFIG+=static unixcaptool.pro
+          
+          make -j$(sysctl -n hw.ncpu)
+          mkdir -p dist
+          cp unixcaptool dist/
+          
+          rm unixcaptool
+        shell: bash
+
+      - name: Verify static linking (otool check)
+        run: |
+          # Check no dynamic Qt libs
+          otool -L packages/unixcaptool/dist/unixcaptool | grep Qt || echo "Success: No dynamic Qt libs linked"
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unixcaptool-macos
+          path: packages/unixcaptool/dist/unixcaptool
