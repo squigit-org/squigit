@@ -1,8 +1,7 @@
 name: Build Standalone UnixCapTool
 
 on:
-  push:
-    branches: [ main ]
+  # push:
   workflow_dispatch:
 
 env:
@@ -21,7 +20,7 @@ jobs:
 
       - name: Build Static Qt 6 (Linux)
         id: qt-static
-        uses: ./actions/build-qt-static
+        uses: ./.github/actions/build-qt-static
         with:
           version: ${{ env.QT_VERSION }}
           dir: ${{ runner.temp }}/Qt-static
