@@ -43,7 +43,7 @@ runs:
           libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
           libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
           libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev libwww-perl \
-          libwayland-dev wayland-protocols
+          libwayland-dev wayland-protocols libxcb-render0-dev libxcb-cursor-dev
         echo "Deps installed."
 
     - name: "Prepare git config to force HTTPS for SSH submodule URLs"
@@ -137,7 +137,7 @@ runs:
         #    This surgically removes the object files but leaves the system libs (e.g., -lpng)
         find . -type f -name "*.prl" | while read -r file; do
           sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
-          sed -i -E 's| \S*/\S*\.o||g' "$file"
+          sed -i -E 's| ?[^ ]*\.o||g' "$file"
         done
         
         echo ".prl cleaning complete."
