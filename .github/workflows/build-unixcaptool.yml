@@ -79,10 +79,6 @@ jobs:
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: brew install llvm
 
-      - name: Install libpng (macOS)
-        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        run: brew install libpng
-
       - name: Build static Qt from source (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: |
@@ -95,8 +91,7 @@ jobs:
           mkdir ../build
           cd ../build
           export LLVM_DIR=$(brew --prefix llvm)
-          export PKG_CONFIG_PATH=$(brew --prefix libpng)/lib/pkgconfig:$PKG_CONFIG_PATH
-          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -libpng system -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -qt-libpng -no-dbus -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
 
