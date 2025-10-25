@@ -85,7 +85,7 @@ jobs:
           chmod -R +x ${QT_INSTALL_DIR}/libexec
           cd packages/ycaptool
           
-          qmake CONFIG+=static "QTPLUGIN+=qwayland" ycaptool.pro
+          qmake CONFIG+=static ycaptool.pro
           
           make -j$(nproc)
           mkdir -p dist
