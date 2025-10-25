@@ -36,7 +36,7 @@ jobs:
           version: ${{ env.QT_VERSION }}
           configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -platform linux-g++"
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtwayland,qtimageformats"
+          submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtwayland,qtimageformats,qtx11extras"
 
       - name: Upload Qt install artifact (for transfer to next job)
         if: always()
