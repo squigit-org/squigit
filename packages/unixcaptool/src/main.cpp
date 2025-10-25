@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  **/
 
+#include <QtGlobal>
 #include <QGuiApplication>
 #include <QDebug>
 #include <QDir>

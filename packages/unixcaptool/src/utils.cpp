@@ -16,6 +16,7 @@
  **/
 
 #include "utils.h"
+#include <QtGlobal>
 #include <QGuiApplication>
 #include <QScreen>
 #include <QDebug>
