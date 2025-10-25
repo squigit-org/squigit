@@ -90,7 +90,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-          toolset: 14.3
+          vsversion: 2022
 
       - name: Build static Qt from source (Windows)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
