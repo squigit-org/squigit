@@ -72,7 +72,7 @@ if (-not $nircmdCmd) {
 
 Add-Type -AssemblyName System.Windows.Forms
 
-$screens = [System.Windows.Forms.Screen]::AllScreens
+$screens = [System.Windows.Forms.Screen]::AllScreens | Sort-Object -Property DeviceName
 if (-not $screens) {
     Write-Error "No screens detected."
     exit 1

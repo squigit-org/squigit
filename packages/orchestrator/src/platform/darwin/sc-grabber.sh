@@ -21,30 +21,12 @@ rm -rf -- "$savePath" && mkdir -p -- "$savePath" || {
   exit 1
 }
 
-if ! command -v osascript &> /dev/null; then
-  echo "Error: osascript not available. This script requires macOS." >&2
-  exit 1
+unixcaptool_fallback="$HOME/Library/Application Support/spatialshot/bin/unixcaptool"
+if command -v unixcaptool &> /dev/null; then
+    exec unixcaptool
+elif [ -x "$unixcaptool_fallback" ]; then
+    exec "$unixcaptool_fallback"
+else
+    echo "Error: unixcaptool not found in PATH or at '$unixcaptool_fallback'." >&2
+    exit 1
 fi
-
-num_screens=$(osascript -e 'tell application "System Events" to count desktops' 2>/dev/null)
-
-if ! printf '%s' "$num_screens" | grep -Eq '^[0-9]+$' || [ "$num_screens" -eq 0 ]; then
-  echo "Warning: couldn't detect monitor count; defaulting to 1."
-  num_screens=1
-fi
-
-echo "Detected $num_screens monitor(s). Starting capture..."
-
-counter=1
-while [ "$counter" -le "$num_screens" ]; do
-    fileName="$counter.$imageFormat"
-    filePath="$savePath/$fileName"
-
-    echo "-> Capturing Monitor $counter and saving to '$filePath'..."
-    if ! screencapture -x -D "$counter" "$filePath"; then
-        echo "Error: screencapture failed for monitor $counter." >&2
-        exit 1
-    fi
-
-    counter=$((counter + 1))
-done
