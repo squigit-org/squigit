@@ -1,8 +1,8 @@
 name: Build Standalone UnixCapTool
 
 on:
-  # push:
-  workflow_dispatch:
+  push:
+  # workflow_dispatch:
 
 env:
   QT_VERSION: "6.8.0"
@@ -89,12 +89,12 @@ jobs:
           
           git clone --depth 1 --branch "v${{ env.QT_VERSION }}" https://code.qt.io/qt/qt5.git
           cd qt5
-          perl init-repository --module-subset qtbase,qtimageformats -f
+          
+          perl init-repository --module-subset qtbase -f
           
           mkdir -p $QT_BUILD_DIR
           cd $QT_BUILD_DIR
           
-          # Configure Qt 6 (static, release, no-dbus for mac)
           ../src/qt5/configure -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" \
             -release -static -opensource -confirm-license \
             -no-dbus -no-pch -nomake examples -nomake tests \
