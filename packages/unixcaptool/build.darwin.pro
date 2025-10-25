@@ -12,4 +12,6 @@ HEADERS += src/shell.h \
     src/audiomanager.h \
     src/utils.h \
     src/receiver.h
+
 LIBS += $$[QT_INSTALL_PLUGINS]/platforms/libqcocoa.a
+LIBS += $$[QT_INSTALL_PLUGINS]/imageformats/libqpng.a

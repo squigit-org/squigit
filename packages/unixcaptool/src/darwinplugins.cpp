@@ -18,3 +18,4 @@
 #include <QtPlugin>
 
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
+Q_IMPORT_PLUGIN(QPngPlugin)
