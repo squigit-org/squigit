@@ -1,0 +1,236 @@
+name: Build Squiggle (Cross-Platform)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'packages/squiggle/**'
+      - '.github/workflows/build-squiggle.yml'
+      - '.github/actions/build-qt-static/action.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'packages/squiggle/**'
+      - '.github/workflows/build-squiggle.yml'
+      - '.github/actions/build-qt-static/action.yml'
+
+env:
+  QT_VERSION: 6.8.0
+
+jobs:
+  build-qt-linux:
+    runs-on: ubuntu-latest
+    outputs:
+      qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+      qt-artifact-name: "qt-install-linux"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set QT_INSTALL_DIR
+        id: set-qt-dir
+        run: echo "qt-install-dir=${{ runner.temp }}/qt-static-linux" >> $GITHUB_OUTPUT
+
+      - name: Cache Qt (Linux)
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1
+          restore-keys: |
+            qt-static-linux-squiggle-${{ env.QT_VERSION }}-
+
+      - name: Build static Qt (Linux)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/build-qt-static
+        with:
+          version: ${{ env.QT_VERSION }}
+          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples"
+          dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats"
+
+      - name: Upload Qt install artifact (Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: "qt-install-linux"
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+  build-qt-windows:
+    runs-on: windows-latest
+    outputs:
+      qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+      qt-artifact-name: "qt-install-windows"
+    steps:
+      - name: Set QT_INSTALL_DIR
+        id: set-qt-dir
+        run: echo "qt-install-dir=${{ runner.temp }}/qt-static-windows" >> $env:GITHUB_OUTPUT
+
+      - name: Cache Qt (Windows)
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          key: qt-static-windows-${{ env.QT_VERSION }}-modules-core-gui-widgets-imageformats-v1
+          restore-keys: |
+            qt-static-windows-${{ env.QT_VERSION }}-
+
+      - name: Install static Qt (Windows)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          target: static
+          modules: core gui widgets imageformats
+          dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+
+      - name: Upload Qt install artifact (Windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: "qt-install-windows"
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+  build-qt-macos:
+    runs-on: macos-latest
+    outputs:
+      qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+      qt-artifact-name: "qt-install-macos"
+    steps:
+      - name: Set QT_INSTALL_DIR
+        id: set-qt-dir
+        run: echo "qt-install-dir=${{ runner.temp }}/qt-static-macos" >> $GITHUB_OUTPUT
+
+      - name: Cache Qt (macOS)
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          key: qt-static-macos-${{ env.QT_VERSION }}-modules-core-gui-widgets-imageformats-v1
+          restore-keys: |
+            qt-static-macos-${{ env.QT_VERSION }}-
+
+      - name: Install static Qt (macOS)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          target: static
+          modules: core gui widgets imageformats
+          dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+
+      - name: Upload Qt install artifact (macOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: "qt-install-macos"
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+  build-squiggle:
+    needs: [build-qt-linux, build-qt-windows, build-qt-macos]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            qt-needs: build-qt-linux
+            platform-plugin: qxcb
+            artifact-name: squiggle-linux
+            binary-path: packages/squiggle/dist/squiggle
+            
+          - os: windows-latest
+            qt-needs: build-qt-windows
+            platform-plugin: qwindows
+            artifact-name: squiggle-windows
+            binary-path: packages/squiggle/dist/squiggle.exe
+
+          - os: macos-latest
+            qt-needs: build-qt-macos
+            platform-plugin: qcocoa
+            artifact-name: squiggle-macos
+            binary-path: packages/squiggle/dist/squiggle
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Qt Environment Variables
+        id: set-qt-env
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            echo "QT_INSTALL_DIR=${{ needs.build-qt-linux.outputs.qt-install-dir }}" >> $GITHUB_ENV
+            echo "QT_ARTIFACT_NAME=${{ needs.build-qt-linux.outputs.qt-artifact-name }}" >> $GITHUB_ENV
+          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
+            echo "QT_INSTALL_DIR=${{ needs.build-qt-windows.outputs.qt-install-dir }}" >> $GITHUB_ENV
+            echo "QT_ARTIFACT_NAME=${{ needs.build-qt-windows.outputs.qt-artifact-name }}" >> $GITHUB_ENV
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            echo "QT_INSTALL_DIR=${{ needs.build-qt-macos.outputs.qt-install-dir }}" >> $GITHUB_ENV
+            echo "QT_ARTIFACT_NAME=${{ needs.build-qt-macos.outputs.qt-artifact-name }}" >> $GITHUB_ENV
+          fi
+
+      - name: Download Qt install artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.QT_ARTIFACT_NAME }}
+          path: ${{ env.QT_INSTALL_DIR }}
+
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
+            libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
+            libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
+            libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
+            libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
+            libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
+            libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev
+
+      - name: Build Squiggle (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
+          export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
+          chmod -R +x ${QT_INSTALL_DIR}/bin
+          chmod -R +x ${QT_INSTALL_DIR}/libexec
+          
+          cd packages/squiggle
+          
+          qmake6 CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
+          
+          make -j$(nproc)
+          mkdir -p dist
+          cp squiggle dist/
+          strip dist/squiggle
+
+      - name: Build Squiggle (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: msvc-desktop-x64
+        run: |
+          set "PATH=${{ env.QT_INSTALL_DIR }}\bin;%PATH%"
+          
+          cd packages\squiggle
+          
+          qmake CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
+          
+          nmake release
+          
+          mkdir dist
+          copy release\squiggle.exe dist\squiggle.exe
+
+      - name: Build Squiggle (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
+          
+          cd packages/squiggle
+          
+          qmake CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
+          
+          make -j$(sysctl -n hw.ncpu)
+          
+          mkdir -p dist
+          cp squiggle.app/Contents/MacOS/squiggle dist/
+          strip dist/squiggle
+
+      - name: Upload Final Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.binary-path }}
