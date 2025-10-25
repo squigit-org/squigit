@@ -19,14 +19,14 @@ jobs:
         id: set-qt-dir
         run: echo "qt-install-dir=${{ runner.temp }}/qt-static-linux" >> $GITHUB_OUTPUT
 
-      - name: Cache Qt (Linux)
+      - name: Cache Qt (restore/save)
         id: cache-qt
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1
+          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v4
           restore-keys: |
-            qt-static-linux-squiggle-${{ env.QT_VERSION }}-
+            qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
 
       - name: Build static Qt (Linux)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
