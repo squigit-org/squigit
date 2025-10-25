@@ -1,8 +1,8 @@
 name: Build Squiggle (Cross-Platform)
 
 on:
-  # push:
-  workflow_dispatch:
+  push:
+  # workflow_dispatch:
 
 env:
   QT_VERSION: 6.8.0
@@ -130,19 +130,31 @@ jobs:
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: brew install llvm
 
-      - name: Build static Qt from source (macOS)
+      - name: Build static Qt 6 from source (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: |
-          mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
-          cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
-          git clone https://code.qt.io/qt/qt5.git
+          set -e
+          QT_SRC_DIR=${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
+          QT_BUILD_DIR=${{ steps.set-qt-dir.outputs.qt-install-dir }}/build
+          
+          mkdir -p $QT_SRC_DIR
+          cd $QT_SRC_DIR
+          
+          git clone --depth 1 --branch "v${{ env.QT_VERSION }}" https://code.qt.io/qt/qt5.git
           cd qt5
-          git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
-          mkdir ../build
-          cd ../build
-          export LLVM_DIR=$(brew --prefix llvm)
-          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          
+          # Build qtbase (for core) AND qtimageformats (for the PNG plugin symbol)
+          perl init-repository --module-subset qtbase,qtimageformats -f
+          
+          mkdir -p $QT_BUILD_DIR
+          cd $QT_BUILD_DIR
+          
+          # Configure Qt 6 (static, release, no-dbus for mac)
+          ../src/qt5/configure -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" \
+            -release -static -opensource -confirm-license \
+            -no-dbus -no-pch -nomake examples -nomake tests \
+            -skip qtwebengine -skip qtdeclarative -skip qttools
+            
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
 
