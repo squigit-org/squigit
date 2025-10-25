@@ -85,9 +85,7 @@ jobs:
           chmod -R +x ${QT_INSTALL_DIR}/libexec
           cd packages/ycaptool
           
-          # === THIS IS THE FIX ===
-          # Add "QTPLUGIN+=qxcb" to force static linking of the X11 platform plugin
-          qmake CONFIG+=static "QTPLUGIN+=qxcb" ycaptool.pro
+          qmake CONFIG+=static "QTPLUGIN+=qwayland" ycaptool.pro
           
           make -j$(nproc)
           mkdir -p dist
