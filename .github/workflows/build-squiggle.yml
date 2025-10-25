@@ -1,7 +1,18 @@
 name: Build Squiggle (Cross-Platform)
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'packages/squiggle/**'
+      - '.github/workflows/build-squiggle.yml'
+      - '.github/actions/build-qt-static/action.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'packages/squiggle/**'
+      - '.github/workflows/build-squiggle.yml'
+      - '.github/actions/build-qt-static/action.yml'
 
 env:
   QT_VERSION: 6.8.0
@@ -19,14 +30,14 @@ jobs:
         id: set-qt-dir
         run: echo "qt-install-dir=${{ runner.temp }}/qt-static-linux" >> $GITHUB_OUTPUT
 
-      - name: Cache Qt (restore/save)
+      - name: Cache Qt (Linux)
         id: cache-qt
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v4
+          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1
           restore-keys: |
-            qt-static-linux-${{ env.QT_VERSION }}-${{ runner.os }}-
+            qt-static-linux-squiggle-${{ env.QT_VERSION }}-
 
       - name: Build static Qt (Linux)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
@@ -65,13 +76,37 @@ jobs:
           restore-keys: |
             qt-static-windows-${{ env.QT_VERSION }}-
 
-      - name: Install static Qt (Windows)
+      - name: Install dependencies (Windows)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        shell: powershell
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          choco install strawberryperl ninja cmake --yes --no-progress
+
+      - name: Setup MSVC environment
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: 17.0
+
+      - name: Build static Qt from source (Windows)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         shell: bash
         run: |
-          mkdir -p "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
-          pip install aqtinstall
-          aqt install-qt windows desktop ${{ env.QT_VERSION }} win64_msvc2019_64 -m qtimageformats -O "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
+          mkdir -p "${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
+          cd "${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
+          git clone https://code.qt.io/qt/qt5.git
+          cd qt5
+          git checkout v${{ env.QT_VERSION }}
+          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
+          mkdir ../build
+          cd ../build
+          ../qt5/qtbase/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
+          cmake --build . --parallel
+          cmake --install .
 
       - name: Upload Qt install artifact (Windows)
         uses: actions/upload-artifact@v4
@@ -99,12 +134,20 @@ jobs:
           restore-keys: |
             qt-static-macos-${{ env.QT_VERSION }}-
 
-      - name: Install static Qt (macOS)
+      - name: Build static Qt from source (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: |
-          mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          pip install aqtinstall
-          aqt install-qt mac desktop ${{ env.QT_VERSION }} clang_64 -m qtimageformats -O ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
+          cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
+          git clone https://code.qt.io/qt/qt5.git
+          cd qt5
+          git checkout v${{ env.QT_VERSION }}
+          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
+          mkdir ../build
+          cd ../build
+          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          make -j$(sysctl -n hw.ncpu)
+          make install
 
       - name: Upload Qt install artifact (macOS)
         uses: actions/upload-artifact@v4
@@ -192,7 +235,7 @@ jobs:
 
       - name: Build Squiggle (Windows)
         if: matrix.os == 'windows-latest'
-        shell: msvc-desktop-x64
+        shell: cmd
         run: |
           set "PATH=${{ env.QT_INSTALL_DIR }}\bin;%PATH%"
           
