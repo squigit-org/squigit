@@ -26,21 +26,10 @@
 #include <QVariantMap>
 #include <QScreen>
 #include <QPixmap>
-#include <QtPlugin>
 #include "audiomanager.h"
 #include "receiver.h"
 #include "utils.h"
 #include "shell.h"
-
-// For static builds: Link static platform plugins if needed
-#if defined(Q_OS_LINUX)
-Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
-Q_IMPORT_PLUGIN(QWaylandIntegrationPlugin)
-Q_IMPORT_PLUGIN(QWaylandEglPlatformIntegrationPlugin)
-Q_IMPORT_PLUGIN(QWaylandXdgShellIntegrationPlugin)
-#elif defined(Q_OS_MACOS)
-Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
-#endif
 
 int main(int argc, char *argv[])
 {
