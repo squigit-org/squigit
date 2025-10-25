@@ -34,7 +34,7 @@ jobs:
         uses: ./.github/actions/build-qt-static
         with:
           version: ${{ env.QT_VERSION }}
-          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples"
+          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -platform linux-g++"
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
           submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtwayland,qtimageformats"
 
@@ -82,9 +82,14 @@ jobs:
           mkdir ../build
           cd ../build
           export LLVM_DIR=$(brew --prefix llvm)
-          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON -platform macx-clang -no-framework
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
+          cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          find . -type f -name "*.prl" | while read -r file; do
+            sed -i '' -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
+            sed -i '' -E 's| \S*/\S*\.o||g' "$file"
+          done
 
       - name: Upload Qt install artifact (macOS)
         uses: actions/upload-artifact@v4
@@ -130,7 +135,7 @@ jobs:
           chmod -R +x ${QT_INSTALL_DIR}/libexec
           cd packages/unixcaptool
           
-          qmake CONFIG+=static unixcaptool.pro
+          qmake CONFIG+=static build.linux.pro
           
           make -j$(nproc)
           mkdir -p dist
@@ -178,7 +183,7 @@ jobs:
           chmod -R +x ${QT_INSTALL_DIR}/libexec
           cd packages/unixcaptool
           
-          qmake CONFIG+=static unixcaptool.pro
+          qmake CONFIG+=static build.darwin.pro
           
           make -j$(sysctl -n hw.ncpu)
           mkdir -p dist
