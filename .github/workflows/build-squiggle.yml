@@ -25,13 +25,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-v1
+          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v2 # v2 to include llvm
           restore-keys: |
             qt-static-linux-squiggle-${{ env.QT_VERSION }}-
 
       - name: Build static Qt (Linux)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        uses: ./.github/actions/build-qt-linux
+        uses: ./.github/actions/build-qt-static
         with:
           version: ${{ env.QT_VERSION }}
           configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples"
@@ -43,6 +43,7 @@ jobs:
         with:
           name: "qt-install-linux"
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+
   build-qt-windows:
     runs-on: windows-latest
     outputs:
@@ -62,9 +63,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-windows-${{ env.QT_VERSION }}-modules-core-gui-widgets-imageformats-v1
+          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1
           restore-keys: |
-            qt-static-windows-${{ env.QT_VERSION }}-
+            qt-static-windows-squiggle-${{ env.QT_VERSION }}-
 
       - name: Install dependencies (Windows)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
@@ -103,6 +104,7 @@ jobs:
         with:
           name: "qt-install-windows"
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+
   build-qt-macos:
     runs-on: macos-latest
     outputs:
@@ -120,9 +122,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-macos-${{ env.QT_VERSION }}-modules-core-gui-widgets-imageformats-v1
+          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1
           restore-keys: |
-            qt-static-macos-${{ env.QT_VERSION }}-
+            qt-static-macos-squiggle-${{ env.QT_VERSION }}-
 
       - name: Install LLVM (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
@@ -149,6 +151,7 @@ jobs:
         with:
           name: "qt-install-macos"
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+
   build-squiggle:
     needs: [build-qt-linux, build-qt-windows, build-qt-macos]
     runs-on: ${{ matrix.os }}
@@ -157,19 +160,16 @@ jobs:
         include:
           - os: ubuntu-latest
             qt-needs: build-qt-linux
-            platform-plugin: qxcb
             artifact-name: squiggle-linux
             binary-path: packages/squiggle/dist/squiggle
             
           - os: windows-latest
             qt-needs: build-qt-windows
-            platform-plugin: qwindows
             artifact-name: squiggle-windows
             binary-path: packages/squiggle/dist/squiggle.exe
 
           - os: macos-latest
             qt-needs: build-qt-macos
-            platform-plugin: qcocoa
             artifact-name: squiggle-macos
             binary-path: packages/squiggle/dist/squiggle
 
@@ -221,7 +221,8 @@ jobs:
           
           cd packages/squiggle
           
-          qmake CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
+          # Use simplified qmake command; all logic is in the .pro file
+          qmake squiggle.pro
           
           make -j$(nproc)
           mkdir -p dist
@@ -236,7 +237,8 @@ jobs:
           
           cd packages\squiggle
           
-          qmake CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
+          # Use simplified qmake command; all logic is in the .pro file
+          qmake squiggle.pro
           
           ninja
           
@@ -248,12 +250,14 @@ jobs:
         shell: bash
         run: |
           export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
+          # Ensure Qt binaries are executable
           chmod -R +x ${QT_INSTALL_DIR}/bin
           chmod -R +x ${QT_INSTALL_DIR}/libexec
           
           cd packages/squiggle
           
-          qmake CONFIG+=static "QTPLUGIN+=${{ matrix.platform-plugin }}" "QTPLUGIN+=qpng" squiggle.pro
+          # Use simplified qmake command; all logic is in the .pro file
+          qmake squiggle.pro
           
           make -j$(sysctl -n hw.ncpu)
           
@@ -266,3 +270,4 @@ jobs:
         with:
           name: ${{ matrix.artifact-name }}
           path: ${{ matrix.binary-path }}
+
