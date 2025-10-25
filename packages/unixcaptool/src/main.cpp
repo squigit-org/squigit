@@ -19,11 +19,14 @@
 #include <QDebug>
 #include <QDir>
 #include <QStandardPaths>
+#ifndef Q_OS_MACOS
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDBusConnection>
+#include <QDBusObjectPath>
 #include <QEventLoop>
 #include <QVariantMap>
+#endif
 #include <QScreen>
 #include <QPixmap>
 #include "audiomanager.h"
@@ -78,6 +81,7 @@ int main(int argc, char *argv[])
 
     bool success = false;
     if (platform.startsWith("wayland")) {
+#ifndef Q_OS_MACOS
         qDebug() << "Wayland detected — using portal or wlroots fallback...";
         QDBusInterface portal(
             "org.freedesktop.portal.Desktop",
@@ -121,6 +125,11 @@ int main(int argc, char *argv[])
             }
         }
         success = true;
+#else
+        qWarning() << "Wayland not supported on macOS.";
+        am.restore_audio();
+        return 1;
+#endif
     } else if (platform == "xcb" || platform == "cocoa") {
         qDebug() << "Direct capture supported (X11 or macOS).";
         QList<QScreen *> screens = app.screens();

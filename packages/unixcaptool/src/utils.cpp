@@ -19,12 +19,14 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QDebug>
+#ifndef Q_OS_MACOS
 #include <QProcess>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <algorithm>
 #include "shell.h"
+#endif
 
 QRect desktopGeometry()
 {
@@ -113,6 +115,7 @@ bool processFullPixmap(const QPixmap &fullDesktop)
     return success;
 }
 
+#ifndef Q_OS_MACOS
 bool tryWlroots()
 {
     qDebug() << "Trying wlroots fallback with grim and wlr-randr...";
@@ -199,3 +202,4 @@ bool tryWlroots()
 
     return success;
 }
+#endif
