@@ -6,31 +6,25 @@ CONFIG += c++17
 
 QT += core gui widgets
 
-# --- FIX FOR MACOS BUILD ---
-# Check if we are building on macOS
-macx {
-    # On macOS, MainWindow.cpp includes Cocoa.h, so it must be compiled
-    # as Objective-C++. Using OBJECTIVE_SOURCES tells qmake to do this.
-    OBJECTIVE_SOURCES += src/MainWindow.cpp
-    
-    # Link the Cocoa framework
-    LIBS += -framework Cocoa
-} else {
-    # On all other platforms (Linux, Windows),
-    # compile it as a normal C++ file.
-    SOURCES += src/MainWindow.cpp
-}
-# -------------------------
-
-# Add all other source files here
 SOURCES += \
-    src/main.cpp
+    src/main.cpp \
+    src/MainWindow.cpp
 
 HEADERS += \
     src/MainWindow.h
 
-# Windows-specific libraries
 win32 {
     LIBS += -ldwmapi
+}
+
+macx {
+    LIBS += -framework Cocoa
+    
+    # --- NEW FIX ---
+    # Force all C++ compilation to go through the
+    # Objective-C++ compiler by adding the '-x objective-c++' flag.
+    # This is required because a Qt header in MainWindow.h (like QScreen)
+    # includes Cocoa.h, which "taints" any .cpp file that includes it.
+    QMAKE_CXXFLAGS += -x objective-c++
 }
 
