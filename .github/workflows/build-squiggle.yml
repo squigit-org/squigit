@@ -2,6 +2,7 @@ name: Build Squiggle (Cross-Platform)
 
 on:
   push:
+  # workflow_dispatch:
 
 env:
   QT_VERSION: 6.8.0
@@ -93,7 +94,7 @@ jobs:
           perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
           mkdir ../build
           cd ../build
-          ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -feature-clang -feature-clangcpp -- -D LLVM_INSTALL_DIR="/c/Program Files/LLVM"
+          ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -feature-clang -feature-clangcpp -llvm-install-dir "C:/Program Files/LLVM"
           cmake --build . --parallel
           cmake --install .
 
@@ -139,7 +140,7 @@ jobs:
           mkdir ../build
           cd ../build
           export LLVM_DIR=$(brew --prefix llvm)
-          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -feature-clang -feature-clangcpp -llvm-install-dir "${LLVM_DIR}"
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
 

@@ -1,7 +1,8 @@
 name: Build Orchestrator (Cross-Platform)
 
 on:
-  push:
+  # push:
+  workflow_dispatch:
 
 jobs:
   build:
