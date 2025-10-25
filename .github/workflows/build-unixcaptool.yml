@@ -80,6 +80,7 @@ jobs:
           mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
           cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
           rm -rf qt5
+          rm -rf build  # <-- ADD THIS LINE
           git clone https://code.qt.io/qt/qt5.git
           cd qt5
           git checkout v${{ env.QT_VERSION }}
