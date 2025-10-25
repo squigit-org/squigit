@@ -62,7 +62,6 @@ jobs:
         run: |
           sudo apt-get update
           # Install ALL system dependencies. These will be dynamically linked.
-          # ===> libjpeg-dev was added to this list <===
           sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
             libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
             libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
@@ -86,11 +85,17 @@ jobs:
           chmod -R +x ${QT_INSTALL_DIR}/libexec
           cd packages/ycaptool
           
-          qmake CONFIG+=static ycaptool.pro
+          # === THIS IS THE FIX ===
+          # Add "QTPLUGIN+=qxcb" to force static linking of the X11 platform plugin
+          qmake CONFIG+=static "QTPLUGIN+=qxcb" ycaptool.pro
           
           make -j$(nproc)
           mkdir -p dist
           cp ycaptool dist/
+          
+          echo "Stripping binary..."
+          strip dist/ycaptool
+          
           rm ycaptool
         shell: bash
 
