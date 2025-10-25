@@ -22,6 +22,15 @@ AudioManager::AudioManager() = default;
 
 void AudioManager::mute_audio()
 {
+#ifdef Q_OS_MACOS
+    m_audio_backend = "osascript";
+    m_prev_mute_state = Shell::run_and_get_output("osascript -e 'output muted of (get volume settings)'");
+    if (m_prev_mute_state == "false")
+    {
+        Shell::run_silent("osascript -e 'set volume with output muted'");
+        m_audio_muted_by_script = true;
+    }
+#else
     if (Shell::command_exists("pactl"))
     {
         m_audio_backend = "pactl";
@@ -52,12 +61,22 @@ void AudioManager::mute_audio()
             m_audio_muted_by_script = true;
         }
     }
+#endif
 }
 
 void AudioManager::restore_audio()
 {
     if (!m_audio_muted_by_script)
         return;
+#ifdef Q_OS_MACOS
+    if (m_audio_backend == "osascript")
+    {
+        if (m_prev_mute_state == "false")
+        {
+            Shell::run_silent("osascript -e 'set volume without output muted'");
+        }
+    }
+#else
     if (m_audio_backend == "pactl")
     {
         if (m_prev_mute_state.find("yes") == std::string::npos)
@@ -79,4 +98,5 @@ void AudioManager::restore_audio()
             Shell::run_silent("amixer set Master unmute");
         }
     }
+#endif
 }

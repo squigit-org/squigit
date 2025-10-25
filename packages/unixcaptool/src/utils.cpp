@@ -161,11 +161,10 @@ bool tryWlroots()
         QJsonObject targetMonitor;
         for (const QJsonValue &val : monitors) {
             QJsonObject mon = val.toObject();
-            if (!mon.value("active").toBool(false)) continue;
+            if (!mon.value("enabled").toBool(false)) continue;
 
-            QJsonObject rect = mon.value("rect").toObject();
-            int x = rect.value("x").toInt();
-            int y = rect.value("y").toInt();
+            int x = mon.value("x").toInt();
+            int y = mon.value("y").toInt();
 
             if (screenGeom.x() == x && screenGeom.y() == y) {
                 targetMonitor = mon;
