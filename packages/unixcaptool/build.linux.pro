@@ -14,6 +14,7 @@ HEADERS += src/shell.h \
 LIBS += $$[QT_INSTALL_PLUGINS]/platforms/libqxcb.a \
         $$[QT_INSTALL_PLUGINS]/platforms/libqwayland-generic.a \
         $$[QT_INSTALL_PLUGINS]/platforms/libqwayland-egl.a \
-        $$[QT_INSTALL_PLUGINS]/wayland-shell-integration/libxdg-shell.a
+        $$[QT_INSTALL_PLUGINS]/wayland-shell-integration/libxdg-shell.a \
+        $$[QT_INSTALL_PLUGINS]/imageformats/libqpng.a
 
 LIBS += -lwayland-client -lwayland-cursor -lwayland-egl
