@@ -22,6 +22,7 @@
 #include <QDebug>
 #include <QStandardPaths>
 #include <QFileInfo>
+#include <algorithm>
 
 int main(int argc, char *argv[]) {
     
@@ -59,7 +60,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    const QList<QScreen*> screens = QGuiApplication::screens();
+    QList<QScreen*> screens = QGuiApplication::screens();
+    std::sort(screens.begin(), screens.end(), [](QScreen* a, QScreen* b) {
+        return a->name() < b->name();
+    });
     QScreen* primaryScreen = QGuiApplication::primaryScreen();
 
     qDebug() << "Spatialshot started. Using tmp path:" << tmpPath;
