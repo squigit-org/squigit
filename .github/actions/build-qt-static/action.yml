@@ -42,7 +42,8 @@ runs:
           libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
           libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
           libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
-          libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev libwww-perl
+          libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev libwww-perl \
+          libwayland-dev wayland-protocols
         echo "Deps installed."
 
     - name: "Prepare git config to force HTTPS for SSH submodule URLs"
