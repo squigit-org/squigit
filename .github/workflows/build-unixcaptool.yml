@@ -33,9 +33,9 @@ jobs:
         uses: ./.github/actions/build-qt-static
         with:
           version: ${{ env.QT_VERSION }}
-          configure-args: "-no-pch -skip qtwebengine -skip qttools -nomake examples -nomake tests"
+          configure-args: "-no-pch -skip qtwebengine -nomake examples -nomake tests"
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          submodules: "qtbase,qtimageformats"
+          submodules: "qtbase,qtwayland"
 
       - name: Upload Qt install artifact (Linux, optional for debug)
         uses: actions/upload-artifact@v4
@@ -87,11 +87,11 @@ jobs:
           git clone https://code.qt.io/qt/qt5.git
           cd qt5
           git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qtimageformats -f
+          perl init-repository --module-subset qtbase -f
           mkdir ../build
           cd ../build
           export LLVM_DIR=$(brew --prefix llvm)
-          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -skip qttools -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
 
