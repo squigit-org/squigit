@@ -24,10 +24,13 @@
 #include <QDBusConnection>
 #include <QEventLoop>
 #include <QVariantMap>
+#include <QtPlugin>
 #include "audiomanager.h"
 #include "receiver.h"
 #include "utils.h"
 #include "shell.h"
+
+Q_IMPORT_PLUGIN(QWaylandIntegrationPlugin);
 
 int main(int argc, char *argv[])
 {
