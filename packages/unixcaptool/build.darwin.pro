@@ -7,7 +7,7 @@ SOURCES += src/main.cpp \
     src/audiomanager.cpp \
     src/utils.cpp \
     src/receiver.cpp \
-    src/mac_plugins.cpp
+    src/darwinplugins.cpp
 HEADERS += src/shell.h \
     src/audiomanager.h \
     src/utils.h \

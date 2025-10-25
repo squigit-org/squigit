@@ -6,7 +6,7 @@ SOURCES += src/main.cpp \
     src/audiomanager.cpp \
     src/utils.cpp \
     src/receiver.cpp \
-    src/linux_plugins.cpp
+    src/linuxplugins.cpp
 HEADERS += src/shell.h \
     src/audiomanager.h \
     src/utils.h \
