@@ -22,7 +22,6 @@ isEmpty(QT_INSTALL_DIR) {
 }
 
 LIBS += $${QT_PLUGIN_PATH}/platforms/libqcocoa.a
-LIBS += $${QT_PLUGIN_PATH}/imageformats/libqpng.a
 
 LIBS += -framework Cocoa -framework Carbon -framework IOKit
 LIBS += -framework OpenGL -framework Metal
