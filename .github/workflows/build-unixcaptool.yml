@@ -70,13 +70,17 @@ jobs:
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: brew install llvm
 
+      - name: Install image dependencies (macOS)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        run: brew install libpng jpeg
+
       - name: Build static Qt from source (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: |
           cd ../build
           export LLVM_DIR=$(brew --prefix llvm)
 
-          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON -platform macx-clang -no-framework -qt-libpng
+          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON -platform macx-clang -no-framework -system-libpng -system-libjpeg
 
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
@@ -84,7 +88,7 @@ jobs:
           find . -type f -name "*.prl" | while read -r file; do
             sed -i '' -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
 
-            sed -i '' -E 's|[^[:space:]]+\.o[[:space:]]?||g' "$file"
+            sed -i '' -E 's| \S*/\S*\.o||g' "$file"
           done
 
       - name: Upload Qt install artifact (macOS)
