@@ -31,7 +31,7 @@ jobs:
 
       - name: Build Static Qt 6 (Linux)
         id: qt-static
-        uses: ./actions/build-qt-static # Use your local action
+        uses: ./.github/actions/build-qt-static # Use your local action
         with:
           version: ${{ env.QT_VERSION }}
           dir: ${{ runner.temp }}/Qt-static
