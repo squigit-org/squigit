@@ -1,5 +1,3 @@
-# FILE: .github/workflows/build.yml
-
 name: Build Standalone UnixCapTool
 
 on:
@@ -20,25 +18,36 @@ jobs:
         with:
           submodules: 'recursive'
 
-      - name: Free up runner disk space
-        uses: jlumbroso/free-disk-space@main
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: true
-          dotnet: true
+          tool-cache: false
           android: true
+          dotnet: true
           haskell: true
           large-packages: true
-          docker-images: true 
+          docker-images: true
           swap-storage: true
 
       - name: Build Static Qt 6 (Linux)
         id: qt-static
-        uses: ./.github/actions/build-qt-linux
+        uses: ./.github/actions/build-qt-unixcaptool
         with:
           version: ${{ env.QT_VERSION }}
           dir: ${{ runner.temp }}/Qt-static
           submodules: "qtbase,qtimageformats,qtwayland"
-          configure-args: "" # Add any extra args here, e.g. -no-pch
+          configure-args: "" 
+
+      - name: Install Runtime Libs for Pkg-Config
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxcb-glx0-dev libxcb-image0-dev libxcb-icccm4-dev \
+            libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
+            libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev \
+            libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev \
+            libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev \
+            libwayland-dev libegl1-mesa-dev libdbus-1-dev libglib2.0-dev
 
       - name: Build unixcaptool (Linux)
         working-directory: ./packages/unixcaptool
@@ -47,7 +56,7 @@ jobs:
             "QT_INSTALL_DIR=${{ steps.qt-static.outputs.dir }}" \
             build.linux.pro
           make
-      
+       
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -62,19 +71,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build Static Qt 6 (macOS)
-        id: qt-static
-        uses: ./.github/actions/build-qt-macos
+      - name: Set QT_INSTALL_DIR
+        id: set-qt-dir
+        run: echo "qt-install-dir=${{ runner.temp }}/qt-static-macos" >> $GITHUB_OUTPUT
+
+      - name: Cache Qt (macOS)
+        id: cache-qt
+        uses: actions/cache@v4
         with:
-          version: ${{ env.QT_VERSION }}
-          dir: ${{ runner.temp }}/qt-static-macos
-          submodules: "qtbase,qtimageformats"
+          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          key: qt-static-macos-${{ env.QT_VERSION }}-modules-base-imageformats-v1
+
+      - name: Install Dependencies (macOS)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        run: brew install ninja
+
+      - name: Build static Qt 6 from source (macOS)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        run: |
+          set -e
+          QT_SRC_DIR=${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
+          QT_BUILD_DIR=${{ steps.set-qt-dir.outputs.qt-install-dir }}/build
+          
+          mkdir -p $QT_SRC_DIR
+          cd $QT_SRC_DIR
+          
+          git clone --depth 1 --branch "v${{ env.QT_VERSION }}" https://code.qt.io/qt/qt5.git
+          cd qt5
+          
+          perl init-repository --module-subset qtbase,qtimageformats -f
+          
+          mkdir -p $QT_BUILD_DIR
+          cd $QT_BUILD_DIR
+          
+          ../src/qt5/configure -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" \
+            -release -static -opensource -confirm-license \
+            -no-dbus -no-pch -nomake examples -nomake tests \
+            -skip qtwebengine -skip qtdeclarative -skip qttools
+           
+          cmake --build . --parallel $(sysctl -n hw.ncpu)
+          cmake --install .
 
       - name: Build unixcaptool (macOS)
         working-directory: ./packages/unixcaptool
         run: |
-          ${{ steps.qt-static.outputs.dir }}/bin/qmake \
-            "QT_INSTALL_DIR=${{ steps.qt-static.outputs.dir }}" \
+          ${{ steps.set-qt-dir.outputs.qt-install-dir }}/bin/qmake \
+            "QT_INSTALL_DIR=${{ steps.set-qt-dir.outputs.qt-install-dir }}" \
             build.darwin.pro
           make
 
