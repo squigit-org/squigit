@@ -35,7 +35,7 @@ jobs:
           version: ${{ env.QT_VERSION }}
           dir: ${{ runner.temp }}/Qt-static
           submodules: "qtbase,qtimageformats,qtwayland"
-          configure-args: "-skip qtdeclarative -skip qtquick3d -skip qtmultimedia -skip qtpositioning -skip qtserialport -skip qtvirtualkeyboard -skip qtlanguageserver -skip qtwidgets -skip qtgraphs -skip qtlocation"          
+          configure-args: "-skip qtdeclarative -skip qtquick3d -skip qtmultimedia -skip qtpositioning -skip qtserialport -skip qtvirtualkeyboard -skip qtlanguageserver -skip qtwidgets -skip qtgraphs -skip qtlocation -skip qtwebengine"
       
       - name: Install Runtime Libs for Pkg-Config
         run: |
