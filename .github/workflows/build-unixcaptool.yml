@@ -5,6 +5,7 @@ on:
   # workflow_dispatch:
 
 env:
+  # Set your desired Qt version here
   QT_VERSION: "6.8.0"
 
 jobs:
@@ -30,42 +31,19 @@ jobs:
 
       - name: Build Static Qt 6 (Linux)
         id: qt-static
-        uses: ./.github/actions/build-qt-static
+        uses: ./actions/build-qt-static # Use your local action
         with:
           version: ${{ env.QT_VERSION }}
           dir: ${{ runner.temp }}/Qt-static
+          # This is the key: we only ask for the modules we need.
           submodules: "qtbase,qtimageformats,qtwayland"
-          configure-args: >-
-            -skip qtdeclarative
-            -skip qtquick3d
-            -skip qtmultimedia
-            -skip qtpositioning
-            -skip qtserialport
-            -skip qtvirtualkeyboard
-            -skip qtlanguageserver
-            -skip qtwidgets
-            -skip qtgraphs
-            -skip qtlocation
-            -skip qtwebengine
-            -skip qtdoc
-            -skip qt3d
-            -skip qt5compat
-            -skip qtactiveqt
-            -skip qtcharts
-            -skip qtcoap
-            -skip qtconnectivity
-            -skip qtdatavis3d
-            -skip qtwebsockets
-            -skip qthttpserver
-            -skip qttools
-            -skip qtwebchannel
-            -skip qtsvg
-            -skip qtnetworkauth
-      
+          # The massive skip list is GONE!
+          # You could still pass other args here, e.g. "-no-pch"
+          configure-args: "" 
+
       - name: Install Runtime Libs for Pkg-Config
         run: |
-          # The Qt build action installs -dev packages, but we need
-          # them available for the qmake pkg-config step too.
+          # These are still needed for the final unixcaptool link step
           sudo apt-get update
           sudo apt-get install -y \
             libxcb-glx0-dev libxcb-image0-dev libxcb-icccm4-dev \
@@ -92,7 +70,7 @@ jobs:
 
   build-macos:
     name: Build Static (macOS)
-    runs-on: macos-latest
+    runs-on: macos-14 # Use ARM runner
     
     steps:
       - name: Checkout repository
@@ -140,7 +118,7 @@ jobs:
             
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
-          
+
       - name: Build unixcaptool (macOS)
         working-directory: ./packages/unixcaptool
         run: |

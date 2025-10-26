@@ -34,7 +34,6 @@ runs:
       run: |
         set -euo pipefail
         sudo apt-get update
-        # We need libjpeg-dev for the new error
         sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
           libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
           libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
@@ -85,9 +84,6 @@ runs:
         cd "${QT_SRC}"
         echo "Checked out $(git describe --tags --always || git rev-parse --short HEAD)"
 
-    # --- THIS IS THE FIX ---
-    # This step now fails fast if the submodule list is wrong,
-    # preventing the 20-minute fallback that clones all 50+ modules.
     - name: "Init repository (Strict Subset)"
       working-directory: ${{ runner.temp }}/qt
       shell: bash
@@ -95,6 +91,7 @@ runs:
         set -euo pipefail
         if [ -n "${{ inputs.submodules }}" ]; then
           echo "Trying init-repository --module-subset=${{ inputs.submodules }} -f ..."
+          # This now fails fast instead of falling back to cloning everything
           if perl init-repository --module-subset="${{ inputs.submodules }}" -f; then
             echo "init-repository succeeded with provided subset."
           else
@@ -107,6 +104,7 @@ runs:
           perl init-repository
         fi
         echo "Now updating submodules (shallow, parallel where possible)..."
+        # This will only update the modules we actually initialized
         git submodule update --init --recursive --jobs=$(nproc) --depth=1 || true
 
     - name: "Create build dir, configure (with DBus), build, install"
@@ -117,6 +115,8 @@ runs:
         mkdir -p build
         cd build
         echo "Configuring Qt (DBus support enabled by default)..."
+        # We still pass configure-args, but it's now for *optional* args
+        # like -no-pch, not for the massive skip list.
         CFG_ARGS="-prefix \"${{ inputs.dir }}\" -release -static -opensource -confirm-license -nomake examples -nomake tests ${{ inputs.configure-args }}"
         if [ "${CONFIGURE_FALLBACK_SKIP_QTTOOLS:-0}" = "1" ]; then
           echo "CONFIGURE_FALLBACK_SKIP_QTTOOLS=1 ; appending -skip qttools to configure args."
@@ -134,17 +134,10 @@ runs:
       run: |
         set -euo pipefail
         echo "Cleaning .prl files in ${{ inputs.dir }} to fix static linking..."
-        
-        # This is the new, correct fix.
-        # We find every .prl file and run two sed commands on it:
-        # 1. Delete the line starting with QMAKE_PRL_BUILD_DIR (it contains absolute build paths)
-        # 2. On the QMAKE_PRL_LIBS line, remove any "word" that contains a '/' and ends in '.o'.
-        #    This surgically removes the object files but leaves the system libs (e.g., -lpng)
         find . -type f -name "*.prl" | while read -r file; do
           sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
           sed -i -E 's| ?[^ ]*\.o||g' "$file"
         done
-        
         echo ".prl cleaning complete."
 
     - name: "Verify install"
