@@ -2,6 +2,9 @@ name: Build on Linux
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -13,7 +16,7 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libgl1-mesa-dev libxkbcommon-x11-dev libpulse-dev libasound2-dev
+        sudo apt-get install -y build-essential libgl1-mesa-dev libxkbcommon-x11-dev libpulse-dev libasound2-dev libxcb1-dev libxcb-image0-dev libxcb-keysyms1-dev libxcb-render-util0-dev libxcb-xinerama0-dev libxcb-icccm4-dev libxcb-randr0-dev libx11-xcb-dev libdbus-1-dev
 
     - name: Build static Qt
       run: |
