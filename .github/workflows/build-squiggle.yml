@@ -1,8 +1,8 @@
 name: Build Squiggle (Cross-Platform)
 
 on:
-  # push:
-  workflow_dispatch:
+  push:
+  # workflow_dispatch:
 
 env:
   QT_VERSION: 6.8.0
@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-      qt-artifact-name: "qt-install-linux"
     steps:
       - uses: actions/checkout@v4
 
@@ -25,30 +24,23 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v2 # v2 to include llvm
+          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-v2 # v2 to include llvm
           restore-keys: |
             qt-static-linux-squiggle-${{ env.QT_VERSION }}-
 
       - name: Build static Qt (Linux)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        uses: ./.github/actions/build-qt-static
+        uses: ./.github/actions/build-qt-linux
         with:
           version: ${{ env.QT_VERSION }}
           configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples"
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
           submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats"
 
-      - name: Upload Qt install artifact (Linux)
-        uses: actions/upload-artifact@v4
-        with:
-          name: "qt-install-linux"
-          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-
   build-qt-windows:
     runs-on: windows-latest
     outputs:
       qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-      qt-artifact-name: "qt-install-windows"
     steps:
       - uses: actions/checkout@v4
 
@@ -63,7 +55,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1
+          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-v1
           restore-keys: |
             qt-static-windows-squiggle-${{ env.QT_VERSION }}-
 
@@ -99,17 +91,10 @@ jobs:
           cmake --build . --parallel
           cmake --install .
 
-      - name: Upload Qt install artifact (Windows)
-        uses: actions/upload-artifact@v4
-        with:
-          name: "qt-install-windows"
-          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-
   build-qt-macos:
     runs-on: macos-latest
     outputs:
       qt-install-dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-      qt-artifact-name: "qt-install-macos"
     steps:
       - uses: actions/checkout@v4
 
@@ -122,7 +107,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1
+          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-v1
           restore-keys: |
             qt-static-macos-squiggle-${{ env.QT_VERSION }}-
 
@@ -155,13 +140,7 @@ jobs:
             sed -i '' -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"  # Remove build dir line (absolute paths)
             sed -i '' -E 's| ?[^ ]*\.o||g' "$file"  # Remove any .o paths from libs
           done
-          echo ".prl cleaning complete."    
-
-      - name: Upload Qt install artifact (macOS)
-        uses: actions/upload-artifact@v4
-        with:
-          name: "qt-install-macos"
-          path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+          echo ".prl cleaning complete."
 
   build-squiggle:
     needs: [build-qt-linux, build-qt-windows, build-qt-macos]
@@ -193,14 +172,19 @@ jobs:
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             echo "QT_INSTALL_DIR=${{ needs.build-qt-linux.outputs.qt-install-dir }}" >> $GITHUB_ENV
-            echo "QT_ARTIFACT_NAME=${{ needs.build-qt-linux.outputs.qt-artifact-name }}" >> $GITHUB_ENV
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             echo "QT_INSTALL_DIR=${{ needs.build-qt-windows.outputs.qt-install-dir }}" >> $GITHUB_ENV
-            echo "QT_ARTIFACT_NAME=${{ needs.build-qt-windows.outputs.qt-artifact-name }}" >> $GITHUB_ENV
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
             echo "QT_INSTALL_DIR=${{ needs.build-qt-macos.outputs.qt-install-dir }}" >> $GITHUB_ENV
-            echo "QT_ARTIFACT_NAME=${{ needs.build-qt-macos.outputs.qt-artifact-name }}" >> $GITHUB_ENV
           fi
+
+      - name: Restore Qt from Cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.QT_INSTALL_DIR }}
+          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-${{ runner.os == 'Linux' && 'v2' || 'v1' }}
+          restore-keys: |
+            ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-
 
       - name: Install system dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -215,15 +199,6 @@ jobs:
             libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
             libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
             libxcb-cursor-dev # <--- THIS IS THE FIX
-
-      - name: Cache Qt (Shared)
-        id: cache-qt-shared
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.QT_INSTALL_DIR }}
-          key: qt-static-${{ runner.os }}-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1  # Match your Qt job's key (adjust v1/v2 as needed)
-          restore-keys: |
-            qt-static-${{ runner.os }}-squiggle-${{ env.QT_VERSION }}-
 
       - name: Build Squiggle (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -285,4 +260,3 @@ jobs:
         with:
           name: ${{ matrix.artifact-name }}
           path: ${{ matrix.binary-path }}
-

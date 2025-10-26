@@ -1,78 +1,158 @@
-name: 'Build Static Qt (Linux)'
-description: 'Builds a static version of Qt from source on Linux'
+name: "Prepare a static build of Qt 6 (Linux)"
+description: "Static Qt 6 builds are not readily available and have to be built from source. This action automates that for Linux."
+branding:
+  icon: book-open
+  color: green
 
 inputs:
   version:
-    description: 'Qt version to build (e.g., 6.8.0)'
+    type: string
+    description: "The version of Qt which should be installed, e.g. 6.8.0"
     required: true
+    default: "6.8.0"
   configure-args:
-    description: 'Extra arguments for the ./configure script'
+    type: string
+    description: "Additional arguments passed to Qt configure, e.g. -no-pch -skip qtwebengine"
     required: false
-    default: ''
+    default: ""
   dir:
-    description: 'Directory to install Qt into'
+    type: string
+    description: "The directory where Qt should be installed"
     required: true
+    default: "${{ runner.temp }}/Qt-static"
   submodules:
-    description: 'Comma-separated list of Qt submodules to build'
-    required: true
+    type: string
+    description: "Comma separated list of Qt modules, e.g. qtbase,qtshadertools"
+    required: false
+    default: ""
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Install Qt build dependencies
+    - name: "Install build dependencies (Ubuntu/Debian)"
       shell: bash
       run: |
+        set -euo pipefail
         sudo apt-get update
-        sudo apt-get install -y \
-          build-essential perl python3 git cmake ninja-build \
+        # We need libjpeg-dev for the new error
+        sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
           libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
           libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
           libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
           libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
           libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
-          libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
-          libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
-          libclang-18-dev llvm-18-dev # <-- ADDED THIS LINE to fix missing libclangBasic.a
+          libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev dbus-x11 \
+          libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev libwww-perl \
+          libwayland-dev wayland-protocols libxcb-render0-dev libxcb-cursor-dev
+        echo "Deps installed."
 
-    - name: Clone Qt source
+    - name: "Prepare git config to force HTTPS for SSH submodule URLs"
       shell: bash
       run: |
-        echo "Cloning Qt v${{ inputs.version }} into ${{ inputs.dir }}/src/qt5"
-        mkdir -p ${{ inputs.dir }}/src
-        cd ${{ inputs.dir }}/src
-        git clone https://code.qt.io/qt/qt5.git
-        cd qt5
-        git checkout v${{ inputs.version }}
+        set -euo pipefail
+        git config --global url."https://github.com/".insteadOf "git@github.com:"
+        git config --global url."https://code.qt.io/qt/".insteadOf "git@code.qt.io:qt/"
 
-    - name: Initialize specified submodules
+    - name: "Ensure Clang/LLVM 18 (try install; fall back to skipping qttools)"
       shell: bash
       run: |
-        echo "Initializing submodules: ${{ inputs.submodules }}"
-        cd ${{ inputs.dir }}/src/qt5
-        # This is the critical step to limit the build scope
-        perl init-repository --module-subset=${{ inputs.submodules }} -f
+        set -euo pipefail
+        echo "Attempting to install clang-18 and dev libs from apt.llvm.org..."
+        if wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 18 && \
+           sudo apt-get update && \
+           sudo apt-get install -y clang-18 llvm-18-dev libclang-18-dev libclang-cpp18-dev; then
+          echo "Clang/LLVM 18 installed successfully."
+        else
+          echo "Warning: failed to install clang-18 dev packages. Will fall back to skipping qttools to continue."
+          echo "CONFIGURE_FALLBACK_SKIP_QTTOOLS=1" >> $GITHUB_ENV
+        fi
+        echo "ls /usr/lib/llvm-18/lib || true"
+        ls -la /usr/lib/llvm-18/lib || true
 
-    - name: Configure Qt build
+    - name: "Clone qt5 supermodule and checkout v${{ inputs.version }}"
+      working-directory: ${{ runner.temp }}
       shell: bash
       run: |
-        echo "Configuring Qt build in ${{ inputs.dir }}/build"
-        mkdir -p ${{ inputs.dir }}/build
-        cd ${{ inputs.dir }}/build
-        # Configure to build statically, use Ninja, and set the install prefix
-        ${{ inputs.dir }}/src/qt5/configure -static -prefix "${{ inputs.dir }}" -cmake-generator Ninja ${{ inputs.configure-args }}
+        set -euo pipefail
+        QT_SRC="${{ runner.temp }}/qt"
+        rm -rf "${QT_SRC}"
+        git clone --depth 1 --branch "v${{ inputs.version }}" https://code.qt.io/qt/qt5.git "${QT_SRC}" || {
+          git clone --depth 1 https://code.qt.io/qt/qt5.git "${QT_SRC}"
+          cd "${QT_SRC}"
+          git fetch --tags --prune
+          git checkout "v${{ inputs.version }}" || { echo "Failed to checkout v${{ inputs.version }}"; exit 1; }
+        }
+        cd "${QT_SRC}"
+        echo "Checked out $(git describe --tags --always || git rev-parse --short HEAD)"
 
-    - name: Build Qt
+    - name: "Init repository (try user subset; fallback to default)"
+      working-directory: ${{ runner.temp }}/qt
       shell: bash
       run: |
-        echo "Building Qt..."
-        cd ${{ inputs.dir }}/build
-        # Use nproc to get core count for parallel build
-        cmake --build . --parallel $(nproc)
+        set -euo pipefail
+        if [ -n "${{ inputs.submodules }}" ]; then
+          echo "Trying init-repository --module-subset=${{ inputs.submodules }} -f ..."
+          if perl init-repository --module-subset="${{ inputs.submodules }}" -f; then
+            echo "init-repository succeeded with provided subset."
+          else
+            echo "Provided module-subset failed; falling back to default init-repository."
+            perl init-repository
+          fi
+        else
+          perl init-repository
+        fi
+        echo "Now updating submodules (shallow, parallel where possible)..."
+        git submodule update --init --recursive --jobs=$(nproc) --depth=1 || true
 
-    - name: Install Qt
+    - name: "Create build dir, configure (with DBus), build, install"
+      working-directory: ${{ runner.temp }}/qt
       shell: bash
       run: |
-        echo "Installing Qt into ${{ inputs.dir }}"
-        cd ${{ inputs.dir }}/build
+        set -euo pipefail
+        mkdir -p build
+        cd build
+        echo "Configuring Qt (DBus support enabled by default)..."
+        CFG_ARGS="-prefix \"${{ inputs.dir }}\" -release -static -opensource -confirm-license -nomake examples -nomake tests ${{ inputs.configure-args }}"
+        if [ "${CONFIGURE_FALLBACK_SKIP_QTTOOLS:-0}" = "1" ]; then
+          echo "CONFIGURE_FALLBACK_SKIP_QTTOOLS=1 ; appending -skip qttools to configure args."
+          CFG_ARGS="$CFG_ARGS -skip qttools"
+        fi
+        eval ../configure $CFG_ARGS
+        echo "Building Qt (parallel)..."
+        cmake --build . --parallel "$(nproc)"
+        echo "Installing Qt to ${{ inputs.dir }}..."
         cmake --install .
 
+    - name: "Clean .prl files (remove absolute build paths and .o file libs)"
+      working-directory: ${{ inputs.dir }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Cleaning .prl files in ${{ inputs.dir }} to fix static linking..."
+        
+        # This is the new, correct fix.
+        # We find every .prl file and run two sed commands on it:
+        # 1. Delete the line starting with QMAKE_PRL_BUILD_DIR (it contains absolute build paths)
+        # 2. On the QMAKE_PRL_LIBS line, remove any "word" that contains a '/' and ends in '.o'.
+        #    This surgically removes the object files but leaves the system libs (e.g., -lpng)
+        find . -type f -name "*.prl" | while read -r file; do
+          sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
+          sed -i -E 's| ?[^ ]*\.o||g' "$file"
+        done
+        
+        echo ".prl cleaning complete."
+
+    - name: "Verify install"
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -d "${{ inputs.dir }}" ]; then
+          echo "Install dir contents:"
+          ls -la "${{ inputs.dir }}" || true
+        fi
+        if [ -x "${{ inputs.dir }}/bin/qmake" ] || [ -d "${{ inputs.dir }}/lib" ]; then
+          echo "Qt installation looks present at ${{ inputs.dir }}"
+        else
+          echo "Warning: Qt install not detected at ${{ inputs.dir }}. Check earlier logs."
+          exit 1
+        fi
