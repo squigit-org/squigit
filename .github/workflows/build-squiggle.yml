@@ -33,7 +33,7 @@ jobs:
         uses: ./.github/actions/build-qt-squiggle
         with:
           version: ${{ env.QT_VERSION }}
-          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples"
+          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -no-opengl -no-dbus -no-icu -no-glib -no-fontconfig -qt-libjpeg -qt-libpng -qt-freetype -qt-zlib -qt-pcre -qt-harfbuzz -bundled-xcb-xinput"
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
           submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats"
 
@@ -208,7 +208,7 @@ jobs:
             libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
             libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
             libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
-            libxcb-cursor-dev # <--- THIS IS THE FIX
+            libxcb-cursor-dev libharfbuzz-dev libzstd-dev  # Added these
 
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'

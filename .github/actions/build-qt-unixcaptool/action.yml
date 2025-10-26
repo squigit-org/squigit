@@ -91,7 +91,6 @@ runs:
         set -euo pipefail
         if [ -n "${{ inputs.submodules }}" ]; then
           echo "Trying init-repository --module-subset=${{ inputs.submodules }} -f ..."
-          # This now fails fast instead of falling back to cloning everything
           if perl init-repository --module-subset="${{ inputs.submodules }}" -f; then
             echo "init-repository succeeded with provided subset."
           else
@@ -105,7 +104,7 @@ runs:
         fi
         echo "Now updating submodules (shallow, parallel where possible)..."
         # This will only update the modules we actually initialized
-        git submodule update --init --recursive --jobs=$(nproc) --depth=1 || true
+        git submodule update --recursive --jobs=$(nproc) --depth=1 || true
 
     - name: "Create build dir, configure (with DBus), build, install"
       working-directory: ${{ runner.temp }}/qt

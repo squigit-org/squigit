@@ -44,9 +44,9 @@ macx {
 }
 
 linux {
-    # Manually add the Linux platform plugin
-    QTPLUGIN += qxcb
+    QMAKE_LFLAGS += -static -static-libgcc -static-libstdc++
 }
+
 # -----------------------------
 
 SOURCES += \
