@@ -67,7 +67,12 @@ jobs:
           for ($retry = 1; $retry -le 3; $retry++) {
             choco install strawberryperl ninja llvm jom --yes --no-progress --limit-output
             if ($LASTEXITCODE -eq 0) { break }
+            Write-Output "Retry $retry of 3 failed for choco install. Waiting 10 seconds..."
             Start-Sleep -Seconds 10
+          }
+          if ($LASTEXITCODE -ne 0) {
+            Write-Output "Failed to install dependencies after 3 retries. Exiting."
+            exit 1
           }
 
       - name: Setup MSVC environment
@@ -81,16 +86,18 @@ jobs:
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         shell: bash
         run: |
+          set -e
           mkdir -p "${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
           cd "${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
+          rm -rf qt5  # Clean existing qt5 directory to avoid clone error
           git clone https://code.qt.io/qt/qt5.git
           cd qt5
           git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qttools,qtimageformats -f  # Removed unnecessary
+          perl init-repository --module-subset qtbase,qttools,qtimageformats -f
           mkdir ../build
           cd ../build
           rm -rf ./*  # Clean build dir
-          ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
+          ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -platform win32-msvc -qt-zlib -qt-libpng -qt-libjpeg -qt-freetype -qt-pcre -qt-harfbuzz
           cmake --build . --parallel
           cmake --install .
 
