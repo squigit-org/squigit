@@ -55,11 +55,11 @@ def get_tmp_path() -> Path:
 TMP_PATH = get_tmp_path()
 
 # Binary Paths
-YCAPTOOL_BINARY = PKGS_PATH / "ycaptool" / "dist" / "ycaptool"
-SQUIGGLE_BINARY = ".exe" if platform.system() == "Windows" else ""
-SQUIGGLE_BINARY = f"squiggle{SQUIGGLE_BINARY}"
-SQUIGGLE_BINARY = PKGS_PATH / "squiggle" / "dist" / SQUIGGLE_BINARY
-ELECTRON_NODE   = PKGS_PATH / "spatialshot"
+UNIXCAPTOOL_BINARY = PKGS_PATH / "unixcaptool" / "dist" / "unixcaptool"
+SQUIGGLE_BINARY    = ".exe" if platform.system() == "Windows" else ""
+SQUIGGLE_BINARY    = f"squiggle{SQUIGGLE_BINARY}"
+SQUIGGLE_BINARY    = PKGS_PATH / "squiggle" / "dist" / SQUIGGLE_BINARY
+ELECTRON_NODE      = PKGS_PATH / "spatialshot"
 
 # Scripts Paths
 SC_grabber_WIN    = PLATFORM_PATH / "windows" / "sc-grabber.ps1"
@@ -221,10 +221,10 @@ def run_screenshot_capture(
     """
     if env == "wayland":
         logger.info("Initiating capture: Linux (Wayland)")
-        if not YCAPTOOL_BINARY.exists():
-            logger.error("ycaptool binary not found: %s", YCAPTOOL_BINARY)
+        if not UNIXCAPTOOL_BINARY.exists():
+            logger.error("ycaptool binary not found: %s", UNIXCAPTOOL_BINARY)
             return False, 0
-        success, _, _ = _run_process([str(YCAPTOOL_BINARY)])
+        success, _, _ = _run_process([str(UNIXCAPTOOL_BINARY)])
         return success, monitor_count
 
     script_path = None
