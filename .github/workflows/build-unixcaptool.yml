@@ -1,8 +1,8 @@
 name: Build Standalone UnixCapTool
 
 on:
-  push:
-  # workflow_dispatch:
+  # push:
+  workflow_dispatch:
 
 env:
   QT_VERSION: "6.8.0"
