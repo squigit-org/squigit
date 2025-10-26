@@ -3,17 +3,26 @@ TEMPLATE = app
 
 CONFIG += c++17
 
+#
+# --- THIS IS THE FIX ---
+#
+# Tell qmake to NOT auto-generate a plugin manifest.
+# The "smart" auto-generation is broken for this static build
+# and adds object files (.o) to the linker command that do not exist.
+#
+CONFIG += no_plugin_manifest
+
 QT += core gui widgets
 
-# --- Statically Link Plugins ---
-# We need the PNG image format plugin on all platforms.
-# qmake will automatically add the correct platform plugin (qxcb, qcocoa, qwindows).
+#
+# Now that we've disabled the broken auto-plugin feature,
+# we must MANUALLY add all the plugins we need.
+#
 QTPLUGIN += qpng
 
-# Platform-specific settings
 win32 {
     LIBS += -ldwmapi
-    # Platform plugin is added automatically
+    QTPLUGIN += qwindows
 }
 
 macx {
@@ -22,11 +31,13 @@ macx {
     # Force Objective-C++ compilation for all files
     QMAKE_CXXFLAGS += -x objective-c++
     
-    # Platform plugin is added automatically
+    # Manually add the macOS platform plugin
+    QTPLUGIN += qcocoa
 }
 
 linux {
-    # Platform plugin is added automatically
+    # Manually add the Linux platform plugin
+    QTPLUGIN += qxcb
 }
 # -----------------------------
 
