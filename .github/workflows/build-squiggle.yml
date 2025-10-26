@@ -53,7 +53,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v3
+          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v4  # Bump to v4 for clean src handling
           restore-keys: |
             qt-static-windows-squiggle-${{ env.QT_VERSION }}-
 
@@ -87,16 +87,23 @@ jobs:
         shell: bash
         run: |
           set -e
-          mkdir -p "${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
-          cd "${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
-          rm -rf qt5  # Clean existing qt5 directory to avoid clone error
-          git clone https://code.qt.io/qt/qt5.git
+          SRC_DIR="${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
+          mkdir -p "$SRC_DIR"
+          cd "$SRC_DIR"
+          rm -rf qt5  # Ensure clean clone
+          git clone --depth 1 -b "v${{ env.QT_VERSION }}" https://code.qt.io/qt/qt5.git
           cd qt5
-          git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qttools,qtimageformats -f
-          mkdir ../build
-          cd ../build
-          rm -rf ./*  # Clean build dir
+          perl init-repository -f  # Force init; ignore subset for now to avoid extra pulls
+          # Standard submodule update to avoid subset quirks pulling extras
+          git submodule update --init --recursive --depth 1
+          # Remove unnecessary modules for your Widgets-only app (reduces build time/size)
+          rm -rf qtdeclarative qtshadertools qtsvg qtlanguageserver qtactiveqt qtcharts qtconnectivity qtdatavis3d qtdoc qtlocation qtmultimedia qtquickcontrols2 qtscxml qtsensors qtserialbus qtspeech qtsvg qttest qtxmlpatterns qt3d qtcanvas3d
+          # Create clean build dir
+          BUILD_DIR="../build"
+          rm -rf "$BUILD_DIR" || true
+          mkdir -p "$BUILD_DIR"
+          cd "$BUILD_DIR"
+          # Configure for static, minimal build
           ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -platform win32-msvc -qt-zlib -qt-libpng -qt-libjpeg -qt-freetype -qt-pcre -qt-harfbuzz
           cmake --build . --parallel
           cmake --install .
