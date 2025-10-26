@@ -33,6 +33,14 @@ macx {
     
     # Manually add the macOS platform plugin
     QTPLUGIN += qcocoa
+
+    #
+    # --- THIS IS THE REAL FIX ---
+    # The static qmake build is broken and adds a list of
+    # non-existent resource object (.o) files to the linker.
+    # This line manually clears that broken list.
+    #
+    QMAKE_LIBS_RESOURCES = 
 }
 
 linux {
