@@ -1,8 +1,8 @@
 name: Build Squiggle (Cross-Platform)
 
 on:
-  # push:
-  workflow_dispatch:
+  push:
+  # workflow_dispatch:
 
 env:
   QT_VERSION: 6.8.0
@@ -208,7 +208,8 @@ jobs:
             libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
             libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
             libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
-            libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev
+            libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
+            libxcb-cursor-dev # <--- THIS IS THE FIX
 
       - name: Build Squiggle (Linux)
         if: matrix.os == 'ubuntu-latest'
