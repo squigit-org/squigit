@@ -46,16 +46,14 @@ jobs:
 
       - name: Set QT_INSTALL_DIR
         id: set-qt-dir
-        run: |
-          $temp = "${{ runner.temp }}".Replace('\', '/')
-          echo "qt-install-dir=$temp/qt-static-windows" >> $env:GITHUB_OUTPUT
+        run: echo "qt-install-dir=${{ runner.temp }}\qt-static-windows" >> $env:GITHUB_OUTPUT
 
       - name: Cache Qt (Windows)
         id: cache-qt
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v1
+          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v2
           restore-keys: |
             qt-static-windows-squiggle-${{ env.QT_VERSION }}-
 
@@ -90,6 +88,18 @@ jobs:
           ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
           cmake --build . --parallel
           cmake --install .
+
+      - name: Clean .prl files (remove absolute build paths and .o file libs)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        shell: powershell
+        working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+        run: |
+          Get-ChildItem -Recurse -Filter *.prl | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            $content = $content -replace '^QMAKE_PRL_BUILD_DIR.*\r?\n', ''
+            $content = $content -replace '\s?[^ ]*\.o', ''
+            Set-Content $_.FullName -Value $content
+          }
 
   build-qt-macos:
     runs-on: macos-latest
@@ -182,7 +192,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.QT_INSTALL_DIR }}
-          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-${{ runner.os == 'Linux' && 'v2' || 'v1' }}
+          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-${{ runner.os == 'Linux' && 'v2' || 'v2' }}
           restore-keys: |
             ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-
 
@@ -207,7 +217,7 @@ jobs:
           Set-ExecutionPolicy Bypass -Scope Process -Force
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco install strawberryperl ninja cmake llvm --yes --no-progress
+          choco install strawberryperl ninja cmake llvm jom --yes --no-progress  # Added jom here
 
       - name: Setup MSVC environment
         if: matrix.os == 'windows-latest'
@@ -236,19 +246,18 @@ jobs:
 
       - name: Build Squiggle (Windows)
         if: matrix.os == 'windows-latest'
-        shell: cmd
+        shell: bash
         run: |
-          set "PATH=${{ env.QT_INSTALL_DIR }}\bin;%PATH%"
+          export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
           
-          cd packages\squiggle
+          cd packages/squiggle
           
-          REM Use simplified qmake command; all logic is in the .pro file
           qmake squiggle.pro
           
-          ninja
+          jom /J $(nproc || echo 4)  # Use jom for parallel builds; fallback to 4 if nproc not available
           
           mkdir dist
-          copy release\squiggle.exe dist\squiggle.exe
+          cp release/squiggle.exe dist/squiggle.exe
 
       - name: Build Squiggle (macOS)
         if: matrix.os == 'macos-latest'
@@ -261,6 +270,7 @@ jobs:
           
           cd packages/squiggle
           
+          # Use simplified qmake command; all logic is in the .pro file
           qmake squiggle.pro
           
           make -j$(sysctl -n hw.ncpu)
