@@ -85,7 +85,10 @@ runs:
         cd "${QT_SRC}"
         echo "Checked out $(git describe --tags --always || git rev-parse --short HEAD)"
 
-    - name: "Init repository (try user subset; fallback to default)"
+    # --- THIS IS THE FIX ---
+    # This step now fails fast if the submodule list is wrong,
+    # preventing the 20-minute fallback that clones all 50+ modules.
+    - name: "Init repository (Strict Subset)"
       working-directory: ${{ runner.temp }}/qt
       shell: bash
       run: |
@@ -95,10 +98,12 @@ runs:
           if perl init-repository --module-subset="${{ inputs.submodules }}" -f; then
             echo "init-repository succeeded with provided subset."
           else
-            echo "Provided module-subset failed; falling back to default init-repository."
-            perl init-repository
+            echo "ERROR: Provided module-subset failed!"
+            echo "Your 'submodules:' input may be incorrect or have a missing dependency."
+            exit 1 # <-- FAIL FAST
           fi
         else
+          echo "No subset provided, initializing all modules."
           perl init-repository
         fi
         echo "Now updating submodules (shallow, parallel where possible)..."
