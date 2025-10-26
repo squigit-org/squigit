@@ -18,6 +18,15 @@ jobs:
         with:
           submodules: 'recursive'
 
+      - name: Free up runner disk space
+        uses: ecastro/gh-action-free-disk-space@v1
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+
       - name: Build Static Qt 6 (Linux)
         id: qt-static
         uses: ./.github/actions/build-qt-static
@@ -25,6 +34,7 @@ jobs:
           version: ${{ env.QT_VERSION }}
           dir: ${{ runner.temp }}/Qt-static
           submodules: "qtbase,qtimageformats,qtwayland"
+          configure-args: "-skip qtdeclarative -skip qtquick3d -skip qtmultimedia -skip qtpositioning -skip qtserialport -skip qtvirtualkeyboard -skip qtlanguageserver -skip qtwidgets"
 
       - name: Install Runtime Libs for Pkg-Config
         run: |
