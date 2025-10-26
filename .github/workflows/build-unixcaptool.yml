@@ -1,8 +1,8 @@
 name: Build Standalone UnixCapTool
 
 on:
-  # push:
-  workflow_dispatch:
+  push:
+  # workflow_dispatch:
 
 env:
   QT_VERSION: "6.8.0"
@@ -53,7 +53,7 @@ jobs:
         working-directory: ./packages/unixcaptool
         run: |
           ${{ steps.qt-static.outputs.dir }}/bin/qmake6 \
-            "QT_INSTALL_DIR=${{ steps.qt-static.outputs.dir }}" \
+            QT_INSTALL_DIR=${{ steps.qt-static.outputs.dir }} \
             build.linux.pro
           make
        
@@ -116,7 +116,7 @@ jobs:
         working-directory: ./packages/unixcaptool
         run: |
           ${{ steps.set-qt-dir.outputs.qt-install-dir }}/bin/qmake \
-            "QT_INSTALL_DIR=${{ steps.set-qt-dir.outputs.qt-install-dir }}" \
+            QT_INSTALL_DIR=${{ steps.set-qt-dir.outputs.qt-install-dir }} \
             build.darwin.pro
           make
 
