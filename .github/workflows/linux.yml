@@ -10,13 +10,19 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install Qt
+    - name: Install build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y qt6-base-dev libqt6dbus6
+        sudo apt-get install -y build-essential libgl1-mesa-dev libxkbcommon-x11-dev libpulse-dev libasound2-dev
+
+    - name: Build static Qt
+      run: |
+        chmod +x scripts/build-static-qt.sh
+        ./scripts/build-static-qt.sh
+      working-directory: ./packages/unixcaptool
 
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static"
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(pwd)/build/.qt -DCMAKE_EXE_LINKER_FLAGS="-static"
       working-directory: ./packages/unixcaptool
 
     - name: Build
