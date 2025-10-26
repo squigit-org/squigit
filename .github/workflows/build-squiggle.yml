@@ -24,18 +24,49 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v3 # Bump version for -qt-xcb
+          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-v6
           restore-keys: |
             qt-static-linux-squiggle-${{ env.QT_VERSION }}-
 
+      - name: Install build dependencies (Linux)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential perl python3 cmake ninja-build git \
+            libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
+            libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
+            libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
+            libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
+            libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
+            libpcre2-dev libpng-dev libjpeg-dev libglib2.0-dev libwww-perl \
+            libxcb-cursor-dev libharfbuzz-dev libzstd-dev
+
       - name: Build static Qt (Linux)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        uses: ./.github/actions/build-qt-squiggle
-        with:
-          version: ${{ env.QT_VERSION }}
-          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -no-opengl -no-dbus -no-icu -no-glib -no-fontconfig -qt-libjpeg -qt-libpng -qt-freetype -qt-zlib -qt-pcre -qt-harfbuzz -bundled-xcb-xinput -qt-xcb"
-          dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          submodules: "qtbase,qttools,qtimageformats"  # Removed unnecessary qtdeclarative, qtshadertools
+        run: |
+          set -euo pipefail
+          QT_SRC="${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
+          rm -rf "$QT_SRC"
+          git clone --depth 1 --branch "v${{ env.QT_VERSION }}" https://code.qt.io/qt/qt5.git "$QT_SRC"
+          cd "$QT_SRC"
+          ./init-repository -f
+          git submodule update --init --recursive --depth 1
+          rm -rf qt3d qt5compat qtcanvas3d qtcharts qtcoap qtconnectivity qtdatavis3d qtdoc qtfeedback qtgamepad qtgraphs qtgrpc qthttpserver qtlocation qtlottie qtmqtt qtmultimedia qtnetworkauth qtopcua qtpim qtpositioning qtqa qtquick3d qtquick3dphysics qtquickeffectmaker qtquicktimeline qtremoteobjects qtscxml qtsensors qtserialbus qtserialport qtspeech qtsystems qttranslations qtvirtualkeyboard qtwayland qtwebchannel qtwebengine qtwebglplugin qtwebsockets qtwebview qtxmlpatterns
+          mkdir -p ../build
+          cd ../build
+          rm -rf ./*
+          ../src/configure -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -release -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -no-opengl -no-dbus -no-icu -no-glib -no-fontconfig -qt-libjpeg -qt-libpng -qt-freetype -qt-zlib -qt-pcre -qt-harfbuzz -bundled-xcb-xinput -xcb
+          cmake --build . --parallel $(nproc)
+          cmake --install .
+
+      - name: Clean .prl files (Linux)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+        run: |
+          find . -type f -name "*.prl" | while read -r file; do
+            sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
+            sed -i -E 's| ?[^ ]*\.o||g' "$file"
+          done
 
   build-qt-windows:
     runs-on: windows-latest
@@ -53,7 +84,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v4  # Bump to v4 for clean src handling
+          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-v6
           restore-keys: |
             qt-static-windows-squiggle-${{ env.QT_VERSION }}-
 
@@ -67,13 +98,9 @@ jobs:
           for ($retry = 1; $retry -le 3; $retry++) {
             choco install strawberryperl ninja llvm jom --yes --no-progress --limit-output
             if ($LASTEXITCODE -eq 0) { break }
-            Write-Output "Retry $retry of 3 failed for choco install. Waiting 10 seconds..."
             Start-Sleep -Seconds 10
           }
-          if ($LASTEXITCODE -ne 0) {
-            Write-Output "Failed to install dependencies after 3 retries. Exiting."
-            exit 1
-          }
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Setup MSVC environment
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
@@ -82,7 +109,7 @@ jobs:
           arch: x64
           vsversion: 2022
 
-      - name: Build static Qt from source (Windows)
+      - name: Build static Qt (Windows)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         shell: bash
         run: |
@@ -90,25 +117,21 @@ jobs:
           SRC_DIR="${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
           mkdir -p "$SRC_DIR"
           cd "$SRC_DIR"
-          rm -rf qt5  # Ensure clean clone
+          rm -rf qt5
           git clone --depth 1 -b "v${{ env.QT_VERSION }}" https://code.qt.io/qt/qt5.git
           cd qt5
-          perl init-repository -f  # Force init; ignore subset for now to avoid extra pulls
-          # Standard submodule update to avoid subset quirks pulling extras
+          perl init-repository -f
           git submodule update --init --recursive --depth 1
-          # Remove unnecessary modules for your Widgets-only app (reduces build time/size)
-          rm -rf qtdeclarative qtshadertools qtsvg qtlanguageserver qtactiveqt qtcharts qtconnectivity qtdatavis3d qtdoc qtlocation qtmultimedia qtquickcontrols2 qtscxml qtsensors qtserialbus qtspeech qtsvg qttest qtxmlpatterns qt3d qtcanvas3d
-          # Create clean build dir
+          rm -rf qt3d qt5compat qtcanvas3d qtcharts qtcoap qtconnectivity qtdatavis3d qtdoc qtfeedback qtgamepad qtgraphs qtgrpc qthttpserver qtlocation qtlottie qtmqtt qtmultimedia qtnetworkauth qtopcua qtpim qtpositioning qtqa qtquick3d qtquick3dphysics qtquickeffectmaker qtquicktimeline qtremoteobjects qtscxml qtsensors qtserialbus qtserialport qtspeech qtsystems qttranslations qtvirtualkeyboard qtwayland qtwebchannel qtwebengine qtwebglplugin qtwebsockets qtwebview qtxmlpatterns
           BUILD_DIR="../build"
           rm -rf "$BUILD_DIR" || true
           mkdir -p "$BUILD_DIR"
           cd "$BUILD_DIR"
-          # Configure for static, minimal build
           ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -platform win32-msvc -qt-zlib -qt-libpng -qt-libjpeg -qt-freetype -qt-pcre -qt-harfbuzz
           cmake --build . --parallel
           cmake --install .
 
-      - name: Clean .prl files (remove absolute build paths and .o file libs)
+      - name: Clean .prl files (Windows)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         shell: powershell
         working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
@@ -136,41 +159,41 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v2
+          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-v4
           restore-keys: |
             qt-static-macos-squiggle-${{ env.QT_VERSION }}-
 
-      - name: Install LLVM (macOS)
+      - name: Install dependencies (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        run: brew install llvm
+        run: brew install llvm git perl python3 cmake ninja
 
-      - name: Build static Qt from source (macOS)
+      - name: Build static Qt (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         run: |
-          mkdir -p ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
-          cd ${{ steps.set-qt-dir.outputs.qt-install-dir }}/src
-          git clone https://code.qt.io/qt/qt5.git
-          cd qt5
-          git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qttools,qtimageformats -f  # Removed unnecessary
-          mkdir ../build
+          set -euo pipefail
+          QT_SRC="${{ steps.set-qt-dir.outputs.qt-install-dir }}/src"
+          rm -rf "$QT_SRC"
+          git clone --depth 1 --branch "v${{ env.QT_VERSION }}" https://code.qt.io/qt/qt5.git "$QT_SRC"
+          cd "$QT_SRC"
+          ./init-repository -f
+          git submodule update --init --recursive --depth 1
+          rm -rf qt3d qt5compat qtcanvas3d qtcharts qtcoap qtconnectivity qtdatavis3d qtdoc qtfeedback qtgamepad qtgraphs qtgrpc qthttpserver qtlocation qtlottie qtmqtt qtmultimedia qtnetworkauth qtopcua qtpim qtpositioning qtqa qtquick3d qtquick3dphysics qtquickeffectmaker qtquicktimeline qtremoteobjects qtscxml qtsensors qtserialbus qtserialport qtspeech qtsystems qttranslations qtvirtualkeyboard qtwayland qtwebchannel qtwebengine qtwebglplugin qtwebsockets qtwebview qtxmlpatterns
+          mkdir -p ../build
           cd ../build
-          rm -rf ./*  # Clean build dir
+          rm -rf ./*
           export LLVM_DIR=$(brew --prefix llvm)
-          ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
+          ../src/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}" -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
 
-      - name: Clean .prl files (remove absolute build paths and .o file libs)
+      - name: Clean .prl files (macOS)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
         working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
         run: |
-          echo "Cleaning .prl files in ${{ steps.set-qt-dir.outputs.qt-install-dir }} to fix static linking..."
           find . -type f -name "*.prl" | while read -r file; do
-            sed -i '' -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"  # Remove build dir line (absolute paths)
-            sed -i '' -E 's| ?[^ ]*\.o||g' "$file"  # Remove any .o paths from libs
+            sed -i '' -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"
+            sed -i '' -E 's| ?[^ ]*\.o||g' "$file"
           done
-          echo ".prl cleaning complete."
 
   build-squiggle:
     needs: [build-qt-linux, build-qt-windows, build-qt-macos]
@@ -181,23 +204,20 @@ jobs:
           - os: ubuntu-latest
             qt-needs: build-qt-linux
             artifact-name: squiggle-linux
-            binary-path: packages/squiggle/dist/squiggle
-            
+            binary-path: packages/squiggle/dist/bin/squiggle
           - os: windows-latest
             qt-needs: build-qt-windows
             artifact-name: squiggle-windows
-            binary-path: packages/squiggle/dist/squiggle.exe
-
+            binary-path: packages/squiggle/dist/bin/squiggle.exe
           - os: macos-latest
             qt-needs: build-qt-macos
             artifact-name: squiggle-macos
-            binary-path: packages/squiggle/dist/squiggle
+            binary-path: packages/squiggle/dist/bin/squiggle
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set Qt Environment Variables
-        id: set-qt-env
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
@@ -212,23 +232,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.QT_INSTALL_DIR }}
-          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-${{ runner.os == 'Linux' && 'v3' || 'v3' }}
-          restore-keys: |
-            ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-
+          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-v6
 
       - name: Install system dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
+          sudo apt-get install -y build-essential cmake ninja-build \
             libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
             libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
             libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
             libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
-            libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
-            libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
-            libxcb-cursor-dev libharfbuzz-dev libzstd-dev libxkbcommon-x11-dev
+            libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev
 
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'
@@ -242,70 +257,31 @@ jobs:
             if ($LASTEXITCODE -eq 0) { break }
             Start-Sleep -Seconds 10
           }
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
-      - name: Setup MSVC environment
+      - name: Setup MSVC environment (Windows)
         if: matrix.os == 'windows-latest'
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
           vsversion: 2022
 
-      - name: Build Squiggle (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Build Squiggle (All Platforms)
         shell: bash
         run: |
           export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
           export PKG_CONFIG_PATH="${{ env.QT_INSTALL_DIR }}/lib/pkgconfig:$PKG_CONFIG_PATH"
-          chmod -R +x ${QT_INSTALL_DIR}/bin
-          chmod -R +x ${QT_INSTALL_DIR}/libexec
-          
           cd packages/squiggle
-          
-          qmake squiggle.pro || { echo "qmake failed"; exit 1; }
-          
-          make -j$(nproc) || { echo "make failed"; exit 1; }
-          mkdir -p dist
-          cp squiggle dist/
-          strip dist/squiggle
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -CMAKE_PREFIX_PATH="${{ env.QT_INSTALL_DIR }}" \
+            -DQT_STATIC_BUILD=ON
+          cmake --build build
+          cmake --install build --prefix dist
 
-      - name: Build Squiggle (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: bash
-        run: |
-          export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
-          
-          cd packages/squiggle
-          
-          qmake squiggle.pro
-          
-          if command -v jom >/dev/null; then
-            jom /J $(nproc || echo 4)
-          else
-            nmake
-          fi
-          
-          mkdir dist
-          cp release/squiggle.exe dist/squiggle.exe
-
-      - name: Build Squiggle (macOS)
-        if: matrix.os == 'macos-latest'
-        shell: bash
-        run: |
-          export PATH="${{ env.QT_INSTALL_DIR }}/bin:$PATH"
-          # Ensure Qt binaries are executable
-          chmod -R +x ${QT_INSTALL_DIR}/bin
-          chmod -R +x ${QT_INSTALL_DIR}/libexec
-          
-          cd packages/squiggle
-          
-          # Use simplified qmake command; all logic is in the .pro file
-          qmake squiggle.pro
-          
-          make -j$(sysctl -n hw.ncpu)
-          
-          mkdir -p dist
-          cp squiggle.app/Contents/MacOS/squiggle dist/
-          strip dist/squiggle
+      - name: Strip binary (Linux & macOS)
+        if: matrix.os != 'windows-latest'
+        run: strip packages/squiggle/dist/bin/squiggle
 
       - name: Upload Final Artifact
         uses: actions/upload-artifact@v4

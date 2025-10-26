@@ -1,3 +1,6 @@
+i'm trying to build this pkg into standalone exe binary.
+but i'm getting this error:
+```
 name: "Prepare a static build of Qt 6 (Linux)"
 description: "Static Qt 6 builds are not readily available and have to be built from source. This action automates that for Linux."
 branding:
@@ -142,3 +145,55 @@ runs:
           echo "Warning: Qt install not detected at ${{ inputs.dir }}. Check earlier logs."
           exit 1
         fi
+```
+
+remove .pro and convert the building method into ninja.build and cmakelists also modify them to built on linux and macos too.
+
+make sure for linux it will bundle of these:
+a7md@a7md:~$ sudo docker run -it --rm -v ~/Downloads/squiggle-linux:/app ubuntu:24.04 bash
+[sudo] password for a7md: 
+root@cf61e8dfbb70:/# cd app
+root@cf61e8dfbb70:/app# ls
+squiggle
+root@cf61e8dfbb70:/app# ./squiggle
+./squiggle: error while loading shared libraries: libxkbcommon-x11.so.0: cannot open shared object file: No such file or directory
+root@cf61e8dfbb70:/app# ldd ./squiggle
+	linux-vdso.so.1 (0x00007ad57c84e000)
+	libxkbcommon-x11.so.0 => not found
+	libxcb-cursor.so.0 => not found
+	libxcb-icccm.so.4 => not found
+	libxcb-image.so.0 => not found
+	libxcb-keysyms.so.1 => not found
+	libxcb-randr.so.0 => not found
+	libxcb-render-util.so.0 => not found
+	libxcb-shm.so.0 => not found
+	libxcb-sync.so.1 => not found
+	libxcb-xfixes.so.0 => not found
+	libxcb-render.so.0 => not found
+	libxcb-shape.so.0 => not found
+	libxcb-xkb.so.1 => not found
+	libxcb-glx.so.0 => not found
+	libjpeg.so.8 => not found
+	libX11-xcb.so.1 => not found
+	libxcb.so.1 => not found
+	libEGL.so.1 => not found
+	libpng16.so.16 => not found
+	libfreetype.so.6 => not found
+	libfontconfig.so.1 => not found
+	libX11.so.6 => not found
+	libdbus-1.so.3 => not found
+	libxkbcommon.so.0 => not found
+	libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007ad57c822000)
+	libicui18n.so.74 => not found
+	libicuuc.so.74 => not found
+	libpcre2-16.so.0 => not found
+	libzstd.so.1 => /lib/x86_64-linux-gnu/libzstd.so.1 (0x00007ad57c766000)
+	libglib-2.0.so.0 => not found
+	libGLX.so.0 => not found
+	libOpenGL.so.0 => not found
+	libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007ad57ad82000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007ad57c67b000)
+	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007ad57ad54000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007ad57ab42000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007ad57c850000)
+root@cf61e8dfbb70:/app# 
