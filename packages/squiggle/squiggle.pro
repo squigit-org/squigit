@@ -1,35 +1,32 @@
 TARGET = squiggle
 TEMPLATE = app
 
-# Use C++17 and configure for a static build
-CONFIG += c++17 static
+CONFIG += c++17
 
 QT += core gui widgets
 
 # --- Statically Link Plugins ---
-# We need the PNG image format plugin on all platforms
+# We need the PNG image format plugin on all platforms.
+# qmake will automatically add the correct platform plugin (qxcb, qcocoa, qwindows).
 QTPLUGIN += qpng
 
-# Platform-specific plugins and settings
+# Platform-specific settings
 win32 {
     LIBS += -ldwmapi
-    QTPLUGIN += qwindows
+    # Platform plugin is added automatically
 }
 
 macx {
     LIBS += -framework Cocoa
     
     # Force Objective-C++ compilation for all files
-    # This fixes the Cocoa.h compilation errors
     QMAKE_CXXFLAGS += -x objective-c++
     
-    # macOS platform plugin
-    QTPLUGIN += qcocoa
+    # Platform plugin is added automatically
 }
 
 linux {
-    # Linux platform plugin
-    QTPLUGIN += qxcb
+    # Platform plugin is added automatically
 }
 # -----------------------------
 
