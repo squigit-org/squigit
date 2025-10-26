@@ -1,4 +1,5 @@
 # FILE: .github/actions/build-qt-macos/action.yml
+# (This file has been UPDATED)
 
 name: "Prepare a static build of Qt 6 (macOS)"
 description: "Automates building static Qt 6 from source on macOS."
@@ -30,12 +31,19 @@ runs:
       shell: bash
       run: echo "qt-install-dir=${{ inputs.dir }}" >> $GITHUB_OUTPUT
 
+    # --- THIS IS THE NEW STEP ---
+    - name: Generate Cache-Friendly Submodule Key
+      id: submodule-key
+      shell: bash
+      run: echo "key=$(echo '${{ inputs.submodules }}' | tr ',' '-')" >> $GITHUB_OUTPUT
+
     - name: Cache Qt (macOS)
       id: cache-qt
       uses: actions/cache@v4
       with:
         path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-        key: qt-static-macos-${{ inputs.version }}-modules-${{ inputs.submodules }}-v1
+        # Use the sanitized key from the step above
+        key: qt-static-macos-${{ inputs.version }}-modules-${{ steps.submodule-key.outputs.key }}-v1
 
     - name: Install Dependencies (macOS)
       if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
