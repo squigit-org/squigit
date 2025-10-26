@@ -1,8 +1,8 @@
 name: Build Standalone UnixCapTool
 
 on:
-  # push:
-  workflow_dispatch:
+  push:
+  # workflow_dispatch:
 
 env:
   QT_VERSION: "6.8.0"
@@ -35,7 +35,32 @@ jobs:
           version: ${{ env.QT_VERSION }}
           dir: ${{ runner.temp }}/Qt-static
           submodules: "qtbase,qtimageformats,qtwayland"
-          configure-args: "-skip qtdeclarative -skip qtquick3d -skip qtmultimedia -skip qtpositioning -skip qtserialport -skip qtvirtualkeyboard -skip qtlanguageserver -skip qtwidgets -skip qtgraphs -skip qtlocation -skip qtwebengine"
+          configure-args: >-
+            -skip qtdeclarative
+            -skip qtquick3d
+            -skip qtmultimedia
+            -skip qtpositioning
+            -skip qtserialport
+            -skip qtvirtualkeyboard
+            -skip qtlanguageserver
+            -skip qtwidgets
+            -skip qtgraphs
+            -skip qtlocation
+            -skip qtwebengine
+            -skip qtdoc
+            -skip qt3d
+            -skip qt5compat
+            -skip qtactiveqt
+            -skip qtcharts
+            -skip qtcoap
+            -skip qtconnectivity
+            -skip qtdatavis3d
+            -skip qtwebsockets
+            -skip qthttpserver
+            -skip qttools
+            -skip qtwebchannel
+            -skip qtsvg
+            -skip qtnetworkauth
       
       - name: Install Runtime Libs for Pkg-Config
         run: |
