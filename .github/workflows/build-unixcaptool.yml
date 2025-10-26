@@ -19,13 +19,14 @@ jobs:
           submodules: 'recursive'
 
       - name: Free up runner disk space
-        uses: ecastro/gh-action-free-disk-space@v1
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
+        run: |
+          echo "Initial free space:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          echo "Free space after cleanup:"
+          df -h
 
       - name: Build Static Qt 6 (Linux)
         id: qt-static
