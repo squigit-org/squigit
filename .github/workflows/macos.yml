@@ -15,12 +15,14 @@ jobs:
 
     - name: Configure CMake
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(brew --prefix qt@6)
+      working-directory: ./packages/unixcaptool
 
     - name: Build
       run: cmake --build build
+      working-directory: ./packages/unixcaptool
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: unixcaptool-macos
-        path: build/src/unixcaptool
+        path: packages/unixcaptool/build/src/unixcaptool
