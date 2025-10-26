@@ -146,6 +146,17 @@ jobs:
           cmake --build . --parallel $(sysctl -n hw.ncpu)
           cmake --install .
 
+      - name: Clean .prl files (remove absolute build paths and .o file libs)
+        if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
+        working-directory: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
+        run: |
+          echo "Cleaning .prl files in ${{ steps.set-qt-dir.outputs.qt-install-dir }} to fix static linking..."
+          find . -type f -name "*.prl" | while read -r file; do
+            sed -i '' -e '/^QMAKE_PRL_BUILD_DIR/d' "$file"  # Remove build dir line (absolute paths)
+            sed -i '' -E 's| ?[^ ]*\.o||g' "$file"  # Remove any .o paths from libs
+          done
+          echo ".prl cleaning complete."    
+
       - name: Upload Qt install artifact (macOS)
         uses: actions/upload-artifact@v4
         with:
@@ -191,12 +202,6 @@ jobs:
             echo "QT_ARTIFACT_NAME=${{ needs.build-qt-macos.outputs.qt-artifact-name }}" >> $GITHUB_ENV
           fi
 
-      - name: Download Qt install artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.QT_ARTIFACT_NAME }}
-          path: ${{ env.QT_INSTALL_DIR }}
-
       - name: Install system dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -210,6 +215,15 @@ jobs:
             libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
             libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
             libxcb-cursor-dev # <--- THIS IS THE FIX
+
+      - name: Cache Qt (Shared)
+        id: cache-qt-shared
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.QT_INSTALL_DIR }}
+          key: qt-static-${{ runner.os }}-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-static/action.yml') }}-v1  # Match your Qt job's key (adjust v1/v2 as needed)
+          restore-keys: |
+            qt-static-${{ runner.os }}-squiggle-${{ env.QT_VERSION }}-
 
       - name: Build Squiggle (Linux)
         if: matrix.os == 'ubuntu-latest'
