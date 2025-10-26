@@ -1,8 +1,8 @@
 name: Build Squiggle (Cross-Platform)
 
 on:
-  # push:
-  workflow_dispatch:
+  push:
+  # workflow_dispatch:
 
 env:
   QT_VERSION: 6.8.0
@@ -24,7 +24,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v2 # v2 to include llvm
+          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v3 # Bump version for -qt-xcb
           restore-keys: |
             qt-static-linux-squiggle-${{ env.QT_VERSION }}-
 
@@ -33,9 +33,9 @@ jobs:
         uses: ./.github/actions/build-qt-squiggle
         with:
           version: ${{ env.QT_VERSION }}
-          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -no-opengl -no-dbus -no-icu -no-glib -no-fontconfig -qt-libjpeg -qt-libpng -qt-freetype -qt-zlib -qt-pcre -qt-harfbuzz -bundled-xcb-xinput"
+          configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -no-opengl -no-dbus -no-icu -no-glib -no-fontconfig -qt-libjpeg -qt-libpng -qt-freetype -qt-zlib -qt-pcre -qt-harfbuzz -bundled-xcb-xinput -qt-xcb"
           dir: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          submodules: "qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats"
+          submodules: "qtbase,qttools,qtimageformats"  # Removed unnecessary qtdeclarative, qtshadertools
 
   build-qt-windows:
     runs-on: windows-latest
@@ -53,7 +53,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v2
+          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v3
           restore-keys: |
             qt-static-windows-squiggle-${{ env.QT_VERSION }}-
 
@@ -64,7 +64,11 @@ jobs:
           Set-ExecutionPolicy Bypass -Scope Process -Force
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco install strawberryperl ninja cmake llvm --yes --no-progress
+          for ($retry = 1; $retry -le 3; $retry++) {
+            choco install strawberryperl ninja llvm jom --yes --no-progress --limit-output
+            if ($LASTEXITCODE -eq 0) { break }
+            Start-Sleep -Seconds 10
+          }
 
       - name: Setup MSVC environment
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
@@ -82,9 +86,10 @@ jobs:
           git clone https://code.qt.io/qt/qt5.git
           cd qt5
           git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
+          perl init-repository --module-subset qtbase,qttools,qtimageformats -f  # Removed unnecessary
           mkdir ../build
           cd ../build
+          rm -rf ./*  # Clean build dir
           ../qt5/configure.bat -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -cmake-generator Ninja -prefix "${{ steps.set-qt-dir.outputs.qt-install-dir }}"
           cmake --build . --parallel
           cmake --install .
@@ -117,7 +122,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v1
+          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v2
           restore-keys: |
             qt-static-macos-squiggle-${{ env.QT_VERSION }}-
 
@@ -133,9 +138,10 @@ jobs:
           git clone https://code.qt.io/qt/qt5.git
           cd qt5
           git checkout v${{ env.QT_VERSION }}
-          perl init-repository --module-subset qtbase,qtshadertools,qtdeclarative,qttools,qtimageformats -f
+          perl init-repository --module-subset qtbase,qttools,qtimageformats -f  # Removed unnecessary
           mkdir ../build
           cd ../build
+          rm -rf ./*  # Clean build dir
           export LLVM_DIR=$(brew --prefix llvm)
           ../qt5/configure -static -opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples -make libs -prefix ${{ steps.set-qt-dir.outputs.qt-install-dir }} -D LLVM_INSTALL_DIR="${LLVM_DIR}" -DFEATURE_clang=ON -DFEATURE_clangcpp=ON
           cmake --build . --parallel $(sysctl -n hw.ncpu)
@@ -192,7 +198,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.QT_INSTALL_DIR }}
-          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-${{ runner.os == 'Linux' && 'v2' || 'v2' }}
+          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-${{ runner.os == 'Linux' && 'v3' || 'v3' }}
           restore-keys: |
             ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-
 
@@ -208,7 +214,7 @@ jobs:
             libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev \
             libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev libatspi2.0-dev \
             libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
-            libxcb-cursor-dev libharfbuzz-dev libzstd-dev  # Added these
+            libxcb-cursor-dev libharfbuzz-dev libzstd-dev libxkbcommon-x11-dev
 
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'
@@ -217,7 +223,11 @@ jobs:
           Set-ExecutionPolicy Bypass -Scope Process -Force
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco install strawberryperl ninja cmake llvm jom --yes --no-progress  # Added jom here
+          for ($retry = 1; $retry -le 3; $retry++) {
+            choco install strawberryperl ninja llvm jom --yes --no-progress --limit-output
+            if ($LASTEXITCODE -eq 0) { break }
+            Start-Sleep -Seconds 10
+          }
 
       - name: Setup MSVC environment
         if: matrix.os == 'windows-latest'
@@ -237,9 +247,9 @@ jobs:
           
           cd packages/squiggle
           
-          qmake squiggle.pro
+          qmake squiggle.pro || { echo "qmake failed"; exit 1; }
           
-          make -j$(nproc)
+          make -j$(nproc) || { echo "make failed"; exit 1; }
           mkdir -p dist
           cp squiggle dist/
           strip dist/squiggle
@@ -254,7 +264,11 @@ jobs:
           
           qmake squiggle.pro
           
-          jom /J $(nproc || echo 4)  # Use jom for parallel builds; fallback to 4 if nproc not available
+          if command -v jom >/dev/null; then
+            jom /J $(nproc || echo 4)
+          else
+            nmake
+          fi
           
           mkdir dist
           cp release/squiggle.exe dist/squiggle.exe
