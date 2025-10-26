@@ -1,0 +1,28 @@
+name: Build on Linux
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Qt
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qt6-base-dev libqt6dbus6
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static"
+
+    - name: Build
+      run: cmake --build build
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: unixcaptool-linux
+        path: build/src/unixcaptool

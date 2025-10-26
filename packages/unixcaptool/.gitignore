@@ -6,5 +6,4 @@
 
 dist
 Makefile
-moc_predefs.h
-moc_receiver.cpp
+moc_*
