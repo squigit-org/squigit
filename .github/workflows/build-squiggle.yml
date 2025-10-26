@@ -24,13 +24,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-v2 # v2 to include llvm
+          key: qt-static-linux-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v2 # v2 to include llvm
           restore-keys: |
             qt-static-linux-squiggle-${{ env.QT_VERSION }}-
 
       - name: Build static Qt (Linux)
         if: ${{ steps.cache-qt.outputs.cache-hit != 'true' }}
-        uses: ./.github/actions/build-qt-linux
+        uses: ./.github/actions/build-qt-squiggle
         with:
           version: ${{ env.QT_VERSION }}
           configure-args: "-opensource -confirm-license -no-pch -skip qtwebengine -nomake tests -nomake examples"
@@ -55,7 +55,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-v1
+          key: qt-static-windows-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v1
           restore-keys: |
             qt-static-windows-squiggle-${{ env.QT_VERSION }}-
 
@@ -107,7 +107,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.set-qt-dir.outputs.qt-install-dir }}
-          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-v1
+          key: qt-static-macos-squiggle-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-v1
           restore-keys: |
             qt-static-macos-squiggle-${{ env.QT_VERSION }}-
 
@@ -182,7 +182,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.QT_INSTALL_DIR }}
-          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-linux/action.yml') }}-${{ runner.os == 'Linux' && 'v2' || 'v1' }}
+          key: ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-${{ hashFiles('.github/actions/build-qt-squiggle/action.yml') }}-${{ runner.os == 'Linux' && 'v2' || 'v1' }}
           restore-keys: |
             ${{ runner.os == 'Linux' && 'qt-static-linux-squiggle' || (runner.os == 'Windows' && 'qt-static-windows-squiggle' || 'qt-static-macos-squiggle') }}-${{ env.QT_VERSION }}-
 
@@ -200,6 +200,22 @@ jobs:
             libpcre2-dev libdbus-1-dev libpng-dev libjpeg-dev libglib2.0-dev \
             libxcb-cursor-dev # <--- THIS IS THE FIX
 
+      - name: Install dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          choco install strawberryperl ninja cmake llvm --yes --no-progress
+
+      - name: Setup MSVC environment
+        if: matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          vsversion: 2022
+
       - name: Build Squiggle (Linux)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
@@ -211,7 +227,6 @@ jobs:
           
           cd packages/squiggle
           
-          # Use simplified qmake command; all logic is in the .pro file
           qmake squiggle.pro
           
           make -j$(nproc)
@@ -227,7 +242,7 @@ jobs:
           
           cd packages\squiggle
           
-          # Use simplified qmake command; all logic is in the .pro file
+          REM Use simplified qmake command; all logic is in the .pro file
           qmake squiggle.pro
           
           ninja
@@ -246,7 +261,6 @@ jobs:
           
           cd packages/squiggle
           
-          # Use simplified qmake command; all logic is in the .pro file
           qmake squiggle.pro
           
           make -j$(sysctl -n hw.ncpu)
