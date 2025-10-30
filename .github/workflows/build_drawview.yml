@@ -43,12 +43,15 @@ jobs:
         with:
           msbuild-architecture: x64
 
+      - name: 4.6. Setup MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: 5. Configure CMake
         run: |
           cmake -S ${{ env.SOURCE_DIR }} -B build `
             -G "${{ env.CMAKE_GENERATOR }}" `
             -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} `
-            -DCMAKE_PREFIX_PATH="${{ env.QT_PATH }}\lib\cmake\Qt6"
+            -DCMAKE_PREFIX_PATH=${{ env.QT_PATH }}
 
       - name: 6. Build with CMake/Ninja
         run: |
