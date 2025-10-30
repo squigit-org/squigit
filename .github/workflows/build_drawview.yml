@@ -38,6 +38,11 @@ jobs:
         run: |
           aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 --archives 7z --outputdir C:\Qt
 
+      - name: 4.5. Set up MSVC Developer Environment
+        uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: x64
+
       - name: 5. Configure CMake
         run: |
           cmake -S ${{ env.SOURCE_DIR }} -B build `
