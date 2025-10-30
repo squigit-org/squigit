@@ -36,7 +36,7 @@ jobs:
 
       - name: 4. Install Qt 6.6.0 (msvc2019_64)
         run: |
-          aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 --archives 7z -O C:\Qt --modules qtbase
+          aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 --archives 7z --outputdir C:\Qt
 
       - name: 5. Configure CMake
         run: |
@@ -62,7 +62,7 @@ jobs:
           windeployqt drawview.exe
           
           Get-ChildItem
-          Get-ChildItem -Recse
+          Get-ChildItem -Recurse
         
       - name: 10. Upload Artifact
         uses: actions/upload-artifact@v4
