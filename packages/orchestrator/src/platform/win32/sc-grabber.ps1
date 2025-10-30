@@ -79,18 +79,28 @@ if (-not $screens) {
 }
 
 $i = 1
+$errorsEncountered = $false
 foreach ($screen in $screens) {
     $b = $screen.Bounds
     $outFile = Join-Path $fullPath ("$i.$imageExt")
 
     & $nircmdCmd savescreenshot $outFile $b.X $b.Y $b.Width $b.Height
+    
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "nircmd failed for screen $i (exit code: $LASTEXITCODE)."
-        exit $LASTEXITCODE
+        $exitCodeStr = if ([string]::IsNullOrEmpty($LASTEXITCODE)) { "[blank]" } else { $LASTEXITCODE }
+        
+        Write-Warning "nircmd reported an issue with screen $i (exit code: $exitCodeStr). Continuing to next screen..."
+        $errorsEncountered = $true
     }
 
     $i++
 }
 
 Write-Output "Captured $($i - 1) screen(s) into: $fullPath"
+
+if ($errorsEncountered) {
+    Write-Warning "One or more screens may not have been captured correctly."
+    exit 1
+}
+
 exit 0
