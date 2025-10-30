@@ -31,15 +31,15 @@ int main(int argc, char *argv[]) {
 #endif
 
     QApplication app(argc, argv);
-    app.setApplicationName("spatialshot");
-    app.setOrganizationName("spatialshot"); 
+    app.setApplicationName("drawview");
+    app.setOrganizationName("spatialshot");  
     app.setApplicationVersion("1.0.0");
 
     QString tmpPath;
     QString cacheBase;
 
 #ifdef Q_OS_WIN
-    cacheBase = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    cacheBase = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
 #else
     cacheBase = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation);
 #endif

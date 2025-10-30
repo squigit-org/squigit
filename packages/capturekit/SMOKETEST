@@ -1,5 +1,12 @@
 #!/bin/bash
 
+OS=$(uname)
+
+if [ "$OS" != "Linux" ]; then
+    echo "This script must be run on Linux."
+    exit 1
+fi
+
 echo "--- Building Docker image ---"
 sudo docker build -t capkit "$DIR"
 echo "--- Docker build finished ---"

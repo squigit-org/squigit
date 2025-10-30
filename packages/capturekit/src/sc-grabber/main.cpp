@@ -37,6 +37,10 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    app.setApplicationName("scgrabber");
+    app.setOrganizationName("spatialshot");  
+    app.setApplicationVersion("1.0.0");
+
     QString platform = app.platformName();
     qDebug() << "Detected platform:" << platform;
 
