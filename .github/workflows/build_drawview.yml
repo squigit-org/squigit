@@ -20,6 +20,7 @@ jobs:
       QT_PATH: C:\Qt\6.6.0\msvc2019_64
       CMAKE_GENERATOR: Ninja
       CMAKE_BUILD_TYPE: Release
+      SOURCE_DIR: packages/capturekit/src
 
     steps:
       - name: 1. Check out repository code
@@ -34,17 +35,19 @@ jobs:
         run: pip install aqtinstall
 
       - name: 4. Install Qt 6.6.0 (msvc2019_64)
-        run: aqt install-qt windows desktop 6.6.0 msvc2019_64 --archives 7z
+        run: |
+          aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 --archives 7z -O C:\Qt --modules qtbase
 
       - name: 5. Configure CMake
         run: |
-          cmake -S packages/capturekit/src -B build `
+          cmake -S ${{ env.SOURCE_DIR }} -B build `
             -G "${{ env.CMAKE_GENERATOR }}" `
             -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} `
             -DCMAKE_PREFIX_PATH=${{ env.QT_PATH }}
 
       - name: 6. Build with CMake/Ninja
-        run: cmake --build build --config ${{ env.CMAKE_BUILD_TYPE }}
+        run: |
+          cmake --build build
 
       - name: 7. Create distribution directory
         run: New-Item -ItemType Directory -Path "dist" -Force
@@ -55,12 +58,11 @@ jobs:
       - name: 9. Run windeployqt
         run: |
           $env:PATH = "${{ env.QT_PATH }}\bin;$env:PATH"
-          
           cd dist
           windeployqt drawview.exe
           
           Get-ChildItem
-          Get-ChildItem -Recurse
+          Get-ChildItem -Recse
         
       - name: 10. Upload Artifact
         uses: actions/upload-artifact@v4
