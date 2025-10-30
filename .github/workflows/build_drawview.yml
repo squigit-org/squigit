@@ -36,7 +36,7 @@ jobs:
 
       - name: 4. Install Qt 6.6.0 (msvc2019_64)
         run: |
-          aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 --archives 7z --outputdir C:\Qt
+          aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 --outputdir C:\Qt
 
       - name: 4.5. Set up MSVC Developer Environment
         uses: microsoft/setup-msbuild@v2
