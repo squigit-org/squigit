@@ -48,7 +48,7 @@ jobs:
           cmake -S ${{ env.SOURCE_DIR }} -B build `
             -G "${{ env.CMAKE_GENERATOR }}" `
             -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} `
-            -DCMAKE_PREFIX_PATH=${{ env.QT_PATH }}
+            -DCMAKE_PREFIX_PATH="${{ env.QT_PATH }}\lib\cmake\Qt6"
 
       - name: 6. Build with CMake/Ninja
         run: |
