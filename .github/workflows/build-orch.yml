@@ -1,0 +1,129 @@
+name: Build Orchestrator
+
+on:
+  # workflow_dispatch:
+  push:
+
+defaults:
+  run:
+    working-directory: packages/orchestrator
+
+jobs:
+  build-linux:
+    name: Build Standalone (Linux-MUSL)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            packages/orchestrator/target/
+          key: ${{ runner.os }}-cargo-musl-${{ hashFiles('packages/orchestrator/Cargo.lock') }}
+
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Add MUSL target
+        run: rustup target add x86_64-unknown-linux-musl
+
+      - name: Install MUSL C compiler and required libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools libudev-dev libdbus-1-dev
+
+      - name: Build static MUSL binary
+        run: cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: Strip debug symbols from binary
+        run: strip target/x86_64-unknown-linux-musl/release/spatialshot-orchestrator
+
+      - name: Rename artifact
+        run: mv target/x86_64-unknown-linux-musl/release/spatialshot-orchestrator spatialshot-orchestrator-linux-x64
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatialshot-orchestrator-linux-x64
+          path: packages/orchestrator/spatialshot-orchestrator-linux-x64
+
+  build-macos:
+    name: Build Standalone (macOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            packages/orchestrator/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/orchestrator/Cargo.lock') }}
+
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build binary
+        run: cargo build --release
+
+      - name: Strip debug symbols from binary
+        run: strip target/release/spatialshot-orchestrator
+
+      - name: Rename artifact
+        run: mv target/release/spatialshot-orchestrator spatialshot-orchestrator-macos-x64
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatialshot-orchestrator-macos-x64
+          path: packages/orchestrator/spatialshot-orchestrator-macos-x64
+
+  build-windows:
+    name: Build Standalone (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            packages/orchestrator/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/orchestrator/Cargo.lock') }}
+          
+      - name: Install Rust stable toolchain (msvc)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build binary
+        run: cargo build --release
+
+      - name: Rename artifact
+        run: mv target/release/spatialshot-orchestrator.exe spatialshot-orchestrator-windows-x64.exe
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatialshot-orchestrator-windows-x64.exe
+          path: packages/orchestrator/spatialshot-orchestrator-windows-x64.exe
