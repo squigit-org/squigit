@@ -66,8 +66,8 @@ jobs:
         
         .\PKGBUILD.ps1
         
-        if (-not (Test-Path "dist\capkit.exe")) {
-          Write-Error "Build failed - capkit.exe not found"
+        if (-not (Test-Path "dist\drawview.exe")) {
+          Write-Error "Build failed - drawview.exe not found"
           exit 1
         }
         
