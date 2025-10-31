@@ -16,46 +16,32 @@
 **/
 
 use anyhow::{anyhow, Result};
-use fs2::FileExt;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::fs::File;
+// use std::fs::File; // No longer needed
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{mpsc, Arc};
+// use std::sync::atomic::{AtomicBool, Ordering}; // No longer needed
+use std::sync::mpsc;
+// use std::sync::Arc; // No longer needed
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+// use fs2::FileExt; // No longer needed
 
+// Declare modules
 mod platform;
 mod shared;
 
+// Use modules
 use platform::*;
 use shared::*;
 
-fn acquire_lock_or_exit() -> Result<File> {
-    let lock_path = std::env::temp_dir().join("spatialshot.lock");
-    let file = File::create(&lock_path)?;
-
-    match file.try_lock_exclusive() {
-        Ok(_) => {
-            println!("Acquired instance lock at {}", lock_path.display());
-            Ok(file)
-        }
-        Err(_) => Err(anyhow!(
-            "Another instance of spatialshot-orchestrator is already running."
-        )),
-    }
-}
+// --- SAFETY FUNCTION REMOVED ---
+// fn acquire_lock_or_exit() -> Result<File> { ... }
 
 fn main() -> Result<()> {
-    let _lock_file = match acquire_lock_or_exit() {
-        Ok(file) => file,
-        Err(e) => {
-            eprintln!("{}", e);
-            return Ok(());
-        }
-    };
+    // --- LOCK LOGIC REMOVED ---
 
     let paths = setup_paths()?;
+    // We still keep this to clean up zombies from previous runs
     kill_running_packages(&paths);
 
     let initial_monitor_count = get_monitor_count(&paths)?;
@@ -66,48 +52,46 @@ fn main() -> Result<()> {
         core_affinity::set_for_current(cores[0]);
     }
 
-    let running = Arc::new(AtomicBool::new(true));
+    // --- COORDINATION ARCS REMOVED ---
 
+    // This is synchronous, it waits.
     run_grab_screen(&paths)?;
 
+    // Spawn the *only* background thread: the monitor
     let paths_monitor = paths.clone();
-    let running_monitor = running.clone();
     let cores_monitor = cores.clone();
     let monitor_handle = thread::spawn(move || {
         if cores_monitor.len() >= 2 {
             core_affinity::set_for_current(cores_monitor[1]);
         }
-        let res = monitor_tmp(
+        // Pass only the monitor count
+        monitor_tmp(
             &paths_monitor,
-            running_monitor.clone(),
             initial_monitor_count,
-        );
-        if res.is_err() {
-            running_monitor.store(false, Ordering::SeqCst);
-        }
-        res
+        )
     });
 
-    let paths_safety = paths;
-    let running_safety = running.clone();
-    let cores_safety = cores.clone();
-    let safety_handle = thread::spawn(move || {
-        if cores_safety.len() >= 3 {
-            core_affinity::set_for_current(cores_safety[2]);
-        }
-        safety_monitor(&paths_safety, running_safety, initial_monitor_count)
-    });
+    // --- SAFETY THREAD SPAWN REMOVED ---
 
-    let monitor_res = monitor_handle.join().unwrap();
-    let safety_res = safety_handle.join().unwrap();
+    // Wait for the monitor thread to finish
+    // (i.e., after it has launched spatialshot)
+    let monitor_res = monitor_handle.join().unwrap_or(Err(anyhow!("Monitor thread panicked")));
 
-    monitor_res?;
-    safety_res?;
+    // If the monitor thread panicked (e.g., file error),
+    // we should clean up the draw-view it might have orphaned.
+    if monitor_res.is_err() {
+        kill_running_packages(&paths);
+        monitor_res?; // Propagate the panic
+    }
 
     Ok(())
 }
 
-fn monitor_tmp(paths: &AppPaths, running: Arc<AtomicBool>, monitor_count: u32) -> Result<()> {
+
+fn monitor_tmp(
+    paths: &AppPaths,
+    monitor_count: u32,
+) -> Result<()> {
     let (tx, rx) = mpsc::channel();
     let mut watcher: RecommendedWatcher = Watcher::new(
         move |res: Result<notify::Event, _>| {
@@ -121,27 +105,27 @@ fn monitor_tmp(paths: &AppPaths, running: Arc<AtomicBool>, monitor_count: u32) -
     )?;
     watcher.watch(&paths.tmp_dir, RecursiveMode::NonRecursive)?;
 
+    // --- Phase 1: Wait for grab-screen screenshots ---
     loop {
-        if !running.load(Ordering::SeqCst) {
-            return Ok(());
-        }
+        // --- 'running' CHECK REMOVED ---
 
         let files = std::fs::read_dir(&paths.tmp_dir)?
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().ok().map(|ft| ft.is_file()).unwrap_or(false))
             .count();
+            
         if files as u32 == monitor_count {
             println!("Monitor Thread: All screenshots detected. Running draw-view...");
             run_draw_view(paths)?;
+            // --- 'draw_view_active' BOOL REMOVED ---
             break;
         }
         let _ = rx.recv_timeout(Duration::from_millis(100));
     }
 
+    // --- Phase 2: Wait for draw-view output (o*.png) ---
     loop {
-        if !running.load(Ordering::SeqCst) {
-            return Ok(());
-        }
+        // --- 'running' CHECK REMOVED ---
 
         let out_files: Vec<PathBuf> = std::fs::read_dir(&paths.tmp_dir)?
             .filter_map(|e| e.ok())
@@ -162,48 +146,9 @@ fn monitor_tmp(paths: &AppPaths, running: Arc<AtomicBool>, monitor_count: u32) -
                 out_path.display()
             );
             run_spatialshot(paths, out_path)?;
-            running.store(false, Ordering::SeqCst);
-            return Ok(());
+            // --- 'running' BOOL REMOVED ---
+            return Ok(()); // Success!
         }
         let _ = rx.recv_timeout(Duration::from_millis(100));
-    }
-}
-
-fn safety_monitor(
-    paths: &AppPaths,
-    running: Arc<AtomicBool>,
-    initial_monitor_count: u32,
-) -> Result<()> {
-    let start_time = Instant::now();
-    let timeout = Duration::from_secs(60);
-
-    loop {
-        if !running.load(Ordering::SeqCst) {
-            println!("Safety Thread: Monitor thread finished. Exiting.");
-            return Ok(());
-        }
-
-        if start_time.elapsed() > timeout {
-            println!("Safety Thread: Timeout exceeded! Killing processes and exiting.");
-            running.store(false, Ordering::SeqCst);
-            kill_running_packages(paths);
-            std::process::exit(1);
-        }
-
-        let count_result = get_monitor_count(paths);
-
-        if let Ok(current_count) = count_result {
-            if current_count != initial_monitor_count {
-                println!(
-                    "Safety Thread: Monitor count changed! ({} -> {}). Killing processes and exiting.",
-                    initial_monitor_count, current_count
-                );
-                running.store(false, Ordering::SeqCst);
-                kill_running_packages(paths);
-                std::process::exit(1);
-            }
-        }
-        
-        thread::sleep(Duration::from_millis(100));
     }
 }

@@ -9,7 +9,7 @@ pub struct AppPaths {
 }
 
 pub fn setup_paths() -> Result<AppPaths> {
-    // FIX: Added underscore to suppress warning
+    // FIX: Added underscore
     let _home_dir = home::home_dir().ok_or(anyhow::anyhow!("No home dir"))?;
 
     #[cfg(target_os = "linux")]

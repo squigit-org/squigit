@@ -1,25 +1,8 @@
-/**
- *  Copyright (C) 2025  a7mddra-spatialshot
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-**/
-
-use crate::shared::AppPaths;
 use anyhow::{anyhow, Result};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
+use crate::shared::AppPaths;
 use sysinfo::{ProcessRefreshKind, RefreshKind, System, ProcessesToUpdate};
 
 const CORE_SH: &str = include_str!("core.sh");
@@ -27,7 +10,7 @@ const CORE_SH: &str = include_str!("core.sh");
 pub fn get_monitor_count(paths: &AppPaths) -> Result<u32> {
     write_core_script(paths)?;
     let output = run_core_sync(paths, "count-monitors", &[])?;
-    Ok(output.trim().parse()?)
+    Ok(output.trim().parse()?) // Propagates error
 }
 
 pub fn run_grab_screen(paths: &AppPaths) -> Result<()> {
@@ -58,7 +41,10 @@ fn run_core_sync(paths: &AppPaths, arg: &str, extra_args: &[&str]) -> Result<Str
         cmd_str.push_str(&format!(" \"{}\"", extra));
     }
 
-    let output = Command::new("bash").arg("-c").arg(&cmd_str).output()?;
+    let output = Command::new("bash")
+        .arg("-c")
+        .arg(&cmd_str)
+        .output()?; 
 
     if !output.status.success() {
         return Err(anyhow!(
@@ -89,6 +75,7 @@ pub fn kill_running_packages(_paths: &AppPaths) {
     let mut sys = System::new_with_specifics(
         RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
     );
+    // FIX: This API changed
     sys.refresh_processes_specifics(ProcessesToUpdate::All, false, ProcessRefreshKind::new());
     for process in sys.processes().values() {
         let name = process.name();
