@@ -153,8 +153,7 @@ fn launch_in_user_session(
     let app_w = HSTRING::from(app_path);
     let work_w = work_dir.map(HSTRING::from);
     
-    // FIX: This is the correct way to handle an optional PCWSTR
-    let work_dir_pcwstr = work_w.as_ref().map_or(PCWSTR::null(), |s| s.as_pcwstr());
+    let work_dir_pcwstr = work_w.as_ref().map_or(PCWSTR::null(), |s| PCWSTR(s.as_ptr()));
 
     let cmd_line_str = cmd_line.unwrap_or("");
     let mut cmd_w: Vec<u16> = cmd_line_str.encode_utf16().chain(Some(0)).collect();
