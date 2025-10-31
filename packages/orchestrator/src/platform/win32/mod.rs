@@ -15,33 +15,38 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
-use crate::shared::AppPaths;
 use anyhow::{anyhow, bail, Result};
 use std::ffi::c_void;
 use std::io::Read;
-use std::os::windows::io::{FromRawHandle, IntoRawHandle};
+use std::os::windows::io::FromRawHandle;
 use std::path::Path;
 use std::ptr::null_mut;
+use crate::shared::AppPaths;
 use sysinfo::{ProcessRefreshKind, RefreshKind, System};
 use windows::{
-    core::HSTRING,
+    core::{HSTRING, PCWSTR, PWSTR},
     Win32::{
         Foundation::{CloseHandle, BOOL, HANDLE, INVALID_HANDLE_VALUE},
         Security::{
-            DuplicateTokenEx, SecurityImpersonation, TokenAssignPrimary, TokenDuplicate,
-            TokenImpersonate, TokenQuery, TokenType, TOKEN_ACCESS_MASK,
+            DuplicateTokenEx, SecurityImpersonation,
+            TOKEN_ASSIGN_PRIMARY,
+            TOKEN_DUPLICATE,
+            TOKEN_IMPERSONATE,
+            TOKEN_QUERY,
+            TOKEN_TYPE,
         },
         System::{
             Environment::{CreateEnvironmentBlock, DestroyEnvironmentBlock},
             Pipes::CreatePipe,
             RemoteDesktop::{
-                WTSActive, WTSEnumerateSessionsW, WTSFreeMemory, WTSGetActiveConsoleSessionId,
-                WTSQueryUserToken, WTS_SESSION_INFOW,
+                WTSGetActiveConsoleSessionId, WTSQueryUserToken, WTSEnumerateSessionsW,
+                WTSFreeMemory, WTSActive,
             },
             Threading::{
-                CreateProcessAsUserW, GetExitCodeProcess, WaitForSingleObject, CREATE_NO_WINDOW,
-                CREATE_UNICODE_ENVIRONMENT, INFINITE, PROCESS_INFORMATION, STARTF_USESHOWWINDOW,
-                STARTF_USESTDHANDLES, STARTUPINFOW,
+                CreateProcessAsUserW, GetExitCodeProcess, WaitForSingleObject,
+                CREATE_NO_WINDOW, CREATE_UNICODE_ENVIRONMENT, INFINITE, PROCESS_INFORMATION,
+                PROCESS_CREATION_FLAGS,
+                STARTF_USESHOWWINDOW, STARTF_USESTDHANDLES, STARTUPINFOW,
             },
         },
         UI::WindowsAndMessaging::{SW_HIDE, SW_SHOW},
@@ -106,7 +111,6 @@ fn run_core_sync(paths: &AppPaths, arg: &str, extra_args: &[&str]) -> Result<Str
     for extra in extra_args {
         cmd_line.push_str(&format!(" \"{}\"", extra));
     }
-
     let (stdout, stderr, exit_code) =
         launch_in_user_session("powershell.exe", Some(&cmd_line), None, false, true, true)?;
 
@@ -131,14 +135,16 @@ fn launch_in_user_session(
     let h_token = get_session_user_token()?;
 
     let mut env: *mut c_void = null_mut();
-    unsafe { CreateEnvironmentBlock(&mut env, h_token, BOOL(0)) }.ok()?;
+    if !unsafe { CreateEnvironmentBlock(&mut env, h_token, BOOL(0)) }.as_bool() {
+        bail!("CreateEnvironmentBlock failed");
+    }
 
     let mut startup_info = STARTUPINFOW::default();
     startup_info.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
     let mut desktop_w: Vec<u16> = "winsta0\\default".encode_utf16().chain(Some(0)).collect();
-    startup_info.lpDesktop = desktop_w.as_mut_ptr();
+    startup_info.lpDesktop = PWSTR(desktop_w.as_mut_ptr());
 
-    startup_info.wShowWindow = if visible { SW_SHOW.0 } else { SW_HIDE.0 };
+    startup_info.wShowWindow = if visible { SW_SHOW.0 as u16 } else { SW_HIDE.0 as u16 };
     startup_info.dwFlags = STARTF_USESHOWWINDOW;
 
     let mut h_stdout_read = INVALID_HANDLE_VALUE;
@@ -157,7 +163,8 @@ fn launch_in_user_session(
     }
 
     let mut process_info = PROCESS_INFORMATION::default();
-    let creation_flags = CREATE_UNICODE_ENVIRONMENT | if visible { 0 } else { CREATE_NO_WINDOW.0 };
+    let creation_flags =
+        CREATE_UNICODE_ENVIRONMENT | if visible { PROCESS_CREATION_FLAGS(0) } else { CREATE_NO_WINDOW };
 
     let app_w = HSTRING::from(app_path);
     let work_w = work_dir.map(HSTRING::from);
@@ -165,25 +172,22 @@ fn launch_in_user_session(
     let cmd_line_str = cmd_line.unwrap_or("");
     let mut cmd_w: Vec<u16> = cmd_line_str.encode_utf16().chain(Some(0)).collect();
     let cmd_ptr = if cmd_line_str.is_empty() {
-        null_mut()
+        PWSTR::null()
     } else {
-        cmd_w.as_mut_ptr()
+        PWSTR(cmd_w.as_mut_ptr())
     };
 
     let ok = unsafe {
         CreateProcessAsUserW(
             h_token,
-            app_w.as_wide().as_ptr(),
+            &app_w,
             cmd_ptr,
             None,
             None,
             BOOL(if wait && capture { 1 } else { 0 }),
             creation_flags,
-            env,
-            work_w
-                .as_ref()
-                .map(|h| h.as_wide().as_ptr())
-                .unwrap_or(null_mut()),
+            Some(env),
+            work_w.as_ref(),
             &startup_info,
             &mut process_info,
         )
@@ -197,7 +201,7 @@ fn launch_in_user_session(
         unsafe { CloseHandle(startup_info.hStdError) };
     }
 
-    if !ok.is_ok() {
+    if !ok.as_bool() {
         bail!("CreateProcessAsUserW failed");
     }
 
@@ -229,7 +233,9 @@ fn launch_in_user_session(
 fn create_pipe() -> Result<(HANDLE, HANDLE)> {
     let mut h_read = INVALID_HANDLE_VALUE;
     let mut h_write = INVALID_HANDLE_VALUE;
-    unsafe { CreatePipe(&mut h_read, &mut h_write, None, 0) }.ok()?;
+    if !unsafe { CreatePipe(&mut h_read, &mut h_write, None, 0) }.as_bool() {
+        bail!("CreatePipe failed");
+    }
     Ok((h_read, h_write))
 }
 
@@ -249,7 +255,11 @@ fn get_session_user_token() -> Result<HANDLE> {
     if session_id == 0xFFFFFFFF {
         let mut p_session_info = null_mut();
         let mut count = 0;
-        unsafe { WTSEnumerateSessionsW(HANDLE(0), 0, 1, &mut p_session_info, &mut count) }.ok()?;
+        if !unsafe { WTSEnumerateSessionsW(HANDLE(0), 0, 1, &mut p_session_info, &mut count) }
+            .as_bool()
+        {
+            bail!("WTSEnumerateSessionsW failed");
+        }
         let sessions = unsafe { std::slice::from_raw_parts(p_session_info, count as usize) };
         session_id = sessions
             .iter()
@@ -264,23 +274,27 @@ fn get_session_user_token() -> Result<HANDLE> {
     }
 
     let mut h_impersonation_token = HANDLE::default();
-    unsafe { WTSQueryUserToken(session_id, &mut h_impersonation_token) }.ok()?;
+    if !unsafe { WTSQueryUserToken(session_id, &mut h_impersonation_token) }.as_bool() {
+        bail!("WTSQueryUserToken failed");
+    }
 
     let mut h_token = HANDLE::default();
-    let access = TOKEN_ACCESS_MASK(
-        TokenAssignPrimary.0 | TokenDuplicate.0 | TokenQuery.0 | TokenImpersonate.0,
-    );
-    unsafe {
+    let access = TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_IMPERSONATE;
+    
+    if !unsafe {
         DuplicateTokenEx(
             h_impersonation_token,
             access,
             None,
             SecurityImpersonation,
-            TokenType::TokenPrimary,
+            TOKEN_TYPE::TokenPrimary,
             &mut h_token,
         )
     }
-    .ok()?;
+    .as_bool()
+    {
+        bail!("DuplicateTokenEx failed");
+    }
 
     unsafe { CloseHandle(h_impersonation_token) };
     Ok(h_token)
@@ -293,7 +307,7 @@ pub fn kill_running_packages(_paths: &AppPaths) {
     sys.refresh_processes();
     for process in sys.processes().values() {
         let name = process.name();
-        if name == "scgrabber-bin.exe" || name == "drawview.exe" || name == "spatialshot.exe" {
+        if name == "scgrabber-bin.exe" || name == "drawview.exe" || name "spatialshot.exe" {
             process.kill();
         }
     }

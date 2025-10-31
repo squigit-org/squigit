@@ -58,7 +58,7 @@ pub fn setup_paths() -> Result<AppPaths> {
         }
         #[cfg(target_os = "windows")]
         {
-            PathBuf::from(local_app_data).join("spatialshot")
+            PathBuf::from(local_app_data.clone()).join("spatialshot")
         }
     };
 
