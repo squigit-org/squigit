@@ -26,21 +26,21 @@ pub struct AppPaths {
 }
 
 pub fn setup_paths() -> Result<AppPaths> {
-    let home_dir = home::home_dir().ok_or(anyhow::anyhow!("No home dir"))?;
+    let _home_dir = home::home_dir().ok_or(anyhow::anyhow!("No home dir"))?;
 
     #[cfg(target_os = "linux")]
     let (cache_home, data_home) = {
         let cache = std::env::var("XDG_CACHE_HOME")
-            .unwrap_or_else(|_| home_dir.join(".cache").to_string_lossy().to_string());
+            .unwrap_or_else(|_| _home_dir.join(".cache").to_string_lossy().to_string());
         let data = std::env::var("XDG_DATA_HOME")
-            .unwrap_or_else(|_| home_dir.join(".local/share").to_string_lossy().to_string());
+            .unwrap_or_else(|_| _home_dir.join(".local/share").to_string_lossy().to_string());
         (cache, data)
     };
 
     #[cfg(target_os = "macos")]
     let (caches, app_support) = {
-        let support = home_dir.join("Library/Application Support");
-        let cache = home_dir.join("Library/Caches");
+        let support = _home_dir.join("Library/Application Support");
+        let cache = _home_dir.join("Library/Caches");
         (cache, support)
     };
 

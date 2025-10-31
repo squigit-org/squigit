@@ -20,14 +20,14 @@ use anyhow::{anyhow, Result};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
-use sysinfo::{ProcessRefreshKind, RefreshKind, System};
+use sysinfo::{ProcessRefreshKind, RefreshKind, System, ProcessesToUpdate};
 
 const CORE_SH: &str = include_str!("core.sh");
 
 pub fn get_monitor_count(paths: &AppPaths) -> Result<u32> {
     write_core_script(paths)?;
     let output = run_core_sync(paths, "count-monitors", &[])?;
-    Ok(output.trim().parse().unwrap_or(1))
+    Ok(output.trim().parse()?)
 }
 
 pub fn run_grab_screen(paths: &AppPaths) -> Result<()> {
@@ -89,7 +89,7 @@ pub fn kill_running_packages(_paths: &AppPaths) {
     let mut sys = System::new_with_specifics(
         RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
     );
-    sys.refresh_processes();
+    sys.refresh_processes_specifics(sysinfo::ProcessesToUpdate::All, false);
     for process in sys.processes().values() {
         let name = process.name();
         if name == "scgrabber-bin" || name == "drawview-bin" || name == "spatialshot" {

@@ -33,7 +33,3 @@ windows = { version = "0.56.0", features = [
     "Win32_System_Pipes",
     "Win32_UI_WindowsAndMessaging",
 ] }
-
-[target.x86_64-unknown-linux-musl]
-linker = "x86_64-linux-musl-gcc"
-rustflags = ["-C", "target-feature=+crt-static"]

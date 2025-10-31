@@ -190,18 +190,20 @@ fn safety_monitor(
             std::process::exit(1);
         }
 
-        let current_count = get_monitor_count(paths)?;
-        if current_count != initial_monitor_count {
-            println!(
-                "Safety Thread: Monitor count changed! ({} -> {}). Killing processes and exiting.",
-                initial_monitor_count, current_count
-            );
-            running.store(false, Ordering::SeqCst);
+        let count_result = get_monitor_count(paths);
 
-            kill_running_packages(paths);
-            std::process::exit(1);
+        if let Ok(current_count) = count_result {
+            if current_count != initial_monitor_count {
+                println!(
+                    "Safety Thread: Monitor count changed! ({} -> {}). Killing processes and exiting.",
+                    initial_monitor_count, current_count
+                );
+                running.store(false, Ordering::SeqCst);
+                kill_running_packages(paths);
+                std::process::exit(1);
+            }
         }
-
+        
         thread::sleep(Duration::from_millis(100));
     }
 }

@@ -22,9 +22,9 @@ use std::os::windows::io::FromRawHandle;
 use std::path::Path;
 use std::ptr::null_mut;
 use crate::shared::AppPaths;
-use sysinfo::{ProcessRefreshKind, RefreshKind, System};
+use sysinfo::{ProcessRefreshKind, RefreshKind, System, ProcessesToUpdate};
 use windows::{
-    core::{HSTRING, PCWSTR, PWSTR},
+    core::{HSTRING, PWSTR},
     Win32::{
         Foundation::{CloseHandle, BOOL, HANDLE, INVALID_HANDLE_VALUE},
         Security::{
@@ -33,6 +33,7 @@ use windows::{
             TOKEN_DUPLICATE,
             TOKEN_IMPERSONATE,
             TOKEN_QUERY,
+            TOKEN_PRIMARY,
             TOKEN_TYPE,
         },
         System::{
@@ -58,7 +59,7 @@ const CORE_PS1: &str = include_str!("core.ps1");
 pub fn get_monitor_count(paths: &AppPaths) -> Result<u32> {
     write_core_script(paths)?;
     let output = run_core_sync(paths, "count-monitors", &[])?;
-    Ok(output.trim().parse().unwrap_or(1))
+    Ok(output.trim().parse()?)
 }
 
 pub fn run_grab_screen(paths: &AppPaths) -> Result<()> {
@@ -135,7 +136,7 @@ fn launch_in_user_session(
     let h_token = get_session_user_token()?;
 
     let mut env: *mut c_void = null_mut();
-    if !unsafe { CreateEnvironmentBlock(&mut env, h_token, BOOL(0)) }.as_bool() {
+    if !unsafe { CreateEnvironmentBlock(&mut env, h_token, BOOL(0)) }.is_ok() {
         bail!("CreateEnvironmentBlock failed");
     }
 
@@ -201,7 +202,7 @@ fn launch_in_user_session(
         unsafe { CloseHandle(startup_info.hStdError) };
     }
 
-    if !ok.as_bool() {
+    if ok.is_err() {
         bail!("CreateProcessAsUserW failed");
     }
 
@@ -233,7 +234,7 @@ fn launch_in_user_session(
 fn create_pipe() -> Result<(HANDLE, HANDLE)> {
     let mut h_read = INVALID_HANDLE_VALUE;
     let mut h_write = INVALID_HANDLE_VALUE;
-    if !unsafe { CreatePipe(&mut h_read, &mut h_write, None, 0) }.as_bool() {
+    if !unsafe { CreatePipe(&mut h_read, &mut h_write, None, 0) }.is_ok() {
         bail!("CreatePipe failed");
     }
     Ok((h_read, h_write))
@@ -256,7 +257,7 @@ fn get_session_user_token() -> Result<HANDLE> {
         let mut p_session_info = null_mut();
         let mut count = 0;
         if !unsafe { WTSEnumerateSessionsW(HANDLE(0), 0, 1, &mut p_session_info, &mut count) }
-            .as_bool()
+            .is_ok()
         {
             bail!("WTSEnumerateSessionsW failed");
         }
@@ -274,24 +275,24 @@ fn get_session_user_token() -> Result<HANDLE> {
     }
 
     let mut h_impersonation_token = HANDLE::default();
-    if !unsafe { WTSQueryUserToken(session_id, &mut h_impersonation_token) }.as_bool() {
+    if !unsafe { WTSQueryUserToken(session_id, &mut h_impersonation_token) }.is_ok() {
         bail!("WTSQueryUserToken failed");
     }
 
     let mut h_token = HANDLE::default();
     let access = TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_IMPERSONATE;
-    
+
     if !unsafe {
         DuplicateTokenEx(
             h_impersonation_token,
             access,
             None,
             SecurityImpersonation,
-            TOKEN_TYPE::TokenPrimary,
+            TOKEN_TYPE(TOKEN_PRIMARY.0),
             &mut h_token,
         )
     }
-    .as_bool()
+    .is_ok()
     {
         bail!("DuplicateTokenEx failed");
     }
@@ -304,10 +305,10 @@ pub fn kill_running_packages(_paths: &AppPaths) {
     let mut sys = System::new_with_specifics(
         RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
     );
-    sys.refresh_processes();
+    sys.refresh_processes_specifics(ProcessesToUpdate::All, false);
     for process in sys.processes().values() {
         let name = process.name();
-        if name == "scgrabber-bin.exe" || name == "drawview.exe" || name "spatialshot.exe" {
+        if name == "scgrabber-bin.exe" || name == "drawview.exe" || name == "spatialshot.exe" {
             process.kill();
         }
     }
