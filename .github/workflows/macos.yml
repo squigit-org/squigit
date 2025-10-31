@@ -48,5 +48,5 @@ jobs:
     - name: Upload dist artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dist-artifact-macos
+        name: capkit-macos
         path: packages/capturekit/dist.zip

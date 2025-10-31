@@ -2,11 +2,6 @@ name: Build Windows Release
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths: 
-      - 'packages/capturekit/**'
-      - '.github/workflows/build-windows.yml'
 
 env:
   QT_VERSION: '6.6.0'
@@ -70,8 +65,8 @@ jobs:
         
         .\PKGBUILD.ps1
         
-        if (-not (Test-Path "dist\drawview.exe")) {
-          Write-Error "Build failed - drawview.exe not found"
+        if (-not (Test-Path "dist\capkit.exe")) {
+          Write-Error "Build failed - capkit.exe not found"
           exit 1
         }
         
@@ -83,7 +78,7 @@ jobs:
         Write-Host "Creating distribution zip..." -ForegroundColor Cyan
         
         $version = "1.0.0"
-        $zipName = "spatialshot-windows-$version.zip"
+        $zipName = "capkit-windows-$version.zip"
         
         Compress-Archive -Path "dist\*" -DestinationPath $zipName -CompressionLevel Optimal
         
@@ -101,12 +96,12 @@ jobs:
     - name: 7. Upload build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: spatialshot-windows
-        path: packages/capturekit/spatialshot-windows-*.zip
+        name: capkit-windows
+        path: packages/capturekit/capkit-windows-*.zip
         retention-days: 30
 
     - name: 8. Upload to GitHub Releases (optional)
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: packages/capturekit/spatialshot-windows-*.zip
+        files: packages/capturekit/capkit-windows-*.zip

@@ -78,5 +78,5 @@ jobs:
     - name: Upload dist artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dist-artifact
+        name: capkit-linux
         path: packages/capturekit/dist.zip
