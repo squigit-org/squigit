@@ -153,7 +153,6 @@ try {
     if (-not (Create-Distribution)) { exit 1 }
     
     Write-Host "`n「」 Build completed successfully!" -ForegroundColor Green
-    Write-Host "Run '$DistDir\drawview.exe' to test." -ForegroundColor Yellow
     
 } catch {
     Write-Errr $_.Exception.Message
