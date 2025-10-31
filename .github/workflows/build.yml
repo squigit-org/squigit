@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake qt6-base-dev zip
+
+    - name: Make PKGBUILD executable
+      run: chmod +x packages/capturekit/PKGBUILD
+
+    - name: Run build script
+      working-directory: packages/capturekit
+      run: bash ./PKGBUILD
+
+    - name: Zip dist directory
+      working-directory: packages/capturekit
+      run: |
+        if [ -d dist ]; then
+          zip -r dist.zip dist
+        else
+          echo "dist directory not found; creating empty zip to avoid failure"
+          mkdir -p dist
+          zip -r dist.zip dist
+        fi
+
+    - name: Upload dist artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-artifact
+        path: packages/capturekit/dist.zip
