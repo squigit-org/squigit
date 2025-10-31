@@ -65,19 +65,8 @@ jobs:
       working-directory: packages/capturekit
       run: bash ./PKGBUILD
 
-    - name: Create distribution zip
-      working-directory: packages/capturekit
-      run: |
-        if [ -d "dist" ]; then
-          mv dist capkit-linux
-          zip -r capkit-linux.zip capkit-linux
-        else
-          echo "dist directory not found, skipping zip."
-          exit 1
-        fi
-
-    - name: Upload dist artifact
+    - name: Upload artifact contents
       uses: actions/upload-artifact@v4
       with:
         name: capkit-linux
-        path: packages/capturekit/capkit-linux.zip
+        path: packages/capturekit/dist/*

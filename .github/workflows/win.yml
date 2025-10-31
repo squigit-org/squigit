@@ -73,28 +73,9 @@ jobs:
         
         Write-Host "✓ Build completed successfully" -ForegroundColor Green
 
-    - name: 6. Create distribution zip
-      working-directory: packages/capturekit
-      run: |
-        if (Test-Path -Path "dist") {
-          Rename-Item -Path "dist" -NewName "capkit-windows"
-          $zipName = "capkit-windows.zip"
-          Compress-Archive -Path "capkit-windows" -DestinationPath $zipName
-          echo "ZIP_PATH=$zipName" >> $env:GITHUB_ENV
-        } else {
-          Write-Error "dist directory not found, skipping zip."
-          exit 1
-        }
-
-    - name: 7. Upload build artifact
+    - name: Upload artifact contents
       uses: actions/upload-artifact@v4
       with:
         name: capkit-windows
-        path: packages/capturekit/capkit-windows.zip
+        path: packages/capturekit/dist/*
         retention-days: 30
-
-    - name: 8. Upload to GitHub Releases (optional)
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: packages/capturekit/capkit-windows.zip
