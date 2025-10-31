@@ -6,7 +6,8 @@ param(
 
 $QtVersion = "6.6.0"
 $QtVariant = "win64_msvc2019_64"
-$QtPath = "C:\Qt\$QtVersion\$QtVariant"
+$QtArch = "msvc2019_64"
+$QtPath = "C:\Qt\$QtVersion\$QtArch"
 $SourceDir = "src"
 $BuildDir = "build"
 $DistDir = "dist"
