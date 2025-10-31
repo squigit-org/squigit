@@ -126,7 +126,7 @@ pub fn kill_running_packages(_paths: &AppPaths) {
     let mut sys = System::new_with_specifics(
         RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
     );
-    sys.refresh_processes_specifics(sysinfo::ProcessesToUpdate::All, false);
+    sys.refresh_processes_specifics(ProcessesToUpdate::All, false, ProcessRefreshKind::new());
     for process in sys.processes().values() {
         let name = process.name();
         if name == "scgrabber-bin" || name == "drawview-bin" || name == "spatialshot" {

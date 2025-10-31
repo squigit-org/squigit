@@ -1,23 +1,6 @@
-/**
- *  Copyright (C) 2025  a7mddra-spatialshot
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-**/
-
 use anyhow::Result;
-use home;
 use std::path::PathBuf;
+use home;
 
 #[derive(Debug, Clone)]
 pub struct AppPaths {
@@ -26,6 +9,7 @@ pub struct AppPaths {
 }
 
 pub fn setup_paths() -> Result<AppPaths> {
+    // FIX: Added underscore to suppress warning
     let _home_dir = home::home_dir().ok_or(anyhow::anyhow!("No home dir"))?;
 
     #[cfg(target_os = "linux")]
@@ -45,7 +29,8 @@ pub fn setup_paths() -> Result<AppPaths> {
     };
 
     #[cfg(target_os = "windows")]
-    let local_app_data = std::env::var("LOCALAPPDATA").map_err(|e| anyhow::anyhow!(e))?;
+    let local_app_data =
+        std::env::var("LOCALAPPDATA").map_err(|e| anyhow::anyhow!(e))?;
 
     let spatial_dir = {
         #[cfg(target_os = "linux")]

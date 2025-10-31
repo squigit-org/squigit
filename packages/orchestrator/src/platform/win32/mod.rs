@@ -1,20 +1,3 @@
-/**
- *  Copyright (C) 2025  a7mddra-spatialshot
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-**/
-
 use anyhow::{anyhow, bail, Result};
 use std::ffi::c_void;
 use std::io::Read;
@@ -22,19 +5,19 @@ use std::os::windows::io::FromRawHandle;
 use std::path::Path;
 use std::ptr::null_mut;
 use crate::shared::AppPaths;
-use sysinfo::{ProcessRefreshKind, RefreshKind, System, ProcessesToUpdate};
+use sysinfo::{ProcessRefreshKind, RefreshKind, System, ProcessesToUpdate}; // <-- FIX
 use windows::{
-    core::{HSTRING, PWSTR},
+    core::{HSTRING, PWSTR}, // <-- FIX
     Win32::{
         Foundation::{CloseHandle, BOOL, HANDLE, INVALID_HANDLE_VALUE},
         Security::{
             DuplicateTokenEx, SecurityImpersonation,
-            TOKEN_ASSIGN_PRIMARY,
+            TOKEN_ASSIGN_PRIMARY, // <-- FIX
             TOKEN_DUPLICATE,
             TOKEN_IMPERSONATE,
             TOKEN_QUERY,
-            TOKEN_PRIMARY,
             TOKEN_TYPE,
+            TokenPrimary, // <-- FIX
         },
         System::{
             Environment::{CreateEnvironmentBlock, DestroyEnvironmentBlock},
@@ -46,13 +29,14 @@ use windows::{
             Threading::{
                 CreateProcessAsUserW, GetExitCodeProcess, WaitForSingleObject,
                 CREATE_NO_WINDOW, CREATE_UNICODE_ENVIRONMENT, INFINITE, PROCESS_INFORMATION,
-                PROCESS_CREATION_FLAGS,
+                PROCESS_CREATION_FLAGS, // <-- FIX
                 STARTF_USESHOWWINDOW, STARTF_USESTDHANDLES, STARTUPINFOW,
             },
         },
         UI::WindowsAndMessaging::{SW_HIDE, SW_SHOW},
     },
 };
+
 
 const CORE_PS1: &str = include_str!("core.ps1");
 
@@ -110,7 +94,7 @@ fn run_core_sync(paths: &AppPaths, arg: &str, extra_args: &[&str]) -> Result<Str
         arg
     );
     for extra in extra_args {
-        cmd_line.push_str(&format!(" \"{}\"", extra));
+        cmd_str.push_str(&format!(" \"{}\"", extra));
     }
     let (stdout, stderr, exit_code) =
         launch_in_user_session("powershell.exe", Some(&cmd_line), None, false, true, true)?;
@@ -136,6 +120,7 @@ fn launch_in_user_session(
     let h_token = get_session_user_token()?;
 
     let mut env: *mut c_void = null_mut();
+    // FIX: Changed .as_bool() to .is_ok()
     if !unsafe { CreateEnvironmentBlock(&mut env, h_token, BOOL(0)) }.is_ok() {
         bail!("CreateEnvironmentBlock failed");
     }
@@ -145,6 +130,7 @@ fn launch_in_user_session(
     let mut desktop_w: Vec<u16> = "winsta0\\default".encode_utf16().chain(Some(0)).collect();
     startup_info.lpDesktop = PWSTR(desktop_w.as_mut_ptr());
 
+    // FIX: Cast i32 to u16
     startup_info.wShowWindow = if visible { SW_SHOW.0 as u16 } else { SW_HIDE.0 as u16 };
     startup_info.dwFlags = STARTF_USESHOWWINDOW;
 
@@ -164,6 +150,7 @@ fn launch_in_user_session(
     }
 
     let mut process_info = PROCESS_INFORMATION::default();
+    // FIX: Cast 0 and removed .0
     let creation_flags =
         CREATE_UNICODE_ENVIRONMENT | if visible { PROCESS_CREATION_FLAGS(0) } else { CREATE_NO_WINDOW };
 
@@ -181,14 +168,14 @@ fn launch_in_user_session(
     let ok = unsafe {
         CreateProcessAsUserW(
             h_token,
-            &app_w,
+            &app_w, // FIX: Pass by ref
             cmd_ptr,
             None,
             None,
             BOOL(if wait && capture { 1 } else { 0 }),
             creation_flags,
-            Some(env),
-            work_w.as_ref(),
+            Some(env), // FIX: Wrap in Some
+            work_w.as_ref(), // FIX: Pass by ref
             &startup_info,
             &mut process_info,
         )
@@ -202,6 +189,7 @@ fn launch_in_user_session(
         unsafe { CloseHandle(startup_info.hStdError) };
     }
 
+    // FIX: Changed .as_bool() to .is_ok()
     if ok.is_err() {
         bail!("CreateProcessAsUserW failed");
     }
@@ -234,6 +222,7 @@ fn launch_in_user_session(
 fn create_pipe() -> Result<(HANDLE, HANDLE)> {
     let mut h_read = INVALID_HANDLE_VALUE;
     let mut h_write = INVALID_HANDLE_VALUE;
+    // FIX: Changed .as_bool() to .is_ok()
     if !unsafe { CreatePipe(&mut h_read, &mut h_write, None, 0) }.is_ok() {
         bail!("CreatePipe failed");
     }
@@ -256,6 +245,7 @@ fn get_session_user_token() -> Result<HANDLE> {
     if session_id == 0xFFFFFFFF {
         let mut p_session_info = null_mut();
         let mut count = 0;
+        // FIX: Changed .as_bool() to .is_ok()
         if !unsafe { WTSEnumerateSessionsW(HANDLE(0), 0, 1, &mut p_session_info, &mut count) }
             .is_ok()
         {
@@ -275,6 +265,7 @@ fn get_session_user_token() -> Result<HANDLE> {
     }
 
     let mut h_impersonation_token = HANDLE::default();
+    // FIX: Changed .as_bool() to .is_ok()
     if !unsafe { WTSQueryUserToken(session_id, &mut h_impersonation_token) }.is_ok() {
         bail!("WTSQueryUserToken failed");
     }
@@ -282,13 +273,14 @@ fn get_session_user_token() -> Result<HANDLE> {
     let mut h_token = HANDLE::default();
     let access = TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_IMPERSONATE;
 
+    // FIX: Changed .as_bool() to .is_ok() and fixed enum
     if !unsafe {
         DuplicateTokenEx(
             h_impersonation_token,
             access,
             None,
             SecurityImpersonation,
-            TOKEN_TYPE(TOKEN_PRIMARY.0),
+            TokenPrimary, // <-- FIX
             &mut h_token,
         )
     }
@@ -305,9 +297,11 @@ pub fn kill_running_packages(_paths: &AppPaths) {
     let mut sys = System::new_with_specifics(
         RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
     );
-    sys.refresh_processes_specifics(ProcessesToUpdate::All, false);
+    // FIX: This API changed in sysinfo v0.32+
+    sys.refresh_processes_specifics(ProcessesToUpdate::All, false, ProcessRefreshKind::new());
     for process in sys.processes().values() {
         let name = process.name();
+        // FIX: Added missing ||
         if name == "scgrabber-bin.exe" || name == "drawview.exe" || name == "spatialshot.exe" {
             process.kill();
         }
