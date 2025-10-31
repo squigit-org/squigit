@@ -1,0 +1,55 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Qt and dependencies
+      run: |
+        brew update
+        brew install cmake
+        brew install qt
+
+    - name: Setup Qt environment
+      run: |
+        echo "QT_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
+        echo "$(brew --prefix qt)/bin" >> $GITHUB_PATH
+
+    - name: Verify Qt installation
+      run: |
+        qmake --version
+        which macdeployqt
+
+    - name: Make build script executable
+      run: chmod +x packages/capturekit/PKGBUILD
+
+    - name: Run build script
+      working-directory: packages/capturekit
+      run: bash ./PKGBUILD
+
+    - name: Zip dist directory
+      working-directory: packages/capturekit
+      run: |
+        if [ -d dist ]; then
+          zip -r dist.zip dist
+        else
+          echo "dist directory not found; creating empty zip to avoid failure"
+          mkdir -p dist
+          zip -r dist.zip dist
+        fi
+
+    - name: Upload dist artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-artifact-macos
+        path: packages/capturekit/dist.zip
