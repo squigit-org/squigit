@@ -1,132 +1,207 @@
 /**
- * Copyright (C) 2025  a7mddra-spatialshot
+ *  Copyright (C) 2025  a7mddra-spatialshot
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
-use anyhow::{Context, Result};
-use core_affinity;
-use log::{error, LevelFilter};
-use std::sync::mpsc;
+use anyhow::{anyhow, Result};
+use fs2::FileExt;
+use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::fs::File;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 mod platform;
 mod shared;
 
-fn main() -> Result<()> {
-    env_logger::Builder::new()
-        .filter_level(LevelFilter::Error)
-        .format_timestamp(None)
-        .format_target(false)
-        .init();
+use platform::*;
+use shared::*;
 
-    let core_ids = core_affinity::get_core_ids().context("Failed to get CPU core IDs")?;
-    if core_ids.len() < 2 {
-        error!("This application requires at least 2 CPU cores for optimal performance.");
-    }
-    let monitor_core = core_ids[0];
-    let sequence_core = core_ids.get(1).copied().unwrap_or(monitor_core);
-    let display_monitor_core = core_ids.get(2).copied().unwrap_or(monitor_core);
+fn acquire_lock_or_exit() -> Result<File> {
+    let lock_path = std::env::temp_dir().join("spatialshot.lock");
+    let file = File::create(&lock_path)?;
 
-    let paths = shared::find_app_paths().context("Failed to determine application paths")?;
-
-    let initial_count = platform::get_monitor_count()
-        .context("Failed to get initial monitor count")?;
-
-    let (tx, rx) = mpsc::channel::<shared::MonitorEvent>();
-
-    let monitor_paths = paths.clone();
-    let _monitor_handle = thread::Builder::new()
-        .name("monitor_thread".into())
-        .spawn(move || {
-            if !core_affinity::set_for_current(monitor_core) {
-                error!(
-                    "[MONITOR] Failed to pin monitor thread to core {:?}",
-                    monitor_core
-                );
-            }
-            let is_wayland = cfg!(target_os = "linux") && platform::is_wayland();
-            let expected_monitors = if is_wayland {
-                1
-            } else {
-                initial_count
-            };
-            shared::monitor_tmp_directory(tx, monitor_paths, is_wayland, expected_monitors);
-        })
-        .context("Failed to spawn monitor thread")?;
-
-    let sequence_paths = paths.clone();
-    let _sequence_handle = thread::Builder::new()
-        .name("sequence_thread".into())
-        .spawn(move || -> Result<()> {
-            if !core_affinity::set_for_current(sequence_core) {
-                error!(
-                    "[SEQ] Failed to pin sequence thread to core {:?}",
-                    sequence_core
-                );
-            }
-            platform::run(rx, &sequence_paths)
-        })
-        .context("Failed to spawn sequence thread")?;
-
-    let display_monitor_paths = paths.clone();
-    let _display_monitor_handle = thread::Builder::new()
-        .name("display_monitor_thread".into())
-        .spawn(move || {
-            if !core_affinity::set_for_current(display_monitor_core) {
-                error!(
-                    "[DISPLAY_MON] Failed to pin display monitor thread to core {:?}",
-                    display_monitor_core
-                );
-            }
-            monitor_display_changes(initial_count, &display_monitor_paths);
-        })
-        .context("Failed to spawn display monitor thread")?;
-
-    match _sequence_handle.join() {
-        Ok(Ok(())) => Ok(()),
-        Ok(Err(e)) => {
-            error!("Orchestration failed: {:?}", e);
-            Err(e)
+    match file.try_lock_exclusive() {
+        Ok(_) => {
+            println!("Acquired instance lock at {}", lock_path.display());
+            Ok(file)
         }
-        Err(panic_payload) => {
-            let msg = if let Some(s) = panic_payload.downcast_ref::<&str>() {
-                *s
-            } else if let Some(s) = panic_payload.downcast_ref::<String>() {
-                s.as_str()
-            } else {
-                "Sequence thread panicked with unknown payload"
-            };
-            error!("Critical error: {}", msg);
-            anyhow::bail!("Sequence thread panicked.")
-        }
+        Err(_) => Err(anyhow!(
+            "Another instance of spatialshot-orchestrator is already running."
+        )),
     }
 }
 
-fn monitor_display_changes(initial_count: u32, paths: &shared::AppPaths) {
-    loop {
-        match platform::get_monitor_count() {
-            Ok(current_count) => {
-                if current_count != initial_count {
-                    error!("[DISPLAY_MON] Monitor count changed from {} to {}. Shutting down.", initial_count, current_count);
-                    let _ = platform::kill_running_packages(paths);
-                    std::process::exit(1);
+fn main() -> Result<()> {
+    let _lock_file = match acquire_lock_or_exit() {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!("{}", e);
+            return Ok(());
+        }
+    };
+
+    let paths = setup_paths()?;
+    kill_running_packages(&paths);
+
+    let initial_monitor_count = get_monitor_count(&paths)?;
+    println!("Detected {} monitor(s).", initial_monitor_count);
+
+    let cores = core_affinity::get_core_ids().unwrap_or_default();
+    if !cores.is_empty() {
+        core_affinity::set_for_current(cores[0]);
+    }
+
+    let running = Arc::new(AtomicBool::new(true));
+
+    run_grab_screen(&paths)?;
+
+    let paths_monitor = paths.clone();
+    let running_monitor = running.clone();
+    let cores_monitor = cores.clone();
+    let monitor_handle = thread::spawn(move || {
+        if cores_monitor.len() >= 2 {
+            core_affinity::set_for_current(cores_monitor[1]);
+        }
+        let res = monitor_tmp(
+            &paths_monitor,
+            running_monitor.clone(),
+            initial_monitor_count,
+        );
+        if res.is_err() {
+            running_monitor.store(false, Ordering::SeqCst);
+        }
+        res
+    });
+
+    let paths_safety = paths;
+    let running_safety = running.clone();
+    let cores_safety = cores.clone();
+    let safety_handle = thread::spawn(move || {
+        if cores_safety.len() >= 3 {
+            core_affinity::set_for_current(cores_safety[2]);
+        }
+        safety_monitor(&paths_safety, running_safety, initial_monitor_count)
+    });
+
+    let monitor_res = monitor_handle.join().unwrap();
+    let safety_res = safety_handle.join().unwrap();
+
+    monitor_res?;
+    safety_res?;
+
+    Ok(())
+}
+
+fn monitor_tmp(paths: &AppPaths, running: Arc<AtomicBool>, monitor_count: u32) -> Result<()> {
+    let (tx, rx) = mpsc::channel();
+    let mut watcher: RecommendedWatcher = Watcher::new(
+        move |res: Result<notify::Event, _>| {
+            if let Ok(event) = res {
+                if matches!(event.kind, EventKind::Create(_)) {
+                    tx.send(()).ok();
                 }
             }
-            Err(e) => error!("[DISPLAY_MON] Failed to get monitor count: {:?}", e),
+        },
+        notify::Config::default(),
+    )?;
+    watcher.watch(&paths.tmp_dir, RecursiveMode::NonRecursive)?;
+
+    loop {
+        if !running.load(Ordering::SeqCst) {
+            return Ok(());
         }
-        thread::sleep(Duration::from_secs(1));
+
+        let files = std::fs::read_dir(&paths.tmp_dir)?
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().ok().map(|ft| ft.is_file()).unwrap_or(false))
+            .count();
+        if files as u32 == monitor_count {
+            println!("Monitor Thread: All screenshots detected. Running draw-view...");
+            run_draw_view(paths)?;
+            break;
+        }
+        let _ = rx.recv_timeout(Duration::from_millis(100));
+    }
+
+    loop {
+        if !running.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        let out_files: Vec<PathBuf> = std::fs::read_dir(&paths.tmp_dir)?
+            .filter_map(|e| e.ok())
+            .filter_map(|e| {
+                if let Some(name) = e.file_name().to_str() {
+                    if name.starts_with('o') && name.ends_with(".png") {
+                        return Some(e.path());
+                    }
+                }
+                None
+            })
+            .collect();
+
+        if !out_files.is_empty() {
+            let out_path = &out_files[0];
+            println!(
+                "Monitor Thread: Output file {} detected. Running spatialshot...",
+                out_path.display()
+            );
+            run_spatialshot(paths, out_path)?;
+            running.store(false, Ordering::SeqCst);
+            return Ok(());
+        }
+        let _ = rx.recv_timeout(Duration::from_millis(100));
+    }
+}
+
+fn safety_monitor(
+    paths: &AppPaths,
+    running: Arc<AtomicBool>,
+    initial_monitor_count: u32,
+) -> Result<()> {
+    let start_time = Instant::now();
+    let timeout = Duration::from_secs(60);
+
+    loop {
+        if !running.load(Ordering::SeqCst) {
+            println!("Safety Thread: Monitor thread finished. Exiting.");
+            return Ok(());
+        }
+
+        if start_time.elapsed() > timeout {
+            println!("Safety Thread: Timeout exceeded! Killing processes and exiting.");
+            running.store(false, Ordering::SeqCst);
+            kill_running_packages(paths);
+            std::process::exit(1);
+        }
+
+        let current_count = get_monitor_count(paths)?;
+        if current_count != initial_monitor_count {
+            println!(
+                "Safety Thread: Monitor count changed! ({} -> {}). Killing processes and exiting.",
+                initial_monitor_count, current_count
+            );
+            running.store(false, Ordering::SeqCst);
+
+            kill_running_packages(paths);
+            std::process::exit(1);
+        }
+
+        thread::sleep(Duration::from_millis(100));
     }
 }
