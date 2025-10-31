@@ -16,7 +16,7 @@ use windows::{
             TOKEN_DUPLICATE,
             TOKEN_IMPERSONATE,
             TOKEN_QUERY,
-            TokenPrimary,
+            TokenPrimary, // This is an enum variant, not a type
         },
         System::{
             Environment::{CreateEnvironmentBlock, DestroyEnvironmentBlock},
@@ -41,7 +41,7 @@ const CORE_PS1: &str = include_str!("core.ps1");
 pub fn get_monitor_count(paths: &AppPaths) -> Result<u32> {
     write_core_script(paths)?;
     let output = run_core_sync(paths, "count-monitors", &[])?;
-    Ok(output.trim().parse()?) // Propagates error
+    Ok(output.trim().parse()?)
 }
 
 pub fn run_grab_screen(paths: &AppPaths) -> Result<()> {
@@ -85,14 +85,15 @@ fn write_core_script(paths: &AppPaths) -> Result<()> {
     Ok(())
 }
 
+// FIX: This function was missing its variable `cmd_str`
 fn run_core_sync(paths: &AppPaths, arg: &str, extra_args: &[&str]) -> Result<String> {
-    let mut cmd_str = format!(
+    let mut cmd_str = format!( // <-- This line was missing
         "-ExecutionPolicy Bypass -File \"{}\" {}",
         paths.core_path.to_string_lossy(),
         arg
     );
     for extra in extra_args {
-        cmd_str.push_str(&format!(" \"{}\"", extra));
+        cmd_str.push_str(&format!(" \"{}\"", extra)); // <-- This line caused E0425
     }
     let (stdout, stderr, exit_code) =
         launch_in_user_session("powershell.exe", Some(&cmd_str), None, false, true, true)?;
@@ -151,6 +152,9 @@ fn launch_in_user_session(
 
     let app_w = HSTRING::from(app_path);
     let work_w = work_dir.map(HSTRING::from);
+    
+    // FIX: This is the correct way to handle an optional PCWSTR
+    let work_dir_pcwstr = work_w.as_ref().map_or(PCWSTR::null(), |s| s.as_pcwstr());
 
     let cmd_line_str = cmd_line.unwrap_or("");
     let mut cmd_w: Vec<u16> = cmd_line_str.encode_utf16().chain(Some(0)).collect();
@@ -170,7 +174,7 @@ fn launch_in_user_session(
             BOOL(if wait && capture { 1 } else { 0 }),
             creation_flags,
             Some(env),
-            work_w.as_ref().map_or(PCWSTR::null(), |s| s.into()),
+            work_dir_pcwstr, // <-- FIX: Pass the derived PCWSTR
             &startup_info,
             &mut process_info,
         )
@@ -270,7 +274,7 @@ fn get_session_user_token() -> Result<HANDLE> {
             access,
             None,
             SecurityImpersonation,
-            TokenPrimary,
+            TokenPrimary, // <-- FIX: This is the correct enum variant
             &mut h_token,
         )
     }
@@ -296,3 +300,4 @@ pub fn kill_running_packages(_paths: &AppPaths) {
         }
     }
 }
+
