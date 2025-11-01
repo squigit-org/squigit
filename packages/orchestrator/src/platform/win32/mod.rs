@@ -24,11 +24,8 @@ use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
 const CORE_PS1: &str = include_str!("core.ps1");
 
 pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
-    let cmd_line = format!(
-        "-ExecutionPolicy Bypass -File \"{}\" grab-screen",
-        paths.core_path.to_string_lossy()
-    );
-    let output = run_powershell_sync(&cmd_line)?;
+    let core_path_str = paths.core_path.to_string_lossy().to_string();
+    let output = run_powershell_sync(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "grab-screen"])?;
     if !output.status.success() {
         return Err(anyhow!("grab-screen failed: {}", String::from_utf8_lossy(&output.stderr)));
     }
@@ -36,11 +33,8 @@ pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
 }
 
 pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
-    let cmd_line = format!(
-        "-ExecutionPolicy Bypass -File \"{}\" draw-view",
-        paths.core_path.to_string_lossy()
-    );
-    let output = run_powershell_sync(&cmd_line)?;
+    let core_path_str = paths.core_path.to_string_lossy().to_string();
+    let output = run_powershell_sync(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "draw-view"])?;
     if !output.status.success() {
         return Err(anyhow!("draw-view failed: {}", String::from_utf8_lossy(&output.stderr)));
     }
@@ -48,12 +42,9 @@ pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
 }
 
 pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()> {
-    let cmd_line = format!(
-        "-ExecutionPolicy Bypass -File \"{}\" spatialshot \"{}\"",
-        paths.core_path.to_string_lossy(),
-        img_path.to_string_lossy()
-    );
-    let output = run_powershell_sync(&cmd_line)?;
+    let core_path_str = paths.core_path.to_string_lossy().to_string();
+    let img_path_str = img_path.to_string_lossy().to_string();
+    let output = run_powershell_sync(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "spatialshot", &img_path_str])?;
     if !output.status.success() {
         return Err(anyhow!("spatialshot failed: {}", String::from_utf8_lossy(&output.stderr)));
     }
@@ -65,9 +56,9 @@ pub fn write_core_script(paths: &AppPaths) -> Result<()> {
     Ok(())
 }
 
-fn run_powershell_sync(cmd_args: &str) -> Result<Output> {
+fn run_powershell_sync(args: &[&str]) -> Result<Output> {
     let output = Command::new("powershell.exe")
-        .arg(cmd_args)
+        .args(args)
         .output()?;
     Ok(output)
 }
