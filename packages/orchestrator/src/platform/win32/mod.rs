@@ -50,41 +50,46 @@ use windows::{
 
 const CORE_PS1: &str = include_str!("core.ps1");
 
-// --- get_monitor_count REMOVED ---
-
 pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
-    // UPDATED to return count
     let cmd_line = format!(
         "-ExecutionPolicy Bypass -File \"{}\" grab-screen",
         paths.core_path.to_string_lossy()
     );
-    // We must 'wait' and 'capture' to get the stdout from the script
     let (stdout, stderr, exit_code) =
         launch_in_user_session("powershell.exe", Some(&cmd_line), None, false, true, true)?;
 
     if exit_code != 0 {
         return Err(anyhow!("grab-screen failed: {}", stderr));
     }
-    // The stdout is now just the number
     Ok(stdout.trim().parse()?)
 }
 
 pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
     let cmd_line = format!(
-        "-ExecutionPolicy Bypass -File \"{}\" draw-view *> $null",
+        "-ExecutionPolicy Bypass -File \"{}\" draw-view",
         paths.core_path.to_string_lossy()
     );
-    launch_in_user_session("powershell.exe", Some(&cmd_line), None, true, false, false)?;
+    let (_, stderr, exit_code) =
+        launch_in_user_session("powershell.exe", Some(&cmd_line), None, false, true, true)?;
+
+    if exit_code != 0 {
+        return Err(anyhow!("draw-view failed: {}", stderr));
+    }
     Ok(())
 }
 
 pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()> {
     let cmd_line = format!(
-        "-ExecutionPolicy Bypass -File \"{}\" spatialshot \"{}\" *> $null",
+        "-ExecutionPolicy Bypass -File \"{}\" spatialshot \"{}\"",
         paths.core_path.to_string_lossy(),
         img_path.to_string_lossy()
     );
-    launch_in_user_session("powershell.exe", Some(&cmd_line), None, true, false, false)?;
+    let (_, stderr, exit_code) =
+        launch_in_user_session("powershell.exe", Some(&cmd_line), None, false, true, true)?;
+
+    if exit_code != 0 {
+        return Err(anyhow!("spatialshot failed: {}", stderr));
+    }
     Ok(())
 }
 

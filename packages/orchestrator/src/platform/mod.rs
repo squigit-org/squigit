@@ -21,7 +21,6 @@ mod linux;
 #[cfg(target_os = "linux")]
 pub use self::linux::{
     kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot, write_core_script,
-    // get_monitor_count REMOVED
 };
 
 // --- Windows ---
@@ -30,7 +29,6 @@ mod win32;
 #[cfg(target_os = "windows")]
 pub use self::win32::{
     kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot, write_core_script,
-    // get_monitor_count REMOVED
 };
 
 // --- macOS ---
@@ -39,13 +37,10 @@ mod darwin;
 #[cfg(target_os = "macos")]
 pub use self::darwin::{
     kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot, write_core_script,
-    // get_monitor_count REMOVED
 };
 
-// --- Unsupported Platforms ---
 #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
 pub fn run_grab_screen(_paths: &crate::shared::AppPaths) -> anyhow::Result<u32> {
-    // UPDATED SIGNATURE
     anyhow::bail!("Unsupported platform");
 }
 
@@ -62,9 +57,6 @@ pub fn run_spatialshot(
     anyhow::bail!("Unsupported platform");
 }
 
-// get_monitor_count STUB REMOVED
-// ...
-
 #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
 pub fn kill_running_packages(_paths: &crate::shared::AppPaths) {}
 
@@ -72,4 +64,3 @@ pub fn kill_running_packages(_paths: &crate::shared::AppPaths) {}
 pub fn write_core_script(_paths: &crate::shared::AppPaths) -> anyhow::Result<()> {
     Ok(())
 }
-

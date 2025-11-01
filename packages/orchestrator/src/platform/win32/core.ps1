@@ -1,7 +1,5 @@
 #!/usr/bin/env pwsh
 
-# All monitor counting and watching functions (probe_cim, probe_wmi, Get-MonitorCount) are REMOVED.
-
 $arg = $args[0]
 $remainingArgs = $args[1..($args.Length - 1)]
 
@@ -90,7 +88,6 @@ public static class DpiAwareness {
             $b = $screen.Bounds
             $outFile = Join-Path $fullPath ("$i.$imageExt")
 
-            # This call IS synchronous. The script waits for nircmd to finish.
             & $nircmdCmd savescreenshot $outFile $b.X $b.Y $b.Width $b.Height
             
             if ($LASTEXITCODE -ne 0) {
@@ -103,7 +100,6 @@ public static class DpiAwareness {
             $i++
         }
 
-        # MODIFIED: Print *only* the number of captured screens for Rust.
         Write-Output ($i - 1)
 
         if ($errorsEncountered) {
@@ -114,10 +110,6 @@ public static class DpiAwareness {
         exit 0
     }
     
-    # count-monitors REMOVED
-    
-    # watch-monitors REMOVED
-
     "draw-view" {
         $exe = Join-Path $env:LOCALAPPDATA 'spatialshot\capkit\drawview.exe'
         
@@ -141,7 +133,6 @@ public static class DpiAwareness {
     }
     
     default {
-        # Updated invalid options
         Write-Error "Invalid argument: $arg. Valid options: grab-screen, draw-view, spatialshot"
         exit 1
     }

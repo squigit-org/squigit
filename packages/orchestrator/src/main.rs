@@ -18,7 +18,6 @@
 use anyhow::{anyhow, Result};
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
-// use std::process::exit; // No longer needed
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -31,22 +30,13 @@ use shared::*;
 
 fn main() -> Result<()> {
     let paths = setup_paths()?;
-
-    // --- WRITE SCRIPT ONCE ---
     write_core_script(&paths)?;
-    // --- END ---
-
-    kill_running_packages(&paths); // Kill any old/stray processes first
-
     let cores = core_affinity::get_core_ids().unwrap_or_default();
+
     if !cores.is_empty() {
         core_affinity::set_for_current(cores[0]);
     }
 
-    // --- NO MORE WATCHDOG ---
-
-    // --- MAIN FLOW ---
-    // run_grab_screen now does the capture AND returns the number of screens.
     let initial_monitor_count = run_grab_screen(&paths)?;
     println!(
         "grab-screen finished and reported {} monitor(s).",
@@ -66,7 +56,6 @@ fn main() -> Result<()> {
         .join()
         .unwrap_or(Err(anyhow!("Monitor thread panicked")));
 
-    // This block handles errors from monitor_tmp (e.g., if drawview exits 1)
     if monitor_res.is_err() {
         kill_running_packages(&paths);
         monitor_res?;
@@ -89,8 +78,6 @@ fn monitor_tmp(paths: &AppPaths, monitor_count: u32) -> Result<()> {
     )?;
     watcher.watch(&paths.tmp_dir, RecursiveMode::NonRecursive)?;
 
-    // This loop now waits for the file count to match what
-    // run_grab_screen reported.
     loop {
         let files = std::fs::read_dir(&paths.tmp_dir)?
             .filter_map(|e| e.ok())
@@ -130,4 +117,3 @@ fn monitor_tmp(paths: &AppPaths, monitor_count: u32) -> Result<()> {
         let _ = rx.recv_timeout(Duration::from_millis(100));
     }
 }
-

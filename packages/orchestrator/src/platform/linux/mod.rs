@@ -24,10 +24,7 @@ use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
 
 const CORE_SH: &str = include_str!("core.sh");
 
-// --- get_monitor_count REMOVED ---
-
 pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
-    // UPDATED to return count
     let output = run_core_sync(paths, "grab-screen", &[])?;
     Ok(output.trim().parse()?)
 }
@@ -72,12 +69,17 @@ fn run_core_async(paths: &AppPaths, arg: &str, extra_args: &[&str]) -> Result<()
         cmd_str.push_str(&format!(" \"{}\"", extra));
     }
 
-    Command::new("bash")
+    let output = Command::new("bash")
         .arg("-c")
         .arg(&cmd_str)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()?;
+        .output()?;
+
+    if !output.status.success() {
+        return Err(anyhow!(
+            "Command failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
 
     Ok(())
 }
