@@ -1,79 +1,64 @@
+
 import pytest
-from unittest.mock import MagicMock, patch, mock_open
-from pathlib import Path
 import subprocess
-import time
+from unittest.mock import MagicMock, patch
+import logging
+import os
+import sys
 
-# Assuming launcher.py is in the python path
-from launcher import _run_process, clear_tmp, wait_for_file, get_tmp_path
+# Add the path to the root directory to the system path to import setup.py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-@patch('subprocess.run')
-def test_run_process_success(mock_run):
-    """Test _run_process for a successful command execution."""
-    mock_run.return_value = MagicMock(returncode=0, stdout="Success", stderr="", check_returncode=lambda: None)
-    success, stdout, stderr = _run_process(["echo", "hello"])
-    assert success is True
-    assert stdout == "Success"
-    assert stderr == ""
+from setup import _execute_command, BuildError
 
-@patch('subprocess.run')
-def test_run_process_failure(mock_run):
-    """Test _run_process for a failed command execution."""
-    error = subprocess.CalledProcessError(1, ["bad_command"])
-    error.stdout = ""
-    error.stderr = "Error"
-    mock_run.side_effect = error
-    success, stdout, stderr = _run_process(["bad_command"])
-    assert success is False
-    assert stderr == "Error"
+class TestExecuteCommand:
 
-@patch('subprocess.run')
-def test_run_process_file_not_found(mock_run):
-    """Test _run_process for FileNotFoundError."""
-    mock_run.side_effect = FileNotFoundError("Command not found")
-    success, stdout, stderr = _run_process(["non_existent_command"])
-    assert success is False
-    assert stderr == "File not found"
+    @patch('subprocess.run')
+    def test_successful_command(self, mock_run):
+        mock_run.return_value = MagicMock(
+            stdout="Success output",
+            stderr="",
+            returncode=0
+        )
+        with patch('logging.info') as mock_logging_info:
+            _execute_command(["echo", "hello"], ".", "test_component")
+            mock_run.assert_called_once()
+            mock_logging_info.assert_any_call("[test_component] STDOUT | Success output")
 
-@patch('shutil.rmtree')
-@patch('pathlib.Path.mkdir')
-@patch('pathlib.Path.exists')
-def test_clear_tmp_exists(mock_exists, mock_mkdir, mock_rmtree):
-    """Test clear_tmp when the temp directory already exists."""
-    mock_exists.return_value = True
-    tmp_path = get_tmp_path()
-    returned_path = clear_tmp()
-    mock_rmtree.assert_called_once_with(tmp_path)
-    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
-    assert returned_path == tmp_path
+    @patch('subprocess.run')
+    def test_failed_command(self, mock_run):
+        mock_run.side_effect = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["bad_command"],
+            output="",
+            stderr="Error output"
+        )
+        with patch('logging.error') as mock_logging_error:
+            with pytest.raises(BuildError) as excinfo:
+                _execute_command(["bad_command"], ".", "test_component")
+            mock_run.assert_called_once()
+            mock_logging_error.assert_any_call("[test_component] FAILED STDERR | Error output")
+            assert "Command failed with exit code 1" in str(excinfo.value)
 
-@patch('shutil.rmtree')
-@patch('pathlib.Path.mkdir')
-@patch('pathlib.Path.exists')
-def test_clear_tmp_not_exists(mock_exists, mock_mkdir, mock_rmtree):
-    """Test clear_tmp when the temp directory does not exist."""
-    mock_exists.return_value = False
-    tmp_path = get_tmp_path()
-    returned_path = clear_tmp()
-    mock_rmtree.assert_not_called()
-    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
-    assert returned_path == tmp_path
+    @patch('subprocess.run')
+    def test_command_not_found(self, mock_run):
+        mock_run.side_effect = FileNotFoundError
+        with pytest.raises(BuildError) as excinfo:
+            _execute_command(["non_existent_command"], ".", "test_component")
+        mock_run.assert_called_once()
+        assert "Command `non_existent_command` not found" in str(excinfo.value)
 
-@patch('time.sleep')
-@patch('pathlib.Path.exists')
-def test_wait_for_file_success(mock_exists, mock_sleep):
-    """Test wait_for_file for a file that appears in time."""
-    mock_exists.side_effect = [False, False, True] # File appears on the 3rd check
-    test_file = Path("/tmp/test.file")
-    assert wait_for_file(test_file, timeout_sec=5) is True
-    assert mock_exists.call_count == 3
-
-@patch('time.sleep')
-@patch('time.time')
-@patch('pathlib.Path.exists')
-def test_wait_for_file_timeout(mock_exists, mock_time, mock_sleep):
-    """Test wait_for_file for a file that does not appear in time."""
-    mock_exists.return_value = False
-    mock_time.side_effect = iter(range(20))
-    test_file = Path("/tmp/test.file")
-    assert wait_for_file(test_file, timeout_sec=5) is False
+    @patch('subprocess.run')
+    def test_command_with_env_vars(self, mock_run):
+        mock_run.return_value = MagicMock(
+            stdout="",
+            stderr="",
+            returncode=0
+        )
+        env_vars = {"MY_VAR": "my_value"}
+        _execute_command(["printenv"], ".", "test_component", env=env_vars)
+        mock_run.assert_called_once()
+        # Check if env was passed correctly. subprocess.run is called with env={**os.environ, **env}
+        # So we can't directly check for env_vars, but we can check if it was passed.
+        assert mock_run.call_args.kwargs['env'] is not None
+        assert mock_run.call_args.kwargs['env']['MY_VAR'] == 'my_value'
