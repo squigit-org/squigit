@@ -23,6 +23,7 @@ use std::path::PathBuf;
 pub struct AppPaths {
     pub tmp_dir: PathBuf,
     pub core_path: PathBuf,
+    pub spatial_dir: PathBuf,
 }
 
 pub fn setup_paths() -> Result<AppPaths> {
@@ -92,5 +93,5 @@ pub fn setup_paths() -> Result<AppPaths> {
 
     std::fs::create_dir_all(&tmp_dir)?;
 
-    Ok(AppPaths { tmp_dir, core_path })
+    Ok(AppPaths { tmp_dir, core_path, spatial_dir })
 }

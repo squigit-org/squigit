@@ -96,4 +96,3 @@ pub fn kill_running_packages(_paths: &AppPaths) {
         }
     }
 }
-

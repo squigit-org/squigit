@@ -22,6 +22,9 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use fs2::FileExt;
+use std::fs::File;
+
 mod platform;
 mod shared;
 
@@ -30,6 +33,17 @@ use shared::*;
 
 fn main() -> Result<()> {
     let paths = setup_paths()?;
+    let lock_path = paths.spatial_dir.join("spatialshot-orchestrator.lock");
+    let _lock_file = File::create(&lock_path)?;
+    match _lock_file.try_lock_exclusive() {
+        Ok(()) => {
+            println!("Kernel lock acquired.");
+        }
+        Err(_) => {
+            eprintln!("Another instance of spatialshot-orchestrator is already running. Exiting.");
+            return Ok(());
+        }
+    }
     write_core_script(&paths)?;
     let cores = core_affinity::get_core_ids().unwrap_or_default();
 

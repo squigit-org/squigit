@@ -25,7 +25,6 @@ use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
 const CORE_SH: &str = include_str!("core.sh");
 
 pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
-    // UPDATED to return count
     let output = run_core_sync(paths, "grab-screen", &[])?;
     Ok(output.trim().parse()?)
 }
@@ -124,4 +123,3 @@ pub fn kill_running_packages(_paths: &AppPaths) {
         }
     }
 }
-
