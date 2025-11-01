@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 /**
  * Copyright (C) 2025  a7mddra-spatialshot
  *
