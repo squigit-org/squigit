@@ -32,6 +32,7 @@ public:
     ~Watchdog();
 
     void start();
+    void stop();
 
 private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);

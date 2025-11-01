@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
 
 #ifdef Q_OS_LINUX
     Watchdog *watcher = new Watchdog(&app);
+    QObject::connect(&app, &QApplication::aboutToQuit, watcher, &Watchdog::stop);
     watcher->start();
 #endif
 

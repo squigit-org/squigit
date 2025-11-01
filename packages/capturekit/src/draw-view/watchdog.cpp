@@ -28,9 +28,14 @@ Watchdog::Watchdog(QObject *parent)
 
 Watchdog::~Watchdog()
 {
-    if (m_process->state() != QProcess::NotRunning) {
+    stop();
+}
+
+void Watchdog::stop()
+{
+    if (m_process->state() != QProcess::NotRunning)
+    {
         m_process->terminate();
-        m_process->waitForFinished(1000);
     }
 }
 
