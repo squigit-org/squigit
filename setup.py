@@ -1,46 +1,36 @@
-'''
-SpatialShot Setup and Build Automation Script
-
-This script provides a comprehensive, cross-platform solution for building the entire
-SpatialShot application suite. It is designed for internal, development, and CI/CD
-use, ensuring a consistent and reliable build process.
-
-The script performs the following actions:
-1.  **Platform Detection**: Identifies the host operating system (Windows, macOS, or Linux).
-2.  **Dependency Verification**: (Placeholder) Ensures necessary build tools are present.
-3.  **Component Compilation**: Executes the specific build commands for each sub-package:
-    - `capturekit`: The C++/Qt-based screen capture utility.
-    - `orchestrator`: The Rust-based core logic and process manager.
-    - `spatialshot`: The Node.js/Electron-based user interface.
-4.  **Testing**: Runs the automated test suite using pytest.
-
-This script is engineered to be robust, with detailed logging, error handling, and
-clear separation of concerns, adhering to high-quality software engineering standards.
-
-Usage:
-    python setup.py
-'''
+"""
+                   ◆ SpatialShot Build & Test Orchestrator ◆
+                                        
+           This script automates the complete build pipeline for all
+       SpatialShot components — CaptureKit, Orchestrator, and UI layers.
+                                        
+       It ensures proper environment setup, handles cross-platform builds
+      (Windows, Linux, macOS), and executes the full test suite afterward.
+                                        
+          Each component is built in isolation with detailed logging,
+        allowing partial rebuilds and granular error tracking for CI/CD.
+                                        
+       NOTE: Requires system dependencies like Cargo, Node.js, and Bash.
+            For Windows users, PowerShell (pwsh) must be installed.
+                       HACK: View latest GitHub Release ↴
+             https://github.com/a7mddra/spatialshot/releases/latest
+"""
 
 import logging
 import os
 import platform
 import subprocess
 import sys
-import datetime  # <-- Moved import to the top
+import datetime
+import stat
 from typing import Dict, List, Optional, Callable
 
-# --- Constants and Configuration ---
-
-# Root directory of the project
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Logging configuration
-LOG_FORMAT = "[%(asctime)s] [%(levelname)-8s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s"
+LOG_FORMAT = "[%(module)s.%(funcName)s:%(lineno)d] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 
-# Type alias for environment variables
 EnvVars = Optional[Dict[str, str]]
-
 
 class BuildError(Exception):
     """Custom exception for build failures."""
@@ -88,20 +78,74 @@ def _execute_command(command: List[str], cwd: str, component: str, env: EnvVars 
             text=True,
             env={**os.environ, **env} if env else None,
         )
-        
-        # Log STDOUT and STDERR line by line to respect log formatting
+
         _log_process_output(process.stdout, logging.info, f"[{component}] STDOUT |")
         _log_process_output(process.stderr, logging.warning, f"[{component}] STDERR |")
 
         logging.info(f"[{component}] Command completed successfully.")
     except subprocess.CalledProcessError as e:
         error_message = f"Command failed with exit code {e.returncode}.\n"
-        # Also log the output here for easier debugging on failure
         _log_process_output(e.stdout, logging.error, f"[{component}] FAILED STDOUT |")
         _log_process_output(e.stderr, logging.error, f"[{component}] FAILED STDERR |")
         raise BuildError(error_message, component)
     except FileNotFoundError:
         raise BuildError(f"Command `{command[0]}` not found. Please ensure it is installed and in the system's PATH.", component)
+
+
+def set_script_permissions(system: str):
+    """
+    Sets executable permissions for .sh files on Unix
+    and unblocks .ps1 files on Windows.
+
+    Raises:
+        BuildError: If the permission command fails (e.g., pwsh not found).
+    """
+    if system == "Windows":
+        logging.info("--- Setting Up Permissions: Unblocking PowerShell Scripts ---")
+        command = ["pwsh", "-Command", f"Get-ChildItem -Recurse -Path '{ROOT_DIR}' -Filter *.ps1 | Unblock-File"]
+        try:
+            _execute_command(command, ROOT_DIR, "unblock-ps1")
+            logging.info("Successfully unblocked PowerShell scripts.")
+        except BuildError as e:
+            logging.warning(f"Could not unblock PowerShell scripts: {e}")
+            logging.warning("This may cause 'capturekit' build to fail on Windows.")
+            raise
+
+    elif system in ("Linux", "Darwin"):
+        logging.info("--- Setting Up Permissions: Setting Executable bit on .sh Files ---")
+        
+        scripts_to_make_executable = []
+        for root, dirs, files in os.walk(ROOT_DIR):
+            for file in files:
+                if file.endswith(".sh"):
+                    scripts_to_make_executable.append(os.path.join(root, file))
+
+        known_scripts = [
+            os.path.join(ROOT_DIR, "packages", "capturekit", "PKGBUILD")
+        ]
+        for script_path in known_scripts:
+            if os.path.exists(script_path):
+                scripts_to_make_executable.append(script_path)
+            else:
+                logging.debug(f"Known script not found, skipping chmod: {script_path}")
+
+        file_count = 0
+        for file_path in set(scripts_to_make_executable):
+            try:
+                st = os.stat(file_path)
+                mode = st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+                os.chmod(file_path, mode)
+                file_count += 1
+            except OSError as e:
+                logging.warning(f"Failed to set executable bit on {file_path}: {e}")
+        
+        if file_count > 0:
+            logging.info(f"Set executable permissions for {file_count} script files.")
+        else:
+            logging.info("No script files found or processed for executable permissions.")
+    
+    else:
+        logging.info(f"Skipping script permission setup for unrecognized system: {system}")
 
 
 def build_capturekit_windows():
@@ -130,28 +174,22 @@ def build_spatialshot_windows():
     """Builds the 'spatialshot' Node.js component on Windows."""
     logging.info("--- Building Component: spatialshot (Node.js/Windows) ---")
     project_path = os.path.join(ROOT_DIR, "packages", "spatialshot")
-    
-    # 1. Install dependencies
+
     _execute_command(["npm", "install"], project_path, "spatialshot-npm-install")
-    
-    # 2. Build CSS
+
     _execute_command(["npm", "run", "build:css"], project_path, "spatialshot-build-css")
 
-    # 3. Build Electron app for Windows
     _execute_command(["npm", "run", "build:win"], project_path, "spatialshot-build-win")
 
 def build_spatialshot_unix(platform_name: str):
     """Builds the 'spatialshot' Node.js component on Linux or macOS."""
     logging.info(f"--- Building Component: spatialshot (Node.js/{platform_name}) ---")
     project_path = os.path.join(ROOT_DIR, "packages", "spatialshot")
-    
-    # 1. Install dependencies
+
     _execute_command(["npm", "install"], project_path, "spatialshot-npm-install")
 
-    # 2. Build CSS
     _execute_command(["npm", "run", "build:css"], project_path, "spatialshot-build-css")
 
-    # 3. Build Electron app for the target platform
     build_script = f"build:{platform_name.lower()}"
     _execute_command(["npm", "run", build_script], project_path, f"spatialshot-{build_script}")
 
@@ -164,52 +202,92 @@ def run_tests():
 def main():
     """
     Main function to orchestrate the entire build and test process.
+    Build steps will attempt to continue even if a prior step fails.
     """
     start_time = datetime.datetime.now()
     logging.info("==================================================")
     logging.info("  Starting SpatialShot Full Build and Test Cycle  ")
     logging.info("==================================================")
 
+    build_failed_components = []
+    system = platform.system()
+    logging.info(f"Detected Operating System: {system}")
+
     try:
-        system = platform.system()
-        if system == "Windows":
-            logging.info("Detected Operating System: Windows")
-            build_capturekit_windows()
+        logging.info(">>> STEP 0: Setting Script Permissions <<<")
+        try:
+            set_script_permissions(system)
+        except BuildError as e:
+            logging.error(f"[{e.component}] Permission setup FAILED.")
+            logging.error(str(e))
+            build_failed_components.append(e.component)
+
+        logging.info(">>> STEP 1: Building CaptureKit <<<")
+        try:
+            if system == "Windows":
+                build_capturekit_windows()
+            elif system == "Linux":
+                build_capturekit_unix("Linux")
+            elif system == "Darwin":
+                build_capturekit_unix("macOS")
+            else:
+                raise BuildError(f"Unsupported operating system: {system}", "setup")
+        except BuildError as e:
+            logging.error(f"[{e.component}] Build FAILED.")
+            logging.error(str(e))
+            build_failed_components.append(e.component)
+
+        logging.info(">>> STEP 2: Building Orchestrator <<<")
+        try:
             build_orchestrator()
-            build_spatialshot_windows()
-        elif system == "Linux":
-            logging.info("Detected Operating System: Linux")
-            build_capturekit_unix("Linux")
-            build_orchestrator()
-            build_spatialshot_unix("Linux")
-        elif system == "Darwin":
-            logging.info("Detected Operating System: macOS")
-            build_capturekit_unix("macOS")
-            build_orchestrator()
-            build_spatialshot_unix("macOS")
+        except BuildError as e:
+            logging.error(f"[{e.component}] Build FAILED. (e.g., Rust/cargo not installed?)")
+            logging.error(str(e))
+            build_failed_components.append(e.component)
+
+        logging.info(">>> STEP 3: Building SpatialShot <<<")
+        try:
+            if system == "Windows":
+                build_spatialshot_windows()
+            elif system == "Linux":
+                build_spatialshot_unix("Linux")
+            elif system == "Darwin":
+                build_spatialshot_unix("macOS")
+        except BuildError as e:
+            logging.error(f"[{e.component}] Build FAILED. (e.g., Node.js/npm not installed?)")
+            logging.error(str(e))
+            build_failed_components.append(e.component)
+
+        logging.info(">>> STEP 4: Running Tests <<<")
+        if not build_failed_components:
+            try:
+                run_tests()
+            except BuildError as e:
+                logging.error(f"[{e.component}] Tests FAILED.")
+                logging.error(str(e))
+                build_failed_components.append(e.component)
         else:
-            raise BuildError(f"Unsupported operating system: {system}", "setup")
+            logging.warning("Skipping test suite due to build failures in: " +
+                            f"{', '.join(sorted(list(set(build_failed_components))))}")
 
-        run_tests()
-
-    except BuildError as e:
-        logging.error("A critical error occurred during the build process.")
-        logging.error(str(e))
-        sys.exit(1)
     except Exception as e:
-        logging.error("An unexpected error occurred.", exc_info=True)
-        sys.exit(1)
+        logging.error("An unexpected error occurred outside of a build step.", exc_info=True)
+        sys.exit(2)
     finally:
-        # No import needed here anymore
         end_time = datetime.datetime.now()
         duration = end_time - start_time
-        # Fixed: Changed .toSeconds() to .total_seconds()
         logging.info(f"Total execution time: {duration.total_seconds()} seconds.")
         logging.info("==================================================")
-        logging.info("  SpatialShot Build and Test Cycle Finished       ")
-        logging.info("==================================================")
+
+        if build_failed_components:
+            failed_unique = sorted(list(set(build_failed_components)))
+            logging.warning("  Build and Test Cycle Finished with FAILURES  ")
+            logging.warning(f"Failed components: {', '.join(failed_unique)}")
+            logging.info("==================================================")
+            sys.exit(1)
+        else:
+            logging.info("  SpatialShot Build and Test Cycle Finished Successfully  ")
+            logging.info("==================================================")
 
 if __name__ == "__main__":
-    # This check prevents the main function from running when the script is imported.
-    # In a real-world scenario, this allows for the reuse of functions in other scripts.
     main()
