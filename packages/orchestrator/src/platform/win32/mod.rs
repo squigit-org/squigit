@@ -1,35 +1,47 @@
+/**
+ * Copyright (C) 2025  a7mddra-spatialshot
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+**/
+
 use anyhow::{anyhow, bail, Result};
+use crate::shared::AppPaths;
 use std::ffi::c_void;
 use std::io::Read;
 use std::os::windows::io::FromRawHandle;
 use std::path::Path;
 use std::ptr::null_mut;
-use crate::shared::AppPaths;
-use sysinfo::{ProcessRefreshKind, RefreshKind, System, ProcessesToUpdate};
+use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
 use windows::{
     core::{HSTRING, PCWSTR, PWSTR},
     Win32::{
         Foundation::{CloseHandle, BOOL, HANDLE, INVALID_HANDLE_VALUE},
         Security::{
-            DuplicateTokenEx, SecurityImpersonation,
-            TOKEN_ASSIGN_PRIMARY,
-            TOKEN_DUPLICATE,
-            TOKEN_IMPERSONATE,
-            TOKEN_QUERY,
-            TokenPrimary, // This is an enum variant, not a type
+            DuplicateTokenEx, SecurityImpersonation, TOKEN_ASSIGN_PRIMARY, TOKEN_DUPLICATE,
+            TOKEN_IMPERSONATE, TOKEN_QUERY, TokenPrimary,
         },
         System::{
             Environment::{CreateEnvironmentBlock, DestroyEnvironmentBlock},
             Pipes::CreatePipe,
             RemoteDesktop::{
-                WTSGetActiveConsoleSessionId, WTSQueryUserToken, WTSEnumerateSessionsW,
-                WTSFreeMemory, WTSActive,
+                WTSEnumerateSessionsW, WTSFreeMemory, WTSGetActiveConsoleSessionId,
+                WTSQueryUserToken, WTSActive,
             },
             Threading::{
                 CreateProcessAsUserW, GetExitCodeProcess, WaitForSingleObject,
-                CREATE_NO_WINDOW, CREATE_UNICODE_ENVIRONMENT, INFINITE, PROCESS_INFORMATION,
-                PROCESS_CREATION_FLAGS,
-                STARTF_USESHOWWINDOW, STARTF_USESTDHANDLES, STARTUPINFOW,
+                CREATE_NO_WINDOW, CREATE_UNICODE_ENVIRONMENT, INFINITE, PROCESS_CREATION_FLAGS,
+                PROCESS_INFORMATION, STARTF_USESHOWWINDOW, STARTF_USESTDHANDLES, STARTUPINFOW,
             },
         },
         UI::WindowsAndMessaging::{SW_HIDE, SW_SHOW},
@@ -38,29 +50,26 @@ use windows::{
 
 const CORE_PS1: &str = include_str!("core.ps1");
 
-pub fn get_monitor_count(paths: &AppPaths) -> Result<u32> {
-    write_core_script(paths)?;
-    let output = run_core_sync(paths, "count-monitors", &[])?;
-    Ok(output.trim().parse()?)
-}
+// --- get_monitor_count REMOVED ---
 
-pub fn run_grab_screen(paths: &AppPaths) -> Result<()> {
-    write_core_script(paths)?;
+pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
+    // UPDATED to return count
     let cmd_line = format!(
         "-ExecutionPolicy Bypass -File \"{}\" grab-screen",
         paths.core_path.to_string_lossy()
     );
-    let (_, stderr, exit_code) =
-        launch_in_user_session("powershell.exe", Some(&cmd_line), None, false, true, false)?;
+    // We must 'wait' and 'capture' to get the stdout from the script
+    let (stdout, stderr, exit_code) =
+        launch_in_user_session("powershell.exe", Some(&cmd_line), None, false, true, true)?;
 
     if exit_code != 0 {
         return Err(anyhow!("grab-screen failed: {}", stderr));
     }
-    Ok(())
+    // The stdout is now just the number
+    Ok(stdout.trim().parse()?)
 }
 
 pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
-    write_core_script(paths)?;
     let cmd_line = format!(
         "-ExecutionPolicy Bypass -File \"{}\" draw-view *> $null",
         paths.core_path.to_string_lossy()
@@ -70,7 +79,6 @@ pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
 }
 
 pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()> {
-    write_core_script(paths)?;
     let cmd_line = format!(
         "-ExecutionPolicy Bypass -File \"{}\" spatialshot \"{}\" *> $null",
         paths.core_path.to_string_lossy(),
@@ -80,20 +88,19 @@ pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn write_core_script(paths: &AppPaths) -> Result<()> {
+pub fn write_core_script(paths: &AppPaths) -> Result<()> {
     std::fs::write(&paths.core_path, CORE_PS1)?;
     Ok(())
 }
 
-// FIX: This function was missing its variable `cmd_str`
 fn run_core_sync(paths: &AppPaths, arg: &str, extra_args: &[&str]) -> Result<String> {
-    let mut cmd_str = format!( // <-- This line was missing
+    let mut cmd_str = format!(
         "-ExecutionPolicy Bypass -File \"{}\" {}",
         paths.core_path.to_string_lossy(),
         arg
     );
     for extra in extra_args {
-        cmd_str.push_str(&format!(" \"{}\"", extra)); // <-- This line caused E0425
+        cmd_str.push_str(&format!(" \"{}\"", extra));
     }
     let (stdout, stderr, exit_code) =
         launch_in_user_session("powershell.exe", Some(&cmd_str), None, false, true, true)?;
@@ -152,7 +159,7 @@ fn launch_in_user_session(
 
     let app_w = HSTRING::from(app_path);
     let work_w = work_dir.map(HSTRING::from);
-    
+
     let work_dir_pcwstr = work_w.as_ref().map_or(PCWSTR::null(), |s| PCWSTR(s.as_ptr()));
 
     let cmd_line_str = cmd_line.unwrap_or("");
@@ -173,7 +180,7 @@ fn launch_in_user_session(
             BOOL(if wait && capture { 1 } else { 0 }),
             creation_flags,
             Some(env),
-            work_dir_pcwstr, // <-- FIX: Pass the derived PCWSTR
+            work_dir_pcwstr,
             &startup_info,
             &mut process_info,
         )
@@ -273,7 +280,7 @@ fn get_session_user_token() -> Result<HANDLE> {
             access,
             None,
             SecurityImpersonation,
-            TokenPrimary, // <-- FIX: This is the correct enum variant
+            TokenPrimary,
             &mut h_token,
         )
     }
@@ -290,7 +297,6 @@ pub fn kill_running_packages(_paths: &AppPaths) {
     let mut sys = System::new_with_specifics(
         RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
     );
-    // FIX: This API changed
     sys.refresh_processes_specifics(ProcessesToUpdate::All, false, ProcessRefreshKind::new());
     for process in sys.processes().values() {
         let name = process.name();

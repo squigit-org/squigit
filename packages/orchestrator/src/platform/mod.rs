@@ -1,18 +1,18 @@
 /**
- *  Copyright (C) 2025  a7mddra-spatialshot
+ * Copyright (C) 2025  a7mddra-spatialshot
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
 // --- Linux ---
@@ -20,7 +20,8 @@
 mod linux;
 #[cfg(target_os = "linux")]
 pub use self::linux::{
-    get_monitor_count, kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot,
+    kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot, write_core_script,
+    // get_monitor_count REMOVED
 };
 
 // --- Windows ---
@@ -28,7 +29,8 @@ pub use self::linux::{
 mod win32;
 #[cfg(target_os = "windows")]
 pub use self::win32::{
-    get_monitor_count, kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot,
+    kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot, write_core_script,
+    // get_monitor_count REMOVED
 };
 
 // --- macOS ---
@@ -36,12 +38,14 @@ pub use self::win32::{
 mod darwin;
 #[cfg(target_os = "macos")]
 pub use self::darwin::{
-    get_monitor_count, kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot,
+    kill_running_packages, run_draw_view, run_grab_screen, run_spatialshot, write_core_script,
+    // get_monitor_count REMOVED
 };
 
 // --- Unsupported Platforms ---
 #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-pub fn run_grab_screen(_paths: &crate::shared::AppPaths) -> anyhow::Result<()> {
+pub fn run_grab_screen(_paths: &crate::shared::AppPaths) -> anyhow::Result<u32> {
+    // UPDATED SIGNATURE
     anyhow::bail!("Unsupported platform");
 }
 
@@ -58,10 +62,14 @@ pub fn run_spatialshot(
     anyhow::bail!("Unsupported platform");
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-pub fn get_monitor_count(_paths: &crate::shared::AppPaths) -> anyhow::Result<u32> {
-    Ok(1)
-}
+// get_monitor_count STUB REMOVED
+// ...
 
 #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
 pub fn kill_running_packages(_paths: &crate::shared::AppPaths) {}
+
+#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+pub fn write_core_script(_paths: &crate::shared::AppPaths) -> anyhow::Result<()> {
+    Ok(())
+}
+

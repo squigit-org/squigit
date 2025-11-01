@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# All monitor counting and watching logic is REMOVED.
+
 arg="$1"
 shift
 
@@ -11,114 +13,21 @@ case "$arg" in
     
     wrapper="${XDG_DATA_HOME:-$HOME/.local/share}/spatialshot/capkit/scgrabber"
     
-    exec "$wrapper" "$@"
+    # Run the wrapper and wait for it to complete
+    # DO NOT use 'exec', as we need to run commands after it finishes.
+    "$wrapper" "$@"
+
+    # After wrapper finishes, count the .png files it created
+    # Use 'find' and 'wc' for a reliable count.
+    count=$(find "$tmp_dir" -type f -name "*.png" | wc -l | tr -d ' ')
+    
+    # Print *only* the count for Rust to capture
+    echo "${count:-0}"
     ;;
   
-  count-monitors)
-    is_cmd() {
-        command -v "$1" >/dev/null 2>&1
-    }
-
-    probe_xrandr_listmonitors() {
-        if ! is_cmd xrandr; then return 1; fi
-
-        if output=$(xrandr --listmonitors 2>/dev/null); then
-            first_line=$(echo "$output" | head -n 1)
-            if [[ $first_line == *"Monitors:"* ]]; then
-                count=$(echo "$first_line" | awk '{print $2}')
-                if [[ $count =~ ^[0-9]+$ ]] && [ "$count" -ge 1 ]; then
-                    echo "$count"
-                    return 0
-                fi
-            fi
-        fi
-        return 1
-    }
-
-    probe_xrandr_grep() {
-        if ! is_cmd xrandr; then return 1; fi
-
-        if count=$(xrandr 2>/dev/null | grep -c " connected [0-9]"); then
-            if [ "$count" -ge 1 ]; then
-                echo "$count"
-                return 0
-            fi
-        fi
-        return 1
-    }
-
-    probe_swaymsg() {
-        if ! is_cmd swaymsg; then return 1; fi
-
-        if count=$(swaymsg -t get_outputs 2>/dev/null | grep -c '"active": true'); then
-            if [ "$count" -ge 1 ]; then
-                echo "$count"
-                return 0
-            fi
-        fi
-        return 1
-    }
-
-    probe_kscreen() {
-        if ! is_cmd kscreen-doctor; then return 1; fi
-
-        if count=$(kscreen-doctor -o 2>/dev/null | grep -c 'Enabled: yes'); then
-            if [ "$count" -ge 1 ]; then
-                echo "$count"
-                return 0
-            fi
-        fi
-        return 1
-    }
-
-    probe_wlr_randr() {
-        if ! is_cmd wlr-randr; then return 1; fi
-
-        if count=$(wlr-randr 2>/dev/null | grep -c 'Enabled: yes'); then
-            if [ "$count" -ge 1 ]; then
-                echo "$count"
-                return 0
-            fi
-        fi
-        return 1
-    }
-
-    probe_drm_sysfs() {
-        count=0
-        for status_file in /sys/class/drm/*/status; do
-            if [ -f "$status_file" ]; then
-                status=$(cat "$status_file" 2>/dev/null | tr -d '[:space:]')
-                if [ "$status" = "connected" ]; then
-                    count=$((count + 1))
-                fi
-            fi
-        done
-        if [ "$count" -ge 1 ]; then
-            echo "$count"
-            return 0
-        fi
-        return 1
-    }
-
-    main() {
-        if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
-            probe_swaymsg && return
-            probe_kscreen && return
-            probe_wlr_randr && return
-        fi
-
-        if [ -n "$DISPLAY" ]; then
-             probe_xrandr_listmonitors && return
-             probe_xrandr_grep && return
-        fi
-        
-        probe_drm_sysfs && return
-
-        echo 1
-    }
-
-    main
-    ;;
+  # count-monitors REMOVED
+  
+  # watch-monitors REMOVED
   
   draw-view)
     wrapper="${XDG_DATA_HOME:-$HOME/.local/share}/spatialshot/capkit/drawview"
@@ -133,7 +42,8 @@ case "$arg" in
     ;;
   
   *)
-    echo "Invalid argument: $arg. Valid options: grab-screen, count-monitors, draw-view, spatialshot"
+    # Updated invalid options
+    echo "Invalid argument: $arg. Valid options: grab-screen, draw-view, spatialshot"
     exit 1
     ;;
 esac
