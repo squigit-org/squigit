@@ -91,7 +91,7 @@ public static class DpiAwareness {
             try {
                 & $nircmdCmd savescreenshot $outFile $b.X $b.Y $b.Width $b.Height
             } catch {
-                Write-Warning "Exception running nircmd for screen $i: $_"
+                Write-Warning "Exception running nircmd for screen ${i}: $_"
                 $errorsEncountered = $true
                 $i++
                 continue
