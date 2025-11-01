@@ -6,7 +6,6 @@ import logging
 import os
 import sys
 
-# Add the path to the root directory to the system path to import setup.py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 from setup import _execute_command, BuildError
@@ -58,7 +57,6 @@ class TestExecuteCommand:
         env_vars = {"MY_VAR": "my_value"}
         _execute_command(["printenv"], ".", "test_component", env=env_vars)
         mock_run.assert_called_once()
-        # Check if env was passed correctly. subprocess.run is called with env={**os.environ, **env}
-        # So we can't directly check for env_vars, but we can check if it was passed.
+
         assert mock_run.call_args.kwargs['env'] is not None
         assert mock_run.call_args.kwargs['env']['MY_VAR'] == 'my_value'
