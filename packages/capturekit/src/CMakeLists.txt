@@ -62,7 +62,6 @@ set(DRAWVIEW_SOURCES
     draw-view/drawview.cpp
     draw-view/drawview.h
     draw-view/Window.h
-    draw-view/watchdog.h
 )
 if(APPLE)
     list(APPEND DRAWVIEW_SOURCES draw-view/window.mm)
@@ -73,6 +72,7 @@ endif()
 
 if(UNIX AND NOT APPLE)
     list(APPEND DRAWVIEW_SOURCES
+        draw-view/watchdog.h
         draw-view/watchdog.cpp
     )
 endif()
