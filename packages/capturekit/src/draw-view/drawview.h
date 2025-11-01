@@ -24,25 +24,26 @@
 #include <QPainterPath>
 #include <QPropertyAnimation>
 
-class DrawView : public QWidget {
+class DrawView : public QWidget
+{
     Q_OBJECT
     Q_PROPERTY(qreal gradientOpacity READ gradientOpacity WRITE setGradientOpacity)
 
 public:
-    explicit DrawView(int displayNum, const QString& imagePath, const QString& tmpPath, QWidget* parent = nullptr);
+    explicit DrawView(int displayNum, const QString &imagePath, const QString &tmpPath, QWidget *parent = nullptr);
 
 protected:
-    void showEvent(QShowEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;
-    void paintEvent(QPaintEvent* event) override;
+    void showEvent(QShowEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     qreal gradientOpacity() const;
     void setGradientOpacity(qreal opacity);
-    void drawCursorCircle(QPainter& painter, const QPointF& center);
+    void drawCursorCircle(QPainter &painter, const QPointF &center);
     void updateBounds(qreal x, qreal y);
     void clearCanvas();
     void cropAndSave();
@@ -54,7 +55,7 @@ private:
     QPainterPath m_path;
     bool m_isDrawing = false;
     bool m_hasDrawing = false;
-    
+
     QPointF m_smoothedPoint;
     QPointF m_currentMousePos;
     const qreal m_smoothingFactor = 0.2;
@@ -64,7 +65,7 @@ private:
     const QColor m_brushColor = Qt::white;
 
     qreal m_gradientOpacity = 0.0;
-    QPropertyAnimation* m_animation;
+    QPropertyAnimation *m_animation;
 };
 
 #endif // DRAWVIEW_H

@@ -17,40 +17,27 @@
 
 #pragma once
 
-#ifndef WINDOW_H
-#define WINDOW_H
+#ifndef WATCHDOG_H
+#define WATCHDOG_H
 
-#include <QMainWindow>
-#include <QWidget>
-#include <QPainterPath>
-#include <QScreen>
-#include <QPropertyAnimation>
-#include <QCloseEvent>
+#include <QObject>
+#include <QProcess>
 
-#include "drawview.h"
-
-class MainWindow : public QMainWindow
+class Watchdog : public QObject
 {
     Q_OBJECT
+
 public:
-    MainWindow(int displayNum, const QString &imagePath, const QString &tmpPath, QScreen *screen, QWidget *parent = nullptr);
-    ~MainWindow();
-    int displayNumber() const { return m_displayNum; }
+    explicit Watchdog(QObject *parent = nullptr);
+    ~Watchdog();
 
-protected:
-    void closeEvent(QCloseEvent *event) override;
+    void start();
 
-#ifdef Q_OS_WIN
-    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
-#endif
+private slots:
+    void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
-    int m_displayNum;
-    DrawView *m_drawView;
-
-#ifdef Q_OS_MAC
-    void *m_displayChangeHandle;
-#endif
+    QProcess *m_process;
 };
 
-#endif
+#endif // WATCHDOG_H

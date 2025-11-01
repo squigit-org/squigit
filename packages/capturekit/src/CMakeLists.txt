@@ -62,12 +62,19 @@ set(DRAWVIEW_SOURCES
     draw-view/drawview.cpp
     draw-view/drawview.h
     draw-view/Window.h
+    draw-view/watchdog.h
 )
 if(APPLE)
     list(APPEND DRAWVIEW_SOURCES draw-view/window.mm)
     set_source_files_properties(draw-view/window.mm PROPERTIES LANGUAGE OBJCXX)
 else()
     list(APPEND DRAWVIEW_SOURCES draw-view/Window.cpp)
+endif()
+
+if(UNIX AND NOT APPLE)
+    list(APPEND DRAWVIEW_SOURCES
+        draw-view/watchdog.cpp
+    )
 endif()
 
 set(DRAWVIEW_WIN32_FLAG "")
