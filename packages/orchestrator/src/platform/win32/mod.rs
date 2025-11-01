@@ -26,10 +26,32 @@ const CORE_PS1: &str = include_str!("core.ps1");
 pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
     let core_path_str = paths.core_path.to_string_lossy().to_string();
     let output = run_powershell_sync(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "grab-screen"])?;
+    
     if !output.status.success() {
-        return Err(anyhow!("grab-screen failed: {}", String::from_utf8_lossy(&output.stderr)));
+        return Err(anyhow!("grab-screen script failed: {}", String::from_utf8_lossy(&output.stderr)));
     }
-    Ok(String::from_utf8_lossy(&output.stdout).trim().parse()?)
+
+    let output_str = String::from_utf8_lossy(&output.stdout);
+
+    let monitor_count_str = output_str
+        .lines()
+        .map(|line| line.trim())
+        .find(|line| line.parse::<u32>().is_ok())
+        .unwrap_or("0");
+
+    match monitor_count_str.parse::<u32>() {
+        Ok(count) => {
+            if count == 0 {
+                if output_str.contains("No screens detected") || output_str.contains("exit 1") {
+                    return Err(anyhow!("grab-screen reported 0 monitors or failed: {}", output_str));
+                }
+            }
+            Ok(count)
+        },
+        Err(e) => {
+            Err(anyhow!("Failed to parse monitor count from output: {}. Error: {}", output_str, e))
+        }
+    }
 }
 
 pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
