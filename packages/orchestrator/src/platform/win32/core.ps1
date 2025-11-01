@@ -88,12 +88,17 @@ public static class DpiAwareness {
             $b = $screen.Bounds
             $outFile = Join-Path $fullPath ("$i.$imageExt")
 
-            & $nircmdCmd savescreenshot $outFile $b.X $b.Y $b.Width $b.Height
-            
-            if ($LASTEXITCODE -ne 0) {
-                $exitCodeStr = if ([string]::IsNullOrEmpty($LASTEXITCODE)) { "[blank]" } else { $LASTEXITCODE }
-                
-                Write-Warning "nircmd reported an issue with screen $i (exit code: $exitCodeStr). Continuing to next screen..."
+            try {
+                & $nircmdCmd savescreenshot $outFile $b.X $b.Y $b.Width $b.Height
+            } catch {
+                Write-Warning "Exception running nircmd for screen $i: $_"
+                $errorsEncountered = $true
+                $i++
+                continue
+            }
+
+            if (-not (Test-Path $outFile)) {
+                Write-Warning "Screenshot file not created for screen $i."
                 $errorsEncountered = $true
             }
 
@@ -104,7 +109,7 @@ public static class DpiAwareness {
 
         if ($errorsEncountered) {
             Write-Warning "One or more screens may not have been captured correctly."
-            exit 1
+            if ($i - 1 -eq 0) { exit 1 }
         }
 
         exit 0
