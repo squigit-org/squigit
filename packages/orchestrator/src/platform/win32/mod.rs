@@ -20,6 +20,8 @@ use crate::shared::AppPaths;
 use std::path::Path;
 use std::process::{Command, Output};
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
+use std::os::windows::process::CommandExt;
+use windows::Win32::System::Threading::CREATE_NO_WINDOW;
 
 const CORE_PS1: &str = include_str!("core.ps1");
 
@@ -80,6 +82,7 @@ pub fn write_core_script(paths: &AppPaths) -> Result<()> {
 
 fn run_powershell_sync(args: &[&str]) -> Result<Output> {
     let output = Command::new("powershell.exe")
+        .creation_flags(CREATE_NO_WINDOW.0)
         .args(args)
         .output()?;
     Ok(output)
