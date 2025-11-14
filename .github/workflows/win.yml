@@ -76,6 +76,6 @@ jobs:
     - name: Upload artifact contents
       uses: actions/upload-artifact@v4
       with:
-        name: capkit-windows
+        name: capkit-windows-x64
         path: packages/capturekit/dist/*
         retention-days: 30
