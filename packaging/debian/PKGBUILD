@@ -1,0 +1,6 @@
+#!/bin/bash
+# This script is run by the GitHub Actions runner
+set -e
+echo "--- Building Linux Installer ---"
+go build -o spatialshot-installer packaging/debian/main.go
+echo "--- Linux Installer Built ---"
