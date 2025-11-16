@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Image Upload — Minimal</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../renderer/style/topbar.css" />
+  <link rel="stylesheet" href="../../renderer/style/feedback.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="traffic-lights">
+      <button class="traffic-light-btn close-btn" title="Close" aria-label="Close picker"></button>
+      <button class="traffic-light-btn minimize-btn" title="Minimize" aria-label="Minimize picker"></button>
+      <button class="traffic-light-btn maximize-btn" title="Maximize" aria-label="Maximize picker"></button>
+    </div>
+    <div class="drag-region"></div>
+  </div>
+
+  <div id="feedbackMessage"></div>
+
+  <input id="fileInput" class="file-input" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-hidden="true">
+
+  <main class="card" role="main" aria-label="Image upload">
+    <section class="upload-area" id="uploadArea" tabindex="0" aria-label="Drop image here or click to upload">
+      <svg class="upload-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 16v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"></path>
+        <polyline points="7 11 12 6 17 11"></polyline>
+        <line x1="12" y1="6" x2="12" y2="18"></line>
+      </svg>
+      <div class="title">Upload your image</div>
+      <div class="subtitle">Click anywhere or drop a file</div>
+      <div class="hint" aria-hidden>
+        <span>• JPG, PNG, WEBP</span>
+        <span>• Max 20 MB</span>
+      </div>
+    </section>
+
+    <aside class="right-col" aria-label="Details">
+      <div class="panel-title">Quick notes</div>
+      <div class="panel-body">Files are processed immediately. There is no preview.</div>
+      <div style="height:8px"></div>
+      <div class="panel-title">Accessibility</div>
+      <div class="panel-body">You can tab to the upload area and press Enter to open the file dialog.</div>
+
+      <div class="footer" aria-hidden="true">
+        <p style="margin:0;color:var(--muted);font-size:13px;">SpatialShot &copy; 2025</p>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="./index.js"></script>
+</body>
+</html>

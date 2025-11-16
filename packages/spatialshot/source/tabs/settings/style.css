@@ -1,0 +1,439 @@
+
+
+:root {
+    --primary: #000000;
+    --primary-light: #333333;
+    --secondary: #1a1a1a;
+    --danger: #d32f2f;
+    --success: #2e7d32;
+    --done: #0288d1;
+    --dark: #0d1117;
+    --light: #dfe6ec;
+    --gray: #6a737d;
+    --border-radius: 12px;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+    --transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.panel {
+    position: fixed;
+    top: 74px;
+    right: 18px;
+    width: 250px;
+    height: auto;
+    background: rgba(0, 0, 0, 0.308);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease-in-out;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95) translateY(-10px);
+}
+
+.panel.active {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.panel-content {
+    background: rgba(255, 255, 255, 0);
+    flex: 1;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem;
+    margin: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.user-info-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.user-details-wrapper {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.user-details h3 {
+    color: white;
+    font-size: 1.1rem;
+    margin: 0;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.user-details p {
+    color: var(--gray);
+    font-size: 0.9rem;
+    margin: 0;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+
+.user-details h3.marquee {
+    mask: linear-gradient(90deg,
+            transparent 0%,
+            white 10%,
+            white 90%,
+            transparent 100%);
+}
+
+.user-details p.marquee {
+    mask: linear-gradient(90deg,
+            transparent 0%,
+            white 10%,
+            white 90%,
+            transparent 100%);
+}
+
+
+.marquee-container {
+    display: inline-flex;
+    animation: marquee-continuous 10s linear infinite;
+}
+
+.marquee-content {
+    display: inline-block;
+    white-space: nowrap;
+    padding-right: 2rem;
+}
+
+.name-marquee-container {
+    animation-duration: 12s;
+}
+
+.email-marquee-container {
+    animation-duration: 15s;
+}
+
+@keyframes marquee-continuous {
+    0% {
+        transform: translateX(0%);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.user-details-wrapper:hover .marquee-container {
+    animation-play-state: paused;
+}
+
+.logout-btn {
+    background: transparent;
+    border: none;
+    color: #ff4444;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: var(--transition);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
+.logout-btn:hover {
+    background: rgba(255, 68, 68, 0.1);
+    color: #ff6666;
+    transform: scale(1.1);
+}
+
+.button-group .btn:has(.fa-sign-out-alt) {
+    display: none;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    width: 100%;
+    border-radius: 0;
+    position: relative;
+}
+
+.btn:hover {
+    background: rgba(0, 0, 0, 0);
+    padding-left: 1.3rem;
+}
+
+.btn-content {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.btn i {
+    font-size: 1.1rem;
+    width: 20px;
+    color: #dfe6ec;
+    transition: var(--transition);
+}
+
+.btn:hover i {
+    color: white;
+    transform: rotate(-5deg);
+}
+
+.btn-text {
+    flex: 1;
+    color: rgb(255, 255, 255);
+    font-weight: 600;
+}
+
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #353141;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border-radius: 50%;
+}
+
+input:checked+.toggle-slider {
+    background-color: var(--primary);
+}
+
+input:checked+.toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: white;
+    font-size: 0.9rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.settings-panel.subview-active .user-info,
+.settings-panel.subview-active .button-group {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    pointer-events: none;
+}
+
+.panel:has(.subview-active) .footer {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    pointer-events: none;
+}
+
+.settings-panel .user-info,
+.settings-panel .button-group,
+.footer {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+
+.prompt-view {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.116);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: left 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    z-index: 10;
+}
+
+.prompt-view.active {
+    left: 0;
+}
+
+.prompt-header {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+}
+
+.back-btn {
+    background: transparent;
+    border: none;
+    color: #dfe6ec;
+    font-size: 1.2rem;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+    color: white;
+}
+
+.prompt-header h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+}
+
+.prompt-content {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.prompt-textarea {
+    width: 100%;
+    height: 100%;
+    min-height: 120px;
+    max-height: 250px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    resize: vertical;
+    margin-bottom: 1rem;
+    font-family: inherit;
+    line-height: 1.5;
+    transition: var(--transition);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.prompt-textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+}
+
+.prompt-textarea::placeholder {
+    color: var(--gray);
+    font-style: italic;
+}
+
+.save-btn {
+    background: var(--primary-light);
+    color: white;
+    border: none;
+    padding: 0.8rem;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.save-btn:hover {
+    background: var(--primary);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(54, 54, 54, 0.3);
+}
+
+#panel-overlay {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 60px);
+  background-color: rgba(0, 0, 0, 0);
+  z-index: 999;
+  display: none;
+}
+
+#panel-overlay.active {
+  display: block;
+}

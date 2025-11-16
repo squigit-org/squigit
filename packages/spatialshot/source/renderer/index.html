@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:; img-src 'self' https: data:;">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1e1e1e" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="./style/main.css" />
+  <link rel="stylesheet" href="./style/topbar.css" />
+  <link rel="stylesheet" href="./style/content.css" />
+  <link rel="stylesheet" href="./style/feedback.css" />
+  <link rel="stylesheet" href="../tabs/login/style.css" />
+  <link rel="stylesheet" href="../tabs/settings/style.css" />
+  <link rel="stylesheet" href="../shared/webview/style.css" />
+  <link rel="stylesheet" href="./style/scrollbar.css" />
+</head>
+<body>
+  <div class="widget-container" role="application" aria-label="SpatialShot">
+    <div class="topbar">
+      <!-- macOS Traffic Light Buttons -->
+      <div class="traffic-lights">
+        <button class="traffic-light-btn close-btn" title="Close" aria-label="Close picker"></button>
+        <button class="traffic-light-btn minimize-btn" title="Minimize" aria-label="Minimize picker"></button>
+        <button class="traffic-light-btn maximize-btn" title="Maximize" aria-label="Maximize picker"></button>
+      </div>
+
+      <div class="category-nav-left" role="navigation" aria-label="Categories">
+        <button class="cat-btn" data-category="aimode" title="AI Overview" aria-label="AI Overview">
+            <img src="../../assets/tabs/default/aimode.svg" alt="" class="icon-normal">
+            <img src="../../assets/tabs/selected/aimode.svg" alt="" class="icon-active">
+        </button>
+        <button class="cat-btn" data-category="lens" title="Search with Google Lens" aria-label="Search with Google Lens">
+            <img src="../../assets/tabs/default/golens.svg" alt="" class="icon-normal">
+            <img src="../../assets/tabs/selected/golens.svg" alt="" class="icon-active">
+        </button>
+      </div>
+
+      <div class="drag-region"></div>
+
+      <div class="category-nav-right" role="navigation" aria-label="Categories">
+
+        <button class="cat-btn" data-category="settings" title="Settings" aria-label="Settings">
+            <img src="../../assets/tabs/default/settings.svg" alt="" class="icon-normal">
+            <img src="../../assets/tabs/default/settings.svg" alt="" class="icon-active">
+        </button>
+      </div>
+    </div>
+
+    <div class="content-container" id="content-container" role="list" aria-label="Content">
+      <img id="image" style="display: none;" />
+      <div id="upload-icon" style="display: none;"></div>
+      <div id="login-screen">
+      <!-- Main content -->
+      <div class="login-content">
+        
+        <!-- Particles - smooth meteor-like flow -->
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        
+        <!-- Content elements -->
+        <div class="logo-container">
+          <img src="../../assets/raw.svg" alt="SpatialShot Logo" class="logo-image">
+        </div>
+        
+        <h1 class="login-title">One Step Away!</h1>
+        <p class="login-subtitle">Sign in to get your image results.</p>
+        
+        <button id="login-btn">
+          <svg class="google-logo" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </button>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- Feedback Messages -->
+  <div class="feedback-message" id="feedbackMessage"></div>
+
+  <!-- Settings panel overlay -->
+  <div id="panel-overlay"></div>
+
+  <!-- Settings panel -->
+  <div class="panel" id="panel">
+      <div class="panel-content" id="settings-content">
+      </div>
+      
+      <div class="footer">
+          <p>SpatialShot &copy; 2025</p>
+      </div>
+  </div>
+
+  <script type="module" src="./index.js"></script>
+</body>
+</html>

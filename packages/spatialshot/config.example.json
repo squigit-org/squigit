@@ -24,11 +24,11 @@
       "http://localhost:3000/auth/google/callback"
     ]
   },
-  "mongodb_atlas": {
-    "__comment": "Connection details for the MongoDB Atlas database. This information is available in your cluster's 'Connect' dialog.",
-    "username": "YOUR_DATABASE_USERNAME_HERE",
-    "password": "YOUR_DATABASE_PASSWORD_HERE",
-    "host": "YOUR_CLUSTER_HOSTNAME_HERE",
-    "options": "retryWrites=true&w=majority"
+  "google_gemini": {
+    "__comment": "Configuration for Google Gemini API. Credentials can be obtained from the Google Cloud Console under 'APIs & Services' > 'Credentials'.",
+    "api_key": "YOUR_GEMINI_API_KEY_HERE",
+    "api_endpoint": "YOUR_GEMINI_API_ENDPOINT_HERE",
+    "project_name": "YOUR_GCP_PROJECT_NAME_HERE",
+    "project_number": "YOUR_GCP_PROJECT_NUMBER_HERE"
   }
 }
