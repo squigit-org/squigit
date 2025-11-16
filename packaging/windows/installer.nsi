@@ -32,11 +32,11 @@ Section "Install"
   ; --- 1. Create Directories (Your pseudo-code logic) ---
   CreateDirectory "$LOCALAPPDATA\Spatialshot"
   CreateDirectory "$LOCALAPPDATA\Spatialshot\app"
-  CreateDirectory "$LOCALAPPDATA\Spatialshot\tmp"
+  CreateDirectory "$LOCALAPPDATA\Spatialshot\cache"
   CreateDirectory "$LOCALAPPDATA\Spatialshot\capkit"
   CreateDirectory "$LOCALAPPDATA\Spatialshot\3rdparty"
   
-  SetOutPath "$LOCALAPPDATA\Spatialshot\tmp"
+  SetOutPath "$LOCALAPPDATA\Spatialshot\cache"
 
   ; --- 2. Download Artifacts (The Online Part) ---
   DetailPrint "Downloading components..."
@@ -48,10 +48,10 @@ Section "Install"
   ; --- 3. Unzip and Move Files ---
   DetailPrint "Installing files..."
   ; We use PowerShell's built-in 'Expand-Archive' to avoid bundling 'unzip.exe'
-  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\tmp\spatialshot.zip'' -DestinationPath ''$INSTDIR'' -Force"'
-  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\tmp\capkit.zip'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\capkit'' -Force"'
-  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\tmp\${NIRCMD_ZIP}'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\3rdparty'' -Force"'
-  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\tmp\orchestrator.zip'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\app'' -Force"'
+  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\cache\spatialshot.zip'' -DestinationPath ''$INSTDIR'' -Force"'
+  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\cache\capkit.zip'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\capkit'' -Force"'
+  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\cache\${NIRCMD_ZIP}'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\3rdparty'' -Force"'
+  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\cache\orchestrator.zip'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\app'' -Force"'
   
   ; Rename the orchestrator binary if needed (assuming it's 'spatialshot-orchestrator-windows-x64.exe' in the zip)
   Rename "$LOCALAPPDATA\Spatialshot\app\spatialshot-orchestrator-windows-x64.exe" "$LOCALAPPDATA\Spatialshot\app\${ORCHESTRATOR_EXE}"
@@ -73,11 +73,11 @@ Section "Install"
 
   ; --- 6. Cleanup ---
   DetailPrint "Cleaning up..."
-  Delete "$LOCALAPPDATA\Spatialshot\tmp\spatialshot.zip"
-  Delete "$LOCALAPPDATA\Spatialshot\tmp\capkit.zip"
-  Delete "$LOCALAPPDATA\Spatialshot\tmp\orchestrator.zip"
-  Delete "$LOCALAPPDATA\Spatialshot\tmp\${NIRCMD_ZIP}"
-  RmDir "$LOCALAPPDATA\Spatialshot\tmp"
+  Delete "$LOCALAPPDATA\Spatialshot\cache\spatialshot.zip"
+  Delete "$LOCALAPPDATA\Spatialshot\cache\capkit.zip"
+  Delete "$LOCALAPPDATA\Spatialshot\cache\orchestrator.zip"
+  Delete "$LOCALAPPDATA\Spatialshot\cache\${NIRCMD_ZIP}"
+  RmDir "$LOCALAPPDATA\Spatialshot\cache"
 
   ; --- 7. Warning ---
   MessageBox MB_OK|MB_ICONINFORMATION "Installation complete! SpatialShot is unsigned. You may need to bypass Windows Defender on first launch."

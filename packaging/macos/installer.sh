@@ -9,7 +9,7 @@ ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/releases/latest/downloa
 SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-macos.app.zip"
 
 # --- Paths ---
-TMP_DIR="$HOME/Library/Caches/spatialshot/tmp_install"
+CACHE_DIR="$HOME/Library/Caches/spatialshot/cache"
 APP_DIR="$HOME/Library/Application Support/spatialshot/app"
 CAPKIT_DIR="$HOME/Library/Application Support/spatialshot/capkit"
 
@@ -17,32 +17,32 @@ echo "Starting SpatialShot installation..."
 
 # --- 1. Create Directories ---
 echo "Creating directories..."
-mkdir -p "$TMP_DIR"
+mkdir -p "$CACHE_DIR"
 mkdir -p "$APP_DIR"
 mkdir -p "$CAPKIT_DIR"
 
 # --- 2. Download ---
 echo "Downloading components (this may take a moment)..."
-curl -L "$SPATIALSHOT_URL" -o "$TMP_DIR/spatialshot.app.zip"
-curl -L "$CAPKIT_URL" -o "$TMP_DIR/capkit.zip"
-curl -L "$ORCHESTRATOR_URL" -o "$TMP_DIR/orchestrator.zip"
+curl -L "$SPATIALSHOT_URL" -o "$CACHE_DIR/spatialshot.app.zip"
+curl -L "$CAPKIT_URL" -o "$CACHE_DIR/capkit.zip"
+curl -L "$ORCHESTRATOR_URL" -o "$CACHE_DIR/orchestrator.zip"
 
 # --- 3. Install ---
 echo "Installing files..."
 
 # Unzip and install the .app to /Applications
-unzip -o "$TMP_DIR/spatialshot.app.zip" -d "$TMP_DIR"
-if [ -d "$TMP_DIR/SpatialShot.app" ]; then
+unzip -o "$CACHE_DIR/spatialshot.app.zip" -d "$CACHE_DIR"
+if [ -d "$CACHE_DIR/SpatialShot.app" ]; then
     rm -rf "/Applications/SpatialShot.app"
-    mv "$TMP_DIR/SpatialShot.app" "/Applications/"
+    mv "$CACHE_DIR/SpatialShot.app" "/Applications/"
 else
     echo "Error: SpatialShot.app not found in zip!"
     exit 1
 fi
 
 # Install helpers
-unzip -o "$TMP_DIR/capkit.zip" -d "$CAPKIT_DIR"
-unzip -o "$TMP_DIR/orchestrator.zip" -d "$APP_DIR"
+unzip -o "$CACHE_DIR/capkit.zip" -d "$CAPKIT_DIR"
+unzip -o "$CACHE_DIR/orchestrator.zip" -d "$APP_DIR"
 chmod +x "$APP_DIR/spatialshot-orchestrator-macos"
 
 # --- 4. Create Uninstaller ---
@@ -87,7 +87,7 @@ chmod +x "$UNINSTALLER_PATH"
 
 # --- 5. Cleanup ---
 echo "Cleaning up..."
-rm -rf "$TMP_DIR"
+rm -rf "$CACHE_DIR"
 
 # --- 6. Final Instructions ---
 echo ""
