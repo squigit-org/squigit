@@ -7,8 +7,8 @@
   "author": "a7mddra <a7mddra@gmail.com>",
   "license": "GPL-3.0",
   "scripts": {
-    "start": "electron .",
-    "build:css": "sass source/tabs/login/style.scss:source/tabs/login/style.css",
+    "start": "env -u IBUS_ADDRESS -u IBUS_DAEMON_PID -u IBUS_ENABLE_SYNC_MODE -u IBUS_SESSION_ID -u IBUS_USE_ASYNC_ENGINE -u IBUS_USE_PORTAL -u IBUS_VERSION electron .",
+    "build:css": "sass source/login/style.scss:source/login/style.css",
     "build": "electron-builder"
   },
   "devDependencies": {
@@ -34,6 +34,11 @@
     }
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^7.1.0"
+    "axios": "^1.13.2",
+    "express": "^5.1.0",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^166.0.0",
+    "localtunnel": "^2.0.2",
+    "open": "^11.0.0"
   }
 }

@@ -1,168 +1,132 @@
-
-
-/* Top bar container */
 .topbar {
-    display: flex;
-    align-items: center;
-    padding: 0 21px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    height: 60px;
-    flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 21px;
+  height: 60px;
+  flex-shrink: 0;
+  background: #121212;
+}
+
+html.light-theme .topbar {
+  background: #f3f4f6;
 }
 
 .drag-region {
-    -webkit-app-region: drag;
-    flex-grow: 1;
-    height: 100%;
+  -webkit-app-region: drag;
+  flex-grow: 1;
+  height: 100%;
 }
 
 /* Traffic Light Buttons */
 .traffic-lights {
-    display: flex;
-    align-items: center;
-    padding: 16px 0;
-    gap: 10px;
-    margin-right: 10px;
+  display: flex;
+  align-items: center;
+  padding: 16px 0;
+  gap: 10px;
+  margin-right: 10px;
 }
 
 .traffic-light-btn {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-app-region: no-drag;
-    position: relative;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+  position: relative;
 }
 
 .traffic-light-btn:hover {
-    transform: scale(1.1);
-    filter: brightness(1.1);
+  transform: scale(1.1);
+  filter: brightness(1.1);
 }
 
 .traffic-light-btn:active {
-    transform: scale(0.95);
+  transform: scale(0.95);
 }
 
 .close-btn {
-    background: #ff5f57;
+  background: #ff5f57;
 }
 
 .close-btn:hover {
-    background: #ff3b30;
+  background: #ff3b30;
 }
 
 .minimize-btn {
-    background: #ffbd2e;
+  background: #ffbd2e;
 }
 
 .minimize-btn:hover {
-    background: #ff9500;
+  background: #ff9500;
 }
 
 .maximize-btn {
-    background: #28ca42;
+  background: #28ca42;
 }
 
 .maximize-btn:hover {
-    background: #1db335;
+  background: #1db335;
 }
 
 .traffic-light-btn::after {
-    content: '';
-    position: absolute;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+  content: "";
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 .close-btn:hover::after {
-    content: '\00D7';
-    color: #6b1c1c;
-    font-size: 13px;
-    font-weight: bold;
-    opacity: 1;
+  content: "\00D7";
+  color: #6b1c1c;
+  font-size: 13px;
+  font-weight: bold;
+  opacity: 1;
 }
 
 .minimize-btn:hover::after {
-    content: '\2212';
-    color: #7a5c0d;
-    font-size: 13px;
-    font-weight: bold;
-    opacity: 1;
+  content: "\2212";
+  color: #7a5c0d;
+  font-size: 13px;
+  font-weight: bold;
+  opacity: 1;
 }
 
 .maximize-btn:hover::after {
-    content: '\002B';
-    color: #0f5c1e;
-    font-size: 13px;
-    font-weight: bold;
-    opacity: 1;
+  content: "\002B";
+  color: #0f5c1e;
+  font-size: 13px;
+  font-weight: bold;
+  opacity: 1;
 }
 
-.category-nav-left,
-.category-nav-right {
-    display: flex;
-    gap: 10px;
-    -webkit-app-region: no-drag;
+.settings-btn {
+  width: 42px;
+  height: 42px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
-.cat-btn {
-    width: 42px;
-    height: 42px;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    position: relative;
+.settings-btn .icon-normal {
+  width: 24px;
+  height: 24px;
 }
 
-.cat-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.cat-btn.active {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-/* SVG Icon Styling */
-.cat-btn img {
-    width: 26px;
-    height: 26px;
-    transition: opacity 0.2s ease;
-}
-
-.cat-btn .icon-normal {
-    display: block;
-}
-
-.cat-btn .icon-active {
-    display: none;
-}
-
-.cat-btn.active .icon-normal {
-    display: none;
-}
-
-.cat-btn.active .icon-active {
-    display: block;
-}
-
-.cat-btn[data-category="settings"].panel-active {
+.settings-btn:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.cat-btn[data-category="settings"].panel-active .icon-normal {
-  display: none;
-}
-
-.cat-btn[data-category="settings"].panel-active .icon-active {
-  display: block;
+.settings-btn.active {
+  background: rgba(255, 255, 255, 0.15);
 }

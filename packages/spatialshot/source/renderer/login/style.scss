@@ -1,0 +1,303 @@
+@use "sass:map";
+@use "sass:list";
+
+// --- Particle Data ---
+$particles: (
+  // duration, delay, bottom, left
+  (2.5000000s, 0.00s, -50px, -30px),
+  (3.0000000s, 0.50s, -20px, 0010%),
+  (2.8000000s, 1.00s, 0005%, -40px),
+  (2.2000000s, 1.50s, -30px, 0020%),
+  (3.2000000s, 2.00s, 0010%, -20px),
+  (2.6000000s, 2.50s, -40px, 0015%),
+  (2.0000000s, 3.00s, 0015%, -50px),
+  (2.9000000s, 3.50s, -10px, 0005%),
+  (2.4000000s, 4.00s, 0020%, -25px),
+  (3.5000000s, 4.50s, -35px, 0025%),
+  (2.7000000s, 0.30s, -45px, 0008%),
+  (2.3000000s, 0.80s, 0003%, -35px),
+  (3.1000000s, 1.30s, -15px, 0018%),
+  (2.1000000s, 1.80s, 0012%, -45px),
+  (2.9000000s, 2.30s, -25px, 0012%),
+  (2.5000000s, 2.80s, 0008%, -15px),
+  (3.3000000s, 3.30s, -55px, 0022%),
+  (2.2000000s, 3.80s, 0018%, -28px),
+  (2.8000000s, 4.30s, -05px, 0016%),
+  (3.0000000s, 4.80s, 0013%, -38px)
+);
+
+#login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideUp 0.8s ease-out;
+  background: linear-gradient(
+    135deg,
+    rgb(135, 77, 202) 0%,
+    rgb(13, 130, 209) 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite, slideUp 0.8s ease-out;
+  overflow: hidden;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.4;
+  animation: float 20s infinite ease-in-out;
+}
+
+.orb1 {
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgb(135, 77, 202), transparent);
+  top: -75px;
+  left: -75px;
+  animation-duration: 25s;
+}
+
+.orb2 {
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, rgb(13, 130, 209), transparent);
+  bottom: -60px;
+  right: -60px;
+  animation-duration: 30s;
+  animation-delay: -5s;
+}
+
+.orb3 {
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-duration: 35s;
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+.logo-container {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  position: relative;
+  animation: logoPulse 3s ease-in-out infinite;
+  z-index: 20;
+}
+
+@keyframes logoPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.9) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+  animation: titleFade 1s ease-out 0.3s both;
+  z-index: 20;
+  position: relative;
+}
+
+@keyframes titleFade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  margin-bottom: 32px;
+  line-height: 1.5;
+  animation: titleFade 1s ease-out 0.5s both;
+  z-index: 20;
+  position: relative;
+}
+
+#login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 28px;
+  background: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  animation: buttonFade 1s ease-out 0.7s both;
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+  z-index: 20;
+}
+
+@keyframes buttonFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#login-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+#login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+}
+
+#login-btn:hover::before {
+  left: 100%;
+}
+
+#login-btn:active {
+  transform: translateY(0);
+}
+
+.google-logo {
+  width: 20px;
+  height: 20px;
+}
+
+.particle {
+  position: absolute;
+  width: 2.6px;
+  height: 2.6px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: meteorFlow linear infinite;
+  z-index: 5;
+}
+
+@keyframes meteorFlow {
+  0% {
+    transform: translateX(-150px) translateY(150px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(600px) translateY(-600px);
+    opacity: 0;
+  }
+}
+
+@for $i from 1 through list.length($particles) {
+  $particle-data: list.nth($particles, $i);
+  .particle:nth-child(#{$i}) {
+    animation-duration: list.nth($particle-data, 1);
+    animation-delay: list.nth($particle-data, 2);
+    bottom: list.nth($particle-data, 3);
+    left: list.nth($particle-data, 4);
+  }
+}
