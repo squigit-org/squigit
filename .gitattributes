@@ -5,7 +5,6 @@ PKGBUILD linguist-vendored
 *.css linguist-vendored
 *.html linguist-vendored
 *.sh linguist-vendored
-*.ps1 linguist-vendored
 *.yml linguist-vendored
 *.json linguist-vendored
 *.md linguist-vendored
