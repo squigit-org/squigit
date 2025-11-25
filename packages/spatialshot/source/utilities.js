@@ -1,8 +1,17 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const { app } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
+const crypto = require("crypto");
+const { APP_DEFAULTS } = require("./constants");
 
-// --- CONFIG & SESSION ---
+// --- UTILITIES ---
 
 function getUserDataPath() {
   const platform = process.platform;
@@ -14,6 +23,43 @@ function getUserDataPath() {
     return path.join(app.getPath("home"), ".local", "share", "spatialshot");
   }
 }
+
+// --- CRYPTO ---
+
+function getStablePassphrase() {
+  const homeDir = os.homedir();
+  return crypto.createHash("sha256").update(homeDir).digest("hex");
+}
+
+function deriveKey(passphrase, salt) {
+  return crypto.pbkdf2Sync(passphrase, salt, 150_000, 32, "sha256");
+}
+
+async function getDecryptedApiKey() {
+  const filePath = path.join(getUserDataPath(), "encrypted_api.json");
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+
+  const passphrase = getStablePassphrase();
+  const raw = fs.readFileSync(filePath, "utf8");
+  const payload = JSON.parse(raw);
+  const salt = Buffer.from(payload.salt, "base64");
+  const iv = Buffer.from(payload.iv, "base64");
+  const tag = Buffer.from(payload.tag, "base64");
+  const ciphertext = Buffer.from(payload.ciphertext, "base64");
+
+  const key = deriveKey(passphrase, salt);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  const decrypted = Buffer.concat([
+    decipher.update(ciphertext),
+    decipher.final(),
+  ]);
+  return decrypted.toString("utf8");
+}
+
+// --- CONFIG & SESSION ---
 
 function getSessionFilePath() {
   return path.join(getUserDataPath(), "session.json");
@@ -41,12 +87,10 @@ function writeSession(obj) {
   }
 }
 
-const { theme, prompt } = require("../config.private.json").app_defaults;
-
-const { api_key } = require("../config.private.json").google_gemini;
-
-const defs = { theme, prompt };
-const apiKey = api_key || "";
+const defs = {
+  theme: APP_DEFAULTS.theme,
+  prompt: APP_DEFAULTS.prompt,
+};
 
 // --- PREFERENCES ---
 
@@ -77,11 +121,13 @@ function writePreferences(data) {
 
 module.exports = {
   getUserDataPath,
+  getDecryptedApiKey,
+  getStablePassphrase,
+  deriveKey,
   getSessionFilePath,
   readSession,
   writeSession,
   defs,
-  apiKey,
   getPreferencesPath,
   readPreferences,
   writePreferences,

@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const setupAuthHandlers = require("../auth/ipc");
 const setupDialogHandlers = require("./dialogs");
 const setupExternalHandlers = require("./external");
@@ -8,6 +14,7 @@ const setupThemeHandlers = require("./theme");
 const setupViewHandlers = require("./view");
 const setupWindowHandlers = require("./window");
 const setupLensHandlers = require("./lens");
+const { setupByokHandlers } = require("./byok");
 
 function setupIpcHandlers(
   ipcMain,
@@ -18,16 +25,17 @@ function setupIpcHandlers(
   getMainView,
   setMainView
 ) {
+  const dialogHelpers = setupDialogHandlers(ipcMain);
+
   setupAuthHandlers(
     ipcMain,
     mainWindow,
     getMainView,
     setMainView,
     setupMainView,
-    getCurrentImagePath
+    getCurrentImagePath,
+    dialogHelpers
   );
-
-  setupDialogHandlers(ipcMain);
 
   setupExternalHandlers(ipcMain);
 
@@ -50,6 +58,8 @@ function setupIpcHandlers(
   setupWindowHandlers(ipcMain);
 
   setupLensHandlers(ipcMain, getCurrentImagePath);
+
+  setupByokHandlers();
 }
 
 module.exports = { setupIpcHandlers };

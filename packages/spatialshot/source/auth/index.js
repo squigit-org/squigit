@@ -1,12 +1,30 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const { OAuth2Client } = require("google-auth-library");
 const { google } = require("googleapis");
+const tcpPortUsed = require("tcp-port-used");
 const http = require("http");
 const url = require("url");
 const fs = require("fs");
 const path = require("path");
 
-const { client_id, client_secret, redirect_uris, scopes } =
-  require("../../config.private.json").google_oauth;
+let credentials;
+try {
+  const credsFile = require("./credentials.json");
+  credentials = credsFile.web || credsFile.installed;
+} catch (e) {
+  console.error("CRITICAL: credentials.json not found in auth bundle.", e);
+  credentials = {};
+}
+
+const client_id = credentials.client_id;
+const client_secret = credentials.client_secret;
+const redirect_uris = credentials.redirect_uris;
+const scopes = credentials.scopes;
 
 const oAuth2Client = new OAuth2Client(
   client_id,
@@ -23,7 +41,7 @@ function generateHtmlResponse(title, bodyContent, isError = false) {
   const titleColor = isError ? "#d93025" : "#202124";
   const breadcrumb = isError ? "Error" : "Confirmation";
   const dynamicStyle = `<style>:root { --title-color: ${titleColor}; }</style>`;
-  
+
   return htmlTemplate
     .replace(/\${title}/g, title)
     .replace(/\${dynamicStyle}/g, dynamicStyle)
@@ -31,14 +49,21 @@ function generateHtmlResponse(title, bodyContent, isError = false) {
     .replace(/\${bodyContent}/g, bodyContent);
 }
 async function authenticate() {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const authorizeUrl = oAuth2Client.generateAuthUrl({
       access_type: "offline",
       scope: scopes.join(" "),
     });
 
     const redirectUrlObj = new url.URL(redirect_uris[0]);
-    const port = redirectUrlObj.port || 3000;
+    const port = parseInt(redirectUrlObj.port || "3000", 10);
+
+    const inUse = await tcpPortUsed.check(port);
+    if (inUse) {
+      try {
+        await kill(port, "tcp");
+      } catch (e) { }
+    }
 
     const server = http
       .createServer(async (req, res) => {
@@ -114,6 +139,13 @@ async function authenticate() {
         const { default: open } = await import("open");
         console.log(`Listening on port ${port}...`);
         open(authorizeUrl, { wait: false });
+      })
+      .on("error", (err) => {
+        if (err.code === "EADDRINUSE") {
+          reject(new Error(`Port ${port} is already in use.`));
+        } else {
+          reject(err);
+        }
       });
   });
 }

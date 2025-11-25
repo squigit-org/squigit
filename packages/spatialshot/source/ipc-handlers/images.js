@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const fs = require("fs");
 const path = require("path");
 const { writeSession } = require("../utilities");

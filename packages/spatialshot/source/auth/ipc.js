@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const fs = require("fs");
 const path = require("path");
 const { authenticate } = require(".");
@@ -9,7 +15,8 @@ module.exports = function (
   getMainView,
   setMainView,
   setupMainView,
-  getCurrentImagePath
+  getCurrentImagePath,
+  dialogHelpers
 ) {
   function safeSendAuthResult(payload) {
     if (mainWindow && !mainWindow.webContents.isDestroyed()) {
@@ -39,7 +46,23 @@ module.exports = function (
       }
     } catch (error) {
       console.error("Authentication error:", error);
-      safeSendAuthResult({ success: false, error: error.message });
+      if (error.message.includes("is already in use")) {
+        dialogHelpers.showErrorBox(
+          "Authentication Error",
+          "Another login tab is active."
+        );
+        safeSendAuthResult({ success: false, error: "Port in use" });
+      } else {
+        safeSendAuthResult({ success: false, error: error.message });
+      }
+    }
+  });
+
+  ipcMain.on("byok-login", () => {
+    safeSendAuthResult({ success: true });
+    const theme = readPreferences().theme;
+    if (getCurrentImagePath()) {
+      setupMainView(theme);
     }
   });
 
@@ -59,13 +82,32 @@ module.exports = function (
     }
   });
 
+  ipcMain.handle("reset-api-key", async () => {
+    const mainView = getMainView();
+    if (mainWindow) {
+      if (mainView) {
+        mainWindow.removeBrowserView(mainView);
+        mainView.webContents.destroy();
+        setMainView(null);
+      }
+      mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+    }
+    const userFilePath = path.join(getUserDataPath(), "encrypted_api.json");
+    if (fs.existsSync(userFilePath)) {
+      fs.unlinkSync(userFilePath);
+    }
+    return true;
+  });
+
   ipcMain.handle("get-user-data", () => {
     const p = path.join(getUserDataPath(), "profile.json");
     if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, "utf8"));
     return null;
   });
 
-  ipcMain.handle("check-auth-status", () =>
-    fs.existsSync(path.join(getUserDataPath(), "profile.json"))
-  );
+  ipcMain.handle("check-auth-status", () => {
+    const userFilePath = path.join(getUserDataPath(), "profile.json");
+    const keyFilePath = path.join(getUserDataPath(), "encrypted_api.json");
+    return fs.existsSync(userFilePath) && fs.existsSync(keyFilePath);
+  });
 };

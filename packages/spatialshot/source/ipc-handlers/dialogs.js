@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const { dialog } = require("electron");
 
 module.exports = function (ipcMain) {
@@ -22,4 +28,15 @@ module.exports = function (ipcMain) {
     });
     return result.response === 0 ? "save" : "dont-save";
   });
+
+  return {
+    showErrorBox: (title, message) => {
+      dialog.showMessageBox({
+        type: "error",
+        title: title,
+        message: message,
+        buttons: ["OK"],
+      });
+    },
+  };
 };

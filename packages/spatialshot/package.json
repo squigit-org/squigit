@@ -1,14 +1,14 @@
 {
   "name": "spatialshot",
   "version": "1.0.0",
-  "description": "AI and contextual analysis module for screenshot data.",
-  "main": "source/main.js",
-  "type": "commonjs",
+  "description": "Main application for rendering AI and contextual analysis module.",
+  "homepage": "https://github.com/a7mddra/spatialshot",
   "author": "a7mddra <a7mddra@gmail.com>",
   "license": "GPL-3.0",
+  "main": "source/main.js",
+  "type": "commonjs",
   "scripts": {
-    "start": "env -u IBUS_ADDRESS -u IBUS_DAEMON_PID -u IBUS_ENABLE_SYNC_MODE -u IBUS_SESSION_ID -u IBUS_USE_ASYNC_ENGINE -u IBUS_USE_PORTAL -u IBUS_VERSION electron .",
-    "build:css": "sass source/login/style.scss:source/login/style.css",
+    "start": "electron .",
     "build": "electron-builder"
   },
   "devDependencies": {
@@ -34,11 +34,13 @@
     }
   },
   "dependencies": {
+    "open": "^11.0.0",
     "axios": "^1.13.2",
     "express": "^5.1.0",
-    "google-auth-library": "^10.5.0",
-    "googleapis": "^166.0.0",
     "localtunnel": "^2.0.2",
-    "open": "^11.0.0"
+    "googleapis": "^166.0.0",
+    "tcp-port-used": "^1.0.2",
+    "google-auth-library": "^10.5.0",
+    "electron-clipboard-watcher": "^1.0.1"
   }
 }

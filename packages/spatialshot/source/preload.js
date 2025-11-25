@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const { contextBridge, ipcRenderer } = require("electron");
 
 // ===================================================
@@ -22,8 +28,7 @@ contextBridge.exposeInMainWorld("electron", {
   closeWindow: () => ipcRenderer.send("close-window"),
   minimizeWindow: () => ipcRenderer.send("minimize-window"),
   maximizeWindow: () => ipcRenderer.send("maximize-window"),
-  setMainViewBounds: (rect) =>
-    ipcRenderer.send("set-main-view-bounds", rect),
+  setMainViewBounds: (rect) => ipcRenderer.send("set-main-view-bounds", rect),
   hideMainView: () => ipcRenderer.send("hide-main-view"),
 
   // ---- Auth ----
@@ -31,8 +36,19 @@ contextBridge.exposeInMainWorld("electron", {
   onAuthResult: (callback) =>
     ipcRenderer.on("auth-result", (_, data) => callback(data)),
   checkAuthStatus: () => ipcRenderer.invoke("check-auth-status"),
-});
+  byokLogin: () => ipcRenderer.send("byok-login"),
+  checkFileExists: (fileName) =>
+    ipcRenderer.invoke("check-file-exists", fileName),
+  openExternalUrl: (url) => ipcRenderer.send("open-external-url", url),
 
+  // ---- BYOK ----
+  startClipboardWatcher: () => ipcRenderer.invoke("start-clipboard-watcher"),
+  stopClipboardWatcher: () => ipcRenderer.invoke("stop-clipboard-watcher"),
+  onClipboardText: (callback) =>
+    ipcRenderer.on("clipboard-text", (_, text) => callback(text)),
+  encryptAndSave: (plaintext, passphrase) =>
+    ipcRenderer.invoke("encrypt-and-save", { plaintext, passphrase }),
+});
 
 // ===================================================
 //  Electron API (secondary bridge)
@@ -44,6 +60,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ---- System ----
   clearCache: () => ipcRenderer.send("clear-cache"),
   logout: () => ipcRenderer.send("logout"),
+  resetAPIKey: () => ipcRenderer.send("reset-api-key"),
 
   // ---- Data ----
   getUserData: () => ipcRenderer.invoke("get-user-data"),

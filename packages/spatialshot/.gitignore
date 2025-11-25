@@ -3,5 +3,5 @@
 !.gitignore
 node_modules
 dist
-.dev
-config.private.json
+
+source/auth/credentials.json

@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-license-identifier: Apache-2.0
+ */
+
 const { BrowserWindow } = require("electron");
 
 module.exports = function (ipcMain) {

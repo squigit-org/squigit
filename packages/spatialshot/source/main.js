@@ -1,7 +1,23 @@
-const { app, BrowserWindow, ipcMain, BrowserView, nativeTheme } = require("electron");
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  BrowserView,
+  nativeTheme,
+} = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { getUserDataPath, writeSession, readPreferences } = require("./utilities");
+const {
+  getUserDataPath,
+  writeSession,
+  readPreferences,
+} = require("./utilities");
 const { setupIpcHandlers } = require("./ipc-handlers");
 
 // --- App State ---
@@ -9,24 +25,32 @@ let currentImagePath = null;
 let mainView = null;
 let mainWindow;
 const getCurrentImagePath = () => currentImagePath;
-const setCurrentImagePath = (path) => { currentImagePath = path; };
+const setCurrentImagePath = (path) => {
+  currentImagePath = path;
+};
 const getMainView = () => mainView;
-const setMainView = (view) => { mainView = view; };
+const setMainView = (view) => {
+  mainView = view;
+};
 
 // --- Paths ---
 const SPALOAD_PATH = path.join(__dirname, "spaload.js");
 const PRELOAD_PATH = path.join(__dirname, "preload.js");
-const SPA_PATH = path.join(__dirname, `../../aimode/dist`);
 const RENDERER_PATH = path.join(__dirname, "./renderer");
 const ICON_PATH = path.join(__dirname, "../assets/icons/light/512.png");
 
-const getMainViewBounds = (width, height) => ({ x: 0, y: 60, width, height: height - 60 });
+const getMainViewBounds = (width, height) => ({
+  x: 0,
+  y: 60,
+  width,
+  height: height - 60,
+});
 const hideMainViewBounds = { x: 0, y: 0, width: 0, height: 0 };
 
 function setupMainView(theme) {
   if (mainView) return;
 
-  mainView = new BrowserView({ webPreferences: { preload: SPALOAD_PATH} });
+  mainView = new BrowserView({ webPreferences: { preload: SPALOAD_PATH } });
 
   mainWindow.addBrowserView(mainView);
   mainView.setBounds(hideMainViewBounds);
@@ -41,7 +65,7 @@ function setupMainView(theme) {
     }
   });
 
-  const viewPath = SPA_PATH + `/${theme}.html`;
+  const viewPath = RENDERER_PATH + `/view/${theme}.html`;
   mainView.webContents.loadURL(`file://${viewPath}`);
 }
 
@@ -50,10 +74,16 @@ function createWindow() {
   const bgColor = theme === "light" ? "#ffffff" : "#0a0a0a";
 
   mainWindow = new BrowserWindow({
-    width: 900, height: 700,
-    frame: false, show: false,
-    icon: ICON_PATH, backgroundColor: bgColor,
-    webPreferences: {preload: PRELOAD_PATH},
+    width: 900,
+    height: 700,
+    frame: false,
+    show: false,
+    icon: ICON_PATH,
+    backgroundColor: bgColor,
+    webPreferences: {
+      preload: PRELOAD_PATH,
+      nodeIntegrationInSubFrames: true,
+    },
   });
 
   const cliImageArg = process.argv.find((arg) =>
@@ -70,8 +100,7 @@ function createWindow() {
       currentImagePath = null;
       mainWindow.loadFile(RENDERER_PATH + "/hello/index.html");
     }
-  }
-  else {
+  } else {
     currentImagePath = null;
     mainWindow.loadFile(RENDERER_PATH + "/hello/index.html");
   }
@@ -96,7 +125,8 @@ function createWindow() {
     }
 
     const userFilePath = path.join(getUserDataPath(), "profile.json");
-    const isAuthed = fs.existsSync(userFilePath);
+    const keyFilePath = path.join(getUserDataPath(), "encrypted_api.json");
+    const isAuthed = fs.existsSync(userFilePath) && fs.existsSync(keyFilePath);
 
     if (isAuthed) {
       mainWindow.webContents.send("auth-result", { success: true });
@@ -115,10 +145,10 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
   setupIpcHandlers(
-    ipcMain, 
-    mainWindow, 
-    setupMainView, 
-    getCurrentImagePath, 
+    ipcMain,
+    mainWindow,
+    setupMainView,
+    getCurrentImagePath,
     setCurrentImagePath,
     getMainView,
     setMainView

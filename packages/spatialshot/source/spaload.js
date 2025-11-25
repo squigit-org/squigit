@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("ipc", {
@@ -30,6 +36,7 @@ contextBridge.exposeInMainWorld("ipc", {
 
   // ---- System ----
   logout: () => ipcRenderer.send("logout"),
+  resetAPIKey: () => ipcRenderer.invoke("reset-api-key"),
   clearCache: () => ipcRenderer.send("clear-cache"),
   openExternalUrl: (url) => ipcRenderer.send("open-external-url", url),
   showUnsavedChangesAlert: () =>

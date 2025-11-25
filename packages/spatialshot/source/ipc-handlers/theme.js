@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-license-identifier: Apache-2.0
+ */
+
 const { nativeTheme } = require("electron");
 const { readPreferences, writePreferences } = require("../utilities");
 

@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // --- TRAFFIC LIGHTS SETUP ---
 
 export function setupTrafficLights() {

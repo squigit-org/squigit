@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { setupTrafficLights, setupThemeHandling } from "./utils.js";
 
 setupTrafficLights();
@@ -12,13 +18,31 @@ settingsBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("DOMContentLoaded", () => {
-  window.electron.checkAuthStatus().then((isAuthenticated) => {
+  window.electron.checkAuthStatus().then(async (isAuthenticated) => {
     if (isAuthenticated) {
       loginViewFrame.style.display = "none";
       initializeSPA();
     } else {
       loginViewFrame.style.display = "block";
       window.electron.hideMainView();
+
+      const keyExists = await window.electron.checkFileExists(
+        "encrypted_api.json"
+      );
+      const command = keyExists ? "show-login" : "show-setup";
+
+      const sendMessage = () => {
+        loginViewFrame.contentWindow.postMessage(command, "*");
+      };
+
+      if (
+        loginViewFrame.contentDocument &&
+        loginViewFrame.contentDocument.readyState === "complete"
+      ) {
+        sendMessage();
+      } else {
+        loginViewFrame.addEventListener("load", sendMessage, { once: true });
+      }
     }
   });
 });
@@ -31,12 +55,12 @@ window.electron.onAuthResult((result) => {
 });
 
 function initializeSPA() {
-    const rect = contentContainer.getBoundingClientRect();
-    const viewBounds = {
-      x: Math.floor(rect.left),
-      y: Math.floor(rect.top),
-      width: Math.floor(rect.width),
-      height: Math.floor(rect.height),
-    };
-    window.electron.setMainViewBounds(viewBounds);
+  const rect = contentContainer.getBoundingClientRect();
+  const viewBounds = {
+    x: Math.floor(rect.left),
+    y: Math.floor(rect.top),
+    width: Math.floor(rect.width),
+    height: Math.floor(rect.height),
+  };
+  window.electron.setMainViewBounds(viewBounds);
 }
