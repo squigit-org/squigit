@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+ 
 package main
 
 import (
@@ -10,7 +16,6 @@ import (
 	"text/template"
 )
 
-// findTerminal finds the best terminal emulator
 func findTerminal() (string, string) {
 	terminals := map[string]string{
 		"gnome-terminal": "-e",
@@ -26,7 +31,6 @@ func findTerminal() (string, string) {
 			return term, arg
 		}
 	}
-	// Fallback
 	return "xterm", "-e"
 }
 
