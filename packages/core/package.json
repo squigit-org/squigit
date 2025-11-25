@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "AI and contextual analysis module for screenshot data.",
   "author": "a7mddra <a7mddra@gmail.com>",
-  "license": "GPL-3.0",
+  "license": "Apache-2.0",
   "homepage": "https://github.com/a7mddra/spatialshot",
   "scripts": {
     "dev": "vite",
