@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["a7mddra-spatialshot"]
 description = "Core orchestrator for the SpatialShot utility"
-license = "GPL-3.0"
+license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1.0"
