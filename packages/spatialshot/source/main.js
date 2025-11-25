@@ -73,9 +73,32 @@ function createWindow() {
   const theme = readPreferences().theme;
   const bgColor = theme === "light" ? "#ffffff" : "#0a0a0a";
 
+  let isHelloPage = false;
+  let initialLoadPath;
+  const cliImageArg = process.argv.find((arg) =>
+    arg.toLowerCase().match(/\.(png|jpe?g|bmp|webp)$/)
+  );
+
+  if (cliImageArg) {
+    const resolved = path.resolve(cliImageArg);
+    if (fs.existsSync(resolved)) {
+      currentImagePath = resolved;
+      writeSession({ imagePath: currentImagePath });
+      initialLoadPath = RENDERER_PATH + "/index.html";
+    } else {
+      currentImagePath = null;
+      isHelloPage = true;
+      initialLoadPath = RENDERER_PATH + "/hello/index.html";
+    }
+  } else {
+    currentImagePath = null;
+    isHelloPage = true;
+    initialLoadPath = RENDERER_PATH + "/hello/index.html";
+  }
+
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 700,
+    width: isHelloPage ? 800 : 900,
+    height: isHelloPage ? 600 : 700,
     frame: false,
     show: false,
     icon: ICON_PATH,
@@ -86,24 +109,7 @@ function createWindow() {
     },
   });
 
-  const cliImageArg = process.argv.find((arg) =>
-    arg.toLowerCase().match(/\.(png|jpe?g|bmp|webp)$/)
-  );
-
-  if (cliImageArg) {
-    const resolved = path.resolve(cliImageArg);
-    if (fs.existsSync(resolved)) {
-      currentImagePath = resolved;
-      writeSession({ imagePath: currentImagePath });
-      mainWindow.loadFile(RENDERER_PATH + "/index.html");
-    } else {
-      currentImagePath = null;
-      mainWindow.loadFile(RENDERER_PATH + "/hello/index.html");
-    }
-  } else {
-    currentImagePath = null;
-    mainWindow.loadFile(RENDERER_PATH + "/hello/index.html");
-  }
+  mainWindow.loadFile(initialLoadPath);
 
   ipcMain.once("theme-applied", () => {
     if (mainWindow) mainWindow.show();
@@ -120,6 +126,19 @@ function createWindow() {
   });
 
   mainWindow.webContents.on("did-finish-load", () => {
+    const currentURL = mainWindow.webContents.getURL();
+    const isHelloPageLoaded = currentURL.includes("/hello/index.html");
+
+    const targetWidth = isHelloPageLoaded ? 800 : 900;
+    const targetHeight = isHelloPageLoaded ? 600 : 700;
+
+    const [currentWidth, currentHeight] = mainWindow.getSize();
+
+    if (currentWidth !== targetWidth || currentHeight !== targetHeight) {
+      mainWindow.setSize(targetWidth, targetHeight);
+      mainWindow.center();
+    }
+
     if (currentImagePath) {
       mainWindow.webContents.send("image-path", currentImagePath);
     }
