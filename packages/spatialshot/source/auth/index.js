@@ -6,7 +6,6 @@
 
 const { OAuth2Client } = require("google-auth-library");
 const { google } = require("googleapis");
-const tcpPortUsed = require("tcp-port-used");
 const http = require("http");
 const url = require("url");
 const fs = require("fs");
@@ -57,13 +56,6 @@ async function authenticate() {
 
     const redirectUrlObj = new url.URL(redirect_uris[0]);
     const port = parseInt(redirectUrlObj.port || "3000", 10);
-
-    const inUse = await tcpPortUsed.check(port);
-    if (inUse) {
-      try {
-        await kill(port, "tcp");
-      } catch (e) { }
-    }
 
     const server = http
       .createServer(async (req, res) => {

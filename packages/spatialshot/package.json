@@ -39,7 +39,6 @@
     "express": "^5.1.0",
     "localtunnel": "^2.0.2",
     "googleapis": "^166.0.0",
-    "tcp-port-used": "^1.0.2",
     "google-auth-library": "^10.5.0",
     "electron-clipboard-watcher": "^1.0.1"
   }
