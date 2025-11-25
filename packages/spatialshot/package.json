@@ -4,7 +4,7 @@
   "description": "Main application for rendering AI and contextual analysis module.",
   "homepage": "https://github.com/a7mddra/spatialshot",
   "author": "a7mddra <a7mddra@gmail.com>",
-  "license": "GPL-3.0",
+  "license": "Apache-2.0",
   "main": "source/main.js",
   "type": "commonjs",
   "scripts": {
