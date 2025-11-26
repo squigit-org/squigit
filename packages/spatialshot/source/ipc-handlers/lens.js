@@ -25,12 +25,11 @@ async function openImageInLens(localImagePath) {
         },
       }
     );
-    +configUrl;
 
     if (response.data.success) {
       const encodedUrl = encodeURIComponent(response.data.data.url);
-      const configUrl = `&ep=subb&re=df&s=4&hl=en&gl=US`;
-      const lensUrl = `https://lens.google.com/uploadbyurl?`;
+      const configUrl = "&ep=subb&re=df&s=4&hl=en&gl=US";
+      const lensUrl = "https://lens.google.com/uploadbyurl?";
       await shell.openExternal(lensUrl + "url=" + encodedUrl + configUrl);
     } else {
       console.error("Error uploading to ImgBB:", response.data);
