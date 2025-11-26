@@ -56,33 +56,19 @@ function setupLensHandlers(ipcMain, getCurrentImagePath) {
       }
       await openImageInLens(imagePath);
     } else {
-      const win = new BrowserWindow({
-        width: 400,
-        height: 500,
-        webPreferences: {
-          preload: path.join(app.getAppPath(), "source", "preload.js"),
-        },
-      });
-      win.loadFile(
-        path.join(
-          app.getAppPath(),
-          "source",
-          "renderer",
-          "login",
-          "imgbb-login.html"
-        )
-      );
-      win.on("close", async () => {
-        const imgbbApiKey = await getDecryptedKey("imgbb");
-        if (imgbbApiKey) {
-          const imagePath = getCurrentImagePath();
-          if (!imagePath) {
-            console.error("No image path found in main process");
-            return;
-          }
-          await openImageInLens(imagePath);
-        }
-      });
+      loginViewFrame.contentWindow.postMessage("show-imgbb", "*");
+
+      // win.on("close", async () => {
+      //   const imgbbApiKey = await getDecryptedKey("imgbb");
+      //   if (imgbbApiKey) {
+      //     const imagePath = getCurrentImagePath();
+      //     if (!imagePath) {
+      //       console.error("No image path found in main process");
+      //       return;
+      //     }
+      //     await openImageInLens(imagePath);
+      //   }
+      // });
     }
   });
 }

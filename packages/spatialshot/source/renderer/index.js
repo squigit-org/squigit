@@ -29,7 +29,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const keyExists = await window.electron.checkFileExists(
         "gemini_key.json"
       );
-      const command = keyExists ? "show-login" : "show-setup";
+      const command = keyExists ? "show-login" : "show-gemini";
 
       const sendMessage = () => {
         loginViewFrame.contentWindow.postMessage(command, "*");
