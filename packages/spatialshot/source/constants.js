@@ -9,6 +9,6 @@ module.exports = {
     theme: "dark",
     language: "en-US",
     prompt:
-      "Analyze this image and provide a detailed description focusing on the main subjects, colors, composition, and any notable details or patterns.",
+      "Analyze this image and provide a detailed description.",
   },
 };
