@@ -27,7 +27,7 @@ case "$arg" in
   spatialshot)
     app="${XDG_DATA_HOME:-$HOME/.local/share}/spatialshot/app/spatialshot"
     
-    exec "$app" "$@"
+    exec "$app" --no-sandbox "$@"
     ;;
   
   *)
