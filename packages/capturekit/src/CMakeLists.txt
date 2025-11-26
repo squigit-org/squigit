@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
+
 if(APPLE)
     project(CAPKIT LANGUAGES CXX OBJCXX)
 else()
@@ -11,6 +12,36 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
+
+set(PACKAGE_JSON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../package.json")
+
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PACKAGE_JSON_PATH}")
+
+if(EXISTS "${PACKAGE_JSON_PATH}")
+    file(READ "${PACKAGE_JSON_PATH}" PACKAGE_JSON_CONTENT)
+
+    # Parse Version
+    string(REGEX MATCH "\"version\":[ \t]*\"([0-9]+\\.[0-9]+\\.[0-9]+)\"" _ ${PACKAGE_JSON_CONTENT})
+    set(APP_VERSION ${CMAKE_MATCH_1})
+
+    # Parse Organization
+    string(REGEX MATCH "\"organization\":[ \t]*\"([^\"]+)\"" _ ${PACKAGE_JSON_CONTENT})
+    set(ORG_NAME ${CMAKE_MATCH_1})
+    
+    # Parse Name
+    string(REGEX MATCH "\"name\":[ \t]*\"([^\"]+)\"" _ ${PACKAGE_JSON_CONTENT})
+    set(APP_NAME ${CMAKE_MATCH_1})
+
+    message(STATUS "🔗 Monorepo Sync: Configuring ${APP_NAME} v${APP_VERSION} for ${ORG_NAME}")
+else()
+    message(FATAL_ERROR "Could not find package.json at ${PACKAGE_JSON_PATH}")
+endif()
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/config.h"
+)
+
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 if(UNIX AND NOT APPLE)
@@ -34,6 +65,7 @@ if(UNIX)
 
     target_include_directories(scgrabber PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/sc-grabber
+        "${CMAKE_CURRENT_BINARY_DIR}/generated"
     )
 
     target_link_libraries(scgrabber PRIVATE
@@ -97,6 +129,7 @@ target_link_libraries(drawview PRIVATE ${DRAWVIEW_LIBS})
 
 target_include_directories(drawview PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/draw-view
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 
 if(UNIX)

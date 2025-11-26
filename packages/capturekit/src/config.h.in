@@ -1,0 +1,5 @@
+#pragma once
+
+#define APP_VERSION "@APP_VERSION@"
+#define ORG_NAME "@ORG_NAME@"
+#define APP_NAME "@APP_NAME@"

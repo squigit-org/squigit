@@ -26,8 +26,8 @@ int main(int argc, char *argv[])
 
     QApplication app(argc, argv);
     app.setApplicationName("drawview");
-    app.setOrganizationName("spatialshot");
-    app.setApplicationVersion("1.0.0");
+    app.setOrganizationName(ORG_NAME);  
+    app.setApplicationVersion(APP_VERSION);
 
 #ifdef Q_OS_LINUX
     Watchdog *watcher = new Watchdog(&app);

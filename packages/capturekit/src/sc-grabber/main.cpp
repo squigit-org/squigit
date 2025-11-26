@@ -22,13 +22,14 @@
 #include "audmgr.h"
 #include "helpers.h"
 #include "receiver.h"
+#include "config.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setApplicationName("scgrabber");
-    app.setOrganizationName("spatialshot");  
-    app.setApplicationVersion("1.0.0");
+    app.setOrganizationName(ORG_NAME);  
+    app.setApplicationVersion(APP_VERSION);
 
     QString platform = app.platformName();
     qDebug() << "Detected platform:" << platform;
