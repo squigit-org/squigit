@@ -27,7 +27,7 @@ window.addEventListener("DOMContentLoaded", () => {
       window.electron.hideMainView();
 
       const keyExists = await window.electron.checkFileExists(
-        "encrypted_api.json"
+        "gemini_key.json"
       );
       const command = keyExists ? "show-login" : "show-setup";
 

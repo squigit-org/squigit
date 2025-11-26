@@ -92,9 +92,13 @@ module.exports = function (
       }
       mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
     }
-    const userFilePath = path.join(getUserDataPath(), "encrypted_api.json");
-    if (fs.existsSync(userFilePath)) {
-      fs.unlinkSync(userFilePath);
+    const geminiKeyPath = path.join(getUserDataPath(), "gemini_key.json");
+    if (fs.existsSync(geminiKeyPath)) {
+      fs.unlinkSync(geminiKeyPath);
+    }
+    const imgbbKeyPath = path.join(getUserDataPath(), "imgbb_key.json");
+    if (fs.existsSync(imgbbKeyPath)) {
+      fs.unlinkSync(imgbbKeyPath);
     }
     return true;
   });
@@ -107,7 +111,7 @@ module.exports = function (
 
   ipcMain.handle("check-auth-status", () => {
     const userFilePath = path.join(getUserDataPath(), "profile.json");
-    const keyFilePath = path.join(getUserDataPath(), "encrypted_api.json");
+    const keyFilePath = path.join(getUserDataPath(), "gemini_key.json");
     return fs.existsSync(userFilePath) && fs.existsSync(keyFilePath);
   });
 };

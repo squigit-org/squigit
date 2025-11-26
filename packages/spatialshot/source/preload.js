@@ -45,9 +45,9 @@ contextBridge.exposeInMainWorld("electron", {
   startClipboardWatcher: () => ipcRenderer.invoke("start-clipboard-watcher"),
   stopClipboardWatcher: () => ipcRenderer.invoke("stop-clipboard-watcher"),
   onClipboardText: (callback) =>
-    ipcRenderer.on("clipboard-text", (_, text) => callback(text)),
-  encryptAndSave: (plaintext, passphrase) =>
-    ipcRenderer.invoke("encrypt-and-save", { plaintext, passphrase }),
+    ipcRenderer.on("clipboard-text", (_, data) => callback(data)),
+  encryptAndSave: (data) =>
+    ipcRenderer.invoke("encrypt-and-save", data),
 });
 
 // ===================================================

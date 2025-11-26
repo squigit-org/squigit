@@ -36,11 +36,10 @@ function initialize() {
     await window.parent.electron.startClipboardWatcher();
   });
 
-  window.parent.electron.onClipboardText(async (text) => {
-    if (text && text.startsWith("AIzaS")) {
+  window.parent.electron.onClipboardText(async (data) => {
+    if (data && data.provider === 'gemini' && data.key && data.key.startsWith("AIzaS")) {
       await window.parent.electron.stopClipboardWatcher();
-      const passphrase = new Date().toISOString();
-      await window.parent.electron.encryptAndSave(text, passphrase);
+      await window.parent.electron.encryptAndSave({ plaintext: data.key, provider: 'gemini' });
 
       const profileExists = await window.parent.electron.checkFileExists(
         "profile.json"

@@ -162,7 +162,7 @@ function createWindow() {
     }
 
     const userFilePath = path.join(getUserDataPath(), "profile.json");
-    const keyFilePath = path.join(getUserDataPath(), "encrypted_api.json");
+    const keyFilePath = path.join(getUserDataPath(), "gemini_key.json");
     const isAuthed = fs.existsSync(userFilePath) && fs.existsSync(keyFilePath);
 
     if (isAuthed) {

@@ -23,9 +23,13 @@ function setupByokHandlers() {
 
     const intervalId = setInterval(() => {
       try {
-        const t = clipboard.readText();
+        const t = clipboard.readText().trim();
         if (t && ev.sender && !ev.sender.isDestroyed()) {
-          ev.sender.send("clipboard-text", t);
+          if (t.startsWith("AIzaS")) {
+            ev.sender.send("clipboard-text", { provider: "gemini", key: t });
+          } else if (t.length === 32 && /^[a-zA-Z0-9]+$/.test(t)) {
+            ev.sender.send("clipboard-text", { provider: "imgbb", key: t });
+          }
         }
       } catch (_) {}
     }, 1000);
@@ -42,8 +46,9 @@ function setupByokHandlers() {
   });
 
   /* --- Encryption helpers (AES-256-GCM, PBKDF2 key derivation) --- */
-  ipcMain.handle("encrypt-and-save", async (ev, { plaintext }) => {
+  ipcMain.handle("encrypt-and-save", async (ev, { plaintext, provider }) => {
     if (!plaintext) throw new Error("plaintext required");
+    if (!provider) throw new Error("provider required");
     const passphrase = getStablePassphrase();
     const salt = crypto.randomBytes(16);
     const iv = crypto.randomBytes(12);
@@ -64,7 +69,7 @@ function setupByokHandlers() {
       ciphertext: encrypted.toString("base64"),
     };
 
-    const outPath = path.join(getUserDataPath(), "encrypted_api.json");
+    const outPath = path.join(getUserDataPath(), `${provider}_key.json`);
     fs.writeFileSync(outPath, JSON.stringify(payload, null, 2), {
       mode: 0o600,
     });

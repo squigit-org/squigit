@@ -35,8 +35,9 @@ function deriveKey(passphrase, salt) {
   return crypto.pbkdf2Sync(passphrase, salt, 150_000, 32, "sha256");
 }
 
-async function getDecryptedApiKey() {
-  const filePath = path.join(getUserDataPath(), "encrypted_api.json");
+async function getDecryptedKey(provider) {
+  if (!provider) throw new Error("provider required");
+  const filePath = path.join(getUserDataPath(), `${provider}_key.json`);
   if (!fs.existsSync(filePath)) {
     return null;
   }
@@ -57,6 +58,10 @@ async function getDecryptedApiKey() {
     decipher.final(),
   ]);
   return decrypted.toString("utf8");
+}
+
+async function getDecryptedApiKey() {
+  return getDecryptedKey('gemini');
 }
 
 // --- CONFIG & SESSION ---
@@ -122,6 +127,7 @@ function writePreferences(data) {
 module.exports = {
   getUserDataPath,
   getDecryptedApiKey,
+  getDecryptedKey,
   getStablePassphrase,
   deriveKey,
   getSessionFilePath,

@@ -4,20 +4,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const { shell } = require("electron");
+const { shell, BrowserWindow, app } = require("electron");
 const fs = require("fs");
+const path = require("path");
 const axios = require("axios");
-const { IMGBB_API_KEY } = require("../config");
+const { getDecryptedKey } = require("../utilities");
 
 async function openImageInLens(localImagePath) {
   try {
+    const imgbbApiKey = await getDecryptedKey("imgbb");
+    if (!imgbbApiKey) {
+      console.error("ImgBB API key not found.");
+      return;
+    }
     const image = fs.readFileSync(localImagePath, { encoding: "base64" });
 
     const formData = new URLSearchParams();
     formData.append("image", image);
 
     const response = await axios.post(
-      `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
+      `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`,
       formData,
       {
         headers: {
@@ -41,12 +47,43 @@ async function openImageInLens(localImagePath) {
 
 function setupLensHandlers(ipcMain, getCurrentImagePath) {
   ipcMain.handle("trigger-lens-search", async () => {
-    const imagePath = getCurrentImagePath();
-    if (!imagePath) {
-      console.error("No image path found in main process");
-      return;
+    const imgbbApiKey = await getDecryptedKey("imgbb");
+    if (imgbbApiKey) {
+      const imagePath = getCurrentImagePath();
+      if (!imagePath) {
+        console.error("No image path found in main process");
+        return;
+      }
+      await openImageInLens(imagePath);
+    } else {
+      const win = new BrowserWindow({
+        width: 400,
+        height: 500,
+        webPreferences: {
+          preload: path.join(app.getAppPath(), "source", "preload.js"),
+        },
+      });
+      win.loadFile(
+        path.join(
+          app.getAppPath(),
+          "source",
+          "renderer",
+          "login",
+          "imgbb-login.html"
+        )
+      );
+      win.on("close", async () => {
+        const imgbbApiKey = await getDecryptedKey("imgbb");
+        if (imgbbApiKey) {
+          const imagePath = getCurrentImagePath();
+          if (!imagePath) {
+            console.error("No image path found in main process");
+            return;
+          }
+          await openImageInLens(imagePath);
+        }
+      });
     }
-    await openImageInLens(imagePath);
   });
 }
 
