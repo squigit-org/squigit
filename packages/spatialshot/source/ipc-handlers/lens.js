@@ -5,28 +5,39 @@
  */
 
 const { shell } = require("electron");
-const express = require("express");
-const localtunnel = require("localtunnel");
+const fs = require("fs");
+const axios = require("axios");
+const { IMGBB_API_KEY } = require("../config");
 
 async function openImageInLens(localImagePath) {
-  const app = express();
-  const server = app.listen(0);
-  const { port } = server.address();
+  try {
+    const image = fs.readFileSync(localImagePath, { encoding: "base64" });
 
-  app.get("/image.png", (req, res) => {
-    res.sendFile(localImagePath);
-  });
+    const formData = new URLSearchParams();
+    formData.append("image", image);
 
-  const tunnel = await localtunnel({ port });
+    const response = await axios.post(
+      `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+    +configUrl;
 
-  const encodedUrl = encodeURIComponent(`${tunnel.url}/image.png`);
-  const lensUrl = `https://lens.google.com/uploadbyurl?url=${encodedUrl}&ep=subb&re=df&s=4&hl=en&gl=US`;
-  await shell.openExternal(lensUrl);
-
-  setTimeout(() => {
-    tunnel.close();
-    server.close();
-  }, 30000);
+    if (response.data.success) {
+      const encodedUrl = encodeURIComponent(response.data.data.url);
+      const configUrl = `&ep=subb&re=df&s=4&hl=en&gl=US`;
+      const lensUrl = `https://lens.google.com/uploadbyurl?`;
+      await shell.openExternal(lensUrl + "url=" + encodedUrl + configUrl);
+    } else {
+      console.error("Error uploading to ImgBB:", response.data);
+    }
+  } catch (error) {
+    console.error("Error in openImageInLens:", error);
+  }
 }
 
 function setupLensHandlers(ipcMain, getCurrentImagePath) {
