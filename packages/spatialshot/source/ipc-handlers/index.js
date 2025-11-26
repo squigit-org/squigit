@@ -60,6 +60,8 @@ function setupIpcHandlers(
   setupLensHandlers(ipcMain, getCurrentImagePath);
 
   setupByokHandlers();
+
+  return dialogHelpers;
 }
 
 module.exports = { setupIpcHandlers };

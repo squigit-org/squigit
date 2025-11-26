@@ -19,6 +19,7 @@ const {
   readPreferences,
 } = require("./utilities");
 const { setupIpcHandlers } = require("./ipc-handlers");
+const { checkForUpdates } = require("./updater");
 
 // --- App State ---
 let currentImagePath = null;
@@ -163,7 +164,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
-  setupIpcHandlers(
+  const dialogHelpers = setupIpcHandlers(
     ipcMain,
     mainWindow,
     setupMainView,
@@ -172,6 +173,7 @@ app.whenReady().then(() => {
     getMainView,
     setMainView
   );
+  checkForUpdates(dialogHelpers);
 });
 
 app.on("window-all-closed", () => {

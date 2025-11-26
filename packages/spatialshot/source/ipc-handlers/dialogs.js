@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const { dialog } = require("electron");
+const { dialog, shell } = require("electron");
 
 module.exports = function (ipcMain) {
   ipcMain.handle("open-file-dialog", async () => {
@@ -38,5 +38,19 @@ module.exports = function (ipcMain) {
         buttons: ["OK"],
       });
     },
+    showUpdateDialog: (newVersion, oldVersion) => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Available',
+        message: `New version ${newVersion} is available!`,
+        detail: `You are on ${oldVersion}. Check the changelog for details.`,
+        buttons: ['See Changelog', 'Cancel'],
+        defaultId: 0
+      }).then(result => {
+        if (result.response === 0) {
+          shell.openExternal('https://github.com/a7mddra/spatialshot/blob/main/CHANGELOG.md');
+        }
+      });
+    }
   };
 };
