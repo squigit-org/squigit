@@ -7,6 +7,7 @@
 import { useState, useEffect } from "react";
 import { Message, ModelType } from "../types";
 import { startNewChatStream, sendMessage } from "../services/geminiService";
+import systemPromptYaml from "../services/prompt.yml?raw";
 
 export const useChatEngine = ({
   apiKey,
@@ -65,11 +66,13 @@ export const useChatEngine = ({
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
+      const combinedPrompt = `<sys-prmp>\n${systemPromptYaml}\n</sys-prmp>\nMSS: ${prompt}`;
+
       await startNewChatStream(
         modelId,
         imgData.base64,
         imgData.mimeType,
-        prompt,
+        combinedPrompt,
         (token: string) => {
           fullResponse += token;
           setStreamingText(fullResponse);
