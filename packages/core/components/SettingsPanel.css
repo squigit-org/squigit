@@ -284,7 +284,7 @@ input:checked + .toggle-slider:before {
   transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
 }
 
-.prompt-view {
+.subview {
   position: absolute;
   top: 0;
   left: 100%;
@@ -300,31 +300,18 @@ input:checked + .toggle-slider:before {
   z-index: 10;
 }
 
-.prompt-view.active {
+.subview.active {
   left: 0;
 }
 
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.rotating {
-  animation: rotate 1s linear infinite;
-}
-
-.prompt-header {
+.subview-header {
   padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
   gap: 1rem;
   border-bottom: 1px solid var(--neutral-800);
   background: transparent;
+  justify-content: flex-start;
 }
 
 .back-btn {
@@ -348,19 +335,102 @@ input:checked + .toggle-slider:before {
   color: var(--light);
 }
 
-.prompt-header h2 {
-  font-size: 1.2rem;
-  font-weight: 600;
+.reset-btn {
+  background: transparent;
+  border: none;
   color: var(--light);
-  margin: 0;
-  transition: color 0.3s ease-in-out;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
 }
 
-.prompt-content {
+.reset-btn:hover {
+  background: var(--neutral-800);
+  transform: scale(1.1);
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+.subview-content {
   padding: 1rem;
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  max-height: calc(100% - 60px); 
+}
+
+.subview-content label {
+  display: block;
+  color: var(--light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.model-switcher {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem;
+  border: 1px solid var(--neutral-800);
+  border-radius: var(--border-radius);
+  background: var(--neutral-900);
+}
+
+.model-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.model-name {
+  color: var(--light);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.model-description {
+  color: var(--gray);
+  font-size: 0.85rem;
+}
+
+.next-model-btn {
+  background: transparent;
+  border: none;
+  color: var(--light);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.next-model-btn:hover {
+  background: var(--neutral-800);
+  transform: scale(1.1);
 }
 
 .prompt-textarea {
