@@ -4,17 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useCallback, useRef } from "react";
-import { ModelType } from "./types";
+import React, { useState, useCallback } from "react";
 import { useSystemSync } from "./hooks/useSystemSync";
 import { useChatEngine } from "./hooks/useChatEngine";
 import { ChatLayout } from "./components/ChatLayout";
 
 const App: React.FC = () => {
   const [input, setInput] = useState("");
-  const [currentModel, setCurrentModel] = useState<string>(
-    ModelType.GEMINI_2_5_FLASH
-  );
   const [isPanelActive, setIsPanelActive] = useState(false);
 
 
@@ -24,15 +20,12 @@ const App: React.FC = () => {
 
   const system = useSystemSync(toggleSettingsPanel);
 
-
-
   const engine = useChatEngine({
     apiKey: system.apiKey,
-    currentModel,
+    currentModel: system.currentModel,
     startupImage: system.startupImage,
     prompt: system.prompt,
-    setCurrentModel,
-
+    setCurrentModel: system.setEditingModel,
   });
 
   const handleSend = () => {
@@ -41,15 +34,11 @@ const App: React.FC = () => {
     setInput("");
   };
 
-  const handleModelChange = (newModel: string) => {
-    setCurrentModel(newModel);
-  };
-
   const handleRetry = () => {
     if (engine.lastSentMessage) {
       engine.handleRetrySend();
     } else {
-      engine.startSession(system.apiKey, currentModel, system.startupImage);
+      engine.startSession(system.apiKey, system.currentModel, system.startupImage);
     }
   };
 
@@ -65,23 +54,24 @@ const App: React.FC = () => {
       lastSentMessage={engine.lastSentMessage}
       // States from App
       input={input}
-      currentModel={currentModel}
+      currentModel={system.editingModel}
       // System-related states
       startupImage={system.startupImage}
-      prompt={system.prompt}
+      prompt={system.editingPrompt}
       userName={system.userName}
       userEmail={system.userEmail}
       avatarSrc={system.avatarSrc}
       isDarkMode={system.isDarkMode}
       // Handlers
       onSend={handleSend}
-      onModelChange={handleModelChange}
+      onModelChange={system.setEditingModel}
       onRetry={handleRetry}
-      onSavePrompt={system.handleSavePrompt}
+      onSave={system.saveSettings}
       onLogout={system.handleLogout}
       onToggleTheme={system.handleToggleTheme}
       onResetAPIKey={system.handleResetAPIKey}
       onInputChange={setInput}
+      setPrompt={system.setEditingPrompt}
       toggleSettingsPanel={toggleSettingsPanel}
       isPanelActive={isPanelActive}
 

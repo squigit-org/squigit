@@ -104,10 +104,11 @@ export interface ChatLayoutProps {
   onSend: () => void;
   onModelChange: (model: string) => void;
   onRetry: () => void;
-  onSavePrompt: (prompt: string) => void;
+  onSave: () => void;
   onLogout: () => void;
   onToggleTheme: () => void;
   onInputChange: (value: string) => void;
+  setPrompt: (prompt: string) => void;
   toggleSettingsPanel: () => void;
   isPanelActive: boolean;
   onResetAPIKey: () => void;
@@ -132,20 +133,27 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   onSend,
   onModelChange,
   onRetry,
-  onSavePrompt,
+  onSave,
   onLogout,
   onToggleTheme,
   onInputChange,
+  setPrompt,
   toggleSettingsPanel,
   isPanelActive,
   onResetAPIKey,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(null);
+  const [isSubviewActive, setIsSubviewActive] = useState(false);
 
   const [isPanelVisible, setIsPanelVisible] = useState(false);
   const [isPanelClosing, setIsPanelClosing] = useState(false);
   const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  
+  const handleToggleSubview = (isActive: boolean) => {
+    setIsSubviewActive(isActive);
+  };
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -217,9 +225,16 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     }
   }, [isPanelActive]);
 
-  const closeSettingsPanel = () => {
+  const closeSettingsPanel = async () => {
     if (isPanelActive) {
-      toggleSettingsPanel();
+      if (settingsPanelRef.current) {
+        const canClose = await settingsPanelRef.current.handleClose();
+        if (canClose) {
+          toggleSettingsPanel();
+        }
+      } else {
+        toggleSettingsPanel();
+      }
     }
   };
 
@@ -236,6 +251,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     const handleOutsideClick = (e: MouseEvent) => {
       if (
         isPanelActive &&
+        !isSubviewActive &&
         panelRef.current &&
         !panelRef.current.contains(e.target as Node)
       ) {
@@ -248,7 +264,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       document.removeEventListener("keydown", handleEsc);
       document.removeEventListener("click", handleOutsideClick);
     };
-  }, [isPanelActive]);
+  }, [isPanelActive, isSubviewActive]);
 
   return (
     <div
@@ -392,15 +408,20 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
           >
             <div className="panel-content" id="settings-content">
               <SettingsPanel
+                ref={settingsPanelRef}
                 currentPrompt={prompt}
+                currentModel={currentModel}
+                onPromptChange={setPrompt}
+                onModelChange={onModelChange}
                 userName={userName}
                 userEmail={userEmail}
                 avatarSrc={avatarSrc}
-                onSavePrompt={onSavePrompt}
+                onSave={onSave}
                 onLogout={onLogout}
                 isDarkMode={isDarkMode}
                 onToggleTheme={onToggleTheme}
                 onResetAPIKey={onResetAPIKey}
+                toggleSubview={handleToggleSubview}
               />
             </div>
             <div className="footer">

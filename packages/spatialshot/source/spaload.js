@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld("ipc", {
   getPrompt: () => ipcRenderer.invoke("get-prompt"),
   savePrompt: (prompt) => ipcRenderer.invoke("save-prompt", prompt),
   resetPrompt: () => ipcRenderer.invoke("reset-prompt"),
+  getModel: () => ipcRenderer.invoke("get-model"),
+  saveModel: (model) => ipcRenderer.invoke("save-model", model),
+  resetModel: () => ipcRenderer.invoke("reset-model"),
   getApiKey: () => ipcRenderer.invoke("get-api-key"),
 
   // ---- UI events ----

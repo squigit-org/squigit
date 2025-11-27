@@ -12,7 +12,10 @@ const ipc = "ipc" in window ? (window as any).ipc : null;
 
 export const useSystemSync = (onToggleSettings: () => void) => {
   const [apiKey, setApiKey] = useState<string>("");
-  const [prompt, setPrompt] = useState<string>("");
+  const [activePrompt, setActivePrompt] = useState<string>("");
+  const [editingPrompt, setEditingPrompt] = useState<string>("");
+  const [activeModel, setActiveModel] = useState<string>("gemini-2.5-flash");
+  const [editingModel, setEditingModel] = useState<string>("gemini-2.5-flash");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [avatarSrc, setAvatarSrc] = useState("");
@@ -50,7 +53,16 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         }
 
         const savedPrompt = await ipc.getPrompt();
-        if (savedPrompt) setPrompt(savedPrompt);
+        if (savedPrompt) {
+          setActivePrompt(savedPrompt);
+          setEditingPrompt(savedPrompt);
+        }
+
+        const savedModel = await ipc.getModel();
+        if (savedModel) {
+          setActiveModel(savedModel);
+          setEditingModel(savedModel);
+        }
 
         const userData = await ipc.getUserData();
         if (userData) {
@@ -99,11 +111,13 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     setupIpc();
   }, [onToggleSettings]);
 
-  const handleSavePrompt = (newPrompt: string) => {
-    setPrompt(newPrompt);
+  const saveSettings = () => {
+    setActivePrompt(editingPrompt);
+    setActiveModel(editingModel);
     if (ipc) {
-      ipc.savePrompt(newPrompt);
-      showFeedbackMessage("prompt saved", "done");
+      ipc.savePrompt(editingPrompt);
+      ipc.saveModel(editingModel);
+      showFeedbackMessage("Settings saved", "done");
     }
   };
 
@@ -130,14 +144,19 @@ export const useSystemSync = (onToggleSettings: () => void) => {
 
   return {
     apiKey,
-    prompt,
+    prompt: activePrompt,
+    editingPrompt,
+    setEditingPrompt,
+    currentModel: activeModel,
+    editingModel,
+    setEditingModel,
     startupImage,
     userName,
     userEmail,
     avatarSrc,
     isDarkMode,
     systemError,
-    handleSavePrompt,
+    saveSettings,
     handleToggleTheme,
     handleLogout,
     handleResetAPIKey,

@@ -10,5 +10,6 @@ module.exports = {
     language: "en-US",
     prompt:
       "Analyze this image and provide a detailed description.",
+    model: "gemini-2.5-flash",
   },
 };

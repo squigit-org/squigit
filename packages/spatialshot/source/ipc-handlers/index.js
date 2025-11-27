@@ -8,6 +8,7 @@ const setupAuthHandlers = require("../auth/ipc");
 const setupDialogHandlers = require("./dialogs");
 const setupExternalHandlers = require("./external");
 const setupImageHandlers = require("./images");
+const setupModelHandlers = require("./model");
 const setupPromptHandlers = require("./prompts");
 const setupSettingsHandlers = require("./settings");
 const setupThemeHandlers = require("./theme");
@@ -48,6 +49,7 @@ function setupIpcHandlers(
   );
 
   setupPromptHandlers(ipcMain, mainWindow);
+  setupModelHandlers(ipcMain, mainWindow);
 
   setupSettingsHandlers(ipcMain, getMainView);
 

@@ -95,6 +95,7 @@ function writeSession(obj) {
 const defs = {
   theme: APP_DEFAULTS.theme,
   prompt: APP_DEFAULTS.prompt,
+  model: APP_DEFAULTS.model,
 };
 
 // --- PREFERENCES ---
@@ -114,6 +115,7 @@ function readPreferences() {
     }
   }
   if (!preferences.prompt) preferences.prompt = defs.prompt || "";
+  if (!preferences.model) preferences.model = defs.model || "gemini-2.5-flash";
   if (preferences.theme !== "light" && preferences.theme !== "dark") {
     preferences.theme = "dark";
   }
