@@ -29,7 +29,7 @@ class TestOrchestrator:
             (bin_dir / "draw-view").touch(mode=0o755)
             (bin_dir / "spatialshot").touch(mode=0o755)
 
-            orchestrator_path = Path(__file__).parent.parent.parent / "packages" / "orchestrator" / "target" / "debug" / "spatialshot-orchestrator"
+            orchestrator_path = Path(__file__).parent.parent.parent / "packages" / "orchestrator" / "target" / "release" / "spatialshot-orchestrator"
 
             process = subprocess.Popen([str(orchestrator_path)], env=env)
 
