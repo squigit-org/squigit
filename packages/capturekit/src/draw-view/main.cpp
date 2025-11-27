@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "config.h"
 #include "Window.h"
 #include <QApplication>
 #include <QScreen>

@@ -22,14 +22,23 @@ if(EXISTS "${PACKAGE_JSON_PATH}")
 
     # Parse Version
     string(REGEX MATCH "\"version\":[ \t]*\"([0-9]+\\.[0-9]+\\.[0-9]+)\"" _ ${PACKAGE_JSON_CONTENT})
+    if(NOT CMAKE_MATCH_1)
+        message(FATAL_ERROR "Could not parse version from ${PACKAGE_JSON_PATH}")
+    endif()
     set(APP_VERSION ${CMAKE_MATCH_1})
 
     # Parse Organization
     string(REGEX MATCH "\"organization\":[ \t]*\"([^\"]+)\"" _ ${PACKAGE_JSON_CONTENT})
+    if(NOT CMAKE_MATCH_1)
+        message(FATAL_ERROR "Could not parse organization from ${PACKAGE_JSON_PATH}")
+    endif()
     set(ORG_NAME ${CMAKE_MATCH_1})
     
     # Parse Name
     string(REGEX MATCH "\"name\":[ \t]*\"([^\"]+)\"" _ ${PACKAGE_JSON_CONTENT})
+    if(NOT CMAKE_MATCH_1)
+        message(FATAL_ERROR "Could not parse name from ${PACKAGE_JSON_PATH}")
+    endif()
     set(APP_NAME ${CMAKE_MATCH_1})
 
     message(STATUS "🔗 Monorepo Sync: Configuring ${APP_NAME} v${APP_VERSION} for ${ORG_NAME}")
@@ -40,8 +49,10 @@ endif()
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/generated/config.h"
+    @ONLY
 )
-
+# Add include directory for generated headers
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 if(UNIX AND NOT APPLE)
