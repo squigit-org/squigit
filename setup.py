@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Callable
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-LOG_FORMAT = "[%(module)s.%(funcName)s:%(lineno)d] %(message)s"
+LOG_FORMAT = "[%(levelname)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 
 EnvVars = Optional[Dict[str, str]]
@@ -223,6 +223,8 @@ def main():
     logging.info("==================================================")
 
     build_failed_components = []
+    build_succeeded_components = []
+    skipped_components = {}
     system = platform.system()
     logging.info(f"Detected Operating System: {system}")
 
@@ -245,6 +247,7 @@ def main():
                 build_capturekit_unix("macOS")
             else:
                 raise BuildError(f"Unsupported operating system: {system}", "setup")
+            build_succeeded_components.append("capturekit")
         except BuildError as e:
             logging.error(f"[{e.component}] Build FAILED.")
             logging.error(str(e))
@@ -253,6 +256,7 @@ def main():
         logging.info(">>> STEP 2: Building Orchestrator <<<")
         try:
             build_orchestrator()
+            build_succeeded_components.append("orchestrator")
         except BuildError as e:
             logging.error(f"[{e.component}] Build FAILED. (e.g., Rust/cargo not installed?)")
             logging.error(str(e))
@@ -261,6 +265,7 @@ def main():
         logging.info(">>> STEP 3: Building SpatialShot <<<")
         try:
             build_spatialshot(system)
+            build_succeeded_components.append("spatialshot")
         except BuildError as e:
             logging.error(f"[{e.component}] Build FAILED. (e.g., Node.js/npm not installed?)")
             logging.error(str(e))
@@ -270,13 +275,15 @@ def main():
         if not build_failed_components:
             try:
                 run_tests()
+                build_succeeded_components.append("tests")
             except BuildError as e:
                 logging.error(f"[{e.component}] Tests FAILED.")
                 logging.error(str(e))
                 build_failed_components.append(e.component)
         else:
-            logging.warning("Skipping test suite due to build failures in: " +
-                            f"{', '.join(sorted(list(set(build_failed_components))))}")
+            reason = f"build failures in: {', '.join(sorted(list(set(build_failed_components))))}"
+            logging.warning("Skipping test suite due to " + reason)
+            skipped_components['tests'] = reason
 
     except Exception as e:
         logging.error("An unexpected error occurred outside of a build step.", exc_info=True)
@@ -284,11 +291,24 @@ def main():
     finally:
         end_time = datetime.datetime.now()
         duration = end_time - start_time
-        logging.info(f"Total execution time: {duration.total_seconds()} seconds.")
+        logging.info(f"Total execution time: {duration.total_seconds():.2f} seconds.")
+
+        logging.info("--- Build & Test Summary ---")
+        if build_succeeded_components:
+            logging.info(f"Success: {', '.join(build_succeeded_components)}")
+        
+        failed_unique = sorted(list(set(build_failed_components)))
+        if failed_unique:
+            logging.warning(f"Failed: {', '.join(failed_unique)}")
+
+        if skipped_components:
+            skipped_list = [f"{name} (reason: {reason})" for name, reason in skipped_components.items()]
+            logging.info(f"Skipped: {', '.join(skipped_list)}")
+        logging.info("--------------------------")
+
         logging.info("==================================================")
 
         if build_failed_components:
-            failed_unique = sorted(list(set(build_failed_components)))
             logging.warning("  Build and Test Cycle Finished with FAILURES  ")
             logging.warning(f"Failed components: {', '.join(failed_unique)}")
             logging.info("==================================================")
