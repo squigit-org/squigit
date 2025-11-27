@@ -17,6 +17,7 @@
 
 body {
   margin: 0;
+  overflow: hidden;
   background: #ffffff;
   font-family: "Söhne", "Instrument Sans", -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -185,8 +186,12 @@ ul {
   }
 }
 
-#setup-view .container {
+#gemini-setup-view .container {
   margin-bottom: 150px;
+}
+
+#imgbb-setup-view .container {
+  margin-bottom: 30px;
 }
 
 #login-view .container {

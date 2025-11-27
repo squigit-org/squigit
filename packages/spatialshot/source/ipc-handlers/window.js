@@ -7,12 +7,20 @@
 const { BrowserWindow } = require("electron");
 
 module.exports = function (ipcMain) {
-  ipcMain.on("close-window", () => BrowserWindow.getFocusedWindow()?.close());
-  ipcMain.on("minimize-window", () =>
-    BrowserWindow.getFocusedWindow()?.minimize()
-  );
-  ipcMain.on("maximize-window", () => {
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) win.isMaximized() ? win.unmaximize() : win.maximize();
+  ipcMain.on("close-window", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.close();
+  });
+
+  ipcMain.on("minimize-window", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.minimize();
+  });
+
+  ipcMain.on("maximize-window", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      win.isMaximized() ? win.unmaximize() : win.maximize();
+    }
   });
 };

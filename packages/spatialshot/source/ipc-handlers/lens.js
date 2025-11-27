@@ -55,20 +55,39 @@ function setupLensHandlers(ipcMain, getCurrentImagePath) {
         return;
       }
       await openImageInLens(imagePath);
-    } else {
-      loginViewFrame.contentWindow.postMessage("show-imgbb", "*");
+    }
+    else {
+      const win = new BrowserWindow({
+        width: 480,
+        height: 430,
+        alwaysOnTop: true, 
+        minimizable: false,
+        maximizable: false,
+        resizable: false,
+        webPreferences: {
+          preload: path.join(app.getAppPath(), "source", "preload.js"),
+        },
+      });
 
-      // win.on("close", async () => {
-      //   const imgbbApiKey = await getDecryptedKey("imgbb");
-      //   if (imgbbApiKey) {
-      //     const imagePath = getCurrentImagePath();
-      //     if (!imagePath) {
-      //       console.error("No image path found in main process");
-      //       return;
-      //     }
-      //     await openImageInLens(imagePath);
-      //   }
-      // });
+      win.loadFile(
+        path.join(
+          app.getAppPath(),
+          "source",
+          "renderer",
+          "login",
+          "index.html"
+        ),
+        { query: { mode: 'imgbb' } } 
+      );
+
+      win.on("close", async () => {
+        const imgbbApiKey = await getDecryptedKey("imgbb");
+        if (imgbbApiKey) {
+          const imagePath = getCurrentImagePath();
+          if (!imagePath) return;
+          await openImageInLens(imagePath);
+        }
+      });
     }
   });
 }

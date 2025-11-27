@@ -4,47 +4,55 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+const views = {
+  gemini: document.getElementById("gemini-setup-view"),
+  imgbb: document.getElementById("imgbb-setup-view"),
+  login: document.getElementById("login-view"),
+};
+
+function showView(id) {
+  Object.values(views).forEach((v) => v.classList.add("hidden"));
+  views[id].classList.remove("hidden");
+}
+
+const isPopup = window.top === window.self;
+const urlParams = new URLSearchParams(window.location.search);
+const modeParam = urlParams.get("mode");
+
+const provider = isPopup || modeParam === "imgbb" ? "imgbb" : "gemini";
+
 function initialize() {
-  const geminiView = document.getElementById("gemini-view");
-  const imgbbView = document.getElementById("imgbb-view");
-  const loginView = document.getElementById("login-view");
+  if (provider == "imgbb") {
+    showView("imgbb");
+  }
 
   window.addEventListener("message", (event) => {
     if (event.data === "show-login") {
-      geminiView.classList.add("hidden");
-      imgbbView.classList.add("hidden");
-      loginView.classList.remove("hidden");
+      showView("login");
     } else if (event.data === "show-gemini") {
-      loginView.classList.add("hidden");
-      imgbbView.classList.add("hidden");
-      geminiView.classList.remove("hidden");
-    } else if (event.data === "show-imgbb") {
-      geminiView.classList.add("hidden");
-      loginView.classList.add("hidden");
-      imgbbView.classList.remove("hidden");
+      showView("gemini");
     }
   });
 
-  // --- Setup View Logic ---
-  const setupBtn = document.getElementById("setup-btn");
-  const buttonSvg = document.getElementById("button-svg");
-  const spinner = document.getElementById("spinner");
+  const setupBtn = document.getElementById(provider + "-setup-btn");
+  const buttonSvg = document.getElementById(provider + "-button-svg");
+  const spinner = document.getElementById(provider + "-spinner");
   let watcherStarted = false;
 
   setupBtn.addEventListener("click", async () => {
     if (watcherStarted) return;
     watcherStarted = true;
 
-    const deepLink = "https://aistudio.google.com/app/apikey";
-    const geminiKeyExists = await window.parent.electron.checkFileExists(
-      "gemini_key.json"
-    );
-    if (geminiKeyExists) {
-      deepLink = "https://api.imgbb.com/";
-    }
+    const deepLink =
+      provider == "gemini"
+        ? "https://aistudio.google.com/app/apikey"
+        : "https://api.imgbb.com/";
+
     window.parent.electron.openExternalUrl(deepLink);
     buttonSvg.style.display = "none";
     spinner.style.display = "block";
+    setupBtn.style.pointerEvents = "none";
+    setupBtn.style.cursor = "not-allowed";
     await window.parent.electron.startClipboardWatcher();
   });
 
@@ -67,11 +75,14 @@ function initialize() {
       if (profileExists) {
         window.parent.electron.byokLogin();
       } else {
-        geminiView.classList.add("hidden");
-        imgbbView.classList.add("hidden");
-        loginView.classList.remove("hidden");
+        showView("login");
       }
-    } else if (data && data.provider === "imgbb" && data.key) {
+    } else if (
+      data &&
+      data.provider === "imgbb" &&
+      data.key &&
+      data.key.length == 32
+    ) {
       await window.electron.stopClipboardWatcher();
       await window.electron.encryptAndSave({
         plaintext: data.key,
@@ -81,7 +92,6 @@ function initialize() {
     }
   });
 
-  // --- Login View Logic ---
   const loginBtn = document.getElementById("login-btn");
   loginBtn.addEventListener("click", () => {
     window.parent.electron.startAuth();
