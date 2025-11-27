@@ -15,7 +15,8 @@ function showView(id) {
   views[id].classList.remove("hidden");
 }
 
-const isPopup = window.top === window.self;
+const isPopup = window.top === window.self; 
+
 const urlParams = new URLSearchParams(window.location.search);
 const modeParam = urlParams.get("mode");
 
@@ -58,10 +59,8 @@ function initialize() {
 
   window.parent.electron.onClipboardText(async (data) => {
     if (
-      data &&
-      data.provider === "gemini" &&
-      data.key &&
-      data.key.startsWith("AIzaS")
+      data && data.provider === provider &&
+      data.key && data.key.startsWith("AIzaS")
     ) {
       await window.parent.electron.stopClipboardWatcher();
       await window.parent.electron.encryptAndSave({
@@ -78,10 +77,8 @@ function initialize() {
         showView("login");
       }
     } else if (
-      data &&
-      data.provider === "imgbb" &&
-      data.key &&
-      data.key.length == 32
+      data && data.provider === provider &&
+      data.key && data.key.length == 32
     ) {
       await window.electron.stopClipboardWatcher();
       await window.electron.encryptAndSave({

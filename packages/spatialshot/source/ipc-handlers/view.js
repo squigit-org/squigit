@@ -10,7 +10,7 @@ module.exports = function (ipcMain, getMainView, getCurrentImagePath) {
   ipcMain.on("set-main-view-bounds", (event, rect) => {
     const mainView = getMainView();
     if (mainView) {
-      const win = BrowserWindow.getFocusedWindow();
+      const win = BrowserWindow.fromWebContents(event.sender);
       if (win) {
         const [width, height] = win.getSize();
         mainView.setBounds({ x: 0, y: 60, width, height: height - 60 });
