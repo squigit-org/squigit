@@ -22,10 +22,10 @@ const App: React.FC = () => {
 
   const engine = useChatEngine({
     apiKey: system.apiKey,
-    currentModel: system.currentModel,
+    currentModel: system.sessionModel,
     startupImage: system.startupImage,
     prompt: system.prompt,
-    setCurrentModel: system.setEditingModel,
+    setCurrentModel: system.setSessionModel,
   });
 
   const handleSend = () => {
@@ -38,7 +38,7 @@ const App: React.FC = () => {
     if (engine.lastSentMessage) {
       engine.handleRetrySend();
     } else {
-      engine.startSession(system.apiKey, system.currentModel, system.startupImage);
+      engine.startSession(system.apiKey, system.sessionModel, system.startupImage);
     }
   };
 
@@ -54,7 +54,8 @@ const App: React.FC = () => {
       lastSentMessage={engine.lastSentMessage}
       // States from App
       input={input}
-      currentModel={system.editingModel}
+      currentModel={system.sessionModel}
+      editingModel={system.editingModel}
       // System-related states
       startupImage={system.startupImage}
       prompt={system.editingPrompt}
@@ -64,9 +65,10 @@ const App: React.FC = () => {
       isDarkMode={system.isDarkMode}
       // Handlers
       onSend={handleSend}
-      onModelChange={system.setEditingModel}
+      onModelChange={system.setSessionModel}
+      onEditingModelChange={system.setEditingModel}
       onRetry={handleRetry}
-      onSave={system.saveSettings}
+      onSave={(newPrompt: string, newModel: string) => system.saveSettings(newPrompt, newModel)}
       onLogout={system.handleLogout}
       onToggleTheme={system.handleToggleTheme}
       onResetAPIKey={system.handleResetAPIKey}

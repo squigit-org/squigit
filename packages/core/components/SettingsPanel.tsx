@@ -23,7 +23,7 @@ interface SettingsPanelProps {
   avatarSrc: string;
   onPromptChange: (prompt: string) => void;
   onModelChange: (model: string) => void;
-  onSave: () => void;
+  onSave: (prompt: string, model: string) => void;
   onLogout: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
@@ -104,9 +104,7 @@ export const SettingsPanel = forwardRef<
     }, [isSubviewActive]);
 
     const handleSave = () => {
-      onPromptChange(localPrompt);
-      onModelChange(localModel);
-      onSave();
+      onSave(localPrompt, localModel);
       setIsSubviewActive(false);
       toggleSubview(false);
     };
@@ -321,7 +319,7 @@ export const SettingsPanel = forwardRef<
 
             <button
               className="save-btn"
-              id="savePromptBtn"
+              id="saveBtn"
               onClick={handleSave}
             >
               <i className="fas fa-save" /> Save

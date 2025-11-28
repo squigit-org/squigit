@@ -14,8 +14,9 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   const [apiKey, setApiKey] = useState<string>("");
   const [activePrompt, setActivePrompt] = useState<string>("");
   const [editingPrompt, setEditingPrompt] = useState<string>("");
-  const [activeModel, setActiveModel] = useState<string>("gemini-2.5-flash");
+  const [startupModel, setStartupModel] = useState<string>("gemini-2.5-flash");
   const [editingModel, setEditingModel] = useState<string>("gemini-2.5-flash");
+  const [sessionModel, setSessionModel] = useState<string>("gemini-2.5-flash");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [avatarSrc, setAvatarSrc] = useState("");
@@ -60,8 +61,9 @@ export const useSystemSync = (onToggleSettings: () => void) => {
 
         const savedModel = await ipc.getModel();
         if (savedModel) {
-          setActiveModel(savedModel);
+          setStartupModel(savedModel);
           setEditingModel(savedModel);
+          setSessionModel(savedModel);
         }
 
         const userData = await ipc.getUserData();
@@ -111,12 +113,14 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     setupIpc();
   }, [onToggleSettings]);
 
-  const saveSettings = () => {
-    setActivePrompt(editingPrompt);
-    setActiveModel(editingModel);
+  const saveSettings = (newPrompt: string, newModel: string) => {
+    setStartupModel(newModel);
+    setEditingModel(newModel);
+    setActivePrompt(newPrompt);
+    setEditingPrompt(newPrompt);
     if (ipc) {
-      ipc.savePrompt(editingPrompt);
-      ipc.saveModel(editingModel);
+      ipc.savePrompt(newPrompt);
+      ipc.saveModel(newModel);
       showFeedbackMessage("Settings saved", "done");
     }
   };
@@ -147,9 +151,11 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     prompt: activePrompt,
     editingPrompt,
     setEditingPrompt,
-    currentModel: activeModel,
+    startupModel,
     editingModel,
     setEditingModel,
+    sessionModel,
+    setSessionModel,
     startupImage,
     userName,
     userEmail,

@@ -91,6 +91,7 @@ export interface ChatLayoutProps {
   // States from App
   input: string;
   currentModel: string;
+  editingModel: string;
 
   // System-related states
   startupImage: { base64: string; mimeType: string } | null;
@@ -103,8 +104,9 @@ export interface ChatLayoutProps {
   // Handlers
   onSend: () => void;
   onModelChange: (model: string) => void;
+  onEditingModelChange: (model: string) => void;
   onRetry: () => void;
-  onSave: () => void;
+  onSave: (prompt: string, model: string) => void;
   onLogout: () => void;
   onToggleTheme: () => void;
   onInputChange: (value: string) => void;
@@ -124,6 +126,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   lastSentMessage,
   input,
   currentModel,
+  editingModel,
   startupImage,
   prompt,
   userName,
@@ -132,6 +135,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   isDarkMode,
   onSend,
   onModelChange,
+  onEditingModelChange,
   onRetry,
   onSave,
   onLogout,
@@ -155,7 +159,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     setIsSubviewActive(isActive);
   };
 
-  const [contextMenu, setContextMenu] = useState<{
+  const [contextMenu, setContextMenu] = useState<{ 
     x: number;
     y: number;
     selectedText: string;
@@ -394,13 +398,13 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         <>
           <div
             id="panel-overlay"
-            className={`${isPanelActiveAndVisible ? "active" : ""} ${
+            className={`${isPanelActiveAndVisible ? "active" : ""} ${ 
               isPanelClosing ? "closing" : ""
             }`}
             onClick={closeSettingsPanel}
           />
           <div
-            className={`panel ${isPanelActiveAndVisible ? "active" : ""} ${
+            className={`panel ${isPanelActiveAndVisible ? "active" : ""} ${ 
               isPanelClosing ? "closing" : ""
             }`}
             id="panel"
@@ -410,9 +414,9 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
               <SettingsPanel
                 ref={settingsPanelRef}
                 currentPrompt={prompt}
-                currentModel={currentModel}
+                currentModel={editingModel}
                 onPromptChange={setPrompt}
-                onModelChange={onModelChange}
+                onModelChange={onEditingModelChange}
                 userName={userName}
                 userEmail={userEmail}
                 avatarSrc={avatarSrc}
