@@ -58,17 +58,10 @@ fn run_core_async(paths: &AppPaths, arg: &str, extra_args: &[&str]) -> Result<()
         cmd_str.push_str(&format!(" \"{}\"", extra));
     }
 
-    let output = Command::new("bash")
+    Command::new("bash")
         .arg("-c")
         .arg(&cmd_str)
-        .output()?;
-
-    if !output.status.success() {
-        return Err(anyhow!(
-            "Command failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
+        .spawn()?;
 
     Ok(())
 }

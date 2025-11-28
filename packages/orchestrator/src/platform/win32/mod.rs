@@ -47,21 +47,13 @@ pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
 
 pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
     let core_path_str = paths.core_path.to_string_lossy().to_string();
-    let output = run_powershell_sync(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "draw-view"])?;
-    if !output.status.success() {
-        return Err(anyhow!("draw-view failed: {}", String::from_utf8_lossy(&output.stderr)));
-    }
-    Ok(())
+    run_powershell_async(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "draw-view"])
 }
 
 pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()> {
     let core_path_str = paths.core_path.to_string_lossy().to_string();
     let img_path_str = img_path.to_string_lossy().to_string();
-    let output = run_powershell_sync(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "spatialshot", &img_path_str])?;
-    if !output.status.success() {
-        return Err(anyhow!("spatialshot failed: {}", String::from_utf8_lossy(&output.stderr)));
-    }
-    Ok(())
+    run_powershell_async(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "spatialshot", &img_path_str])
 }
 
 pub fn write_core_script(paths: &AppPaths) -> Result<()> {
@@ -75,6 +67,14 @@ fn run_powershell_sync(args: &[&str]) -> Result<Output> {
         .args(args)
         .output()?;
     Ok(output)
+}
+
+fn run_powershell_async(args: &[&str]) -> Result<()> {
+    Command::new("powershell.exe")
+        .creation_flags(CREATE_NO_WINDOW.0)
+        .args(args)
+        .spawn()?;
+    Ok(())
 }
 
 pub fn kill_running_packages(_paths: &AppPaths) {
