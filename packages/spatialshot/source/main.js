@@ -10,7 +10,6 @@ const {
   ipcMain,
   BrowserView,
   nativeTheme,
-  screen,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -18,6 +17,7 @@ const {
   getUserDataPath,
   writeSession,
   readPreferences,
+  getDynamicDims,
 } = require("./utilities");
 const { setupIpcHandlers } = require("./ipc-handlers");
 const { checkForUpdates } = require("./updater");
@@ -98,25 +98,13 @@ function createWindow() {
     initialLoadPath = RENDERER_PATH + "/hello/index.html";
   }
 
-  const windowWidth = isHelloPage ? 800 : 900;
-  const windowHeight = isHelloPage ? 600 : 700;
-
-  const cursorPoint = screen.getCursorScreenPoint();
-  let display = screen.getDisplayNearestPoint(cursorPoint);
-
-  if (cursorPoint.x === 0 && cursorPoint.y === 0) {
-    display = screen.getPrimaryDisplay();
-  }
-
-  const { workArea } = display;
-  const x = Math.floor(workArea.x + (workArea.width - windowWidth) / 2);
-  const y = Math.floor(workArea.y + (workArea.height - windowHeight) / 2);
-
+  const win = isHelloPage ? { w: 800, h: 600 } : { w: 900, h: 700 };
+  const dims = getDynamicDims(win.w, win.h);
   mainWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
-    x: x,
-    y: y,
+    width: dims.windowWidth,
+    height: dims.windowHeight,
+    x: dims.x,
+    y: dims.y,
     frame: false,
     show: false,
     icon: ICON_PATH,

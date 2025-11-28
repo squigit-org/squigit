@@ -8,7 +8,7 @@ const { shell, BrowserWindow, app } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
-const { getDecryptedKey } = require("../utilities");
+const { getDecryptedKey, getDynamicDims } = require("../utilities");
 
 async function openImageInLens(localImagePath) {
   try {
@@ -55,12 +55,14 @@ function setupLensHandlers(ipcMain, getCurrentImagePath) {
         return;
       }
       await openImageInLens(imagePath);
-    }
-    else {
+    } else {
+      const dims = getDynamicDims(480, 430);
       const win = new BrowserWindow({
-        width: 480,
-        height: 430,
-        alwaysOnTop: true, 
+        width: dims.windowWidth,
+        height: dims.windowHeight,
+        x: dims.x,
+        y: dims.y,
+        alwaysOnTop: true,
         minimizable: false,
         maximizable: false,
         resizable: false,
@@ -77,7 +79,7 @@ function setupLensHandlers(ipcMain, getCurrentImagePath) {
           "login",
           "index.html"
         ),
-        { query: { mode: 'imgbb' } } 
+        { query: { mode: "imgbb" } }
       );
 
       win.on("close", async () => {

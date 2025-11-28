@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const { app } = require("electron");
+const { app, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -12,6 +12,28 @@ const crypto = require("crypto");
 const { APP_DEFAULTS } = require("./constants");
 
 // --- UTILITIES ---
+
+function getDynamicDims(width, height) {
+  const cursorPoint = screen.getCursorScreenPoint();
+  let display = screen.getDisplayNearestPoint(cursorPoint);
+  
+  if (cursorPoint.x === 0 && cursorPoint.y === 0) {
+    display = screen.getPrimaryDisplay();
+  }
+
+  const { workArea } = display;
+
+  const fracWidth = width / 1366;
+  const fracHeight = height / 768;
+
+  const windowWidth = Math.floor(fracWidth * workArea.width);
+  const windowHeight = Math.floor(fracHeight * workArea.height);
+
+  const x = Math.floor(workArea.x + (workArea.width - windowWidth) / 2);
+  const y = Math.floor(workArea.y + (workArea.height - windowHeight) / 2);
+
+  return { windowWidth, windowHeight, x, y };
+}
 
 function getUserDataPath() {
   const platform = process.platform;
@@ -139,4 +161,5 @@ module.exports = {
   getPreferencesPath,
   readPreferences,
   writePreferences,
+  getDynamicDims,
 };
