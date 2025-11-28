@@ -283,11 +283,11 @@ export const SettingsPanel = forwardRef<
               <i className="fas fa-arrow-left" />
             </button>
             <button
-              className={`reset-btn ${isRotating ? "rotating" : ""}`}
+              className="reset-btn"
               id="resetPromptBtn"
               onClick={handleReset}
             >
-              <i className="fas fa-sync-alt" />
+              Reset <i className={`fas fa-sync-alt ${isRotating ? "rotating" : ""}`} />
             </button>
           </div>
           <div className="subview-content">
