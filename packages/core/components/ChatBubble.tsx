@@ -83,7 +83,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
         >
           <div
             dir="auto"
-            className={`w-full rounded-2xl px-4 py-3 text-sm text-neutral-100 leading-relaxed backdrop-blur-md shadow-lg ${
+            className={`w-full rounded-2xl px-4 py-3 text-base text-neutral-100 leading-relaxed backdrop-blur-md shadow-lg ${
               isUser
                 ? "bg-neutral-800/50 border border-neutral-700"
                 : "bg-transparent border-none"
