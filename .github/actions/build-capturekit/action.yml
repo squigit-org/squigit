@@ -34,7 +34,7 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        # Added --accept-source-agreements to prevent hanging
+        # Added --accept-source-agreements
         winget install --id Kitware.CMake --silent --accept-package-agreements --accept-source-agreements
         winget install --id Ninja-build.Ninja --silent --accept-package-agreements --accept-source-agreements
         if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { exit 1 }
@@ -84,12 +84,14 @@ runs:
         else
           ZIP_NAME="capkit-linux-x64.zip"
         fi
-
-        echo "Zipping CaptureKit to $DIST_ROOT/$ZIP_NAME..."
+        
+        ZIP_FULL_PATH="$DIST_ROOT/$ZIP_NAME"
+        echo "Zipping CaptureKit to $ZIP_FULL_PATH"
+        
         cd packages/capturekit/dist
         
         if [ "$RUNNER_OS" == "Windows" ]; then
-          7z a -tzip -r "$DIST_ROOT/$ZIP_NAME" .
+          7z a -tzip -r "$ZIP_FULL_PATH" .
         else
-          zip -r "$DIST_ROOT/$ZIP_NAME" .
+          zip -r "$ZIP_FULL_PATH" .
         fi

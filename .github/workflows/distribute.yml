@@ -2,7 +2,7 @@ name: Distribute Production Suite
 
 on:
   push:
-  # workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -84,7 +84,7 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           npm_script: ${{ matrix.npm_script }}
           artifact_path: ${{ matrix.artifact_path }}
-          platform: ${{ matrix.platform }} # <--- FIXED: WAS MISSING
+          platform: ${{ matrix.platform }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -93,7 +93,7 @@ jobs:
           path: dist-out/*
 
   # =========================================================
-  # JOB 4: PUBLISH BINARIES
+  # JOB 4: PUBLISH BINARIES (THE CLEANUP STEP)
   # =========================================================
   publish-binaries:
     needs: [build-orchestrator, build-capturekit, build-spatialshot]
@@ -113,7 +113,12 @@ jobs:
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          files: all-artifacts/**/*
+          fail_on_unmatched_files: false
+          files: |
+            all-artifacts/**/*.zip
+            all-artifacts/**/*.exe
+            all-artifacts/**/*.dmg
+            all-artifacts/**/*installer*
 
   # =========================================================
   # JOB 5: BUILD INSTALLERS

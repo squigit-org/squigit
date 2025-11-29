@@ -71,43 +71,38 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
-      run: npm run ${{ inputs.npm_script }} -- -p never -c.mac.identity=null
+      run: npm run ${{ inputs.npm_script }} -- -p never -c.publish=never -c.mac.identity=null
 
     # --- STAGE & ZIP ---
     - name: Zip Artifacts
       shell: bash
       run: |
-        # Use Absolute Paths to avoid "../../.." madness
+        # Use absolute paths to prevent "No such file" errors
         DIST_ROOT="$GITHUB_WORKSPACE/dist-out"
         mkdir -p "$DIST_ROOT"
         
         ZIP_NAME="spatialshot-${{ inputs.platform }}-portable.zip"
+        ZIP_FULL_PATH="$DIST_ROOT/$ZIP_NAME"
         
-        echo "Artifact Path: ${{ inputs.artifact_path }}"
-        echo "Zip Target: $DIST_ROOT/$ZIP_NAME"
-        
-        # Check if artifact path exists first
-        # Resolve wildcards
         TARGET_PATH=$(ls -d ${{ inputs.artifact_path }} 2>/dev/null | head -n 1)
         
         if [ -z "$TARGET_PATH" ]; then
           echo "::error::Artifact path not found: ${{ inputs.artifact_path }}"
-          ls -R packages/spatialshot/dist/ || true
           exit 1
         fi
 
+        echo "Zipping $TARGET_PATH to $ZIP_FULL_PATH"
+
         if [ -d "$TARGET_PATH" ]; then
-          echo "Zipping directory: $TARGET_PATH"
           cd "$TARGET_PATH"
           if [ "$RUNNER_OS" == "Windows" ]; then
-            7z a -tzip -r "$DIST_ROOT/$ZIP_NAME" .
+            7z a -tzip -r "$ZIP_FULL_PATH" .
           else
-            zip -r "$DIST_ROOT/$ZIP_NAME" .
+            zip -r "$ZIP_FULL_PATH" .
           fi
         else
-          echo "Copying single file: $TARGET_PATH"
+          # Single file (like DMG)
           cp "$TARGET_PATH" "$DIST_ROOT/"
         fi
         
-        echo "Final Contents:"
         ls -l "$DIST_ROOT"
