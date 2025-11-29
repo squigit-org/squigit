@@ -16,10 +16,10 @@ The core logic in `main.rs` is platform-agnostic: It sets up application paths (
 
 ### Windows Flow
 
-- **Core Script Handling**: Writes `core.ps1` (a PowerShell script) to the spatial dir; it includes DPI awareness, path validation, and uses `nircmd.exe` for screenshot capture via .NET screen bounds.
-- **Execution**: Simplified to direct `Command::new("powershell.exe")` calls with `-ExecutionPolicy Bypass` for `grab-screen` (multi-monitor capture to temp PNGs), `draw-view` (processing exe), and `spatialshot` (final exe with output path). No token impersonation or session querying, as it's designed for user-initiated runs (e.g., via hotkeys/shortcuts).
-- **Monitoring & Cleanup**: Same file watcher logic as others; kills processes like `drawview.exe` via `sysinfo` on errors. Relies on `%LOCALAPPDATA%` for paths.
-- **Key Traits**: Avoids privileged APIs to prevent errors like `WTSQueryUserToken failed`; assumes interactive user session for graphical access (e.g., `System.Windows.Forms` for screens).
+- **Native Core Handling**: Implements a dedicated Rust module (`core.rs`) that interfaces directly with the **Win32 API** (GDI & HiDpi). It uses `EnumDisplayMonitors` to calculate precise screen bounds and explicitly sorts displays by device name (e.g., `\\.\DISPLAY1`) to guarantee alignment with the C++ Qt frontend.
+- **Execution**: Achieves minimal latency by bypassing shell scripting entirely. The Orchestrator directly spawns `nircmdc.exe` for capturing screenshots and launches `draw-view`/`spatialshot` binaries using `std::process::Command` with `CREATE_NO_WINDOW` flags for a seamless, invisible background execution.
+- **Monitoring & Cleanup**: Utilizes robust file watcher logic to coordinate stages; uses `sysinfo` to instantly kill processes like `drawview.exe` on error or timeout. Relies on `%LOCALAPPDATA%` for atomic path management.
+- **Key Traits**: Designed for instant feedback on hotkey triggers (`Win+Shift+A`). By utilizing compiled Rust code for hardware enumeration, it ensures zero-latency execution, strictly typed display handling, and eliminates dependencies on system execution policies.
 
 ### macOS (Darwin) Flow
 
