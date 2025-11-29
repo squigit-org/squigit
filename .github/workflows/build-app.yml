@@ -24,7 +24,7 @@ jobs:
           - os: macos-latest
             platform: mac
             npm_script: build:mac
-            # On Mac, 'dir' target usually outputs to /mac/AppName.app. 
+            # On Mac, 'dir' target outputs to /mac/AppName.app. 
             # We upload the whole /mac folder to ensure we get the portable structure.
             artifact_path: packages/spatialshot/dist/mac
 
@@ -87,9 +87,9 @@ jobs:
         working-directory: ./packages/spatialshot
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Fix: append -c.publish=never to prevent electron-builder from failing 
-        # when it tries to auto-detect repository info for publishing
-        run: npm run ${{ matrix.npm_script }} -- -c.publish=never
+        # Fix: Use '-p never' (publish: never) to explicitly disable publishing.
+        # This prevents electron-builder from checking for repository info or loading 'never' as a plugin.
+        run: npm run ${{ matrix.npm_script }} -- -p never
 
       # ---------------------------------------------------------
       # 4. UPLOAD ELECTRON ARTIFACTS ONLY
