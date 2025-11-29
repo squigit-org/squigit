@@ -12,9 +12,9 @@ CAPKIT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/spatialshot/capkit"
 UNINSTALL_SCRIPT_PATH="$APP_DIR/uninstall.sh"
 
 # --- Artifact URLs ---
-CAPKIT_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
-ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
-SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
+CAPKIT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/capkit-linux-x64.zip"
+ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-orchestrator-linux-x64.zip"
+SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-linux-portable.zip"
 
 echo "Creating directories..."
 mkdir -p "$CACHE_DIR"

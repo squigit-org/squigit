@@ -11,9 +11,9 @@ DATA_DIR="$HOME/Library/Application Support/spatialshot"
 BIN_DIR="$DATA_DIR/bin"
 CAPKIT_DIR="$DATA_DIR/capkit"
 
-CAPKIT_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
-ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
-SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
+CAPKIT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/capkit-macos.zip"
+ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-orchestrator-macos-x64.zip"
+SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-mac-portable.zip"
 
 log_info() { echo "✦ $1"; }
 log_warn() { echo "ⓘ $1"; }

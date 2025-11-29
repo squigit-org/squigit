@@ -93,7 +93,7 @@ jobs:
           path: dist-out/*
 
   # =========================================================
-  # JOB 4: PUBLISH BINARIES (Create Release)
+  # JOB 4: PUBLISH BINARIES
   # =========================================================
   publish-binaries:
     needs: [build-orchestrator, build-capturekit, build-spatialshot]
@@ -121,7 +121,7 @@ jobs:
             all-artifacts/**/*installer*
 
   # =========================================================
-  # JOB 5: BUILD INSTALLERS (The Fix)
+  # JOB 5: BUILD INSTALLERS
   # =========================================================
   build-installers:
     needs: publish-binaries
