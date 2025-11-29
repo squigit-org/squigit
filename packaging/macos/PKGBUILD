@@ -20,10 +20,6 @@ if [ ! -d "Platypus.app" ]; then
     echo "Unzipping Platypus..."
     unzip -q -o platypus.zip
     
-    echo "--- UNZIPPED FILES ---"
-    ls -R
-    echo "----------------------"
-
     PLATYPUS_APP_PATH=$(find . -name "Platypus.app" -type d | head -n 1)
     
     if [ -z "$PLATYPUS_APP_PATH" ]; then
@@ -36,7 +32,13 @@ if [ ! -d "Platypus.app" ]; then
     fi
 fi
 
+# Decompress gzipped CLI if present
+GZIPPED_CLI="./Platypus.app/Contents/Resources/platypus_clt.gz"
 PLATYPUS_CLI="./Platypus.app/Contents/Resources/platypus"
+if [ -f "$GZIPPED_CLI" ]; then
+    echo "Decompressing Platypus CLI..."
+    gunzip -c "$GZIPPED_CLI" > "$PLATYPUS_CLI"
+fi
 
 if [ ! -f "$PLATYPUS_CLI" ]; then
     echo "Error: Platypus CLI not found at $PLATYPUS_CLI"
