@@ -66,17 +66,22 @@ runs:
       shell: bash
       run: npm ci
 
+    - name: Patch package.json with Repository
+      working-directory: ./packages/spatialshot
+      shell: bash
+      run: |
+        REPO_URL="https://github.com/${{ github.repository }}"
+        echo "Patching package.json with repo: $REPO_URL"
+        npm pkg set repository.type="git"
+        npm pkg set repository.url="$REPO_URL"
+
     - name: Build Electron
       working-directory: ./packages/spatialshot
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
-      run: |
-        REPO_URL="https://github.com/$GITHUB_REPOSITORY"
-        echo "Building for $REPO_URL"
-        npm run ${{ inputs.npm_script }} -- -p never -c.mac.identity=null -c.repository.url="$REPO_URL"
+      run: npm run ${{ inputs.npm_script }} -- -p never -c.mac.identity=null
 
-    # --- STAGE & ZIP ---
     - name: Zip Artifacts
       shell: bash
       run: |
