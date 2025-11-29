@@ -1,8 +1,8 @@
 name: Build All Installers
 
 on:
-  push:
-  # workflow_dispatch:
+  # push:
+  workflow_dispatch:
 
 jobs:
   # Job 1: Build the Windows Installer
