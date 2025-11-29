@@ -14,7 +14,7 @@ const path = require("path");
 let credentials;
 try {
   const credsFile = require("./credentials.json");
-  credentials = credsFile.web || credsFile.installed;
+  credentials = credsFile.installed;
 } catch (e) {
   console.error("CRITICAL: credentials.json not found in auth bundle.", e);
   credentials = {};
