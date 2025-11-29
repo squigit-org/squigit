@@ -93,7 +93,7 @@ jobs:
           path: dist-out/*
 
   # =========================================================
-  # JOB 4: PUBLISH BINARIES (THE CLEANUP STEP)
+  # JOB 4: PUBLISH BINARIES (Create Release)
   # =========================================================
   publish-binaries:
     needs: [build-orchestrator, build-capturekit, build-spatialshot]
@@ -121,7 +121,7 @@ jobs:
             all-artifacts/**/*installer*
 
   # =========================================================
-  # JOB 5: BUILD INSTALLERS
+  # JOB 5: BUILD INSTALLERS (The Fix)
   # =========================================================
   build-installers:
     needs: publish-binaries
@@ -148,6 +148,7 @@ jobs:
         run: |
            chmod +x packaging/linux/PKGBUILD
            bash packaging/linux/PKGBUILD
+           ls -l spatialshot-installer
 
       # --- MAC INSTALLER ---
       - name: Build macOS Installer
@@ -155,6 +156,7 @@ jobs:
         run: |
            chmod +x packaging/macos/PKGBUILD
            bash packaging/macos/PKGBUILD
+           ls -l spatialshot-installer.dmg
 
       # --- UPLOAD INSTALLERS ---
       - name: Upload Installer
@@ -163,5 +165,5 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: |
             packaging/windows/*.exe
-            packaging/linux/*installer*
-            packaging/macos/*.dmg
+            spatialshot-installer
+            spatialshot-installer.dmg
