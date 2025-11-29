@@ -51,10 +51,16 @@ INSTALLER_SCRIPT="packaging/macos/installer.sh"
 chmod +x "$INSTALLER_SCRIPT"
 
 echo "Running Platypus to create .app..."
-"$PLATYPUS_CLI" -A -t "Text Window" \
-               -o "Install SpatialShot.app" \
-               -I "packaging/macos/icon.icns" \
-               "$INSTALLER_SCRIPT"
+
+# CORRECTED COMMAND
+# -t changed to -o (Interface Type)
+# -I changed to -i (Icon Path)
+# Output path moved to the end (Positional argument)
+"$PLATYPUS_CLI" -A \
+               -o "Text Window" \
+               -i "packaging/macos/icon.icns" \
+               "$INSTALLER_SCRIPT" \
+               "Install SpatialShot.app"
 
 echo "Creating .dmg..."
 rm -f spatialshot-installer.dmg
