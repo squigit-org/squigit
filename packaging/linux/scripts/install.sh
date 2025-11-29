@@ -24,17 +24,23 @@ echo "  > Directories created."
 
 echo "Downloading components..."
 echo "  > Downloading capkit..."
-wget -q --show-progress -O "$CACHE_DIR/capkit.zip" "$CAPKIT_URL"
+wget -q --show-progress -L -O "$CACHE_DIR/capkit.zip" "$CAPKIT_URL"
 echo "  > Downloading orchestrator..."
-wget -q --show-progress -O "$CACHE_DIR/orchestrator.zip" "$ORCHESTRATOR_URL"
+wget -q --show-progress -L -O "$CACHE_DIR/orchestrator.zip" "$ORCHESTRATOR_URL"
 echo "  > Downloading spatialshot..."
-wget -q --show-progress -O "$CACHE_DIR/spatialshot.zip" "$SPATIALSHOT_URL"
+wget -q --show-progress -L -O "$CACHE_DIR/spatialshot.zip" "$SPATIALSHOT_URL"
 echo "  > Downloads complete."
 
 echo "Installing files..."
 unzip -o "$CACHE_DIR/spatialshot.zip" -d "$APP_DIR"
 unzip -o "$CACHE_DIR/capkit.zip" -d "$CAPKIT_DIR"
 unzip -o "$CACHE_DIR/orchestrator.zip" -d "$APP_DIR"
+
+if [ -f "$APP_DIR/spatialshot-orchestrator" ]; then
+    echo "  > Renaming binary..."
+    mv "$APP_DIR/spatialshot-orchestrator" "$APP_DIR/spatialshot-orchestrator-linux-x64"
+fi
+
 chmod +x "$APP_DIR/spatialshot-orchestrator-linux-x64"
 
 echo "  > Files installed."

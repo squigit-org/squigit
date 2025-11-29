@@ -11,6 +11,7 @@ DATA_DIR="$HOME/Library/Application Support/spatialshot"
 BIN_DIR="$DATA_DIR/bin"
 CAPKIT_DIR="$DATA_DIR/capkit"
 
+# --- Artifact URLs ---
 CAPKIT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/capkit-macos.zip"
 ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-orchestrator-macos-x64.zip"
 SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-mac-portable.zip"
@@ -60,6 +61,11 @@ unzip -q -o "$CACHE_DIR/capkit.zip" -d "$CAPKIT_DIR"
 fix_quarantine "$CAPKIT_DIR"
 
 unzip -q -o "$CACHE_DIR/orchestrator.zip" -d "$BIN_DIR"
+
+if [ -f "$BIN_DIR/spatialshot-orchestrator" ]; then
+    mv "$BIN_DIR/spatialshot-orchestrator" "$BIN_DIR/spatialshot-orchestrator-macos"
+fi
+
 ORCH_BIN="$BIN_DIR/spatialshot-orchestrator-macos"
 chmod +x "$ORCH_BIN"
 fix_quarantine "$ORCH_BIN"
@@ -95,7 +101,7 @@ cat << 'EOF' > "$UNINSTALLER"
 #!/bin/bash
 clear
 echo "=========================================="
-echo "       UNINSTALLING SPATIALSHOT"
+echo "        UNINSTALLING SPATIALSHOT"
 echo "=========================================="
 echo ""
 
@@ -115,7 +121,6 @@ SERVICE_PATH="$HOME/Library/Services/SpatialShot Capture.workflow"
 if [ -d "$SERVICE_PATH" ]; then
     rm -rf "$SERVICE_PATH"
     echo "Removed Keyboard Shortcut Service"
-    # Refresh the service cache
     /System/Library/CoreServices/pbs -flush
 else
     echo "Service not found"
