@@ -6,13 +6,14 @@ echo "--- Building macOS Installer ---"
 PLATYPUS_VERSION="5.4.1"
 PLATYPUS_URL="https://sveinbjorn.org/files/software/platypus.zip"
 
+# --- 1. Download Platypus ---
 if [ ! -d "Platypus.app" ]; then
     echo "Downloading Platypus v${PLATYPUS_VERSION}..."
     curl -L -A "Mozilla/5.0" -o platypus.zip "$PLATYPUS_URL"
     
     FILE_SIZE=$(stat -f%z platypus.zip)
     if [ "$FILE_SIZE" -lt 1000000 ]; then
-        echo "Error: Downloaded file is too small ($FILE_SIZE bytes). Likely an error page."
+        echo "Error: Downloaded file is too small ($FILE_SIZE bytes)."
         cat platypus.zip
         exit 1
     fi
@@ -21,7 +22,6 @@ if [ ! -d "Platypus.app" ]; then
     unzip -q -o platypus.zip
     
     PLATYPUS_APP_PATH=$(find . -name "Platypus.app" -type d | head -n 1)
-    
     if [ -z "$PLATYPUS_APP_PATH" ]; then
         echo "Error: Could not find Platypus.app after unzipping."
         exit 1
@@ -32,9 +32,10 @@ if [ ! -d "Platypus.app" ]; then
     fi
 fi
 
-# Decompress gzipped CLI if present
+# --- 2. Prepare CLI Tool & Environment ---
 GZIPPED_CLI="./Platypus.app/Contents/Resources/platypus_clt.gz"
 PLATYPUS_CLI="./Platypus.app/Contents/Resources/platypus"
+
 if [ -f "$GZIPPED_CLI" ]; then
     echo "Decompressing Platypus CLI..."
     gunzip -c "$GZIPPED_CLI" > "$PLATYPUS_CLI"
@@ -44,28 +45,48 @@ if [ ! -f "$PLATYPUS_CLI" ]; then
     echo "Error: Platypus CLI not found at $PLATYPUS_CLI"
     exit 1
 fi
-
 chmod +x "$PLATYPUS_CLI"
 
+# [FIX] Install helper files to the path Platypus expects (/usr/local/share/platypus)
+echo "Installing Platypus resources to /usr/local/share/platypus..."
+sudo mkdir -p /usr/local/share/platypus
+sudo cp "Platypus.app/Contents/Resources/ScriptExec" /usr/local/share/platypus/
+# Copy the Nib file too, as 'Text Window' interface usually needs it
+if [ -d "Platypus.app/Contents/Resources/MainMenu.nib" ]; then
+    sudo cp -R "Platypus.app/Contents/Resources/MainMenu.nib" /usr/local/share/platypus/
+fi
+
+# --- 3. Build the App ---
 INSTALLER_SCRIPT="packaging/macos/installer.sh"
 chmod +x "$INSTALLER_SCRIPT"
+APP_NAME="Install SpatialShot.app"
+ICON_PATH="packaging/macos/icon.icns"
 
 echo "Running Platypus to create .app..."
 
-# CORRECTED COMMAND
-# -t changed to -o (Interface Type)
-# -I changed to -i (Icon Path)
-# Output path moved to the end (Positional argument)
-"$PLATYPUS_CLI" -A \
-               -o "Text Window" \
-               -i "packaging/macos/icon.icns" \
-               "$INSTALLER_SCRIPT" \
-               "Install SpatialShot.app"
+CMD_ARGS=(
+    "-A"
+    "-o" "Text Window"
+    "$INSTALLER_SCRIPT"
+    "$APP_NAME"
+)
 
+# Only add icon flag if file actually exists
+if [ -f "$ICON_PATH" ]; then
+    echo "Using icon: $ICON_PATH"
+    CMD_ARGS=("${CMD_ARGS[@]:0:2}" "-i" "$ICON_PATH" "${CMD_ARGS[@]:2}")
+else
+    echo "Warning: Icon not found at '$ICON_PATH'. Using default icon."
+fi
+
+# Execute Platypus
+"$PLATYPUS_CLI" "${CMD_ARGS[@]}"
+
+# --- 4. Create DMG ---
 echo "Creating .dmg..."
 rm -f spatialshot-installer.dmg
 
-hdiutil create -srcfolder "Install SpatialShot.app" \
+hdiutil create -srcfolder "$APP_NAME" \
                -volname "Install SpatialShot" \
                -fs HFS+ \
                -format UDZO \
