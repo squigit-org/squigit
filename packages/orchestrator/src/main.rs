@@ -37,7 +37,6 @@ fn main() -> Result<()> {
     }
     write_core_script(&paths)?;
 
-    // Setup watcher and channel before running screen grab to avoid race conditions.
     let (tx, rx) = mpsc::channel();
     let mut watcher: RecommendedWatcher = Watcher::new(
         move |res: Result<notify::Event, _>| {
@@ -51,18 +50,15 @@ fn main() -> Result<()> {
     )?;
     watcher.watch(&paths.tmp_dir, RecursiveMode::NonRecursive)?;
 
-    // Now run the screen grab process.
     let initial_monitor_count = run_grab_screen(&paths)?;
     println!(
         "grab-screen finished and reported {} monitor(s).",
         initial_monitor_count
     );
 
-    // Spawn a thread to monitor for file changes.
     let paths_monitor = paths.clone();
-    let monitor_handle = thread::spawn(move || {
-        monitor_events(&paths_monitor, initial_monitor_count, rx)
-    });
+    let monitor_handle =
+        thread::spawn(move || monitor_events(&paths_monitor, initial_monitor_count, rx));
 
     let monitor_res = monitor_handle
         .join()
@@ -77,7 +73,6 @@ fn main() -> Result<()> {
 }
 
 fn monitor_events(paths: &AppPaths, monitor_count: u32, rx: mpsc::Receiver<()>) -> Result<()> {
-    // First loop: wait for all screenshots to be created by grab-screen
     loop {
         let files = std::fs::read_dir(&paths.tmp_dir)?
             .filter_map(|e| e.ok())
@@ -89,11 +84,9 @@ fn monitor_events(paths: &AppPaths, monitor_count: u32, rx: mpsc::Receiver<()>) 
             run_draw_view(paths)?;
             break;
         }
-        // Wait for a file creation event, with a timeout to periodically re-check the count
         let _ = rx.recv_timeout(Duration::from_millis(200));
     }
 
-    // Second loop: wait for the output file from draw-view
     loop {
         let out_files: Vec<PathBuf> = std::fs::read_dir(&paths.tmp_dir)?
             .filter_map(|e| e.ok())
@@ -116,7 +109,6 @@ fn monitor_events(paths: &AppPaths, monitor_count: u32, rx: mpsc::Receiver<()>) 
             run_spatialshot(paths, out_path)?;
             return Ok(());
         }
-        // Wait for a file creation event
         let _ = rx.recv_timeout(Duration::from_millis(100));
     }
 }
