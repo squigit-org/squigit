@@ -1,0 +1,183 @@
+name: Build capturekit
+
+on:
+  workflow_dispatch:
+  # push:
+    
+env:
+  QT_VERSION: '6.6.0'
+  QT_VARIANT: 'win64_msvc2019_64'
+  SOURCE_DIR: 'packages/capturekit/src'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Qt and dependencies
+      run: |
+        brew update
+        brew install cmake
+        brew install qt
+
+    - name: Setup Qt environment
+      run: |
+        echo "QT_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
+        echo "$(brew --prefix qt)/bin" >> $GITHUB_PATH
+
+    - name: Verify Qt installation
+      run: |
+        qmake --version
+        which macdeployqt
+
+    - name: Make build script executable
+      run: chmod +x packages/capturekit/PKGBUILD
+
+    - name: Run build script
+      working-directory: packages/capturekit
+      run: bash ./PKGBUILD
+
+    - name: Upload artifact contents
+      uses: actions/upload-artifact@v4
+      with:
+        name: capkit-macos
+        path: packages/capturekit/dist/*
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install base dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake qt6-base-dev zip apt-file
+        sudo apt-get install -y --no-install-recommends pkg-config
+
+    - name: Update apt-file database
+      run: |
+        sudo apt-file update
+
+    - name: Install XCB and related runtime packages (auto-discover via apt-file)
+      shell: bash
+      run: |
+        PKGFILE=packages/capturekit/PKGBUILD
+        if [ ! -f "$PKGFILE" ]; then
+          echo "PKGBUILD not found at $PKGFILE"; exit 0
+        fi
+
+        # Extract entries from XCB_LIB_BASENAMES array in the PKGBUILD
+        mapfile -t XCB_LIBS < <(awk '/^XCB_LIB_BASENAMES/ {in=1; next} in && /^\)/ {exit} in {gsub(/["]/,""); print}' "$PKGFILE" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | tr -d '\n')
+
+        # awk extraction may produce a single line like: libA libB ... so split
+        if [ "${#XCB_LIBS[@]}" -eq 1 ]; then
+          read -r -a XCB_LIBS <<< "${XCB_LIBS[0]}"
+        fi
+
+        echo "Detected XCB lib basenames: ${XCB_LIBS[*]}"
+
+        for lib in "${XCB_LIBS[@]}"; do
+          # Remove any trailing whitespace
+          lib=$(echo "$lib" | tr -d '[:space:]')
+          if [ -z "$lib" ]; then
+            continue
+          fi
+          echo "Searching packages that provide $lib"
+          # Use apt-file to find packages that contain this exact filename
+          pkgs=$(apt-file search --regexp "/${lib}$" 2>/dev/null | cut -d: -f1 | sort -u)
+          if [ -n "$pkgs" ]; then
+            echo "Found packages for $lib: $pkgs"
+            echo "Installing packages: $pkgs"
+            sudo apt-get install -y --no-install-recommends $pkgs || true
+          else
+            echo "No packages found via apt-file for $lib (will skip)."
+          fi
+        done
+
+    - name: Make PKGBUILD executable
+      run: chmod +x packages/capturekit/PKGBUILD
+
+    - name: Run build script
+      working-directory: packages/capturekit
+      run: bash ./PKGBUILD
+
+    - name: Upload artifact contents
+      uses: actions/upload-artifact@v4
+      with:
+        name: capkit-linux-x64
+        path: packages/capturekit/dist/*
+
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: 1. Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 2. Verify project structure
+      run: |
+        Write-Host "Project structure:"
+        Get-ChildItem -Path packages/capturekit -Recurse | ForEach-Object {
+          Write-Host "  $($_.FullName)"
+        }
+        
+        if (-not (Test-Path "${{ env.SOURCE_DIR }}")) {
+          Write-Error "Source directory not found: ${{ env.SOURCE_DIR }}"
+          exit 1
+        }
+
+    - name: 3. Install build prerequisites
+      run: |
+        Write-Host "Installing prerequisites..."
+        
+        winget install --id Kitware.CMake --silent --accept-package-agreements
+        if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
+          Write-Error "CMake installation failed"
+          exit 1
+        }
+        
+        winget install --id Ninja-build.Ninja --silent --accept-package-agreements
+        if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+          Write-Error "Ninja installation failed"
+          exit 1
+        }
+        
+        python --version
+        
+        Write-Host "✓ All prerequisites installed" -ForegroundColor Green
+
+    - name: 4. Setup MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: 5. Run Windows build script
+      working-directory: packages/capturekit
+      run: |
+        Write-Host "Running Windows build script..." -ForegroundColor Cyan
+        
+        if (-not (Test-Path "PKGBUILD.ps1")) {
+          Write-Error "PKGBUILD.ps1 not found in current directory"
+          Get-Location
+          Get-ChildItem
+          exit 1
+        }
+        
+        .\PKGBUILD.ps1
+        
+        if (-not (Test-Path "dist\drawview.exe")) {
+          Write-Error "Build failed - drawview.exe not found"
+          exit 1
+        }
+        
+        Write-Host "✓ Build completed successfully" -ForegroundColor Green
+
+    - name: Upload artifact contents
+      uses: actions/upload-artifact@v4
+      with:
+        name: capkit-windows-x64
+        path: packages/capturekit/dist/*
+        retention-days: 30
