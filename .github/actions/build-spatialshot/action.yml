@@ -71,13 +71,15 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
-      run: npm run ${{ inputs.npm_script }} -- -p never -c.publish=never -c.mac.identity=null
+      run: |
+        REPO_URL="https://github.com/$GITHUB_REPOSITORY"
+        echo "Building for $REPO_URL"
+        npm run ${{ inputs.npm_script }} -- -p never -c.mac.identity=null -c.repository.url="$REPO_URL"
 
     # --- STAGE & ZIP ---
     - name: Zip Artifacts
       shell: bash
       run: |
-        # Use absolute paths to prevent "No such file" errors
         DIST_ROOT="$GITHUB_WORKSPACE/dist-out"
         mkdir -p "$DIST_ROOT"
         
@@ -88,6 +90,7 @@ runs:
         
         if [ -z "$TARGET_PATH" ]; then
           echo "::error::Artifact path not found: ${{ inputs.artifact_path }}"
+          ls -R packages/spatialshot/dist/ || true
           exit 1
         fi
 
@@ -101,7 +104,6 @@ runs:
             zip -r "$ZIP_FULL_PATH" .
           fi
         else
-          # Single file (like DMG)
           cp "$TARGET_PATH" "$DIST_ROOT/"
         fi
         
