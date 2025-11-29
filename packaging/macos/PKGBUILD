@@ -20,6 +20,9 @@ if [ ! -d "Platypus.app" ]; then
     echo "Unzipping Platypus..."
     unzip -q -o platypus.zip
     
+    echo "--- UNZIPPED FILES ---"
+    ls -R
+    echo "----------------------"
 
     PLATYPUS_APP_PATH=$(find . -name "Platypus.app" -type d | head -n 1)
     
