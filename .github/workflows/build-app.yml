@@ -2,6 +2,8 @@ name: Production Build (Portable)
 
 on:
   push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -42,7 +44,10 @@ jobs:
       # ---------------------------------------------------------
       - name: Install Core Dependencies
         working-directory: ./packages/core
-        run: npm ci
+        run: |
+          npm ci
+          # Fix: Install missing Node.js types for vite.config.ts (path, __dirname)
+          npm install --no-save @types/node
 
       - name: Build Core
         working-directory: ./packages/core
