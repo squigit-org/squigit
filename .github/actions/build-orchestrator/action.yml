@@ -6,7 +6,8 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install MUSL target (Linux)
+    # --- LINUX SETUP ---
+    - name: Install MUSL (Linux)
       if: runner.os == 'Linux'
       shell: bash
       run: |
@@ -14,27 +15,46 @@ runs:
         sudo apt-get install -y musl-tools musl-dev libudev-dev libdbus-1-dev
         rustup target add x86_64-unknown-linux-musl
 
-    - name: Update dependencies
+    # --- BUILD ---
+    - name: Build
       working-directory: ./packages/orchestrator
       shell: bash
-      run: cargo update
+      run: |
+        cargo update
+        if [ "$RUNNER_OS" == "Linux" ]; then
+           cargo build --release --target x86_64-unknown-linux-musl
+        else
+           cargo build --release
+        fi
 
-    - name: Build release (Linux MUSL)
-      if: runner.os == 'Linux'
-      working-directory: ./packages/orchestrator
-      shell: bash
-      run: cargo build --release --target x86_64-unknown-linux-musl
-
-    - name: Build release (Windows/Mac)
-      if: runner.os != 'Linux'
-      working-directory: ./packages/orchestrator
-      shell: bash
-      run: cargo build --release
-
-    - name: Prepare Artifacts
+    # --- ZIP OUTPUT ---
+    - name: Zip Artifacts
       shell: bash
       run: |
         mkdir -p dist-out
-        echo "Searching for binary..."
-        find packages/orchestrator/target -type f -name "spatialshot-orchestrator*" | grep release | grep -v "\.d" | head -n 1 | xargs -I {} cp {} dist-out/
-        ls -l dist-out/
+        
+        # Name the zip based on OS
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          ZIP_NAME="spatialshot-orchestrator-windows-x64.zip"
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          ZIP_NAME="spatialshot-orchestrator-macos-x64.zip"
+        else
+          ZIP_NAME="spatialshot-orchestrator-linux-x64.zip"
+        fi
+
+        # Find the binary
+        BIN_PATH=$(find packages/orchestrator/target -type f -name "spatialshot-orchestrator*" | grep release | grep -v "\.d" | head -n 1)
+        
+        echo "Zipping $BIN_PATH to $ZIP_NAME..."
+        
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          # On Windows, we need to be careful with paths in 7z
+          # Just copy it to a temp dir and zip that to avoid path issues
+          mkdir temp_zip
+          cp "$BIN_PATH" temp_zip/
+          cd temp_zip
+          7z a -tzip "../dist-out/$ZIP_NAME" .
+        else
+          # On Linux/Mac, zip -j flattens the path (junks directory names)
+          zip -j "dist-out/$ZIP_NAME" "$BIN_PATH"
+        fi

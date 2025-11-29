@@ -1,11 +1,12 @@
 name: 'Build CaptureKit'
-description: 'Builds C++ CaptureKit with Qt'
+description: 'Builds C++ CaptureKit with Qt (Full Logic)'
 runs:
   using: "composite"
   steps:
     - name: Checkout
       uses: actions/checkout@v4
 
+    # --- LINUX DEPENDENCIES ---
     - name: Install base dependencies (Linux)
       if: runner.os == 'Linux'
       shell: bash
@@ -19,51 +20,30 @@ runs:
       shell: bash
       run: |
         PKGFILE=packages/capturekit/PKGBUILD
-        if [ ! -f "$PKGFILE" ]; then
-          echo "PKGBUILD not found at $PKGFILE"; exit 1
-        fi
-
+        if [ ! -f "$PKGFILE" ]; then echo "PKGBUILD missing"; exit 1; fi
         mapfile -t XCB_LIBS < <(awk '/^XCB_LIB_BASENAMES/ {in=1; next} in && /^\)/ {exit} in {gsub(/["]/,""); print}' "$PKGFILE" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | tr -d '\n')
-
-        if [ "${#XCB_LIBS[@]}" -eq 1 ]; then
-          read -r -a XCB_LIBS <<< "${XCB_LIBS[0]}"
-        fi
-
-        echo "Detected XCB lib basenames: ${XCB_LIBS[*]}"
-
+        if [ "${#XCB_LIBS[@]}" -eq 1 ]; then read -r -a XCB_LIBS <<< "${XCB_LIBS[0]}"; fi
         for lib in "${XCB_LIBS[@]}"; do
-          lib=$(echo "$lib" | tr -d '[:space:]')
-          if [ -z "$lib" ]; then continue; fi
-          
-          echo "Searching packages for $lib..."
+          lib=$(echo "$lib" | tr -d '[:space:]'); if [ -z "$lib" ]; then continue; fi
           pkgs=$(apt-file search --regexp "/${lib}$" 2>/dev/null | cut -d: -f1 | sort -u)
-          
-          if [ -n "$pkgs" ]; then
-            echo "Installing packages: $pkgs"
-            sudo apt-get install -y --no-install-recommends $pkgs || true
-          else
-            echo "No packages found via apt-file for $lib (will skip)."
-          fi
+          if [ -n "$pkgs" ]; then sudo apt-get install -y --no-install-recommends $pkgs || true; fi
         done
 
+    # --- WINDOWS DEPENDENCIES ---
     - name: Install Prereqs (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        Write-Host "Installing prerequisites..."
         winget install --id Kitware.CMake --silent --accept-package-agreements
-        if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { Write-Error "CMake failed"; exit 1 }
-        
         winget install --id Ninja-build.Ninja --silent --accept-package-agreements
-        if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { Write-Error "Ninja failed"; exit 1 }
-        
-        python --version
-        Write-Host "✓ All prerequisites installed" -ForegroundColor Green
+        if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { exit 1 }
+        if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { exit 1 }
 
     - name: Setup MSVC (Windows)
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
+    # --- MAC DEPENDENCIES ---
     - name: Install Prereqs (Mac)
       if: runner.os == 'macOS'
       shell: bash
@@ -73,25 +53,41 @@ runs:
         echo "QT_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
         echo "$(brew --prefix qt)/bin" >> $GITHUB_PATH
 
-    - name: Run Build Script (Non-Windows)
+    # --- BUILD ---
+    - name: Run Build (Non-Windows)
       if: runner.os != 'Windows'
       shell: bash
       working-directory: packages/capturekit
-      run: |
-        chmod +x PKGBUILD
-        ./PKGBUILD
+      run: chmod +x PKGBUILD && ./PKGBUILD
 
-    - name: Run Build Script (Windows)
+    - name: Run Build (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       working-directory: packages/capturekit
       run: |
-        if (-not (Test-Path "PKGBUILD.ps1")) { Write-Error "PKGBUILD.ps1 missing"; exit 1 }
         .\PKGBUILD.ps1
-        if (-not (Test-Path "dist\drawview.exe")) { Write-Error "Build failed - drawview.exe not found"; exit 1 }
+        if (-not (Test-Path "dist\drawview.exe")) { exit 1 }
 
-    - name: Stage Artifacts
+    # --- ZIP OUTPUT ---
+    - name: Zip Artifacts
       shell: bash
       run: |
         mkdir -p dist-out
-        cp -r packages/capturekit/dist/* dist-out/
+        
+        # Define Zip Name
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          ZIP_NAME="capkit-windows-x64.zip"
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          ZIP_NAME="capkit-macos.zip"
+        else
+          ZIP_NAME="capkit-linux-x64.zip"
+        fi
+
+        echo "Zipping CaptureKit to $ZIP_NAME..."
+        cd packages/capturekit/dist
+        
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          7z a -tzip -r "../../../dist-out/$ZIP_NAME" .
+        else
+          zip -r "../../../dist-out/$ZIP_NAME" .
+        fi

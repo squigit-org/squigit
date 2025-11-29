@@ -141,10 +141,34 @@ if [ "$OS" == "Darwin" ]; then
     BINARIES=("scgrabber-bin" "drawview-bin")
 
     for bin in "${BINARIES[@]}"; do
+        echo "Processing $bin..."
         rm -rf temp.app
         mkdir -p temp.app/Contents/MacOS
+        mkdir -p temp.app/Contents/Resources
+        
         cp "$DIR/dist/$bin" temp.app/Contents/MacOS/
-        "$MACDEPLOYQT" temp.app -executable=temp.app/Contents/MacOS/$bin -always-overwrite
+
+        # Create Info.plist
+        cat << EOF > temp.app/Contents/Info.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>$bin</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.spatialshot.temp</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+</dict>
+</plist>
+EOF
+
+        # Run macdeployqt
+        "$MACDEPLOYQT" temp.app -executable=temp.app/Contents/MacOS/$bin -always-overwrite -no-strip -verbose=1
+        
         if [ $? -ne 0 ]; then
             echo "macdeployqt failed for $bin. Aborting."
             exit 1
@@ -170,10 +194,6 @@ if [ "$OS" == "Darwin" ]; then
     done
 
     if [ ! -f "$DIR/dist/qt.conf" ]; then
-        echo "[Paths]" > "$DIR/dist/qt.conf"
-        echo "Prefix = ." >> "$DIR/dist/qt.conf"
-        echo "Plugins = plugins" >> "$DIR/dist/qt.conf"
-    else
         echo "[Paths]" > "$DIR/dist/qt.conf"
         echo "Prefix = ." >> "$DIR/dist/qt.conf"
         echo "Plugins = plugins" >> "$DIR/dist/qt.conf"
