@@ -11,6 +11,9 @@ const url = require("url");
 const fs = require("fs");
 const path = require("path");
 
+const LOCAL_PORT = 3000;
+const REDIRECT_URI = `http://localhost:${LOCAL_PORT}`;
+
 let credentials;
 try {
   const credsFile = require("./credentials.json");
@@ -22,13 +25,16 @@ try {
 
 const client_id = credentials.client_id;
 const client_secret = credentials.client_secret;
-const redirect_uris = credentials.redirect_uris;
-const scopes = credentials.scopes;
+
+const scopes = credentials.scopes || [
+  "https://www.googleapis.com/auth/userinfo.profile",
+  "https://www.googleapis.com/auth/userinfo.email"
+];
 
 const oAuth2Client = new OAuth2Client(
   client_id,
   client_secret,
-  redirect_uris[0]
+  REDIRECT_URI 
 );
 
 const htmlTemplate = fs.readFileSync(
@@ -47,30 +53,45 @@ function generateHtmlResponse(title, bodyContent, isError = false) {
     .replace(/\${breadcrumb}/g, breadcrumb)
     .replace(/\${bodyContent}/g, bodyContent);
 }
+
 async function authenticate() {
   return new Promise(async (resolve, reject) => {
     const authorizeUrl = oAuth2Client.generateAuthUrl({
       access_type: "offline",
-      scope: scopes.join(" "),
+      scope: Array.isArray(scopes) ? scopes.join(" ") : scopes,
     });
-
-    const redirectUrlObj = new url.URL(redirect_uris[0]);
-    const port = parseInt(redirectUrlObj.port || "3000", 10);
 
     const server = http
       .createServer(async (req, res) => {
-        if (req.url.indexOf("favicon") > -1) {
-          res.writeHead(204);
-          res.end();
-          return;
-        }
-
         try {
-          const qs = new url.URL(req.url, redirect_uris[0]).searchParams;
+          const parsed = new url.URL(req.url, REDIRECT_URI);
+          const pathname = parsed.pathname;
+
+          if (pathname === "/favicon.png" || pathname === "/favicon.ico") {
+            const favPath = path.join(__dirname, "favicon.png");
+            fs.stat(favPath, (err, stats) => {
+              if (err || !stats.isFile()) {
+                res.writeHead(404);
+                res.end();
+                return;
+              }
+              res.writeHead(200, {
+                "Content-Type": "image/png",
+                "Cache-Control": "public, max-age=31536000, immutable",
+              });
+              fs.createReadStream(favPath).pipe(res);
+            });
+            return;
+          }
+
+          const qs = parsed.searchParams;
           const code = qs.get("code");
 
           if (!code) {
-            throw new Error("No code found in the callback URL.");
+            if (req.url === "/" || req.url.startsWith("/?")) {
+              throw new Error("No code found in the callback URL.");
+            }
+            return;
           }
 
           const { tokens } = await oAuth2Client.getToken(code);
@@ -127,14 +148,14 @@ async function authenticate() {
           reject(e);
         }
       })
-      .listen(port, async () => {
+      .listen(LOCAL_PORT, async () => {
         const { default: open } = await import("open");
-        console.log(`Listening on port ${port}...`);
+        console.log(`Listening on port ${LOCAL_PORT}...`);
         open(authorizeUrl, { wait: false });
       })
       .on("error", (err) => {
         if (err.code === "EADDRINUSE") {
-          reject(new Error(`Port ${port} is already in use.`));
+          reject(new Error(`Port ${LOCAL_PORT} is already in use. Please close other instances.`));
         } else {
           reject(err);
         }

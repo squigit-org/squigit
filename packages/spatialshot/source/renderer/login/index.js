@@ -4,10 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+function el(id) {
+  return document.getElementById(id);
+}
+
 const views = {
-  gemini: document.getElementById("gemini-setup-view"),
-  imgbb: document.getElementById("imgbb-setup-view"),
-  login: document.getElementById("login-view"),
+  gemini: el("gemini-setup-view"),
+  imgbb: el("imgbb-setup-view"),
+  login: el("login-view"),
 };
 
 function showView(id) {
@@ -35,9 +39,9 @@ function initialize() {
     }
   });
 
-  const setupBtn = document.getElementById(provider + "-setup-btn");
-  const buttonSvg = document.getElementById(provider + "-button-svg");
-  const spinner = document.getElementById(provider + "-spinner");
+  const setupBtn = el(provider + "-setup-btn");
+  const buttonSvg = el(provider + "-button-svg");
+  const spinner = el(provider + "-spinner");
   let watcherStarted = false;
 
   setupBtn.addEventListener("click", async () => {
@@ -89,8 +93,12 @@ function initialize() {
     }
   });
 
-  const loginBtn = document.getElementById("login-btn");
-  loginBtn.addEventListener("click", () => {
+
+  el("login-btn").addEventListener("click", () => {
+    el("google-logo").style.display = "none";
+    el("login-spinner").style.display = "block";
+    el("login-btn").style.pointerEvents = "none";
+    el("login-btn").style.cursor = "not-allowed";
     window.parent.electron.startAuth();
   });
 }
