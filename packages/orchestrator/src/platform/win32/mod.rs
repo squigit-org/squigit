@@ -4,76 +4,80 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-use anyhow::{anyhow, Result};
 use crate::shared::AppPaths;
-use std::path::Path;
-use std::process::{Command, Output};
-use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
+use anyhow::{anyhow, Result};
 use std::os::windows::process::CommandExt;
+use std::path::Path;
+use std::process::Command;
+use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System};
 use windows::Win32::System::Threading::CREATE_NO_WINDOW;
 
-const CORE_PS1: &str = include_str!("core.ps1");
+mod core;
 
 pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
-    let core_path_str = paths.core_path.to_string_lossy().to_string();
-    let output = run_powershell_sync(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "grab-screen"])?;
-    
-    if !output.status.success() {
-        return Err(anyhow!("grab-screen script failed: {}", String::from_utf8_lossy(&output.stderr)));
+    core::enable_dpi_awareness();
+
+    if paths.tmp_dir.exists() {
+        std::fs::remove_dir_all(&paths.tmp_dir)?;
+    }
+    std::fs::create_dir_all(&paths.tmp_dir)?;
+
+    let nircmdc_path = paths.spatial_dir.join("3rdparty").join("nircmdc.exe");
+    if !nircmdc_path.exists() {
+        return Err(anyhow!(
+            "nircmdc.exe not found at {}",
+            nircmdc_path.display()
+        ));
     }
 
-    let output_str = String::from_utf8_lossy(&output.stdout);
+    let monitors = core::get_monitor_bounds_sorted();
+    let monitor_count = monitors.len() as u32;
 
-    let monitor_count_str = output_str
-        .lines()
-        .map(|line| line.trim())
-        .find(|line| line.parse::<u32>().is_ok())
-        .unwrap_or("0");
+    if monitor_count == 0 {
+        return Err(anyhow!("No monitors detected by EnumDisplayMonitors."));
+    }
 
-    match monitor_count_str.parse::<u32>() {
-        Ok(count) => {
-            if count == 0 {
-                if output_str.contains("No screens detected") || output_str.contains("exit 1") {
-                    return Err(anyhow!("grab-screen reported 0 monitors or failed: {}", output_str));
-                }
-            }
-            Ok(count)
-        },
-        Err(e) => {
-            Err(anyhow!("Failed to parse monitor count from output: {}. Error: {}", output_str, e))
+    for (i, (x, y, w, h)) in monitors.iter().enumerate() {
+        let filename = paths.tmp_dir.join(format!("{}.png", i + 1));
+        
+        let status = Command::new(&nircmdc_path)
+            .creation_flags(CREATE_NO_WINDOW.0)
+            .args([
+                "savescreenshot",
+                &filename.to_string_lossy(),
+                &x.to_string(),
+                &y.to_string(),
+                &w.to_string(),
+                &h.to_string(),
+            ])
+            .status()?;
+
+        if !status.success() {
+            eprintln!("nircmdc failed for monitor {}", i);
         }
     }
+
+    Ok(monitor_count)
 }
 
 pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
-    let core_path_str = paths.core_path.to_string_lossy().to_string();
-    run_powershell_async(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "draw-view"])
-}
-
-pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()> {
-    let core_path_str = paths.core_path.to_string_lossy().to_string();
-    let img_path_str = img_path.to_string_lossy().to_string();
-    run_powershell_async(&["-ExecutionPolicy", "Bypass", "-File", &core_path_str, "spatialshot", &img_path_str])
-}
-
-pub fn write_core_script(paths: &AppPaths) -> Result<()> {
-    std::fs::write(&paths.core_path, CORE_PS1)?;
+    let exe_path = paths.spatial_dir.join("capkit").join("drawview.exe");
+    Command::new(exe_path)
+        .creation_flags(CREATE_NO_WINDOW.0)
+        .spawn()?;
     Ok(())
 }
 
-fn run_powershell_sync(args: &[&str]) -> Result<Output> {
-    let output = Command::new("powershell.exe")
+pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()> {
+    let exe_path = paths.spatial_dir.join("app").join("spatialshot.exe");
+    Command::new(exe_path)
         .creation_flags(CREATE_NO_WINDOW.0)
-        .args(args)
-        .output()?;
-    Ok(output)
+        .arg(img_path)
+        .spawn()?;
+    Ok(())
 }
 
-fn run_powershell_async(args: &[&str]) -> Result<()> {
-    Command::new("powershell.exe")
-        .creation_flags(CREATE_NO_WINDOW.0)
-        .args(args)
-        .spawn()?;
+pub fn write_core_script(_paths: &AppPaths) -> Result<()> {
     Ok(())
 }
 

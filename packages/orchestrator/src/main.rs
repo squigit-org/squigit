@@ -36,25 +36,32 @@ fn main() -> Result<()> {
         }
     }
     write_core_script(&paths)?;
-    let cores = core_affinity::get_core_ids().unwrap_or_default();
 
-    if !cores.is_empty() {
-        core_affinity::set_for_current(cores[0]);
-    }
+    // Setup watcher and channel before running screen grab to avoid race conditions.
+    let (tx, rx) = mpsc::channel();
+    let mut watcher: RecommendedWatcher = Watcher::new(
+        move |res: Result<notify::Event, _>| {
+            if let Ok(event) = res {
+                if matches!(event.kind, EventKind::Create(_)) {
+                    tx.send(()).ok();
+                }
+            }
+        },
+        notify::Config::default(),
+    )?;
+    watcher.watch(&paths.tmp_dir, RecursiveMode::NonRecursive)?;
 
+    // Now run the screen grab process.
     let initial_monitor_count = run_grab_screen(&paths)?;
     println!(
         "grab-screen finished and reported {} monitor(s).",
         initial_monitor_count
     );
 
+    // Spawn a thread to monitor for file changes.
     let paths_monitor = paths.clone();
-    let cores_monitor = cores.clone();
     let monitor_handle = thread::spawn(move || {
-        if cores_monitor.len() >= 2 {
-            core_affinity::set_for_current(cores_monitor[1]);
-        }
-        monitor_tmp(&paths_monitor, initial_monitor_count)
+        monitor_events(&paths_monitor, initial_monitor_count, rx)
     });
 
     let monitor_res = monitor_handle
@@ -69,34 +76,24 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn monitor_tmp(paths: &AppPaths, monitor_count: u32) -> Result<()> {
-    let (tx, rx) = mpsc::channel();
-    let mut watcher: RecommendedWatcher = Watcher::new(
-        move |res: Result<notify::Event, _>| {
-            if let Ok(event) = res {
-                if matches!(event.kind, EventKind::Create(_)) {
-                    tx.send(()).ok();
-                }
-            }
-        },
-        notify::Config::default(),
-    )?;
-    watcher.watch(&paths.tmp_dir, RecursiveMode::NonRecursive)?;
-
+fn monitor_events(paths: &AppPaths, monitor_count: u32, rx: mpsc::Receiver<()>) -> Result<()> {
+    // First loop: wait for all screenshots to be created by grab-screen
     loop {
         let files = std::fs::read_dir(&paths.tmp_dir)?
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().ok().map(|ft| ft.is_file()).unwrap_or(false))
             .count();
 
-        if files as u32 == monitor_count {
+        if files as u32 >= monitor_count {
             println!("Monitor Thread: All screenshots detected. Running draw-view...");
             run_draw_view(paths)?;
             break;
         }
-        let _ = rx.recv_timeout(Duration::from_millis(100));
+        // Wait for a file creation event, with a timeout to periodically re-check the count
+        let _ = rx.recv_timeout(Duration::from_millis(200));
     }
 
+    // Second loop: wait for the output file from draw-view
     loop {
         let out_files: Vec<PathBuf> = std::fs::read_dir(&paths.tmp_dir)?
             .filter_map(|e| e.ok())
@@ -119,6 +116,7 @@ fn monitor_tmp(paths: &AppPaths, monitor_count: u32) -> Result<()> {
             run_spatialshot(paths, out_path)?;
             return Ok(());
         }
+        // Wait for a file creation event
         let _ = rx.recv_timeout(Duration::from_millis(100));
     }
 }
