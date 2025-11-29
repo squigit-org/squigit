@@ -87,7 +87,9 @@ jobs:
         working-directory: ./packages/spatialshot
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run ${{ matrix.npm_script }}
+        # Fix: append -c.publish=never to prevent electron-builder from failing 
+        # when it tries to auto-detect repository info for publishing
+        run: npm run ${{ matrix.npm_script }} -- -c.publish=never
 
       # ---------------------------------------------------------
       # 4. UPLOAD ELECTRON ARTIFACTS ONLY
