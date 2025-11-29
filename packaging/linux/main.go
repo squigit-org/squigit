@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 )
 
+//go:embed scripts/*
 var scriptFS embed.FS
 
 const (

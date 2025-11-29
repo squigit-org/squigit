@@ -3,21 +3,53 @@
 set -e
 echo "--- Building macOS Installer ---"
 
+PLATYPUS_VERSION="5.4.1"
+PLATYPUS_URL="https://github.com/sveinbjornt/Platypus/releases/download/${PLATYPUS_VERSION}/Platypus-${PLATYPUS_VERSION}.zip"
+
 if [ ! -d "Platypus.app" ]; then
-    echo "Downloading Platypus..."
-    curl -L -o platypus.zip https://sveinbjorn.org/files/software/platypus/platypus.zip
-    unzip -q platypus.zip
+    echo "Downloading Platypus v${PLATYPUS_VERSION}..."
+    curl -L -A "Mozilla/5.0" -o platypus.zip "$PLATYPUS_URL"
+    
+    FILE_SIZE=$(stat -f%z platypus.zip)
+    if [ "$FILE_SIZE" -lt 1000000 ]; then
+        echo "Error: Downloaded file is too small ($FILE_SIZE bytes). Likely an error page."
+        cat platypus.zip
+        exit 1
+    fi
+
+    echo "Unzipping Platypus..."
+    unzip -q -o platypus.zip
+    
+
+    PLATYPUS_APP_PATH=$(find . -name "Platypus.app" -type d | head -n 1)
+    
+    if [ -z "$PLATYPUS_APP_PATH" ]; then
+        echo "Error: Could not find Platypus.app after unzipping."
+        exit 1
+    fi
+
+    if [ "$PLATYPUS_APP_PATH" != "./Platypus.app" ]; then
+        mv "$PLATYPUS_APP_PATH" .
+    fi
 fi
 
 PLATYPUS_CLI="./Platypus.app/Contents/Resources/platypus"
-chmod +x "$PLATYPUS_CLI"
-chmod +x packaging/macos/installer.sh
 
-echo "Running Platypus..."
+if [ ! -f "$PLATYPUS_CLI" ]; then
+    echo "Error: Platypus CLI not found at $PLATYPUS_CLI"
+    exit 1
+fi
+
+chmod +x "$PLATYPUS_CLI"
+
+INSTALLER_SCRIPT="packaging/macos/installer.sh"
+chmod +x "$INSTALLER_SCRIPT"
+
+echo "Running Platypus to create .app..."
 "$PLATYPUS_CLI" -A -t "Text Window" \
                -o "Install SpatialShot.app" \
                -I "packaging/macos/icon.icns" \
-               "packaging/macos/installer.sh"
+               "$INSTALLER_SCRIPT"
 
 echo "Creating .dmg..."
 rm -f spatialshot-installer.dmg
@@ -28,4 +60,4 @@ hdiutil create -srcfolder "Install SpatialShot.app" \
                -format UDZO \
                spatialshot-installer.dmg
 
-echo "--- macOS Installer Built ---"
+echo "--- macOS Installer Built Successfully ---"
