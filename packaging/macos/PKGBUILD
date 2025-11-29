@@ -4,7 +4,7 @@ set -e
 echo "--- Building macOS Installer ---"
 
 PLATYPUS_VERSION="5.4.1"
-PLATYPUS_URL="https://github.com/sveinbjornt/Platypus/releases/download/${PLATYPUS_VERSION}/Platypus-${PLATYPUS_VERSION}.zip"
+PLATYPUS_URL="https://github.com/sveinbjornt/Platypus/releases/download/${PLATYPUS_VERSION}/platypus${PLATYPUS_VERSION}.zip"
 
 if [ ! -d "Platypus.app" ]; then
     echo "Downloading Platypus v${PLATYPUS_VERSION}..."
