@@ -1,0 +1,97 @@
+name: 'Build CaptureKit'
+description: 'Builds C++ CaptureKit with Qt'
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install base dependencies (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake qt6-base-dev zip apt-file pkg-config
+        sudo apt-file update
+
+    - name: Install Complex XCB Deps (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        PKGFILE=packages/capturekit/PKGBUILD
+        if [ ! -f "$PKGFILE" ]; then
+          echo "PKGBUILD not found at $PKGFILE"; exit 1
+        fi
+
+        mapfile -t XCB_LIBS < <(awk '/^XCB_LIB_BASENAMES/ {in=1; next} in && /^\)/ {exit} in {gsub(/["]/,""); print}' "$PKGFILE" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | tr -d '\n')
+
+        if [ "${#XCB_LIBS[@]}" -eq 1 ]; then
+          read -r -a XCB_LIBS <<< "${XCB_LIBS[0]}"
+        fi
+
+        echo "Detected XCB lib basenames: ${XCB_LIBS[*]}"
+
+        for lib in "${XCB_LIBS[@]}"; do
+          lib=$(echo "$lib" | tr -d '[:space:]')
+          if [ -z "$lib" ]; then continue; fi
+          
+          echo "Searching packages for $lib..."
+          pkgs=$(apt-file search --regexp "/${lib}$" 2>/dev/null | cut -d: -f1 | sort -u)
+          
+          if [ -n "$pkgs" ]; then
+            echo "Installing packages: $pkgs"
+            sudo apt-get install -y --no-install-recommends $pkgs || true
+          else
+            echo "No packages found via apt-file for $lib (will skip)."
+          fi
+        done
+
+    - name: Install Prereqs (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        Write-Host "Installing prerequisites..."
+        winget install --id Kitware.CMake --silent --accept-package-agreements
+        if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { Write-Error "CMake failed"; exit 1 }
+        
+        winget install --id Ninja-build.Ninja --silent --accept-package-agreements
+        if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { Write-Error "Ninja failed"; exit 1 }
+        
+        python --version
+        Write-Host "✓ All prerequisites installed" -ForegroundColor Green
+
+    - name: Setup MSVC (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Install Prereqs (Mac)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew update
+        brew install cmake qt
+        echo "QT_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
+        echo "$(brew --prefix qt)/bin" >> $GITHUB_PATH
+
+    - name: Run Build Script (Non-Windows)
+      if: runner.os != 'Windows'
+      shell: bash
+      working-directory: packages/capturekit
+      run: |
+        chmod +x PKGBUILD
+        ./PKGBUILD
+
+    - name: Run Build Script (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      working-directory: packages/capturekit
+      run: |
+        if (-not (Test-Path "PKGBUILD.ps1")) { Write-Error "PKGBUILD.ps1 missing"; exit 1 }
+        .\PKGBUILD.ps1
+        if (-not (Test-Path "dist\drawview.exe")) { Write-Error "Build failed - drawview.exe not found"; exit 1 }
+
+    - name: Stage Artifacts
+      shell: bash
+      run: |
+        mkdir -p dist-out
+        cp -r packages/capturekit/dist/* dist-out/

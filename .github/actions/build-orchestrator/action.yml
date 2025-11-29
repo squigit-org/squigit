@@ -1,0 +1,40 @@
+name: 'Build Orchestrator'
+description: 'Builds Rust Orchestrator for specific OS'
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install MUSL target (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y musl-tools musl-dev libudev-dev libdbus-1-dev
+        rustup target add x86_64-unknown-linux-musl
+
+    - name: Update dependencies
+      working-directory: ./packages/orchestrator
+      shell: bash
+      run: cargo update
+
+    - name: Build release (Linux MUSL)
+      if: runner.os == 'Linux'
+      working-directory: ./packages/orchestrator
+      shell: bash
+      run: cargo build --release --target x86_64-unknown-linux-musl
+
+    - name: Build release (Windows/Mac)
+      if: runner.os != 'Linux'
+      working-directory: ./packages/orchestrator
+      shell: bash
+      run: cargo build --release
+
+    - name: Prepare Artifacts
+      shell: bash
+      run: |
+        mkdir -p dist-out
+        echo "Searching for binary..."
+        find packages/orchestrator/target -type f -name "spatialshot-orchestrator*" | grep release | grep -v "\.d" | head -n 1 | xargs -I {} cp {} dist-out/
+        ls -l dist-out/

@@ -1,0 +1,162 @@
+name: Distribute Production Suite
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # =========================================================
+  # JOB 1: BUILD ORCHESTRATOR (RUST)
+  # =========================================================
+  build-orchestrator:
+    name: Orch ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build
+        uses: ./.github/actions/build-orchestrator
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orchestrator-${{ matrix.os }}
+          path: dist-out/*
+
+  # =========================================================
+  # JOB 2: BUILD CAPTUREKIT (C++/QT)
+  # =========================================================
+  build-capturekit:
+    name: CapKit ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build
+        uses: ./.github/actions/build-capturekit
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturekit-${{ matrix.os }}
+          path: dist-out/*
+
+  # =========================================================
+  # JOB 3: BUILD SPATIALSHOT (ELECTRON/REACT|VITE)
+  # =========================================================
+  build-spatialshot:
+    name: App ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            npm_script: build:win
+            artifact_path: packages/spatialshot/dist/win-unpacked
+          - os: ubuntu-latest
+            platform: linux
+            npm_script: build:linux
+            artifact_path: packages/spatialshot/dist/linux-unpacked
+          - os: macos-latest
+            platform: mac
+            npm_script: build:mac
+            artifact_path: packages/spatialshot/dist/mac*
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build
+        uses: ./.github/actions/build-spatialshot
+        with:
+          google_credentials: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          npm_script: ${{ matrix.npm_script }}
+          artifact_path: ${{ matrix.artifact_path }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatialshot-${{ matrix.platform }}
+          path: dist-out/*
+
+  # =========================================================
+  # JOB 4: PUBLISH BINARIES (Required for Online Installers)
+  # =========================================================
+  publish-binaries:
+    needs: [build-orchestrator, build-capturekit, build-spatialshot]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Create Release & Upload Binaries
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: all-artifacts/**/*
+
+  # =========================================================
+  # JOB 5: BUILD INSTALLERS
+  # =========================================================
+  build-installers:
+    needs: publish-binaries
+    name: Installer ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      # --- WINDOWS INSTALLER ---
+      - name: Build Windows Installer
+        if: runner.os == 'Windows'
+        run: |
+          choco install nsis
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          pwsh -File packaging/windows/PKGBUILD.ps1
+
+      # --- LINUX INSTALLER ---
+      - name: Build Linux Installer
+        if: runner.os == 'Linux'
+        run: |
+           chmod +x packaging/linux/PKGBUILD
+           bash packaging/linux/PKGBUILD
+
+      # --- MAC INSTALLER ---
+      - name: Build macOS Installer
+        if: runner.os == 'macOS'
+        run: |
+           chmod +x packaging/macos/PKGBUILD
+           bash packaging/macos/PKGBUILD
+
+      # --- UPLOAD INSTALLERS TO SAME RELEASE ---
+      - name: Upload Installer
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            packaging/windows/*.exe
+            packaging/linux/*installer*
+            packaging/macos/*.dmg
