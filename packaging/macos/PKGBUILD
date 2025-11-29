@@ -3,20 +3,25 @@
 set -e
 echo "--- Building macOS Installer ---"
 
-echo "Downloading and unzipping Platypus..."
-curl -L -o platypus.zip https://sveinbjorn.org/files/software/platypus/platypus.zip
-unzip -q platypus.zip
+if [ ! -d "Platypus.app" ]; then
+    echo "Downloading Platypus..."
+    curl -L -o platypus.zip https://sveinbjorn.org/files/software/platypus/platypus.zip
+    unzip -q platypus.zip
+fi
 
 PLATYPUS_CLI="./Platypus.app/Contents/Resources/platypus"
 chmod +x "$PLATYPUS_CLI"
 chmod +x packaging/macos/installer.sh
 
-echo "Running Platypus to create .app..."
+echo "Running Platypus..."
 "$PLATYPUS_CLI" -A -t "Text Window" \
                -o "Install SpatialShot.app" \
+               -I "packaging/macos/icon.icns" \
                "packaging/macos/installer.sh"
 
 echo "Creating .dmg..."
+rm -f spatialshot-installer.dmg
+
 hdiutil create -srcfolder "Install SpatialShot.app" \
                -volname "Install SpatialShot" \
                -fs HFS+ \

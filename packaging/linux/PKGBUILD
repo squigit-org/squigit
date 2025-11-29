@@ -1,0 +1,7 @@
+#!/bin/bash
+# This script is run by the GitHub Actions runner
+set -e
+echo "--- Building Linux Installer ---"
+cd packaging/linux
+go build -ldflags="-s -w" -o ../../spatialshot-installer main.go
+echo "--- Linux Installer Built Successfully ---"

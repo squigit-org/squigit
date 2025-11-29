@@ -1,98 +1,127 @@
-; installer.nsi - SpatialShot Online Installer Script
-; This is the "recipe" for your .exe installer.
+; installer.nsi - SpatialShot Windows Installer
+; =============================================
 
 !define APP_NAME "SpatialShot"
+!define APP_EXE "SpatialShot.exe"
 !define ORCHESTRATOR_EXE "orchestrator.exe"
-!define NIRCMD_URL "https://www.nirsoft.net/utils/nircmd-x64.zip"
-!define NIRCMD_ZIP "nircmd-x64.zip"
 
-; --- GitHub Artifact URLs (REPLACE THESE with your real release links) ---
+; --- Artifact URLs ---
 !define CAPKIT_URL "https://github.com/a7mddra/spatialshot/releases/latest/download/capkit-windows-x64.zip"
 !define ORCHESTRATOR_URL "https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-orchestrator-windows-x64.exe.zip"
 !define SPATIALSHOT_URL "https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-windows-x64.zip"
 
-; --- Basic Setup ---
+; --- Setup ---
 Name "${APP_NAME}"
-OutFile "SpatialShot_Installer.exe" ; This is the output file
-InstallDir "$PROGRAMFILES\SpatialShot"
-RequestExecutionLevel admin
+OutFile "SpatialShot_Installer.exe"
+InstallDir "$LOCALAPPDATA\SpatialShot"
+RequestExecutionLevel user ; Install for current user (No Admin/UAC prompts)
 
-; --- Modern UI 2 ---
+; --- UI Settings ---
 !include "MUI2.nsh"
+!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
 !define MUI_ABORTWARNING
+
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_LANGUAGE "English"
 
-; --- Installer Section ---
+; --- Main Installation ---
 Section "Install"
   SetOutPath $INSTDIR
-  ; --- 1. Create Directories (Your pseudo-code logic) ---
-  CreateDirectory "$LOCALAPPDATA\Spatialshot"
-  CreateDirectory "$LOCALAPPDATA\Spatialshot\app"
-  CreateDirectory "$LOCALAPPDATA\Spatialshot\cache"
-  CreateDirectory "$LOCALAPPDATA\Spatialshot\capkit"
-  CreateDirectory "$LOCALAPPDATA\Spatialshot\3rdparty"
+
+  ; 1. Create Structure
+  CreateDirectory "$INSTDIR\app"
+  CreateDirectory "$INSTDIR\cache"
+  CreateDirectory "$INSTDIR\capkit"
   
-  SetOutPath "$LOCALAPPDATA\Spatialshot\cache"
+  SetOutPath "$INSTDIR\cache"
 
-  ; --- 2. Download Artifacts (The Online Part) ---
-  DetailPrint "Downloading components..."
-  NSISdl::download "${SPATIALSHOT_URL}" "spatialshot.zip"
-  NSISdl::download "${CAPKIT_URL}" "capkit.zip"
-  NSISdl::download "${ORCHESTRATOR_URL}" "orchestrator.zip"
-  NSISdl::download "${NIRCMD_URL}" "${NIRCMD_ZIP}"
-
-  ; --- 3. Unzip and Move Files ---
-  DetailPrint "Installing files..."
-  ; We use PowerShell's built-in 'Expand-Archive' to avoid bundling 'unzip.exe'
-  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\cache\spatialshot.zip'' -DestinationPath ''$INSTDIR'' -Force"'
-  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\cache\capkit.zip'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\capkit'' -Force"'
-  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\cache\${NIRCMD_ZIP}'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\3rdparty'' -Force"'
-  ExecWait '"powershell" -WindowStyle Hidden -Command "Expand-Archive -Path ''$LOCALAPPDATA\Spatialshot\cache\orchestrator.zip'' -DestinationPath ''$LOCALAPPDATA\Spatialshot\app'' -Force"'
+  ; 2. Download (Using PowerShell for best TLS/Redirect support)
+  DetailPrint "Downloading SpatialShot Core..."
+  ExecWait 'powershell -NoProfile -Command "Invoke-WebRequest -Uri ${SPATIALSHOT_URL} -OutFile spatialshot.zip"'
   
-  ; Rename the orchestrator binary if needed (assuming it's 'spatialshot-orchestrator-windows-x64.exe' in the zip)
-  Rename "$LOCALAPPDATA\Spatialshot\app\spatialshot-orchestrator-windows-x64.exe" "$LOCALAPPDATA\Spatialshot\app\${ORCHESTRATOR_EXE}"
+  DetailPrint "Downloading CapKit..."
+  ExecWait 'powershell -NoProfile -Command "Invoke-WebRequest -Uri ${CAPKIT_URL} -OutFile capkit.zip"'
+  
+  DetailPrint "Downloading Orchestrator..."
+  ExecWait 'powershell -NoProfile -Command "Invoke-WebRequest -Uri ${ORCHESTRATOR_URL} -OutFile orchestrator.zip"'
 
-  ; --- 4. Setup Launching Methods ---
+  ; 3. Unzip
+  DetailPrint "Extracting components..."
+  SetOutPath $INSTDIR
+  ExecWait 'powershell -NoProfile -Command "Expand-Archive -Path ''$INSTDIR\cache\spatialshot.zip'' -DestinationPath ''$INSTDIR'' -Force"'
+  
+  SetOutPath "$INSTDIR\capkit"
+  ExecWait 'powershell -NoProfile -Command "Expand-Archive -Path ''$INSTDIR\cache\capkit.zip'' -DestinationPath ''$INSTDIR\capkit'' -Force"'
+  
+  SetOutPath "$INSTDIR\app"
+  ExecWait 'powershell -NoProfile -Command "Expand-Archive -Path ''$INSTDIR\cache\orchestrator.zip'' -DestinationPath ''$INSTDIR\app'' -Force"'
+
+  ; Rename Orchestrator
+  Rename "$INSTDIR\app\spatialshot-orchestrator-windows-x64.exe" "$INSTDIR\app\${ORCHESTRATOR_EXE}"
+
+  ; 4. The "Sophisticated" Hotkey Listener (PowerShell)
+  ;    Targets: Win (0x0008) + Shift (0x0004) + A (0x41)
+  DetailPrint "Registering Global Hotkey (Win+Shift+A)..."
+  FileOpen $0 "$INSTDIR\hotkey_listener.ps1" w
+  FileWrite $0 'Add-Type -MemberDefinition "[DllImport(\"user32.dll\")] public static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk); [DllImport(\"user32.dll\")] public static extern bool GetMessage(out IntPtr lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);" -Name "Win32" -Namespace Win32$\r$\n'
+  
+  ; --- CONFIGURATION: WIN + SHIFT + A ---
+  FileWrite $0 '$MOD_WIN = 0x0008; $MOD_SHIFT = 0x0004; $VK_A = 0x41$\r$\n'
+  
+  ; Register Hotkey
+  FileWrite $0 '$Result = [Win32.Win32]::RegisterHotKey([IntPtr]::Zero, 1, $MOD_WIN -bor $MOD_SHIFT, $VK_A)$\r$\n'
+  FileWrite $0 'if (!$Result) { Write-Host "Hotkey failed"; exit }$\r$\n'
+  
+  ; Infinite Loop (Waiting for keypress, consumes 0% CPU)
+  FileWrite $0 '$msg = [IntPtr]::Zero$\r$\n'
+  FileWrite $0 'while ([Win32.Win32]::GetMessage([ref]$msg, [IntPtr]::Zero, 0, 0)) {$\r$\n'
+  FileWrite $0 '    Start-Process -FilePath "$INSTDIR\app\${ORCHESTRATOR_EXE}" -WindowStyle Hidden$\r$\n'
+  FileWrite $0 '}$\r$\n'
+  FileClose $0
+
+  ; 5. VBS Wrapper (To hide the PowerShell window completely)
+  FileOpen $0 "$INSTDIR\launch_hotkey.vbs" w
+  FileWrite $0 'Set WshShell = CreateObject("WScript.Shell")$\r$\n'
+  FileWrite $0 'WshShell.Run "powershell -NoProfile -ExecutionPolicy Bypass -File ""$INSTDIR\hotkey_listener.ps1""", 0$\r$\n'
+  FileClose $0
+
+  ; 6. Create Shortcuts
   DetailPrint "Creating shortcuts..."
   
-  ; Desktop Shortcut for the main app
+  ; Desktop Icon
   CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_NAME}.exe"
   
-  ; Add Orchestrator to RUN ON STARTUP (to register the hotkey)
-  CreateDirectory "$STARTUP\SpatialShot"
-  CreateShortcut "$STARTUP\SpatialShot\SpatialShot Hotkey.lnk" "$LOCALAPPDATA\Spatialshot\app\${ORCHESTRATOR_EXE}"
+  ; Startup Item (Points to VBS -> Points to PowerShell)
+  CreateShortcut "$SMSTARTUP\SpatialShot Hotkey.lnk" "$INSTDIR\launch_hotkey.vbs"
 
-  ; --- 5. Write Uninstaller and Registry ---
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayName" "${APP_NAME}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  ; 7. Uninstaller Setup
   WriteUninstaller "$INSTDIR\Uninstall.exe"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayName" "${APP_NAME}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayIcon" '"$INSTDIR\${APP_NAME}.exe"'
 
-  ; --- 6. Cleanup ---
-  DetailPrint "Cleaning up..."
-  Delete "$LOCALAPPDATA\Spatialshot\cache\spatialshot.zip"
-  Delete "$LOCALAPPDATA\Spatialshot\cache\capkit.zip"
-  Delete "$LOCALAPPDATA\Spatialshot\cache\orchestrator.zip"
-  Delete "$LOCALAPPDATA\Spatialshot\cache\${NIRCMD_ZIP}"
-  RmDir "$LOCALAPPDATA\Spatialshot\cache"
+  ; 8. Cleanup Cache
+  RmDir /r "$INSTDIR\cache"
 
-  ; --- 7. Warning ---
-  MessageBox MB_OK|MB_ICONINFORMATION "Installation complete! SpatialShot is unsigned. You may need to bypass Windows Defender on first launch."
+  ; 9. Launch Listener Immediately (So user doesn't have to reboot)
+  ExecShell "" "$INSTDIR\launch_hotkey.vbs"
+
 SectionEnd
 
-; --- Uninstaller Section ---
+; --- Uninstaller ---
 Section "Uninstall"
-  ; Remove files and directories
+  ; Killing the listener via PowerShell is the cleanest way
+  ExecWait 'powershell -Command "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue"'
+
+  ; Remove Files
   RMDir /r "$INSTDIR"
-  RMDir /r "$LOCALAPPDATA\Spatialshot"
-
-  ; Remove shortcuts
+  
+  ; Remove Shortcuts
   Delete "$DESKTOP\${APP_NAME}.lnk"
-  RMDir /r "$STARTUP\SpatialShot"
-
-  ; Remove registry keys
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
+  Delete "$SMSTARTUP\SpatialShot Hotkey.lnk"
+  
+  ; Remove Registry
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 SectionEnd

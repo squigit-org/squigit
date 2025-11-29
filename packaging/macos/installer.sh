@@ -1,109 +1,159 @@
 #!/bin/bash
-# install-macos.sh - SpatialShot Online Installer
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 set -e
 
-# --- Artifact URLs (REPLACE THESE) ---
-# Note: macOS builds often zip the .app file
-CAPKIT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/capkit-macos.zip"
-ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-orchestrator-macos.zip"
-SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-macos.app.zip"
+APP_NAME="SpatialShot"
+SERVICE_NAME="SpatialShot" 
 
-# --- Paths ---
-CACHE_DIR="$HOME/Library/Caches/spatialshot/cache"
-APP_DIR="$HOME/Library/Application Support/spatialshot/app"
-CAPKIT_DIR="$HOME/Library/Application Support/spatialshot/capkit"
+CACHE_DIR="$HOME/Library/Caches/spatialshot/tmp"
+DEST_APP_DIR="/Applications"
+DATA_DIR="$HOME/Library/Application Support/spatialshot"
+BIN_DIR="$DATA_DIR/bin"
+CAPKIT_DIR="$DATA_DIR/capkit"
 
-echo "Starting SpatialShot installation..."
+CAPKIT_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
+ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
+SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/actions/runs/xxx/artifacts/xxx"
 
-# --- 1. Create Directories ---
-echo "Creating directories..."
+log_info() { echo "✦ $1"; }
+log_warn() { echo "ⓘ $1"; }
+log_success() { echo "✓ $1"; }
+
+fix_quarantine() {
+    local target="$1"
+    if [ -e "$target" ]; then
+        log_info "Bypassing Gatekeeper for $(basename "$target")..."
+        xattr -cr "$target" 2>/dev/null || true
+    fi
+}
+
+echo "=========================================="
+echo "        INSTALLING SPATIALSHOT"
+echo "=========================================="
+echo ""
+
 mkdir -p "$CACHE_DIR"
-mkdir -p "$APP_DIR"
+mkdir -p "$BIN_DIR"
 mkdir -p "$CAPKIT_DIR"
 
-# --- 2. Download ---
-echo "Downloading components (this may take a moment)..."
-curl -L "$SPATIALSHOT_URL" -o "$CACHE_DIR/spatialshot.app.zip"
-curl -L "$CAPKIT_URL" -o "$CACHE_DIR/capkit.zip"
-curl -L "$ORCHESTRATOR_URL" -o "$CACHE_DIR/orchestrator.zip"
+log_info "Downloading components..."
+curl -L -s "$SPATIALSHOT_URL" -o "$CACHE_DIR/spatialshot.app.zip"
+curl -L -s "$CAPKIT_URL" -o "$CACHE_DIR/capkit.zip"
+curl -L -s "$ORCHESTRATOR_URL" -o "$CACHE_DIR/orchestrator.zip"
 
-# --- 3. Install ---
-echo "Installing files..."
+log_info "Installing Application..."
+unzip -q -o "$CACHE_DIR/spatialshot.app.zip" -d "$CACHE_DIR"
 
-# Unzip and install the .app to /Applications
-unzip -o "$CACHE_DIR/spatialshot.app.zip" -d "$CACHE_DIR"
-if [ -d "$CACHE_DIR/SpatialShot.app" ]; then
-    rm -rf "/Applications/SpatialShot.app"
-    mv "$CACHE_DIR/SpatialShot.app" "/Applications/"
+if [ -d "$CACHE_DIR/$APP_NAME.app" ]; then
+    rm -rf "$DEST_APP_DIR/$APP_NAME.app"
+    mv "$CACHE_DIR/$APP_NAME.app" "$DEST_APP_DIR/"
+    fix_quarantine "$DEST_APP_DIR/$APP_NAME.app"
+    
+    log_success "Installed $APP_NAME.app to $DEST_APP_DIR"
 else
-    echo "Error: SpatialShot.app not found in zip!"
+    echo "Error: $APP_NAME.app not found in zip."
     exit 1
 fi
 
-# Install helpers
-unzip -o "$CACHE_DIR/capkit.zip" -d "$CAPKIT_DIR"
-unzip -o "$CACHE_DIR/orchestrator.zip" -d "$APP_DIR"
-chmod +x "$APP_DIR/spatialshot-orchestrator-macos"
+log_info "Installing Binaries..."
+unzip -q -o "$CACHE_DIR/capkit.zip" -d "$CAPKIT_DIR"
+fix_quarantine "$CAPKIT_DIR"
 
-# --- 4. Create Uninstaller ---
-echo "Creating uninstaller..."
-UNINSTALLER_PATH="$APP_DIR/uninstall.sh"
-cat << 'EOF' > "$UNINSTALLER_PATH"
+unzip -q -o "$CACHE_DIR/orchestrator.zip" -d "$BIN_DIR"
+ORCH_BIN="$BIN_DIR/spatialshot-orchestrator-macos"
+chmod +x "$ORCH_BIN"
+fix_quarantine "$ORCH_BIN"
+
+SERVICE_PATH="$HOME/Library/Services/$SERVICE_NAME.workflow"
+log_info "Creating System Service for Hotkey support..."
+
+mkdir -p "$HOME/Library/Services"
+osacompile -o "$SERVICE_PATH" -e "do shell script \"'$ORCH_BIN'\""
+
+fix_quarantine "$SERVICE_PATH"
+
+KEY_COMBINATION="@\$A" 
+
+log_info "Attempting to register hotkey (Cmd+Shift+A)..."
+PBS_PLIST="$HOME/Library/Preferences/pbs.plist"
+DOMAIN="NSServicesStatus"
+
+if [ ! -f "$PBS_PLIST" ]; then
+    defaults write pbs NSServicesStatus -dict
+fi
+
+defaults write pbs NSServicesStatus -dict-add "com.apple.automator.$SERVICE_NAME" "{ 'key_equivalent' = '$KEY_COMBINATION'; 'enabled_context_menu' = 1; 'enabled_services_menu' = 1; }"
+
+killall cfprefsd 2>/dev/null || true
+killall pbs 2>/dev/null || true
+
+UNINSTALLER="$DATA_DIR/Uninstall SpatialShot.command"
+
+log_info "Creating Uninstaller at $UNINSTALLER..."
+
+cat << 'EOF' > "$UNINSTALLER"
 #!/bin/bash
+clear
 echo "=========================================="
-echo "  STARTING SPATIALSHOT UNINSTALLER"
+echo "       UNINSTALLING SPATIALSHOT"
 echo "=========================================="
 echo ""
-set -e
+
+echo "Stopping application..."
+pkill -f "SpatialShot" 2>/dev/null || true
+pkill -f "spatialshot-orchestrator" 2>/dev/null || true
 
 APP_PATH="/Applications/SpatialShot.app"
-DATA_DIR="$HOME/Library/Application Support/spatialshot"
-
-echo "STEP 1: Removing application..."
 if [ -d "$APP_PATH" ]; then
     rm -rf "$APP_PATH"
-    echo "  > Application removed from $APP_PATH"
+    echo "Removed Application"
 else
-    echo "  > Application not found at $APP_PATH"
+    echo "Application not found in /Applications"
 fi
 
-echo "STEP 2: Removing application data..."
+SERVICE_PATH="$HOME/Library/Services/SpatialShot Capture.workflow"
+if [ -d "$SERVICE_PATH" ]; then
+    rm -rf "$SERVICE_PATH"
+    echo "Removed Keyboard Shortcut Service"
+    # Refresh the service cache
+    /System/Library/CoreServices/pbs -flush
+else
+    echo "Service not found"
+fi
+
+DATA_DIR="$HOME/Library/Application Support/spatialshot"
 if [ -d "$DATA_DIR" ]; then
     rm -rf "$DATA_DIR"
-    echo "  > Application data removed from $DATA_DIR"
-else
-    echo "  > Application data not found at $DATA_DIR"
+    echo "Removed Configuration & Binaries"
 fi
 
-echo "STEP 3: Manual Steps..."
-echo "  > If you have configured a hotkey for SpatialShot, please remove it manually from 'System Settings' > 'Keyboard' > 'Keyboard Shortcuts...'"
+CACHE_DIR="$HOME/Library/Caches/spatialshot"
+if [ -d "$CACHE_DIR" ]; then
+    rm -rf "$CACHE_DIR"
+    echo "Removed Cache"
+fi
 
 echo ""
 echo "=========================================="
-echo "  UNINSTALLATION COMPLETE!"
+echo "        UNINSTALLATION COMPLETE"
 echo "=========================================="
+echo "You may close this window."
+exit 0
 EOF
-chmod +x "$UNINSTALLER_PATH"
 
-# --- 5. Cleanup ---
-echo "Cleaning up..."
+chmod +x "$UNINSTALLER"
+xattr -cr "$UNINSTALLER" 2>/dev/null || true
+
 rm -rf "$CACHE_DIR"
 
-# --- 6. Final Instructions ---
 echo ""
-echo "✅ SpatialShot installation complete!"
-echo "The application 'SpatialShot.app' has been installed to /Applications."
-echo "To uninstall, run the script located at: $UNINSTALLER_PATH"
+echo "=========================================="
+echo "         INSTALLATION COMPLETE"
+echo "=========================================="
+echo "1. SpatialShot is installed in Applications."
+echo "2. A System Service '$SERVICE_NAME' has been created."
 echo ""
-echo "--- ⚠️ ACTION REQUIRED: Set Your Hotkey ---"
-echo "To enable the 'Circle to Search' hotkey, you must set it up manually:"
+echo "   IMPORTANT: If the Hotkey (Cmd+Shift+A) does not work immediately:"
+echo "   Go to System Settings > Keyboard > Keyboard Shortcuts > Services > General"
+echo "   Ensure '$SERVICE_NAME' is checked and the key is set."
 echo ""
-echo "1. Open 'System Settings' > 'Keyboard' > 'Keyboard Shortcuts...'"
-echo "2. Go to 'Services' in the sidebar."
-echo "3. Find 'SpatialShot' and add your preferred shortcut (e.g., ⌘+Shift+A)."
-echo ""
-echo "Opening System Settings for you now..."
-sleep 3
-open "x-apple.systempreferences:com.apple.keyboard.shortcuts"
-
-exit 0

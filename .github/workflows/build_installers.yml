@@ -1,8 +1,8 @@
 name: Build All Installers
 
 on:
-  # push:
-  workflow_dispatch:
+  push:
+  # workflow_dispatch:
 
 jobs:
   # Job 1: Build the Windows Installer
@@ -38,8 +38,8 @@ jobs:
 
       - name: Run Linux build script
         run: |
-          chmod +x packaging/debian/PKGBUILD.sh
-          bash packaging/debian/PKGBUILD.sh
+          chmod +x packaging/linux/PKGBUILD
+          bash packaging/linux/PKGBUILD
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
