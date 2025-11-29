@@ -34,8 +34,9 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        winget install --id Kitware.CMake --silent --accept-package-agreements
-        winget install --id Ninja-build.Ninja --silent --accept-package-agreements
+        # Added --accept-source-agreements to prevent hanging
+        winget install --id Kitware.CMake --silent --accept-package-agreements --accept-source-agreements
+        winget install --id Ninja-build.Ninja --silent --accept-package-agreements --accept-source-agreements
         if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { exit 1 }
         if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { exit 1 }
 
@@ -72,9 +73,10 @@ runs:
     - name: Zip Artifacts
       shell: bash
       run: |
-        mkdir -p dist-out
+        # Use Absolute Paths
+        DIST_ROOT="$GITHUB_WORKSPACE/dist-out"
+        mkdir -p "$DIST_ROOT"
         
-        # Define Zip Name
         if [ "$RUNNER_OS" == "Windows" ]; then
           ZIP_NAME="capkit-windows-x64.zip"
         elif [ "$RUNNER_OS" == "macOS" ]; then
@@ -83,11 +85,11 @@ runs:
           ZIP_NAME="capkit-linux-x64.zip"
         fi
 
-        echo "Zipping CaptureKit to $ZIP_NAME..."
+        echo "Zipping CaptureKit to $DIST_ROOT/$ZIP_NAME..."
         cd packages/capturekit/dist
         
         if [ "$RUNNER_OS" == "Windows" ]; then
-          7z a -tzip -r "../../../dist-out/$ZIP_NAME" .
+          7z a -tzip -r "$DIST_ROOT/$ZIP_NAME" .
         else
-          zip -r "../../../dist-out/$ZIP_NAME" .
+          zip -r "$DIST_ROOT/$ZIP_NAME" .
         fi

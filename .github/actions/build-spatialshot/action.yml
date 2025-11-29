@@ -71,32 +71,43 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
-      run: npm run ${{ inputs.npm_script }} -- -p never
+      run: npm run ${{ inputs.npm_script }} -- -p never -c.mac.identity=null
 
     # --- STAGE & ZIP ---
     - name: Zip Artifacts
       shell: bash
       run: |
-        mkdir -p dist-out
+        # Use Absolute Paths to avoid "../../.." madness
+        DIST_ROOT="$GITHUB_WORKSPACE/dist-out"
+        mkdir -p "$DIST_ROOT"
         
-        # Determine unique zip name
         ZIP_NAME="spatialshot-${{ inputs.platform }}-portable.zip"
         
-        echo "Zipping artifact from: ${{ inputs.artifact_path }}"
+        echo "Artifact Path: ${{ inputs.artifact_path }}"
+        echo "Zip Target: $DIST_ROOT/$ZIP_NAME"
         
-        # Navigate to the parent of the artifact path to zip cleanly
-        # If artifact_path is "dist/win-unpacked", we want to zip the *contents* of win-unpacked
+        # Check if artifact path exists first
+        # Resolve wildcards
+        TARGET_PATH=$(ls -d ${{ inputs.artifact_path }} 2>/dev/null | head -n 1)
         
-        if [ -d "${{ inputs.artifact_path }}" ]; then
-          cd "${{ inputs.artifact_path }}"
+        if [ -z "$TARGET_PATH" ]; then
+          echo "::error::Artifact path not found: ${{ inputs.artifact_path }}"
+          ls -R packages/spatialshot/dist/ || true
+          exit 1
+        fi
+
+        if [ -d "$TARGET_PATH" ]; then
+          echo "Zipping directory: $TARGET_PATH"
+          cd "$TARGET_PATH"
           if [ "$RUNNER_OS" == "Windows" ]; then
-            7z a -tzip -r "../../../../../dist-out/$ZIP_NAME" .
+            7z a -tzip -r "$DIST_ROOT/$ZIP_NAME" .
           else
-            zip -r "../../../../../dist-out/$ZIP_NAME" .
+            zip -r "$DIST_ROOT/$ZIP_NAME" .
           fi
         else
-          # It's a single file (like a DMG/AppImage), just copy it
-          cp "${{ inputs.artifact_path }}" "dist-out/"
+          echo "Copying single file: $TARGET_PATH"
+          cp "$TARGET_PATH" "$DIST_ROOT/"
         fi
         
-        ls -l dist-out/
+        echo "Final Contents:"
+        ls -l "$DIST_ROOT"

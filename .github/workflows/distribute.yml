@@ -53,7 +53,7 @@ jobs:
           path: dist-out/*
 
   # =========================================================
-  # JOB 3: BUILD SPATIALSHOT (ELECTRON/REACT|VITE)
+  # JOB 3: BUILD SPATIALSHOT (ELECTRON)
   # =========================================================
   build-spatialshot:
     name: App ${{ matrix.platform }}
@@ -84,6 +84,7 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           npm_script: ${{ matrix.npm_script }}
           artifact_path: ${{ matrix.artifact_path }}
+          platform: ${{ matrix.platform }} # <--- FIXED: WAS MISSING
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -92,7 +93,7 @@ jobs:
           path: dist-out/*
 
   # =========================================================
-  # JOB 4: PUBLISH BINARIES (Required for Online Installers)
+  # JOB 4: PUBLISH BINARIES
   # =========================================================
   publish-binaries:
     needs: [build-orchestrator, build-capturekit, build-spatialshot]
@@ -150,7 +151,7 @@ jobs:
            chmod +x packaging/macos/PKGBUILD
            bash packaging/macos/PKGBUILD
 
-      # --- UPLOAD INSTALLERS TO SAME RELEASE ---
+      # --- UPLOAD INSTALLERS ---
       - name: Upload Installer
         uses: softprops/action-gh-release@v1
         with:
