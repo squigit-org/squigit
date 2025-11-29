@@ -2,8 +2,7 @@ name: Distribute Production Suite
 
 on:
   push:
-    tags: ['v*']
-  workflow_dispatch:
+  # workflow_dispatch:
 
 permissions:
   contents: write
