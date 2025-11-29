@@ -39,24 +39,24 @@ Section "Install"
 
   ; 2. Download (Using PowerShell for best TLS/Redirect support)
   DetailPrint "Downloading SpatialShot Core..."
-  ExecWait 'powershell -NoProfile -Command "Invoke-WebRequest -Uri ${SPATIALSHOT_URL} -OutFile spatialshot.zip"'
+  ExecWait "powershell -NoProfile -Command $\"Invoke-WebRequest -Uri ${SPATIALSHOT_URL} -OutFile spatialshot.zip$\""
   
   DetailPrint "Downloading CapKit..."
-  ExecWait 'powershell -NoProfile -Command "Invoke-WebRequest -Uri ${CAPKIT_URL} -OutFile capkit.zip"'
+  ExecWait "powershell -NoProfile -Command $\"Invoke-WebRequest -Uri ${CAPKIT_URL} -OutFile capkit.zip$\""
   
   DetailPrint "Downloading Orchestrator..."
-  ExecWait 'powershell -NoProfile -Command "Invoke-WebRequest -Uri ${ORCHESTRATOR_URL} -OutFile orchestrator.zip"'
+  ExecWait "powershell -NoProfile -Command $\"Invoke-WebRequest -Uri ${ORCHESTRATOR_URL} -OutFile orchestrator.zip$\""
 
   ; 3. Unzip
   DetailPrint "Extracting components..."
   SetOutPath $INSTDIR
-  ExecWait 'powershell -NoProfile -Command "Expand-Archive -Path ''$INSTDIR\cache\spatialshot.zip'' -DestinationPath ''$INSTDIR'' -Force"'
+  ExecWait "powershell -NoProfile -Command $\"Expand-Archive -Path '$INSTDIR\cache\spatialshot.zip' -DestinationPath '$INSTDIR' -Force$\""
   
   SetOutPath "$INSTDIR\capkit"
-  ExecWait 'powershell -NoProfile -Command "Expand-Archive -Path ''$INSTDIR\cache\capkit.zip'' -DestinationPath ''$INSTDIR\capkit'' -Force"'
+  ExecWait "powershell -NoProfile -Command $\"Expand-Archive -Path '$INSTDIR\cache\capkit.zip' -DestinationPath '$INSTDIR\capkit' -Force$\""
   
   SetOutPath "$INSTDIR\app"
-  ExecWait 'powershell -NoProfile -Command "Expand-Archive -Path ''$INSTDIR\cache\orchestrator.zip'' -DestinationPath ''$INSTDIR\app'' -Force"'
+  ExecWait "powershell -NoProfile -Command $\"Expand-Archive -Path '$INSTDIR\cache\orchestrator.zip' -DestinationPath '$INSTDIR\app' -Force$\""
 
   ; Rename Orchestrator
   Rename "$INSTDIR\app\spatialshot-orchestrator-windows-x64.exe" "$INSTDIR\app\${ORCHESTRATOR_EXE}"
