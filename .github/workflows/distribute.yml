@@ -163,6 +163,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Generate release tag
+        id: generate_tag
+        run: echo "tag_name=nightly-$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -171,10 +175,10 @@ jobs:
       - name: Create Release & Upload Binaries
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ steps.generate_tag.outputs.tag_name }}
+          name: Nightly Release ${{ steps.generate_tag.outputs.tag_name }}
           draft: false
-          prerelease: false
+          prerelease: true
           fail_on_unmatched_files: false
           files: |
             all-artifacts/orchestrator-*/*.zip
