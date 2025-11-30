@@ -12,11 +12,11 @@ BIN_DIR="$DATA_DIR/bin"
 CAPKIT_DIR="$DATA_DIR/capkit"
 
 # --- Artifact URLs ---
-RELEASES_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/"
+RELEASES_URL="https://github.com/a7mddra/spatialshot/releases/latest/download"
 EXEC_SUFFIX="-mac-x64.zip"
-CAPKIT_URL="$RELEASES_URL+"capturekit"+$EXEC_SUFFIX"
-ORCHESTRATOR_URL="$RELEASES_URL+"orchestrator"+$EXEC_SUFFIX"
-SPATIALSHOT_URL="$RELEASES_URL+"spatialshot"+$EXEC_SUFFIX"
+CAPKIT_URL="${RELEASES_URL}/capturekit${EXEC_SUFFIX}"
+ORCHESTRATOR_URL="${RELEASES_URL}/orchestrator${EXEC_SUFFIX}"
+SPATIALSHOT_URL="${RELEASES_URL}/spatialshot${EXEC_SUFFIX}"
 
 log_info() { echo "✦ $1"; }
 log_warn() { echo "ⓘ $1"; }
