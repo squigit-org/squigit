@@ -12,9 +12,11 @@ BIN_DIR="$DATA_DIR/bin"
 CAPKIT_DIR="$DATA_DIR/capkit"
 
 # --- Artifact URLs ---
-CAPKIT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/capkit-macos.zip"
-ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-orchestrator-macos-x64.zip"
-SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-mac-portable.zip"
+RELEASES_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/"
+EXEC_SUFFIX="-macos-x64.zip"
+CAPKIT_URL="$RELEASES_URL+"capkit"+$EXEC_SUFFIX"
+ORCHESTRATOR_URL="$RELEASES_URL+"orchestrator"+$EXEC_SUFFIX"
+SPATIALSHOT_URL="$RELEASES_URL+"spatialshot"+$EXEC_SUFFIX"
 
 log_info() { echo "✦ $1"; }
 log_warn() { echo "ⓘ $1"; }
@@ -62,11 +64,11 @@ fix_quarantine "$CAPKIT_DIR"
 
 unzip -q -o "$CACHE_DIR/orchestrator.zip" -d "$BIN_DIR"
 
-if [ -f "$BIN_DIR/spatialshot-orchestrator" ]; then
-    mv "$BIN_DIR/spatialshot-orchestrator" "$BIN_DIR/spatialshot-orchestrator-macos"
+if [ -f "$BIN_DIR/orchestrator" ]; then
+    mv "$BIN_DIR/orchestrator" "$BIN_DIR/orchestrator-macos"
 fi
 
-ORCH_BIN="$BIN_DIR/spatialshot-orchestrator-macos"
+ORCH_BIN="$BIN_DIR/orchestrator-macos"
 chmod +x "$ORCH_BIN"
 fix_quarantine "$ORCH_BIN"
 
@@ -107,7 +109,7 @@ echo ""
 
 echo "Stopping application..."
 pkill -f "SpatialShot" 2>/dev/null || true
-pkill -f "spatialshot-orchestrator" 2>/dev/null || true
+pkill -f "orchestrator" 2>/dev/null || true
 
 APP_PATH="/Applications/SpatialShot.app"
 if [ -d "$APP_PATH" ]; then

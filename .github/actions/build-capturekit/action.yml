@@ -1,5 +1,5 @@
-name: 'Build CaptureKit'
-description: 'Builds C++ CaptureKit with Qt (Full Logic)'
+name: "Build CaptureKit"
+description: "Builds C++ CaptureKit with Qt (Full Logic)"
 runs:
   using: "composite"
   steps:
@@ -34,7 +34,6 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        # Added --accept-source-agreements
         winget install --id Kitware.CMake --silent --accept-package-agreements --accept-source-agreements
         winget install --id Ninja-build.Ninja --silent --accept-package-agreements --accept-source-agreements
         if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { exit 1 }
@@ -73,10 +72,9 @@ runs:
     - name: Zip Artifacts
       shell: bash
       run: |
-        # Use Absolute Paths
         DIST_ROOT="$GITHUB_WORKSPACE/dist-out"
         mkdir -p "$DIST_ROOT"
-        
+
         if [ "$RUNNER_OS" == "Windows" ]; then
           ZIP_NAME="capkit-windows-x64.zip"
         elif [ "$RUNNER_OS" == "macOS" ]; then
@@ -84,12 +82,12 @@ runs:
         else
           ZIP_NAME="capkit-linux-x64.zip"
         fi
-        
+
         ZIP_FULL_PATH="$DIST_ROOT/$ZIP_NAME"
         echo "Zipping CaptureKit to $ZIP_FULL_PATH"
-        
+
         cd packages/capturekit/dist
-        
+
         if [ "$RUNNER_OS" == "Windows" ]; then
           7z a -tzip -r "$ZIP_FULL_PATH" .
         else

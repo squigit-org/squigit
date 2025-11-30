@@ -6,9 +6,11 @@
 !define ORCHESTRATOR_EXE "orchestrator.exe"
 
 ; --- Artifact URLs ---
-!define CAPKIT_URL "https://github.com/a7mddra/spatialshot/releases/latest/download/capkit-windows-x64.zip"
-!define ORCHESTRATOR_URL "https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-orchestrator-windows-x64.zip"
-!define SPATIALSHOT_URL "https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-win-portable.zip"
+!define RELEASES_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/"
+!define EXEC_SUFFIX="-windows-x64.zip"
+CAPKIT_URL="$RELEASES_URL"+"capkit"+"$EXEC_SUFFIX"
+ORCHESTRATOR_URL="$RELEASES_URL"+"orchestrator"+"$EXEC_SUFFIX"
+SPATIALSHOT_URL="$RELEASES_URL"+"spatialshot"+"$EXEC_SUFFIX"
 
 ; --- Setup ---
 Name "${APP_NAME}"

@@ -1,5 +1,5 @@
-name: 'Build Orchestrator'
-description: 'Builds Rust Orchestrator for specific OS'
+name: "Build Orchestrator"
+description: "Builds Rust Orchestrator for specific OS"
 runs:
   using: "composite"
   steps:
@@ -32,29 +32,24 @@ runs:
       shell: bash
       run: |
         mkdir -p dist-out
-        
-        # Name the zip based on OS
+
         if [ "$RUNNER_OS" == "Windows" ]; then
-          ZIP_NAME="spatialshot-orchestrator-windows-x64.zip"
+          ZIP_NAME="orchestrator-windows-x64.zip"
         elif [ "$RUNNER_OS" == "macOS" ]; then
-          ZIP_NAME="spatialshot-orchestrator-macos-x64.zip"
+          ZIP_NAME="orchestrator-macos-x64.zip"
         else
-          ZIP_NAME="spatialshot-orchestrator-linux-x64.zip"
+          ZIP_NAME="orchestrator-linux-x64.zip"
         fi
 
-        # Find the binary
-        BIN_PATH=$(find packages/orchestrator/target -type f -name "spatialshot-orchestrator*" | grep release | grep -v "\.d" | head -n 1)
-        
+        BIN_PATH=$(find packages/orchestrator/target -type f -name "orchestrator*" | grep release | grep -v "\.d" | head -n 1)
+
         echo "Zipping $BIN_PATH to $ZIP_NAME..."
-        
+
         if [ "$RUNNER_OS" == "Windows" ]; then
-          # On Windows, we need to be careful with paths in 7z
-          # Just copy it to a temp dir and zip that to avoid path issues
           mkdir temp_zip
           cp "$BIN_PATH" temp_zip/
           cd temp_zip
           7z a -tzip "../dist-out/$ZIP_NAME" .
         else
-          # On Linux/Mac, zip -j flattens the path (junks directory names)
           zip -j "dist-out/$ZIP_NAME" "$BIN_PATH"
         fi

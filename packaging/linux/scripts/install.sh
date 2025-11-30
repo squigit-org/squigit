@@ -12,9 +12,11 @@ CAPKIT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/spatialshot/capkit"
 UNINSTALL_SCRIPT_PATH="$APP_DIR/uninstall.sh"
 
 # --- Artifact URLs ---
-CAPKIT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/capkit-linux-x64.zip"
-ORCHESTRATOR_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-orchestrator-linux-x64.zip"
-SPATIALSHOT_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/spatialshot-linux-portable.zip"
+RELEASES_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/"
+EXEC_SUFFIX="-linux-x64.zip"
+CAPKIT_URL="$RELEASES_URL+"capkit"+$EXEC_SUFFIX"
+ORCHESTRATOR_URL="$RELEASES_URL+"orchestrator"+$EXEC_SUFFIX"
+SPATIALSHOT_URL="$RELEASES_URL+"spatialshot"+$EXEC_SUFFIX"
 
 echo "Creating directories..."
 mkdir -p "$CACHE_DIR"
@@ -36,12 +38,12 @@ unzip -o "$CACHE_DIR/orchestrator.zip" -d "$APP_DIR"
 unzip -o "$CACHE_DIR/spatialshot.zip" -d "$APP_DIR"
 unzip -o "$CACHE_DIR/capkit.zip" -d "$CAPKIT_DIR"
 
-if [ -f "$APP_DIR/spatialshot-orchestrator" ]; then
+if [ -f "$APP_DIR/orchestrator" ]; then
     echo "  > Renaming binary..."
-    mv "$APP_DIR/spatialshot-orchestrator" "$APP_DIR/spatialshot-orchestrator-linux-x64"
+    mv "$APP_DIR/orchestrator" "$APP_DIR/orchestrator-linux-x64"
 fi
 
-chmod +x "$APP_DIR/spatialshot-orchestrator-linux-x64"
+chmod +x "$APP_DIR/orchestrator-linux-x64"
 
 echo "  > Files installed."
 
