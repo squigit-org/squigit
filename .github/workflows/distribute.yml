@@ -2,8 +2,8 @@ name: Distribute Production Suite
 
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
     tags:
       - "v*"
 
