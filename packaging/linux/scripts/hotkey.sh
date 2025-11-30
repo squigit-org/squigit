@@ -2,8 +2,6 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# The Main Go program now passes the wrapper path here. 
-# Example: /home/user/.local/bin/spatialshot
 BINARY_PATH="${1:-}"
 USER_KEYS="${2:-}"
 SHORTCUT_NAME="${3:-Spatialshot}"
@@ -26,7 +24,6 @@ if [ -z "$BINARY_PATH" ]; then
     exit 1
 fi
 
-# We use the provided path exactly. It should be the absolute path to the wrapper.
 FULL_BIN_PATH="$BINARY_PATH"
 
 log "Configuring Hotkey..."
@@ -206,7 +203,7 @@ DESKTOP="$(echo "$DESKTOP_RAW" | tr '[:upper:]' '[:lower:]' || true)"
 case "$DESKTOP" in
     *gnome*|*ubuntu*|*unity*|*budgie*) setup_gnome_style || exit 1 ;;
     *cinnamon*) setup_cinnamon "$(generate_id)" || exit 1 ;;
-    *mate*) setup_gnome_style || exit 1 ;; # Mate often uses gnome schema
+    *mate*) setup_gnome_style || exit 1 ;;
     *xfce*) setup_xfce || exit 1 ;;
     *kde*|*plasma*) setup_kde || exit 1 ;;
     *) 

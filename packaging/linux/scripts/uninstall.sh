@@ -7,7 +7,6 @@ CLI_WRAPPER="$HOME/.local/bin/spatialshot"
 
 SILENT=false
 
-# Check for arguments
 for arg in "$@"; do
     if [ "$arg" == "--silent" ]; then
         SILENT=true

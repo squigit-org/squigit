@@ -22,7 +22,6 @@ const (
 	BinName     = "spatialshot-orchestrator-linux-x64"
 	WrapperName = "spatialshot"
 
-	// ANSI Colors
 	ColorReset  = "\033[0m"
 	ColorGreen  = "\033[32m"
 	ColorYellow = "\033[33m"
@@ -32,7 +31,6 @@ const (
 )
 
 func main() {
-	// HANDLE: "spatialshot uninstall" command
 	if len(os.Args) > 1 && os.Args[1] == "uninstall" {
 		fmt.Println("Uninstalling Spatialshot...")
 		runEmbeddedScript("scripts/uninstall.sh", nil)
@@ -47,8 +45,6 @@ func main() {
 	// ---------------------------------------------------------
 	// PRE-INSTALL: Silent Cleanup
 	// ---------------------------------------------------------
-	// We run the uninstaller silently to ensure a clean slate.
-	// We ignore errors here because it might be the first install.
 	runEmbeddedScript("scripts/uninstall.sh", []string{"--silent"})
 
 	fmt.Println(ColorBold + "Starting Spatialshot Setup..." + ColorReset)
@@ -57,19 +53,27 @@ func main() {
 	localShare := filepath.Join(homeDir, ".local", "share")
 	localBin := filepath.Join(homeDir, ".local", "bin")
 	targetAppDir := filepath.Join(localShare, AppDirName, "app")
-
-	// We target the wrapper for the hotkey, NOT the internal binary.
-	// This solves the relative/absolute path issues in different DEs.
 	wrapperPath := filepath.Join(localBin, WrapperName)
 
 	// ---------------------------------------------------------
 	// STEP 1: Install Files
 	// ---------------------------------------------------------
 	fmt.Println("\n" + ColorBlue + "[1/3] Downloading and Installing..." + ColorReset)
-	runEmbeddedScript("scripts/install.sh", nil)
+	if err := runEmbeddedScript("scripts/install.sh", nil); err != nil {
+		fatal("Installation script failed.")
+	}
 
 	// ---------------------------------------------------------
-	// STEP 2: Create CLI Wrapper (Moved BEFORE Hotkey)
+	// STEP 1.5: Extract Uninstaller to Disk
+	// ---------------------------------------------------------
+	destUninstallPath := filepath.Join(targetAppDir, "uninstall.sh")
+	fmt.Println("      > Extracting uninstaller to " + destUninstallPath)
+	if err := extractEmbeddedFile("scripts/uninstall.sh", destUninstallPath); err != nil {
+		fmt.Println(ColorYellow + "Warning: Could not save uninstaller script to disk." + ColorReset)
+	}
+
+	// ---------------------------------------------------------
+	// STEP 2: Create CLI Wrapper
 	// ---------------------------------------------------------
 	fmt.Println("\n" + ColorBlue + "[2/3] Creating CLI Wrapper..." + ColorReset)
 	createCLIWrapper(localBin, targetAppDir)
@@ -78,8 +82,6 @@ func main() {
 	// STEP 3: Configure Hotkeys
 	// ---------------------------------------------------------
 	fmt.Println("\n" + ColorBlue + "[3/3] Configuring Hotkeys..." + ColorReset)
-	// We pass the wrapper path. The wrapper handles finding the real app.
-	// This makes the command simple: /home/user/.local/bin/spatialshot
 	hotkeyErr := runEmbeddedScript("scripts/hotkey.sh", []string{wrapperPath})
 
 	// ---------------------------------------------------------
@@ -90,6 +92,14 @@ func main() {
 	fmt.Println("Press [Enter] to exit...")
 	var input string
 	fmt.Scanln(&input)
+}
+
+func extractEmbeddedFile(srcEmbedPath, destPath string) error {
+	content, err := scriptFS.ReadFile(srcEmbedPath)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(destPath, content, 0755)
 }
 
 func runEmbeddedScript(scriptName string, args []string) error {
@@ -112,7 +122,6 @@ func runEmbeddedScript(scriptName string, args []string) error {
 
 	cmd := exec.Command("/bin/bash", append([]string{tmpFile.Name()}, args...)...)
 
-	// If silent arg is present, suppress stdout/stderr
 	isSilent := false
 	for _, arg := range args {
 		if arg == "--silent" {
@@ -135,20 +144,20 @@ func createCLIWrapper(binDir, appDir string) {
 	wrapperPath := filepath.Join(binDir, WrapperName)
 
 	scriptContent := fmt.Sprintf(`#!/bin/bash
-TARGET_BIN="%s/%s"
+APP_BIN="%s/%s"
+UNINSTALLER="%s/uninstall.sh"
 
 if [ "$1" == "uninstall" ]; then
-    # Locate the uninstaller script in the app dir if we want to support 
-    # self-uninstallation without the original installer binary.
-    # However, since main.go embeds it, we can't easily run it unless
-    # we copied the main binary to the install dir. 
-    # For now, let's assume standard execution:
-    exec "$TARGET_BIN" uninstall
+    if [ -f "$UNINSTALLER" ]; then
+        exec "$UNINSTALLER"
+    else
+        echo "Error: Uninstaller not found at $UNINSTALLER"
+        exit 1
+    fi
 else
-    # Forward all args
-    exec "$TARGET_BIN" "$@"
+    exec "$APP_BIN" "$@"
 fi
-`, appDir, BinName)
+`, appDir, BinName, appDir)
 
 	err := os.WriteFile(wrapperPath, []byte(scriptContent), 0755)
 	if err != nil {
@@ -160,18 +169,16 @@ fi
 
 func printSummary(hotkeySuccess bool) {
 	fmt.Println("\n" + ColorGreen + "========================================")
-	fmt.Println("      INSTALLATION COMPLETE! 🚀")
+	fmt.Println("      INSTALLATION COMPLETE!")
 	fmt.Println("========================================" + ColorReset)
 
 	fmt.Println("\n" + ColorBold + "Spatialshot is now ready." + ColorReset)
 	fmt.Println("Here is how to use it:")
 
-	// 1. Manual Launch
 	fmt.Printf("\n1. %sFrom your Dock/Menu:%s\n", ColorCyan, ColorReset)
 	fmt.Println("   Open 'Spatialshot' to upload a local photo or manage settings.")
 	fmt.Println("")
 
-	// 2. Hotkey Launch
 	fmt.Printf("2. %sUsing the Hotkey:%s\n", ColorCyan, ColorReset)
 	if hotkeySuccess {
 		fmt.Printf("   Press %sSuper + Shift + A%s to instantly capture via drawing.\n", ColorGreen, ColorReset)

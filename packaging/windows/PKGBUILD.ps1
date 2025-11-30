@@ -1,3 +1,5 @@
+# This script is run by the GitHub Actions runner
+
 Write-Host "--- Building Windows Installer ---"
 
 if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {

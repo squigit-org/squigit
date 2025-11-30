@@ -1,7 +1,7 @@
 name: Distribute Production Suite
 
 on:
-  # push:
+  push:
   workflow_dispatch:
 
 permissions:
@@ -93,10 +93,72 @@ jobs:
           path: dist-out/*
 
   # =========================================================
-  # JOB 4: PUBLISH BINARIES
+  # JOB 4: BUILD INSTALLERS
+  # =========================================================
+  build-windows-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install NSIS
+        run: |
+          choco install nsis
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Run Windows build script
+        run: pwsh -File packaging/windows/PKGBUILD.ps1
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatialshot-installer-windows
+          path: packaging/windows/SpatialShot_Installer.exe
+
+  build-linux-installer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Run Linux build script
+        run: |
+          chmod +x packaging/linux/PKGBUILD
+          bash packaging/linux/PKGBUILD
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatialshot-installer-linux
+          path: spatialshot-installer
+
+  build-macos-installer:
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run macOS build script
+        run: |
+          chmod +x packaging/macos/PKGBUILD
+          bash packaging/macos/PKGBUILD
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatialshot-installer-macos
+          path: spatialshot-installer.dmg
+
+  # =========================================================
+  # JOB 5: PUBLISH BINARIES
   # =========================================================
   publish-binaries:
-    needs: [build-orchestrator, build-capturekit, build-spatialshot]
+    needs: [build-orchestrator, build-capturekit, build-spatialshot, build-windows-installer, build-linux-installer, build-macos-installer]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -115,55 +177,6 @@ jobs:
           prerelease: false
           fail_on_unmatched_files: false
           files: |
-            all-artifacts/**/*.zip
-            all-artifacts/**/*.exe
-            all-artifacts/**/*.dmg
-            all-artifacts/**/*installer*
-
-  # =========================================================
-  # JOB 5: BUILD INSTALLERS
-  # =========================================================
-  build-installers:
-    needs: publish-binaries
-    name: Installer ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      # --- WINDOWS INSTALLER ---
-      - name: Build Windows Installer
-        if: runner.os == 'Windows'
-        run: |
-          choco install nsis
-          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          pwsh -File packaging/windows/PKGBUILD.ps1
-
-      # --- LINUX INSTALLER ---
-      - name: Build Linux Installer
-        if: runner.os == 'Linux'
-        run: |
-           chmod +x packaging/linux/PKGBUILD
-           bash packaging/linux/PKGBUILD
-           ls -l spatialshot-installer
-
-      # --- MAC INSTALLER ---
-      - name: Build macOS Installer
-        if: runner.os == 'macOS'
-        run: |
-           chmod +x packaging/macos/PKGBUILD
-           bash packaging/macos/PKGBUILD
-           ls -l spatialshot-installer.dmg
-
-      # --- UPLOAD INSTALLERS ---
-      - name: Upload Installer
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          files: |
-            packaging/windows/*.exe
-            spatialshot-installer
-            spatialshot-installer.dmg
+            all-artifacts/orchestrator-*/*.zip
+            all-artifacts/capturekit-*/*.zip
+            all-artifacts/spatialshot-*/*.zip
