@@ -23,6 +23,11 @@ const (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "uninstall" {
+		runEmbeddedScript("scripts/uninstall.sh", nil)
+		return
+	}
+
 	if !isTerminal() {
 		launchInTerminal()
 		return
@@ -83,18 +88,22 @@ func createCLIWrapper(binDir, appDir string) {
 	os.MkdirAll(binDir, 0755)
 
 	wrapperPath := filepath.Join(binDir, "spatialshot")
+	self, err := os.Executable()
+	if err != nil {
+		self = "spatialshot-installer" // fallback
+	}
 
 	scriptContent := fmt.Sprintf(`#!/bin/bash
 if [ "$1" == "uninstall" ]; then
     echo "Running Uninstaller..."
-    exec "%s/uninstall.sh"
+    exec "%s" uninstall
 else
     # Forward all args to the main binary
     exec "%s/%s" "$@"
 fi
-`, appDir, appDir, BinName)
+`, self, appDir, BinName)
 
-	err := os.WriteFile(wrapperPath, []byte(scriptContent), 0755)
+	err = os.WriteFile(wrapperPath, []byte(scriptContent), 0755)
 	if err != nil {
 		fmt.Println("   Warning: Could not create CLI wrapper in " + binDir)
 		fmt.Println("   Ensure " + binDir + " is in your PATH.")

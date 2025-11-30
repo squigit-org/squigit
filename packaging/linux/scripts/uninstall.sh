@@ -5,8 +5,7 @@ IFS=$'\n\t'
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_BIN_HOME="${XDG_BIN_HOME:-$HOME/.local/bin}"
 
-APP_DIR="$XDG_DATA_HOME/spatialshot/app"
-CAPKIT_DIR="$XDG_DATA_HOME/spatialshot/capkit"
+APP_DIR="$XDG_DATA_HOME/spatialshot/"
 TARGET_BIN="$XDG_BIN_HOME/spatialshot-orchestrator-linux-x64"
 SYMLINK="$XDG_BIN_HOME/spatialshot"
 DESKTOP_FILE="$HOME/.local/share/applications/spatialshot.desktop"
@@ -17,8 +16,6 @@ case "$ans" in
   y|Y)
     echo "Removing app directory: $APP_DIR"
     rm -rf "$APP_DIR" || true
-    echo "Removing capkit directory: $CAPKIT_DIR"
-    rm -rf "$CAPKIT_DIR" || true
     echo "Removing orchestrator binary: $TARGET_BIN"
     rm -f "$TARGET_BIN" || true
     echo "Removing symlink: $SYMLINK"
