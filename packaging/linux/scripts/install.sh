@@ -48,9 +48,11 @@ Version=1.0
 Type=Application
 Name=Spatialshot
 Exec=$HOME/.local/share/spatialshot/app/spatialshot --no-sandbox
-Icon=$HOME/.local/share/spatialshot/app/resources/app/assets/icons/light/128.png 
+Icon=$HOME/.local/share/spatialshot/app/resources/app/assets/icons/light/512.png 
 Terminal=false
 Categories=Utility;" > "$HOME/.local/share/applications/spatialshot.desktop"
+
+chmod +x "${XDG_DATA_HOME:-$HOME/.local/share}/applications/spatialshot.desktop"
 
 echo "Cleaning up..."
 rm -rf "$CACHE_DIR"
