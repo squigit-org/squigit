@@ -41,7 +41,7 @@ runs:
           ZIP_NAME="orchestrator-linux-x64.zip"
         fi
 
-        BIN_PATH=$(find packages/orchestrator/target -type f -name "orchestrator*" | grep release | grep -v "\.d" | head -n 1)
+        BIN_PATH=$(find packages/orchestrator/target -type f -name "spatialshot-orchestrator*" | grep release | grep -v "\.d" | head -n 1)
 
         echo "Zipping $BIN_PATH to $ZIP_NAME..."
 

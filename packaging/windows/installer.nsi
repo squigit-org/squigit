@@ -8,9 +8,9 @@
 ; --- Artifact URLs ---
 !define RELEASES_URL="https://github.com/a7mddra/spatialshot/releases/latest/download/"
 !define EXEC_SUFFIX="-windows-x64.zip"
-CAPKIT_URL="$RELEASES_URL"+"capkit"+"$EXEC_SUFFIX"
-ORCHESTRATOR_URL="$RELEASES_URL"+"orchestrator"+"$EXEC_SUFFIX"
-SPATIALSHOT_URL="$RELEASES_URL"+"spatialshot"+"$EXEC_SUFFIX"
+!define CAPKIT_URL="$RELEASES_URL"+"capkit"+"$EXEC_SUFFIX"
+!define ORCHESTRATOR_URL="$RELEASES_URL"+"orchestrator"+"$EXEC_SUFFIX"
+!define SPATIALSHOT_URL="$RELEASES_URL"+"spatialshot"+"$EXEC_SUFFIX"
 
 ; --- Setup ---
 Name "${APP_NAME}"
