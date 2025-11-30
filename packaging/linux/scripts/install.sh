@@ -38,12 +38,7 @@ unzip -o "$CACHE_DIR/orchestrator.zip" -d "$APP_DIR"
 unzip -o "$CACHE_DIR/spatialshot.zip" -d "$APP_DIR"
 unzip -o "$CACHE_DIR/capkit.zip" -d "$CAPKIT_DIR"
 
-if [ -f "$APP_DIR/orchestrator" ]; then
-    echo "  > Renaming binary..."
-    mv "$APP_DIR/orchestrator" "$APP_DIR/orchestrator-linux-x64"
-fi
-
-chmod +x "$APP_DIR/orchestrator-linux-x64"
+chmod +x "$APP_DIR/spatialshot-orchestrator"
 
 echo "  > Files installed."
 

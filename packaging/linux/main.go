@@ -19,8 +19,8 @@ var scriptFS embed.FS
 
 const (
 	AppDirName  = "spatialshot"
-	BinName     = "spatialshot-orchestrator-linux-x64"
 	WrapperName = "spatialshot"
+	BinName     = "spatialshot-orchestrator"
 
 	ColorReset  = "\033[0m"
 	ColorGreen  = "\033[32m"

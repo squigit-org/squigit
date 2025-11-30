@@ -12,3 +12,4 @@
   * change model during same chat,
   * save user chats,
   * msg reply, and so on...
+* improve installers to update the new mini pkg only not whole app
