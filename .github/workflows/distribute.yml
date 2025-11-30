@@ -1,7 +1,7 @@
 name: Distribute Production Suite
 
 on:
-  push:
+  # push:
   workflow_dispatch:
 
 permissions:
