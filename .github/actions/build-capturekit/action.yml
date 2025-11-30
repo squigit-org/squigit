@@ -76,11 +76,11 @@ runs:
         mkdir -p "$DIST_ROOT"
 
         if [ "$RUNNER_OS" == "Windows" ]; then
-          ZIP_NAME="capkit-windows-x64.zip"
+          ZIP_NAME="capturekit-win-x64.zip"
         elif [ "$RUNNER_OS" == "macOS" ]; then
-          ZIP_NAME="capkit-macos.zip"
+          ZIP_NAME="capturekit-mac-x64.zip"
         else
-          ZIP_NAME="capkit-linux-x64.zip"
+          ZIP_NAME="capturekit-linux-x64.zip"
         fi
 
         ZIP_FULL_PATH="$DIST_ROOT/$ZIP_NAME"

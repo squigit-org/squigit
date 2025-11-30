@@ -88,7 +88,7 @@ runs:
         DIST_ROOT="$GITHUB_WORKSPACE/dist-out"
         mkdir -p "$DIST_ROOT"
 
-        ZIP_NAME="spatialshot-${{ inputs.platform }}-portable.zip"
+        ZIP_NAME="spatialshot-${{ inputs.platform }}-x64.zip"
         ZIP_FULL_PATH="$DIST_ROOT/$ZIP_NAME"
 
         TARGET_PATH=$(ls -d ${{ inputs.artifact_path }} 2>/dev/null | head -n 1)

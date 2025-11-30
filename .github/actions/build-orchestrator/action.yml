@@ -34,9 +34,9 @@ runs:
         mkdir -p dist-out
 
         if [ "$RUNNER_OS" == "Windows" ]; then
-          ZIP_NAME="orchestrator-windows-x64.zip"
+          ZIP_NAME="orchestrator-win-x64.zip"
         elif [ "$RUNNER_OS" == "macOS" ]; then
-          ZIP_NAME="orchestrator-macos-x64.zip"
+          ZIP_NAME="orchestrator-mac-x64.zip"
         else
           ZIP_NAME="orchestrator-linux-x64.zip"
         fi
