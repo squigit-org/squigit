@@ -70,7 +70,10 @@ module.exports = function (ipcMain) {
               installerName = "spatialshot-installer";
             }
 
-            const fullPath = path.join(getUserDataPath()+"-installer", installerName);
+            const fullPath = path.join(
+              getUserDataPath() + "-installer",
+              installerName
+            );
 
             if (!fs.existsSync(fullPath)) {
               showErrorBoxHelper(
@@ -87,13 +90,44 @@ module.exports = function (ipcMain) {
                 } catch (e) {
                   console.warn("Could not chmod installer:", e);
                 }
-                const child = spawn(fullPath, [], {
-                  detached: true,
-                  stdio: "ignore",
-                });
-                child.unref();
-              }
-              else {
+
+                const terminals = [
+                  { cmd: "gnome-terminal", args: ["--"] },
+                  { cmd: "konsole", args: ["-e"] },
+                  { cmd: "xfce4-terminal", args: ["-e"] },
+                  { cmd: "terminator", args: ["--"] },
+                  { cmd: "tilix", args: ["--"] },
+                  { cmd: "xterm", args: ["-e"] },
+                ];
+
+                function tryNext(index) {
+                  if (index >= terminals.length) {
+                    const fallback = spawn(fullPath, [], {
+                      detached: true,
+                      stdio: "ignore",
+                    });
+                    fallback.unref();
+                    fallback.on("error", (fallbackErr) => {
+                      showErrorBoxHelper(
+                        "Update Error",
+                        `Could not open a terminal to run the installer.\nPlease run it manually:\n${fullPath}`
+                      );
+                    });
+                    return;
+                  }
+                  const term = terminals[index];
+                  const child = spawn(term.cmd, [...term.args, fullPath], {
+                    detached: true,
+                    stdio: "ignore",
+                  });
+                  child.on("error", () => {
+                    tryNext(index + 1);
+                  });
+                  child.unref();
+                }
+
+                tryNext(0);
+              } else {
                 await open(fullPath);
               }
 
@@ -105,7 +139,7 @@ module.exports = function (ipcMain) {
                 "Update Error",
                 `Could not open the installer: ${err.message}`
               );
-              console.error(getUserDataPath()+"-installer", err);
+              console.error(getUserDataPath() + "-installer", err);
             }
           }
         });
