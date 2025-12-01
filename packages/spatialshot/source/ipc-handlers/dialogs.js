@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const { dialog, shell } = require("electron");
+const { dialog, app } = require("electron");
+const { getUserDataPath } = require("../utilities");
+const path = require("path");
 
 module.exports = function (ipcMain) {
   ipcMain.handle("open-file-dialog", async () => {
@@ -29,28 +31,84 @@ module.exports = function (ipcMain) {
     return result.response === 0 ? "save" : "dont-save";
   });
 
+  const showErrorBoxHelper = (title, message) => {
+    dialog.showMessageBox({
+      type: "error",
+      title: title,
+      message: message,
+      buttons: ["OK"],
+    });
+  };
+
   return {
-    showErrorBox: (title, message) => {
-      dialog.showMessageBox({
-        type: "error",
-        title: title,
-        message: message,
-        buttons: ["OK"],
-      });
-    },
+    showErrorBox: showErrorBoxHelper,
+
     showUpdateDialog: (newVersion, oldVersion) => {
-      dialog.showMessageBox({
-        type: 'info',
-        title: 'Update Available',
-        message: `New version ${newVersion} is available!`,
-        detail: `You are on ${oldVersion}. Check the changelog for details.`,
-        buttons: ['See Changelog', 'Cancel'],
-        defaultId: 0
-      }).then(result => {
-        if (result.response === 0) {
-          shell.openExternal('https://github.com/a7mddra/spatialshot/blob/main/CHANGELOG.md');
-        }
-      });
-    }
+      dialog
+        .showMessageBox({
+          type: "info",
+          title: "Update Available",
+          message: `New version ${newVersion} is available!`,
+          detail: `You are on ${oldVersion}. Check the changelog for details.`,
+          buttons: ["Update now", "Cancel"],
+          defaultId: 0,
+          cancelId: 1,
+        })
+        .then(async (result) => {
+          if (result.response === 0) {
+            const { default: open } = await import("open");
+            const { spawn } = require("child_process");
+            const fs = require("fs");
+            const platform = process.platform;
+            let installerName;
+
+            if (platform === "win32") {
+              installerName = "spatialshot-installer.exe";
+            } else if (platform === "darwin") {
+              installerName = "spatialshot-installer.dmg";
+            } else {
+              installerName = "spatialshot-installer";
+            }
+
+            const fullPath = path.join(getUserDataPath()+"-installer", installerName);
+
+            if (!fs.existsSync(fullPath)) {
+              showErrorBoxHelper(
+                "Installer Not Found",
+                `The installer file was not found at:\n${fullPath}\n\nDid you download it?`
+              );
+              return;
+            }
+
+            try {
+              if (platform === "linux") {
+                try {
+                  fs.chmodSync(fullPath, 0o755);
+                } catch (e) {
+                  console.warn("Could not chmod installer:", e);
+                }
+                const child = spawn(fullPath, [], {
+                  detached: true,
+                  stdio: "ignore",
+                });
+                child.unref();
+              }
+              else {
+                await open(fullPath);
+              }
+
+              setTimeout(() => {
+                app.quit();
+              }, 1000);
+            } catch (err) {
+              showErrorBoxHelper(
+                "Update Error",
+                `Could not open the installer: ${err.message}`
+              );
+              console.error(getUserDataPath()+"-installer", err);
+            }
+          }
+        });
+    },
   };
 };
