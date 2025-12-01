@@ -2,6 +2,7 @@
 
 APP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/spatialshot"
 TMP_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/spatialshot/tmp"
+INSTALLER_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/spatialshot-installer"
 DESKTOP_FILE="$HOME/.local/share/applications/spatialshot.desktop"
 CLI_WRAPPER="$HOME/.local/bin/spatialshot"
 
@@ -45,6 +46,7 @@ if [ -f "$CLI_WRAPPER" ]; then
 fi
 
 if [ "$SILENT" = false ]; then
+    rm -rf "$INSTALLER_DIR"
     echo "Removing hotkeys..."
     echo "  > Note: Hotkeys in GNOME/KDE might persist in settings,"
     echo "    but the command they point to is gone."
