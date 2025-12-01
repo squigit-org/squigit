@@ -75,6 +75,12 @@ jobs:
                   pattern: installer-*
                   merge-multiple: true
 
+            - name: Zip Artifacts
+              run: |
+                  zip spatialshot-windows-installer.zip SpatialShot_Installer.exe
+                  zip spatialshot-linux-installer.zip spatialshot-installer
+                  zip spatialshot-macos-installer.zip spatialshot-installer.dmg
+
             - name: Update Installers Release
               uses: softprops/action-gh-release@v1
               with:
@@ -84,6 +90,6 @@ jobs:
                   draft: false
                   prerelease: false
                   files: |
-                      SpatialShot_Installer.exe
-                      spatialshot-installer
-                      spatialshot-installer.dmg
+                      spatialshot-installer-win-x64.zip
+                      spatialshot-installer-linux-x64.zip
+                      spatialshot-installer-mac-x64.zip
