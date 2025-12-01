@@ -16,9 +16,8 @@ ICO_DIR="$HOME/.icons/applications/spatialshot"
 # --- Artifact URLs ---
 RELEASES_URL="https://github.com/a7mddra/spatialshot/releases"
 LATEST_URL="${RELEASES_URL}/latest/download"
-INSTALLERS_URL="${RELEASES}/download/installers"
+INSTALLERS_URL="${RELEASES_URL}/download/installers"
 EXEC_SUFFIX="-linux-x64.zip"
-
 CAPKIT_URL="${LATEST_URL}/capturekit${EXEC_SUFFIX}"
 ORCHESTRATOR_URL="${LATEST_URL}/orchestrator${EXEC_SUFFIX}"
 SPATIALSHOT_URL="${LATEST_URL}/spatialshot${EXEC_SUFFIX}"
