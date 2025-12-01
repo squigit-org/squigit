@@ -1,3 +1,7 @@
+if (process.platform === 'linux') {
+  process.env.GTK_IM_MODULE = 'xim';
+}
+
 /**
  * @license
  * Copyright 2025 a7mddra
