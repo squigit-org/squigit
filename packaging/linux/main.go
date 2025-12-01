@@ -50,7 +50,7 @@ func main() {
 
 	if _, err := os.Stat(targetAppDir); err == nil {
 		fmt.Println(ColorYellow + "Spatialshot is already installed." + ColorReset)
-		if !askForConfirmation("Do you want to overwrite the existing installation?") {
+		if !askForConfirmation("Do you want to update to the latest version?") {
 			fmt.Println("Installation aborted.")
 			os.Exit(0)
 		}
