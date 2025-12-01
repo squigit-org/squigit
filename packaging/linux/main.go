@@ -42,18 +42,26 @@ func main() {
 		return
 	}
 
+	homeDir, _ := os.UserHomeDir()
+	localShare := filepath.Join(homeDir, ".local", "share")
+	localBin := filepath.Join(homeDir, ".local", "bin")
+	targetAppDir := filepath.Join(localShare, AppDirName, "app")
+	wrapperPath := filepath.Join(localBin, WrapperName)
+
+	if _, err := os.Stat(targetAppDir); err == nil {
+		fmt.Println(ColorYellow + "Spatialshot is already installed." + ColorReset)
+		if !askForConfirmation("Do you want to overwrite the existing installation?") {
+			fmt.Println("Installation aborted.")
+			os.Exit(0)
+		}
+	}
+
 	// ---------------------------------------------------------
 	// PRE-INSTALL: Silent Cleanup
 	// ---------------------------------------------------------
 	runEmbeddedScript("scripts/uninstall.sh", []string{"--silent"})
 
 	fmt.Println(ColorBold + "Starting Spatialshot Setup..." + ColorReset)
-
-	homeDir, _ := os.UserHomeDir()
-	localShare := filepath.Join(homeDir, ".local", "share")
-	localBin := filepath.Join(homeDir, ".local", "bin")
-	targetAppDir := filepath.Join(localShare, AppDirName, "app")
-	wrapperPath := filepath.Join(localBin, WrapperName)
 
 	// ---------------------------------------------------------
 	// STEP 1: Install Files
@@ -218,6 +226,13 @@ func launchInTerminal() {
 			os.Exit(0)
 		}
 	}
+}
+
+func askForConfirmation(prompt string) bool {
+	fmt.Printf("%s [y/N] ", prompt)
+	var response string
+	fmt.Scanln(&response)
+	return response == "y" || response == "Y"
 }
 
 func fatal(msg string) {

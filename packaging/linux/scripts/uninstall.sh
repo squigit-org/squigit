@@ -24,14 +24,14 @@ if [ "$SILENT" = false ]; then
     echo "=========================================="
     echo "    STARTING SPATIALSHOT UNINSTALLER"
     echo "=========================================="
-fi
     
-echo "This will remove Spatialshot files installed in your home directory."
-read -p "Are you sure? [y/N] " ans
-case "$ans" in
-    y|Y) ;;
-    *) echo "Aborted."; exit 1 ;;
-esac
+    echo "This will remove Spatialshot files installed in your home directory."
+    read -p "Are you sure? [y/N] " ans
+    case "$ans" in
+        y|Y) ;;
+        *) echo "Aborted."; exit 1 ;;
+    esac
+fi
 
 log "Removing application files..."
 rm -rf "$APP_DIR"
