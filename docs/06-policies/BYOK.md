@@ -54,12 +54,12 @@ Trust is earned through verification.
 
 To get started, generate keys from the supported providers below:
 
-| **Provider** | **Service / Models** | **Get Key** | 
- | ----- | ----- | ----- | 
-| **Google** | **LLM:** Gemini 2.5 Flash, 2.5 Pro, 1.5 Lite | [Google AI Studio](https://aistudio.google.com/app/apikey) | 
-| **ImgBB** | **Image Hosting:** For uploading/analyzing images | [ImgBB API](https://api.imgbb.com/) | 
+| **Provider** | **Service / Models** | **Get Key** |
+ | ----- | ----- | ----- |
+| **Google** | **LLM:** Gemini 2.5 Flash, 2.5 Pro, 1.5 Lite | [Google AI Studio](https://aistudio.google.com/app/apikey) |
+| **ImgBB** | **Image Hosting:** For uploading/analyzing images | [ImgBB API](https://api.imgbb.com/) |
 
-### How to add your keys (Automated Flow):
+### How to add your keys (Automated Flow)
 
 1. Navigate to **Settings** > **Reset API Keys** within the app.
 

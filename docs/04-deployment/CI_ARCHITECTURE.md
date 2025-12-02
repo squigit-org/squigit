@@ -67,9 +67,9 @@ This workflow implements a **Fan-Out / Fan-In** pattern. It fans out to 9 parall
 
 The `publish-binaries` job waits for all build matrix jobs to complete. It downloads all produced artifacts and uploads them to the GitHub Release associated with the triggering tag. This results in a release containing:
 
-    * `capturekit-{os}-x64.zip` (x3)
-    * `orchestrator-{os}-x64.zip` (x3)
-    * `spatialshot-{os}-x64.zip` (x3)
+* `capturekit-{os}-x64.zip` (x3)
+* `orchestrator-{os}-x64.zip` (x3)
+* `spatialshot-{os}-x64.zip` (x3)
 
 -----
 
