@@ -19,9 +19,9 @@ The Linux installer is compiled as a standalone Go binary (`main.go`). This appr
 
 ### 2.1 Installation Routine
 
-1.  **Environment Resolution:** The binary resolves standard XDG directories (`XDG_DATA_HOME`, `XDG_CACHE_HOME`) to ensure compliance with Linux filesystem standards.
-2.  **Artifact Retrieval:** The embedded `install.sh` script utilizes `wget` to download zipped artifacts for the Orchestrator, CaptureKit, and the main Electron binary from the GitHub Releases `latest` endpoint.
-3.  **Permissions Management:** Executable bits (`chmod +x`) are applied to the downloaded binaries immediately after extraction.
+1. **Environment Resolution:** The binary resolves standard XDG directories (`XDG_DATA_HOME`, `XDG_CACHE_HOME`) to ensure compliance with Linux filesystem standards.
+2. **Artifact Retrieval:** The embedded `install.sh` script utilizes `wget` to download zipped artifacts for the Orchestrator, CaptureKit, and the main Electron binary from the GitHub Releases `latest` endpoint.
+3. **Permissions Management:** Executable bits (`chmod +x`) are applied to the downloaded binaries immediately after extraction.
 
 ### 2.2 Desktop Environment Heuristics (Hotkeys)
 
@@ -46,9 +46,9 @@ Due to the ad-hoc nature of the binary ingestion, macOS Gatekeeper will flag the
 
 macOS does not natively allow background applications to intercept global key events without Accessibility permissions. To circumvent the need for invasive permission prompts, the installer creates a **System Service**:
 
-1.  **Workflow Compilation:** It compiles an Automator workflow (`.workflow`) using `osacompile`. This workflow executes the `orchestrator-macos` binary.
-2.  **PBS Registration:** It directly modifies the `pbs.plist` (PbxSystemServices) preferences file to map `Cmd+Shift+A` to the created service.
-3.  **Service Flush:** It kills `cfprefsd` and `pbs` to force the system to reload the service registry immediately.
+1. **Workflow Compilation:** It compiles an Automator workflow (`.workflow`) using `osacompile`. This workflow executes the `orchestrator-macos` binary.
+2. **PBS Registration:** It directly modifies the `pbs.plist` (PbxSystemServices) preferences file to map `Cmd+Shift+A` to the created service.
+3. **Service Flush:** It kills `cfprefsd` and `pbs` to force the system to reload the service registry immediately.
 
 -----
 
@@ -67,9 +67,9 @@ The installer utilizes `Invoke-WebRequest` to fetch the ZIP files and `Expand-Ar
 
 Windows lacks a native "command-line" method to register a global hotkey that launches an executable without that executable already running. The installer solves this by generating a persistent background listener:
 
-1.  **P/Invoke Generation:** The installer dynamically writes a PowerShell script (`hotkey_listener.ps1`) that defines a C\# class using `Add-Type`. This class imports `RegisterHotKey` and `GetMessage` from `user32.dll`.
-2.  **VBScript Wrapper:** To prevent a PowerShell console window from appearing on startup, a VBScript (`launch_hotkey.vbs`) is created to launch the PowerShell listener with `-WindowStyle Hidden`.
-3.  **Persistence:** A shortcut to the VBScript is placed in the user's `Startup` folder.
+1. **P/Invoke Generation:** The installer dynamically writes a PowerShell script (`hotkey_listener.ps1`) that defines a C\# class using `Add-Type`. This class imports `RegisterHotKey` and `GetMessage` from `user32.dll`.
+2. **VBScript Wrapper:** To prevent a PowerShell console window from appearing on startup, a VBScript (`launch_hotkey.vbs`) is created to launch the PowerShell listener with `-WindowStyle Hidden`.
+3. **Persistence:** A shortcut to the VBScript is placed in the user's `Startup` folder.
 
 -----
 
@@ -77,7 +77,7 @@ Windows lacks a native "command-line" method to register a global hotkey that la
 
 All three installers operate on a "Pull" model. They are hardcoded to fetch resources from specific endpoints:
 
-  * **Base URL:** `https://github.com/a7mddra/spatialshot/releases`
-  * **Resolution:** Uses `/latest/download/` to ensure the installer—regardless of when it was downloaded—always provisions the most up-to-date version of the application components.
+* **Base URL:** `https://github.com/a7mddra/spatialshot/releases`
+* **Resolution:** Uses `/latest/download/` to ensure the installer—regardless of when it was downloaded—always provisions the most up-to-date version of the application components.
 
 This strategy delegates version control entirely to the GitHub Releases API, removing the need for an auto-updater mechanism within the application code itself. The installer effectively acts as both the setup wizard and the updater.

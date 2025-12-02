@@ -6,10 +6,10 @@
 
 SpatialShot does not use a standard Electron architecture (a single `BrowserWindow` loading a URL). Instead, it implements a **Shell + View** composite architecture to ensure maximum performance and security isolation.
 
-| Component | Path | Technology | Role | 
- | ----- | ----- | ----- | ----- | 
-| **The Shell** | `spatialshot/source/renderer` | HTML/Vanilla JS | The "frame" of the window. Handles traffic lights, window dragging, and the login state. Lightweight and instant-loading. | 
-| **The View** | `packages/core` | React 19 + Vite | The heavy "Brain". Loaded inside a `BrowserView` (a separate process). Contains the Chat Engine and Gemini Logic. | 
+| Component | Path | Technology | Role |
+ | ----- | ----- | ----- | ----- |
+| **The Shell** | `spatialshot/source/renderer` | HTML/Vanilla JS | The "frame" of the window. Handles traffic lights, window dragging, and the login state. Lightweight and instant-loading. |
+| **The View** | `packages/core` | React 19 + Vite | The heavy "Brain". Loaded inside a `BrowserView` (a separate process). Contains the Chat Engine and Gemini Logic. |
 
 ````mermaid
 graph TD
@@ -69,19 +69,19 @@ The intelligence resides in `packages/core`. This is a pure React application bu
 
 This hook manages the conversational state. It abstracts the complexity of streaming responses from Google Gemini.
 
-1.  **Initialization:** Accepts an `apiKey` and `startupImage`.
+1. **Initialization:** Accepts an `apiKey` and `startupImage`.
 
-2.  **Streaming:** Uses `startNewChatStream` to open a socket-like connection to Gemini.
+2. **Streaming:** Uses `startNewChatStream` to open a socket-like connection to Gemini.
 
-3.  **Fallback Logic:** If Gemini 2.5 Flash hits a `429` (Rate Limit) or `503` (Overloaded), the engine automatically downgrades to **Gemini Flash Lite** to ensure the user gets *some* answer.
+3. **Fallback Logic:** If Gemini 2.5 Flash hits a `429` (Rate Limit) or `503` (Overloaded), the engine automatically downgrades to **Gemini Flash Lite** to ensure the user gets *some* answer.
 
 ### System Synchronization (`useSystemSync.ts`)
 
 Since React is stateless regarding the file system, this hook binds React state to Electron's persistent JSON store.
 
-  * Listens for `ipc.onThemeChanged`.
+* Listens for `ipc.onThemeChanged`.
 
-  * Syncs API Keys, User Profiles, and Prompts from disk on mount.
+* Syncs API Keys, User Profiles, and Prompts from disk on mount.
 
 ## 3\. The Backend (Electron Logic)
 
@@ -91,15 +91,15 @@ The `source/main.js` entry point orchestrates the application lifecycle. To main
 
 SpatialShot operates on a zero-trust model regarding API keys.
 
-1.  **Clipboard Watcher (`ipc-handlers/byok.js`):**
+1. **Clipboard Watcher (`ipc-handlers/byok.js`):**
 
       * When the user clicks "Setup", the app polls the clipboard.
 
       * It regex-matches for Google Keys (`AIzaS...`) or ImgBB keys (32-char hex).
 
-      * **UX Benefit:** The user never has to paste sensitive keys; the app grabs them, encrypts them, and clears them from memory.
+    ***UX Benefit:** The user never has to paste sensitive keys; the app grabs them, encrypts them, and clears them from memory.
 
-2.  **Encryption (`utilities.js`):**
+2. **Encryption (`utilities.js`):**
 
       * Keys are **never** stored in plain text.
 
@@ -111,7 +111,7 @@ SpatialShot operates on a zero-trust model regarding API keys.
 
 Unlike standard apps with fixed sizes, SpatialShot attempts to mimic a native OS overlay.
 
-  * **Logic:** `getDynamicDims` calculates the window size relative to the monitor's work area. It creates a window that feels proportional to the screen resolution (approx. 1/13th width ratio), centered perfectly.
+* **Logic:** `getDynamicDims` calculates the window size relative to the monitor's work area. It creates a window that feels proportional to the screen resolution (approx. 1/13th width ratio), centered perfectly.
 
 ## 4\. External Integrations
 
@@ -119,26 +119,26 @@ SpatialShot connects to two primary external services:
 
 ### 1\. Google Gemini (Intelligence)
 
-  * **Direct SDK:** Uses `@google/genai` directly in the renderer (Core).
+* **Direct SDK:** Uses `@google/genai` directly in the renderer (Core).
 
-  * **Prompt Engineering:** Injects a system prompt (`prompt.yml`) that defines the persona as "Friendly, Informal, and Brief".
+* **Prompt Engineering:** Injects a system prompt (`prompt.yml`) that defines the persona as "Friendly, Informal, and Brief".
 
 ### 2\. Google Lens (OCR & Visual Search)
 
 Since Google Lens has no public API, SpatialShot implements a clever "Bridge" technique in `ipc-handlers/lens.js`.
 
-1.  **Upload:** The local screenshot is uploaded to **ImgBB** (using the user's private key).
+1. **Upload:** The local screenshot is uploaded to **ImgBB** (using the user's private key).
 
-2.  **Redirect:** The resulting public URL is encoded.
+2. **Redirect:** The resulting public URL is encoded.
 
-3.  **Launch:** The app opens the default browser to `https://lens.google.com/uploadbyurl?url={IMG_URL}`.
+3. **Launch:** The app opens the default browser to `https://lens.google.com/uploadbyurl?url={IMG_URL}`.
 
 ## 5\. Authentication Flow
 
 Authentication is handled locally to support Google Sign-In without a backend server.
 
-1.  **Local Server:** `auth/index.js` spins up a temporary HTTP server on `localhost:3000`.
+1. **Local Server:** `auth/index.js` spins up a temporary HTTP server on `localhost:3000`.
 
-2.  **OAuth Flow:** Launches the system browser for Google OAuth.
+2. **OAuth Flow:** Launches the system browser for Google OAuth.
 
-3.  **Callback:** The local server catches the callback, extracts the token, fetches the user profile, writes it to `profile.json`, and shuts down.
+3. **Callback:** The local server catches the callback, extracts the token, fetches the user profile, writes it to `profile.json`, and shuts down.

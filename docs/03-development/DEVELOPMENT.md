@@ -48,9 +48,9 @@ For contributors focusing on specific components without requiring full compilat
 1. **Download Prebuilt Binaries**:
    - Navigate to the [latest GitHub Release](https://github.com/a7mddra/spatialshot/releases/latest)
    - Download the platform-specific archives for:
-     - `capturekit-{os}-x64.zip`
-     - `orchestrator-{os}-x64.zip`
-     - `spatialshot-{os}-x64.zip`
+   - `capturekit-{os}-x64.zip`
+   - `orchestrator-{os}-x64.zip`
+   - `spatialshot-{os}-x64.zip`
 
 2. **Extract to Appropriate Locations**:
    - Place CaptureKit binaries in `packages/capturekit/dist/`
@@ -81,6 +81,7 @@ npm run dev
 ```
 
 Development features:
+
 - Hot module replacement enabled
 - TypeScript strict mode
 - Tailwind CSS with JIT compilation
@@ -107,11 +108,13 @@ npm start
 ```
 
 Development features:
+
 - Main process debugging with `--inspect` flag
 - Renderer process DevTools accessible via `Ctrl+Shift+I`
 - IPC handler hot-reload not supported; restart required for main process changes
 
 Key development directories:
+
 - `source/main.js`: Electron main process entry point
 - `source/ipc-handlers/`: Modular IPC communication handlers
 - `source/renderer/`: Shell interface and view management
@@ -129,11 +132,13 @@ cargo run
 ```
 
 Development features:
+
 - Standard Rust toolchain with cargo
 - Platform-specific modules in `src/platform/`
 - Integration tests in `tests/integration/`
 
 Debugging considerations:
+
 - The binary runs without a console window by default (Windows subsystem setting)
 - Use `RUST_LOG=debug` environment variable for verbose logging
 - Platform-specific debugging may require attaching to spawned child processes
@@ -145,6 +150,7 @@ Debugging considerations:
 The CaptureKit consists of two C++ binaries for screen capture and overlay rendering.
 
 **Development Environment Setup**:
+
 ```bash
 cd packages/capturekit
 mkdir build && cd build
@@ -153,11 +159,13 @@ ninja
 ```
 
 Platform-specific considerations:
+
 - **Linux**: Requires XCB development libraries and Qt6 modules
 - **Windows**: Requires MSVC compiler and Qt6 installation (or use aqtinstall)
 - **macOS**: Requires Xcode command line tools and Qt6 via Homebrew
 
 Testing individual components:
+
 ```bash
 # Test screen grabber
 ./dist/scgrabber

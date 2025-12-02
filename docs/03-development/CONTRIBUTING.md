@@ -1,94 +1,184 @@
 # Contributing to SpatialShot
 
-First off, thank you for considering contributing to SpatialShot. We are excited to have you. Every contribution, from a small typo fix to a major new feature, is valuable and appreciated.
+Thank you for your interest in contributing to SpatialShot! This document provides a complete guide to contributing, from setting up your development environment to submitting a pull request.
 
-This document provides a set of guidelines for contributing to SpatialShot. These are mostly guidelines, not strict rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+We welcome all contributions, from reporting bugs and improving documentation to adding new features. Every contributor is valued.
 
-## Code of Conduct
+## Our Pledge & Your First Steps
 
-This project and everyone participating in it is governed by the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior.
+All contributors are expected to adhere to our [Code of Conduct](../06-policies/CODE_OF_CONDUCT.md). Please read it before participating.
 
-## How Can I Contribute?
+Before you start working on a significant change, we encourage you to:
+1.**Check the [Issue Tracker](https://github.com/a7mddra/spatialshot/issues)** to see if your idea is already being discussed or if there are `good first issue` labels.
+2. **Open an Issue** to propose a new feature or discuss a bug fix. This allows the maintainers and community to provide feedback before you invest significant time.
 
-There are many ways to contribute, including reporting bugs, suggesting enhancements, improving documentation, or writing code.
+## The SpatialShot Development Philosophy: Engineered Isolation
 
-* **Reporting Bugs:** If you find a bug, please open an issue and provide a detailed description, including your operating system, steps to reproduce, and any relevant logs.
-* **Suggesting Enhancements:** If you have an idea for a new feature or an improvement to an existing one, open an issue to start a discussion.
-* **Writing Code:** If you're ready to write some code, you can start by looking through issues labeled `good first issue` or `help wanted`.
+SpatialShot is a polyglot monorepo built with **7+ programming languages and 5+ frameworks**. This presents a sophisticated debugging challenge but is engineered to create an optimal path for contributors through **strict separation of concerns**.
 
-## Getting Started: Your Development Environment
+A React developer can enhance the user interface without understanding low-level system APIs for screen capture. A systems programmer can optimize the capture engine without delving into React state management. This guide will help you navigate directly to the component you wish to improve.
 
-SpatialShot has a modular architecture, allowing developers to work on specific parts of the application without needing a complex, full-system build environment. We offer two main paths for setting up your development environment.
+## Setting Up Your Development Environment
 
-### Path 1: The Quickstart (UI, Orchestration, and General Development)
+### Prerequisites
 
-This is the recommended path for most contributors, especially those working on the Electron UI (`spatialshot`), the Python launcher (`QUICKRUN`), or general scripting. This path **does not require you to compile C++, Qt, or Rust code**.
+Ensure you have these foundational tools installed:
 
-1.  **Fork & Clone:** Fork the repository on GitHub and clone your fork locally:
+* **Git** for version control.
+* **Python 3.8+** for build orchestration.
+* **Node.js 18+** and npm for frontend development.
+* **(Optional) Rust toolchain** (`rustup`) for Orchestrator work.
+* **(Optional) C++ compiler & Qt6 libraries** for CaptureKit development.
 
-    ```bash
-    git clone https://github.com/YOUR-USERNAME/spatialshot.git
-    cd spatialshot
-    ```
+### Choose Your Development Path
 
-2.  **Install Dependencies:** Ensure you have `python3` and `npm` installed on your system.
+We offer two primary paths to match your contribution focus.
 
-3.  **Download Binaries:** Go to the [**latest GitHub Release**](https://github.com/a7mddra/spatialshot/releases/latest). Download the pre-compiled binary archives for your operating system (e.g., `squiggle-linux.tar.gz`, `ycaptool-linux.tar.gz`).
+#### 🛠️ Path 1: Full Source Build (For Core Contributors & Build Modifications)
 
-4.  **Place Binaries:** Extract the archives and place the executable files in their correct locations within the project structure:
+Use this path if you are modifying the build system, working across multiple components, or need to compile everything from source.
 
-      * Place the `squiggle` executable in: `packages/squiggle/dist/`
-      * Place the `ycaptool` executables in: `packages/ycaptool/dist/` (if using Linux)
+Run the unified build orchestrator from the repository root:
 
-5.  **Run the Launcher:** Now that the binaries are in place, you can run the development launcher to test the full application flow.
+```bash
+python3 setup.py
+```
 
-    ```bash
-    python3 QUICKRUN/launcher.py
-    ```
+This script performs a complete, deterministic build:
 
-### Path 2: The Core Contributor Setup (Low-Level Development)
+1. Sanitizes environment (permissions, PowerShell policies).
+2. Compiles **CaptureKit** (C++/Qt6) and **Orchestrator** (Rust).
+3. Bundles the **Core** React frontend with Vite.
+4. Injects frontend assets into the Electron container.
+5. Runs the integration test suite.
 
-This path is for contributors working on the low-level packages themselves, such as `squiggle` (C++/Qt) or `ycaptool` (Python/C++/Gtk). This requires a full build environment.
+> **Refer to [Build Architecture](../02-architecture/BUILD.md) for in-depth details and troubleshooting.**
 
-1.  **Fork & Clone:** Clone your fork of the repository.
-2.  **Install Build Dependencies:** You will need the specific toolchains for the package you are working on. This may include:
-    * A C++ compiler (g++, clang, or MSVC)
-    * A static build of the Qt6 framework
-    * Python 3 and `pip`
-    * Node.js and `npm`
-    * The Rust toolchain (`cargo`)
-3.  **Run the Build Orchestrator:** The `setup.py` script is the main build tool that compiles all the necessary binaries from source.
-    ```bash
-    python3 setup.py
-    ```
-    Once the build is complete, you can run `QUICKRUN/launcher.py` to test the full application using your locally compiled binaries.
+#### ⚡ Path 2: Prebuilt Binary Development (For Specialized Contributors)
 
-## Project Architecture
+Use this path to focus on a single component (e.g., only the React UI or the Electron logic) without the overhead of compiling the entire stack.
 
-SpatialShot is composed of several independent packages orchestrated to work together:
+1. **Download Binaries**: Get the latest prebuilt artifacts from the [GitHub Releases](https://github.com/a7mddra/spatialshot/releases/latest) page:
+    * `capturekit-{os}-x64.zip`
+    * `orchestrator-{os}-x64.zip`
+    * `spatialshot-{os}-x64.zip`
+2. **Extract to Project Structure**:
+    * Place CaptureKit binaries in `packages/capturekit/dist/`
+    * Place the Orchestrator binary in `packages/orchestrator/target/release/`
+    * Place SpatialShot binaries in `packages/spatialshot/dist/`
+3. **Develop in Isolation**: You can now run the app and modify your chosen component, using the stable prebuilt binaries for all other parts.
 
-* `packages/orchestrator`: The final, production-ready **Rust** binary that manages the entire application flow in a lightweight, high-performance manner.
-* `packages/squiggle`: The **C++/Qt** application responsible for the "freeze" overlay and drawing interface. It is optimized for speed to provide an instant, native feel.
-* `packages/ycaptool`: A specialized **C++/Qt6** utility for handling screen capture on Linux (Wayland), which has strict security protocols.
-* `packages/spatialshot` (formerly `panel`): The main user interface, an **Electron/Node.js** application that displays the results from the Gemini and Lens APIs.
-* `platform`: Contains platform-specific shell scripts (`.sh`, `.ps1`) for native OS interactions like screen capture on Windows, macOS, and X11.
-* `QUICKRUN`: The **Python** development launcher used for integration testing and providing a simple entry point for contributors.
-* `packaging` & `setup.py`: Scripts and configuration for building and packaging all the components.
+## Component-Specific Workflow Guide
 
-## Submitting Contributions
+### 🎨 Frontend (React/TypeScript) - `packages/core/`
 
-Please follow the standard GitHub pull request workflow.
+**Typical Contributor**: UI/UX designer, web developer.
 
-1.  **Create a Branch:** Create a new branch from `main` for your feature or bugfix.
-    ```bash
-    git checkout -b feature/your-awesome-feature
-    ```
-2.  **Make Your Changes:** Write your code and ensure it follows the existing style of the project.
-3.  **Test Your Changes:** Run the `QUICKRUN/launcher.py` to ensure that your changes have not broken the end-to-end workflow. If you are adding new logic, consider adding relevant automated tests in the `tests/` directory.
-4.  **Commit Your Changes:** Use a clear and descriptive commit message.
-5.  **Push and Open a Pull Request:** Push your branch to your fork and open a pull request against the `main` branch of the official SpatialShot repository.
-6.  **Provide Context:** In your pull request description, explain the "what" and "why" of your changes. If it resolves an existing issue, be sure to link it (e.g., "Closes #123").
+```bash
+cd packages/core
+npm install
+npm run dev # Dev server at http://localhost:5173
+```
 
-Your pull request will be reviewed by a maintainer, who may suggest some changes or improvements. We appreciate your patience and collaboration during the review process.
+* **Workflow**: Standard React 19 + Vite with HMR. Develop the UI as a pure web app.
+* **Integration**: Run `npm run build` to compile assets. The main `setup.py` or Electron app will inject these into the renderer.
 
-Thank you again for your interest in making SpatialShot better!
+### 📦 Electron Application - `packages/spatialshot/`
+
+**Typical Contributor**: JavaScript/Node.js developer, desktop app integrator.
+
+```bash
+cd packages/spatialshot
+npm install
+npm start
+```
+
+* **Key Directories**:
+  * `source/main.js`: Main process entry point.
+  * `source/ipc-handlers/`: Modular IPC channels.
+  * `source/renderer/`: Shell window management.
+* **Debugging**: Use `--inspect` flag for main process debugging. Renderer DevTools are available (`Ctrl+Shift+I`).
+
+### ⚙️ Orchestrator (Rust) - `packages/orchestrator/`
+
+**Typical Contributor**: Systems programmer, middleware developer.
+
+```bash
+cd packages/orchestrator
+cargo build
+cargo run
+```
+
+* **Architecture**: Manages the application lifecycle via a file-system state machine. Platform-specific logic is in `src/platform/`.
+* **Debugging**: Use `RUST_LOG=debug` environment variable for detailed logs.
+
+### 🖥️ CaptureKit (C++/Qt6) - `packages/capturekit/`
+
+**Typical Contributor**: C++ developer, graphics/systems engineer.
+
+```bash
+cd packages/capturekit
+mkdir build && cd build
+cmake -GNinja ..
+ninja
+# Test a component directly
+./dist/scgrabber
+./dist/drawview /path/to/test.png
+```
+
+* **Platform Notes**: Requires Qt6 development libraries. Linux needs XCB libs. The build uses custom `PKGBUILD` scripts for deployment.
+
+## Making & Submitting Your Changes
+
+### 1. Create a Topic Branch
+
+Always branch from the `main` branch.
+
+```bash
+git checkout -b type/descriptive-name
+```
+
+Use prefixes like `feat/`, `fix/`, `docs/`, or `refactor/`.
+
+### 2. Develop and Test Your Changes
+
+* **Follow Architecture**: Respect component boundaries. Use existing IPC channels and the file-system state machine for inter-component communication.
+* **Test Thoroughly**:
+  * Test your component in isolation using the guides above.
+  * If possible, run the full test suite with `pytest` to ensure no regressions.
+  * Test on the target operating system if your change is platform-specific.
+
+### 3. Commit Your Changes
+
+Write clear, concise commit messages in the imperative mood.
+
+```plaintext
+feat(ui): add high-contrast theme toggle
+^    ^   ^
+|    |   |__ Summary in present tense
+|    |______ Scope (component affected)
+|___________ Type: feat, fix, docs, style, refactor, test, chore
+```
+
+### 4. Submit a Pull Request (PR)
+
+1. Push your branch to your fork: `git push origin your-branch-name`.
+2. Open a PR against the `a7mddra/spatialshot` `main` branch.
+3. **Fill out the PR template completely**:
+
+* Describe the change and its motivation.
+* Link to any related issues.
+* Detail the testing you performed.
+* Note any breaking changes or required documentation updates.
+
+### PR Review Process
+
+A maintainer will review your PR. They may suggest changes. This collaborative process ensures code quality and alignment with project goals. Please be responsive to feedback.
+
+## Getting Help
+
+* **Documentation**: The [`/docs`](../README.md) directory is the source of truth for architecture and guides.
+* **Issues**: Search and discuss in the [GitHub Issues](https://github.com/a7mddra/spatialshot/issues).
+* **Discussions**: Use GitHub Discussions for broader questions or design ideas.
+
+Thank you for helping to build SpatialShot. Your contributions are what make this project possible.

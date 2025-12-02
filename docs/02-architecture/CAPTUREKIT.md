@@ -6,10 +6,10 @@
 
 Unlike the Orchestrator (which manages *process* flow), CaptureKit handles *pixels*.
 
-| Binary | Platforms | Role | 
- | ----- | ----- | ----- | 
-| **`scgrabber`** | Linux, macOS | Captures screenshots of all monitors simultaneously. (Windows uses `nircmd` via Orchestrator). | 
-| **`drawview`** | All Platforms | Creates a fullscreen, frameless overlay for selecting, cropping, and drawing on the screenshot. | 
+| Binary | Platforms | Role |
+ | ----- | ----- | ----- |
+| **`scgrabber`** | Linux, macOS | Captures screenshots of all monitors simultaneously. (Windows uses `nircmd` via Orchestrator). |
+| **`drawview`** | All Platforms | Creates a fullscreen, frameless overlay for selecting, cropping, and drawing on the screenshot. |
 
 ## 2. scgrabber: The Camera (Linux/macOS)
 
@@ -38,15 +38,15 @@ graph TD
 
 ````
 
-  * **The Splitter Logic (`helpers.cpp`):** When using the Portal, we receive one giant image containing all monitors. `scgrabber` calculates the logical geometry of every monitor vs. the physical geometry of the image and "slices" the giant image back into individual monitor feeds (`processFullPixmap`).
+* **The Splitter Logic (`helpers.cpp`):** When using the Portal, we receive one giant image containing all monitors. `scgrabber` calculates the logical geometry of every monitor vs. the physical geometry of the image and "slices" the giant image back into individual monitor feeds (`processFullPixmap`).
 
 ### Audio Suppression (`audmgr`)
 
 To prevent the OS from playing a loud "shutter" sound, `scgrabber` temporarily mutes the system audio stream before capturing and restores it immediately after.
 
-  * **Linux:** Detects `pactl`, `wpctl`, or `amixer`.
+* **Linux:** Detects `pactl`, `wpctl`, or `amixer`.
 
-  * **macOS:** Uses `osascript` to mute output volume.
+* **macOS:** Uses `osascript` to mute output volume.
 
 ## 3\. drawview: The Canvas (Cross-Platform)
 
@@ -54,9 +54,9 @@ To prevent the OS from playing a loud "shutter" sound, `scgrabber` temporarily m
 
 ### Rendering Pipeline
 
-1.  **Input:** Receives the path to the raw screenshot (from `scgrabber` or Orchestrator).
+1. **Input:** Receives the path to the raw screenshot (from `scgrabber` or Orchestrator).
 
-2.  **Composition:**
+2. **Composition:**
 
       * Layer 1: The Background Image (The screenshot).
 
@@ -64,22 +64,22 @@ To prevent the OS from playing a loud "shutter" sound, `scgrabber` temporarily m
 
       * Layer 3: The Drawing Path (`QPainterPath` with Glow Effect).
 
-3.  **The Glow:** The brush isn't just a white line. It renders 5 layers of varying opacity and width using `QPainter::CompositionMode_Screen` to simulate a neon light effect.
+3. **The Glow:** The brush isn't just a white line. It renders 5 layers of varying opacity and width using `QPainter::CompositionMode_Screen` to simulate a neon light effect.
 
 ### Cropping Logic
 
 When the user releases the mouse after drawing:
 
-1.  Calculates the bounding box of the drawn stroke.
+1. Calculates the bounding box of the drawn stroke.
 
-2.  Crops the original background image to that rect.
+2. Crops the original background image to that rect.
 
-3.  Saves the result starting with `o` (e.g., `o1.png`) to signal the Orchestrator that the user is done.
+3. Saves the result starting with `o` (e.g., `o1.png`) to signal the Orchestrator that the user is done.
 
 ## 4\. The Watchdog (Linux Specific)
 
 On Linux, if a user unplugs a monitor while `drawview` is open, the overlay might crash or cover the wrong area. To solve this, `drawview` spawns a **Watchdog** thread (`watchdog.cpp`).
 
-  * **Embedded Script:** It runs an embedded Bash script that polls `xrandr`, `swaymsg`, `kscreen-doctor`, or `drm/sysfs` every second.
+* **Embedded Script:** It runs an embedded Bash script that polls `xrandr`, `swaymsg`, `kscreen-doctor`, or `drm/sysfs` every second.
 
-  * **Trigger:** If the monitor count changes, the Watchdog force-quits `drawview` to prevent zombie overlays.
+* **Trigger:** If the monitor count changes, the Watchdog force-quits `drawview` to prevent zombie overlays.

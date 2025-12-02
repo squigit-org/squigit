@@ -26,11 +26,11 @@ The Orchestrator watches this directory and transitions the state based on file 
 
 The Orchestrator resolves paths dynamically based on the OS standard (XDG for Linux, `Library/` for macOS, `AppData` for Windows).
 
-| Path | Description | 
- | ----- | ----- | 
-| **Spatial Dir** | The root config/data folder. Contains the `lock` file. | 
-| **Tmp Dir** | The shared bus. Contains raw screenshots and the final output. | 
-| **Core Script** | A generated script (`core.sh`) used on Unix systems to normalize execution. | 
+| Path | Description |
+ | ----- | ----- |
+| **Spatial Dir** | The root config/data folder. Contains the `lock` file. |
+| **Tmp Dir** | The shared bus. Contains raw screenshots and the final output. |
+| **Core Script** | A generated script (`core.sh`) used on Unix systems to normalize execution. |
 
 ## 3. Platform Abstraction Layer
 
@@ -46,19 +46,19 @@ pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()>;
 
 On Unix systems, the Orchestrator generates a `core.sh` script at runtime.
 
-  * **Why?** It simplifies environment variable injection and binary path resolution.
+* **Why?** It simplifies environment variable injection and binary path resolution.
 
-  * **macOS Specifics:** Uses `launchctl asuser` to ensure spawned processes (like the screen grabber) attach to the correct GUI session and user context.
+* **macOS Specifics:** Uses `launchctl asuser` to ensure spawned processes (like the screen grabber) attach to the correct GUI session and user context.
 
 ### Windows (Win32)
 
 On Windows, we do not use shell scripts due to execution policy restrictions and performance.
 
-  * **Screen Grabbing:** Uses `EnumDisplayMonitors` (Win32 API) to calculate geometry, but delegates the actual pixel capture to a bundled `nircmdc.exe` for reliability.
+* **Screen Grabbing:** Uses `EnumDisplayMonitors` (Win32 API) to calculate geometry, but delegates the actual pixel capture to a bundled `nircmdc.exe` for reliability.
 
-  * **DPI Awareness:** Manually sets `DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2` to ensure multi-monitor coordinates are accurate.
+* **DPI Awareness:** Manually sets `DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2` to ensure multi-monitor coordinates are accurate.
 
-  * **Execution:** Spawns processes directly using `Command::new` with `CREATE_NO_WINDOW` flags to prevent console popups.
+* **Execution:** Spawns processes directly using `Command::new` with `CREATE_NO_WINDOW` flags to prevent console popups.
 
 ## 4\. The Watcher Logic (`src/main.rs`)
 
@@ -88,6 +88,6 @@ if filename.starts_with('o') && filename.ends_with(".png") {
 
 ## 5\. Error Handling & Cleanup
 
-  * **Panic Handling:** If the monitor thread panics or the process is interrupted, the Orchestrator attempts to run `kill_running_packages`.
+* **Panic Handling:** If the monitor thread panics or the process is interrupted, the Orchestrator attempts to run `kill_running_packages`.
 
-  * **Zombie Processes:** On startup, `kill_running_packages` scans the process table (`sysinfo` crate) for `scgrabber`, `drawview`, or `spatialshot` and terminates them to ensure a clean state.
+* **Zombie Processes:** On startup, `kill_running_packages` scans the process table (`sysinfo` crate) for `scgrabber`, `drawview`, or `spatialshot` and terminates them to ensure a clean state.
