@@ -62,9 +62,14 @@ pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
 
 pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
     let exe_path = paths.spatial_dir.join("capkit").join("drawview.exe");
-    Command::new(exe_path)
+    let status = Command::new(exe_path)
         .creation_flags(CREATE_NO_WINDOW.0)
-        .spawn()?;
+        .status()?;
+
+    if !status.success() {
+        return Err(anyhow!("draw-view exited with a non-zero status."));
+    }
+
     Ok(())
 }
 

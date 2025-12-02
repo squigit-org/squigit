@@ -19,7 +19,17 @@ pub fn run_grab_screen(paths: &AppPaths) -> Result<u32> {
 }
 
 pub fn run_draw_view(paths: &AppPaths) -> Result<()> {
-    run_core_async(paths, "draw-view", &[])
+    let cmd_str = format!("bash \"{}\" draw-view", paths.core_path.to_string_lossy());
+    let status = Command::new("bash")
+        .arg("-c")
+        .arg(&cmd_str)
+        .status()?;
+
+    if !status.success() {
+        return Err(anyhow!("draw-view exited with a non-zero status."));
+    }
+
+    Ok(())
 }
 
 pub fn run_spatialshot(paths: &AppPaths, img_path: &Path) -> Result<()> {
