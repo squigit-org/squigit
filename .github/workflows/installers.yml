@@ -1,4 +1,4 @@
-name: Build Permanent Installers
+name: Permanent Installers
 
 on:
     workflow_dispatch:
