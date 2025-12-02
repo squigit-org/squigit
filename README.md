@@ -5,7 +5,7 @@
 [![spatialshot](https://img.shields.io/github/package-json/v/a7mddra/spatialshot?filename=packages%2Fspatialshot%2Fpackage.json&label=spatialshot&color=orange)](https://github.com/a7mddra/spatialshot/blob/main/packages/spatialshot/package.json)
 [![License](https://img.shields.io/github/license/a7mddra/spatialshot)](https://github.com/a7mddra/spatialshot/blob/main/LICENSE)
 
-![SpatialShot Screenshot](.assets/)
+![SpatialShot demo](.assets/demo.gif)
 
 SpatialShot is an open-source "Circle to Search" desktop utility that brings the power of AI vision directly to your screen. It provides seamless screen capture, analysis, and visual search capabilities with a single hotkey.
 
