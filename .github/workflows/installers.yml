@@ -1,4 +1,4 @@
-name: Permanent Installers
+name: 'Testing: Installers'
 
 on:
     workflow_dispatch:
