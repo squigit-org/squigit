@@ -1,4 +1,4 @@
-# SpatialShot
+# <img src=".assets/logo.svg" alt="logo">
 
 [![SpatialShot CI](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml)
 [![SpatialShot Installers](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml/badge.svg)](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml)
