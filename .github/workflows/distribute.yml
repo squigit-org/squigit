@@ -1,4 +1,4 @@
-name: Distribute Production Suite
+name: 'Testing: CI'
 
 on:
   push:
