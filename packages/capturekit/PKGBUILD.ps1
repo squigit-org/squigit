@@ -1,44 +1,50 @@
 #!/usr/bin/env pwsh
 
+# -----------------------------------------------------------------------------
+# CaptureKit Windows Build Script
+# -----------------------------------------------------------------------------
+
 param(
     [switch]$CI = $false
 )
 
 $QtVersion = "6.6.0"
-$QtVariant = "win64_msvc2019_64"
-$QtArch    = "msvc2019_64"
+$QtVariant = "win64_msvc2019_64" 
+$QtArch = "msvc2019_64"       
 $QtBaseDir = "C:\Qt"
-$QtPath    = "$QtBaseDir\$QtVersion\$QtArch"
+$QtPath = "$QtBaseDir\$QtVersion\$QtArch"
 
-$SourceDir = "src"
-$BuildDir  = "build"
-$DistDir   = "dist"
+$SourceDir = "." 
+$BuildDir = "build"
+$DistDir = "dist"
 
-function Write-Succ { param($msg) Write-Host "✓ $msg"  -ForegroundColor Green }
-function Write-Warn { param($msg) Write-Host "! $msg"  -ForegroundColor Yellow }
-function Write-Info { param($msg) Write-Host "ⓘ $msg" -ForegroundColor Cyan }
-function Write-Errr { param($msg) Write-Host "⟳ $msg" -ForegroundColor Red }
+function Write-Succ { param($msg) Write-Host "[OK] $msg"   -ForegroundColor Green }
+function Write-Warn { param($msg) Write-Host "[WARN] $msg" -ForegroundColor Yellow }
+function Write-Info { param($msg) Write-Host "[INFO] $msg" -ForegroundColor Cyan }
+function Write-Errr { param($msg) Write-Host "[ERR] $msg"  -ForegroundColor Red }
 
 function Test-Prerequisites {
     Write-Info "Checking prerequisites..."
     
     if (-not (Get-Command cl -ErrorAction SilentlyContinue)) {
-        throw "MSVC Compiler (cl.exe) not found. Please run this script from 'x64 Native Tools Command Prompt' or ensure Visual Studio environment is loaded."
+        throw "MSVC Compiler (cl.exe) not found. Please run this script from 'x64 Native Tools Command Prompt'."
     }
 
     $prereqs = @(
-        @{ Name = "CMake";  Command = "cmake";  Install = "winget install Kitware.CMake" },
-        @{ Name = "Ninja";  Command = "ninja";  Install = "winget install Ninja-build.Ninja" },
+        @{ Name = "CMake"; Command = "cmake"; Install = "winget install Kitware.CMake" },
+        @{ Name = "Ninja"; Command = "ninja"; Install = "winget install Ninja-build.Ninja" },
         @{ Name = "Python"; Command = "python"; Install = "Install from python.org" }
     )
     
     foreach ($prereq in $prereqs) {
         if (Get-Command $prereq.Command -ErrorAction SilentlyContinue) {
             Write-Succ "$($prereq.Name) found"
-        } else {
+        }
+        else {
             if ($CI) {
                 throw "$($prereq.Name) not found. Required for build."
-            } else {
+            }
+            else {
                 Write-Errr "$($prereq.Name) not found. Install with: $($prereq.Install)"
                 return $false
             }
@@ -55,29 +61,30 @@ function Install-Qt {
         return $true
     }
     
-    Write-Warn "Qt not found. Installing via aqt..."
+    Write-Warn "Qt not found. Attempting auto-installation via aqtinstall..."
     
     try {
-        python -m pip install aqtinstall --quiet
-        Write-Succ "aqtinstall check passed"
+        Write-Info "Installing aqtinstall..."
+        python -m pip install aqtinstall --upgrade --quiet
         
-        Write-Info "Downloading Qt $QtVersion ($QtVariant)..."
-
-        python -m aqt install-qt windows desktop $QtVersion $QtVariant --outputdir $QtBaseDir
+        Write-Info "Downloading Qt $QtVersion ($QtVariant) to $QtBaseDir..."
+        python -m aqt install-qt windows desktop $QtVersion $QtVariant --outputdir $QtBaseDir --archives qtbase qttools icu
         
         if (Test-Path $QtPath) {
             Write-Succ "Qt installed successfully"
             return $true
-        } else {
-            throw "Qt installation failed - path not found: $QtPath"
         }
-    } catch {
+        else {
+            throw "Qt installation completed but path not found: $QtPath"
+        }
+    }
+    catch {
         throw "Qt installation failed: $_"
     }
 }
 
-function Build-DrawView-Qt {
-    Write-Info "--- Building DrawView ---"
+function Invoke-CaptureKit {
+    Write-Info "--- Building CaptureKit (Unified) ---"
     
     if (Test-Path $BuildDir) { Remove-Item $BuildDir -Recurse -Force }
     
@@ -94,72 +101,57 @@ function Build-DrawView-Qt {
     & cmake @cmakeArgs
     if ($LASTEXITCODE -ne 0) { throw "CMake configuration failed" }
     
-    Write-Info "Compiling DrawView..."
-    & cmake --build $BuildDir --config Release --target drawview
-    if ($LASTEXITCODE -ne 0) { throw "DrawView build failed" }
+    Write-Info "Compiling C++ Source..."
+    & cmake --build $BuildDir --config Release
+    if ($LASTEXITCODE -ne 0) { throw "Build failed" }
     
-    Write-Succ "DrawView compiled"
+    Write-Succ "Compilation complete"
 }
 
-function Build-SCGrabber-Native {
-    Write-Info "--- Building SCGrabber ---"
-    
-    
-    $GrabberSrc = "$SourceDir/sc-grabber/win32.cpp"
-    if (-not (Test-Path $GrabberSrc)) {
-        if (Test-Path "$SourceDir/win32.cpp") { $GrabberSrc = "$SourceDir/win32.cpp" }
-        else { throw "Could not find scgrabber win32.cpp" }
-    }
-
-    $OutExe = "$BuildDir/scgrabber.exe"
-
-    Write-Info "Compiling $GrabberSrc with /MT (Static Link)..."
-    
-    
-    
-    & cl.exe /nologo /EHsc /O2 /std:c++17 /MT $GrabberSrc `
-             /link /SUBSYSTEM:WINDOWS /OUT:$OutExe `
-             user32.lib gdi32.lib gdiplus.lib shell32.lib ole32.lib shlwapi.lib
-
-    if ($LASTEXITCODE -ne 0) { throw "SCGrabber compilation failed" }
-    
-    if (Test-Path $OutExe) {
-        Write-Succ "SCGrabber compiled ($OutExe)"
-    } else {
-        throw "SCGrabber binary not created"
-    }
-}
-
-function Create-Distribution {
+function Publish-Distribution {
     Write-Info "--- Packaging Distribution ---"
     
     if (Test-Path $DistDir) { Remove-Item $DistDir -Recurse -Force }
     New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
     
-    $grabberExe = "$BuildDir/scgrabber.exe"
-    if (Test-Path $grabberExe) {
-        Copy-Item $grabberExe $DistDir
-        Write-Succ "Copied scgrabber.exe (Standalone)"
-    } else {
-        throw "Missing scgrabber.exe"
+    $binName = "capturekit.exe"
+    $builtExe = "$BuildDir/$binName"
+    
+    if (-not (Test-Path $builtExe)) { 
+        $builtExe = "$BuildDir/Release/$binName" 
     }
 
-    $drawviewExe = "$BuildDir/drawview.exe"
-    if (-not (Test-Path $drawviewExe)) { $drawviewExe = "$BuildDir/Release/drawview.exe" } 
-    
-    if (Test-Path $drawviewExe) {
-        Copy-Item $drawviewExe $DistDir
-        Write-Succ "Copied drawview.exe"
+    if (Test-Path $builtExe) {
+        Copy-Item $builtExe $DistDir
+        Write-Succ "Copied $binName"
         
-        Write-Info "Running windeployqt for DrawView..."
+        Write-Info "Running windeployqt to bundle DLLs..."
+        
         $env:PATH = "$QtPath\bin;$env:PATH"
         
         Push-Location $DistDir
-        & windeployqt drawview.exe --release --compiler-runtime --no-translations --no-opengl-sw
+        & windeployqt $binName --release --compiler-runtime --no-translations --no-opengl-sw --no-system-d3d-compiler
         if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
         Pop-Location
-    } else {
-        throw "Missing drawview.exe"
+
+        Write-Info "Bundling Visual C++ Runtime DLLs (System32)..."
+        $sys32 = [Environment]::GetFolderPath("System")
+        $runtimeDlls = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll", "msvcp140_1.dll")
+        
+        foreach ($dll in $runtimeDlls) {
+            $srcPath = Join-Path $sys32 $dll
+            if (Test-Path $srcPath) {
+                Copy-Item $srcPath $DistDir -Force
+                Write-Succ "  Bundled $dll"
+            }
+            else {
+                Write-Warn "  Could not find $dll in System32. User may need VC Redistributable."
+            }
+        }
+
+    }
+    else {
+        throw "Could not find compiled executable at $builtExe"
     }
     
     Write-Succ "Distribution Ready at $DistDir"
@@ -169,24 +161,20 @@ function Create-Distribution {
 }
 
 try {
-    if (-not (Test-Path "src")) {
-        throw "Run this script from packages/capturekit directory."
+    if (-not (Test-Path "CMakeLists.txt")) {
+        throw "Run this script from the packages/capturekit directory (where CMakeLists.txt is)."
     }
     
     if (-not (Test-Prerequisites)) { exit 1 }
-    
+
     Install-Qt
+    Invoke-CaptureKit
+    Publish-Distribution
     
-    New-Item -ItemType Directory -Path $BuildDir -Force | Out-Null
+    Write-Host "`n[SUCCESS] CaptureKit Build Completed." -ForegroundColor Green
     
-    Build-DrawView-Qt
-    Build-SCGrabber-Native
-    
-    Create-Distribution
-    
-    Write-Host "`n[SUCCESS] Windows Build Completed." -ForegroundColor Green
-    
-} catch {
+}
+catch {
     Write-Errr $_.Exception.Message
     exit 1
 }

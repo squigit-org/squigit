@@ -10,6 +10,7 @@
 #define DRAWVIEW_H
 
 #include <QWidget>
+#include <QImage>
 #include <QPainterPath>
 #include <QPropertyAnimation>
 
@@ -19,7 +20,7 @@ class DrawView : public QWidget
     Q_PROPERTY(qreal gradientOpacity READ gradientOpacity WRITE setGradientOpacity)
 
 public:
-    explicit DrawView(int displayNum, const QString &imagePath, const QString &tmpPath, QWidget *parent = nullptr);
+    explicit DrawView(const QImage &background, QWidget *parent = nullptr);
 
 protected:
     void showEvent(QShowEvent *event) override;
@@ -35,12 +36,10 @@ private:
     void drawCursorCircle(QPainter &painter, const QPointF &center);
     void updateBounds(qreal x, qreal y);
     void clearCanvas();
-    void cropAndSave();
-
-    int m_displayNum;
-    const QString m_tmpPath;
+    void cropAndFinish();
 
     QImage m_background;
+
     QPainterPath m_path;
     bool m_isDrawing = false;
     bool m_hasDrawing = false;

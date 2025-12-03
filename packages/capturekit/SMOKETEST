@@ -13,35 +13,19 @@ echo "--- Docker build finished ---"
 
 xhost +SI:localuser:root
 
-APP_TO_RUN=$1
-
-if [ "$APP_TO_RUN" == "scgrabber" ]; then
-    sudo docker run --rm --net=host \
-     -e DISPLAY="$DISPLAY" \
-     -e XAUTHORITY=/root/.Xauthority \
-     -e LD_LIBRARY_PATH=/app/libs \
-     -e QT_PLUGIN_PATH=/app/plugins \
-     -e QT_QPA_PLATFORM_PLUGIN_PATH=/app/plugins/platforms \
-     -e QT_DEBUG_PLUGINS=1 \
-     -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
-     -v "$HOME/.Xauthority":/root/.Xauthority:ro \
-     -v /run/user/$(id -u)/bus:/run/user/$(id -u)/bus \
-     -e DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus \
-     -v "$HOME/.cache/spatialshot/tmp":/root/.cache/spatialshot/tmp \
-      capkit ./scgrabber
-elif [ "$APP_TO_RUN" == "drawview" ]; then
-    sudo docker run --rm --net=host \
-     -e DISPLAY=$DISPLAY \
-     -e XAUTHORITY=/root/.Xauthority \
-     -e QT_DEBUG_PLUGINS=1 \
-     -v /tmp/.X11-unix:/tmp/.X11-unix \
-     -v "$HOME/.Xauthority":/root/.Xauthority \
-     -v "$HOME/.cache/spatialshot/tmp":/root/.cache/spatialshot/tmp \
-     capkit ./drawview
-else
-    echo "Usage: ./SMOKETEST [scgrabber|drawview]"
-    exit 1
-fi
+sudo docker run --rm --net=host \
+    -e DISPLAY="$DISPLAY" \
+    -e XAUTHORITY=/root/.Xauthority \
+    -e LD_LIBRARY_PATH=/app/libs \
+    -e QT_PLUGIN_PATH=/app/plugins \
+    -e QT_QPA_PLATFORM_PLUGIN_PATH=/app/plugins/platforms \
+    -e QT_DEBUG_PLUGINS=1 \
+    -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
+    -v "$HOME/.Xauthority":/root/.Xauthority:ro \
+    -v /run/user/$(id -u)/bus:/run/user/$(id -u)/bus \
+    -e DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus \
+    -v "$HOME/.cache/spatialshot/tmp":/root/.cache/spatialshot/tmp \
+    capkit ./capturekit
 
 xhost -SI:localuser:root
 exit 0

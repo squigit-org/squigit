@@ -10,21 +10,18 @@
 #define WINDOW_H
 
 #include <QMainWindow>
+#include <QImage>
+#include <QRect>
 #include <QWidget>
-#include <QPainterPath>
-#include <QScreen>
-#include <QPropertyAnimation>
-#include <QCloseEvent>
 
-#include "drawview.h"
+class DrawView;
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    MainWindow(int displayNum, const QString &imagePath, const QString &tmpPath, QScreen *screen, QWidget *parent = nullptr);
+    MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, QWidget *parent = nullptr);
     ~MainWindow();
-    int displayNumber() const { return m_displayNum; }
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -38,8 +35,8 @@ private:
     DrawView *m_drawView;
 
 #ifdef Q_OS_MAC
-    void *m_displayChangeHandle;
+    bool m_displayCallbackRegistered;
 #endif
 };
 
-#endif
+#endif // WINDOW_H
