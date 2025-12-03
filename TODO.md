@@ -16,9 +16,6 @@ Decouple the application from the Google Gemini SDK. Integrate a library like `o
   * *Why?*: Many users have existing subscriptions or credits with other providers and should be able to use SpatialShot as their universal interface.
   * *Implementation*: Refactor the AI service layer to use a provider-agnostic interface, update the settings panel for key management, and maintain the existing BYOK model.
 
-* **Switch from `nircmd` to a native Windows screen grabber**:
-Eliminate the external dependency on `nircmd.exe` by implementing native screen capture functionality within the Windows version of the `scgrabber` binary.
-  * *Why?*: Improves performance, reduces the number of distributed binaries, and unifies the capture logic across platforms.
 * **Add a standard rectangular selection to `drawview`**: Currently, the overlay only supports a freeform "squiggle" draw-to-crop. Add an option (e.g., via a modifier key or toggle) to allow users to drag a precise rectangular selection area, which is the standard screen capture method on desktop.
 * **Improve the `drawview` painting aesthetic**: Enhance the visual design of the drawing overlay with more sophisticated glow effects, smoother lines, or an "AI-themed" visual style to make the interaction feel more polished and futuristic.
 
