@@ -15,8 +15,8 @@ TARGETS = {
         "path": PKGS_DIR / "spatialshot" / "package.json",
         "type": "json"
     },
-    "capturekit_cpp": {
-        "path": PKGS_DIR / "capturekit" / "package.json",
+    "engine_cpp": {
+        "path": PKGS_DIR / "engine" / "package.json",
         "type": "json"
     },
     "orchestrator_rust": {

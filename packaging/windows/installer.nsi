@@ -8,7 +8,7 @@
 ; --- Artifact URLs ---
 !define RELEASES_URL "https://github.com/a7mddra/spatialshot/releases/latest/download/"
 !define EXEC_SUFFIX "-win-x64.zip"
-!define CAPKIT_URL "${RELEASES_URL}capturekit${EXEC_SUFFIX}"
+!define ENGINE_URL "${RELEASES_URL}engine${EXEC_SUFFIX}"
 !define ORCHESTRATOR_URL "${RELEASES_URL}orchestrator${EXEC_SUFFIX}"
 !define SPATIALSHOT_URL "${RELEASES_URL}spatialshot${EXEC_SUFFIX}"
 
@@ -34,15 +34,15 @@ Section "Install"
 
   CreateDirectory "$INSTDIR\app"
   CreateDirectory "$INSTDIR\cache"
-  CreateDirectory "$INSTDIR\capkit"
+  CreateDirectory "$INSTDIR\engine"
   
   SetOutPath "$INSTDIR\cache"
 
   DetailPrint "Downloading SpatialShot Core..."
   ExecWait "powershell -NoProfile -Command $\"Invoke-WebRequest -Uri ${SPATIALSHOT_URL} -OutFile spatialshot.zip$\""
   
-  DetailPrint "Downloading CapKit..."
-  ExecWait "powershell -NoProfile -Command $\"Invoke-WebRequest -Uri ${CAPKIT_URL} -OutFile capkit.zip$\""
+  DetailPrint "Downloading Engine..."
+  ExecWait "powershell -NoProfile -Command $\"Invoke-WebRequest -Uri ${ENGINE_URL} -OutFile engine.zip$\""
   
   DetailPrint "Downloading Orchestrator..."
   ExecWait "powershell -NoProfile -Command $\"Invoke-WebRequest -Uri ${ORCHESTRATOR_URL} -OutFile orchestrator.zip$\""
@@ -51,8 +51,8 @@ Section "Install"
   SetOutPath $INSTDIR
   ExecWait "powershell -NoProfile -Command $\"Expand-Archive -Path '$INSTDIR\cache\spatialshot.zip' -DestinationPath '$INSTDIR' -Force$\""
   
-  SetOutPath "$INSTDIR\capkit"
-  ExecWait "powershell -NoProfile -Command $\"Expand-Archive -Path '$INSTDIR\cache\capkit.zip' -DestinationPath '$INSTDIR\capkit' -Force$\""
+  SetOutPath "$INSTDIR\engine"
+  ExecWait "powershell -NoProfile -Command $\"Expand-Archive -Path '$INSTDIR\cache\engine.zip' -DestinationPath '$INSTDIR\engine' -Force$\""
   
   SetOutPath "$INSTDIR\app"
   ExecWait "powershell -NoProfile -Command $\"Expand-Archive -Path '$INSTDIR\cache\orchestrator.zip' -DestinationPath '$INSTDIR\app' -Force$\""

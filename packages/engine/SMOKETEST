@@ -8,7 +8,7 @@ if [ "$OS" != "Linux" ]; then
 fi
 
 echo "--- Building Docker image ---"
-sudo docker build -t capkit "$DIR"
+sudo docker build -t engine "$DIR"
 echo "--- Docker build finished ---"
 
 xhost +SI:localuser:root
@@ -25,7 +25,7 @@ sudo docker run --rm --net=host \
     -v /run/user/$(id -u)/bus:/run/user/$(id -u)/bus \
     -e DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus \
     -v "$HOME/.cache/spatialshot/tmp":/root/.cache/spatialshot/tmp \
-    capkit ./capturekit
+    engine ./engine
 
 xhost -SI:localuser:root
 exit 0

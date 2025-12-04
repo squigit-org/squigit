@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 
 # -----------------------------------------------------------------------------
-# CaptureKit Windows Build Script
+# Engine Windows Build Script
 # -----------------------------------------------------------------------------
 
 param(
@@ -83,8 +83,8 @@ function Install-Qt {
     }
 }
 
-function Invoke-CaptureKit {
-    Write-Info "--- Building CaptureKit (Unified) ---"
+function Invoke-Engine {
+    Write-Info "--- Building Engine (Unified) ---"
     
     if (Test-Path $BuildDir) { Remove-Item $BuildDir -Recurse -Force }
     
@@ -114,7 +114,7 @@ function Publish-Distribution {
     if (Test-Path $DistDir) { Remove-Item $DistDir -Recurse -Force }
     New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
     
-    $binName = "capturekit.exe"
+    $binName = "engine.exe"
     $builtExe = "$BuildDir/$binName"
     
     if (-not (Test-Path $builtExe)) { 
@@ -162,16 +162,16 @@ function Publish-Distribution {
 
 try {
     if (-not (Test-Path "CMakeLists.txt")) {
-        throw "Run this script from the packages/capturekit directory (where CMakeLists.txt is)."
+        throw "Run this script from the packages/engine directory (where CMakeLists.txt is)."
     }
     
     if (-not (Test-Prerequisites)) { exit 1 }
 
     Install-Qt
-    Invoke-CaptureKit
+    Invoke-Engine
     Publish-Distribution
     
-    Write-Host "`n[SUCCESS] CaptureKit Build Completed." -ForegroundColor Green
+    Write-Host "`n[SUCCESS] Engine Build Completed." -ForegroundColor Green
     
 }
 catch {

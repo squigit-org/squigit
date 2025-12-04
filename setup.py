@@ -2,7 +2,7 @@
                    ◆ SpatialShot Build & Test Orchestrator ◆
                                         
            This script automates the complete build pipeline for all
-       SpatialShot components — CaptureKit, Orchestrator, and UI layers.
+       SpatialShot components — Engine, Orchestrator, and UI layers.
                                         
        It ensures proper environment setup, handles cross-platform builds
       (Windows, Linux, macOS), and executes the full test suite afterward.
@@ -109,7 +109,7 @@ def set_script_permissions(system: str):
             logging.info("Successfully unblocked PowerShell scripts.")
         except BuildError as e:
             logging.warning(f"Could not unblock PowerShell scripts: {e}")
-            logging.warning("This may cause 'capturekit' build to fail on Windows.")
+            logging.warning("This may cause 'engine' build to fail on Windows.")
             raise
 
     elif system in ("Linux", "Darwin"):
@@ -122,7 +122,7 @@ def set_script_permissions(system: str):
                     scripts_to_make_executable.append(os.path.join(root, file))
 
         known_scripts = [
-            os.path.join(ROOT_DIR, "packages", "capturekit", "PKGBUILD")
+            os.path.join(ROOT_DIR, "packages", "engine", "PKGBUILD")
         ]
         for script_path in known_scripts:
             if os.path.exists(script_path):
@@ -149,20 +149,20 @@ def set_script_permissions(system: str):
         logging.info(f"Skipping script permission setup for unrecognized system: {system}")
 
 
-def build_capturekit_windows():
-    """Builds the 'capturekit' component on Windows."""
-    logging.info("--- Building Component: capturekit (Windows) ---")
-    script_path = os.path.join(ROOT_DIR, "packages", "capturekit", "PKGBUILD.ps1")
+def build_engine_windows():
+    """Builds the 'engine' component on Windows."""
+    logging.info("--- Building Component: engine (Windows) ---")
+    script_path = os.path.join(ROOT_DIR, "packages", "engine", "PKGBUILD.ps1")
     command = ["pwsh", "-File", script_path]
-    _execute_command(command, os.path.dirname(script_path), "capturekit")
+    _execute_command(command, os.path.dirname(script_path), "engine")
 
 
-def build_capturekit_unix(platform_name: str):
-    """Builds the 'capturekit' component on Linux or macOS."""
-    logging.info(f"--- Building Component: capturekit ({platform_name}) ---")
-    script_path = os.path.join(ROOT_DIR, "packages", "capturekit", "PKGBUILD")
+def build_engine_unix(platform_name: str):
+    """Builds the 'engine' component on Linux or macOS."""
+    logging.info(f"--- Building Component: engine ({platform_name}) ---")
+    script_path = os.path.join(ROOT_DIR, "packages", "engine", "PKGBUILD")
     command = ["bash", script_path]
-    _execute_command(command, os.path.dirname(script_path), "capturekit")
+    _execute_command(command, os.path.dirname(script_path), "engine")
 
 def build_orchestrator():
     """Builds the 'orchestrator' component using Cargo."""
@@ -237,17 +237,17 @@ def main():
             logging.error(str(e))
             build_failed_components.append(e.component)
 
-        logging.info(">>> STEP 1: Building CaptureKit <<<")
+        logging.info(">>> STEP 1: Building Engine <<<")
         try:
             if system == "Windows":
-                build_capturekit_windows()
+                build_engine_windows()
             elif system == "Linux":
-                build_capturekit_unix("Linux")
+                build_engine_unix("Linux")
             elif system == "Darwin":
-                build_capturekit_unix("macOS")
+                build_engine_unix("macOS")
             else:
                 raise BuildError(f"Unsupported operating system: {system}", "setup")
-            build_succeeded_components.append("capturekit")
+            build_succeeded_components.append("engine")
         except BuildError as e:
             logging.error(f"[{e.component}] Build FAILED.")
             logging.error(str(e))

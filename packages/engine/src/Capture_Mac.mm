@@ -82,7 +82,7 @@ public:
                 QMessageBox msgBox;
                 msgBox.setIcon(QMessageBox::Information);
                 msgBox.setWindowTitle(tr("Screen Recording Permission"));
-                msgBox.setText(tr("CaptureKit requires screen recording permission to take screenshots."));
+                msgBox.setText(tr("Engine requires screen recording permission to take screenshots."));
                 msgBox.setInformativeText(tr("Please grant permission in System Settings. The application will close after. A restart may be required."));
                 
                 QPushButton *openSettingsButton = msgBox.addButton(tr("Open System Settings"), QMessageBox::ActionRole);

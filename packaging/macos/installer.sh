@@ -9,12 +9,12 @@ CACHE_DIR="$HOME/Library/Caches/spatialshot/tmp"
 DEST_APP_DIR="/Applications"
 DATA_DIR="$HOME/Library/Application Support/spatialshot"
 BIN_DIR="$DATA_DIR/bin"
-CAPKIT_DIR="$DATA_DIR/capkit"
+ENGINE_DIR="$DATA_DIR/engine"
 
 # --- Artifact URLs ---
 RELEASES_URL="https://github.com/a7mddra/spatialshot/releases/latest/download"
 EXEC_SUFFIX="-mac-x64.zip"
-CAPKIT_URL="${RELEASES_URL}/capturekit${EXEC_SUFFIX}"
+ENGINE_URL="${RELEASES_URL}/engine${EXEC_SUFFIX}"
 ORCHESTRATOR_URL="${RELEASES_URL}/orchestrator${EXEC_SUFFIX}"
 SPATIALSHOT_URL="${RELEASES_URL}/spatialshot${EXEC_SUFFIX}"
 
@@ -37,11 +37,11 @@ echo ""
 
 mkdir -p "$CACHE_DIR"
 mkdir -p "$BIN_DIR"
-mkdir -p "$CAPKIT_DIR"
+mkdir -p "$ENGINE_DIR"
 
 log_info "Downloading components..."
 curl -L -s "$SPATIALSHOT_URL" -o "$CACHE_DIR/spatialshot.app.zip"
-curl -L -s "$CAPKIT_URL" -o "$CACHE_DIR/capkit.zip"
+curl -L -s "$ENGINE_URL" -o "$CACHE_DIR/engine.zip"
 curl -L -s "$ORCHESTRATOR_URL" -o "$CACHE_DIR/orchestrator.zip"
 
 log_info "Installing Application..."
@@ -59,8 +59,8 @@ else
 fi
 
 log_info "Installing Binaries..."
-unzip -q -o "$CACHE_DIR/capkit.zip" -d "$CAPKIT_DIR"
-fix_quarantine "$CAPKIT_DIR"
+unzip -q -o "$CACHE_DIR/engine.zip" -d "$ENGINE_DIR"
+fix_quarantine "$ENGINE_DIR"
 
 unzip -q -o "$CACHE_DIR/orchestrator.zip" -d "$BIN_DIR"
 

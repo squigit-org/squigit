@@ -2,7 +2,7 @@
 set -e
 
 # -----------------------------------------------------------------------------
-# CaptureKit Unified Build Script (Linux & macOS)
+# Engine Unified Build Script (Linux & macOS)
 # -----------------------------------------------------------------------------
 
 OS=$(uname)
@@ -74,13 +74,13 @@ mkdir -p "$DIST_DIR/libs"
 mkdir -p "$DIST_DIR/plugins"
 
 if [ "$OS" == "Darwin" ]; then
-    APP_BUNDLE="$BUILD_DIR/capturekit.app"
+    APP_BUNDLE="$BUILD_DIR/engine.app"
     if [ ! -d "$APP_BUNDLE" ]; then err "App bundle not found!"; exit 1; fi
 else
-    BIN_NAME="capturekit-bin"
+    BIN_NAME="engine-bin"
     SRC_BIN="$BUILD_DIR/$BIN_NAME"
     
-    if [ ! -f "$SRC_BIN" ]; then SRC_BIN="$BUILD_DIR/capturekit"; fi
+    if [ ! -f "$SRC_BIN" ]; then SRC_BIN="$BUILD_DIR/engine"; fi
     if [ ! -f "$SRC_BIN" ]; then err "Compiled binary not found at $SRC_BIN"; exit 1; fi
 
     cp "$SRC_BIN" "$DIST_DIR/bin/$BIN_NAME"
@@ -92,7 +92,7 @@ if [ "$OS" == "Darwin" ]; then
     MACDEPLOYQT="$QT_BIN_PATH/macdeployqt"
     
     cp -R "$APP_BUNDLE" "$DIST_DIR/"
-    "$MACDEPLOYQT" "$DIST_DIR/capturekit.app" -dmg -always-overwrite -verbose=1
+    "$MACDEPLOYQT" "$DIST_DIR/engine.app" -dmg -always-overwrite -verbose=1
     
     log "macOS Deployment Complete."
 
@@ -110,7 +110,7 @@ else
     done
 
     log "Creating Runner Script..."
-    cat << EOF > "$DIST_DIR/capturekit"
+    cat << EOF > "$DIST_DIR/engine"
 #!/bin/bash
 DIR="\$( cd "\$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"
 export LD_LIBRARY_PATH="\$DIR/libs:\$DIR/lib:\$LD_LIBRARY_PATH"
@@ -123,7 +123,7 @@ export QML2_IMPORT_PATH="\$DIR/qml"
 
 exec "\$DIR/bin/$BIN_NAME" "\$@"
 EOF
-    chmod +x "$DIST_DIR/capturekit"
+    chmod +x "$DIST_DIR/engine"
 
     log "Resolving Shared Libraries (ldd)..."
     
@@ -186,5 +186,5 @@ EOF
     fi
 
     log "Linux Distribution Ready at $DIST_DIR"
-    log "Run with: ./dist/capturekit"
+    log "Run with: ./dist/engine"
 fi

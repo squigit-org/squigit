@@ -19,7 +19,7 @@ static void DisplayReconfigurationCallBack(
     void *userInfo)
 {
     if (flags & kCGDisplayAddFlag || flags & kCGDisplayRemoveFlag) {
-        qWarning() << "Display configuration changed! Exiting capturekit.";
+        qWarning() << "Display configuration changed! Exiting engine.";
         QApplication::exit(1);
     }
 }

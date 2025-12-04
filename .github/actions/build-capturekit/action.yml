@@ -1,5 +1,5 @@
-name: "Build CaptureKit"
-description: "Builds C++ CaptureKit with Qt (Full Logic)"
+name: "Build Engine"
+description: "Builds C++ Engine with Qt (Full Logic)"
 runs:
   using: "composite"
   steps:
@@ -19,7 +19,7 @@ runs:
       if: runner.os == 'Linux'
       shell: bash
       run: |
-        PKGFILE=packages/capturekit/PKGBUILD
+        PKGFILE=packages/engine/PKGBUILD
         if [ ! -f "$PKGFILE" ]; then echo "PKGBUILD missing"; exit 1; fi
         mapfile -t XCB_LIBS < <(awk '/^XCB_LIB_BASENAMES/ {in=1; next} in && /^\)/ {exit} in {gsub(/["]/,""); print}' "$PKGFILE" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | tr -d '\n')
         if [ "${#XCB_LIBS[@]}" -eq 1 ]; then read -r -a XCB_LIBS <<< "${XCB_LIBS[0]}"; fi
@@ -57,13 +57,13 @@ runs:
     - name: Run Build (Non-Windows)
       if: runner.os != 'Windows'
       shell: bash
-      working-directory: packages/capturekit
+      working-directory: packages/engine
       run: chmod +x PKGBUILD && ./PKGBUILD
 
     - name: Run Build (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
-      working-directory: packages/capturekit
+      working-directory: packages/engine
       run: |
         .\PKGBUILD.ps1
         if (-not (Test-Path "dist\drawview.exe")) { exit 1 }
@@ -76,17 +76,17 @@ runs:
         mkdir -p "$DIST_ROOT"
 
         if [ "$RUNNER_OS" == "Windows" ]; then
-          ZIP_NAME="capturekit-win-x64.zip"
+          ZIP_NAME="engine-win-x64.zip"
         elif [ "$RUNNER_OS" == "macOS" ]; then
-          ZIP_NAME="capturekit-mac-x64.zip"
+          ZIP_NAME="engine-mac-x64.zip"
         else
-          ZIP_NAME="capturekit-linux-x64.zip"
+          ZIP_NAME="engine-linux-x64.zip"
         fi
 
         ZIP_FULL_PATH="$DIST_ROOT/$ZIP_NAME"
-        echo "Zipping CaptureKit to $ZIP_FULL_PATH"
+        echo "Zipping Engine to $ZIP_FULL_PATH"
 
-        cd packages/capturekit/dist
+        cd packages/engine/dist
 
         if [ "$RUNNER_OS" == "Windows" ]; then
           7z a -tzip -r "$ZIP_FULL_PATH" .
