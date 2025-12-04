@@ -13,7 +13,7 @@
 #include <QImage>
 #include <QRect>
 #include <QWidget>
-#include <QScreen> // Add this
+#include <QScreen>
 
 class DrawView;
 
@@ -21,7 +21,6 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    // Update constructor signature to take QScreen*
     MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent = nullptr);
     ~MainWindow();
 

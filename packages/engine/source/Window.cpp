@@ -9,14 +9,13 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDebug>
-#include <QScreen> // Ensure this is included
+#include <QScreen>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <dwmapi.h>
 #endif
 
-// Update constructor implementation
 MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent)
     : QMainWindow(parent),
       m_displayNum(displayNum),
@@ -29,20 +28,14 @@ MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, 
     setAttribute(Qt::WA_ShowWithoutActivating);
     setAttribute(Qt::WA_TranslucentBackground, false);
 
-    // FIX START ------------------------------------------
-    
-    // 1. Explicitly associate this window with the physical screen
-    if (screen) {
+    if (screen)
+    {
         setScreen(screen);
     }
 
-    // 2. Force geometry on ALL platforms (Linux needs this before showFullScreen for correct placement)
-    setGeometry(geo); 
+    setGeometry(geo);
 
-    // 3. Show full screen
     showFullScreen();
-    
-    // FIX END --------------------------------------------
 
     setContentsMargins(0, 0, 0, 0);
     m_drawView->setContentsMargins(0, 0, 0, 0);
