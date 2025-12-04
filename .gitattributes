@@ -8,3 +8,4 @@
 *.md linguist-vendored
 
 PKGBUILD linguist-vendored
+SMOKETEST linguist-vendored
