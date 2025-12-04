@@ -27,10 +27,8 @@ DrawView::DrawView(const QImage &background, QWidget *parent)
     setContentsMargins(0, 0, 0, 0);
 
     qreal dpr = m_background.devicePixelRatio();
-    if (dpr <= 0)
-    {
-        dpr = 1.0;
-    }
+    if (dpr <= 0.0) dpr = 1.0;
+
     setFixedSize(qRound(m_background.width() / dpr), qRound(m_background.height() / dpr));
 
     m_animation = new QPropertyAnimation(this, "gradientOpacity");
@@ -181,10 +179,8 @@ void DrawView::cropAndFinish()
     qreal logicalH = m_maxY - m_minY;
 
     qreal dpr = m_background.devicePixelRatio();
-    if (dpr <= 0)
-    {
-        dpr = 1.0;
-    }
+    if (dpr <= 0.0) dpr = 1.0;
+
     int physX = qRound(logicalX * dpr);
     int physY = qRound(logicalY * dpr);
     int physW = qRound(logicalW * dpr);

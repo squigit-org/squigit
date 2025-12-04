@@ -115,6 +115,8 @@ private:
                 frame.devicePixelRatio = 1.0;
             }
 
+            frame.image.setDevicePixelRatio(frame.devicePixelRatio);
+
             data->frames.push_back(frame);
 
             gdiBitmap->UnlockBits(&bitmapData);

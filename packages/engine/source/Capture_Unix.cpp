@@ -79,6 +79,7 @@ private:
             frame.image = pixmap.toImage(); 
             frame.geometry = screen->geometry();
             frame.devicePixelRatio = screen->devicePixelRatio();
+            frame.image.setDevicePixelRatio(frame.devicePixelRatio);
             frame.name = screen->name();
             frame.index = index++;
             frames.push_back(frame);

@@ -21,8 +21,37 @@ extern "C" CaptureEngine *createUnixEngine(QObject *parent);
 
 int main(int argc, char *argv[])
 {
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+#endif
+
 #ifdef Q_OS_WIN
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    HMODULE user32 = LoadLibraryW(L"user32.dll");
+    if (user32) {
+        using SetProcessDpiAwarenessContextFn = BOOL(WINAPI *)(HANDLE);
+        auto fn = reinterpret_cast<SetProcessDpiAwarenessContextFn>(GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
+        if (fn) {
+            fn(reinterpret_cast<HANDLE>(-4));
+        } else {
+            HMODULE shcore = LoadLibraryW(L"Shcore.dll");
+            if (shcore) {
+                using SetProcessDpiAwarenessFn = HRESULT(WINAPI *)(int /*PROCESS_DPI_AWARENESS*/);
+                auto fn2 = reinterpret_cast<SetProcessDpiAwarenessFn>(GetProcAddress(shcore, "SetProcessDpiAwareness"));
+                if (fn2) {
+                    constexpr int PROCESS_PER_MONITOR_DPI_AWARE = 2;
+                    fn2(PROCESS_PER_MONITOR_DPI_AWARE);
+                }
+                FreeLibrary(shcore);
+            } else {
+                using SetProcessDPIAwareFn = BOOL(WINAPI *)();
+                auto fn3 = reinterpret_cast<SetProcessDPIAwareFn>(GetProcAddress(user32, "SetProcessDPIAware"));
+                if (fn3) fn3();
+            }
+        }
+        FreeLibrary(user32);
+    }
 #endif
 
 #ifdef Q_OS_LINUX
