@@ -1,0 +1,20 @@
+[package]
+name = "hotkey_listener"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading" 
+] }
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Link Time Optimization (removes dead code)
+codegen-units = 1   # Slows build, but makes binary smaller
+panic = "abort"     # Removes panic unwinding logic
+strip = true        # Strips symbols (crucial for size)
