@@ -1,4 +1,4 @@
-# Development Guide for SpatialShot
+# Development Guide for Spatialshot
 
 The fragility of having a monorepo with 7+ programming languages and 5+ frameworks makes it a sophisticated challenge for debugging but creates an optimal path for contributors. In this project, we have meticulously engineered the separation of concerns such that a React web developer doesn't need to understand how we hijack low-level system APIs to capture screens, freeze the desktop, or enable drawing capabilities. A web developer can contribute to the React section and improve our user interface without touching Rust or C++ code. Similarly, a systems programmer can optimize the capture engine without understanding React state management or Electron IPC protocols.
 
@@ -8,7 +8,7 @@ This document provides comprehensive guidance for contributors at all technical 
 
 ### Prerequisites
 
-The SpatialShot ecosystem requires the following foundational tools:
+The Spatialshot ecosystem requires the following foundational tools:
 
 - **Git**: Version control system
 - **Python 3.8+**: Build orchestration and scripting
@@ -55,7 +55,7 @@ For contributors focusing on specific components without requiring full compilat
 2. **Extract to Appropriate Locations**:
    - Place CaptureKit binaries in `packages/capturekit/dist/`
    - Place Orchestrator binary in `packages/orchestrator/target/release/`
-   - Place SpatialShot binaries in `packages/spatialshot/dist/`
+   - Place Spatialshot binaries in `packages/spatialshot/dist/`
 
 3. **Develop Specialized Components**:
    - **React Developers**: Work in `packages/core/` using standard React development workflows
@@ -183,7 +183,7 @@ Each component can be developed and tested independently:
 1. **CaptureKit**: Test with static images without Orchestrator coordination
 2. **Orchestrator**: Test with mock file system events without actual capture
 3. **Core**: Test as standard web application without Electron container
-4. **SpatialShot**: Test with prebuilt binaries for other components
+4. **Spatialshot**: Test with prebuilt binaries for other components
 
 ### Integration Testing
 
@@ -253,4 +253,4 @@ Contributors are encouraged to review the TODO document to identify areas where 
 - **Discussion**: Use GitHub Discussions for design questions and architectural decisions
 - **Maintainers**: Contact project maintainers for critical issues or security concerns
 
-The separation of concerns in SpatialShot enables contributors to engage at their comfort level, from superficial UI improvements to deep systems programming. Each component maintains clear interfaces and contracts, allowing focused development without requiring expertise across the entire technology stack.
+The separation of concerns in Spatialshot enables contributors to engage at their comfort level, from superficial UI improvements to deep systems programming. Each component maintains clear interfaces and contracts, allowing focused development without requiring expertise across the entire technology stack.

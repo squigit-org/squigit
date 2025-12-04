@@ -1,10 +1,10 @@
-# SpatialShot Configuration
+# Spatialshot Configuration
 
 The `spatialshot` package offers several configuration options, from build-time settings to user-specific preferences that are managed dynamically at runtime.
 
 ## Runtime Configuration Files
 
-At runtime, SpatialShot creates and manages several configuration and data files in the user's data directory. The location of this directory varies by operating system:
+At runtime, Spatialshot creates and manages several configuration and data files in the user's data directory. The location of this directory varies by operating system:
 
 - **Windows**: `%LOCALAPPDATA%\\Spatialshot`
 - **macOS**: `~/Library/Application Support/Spatialshot`

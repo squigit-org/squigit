@@ -1,6 +1,6 @@
-# Contributing to SpatialShot
+# Contributing to Spatialshot
 
-Thank you for your interest in contributing to SpatialShot! This document provides a complete guide to contributing, from setting up your development environment to submitting a pull request.
+Thank you for your interest in contributing to Spatialshot! This document provides a complete guide to contributing, from setting up your development environment to submitting a pull request.
 
 We welcome all contributions, from reporting bugs and improving documentation to adding new features. Every contributor is valued.
 
@@ -12,9 +12,9 @@ Before you start working on a significant change, we encourage you to:
 1.**Check the [Issue Tracker](https://github.com/a7mddra/spatialshot/issues)** to see if your idea is already being discussed or if there are `good first issue` labels.
 2. **Open an Issue** to propose a new feature or discuss a bug fix. This allows the maintainers and community to provide feedback before you invest significant time.
 
-## The SpatialShot Development Philosophy: Engineered Isolation
+## The Spatialshot Development Philosophy: Engineered Isolation
 
-SpatialShot is a polyglot monorepo built with **7+ programming languages and 5+ frameworks**. This presents a sophisticated debugging challenge but is engineered to create an optimal path for contributors through **strict separation of concerns**.
+Spatialshot is a polyglot monorepo built with **7+ programming languages and 5+ frameworks**. This presents a sophisticated debugging challenge but is engineered to create an optimal path for contributors through **strict separation of concerns**.
 
 A React developer can enhance the user interface without understanding low-level system APIs for screen capture. A systems programmer can optimize the capture engine without delving into React state management. This guide will help you navigate directly to the component you wish to improve.
 
@@ -65,7 +65,7 @@ Use this path to focus on a single component (e.g., only the React UI or the Ele
 2. **Extract to Project Structure**:
     * Place CaptureKit binaries in `packages/capturekit/dist/`
     * Place the Orchestrator binary in `packages/orchestrator/target/release/`
-    * Place SpatialShot binaries in `packages/spatialshot/dist/`
+    * Place Spatialshot binaries in `packages/spatialshot/dist/`
 3. **Develop in Isolation**: You can now run the app and modify your chosen component, using the stable prebuilt binaries for all other parts.
 
 ## Component-Specific Workflow Guide
@@ -181,4 +181,4 @@ A maintainer will review your PR. They may suggest changes. This collaborative p
 * **Issues**: Search and discuss in the [GitHub Issues](https://github.com/a7mddra/spatialshot/issues).
 * **Discussions**: Use GitHub Discussions for broader questions or design ideas.
 
-Thank you for helping to build SpatialShot. Your contributions are what make this project possible.
+Thank you for helping to build Spatialshot. Your contributions are what make this project possible.

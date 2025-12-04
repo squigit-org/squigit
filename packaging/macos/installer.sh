@@ -2,8 +2,8 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 set -e
 
-APP_NAME="SpatialShot"
-SERVICE_NAME="SpatialShot" 
+APP_NAME="Spatialshot"
+SERVICE_NAME="Spatialshot" 
 
 CACHE_DIR="$HOME/Library/Caches/spatialshot/tmp"
 DEST_APP_DIR="/Applications"
@@ -95,7 +95,7 @@ defaults write pbs NSServicesStatus -dict-add "com.apple.automator.$SERVICE_NAME
 killall cfprefsd 2>/dev/null || true
 killall pbs 2>/dev/null || true
 
-UNINSTALLER="$DATA_DIR/Uninstall SpatialShot.command"
+UNINSTALLER="$DATA_DIR/Uninstall Spatialshot.command"
 
 log_info "Creating Uninstaller at $UNINSTALLER..."
 
@@ -108,10 +108,10 @@ echo "=========================================="
 echo ""
 
 echo "Stopping application..."
-pkill -f "SpatialShot" 2>/dev/null || true
+pkill -f "Spatialshot" 2>/dev/null || true
 pkill -f "orchestrator" 2>/dev/null || true
 
-APP_PATH="/Applications/SpatialShot.app"
+APP_PATH="/Applications/Spatialshot.app"
 if [ -d "$APP_PATH" ]; then
     rm -rf "$APP_PATH"
     echo "Removed Application"
@@ -119,7 +119,7 @@ else
     echo "Application not found in /Applications"
 fi
 
-SERVICE_PATH="$HOME/Library/Services/SpatialShot Capture.workflow"
+SERVICE_PATH="$HOME/Library/Services/Spatialshot Capture.workflow"
 if [ -d "$SERVICE_PATH" ]; then
     rm -rf "$SERVICE_PATH"
     echo "Removed Keyboard Shortcut Service"
@@ -157,7 +157,7 @@ echo ""
 echo "=========================================="
 echo "         INSTALLATION COMPLETE"
 echo "=========================================="
-echo "1. SpatialShot is installed in Applications."
+echo "1. Spatialshot is installed in Applications."
 echo "2. A System Service '$SERVICE_NAME' has been created."
 echo ""
 echo "   IMPORTANT: If the Hotkey (Cmd+Shift+A) does not work immediately:"

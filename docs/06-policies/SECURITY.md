@@ -22,7 +22,7 @@ We appreciate your efforts to disclose your findings responsibly and will make e
 
 ### For Developers
 
-SpatialShot is built with security in mind from the ground up:
+Spatialshot is built with security in mind from the ground up:
 
 - **No Hardcoded Secrets**: We use GitHub Secrets and CI-based credential injection. Attempting to build the application without the required `google-credentials.json` file will result in a build failure.
 - **Authentication**: We implement the OAuth 2.0 Desktop application flow for authorization. For a successful build, we recommend either providing your own secrets or using the official repository's CI pipeline, which handles automatic injection.
@@ -31,7 +31,7 @@ SpatialShot is built with security in mind from the ground up:
 
 Your privacy and data security are paramount. The application operates on a strict **local-first, zero-trust principle**:
 
-- **No Data Collection**: SpatialShot has no backend database or central server. Your API keys, images, and conversation history never leave your local machine. **We cannot see your data.**
+- **No Data Collection**: Spatialshot has no backend database or central server. Your API keys, images, and conversation history never leave your local machine. **We cannot see your data.**
 - **Bring Your Own Key (BYOK)**: Your API keys are stored locally in encrypted JSON files using AES-256 to protect them from potential local malware.
 - **Secure Authentication**: The Google sign-in process happens entirely in your default web browser. The application itself never handles your password or email credentials.
 - **End-to-End AI Chat**: Your conversations with AI providers are direct. Messages flow `you → provider → you`. We do not intercept, log, or have access to your prompts or completions.

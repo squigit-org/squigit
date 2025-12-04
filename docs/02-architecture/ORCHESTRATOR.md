@@ -1,6 +1,6 @@
 # Orchestrator Architecture
 
-The **Orchestrator** is the Rust-based kernel of SpatialShot. It acts as the central nervous system, managing the lifecycle of a capture session. It does not perform image processing or UI rendering itself; instead, it coordinates independent binaries (`capturekit`, `drawview`, and the main `app`) using a file-system-based state machine.
+The **Orchestrator** is the Rust-based kernel of Spatialshot. It acts as the central nervous system, managing the lifecycle of a capture session. It does not perform image processing or UI rendering itself; instead, it coordinates independent binaries (`capturekit`, `drawview`, and the main `app`) using a file-system-based state machine.
 
 ## 1. Core Philosophy: File-System as State
 

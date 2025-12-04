@@ -2,7 +2,7 @@
 
 ## 1\. Distribution Philosophy
 
-Unlike monolithic application distributions (e.g., AppImage, MSI), the SpatialShot deployment strategy treats the application as a modular ecosystem comprising three distinct runtime components: the Electron frontend, the Rust Orchestrator, and the C++ CaptureKit.
+Unlike monolithic application distributions (e.g., AppImage, MSI), the Spatialshot deployment strategy treats the application as a modular ecosystem comprising three distinct runtime components: the Electron frontend, the Rust Orchestrator, and the C++ CaptureKit.
 
 The installers function as **thin-client bootstrap loaders**. They do not bundle the application binaries directly. Instead, they perform a **dynamic ingestion** of the latest artifacts from the remote repository at runtime. This ensures that the installation process always yields the most current release version, decoupling the installer version from the application version.
 
@@ -27,7 +27,7 @@ The Linux installer is compiled as a standalone Go binary (`main.go`). This appr
 
 **Script:** `packaging/linux/scripts/hotkey.sh`
 
-SpatialShot requires a global hotkey (`Super+Shift+A`) to trigger the capture engine. As Linux lacks a unified input registry, the installer implements a heuristic engine to detect the running Desktop Environment (DE) and inject the appropriate configuration.
+Spatialshot requires a global hotkey (`Super+Shift+A`) to trigger the capture engine. As Linux lacks a unified input registry, the installer implements a heuristic engine to detect the running Desktop Environment (DE) and inject the appropriate configuration.
 
 -----
 
@@ -40,7 +40,7 @@ The macOS installer is packaged using **Platypus**, which wraps a bash script (`
 
 ### 3.1 Gatekeeper and Quarantine Management
 
-Due to the ad-hoc nature of the binary ingestion, macOS Gatekeeper will flag the downloaded binaries. The installer actively manages this by recursively applying the `xattr -cr` command to the downloaded bundles (`SpatialShot.app` and `capkit` binaries) to clear the quarantine attributes, effectively bypassing signature enforcement for the local machine.
+Due to the ad-hoc nature of the binary ingestion, macOS Gatekeeper will flag the downloaded binaries. The installer actively manages this by recursively applying the `xattr -cr` command to the downloaded bundles (`Spatialshot.app` and `capkit` binaries) to clear the quarantine attributes, effectively bypassing signature enforcement for the local machine.
 
 ### 3.2 System Service Injection
 
@@ -61,7 +61,7 @@ The Windows installer is built using NSIS (`installer.nsi`), providing a standar
 
 ### 4.1 Artifact Expansion
 
-The installer utilizes `Invoke-WebRequest` to fetch the ZIP files and `Expand-Archive` to unpack them into `%LOCALAPPDATA%\SpatialShot`. This directory structure mirrors the Linux `~/.local/share` layout, creating a contained environment for the ecosystem.
+The installer utilizes `Invoke-WebRequest` to fetch the ZIP files and `Expand-Archive` to unpack them into `%LOCALAPPDATA%\Spatialshot`. This directory structure mirrors the Linux `~/.local/share` layout, creating a contained environment for the ecosystem.
 
 ### 4.2 PowerShell Hotkey Listener
 

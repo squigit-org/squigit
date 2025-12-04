@@ -233,7 +233,7 @@ export const SettingsPanel = forwardRef<
             className="btn"
             onClick={() =>
               handleOpenExternalUrl(
-                "mailto:a7mddra@gmail.com?subject=This%20is%20a%20bug%20report%20from%20SpatialShot&body=Please%20describe%20the%20bug%20below:%0A%0A"
+                "mailto:a7mddra@gmail.com?subject=This%20is%20a%20bug%20report%20from%20Spatialshot&body=Please%20describe%20the%20bug%20below:%0A%0A"
               )
             }
           >

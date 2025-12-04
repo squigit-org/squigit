@@ -1,8 +1,8 @@
-# TODO for SpatialShot
+# TODO for Spatialshot
 
 * **Add a taskbar/dock icon for quick launch**:
 Implement a persistent system tray (Windows/Linux) or menu bar (macOS) icon to provide quick access to the main window or a new capture, improving accessibility beyond the global hotkey.
-* **Add a "SpatialShot Upload" feature within active chat**: Introduce a new button in the chat prompt box that allows users to capture a new screenshot *without* starting a new chat. The captured image should be inserted into the current conversation as a user message, enabling continuous multi-modal dialogue.
+* **Add a "Spatialshot Upload" feature within active chat**: Introduce a new button in the chat prompt box that allows users to capture a new screenshot *without* starting a new chat. The captured image should be inserted into the current conversation as a user message, enabling continuous multi-modal dialogue.
   * *Implementation Flow*: Button click → Hide main app window → Trigger standard capture flow via Orchestrator → Return the final image to the current chat view as an uploaded asset.
   * *Why?*: Users engaged in an ongoing analysis may need to provide additional visual context without breaking their conversational thread.
 * **Modernize the LLM chat interface**:
@@ -13,7 +13,7 @@ Implement standard chat application features to improve usability and match user
 
 * **Support multiple AI providers via OpenAI-compatible library**:
 Decouple the application from the Google Gemini SDK. Integrate a library like `openai` (which supports multiple providers) to allow users to configure and use APIs for GPT, Claude, Grok, or any OpenAI-compatible endpoint.
-  * *Why?*: Many users have existing subscriptions or credits with other providers and should be able to use SpatialShot as their universal interface.
+  * *Why?*: Many users have existing subscriptions or credits with other providers and should be able to use Spatialshot as their universal interface.
   * *Implementation*: Refactor the AI service layer to use a provider-agnostic interface, update the settings panel for key management, and maintain the existing BYOK model.
 
 * **Add a standard rectangular selection to `drawview`**: Currently, the overlay only supports a freeform "squiggle" draw-to-crop. Add an option (e.g., via a modifier key or toggle) to allow users to drag a precise rectangular selection area, which is the standard screen capture method on desktop.

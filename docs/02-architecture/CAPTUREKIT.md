@@ -1,6 +1,6 @@
 # CaptureKit Architecture
 
-**CaptureKit** is the high-performance visual layer of SpatialShot, written in **C++17** using the **Qt6** framework. It consists of two distinct binaries that perform the heavy lifting for screen capturing and image manipulation.
+**CaptureKit** is the high-performance visual layer of Spatialshot, written in **C++17** using the **Qt6** framework. It consists of two distinct binaries that perform the heavy lifting for screen capturing and image manipulation.
 
 ## 1. The Two Binaries
 

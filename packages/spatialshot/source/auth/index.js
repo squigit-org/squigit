@@ -106,8 +106,8 @@ async function authenticate() {
           const successBody = `
             <p>The authentication was successful, and the following products are now authorized to access your account:</p>
             <ul>
-                <li><a href="https://github.com/a7mddra/spatialshot.git" target="_blank" rel="noopener noreferrer">SpatialShot</a></li>
-                <li><a href="https://github.com/a7mddra/spatialshot.git" target="_blank" rel="noopener noreferrer">SpatialShot CLI</a></li>
+                <li><a href="https://github.com/a7mddra/spatialshot.git" target="_blank" rel="noopener noreferrer">Spatialshot</a></li>
+                <li><a href="https://github.com/a7mddra/spatialshot.git" target="_blank" rel="noopener noreferrer">Spatialshot CLI</a></li>
             </ul>
             <p>You can close this window and return to your app.</p>
           `;

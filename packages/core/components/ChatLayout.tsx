@@ -429,7 +429,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
               />
             </div>
             <div className="footer">
-              <p>SpatialShot &copy; 2025</p>
+              <p>Spatialshot &copy; 2025</p>
             </div>
           </div>
         </>

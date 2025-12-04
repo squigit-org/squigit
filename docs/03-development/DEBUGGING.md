@@ -1,6 +1,6 @@
-# Debugging SpatialShot
+# Debugging Spatialshot
 
-Debugging a polyglot application like SpatialShot requires a multi-faceted approach. Due to the strict separation of concerns, you can often isolate and debug each component—`CaptureKit` (C++), `Orchestrator` (Rust), and `SpatialShot` (Electron/React)—independently.
+Debugging a polyglot application like Spatialshot requires a multi-faceted approach. Due to the strict separation of concerns, you can often isolate and debug each component—`CaptureKit` (C++), `Orchestrator` (Rust), and `Spatialshot` (Electron/React)—independently.
 
 This guide provides strategies and tools for troubleshooting each part of the system. For high-level development workflows, refer to the [Development Guide](DEVELOPMENT.md).
 
@@ -16,17 +16,17 @@ The most effective debugging strategy is to test each component in isolation bef
 
 ### The File-System as a State Machine
 
-The `Orchestrator` communicates with `CaptureKit` and `SpatialShot` via files. The temporary directory is the single source of truth for the application's state. When debugging, **always inspect the contents of this directory**.
+The `Orchestrator` communicates with `CaptureKit` and `Spatialshot` via files. The temporary directory is the single source of truth for the application's state. When debugging, **always inspect the contents of this directory**.
 
 - **Initial Capture:** Does `scgrabber` correctly create `1.png`, `2.png`, etc.?
 - **Editing Phase:** Is the `Orchestrator` launching `drawview` with the correct paths?
-- **Final Output:** When you save in `drawview`, is a file named `o...png` created? This is the trigger for the `Orchestrator` to launch the main `SpatialShot` window.
+- **Final Output:** When you save in `drawview`, is a file named `o...png` created? This is the trigger for the `Orchestrator` to launch the main `Spatialshot` window.
 
 ## 2\. Logging and Diagnostics
 
-SpatialShot provides several layers of logging. The main log files are typically located in the user's data directory (e.g., `~/.local/share/spatialshot/logs/`).
+Spatialshot provides several layers of logging. The main log files are typically located in the user's data directory (e.g., `~/.local/share/spatialshot/logs/`).
 
-- **`SpatialShot` (Electron):**
+- **`Spatialshot` (Electron):**
   - **Renderer Process:** Open the Developer Tools with `Ctrl+Shift+I` or by launching the app with the `--dev-tools` flag. All `console.log` messages will appear here. Network requests to Gemini and ImgBB can also be inspected.
   - **Main Process:** Uses `electron-log`. Logs are written to both the console and the log files. Launch the application from the command line to see live output.
 
@@ -48,7 +48,7 @@ SpatialShot provides several layers of logging. The main log files are typically
 
 ## 3\. Component-Specific Debugging
 
-### SpatialShot (Electron & React)
+### Spatialshot (Electron & React)
 
 - **Location:** `packages/spatialshot/` and `packages/core/`
 - **Entry Point:** `npm start` in `packages/spatialshot/`

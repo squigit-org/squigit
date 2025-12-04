@@ -2,7 +2,7 @@
 
 ## 1\. Philosophy and Standards
 
-The **SpatialShot** ecosystem adheres to a strict **Synchronized Monorepo Versioning** strategy. Although the repository contains heterogeneous components—Rust middleware, C++ capture engines, and TypeScript interfaces—all subsystems share a unified version identifier. This ensures strict interoperability guarantees between the Orchestrator, the CaptureKit, and the frontend Presentation Layer.
+The **Spatialshot** ecosystem adheres to a strict **Synchronized Monorepo Versioning** strategy. Although the repository contains heterogeneous components—Rust middleware, C++ capture engines, and TypeScript interfaces—all subsystems share a unified version identifier. This ensures strict interoperability guarantees between the Orchestrator, the CaptureKit, and the frontend Presentation Layer.
 
 The project adheres to **Semantic Versioning 2.0.0** (SemVer). Version increments are strictly mapped to the following schema:
 
@@ -89,7 +89,7 @@ graph TD
 
 ## 4\. Client-Side Update Heuristics
 
-SpatialShot implements a "self-healing" update mechanism. The application does not download update binaries directly; instead, it delegates the update process to the resident **Bootstrap Installer**.
+Spatialshot implements a "self-healing" update mechanism. The application does not download update binaries directly; instead, it delegates the update process to the resident **Bootstrap Installer**.
 
 ### 4.1 Detection Logic
 

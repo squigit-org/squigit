@@ -43,7 +43,7 @@ pub fn spawn_electron(bin_dir: &Path, image_path: &Path) -> Result<()> {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .context("Failed to launch SpatialShot Electron app")?;
+        .context("Failed to launch Spatialshot Electron app")?;
 
     Ok(())
 }

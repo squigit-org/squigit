@@ -1,10 +1,10 @@
-# SpatialShot Application Architecture
+# Spatialshot Application Architecture
 
-**SpatialShot** is the user-facing terminal of the utility. It is a "Circle to Search" clone designed for desktop environments. It serves as the bridge between the local screenshot captured by the kernel and the cloud-based AI models (Gemini) or OCR services (Google Lens).
+**Spatialshot** is the user-facing terminal of the utility. It is a "Circle to Search" clone designed for desktop environments. It serves as the bridge between the local screenshot captured by the kernel and the cloud-based AI models (Gemini) or OCR services (Google Lens).
 
 ## 1. High-Level Architecture: The "Shell + View" Model
 
-SpatialShot does not use a standard Electron architecture (a single `BrowserWindow` loading a URL). Instead, it implements a **Shell + View** composite architecture to ensure maximum performance and security isolation.
+Spatialshot does not use a standard Electron architecture (a single `BrowserWindow` loading a URL). Instead, it implements a **Shell + View** composite architecture to ensure maximum performance and security isolation.
 
 | Component | Path | Technology | Role |
  | ----- | ----- | ----- | ----- |
@@ -18,7 +18,7 @@ graph TD
     classDef node fill:#ffffff,stroke:#666,stroke-width:1px,color:black;
     classDef bridge fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5,color:black;
 
-    subgraph SpatialShot [SpatialShot Application]
+    subgraph Spatialshot [Spatialshot Application]
         direction TB
 
         %% Main Process Components
@@ -58,7 +58,7 @@ graph TD
         IPC -.->|Proxy Upload| Cloud
     end
 
-    class SpatialShot container
+    class Spatialshot container
 ````
 
 ## 2\. The Core (Frontend Intelligence)
@@ -89,7 +89,7 @@ The `source/main.js` entry point orchestrates the application lifecycle. To main
 
 ### 🔐 Security & BYOK (Bring Your Own Key)
 
-SpatialShot operates on a zero-trust model regarding API keys.
+Spatialshot operates on a zero-trust model regarding API keys.
 
 1. **Clipboard Watcher (`ipc-handlers/byok.js`):**
 
@@ -109,13 +109,13 @@ SpatialShot operates on a zero-trust model regarding API keys.
 
 ### 📸 Dynamic Window Sizing (`utilities.js`)
 
-Unlike standard apps with fixed sizes, SpatialShot attempts to mimic a native OS overlay.
+Unlike standard apps with fixed sizes, Spatialshot attempts to mimic a native OS overlay.
 
 * **Logic:** `getDynamicDims` calculates the window size relative to the monitor's work area. It creates a window that feels proportional to the screen resolution (approx. 1/13th width ratio), centered perfectly.
 
 ## 4\. External Integrations
 
-SpatialShot connects to two primary external services:
+Spatialshot connects to two primary external services:
 
 ### 1\. Google Gemini (Intelligence)
 
@@ -125,7 +125,7 @@ SpatialShot connects to two primary external services:
 
 ### 2\. Google Lens (OCR & Visual Search)
 
-Since Google Lens has no public API, SpatialShot implements a clever "Bridge" technique in `ipc-handlers/lens.js`.
+Since Google Lens has no public API, Spatialshot implements a clever "Bridge" technique in `ipc-handlers/lens.js`.
 
 1. **Upload:** The local screenshot is uploaded to **ImgBB** (using the user's private key).
 

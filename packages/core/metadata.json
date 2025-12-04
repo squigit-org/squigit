@@ -1,4 +1,4 @@
 {
-  "name": "SpatialShot",
+  "name": "Spatialshot",
   "description": "An Electron-based AI image analysis tool using Google Gemini models with contextual chat history."
 }

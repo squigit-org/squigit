@@ -2,7 +2,7 @@
 
 ## 1\. Design Philosophy
 
-The SpatialShot CI/CD pipeline is architected around a **Component-Based Matrix Strategy**. Unlike monolithic pipelines that build an entire application in a single pass, this system treats the application's three layers (CaptureKit, Orchestrator, SpatialShot) as independent build artifacts.
+The Spatialshot CI/CD pipeline is architected around a **Component-Based Matrix Strategy**. Unlike monolithic pipelines that build an entire application in a single pass, this system treats the application's three layers (CaptureKit, Orchestrator, Spatialshot) as independent build artifacts.
 
 This modularity allows for:
 

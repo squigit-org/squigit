@@ -1,4 +1,4 @@
-name: "Build SpatialShot"
+name: "Build Spatialshot"
 description: "Builds Electron App with Credentials"
 inputs:
   google_credentials:
@@ -61,7 +61,7 @@ runs:
         printf "%s" "$CREDENTIALS_CONTENT" > credentials.json
 
     # --- ELECTRON BUILD ---
-    - name: Install SpatialShot Dependencies
+    - name: Install Spatialshot Dependencies
       working-directory: ./packages/spatialshot
       shell: bash
       run: npm ci

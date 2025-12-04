@@ -1,4 +1,4 @@
-# SpatialShot IPC Protocol
+# Spatialshot IPC Protocol
 
 The `spatialshot` package uses Electron's Inter-Process Communication (IPC) to communicate between the main process and renderer processes. There are two main preload scripts that set up the IPC bridges:
 

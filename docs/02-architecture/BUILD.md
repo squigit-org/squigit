@@ -2,11 +2,11 @@
 
 ## 1\. System Overview
 
-The **SpatialShot** application utilizes a polyglot Monorepo architecture designed to optimize performance across specific operational layers. The system is composed of three distinct subsystems, each requiring a specialized build environment and compilation strategy:
+The **Spatialshot** application utilizes a polyglot Monorepo architecture designed to optimize performance across specific operational layers. The system is composed of three distinct subsystems, each requiring a specialized build environment and compilation strategy:
 
 1. **CaptureKit (C++/Qt6):** A high-performance, low-level engine responsible for frame buffering, screen geometry calculations, and rendering overlays.
 2. **Orchestrator (Rust):** A systems-programming middleware that manages global input hooks, OS-level event propagation, and Inter-Process Communication (IPC).
-3. **Presentation Layer (TypeScript/Electron):** The user-facing application container combining a Vite-bundled React frontend (`Core`) with an Electron backend (`SpatialShot`).
+3. **Presentation Layer (TypeScript/Electron):** The user-facing application container combining a Vite-bundled React frontend (`Core`) with an Electron backend (`Spatialshot`).
 
 To mitigate the complexity of cross-compilation and dependency management across these heterogenous environments, a unified Python-based build orchestrator (`setup.py`) has been developed. This script abstracts the underlying platform-specific logic, ensuring deterministic builds.
 
@@ -28,7 +28,7 @@ The orchestrator performs the following sequential operations:
 1. **Environment Sanitization:** Scans for and rectifies execution permission bit discrepancies on Unix systems (chmod `+x` on shell scripts) and unblocks PowerShell execution policies on Windows.
 2. **Native Compilation:** Triggers the platform-specific build routines for `CaptureKit` (CMake/Ninja) and `Orchestrator` (Cargo).
 3. **Frontend Bundling:** Compiles the `Core` React application via Vite.
-4. **Artifact Injection:** Transplants the compiled `Core` distribution assets into the `SpatialShot` Electron renderer directory.
+4. **Artifact Injection:** Transplants the compiled `Core` distribution assets into the `Spatialshot` Electron renderer directory.
 5. **Integration Testing:** Executes the `pytest` suite to validate component interoperability.
 
 -----
@@ -97,11 +97,11 @@ panic = 'abort'
 
 -----
 
-## 5\. Subsystem: Presentation Layer (Core & SpatialShot)
+## 5\. Subsystem: Presentation Layer (Core & Spatialshot)
 
 **Locations:** `packages/core/` and `packages/spatialshot/`
 
-The frontend architecture separates the UI logic (`Core`) from the desktop container (`SpatialShot`). This requires a strict dependency injection workflow during the build process.
+The frontend architecture separates the UI logic (`Core`) from the desktop container (`Spatialshot`). This requires a strict dependency injection workflow during the build process.
 
 **Integration Workflow:**
 

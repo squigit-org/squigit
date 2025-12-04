@@ -18,9 +18,9 @@ if (-not (Test-Path "installer.nsi")) {
 Write-Host "Running makensis..."
 makensis installer.nsi
 
-if (Test-Path "SpatialShot_Installer.exe") {
+if (Test-Path "Spatialshot_Installer.exe") {
     Write-Host "--- Windows Installer Built Successfully ---"
 } else {
-    Write-Error "Error: SpatialShot_Installer.exe was not created."
+    Write-Error "Error: Spatialshot_Installer.exe was not created."
     exit 1
 }

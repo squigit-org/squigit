@@ -1,4 +1,4 @@
-## SpatialShot — AI assistant instructions
+## Spatialshot — AI assistant instructions
 
 This repository contains multiple components (Node.js UI, Rust orchestrator, and native CaptureKit). The goal of these instructions is to help an AI coding agent be immediately productive when making changes.
 

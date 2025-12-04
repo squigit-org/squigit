@@ -1,8 +1,8 @@
-; installer.nsi - SpatialShot Windows Installer
+; installer.nsi - Spatialshot Windows Installer
 ; =============================================
 
-!define APP_NAME "SpatialShot"
-!define APP_EXE "SpatialShot.exe"
+!define APP_NAME "Spatialshot"
+!define APP_EXE "Spatialshot.exe"
 !define ORCHESTRATOR_EXE "orchestrator.exe"
 
 ; --- Artifact URLs ---
@@ -14,8 +14,8 @@
 
 ; --- Setup ---
 Name "${APP_NAME}"
-OutFile "SpatialShot_Installer.exe"
-InstallDir "$LOCALAPPDATA\SpatialShot"
+OutFile "Spatialshot_Installer.exe"
+InstallDir "$LOCALAPPDATA\Spatialshot"
 RequestExecutionLevel user
 
 ; --- UI Settings ---
@@ -38,7 +38,7 @@ Section "Install"
   
   SetOutPath "$INSTDIR\cache"
 
-  DetailPrint "Downloading SpatialShot Core..."
+  DetailPrint "Downloading Spatialshot Core..."
   ExecWait "powershell -NoProfile -Command $\"Invoke-WebRequest -Uri ${SPATIALSHOT_URL} -OutFile spatialshot.zip$\""
   
   DetailPrint "Downloading Engine..."
@@ -81,7 +81,7 @@ Section "Install"
 
   DetailPrint "Creating shortcuts..."
   CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_NAME}.exe"
-  CreateShortcut "$SMSTARTUP\SpatialShot Hotkey.lnk" "$INSTDIR\launch_hotkey.vbs"
+  CreateShortcut "$SMSTARTUP\Spatialshot Hotkey.lnk" "$INSTDIR\launch_hotkey.vbs"
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayName" "${APP_NAME}"
@@ -99,6 +99,6 @@ Section "Uninstall"
   ExecWait 'powershell -Command "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue"'
   RMDir /r "$INSTDIR"
   Delete "$DESKTOP\${APP_NAME}.lnk"
-  Delete "$SMSTARTUP\SpatialShot Hotkey.lnk"
+  Delete "$SMSTARTUP\Spatialshot Hotkey.lnk"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 SectionEnd

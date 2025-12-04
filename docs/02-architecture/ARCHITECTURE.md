@@ -1,6 +1,6 @@
-# SpatialShot Architecture
+# Spatialshot Architecture
 
-SpatialShot is built on a **modular, polyglot architecture**. Its core principle is **separation of concerns**: independent components communicate through simple interfaces (files & IPC), allowing deep specialization without system-wide expertise.
+Spatialshot is built on a **modular, polyglot architecture**. Its core principle is **separation of concerns**: independent components communicate through simple interfaces (files & IPC), allowing deep specialization without system-wide expertise.
 
 ## Primary Flow: Global Hotkey Capture
 
@@ -44,7 +44,7 @@ This is the main "Circle to Search" flow, triggered by `Super/Cmd/Win + Shift + 
          └───────────────┼────────┼──────────────────────┘
                          ▼        ▼
                ┌─────────────────────────────────┐     ┌──────────────────┐
-               │      SpatialShot (Electron)     │────▶│   Core (React)   │
+               │      Spatialshot (Electron)     │────▶│   Core (React)   │
                │                                 │     │                  │
                │  Launches with `/tmp/o1.png`    │     │ Image converted  │
                │       as startup argument       │     │  to Base64, AI   │
@@ -54,11 +54,11 @@ This is the main "Circle to Search" flow, triggered by `Super/Cmd/Win + Shift + 
 
 ## Direct Application Launch
 
-When the user opens SpatialShot directly to analyze an existing image file.
+When the user opens Spatialshot directly to analyze an existing image file.
 
 ```ascii
 ┌─────────────┐     ┌─────────────────────────────────┐     ┌────────────────────┐
-│    User     │     │      SpatialShot (Electron)     │     │   Core (React)     │
+│    User     │     │      Spatialshot (Electron)     │     │   Core (React)     │
 │  Opens App  │────▶│                                 │────▶│                    │
 │  or Drags   │     │  Shows upload screen. User      │     │ Image converted    │
 │   Image     │     │  provides image via drag-drop   │     │ to Base64, ready   │
@@ -91,7 +91,7 @@ How the application manages state, credentials, and external services.
 ```ascii
 ┌─────────────┐    Uploads Image     ┌─────────────┐     Injects URL    ┌───────────────────┐
 │             │─────────────────────▶│    ImgBB    │───────────────────▶│  lens.google.com  │
-│ SpatialShot │                      │    (API)    │                    │  (User's Browser) │
+│ Spatialshot │                      │    (API)    │                    │  (User's Browser) │
 │     App     │                      └─────────────┘                    └───────────────────┘
 │             │
 │             │    Sends Prompt +    ┌──────────────┐

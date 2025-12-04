@@ -3,7 +3,7 @@ name = "kernel"
 version = "1.0.0"
 edition = "2021"
 authors = ["a7mddra-spatialshot"]
-description = "Core orchestrator for the SpatialShot utility"
+description = "Core orchestrator for the Spatialshot utility"
 license = "Apache-2.0"
 
 [[bin]]

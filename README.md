@@ -1,17 +1,17 @@
 # <img src=".assets/header.svg" alt="logo">
 
-[![SpatialShot CI](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml)
-[![SpatialShot Installers](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml/badge.svg)](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml)
+[![Spatialshot CI](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml)
+[![Spatialshot Installers](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml/badge.svg)](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml)
 [![spatialshot](https://img.shields.io/github/package-json/v/a7mddra/spatialshot?filename=packages%2Fspatialshot%2Fpackage.json&label=spatialshot&color=orange)](https://github.com/a7mddra/spatialshot/blob/main/packages/spatialshot/package.json)
 [![License](https://img.shields.io/github/license/a7mddra/spatialshot)](https://github.com/a7mddra/spatialshot/blob/main/LICENSE)
 
-![SpatialShot demo](.assets/demo.gif)
+![Spatialshot demo](.assets/demo.gif)
 
-SpatialShot is an open-source "Circle to Search" desktop utility that brings the power of AI vision directly to your screen. It provides seamless screen capture, analysis, and visual search capabilities with a single hotkey.
+Spatialshot is an open-source "Circle to Search" desktop utility that brings the power of AI vision directly to your screen. It provides seamless screen capture, analysis, and visual search capabilities with a single hotkey.
 
 Explore detailed guides and architecture in our [documentation](https://github.com/a7mddra/spatialshot/tree/main/docs).
 
-## 🚀 Why SpatialShot?
+## 🚀 Why Spatialshot?
 
 - **🎯 Native Performance**: Polyglot architecture with C++ capture, Rust orchestration, and Electron UI.
 - **🔗 Bring Your Own Key (BYOK)**: No middleman. Plug your own Gemini and ImgBB API keys for direct, cost-effective access.
@@ -33,7 +33,7 @@ Download the appropriate installer for your operating system:
 
 #### Windows
 
-Download [`SpatialShot_Installer.exe`](https://github.com/a7mddra/spatialshot/releases/download/installers/spatialshot-installer-win-x64.zip).
+Download [`Spatialshot_Installer.exe`](https://github.com/a7mddra/spatialshot/releases/download/installers/spatialshot-installer-win-x64.zip).
 
 #### macOS
 
@@ -72,15 +72,15 @@ Download [`spatialshot-installer`](https://github.com/a7mddra/spatialshot/releas
 
 ## 🔐 Authentication: Bring Your Own Key ([BYOK](docs/06-policies/BYOK.md))
 
-SpatialShot operates on a zero-trust, local-first model where you provide your own API keys.
+Spatialshot operates on a zero-trust, local-first model where you provide your own API keys.
 
 ### Setup Process
 
-1. **Launch SpatialShot** and signup
+1. **Launch Spatialshot** and signup
 2. **Generate API Keys** on the official provider sites:
    - **Gemini**: [Google AI Studio](https://aistudio.google.com/app/apikey)
    - **ImgBB**: [ImgBB API](https://api.imgbb.com/)
-3. **Copy to Clipboard** - SpatialShot automatically detects and securely stores your keys
+3. **Copy to Clipboard** - Spatialshot automatically detects and securely stores your keys
 
 ### Security Guarantees
 
@@ -97,11 +97,11 @@ SpatialShot operates on a zero-trust, local-first model where you provide your o
 
 1. Press `Super/Cmd/Win + Shift + A`
 2. Draw a shape around the content you want to analyze
-3. Release to capture and open SpatialShot with AI analysis
+3. Release to capture and open Spatialshot with AI analysis
 
 #### Direct Application Launch
 
-1. Open SpatialShot from your applications menu
+1. Open Spatialshot from your applications menu
 2. Drag & drop an image or use the file dialog
 3. Chat with the AI about your uploaded image
 
@@ -151,7 +151,7 @@ SpatialShot operates on a zero-trust, local-first model where you provide your o
 - [**Build System**](docs/02-architecture/BUILD.md) - Compilation and packaging
 - [**CaptureKit**](docs/02-architecture/CAPTUREKIT.md) - Screen capture engine (C++/Qt6)
 - [**Orchestrator**](docs/02-architecture/ORCHESTRATOR.md) - Core lifecycle manager (Rust)
-- [**SpatialShot App**](docs/02-architecture/SPATIALSHOT.md) - Electron/React application
+- [**Spatialshot App**](docs/02-architecture/SPATIALSHOT.md) - Electron/React application
 
 ### Development & Contribution
 
@@ -177,7 +177,7 @@ SpatialShot operates on a zero-trust, local-first model where you provide your o
 
 ## 🤝 Contributing
 
-We welcome contributions! SpatialShot is fully open source, and we encourage the community to:
+We welcome contributions! Spatialshot is fully open source, and we encourage the community to:
 
 - Report bugs and suggest features
 - Improve documentation

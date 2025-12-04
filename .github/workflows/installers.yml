@@ -24,7 +24,7 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: installer-windows
-                  path: packaging/windows/SpatialShot_Installer.exe
+                  path: packaging/windows/Spatialshot_Installer.exe
 
     build-linux-installer:
         runs-on: ubuntu-latest
@@ -77,7 +77,7 @@ jobs:
 
             - name: Zip Artifacts
               run: |
-                  zip spatialshot-installer-win-x64.zip SpatialShot_Installer.exe
+                  zip spatialshot-installer-win-x64.zip Spatialshot_Installer.exe
                   zip spatialshot-installer-linux-x64.zip spatialshot-installer
                   zip spatialshot-installer-mac-x64.zip spatialshot-installer.dmg
 
@@ -86,7 +86,7 @@ jobs:
               with:
                   tag_name: installers
                   name: Permanent Installers
-                  body: "These are the permanent bootstrapper installers. They automatically fetch the latest version of SpatialShot."
+                  body: "These are the permanent bootstrapper installers. They automatically fetch the latest version of Spatialshot."
                   draft: false
                   prerelease: false
                   files: |

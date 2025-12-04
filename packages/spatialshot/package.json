@@ -21,7 +21,7 @@
   },
   "build": {
     "appId": "com.a7mddra.spatialshot",
-    "productName": "SpatialShot",
+    "productName": "Spatialshot",
     "asar": false,
     "icon": "assets/icons/light/512.png",
     "win": {

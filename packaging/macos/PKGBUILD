@@ -77,7 +77,7 @@ fi
 
 INSTALLER_SCRIPT="packaging/macos/installer.sh"
 chmod +x "$INSTALLER_SCRIPT"
-APP_NAME="Install SpatialShot.app"
+APP_NAME="Install Spatialshot.app"
 ICON_PATH="packaging/macos/icon.icns"
 echo "Running Platypus to create .app..."
 CMD_ARGS=(
@@ -99,7 +99,7 @@ fi
 echo "Creating .dmg..."
 rm -f spatialshot-installer.dmg
 hdiutil create -srcfolder "$APP_NAME" \
-               -volname "Install SpatialShot" \
+               -volname "Install Spatialshot" \
                -fs HFS+ \
                -format UDZO \
                spatialshot-installer.dmg
