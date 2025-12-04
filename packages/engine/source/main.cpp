@@ -12,19 +12,30 @@
 #include "Window.h"
 #include "Capture.h"
 
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
 extern "C" CaptureEngine *createWindowsEngine(QObject *parent);
 extern "C" CaptureEngine *createUnixEngine(QObject *parent);
 
 int main(int argc, char *argv[])
 {
+#ifdef Q_OS_WIN
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+#endif
+
 #ifdef Q_OS_LINUX
     qputenv("QT_QPA_PLATFORM", "xcb");
 #endif
+
     QApplication app(argc, argv);
+    
     app.setApplicationName(APP_NAME);
     app.setOrganizationName(ORG_NAME);
     app.setApplicationVersion(APP_VERSION);
     app.setQuitOnLastWindowClosed(true);
+    
     CaptureEngine *engine = nullptr;
 #ifdef Q_OS_WIN
     engine = createWindowsEngine(&app);
