@@ -14,24 +14,24 @@ jobs:
   # =========================================================
   # JOB 1: BUILD ORCHESTRATOR (RUST)
   # =========================================================
-  build-orchestrator:
-    name: Orch ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v4
+  # build-orchestrator:
+  #   name: Orch ${{ matrix.os }}
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [ubuntu-latest, macos-latest, windows-latest]
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Build
-        uses: ./.github/actions/build-orchestrator
+  #     - name: Build
+  #       uses: ./.github/actions/build-orchestrator
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: orchestrator-${{ matrix.os }}
-          path: dist-out/*
+  #     - name: Upload Artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: orchestrator-${{ matrix.os }}
+  #         path: dist-out/*
 
   # =========================================================
   # JOB 2: BUILD ENGINE (C++/QT)
