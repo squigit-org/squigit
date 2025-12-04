@@ -24,15 +24,15 @@ configure_file(
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 set(SOURCES 
-    src/main.cpp 
-    src/Capture.h
+    source/main.cpp 
+    source/Capture.h
 )
 
 if(WIN32)
-    list(APPEND SOURCES src/Capture_Win.cpp src/Window.cpp)
+    list(APPEND SOURCES source/Capture_Win.cpp source/Window.cpp)
     set(PLATFORM_LIBS dwmapi gdiplus user32 gdi32 Shcore)
 elseif(APPLE)
-    list(APPEND SOURCES src/Capture_Mac.mm src/Window.mm)
+    list(APPEND SOURCES source/Capture_Mac.mm source/Window.mm)
     find_library(FOUNDATION_LIB Foundation)
     find_library(COREGRAPHICS_LIB CoreGraphics)
     find_library(COCOA_LIB Cocoa)
@@ -42,21 +42,21 @@ elseif(APPLE)
     endif()
     set(PLATFORM_LIBS ${FOUNDATION_LIB} ${COREGRAPHICS_LIB} ${COCOA_LIB} ${APPKIT_LIB})
 elseif(UNIX AND NOT APPLE)
-    list(APPEND SOURCES src/Capture_Unix.cpp src/Window.cpp)
+    list(APPEND SOURCES source/Capture_Unix.cpp source/Window.cpp)
     set(PLATFORM_LIBS Qt6::DBus)
 endif()
 
 list(APPEND SOURCES 
-    src/DrawView.cpp 
-    src/DrawView.h 
-    src/Window.h
+    source/DrawView.cpp 
+    source/DrawView.h 
+    source/Window.h
 )
 
 add_executable(engine WIN32 MACOSX_BUNDLE ${SOURCES})
 
 target_include_directories(engine PRIVATE 
-    src/engine 
-    src/interface
+    source/engine 
+    source/interface
 )
 
 target_link_libraries(engine PRIVATE 
