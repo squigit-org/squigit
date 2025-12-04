@@ -54,7 +54,7 @@ Path: /Applications/Spatialshot.app
         ├── Engine/
         │   └── {Qt Dist + mach-O}
         │
-        └── app/
+        └── App/
             └── {Electron Dist + mach-O}
 
 
@@ -89,7 +89,7 @@ Path: $HOME/.local/share/spatialshot/
 ├── Engine/                     <-- Qt Folder
 │   └── {Qt Dist + ELF}
 │
-└── app/                        <-- Electron Folder
+└── App/                        <-- Electron Folder
     └── {Electron Dist + ELF}
 
 
