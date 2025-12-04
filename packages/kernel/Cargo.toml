@@ -7,7 +7,7 @@ description = "Core orchestrator for the Spatialshot utility"
 license = "Apache-2.0"
 
 [[bin]]
-name = "sshot"
+name = "kernel"
 path = "source/main.rs"
 
 [dependencies]
