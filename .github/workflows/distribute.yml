@@ -99,7 +99,7 @@ jobs:
   # JOB 4: PUBLISH BINARIES (THE RELEASE JOB)
   # =========================================================
   publish-binaries:
-    needs: [build-orchestrator, build-engine, build-spatialshot]
+    needs: [build-engine, build-spatialshot]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
