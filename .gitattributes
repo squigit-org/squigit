@@ -6,3 +6,5 @@
 *.sh linguist-vendored
 *.json linguist-vendored
 *.md linguist-vendored
+
+PKGBUILD linguist-vendored
