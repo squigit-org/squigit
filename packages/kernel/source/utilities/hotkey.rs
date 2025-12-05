@@ -14,8 +14,6 @@ use std::sync::{
 use std::time::{Duration, Instant};
 
 pub fn listen() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-
     info!("Spatialshot Listener Started.");
     info!("Target Hotkey: Super (Cmd ⌘ /Win) + Shift + A");
 

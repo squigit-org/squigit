@@ -20,8 +20,12 @@ pub fn run() -> Result<()> {
         return Err(anyhow::anyhow!("Engine binary not found at {:?}", engine_path));
     }
 
-    let temp_dir = std::env::temp_dir();
-    let lock_path = temp_dir.join("spatialshot_kernel.lock"); 
+    let user_suffix = std::env::var("USER") // Unix
+        .or_else(|_| std::env::var("USERNAME")) // Windows
+        .unwrap_or_else(|_| "uid".to_string());
+        
+    let lock_filename = format!("spatialshot_kernel_{}.lock", user_suffix);
+    let lock_path = temp_dir.join(lock_filename); 
     
     let lock_file = File::create(&lock_path).context("Failed to create lock file")?;
     if lock_file.try_lock_exclusive().is_err() {
