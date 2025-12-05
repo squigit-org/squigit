@@ -1,3 +1,5 @@
+#![cfg(not(target_os = "linux"))]
+
 /**
  * @license
  * Copyright 2025 a7mddra

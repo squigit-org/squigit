@@ -20,6 +20,8 @@ pub fn run() -> Result<()> {
         return Err(anyhow::anyhow!("Engine binary not found at {:?}", engine_path));
     }
 
+    let temp_dir = std::env::temp_dir();
+
     let user_suffix = std::env::var("USER") // Unix
         .or_else(|_| std::env::var("USERNAME")) // Windows
         .unwrap_or_else(|_| "uid".to_string());
