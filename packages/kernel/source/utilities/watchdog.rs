@@ -15,11 +15,17 @@ pub fn start_monitor() {
         let mut last_count = get_monitor_count();
         loop {
             thread::sleep(Duration::from_millis(1000));
+            let current_pid = ENGINE_PID.load(Ordering::SeqCst);
+            if current_pid == 0 {
+                return;
+            }
+
             let current_count = get_monitor_count();
 
             if current_count != last_count {
                 log::warn!("Display change detected! Kill switch engaged.");
                 emergency_shutdown();
+                return;
             }
             last_count = current_count;
         }
@@ -31,6 +37,8 @@ fn emergency_shutdown() {
     if pid != 0 {
         let _ = kill_process(pid);
     }
+
+    #[cfg(target_os = "linux")]
     std::process::exit(1);
 }
 
@@ -39,7 +47,7 @@ fn get_monitor_count() -> i32 {
     use core_graphics::display::CGDisplay;
     match CGDisplay::active_displays() {
         Ok(d) => d.len() as i32,
-        Err(_) => 1, // Fail safe
+        Err(_) => 1,
     }
 }
 
@@ -71,8 +79,12 @@ fn kill_process(pid: u32) -> std::io::Result<()> {
     }
     #[cfg(windows)]
     {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
         Command::new("taskkill")
             .args(&["/F", "/PID", &pid.to_string()])
+            .creation_flags(CREATE_NO_WINDOW)
             .output()?;
     }
     Ok(())
