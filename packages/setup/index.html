@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spatialshot Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Custom scrollbar for the EULA text area to look more native/formal */
+      .eula-scroll::-webkit-scrollbar {
+        width: 8px;
+      }
+      .eula-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-left: 1px solid #e5e7eb;
+      }
+      .eula-scroll::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 0;
+      }
+      .eula-scroll::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+      }
+      
+      body {
+        cursor: default;
+        user-select: none;
+      }
+
+      /* Specific font requirement for bold texts */
+      .font-bold, .font-semibold, strong, b, h1, h2, h3, h4, h5, h6 {
+        font-family: "Segoe UI", Tahoma, Arial, sans-serif !important;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-200 flex items-center justify-center min-h-screen font-sans text-sm antialiased text-gray-900">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
