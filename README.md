@@ -2,7 +2,7 @@
 
 [![Spatialshot CI](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml)
 [![Spatialshot Installers](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml/badge.svg)](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml)
-[![spatialshot](https://img.shields.io/github/package-json/v/a7mddra/spatialshot?filename=packages%2Fspatialshot%2Fpackage.json&label=spatialshot&color=orange)](https://github.com/a7mddra/spatialshot/blob/main/packages/app/package.json)
+[![spatialshot](https://img.shields.io/github/package-json/v/a7mddra/spatialshot?filename=packages%2Fapp%2Fpackage.json&label=spatialshot&color=orange)](https://github.com/a7mddra/spatialshot/blob/main/packages/app/package.json)
 [![License](https://img.shields.io/github/license/a7mddra/spatialshot)](https://github.com/a7mddra/spatialshot/blob/main/LICENSE)
 
 ![Spatialshot demo](.assets/demo.gif)
