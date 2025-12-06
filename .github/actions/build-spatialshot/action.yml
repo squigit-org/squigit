@@ -40,7 +40,7 @@ runs:
       shell: bash
       run: |
         CORE_DIST="packages/core/dist"
-        VIEW_DIR="packages/spatialshot/source/renderer/view"
+        VIEW_DIR="packages/spatialshot/src/renderer/view"
 
         rm -rf "$VIEW_DIR"
         mkdir -p "$VIEW_DIR"
@@ -50,7 +50,7 @@ runs:
     # --- INJECT CREDENTIALS ---
     - name: Inject Google Credentials
       shell: bash
-      working-directory: ./packages/spatialshot/source/auth
+      working-directory: ./packages/spatialshot/src/auth
       env:
         CREDENTIALS_CONTENT: ${{ inputs.google_credentials }}
       run: |

@@ -19,4 +19,4 @@ dist-ssr
 src-electron/node_modules
 src-electron/dist
 
-src-electron/source/auth/credentials.json
+src-electron/src/auth/credentials.json

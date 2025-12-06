@@ -176,7 +176,7 @@ def build_spatialshot(system: str):
     logging.info(f"--- Building Component: spatialshot (Node.js/{system}) ---")
     core_path = os.path.join(ROOT_DIR, "packages", "core")
     project_path = os.path.join(ROOT_DIR, "packages", "spatialshot")
-    view_path = os.path.join(project_path, "source", "renderer", "view")
+    view_path = os.path.join(project_path, "src", "renderer", "view")
 
     _execute_command(["npm", "install"], core_path, "core-npm-install")
     _execute_command(["npm", "install"], project_path, "spatialshot-npm-install")

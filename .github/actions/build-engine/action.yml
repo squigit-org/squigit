@@ -34,8 +34,8 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        winget install --id Kitware.CMake --silent --accept-package-agreements --accept-source-agreements
-        winget install --id Ninja-build.Ninja --silent --accept-package-agreements --accept-source-agreements
+        winget install --id Kitware.CMake --silent --accept-package-agreements --accept-src-agreements
+        winget install --id Ninja-build.Ninja --silent --accept-package-agreements --accept-src-agreements
         if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { exit 1 }
         if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { exit 1 }
 
