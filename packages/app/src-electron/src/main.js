@@ -71,8 +71,7 @@ function setupMainView(theme) {
     }
   });
 
-  const viewPath = RENDERER_PATH + `/view/${theme}.html`;
-  mainView.webContents.loadURL(`file://${viewPath}`);
+  mainView.webContents.loadURL(`file://../../dist/${theme}.html`);
 }
 
 function createWindow() {
