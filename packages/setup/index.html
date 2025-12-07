@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Spatialshot Setup</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-      /* ... keep existing scrollbar styles ... */
       .eula-scroll::-webkit-scrollbar {
         width: 8px;
       }
@@ -25,18 +29,19 @@
       body {
         cursor: default;
         user-select: none;
-      }
-      .font-bold, .font-semibold, strong, b, h1, h2, h3, h4, h5, h6 {
-        font-family: Inter, system-ui, -apple-system, Roboto, "Segoe UI", "Helvetica Neue", Arial;
+        font-family: "Segoe UI", 'Inter', system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif !important;
       }
       
-      /* STRICT LAYOUT ENFORCEMENT */
+      .font-bold, .font-semibold, strong, b, h1, h2, h3, h4, h5, h6 {
+        font-family: "Segoe UI", 'Inter', system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif !important;
+      }
+      
       html, body, #root {
         height: 100%;
         width: 100%;
         margin: 0;
         padding: 0;
-        overflow: hidden; /* Prevents window-level scrollbars */
+        overflow: hidden;
       }
     </style>
 </head>
