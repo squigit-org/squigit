@@ -12,10 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "spatialshot-setup",
-        "width": 800,
-        "height": 600,
-        "resizable": true,
+        "title": "Spatialshot Setup",
+        "width": 700,
+        "height": 520,
+        "resizable": false,
         "fullscreen": false
       }
     ],
