@@ -11,7 +11,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props 
 }) => {
-  const baseStyle = "px-6 py-1.5 min-w-[85px] text-sm font-medium border transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed select-none";
+  const baseStyle = "px-6 py-1.5 w-[100px] text-sm font-medium border transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed select-none flex justify-center items-center";
   
   const variants = {
     primary: "bg-gray-900 text-white border-gray-900 hover:bg-gray-800 shadow-sm",

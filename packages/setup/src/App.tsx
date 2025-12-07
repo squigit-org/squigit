@@ -47,10 +47,13 @@ export default function App() {
   };
 
   const handleFinish = async () => {
-    if (state.launchOnExit) {
-      await open(`${state.installPath}\\Spatialshot.exe`);
-    }
-    await getCurrentWindow().close();
+    // Debugging: Reload to welcome screen instead of closing
+    setState({
+      step: WizardStep.WELCOME,
+      installPath: DEFAULT_INSTALL_PATH,
+      isAgreed: false,
+      launchOnExit: true,
+    });
   };
 
   const handleCancel = async () => {
