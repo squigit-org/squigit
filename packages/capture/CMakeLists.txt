@@ -78,5 +78,6 @@ if(APPLE)
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.engine.app"
         MACOSX_BUNDLE_BUNDLE_NAME "Engine"
         MACOSX_BUNDLE_INFO_STRING "Engine Screen Capture"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
     )
 endif()

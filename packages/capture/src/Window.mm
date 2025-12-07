@@ -36,7 +36,12 @@ MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, 
     setAttribute(Qt::WA_ShowWithoutActivating);   
     setAttribute(Qt::WA_TranslucentBackground, false);
     
-    setGeometry(geo);
+    if (screen) {
+        setScreen(screen);
+        setGeometry(screen->geometry());
+    } else {
+        setGeometry(geo);
+    }
     
     setContentsMargins(0, 0, 0, 0);
     m_drawView->setContentsMargins(0, 0, 0, 0);
@@ -50,6 +55,7 @@ MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, 
             [nswindow setAnimationBehavior: NSWindowAnimationBehaviorNone];
             [nswindow setHasShadow:NO];
             [nswindow setLevel:NSFloatingWindowLevel]; 
+            [nswindow setStyleMask:NSWindowStyleMaskBorderless];
         } else {
              qWarning() << "Could not retrieve NSWindow from NSView.";
         }
