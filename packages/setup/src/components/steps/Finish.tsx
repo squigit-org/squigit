@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepLayout } from '../StepLayout';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Check } from 'lucide-react';
 
 interface Props {
   launchOnExit: boolean;
@@ -33,17 +33,26 @@ export const Finish: React.FC<Props> = ({ launchOnExit, setLaunchOnExit, onFinis
             </div>
          </div>
 
-         <div className="mt-6 mb-4 p-4 bg-gray-50 border border-gray-200 rounded-sm">
-            <label className="flex items-center space-x-3 cursor-pointer select-none">
-                <div className="relative flex items-center">
+         <div className="mt-6 mb-4 flex justify-center">
+            <label className="flex items-center cursor-pointer select-none group">
+                <div className="relative">
                     <input 
-                    type="checkbox" 
-                    checked={launchOnExit} 
-                    onChange={(e) => setLaunchOnExit(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        type="checkbox" 
+                        checked={launchOnExit} 
+                        onChange={(e) => setLaunchOnExit(e.target.checked)}
+                        className="sr-only"
                     />
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all duration-200 ${
+                        launchOnExit 
+                            ? 'bg-blue-600 border-blue-600 shadow-sm' 
+                            : 'bg-white border-gray-300 group-hover:border-blue-400'
+                    }`}>
+                        <Check size={14} className={`text-white transition-opacity duration-200 ${launchOnExit ? 'opacity-100' : 'opacity-0'}`} strokeWidth={3} />
+                    </div>
                 </div>
-                <span className="text-sm font-medium text-gray-900">Launch Spatialshot</span>
+                <span className="ml-3 text-sm font-medium text-gray-900 group-hover:text-blue-700 transition-colors">
+                    Launch Spatialshot
+                </span>
             </label>
          </div>
       </div>
