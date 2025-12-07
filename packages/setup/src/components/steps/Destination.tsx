@@ -1,7 +1,7 @@
 import React from 'react';
 import { StepLayout } from '../StepLayout';
 import { REQUIRED_SPACE_MB } from '../../constants';
-import { FolderOpen, HardDrive } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
 import { Button } from '../Button';
 
 interface Props {
@@ -17,7 +17,7 @@ export const Destination: React.FC<Props> = ({ installPath, setInstallPath, onNe
     <StepLayout
       title="Select Destination Location"
       description="Where should Spatialshot be installed?"
-      icon={<FolderOpen size={24} />}
+      icon={<img src="/assets/steps/emoji_u1f4c2.png" className="w-8 h-8 object-contain" alt="Destination" />}
       onNext={onNext}
       onBack={onBack}
       onCancel={onCancel}
@@ -28,7 +28,7 @@ export const Destination: React.FC<Props> = ({ installPath, setInstallPath, onNe
         </p>
         
         <p className="text-sm text-gray-700">
-          To continue, click Next. If you would like to select a different folder, click Browse.
+          To continue, click Next.
         </p>
 
         <div className="flex space-x-2">

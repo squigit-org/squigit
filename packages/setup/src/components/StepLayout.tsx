@@ -13,6 +13,7 @@ interface StepLayoutProps {
   cancelLabel?: string;
   disableNext?: boolean;
   hideButtons?: boolean;
+  hideHeader?: boolean;
   isInstallAction?: boolean; // Changes Next button style
   isFinish?: boolean;
 }
@@ -29,19 +30,22 @@ export const StepLayout: React.FC<StepLayoutProps> = ({
   cancelLabel = "Cancel",
   disableNext = false,
   hideButtons = false,
+  hideHeader = false,
   isInstallAction = false,
   isFinish = false,
 }) => {
   return (
     <div className="flex flex-col h-full w-full">
       {/* HEADER SECTION */}
-      <div className="flex items-center bg-white p-5 border-b border-gray-200 select-none shrink-0">
-        {icon && <div className="text-gray-500 shrink-0 mr-4">{icon}</div>}
-        <div className="flex-1">
-          <h2 className="text-lg font-bold text-gray-900 mb-1 leading-none">{title}</h2>
-          <p className="text-sm text-gray-600">{description}</p>
+      {!hideHeader && (
+        <div className="flex items-center bg-white p-5 border-b border-gray-200 select-none shrink-0">
+          {icon && <div className="text-gray-500 shrink-0 mr-4">{icon}</div>}
+          <div className="flex-1">
+            <h2 className="text-lg font-bold text-gray-900 mb-1 leading-none">{title}</h2>
+            <p className="text-sm text-gray-600">{description}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* CONTENT SECTION - FLEXIBLE */}
       {/* flex-1: Fills remaining height. min-h-0: Allows nested scrollbars to work properly */}
@@ -66,9 +70,11 @@ export const StepLayout: React.FC<StepLayoutProps> = ({
              >
                {nextLabel}
              </Button>
-             <Button onClick={onCancel} className="ml-2" disabled={!onCancel}>
-               {cancelLabel}
-             </Button>
+             {onCancel && (
+               <Button onClick={onCancel} className="ml-2">
+                 {cancelLabel}
+               </Button>
+             )}
            </div>
         </div>
       )}

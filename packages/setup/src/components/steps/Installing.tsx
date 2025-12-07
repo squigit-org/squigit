@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { StepLayout } from '../StepLayout';
-import { HardDrive } from 'lucide-react';
 
 interface Props {
   onComplete: () => void;
@@ -59,7 +58,7 @@ export const Installing: React.FC<Props> = ({ onComplete }) => {
     <StepLayout
       title="Installing"
       description="Please wait while Setup installs Spatialshot on your computer."
-      icon={<HardDrive size={24} className="animate-pulse" />}
+      icon={<img src="/assets/steps/emoji_u1f6e0.png" className="w-8 h-8 object-contain" alt="Installing" />}
       hideButtons={true}
     >
       <div className="flex flex-col justify-center h-full space-y-6">

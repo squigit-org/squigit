@@ -12,7 +12,7 @@ export const UpdatePrompt: React.FC<Props> = ({ onInstall, onCancel }) => {
     <StepLayout
       title="Spatialshot Update"
       description="A previous version of Spatialshot was detected."
-      icon={<Wrench size={24} />}
+      icon={<img src="/assets/steps/emoji_u1f527.png" className="w-8 h-8 object-contain" alt="Update" />}
       onNext={onInstall}
       onCancel={onCancel}
       nextLabel="Install"

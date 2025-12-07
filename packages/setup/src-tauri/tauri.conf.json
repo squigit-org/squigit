@@ -12,10 +12,12 @@
     "windows": [
       {
         "title": "Spatialshot Setup",
-        "width": 700,
+        "width": 730,
         "height": 580, 
         "resizable": false,
-        "fullscreen": false
+        "fullscreen": false,
+        "visible": false,
+        "center": true
       }
     ],
     "security": {

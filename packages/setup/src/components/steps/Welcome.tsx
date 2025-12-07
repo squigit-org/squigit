@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { StepLayout } from '../StepLayout';
-import { ScrollText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -28,7 +27,7 @@ export const Welcome: React.FC<Props> = ({ isAgreed, setIsAgreed, onNext, onCanc
     <StepLayout
       title="Setup Guide"
       description="Please review the following instructions carefully."
-      icon={<ScrollText size={24} />}
+      icon={<img src="/assets/steps/emoji_u1f4c4.png" className="w-8 h-8 object-contain" alt="Guide" />}
       onNext={onNext}
       onCancel={onCancel}
       disableNext={!isAgreed}

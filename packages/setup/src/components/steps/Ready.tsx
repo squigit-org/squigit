@@ -19,7 +19,7 @@ export const Ready: React.FC<Props> = ({
     <StepLayout
       title="Ready to Install"
       description="Setup is now ready to begin installing Spatialshot on your computer."
-      icon={<span className="text-2xl">📦️</span>}
+      icon={<img src="/assets/steps/emoji_u1f4e6.png" className="w-8 h-8 object-contain" alt="Ready" />}
       onNext={onInstall}
       onBack={onBack}
       onCancel={onCancel}
@@ -60,9 +60,6 @@ export const Ready: React.FC<Props> = ({
                       {isLast ? "└──" : "├──"}
                     </span>
                     <span className="flex-1 truncate">{pkg.name}</span>
-                    <span className="text-gray-400 whitespace-nowrap pl-2">
-                      ~ {pkg.size}
-                    </span>
                   </li>
                 );
               })}
