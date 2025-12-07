@@ -34,16 +34,17 @@ export const Welcome: React.FC<Props> = ({ isAgreed, setIsAgreed, onNext, onCanc
             cursor: pointer;
         }
       `}</style>
-      <div className="flex flex-col h-full space-y-4">
-        <div className="text-sm text-gray-700">
-          Please read the following License Agreement. You must accept the terms of this agreement before continuing with the installation.
+      <div className="flex flex-col h-full space-y-3">
+        <div className="text-sm text-gray-700 shrink-0">
+          Please read the following License Agreement. You must accept the terms of this agreement before continuing.
         </div>
         
-        <div className="flex-1 border border-gray-300 bg-white p-3 overflow-y-auto h-48 eula-scroll font-mono text-xs leading-relaxed text-gray-600 select-text shadow-inner">
+        {/* CHANGED: flex-1 ensures it fills available space. min-h-0 allows scrollbar. */}
+        <div className="flex-1 min-h-0 border border-gray-300 bg-white p-3 eula-scroll font-mono text-xs leading-relaxed text-gray-600 select-text shadow-inner overflow-y-auto">
           <pre className="whitespace-pre-wrap font-sans">{LICENSE_TEXT}</pre>
         </div>
 
-        <div className="radio-group pt-2">
+        <div className="radio-group pt-1 shrink-0">
             <label className="radio-option">
                 <input 
                     type="radio" 

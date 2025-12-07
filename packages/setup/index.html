@@ -6,7 +6,7 @@
     <title>Spatialshot Setup</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* Custom scrollbar for the EULA text area to look more native/formal */
+      /* ... keep existing scrollbar styles ... */
       .eula-scroll::-webkit-scrollbar {
         width: 8px;
       }
@@ -26,14 +26,17 @@
         cursor: default;
         user-select: none;
       }
-      /* Specific font requirement for bold texts */
       .font-bold, .font-semibold, strong, b, h1, h2, h3, h4, h5, h6 {
         font-family: Inter, system-ui, -apple-system, Roboto, "Segoe UI", "Helvetica Neue", Arial;
       }
-      html, body {
+      
+      /* STRICT LAYOUT ENFORCEMENT */
+      html, body, #root {
         height: 100%;
+        width: 100%;
         margin: 0;
         padding: 0;
+        overflow: hidden; /* Prevents window-level scrollbars */
       }
     </style>
 </head>

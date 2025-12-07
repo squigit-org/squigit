@@ -3,18 +3,17 @@ import { Button } from './Button';
 
 interface StepLayoutProps {
   title: string;
-  description?: string;
+  description: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
   onNext?: () => void;
   onBack?: () => void;
-  onCancel?: () => void;
+  onCancel?: () => void; // Optional, as installing step hides it
   nextLabel?: string;
-  backLabel?: string;
   cancelLabel?: string;
   disableNext?: boolean;
   hideButtons?: boolean;
-  isInstallAction?: boolean; // Changes Next button style to primary/install
+  isInstallAction?: boolean; // Changes Next button style
   isFinish?: boolean;
 }
 
@@ -26,62 +25,54 @@ export const StepLayout: React.FC<StepLayoutProps> = ({
   onNext,
   onBack,
   onCancel,
-  nextLabel = 'Next',
-  backLabel = 'Back',
-  cancelLabel = 'Cancel',
+  nextLabel = "Next >",
+  cancelLabel = "Cancel",
   disableNext = false,
   hideButtons = false,
   isInstallAction = false,
   isFinish = false,
 }) => {
   return (
-    <div className="flex flex-col h-full bg-white text-gray-900">
-      {/* Header Area */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-white select-none">
-        <div className="flex items-start space-x-4">
-          {icon && <div className="mt-1 text-gray-500">{icon}</div>}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 leading-tight">{title}</h2>
-            {description && <p className="text-gray-500 text-xs mt-1">{description}</p>}
-          </div>
+    <div className="flex flex-col h-full w-full">
+      {/* HEADER SECTION */}
+      <div className="flex bg-white p-5 border-b border-gray-200 select-none shrink-0">
+        <div className="flex-1 pr-4">
+          <h2 className="text-lg font-bold text-gray-900 mb-1 leading-none">{title}</h2>
+          <p className="text-sm text-gray-600">{description}</p>
         </div>
+        {icon && <div className="text-gray-500 shrink-0">{icon}</div>}
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 p-6 overflow-y-auto bg-gray-50/30">
+      {/* CONTENT SECTION - FLEXIBLE */}
+      {/* flex-1: Fills remaining height. min-h-0: Allows nested scrollbars to work properly */}
+      <div className="flex-1 min-h-0 p-5 bg-white overflow-hidden flex flex-col">
         {children}
       </div>
 
-      {/* Footer / Button Bar */}
+      {/* FOOTER SECTION - FIXED AT BOTTOM */}
       {!hideButtons && (
-        <div className="px-5 py-3 bg-gray-100 border-t border-gray-300 flex justify-between items-center select-none">
-          {/* Left Side: Cancel */}
-          <div>
-            {onCancel && (
-              <Button variant="secondary" onClick={onCancel}>
-                {cancelLabel}
-              </Button>
-            )}
-          </div>
+        <div className="bg-gray-50 border-t border-gray-300 p-3 flex justify-between items-center shrink-0 select-none z-10">
+           {/* Left side (Branding or Version could go here) */}
+           <div className="text-xs text-gray-400">
+              Spatialshot
+           </div>
 
-          {/* Right Side: Back & Next */}
-          <div className="flex space-x-3">
-            {onBack && (
-              <Button variant="secondary" onClick={onBack}>
-                {backLabel}
-              </Button>
-            )}
-            
-            {onNext && (
-              <Button 
-                variant={isInstallAction || isFinish ? 'primary' : 'secondary'} 
-                onClick={onNext}
-                disabled={disableNext}
-              >
-                {nextLabel}
-              </Button>
-            )}
-          </div>
+           {/* Right side (Buttons) */}
+           <div className="flex space-x-2">
+             <Button onClick={onBack} disabled={!onBack || isFinish}>
+               &lt; Back
+             </Button>
+             <Button 
+               onClick={onNext} 
+               disabled={disableNext}
+               variant={isInstallAction ? 'primary' : 'secondary'}
+             >
+               {nextLabel}
+             </Button>
+             <Button onClick={onCancel} className="ml-2" disabled={!onCancel}>
+               {cancelLabel}
+             </Button>
+           </div>
         </div>
       )}
     </div>

@@ -1,5 +1,4 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "spatialshot-setup-wizard",
   "version": "0.1.0",
   "identifier": "com.spatialshot.setup",
@@ -14,7 +13,7 @@
       {
         "title": "Spatialshot Setup",
         "width": 700,
-        "height": 520,
+        "height": 580, 
         "resizable": false,
         "fullscreen": false
       }
