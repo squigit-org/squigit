@@ -6,7 +6,7 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("electron", {
+const api = {
   // ===================================================
   //  Window & System Controls
   // ===================================================
@@ -16,9 +16,8 @@ contextBridge.exposeInMainWorld("electron", {
   setMainViewBounds: (rect) => ipcRenderer.send("set-main-view-bounds", rect),
   hideMainView: () => ipcRenderer.send("hide-main-view"),
   openFileDialog: () => ipcRenderer.invoke("open-file-dialog"),
-
-  // External Links
-  openExternal: (url) => ipcRenderer.send("open-external", url),
+  
+  openExternalUrl: (url) => ipcRenderer.send("open-external-url", url),
 
   // ===================================================
   //  Theme & Settings
@@ -29,9 +28,8 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.on("set-theme", (_, theme) => callback(theme)),
   themeApplied: () => ipcRenderer.send("theme-applied"),
 
-  // Settings UI
   toggleSettings: () => ipcRenderer.send("toggle-settings"),
-  onToggleSettings: (callback) =>
+  onToggleSettings: (callback) => 
     ipcRenderer.on("toggle-settings", () => callback()),
 
   // ===================================================
@@ -44,17 +42,15 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.on("auth-result", (_, data) => callback(data)),
   byokLogin: () => ipcRenderer.send("byok-login"),
   resetAPIKey: () => ipcRenderer.invoke("reset-api-key"),
-
+  
   // ===================================================
   //  Data & File System
   // ===================================================
   getUserData: () => ipcRenderer.invoke("get-user-data"),
   getSessionPath: () => ipcRenderer.invoke("get-session-path"),
-  checkFileExists: (fileName) =>
-    ipcRenderer.invoke("check-file-exists", fileName),
+  checkFileExists: (fileName) => ipcRenderer.invoke("check-file-exists", fileName),
   clearCache: () => ipcRenderer.send("clear-cache"),
-  showUnsavedChangesAlert: () =>
-    ipcRenderer.invoke("show-unsaved-changes-alert"),
+  showUnsavedChangesAlert: () => ipcRenderer.invoke("show-unsaved-changes-alert"),
 
   // ===================================================
   //  Image Handling
@@ -67,7 +63,7 @@ contextBridge.exposeInMainWorld("electron", {
   readImageFile: (path) => ipcRenderer.invoke("read-image-file", path),
 
   // ===================================================
-  //  AI / Prompts / Models (React Specific)
+  //  AI / Prompts / Models
   // ===================================================
   getPrompt: () => ipcRenderer.invoke("get-prompt"),
   savePrompt: (prompt) => ipcRenderer.invoke("save-prompt", prompt),
@@ -88,4 +84,14 @@ contextBridge.exposeInMainWorld("electron", {
   onClipboardText: (callback) =>
     ipcRenderer.on("clipboard-text", (_, data) => callback(data)),
   encryptAndSave: (data) => ipcRenderer.invoke("encrypt-and-save", data),
-});
+};
+
+// ===================================================
+//  EXPOSE BRIDGES
+// ===================================================
+
+// Vanilla
+contextBridge.exposeInMainWorld("electron", api);
+
+// React
+contextBridge.exposeInMainWorld("ipc", api);

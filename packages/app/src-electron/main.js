@@ -40,7 +40,6 @@ const setMainView = (view) => {
 };
 
 // --- Paths ---
-const SPALOAD_PATH = path.join(__dirname, "spaload.js");
 const PRELOAD_PATH = path.join(__dirname, "preload.js");
 const RENDERER_PATH = path.join(__dirname, "./renderer");
 const ICON_PATH = path.join(__dirname, "../assets/icons/light/512.png");
@@ -56,7 +55,7 @@ const hideMainViewBounds = { x: 0, y: 0, width: 0, height: 0 };
 function setupMainView(theme) {
   if (mainView) return;
 
-  mainView = new BrowserView({ webPreferences: { preload: SPALOAD_PATH } });
+  mainView = new BrowserView({ webPreferences: { preload: PRELOAD_PATH } });
 
   mainWindow.addBrowserView(mainView);
   mainView.setBounds(hideMainViewBounds);
