@@ -8,7 +8,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "postbuild": "node scripts/build-html.js"
+    "postbuild": "node scripts/build-html.js",
+
+    "// --- UNIVERSAL COMMANDS ---": "",
+    "start": "node scripts/build-sync.js dev",
+    "dist": "node scripts/build-sync.js",
+    "dist:win": "node scripts/build-sync.js win",
+    "dist:mac": "node scripts/build-sync.js mac",
+    "dist:linux": "node scripts/build-sync.js linux"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

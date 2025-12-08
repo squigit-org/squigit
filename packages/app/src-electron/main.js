@@ -52,11 +52,19 @@ const getMainViewBounds = (width, height) => ({
 });
 const hideMainViewBounds = { x: 0, y: 0, width: 0, height: 0 };
 
+function getRendererPath(theme) {
+  if (app.isPackaged) {
+    return path.join(__dirname, 'dist', `${theme}.html`);
+  } 
+  else {
+    return path.join(__dirname, '../dist', `${theme}.html`);
+  }
+}
+
 function setupMainView(theme) {
   if (mainView) return;
 
   mainView = new BrowserView({ webPreferences: { preload: PRELOAD_PATH } });
-
   mainWindow.addBrowserView(mainView);
   mainView.setBounds(hideMainViewBounds);
 
@@ -70,7 +78,7 @@ function setupMainView(theme) {
     }
   });
 
-  mainView.webContents.loadURL(`file://../../dist/${theme}.html`);
+  mainView.webContents.loadFile(getRendererPath(theme));
 }
 
 function createWindow() {
