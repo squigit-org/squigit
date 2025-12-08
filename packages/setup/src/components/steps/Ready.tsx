@@ -38,9 +38,6 @@ export const Ready: React.FC<Props> = ({
           want to review or change any settings.
         </p>
 
-           overflow-hidden ensures NO scrollbar appears even if content is long, 
-           as per "dont want any scrollbar in it never". 
-        */}
         <div className="border border-gray-300 bg-white text-sm p-4 flex-1 overflow-hidden">
           <div className="mb-4">
             <span className="font-semibold text-gray-900 block mb-1">
