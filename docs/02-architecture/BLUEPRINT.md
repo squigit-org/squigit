@@ -7,11 +7,11 @@
 Path: %LOCALAPPDATA%\Programs\Spatialshot\
 (Read Only / Wiped by Updater)
 │
-├── kernel.exe                  <-- [ENTRY POINT] Rust Orchestrator
+├── daemon.exe                  <-- [ENTRY POINT] Rust Orchestrator
 ├── unins000.exe                <-- Uninstaller
 │
-├── Engine\                     <-- Qt Folder
-│   ├── engine.exe
+├── Capture\                    <-- Qt Folder
+│   ├── capture.exe
 │   └── {Qt DLLs & Plugins}
 │
 └── App\                        <-- Electron Folder
@@ -48,10 +48,10 @@ Path: /Applications/Spatialshot.app
 └── Contents/
     ├── Info.plist
     ├── MacOS/
-    │   └── kernel              <-- [ENTRY POINT] Rust Orchestrator
+    │   └── daemon              <-- [ENTRY POINT] Rust Orchestrator
     │
     └── Resources/              <-- Assets & Sub-processes
-        ├── Engine/
+        ├── Capture/
         │   └── {Qt Dist + mach-O}
         │
         └── App/
@@ -84,12 +84,12 @@ Path: /var/folders/.../T/ (Managed by OS)
 Path: $HOME/.local/share/spatialshot/
 (Read Only / Managed by Package Manager or Script)
 │
-├── kernel                      <-- [ENTRY POINT] Rust Orchestrator
+├── daemon                      <-- [ENTRY POINT] Rust Orchestrator
 │
-├── Engine/                     <-- Qt Folder
+├── capture/                    <-- Qt Folder
 │   └── {Qt Dist + ELF}
 │
-└── App/                        <-- Electron Folder
+└── app/                        <-- Electron Folder
     └── {Electron Dist + ELF}
 
 

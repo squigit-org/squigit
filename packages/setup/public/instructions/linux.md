@@ -12,17 +12,13 @@ Welcome, Linux user! We know you usually have to fight your OS to get cool tools
 
 The installer has attempted to automatically register the global hotkey for your specific Desktop Environment (Gnome, KDE, XFCE, or Cinnamon).
 
-### **Try it now: Press `Super ❖` + `Shift ⇧` + `A`**
-
-*Note: The "Super" key is usually the one with the Windows logo.*
-
 ### **"It didn't work!" (Manual Setup)**
 Linux is diverse. If our script couldn't penetrate your specific window manager configuration (looking at you, KDE Plasma), simply add it manually:
 
 1.  Open your **System Settings** -> **Keyboard Shortcuts**.
 2.  Add a **Custom Shortcut**.
 3.  **Name:** `Spatialshot`
-4.  **Command:** Browse to where you installed the app (e.g., `~/Spatialshot/spatialshot`)
+4.  **Command:** Browse to where you installed the app daemon.
 5.  **Binding:** Set it to `Super+Shift+A` (or whatever you prefer).
 
 ---
@@ -34,7 +30,7 @@ Linux is diverse. If our script couldn't penetrate your specific window manager 
 3.  **Chat:** The AI window appears instantly.
 
 **Where is the icon?**
-We have automatically created a `.desktop` file. You can find **Spatialshot** in your application launcher menu like any other app.
+We will automatically create a `.desktop` file. You can find **Spatialshot** in your application launcher menu like any other app.
 
 ---
 
@@ -49,8 +45,6 @@ Spatialshot follows a **Local-First, Zero-Trust** philosophy.
 ---
 
 ## 4. 🚑 Under the Hood (For the curious)
-
-
 
 If you are wondering how we handle the hotkey without a daemon constantly polling your keyboard (which is bad for security), we register the shortcut directly with your Compositor (Mutter, KWin, Xfwm).
 
