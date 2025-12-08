@@ -1,6 +1,12 @@
-import React from 'react';
-import { StepLayout } from '../StepLayout';
-import { Info, Wrench } from 'lucide-react';
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React from "react";
+import { StepLayout } from "../StepLayout";
+import { Info, Wrench } from "lucide-react";
 
 interface Props {
   onInstall: () => void;
@@ -12,7 +18,13 @@ export const UpdatePrompt: React.FC<Props> = ({ onInstall, onCancel }) => {
     <StepLayout
       title="Spatialshot Update"
       description="A previous version of Spatialshot was detected."
-      icon={<img src="/assets/steps/emoji_u1f527.png" className="w-8 h-8 object-contain" alt="Update" />}
+      icon={
+        <img
+          src="/assets/steps/emoji_u1f527.png"
+          className="w-8 h-8 object-contain"
+          alt="Update"
+        />
+      }
       onNext={onInstall}
       onCancel={onCancel}
       nextLabel="Install"
@@ -24,9 +36,12 @@ export const UpdatePrompt: React.FC<Props> = ({ onInstall, onCancel }) => {
         <div className="bg-blue-50 p-4 rounded border border-blue-100 flex items-start text-left max-w-md">
           <Info className="text-blue-600 mr-3 flex-shrink-0 mt-0.5" size={20} />
           <div className="space-y-2">
-            <p className="font-medium text-blue-900">Spatialshot is already installed.</p>
+            <p className="font-medium text-blue-900">
+              Spatialshot is already installed.
+            </p>
             <p className="text-blue-800 text-sm leading-relaxed">
-              Do you want to update to the latest version? This will overwrite the existing installation files but preserve your configuration.
+              Do you want to update to the latest version? This will overwrite
+              the existing installation files but preserve your configuration.
             </p>
           </div>
         </div>

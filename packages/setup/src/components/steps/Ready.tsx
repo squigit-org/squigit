@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React from "react";
 import { StepLayout } from "../StepLayout";
 import { PACKAGE_LIST } from "../../constants";
@@ -32,7 +38,6 @@ export const Ready: React.FC<Props> = ({
           want to review or change any settings.
         </p>
 
-        {/* Using flex-1 to fill space. 
            overflow-hidden ensures NO scrollbar appears even if content is long, 
            as per "dont want any scrollbar in it never". 
         */}
@@ -89,7 +94,6 @@ export const Ready: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Sticky note at bottom of content area */}
         <div className="mt-auto pt-2 shrink-0">
           <div className="card" role="dialog" aria-label="Notes">
             <div className="box note">
