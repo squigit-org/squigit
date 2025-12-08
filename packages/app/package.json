@@ -15,7 +15,8 @@
     "dist": "node scripts/build-sync.js",
     "dist:win": "node scripts/build-sync.js win",
     "dist:mac": "node scripts/build-sync.js mac",
-    "dist:linux": "node scripts/build-sync.js linux"
+    "dist:linux": "node scripts/build-sync.js linux",
+    "install:all": "npm install && cd src-electron && npm install"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
