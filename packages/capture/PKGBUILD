@@ -126,7 +126,9 @@ EOF
     chmod +x "$DIST_DIR/capture"
 
     log "Resolving Shared Libraries (ldd)..."
-    
+
+    export LD_LIBRARY_PATH="$QT_LIB_SRC:$LD_LIBRARY_PATH"
+
     SKIP_LIBS="linux-vdso|libstdc++|libgcc_s|libc.so|libm.so|ld-linux|libpthread|librt|libdl"
 
     copy_deps() {
