@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>Engine</string>
+    <string>Capture</string>
     <key>CFBundleIconFile</key>
-    <string>engine.icns</string>
+    <string>capture.icns</string>
     <key>CFBundleIdentifier</key>
-    <string>com.engine.app</string>
+    <string>com.capture.app</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>

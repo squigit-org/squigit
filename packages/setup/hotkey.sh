@@ -48,7 +48,7 @@ generate_uuid() {
     if has_cmd uuidgen; then
         uuidgen
     else
-        cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s%N | sha1sum | cut -c1-36
+        cat /proc/sys/daemon/random/uuid 2>/dev/null || date +%s%N | sha1sum | cut -c1-36
     fi
 }
 

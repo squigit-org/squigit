@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 
 # -----------------------------------------------------------------------------
-# Engine Windows Build Script
+# Capture Windows Build Script
 # -----------------------------------------------------------------------------
 
 param(
@@ -83,8 +83,8 @@ function Install-Qt {
     }
 }
 
-function Invoke-Engine {
-    Write-Info "--- Building Engine (Unified) ---"
+function Invoke-Capture {
+    Write-Info "--- Building Capture (Unified) ---"
     
     if (Test-Path $BuildDir) { Remove-Item $BuildDir -Recurse -Force }
     
@@ -114,7 +114,7 @@ function Publish-Distribution {
     if (Test-Path $DistDir) { Remove-Item $DistDir -Recurse -Force }
     New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
     
-    $binName = "engine.exe"
+    $binName = "capture.exe"
     $builtExe = "$BuildDir/$binName"
     
     if (-not (Test-Path $builtExe)) { 
@@ -162,16 +162,16 @@ function Publish-Distribution {
 
 try {
     if (-not (Test-Path "CMakeLists.txt")) {
-        throw "Run this script from the packages/engine directory (where CMakeLists.txt is)."
+        throw "Run this script from the packages/capture directory (where CMakeLists.txt is)."
     }
     
     if (-not (Test-Prerequisites)) { exit 1 }
 
     Install-Qt
-    Invoke-Engine
+    Invoke-Capture
     Publish-Distribution
     
-    Write-Host "`n[SUCCESS] Engine Build Completed." -ForegroundColor Green
+    Write-Host "`n[SUCCESS] Capture Build Completed." -ForegroundColor Green
     
 }
 catch {

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
 if(APPLE)
-    project(ENGINE LANGUAGES CXX OBJCXX)
+    project(CAPTURE LANGUAGES CXX OBJCXX)
 else()
-    project(ENGINE LANGUAGES CXX)
+    project(CAPTURE LANGUAGES CXX)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -52,32 +52,32 @@ list(APPEND SOURCES
     src/Window.h
 )
 
-add_executable(engine WIN32 MACOSX_BUNDLE ${SOURCES})
+add_executable(capture WIN32 MACOSX_BUNDLE ${SOURCES})
 
-target_include_directories(engine PRIVATE 
-    src/engine 
+target_include_directories(capture PRIVATE 
+    src/capture 
     src/interface
 )
 
-target_link_libraries(engine PRIVATE 
+target_link_libraries(capture PRIVATE 
     Qt6::Core Qt6::Gui Qt6::Widgets 
     ${PLATFORM_LIBS}
 )
 
 if(UNIX AND NOT APPLE)
-    set_target_properties(engine PROPERTIES
-        OUTPUT_NAME "engine-bin"
+    set_target_properties(capture PROPERTIES
+        OUTPUT_NAME "capture-bin"
         INSTALL_RPATH "$ORIGIN/../libs"
         BUILD_WITH_INSTALL_RPATH TRUE
     )
 endif()
 
 if(APPLE)
-    set_target_properties(engine PROPERTIES
+    set_target_properties(capture PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_GUI_IDENTIFIER "com.engine.app"
-        MACOSX_BUNDLE_BUNDLE_NAME "Engine"
-        MACOSX_BUNDLE_INFO_STRING "Engine Screen Capture"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.capture.app"
+        MACOSX_BUNDLE_BUNDLE_NAME "Capture"
+        MACOSX_BUNDLE_INFO_STRING "Capture Screen Capture"
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
     )
 endif()

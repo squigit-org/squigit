@@ -11,15 +11,15 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-pub static ENGINE_PID: AtomicU32 = AtomicU32::new(0);
+pub static CAPTURE_PID: AtomicU32 = AtomicU32::new(0);
 
-pub fn run_engine(engine_path: &PathBuf) -> Result<PathBuf> {
-    let mut child = Command::new(engine_path)
+pub fn run_capture(capture_path: &PathBuf) -> Result<PathBuf> {
+    let mut child = Command::new(capture_path)
         .stdout(Stdio::piped())
         .spawn()
-        .context("Failed to spawn Engine")?;
+        .context("Failed to spawn Capture")?;
 
-    ENGINE_PID.store(child.id(), Ordering::SeqCst);
+    CAPTURE_PID.store(child.id(), Ordering::SeqCst);
 
     let stdout = child.stdout.take().context("No stdout")?;
     let reader = BufReader::new(stdout);
@@ -40,9 +40,9 @@ pub fn run_engine(engine_path: &PathBuf) -> Result<PathBuf> {
     }
 
     let _ = child.wait();
-    ENGINE_PID.store(0, Ordering::SeqCst);
+    CAPTURE_PID.store(0, Ordering::SeqCst);
 
-    detected_path.ok_or_else(|| anyhow!("Engine finished but no valid PNG path was output"))
+    detected_path.ok_or_else(|| anyhow!("Capture finished but no valid PNG path was output"))
 }
 
 pub fn spawn_electron(bin_dir: &Path, image_path: &PathBuf) -> Result<()> {
@@ -63,29 +63,34 @@ pub fn spawn_electron(bin_dir: &Path, image_path: &PathBuf) -> Result<()> {
                 .arg("--args")
                 .arg(image_path)
                 .arg("--no-sandbox")
-                .spawn()?;
+                .spawn()
+                .context("Failed to open macOS bundle")?;
             return Ok(());
         }
     }
 
-    let electron_executable = if cfg!(target_os = "windows") {
-        bin_dir
-            .parent()
-            .unwrap()
-            .join("App")
-            .join("spatialshot.exe")
-    } else {
-        bin_dir.join("App").join("spatialshot")
-    };
+    #[cfg(not(target_os = "macos"))]
+    {
+        let electron_executable = if cfg!(target_os = "windows") {
+            bin_dir.join("App").join("spatialshot.exe")
+        } else {
+            bin_dir.join("app").join("spatialshot")
+        };
 
-    Command::new(electron_executable)
-        .arg(image_path)
-        .arg("--no-sandbox")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .context("Failed to launch UI")?;
+        let mut cmd = Command::new(electron_executable);
+
+        cmd.arg(image_path);
+
+        if cfg!(target_os = "linux") {
+            cmd.arg("--no-sandbox");
+        }
+
+        cmd.stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .context("Failed to launch UI")?;
+    }
 
     Ok(())
 }

@@ -19,12 +19,12 @@ static void DisplayReconfigurationCallBack(
     void *userInfo)
 {
     if (flags & kCGDisplayAddFlag || flags & kCGDisplayRemoveFlag) {
-        qWarning() << "Display configuration changed! Exiting engine.";
+        qWarning() << "Display configuration changed! Exiting capture.";
         QApplication::exit(1);
     }
 }
 
-MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, QWidget *parent)
+MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent)
     : QMainWindow(parent), 
       m_displayNum(displayNum),
       m_displayCallbackRegistered(false)
@@ -33,7 +33,7 @@ MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, 
     setCentralWidget(m_drawView);
 
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool | Qt::Popup);
-    setAttribute(Qt::WA_ShowWithoutActivating);   
+    setAttribute(Qt::WA_ShowWithoutActivating);    
     setAttribute(Qt::WA_TranslucentBackground, false);
     
     if (screen) {

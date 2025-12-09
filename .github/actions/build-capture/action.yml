@@ -1,0 +1,96 @@
+name: "Build Capture"
+description: "Builds C++ Capture with Qt (Full Logic)"
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Build Docker Builder Image (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      working-directory: packages/capture
+      # We build the container that has Qt6 and Glibc 2.31
+      run: docker build -t spatial-builder .
+
+    - name: Run Build inside Container (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        docker run --rm \
+          -v "$GITHUB_WORKSPACE:/work" \
+          -w "/work/packages/capture" \
+          spatial-builder \
+          /bin/bash -c "chmod +x PKGBUILD && ./PKGBUILD"
+
+        sudo chown -R $USER:$USER packages/capture/dist
+
+    - name: Install Prereqs (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        winget install --id Kitware.CMake --silent --accept-package-agreements --accept-src-agreements
+        winget install --id Ninja-build.Ninja --silent --accept-package-agreements --accept-src-agreements
+        if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { exit 1 }
+        if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { exit 1 }
+
+    - name: Setup MSVC (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Run Build (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      working-directory: packages/capture
+      run: |
+        .\PKGBUILD.ps1
+        if (-not (Test-Path "dist\capture.exe")) { exit 1 }
+
+    - name: Install Prereqs (Mac)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew update
+        brew install cmake qt
+        echo "QT_PATH=$(brew --prefix qt)" >> $GITHUB_ENV
+        echo "$(brew --prefix qt)/bin" >> $GITHUB_PATH
+
+    - name: Run Build (Mac)
+      if: runner.os == 'macOS'
+      shell: bash
+      working-directory: packages/capture
+      run: chmod +x PKGBUILD && ./PKGBUILD
+
+    - name: Zip Artifacts
+      shell: bash
+      run: |
+        DIST_ROOT="$GITHUB_WORKSPACE/dist-out"
+        mkdir -p "$DIST_ROOT"
+
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          OS_TAG="win"
+        elif [ "$RUNNER_OS" == "Linux" ]; then
+          OS_TAG="linux"
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          OS_TAG="mac"
+        fi
+
+        MACHINE_ARCH=$(uname -m)
+        if [[ "$MACHINE_ARCH" == 'arm64' ]]; then
+           ARCH="arm64"
+        else
+           ARCH="x64"
+        fi
+
+        ZIP_NAME="spatialshot-capture-${OS_TAG}-${ARCH}.zip"
+        ZIP_FULL_PATH="$DIST_ROOT/$ZIP_NAME"
+        
+        echo "Zipping Capture to $ZIP_FULL_PATH"
+
+        cd packages/capture/dist
+
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          7z a -tzip -r "$ZIP_FULL_PATH" .
+        else
+          zip -r "$ZIP_FULL_PATH" .
+        fi

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-use crate::utilities::launcher::ENGINE_PID;
+use crate::utilities::launcher::CAPTURE_PID;
 use std::process::Command;
 use std::sync::atomic::Ordering;
 use std::thread;
@@ -15,7 +15,7 @@ pub fn start_monitor() {
         let mut last_count = get_monitor_count();
         loop {
             thread::sleep(Duration::from_millis(1000));
-            let current_pid = ENGINE_PID.load(Ordering::SeqCst);
+            let current_pid = CAPTURE_PID.load(Ordering::SeqCst);
             if current_pid == 0 {
                 return;
             }
@@ -33,7 +33,7 @@ pub fn start_monitor() {
 }
 
 fn emergency_shutdown() {
-    let pid = ENGINE_PID.load(Ordering::SeqCst);
+    let pid = CAPTURE_PID.load(Ordering::SeqCst);
     if pid != 0 {
         let _ = kill_process(pid);
     }

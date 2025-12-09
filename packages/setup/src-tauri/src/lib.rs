@@ -12,24 +12,20 @@ struct SystemStatus {
 fn get_system_status(app: tauri::AppHandle) -> SystemStatus {
     let os = std::env::consts::OS.to_string();
     
-    // 1. Resolve paths based on YOUR Blueprint
     let check_path = match os.as_str() {
         "windows" => {
-            // Blueprint: %LOCALAPPDATA%\Programs\Spatialshot\daemon.exe
-            // Tauri's local_data_dir() resolves to %LOCALAPPDATA%
             app.path().local_data_dir().unwrap_or_default()
                 .join("Programs")
                 .join("Spatialshot")
                 .join("daemon.exe")
         },
         "macos" => {
-            // Blueprint: /Applications/Spatialshot.app/Contents/MacOS/daemon
             PathBuf::from("/Applications/Spatialshot.app/Contents/MacOS/daemon")
         },
         _ => { // Linux
             // Blueprint: $HOME/.local/share/spatialshot/daemon
             // Tauri's data_local_dir() usually resolves to $HOME/.local/share on Linux
-            app.path().data_local_dir().unwrap_or_default()
+            app.path().local_data_dir().unwrap_or_default()
                 .join("spatialshot")
                 .join("daemon")
         },

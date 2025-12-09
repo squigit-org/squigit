@@ -5,36 +5,41 @@
 ```text
 [ INSTALLATION DIRECTORY ]
 Path: %LOCALAPPDATA%\Programs\Spatialshot\
-(Read Only / Wiped by Updater)
+(Read Only / User Scope)
 │
-├── daemon.exe                  <-- [ENTRY POINT] Rust Orchestrator
+├── daemon.exe                  <-- [BACKGROUND SERVICE] Rust Orchestrator
 ├── unins000.exe                <-- Uninstaller
 │
-├── Capture\                    <-- Qt Folder
+├── Capture\                    <-- [CONTAINER] Qt6 Native Tool
 │   ├── capture.exe
-│   └── {Qt DLLs & Plugins}
+│   └── {Qt DLLs}
 │
-└── App\                        <-- Electron Folder
-    ├── spatialshot.exe
-    └── {Electron dependencies}
+└── App\                        <-- [CONTAINER] Electron Dist
+    ├── spatialshot.exe         <-- [APP CORE] The UI Host
+    ├── {DLLs & Locales}        <-- Electron Dependencies
+    └── resources\
+        └── app\                <-- [SOURCE] Raw Files (asar: false)
+            ├── package.json
+            ├── main.js
+            └── dist\
 
 
 [ USER DATA DIRECTORY ]
 Path: %APPDATA%\Spatialshot\
 (Read + Write / Persists forever)
 │
-├── preferences.json            <-- Theme, Sys prompt
-├── gemini_key.json             <-- Encrypted API Key
-├── imgbb_key.json              <-- Encrypted API Key
-├── profile.json                <-- Login flag
-└── session.json                <-- Last state
+├── preferences.json
+├── gemini_key.json
+├── imgbb_key.json
+├── profile.json
+└── session.json
 
 
 [ TEMP DIRECTORY ]
 Path: %TEMP%\
 │
-└── spatial_capture.png         <-- Transient screenshot
-```
+└── spatial_capture.png
+````
 
 -----
 
@@ -43,19 +48,29 @@ Path: %TEMP%\
 ```text
 [ INSTALLATION DIRECTORY ]
 Path: /Applications/Spatialshot.app
-(Read Only / Signed Bundle)
+(Read Only / Signed Bundle / Hybrid Structure)
 │
 └── Contents/
-    ├── Info.plist
-    ├── MacOS/
-    │   └── daemon              <-- [ENTRY POINT] Rust Orchestrator
+    ├── Info.plist              <-- Points to 'Spatialshot' (The Core)
+    ├── Frameworks/             <-- Chromium Dylibs
     │
-    └── Resources/              <-- Assets & Sub-processes
-        ├── Capture/
-        │   └── {Qt Dist + mach-O}
+    ├── MacOS/
+    │   ├── Spatialshot         <-- [APP CORE] Main Binary
+    │   └── daemon              <-- [BACKGROUND SERVICE] Injected Rust Binary
+    │
+    └── Resources/
+        ├── Capture/            <-- [CONTAINER] Injected Qt6 Mach-O
+        │   └── capture
         │
-        └── App/
-            └── {Electron Dist + mach-O}
+        └── app/                <-- [SOURCE] Raw Files (asar: false)
+            ├── package.json
+            ├── main.js
+            └── dist/
+
+
+[ LAUNCH AGENT ]
+Path: ~/Library/LaunchAgents/com.spatialshot.daemon.plist
+(Triggers ../Contents/MacOS/daemon at Login)
 
 
 [ USER DATA DIRECTORY ]
@@ -67,12 +82,6 @@ Path: ~/Library/Application Support/Spatialshot/
 ├── imgbb_key.json
 ├── profile.json
 └── session.json
-
-
-[ TEMP DIRECTORY ]
-Path: /var/folders/.../T/ (Managed by OS)
-│
-└── spatial_capture.png
 ```
 
 -----
@@ -82,30 +91,34 @@ Path: /var/folders/.../T/ (Managed by OS)
 ```text
 [ INSTALLATION DIRECTORY ]
 Path: $HOME/.local/share/spatialshot/
-(Read Only / Managed by Package Manager or Script)
+(Read Only / XDG Compliant)
 │
-├── daemon                      <-- [ENTRY POINT] Rust Orchestrator
+├── daemon                      <-- [ORCHESTRATOR] Rust Binary
 │
-├── capture/                    <-- Qt Folder
-│   └── {Qt Dist + ELF}
+├── capture/                    <-- [CONTAINER] Qt6 ELF
+│   ├── capture
+│   └── {Qt Libs}
 │
-└── app/                        <-- Electron Folder
-    └── {Electron Dist + ELF}
+└── app/                        <-- [CONTAINER] Electron Dist
+    ├── spatialshot             <-- [APP CORE] Main Binary
+    ├── libffmpeg.so
+    └── resources/
+        └── app/                <-- [SOURCE] Raw Files (asar: false)
+            ├── package.json
+            ├── main.js
+            └── dist/
+
+
+[ DESKTOP ENTRY ]
+Path: $HOME/.local/share/applications/spatialshot.desktop
+(Points to .../app/spatialshot)
 
 
 [ USER DATA DIRECTORY ]
 Path: $HOME/.config/spatialshot/
-(Read + Write / Standard Config Location)
+(Read + Write)
 │
 ├── preferences.json
 ├── gemini_key.json
-├── imgbb_key.json
-├── profile.json
-└── session.json
-
-
-[ TEMP DIRECTORY ]
-Path: /tmp/
-│
-└── spatial_capture.png
+└── profile.json
 ```

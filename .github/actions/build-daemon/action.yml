@@ -1,0 +1,56 @@
+name: "Build Daemon"
+description: "Builds Rust Daemon for specific OS"
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # --- BUILD ---
+    - name: Build
+      working-directory: ./packages/daemon
+      shell: bash
+      run: |
+        cargo update
+        cargo build --release
+
+    # --- ZIP OUTPUT ---
+    - name: Zip Artifacts
+      shell: bash
+      run: |
+        mkdir -p dist-out
+
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          OS_TAG="win"
+          BIN_NAME="daemon.exe"
+        elif [ "$RUNNER_OS" == "Linux" ]; then
+          OS_TAG="linux"
+          BIN_NAME="daemon"
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          OS_TAG="mac"
+          BIN_NAME="daemon"
+        fi
+
+        MACHINE_ARCH=$(uname -m)
+        if [[ "$MACHINE_ARCH" == 'arm64' ]]; then
+           ARCH="arm64"
+        else
+           ARCH="x64"
+        fi
+
+        ZIP_NAME="spatialshot-daemon-${OS_TAG}-${ARCH}.zip"
+
+        BIN_PATH="packages/daemon/target/release/$BIN_NAME"
+
+        if [ ! -f "$BIN_PATH" ]; then
+            echo "::error::Binary not found at $BIN_PATH"
+            exit 1
+        fi
+
+        echo "Zipping $BIN_PATH to $ZIP_NAME..."
+
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          7z a -tzip "dist-out/$ZIP_NAME" "./$BIN_PATH"
+        else
+          zip -j "dist-out/$ZIP_NAME" "$BIN_PATH"
+        fi

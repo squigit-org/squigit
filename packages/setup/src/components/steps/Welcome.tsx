@@ -13,6 +13,7 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
 interface Props {
+  osType: string;
   isAgreed: boolean;
   setIsAgreed: (val: boolean) => void;
   onNext: () => void;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export const Welcome: React.FC<Props> = ({
+  osType,
   isAgreed,
   setIsAgreed,
   onNext,
@@ -28,11 +30,18 @@ export const Welcome: React.FC<Props> = ({
   const [markdownContent, setMarkdownContent] = useState<string>("");
 
   useEffect(() => {
-    fetch("/instructions/macos.md")
-      .then((res) => res.text())
+    console.log(`Loading instructions for: ${osType}`);
+    fetch(`/instructions/${osType}.md`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Instruction file not found");
+        return res.text();
+      })
       .then((text) => setMarkdownContent(text))
-      .catch((err) => console.error("Failed to load instructions:", err));
-  }, []);
+      .catch((err) => {
+        console.error("Failed to load instructions:", err);
+        setMarkdownContent("# Error\nCould not load installation instructions.");
+      });
+  }, [osType]);
 
   return (
     <StepLayout

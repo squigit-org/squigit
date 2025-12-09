@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { WizardStep, InstallerState } from "./types";
 import { DEFAULT_INSTALL_PATH } from "./constants";
 import { Welcome } from "./components/steps/Welcome";
@@ -14,15 +14,43 @@ import { Installing } from "./components/steps/Installing";
 import { Finish } from "./components/steps/Finish";
 import { UpdatePrompt } from "./components/steps/UpdatePrompt";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { open } from "@tauri-apps/plugin-shell";
+import { invoke } from "@tauri-apps/api/core";
 
 export default function App() {
+  const [isReady, setIsReady] = useState(false);
+  const [osType, setOsType] = useState("win32");
+
   const [state, setState] = useState<InstallerState>({
     step: WizardStep.WELCOME,
     installPath: DEFAULT_INSTALL_PATH,
     isAgreed: false,
     launchOnExit: true,
   });
+
+  useEffect(() => {
+    async function init() {
+      try {
+        const status = await invoke<{os: string, is_installed: boolean}>('get_system_status');
+        setOsType(status.os);
+
+        if (status.is_installed) {
+            setState(prev => ({ ...prev, step: WizardStep.UPDATE_PROMPT }));
+        } else {
+            setState(prev => ({ ...prev, step: WizardStep.WELCOME }));
+        }
+
+        setIsReady(true);
+        await invoke('show_wizard_window');
+        
+      } catch (error) {
+        console.error("Setup initialization failed", error);
+        setIsReady(true);
+        await getCurrentWindow().show();
+      }
+    }
+
+    init();
+  }, []);
 
   const nextStep = () => {
     setState((prev) => {
@@ -77,6 +105,8 @@ export default function App() {
     }
   };
 
+  if (!isReady) return null;
+
   return (
     <div className="w-full h-full bg-white flex flex-col overflow-hidden">
       {state.step === WizardStep.UPDATE_PROMPT && (
@@ -84,6 +114,7 @@ export default function App() {
       )}
       {state.step === WizardStep.WELCOME && (
         <Welcome
+          osType={osType}
           isAgreed={state.isAgreed}
           setIsAgreed={(val) =>
             setState((prev) => ({ ...prev, isAgreed: val }))
