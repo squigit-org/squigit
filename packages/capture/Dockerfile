@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     git \
     python3 \
     python3-pip \
+    libglib2.0-0 \
     libgl1-mesa-dev \
     libxkbcommon-x11-0 \
     libxcb-cursor0 \
