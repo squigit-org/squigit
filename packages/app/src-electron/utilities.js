@@ -37,12 +37,10 @@ function getDynamicDims(width, height) {
 
 function getUserDataPath() {
   const platform = process.platform;
-  if (platform === "win32") {
-    return path.join(app.getPath("appData"), "Spatialshot");
-  } else if (platform === "darwin") {
-    return path.join(app.getPath("appData"), "Spatialshot");
-  } else {
+  if (platform === "linux") {
     return path.join(app.getPath("home"), ".config", "spatialshot"); 
+  } else {
+    return path.join(app.getPath("appData"), "Spatialshot");
   }
 }
 

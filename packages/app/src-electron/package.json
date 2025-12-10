@@ -5,7 +5,7 @@
   "homepage": "https://github.com/a7mddra/spatialshot",
   "author": "a7mddra <a7mddra@gmail.com>",
   "license": "Apache-2.0",
-  "main": "src/main.js",
+  "main": "main.js",
   "type": "commonjs",
   "scripts": {
     "start": "electron .",
