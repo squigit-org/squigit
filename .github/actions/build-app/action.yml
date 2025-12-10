@@ -1,0 +1,76 @@
+name: "Build App"
+description: "Builds Electron App (Hybrid) with Secrets"
+inputs:
+  google_credentials:
+    required: true
+    description: "Content of google-credentials.json"
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: "npm"
+        cache-dependency-path: "packages/app/package-lock.json"
+
+    - name: Install Dependencies
+      shell: bash
+      working-directory: packages/app
+      run: |
+        npm ci
+        cd src-electron && npm ci
+
+    # --- INJECT SECRETS ---
+    - name: Inject Google Credentials
+      shell: bash
+      working-directory: packages/app/src-electron/auth
+      env:
+        CREDENTIALS_CONTENT: ${{ inputs.google_credentials }}
+      run: |
+        if [ -z "$CREDENTIALS_CONTENT" ]; then
+          echo "::error::Credentials input is empty!"
+          exit 1
+        fi
+        mkdir -p .
+        printf "%s" "$CREDENTIALS_CONTENT" > credentials.json
+        echo "Secrets injected into src-electron/auth/credentials.json"
+
+    # --- REACT BUILD ---
+    - name: Build React Frontend
+      shell: bash
+      working-directory: packages/app
+      run: |
+        npm run build
+        npm run postbuild
+
+    # --- ELECTRON PACK ---
+    - name: Pack Electron App
+      shell: bash
+      working-directory: packages/app/src-electron
+      env:
+        # Avoid code signing errors on forks/PRs without certs
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+      run: |
+        
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          npx electron-builder --win --x64 --publish never
+        elif [ "$RUNNER_OS" == "Linux" ]; then
+          npx electron-builder --linux --x64 --publish never
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          npx electron-builder --mac --x64 --arm64 --publish never
+        fi
+
+    # --- ARTIFACT PREP ---
+    - name: Move Artifacts
+      shell: bash
+      run: |
+        mkdir -p dist-out
+        
+        cp packages/app/release/*.zip dist-out/ 2>/dev/null || true
+        
+        echo "Artifacts ready in dist-out:"
+        ls -l dist-out/

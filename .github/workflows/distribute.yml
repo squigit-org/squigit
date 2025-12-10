@@ -74,50 +74,40 @@ jobs:
           path: dist-out/*
 
   # =========================================================
-  # JOB 3: BUILD SPATIALSHOT
+  # JOB 3: BUILD APP (ELECTRON/REACT)
   # =========================================================
-  build-spatialshot:
-    name: App ${{ matrix.platform }}
+  build-app:
+    name: App ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            platform: win
-            npm_script: build:win
-            artifact_path: packages/spatialshot/dist/win-unpacked
           - os: ubuntu-latest
-            platform: linux
-            npm_script: build:linux
-            artifact_path: packages/spatialshot/dist/linux-unpacked
+            name: Linux
+          - os: windows-latest
+            name: Windows
           - os: macos-latest
-            platform: mac
-            npm_script: build:mac
-            artifact_path: packages/spatialshot/dist/mac*
+            name: macOS
     steps:
       - uses: actions/checkout@v4
 
       - name: Build
-        uses: ./.github/actions/build-spatialshot
+        uses: ./.github/actions/build-app
         with:
           google_credentials: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
-          npm_script: ${{ matrix.npm_script }}
-          artifact_path: ${{ matrix.artifact_path }}
-          platform: ${{ matrix.platform }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: spatialshot-${{ matrix.platform }}
+          name: app-artifact-${{ matrix.name }}
           path: dist-out/*
 
   # =========================================================
   # JOB 4: PUBLISH BINARIES (THE RELEASE JOB)
   # =========================================================
   publish-binaries:
-    needs: [build-daemon, build-capture, build-spatialshot]
+    needs: [build-daemon, build-capture, build-app]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:

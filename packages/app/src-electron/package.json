@@ -31,17 +31,27 @@
     ],
     "asar": false,
     "icon": "assets/icons/light/512.png",
+    
     "win": {
-      "target": "dir",
-      "icon": "assets/icons/light/512.png"
+      "target": "zip",
+      "icon": "assets/icons/light/512.png",
+      "artifactName": "spatialshot-app-win-${arch}.${ext}"
     },
     "linux": {
-      "target": "dir",
-      "icon": "assets/icons/light/512.png"
+      "target": "zip",
+      "icon": "assets/icons/light/512.png",
+      "artifactName": "spatialshot-app-linux-${arch}.${ext}",
+      "category": "Utility"
     },
     "mac": {
-      "target": "dir",
-      "icon": "assets/icons/light/512.png"
+      "target": "zip",
+      "icon": "assets/icons/light/512.png",
+      "artifactName": "spatialshot-app-mac-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "We need to control the screen capture process."
+      }
     }
   },
   "dependencies": {

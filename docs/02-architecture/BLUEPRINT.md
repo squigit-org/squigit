@@ -120,5 +120,7 @@ Path: $HOME/.config/spatialshot/
 │
 ├── preferences.json
 ├── gemini_key.json
-└── profile.json
+├── imgbb_key.json
+├── profile.json
+└── session.json
 ```
