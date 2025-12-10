@@ -5,7 +5,7 @@
   "homepage": "https://github.com/a7mddra/spatialshot",
   "author": "a7mddra <a7mddra@gmail.com>",
   "license": "Apache-2.0",
-  "main": "src-electron/main.js",
+  "main": "main.js",
   "type": "commonjs",
   "scripts": {
     "start": "electron .",
@@ -21,16 +21,11 @@
     "directories": {
       "output": "../release"
     },
-    "asar": true,
     "files": [
-      "src-electron/**/*",
-      "package.json",
-      {
-        "from": "dist",
-        "to": "src-electron/dist",
-        "filter": ["**/*"]
-      }
+      "**/*",
+      "../dist/**/*"
     ],
+    "asar": true,
     "icon": "assets/icons/light/512.png",
     "win": {
       "target": "zip",
