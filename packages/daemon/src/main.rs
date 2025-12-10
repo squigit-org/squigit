@@ -25,6 +25,7 @@ fn main() -> Result<()> {
 
     #[cfg(not(target_os = "linux"))]
     {
+        utilities::ipc::start_shutdown_listener();
         utilities::hotkey::listen();
     }
 

@@ -21,3 +21,6 @@ log = "0.4"
 tauri = { version = "2.9.4", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+interprocess = "1.2.1"
