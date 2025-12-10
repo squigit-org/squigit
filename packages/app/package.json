@@ -12,6 +12,7 @@
 
     "// --- UNIVERSAL COMMANDS ---": "",
     "start": "node scripts/build-sync.js dev",
+    "start:electron": "cd src-electron && npm exec electron .",
     "dist": "node scripts/build-sync.js",
     "dist:win": "node scripts/build-sync.js win",
     "dist:mac": "node scripts/build-sync.js mac",

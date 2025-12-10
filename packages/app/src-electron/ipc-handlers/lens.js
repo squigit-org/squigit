@@ -17,8 +17,8 @@ async function openImageInLens(localImagePath) {
       console.error("ImgBB API key not found.");
       return;
     }
+    
     const image = fs.readFileSync(localImagePath, { encoding: "base64" });
-
     const formData = new URLSearchParams();
     formData.append("image", image);
 
@@ -33,10 +33,18 @@ async function openImageInLens(localImagePath) {
     );
 
     if (response.data.success) {
-      const encodedUrl = encodeURIComponent(response.data.data.url);
-      const configUrl = "&ep=subb&re=df&s=4&hl=en&gl=US";
-      const lensUrl = "https://lens.google.com/uploadbyurl?";
-      await shell.openExternal(lensUrl + "url=" + encodedUrl + configUrl);
+      const lensParams = new URLSearchParams();
+      lensParams.append("url", response.data.data.url);
+      lensParams.append("ep", "subb");
+      lensParams.append("re", "df");
+      lensParams.append("s", "4");
+      lensParams.append("hl", "en");
+      lensParams.append("gl", "US");
+
+      const finalLensUrl = `https://lens.google.com/uploadbyurl?${lensParams.toString()}`;
+      
+      console.log(`Opening Lens: ${finalLensUrl}`);
+      await shell.openExternal(finalLensUrl);
     } else {
       console.error("Error uploading to ImgBB:", response.data);
     }
@@ -48,12 +56,14 @@ async function openImageInLens(localImagePath) {
 function setupLensHandlers(ipcMain, getCurrentImagePath) {
   ipcMain.handle("trigger-lens-search", async () => {
     const imgbbApiKey = await getDecryptedKey("imgbb");
-    if (imgbbApiKey) {
-      const imagePath = getCurrentImagePath();
-      if (!imagePath) {
-        console.error("No image path found in main process");
+    
+    const imagePath = getCurrentImagePath();
+    if (!imagePath && imgbbApiKey) {
+        console.error("Triggered Lens search but no image path available.");
         return;
-      }
+    }
+
+    if (imgbbApiKey) {
       await openImageInLens(imagePath);
     } else {
       const dims = getDynamicDims(480, 430);
@@ -66,8 +76,9 @@ function setupLensHandlers(ipcMain, getCurrentImagePath) {
         minimizable: false,
         maximizable: false,
         resizable: false,
+        icon: path.join(app.getAppPath(), "assets", "icons", "light", "128.png"), 
         webPreferences: {
-          preload: path.join(app.getAppPath(), "preload.js"),
+          preload: path.join(app.getAppPath(), "preload.js"), 
         },
       });
 
@@ -82,11 +93,12 @@ function setupLensHandlers(ipcMain, getCurrentImagePath) {
       );
 
       win.on("close", async () => {
-        const imgbbApiKey = await getDecryptedKey("imgbb");
-        if (imgbbApiKey) {
-          const imagePath = getCurrentImagePath();
-          if (!imagePath) return;
-          await openImageInLens(imagePath);
+        const newKey = await getDecryptedKey("imgbb");
+        if (newKey) {
+          const currentPath = getCurrentImagePath();
+          if (currentPath) {
+            await openImageInLens(currentPath);
+          }
         }
       });
     }
