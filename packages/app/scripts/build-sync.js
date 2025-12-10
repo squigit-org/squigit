@@ -51,7 +51,7 @@ function syncReactBuild() {
   }
 
   fs.cpSync(VITE_DIST, ELECTRON_REACT_DEST, { recursive: true });
-  
+  fs.writeFileSync(path.join(ELECTRON_REACT_DEST, ".gitignore"), "*");
   log("SYNC", `${colors.green}Assets copied to src-electron/renderer/react-ui${colors.reset}`);
 }
 
@@ -66,7 +66,7 @@ async function main() {
 
     if (command === "dev") {
       log("ELECTRON", "Starting Electron...");
-      await runCommand("npm", ["start"], ELECTRON_DIR);
+      await runCommand("npm", ["exec", "electron", "."], ELECTRON_DIR);
     } else {
       log(
         "ELECTRON",

@@ -15,7 +15,8 @@
       "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
       "!**/node_modules/*.d.ts",
       "!**/node_modules/.bin",
-      "!src-electron/renderer/react-ui/**/*.map" 
+      "!renderer/react-ui/**/*.map",
+      "renderer/react-ui/**/*"
     ],
     "asar": true,
     "icon": "assets/icons/light/512.png",

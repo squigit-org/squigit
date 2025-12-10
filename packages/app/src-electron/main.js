@@ -54,10 +54,10 @@ const hideMainViewBounds = { x: 0, y: 0, width: 0, height: 0 };
 
 function getRendererPath(theme) {
   if (app.isPackaged) {
-    return path.join(__dirname, 'renderer', 'react-ui', `${theme}.html`);
+    return RENDERER_PATH + `/react-ui/${theme}.html`;
   } 
   else {
-    return path.join(__dirname, '../dist', `${theme}.html`);
+    return path.join(__dirname, `../dist'/${theme}.html`);
   }
 }
 
