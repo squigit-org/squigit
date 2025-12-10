@@ -15,24 +15,23 @@
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"
   },
-  "build": {
+"build": {
     "appId": "com.a7mddra.spatialshot",
     "productName": "Spatialshot",
     "directories": {
-      "output": "../release" 
+      "output": "../release"
     },
+    "asar": false,
     "files": [
-      "**/*",
-      "!node_modules", 
+      "src-electron/**/*",
+      "package.json",
       {
-        "from": "../dist", 
-        "to": "dist",
+        "from": "dist",
+        "to": "src-electron/dist",
         "filter": ["**/*"]
       }
     ],
-    "asar": false,
     "icon": "assets/icons/light/512.png",
-    
     "win": {
       "target": "zip",
       "icon": "assets/icons/light/512.png",
