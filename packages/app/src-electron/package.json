@@ -23,6 +23,7 @@
     },
     "files": [
       "**/*",
+      "!node_modules", 
       {
         "from": "../dist", 
         "to": "dist",
