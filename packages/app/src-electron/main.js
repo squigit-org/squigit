@@ -42,7 +42,7 @@ const setMainView = (view) => {
 // --- Paths ---
 const PRELOAD_PATH = path.join(__dirname, "preload.js");
 const RENDERER_PATH = path.join(__dirname, "./renderer");
-const ICON_PATH = path.join(__dirname, "../assets/icons/light/512.png");
+const ICON_PATH = path.join(__dirname, "./assets/icons/light/512.png");
 
 const getMainViewBounds = (width, height) => ({
   x: 0,

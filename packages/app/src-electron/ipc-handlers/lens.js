@@ -67,14 +67,13 @@ function setupLensHandlers(ipcMain, getCurrentImagePath) {
         maximizable: false,
         resizable: false,
         webPreferences: {
-          preload: path.join(app.getAppPath(), "src", "preload.js"),
+          preload: path.join(app.getAppPath(), "preload.js"),
         },
       });
 
       win.loadFile(
         path.join(
           app.getAppPath(),
-          "src",
           "renderer",
           "login",
           "index.html"
