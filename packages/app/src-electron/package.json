@@ -21,7 +21,7 @@
     "directories": {
       "output": "../release"
     },
-    "asar": false,
+    "asar": true,
     "files": [
       "src-electron/**/*",
       "package.json",
