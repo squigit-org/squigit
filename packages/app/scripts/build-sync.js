@@ -6,9 +6,12 @@
 
 const { spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 
 const APP_DIR = path.resolve(__dirname, "..");
 const ELECTRON_DIR = path.join(APP_DIR, "src-electron");
+const VITE_DIST = path.join(APP_DIR, "dist");
+const ELECTRON_REACT_DEST = path.join(ELECTRON_DIR, "renderer", "react-ui");
 
 const args = process.argv.slice(2);
 const command = args[0] || "dev";
@@ -20,6 +23,7 @@ const colors = {
   yellow: "\x1b[33m",
   red: "\x1b[31m",
 };
+
 function log(step, message) {
   console.log(`${colors.cyan}[${step}]${colors.reset} ${message}`);
 }
@@ -39,11 +43,26 @@ function runCommand(cmd, args, cwd) {
   });
 }
 
+function syncReactBuild() {
+  log("SYNC", "Copying Vite dist to Electron renderer...");
+  
+  if (fs.existsSync(ELECTRON_REACT_DEST)) {
+    fs.rmSync(ELECTRON_REACT_DEST, { recursive: true, force: true });
+  }
+
+  fs.cpSync(VITE_DIST, ELECTRON_REACT_DEST, { recursive: true });
+  
+  log("SYNC", `${colors.green}Assets copied to src-electron/renderer/react-ui${colors.reset}`);
+}
+
 async function main() {
   try {
     log("VITE", "Building React frontend...");
     await runCommand("npm", ["run", "build"], APP_DIR);
-    log("VITE", `${colors.green}Frontend build complete.${colors.reset}`);
+
+    syncReactBuild();
+    
+    log("VITE", `${colors.green}Frontend build & sync complete.${colors.reset}`);
 
     if (command === "dev") {
       log("ELECTRON", "Starting Electron...");
@@ -56,18 +75,10 @@ async function main() {
 
       let buildFlag = "";
       switch (command) {
-        case "win":
-          buildFlag = "--win";
-          break;
-        case "mac":
-          buildFlag = "--mac";
-          break;
-        case "linux":
-          buildFlag = "--linux";
-          break;
-        case "all":
-          buildFlag = "-wml";
-          break;
+        case "win": buildFlag = "--win"; break;
+        case "mac": buildFlag = "--mac"; break;
+        case "linux": buildFlag = "--linux"; break;
+        case "all": buildFlag = "-wml"; break;
       }
 
       await runCommand("npm", ["run", "build", "--", buildFlag], ELECTRON_DIR);
