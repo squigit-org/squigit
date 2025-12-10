@@ -46,6 +46,10 @@ runs:
       run: |
         npm run build
         npm run postbuild
+        echo "Syncing React build to Electron renderer..."
+        mkdir -p src-electron/renderer/react-ui
+        cp -R dist/* src-electron/renderer/react-ui/
+        echo "Sync complete."
 
     # --- ELECTRON PACK ---
     - name: Pack Electron App

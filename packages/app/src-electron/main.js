@@ -57,7 +57,7 @@ function getRendererPath(theme) {
     return RENDERER_PATH + `/react-ui/${theme}.html`;
   } 
   else {
-    return path.join(__dirname, `../dist'/${theme}.html`);
+    return path.join(__dirname, `../dist/${theme}.html`);
   }
 }
 
