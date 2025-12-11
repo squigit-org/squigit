@@ -4,12 +4,37 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export const DEFAULT_INSTALL_PATH = String.raw`C:\Users\Admin\AppData\Programs\Spatialshot`;
+export const OS_CONFIG: Record<string, {
+    pathDisplay: (home: string) => string;
+    packages: (arch: string) => Array<{ name: string; size: string }>;
+    tasks: string[];
+}> = {
+    macos: {
+        pathDisplay: () => "/Applications/Spatialshot.app",
+        packages: (arch) => [
+            { name: `spatialshot-mac-${arch}.zip`, size: "95 MiB" },
+            { name: `capture-mac-${arch}.zip`, size: "40 MiB" },
+            { name: `daemon-mac-${arch}.zip`, size: "1.5 MiB" },
+        ],
+        tasks: [
+            "Install Application Bundle",
+            "Configure Launch Agent",
+            "Set Permissions (xattr)"
+        ]
+    },
+    linux: {
+        pathDisplay: (home) => `${home}/.local/share/spatialshot`,
+        packages: () => [
+            { name: "spatialshot-linux-x64.zip", size: "105 MiB" },
+            { name: "capture-linux-x64.zip", size: "48 MiB" },
+            { name: "daemon-linux-x64.zip", size: "1.5 MiB" },
+        ],
+        tasks: [
+            "Install Binaries (XDG Compliant)",
+            "Register Desktop Entry",
+            "Register Global Hotkey (Wayland/X11)"
+        ]
+    }
+};
 
-export const REQUIRED_SPACE_MB = 400;
-
-export const PACKAGE_LIST = [
-  { name: "daemon-win-x64.zip", size: "1 MiB" },
-  { name: "capture-win-x64.zip", size: "50 MiB" },
-  { name: "spatialshot-win-x64.zip", size: "108 MiB" },
-];
+export const REQUIRED_SPACE_MB = 450;

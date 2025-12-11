@@ -18,10 +18,13 @@ Path: %LOCALAPPDATA%\Programs\Spatialshot\
     ├── spatialshot.exe         <-- [APP CORE] The UI Host
     ├── {DLLs & Locales}        <-- Electron Dependencies
     └── resources\
-        └── app\                <-- [SOURCE] Raw Files (asar: false)
-            ├── package.json
-            ├── main.js
-            └── dist\
+        └── app.asar            <-- [SOURCE] Bundled Source
+
+
+[ UPDATE/SETUP STAGING ]
+Path: %APPDATA%\Spatialshot\updates\
+│
+└── Spatialshot-Setup.exe       <-- [TAURI] The Updater/Bootstrapper
 
 
 [ USER DATA DIRECTORY ]
@@ -61,11 +64,13 @@ Path: /Applications/Spatialshot.app
     └── Resources/
         ├── Capture/            <-- [CONTAINER] Injected Qt6 Mach-O
         │   └── capture
-        │
-        └── app/                <-- [SOURCE] Raw Files (asar: false)
-            ├── package.json
-            ├── main.js
-            └── dist/
+        └── app.asar
+
+
+[ UPDATE/SETUP STAGING ]
+Path: ~/Library/Application Support/Spatialshot/updates/
+│
+└── Spatialshot-Setup.dmg       <-- [TAURI] The Updater (Mounts & Copies)
 
 
 [ LAUNCH AGENT ]
@@ -103,10 +108,13 @@ Path: $HOME/.local/share/spatialshot/
     ├── spatialshot             <-- [APP CORE] Main Binary
     ├── libffmpeg.so
     └── resources/
-        └── app/                <-- [SOURCE] Raw Files (asar: false)
-            ├── package.json
-            ├── main.js
-            └── dist/
+        └── app.asar
+
+
+[ UPDATE/SETUP STAGING ]
+Path: $HOME/.config/spatialshot/updates/
+│
+└── Spatialshot-Setup           <-- [TAURI] The Updater Binary
 
 
 [ DESKTOP ENTRY ]

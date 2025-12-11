@@ -18,4 +18,5 @@ export interface InstallerState {
   installPath: string;
   isAgreed: boolean;
   launchOnExit: boolean;
+  arch: string;
 }

@@ -1,55 +1,36 @@
-# 🐧 Spatialshot for Linux: Setup & Privacy
+# 🐧 Linux Configuration & Privacy Policy
 
-Welcome, Linux user! We know you usually have to fight your OS to get cool tools working. Not today.
+Spatialshot is designed as a self-contained, XDG-compliant application with native Wayland support via Desktop Portals.
 
-* **Executable Permissions:** We already ran `chmod +x`.
-* **Wayland Support:** Native. We use XDG Desktop Portals, so no black screens and no root access needed.
-* **Dependencies:** None. It's a self-contained binary.
+## 1. Global Shortcut Configuration
 
----
+The installer attempts to automatically register `Super+Shift+A` with your desktop environment (GNOME, KDE, XFCE, etc.).
 
-## 1. ⌨️ The Hotkey (Super + Shift + A)
+* **Manual Setup:** If the hotkey does not trigger:
+    1. Navigate to **System Settings > Keyboard > Shortcuts**.
+    2. Add a **Custom Shortcut**.
+    3. **Command:** Point to the daemon binary at `~/.local/share/spatialshot/daemon`.
+    4. **Binding:** Set to `Super+Shift+A` (or preferred combination).
 
-The installer has attempted to automatically register the global hotkey for your specific Desktop Environment (Gnome, KDE, XFCE, or Cinnamon).
+## 2. Operational Flow & Portals
 
-### **"It didn't work!" (Manual Setup)**
-Linux is diverse. If our script couldn't penetrate your specific window manager configuration (looking at you, KDE Plasma), simply add it manually:
+Unlike traditional X11 tools, this application respects Wayland security protocols.
 
-1.  Open your **System Settings** -> **Keyboard Shortcuts**.
-2.  Add a **Custom Shortcut**.
-3.  **Name:** `Spatialshot`
-4.  **Command:** Browse to where you installed the app daemon.
-5.  **Binding:** Set it to `Super+Shift+A` (or whatever you prefer).
+* **Trigger:** Press the hotkey to launch the capture instance.
+* **Portal Interaction:** A system-level "Screen Share" dialog will appear. This is a mandatory OS security feature. Select your monitor or region to proceed.
+* **Analysis:** The AI interface launches immediately post-capture.
 
----
+## 3. Application Architecture
 
-## 2. 🚀 How to Use
+* **On-Demand Execution:** Spatialshot does not run a persistent background daemon on Linux. The shortcut triggers the application directly via your Compositor (Mutter/KWin), ensuring zero idle resource usage.
+* **Desktop Integration:** An entry is automatically created at `~/.local/share/applications/spatialshot.desktop` for launcher access.
 
-1.  **Trigger:** Press the hotkey.
-2.  **Portal:** You will see your system's native "Screen Share" or "Screenshot" dialog. This is a security feature (Portals). Select the monitor or region you want to capture.
-3.  **Chat:** The AI window appears instantly.
+## 4. Zero-Trust Architecture
 
-**Where is the icon?**
-We will automatically create a `.desktop` file. You can find **Spatialshot** in your application launcher menu like any other app.
-
----
-
-## 3. 🛡️ Privacy & BYOK (Bring Your Own Key)
-
-Spatialshot follows a **Local-First, Zero-Trust** philosophy.
-
-* **You hold the Keys:** You must provide your own Google Gemini API Key. It is stored **encrypted on your disk**. We never see it.
-* **Direct Connection:** The app talks directly to Google (`generativelanguage.googleapis.com`). There is no middleman server.
-* **Google Lens:** If you use the "Lens" feature, images are temporarily uploaded to **ImgBB** to create a public link. For sensitive data, use the standard Chat instead.
+* **Local-First:** Application logic and encryption occur locally.
+* **Direct Connection:** API requests are sent directly to Google (`generativelanguage.googleapis.com`).
+* **Lens Feature:** This optional feature uses ImgBB as a temporary bridge. Do not use "Lens" mode for sensitive personal data.
 
 ---
 
-## 4. 🚑 Under the Hood (For the curious)
-
-If you are wondering how we handle the hotkey without a daemon constantly polling your keyboard (which is bad for security), we register the shortcut directly with your Compositor (Mutter, KWin, Xfwm).
-
-When you press the keys, **your OS** launches the app. The app takes the shot, sends it to the AI, and then closes. Zero background resource usage.
-
----
-
-*By installing this software, you agree to the [Apache 2.0 License](https://github.com/a7mddra/spatialshot?tab=Apache-2.0-1-ov-file#readme).*
+*By installing this software, you agree to the [**Apache 2.0 License**](https://github.com/a7mddra/spatialshot?tab=Apache-2.0-1-ov-file#readme).*

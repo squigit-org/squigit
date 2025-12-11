@@ -53,33 +53,31 @@ module.exports = function (ipcMain) {
           buttons: ["Update now", "Cancel"],
           defaultId: 0,
           cancelId: 1,
+          noLink: true,
         })
         .then(async (result) => {
           if (result.response === 0) {
-            const { default: open } = await import("open");
-            const { spawn } = require("child_process");
-            const fs = require("fs");
+            
+            const updatesDir = path.join(getUserDataPath(), "updates");
             const platform = process.platform;
             let installerName;
 
             if (platform === "win32") {
-              installerName = "spatialshot-installer.exe";
+              installerName = "Spatialshot-Setup.exe";
             } else if (platform === "darwin") {
-              installerName = "spatialshot-installer.dmg";
+              installerName = "Spatialshot-Setup.dmg";
             } else {
-              installerName = "spatialshot-installer";
+              installerName = "Spatialshot-Setup";
             }
 
-            const fullPath = path.join(
-              getUserDataPath() + "-installer",
-              installerName
-            );
+            const fullPath = path.join(updatesDir, installerName);
 
             if (!fs.existsSync(fullPath)) {
               showErrorBoxHelper(
                 "Installer Not Found",
-                `The installer file was not found at:\n${fullPath}\n\nDid you download it?`
+                `The update file is missing at:\n${fullPath}\n\nPlease download it manually from GitHub.`
               );
+              shell.openExternal("https://github.com/a7mddra/spatialshot/releases");
               return;
             }
 
@@ -90,56 +88,29 @@ module.exports = function (ipcMain) {
                 } catch (e) {
                   console.warn("Could not chmod installer:", e);
                 }
+              }
 
-                const terminals = [
-                  { cmd: "gnome-terminal", args: ["--"] },
-                  { cmd: "konsole", args: ["-e"] },
-                  { cmd: "xfce4-terminal", args: ["-e"] },
-                  { cmd: "terminator", args: ["--"] },
-                  { cmd: "tilix", args: ["--"] },
-                  { cmd: "xterm", args: ["-e"] },
-                ];
-
-                function tryNext(index) {
-                  if (index >= terminals.length) {
-                    const fallback = spawn(fullPath, [], {
-                      detached: true,
-                      stdio: "ignore",
-                    });
-                    fallback.unref();
-                    fallback.on("error", (fallbackErr) => {
-                      showErrorBoxHelper(
-                        "Update Error",
-                        `Could not open a terminal to run the installer.\nPlease run it manually:\n${fullPath}`
-                      );
-                    });
-                    return;
-                  }
-                  const term = terminals[index];
-                  const child = spawn(term.cmd, [...term.args, fullPath], {
-                    detached: true,
-                    stdio: "ignore",
-                  });
-                  child.on("error", () => {
-                    tryNext(index + 1);
-                  });
-                  child.unref();
-                }
-
-                tryNext(0);
+              if (platform === "darwin") {
+                await shell.openPath(fullPath);
               } else {
-                await open(fullPath);
+                const child = spawn(fullPath, [], {
+                  detached: true,
+                  stdio: "ignore", 
+                  windowsHide: false 
+                });
+                
+                child.unref();
               }
 
               setTimeout(() => {
                 app.quit();
-              }, 1000);
+              }, 1500);
+
             } catch (err) {
               showErrorBoxHelper(
                 "Update Error",
-                `Could not open the installer: ${err.message}`
+                `Failed to launch setup: ${err.message}`
               );
-              console.error(getUserDataPath() + "-installer", err);
             }
           }
         });
