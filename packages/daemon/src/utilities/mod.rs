@@ -1,6 +1,10 @@
-pub mod ipc;
 pub mod audmgr;
-pub mod hotkey;
 pub mod capture;
 pub mod launcher;
 pub mod watchdog;
+
+#[cfg(not(target_os = "linux"))]
+pub mod hotkey;
+
+#[cfg(not(target_os = "linux"))]
+pub mod ipc;
