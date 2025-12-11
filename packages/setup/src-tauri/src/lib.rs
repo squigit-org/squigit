@@ -38,7 +38,7 @@ struct SystemStatus {
 
 #[cfg(not(target_os = "linux"))]
 fn kill_daemon_if_running() -> bool {
-    use interprocess::local_socket::LocalSocketStream;
+    use interprocess::local_socket::Stream as LocalSocketStream;
     let name = if cfg!(windows) { "\\\\.\\pipe\\spatialshot_ipc_secret_v1" } else { "/tmp/spatialshot.ipc.sock" };
     
     if let Ok(mut conn) = LocalSocketStream::connect(name) {
