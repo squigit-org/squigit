@@ -2,8 +2,9 @@ use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+#[cfg(not(target_os = "linux"))]
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 
 const HOTKEY_SCRIPT_LINUX: &str = include_str!("scripts/hotkey.sh");
 const MACOS_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -39,12 +40,11 @@ struct SystemStatus {
 #[cfg(not(target_os = "linux"))]
 fn kill_daemon_if_running() -> bool {
     use interprocess::local_socket::LocalSocketStream;
-    use std::io::Write;
+    // Note: Implicitly using Write trait from std::io::Write
 
     let name_str = if cfg!(windows) { "\\\\.\\pipe\\spatialshot_ipc_secret_v1" } else { "/tmp/spatialshot.ipc.sock" };
     
-    // FIX: Pass the string directly to connect(). 
-    // In interprocess 1.x, the Result of to_local_socket_name() cannot be passed to connect().
+    // FIX: Pass the string directly. interprocess 1.2.1 expects impl ToLocalSocketName, which str implements.
     if let Ok(mut conn) = LocalSocketStream::connect(name_str) {
         if conn.write_all(b"EXECUTE_ORDER_66\n").is_ok() {
             std::thread::sleep(Duration::from_millis(1000));
@@ -67,12 +67,14 @@ fn manage_daemon_macos(action: &str) {
 fn create_backup(target: &Path) -> Option<PathBuf> {
     if !target.exists() { return None; }
     if let Ok(temp_dir) = tempfile::tempdir() {
-        // FIX: Use keep() instead of deprecated into_path()
-        if let Ok(backup_path) = temp_dir.keep() {
-            let opts = fs_extra::dir::CopyOptions::new().content_only(false);
-            if fs_extra::dir::copy(target, &backup_path, &opts).is_ok() {
-                return Some(backup_path.join(target.file_name().unwrap()));
-            }
+        // FIX: Use into_path() which returns PathBuf directly, and suppress the deprecation warning
+        // to ensure compilation succeeds without error E0308.
+        #[allow(deprecated)]
+        let backup_path = temp_dir.into_path();
+        
+        let opts = fs_extra::dir::CopyOptions::new().content_only(false);
+        if fs_extra::dir::copy(target, &backup_path, &opts).is_ok() {
+            return Some(backup_path.join(target.file_name().unwrap()));
         }
     }
     None
