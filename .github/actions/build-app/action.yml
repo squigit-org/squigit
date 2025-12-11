@@ -21,8 +21,13 @@ runs:
       shell: bash
       working-directory: packages/app
       run: |
-        npm ci
-        cd src-electron && npm ci
+        # Retry logic for main app dependencies
+        (npm ci) || (echo "Retrying npm ci..." && sleep 10 && npm ci) || (echo "Retrying npm ci (final)..." && sleep 30 && npm ci)
+        
+        cd src-electron
+        
+        # Retry logic for electron dependencies (often fails on binary download)
+        (npm ci) || (echo "Retrying npm ci for electron..." && sleep 10 && npm ci) || (echo "Retrying npm ci for electron (final)..." && sleep 30 && npm ci)
 
     # --- INJECT SECRETS ---
     - name: Inject Google Credentials
