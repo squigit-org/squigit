@@ -38,7 +38,10 @@ struct SystemStatus {
 
 #[cfg(not(target_os = "linux"))]
 fn kill_daemon_if_running() -> bool {
-    use interprocess::local_socket::{Stream as LocalSocketStream, traits::Stream as _, ToLocalSocketName};
+    // FIX: Use 1.x syntax. No aliasing needed, struct is already named LocalSocketStream
+    use interprocess::local_socket::{LocalSocketStream, ToLocalSocketName}; 
+    use std::io::Write; // Ensure Write trait is explicitly available for .write_all()
+
     let name_str = if cfg!(windows) { "\\\\.\\pipe\\spatialshot_ipc_secret_v1" } else { "/tmp/spatialshot.ipc.sock" };
     
     if let Ok(name) = name_str.to_local_socket_name() {
