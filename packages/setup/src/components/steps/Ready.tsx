@@ -104,7 +104,7 @@ export const Ready: React.FC<Props> = ({
 
         <div className="mt-auto pt-2 shrink-0">
            <div className="flex items-start text-xs text-gray-500 bg-gray-50 p-2 border border-gray-200 rounded">
-                <span className="mr-2">ℹ️</span>
+                <span className="mr-2">𝓲</span>
                 <span>An active internet connection is required to fetch the latest artifacts.</span>
            </div>
         </div>

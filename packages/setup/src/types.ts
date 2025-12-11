@@ -5,7 +5,7 @@
  */
 
 export enum WizardStep {
-  UPDATE_PROMPT = 'UPDATE_PROMPT',
+  UPDATE = 'UPDATE',
   WELCOME = 'WELCOME',
   DESTINATION = 'DESTINATION',
   READY = 'READY',
@@ -19,4 +19,16 @@ export interface InstallerState {
   isAgreed: boolean;
   launchOnExit: boolean;
   arch: string;
+}
+
+export interface SystemStatus {
+  os: string;
+  arch: string;
+  is_installed: boolean;
+  home_dir: string;
+}
+
+export interface ProgressEvent {
+  status: string;
+  percentage: number;
 }

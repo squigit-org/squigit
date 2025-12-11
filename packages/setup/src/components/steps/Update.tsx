@@ -13,7 +13,7 @@ interface Props {
   onCancel: () => void;
 }
 
-export const UpdatePrompt: React.FC<Props> = ({ onInstall, onCancel }) => {
+export const Update: React.FC<Props> = ({ onInstall, onCancel }) => {
   return (
     <StepLayout
       title="Spatialshot Update"

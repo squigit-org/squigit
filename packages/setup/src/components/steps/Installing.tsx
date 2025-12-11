@@ -6,54 +6,92 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { StepLayout } from "../StepLayout";
+import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 interface Props {
   onComplete: () => void;
+  os: string;
+  arch: string;
 }
 
-export const Installing: React.FC<Props> = ({ onComplete }) => {
+export const Installing: React.FC<Props> = ({ onComplete, os, arch }) => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("Initializing setup...");
-  const completedRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasStarted = useRef(false);
 
   useEffect(() => {
-    let interval: number;
+    if (hasStarted.current) return;
+    hasStarted.current = true;
 
-    const runProgress = () => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          return 100;
+    let unlisten: () => void;
+
+    const startInstallation = async () => {
+      unlisten = await listen<{ status: string; percentage: number }>(
+        "install-progress",
+        (event) => {
+          setStatus(event.payload.status);
+          setProgress(event.payload.percentage);
+
+          if (event.payload.percentage >= 100) {
+            setTimeout(onComplete, 1500);
+          }
         }
+      );
 
-        let increment = Math.random() * 2;
-        if (prev < 20) increment = 0.5;
-        else if (prev > 80) increment = 0.3;
-
-        const next = Math.min(prev + increment, 100);
-
-        if (next < 10) setStatus("Creating directories...");
-        else if (next < 30) setStatus("Downloading daemon-win-x64.zip...");
-        else if (next < 50) setStatus("Extracting capture-win-x64.zip...");
-        else if (next < 80) setStatus("Installing spatialshot-win-x64.zip...");
-        else if (next < 95) setStatus("Registering components...");
-        else setStatus("Finalizing installation...");
-
-        return next;
-      });
+      try {
+        await invoke("start_installation", { os, arch });
+      } catch (err: any) {
+        console.error("Installation Error:", err);
+        setError(String(err));
+        setStatus("Installation Failed");
+      }
     };
 
-    interval = window.setInterval(runProgress, 50);
+    startInstallation();
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [onComplete, os, arch]);
 
   useEffect(() => {
-    if (progress >= 100 && !completedRef.current) {
-      completedRef.current = true;
-      const timer = setTimeout(onComplete, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [progress, onComplete]);
+    if (error) return;
+
+    const unlistenPromise = getCurrentWindow().onCloseRequested(async (event) => {
+      event.preventDefault();
+    });
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, [error]);
+
+  if (error) {
+    return (
+      <StepLayout
+        title="Installation Failed"
+        description="An error occurred during installation."
+        icon={<img src="/assets/steps/error.png" className="w-8 h-8 object-contain" alt="Error"/>}
+        hideButtons={false}
+        nextLabel="Retry"
+        onNext={() => window.location.reload()}
+        cancelLabel="Exit"
+        onCancel={() => getCurrentWindow().close()}
+      >
+        <div className="flex flex-col justify-center h-full space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded p-4 text-red-700 text-sm font-mono overflow-auto max-h-40">
+             {error}
+          </div>
+          <p className="text-gray-500 text-xs text-center">
+             Changes have been rolled back. You can try again or exit.
+          </p>
+        </div>
+      </StepLayout>
+    );
+  }
 
   return (
     <StepLayout
@@ -72,12 +110,12 @@ export const Installing: React.FC<Props> = ({ onComplete }) => {
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-gray-600 mb-1">
             <span>{status}</span>
-            <span>{Math.floor(progress)}%</span>
+            <span>{progress.toFixed(0)}%</span>
           </div>
 
           <div className="h-5 w-full bg-gray-200 border border-gray-300 rounded-sm relative overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all duration-100 ease-out relative"
+              className="h-full bg-blue-600 transition-all duration-300 ease-out relative shadow-[0_0_10px_rgba(37,99,235,0.3)]"
               style={{ width: `${progress}%` }}
             >
               <div className="absolute top-0 left-0 right-0 h-[50%] bg-white opacity-20"></div>

@@ -5,22 +5,21 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { WizardStep, InstallerState } from "./types";
+import { WizardStep, InstallerState, SystemStatus } from "./types";
 import { OS_CONFIG } from "./constants";
 import { Welcome } from "./components/steps/Welcome";
 import { Destination } from "./components/steps/Destination";
 import { Ready } from "./components/steps/Ready";
 import { Installing } from "./components/steps/Installing";
 import { Finish } from "./components/steps/Finish";
-import { UpdatePrompt } from "./components/steps/UpdatePrompt";
+import { Update } from "./components/steps/Update";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import { type } from "@tauri-apps/plugin-os";
+import { ask } from "@tauri-apps/plugin-dialog";
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const [osType, setOsType] = useState("linux");
-  const [homeDir, setHomeDir] = useState("");
 
   const [state, setState] = useState<InstallerState>({
     step: WizardStep.WELCOME,
@@ -33,30 +32,23 @@ export default function App() {
   useEffect(() => {
     async function init() {
       try {
-        // 1. Get System Status from Rust
-        const status = await invoke<{os: string, arch: string, is_installed: boolean, home_dir: string}>('get_system_status');
+        const status = await invoke<SystemStatus>("get_system_status");
         
-        console.log("System Status:", status);
         setOsType(status.os);
-        setHomeDir(status.home_dir);
-
-        // 2. Calculate Default Path dynamically
-        const config = OS_CONFIG[status.os] || OS_CONFIG['linux'];
+        const config = OS_CONFIG[status.os] || OS_CONFIG["linux"];
         const defaultPath = config.pathDisplay(status.home_dir);
 
-        setState(prev => ({ 
-            ...prev, 
-            arch: status.arch,
-            installPath: defaultPath,
-            step: status.is_installed ? WizardStep.UPDATE_PROMPT : WizardStep.WELCOME 
+        setState((prev) => ({
+          ...prev,
+          arch: status.arch,
+          installPath: defaultPath,
+          step: status.is_installed ? WizardStep.UPDATE : WizardStep.WELCOME,
         }));
 
         setIsReady(true);
-        // 3. Show Window
-        await invoke('show_wizard_window');
-        
+        await invoke("show_wizard_window");
       } catch (error) {
-        console.error("Setup initialization failed", error);
+        console.error(error);
         setIsReady(true);
         await getCurrentWindow().show();
       }
@@ -67,7 +59,7 @@ export default function App() {
   const nextStep = () => {
     setState((prev) => {
       switch (prev.step) {
-        case WizardStep.UPDATE_PROMPT:
+        case WizardStep.UPDATE:
           return { ...prev, step: WizardStep.INSTALLING };
         case WizardStep.WELCOME:
           return { ...prev, step: WizardStep.DESTINATION };
@@ -99,22 +91,26 @@ export default function App() {
   };
 
   const handleFinish = async () => {
-    // Logic: If launchOnExit is true, we should launch the app.
-    // For now, we just close the setup wizard.
     if (state.launchOnExit) {
-        // TODO: invoke('launch_installed_app'); 
-        console.log("Launching app...");
+      // Launch logic handled by daemon/OS integration usually, 
+      // or user manually launches via the new shortcuts.
     }
     await getCurrentWindow().close();
   };
 
   const handleCancel = async () => {
-    if (
-      confirm(
-        "Setup is not complete. If you exit now, the program will not be installed.\n\nYou may run Setup again at another time to complete the installation.\n\nExit Setup?"
-      )
-    ) {
-      await getCurrentWindow().close();
+    const answer = await ask(
+      "Setup is not complete. If you exit now, the program will not be installed.\n\nExit Setup?",
+      {
+        title: "Exit Setup",
+        kind: "warning",
+        okLabel: "Exit Setup",
+        cancelLabel: "Resume",
+      }
+    );
+
+    if (answer) {
+      await invoke("close_wizard");
     }
   };
 
@@ -122,8 +118,8 @@ export default function App() {
 
   return (
     <div className="w-full h-full bg-white flex flex-col overflow-hidden">
-      {state.step === WizardStep.UPDATE_PROMPT && (
-        <UpdatePrompt onInstall={nextStep} onCancel={handleCancel} />
+      {state.step === WizardStep.UPDATE && (
+        <Update onInstall={nextStep} onCancel={handleCancel} />
       )}
       {state.step === WizardStep.WELCOME && (
         <Welcome
@@ -154,14 +150,16 @@ export default function App() {
         />
       )}
       {state.step === WizardStep.INSTALLING && (
-        <Installing onComplete={handleInstallComplete} />
+        <Installing 
+          onComplete={handleInstallComplete} 
+          os={osType}
+          arch={state.arch}
+        />
       )}
       {state.step === WizardStep.FINISHED && (
         <Finish
           launchOnExit={state.launchOnExit}
-          setLaunchOnExit={(val) =>
-            setState((prev) => ({ ...prev, launchOnExit: val }))
-          }
+          setLaunchOnExit={(val) => setState((prev) => ({ ...prev, launchOnExit: val }))}
           onFinish={handleFinish}
         />
       )}
