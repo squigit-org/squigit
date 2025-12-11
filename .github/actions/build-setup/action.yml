@@ -42,7 +42,9 @@ runs:
       shell: bash
       working-directory: packages/setup/src-tauri
       run: |
-        mkdir -p ../../dist-out
+        # Use absolute path to workspace root for reliability
+        DIST_DIR="${{ github.workspace }}/dist-out"
+        mkdir -p "$DIST_DIR"
         
         if [ "$RUNNER_OS" == "Windows" ]; then
           OS_TAG="win"
@@ -50,41 +52,31 @@ runs:
         elif [ "$RUNNER_OS" == "Linux" ]; then
           OS_TAG="linux"
           
-          echo "Listing release dir:"
-          ls -R target/release || true
+          # Verify binary exists
+          BIN_PATH="target/release/spatialshot-setup"
+          [ -f "target/release/spatialshot-setup-wizard" ] && BIN_PATH="target/release/spatialshot-setup-wizard"
           
-          # Try cargo name first, then product name
-          if [ -f "target/release/spatialshot-setup" ]; then
-            BIN_PATH="target/release/spatialshot-setup"
-          elif [ -f "target/release/spatialshot-setup-wizard" ]; then
-            BIN_PATH="target/release/spatialshot-setup-wizard"
-          else
-            echo "::error::Could not find binary in target/release"
+          if [ ! -f "$BIN_PATH" ]; then
+            echo "::error::Binary not found at $BIN_PATH"
             exit 1
           fi
           
           ZIP_NAME="spatialshot-setup-${OS_TAG}-x64.zip"
-          
-          # Zip the binary (flattened)
-          zip -j "../../dist-out/$ZIP_NAME" "$BIN_PATH"
+          zip -j "$DIST_DIR/$ZIP_NAME" "$BIN_PATH"
 
         elif [ "$RUNNER_OS" == "macOS" ]; then
           OS_TAG="mac"
-          MACHINE_ARCH=$(uname -m)
-          if [[ "$MACHINE_ARCH" == 'arm64' ]]; then
-             ARCH="arm64"
-          else
-             ARCH="x64"
-          fi
+          ARCH="x64"
+          [[ $(uname -m) == 'arm64' ]] && ARCH="arm64"
           
-          # On macOS, zip the .app bundle from its parent directory to avoid full path
           APP_DIR="target/release/bundle/macos"
           APP_NAME="spatialshot-setup-wizard.app"
           ZIP_NAME="spatialshot-setup-${OS_TAG}-${ARCH}.zip"
           
           if [ -d "$APP_DIR/$APP_NAME" ]; then
             pushd "$APP_DIR"
-            zip -r "../../../../dist-out/$ZIP_NAME" "$APP_NAME"
+            # Zip into the absolute dist dir
+            zip -r "$DIST_DIR/$ZIP_NAME" "$APP_NAME"
             popd
           else
              echo "::error::App bundle not found at $APP_DIR/$APP_NAME"
@@ -92,5 +84,5 @@ runs:
           fi
         fi
         
-        echo "Artifacts prepared in packages/setup/dist-out"
-        ls -l ../../dist-out/
+        echo "Contents of $DIST_DIR:"
+        ls -l "$DIST_DIR"

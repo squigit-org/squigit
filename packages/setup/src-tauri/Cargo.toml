@@ -27,4 +27,4 @@ tempfile = "3.8"
 dirs = "6.0.0"
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
-interprocess = "2.2.1"
+interprocess = "1.2.1"
