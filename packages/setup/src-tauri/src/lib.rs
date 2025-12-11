@@ -38,13 +38,15 @@ struct SystemStatus {
 
 #[cfg(not(target_os = "linux"))]
 fn kill_daemon_if_running() -> bool {
-    use interprocess::local_socket::{Stream as LocalSocketStream, traits::Stream as _};
-    let name = if cfg!(windows) { "\\\\.\\pipe\\spatialshot_ipc_secret_v1" } else { "/tmp/spatialshot.ipc.sock" };
+    use interprocess::local_socket::{Stream as LocalSocketStream, traits::Stream as _, ToLocalSocketName};
+    let name_str = if cfg!(windows) { "\\\\.\\pipe\\spatialshot_ipc_secret_v1" } else { "/tmp/spatialshot.ipc.sock" };
     
-    if let Ok(mut conn) = LocalSocketStream::connect(name) {
-        if conn.write_all(b"EXECUTE_ORDER_66\n").is_ok() {
-            std::thread::sleep(Duration::from_millis(1000));
-            return true;
+    if let Ok(name) = name_str.to_local_socket_name() {
+        if let Ok(mut conn) = LocalSocketStream::connect(name) {
+            if conn.write_all(b"EXECUTE_ORDER_66\n").is_ok() {
+                std::thread::sleep(Duration::from_millis(1000));
+                return true;
+            }
         }
     }
     false
