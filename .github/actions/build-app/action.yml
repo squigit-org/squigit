@@ -64,13 +64,26 @@ runs:
         # Avoid code signing errors on forks/PRs without certs
         CSC_IDENTITY_AUTO_DISCOVERY: false
       run: |
-        
+        run_builder() {
+          local cmd="$1"
+          for i in {1..3}; do
+            echo "Running: $cmd (Attempt $i)"
+            if $cmd; then
+              return 0
+            fi
+            echo "Command failed. Retrying in 15 seconds..."
+            sleep 15
+          done
+          echo "Command failed after 3 attempts."
+          return 1
+        }
+
         if [ "$RUNNER_OS" == "Windows" ]; then
-          npx electron-builder --win --x64 --publish never
+          run_builder "npx electron-builder --win --x64 --publish never"
         elif [ "$RUNNER_OS" == "Linux" ]; then
-          npx electron-builder --linux --x64 --publish never
+          run_builder "npx electron-builder --linux --x64 --publish never"
         elif [ "$RUNNER_OS" == "macOS" ]; then
-          npx electron-builder --mac --x64 --arm64 --publish never
+          run_builder "npx electron-builder --mac --x64 --arm64 --publish never"
         fi
 
     # --- ARTIFACT PREP ---
