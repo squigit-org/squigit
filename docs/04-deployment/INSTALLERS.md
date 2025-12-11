@@ -187,34 +187,31 @@ Path: $HOME/.local/share/applications/spatialshot.desktop
 
 ### windows instructions
 
-````md
-# Windows Configuration & Privacy Policy
+````text
+Here is the plain text version, formatted specifically for the Inno Setup text box.
+
+WINDOWS CONFIGURATION & PRIVACY POLICY
 
 Spatialshot operates as a lightweight background service designed for minimal resource usage. Please review the installation and privacy protocols below.
 
-## 1. Installation Verification (SmartScreen)
-
+1. INSTALLATION VERIFICATION (SMARTSCREEN)
 As an open-source project without a commercial EV certificate, Microsoft Defender SmartScreen may flag this installer as unrecognized.
 
-* **Action:** If you see the "Windows protected your PC" prompt:
-    1. Click **More info**.
-    2. Select **Run anyway**.
+Action: If you see the "Windows protected your PC" prompt:
+  1. Click "More info".
+  2. Select "Run anyway".
 
-## 2. Operational Workflow
+2. OPERATIONAL WORKFLOW
+- Global Hotkey: Win + Shift + A
+- Process: Trigger the hotkey to freeze the screen, draw a region, and immediately launch the AI analysis window.
+- Display Support: The engine utilizes native Qt6 rendering for pixel-perfect accuracy on High-DPI (4K) and multi-monitor configurations.
 
-* **Global Hotkey:** `Win ⊞` + `Shift ⇧` + `A`
-* **Process:** Trigger the hotkey to freeze the screen, draw a region, and immediately launch the AI analysis window.
-* **Display Support:** The engine utilizes native Qt6 rendering for pixel-perfect accuracy on High-DPI (4K) and multi-monitor configurations.
+3. ZERO-TRUST ARCHITECTURE
+- Local-First: Your Google Gemini API Key is stored encrypted on your local disk. It is never transmitted to us.
+- Direct Connection: API requests are sent directly to Google (generativelanguage.googleapis.com). No intermediate servers are used.
+- Lens Feature: This optional feature uses ImgBB as a temporary bridge. Do not use "Lens" mode for sensitive personal data.
 
-## 3. Zero-Trust Architecture
-
-* **Local-First:** Your Google Gemini API Key is stored **encrypted on your local disk**. It is never transmitted to us.
-* **Direct Connection:** API requests are sent directly to Google (`generativelanguage.googleapis.com`). No intermediate servers are used.
-* **Lens Feature:** This optional feature uses ImgBB as a temporary bridge. **Do not use "Lens" mode for sensitive personal data.**
-
----
-
-*By installing this software, you agree to the [Apache 2.0 License](https://github.com/a7mddra/spatialshot?tab=Apache-2.0-1-ov-file#readme).*
+By proceeding, you agree to the terms of the Apache 2.0 License.
 
 ````
 
