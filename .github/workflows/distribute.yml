@@ -104,10 +104,39 @@ jobs:
           path: dist-out/*
 
   # =========================================================
-  # JOB 4: PUBLISH BINARIES (THE RELEASE JOB)
+  # JOB 4: BUILD SETUP (TAURI)
+  # =========================================================
+  build-setup:
+    name: Setup ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux-x64
+          - os: macos-15-intel
+            name: macOS-Intel
+          - os: macos-latest
+            name: macOS-ARM
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        uses: ./.github/actions/build-setup
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: setup-artifact-${{ matrix.name }}
+          path: dist-out/*
+
+  # =========================================================
+  # JOB 5: PUBLISH BINARIES (THE RELEASE JOB)
   # =========================================================
   publish-binaries:
-    needs: [build-daemon, build-capture, build-app]
+    needs: [build-daemon, build-capture, build-app, build-setup]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:

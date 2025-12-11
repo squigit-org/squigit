@@ -1,0 +1,84 @@
+name: "Build Setup Wizard"
+description: "Builds Tauri Setup Wizard"
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: "npm"
+        cache-dependency-path: "packages/setup/package-lock.json"
+
+    - name: Install Frontend Dependencies
+      shell: bash
+      working-directory: packages/setup
+      run: npm ci
+
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev \
+          build-essential \
+          curl \
+          wget \
+          file \
+          libssl-dev \
+          libgtk-3-dev \
+          libayatana-appindicator3-dev \
+          librsvg2-dev
+
+    - name: Build Tauri App
+      shell: bash
+      working-directory: packages/setup
+      run: npm run tauri build
+
+    - name: Prepare Artifacts
+      shell: bash
+      working-directory: packages/setup/src-tauri
+      run: |
+        mkdir -p ../../dist-out
+        
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          OS_TAG="win"
+          # Placeholder
+        elif [ "$RUNNER_OS" == "Linux" ]; then
+          OS_TAG="linux"
+          BIN_PATH="target/release/spatialshot-setup"
+          
+          ZIP_NAME="spatialshot-setup-${OS_TAG}-x64.zip"
+          
+          # Zip the binary (flattened)
+          zip -j "../../dist-out/$ZIP_NAME" "$BIN_PATH"
+
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          OS_TAG="mac"
+          MACHINE_ARCH=$(uname -m)
+          if [[ "$MACHINE_ARCH" == 'arm64' ]]; then
+             ARCH="arm64"
+          else
+             ARCH="x64"
+          fi
+          
+          # On macOS, zip the .app bundle from its parent directory to avoid full path
+          APP_DIR="target/release/bundle/macos"
+          APP_NAME="spatialshot-setup-wizard.app"
+          ZIP_NAME="spatialshot-setup-${OS_TAG}-${ARCH}.zip"
+          
+          if [ -d "$APP_DIR/$APP_NAME" ]; then
+            pushd "$APP_DIR"
+            zip -r "../../../../dist-out/$ZIP_NAME" "$APP_NAME"
+            popd
+          else
+             echo "::error::App bundle not found at $APP_DIR/$APP_NAME"
+             exit 1
+          fi
+        fi
+        
+        echo "Artifacts prepared in packages/setup/dist-out"
+        ls -l ../../dist-out/
