@@ -38,18 +38,17 @@ struct SystemStatus {
 
 #[cfg(not(target_os = "linux"))]
 fn kill_daemon_if_running() -> bool {
-    // FIX: Use 1.x syntax. No aliasing needed, struct is already named LocalSocketStream
-    use interprocess::local_socket::{LocalSocketStream, ToLocalSocketName}; 
-    use std::io::Write; // Ensure Write trait is explicitly available for .write_all()
+    use interprocess::local_socket::LocalSocketStream;
+    use std::io::Write;
 
     let name_str = if cfg!(windows) { "\\\\.\\pipe\\spatialshot_ipc_secret_v1" } else { "/tmp/spatialshot.ipc.sock" };
     
-    if let Ok(name) = name_str.to_local_socket_name() {
-        if let Ok(mut conn) = LocalSocketStream::connect(name) {
-            if conn.write_all(b"EXECUTE_ORDER_66\n").is_ok() {
-                std::thread::sleep(Duration::from_millis(1000));
-                return true;
-            }
+    // FIX: Pass the string directly to connect(). 
+    // In interprocess 1.x, the Result of to_local_socket_name() cannot be passed to connect().
+    if let Ok(mut conn) = LocalSocketStream::connect(name_str) {
+        if conn.write_all(b"EXECUTE_ORDER_66\n").is_ok() {
+            std::thread::sleep(Duration::from_millis(1000));
+            return true;
         }
     }
     false
@@ -68,10 +67,12 @@ fn manage_daemon_macos(action: &str) {
 fn create_backup(target: &Path) -> Option<PathBuf> {
     if !target.exists() { return None; }
     if let Ok(temp_dir) = tempfile::tempdir() {
-        let backup_path = temp_dir.into_path();
-        let opts = fs_extra::dir::CopyOptions::new().content_only(false);
-        if fs_extra::dir::copy(target, &backup_path, &opts).is_ok() {
-            return Some(backup_path.join(target.file_name().unwrap()));
+        // FIX: Use keep() instead of deprecated into_path()
+        if let Ok(backup_path) = temp_dir.keep() {
+            let opts = fs_extra::dir::CopyOptions::new().content_only(false);
+            if fs_extra::dir::copy(target, &backup_path, &opts).is_ok() {
+                return Some(backup_path.join(target.file_name().unwrap()));
+            }
         }
     }
     None
