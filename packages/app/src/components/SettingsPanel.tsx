@@ -15,6 +15,7 @@ import { invoke } from "@tauri-apps/api/core";
 import "../index.css";
 import "./SettingsPanel.css";
 import { MODELS, ModelType } from "../types";
+import { MsgBox } from "./MsgBox";
 
 interface SettingsPanelProps {
   currentPrompt: string;
@@ -30,6 +31,7 @@ interface SettingsPanelProps {
   onToggleTheme: () => void;
   onResetAPIKey: () => void;
   toggleSubview: (isActive: boolean) => void;
+  toggleSettingsPanel: () => void;
 }
 
 const modelsWithInfo = [
@@ -63,6 +65,7 @@ export const SettingsPanel = forwardRef<
       onToggleTheme,
       onResetAPIKey,
       toggleSubview,
+      toggleSettingsPanel,
     },
     ref
   ) => {
@@ -110,6 +113,9 @@ export const SettingsPanel = forwardRef<
       toggleSubview(false);
     };
 
+    const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+    const [isClosingPanel, setIsClosingPanel] = useState(false);
+
     const handleClose = async (): Promise<boolean> => {
       if (!isSubviewActive) {
         return true;
@@ -119,21 +125,25 @@ export const SettingsPanel = forwardRef<
         localPrompt !== currentPrompt || localModel !== currentModel;
 
       if (isDirty) {
-        const result = await invoke<string>("show_unsaved_changes_alert");
-        if (result === "save") {
-          handleSave();
-          return true;
-        } else if (result === "dont-save") {
-          setIsSubviewActive(false);
-          toggleSubview(false);
-          return true;
-        } else {
-          return false;
-        }
+        setIsClosingPanel(true); // External close, so plan to close panel
+        setShowUnsavedDialog(true);
+        return false;
       } else {
         setIsSubviewActive(false);
         toggleSubview(false);
         return true;
+      }
+    };
+
+    const handleBackPress = () => {
+      const isDirty =
+        localPrompt !== currentPrompt || localModel !== currentModel;
+      if (isDirty) {
+        setIsClosingPanel(false); // Just closing subview
+        setShowUnsavedDialog(true);
+      } else {
+        setIsSubviewActive(false);
+        toggleSubview(false);
       }
     };
 
@@ -165,10 +175,46 @@ export const SettingsPanel = forwardRef<
       toggleSubview(true);
     };
 
+    const handleDialogDiscard = () => {
+      setShowUnsavedDialog(false);
+      if (isClosingPanel) {
+        toggleSettingsPanel();
+      } else {
+        setIsSubviewActive(false);
+        toggleSubview(false);
+      }
+    };
+
+    const handleDialogSave = () => {
+      handleSave();
+      setShowUnsavedDialog(false);
+      if (isClosingPanel) {
+        toggleSettingsPanel();
+      }
+    };
+
     return (
       <div
         className={`settings-panel ${isSubviewActive ? "subview-active" : ""}`}
       >
+        <MsgBox
+          isOpen={showUnsavedDialog}
+          variant="warning"
+          title="Unsaved Changes"
+          message="You have unsaved changes. Do you want to save them?"
+          actions={[
+            {
+              label: "Discard",
+              onClick: handleDialogDiscard,
+              variant: "secondary",
+            },
+            {
+              label: "Save",
+              onClick: handleDialogSave,
+              variant: "primary",
+            },
+          ]}
+        />
         <div className="user-info">
           <div className="user-info-main">
             <img className="avatar" src={avatarSrc} alt="User avatar" />
@@ -273,7 +319,7 @@ export const SettingsPanel = forwardRef<
             <button
               className="back-btn"
               id="backPromptBtn"
-              onClick={handleClose}
+              onClick={handleBackPress}
             >
               <i className="fas fa-arrow-left" />
             </button>

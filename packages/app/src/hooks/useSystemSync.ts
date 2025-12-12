@@ -74,7 +74,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         }
       } catch (e) {
         console.error("Config load error", e);
-        setSystemError("Failed to load configuration.");
+        // setSystemError("Failed to load configuration.");
       }
 
       const loadImageFromPath = async (path: string) => {

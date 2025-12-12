@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useSystemSync } from "./hooks/useSystemSync";
 import { useChatEngine } from "./hooks/useChatEngine";
 import { ChatLayout } from "./components/ChatLayout";
@@ -17,6 +18,16 @@ const App: React.FC = () => {
   const toggleSettingsPanel = useCallback(() => {
     setIsPanelActive((prev) => !prev);
   }, []);
+
+  useEffect(() => {
+    const unlisten = listen("toggle-settings", () => {
+      toggleSettingsPanel();
+    });
+
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [toggleSettingsPanel]);
 
   const system = useSystemSync(toggleSettingsPanel);
 

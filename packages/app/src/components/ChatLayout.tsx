@@ -15,7 +15,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Settings } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
 import "katex/dist/katex.min.css";
 
@@ -26,6 +26,7 @@ import { SettingsPanel } from "./SettingsPanel";
 import { ModelSelector } from "./ModelSelector";
 import LensButton from "./LensButton";
 import PromptBox from "./PromptBox";
+import { MsgBox } from "./MsgBox";
 import { invoke } from "@tauri-apps/api/core";
 import "./ChatLayout.css";
 
@@ -151,6 +152,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
     null
   );
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [isSubviewActive, setIsSubviewActive] = useState(false);
 
   const [isPanelVisible, setIsPanelVisible] = useState(false);
@@ -258,9 +260,10 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     const handleOutsideClick = (e: MouseEvent) => {
       if (
         isPanelActive &&
-        !isSubviewActive &&
         panelRef.current &&
-        !panelRef.current.contains(e.target as Node)
+        !panelRef.current.contains(e.target as Node) &&
+        settingsButtonRef.current &&
+        !settingsButtonRef.current.contains(e.target as Node)
       ) {
         closeSettingsPanel();
       }
@@ -280,11 +283,58 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     >
       <header className="flex items-center justify-between gap-4 p-6">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <img src="assets/gem.svg" alt="Gem Icon" className="h-6 w-6" />
-            <span className="text-lg font-semibold text-neutral-200">
-              AI Overview
-            </span>
+          <div className="relative z-50">
+            <button
+              ref={settingsButtonRef}
+              onClick={toggleSettingsPanel}
+              className={`p-2 transition-colors rounded-lg ${
+                isPanelActive
+                  ? "bg-neutral-800 text-neutral-100"
+                  : "text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800"
+              }`}
+              title="Settings"
+            >
+              <Settings size={20} />
+            </button>
+            {isPanelVisible && (
+              <div
+                className={`panel ${
+                  isPanelActiveAndVisible ? "active" : ""
+                } ${isPanelClosing ? "closing" : ""}`}
+                id="panel"
+                ref={panelRef}
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: "0",
+                  right: "auto",
+                  marginTop: "0.5rem",
+                }}
+              >
+                <div className="panel-content" id="settings-content">
+                  <SettingsPanel
+                    ref={settingsPanelRef}
+                    currentPrompt={prompt}
+                    currentModel={editingModel}
+                    onPromptChange={setPrompt}
+                    onModelChange={onEditingModelChange}
+                    userName={userName}
+                    userEmail={userEmail}
+                    avatarSrc={avatarSrc}
+                    onSave={onSave}
+                    onLogout={onLogout}
+                    isDarkMode={isDarkMode}
+                    onToggleTheme={onToggleTheme}
+                    onResetAPIKey={onResetAPIKey}
+                    toggleSubview={handleToggleSubview}
+                    toggleSettingsPanel={toggleSettingsPanel}
+                  />
+                </div>
+                <div className="footer">
+                  <p>Spatialshot &copy; 2025</p>
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <ModelSelector
@@ -319,28 +369,22 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
               </div>
             )}
 
+            <MsgBox
+              isOpen={!!error}
+              variant="error"
+              message={error || ""}
+              actions={[
+                {
+                  label: "Retry",
+                  onClick: onRetry,
+                  variant: "danger",
+                  disabled: !startupImage || !prompt,
+                },
+              ]}
+            />
+
             {isChatMode && (
               <div className="space-y-8 flex flex-col-reverse">
-                {error && (
-                  <div className="error-overlay">
-                    <div className="error-container">
-                      <div className="flex items-center gap-3 text-sm text-red-200">
-                        <AlertCircle size={18} />
-                        <span>{error}</span>
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <button
-                          onClick={onRetry}
-                          disabled={!startupImage || !prompt}
-                          className="rounded-full border border-red-900-50 px-3 py-1 text-xs text-red-200 transition-colors hover:border-red-500-60 disabled:opacity-50"
-                        >
-                          Retry
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {isLoading && (
                   <div className="space-y-4 pt-8 pb-4" aria-hidden="true">
                     <div className="shimmer-line shimmer-line-1 w-3/4" />
@@ -395,46 +439,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         </footer>
       )}
 
-      {isPanelVisible && (
-        <>
-          <div
-            id="panel-overlay"
-            className={`${isPanelActiveAndVisible ? "active" : ""} ${
-              isPanelClosing ? "closing" : ""
-            }`}
-            onClick={closeSettingsPanel}
-          />
-          <div
-            className={`panel ${isPanelActiveAndVisible ? "active" : ""} ${
-              isPanelClosing ? "closing" : ""
-            }`}
-            id="panel"
-            ref={panelRef}
-          >
-            <div className="panel-content" id="settings-content">
-              <SettingsPanel
-                ref={settingsPanelRef}
-                currentPrompt={prompt}
-                currentModel={editingModel}
-                onPromptChange={setPrompt}
-                onModelChange={onEditingModelChange}
-                userName={userName}
-                userEmail={userEmail}
-                avatarSrc={avatarSrc}
-                onSave={onSave}
-                onLogout={onLogout}
-                isDarkMode={isDarkMode}
-                onToggleTheme={onToggleTheme}
-                onResetAPIKey={onResetAPIKey}
-                toggleSubview={handleToggleSubview}
-              />
-            </div>
-            <div className="footer">
-              <p>Spatialshot &copy; 2025</p>
-            </div>
-          </div>
-        </>
-      )}
       <div id="feedbackMessage" className="feedback-message"></div>
       {contextMenu && (
         <ContextMenu
