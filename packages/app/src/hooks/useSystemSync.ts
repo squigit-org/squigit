@@ -5,10 +5,10 @@
  */
 
 import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { showFeedbackMessage } from "../components/utilities";
 import { initializeGemini } from "../services/geminiService";
-
-const ipc = "ipc" in window ? (window as any).ipc : null;
 
 export const useSystemSync = (onToggleSettings: () => void) => {
   const [apiKey, setApiKey] = useState<string>("");
@@ -30,43 +30,43 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   const [systemError, setSystemError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (ipc && ipc.onThemeChanged) {
-      ipc.onThemeChanged((theme: string) => {
-        const newIsDarkMode = theme === "dark";
-        setIsDarkMode(newIsDarkMode);
-        document.body.classList.toggle("light-mode", !newIsDarkMode);
-      });
-    }
+    const unlistenPromise = listen<string>("theme-changed", (event) => {
+      const theme = event.payload;
+      const newIsDarkMode = theme === "dark";
+      setIsDarkMode(newIsDarkMode);
+      document.body.classList.toggle("light-mode", !newIsDarkMode);
+    });
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
   }, []);
 
   useEffect(() => {
-    const setupIpc = async () => {
-      if (!ipc) {
-        setSystemError("IPC bridge not available.");
-        return;
-      }
+    let unlisteners: (() => void)[] = [];
 
+    const setupIpc = async () => {
       try {
-        const key = await ipc.getApiKey();
+        const key = await invoke<string>("get_api_key");
         if (key) {
           setApiKey(key);
           initializeGemini(key);
         }
 
-        const savedPrompt = await ipc.getPrompt();
+        const savedPrompt = await invoke<string>("get_prompt");
         if (savedPrompt) {
           setActivePrompt(savedPrompt);
           setEditingPrompt(savedPrompt);
         }
 
-        const savedModel = await ipc.getModel();
+        const savedModel = await invoke<string>("get_model");
         if (savedModel) {
           setStartupModel(savedModel);
           setEditingModel(savedModel);
           setSessionModel(savedModel);
         }
 
-        const userData = await ipc.getUserData();
+        const userData = await invoke<any>("get_user_data");
         if (userData) {
           setUserName(userData.name);
           setUserEmail(userData.email);
@@ -74,11 +74,15 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         }
       } catch (e) {
         console.error("Config load error", e);
+        setSystemError("Failed to load configuration.");
       }
 
       const loadImageFromPath = async (path: string) => {
         try {
-          const data = await ipc.readImageFile(path);
+          const data = await invoke<{ base64: string; mimeType: string }>(
+            "read_image_file",
+            { path }
+          );
           if (data) {
             setStartupImage(data);
           }
@@ -87,30 +91,33 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         }
       };
 
-      const sessionPath = await ipc.getSessionPath();
+      const sessionPath = await invoke<string>("get_session_path");
       if (sessionPath) {
         await loadImageFromPath(sessionPath);
       }
 
-      if (ipc.onImagePath) {
-        ipc.onImagePath((newPath: string) => {
-          console.log("Received new image path from Main:", newPath);
-          loadImageFromPath(newPath);
-        });
-      }
+      const unlistenImage = await listen<string>("image-path", (event) => {
+        console.log("Received new image path from Main:", event.payload);
+        loadImageFromPath(event.payload);
+      });
+      unlisteners.push(unlistenImage);
 
-      if (ipc.onToggleSettings) {
-        ipc.onToggleSettings(onToggleSettings);
-      }
+      const unlistenSettings = await listen("toggle-settings", () => {
+        onToggleSettings();
+      });
+      unlisteners.push(unlistenSettings);
 
-      if (ipc.onShowFeedbackFromMain) {
-        ipc.onShowFeedbackFromMain((arg: any) =>
-          showFeedbackMessage(arg.message, arg.type)
-        );
-      }
+      const unlistenFeedback = await listen<any>("show-feedback-from-main", (event) => {
+        showFeedbackMessage(event.payload.message, event.payload.type);
+      });
+      unlisteners.push(unlistenFeedback);
     };
 
     setupIpc();
+
+    return () => {
+      unlisteners.forEach((fn) => fn());
+    };
   }, [onToggleSettings]);
 
   const saveSettings = (newPrompt: string, newModel: string) => {
@@ -118,32 +125,25 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     setEditingModel(newModel);
     setActivePrompt(newPrompt);
     setEditingPrompt(newPrompt);
-    if (ipc) {
-      ipc.savePrompt(newPrompt);
-      ipc.saveModel(newModel);
-      showFeedbackMessage("Settings saved", "done");
-    }
+    
+    invoke("save_prompt", { prompt: newPrompt });
+    invoke("save_model", { model: newModel });
+    showFeedbackMessage("Settings saved", "done");
   };
 
   const handleToggleTheme = () => {
     const newIsDarkMode = !isDarkMode;
     setIsDarkMode(newIsDarkMode);
     document.body.classList.toggle("light-mode", !newIsDarkMode);
-    if (ipc) {
-      ipc.setTheme(newIsDarkMode ? "dark" : "light");
-    }
+    invoke("set_theme", { theme: newIsDarkMode ? "dark" : "light" });
   };
 
   const handleLogout = () => {
-    if (ipc) {
-      ipc.logout();
-    }
+    invoke("logout");
   };
 
   const handleResetAPIKey = () => {
-    if (ipc) {
-      ipc.resetAPIKey();
-    }
+    invoke("reset_api_key");
   };
 
   return {

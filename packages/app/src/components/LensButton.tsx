@@ -5,9 +5,8 @@
  */
 
 import React, { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import "./LensButton.css";
-
-const ipc = "ipc" in window ? (window as any).ipc : null;
 
 interface LensButtonProps {
   isChatMode: boolean;
@@ -17,17 +16,15 @@ const LensButton: React.FC<LensButtonProps> = ({ isChatMode }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLensPress = async () => {
-    if (ipc && !isLoading) {
+    if (!isLoading) {
       setIsLoading(true);
       try {
-        await ipc.triggerLensSearch();
+        await invoke("trigger_lens_search");
       } catch (error) {
         console.error("Error during Lens search:", error);
       } finally {
         setIsLoading(false);
       }
-    } else {
-      console.log("IPC not available or already loading");
     }
   };
 

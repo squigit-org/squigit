@@ -26,6 +26,7 @@ import { SettingsPanel } from "./SettingsPanel";
 import { ModelSelector } from "./ModelSelector";
 import LensButton from "./LensButton";
 import PromptBox from "./PromptBox";
+import { invoke } from "@tauri-apps/api/core";
 import "./ChatLayout.css";
 
 const StreamingResponse: React.FC<{ text: string }> = ({ text }) => {
@@ -147,19 +148,21 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   onResetAPIKey,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(null);
+  const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
+    null
+  );
   const [isSubviewActive, setIsSubviewActive] = useState(false);
 
   const [isPanelVisible, setIsPanelVisible] = useState(false);
   const [isPanelClosing, setIsPanelClosing] = useState(false);
   const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  
+
   const handleToggleSubview = (isActive: boolean) => {
     setIsSubviewActive(isActive);
   };
 
-  const [contextMenu, setContextMenu] = useState<{ 
+  const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     selectedText: string;
@@ -380,11 +383,9 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
             <span>AI responses may include mistakes. </span>
             <button
               onClick={() => {
-                if ("ipc" in window) {
-                  (window as any).ipc.openExternalUrl(
-                    "https://support.google.com/websearch?p=ai_overviews"
-                  );
-                }
+                invoke("open_external_url", {
+                  url: "https://support.google.com/websearch?p=ai_overviews",
+                });
               }}
               className="underline"
             >
@@ -398,13 +399,13 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         <>
           <div
             id="panel-overlay"
-            className={`${isPanelActiveAndVisible ? "active" : ""} ${ 
+            className={`${isPanelActiveAndVisible ? "active" : ""} ${
               isPanelClosing ? "closing" : ""
             }`}
             onClick={closeSettingsPanel}
           />
           <div
-            className={`panel ${isPanelActiveAndVisible ? "active" : ""} ${ 
+            className={`panel ${isPanelActiveAndVisible ? "active" : ""} ${
               isPanelClosing ? "closing" : ""
             }`}
             id="panel"

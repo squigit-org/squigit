@@ -11,6 +11,7 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import "../index.css";
 import "./SettingsPanel.css";
 import { MODELS, ModelType } from "../types";
@@ -118,7 +119,7 @@ export const SettingsPanel = forwardRef<
         localPrompt !== currentPrompt || localModel !== currentModel;
 
       if (isDirty) {
-        const result = await (window as any).ipc.showUnsavedChangesAlert();
+        const result = await invoke<string>("show_unsaved_changes_alert");
         if (result === "save") {
           handleSave();
           return true;
@@ -141,28 +142,22 @@ export const SettingsPanel = forwardRef<
     }));
 
     const handleClearCache = () => {
-      if ("ipc" in window) {
-        (window as any).ipc.clearCache();
-      }
+      invoke("clear_cache");
     };
 
     const handleOpenExternalUrl = (url: string) => {
-      if ("ipc" in window) {
-        (window as any).ipc.openExternalUrl(url);
-      }
+      invoke("open_external_url", { url });
     };
 
     const [isRotating, setIsRotating] = useState(false);
 
     const handleReset = async () => {
-      if ("ipc" in window) {
-        setIsRotating(true);
-        const resetPrompt = await (window as any).ipc.resetPrompt();
-        const resetModelId = await (window as any).ipc.resetModel();
-        setLocalPrompt(resetPrompt);
-        setLocalModel(resetModelId);
-        setTimeout(() => setIsRotating(false), 1000);
-      }
+      setIsRotating(true);
+      const resetPrompt = await invoke<string>("reset_prompt");
+      const resetModelId = await invoke<string>("reset_model");
+      setLocalPrompt(resetPrompt);
+      setLocalModel(resetModelId);
+      setTimeout(() => setIsRotating(false), 1000);
     };
 
     const handleOpenSubview = () => {

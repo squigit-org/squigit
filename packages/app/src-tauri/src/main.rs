@@ -1,33 +1,6 @@
-#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-/**
- * @license
- * Copyright 2025 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
-
-mod utilities;
-use anyhow::Result;
-
-fn main() -> Result<()> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .format_timestamp_millis()
-        .init();
-
-    #[cfg(target_os = "linux")]
-    {
-        log::info!("Linux detected. Running capture logic directly.");
-        if let Err(e) = utilities::capture::run() {
-            log::error!("Capture failed: {}", e);
-            std::process::exit(1);
-        }
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        utilities::ipc::start_shutdown_listener();
-        utilities::hotkey::listen();
-    }
-
-    Ok(())
+fn main() {
+  app_lib::run();
 }

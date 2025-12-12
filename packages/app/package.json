@@ -9,7 +9,6 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "postbuild": "node scripts/build-html.js",
-
     "// --- UNIVERSAL COMMANDS ---": "",
     "start": "node scripts/build-sync.js dev",
     "start:electron": "cd src-electron && npm exec electron .",
@@ -36,6 +35,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.1",
+    "@tauri-apps/api": "^2.9.1",
+    "@tauri-apps/cli": "^2.9.6",
     "clsx": "^2.0.0",
     "lucide-react": "^0.553.0",
     "react": "^19.2.0",
