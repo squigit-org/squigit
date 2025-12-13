@@ -1,23 +1,21 @@
-/**
- * @license
- * Copyright 2025 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useCallback, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useSystemSync } from "./hooks/useSystemSync";
 import { useChatEngine } from "./hooks/useChatEngine";
-import { ChatLayout } from "./components/ChatLayout";
+import { ChatLayout } from "./components/chat/ChatLayout";
+import HelloScreen from "./components/hello/HelloScreen";
 
 const App: React.FC = () => {
   const [input, setInput] = useState("");
   const [isPanelActive, setIsPanelActive] = useState(false);
-
+  const [hasImage, setHasImage] = useState<boolean | null>(null);
 
   const toggleSettingsPanel = useCallback(() => {
     setIsPanelActive((prev) => !prev);
   }, []);
+
+  const system = useSystemSync(toggleSettingsPanel);
 
   useEffect(() => {
     const unlisten = listen("toggle-settings", () => {
@@ -29,7 +27,23 @@ const App: React.FC = () => {
     };
   }, [toggleSettingsPanel]);
 
-  const system = useSystemSync(toggleSettingsPanel);
+  useEffect(() => {
+    async function checkStartup() {
+      try {
+        const img = await invoke<string | null>("get_current_image");
+        if (img) {
+          system.setStartupImage(img);
+          setHasImage(true);
+        } else {
+          setHasImage(false);
+        }
+      } catch (e) {
+        console.error("Failed to check startup image", e);
+        setHasImage(false);
+      }
+    }
+    checkStartup();
+  }, []);
 
   const engine = useChatEngine({
     apiKey: system.apiKey,
@@ -53,9 +67,25 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCheckSettings = () => {
+    engine.clearError();
+    system.clearSystemError();
+    toggleSettingsPanel();
+  };
+
+  const handleImageReady = (base64Image: string) => {
+    system.setStartupImage(base64Image);
+    setHasImage(true);
+  };
+
+  if (hasImage === null) return null;
+
+  if (!hasImage) {
+    return <HelloScreen onImageReady={handleImageReady} />;
+  }
+
   return (
     <ChatLayout
-      // States from engine
       messages={engine.messages}
       streamingText={engine.streamingText}
       isChatMode={engine.isChatMode}
@@ -63,18 +93,15 @@ const App: React.FC = () => {
       isStreaming={engine.isStreaming}
       error={engine.error || system.systemError}
       lastSentMessage={engine.lastSentMessage}
-      // States from App
       input={input}
       currentModel={system.sessionModel}
       editingModel={system.editingModel}
-      // System-related states
       startupImage={system.startupImage}
       prompt={system.editingPrompt}
       userName={system.userName}
       userEmail={system.userEmail}
       avatarSrc={system.avatarSrc}
       isDarkMode={system.isDarkMode}
-      // Handlers
       onSend={handleSend}
       onModelChange={system.setSessionModel}
       onEditingModelChange={system.setEditingModel}
@@ -86,8 +113,8 @@ const App: React.FC = () => {
       onInputChange={setInput}
       setPrompt={system.setEditingPrompt}
       toggleSettingsPanel={toggleSettingsPanel}
+      onCheckSettings={handleCheckSettings}
       isPanelActive={isPanelActive}
-
     />
   );
 };

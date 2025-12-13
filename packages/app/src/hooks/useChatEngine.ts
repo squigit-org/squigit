@@ -30,6 +30,7 @@ export const useChatEngine = ({
   const [isStreaming, setIsStreaming] = useState(false);
   const [firstResponseId, setFirstResponseId] = useState<string | null>(null);
   const [lastSentMessage, setLastSentMessage] = useState<Message | null>(null);
+  const clearError = () => setError(null);
 
   useEffect(() => {
     if (apiKey && prompt && startupImage) {
@@ -179,6 +180,7 @@ export const useChatEngine = ({
     messages,
     isLoading,
     error,
+    clearError,
     isChatMode,
     isStreaming,
     streamingText,

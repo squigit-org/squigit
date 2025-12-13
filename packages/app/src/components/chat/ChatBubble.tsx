@@ -11,7 +11,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Check, Copy } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
-import { Message } from "../types";
+import { Message } from "../../types";
 import "katex/dist/katex.min.css";
 
 interface ChatBubbleProps {

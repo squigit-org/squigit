@@ -24,6 +24,18 @@
       "csp": null
     }
   },
+  "plugins": {
+    "cli": {
+      "description": "Spatialshot",
+      "args": [
+        {
+          "name": "image",
+          "index": 1,
+          "description": "Path to an image to load on startup."
+        }
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

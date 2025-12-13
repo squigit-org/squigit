@@ -15,11 +15,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { AlertCircle, Settings } from "lucide-react";
+import { AlertCircle, Settings, RotateCw } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
 import "katex/dist/katex.min.css";
 
-import { Message } from "../types";
+import { Message } from "../../types";
 import { ChatBubble } from "./ChatBubble";
 import { ContextMenu } from "./ContextMenu";
 import { SettingsPanel } from "./SettingsPanel";
@@ -116,6 +116,7 @@ export interface ChatLayoutProps {
   toggleSettingsPanel: () => void;
   isPanelActive: boolean;
   onResetAPIKey: () => void;
+  onReload?: () => void;
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
@@ -145,8 +146,10 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   onInputChange,
   setPrompt,
   toggleSettingsPanel,
+  onCheckSettings,
   isPanelActive,
   onResetAPIKey,
+  onReload,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
@@ -159,6 +162,22 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   const [isPanelClosing, setIsPanelClosing] = useState(false);
   const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const [isRotating, setIsRotating] = useState(false);
+
+  useEffect(() => {
+    // Stop rotating when loading is finished
+    if (!isLoading) {
+      setIsRotating(false);
+    }
+  }, [isLoading]);
+
+  const handleReload = () => {
+    if (onReload) {
+      setIsRotating(true);
+      onReload();
+    }
+  };
 
   const handleToggleSubview = (isActive: boolean) => {
     setIsSubviewActive(isActive);
@@ -250,20 +269,25 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (isPanelActive) {
-          closeSettingsPanel();
-        }
+        if (isPanelActive) closeSettingsPanel();
       }
     };
     document.addEventListener("keydown", handleEsc);
 
     const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // FIX: Check if click is inside the MsgBox portal
+      const isMsgBoxClick =
+        target.closest(".error-overlay") || target.closest(".error-container");
+
       if (
         isPanelActive &&
         panelRef.current &&
-        !panelRef.current.contains(e.target as Node) &&
+        !panelRef.current.contains(target as Node) &&
         settingsButtonRef.current &&
-        !settingsButtonRef.current.contains(e.target as Node)
+        !settingsButtonRef.current.contains(target as Node) &&
+        !isMsgBoxClick // <--- Crucial Fix: Don't close panel if clicking the Alert
       ) {
         closeSettingsPanel();
       }
@@ -275,6 +299,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       document.removeEventListener("click", handleOutsideClick);
     };
   }, [isPanelActive, isSubviewActive]);
+
+  const [showUpdate, setShowUpdate] = useState(false);
 
   return (
     <div
@@ -296,11 +322,21 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
             >
               <Settings size={20} />
             </button>
+            <button
+              onClick={handleReload}
+              className={`p-2 transition-colors rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 ${
+                isRotating ? "rotating" : ""
+              }`}
+              title="Reload chat"
+              disabled={isRotating}
+            >
+              <RotateCw size={20} />
+            </button>
             {isPanelVisible && (
               <div
-                className={`panel ${
-                  isPanelActiveAndVisible ? "active" : ""
-                } ${isPanelClosing ? "closing" : ""}`}
+                className={`panel ${isPanelActiveAndVisible ? "active" : ""} ${
+                  isPanelClosing ? "closing" : ""
+                }`}
                 id="panel"
                 ref={panelRef}
                 style={{
@@ -372,13 +408,41 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
             <MsgBox
               isOpen={!!error}
               variant="error"
+              title="Connection Error"
               message={error || ""}
               actions={[
+                {
+                  label: "Check Settings",
+                  onClick: onCheckSettings,
+                  variant: "secondary",
+                },
                 {
                   label: "Retry",
                   onClick: onRetry,
                   variant: "danger",
                   disabled: !startupImage || !prompt,
+                },
+              ]}
+            />
+
+            <MsgBox
+              isOpen={showUpdate}
+              variant="update"
+              title="New Update Available"
+              message="Version 1.2.0 is available with better caching."
+              actions={[
+                {
+                  label: "Maybe Later",
+                  onClick: () => setShowUpdate(false),
+                  variant: "secondary",
+                },
+                {
+                  label: "Update Now",
+                  onClick: () => {
+                    alert("Backend not connected yet!");
+                    setShowUpdate(false);
+                  },
+                  variant: "primary",
                 },
               ]}
             />

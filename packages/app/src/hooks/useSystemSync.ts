@@ -28,6 +28,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     mimeType: string;
   } | null>(null);
   const [systemError, setSystemError] = useState<string | null>(null);
+  const clearSystemError = () => setSystemError(null);
 
   useEffect(() => {
     const unlistenPromise = listen<string>("theme-changed", (event) => {
@@ -74,7 +75,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         }
       } catch (e) {
         console.error("Config load error", e);
-        // setSystemError("Failed to load configuration.");
+        setSystemError("Failed to load configuration.");
       }
 
       const loadImageFromPath = async (path: string) => {
@@ -162,6 +163,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     avatarSrc,
     isDarkMode,
     systemError,
+    clearSystemError,
     saveSettings,
     handleToggleTheme,
     handleLogout,

@@ -12,9 +12,9 @@ import React, {
   forwardRef,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import "../index.css";
+import "../../index.css";
 import "./SettingsPanel.css";
-import { MODELS, ModelType } from "../types";
+import { MODELS, ModelType } from "../../types";
 import { MsgBox } from "./MsgBox";
 
 interface SettingsPanelProps {
@@ -185,13 +185,13 @@ export const SettingsPanel = forwardRef<
       }
     };
 
-    const handleDialogSave = () => {
-      handleSave();
-      setShowUnsavedDialog(false);
-      if (isClosingPanel) {
-        toggleSettingsPanel();
-      }
-    };
+const handleDialogSave = () => {
+    handleSave(); // This executes save logic
+    setShowUnsavedDialog(false);
+    if (isClosingPanel) {
+      toggleSettingsPanel();
+    }
+  };
 
     return (
       <div

@@ -1,0 +1,147 @@
+:root {
+  --radius: 12px;
+  --bg: #f3f4f6;
+  --card: #ffffff;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #111827;
+  --dash: #d1d5db;
+}
+
+:global(.dark-theme) {
+  --bg: #121212;
+  --card: #1e1e1e;
+  --muted: #9a9ea1;
+  --border: #2c2c2c;
+  --accent: #f3f4f6;
+  --dash: #3d3d3d;
+}
+
+.container {
+  width: 100%;
+  height: 100vh;
+  background: var(--card);
+  padding: 48px;
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  -webkit-app-region: no-drag; 
+}
+
+.uploadArea {
+  width: 420px;
+  height: 320px;
+  border-radius: var(--radius);
+  border: 2px dashed var(--dash);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: transparent;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+  user-select: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.uploadArea:focus-visible {
+  border-color: var(--accent);
+  background-color: rgba(17, 24, 39, 0.01);
+}
+
+.uploadArea.dragging {
+  border-color: var(--muted);
+  background-color: rgba(17, 24, 39, 0.02);
+}
+
+.uploadSvg {
+  width: 56px;
+  height: 56px;
+  stroke: var(--muted);
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.2px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 300;
+}
+
+.hint {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 300px;
+}
+
+.panelTitle {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.panelBody {
+  background: var(--border);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.fileInput {
+  display: none;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.footerText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* responsive */
+@media (max-width: 880px) {
+  .container {
+    flex-direction: column;
+    padding: 28px;
+  }
+
+  .rightCol {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .uploadArea {
+    width: 92%;
+    height: 300px;
+  }
+}
