@@ -113,6 +113,7 @@ export interface ChatLayoutProps {
   onToggleTheme: () => void;
   onInputChange: (value: string) => void;
   setPrompt: (prompt: string) => void;
+  onCheckSettings: () => void;
   toggleSettingsPanel: () => void;
   isPanelActive: boolean;
   onResetAPIKey: () => void;

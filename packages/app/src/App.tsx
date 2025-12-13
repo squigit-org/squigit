@@ -9,6 +9,7 @@ import HelloScreen from "./components/hello/HelloScreen";
 const App: React.FC = () => {
   const [input, setInput] = useState("");
   const [isPanelActive, setIsPanelActive] = useState(false);
+  // null = loading, false = show hello, true = show chat
   const [hasImage, setHasImage] = useState<boolean | null>(null);
 
   const toggleSettingsPanel = useCallback(() => {
@@ -21,18 +22,20 @@ const App: React.FC = () => {
     const unlisten = listen("toggle-settings", () => {
       toggleSettingsPanel();
     });
-
     return () => {
       unlisten.then((f) => f());
     };
   }, [toggleSettingsPanel]);
 
+  // Startup Logic: Check Rust state for CLI image
   useEffect(() => {
     async function checkStartup() {
       try {
         const img = await invoke<string | null>("get_current_image");
         if (img) {
-          system.setStartupImage(img);
+          // IMPORTANT: Convert string data URL to object expected by system
+          const mimeType = img.substring(img.indexOf(":") + 1, img.indexOf(";"));
+          system.setStartupImage({ base64: img, mimeType }); 
           setHasImage(true);
         } else {
           setHasImage(false);
@@ -43,7 +46,7 @@ const App: React.FC = () => {
       }
     }
     checkStartup();
-  }, []);
+  }, []); // Run once on mount
 
   const engine = useChatEngine({
     apiKey: system.apiKey,
@@ -74,16 +77,21 @@ const App: React.FC = () => {
   };
 
   const handleImageReady = (base64Image: string) => {
-    system.setStartupImage(base64Image);
+    // Extract mime type manually for HelloScreen uploads
+    const mimeType = base64Image.substring(base64Image.indexOf(":") + 1, base64Image.indexOf(";"));
+    system.setStartupImage({ base64: base64Image, mimeType });
     setHasImage(true);
   };
 
-  if (hasImage === null) return null;
+  // 1. Loading State
+  if (hasImage === null) return <div className="bg-neutral-950 h-screen w-full"></div>;
 
+  // 2. Hello Screen (No Image)
   if (!hasImage) {
     return <HelloScreen onImageReady={handleImageReady} />;
   }
 
+  // 3. Chat Layout (Has Image)
   return (
     <ChatLayout
       messages={engine.messages}

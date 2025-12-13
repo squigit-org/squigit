@@ -76,7 +76,10 @@ export default function HelloScreen({ onImageReady }: HelloScreenProps) {
   };
 
   const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length > 0) processFiles(e.target.files);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      processFiles(files);
+    }
   };
 
   const triggerFileInput = () => fileInputRef.current?.click();

@@ -158,6 +158,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     sessionModel,
     setSessionModel,
     startupImage,
+    setStartupImage,    
     userName,
     userEmail,
     avatarSrc,
