@@ -188,7 +188,6 @@ Path: $HOME/.local/share/applications/spatialshot.desktop
 ### windows instructions
 
 ````text
-Here is the plain text version, formatted specifically for the Inno Setup text box.
 
 WINDOWS CONFIGURATION & PRIVACY POLICY
 
