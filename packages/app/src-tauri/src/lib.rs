@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use tauri::Manager;
 use tauri_plugin_cli::CliExt;
-use tauri_plugin_opener::Opener;
+use tauri_plugin_opener::OpenerExt;
 
 // 1. App State
 pub struct AppState {
@@ -64,7 +64,7 @@ fn get_current_image(state: tauri::State<AppState>) -> Option<String> {
 // Re-use logic for reading a file without necessarily setting it as "startup" image
 #[tauri::command]
 fn read_image_file(path: String, _state: tauri::State<AppState>) -> Result<serde_json::Value, String> {
-     // reuse the helper to get base66
+     // reuse the helper to get base64
     let mut file = File::open(&path).map_err(|e| e.to_string())?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
@@ -162,7 +162,8 @@ fn trigger_lens_search() {
 
 #[tauri::command]
 fn open_external_url(app: tauri::AppHandle, url: String) {
-    let _ = app.opener().open(url);
+    // FIX: Use open_url with None for the 'with' argument
+    let _ = app.opener().open_url(url, None::<&str>);
 }
 
 // --- Entry Point ---

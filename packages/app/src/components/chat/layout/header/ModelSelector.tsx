@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
-import { MODELS } from "../../types";
+import { MODELS } from "../../../../types";
 
 interface ModelSelectorProps {
   currentModel: string;

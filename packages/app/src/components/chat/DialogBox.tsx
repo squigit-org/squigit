@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, AlertTriangle, Info, Sparkles } from "lucide-react";
-import "./ChatLayout.css";
+import "./layout/ChatLayout.css";
 
 export type MsgBoxVariant = "error" | "warning" | "info" | "update";
 
@@ -33,22 +33,32 @@ export const MsgBox: React.FC<MsgBoxProps> = ({
   actions,
   isOpen,
 }) => {
-  // 1. Native "Pop" Sound Effect
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isOpen && textAreaRef.current) {
+      textAreaRef.current.style.height = "auto";
+      textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
+    }
+  }, [isOpen, message]);
+
   useEffect(() => {
     if (isOpen) {
       try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        const AudioContext =
+          window.AudioContext || (window as any).webkitAudioContext;
         if (AudioContext) {
           const ctx = new AudioContext();
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
 
           osc.type = "sine";
-          // Quick pitch drop for a "bubble" sound
           osc.frequency.setValueAtTime(500, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.15);
+          osc.frequency.exponentialRampToValueAtTime(
+            100,
+            ctx.currentTime + 0.15
+          );
 
-          // Volume envelope
           gain.gain.setValueAtTime(0.1, ctx.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
 
@@ -59,7 +69,7 @@ export const MsgBox: React.FC<MsgBoxProps> = ({
           osc.stop(ctx.currentTime + 0.15);
         }
       } catch (e) {
-        // Silent fail if audio context not supported or blocked
+        /**/
       }
     }
   }, [isOpen]);
@@ -87,37 +97,50 @@ export const MsgBox: React.FC<MsgBoxProps> = ({
         return `${base} border-red-900/50 bg-red-950/30 text-red-200 hover:border-red-500/60 hover:bg-red-900/50`;
       case "primary":
         return `${base} border-neutral-600 bg-neutral-100 text-neutral-900 hover:bg-white hover:border-white shadow-[0_0_10px_rgba(255,255,255,0.1)]`;
-      default: // secondary
+      default:
         return `${base} border-neutral-700 bg-neutral-800 text-neutral-300 hover:text-neutral-100 hover:bg-neutral-700 hover:border-neutral-500`;
     }
   };
 
+  const displayMessage = message ? message.replace(/\\n/g, "\n").trim() : "";
+
   return createPortal(
-    // 2. Stop propagation on the overlay click to prevent closing parent panels
-    <div 
-      className="error-overlay" 
+    <div
+      className="dialog-overlay"
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="error-container animate-in fade-in zoom-in-95 duration-200">
+      <div className="dialog-container animate-in fade-in zoom-in-95 duration-200 max-w-md w-full">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 shrink-0">{getIcon()}</div>
           <div className="flex-1 min-w-0">
             {title && (
-              <h4 className="text-sm font-semibold text-neutral-100 mb-1">
+              <h4 className="text-sm font-semibold text-neutral-100 mb-2">
                 {title}
               </h4>
             )}
-            <p
-              className={`text-sm leading-relaxed ${
-                variant === "error" ? "text-red-100" : "text-neutral-300"
-              }`}
-            >
-              {message}
-            </p>
+
+            <textarea
+              ref={textAreaRef}
+              readOnly
+              value={displayMessage}
+              rows={1}
+              className={`
+                w-full resize-none border-none bg-transparent p-0
+                text-xs font-mono leading-relaxed outline-none focus:ring-0
+                whitespace-pre-wrap
+                max-h-20 overflow-y-auto
+                scrollbar-thin scrollbar-track-transparent
+                ${
+                  variant === "error"
+                    ? "text-red-200/90 scrollbar-thumb-red-900/50"
+                    : "text-neutral-300 scrollbar-thumb-neutral-700"
+                }
+              `}
+            />
           </div>
         </div>
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-4 flex justify-end gap-2">
           {actions.map((action, idx) => (
             <button
               key={idx}

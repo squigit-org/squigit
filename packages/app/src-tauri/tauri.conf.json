@@ -17,7 +17,8 @@
         "height": 600,
         "resizable": true,
         "fullscreen": false,
-        "decorations": true
+        "decorations": true,
+        "backgroundColor": "#0a0a0a"
       }
     ],
     "security": {
@@ -31,6 +32,7 @@
         {
           "name": "image",
           "index": 1,
+          "takesValue": true,
           "description": "Path to an image to load on startup."
         }
       ]

@@ -373,7 +373,7 @@ input:checked + .toggle-slider:before {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  max-height: calc(100% - 60px); 
+  max-height: calc(100% - 60px);
 }
 
 .subview-content label {

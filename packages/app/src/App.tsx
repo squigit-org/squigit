@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useSystemSync } from "./hooks/useSystemSync";
 import { useChatEngine } from "./hooks/useChatEngine";
-import { ChatLayout } from "./components/chat/ChatLayout";
+import { ChatLayout } from "./components/chat/layout/ChatLayout";
 import HelloScreen from "./components/hello/HelloScreen";
 
 const App: React.FC = () => {
@@ -63,6 +63,8 @@ const App: React.FC = () => {
   };
 
   const handleRetry = () => {
+    // If we have a failed message in history, retry sending that.
+    // Otherwise (startup error), restart the whole session.
     if (engine.lastSentMessage) {
       engine.handleRetrySend();
     } else {
@@ -70,10 +72,15 @@ const App: React.FC = () => {
     }
   };
 
+  // FIX: Added handleReload to forcefully restart the session
+  const handleReload = () => {
+    engine.startSession(system.apiKey, system.sessionModel, system.startupImage);
+  };
+
   const handleCheckSettings = () => {
     engine.clearError();
     system.clearSystemError();
-    toggleSettingsPanel();
+    setIsPanelActive(true);
   };
 
   const handleImageReady = (base64Image: string) => {
@@ -114,6 +121,7 @@ const App: React.FC = () => {
       onModelChange={system.setSessionModel}
       onEditingModelChange={system.setEditingModel}
       onRetry={handleRetry}
+      onReload={handleReload} // FIX: Pass the reload handler here
       onSave={(newPrompt: string, newModel: string) => system.saveSettings(newPrompt, newModel)}
       onLogout={system.handleLogout}
       onToggleTheme={system.handleToggleTheme}
