@@ -9,3 +9,9 @@ The application parses this file to automatically alert the user for new updates
 ## 1.0.0
 
 - Initial release
+
+## 1.0.1
+
+- test updater
+- dummy feature
+- dummy feature
