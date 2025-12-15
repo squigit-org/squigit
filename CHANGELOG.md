@@ -11,7 +11,3 @@ The application parses this file to automatically alert the user for new updates
 - test updater
 - dummy feature
 - dummy feature
-
-## 1.0.0
-
-- Initial release
