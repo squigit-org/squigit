@@ -1,0 +1,82 @@
+/*
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+use tauri::{Builder, Emitter, Manager};
+
+pub mod state;
+pub mod utils;
+
+pub mod commands;
+pub mod services;
+
+use commands::auth::{get_api_key, get_user_data, logout, reset_api_key, start_google_auth};
+use commands::clipboard::{start_clipboard_watcher, stop_clipboard_watcher};
+use commands::image::{
+    get_initial_image, process_image_bytes, process_image_path, read_image_file,
+};
+use commands::security::{check_file_exists, encrypt_and_save};
+use commands::window::{
+    clear_cache, close_imgbb_window, open_external_url, open_imgbb_window, resize_window,
+};
+use services::image::process_and_store_image;
+use state::AppState;
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_fs::init())
+        .manage(AppState::new())
+        .invoke_handler(tauri::generate_handler![
+            process_image_path,
+            process_image_bytes,
+            read_image_file,
+            get_initial_image,
+            start_clipboard_watcher,
+            stop_clipboard_watcher,
+            encrypt_and_save,
+            check_file_exists,
+            get_api_key,
+            reset_api_key,
+            start_google_auth,
+            logout,
+            get_user_data,
+            open_imgbb_window,
+            close_imgbb_window,
+            open_external_url,
+            clear_cache,
+            resize_window,
+        ])
+        .setup(|app| {
+            let handle = app.handle().clone();
+
+            let args: Vec<String> = std::env::args().collect();
+
+            if let Some(path) = args.iter().skip(1).find(|arg| !arg.starts_with("-")) {
+                println!("CLI Image argument detected: {}", path);
+                let state = handle.state::<AppState>();
+                if let Ok(_data_url) = process_and_store_image(path, &state) {
+                    let _ = handle.emit("image-path", path);
+                }
+            }
+
+            services::window::spawn_app_window(
+                &handle,
+                "main",
+                "index.html",
+                900.0,
+                700.0,
+                "spatialshot",
+            )
+            .expect("Failed to spawn main window");
+
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}

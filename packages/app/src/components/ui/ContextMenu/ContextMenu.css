@@ -1,0 +1,53 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.context-menu {
+  background-color: var(--neutral-800);
+  border: 1px solid var(--neutral-500);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.context-menu-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--neutral-200);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  outline: none;
+}
+
+.context-menu-item:hover, .context-menu-item:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--neutral-100);
+}
+
+.context-menu-item svg {
+  opacity: 0.8;
+}
+
+.context-menu-item:hover svg, .context-menu-item:focus svg {
+  opacity: 1;
+}
+
+body.light-mode .context-menu-item:hover, 
+html.light .context-menu-item:hover,
+body.light-mode .context-menu-item:focus,
+html.light .context-menu-item:focus {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--neutral-100);
+}

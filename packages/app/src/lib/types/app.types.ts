@@ -1,0 +1,18 @@
+/**
+ * @license
+ * copyright 2025 a7mddra
+ * spdx-license-identifier: apache-2.0
+ */
+
+export interface AppConfig {
+  google_gemini: {
+    api_key: string;
+    api_endpoint: string;
+  };
+}
+
+export interface UserPreferences {
+  model: string;
+  theme: "dark" | "light";
+  prompt: string;
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "spatialshot",
+  "version": "1.0.0",
+  "identifier": "spatialshot",
+  "build": {
+    "beforeDevCommand": "npm run vite",
+    "devUrl": "http://localhost:3456",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/a7mddra/spatialshot/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhBRkVGRUQxQ0Q3M0IxODUKUldTRnNYUE4wZjcraXBpNkgyS0ZnTVdzUFlTVjdwMk14dFNDRUZsUC9iM2FjSGxNbTlxaGoxa20K"
+    },
+    "cli": {
+      "description": "spatialshot",
+      "args": [
+        {
+          "name": "image",
+          "index": 1,
+          "takesValue": true,
+          "description": "Path to an image to load on startup."
+        }
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

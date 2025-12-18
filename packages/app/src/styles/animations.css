@@ -1,0 +1,76 @@
+/**
+ * @license
+ * copyright 2025 a7mddra
+ * spdx-license-identifier: apache-2.0
+ */
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes scrollUpToLens {
+  from {
+    transform: translateY(-66.66%);
+  }
+  to {
+    transform: translateY(0%);
+  }
+}
+
+@keyframes scrollUp {
+  0%,
+  30% {
+    transform: translateY(0%);
+  }
+  33%,
+  46% {
+    transform: translateY(-16.66%);
+  }
+  49%,
+  62% {
+    transform: translateY(-33.33%);
+  }
+  65%,
+  78% {
+    transform: translateY(-50%);
+  }
+  81%,
+  94% {
+    transform: translateY(-66.66%);
+  }
+  97%,
+  100% {
+    transform: translateY(-83.33%);
+  }
+}
+
+@keyframes rotateBorder {
+  to {
+    --angle: 360deg;
+  }
+}
+
+@keyframes marquee-continuous {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}

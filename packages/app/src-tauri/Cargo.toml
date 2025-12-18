@@ -1,0 +1,45 @@
+[package]
+name = "spatialshot"
+version = "1.0.0"
+description = "AI and contextual analysis module for screenshot data."
+authors = ["a7mddra"]
+license = "Apache-2.0"
+repository = "https://github.com/a7mddra/spatialshot"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.2.0", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "2.2.0", features = [] }
+tiny_http = "0.12"
+url = "2.5"
+reqwest = { version = "0.11", features = ["blocking", "json", "rustls-tls"] }
+tauri-plugin-cli = "2.2.0"
+tauri-plugin-fs = "2"
+tauri-plugin-opener = "2.2.0"
+base64 = "0.22.1"
+aes-gcm = "0.10"
+pbkdf2 = "0.12"
+sha2 = "0.10"
+hmac = "0.12"
+rand = "0.8"
+hex = "0.4"
+dirs = "5.0"
+arboard = "3.3"
+parking_lot = "0.12.3"
+image = "0.25.1"
+mime_guess = "2.0"
+opener = "0.8.3"
+tauri-plugin-updater = "2.9.0"
+tauri-plugin-process = "2.3.1"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+dbus = "0.9.7"

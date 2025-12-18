@@ -1,0 +1,182 @@
+/**
+ * @license
+ * Copyright 2025 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import '../../../../styles/animations.css';
+
+.shimmer-line {
+  border-radius: 0.5rem;
+  height: 1.5rem;
+  background-size: 200% 100%;
+  background-color: #262626;
+  animation-name: shimmer;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  animation-iteration-count: infinite;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.shimmer-line-1 {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.25) 50%,
+    transparent 100%
+  );
+  animation-duration: 2s;
+  animation-delay: -0.2s;
+}
+
+.shimmer-line-2 {
+  background-image: linear-gradient(
+    to right,
+    rgba(252, 231, 243, 0) 0%,
+    rgba(207, 250, 254, 0.25) 50%,
+    rgba(252, 231, 243, 0) 100%
+  );
+  animation-duration: 2.2s;
+  animation-delay: -0.5s;
+}
+
+.shimmer-line-3 {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.25) 50%,
+    transparent 100%
+  );
+  animation-duration: 1.8s;
+  animation-delay: 0s;
+}
+
+.shimmer-line-4 {
+  background-image: linear-gradient(
+    to right,
+    rgba(252, 231, 243, 0) 0%,
+    rgba(207, 250, 254, 0.25) 50%,
+    rgba(252, 231, 243, 0) 100%
+  );
+  animation-duration: 2.1s;
+  animation-delay: -0.8s;
+}
+
+.shimmer-line-5 {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.25) 50%,
+    transparent 100%
+  );
+  animation-duration: 2.3s;
+  animation-delay: -1.2s;
+}
+
+.shimmer-line-6 {
+  background-image: linear-gradient(
+    to right,
+    rgba(252, 231, 243, 0) 0%,
+    rgba(207, 250, 254, 0.25) 50%,
+    rgba(252, 231, 243, 0) 100%
+  );
+  animation-duration: 2s;
+  animation-delay: -1s;
+}
+
+.shimmer-line-7 {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.25) 50%,
+    transparent 100%
+  );
+  animation-duration: 2.4s;
+  animation-delay: -1.5s;
+}
+
+.shimmer-line-8 {
+  background-image: linear-gradient(
+    to right,
+    rgba(252, 231, 243, 0) 0%,
+    rgba(207, 250, 254, 0.25) 50%,
+    rgba(252, 231, 243, 0) 100%
+  );
+  animation-duration: 1.9s;
+  animation-delay: -0.6s;
+}
+
+body:global(.light-mode) .shimmer-line {
+  background-color: #e5e5e5;
+}
+
+body:global(.light-mode) .shimmer-line-1 {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+body:global(.light-mode) .shimmer-line-2 {
+  background-image: linear-gradient(
+    to right,
+    rgba(252, 231, 243, 0) 0%,
+    rgba(207, 250, 254, 0.6) 50%,
+    rgba(252, 231, 243, 0) 100%
+  );
+}
+
+body:global(.light-mode) .shimmer-line-3 {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+body:global(.light-mode) .shimmer-line-4 {
+  background-image: linear-gradient(
+    to right,
+    rgba(252, 231, 243, 0) 0%,
+    rgba(207, 250, 254, 0.6) 50%,
+    rgba(252, 231, 243, 0) 100%
+  );
+}
+
+body:global(.light-mode) .shimmer-line-5 {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+body:global(.light-mode) .shimmer-line-6 {
+  background-image: linear-gradient(
+    to right,
+    rgba(252, 231, 243, 0) 0%,
+    rgba(207, 250, 254, 0.6) 50%,
+    rgba(252, 231, 243, 0) 100%
+  );
+}
+
+body:global(.light-mode) .shimmer-line-7 {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(165, 243, 252, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+body:global(.light-mode) .shimmer-line-8 {
+  background-image: linear-gradient(
+    to right,
+    rgba(252, 231, 243, 0) 0%,
+    rgba(207, 250, 254, 0.6) 50%,
+    rgba(252, 231, 243, 0) 100%
+  );
+}

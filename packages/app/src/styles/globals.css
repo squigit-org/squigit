@@ -1,0 +1,81 @@
+/**
+ * @license
+ * copyright 2025 a7mddra
+ * spdx-license-identifier: apache-2.0
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  user-select: text !important;
+}
+
+body *::selection {
+  background: var(--blue) !important;
+}
+
+body.light-mode .shiki-dual-theme span,
+body.light-mode .shiki-dual-theme .shiki {
+  color: var(--shiki-light) !important;
+  background-color: transparent !important;
+  font-style: var(--shiki-light-font-style) !important;
+  font-weight: var(--shiki-light-font-weight) !important;
+  text-decoration: var(--shiki-light-text-decoration) !important;
+}
+
+.shiki-dual-theme span,
+.shiki-dual-theme .shiki {
+  color: var(--shiki-dark) !important;
+  background-color: transparent !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+.shiki-custom-render pre {
+  background-color: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+  background-color: var(--neutral-950);
+  font-family: "Inter", "Inter var", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  color: #e5e5e5;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+body.light-mode {
+  color: #333333;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  transition: background-color 0.3s ease-in-out;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-650);
+  border-radius: 4px;
+  transition: background-color 0.3s ease-in-out;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-700);
+}
