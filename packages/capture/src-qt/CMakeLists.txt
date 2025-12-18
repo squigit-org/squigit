@@ -25,37 +25,37 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 set(SOURCES 
     src/main.cpp 
-    src/Capture.h
+    src/core/Capture.h
+    src/core/DrawView.cpp 
+    src/core/DrawView.h 
+    src/core/Window.h
 )
 
 if(WIN32)
-    list(APPEND SOURCES src/Capture_Win.cpp src/Window.cpp)
+    list(APPEND SOURCES src/platform/Capture_Win.cpp src/core/Window.cpp)
     set(PLATFORM_LIBS dwmapi gdiplus user32 gdi32 Shcore)
 elseif(APPLE)
-    list(APPEND SOURCES src/Capture_Mac.mm src/Window.mm)
+    list(APPEND SOURCES src/platform/Capture_Mac.mm src/core/Window.mm)
+    
     find_library(FOUNDATION_LIB Foundation)
     find_library(COREGRAPHICS_LIB CoreGraphics)
     find_library(COCOA_LIB Cocoa)
     find_library(APPKIT_LIB AppKit)
+    
     if(NOT FOUNDATION_LIB OR NOT COREGRAPHICS_LIB OR NOT COCOA_LIB OR NOT APPKIT_LIB)
         message(FATAL_ERROR "Required macOS frameworks not found")
     endif()
     set(PLATFORM_LIBS ${FOUNDATION_LIB} ${COREGRAPHICS_LIB} ${COCOA_LIB} ${APPKIT_LIB})
 elseif(UNIX AND NOT APPLE)
-    list(APPEND SOURCES src/Capture_Unix.cpp src/Window.cpp)
+    list(APPEND SOURCES src/platform/Capture_Linux.cpp src/core/Window.cpp)
     set(PLATFORM_LIBS Qt6::DBus)
 endif()
-
-list(APPEND SOURCES 
-    src/DrawView.cpp 
-    src/DrawView.h 
-    src/Window.h
-)
 
 add_executable(capture WIN32 MACOSX_BUNDLE ${SOURCES})
 
 target_include_directories(capture PRIVATE 
-    src/capture 
+    src/core 
+    src/platform
     src/interface
 )
 

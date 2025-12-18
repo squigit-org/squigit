@@ -1,5 +1,41 @@
 # 📦️ Spatiashot setup wizard
 
+
+USER
+         |
+    [Installs App]
+         |
+         v
++------------------+
+|  Tauri App (UI)  |  <-- Trusted by User (User clicked "Open")
++------------------+
+         |
+      (Spawns)
+         |
+         v
++------------------+
+|   Rust Daemon    |  <-- Trusted because Tauri spawned it
+| (Contains Zip)   |
++------------------+
+         |
+   (Checks AppData)
+         |
+         +---------------------------------------+
+         | Is "C:\Users\Ahmd\AppData\Local...    |
+         |  .../spatialshot/capture-v1" empty?   |
+         +---------------------------------------+
+               |                  |
+            (YES)                (NO)
+               |                  |
+      [Extracts Zip]          [Do Nothing]
+      [to Safe Zone]              |
+               |                  |
+               v                  v
+    +----------------------------------------+
+    |  Ready to Launch:                      |
+    |  AppData/spatialshot/capture.exe       |
+    +----------------------------------------+
+
 ## --- Artifact URLs ---
 
 ```bash

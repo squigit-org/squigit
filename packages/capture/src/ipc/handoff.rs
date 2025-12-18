@@ -45,7 +45,7 @@ pub fn run_capture(capture_path: &PathBuf) -> Result<PathBuf> {
     detected_path.ok_or_else(|| anyhow!("Capture finished but no valid PNG path was output"))
 }
 
-pub fn spawn_electron(bin_dir: &Path, image_path: &PathBuf) -> Result<()> {
+pub fn spawn_tauri(bin_dir: &Path, image_path: &PathBuf) -> Result<()> {
     #[cfg(target_os = "macos")]
     {
         let mut app_bundle = None;

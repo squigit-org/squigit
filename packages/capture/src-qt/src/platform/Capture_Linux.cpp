@@ -186,7 +186,7 @@ private:
 };
 
 #if defined(Q_OS_LINUX)
-#include "Capture_Unix.moc"
+#include "Capture_Linux.moc"
 
 extern "C" CaptureEngine* createUnixEngine(QObject* parent) {
     return new CaptureEngineUnix(parent);

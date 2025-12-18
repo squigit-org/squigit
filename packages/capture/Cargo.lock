@@ -193,6 +193,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "daemon"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "core-graphics 0.23.2",
+ "dirs",
+ "env_logger",
+ "fs2",
+ "home",
+ "log",
+ "parking_lot",
+ "rdev",
+ "regex",
+ "sysinfo",
+ "which",
+ "windows 0.62.2",
+]
+
+[[package]]
 name = "dirs"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -352,25 +371,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "daemon"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "core-graphics 0.23.2",
- "dirs",
- "env_logger",
- "fs2",
- "home",
- "log",
- "parking_lot",
- "rdev",
- "regex",
- "sysinfo",
- "which",
- "windows 0.62.2",
 ]
 
 [[package]]

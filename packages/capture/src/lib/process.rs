@@ -53,7 +53,7 @@ pub fn run() -> Result<()> {
     match capture_result {
         Ok(image_path) => {
             if image_path.exists() {
-                launcher::spawn_electron(bin_dir, &image_path)?;
+                launcher::spawn_tauri(bin_dir, &image_path)?;
             } else {
                 return Err(anyhow::anyhow!("Capture reported success but file is missing: {:?}", image_path));
             }
