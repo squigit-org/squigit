@@ -1,11 +1,10 @@
-# <img src=".assets/header.svg" alt="logo">
+# <img src="docs/data/header.svg" alt="logo">
 
 [![Spatialshot CI](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml)
-[![Spatialshot Installers](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml/badge.svg)](https://github.com/a7mddra/spatialshot/actions/workflows/installers.yml)
-[![spatialshot](https://img.shields.io/github/package-json/v/a7mddra/spatialshot?filename=packages%2Fapp%2Fpackage.json&label=spatialshot&color=orange)](https://github.com/a7mddra/spatialshot/blob/main/packages/app/package.json)
+[![spatialshot](https://img.shields.io/github/package-json/v/a7mddra/spatialshot?filename=package.json&label=spatialshot&color=orange)](https://github.com/a7mddra/spatialshot/blob/main/package.json)
 [![License](https://img.shields.io/github/license/a7mddra/spatialshot)](https://github.com/a7mddra/spatialshot/blob/main/LICENSE)
 
-![Spatialshot demo](.assets/demo.gif)
+![Spatialshot demo](docs/data/demo.gif)
 
 Spatialshot is an open-source "Circle to Search" desktop utility that brings the power of AI vision directly to your screen. It provides seamless screen capture, analysis, and visual search capabilities with a single hotkey.
 
@@ -13,7 +12,7 @@ Explore detailed guides and architecture in our [documentation](https://github.c
 
 ## 🚀 Why Spatialshot?
 
-- **🎯 Native Performance**: Polyglot architecture with C++ capture, Rust orchestration, and Electron UI.
+- **🎯 Native Performance**: Polyglot architecture with C++ capture, Rust orchestration, and Tauri UI.
 - **🔗 Bring Your Own Key (BYOK)**: No middleman. Plug your own Gemini and ImgBB API keys for direct, cost-effective access.
 - **⚡ Instant Global Hotkey**: `Super/Cmd/Win + Shift + A` freezes your desktop for instant capture from anywhere.
 - **🧠 Multi-Model Support**: Switch between Gemini 2.5 Flash (speed), 2.5 Pro (power), and 1.5 Lite.

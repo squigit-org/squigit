@@ -136,7 +136,7 @@ function Publish-Distribution {
 
         Write-Info "Bundling Visual C++ Runtime DLLs (System32)..."
         $sys32 = [Environment]::GetFolderPath("System")
-        $runtimeDlls = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll", "msvcp140_1.dll")
+        $runtimeDlls = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll", "msvcp140_1.dll", "ucrtbase.dll")
         
         foreach ($dll in $runtimeDlls) {
             $srcPath = Join-Path $sys32 $dll

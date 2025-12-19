@@ -18,6 +18,7 @@
 #include <QUuid>
 #include <QUrl>
 #include <QFile>
+#include <QTimer>
 #endif
 #include <cmath>
 #if defined(Q_OS_LINUX)
@@ -122,9 +123,16 @@ private:
             &helper, SLOT(handleResponse(uint, QVariantMap))
         );
         QObject::connect(&helper, &PortalHelper::finished, &loop, &QEventLoop::quit);
+        
+        // Safety Timeout: 5 seconds
+        QTimer::singleShot(5000, &loop, &QEventLoop::quit);
+        
         loop.exec();
 
-        if (!helper.success) return frames;
+        if (!helper.success) {
+             qWarning() << "Portal request failed or timed out.";
+             return frames;
+        }
 
         QString localPath = QUrl(helper.savedUri).toLocalFile();
         QImage fullDesktop(localPath);

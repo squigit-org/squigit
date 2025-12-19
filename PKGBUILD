@@ -92,7 +92,7 @@ if [ "$OS" == "Darwin" ]; then
     MACDEPLOYQT="$QT_BIN_PATH/macdeployqt"
     
     cp -R "$APP_BUNDLE" "$DIST_DIR/"
-    "$MACDEPLOYQT" "$DIST_DIR/capture.app" -dmg -always-overwrite -verbose=1
+    "$MACDEPLOYQT" "$DIST_DIR/capture.app" -always-overwrite -verbose=1
     
     log "macOS Deployment Complete."
 
@@ -129,7 +129,8 @@ EOF
 
     export LD_LIBRARY_PATH="$QT_LIB_SRC:$LD_LIBRARY_PATH"
 
-    SKIP_LIBS="linux-vdso|libstdc++|libgcc_s|libc.so|libm.so|ld-linux|libpthread|librt|libdl"
+    # Removed libstdc++ from skip list to ensure compatibility on older systems
+    SKIP_LIBS="linux-vdso|libgcc_s|libc.so|libm.so|ld-linux|libpthread|librt|libdl"
 
     copy_deps() {
         local file="$1"
@@ -150,6 +151,14 @@ EOF
     }
 
     copy_deps "$DIST_DIR/bin/$BIN_NAME"
+
+    # Use patchelf if available to set RPATH
+    if command -v patchelf &> /dev/null; then
+        log "Setting RPATH with patchelf..."
+        patchelf --set-rpath '$ORIGIN/../libs' "$DIST_DIR/bin/$BIN_NAME"
+    else
+        warn "patchelf not found. RPATH not set (relying on runner script)."
+    fi
 
     find "$DIST_DIR/plugins" -name "*.so" | while read -r plugin; do
         copy_deps "$plugin"
