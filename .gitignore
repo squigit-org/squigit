@@ -5,7 +5,8 @@
 .vscode
 
 target
+ui/dist
 ui/node_modules
-app/src/data/credentials.json
 app/*.key
 app/*.key.pub
+app/src/data/credentials.json
