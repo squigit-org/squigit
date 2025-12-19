@@ -8,3 +8,4 @@ target
 ui/node_modules
 app/src/data/credentials.json
 app/*.key
+app/*.key.pub
