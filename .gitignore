@@ -3,13 +3,3 @@
 !.gitignore
 .pytest_cache
 .vscode
-
-node_modules
-release
-build
-dist
-dist-ssr
-*.local
-
-src-tauri/src/data/credentials.json
-src-tauri/*.key
