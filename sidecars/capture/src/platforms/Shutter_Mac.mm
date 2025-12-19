@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "Capture.h"
+#include "ScreenGrabber.h"
 #include <QGuiApplication>
 #include <QScreen>
 #include <QPixmap>
@@ -16,10 +16,10 @@
 #import <CoreGraphics/CoreGraphics.h>
 #import <AppKit/AppKit.h>
 
-class CaptureEngineMac : public CaptureEngine
+class ScreenGrabberMac : public ScreenGrabber
 {
 public:
-    CaptureEngineMac(QObject *parent = nullptr) : CaptureEngine(parent) {}
+    ScreenGrabberMac(QObject *parent = nullptr) : ScreenGrabber(parent) {}
 
     std::vector<CapturedFrame> captureAll() override {
         std::vector<CapturedFrame> frames;
@@ -91,11 +91,11 @@ public:
             frames.push_back(frame);
         }
         
-        CaptureEngine::sortLeftToRight(frames);
+        ScreenGrabber::sortLeftToRight(frames);
         return frames;
     }
 };
 
-extern "C" CaptureEngine* createUnixEngine(QObject* parent) {
-    return new CaptureEngineMac(parent);
+extern "C" ScreenGrabber* createUnixEngine(QObject* parent) {
+    return new ScreenGrabberMac(parent);
 }

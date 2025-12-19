@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "Capture.h"
+#include "ScreenGrabber.h"
 #include <QGuiApplication>
 #include <QScreen>
 #include <QPixmap>
@@ -44,10 +44,10 @@ signals:
     void finished();
 };
 #endif
-class CaptureEngineUnix : public CaptureEngine
+class ScreenGrabberUnix : public ScreenGrabber
 {
 public:
-    CaptureEngineUnix(QObject *parent = nullptr) : CaptureEngine(parent) {}
+    ScreenGrabberUnix(QObject *parent = nullptr) : ScreenGrabber(parent) {}
 
     std::vector<CapturedFrame> captureAll() override {
 #if defined(Q_OS_LINUX)
@@ -85,7 +85,7 @@ private:
             frame.index = index++;
             frames.push_back(frame);
         }
-        CaptureEngine::sortLeftToRight(frames);
+        ScreenGrabber::sortLeftToRight(frames);
         return frames;
     }
 
@@ -187,16 +187,16 @@ private:
             frames.push_back(frame);
         }
 
-        CaptureEngine::sortLeftToRight(frames);
+        ScreenGrabber::sortLeftToRight(frames);
         return frames;
     }
 #endif
 };
 
 #if defined(Q_OS_LINUX)
-#include "Capture_Linux.moc"
+#include "Shutter_Linux.moc" // Note: This needs to match the filename. CMake usually generates .moc files based on source name.
 
-extern "C" CaptureEngine* createUnixEngine(QObject* parent) {
-    return new CaptureEngineUnix(parent);
+extern "C" ScreenGrabber* createUnixEngine(QObject* parent) {
+    return new ScreenGrabberUnix(parent);
 }
 #endif

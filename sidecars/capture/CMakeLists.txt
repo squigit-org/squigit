@@ -25,17 +25,17 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 set(SOURCES 
     src/main.cpp 
-    src/core/Capture.h
-    src/core/DrawView.cpp 
-    src/core/DrawView.h 
-    src/core/Window.h
+    src/shutter/ScreenGrabber.h
+    src/surface/SquiggleCanvas.cpp 
+    src/surface/SquiggleCanvas.h 
+    src/surface/OverlayWindow.h
 )
 
 if(WIN32)
-    list(APPEND SOURCES src/platform/Capture_Win.cpp src/core/Window.cpp)
+    list(APPEND SOURCES src/platforms/Shutter_Win.cpp src/surface/OverlayWindow.cpp)
     set(PLATFORM_LIBS dwmapi gdiplus user32 gdi32 Shcore)
 elseif(APPLE)
-    list(APPEND SOURCES src/platform/Capture_Mac.mm src/core/Window.mm)
+    list(APPEND SOURCES src/platforms/Shutter_Mac.mm src/surface/OverlayWindow.mm)
     
     find_library(FOUNDATION_LIB Foundation)
     find_library(COREGRAPHICS_LIB CoreGraphics)
@@ -47,15 +47,16 @@ elseif(APPLE)
     endif()
     set(PLATFORM_LIBS ${FOUNDATION_LIB} ${COREGRAPHICS_LIB} ${COCOA_LIB} ${APPKIT_LIB})
 elseif(UNIX AND NOT APPLE)
-    list(APPEND SOURCES src/platform/Capture_Linux.cpp src/core/Window.cpp)
+    list(APPEND SOURCES src/platforms/Shutter_Linux.cpp src/surface/OverlayWindow.cpp)
     set(PLATFORM_LIBS Qt6::DBus)
 endif()
 
 add_executable(capture WIN32 MACOSX_BUNDLE ${SOURCES})
 
 target_include_directories(capture PRIVATE 
-    src/core 
-    src/platform
+    src/shutter
+    src/surface
+    src/platforms
     src/interface
 )
 

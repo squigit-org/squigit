@@ -3,3 +3,8 @@
 !.gitignore
 .pytest_cache
 .vscode
+
+target
+ui/node_modules
+app/src/data/credentials.json
+app/*.key

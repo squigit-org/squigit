@@ -6,8 +6,8 @@
 
 #pragma once
 
-#ifndef WINDOW_H
-#define WINDOW_H
+#ifndef OVERLAYWINDOW_H
+#define OVERLAYWINDOW_H
 
 #include <QMainWindow>
 #include <QImage>
@@ -15,14 +15,14 @@
 #include <QWidget>
 #include <QScreen>
 
-class DrawView;
+class SquiggleCanvas;
 
-class MainWindow : public QMainWindow
+class OverlayWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent = nullptr);
-    ~MainWindow();
+    OverlayWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent = nullptr);
+    ~OverlayWindow();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -33,11 +33,11 @@ protected:
 
 private:
     int m_displayNum;
-    DrawView *m_drawView;
+    SquiggleCanvas *m_canvas;
 
 #ifdef Q_OS_MAC
     bool m_displayCallbackRegistered;
 #endif
 };
 
-#endif // WINDOW_H
+#endif // OVERLAYWINDOW_H

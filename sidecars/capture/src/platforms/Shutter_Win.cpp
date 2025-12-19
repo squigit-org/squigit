@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "Capture.h"
+#include "ScreenGrabber.h"
 #include <QDebug>
 #include <QGuiApplication>
 #include <QScreen>
@@ -27,16 +27,16 @@ struct MonitorData
     int indexCounter = 0;
 };
 
-class CaptureEngineWin : public CaptureEngine
+class ScreenGrabberWin : public ScreenGrabber
 {
 public:
-    CaptureEngineWin(QObject *parent = nullptr) : CaptureEngine(parent)
+    ScreenGrabberWin(QObject *parent = nullptr) : ScreenGrabber(parent)
     {
         GdiplusStartupInput gdiplusStartupInput;
         GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, NULL);
     }
 
-    ~CaptureEngineWin()
+    ~ScreenGrabberWin()
     {
         GdiplusShutdown(m_gdiplusToken);
     }
@@ -49,7 +49,7 @@ public:
         EnumDisplayMonitors(hdc, NULL, MonitorEnumProc, reinterpret_cast<LPARAM>(&data));
         ReleaseDC(NULL, hdc);
 
-        CaptureEngine::sortLeftToRight(data.frames);
+        ScreenGrabber::sortLeftToRight(data.frames);
 
         for (size_t i = 0; i < data.frames.size(); i++)
         {
@@ -136,7 +136,7 @@ private:
     }
 };
 
-extern "C" CaptureEngine *createWindowsEngine(QObject *parent)
+extern "C" ScreenGrabber *createWindowsEngine(QObject *parent)
 {
-    return new CaptureEngineWin(parent);
+    return new ScreenGrabberWin(parent);
 }

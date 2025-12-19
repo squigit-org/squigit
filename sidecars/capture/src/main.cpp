@@ -9,15 +9,15 @@
 #include <QScreen>
 #include <vector>
 #include "config.h"
-#include "Window.h"
-#include "Capture.h"
+#include "surface/OverlayWindow.h"
+#include "shutter/ScreenGrabber.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
 
-extern "C" CaptureEngine *createWindowsEngine(QObject *parent);
-extern "C" CaptureEngine *createUnixEngine(QObject *parent);
+extern "C" ScreenGrabber *createWindowsEngine(QObject *parent);
+extern "C" ScreenGrabber *createUnixEngine(QObject *parent);
 
 int main(int argc, char *argv[])
 {
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     app.setApplicationVersion(APP_VERSION);
     app.setQuitOnLastWindowClosed(true);
     
-    CaptureEngine *engine = nullptr;
+    ScreenGrabber *engine = nullptr;
 #ifdef Q_OS_WIN
     engine = createWindowsEngine(&app);
 #else
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    QList<MainWindow *> windows;
+    QList<OverlayWindow *> windows;
 
     QList<QScreen *> qtScreens = app.screens();
 
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        MainWindow *win = new MainWindow(frame.index, frame.image, frame.geometry, targetScreen);
+        OverlayWindow *win = new OverlayWindow(frame.index, frame.image, frame.geometry, targetScreen);
         windows.append(win);
         win->show();
     }

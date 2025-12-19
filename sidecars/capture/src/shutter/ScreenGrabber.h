@@ -6,8 +6,8 @@
 
 #pragma once
 
-#ifndef CAPTURE_H
-#define CAPTURE_H
+#ifndef SCREENGRABBER_H
+#define SCREENGRABBER_H
 
 #include <vector>
 #include <QImage>
@@ -25,13 +25,13 @@ struct CapturedFrame
     QString name;
 };
 
-class CaptureEngine : public QObject
+class ScreenGrabber : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit CaptureEngine(QObject *parent = nullptr) : QObject(parent) {}
-    virtual ~CaptureEngine() = default;
+    explicit ScreenGrabber(QObject *parent = nullptr) : QObject(parent) {}
+    virtual ~ScreenGrabber() = default;
     virtual std::vector<CapturedFrame> captureAll() = 0;
     static void sortLeftToRight(std::vector<CapturedFrame> &frames)
     {
@@ -40,4 +40,4 @@ public:
     }
 };
 
-#endif // CAPTURE_H
+#endif // SCREENGRABBER_H

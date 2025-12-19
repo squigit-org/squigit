@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "Window.h"
-#include "DrawView.h"
+#include "OverlayWindow.h"
+#include "SquiggleCanvas.h"
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDebug>
@@ -24,13 +24,13 @@ static void DisplayReconfigurationCallBack(
     }
 }
 
-MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent)
+OverlayWindow::OverlayWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent)
     : QMainWindow(parent), 
       m_displayNum(displayNum),
       m_displayCallbackRegistered(false)
 {
-    m_drawView = new DrawView(bgImage, this);
-    setCentralWidget(m_drawView);
+    m_canvas = new SquiggleCanvas(bgImage, this);
+    setCentralWidget(m_canvas);
 
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool | Qt::Popup);
     setAttribute(Qt::WA_ShowWithoutActivating);    
@@ -44,7 +44,7 @@ MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, 
     }
     
     setContentsMargins(0, 0, 0, 0);
-    m_drawView->setContentsMargins(0, 0, 0, 0);
+    m_canvas->setContentsMargins(0, 0, 0, 0);
 
     WId nativeId = this->winId(); 
     
@@ -72,7 +72,7 @@ MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, 
     }
 }
 
-MainWindow::~MainWindow()
+OverlayWindow::~OverlayWindow()
 {
     if (m_displayCallbackRegistered) {
         qDebug() << "Unregistering display reconfiguration callback.";
@@ -80,7 +80,7 @@ MainWindow::~MainWindow()
     }
 }
 
-void MainWindow::closeEvent(QCloseEvent *event)
+void OverlayWindow::closeEvent(QCloseEvent *event)
 {
     QApplication::exit(1);
     QMainWindow::closeEvent(event);

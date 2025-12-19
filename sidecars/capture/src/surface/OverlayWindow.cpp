@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "Window.h"
-#include "DrawView.h"
+#include "OverlayWindow.h"
+#include "SquiggleCanvas.h"
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDebug>
@@ -16,13 +16,13 @@
 #include <dwmapi.h>
 #endif
 
-MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent)
+OverlayWindow::OverlayWindow(int displayNum, const QImage &bgImage, const QRect &geo, QScreen *screen, QWidget *parent)
     : QMainWindow(parent),
       m_displayNum(displayNum),
-      m_drawView(new DrawView(bgImage, this))
+      m_canvas(new SquiggleCanvas(bgImage, this))
 {
-    setCentralWidget(m_drawView);
-    m_drawView->setFocus();
+    setCentralWidget(m_canvas);
+    m_canvas->setFocus();
 
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool | Qt::Popup);
     setAttribute(Qt::WA_ShowWithoutActivating);
@@ -38,7 +38,7 @@ MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, 
     showFullScreen();
 
     setContentsMargins(0, 0, 0, 0);
-    m_drawView->setContentsMargins(0, 0, 0, 0);
+    m_canvas->setContentsMargins(0, 0, 0, 0);
 
 #ifdef Q_OS_WIN
     BOOL attrib = TRUE;
@@ -46,16 +46,16 @@ MainWindow::MainWindow(int displayNum, const QImage &bgImage, const QRect &geo, 
 #endif
 }
 
-MainWindow::~MainWindow() {}
+OverlayWindow::~OverlayWindow() {}
 
-void MainWindow::closeEvent(QCloseEvent *event)
+void OverlayWindow::closeEvent(QCloseEvent *event)
 {
     QApplication::exit(1);
     QMainWindow::closeEvent(event);
 }
 
 #ifdef Q_OS_WIN
-bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr *result)
+bool OverlayWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr *result)
 {
     MSG *msg = static_cast<MSG *>(message);
     if (msg->message == WM_DISPLAYCHANGE)

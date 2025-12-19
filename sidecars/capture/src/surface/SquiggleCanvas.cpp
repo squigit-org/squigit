@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "DrawView.h"
+#include "SquiggleCanvas.h"
 #include <QApplication>
 #include <QMouseEvent>
 #include <QPainter>
@@ -14,7 +14,7 @@
 #include <QDir>
 #include <cmath>
 
-DrawView::DrawView(const QImage &background, QWidget *parent)
+SquiggleCanvas::SquiggleCanvas(const QImage &background, QWidget *parent)
     : QWidget(parent),
       m_background(background),
       m_smoothedPoint(0, 0),
@@ -39,20 +39,20 @@ DrawView::DrawView(const QImage &background, QWidget *parent)
     clearCanvas();
 }
 
-void DrawView::showEvent(QShowEvent *event)
+void SquiggleCanvas::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
     m_animation->start();
 }
 
-qreal DrawView::gradientOpacity() const { return m_gradientOpacity; }
-void DrawView::setGradientOpacity(qreal opacity)
+qreal SquiggleCanvas::gradientOpacity() const { return m_gradientOpacity; }
+void SquiggleCanvas::setGradientOpacity(qreal opacity)
 {
     m_gradientOpacity = opacity;
     update();
 }
 
-void DrawView::mousePressEvent(QMouseEvent *event)
+void SquiggleCanvas::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton)
     {
@@ -67,7 +67,7 @@ void DrawView::mousePressEvent(QMouseEvent *event)
     }
 }
 
-void DrawView::mouseMoveEvent(QMouseEvent *event)
+void SquiggleCanvas::mouseMoveEvent(QMouseEvent *event)
 {
     m_currentMousePos = event->pos();
     if (!m_isDrawing)
@@ -84,7 +84,7 @@ void DrawView::mouseMoveEvent(QMouseEvent *event)
     update();
 }
 
-void DrawView::mouseReleaseEvent(QMouseEvent *event)
+void SquiggleCanvas::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton && m_isDrawing)
     {
@@ -95,7 +95,7 @@ void DrawView::mouseReleaseEvent(QMouseEvent *event)
     }
 }
 
-void DrawView::keyPressEvent(QKeyEvent *event)
+void SquiggleCanvas::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape || event->key() == Qt::Key_Q)
     {
@@ -103,7 +103,7 @@ void DrawView::keyPressEvent(QKeyEvent *event)
     }
 }
 
-void DrawView::paintEvent(QPaintEvent *event)
+void SquiggleCanvas::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
 
@@ -141,7 +141,7 @@ void DrawView::paintEvent(QPaintEvent *event)
         drawCursorCircle(painter, m_currentMousePos);
 }
 
-void DrawView::drawCursorCircle(QPainter &painter, const QPointF &center)
+void SquiggleCanvas::drawCursorCircle(QPainter &painter, const QPointF &center)
 {
     painter.setRenderHint(QPainter::Antialiasing, true);
     const qreal circleRadius = 28.0;
@@ -150,7 +150,7 @@ void DrawView::drawCursorCircle(QPainter &painter, const QPointF &center)
     painter.drawEllipse(center, circleRadius, circleRadius);
 }
 
-void DrawView::updateBounds(qreal x, qreal y)
+void SquiggleCanvas::updateBounds(qreal x, qreal y)
 {
     qreal brushRadius = m_brushSize / 2 + m_glowAmount / 2;
     m_minX = qMin(m_minX, x - brushRadius);
@@ -159,7 +159,7 @@ void DrawView::updateBounds(qreal x, qreal y)
     m_maxY = qMax(m_maxY, y + brushRadius);
 }
 
-void DrawView::clearCanvas()
+void SquiggleCanvas::clearCanvas()
 {
     m_path = QPainterPath();
     m_isDrawing = false;
@@ -171,7 +171,7 @@ void DrawView::clearCanvas()
     update();
 }
 
-void DrawView::cropAndFinish()
+void SquiggleCanvas::cropAndFinish()
 {
     qreal logicalX = qMax(0.0, m_minX);
     qreal logicalY = qMax(0.0, m_minY);

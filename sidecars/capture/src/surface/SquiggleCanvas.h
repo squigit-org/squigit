@@ -6,21 +6,21 @@
 
 #pragma once
 
-#ifndef DRAWVIEW_H
-#define DRAWVIEW_H
+#ifndef SQUIGGLECANVAS_H
+#define SQUIGGLECANVAS_H
 
 #include <QWidget>
 #include <QImage>
 #include <QPainterPath>
 #include <QPropertyAnimation>
 
-class DrawView : public QWidget
+class SquiggleCanvas : public QWidget
 {
     Q_OBJECT
     Q_PROPERTY(qreal gradientOpacity READ gradientOpacity WRITE setGradientOpacity)
 
 public:
-    explicit DrawView(const QImage &background, QWidget *parent = nullptr);
+    explicit SquiggleCanvas(const QImage &background, QWidget *parent = nullptr);
 
 protected:
     void showEvent(QShowEvent *event) override;
@@ -56,4 +56,4 @@ private:
     QPropertyAnimation *m_animation;
 };
 
-#endif // DRAWVIEW_H
+#endif // SQUIGGLECANVAS_H
