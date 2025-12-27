@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>Capture</string>
+    <key>CFBundleIconFile</key>
+    <string>capture.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.capture.app</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.13</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>We need access to capture screenshots.</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>We need access to record the screen for screenshots.</string>
+</dict>
+</plist>
