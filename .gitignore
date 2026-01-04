@@ -4,9 +4,13 @@
 .pytest_cache
 .vscode
 
+venv
 target
-ui/dist
-ui/node_modules
+
+dist
+build
+node_modules
+
 app/*.key
 app/*.key.pub
 app/src/data/credentials.json
