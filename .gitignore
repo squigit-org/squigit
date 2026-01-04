@@ -11,6 +11,8 @@ dist
 build
 node_modules
 
+sidecars/paddle-ocr/models
+
 app/*.key
 app/*.key.pub
 app/src/data/credentials.json
