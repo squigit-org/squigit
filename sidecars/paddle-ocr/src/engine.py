@@ -57,7 +57,6 @@ class OCREngine:
         os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"
         os.environ["PADDLEOCR_BASE_PATH"] = str(self.config.model_dir)
         
-        # Suppress PaddleOCR logging
         logging.getLogger("ppocr").setLevel(logging.ERROR)
     
     def _get_ocr(self) -> PaddleOCR:

@@ -21,10 +21,10 @@ Patches applied:
 import os
 import sys
 
-# Base path for paddleocr (relative to sidecars/paddle-ocr/)
 import pathlib
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
-BASE = SCRIPT_DIR / 'venv' / 'lib' / 'python3.12' / 'site-packages' / 'paddleocr'
+PY_VERSION = f"python{sys.version_info.major}.{sys.version_info.minor}"
+BASE = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddleocr'
 
 def check_base():
     if not os.path.exists(BASE):
@@ -65,8 +65,7 @@ def patch_paddleocr_py():
         content = f.read()
     
     changed = False
-    
-    # Patch 1: Wrap ppstructure imports
+
     old_imports = '''from ppstructure.utility import init_args, draw_structure_result
 from ppstructure.predict_system import StructureSystem, save_structure_res, to_excel
 from ppstructure.recovery.recovery_to_doc import sorted_layout_boxes, convert_info_docx
@@ -90,8 +89,7 @@ except ImportError:
         changed = True
     elif '# Patched: wrap optional ppstructure imports' in content:
         print("   - Imports already patched")
-    
-    # Patch 2: Wrap PPStructure class definition
+
     old_class = 'class PPStructure(StructureSystem):'
     new_class = '''# Patched: only define PPStructure if StructureSystem is available
 if _HAS_PPSTRUCTURE:
@@ -117,8 +115,7 @@ if _HAS_PPSTRUCTURE:
         changed = True
     elif 'if _HAS_PPSTRUCTURE:' in content:
         print("   - PPStructure class already wrapped")
-    
-    # Patch 3: Fix parse_args to use fallback
+
     old_parse = '''def parse_args(mMain=True):
     import argparse
 

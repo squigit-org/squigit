@@ -1,21 +1,12 @@
 # PaddleOCR standalone executable dependencies
-# Install with: pip install -r requirements.txt
 
-# Core paddle framework (CPU-only, smaller size)
 paddlepaddle==2.6.2
-
-# PaddleOCR library
 paddleocr==2.10.0
-
-# Image processing
 opencv-python-headless
-
-# Required by PaddleOCR
 shapely
 pyclipper
 imgaug
 lmdb
 requests
 
-# Build tool
 pyinstaller

@@ -12,22 +12,14 @@ This inserts a check at the START of set_paddle_lib_path() to use _MEIPASS.
 import pathlib
 import sys
 
-# Resolve path relative to this script's location (patches/ -> paddle-ocr/)
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
-path = SCRIPT_DIR / 'venv' / 'lib' / 'python3.12' / 'site-packages' / 'paddle' / 'base' / 'core.py'
+PY_VERSION = f"python{sys.version_info.major}.{sys.version_info.minor}"
+path = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddle' / 'base' / 'core.py'
 
 print(f"Patching {path}")
 
 with open(path, 'r') as f:
     content = f.read()
-
-# The original function looks like:
-# def set_paddle_lib_path():
-#     site_dirs = (
-#         site.getsitepackages()
-#         ...
-
-# We want to insert our frozen check right after the function def, before site_dirs
 
 old_pattern = '''def set_paddle_lib_path():
     site_dirs = ('''

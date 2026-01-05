@@ -29,10 +29,8 @@ def _get_base_dir() -> Path:
     @return Path to the base directory.
     """
     if getattr(sys, 'frozen', False):
-        # Running as frozen executable (PyInstaller)
         return Path(sys._MEIPASS)
     else:
-        # Running as script
         return Path(__file__).parent.parent.absolute()
 
 
@@ -48,13 +46,10 @@ class EngineConfig:
         engine = OCREngine(config)
     """
     
-    #: Language for text recognition (e.g., 'en', 'ch', 'fr')
     lang: str = 'en'
     
-    #: Whether to use angle classification for rotated text
     use_angle_cls: bool = True
     
-    #: Base directory for model files
     base_dir: Optional[Path] = None
     
     def __post_init__(self):

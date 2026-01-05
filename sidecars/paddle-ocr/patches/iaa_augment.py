@@ -8,10 +8,11 @@ Stub out iaa_augment.py to avoid albumentations dependency.
 @version 1.0.0
 """
 import pathlib
+import sys
 
-# Resolve path relative to this script's location (patches/ -> paddle-ocr/)
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
-path = SCRIPT_DIR / 'venv' / 'lib' / 'python3.12' / 'site-packages' / 'paddleocr' / 'ppocr' / 'data' / 'imaug' / 'iaa_augment.py'
+PY_VERSION = f"python{sys.version_info.major}.{sys.version_info.minor}"
+path = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddleocr' / 'ppocr' / 'data' / 'imaug' / 'iaa_augment.py'
 
 content = '''class IaaAugment:
     def __init__(self, **kwargs):
