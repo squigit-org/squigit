@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2025 a7mddra
+ * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -77,12 +77,12 @@ export const useLens = (
         return;
       }
 
-      // Check if imgData looks like a URL (asset://) and fetch if needed, 
-      // but simpler to rely on caller passing real base64. 
+      // Check if imgData looks like a URL (asset://) and fetch if needed,
+      // but simpler to rely on caller passing real base64.
       // However, triggerLens calls this with startupImage.base64 which might be asset URL.
       // So we should handle it here or ensure caller does.
       // Let's rely on caller (triggerLens and listener).
-      
+
       const publicUrl = await uploadToImgBB(imgData, key);
       const lensUrl = generateLensUrl(publicUrl);
 
@@ -104,7 +104,7 @@ export const useLens = (
           setWaitingForKey(false);
           invoke("close_imgbb_window");
           if (imageRef.current) {
-             const realBase64 = await getRealBase64(imageRef.current);
+            const realBase64 = await getRealBase64(imageRef.current);
             await runLensSearch(realBase64, key);
           }
         }

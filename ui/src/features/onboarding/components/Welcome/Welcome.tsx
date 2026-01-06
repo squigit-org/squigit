@@ -148,7 +148,7 @@ export const Welcome: React.FC<WelcomeProps> = ({ onImageReady }) => {
         </div>
 
         <div className={styles.footer} aria-hidden="true">
-          <p className={styles.footerText}>Spatialshot &copy; 2025</p>
+          <p className={styles.footerText}>Spatialshot &copy; 2026</p>
         </div>
       </aside>
     </div>

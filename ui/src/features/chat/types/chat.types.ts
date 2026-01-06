@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2025 a7mddra
+ * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -26,4 +26,3 @@ export interface AppConfig {
     project_number: string;
   };
 }
-

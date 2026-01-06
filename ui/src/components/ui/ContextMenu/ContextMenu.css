@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2025 a7mddra
+ * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -31,7 +31,8 @@
   outline: none;
 }
 
-.context-menu-item:hover, .context-menu-item:focus {
+.context-menu-item:hover,
+.context-menu-item:focus {
   background-color: rgba(255, 255, 255, 0.1);
   color: var(--neutral-100);
 }
@@ -40,11 +41,12 @@
   opacity: 0.8;
 }
 
-.context-menu-item:hover svg, .context-menu-item:focus svg {
+.context-menu-item:hover svg,
+.context-menu-item:focus svg {
   opacity: 1;
 }
 
-body.light-mode .context-menu-item:hover, 
+body.light-mode .context-menu-item:hover,
 html.light .context-menu-item:hover,
 body.light-mode .context-menu-item:focus,
 html.light .context-menu-item:focus {

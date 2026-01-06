@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2025 a7mddra
+ * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -254,7 +254,7 @@ export const SettingsPanel = forwardRef<
           </div>
 
           <div className={styles["footer"]}>
-            <p>Spatialshot &copy; 2025</p>
+            <p>Spatialshot &copy; 2026</p>
           </div>
         </div>
       </>,
