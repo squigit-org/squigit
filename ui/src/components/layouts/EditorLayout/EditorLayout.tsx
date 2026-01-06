@@ -6,7 +6,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-shell";
 import {
   TextLayer,
   InlineMenu,
@@ -452,9 +451,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         if (action === "copy") {
           if (text) navigator.clipboard.writeText(text);
         } else if (action === "search") {
-          if (text) open(generateSearchUrl(text));
+          if (text)
+            invoke("open_external_url", { url: generateSearchUrl(text) });
         } else if (action === "translate") {
-          if (text) open(generateTranslateUrl(text));
+          if (text)
+            invoke("open_external_url", { url: generateTranslateUrl(text) });
         }
         hideMenu();
       }

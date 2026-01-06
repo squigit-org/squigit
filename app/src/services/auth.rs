@@ -90,7 +90,7 @@ pub fn start_google_auth_flow(app: AppHandle, config_dir: PathBuf) -> Result<(),
         secrets.auth_uri, secrets.client_id, REDIRECT_URI
     );
 
-    opener::open(&auth_url_full).map_err(|e| e.to_string())?;
+    crate::utils::open_url(&auth_url_full).map_err(|e| e.to_string())?;
 
     loop {
         let request = match server.recv() {

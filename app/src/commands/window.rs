@@ -83,11 +83,12 @@ pub async fn resize_window(
 
 #[tauri::command]
 pub async fn open_external_url(url: String) -> Result<(), String> {
+    println!("Opening URL: {}", url);
     tauri::async_runtime::spawn_blocking(move || {
-        let _ = opener::open(url);
+        crate::utils::open_url(&url)
     })
     .await
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
