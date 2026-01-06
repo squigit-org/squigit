@@ -35,7 +35,8 @@ struct OcrRequest {
 #[derive(Debug, Deserialize)]
 struct RawOcrResult {
     text: String,
-    box: Vec<Vec<f64>>,
+    #[serde(rename = "box")]
+    bounding_box: Vec<Vec<f64>>,
     #[serde(default)]
     confidence: Option<f64>,
 }
@@ -126,7 +127,7 @@ pub async fn ocr_image(
         .into_iter()
         .map(|r| OcrBox {
             text: r.text,
-            box_coords: r.box,
+            box_coords: r.bounding_box,
             confidence: r.confidence.unwrap_or(1.0),
         })
         .collect();

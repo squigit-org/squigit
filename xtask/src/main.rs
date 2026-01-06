@@ -1,7 +1,7 @@
 // Copyright 2025 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Build automation for ocrmyimg
+//! Build automation for ocr-engine
 //!
 //! Usage:
 //!   cargo xtask build-sidecar    Build PaddleOCR sidecar executable
@@ -19,7 +19,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "xtask")]
-#[command(about = "Build automation for ocrmyimg")]
+#[command(about = "Build automation for ocr-engine")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

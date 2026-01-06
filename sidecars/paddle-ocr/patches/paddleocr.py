@@ -228,8 +228,8 @@ def main():
     print("✓ All patches applied!")
     print()
     print("Next steps:")
-    print("  1. Build: pyinstaller --clean ocrmyimg.spec")
-    print("  2. Test:  ./dist/ocrmyimg test_sample.png")
+    print("  1. Build: pyinstaller --clean ocr-engine.spec")
+    print("  2. Test:  ./dist/ocr-engine test_sample.png")
     print("=" * 60)
 
 if __name__ == '__main__':

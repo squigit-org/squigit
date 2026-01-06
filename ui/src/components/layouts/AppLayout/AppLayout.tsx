@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import "katex/dist/katex.min.css";
-import "../ui/Notifications/Toast.css";
+import "../../ui/Notifications/Toast.css";
 import "./AppLayout.css";
 import { ContextMenu } from "../../ui/ContextMenu/ContextMenu";
 import { EditorLayout } from "../EditorLayout/EditorLayout";
