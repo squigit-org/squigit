@@ -4,25 +4,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "katex/dist/katex.min.css";
 import "../ui/Notifications/Toast.css";
-import { ContextMenu } from "../ui/ContextMenu/ContextMenu";
-import { ChatLayout } from "../../features/chat/layouts/ChatLayout";
-import { Welcome } from "../../features/onboarding";
-import { Agreement } from "../../features/onboarding/components/Agreement/Agreement";
-import { UpdateNotes } from "../../features/onboarding/components/UpdateNotes/UpdateNotes";
-import { GeminiSetup } from "../../features/auth/components/BYOKey/GeminiSetup";
-import { LoginScreen } from "../../features/auth/components/LoginScreen/LoginScreen";
-import { useAuth } from "../../features/auth/hooks/useAuth";
-import { useSystemSync } from "../../hooks/useSystemSync";
-import { useChatEngine } from "../../features/chat/hooks/useChat";
-import { useUpdateCheck, getPendingUpdate } from "../../hooks/useUpdateCheck";
-import { useWindowManager } from "../../hooks/useWindowManager";
+import "./AppLayout.css";
+import { ContextMenu } from "../../ui/ContextMenu/ContextMenu";
+import { EditorLayout } from "../EditorLayout/EditorLayout";
+import { ChatLayout } from "../../../features/chat/layouts/ChatLayout";
+import { Welcome } from "../../../features/onboarding";
+import { Agreement } from "../../../features/onboarding/components/Agreement/Agreement";
+import { UpdateNotes } from "../../../features/onboarding/components/UpdateNotes/UpdateNotes";
+import { GeminiSetup } from "../../../features/auth/components/BYOKey/GeminiSetup";
+import { LoginScreen } from "../../../features/auth/components/LoginScreen/LoginScreen";
+import { useAuth } from "../../../features/auth/hooks/useAuth";
+import { useSystemSync } from "../../../hooks/useSystemSync";
+import { useChatEngine } from "../../../features/chat/hooks/useChat";
+import {
+  useUpdateCheck,
+  getPendingUpdate,
+} from "../../../hooks/useUpdateCheck";
+import { useWindowManager } from "../../../hooks/useWindowManager";
 import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
-import { commands } from "../../lib/api/tauri/commands";
+import { commands } from "../../../lib/api/tauri/commands";
 
 export const AppLayout: React.FC = () => {
   const [isPanelActive, setIsPanelActive] = useState(false);
@@ -116,6 +121,46 @@ export const AppLayout: React.FC = () => {
     y: number;
     selectedText: string;
   } | null>(null);
+
+  // Split layout state (must be before conditional returns)
+  const [splitRatio, setSplitRatio] = useState(() => {
+    const saved = localStorage.getItem("splitRatio");
+    return saved ? parseFloat(saved) : 62.5; // 5:3 ratio = 62.5%
+  });
+  const isResizingRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isResizingRef.current = true;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!isResizingRef.current || !containerRef.current) return;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const newRatio =
+          ((moveEvent.clientX - containerRect.left) / containerRect.width) *
+          100;
+        const clampedRatio = Math.max(30, Math.min(70, newRatio));
+        setSplitRatio(clampedRatio);
+      };
+
+      const handleMouseUp = () => {
+        isResizingRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        localStorage.setItem("splitRatio", splitRatio.toString());
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [splitRatio]
+  );
 
   useEffect(() => {
     const unlisten = listen<any>("auth-success", (event) => {
@@ -240,63 +285,77 @@ export const AppLayout: React.FC = () => {
     return <LoginScreen onComplete={auth.login} />;
   }
 
-  // 4. Main Chat Interface
+  // 4. Main Split Interface (EditorLayout + ChatLayout)
+
   return (
     <div
+      ref={containerRef}
       onContextMenu={handleContextMenu}
-      className="flex h-screen flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100"
+      className="app-container"
     >
-      <ChatLayout
-        // Chat State
-        messages={chatEngine.messages}
-        streamingText={chatEngine.streamingText}
-        isChatMode={chatEngine.isChatMode}
-        isLoading={chatEngine.isLoading}
-        isStreaming={chatEngine.isStreaming}
-        error={chatEngine.error || system.systemError}
-        lastSentMessage={chatEngine.lastSentMessage}
-        // Inputs
-        input={input}
-        onInputChange={setInput}
-        // Models & Settings
-        currentModel={system.sessionModel}
-        editingModel={system.editingModel}
-        startupImage={system.startupImage}
-        prompt={system.prompt}
-        setPrompt={system.setEditingPrompt}
-        // User Info
-        userName={system.userName}
-        userEmail={system.userEmail}
-        avatarSrc={system.avatarSrc}
-        isDarkMode={system.isDarkMode}
-        // Actions
-        onSend={() => {
-          chatEngine.handleSend(input);
-          setInput("");
-        }}
-        onModelChange={system.setSessionModel}
-        onEditingModelChange={system.setEditingModel}
-        onRetry={() => {
-          if (chatEngine.messages.length === 0) {
-            chatEngine.handleReload();
-          } else {
-            chatEngine.handleRetrySend();
-          }
-        }}
-        onLogout={performLogout}
-        onSave={system.saveSettings}
-        onToggleTheme={system.handleToggleTheme}
-        onCheckSettings={() => {
-          setIsPanelActive(true);
-          chatEngine.clearError();
-        }}
-        toggleSettingsPanel={() => setIsPanelActive(!isPanelActive)}
-        isPanelActive={isPanelActive}
-        onResetAPIKey={system.handleResetAPIKey}
-        onReload={chatEngine.handleReload}
-        sessionLensUrl={system.sessionLensUrl}
-        setSessionLensUrl={system.setSessionLensUrl}
-      />
+      <div className="editor-panel" style={{ width: `${splitRatio}%` }}>
+        <EditorLayout
+          startupImage={system.startupImage}
+          sessionLensUrl={system.sessionLensUrl}
+          setSessionLensUrl={system.setSessionLensUrl}
+        />
+      </div>
+
+      <div className="resize-handle" onMouseDown={handleResizeStart} />
+
+      <div className="chat-panel" style={{ width: `${100 - splitRatio}%` }}>
+        <ChatLayout
+          // Chat State
+          messages={chatEngine.messages}
+          streamingText={chatEngine.streamingText}
+          isChatMode={chatEngine.isChatMode}
+          isLoading={chatEngine.isLoading}
+          isStreaming={chatEngine.isStreaming}
+          error={chatEngine.error || system.systemError}
+          lastSentMessage={chatEngine.lastSentMessage}
+          // Inputs
+          input={input}
+          onInputChange={setInput}
+          // Models & Settings
+          currentModel={system.sessionModel}
+          editingModel={system.editingModel}
+          startupImage={system.startupImage}
+          prompt={system.prompt}
+          setPrompt={system.setEditingPrompt}
+          // User Info
+          userName={system.userName}
+          userEmail={system.userEmail}
+          avatarSrc={system.avatarSrc}
+          isDarkMode={system.isDarkMode}
+          // Actions
+          onSend={() => {
+            chatEngine.handleSend(input);
+            setInput("");
+          }}
+          onModelChange={system.setSessionModel}
+          onEditingModelChange={system.setEditingModel}
+          onRetry={() => {
+            if (chatEngine.messages.length === 0) {
+              chatEngine.handleReload();
+            } else {
+              chatEngine.handleRetrySend();
+            }
+          }}
+          onLogout={performLogout}
+          onSave={system.saveSettings}
+          onToggleTheme={system.handleToggleTheme}
+          onCheckSettings={() => {
+            setIsPanelActive(true);
+            chatEngine.clearError();
+          }}
+          toggleSettingsPanel={() => setIsPanelActive(!isPanelActive)}
+          isPanelActive={isPanelActive}
+          onResetAPIKey={system.handleResetAPIKey}
+          onReload={chatEngine.handleReload}
+          sessionLensUrl={system.sessionLensUrl}
+          setSessionLensUrl={system.setSessionLensUrl}
+        />
+      </div>
 
       <div id="toast" className="toast"></div>
 

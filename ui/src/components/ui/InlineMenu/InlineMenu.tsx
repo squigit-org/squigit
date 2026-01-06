@@ -7,12 +7,12 @@
 import React from "react";
 
 interface InlineMenuProps {
-  menuRef: React.RefObject<HTMLDivElement>;
-  sliderRef: React.RefObject<HTMLDivElement>;
-  notchRef: React.RefObject<SVGSVGElement>;
-  page1Ref: React.RefObject<HTMLDivElement>;
-  page2Ref: React.RefObject<HTMLDivElement>;
-  pageFlatRef: React.RefObject<HTMLDivElement>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  sliderRef: React.RefObject<HTMLDivElement | null>;
+  notchRef: React.RefObject<SVGSVGElement | null>;
+  page1Ref: React.RefObject<HTMLDivElement | null>;
+  page2Ref: React.RefObject<HTMLDivElement | null>;
+  pageFlatRef: React.RefObject<HTMLDivElement | null>;
   onAction: (action: string) => void;
   onSwitchPage: (pageIndex: number) => void;
 }

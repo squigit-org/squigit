@@ -7,13 +7,13 @@
 import React, { useRef } from "react";
 
 interface ImageToolbarProps {
-  toolbarRef: React.RefObject<HTMLDivElement>;
+  toolbarRef: React.RefObject<HTMLDivElement | null>;
   isFullscreen: boolean;
   isLensLoading?: boolean;
   onLensClick: () => void;
   onCopyImage: () => void;
   onToggleFullscreen: (e: React.MouseEvent) => void;
-  imgWrapRef: React.RefObject<HTMLDivElement>;
+  imgWrapRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const ImageToolbar: React.FC<ImageToolbarProps> = ({

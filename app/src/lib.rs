@@ -17,6 +17,7 @@ use commands::clipboard::{start_clipboard_watcher, stop_clipboard_watcher};
 use commands::image::{
     get_initial_image, process_image_bytes, process_image_path, read_image_file,
 };
+use commands::ocr::ocr_image;
 use commands::security::{check_file_exists, encrypt_and_save};
 use commands::window::{
     clear_cache, close_imgbb_window, open_external_url, open_imgbb_window, resize_window,
@@ -51,6 +52,7 @@ pub fn run() {
             open_external_url,
             clear_cache,
             resize_window,
+            ocr_image,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

@@ -14,7 +14,7 @@ interface OCRBox {
 interface TextLayerProps {
   data: OCRBox[];
   size: { w: number; h: number };
-  svgRef: React.RefObject<SVGSVGElement>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
   onTextMouseDown: (e: React.MouseEvent, boxIndex: number) => void;
 }
 
