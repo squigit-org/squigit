@@ -5,9 +5,10 @@
  */
 
 export * from "./Dialogs/Dialog";
-export * from "./ContextMenu/ContextMenu";
 export * from "./Notifications/Toast";
-export * from "./TextLayer/TextLayer";
-export * from "./InlineMenu/InlineMenu";
+export * from "./ContextMenu/ContextMenu";
 export * from "./ImageToolbar/ImageToolbar";
+export * from "./InlineMenu/InlineMenu";
+export * from "./InlineMenu/useInlineMenu";
+export * from "./TextLayer/TextLayer";
 export * from "./TextLayer/useTextSelection";

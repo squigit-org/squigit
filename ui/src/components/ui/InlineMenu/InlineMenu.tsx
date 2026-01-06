@@ -5,6 +5,7 @@
  */
 
 import React from "react";
+import "./InlineMenu.css";
 
 interface InlineMenuProps {
   menuRef: React.RefObject<HTMLDivElement | null>;
@@ -28,7 +29,11 @@ export const InlineMenu: React.FC<InlineMenuProps> = ({
   onSwitchPage,
 }) => {
   return (
-    <div id="context-menu" ref={menuRef}>
+    <div
+      id="context-menu"
+      ref={menuRef}
+      onMouseDown={(e) => e.preventDefault()}
+    >
       <div className="menu-slider" id="menu-slider" ref={sliderRef}>
         {/* Page 1: Copy, Select All, More */}
         <div className="menu-page" id="page-1" ref={page1Ref}>

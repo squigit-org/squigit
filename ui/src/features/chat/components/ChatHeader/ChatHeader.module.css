@@ -119,6 +119,7 @@
 
 .dropdownMenu {
   position: absolute;
+  right: 0;
   z-index: 10;
   width: 11rem;
   margin-top: 0.5rem;

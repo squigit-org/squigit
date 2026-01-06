@@ -81,11 +81,11 @@ export const useChatTitle = ({
         ],
       });
 
-      const title = response.text?.trim() || "Image Chat";
+      const title = response.text?.trim() || "New Chat";
       setSessionChatTitle(title);
     } catch (error) {
       console.error("Failed to generate chat title:", error);
-      setSessionChatTitle("Image Chat");
+      setSessionChatTitle("New Chat");
     } finally {
       setIsGenerating(false);
     }
@@ -96,7 +96,7 @@ export const useChatTitle = ({
   }, [generateTitle]);
 
   return {
-    chatTitle: sessionChatTitle || "Image Chat",
+    chatTitle: sessionChatTitle || "New Chat",
     isGeneratingTitle: isGenerating,
   };
 };
