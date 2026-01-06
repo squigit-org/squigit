@@ -48,6 +48,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   } | null>(null);
 
   const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
+  const [sessionChatTitle, setSessionChatTitle] = useState<string | null>(null);
   const [systemError, setSystemError] = useState<string | null>(null);
   const clearSystemError = () => setSystemError(null);
 
@@ -217,5 +218,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     updateUserData,
     sessionLensUrl,
     setSessionLensUrl,
+    sessionChatTitle,
+    setSessionChatTitle,
   };
 };

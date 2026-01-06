@@ -4,7 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  ForwardedRef,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   TextLayer,
@@ -17,6 +23,7 @@ import {
   generateTranslateUrl,
   useLens,
 } from "../../../features/google";
+import { EditorHeader } from "./EditorHeader";
 import "./EditorLayout.css";
 
 interface OCRBox {
@@ -33,12 +40,55 @@ interface EditorLayoutProps {
   } | null;
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string) => void;
+  // Settings panel props
+  isPanelActive: boolean;
+  toggleSettingsPanel: () => void;
+  isPanelVisible: boolean;
+  isPanelActiveAndVisible: boolean;
+  isPanelClosing: boolean;
+  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
+  prompt: string;
+  editingModel: string;
+  setPrompt: (prompt: string) => void;
+  onEditingModelChange: (model: string) => void;
+  userName: string;
+  userEmail: string;
+  avatarSrc: string;
+  onSave: (prompt: string, model: string) => void;
+  onLogout: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
+  onResetAPIKey: () => void;
+  toggleSubview: (isActive: boolean) => void;
 }
 
 export const EditorLayout: React.FC<EditorLayoutProps> = ({
   startupImage,
   sessionLensUrl,
   setSessionLensUrl,
+  isPanelActive,
+  toggleSettingsPanel,
+  isPanelVisible,
+  isPanelActiveAndVisible,
+  isPanelClosing,
+  settingsButtonRef,
+  panelRef,
+  settingsPanelRef,
+  prompt,
+  editingModel,
+  setPrompt,
+  onEditingModelChange,
+  userName,
+  userEmail,
+  avatarSrc,
+  onSave,
+  onLogout,
+  isDarkMode,
+  onToggleTheme,
+  onResetAPIKey,
+  toggleSubview,
 }) => {
   const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -563,6 +613,29 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   if (!startupImage) {
     return (
       <div className="editor-layout">
+        <EditorHeader
+          isPanelActive={isPanelActive}
+          toggleSettingsPanel={toggleSettingsPanel}
+          isPanelVisible={isPanelVisible}
+          isPanelActiveAndVisible={isPanelActiveAndVisible}
+          isPanelClosing={isPanelClosing}
+          settingsButtonRef={settingsButtonRef}
+          panelRef={panelRef}
+          settingsPanelRef={settingsPanelRef}
+          prompt={prompt}
+          editingModel={editingModel}
+          setPrompt={setPrompt}
+          onEditingModelChange={onEditingModelChange}
+          userName={userName}
+          userEmail={userEmail}
+          avatarSrc={avatarSrc}
+          onSave={onSave}
+          onLogout={onLogout}
+          isDarkMode={isDarkMode}
+          onToggleTheme={onToggleTheme}
+          onResetAPIKey={onResetAPIKey}
+          toggleSubview={toggleSubview}
+        />
         <div className="editor-empty">No image loaded</div>
       </div>
     );
@@ -570,6 +643,29 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
   return (
     <div className="editor-layout">
+      <EditorHeader
+        isPanelActive={isPanelActive}
+        toggleSettingsPanel={toggleSettingsPanel}
+        isPanelVisible={isPanelVisible}
+        isPanelActiveAndVisible={isPanelActiveAndVisible}
+        isPanelClosing={isPanelClosing}
+        settingsButtonRef={settingsButtonRef}
+        panelRef={panelRef}
+        settingsPanelRef={settingsPanelRef}
+        prompt={prompt}
+        editingModel={editingModel}
+        setPrompt={setPrompt}
+        onEditingModelChange={onEditingModelChange}
+        userName={userName}
+        userEmail={userEmail}
+        avatarSrc={avatarSrc}
+        onSave={onSave}
+        onLogout={onLogout}
+        isDarkMode={isDarkMode}
+        onToggleTheme={onToggleTheme}
+        onResetAPIKey={onResetAPIKey}
+        toggleSubview={toggleSubview}
+      />
       <div className="viewer" ref={viewerRef}>
         <div
           className={`image-wrap ${isFullscreen ? "is-fullscreen" : ""}`}

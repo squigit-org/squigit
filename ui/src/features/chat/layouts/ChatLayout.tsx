@@ -20,35 +20,21 @@ export interface ChatLayoutProps {
 
   input: string;
   currentModel: string;
-  editingModel: string;
 
   startupImage: {
     base64: string;
     mimeType: string;
     isFilePath?: boolean;
   } | null;
-  prompt: string;
-  userName: string;
-  userEmail: string;
-  avatarSrc: string;
-  isDarkMode: boolean;
+
+  chatTitle: string;
 
   onSend: () => void;
   onModelChange: (model: string) => void;
-  onEditingModelChange: (model: string) => void;
   onRetry: () => void;
-  onSave: (prompt: string, model: string) => void;
-  onLogout: () => void;
-  onToggleTheme: () => void;
   onInputChange: (value: string) => void;
-  setPrompt: (prompt: string) => void;
   onCheckSettings: () => void;
-  toggleSettingsPanel: () => void;
-  isPanelActive: boolean;
-  onResetAPIKey: () => void;
   onReload?: () => void;
-  sessionLensUrl: string | null;
-  setSessionLensUrl: (url: string) => void;
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
@@ -60,41 +46,16 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   error,
   input,
   currentModel,
-  editingModel,
   startupImage,
-  prompt,
-  userName,
-  userEmail,
-  avatarSrc,
-  isDarkMode,
+  chatTitle,
   onSend,
   onModelChange,
-  onEditingModelChange,
   onRetry,
-  onSave,
-  onLogout,
-  onToggleTheme,
   onInputChange,
-  setPrompt,
-  toggleSettingsPanel,
   onCheckSettings,
-  isPanelActive,
-  onResetAPIKey,
   onReload,
-  sessionLensUrl,
-  setSessionLensUrl,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
-    null
-  );
-  const settingsButtonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  const [isSubviewActive, setIsSubviewActive] = useState(false);
-  const [isPanelVisible, setIsPanelVisible] = useState(false);
-  const [isPanelClosing, setIsPanelClosing] = useState(false);
-  const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
 
@@ -111,68 +72,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     }
   }, [messages.length, isStreaming]);
-
-  useEffect(() => {
-    if (isPanelActive) {
-      setIsPanelVisible(true);
-      const timer = setTimeout(() => {
-        setIsPanelActiveAndVisible(true);
-      }, 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsPanelActiveAndVisible(false);
-      setIsPanelClosing(true);
-      const timer = setTimeout(() => {
-        setIsPanelVisible(false);
-        setIsPanelClosing(false);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isPanelActive]);
-
-  const closeSettingsPanel = async () => {
-    if (isPanelActive) {
-      if (settingsPanelRef.current) {
-        const canClose = await settingsPanelRef.current.handleClose();
-        if (canClose) toggleSettingsPanel();
-      } else {
-        toggleSettingsPanel();
-      }
-    }
-  };
-
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isPanelActive) closeSettingsPanel();
-    };
-
-    const handleOutsideClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-
-      const isMsgBoxClick =
-        target.closest(".error-overlay") || target.closest(".error-container");
-      const isContextMenuClick = target.closest("#app-context-menu");
-
-      if (
-        isPanelActive &&
-        panelRef.current &&
-        !panelRef.current.contains(target as Node) &&
-        settingsButtonRef.current &&
-        !settingsButtonRef.current.contains(target as Node) &&
-        !isMsgBoxClick &&
-        !isContextMenuClick
-      ) {
-        closeSettingsPanel();
-      }
-    };
-
-    document.addEventListener("keydown", handleEsc);
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("keydown", handleEsc);
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [isPanelActive, isSubviewActive]);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -216,29 +115,9 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       className="flex h-screen flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100"
     >
       <ChatHeader
-        isPanelActive={isPanelActive}
-        toggleSettingsPanel={toggleSettingsPanel}
+        chatTitle={chatTitle}
         onReload={handleReload}
         isRotating={isRotating}
-        isPanelVisible={isPanelVisible}
-        isPanelActiveAndVisible={isPanelActiveAndVisible}
-        isPanelClosing={isPanelClosing}
-        settingsButtonRef={settingsButtonRef}
-        panelRef={panelRef}
-        settingsPanelRef={settingsPanelRef}
-        prompt={prompt}
-        editingModel={editingModel}
-        setPrompt={setPrompt}
-        onEditingModelChange={onEditingModelChange}
-        userName={userName}
-        userEmail={userEmail}
-        avatarSrc={avatarSrc}
-        onSave={onSave}
-        onLogout={onLogout}
-        isDarkMode={isDarkMode}
-        onToggleTheme={onToggleTheme}
-        onResetAPIKey={onResetAPIKey}
-        toggleSubview={setIsSubviewActive}
         currentModel={currentModel}
         onModelChange={onModelChange}
         isLoading={isLoading}
@@ -253,7 +132,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         error={error}
         onCheckSettings={onCheckSettings}
         onRetry={onRetry}
-        prompt={prompt}
+        prompt={""}
         showUpdate={showUpdate}
         setShowUpdate={setShowUpdate}
         messages={messages}

@@ -5,5 +5,6 @@
  */
 
 import systemPrompt from "./system-prompt.yml?raw";
+import titlePrompt from "./chat-title-prompt.yml?raw";
 
-export { systemPrompt };
+export { systemPrompt, titlePrompt };

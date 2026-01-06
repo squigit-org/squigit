@@ -18,6 +18,7 @@ import { GeminiSetup } from "../../../features/auth/components/BYOKey/GeminiSetu
 import { LoginScreen } from "../../../features/auth/components/LoginScreen/LoginScreen";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { useSystemSync } from "../../../hooks/useSystemSync";
+import { useChatTitle } from "../../../features/chat/hooks/useChatTitle";
 import { useChatEngine } from "../../../features/chat/hooks/useChat";
 import {
   useUpdateCheck,
@@ -34,6 +35,17 @@ export const AppLayout: React.FC = () => {
   const handleToggleSettings = useCallback(() => {
     setIsPanelActive((prev) => !prev);
   }, []);
+
+  // Settings panel state and refs
+  const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
+    null
+  );
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [isSubviewActive, setIsSubviewActive] = useState(false);
+  const [isPanelVisible, setIsPanelVisible] = useState(false);
+  const [isPanelClosing, setIsPanelClosing] = useState(false);
+  const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
 
   const system = useSystemSync(handleToggleSettings);
   const auth = useAuth();
@@ -101,6 +113,14 @@ export const AppLayout: React.FC = () => {
     enabled: isChatActive,
   });
 
+  // Chat title generation hook
+  const { chatTitle } = useChatTitle({
+    startupImage: system.startupImage,
+    apiKey: system.apiKey,
+    sessionChatTitle: system.sessionChatTitle,
+    setSessionChatTitle: system.setSessionChatTitle,
+  });
+
   const [input, setInput] = useState("");
   const [pendingUpdate] = useState(() => getPendingUpdate());
   const [showUpdate, setShowUpdate] = useState(() => {
@@ -115,6 +135,69 @@ export const AppLayout: React.FC = () => {
     showUpdate,
     isLoadingState
   );
+
+  // Settings panel visibility effects
+  useEffect(() => {
+    if (isPanelActive) {
+      setIsPanelVisible(true);
+      const timer = setTimeout(() => {
+        setIsPanelActiveAndVisible(true);
+      }, 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsPanelActiveAndVisible(false);
+      setIsPanelClosing(true);
+      const timer = setTimeout(() => {
+        setIsPanelVisible(false);
+        setIsPanelClosing(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isPanelActive]);
+
+  const closeSettingsPanel = async () => {
+    if (isPanelActive) {
+      if (settingsPanelRef.current) {
+        const canClose = await settingsPanelRef.current.handleClose();
+        if (canClose) handleToggleSettings();
+      } else {
+        handleToggleSettings();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isPanelActive) closeSettingsPanel();
+    };
+
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      const isMsgBoxClick =
+        target.closest(".error-overlay") || target.closest(".error-container");
+      const isContextMenuClick = target.closest("#app-context-menu");
+
+      if (
+        isPanelActive &&
+        panelRef.current &&
+        !panelRef.current.contains(target as Node) &&
+        settingsButtonRef.current &&
+        !settingsButtonRef.current.contains(target as Node) &&
+        !isMsgBoxClick &&
+        !isContextMenuClick
+      ) {
+        closeSettingsPanel();
+      }
+    };
+
+    document.addEventListener("keydown", handleEsc);
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("keydown", handleEsc);
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isPanelActive, isSubviewActive]);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -298,6 +381,27 @@ export const AppLayout: React.FC = () => {
           startupImage={system.startupImage}
           sessionLensUrl={system.sessionLensUrl}
           setSessionLensUrl={system.setSessionLensUrl}
+          isPanelActive={isPanelActive}
+          toggleSettingsPanel={handleToggleSettings}
+          isPanelVisible={isPanelVisible}
+          isPanelActiveAndVisible={isPanelActiveAndVisible}
+          isPanelClosing={isPanelClosing}
+          settingsButtonRef={settingsButtonRef}
+          panelRef={panelRef}
+          settingsPanelRef={settingsPanelRef}
+          prompt={system.editingPrompt}
+          editingModel={system.editingModel}
+          setPrompt={system.setEditingPrompt}
+          onEditingModelChange={system.setEditingModel}
+          userName={system.userName}
+          userEmail={system.userEmail}
+          avatarSrc={system.avatarSrc}
+          onSave={system.saveSettings}
+          onLogout={performLogout}
+          isDarkMode={system.isDarkMode}
+          onToggleTheme={system.handleToggleTheme}
+          onResetAPIKey={system.handleResetAPIKey}
+          toggleSubview={setIsSubviewActive}
         />
       </div>
 
@@ -318,22 +422,14 @@ export const AppLayout: React.FC = () => {
           onInputChange={setInput}
           // Models & Settings
           currentModel={system.sessionModel}
-          editingModel={system.editingModel}
           startupImage={system.startupImage}
-          prompt={system.prompt}
-          setPrompt={system.setEditingPrompt}
-          // User Info
-          userName={system.userName}
-          userEmail={system.userEmail}
-          avatarSrc={system.avatarSrc}
-          isDarkMode={system.isDarkMode}
+          chatTitle={chatTitle}
           // Actions
           onSend={() => {
             chatEngine.handleSend(input);
             setInput("");
           }}
           onModelChange={system.setSessionModel}
-          onEditingModelChange={system.setEditingModel}
           onRetry={() => {
             if (chatEngine.messages.length === 0) {
               chatEngine.handleReload();
@@ -341,19 +437,11 @@ export const AppLayout: React.FC = () => {
               chatEngine.handleRetrySend();
             }
           }}
-          onLogout={performLogout}
-          onSave={system.saveSettings}
-          onToggleTheme={system.handleToggleTheme}
           onCheckSettings={() => {
             setIsPanelActive(true);
             chatEngine.clearError();
           }}
-          toggleSettingsPanel={() => setIsPanelActive(!isPanelActive)}
-          isPanelActive={isPanelActive}
-          onResetAPIKey={system.handleResetAPIKey}
           onReload={chatEngine.handleReload}
-          sessionLensUrl={system.sessionLensUrl}
-          setSessionLensUrl={system.setSessionLensUrl}
         />
       </div>
 

@@ -1,0 +1,8 @@
+chat-title-prmp: |
+  Generate a 2-3 word title describing this image.
+  Examples: "Terminal Bug", "Comic Meme", "Beautiful Wallpaper", "Login Screen", "Error Message"
+  Rules:
+    - No punctuation
+    - Title case
+    - Be concise and descriptive
+    - Focus on the main subject
