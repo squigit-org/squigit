@@ -55,6 +55,9 @@ export const useInlineMenu = ({
     }
   });
 
+  // Unique ID for this hook instance to handle global exclusivity
+  const hookId = useRef(Math.random().toString(36).substr(2, 9)).current;
+
   // Helper functions
   const getSelectedText = useCallback(() => {
     return window.getSelection()?.toString().trim() || "";
@@ -174,6 +177,11 @@ export const useInlineMenu = ({
       setMenuActive(true);
       onMenuShow?.();
 
+      // Notify other instances to close
+      window.dispatchEvent(
+        new CustomEvent("global-inline-menu-show", { detail: { id: hookId } })
+      );
+
       const menu = menuRef.current;
       const notch = notchRef.current;
       if (!menu || !notch) return;
@@ -182,60 +190,48 @@ export const useInlineMenu = ({
       renderPage(0, false);
 
       const range = selection.getRangeAt(0);
-      const getElementRect = (node: Node | null): DOMRect | null => {
-        if (!node) return null;
-        if (node.nodeType === Node.TEXT_NODE) {
-          return node.parentElement?.getBoundingClientRect() || null;
-        }
-        return (node as Element).getBoundingClientRect();
-      };
+      const rects = Array.from(range.getClientRects()).filter(
+        (r) => r.width > 0 && r.height > 0
+      );
 
-      const anchorRect = getElementRect(selection.anchorNode);
-      const focusRect = getElementRect(selection.focusNode);
-      let topY: number;
-      if (anchorRect && focusRect) {
-        topY = Math.min(anchorRect.top, focusRect.top);
-      } else if (anchorRect) {
-        topY = anchorRect.top;
-      } else if (focusRect) {
-        topY = focusRect.top;
-      } else {
-        topY = range.getBoundingClientRect().top;
-      }
-      const rects = Array.from(range.getClientRects());
-      const tolerance = 50;
-      const validRects = rects.filter((r) => {
-        if (r.width === 0 || r.height === 0) return false;
-        return (
-          Math.abs(r.top - topY) < tolerance ||
-          (r.top >= topY - tolerance && r.bottom <= topY + tolerance + 100)
-        );
-      });
-
-      let left: number, width: number;
-      if (validRects.length > 0) {
-        left = Math.min(...validRects.map((r) => r.left));
-        const right = Math.max(...validRects.map((r) => r.right));
-        width = right - left;
-      } else {
+      if (rects.length === 0) {
+        // Fallback to bounding rect if no client rects
         const r = range.getBoundingClientRect();
-        left = r.left;
-        width = r.width;
+        if (r.width === 0 || r.height === 0) return;
+
+        positionMenu(
+          {
+            left: r.left,
+            top: r.top,
+            width: r.width,
+          },
+          true
+        );
+      } else {
+        // Calculate bounding box of the visual selection
+        // Y position: Top of the first visual line (minimum top value)
+        const topY = Math.min(...rects.map((r) => r.top));
+
+        // X position: Full width of the visual selection
+        const minLeft = Math.min(...rects.map((r) => r.left));
+        const maxRight = Math.max(...rects.map((r) => r.right));
+        const width = maxRight - minLeft;
+
+        const targetRect = {
+          left: minLeft,
+          top: topY,
+          width,
+        };
+
+        positionMenu(targetRect, true);
       }
 
-      const targetRect = {
-        left,
-        top: topY,
-        width,
-      };
-
-      positionMenu(targetRect, true);
       void menu.offsetWidth;
       requestAnimationFrame(() => {
         if (menuRef.current) menuRef.current.classList.add("active");
       });
     },
-    [positionMenu, renderPage, onMenuShow]
+    [positionMenu, renderPage, onMenuShow, hookId]
   );
 
   const showFlatMenu = useCallback(
@@ -243,6 +239,11 @@ export const useInlineMenu = ({
       setMenuActive(true);
       setIsSelectAllMode(true);
       onMenuShow?.();
+
+      // Notify other instances to close
+      window.dispatchEvent(
+        new CustomEvent("global-inline-menu-show", { detail: { id: hookId } })
+      );
 
       const menu = menuRef.current;
       if (!menu) return;
@@ -256,7 +257,7 @@ export const useInlineMenu = ({
         if (menuRef.current) menuRef.current.classList.add("active");
       });
     },
-    [positionMenu, renderPage, onMenuShow]
+    [positionMenu, renderPage, onMenuShow, hookId]
   );
 
   const switchPage = useCallback(
@@ -351,7 +352,19 @@ export const useInlineMenu = ({
 
   // Selection event listeners - only register when container exists
   useEffect(() => {
-    if (!containerElement) return;
+    // Global listener for exclusivity
+    const onGlobalShow = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && detail.id !== hookId && menuActive) {
+        hideMenu();
+      }
+    };
+    window.addEventListener("global-inline-menu-show", onGlobalShow);
+
+    if (!containerElement) {
+      return () =>
+        window.removeEventListener("global-inline-menu-show", onGlobalShow);
+    }
 
     const onMouseUp = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -373,12 +386,33 @@ export const useInlineMenu = ({
       if (menuRef.current && !menuRef.current.contains(target)) {
         // Don't clear selection for selectable-text elements
         if (!target.classList.contains("selectable-text")) {
-          // Only clear if we're the active menu in this container
-          if (menuActive && containerElement.contains(target)) {
-            window.getSelection()?.removeAllRanges();
+          // Clear selection logic...
+          // If we click OUTSIDE the container, we should still hide the menu?
+          // The user says "clicking somewhere not hiding the menu".
+          // If I click inside Chat but Editor menu is open, Editor menu should hide.
+
+          // If the click is NOT in our container, handleSelection logic usually ignores it.
+          // But here we want to HIDE.
+          if (menuActive) {
+            // If we clicked outside the menu...
             hideMenu();
+            // Should we also clear selection?
+            if (containerElement.contains(target)) {
+              window.getSelection()?.removeAllRanges();
+            }
           }
         } else if (menuActive) {
+          hideMenu();
+        }
+      }
+    };
+
+    // We need a GLOBAL mouse down to close menu if clicked completely outside container
+    const onGlobalMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (menuActive && menuRef.current && !menuRef.current.contains(target)) {
+        // If clicked outside container entirely
+        if (!containerElement.contains(target)) {
           hideMenu();
         }
       }
@@ -388,13 +422,18 @@ export const useInlineMenu = ({
     containerElement.addEventListener("mouseup", onMouseUp);
     document.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
-    containerElement.addEventListener("mousedown", onMouseDown);
+    // Use global mousedown for hiding?
+    // The previous code had: containerElement.addEventListener("mousedown", onMouseDown);
+    // If we only listen on container, clicks outside won't close it.
+    // Let's use document for mousedown to catch all clicks.
+    document.addEventListener("mousedown", onMouseDown);
 
     return () => {
+      window.removeEventListener("global-inline-menu-show", onGlobalShow);
       containerElement.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("resize", onResize);
-      containerElement.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mousedown", onMouseDown);
     };
   }, [
     menuActive,
@@ -402,6 +441,7 @@ export const useInlineMenu = ({
     handleSelection,
     hideMenu,
     containerElement,
+    hookId,
   ]);
 
   return {

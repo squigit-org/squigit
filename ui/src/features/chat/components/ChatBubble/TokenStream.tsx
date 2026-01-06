@@ -50,7 +50,7 @@ export const StreamingResponse: React.FC<{ text: string }> = ({ text }) => {
   if (!text) return null;
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} data-component="chat-bubble">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}

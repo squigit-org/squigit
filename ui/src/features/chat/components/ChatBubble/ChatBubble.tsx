@@ -82,6 +82,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
           {/* Main Bubble Text */}
           <div
             dir="auto"
+            data-component="chat-bubble"
             className={`${styles.bubble} ${
               isUser ? styles.userBubble : styles.botBubble
             }`}
