@@ -58,6 +58,27 @@ pub fn run_cmd(cmd: &str, args: &[&str], cwd: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Run a command with node_modules/.bin in PATH.
+pub fn run_cmd_with_node_bin(cmd: &str, args: &[&str], cwd: &Path, node_bin_dir: &Path) -> Result<()> {
+    println!("  $ {} {}", cmd, args.join(" "));
+    
+    // Prepend node_modules/.bin to PATH
+    let path_var = env::var("PATH").unwrap_or_default();
+    let new_path = format!("{}:{}", node_bin_dir.display(), path_var);
+    
+    let status = Command::new(cmd)
+        .args(args)
+        .current_dir(cwd)
+        .env("PATH", new_path)
+        .status()
+        .with_context(|| format!("Failed to run: {} {:?}", cmd, args))?;
+    
+    if !status.success() {
+        anyhow::bail!("Command failed with exit code: {:?}", status.code());
+    }
+    Ok(())
+}
+
 /// Recursively copy a directory.
 pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
     fs::create_dir_all(dst)?;

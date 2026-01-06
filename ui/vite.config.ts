@@ -11,7 +11,7 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3456,
+    port: 1420,
     strictPort: true,
   },
   envPrefix: ["VITE_", "TAURI_"],

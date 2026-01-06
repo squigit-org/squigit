@@ -1,9 +1,0 @@
-[package]
-name = "global-hotkey"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-# We will likely need 'rdev' or platform specific bindings (windows, x11rb, cocoa) here
-# For now, we keep it generic.
-anyhow = "1.0"

@@ -7,7 +7,6 @@
 import React, { ForwardedRef } from "react";
 import { Settings, RotateCw } from "lucide-react";
 import { SettingsPanel } from "../../../settings";
-import { LensButton } from "../../../lens";
 import { ModelSelector } from "./ModelSelector";
 import styles from "./ChatHeader.module.css";
 
@@ -38,15 +37,8 @@ interface ChatHeaderProps {
   currentModel: string;
   onModelChange: (model: string) => void;
   isLoading: boolean;
-  isChatMode: boolean;
-  startupImage: {
-    base64: string;
-    mimeType: string;
-    isFilePath?: boolean;
-  } | null;
-  cachedUrl: string | null;
-  setCachedUrl: (url: string) => void;
 }
+
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
   isPanelActive,
   toggleSettingsPanel,
@@ -74,10 +66,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   currentModel,
   onModelChange,
   isLoading,
-  isChatMode,
-  startupImage,
-  cachedUrl,
-  setCachedUrl,
 }) => {
   return (
     <header className={styles.header}>
@@ -134,13 +122,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           />
         </div>
       </div>
-
-      <LensButton
-        isChatMode={isChatMode}
-        startupImage={startupImage}
-        cachedUrl={cachedUrl}
-        setCachedUrl={setCachedUrl}
-      />
     </header>
   );
 };

@@ -18,8 +18,8 @@ pub fn sidecar_dir() -> std::path::PathBuf {
     project_root().join("sidecars").join("paddle-ocr")
 }
 
-/// Get the app directory path.
-fn app_dir() -> std::path::PathBuf {
+/// Get the Tauri app directory path.
+fn tauri_dir() -> std::path::PathBuf {
     project_root().join("app")
 }
 
@@ -115,7 +115,7 @@ pub fn build() -> Result<()> {
     println!("\n📋 Copying to Tauri binaries...");
     let binary_name = format!("ocr-engine-{}", target_triple());
     let src_exe = sidecar.join("dist").join("ocr-engine");
-    let tauri_binaries = app_dir().join("src-tauri").join("binaries");
+    let tauri_binaries = tauri_dir().join("binaries");
     
     fs::create_dir_all(&tauri_binaries)?;
     

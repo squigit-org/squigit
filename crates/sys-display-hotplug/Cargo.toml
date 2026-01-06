@@ -1,0 +1,4 @@
+[package]
+name = "sys-display-hotplug"
+version = "0.1.0"
+edition = "2021"

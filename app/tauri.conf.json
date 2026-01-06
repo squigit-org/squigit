@@ -1,13 +1,13 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "$schema": "../ui/node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "spatialshot",
   "version": "1.0.0",
   "identifier": "spatialshot",
   "build": {
-    "beforeDevCommand": "npm run vite",
-    "devUrl": "http://localhost:3456",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "beforeDevCommand": "npm --prefix ui run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm --prefix ui run build",
+    "frontendDist": "ui/dist"
   },
   "app": {
     "windows": [],
@@ -37,6 +37,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "externalBin": ["binaries/ocr-engine"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
