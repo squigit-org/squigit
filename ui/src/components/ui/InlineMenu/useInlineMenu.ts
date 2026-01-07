@@ -42,7 +42,6 @@ export const useInlineMenu = ({
   // Refs
   const menuRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
-  const notchRef = useRef<SVGSVGElement>(null);
   const page1Ref = useRef<HTMLDivElement>(null);
   const page2Ref = useRef<HTMLDivElement>(null);
   const pageFlatRef = useRef<HTMLDivElement>(null);
@@ -75,7 +74,6 @@ export const useInlineMenu = ({
     if (menuRef.current) {
       menuRef.current.classList.remove("animating-layout");
       menuRef.current.classList.remove("active");
-      if (notchRef.current) notchRef.current.classList.remove("active");
     }
     setMenuActive(false);
     setIsSelectAllMode(false);
@@ -133,8 +131,7 @@ export const useInlineMenu = ({
       showNotch: boolean = true
     ) => {
       const menu = menuRef.current;
-      const notch = notchRef.current;
-      if (!menu || !notch) return;
+      if (!menu) return;
 
       const selectionCenterViewport =
         selectionRectViewport.left + selectionRectViewport.width / 2;
@@ -158,24 +155,8 @@ export const useInlineMenu = ({
         menuTopViewport = margin;
       }
 
-      const notchAbsoluteX = selectionCenterViewport;
-      let notchRelativeX = notchAbsoluteX - menuLeftViewport;
-      const cornerRadius = 12;
-      const safeZone = cornerRadius + 6;
-      notchRelativeX = Math.max(
-        safeZone,
-        Math.min(menuWidth - safeZone, notchRelativeX)
-      );
-
       menu.style.left = `${menuLeftViewport}px`;
       menu.style.top = `${menuTopViewport}px`;
-
-      if (showNotch) {
-        notch.classList.add("active");
-        notch.style.left = `${notchRelativeX}px`;
-      } else {
-        notch.classList.remove("active");
-      }
     },
     []
   );
@@ -194,8 +175,7 @@ export const useInlineMenu = ({
       );
 
       const menu = menuRef.current;
-      const notch = notchRef.current;
-      if (!menu || !notch) return;
+      if (!menu) return;
 
       menu.classList.remove("animating-layout");
       renderPage(0, false);
@@ -287,8 +267,7 @@ export const useInlineMenu = ({
   const switchPage = useCallback(
     (targetIndex: number) => {
       const menu = menuRef.current;
-      const notch = notchRef.current;
-      if (!menu || !notch) return;
+      if (!menu) return;
 
       menu.classList.add("animating-layout");
 
@@ -313,10 +292,6 @@ export const useInlineMenu = ({
 
       menu.style.width = `${newWidth}px`;
       menu.style.left = `${clampedLeft}px`;
-
-      const moveDelta = clampedLeft - currentLeft;
-      const currentNotchLeft = parseFloat(notch.style.left) || 0;
-      notch.style.left = `${currentNotchLeft - moveDelta}px`;
 
       renderPage(targetIndex, true);
     },
@@ -425,8 +400,6 @@ export const useInlineMenu = ({
               window.getSelection()?.removeAllRanges();
             }
           }
-        } else if (menuActive) {
-          hideMenu();
         }
       }
     };
@@ -452,12 +425,36 @@ export const useInlineMenu = ({
     // Let's use document for mousedown to catch all clicks.
     document.addEventListener("mousedown", onMouseDown);
 
+    // Dynamic selection listener
+    const onSelectionChange = () => {
+      const selection = window.getSelection();
+      // If no valid selection or collapsed (cursor only), hide menu
+      // UNLESS we are in specific sticky modes like "Select All" (maybe?)
+      // Actually user said: "if selection is blue menu is showing if it gone it gone"
+      // So checks are Strict.
+      if (!selection || selection.isCollapsed) {
+        if (menuActive) hideMenu();
+        return;
+      }
+
+      // If selection is NOT in our container, hide
+      if (
+        containerElement &&
+        selection.anchorNode &&
+        !containerElement.contains(selection.anchorNode)
+      ) {
+        if (menuActive) hideMenu();
+      }
+    };
+    document.addEventListener("selectionchange", onSelectionChange);
+
     return () => {
       window.removeEventListener("global-inline-menu-show", onGlobalShow);
       containerElement.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("selectionchange", onSelectionChange);
     };
   }, [
     menuActive,
@@ -472,7 +469,6 @@ export const useInlineMenu = ({
     // Refs for InlineMenu component
     menuRef,
     sliderRef,
-    notchRef,
     page1Ref,
     page2Ref,
     pageFlatRef,

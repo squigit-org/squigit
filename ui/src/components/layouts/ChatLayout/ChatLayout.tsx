@@ -5,7 +5,12 @@
  */
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { Message, ChatHeader, ChatArea, ChatInput } from "..";
+import {
+  Message,
+  ChatHeader,
+  ChatArea,
+  ChatInput,
+} from "../../../features/chat";
 import { InlineMenu, useInlineMenu } from "../../../components/ui";
 import "katex/dist/katex.min.css";
 import "./ChatLayout.module.css";
@@ -127,7 +132,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   const {
     menuRef,
     sliderRef,
-    notchRef,
     page1Ref,
     page2Ref,
     pageFlatRef,
@@ -187,7 +191,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       <InlineMenu
         menuRef={menuRef}
         sliderRef={sliderRef}
-        notchRef={notchRef}
         page1Ref={page1Ref}
         page2Ref={page2Ref}
         pageFlatRef={pageFlatRef}

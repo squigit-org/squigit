@@ -10,7 +10,7 @@ import "../../ui/Notifications/Toast.css";
 import "./AppLayout.css";
 import { ContextMenu } from "../../ui/ContextMenu/ContextMenu";
 import { EditorLayout } from "../EditorLayout/EditorLayout";
-import { ChatLayout } from "../../../features/chat/layouts/ChatLayout";
+import { ChatLayout } from "../ChatLayout/ChatLayout";
 import { Welcome } from "../../../features/onboarding";
 import { Agreement } from "../../../features/onboarding/components/Agreement/Agreement";
 import { UpdateNotes } from "../../../features/onboarding/components/UpdateNotes/UpdateNotes";

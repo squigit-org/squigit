@@ -13,11 +13,8 @@ import React, {
   useImperativeHandle,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  generateSearchUrl,
-  generateTranslateUrl,
-} from "../../../../features/google";
-import "./EditorMenu.css";
+import { generateSearchUrl, generateTranslateUrl } from "../../../google";
+import { InlineMenu } from "../../../../components/ui";
 
 interface OCRBox {
   text: string;
@@ -44,12 +41,10 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
 
     const menuRef = useRef<HTMLDivElement>(null);
     const sliderRef = useRef<HTMLDivElement>(null);
-    const notchRef = useRef<SVGSVGElement>(null);
     const page1Ref = useRef<HTMLDivElement>(null);
     const page2Ref = useRef<HTMLDivElement>(null);
     const pageFlatRef = useRef<HTMLDivElement>(null);
 
-    const NOTCH_OFFSET = 12;
     const MENU_HEIGHT = 48;
 
     const getSelectedText = () => {
@@ -60,7 +55,6 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       if (menuRef.current) {
         menuRef.current.classList.remove("animating-layout");
         menuRef.current.classList.remove("active");
-        if (notchRef.current) notchRef.current.classList.remove("active");
       }
       setMenuActive(false);
       setIsSelectAllMode(false);
@@ -76,8 +70,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
         isFlatMode: boolean
       ) => {
         const menu = menuRef.current;
-        const notch = notchRef.current;
-        if (!menu || !notch) return;
+        if (!menu) return;
 
         const selectionCenterViewport =
           selectionRectViewport.left + selectionRectViewport.width / 2;
@@ -86,7 +79,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
         const menuWidth = menu.offsetWidth || 180;
 
         let menuLeftViewport = selectionCenterViewport - menuWidth / 2;
-        let menuTopViewport = selectionTopViewport - MENU_HEIGHT - NOTCH_OFFSET;
+        let menuTopViewport = selectionTopViewport - MENU_HEIGHT - 12; // Adjusted offset without notch logic variable
 
         const margin = 10;
 
@@ -101,24 +94,8 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
           menuTopViewport = margin;
         }
 
-        const notchAbsoluteX = selectionCenterViewport;
-        let notchRelativeX = notchAbsoluteX - menuLeftViewport;
-        const cornerRadius = 12;
-        const safeZone = cornerRadius + 6;
-        notchRelativeX = Math.max(
-          safeZone,
-          Math.min(menuWidth - safeZone, notchRelativeX)
-        );
-
         menu.style.left = `${menuLeftViewport}px`;
         menu.style.top = `${menuTopViewport}px`;
-
-        if (!isFlatMode) {
-          notch.classList.add("active");
-          notch.style.left = `${notchRelativeX}px`;
-        } else {
-          notch.classList.remove("active");
-        }
       },
       []
     );
@@ -172,9 +149,15 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       (selection: Selection) => {
         setMenuActive(true);
 
+        // Notify other instances to close
+        window.dispatchEvent(
+          new CustomEvent("global-inline-menu-show", {
+            detail: { id: "editor-menu" },
+          })
+        );
+
         const menu = menuRef.current;
-        const notch = notchRef.current;
-        if (!menu || !notch) return;
+        if (!menu) return;
 
         menu.classList.remove("animating-layout");
         renderPage(0, false);
@@ -239,8 +222,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
     const switchPage = useCallback(
       (targetIndex: number) => {
         const menu = menuRef.current;
-        const notch = notchRef.current;
-        if (!menu || !notch) return;
+        if (!menu) return;
 
         menu.classList.add("animating-layout");
 
@@ -267,8 +249,6 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
         menu.style.left = `${clampedLeft}px`;
 
         const moveDelta = clampedLeft - currentLeft;
-        const currentNotchLeft = parseFloat(notch.style.left) || 0;
-        notch.style.left = `${currentNotchLeft - moveDelta}px`;
 
         renderPage(targetIndex, true);
       },
@@ -288,6 +268,14 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       }
 
       setIsSelectAllMode(true);
+
+      // Notify other instances to close
+      window.dispatchEvent(
+        new CustomEvent("global-inline-menu-show", {
+          detail: { id: "editor-menu" },
+        })
+      );
+
       const menu = menuRef.current;
       const wrap = imgWrapRef.current;
       if (!menu || !wrap) return;
@@ -328,8 +316,6 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       menu.style.left = `${targetLeftViewport}px`;
       menu.style.top = `${targetTopViewport}px`;
 
-      notchRef.current?.classList.remove("active");
-
       void menu.offsetWidth;
       requestAnimationFrame(() => {
         if (menuRef.current) menuRef.current.classList.add("active");
@@ -369,11 +355,25 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
 
     // Event listeners
     useEffect(() => {
+      // Global listener for exclusivity
+      const hookId = "editor-menu";
+      const onGlobalShow = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail && detail.id !== hookId && menuActive) {
+          hideMenu();
+        }
+      };
+      window.addEventListener("global-inline-menu-show", onGlobalShow);
+
       const onMouseDown = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
         if (menuRef.current && !menuRef.current.contains(target)) {
-          if (!target.classList.contains("selectable-text")) {
-            window.getSelection()?.removeAllRanges();
+          // Only clear selection if clicking INSIDE the editor wrapper (background click)
+          // detecting "bg" click
+          if (imgWrapRef.current && imgWrapRef.current.contains(target)) {
+            if (!target.classList.contains("selectable-text")) {
+              window.getSelection()?.removeAllRanges();
+            }
           }
           hideMenu();
         }
@@ -384,136 +384,44 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       document.addEventListener("mousedown", onMouseDown);
       window.addEventListener("resize", onResize);
 
+      const onSelectionChange = () => {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed) {
+          if (menuActive) hideMenu();
+          return;
+        }
+
+        // Check if selection is inside editor
+        if (
+          imgWrapRef.current &&
+          selection.anchorNode &&
+          !imgWrapRef.current.contains(selection.anchorNode)
+        ) {
+          if (menuActive) hideMenu();
+        }
+      };
+      document.addEventListener("selectionchange", onSelectionChange);
+
       return () => {
+        window.removeEventListener("global-inline-menu-show", onGlobalShow);
         document.removeEventListener("mousedown", onMouseDown);
         window.removeEventListener("resize", onResize);
+        document.removeEventListener("selectionchange", onSelectionChange);
       };
     }, [menuActive, isSelectAllMode, hideMenu]);
 
     return (
-      <div id="editor-menu" ref={menuRef}>
-        <div className="menu-slider" ref={sliderRef}>
-          {/* Page 1: Copy, Select All, More */}
-          <div className="menu-page" ref={page1Ref}>
-            <div
-              className="menu-item"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleAction("copy")}
-            >
-              Copy
-            </div>
-            <div className="divider"></div>
-            <div
-              className="menu-item"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleAction("selectAll")}
-            >
-              Select All
-            </div>
-            <div className="divider"></div>
-            <div
-              className="menu-item nav-arrow"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.stopPropagation();
-                switchPage(1);
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m9 18 6-6-6-6" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Page 2: Back, Search, Translate */}
-          <div className="menu-page" ref={page2Ref}>
-            <div
-              className="menu-item nav-arrow"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.stopPropagation();
-                switchPage(0);
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </div>
-            <div className="divider"></div>
-            <div
-              className="menu-item"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleAction("search")}
-            >
-              Search
-            </div>
-            <div className="divider"></div>
-            <div
-              className="menu-item"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleAction("translate")}
-            >
-              Translate
-            </div>
-          </div>
-
-          {/* Flat Page: Copy, Search, Translate (for Select All mode) */}
-          <div className="menu-page" ref={pageFlatRef}>
-            <div
-              className="menu-item"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleAction("copy")}
-            >
-              Copy
-            </div>
-            <div className="divider"></div>
-            <div
-              className="menu-item"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleAction("search")}
-            >
-              Search
-            </div>
-            <div className="divider"></div>
-            <div
-              className="menu-item"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleAction("translate")}
-            >
-              Translate
-            </div>
-          </div>
-        </div>
-
-        <svg
-          id="editor-menu-notch"
-          viewBox="0 0 20 10"
-          xmlns="http://www.w3.org/2000/svg"
-          ref={notchRef}
-        >
-          <path d="M0 0 C4 0 6 2 10 10 C14 2 16 0 20 0 Z" />
-        </svg>
-      </div>
+      <InlineMenu
+        id="editor-menu"
+        className="editor-menu"
+        menuRef={menuRef}
+        sliderRef={sliderRef}
+        page1Ref={page1Ref}
+        page2Ref={page2Ref}
+        pageFlatRef={pageFlatRef}
+        onAction={handleAction}
+        onSwitchPage={switchPage}
+      />
     );
   }
 );

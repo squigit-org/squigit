@@ -14,8 +14,11 @@ import React, {
 import { invoke } from "@tauri-apps/api/core";
 import { TextLayer, ImageToolbar, useTextSelection } from "../../ui";
 import { useLens } from "../../../features/google";
-import { EditorHeader } from "./EditorHeader";
-import { EditorMenu, EditorMenuHandle } from "./EditorMenu";
+import {
+  EditorHeader,
+  EditorMenu,
+  EditorMenuHandle,
+} from "../../../features/editor";
 import "./EditorLayout.css";
 
 interface OCRBox {

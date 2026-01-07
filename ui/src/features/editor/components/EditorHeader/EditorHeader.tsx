@@ -6,7 +6,7 @@
 
 import React, { ForwardedRef } from "react";
 import { Settings } from "lucide-react";
-import { SettingsPanel } from "../../../../features/settings";
+import { SettingsPanel } from "../../../settings";
 import styles from "./EditorHeader.module.css";
 
 interface EditorHeaderProps {

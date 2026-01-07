@@ -5,12 +5,11 @@
  */
 
 import React from "react";
-import "./InlineMenu.css";
+import styles from "./InlineMenu.module.css";
 
 interface InlineMenuProps {
   menuRef: React.RefObject<HTMLDivElement | null>;
   sliderRef: React.RefObject<HTMLDivElement | null>;
-  notchRef: React.RefObject<SVGSVGElement | null>;
   page1Ref: React.RefObject<HTMLDivElement | null>;
   page2Ref: React.RefObject<HTMLDivElement | null>;
   pageFlatRef: React.RefObject<HTMLDivElement | null>;
@@ -18,43 +17,53 @@ interface InlineMenuProps {
   onSwitchPage: (pageIndex: number) => void;
 }
 
-export const InlineMenu: React.FC<InlineMenuProps> = ({
+export const InlineMenu: React.FC<
+  InlineMenuProps & { id?: string; className?: string }
+> = ({
   menuRef,
   sliderRef,
-  notchRef,
   page1Ref,
   page2Ref,
   pageFlatRef,
   onAction,
   onSwitchPage,
+  id,
+  className,
 }) => {
   return (
     <div
-      id="context-menu"
+      id={id}
+      className={`${styles.menu} ${className || ""}`}
       ref={menuRef}
       onMouseDown={(e) => e.preventDefault()}
     >
-      <div className="menu-slider" id="menu-slider" ref={sliderRef}>
+      <div className={styles.menuSlider} ref={sliderRef}>
         {/* Page 1: Copy, Select All, More */}
-        <div className="menu-page" id="page-1" ref={page1Ref}>
+        <div className={styles.menuPage} ref={page1Ref}>
           <div
-            className="menu-item"
+            className={styles.menuItem}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onAction("copy")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("copy");
+            }}
           >
             Copy
           </div>
-          <div className="divider"></div>
+          <div className={styles.divider}></div>
           <div
-            className="menu-item"
+            className={styles.menuItem}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onAction("selectAll")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("selectAll");
+            }}
           >
             Select All
           </div>
-          <div className="divider"></div>
+          <div className={styles.divider}></div>
           <div
-            className="menu-item nav-arrow"
+            className={`${styles.menuItem} ${styles.navArrow}`}
             onMouseDown={(e) => e.preventDefault()}
             onClick={(e) => {
               e.stopPropagation();
@@ -78,9 +87,9 @@ export const InlineMenu: React.FC<InlineMenuProps> = ({
         </div>
 
         {/* Page 2: Back, Search, Translate */}
-        <div className="menu-page" id="page-2" ref={page2Ref}>
+        <div className={styles.menuPage} ref={page2Ref}>
           <div
-            className="menu-item nav-arrow"
+            className={`${styles.menuItem} ${styles.navArrow}`}
             onMouseDown={(e) => e.preventDefault()}
             onClick={(e) => {
               e.stopPropagation();
@@ -101,60 +110,66 @@ export const InlineMenu: React.FC<InlineMenuProps> = ({
               <path d="m15 18-6-6 6-6" />
             </svg>
           </div>
-          <div className="divider"></div>
+          <div className={styles.divider}></div>
           <div
-            className="menu-item"
+            className={styles.menuItem}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onAction("search")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("search");
+            }}
           >
             Search
           </div>
-          <div className="divider"></div>
+          <div className={styles.divider}></div>
           <div
-            className="menu-item"
+            className={styles.menuItem}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onAction("translate")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("translate");
+            }}
           >
             Translate
           </div>
         </div>
 
         {/* Flat Page: Copy, Search, Translate (for Select All mode) */}
-        <div className="menu-page" id="page-flat" ref={pageFlatRef}>
+        <div className={styles.menuPage} ref={pageFlatRef}>
           <div
-            className="menu-item"
+            className={styles.menuItem}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onAction("copy")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("copy");
+            }}
           >
             Copy
           </div>
-          <div className="divider"></div>
+          <div className={styles.divider}></div>
           <div
-            className="menu-item"
+            className={styles.menuItem}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onAction("search")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("search");
+            }}
           >
             Search
           </div>
-          <div className="divider"></div>
+          <div className={styles.divider}></div>
           <div
-            className="menu-item"
+            className={styles.menuItem}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onAction("translate")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("translate");
+            }}
           >
             Translate
           </div>
         </div>
       </div>
-
-      <svg
-        id="notch"
-        viewBox="0 0 20 10"
-        xmlns="http://www.w3.org/2000/svg"
-        ref={notchRef}
-      >
-        <path d="M0 0 C4 0 6 2 10 10 C14 2 16 0 20 0 Z" />
-      </svg>
     </div>
   );
 };
