@@ -219,7 +219,6 @@ export const useTextSelection = ({
       } else {
         selectionModeRef.current = "char";
       }
-
       if (selectionModeRef.current === "word") {
         const text = data[boxIndex].text;
         const { start, end } = getWordRange(text, target.charIndex);

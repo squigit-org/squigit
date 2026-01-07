@@ -23,6 +23,13 @@ interface UseInlineMenuOptions {
   onMenuShow?: () => void;
   /** Called when menu is hidden */
   onMenuHide?: () => void;
+  /**
+   * Strategy for positioning the menu relative to the selection.
+   * - 'visual': Analysis client rects to find the top of the first visual line (best for wrapped text/chat).
+   * - 'simple': Uses the bounding rectangle of the selection range (best for Editor/single-line/transform-heavy elements).
+   * @default 'visual'
+   */
+  positioningStrategy?: "visual" | "simple";
 }
 
 export const useInlineMenu = ({
@@ -30,6 +37,7 @@ export const useInlineMenu = ({
   onSelectAll,
   onMenuShow,
   onMenuHide,
+  positioningStrategy = "visual",
 }: UseInlineMenuOptions) => {
   // Refs
   const menuRef = useRef<HTMLDivElement>(null);
@@ -173,7 +181,10 @@ export const useInlineMenu = ({
   );
 
   const showStandardMenu = useCallback(
-    (selection: Selection) => {
+    (
+      selection: Selection,
+      overrideRect?: { left: number; width: number; top: number }
+    ) => {
       setMenuActive(true);
       onMenuShow?.();
 
@@ -189,40 +200,53 @@ export const useInlineMenu = ({
       menu.classList.remove("animating-layout");
       renderPage(0, false);
 
-      const range = selection.getRangeAt(0);
-      const rects = Array.from(range.getClientRects()).filter(
-        (r) => r.width > 0 && r.height > 0
-      );
+      let targetRect;
+      if (overrideRect) {
+        targetRect = overrideRect;
+      } else {
+        const range = selection.getRangeAt(0);
 
-      if (rects.length === 0) {
-        // Fallback to bounding rect if no client rects
-        const r = range.getBoundingClientRect();
-        if (r.width === 0 || r.height === 0) return;
-
-        positionMenu(
-          {
+        if (positioningStrategy === "simple") {
+          const r = range.getBoundingClientRect();
+          targetRect = {
             left: r.left,
             top: r.top,
             width: r.width,
-          },
-          true
-        );
-      } else {
-        // Calculate bounding box of the visual selection
-        // Y position: Top of the first visual line (minimum top value)
-        const topY = Math.min(...rects.map((r) => r.top));
+          };
+        } else {
+          // 'visual' strategy
+          const rects = Array.from(range.getClientRects()).filter(
+            (r) => r.width > 0 && r.height > 0
+          );
 
-        // X position: Full width of the visual selection
-        const minLeft = Math.min(...rects.map((r) => r.left));
-        const maxRight = Math.max(...rects.map((r) => r.right));
-        const width = maxRight - minLeft;
+          if (rects.length === 0) {
+            // Fallback to bounding rect if no client rects
+            const r = range.getBoundingClientRect();
+            targetRect = {
+              left: r.left,
+              top: r.top,
+              width: r.width,
+            };
+          } else {
+            // Calculate bounding box of the visual selection
+            // Y position: Top of the first visual line (minimum top value)
+            const topY = Math.min(...rects.map((r) => r.top));
 
-        const targetRect = {
-          left: minLeft,
-          top: topY,
-          width,
-        };
+            // X position: Full width of the visual selection
+            const minLeft = Math.min(...rects.map((r) => r.left));
+            const maxRight = Math.max(...rects.map((r) => r.right));
+            const width = maxRight - minLeft;
 
+            targetRect = {
+              left: minLeft,
+              top: topY,
+              width,
+            };
+          }
+        }
+      }
+
+      if (targetRect.width > 0) {
         positionMenu(targetRect, true);
       }
 
@@ -231,7 +255,7 @@ export const useInlineMenu = ({
         if (menuRef.current) menuRef.current.classList.add("active");
       });
     },
-    [positionMenu, renderPage, onMenuShow, hookId]
+    [positionMenu, renderPage, onMenuShow, hookId, positioningStrategy]
   );
 
   const showFlatMenu = useCallback(

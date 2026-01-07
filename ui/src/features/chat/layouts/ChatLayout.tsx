@@ -100,12 +100,16 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       // Calculate position for flat menu
       const rect = bubble.getBoundingClientRect();
       const menuWidth = 250; // Approximate width for flat menu
+      const MENU_HEIGHT = 48;
       const centerX = rect.left + rect.width / 2;
       const targetLeft = Math.max(
         10,
         Math.min(centerX - menuWidth / 2, window.innerWidth - menuWidth - 10)
       );
-      const targetTop = Math.max(10, rect.top - 50); // Position above the bubble
+      // Position 10px above the bubble
+      // internal positionMenu adds -48px (height) -12px (notch).
+      // We want -48px -10px. So we need to pass top + 2px.
+      const targetTop = Math.max(10, rect.top + 2);
 
       const targetRect = {
         left: targetLeft,

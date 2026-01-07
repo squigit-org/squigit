@@ -12,15 +12,10 @@ import React, {
   ForwardedRef,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  TextLayer,
-  InlineMenu,
-  ImageToolbar,
-  useTextSelection,
-  useInlineMenu,
-} from "../../ui";
+import { TextLayer, ImageToolbar, useTextSelection } from "../../ui";
 import { useLens } from "../../../features/google";
 import { EditorHeader } from "./EditorHeader";
+import { EditorMenu, EditorMenuHandle } from "./EditorMenu";
 import "./EditorLayout.css";
 
 interface OCRBox {
@@ -100,8 +95,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   const imgWrapRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
-
-  const MENU_HEIGHT = 48;
+  const editorMenuRef = useRef<EditorMenuHandle>(null);
 
   // Get image source
   const imageSrc = startupImage?.base64 || "";
@@ -113,90 +107,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     setSessionLensUrl
   );
 
-  // --- Inline Menu (Hook) ---
-  const showFlatMenuRef = useRef<
-    ((rect: { left: number; width: number; top: number }) => void) | null
-  >(null);
-
-  const performSelectAll = useCallback(() => {
-    const svg = document.querySelector(".text-layer");
-    if (svg) {
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        const range = document.createRange();
-        range.selectNodeContents(svg);
-        selection.addRange(range);
-      }
-    }
-
-    const wrap = imgWrapRef.current;
-    if (!wrap) return;
-
-    const wrapRect = wrap.getBoundingClientRect();
-    const menuWidth = 250;
-
-    let targetTopViewport = wrapRect.top - MENU_HEIGHT - 20;
-    if (data.length > 0) {
-      const firstBoxY = data.reduce(
-        (min, item) => Math.min(min, item.box[0][1]),
-        Infinity
-      );
-      const imgRect = imgRef.current?.getBoundingClientRect();
-      if (imgRect && size.h > 0) {
-        const scale = imgRect.height / size.h;
-        targetTopViewport = imgRect.top + firstBoxY * scale - MENU_HEIGHT - 20;
-      }
-    }
-    if (targetTopViewport < 10) targetTopViewport = 10;
-
-    const viewerRect = viewerRef.current?.getBoundingClientRect();
-    let targetLeftViewport = window.innerWidth / 2 - menuWidth / 2;
-    if (viewerRect) {
-      targetLeftViewport =
-        viewerRect.left + viewerRect.width / 2 - menuWidth / 2;
-    }
-
-    if (targetLeftViewport < 10) targetLeftViewport = 10;
-    if (targetLeftViewport + menuWidth > window.innerWidth - 10) {
-      targetLeftViewport = window.innerWidth - menuWidth - 10;
-    }
-
-    if (showFlatMenuRef.current) {
-      showFlatMenuRef.current({
-        left: targetLeftViewport,
-        top: targetTopViewport,
-        width: menuWidth,
-      });
-    }
-  }, [data, size.h]);
-
-  const {
-    menuRef,
-    sliderRef,
-    notchRef,
-    page1Ref,
-    page2Ref,
-    pageFlatRef,
-    handleAction,
-    switchPage,
-    showStandardMenu,
-    showFlatMenu,
-  } = useInlineMenu({
-    containerRef: imgWrapRef,
-    onSelectAll: performSelectAll,
-  });
-
-  // Update the ref
-  useEffect(() => {
-    showFlatMenuRef.current = showFlatMenu;
-  }, [showFlatMenu]);
-
-  // Text selection hook
+  // Text selection hook - calls EditorMenu.showStandardMenu
   const { svgRef, handleTextMouseDown } = useTextSelection({
     data,
     onSelectionComplete: (selection) => {
-      showStandardMenu(selection);
+      editorMenuRef.current?.showStandardMenu(selection);
     },
   });
 
@@ -404,15 +319,13 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         </div>
       </div>
 
-      <InlineMenu
-        menuRef={menuRef}
-        sliderRef={sliderRef}
-        notchRef={notchRef}
-        page1Ref={page1Ref}
-        page2Ref={page2Ref}
-        pageFlatRef={pageFlatRef}
-        onAction={handleAction}
-        onSwitchPage={switchPage}
+      <EditorMenu
+        ref={editorMenuRef}
+        data={data}
+        size={size}
+        imgRef={imgRef}
+        imgWrapRef={imgWrapRef}
+        viewerRef={viewerRef}
       />
 
       {error && <div className="editor-error">{error}</div>}

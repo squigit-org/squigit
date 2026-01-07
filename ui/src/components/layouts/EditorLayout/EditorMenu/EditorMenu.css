@@ -6,8 +6,7 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
 
-/* Context Menu / Inline Menu */
-#context-menu {
+#editor-menu {
   position: fixed;
   background-color: #18181b;
   border-radius: 12px;
@@ -30,27 +29,27 @@
   align-items: center;
 }
 
-#context-menu.animating-layout {
+#editor-menu.animating-layout {
   transition: opacity 0.15s ease-out,
     transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
     width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
     left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-#context-menu.active {
+#editor-menu.active {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1) translateY(0);
 }
 
-.menu-slider {
+#editor-menu .menu-slider {
   display: flex;
   height: 100%;
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   will-change: transform;
 }
 
-.menu-page {
+#editor-menu .menu-page {
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -59,7 +58,7 @@
   white-space: nowrap;
 }
 
-.menu-item {
+#editor-menu .menu-item {
   padding: 8px 14px;
   cursor: pointer;
   user-select: none;
@@ -72,32 +71,32 @@
   justify-content: center;
 }
 
-.menu-item:hover {
+#editor-menu .menu-item:hover {
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-.menu-item:active {
+#editor-menu .menu-item:active {
   background-color: rgba(255, 255, 255, 0.15);
 }
 
-.divider {
+#editor-menu .divider {
   width: 1px;
   height: 16px;
   background-color: rgba(255, 255, 255, 0.15);
   margin: 0 2px;
 }
 
-.nav-arrow {
+#editor-menu .nav-arrow {
   color: #a1a1aa;
   padding: 8px 8px;
   min-width: 32px;
 }
 
-.nav-arrow:hover {
+#editor-menu .nav-arrow:hover {
   color: white;
 }
 
-#notch {
+#editor-menu-notch {
   position: absolute;
   width: 20px;
   height: 10px;
@@ -112,10 +111,6 @@
   display: none;
 }
 
-#notch.active {
+#editor-menu-notch.active {
   display: block;
-}
-
-#notch.flipped {
-  transform: translateX(-50%) rotate(180deg);
 }
