@@ -127,6 +127,7 @@ class Particle {
 }
 
 function initParticles() {
+  console.log("[Worker] Initializing particles");
   particles = [];
   frame = 0;
   nextSpawnFrame = 5;

@@ -92,6 +92,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 }) => {
   const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
   const [loading, setLoading] = useState(false);
+  // Separate visibility states for sequential transition
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [showTextLayer, setShowTextLayer] = useState(false);
   const [error, setError] = useState("");
   const [size, setSize] = useState({ w: 0, h: 0 });
 
@@ -133,6 +136,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     }
 
     setLoading(true);
+    setShowOverlay(true);
+    setShowTextLayer(false);
     setError("");
 
     try {
@@ -153,7 +158,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         // Use base64 data directly
         imageData = startupImage.base64;
         isBase64 = true;
-        console.log("OCR: Using base64 data");
+        console.log(
+          "OCR: Using base64 data (length: " + imageData.length + ")"
+        );
       }
 
       console.log("Running OCR via Tauri invoke...");
@@ -171,10 +178,18 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
       }));
 
       setData(converted);
+
+      setData(converted);
+
+      // Instant transition:
+      // Toggle both at the same time. React will auto-batch these updates.
+      setShowOverlay(false);
+      setShowTextLayer(true);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       setError(errorMsg);
       console.error("OCR Error:", e);
+      setShowOverlay(false); // Hide on error
     } finally {
       setLoading(false);
     }
@@ -306,14 +321,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             draggable={false}
           />
 
-          <TextLayer
-            data={data}
-            size={size}
-            svgRef={svgRef}
-            onTextMouseDown={handleTextMouseDown}
-          />
+          {showTextLayer && (
+            <TextLayer
+              data={data}
+              size={size}
+              svgRef={svgRef}
+              onTextMouseDown={handleTextMouseDown}
+            />
+          )}
 
-          <ScanningOverlay isVisible={loading} />
+          <ScanningOverlay isVisible={showOverlay} />
 
           <ImageToolbar
             toolbarRef={toolbarRef}

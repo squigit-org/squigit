@@ -25,15 +25,31 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
+    console.log(`[ScanningOverlay] isVisible changed to: ${isVisible}`);
     if (isVisible) {
       setShouldRender(true);
-      // Wait a tick to ensure DOM is present before fading in (if we were adding a fade-in too),
-      // but mainly we just want to ensure we aren't flagged as fading out.
-      requestAnimationFrame(() => setIsFadingOut(false));
+      setIsFadingOut(false);
+      // Determine if we need to restart the worker?
+      // actually the worker is created in the other useEffect when shouldRender becomes true.
+      // If we are just toggling visibility while kept mounted (rare case here as shouldRender controls mount),
+      // we might need to handle RESTART if we supported it, but currently the component unmounts fully.
+      // However, if we went from visible -> hidden (fading) -> visible (cancelled fade),
+      // we might need to ensure animation resumes.
+      // But currently the other useEffect handles worker creation on mount.
+      // If we are fading out, the component is still mounted.
+      // If we go back to visible during fade out, we need to make sure it animates.
+      // The worker only animates on INIT.
+      // Let's just focus on STOP for now. If the user cancels fade out (rapid toggle),
+      // we might have a frozen canvas.
+      // Ideally we should send "START" or "RESUME" if we wanted to be robust,
+      // but the worker doesn't support it yet.
+      // Given the use case (OCR finishes -> fade out), rapid toggling is unlikely or handled by unmount/mount.
     } else {
       // Start fade out
       setIsFadingOut(true);
+
       const timer = setTimeout(() => {
+        console.log("[ScanningOverlay] Fade out complete, unmounting...");
         setShouldRender(false);
         setIsFadingOut(false);
       }, 500); // Match CSS transition duration
@@ -47,26 +63,43 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
     const canvas = canvasRef.current;
 
     // Create and store worker
-    const worker = new ScanningWorker();
-    workerRef.current = worker;
+    let worker: Worker;
+    try {
+      worker = new ScanningWorker();
+      workerRef.current = worker;
+
+      worker.onerror = (e) => {
+        console.error("[ScanningOverlay] Worker error:", e);
+      };
+    } catch (e) {
+      console.error("[ScanningOverlay] Failed to create worker:", e);
+      return;
+    }
 
     // Use OffscreenCanvas for performance
-    // Note: This requires browser support for OffscreenCanvas transfer
-    const offscreen = canvas.transferControlToOffscreen();
+    try {
+      const offscreen = canvas.transferControlToOffscreen();
+      const rect = containerRef.current.getBoundingClientRect();
 
-    const rect = containerRef.current.getBoundingClientRect();
-
-    worker.postMessage(
-      {
-        type: "INIT",
-        payload: {
-          canvas: offscreen,
-          width: rect.width,
-          height: rect.height,
+      console.log("[ScanningOverlay] Initializing worker...");
+      worker.postMessage(
+        {
+          type: "INIT",
+          payload: {
+            canvas: offscreen,
+            width: rect.width,
+            height: rect.height,
+          },
         },
-      },
-      [offscreen]
-    );
+        [offscreen]
+      );
+    } catch (e) {
+      console.error(
+        "[ScanningOverlay] Failed to transfer control to offscreen:",
+        e
+      );
+      // Fallback or just log? For now just log, as this is critical for this component
+    }
 
     const handleResize = () => {
       if (containerRef.current) {
@@ -91,9 +124,8 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
 
   return (
     <div
-      className="scanning-overlay"
+      className={`scanning-overlay ${isFadingOut ? "fading-out" : ""}`}
       ref={containerRef}
-      style={{ opacity: isFadingOut ? 0 : 1 }}
     >
       <canvas ref={canvasRef} className="scanning-canvas" />
     </div>
