@@ -1,13 +1,4 @@
-/**
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useEffect, useRef, useState } from "react";
-import "./ScanningOverlay.css";
-// @ts-ignore
-import ScanningWorker from "./scanning.worker?worker";
+import React, { useEffect, useRef } from "react";
 
 interface ScanningOverlayProps {
   isVisible: boolean;
@@ -16,118 +7,275 @@ interface ScanningOverlayProps {
 export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
   isVisible,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const workerRef = useRef<Worker | null>(null);
-
-  // We keep the component mounted during the fade-out period
-  const [shouldRender, setShouldRender] = useState(isVisible);
-  const [isFadingOut, setIsFadingOut] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number | null>(null);
 
   useEffect(() => {
-    console.log(`[ScanningOverlay] isVisible changed to: ${isVisible}`);
-    if (isVisible) {
-      setShouldRender(true);
-      setIsFadingOut(false);
-      // Determine if we need to restart the worker?
-      // actually the worker is created in the other useEffect when shouldRender becomes true.
-      // If we are just toggling visibility while kept mounted (rare case here as shouldRender controls mount),
-      // we might need to handle RESTART if we supported it, but currently the component unmounts fully.
-      // However, if we went from visible -> hidden (fading) -> visible (cancelled fade),
-      // we might need to ensure animation resumes.
-      // But currently the other useEffect handles worker creation on mount.
-      // If we are fading out, the component is still mounted.
-      // If we go back to visible during fade out, we need to make sure it animates.
-      // The worker only animates on INIT.
-      // Let's just focus on STOP for now. If the user cancels fade out (rapid toggle),
-      // we might have a frozen canvas.
-      // Ideally we should send "START" or "RESUME" if we wanted to be robust,
-      // but the worker doesn't support it yet.
-      // Given the use case (OCR finishes -> fade out), rapid toggling is unlikely or handled by unmount/mount.
-    } else {
-      // Start fade out
-      setIsFadingOut(true);
-
-      const timer = setTimeout(() => {
-        console.log("[ScanningOverlay] Fade out complete, unmounting...");
-        setShouldRender(false);
-        setIsFadingOut(false);
-      }, 500); // Match CSS transition duration
-      return () => clearTimeout(timer);
-    }
-  }, [isVisible]);
-
-  useEffect(() => {
-    if (!shouldRender || !canvasRef.current || !containerRef.current) return;
-
-    const canvas = canvasRef.current;
-
-    // Create and store worker
-    let worker: Worker;
-    try {
-      worker = new ScanningWorker();
-      workerRef.current = worker;
-
-      worker.onerror = (e) => {
-        console.error("[ScanningOverlay] Worker error:", e);
-      };
-    } catch (e) {
-      console.error("[ScanningOverlay] Failed to create worker:", e);
+    if (!isVisible) {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
       return;
     }
 
-    // Use OffscreenCanvas for performance
-    try {
-      const offscreen = canvas.transferControlToOffscreen();
-      const rect = containerRef.current.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-      console.log("[ScanningOverlay] Initializing worker...");
-      worker.postMessage(
-        {
-          type: "INIT",
-          payload: {
-            canvas: offscreen,
-            width: rect.width,
-            height: rect.height,
-          },
-        },
-        [offscreen]
-      );
-    } catch (e) {
-      console.error(
-        "[ScanningOverlay] Failed to transfer control to offscreen:",
-        e
-      );
-      // Fallback or just log? For now just log, as this is critical for this component
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // --- State Variables ---
+    let width = container.clientWidth;
+    let height = container.clientHeight;
+    let particles: Particle[] = [];
+    let frame = 0;
+    let nextSpawnFrame = 5;
+
+    // --- Boundary Configuration ---
+    // These define the "Hidden Inner Bounds"
+    // We update these on resize to ensure dynamic sizing works for small images
+    let boundWidth = 0;
+    let boundHeight = 0;
+    let boundX = 0;
+    let boundY = 0;
+
+    // Reduced count to keep center saturated but not crowded
+    const PARTICLE_COUNT = 25;
+
+    // --- Particle Class ---
+    class Particle {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      moveTimer: number;
+      baseSize: number;
+      currentSize: number;
+      pulseSpeed: number;
+      pulseOffset: number;
+      life: number;
+      maxLife: number;
+      state: "fading_in" | "idle" | "moving" | "fading_out";
+      opacity: number;
+      fadeSpeed: number;
+
+      constructor() {
+        this.x = 0;
+        this.y = 0;
+        this.vx = 0;
+        this.vy = 0;
+        this.moveTimer = 0;
+        this.baseSize = 0;
+        this.currentSize = 0;
+        this.pulseSpeed = 0;
+        this.pulseOffset = 0;
+        this.life = 0;
+        this.maxLife = 0;
+        this.state = "fading_in";
+        this.opacity = 0;
+        this.fadeSpeed = 0;
+
+        this.init();
+      }
+
+      init() {
+        // Position: Spawn strictly inside the bounds
+        this.x = boundX + Math.random() * boundWidth;
+        this.y = boundY + Math.random() * boundHeight;
+
+        // Movement vector (starts stationary)
+        this.vx = 0;
+        this.vy = 0;
+        this.moveTimer = 0;
+
+        // Size properties: 1.5px to 4.0px radius
+        this.baseSize = Math.random() * 2.5 + 1.5;
+
+        // SLOW PULSE
+        this.pulseSpeed = 0.02 + Math.random() * 0.03;
+        this.pulseOffset = Math.random() * Math.PI * 2;
+
+        // Lifecycle
+        this.life = 0;
+        this.maxLife = 200 + Math.random() * 200;
+        this.state = "fading_in";
+        this.opacity = 0;
+
+        // SLOWER FADE: Smooth entry
+        this.fadeSpeed = 0.03 + Math.random() * 0.03;
+      }
+
+      update() {
+        // --- 1. Movement Logic with Bounds Constraint ---
+
+        // Always Clamp: Ensure particle is inside bounds (handles resize events)
+        // If the box shrunk, this pushes the particle back in.
+        if (this.x < boundX) this.x = boundX;
+        if (this.x > boundX + boundWidth) this.x = boundX + boundWidth;
+        if (this.y < boundY) this.y = boundY;
+        if (this.y > boundY + boundHeight) this.y = boundY + boundHeight;
+
+        if (this.state === "idle") {
+          // Lower chance to move (robotic scanner feel)
+          if (Math.random() < 0.01) {
+            this.state = "moving";
+            const angle = Math.random() * Math.PI * 2;
+            // SLOW SPEED: 0.5 to 1.5 pixels
+            const speed = 0.5 + Math.random() * 1.0;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed;
+            // LONG SLIDE
+            this.moveTimer = 30 + Math.random() * 40;
+          }
+        } else if (this.state === "moving") {
+          const nextX = this.x + this.vx;
+          const nextY = this.y + this.vy;
+
+          // PHYSICS CHECK: Will next step hit the boundary?
+          const hitWall =
+            nextX < boundX ||
+            nextX > boundX + boundWidth ||
+            nextY < boundY ||
+            nextY > boundY + boundHeight;
+
+          if (hitWall) {
+            // Stop immediately if hitting bounds (Robotic stop)
+            this.state = "idle";
+            this.vx = 0;
+            this.vy = 0;
+          } else {
+            this.x = nextX;
+            this.y = nextY;
+            this.moveTimer--;
+
+            if (this.moveTimer <= 0) {
+              this.state = "idle";
+              this.vx = 0;
+              this.vy = 0;
+            }
+          }
+        }
+
+        // --- 2. Pulse Size ---
+        const pulse = Math.sin(this.life * this.pulseSpeed + this.pulseOffset);
+        const scale = 0.7 + 0.3 * pulse;
+        this.currentSize = this.baseSize * scale;
+
+        // --- 3. Lifecycle ---
+        this.life++;
+
+        if (this.state === "fading_in") {
+          this.opacity += this.fadeSpeed;
+          if (this.opacity >= 1) {
+            this.opacity = 1;
+            this.state = "idle";
+          }
+        } else if (this.state === "idle" || this.state === "moving") {
+          if (this.life > this.maxLife) {
+            this.state = "fading_out";
+          }
+        } else if (this.state === "fading_out") {
+          this.opacity -= this.fadeSpeed;
+          if (this.opacity <= 0) {
+            this.opacity = 0;
+            this.init(); // Respawn
+          }
+        }
+      }
+
+      draw(context: CanvasRenderingContext2D) {
+        context.beginPath();
+        context.arc(this.x, this.y, this.currentSize, 0, Math.PI * 2);
+        context.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+        context.fill();
+      }
     }
 
+    // --- Resize Handler ---
     const handleResize = () => {
-      if (containerRef.current) {
-        const r = containerRef.current.getBoundingClientRect();
-        worker.postMessage({
-          type: "RESIZE",
-          payload: { width: r.width, height: r.height },
-        });
-      }
+      if (!container) return;
+      width = container.clientWidth;
+      height = container.clientHeight;
+      canvas.width = width;
+      canvas.height = height;
+
+      // Define the "Inner Bounds"
+      // Use 70% of the container size to create a safe center zone.
+      // This guarantees they never touch the image edges.
+      boundWidth = width * 0.7;
+      boundHeight = height * 0.7;
+
+      // Center the bounds
+      boundX = (width - boundWidth) / 2;
+      boundY = (height - boundHeight) / 2;
     };
 
-    window.addEventListener("resize", handleResize);
+    // --- Animation Loop ---
+    const render = () => {
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height);
 
+      // --- SPAWN LOGIC ---
+      if (particles.length < PARTICLE_COUNT) {
+        if (frame >= nextSpawnFrame) {
+          const batchSize = Math.floor(Math.random() * 5) + 8;
+          const toAdd = Math.min(batchSize, PARTICLE_COUNT - particles.length);
+
+          for (let k = 0; k < toAdd; k++) {
+            particles.push(new Particle());
+          }
+
+          nextSpawnFrame = frame + (12 + Math.random() * 12);
+        }
+      }
+      // -------------------
+
+      // Update and Draw
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw(ctx);
+      }
+
+      frame++;
+      animationRef.current = requestAnimationFrame(render);
+    };
+
+    // Initialize
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Initial setup
+    render(); // Start loop
+
+    // Cleanup
     return () => {
       window.removeEventListener("resize", handleResize);
-      worker.terminate();
-      workerRef.current = null;
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+      }
     };
-  }, [shouldRender]);
+  }, [isVisible]);
 
-  if (!shouldRender) return null;
+  if (!isVisible) return null;
 
   return (
     <div
-      className={`scanning-overlay ${isFadingOut ? "fading-out" : ""}`}
       ref={containerRef}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        // Reduced opacity to 0.2
+        backgroundColor: "rgba(0, 0, 0, 0.2)",
+        overflow: "hidden",
+        zIndex: 50,
+        pointerEvents: "none",
+      }}
     >
-      <canvas ref={canvasRef} className="scanning-canvas" />
+      <canvas ref={canvasRef} style={{ display: "block" }} />
     </div>
   );
 };

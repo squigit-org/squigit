@@ -32,6 +32,7 @@
   justify-content: center;
   background: #0a0a0a;
   overflow: auto;
+  padding-left: 8px;
   padding-right: 8px;
 }
 
