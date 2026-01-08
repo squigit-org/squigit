@@ -9,7 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 const SIZES = {
   ONBOARDING: { w: 800, h: 600 },
-  CHAT: { w: 940, h: 680 },
+  CHAT: { w: 1020, h: 670 },
 };
 
 export const useWindowManager = (

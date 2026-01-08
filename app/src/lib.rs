@@ -71,8 +71,8 @@ pub fn run() {
                 &handle,
                 "main",
                 "index.html",
-                900.0,
-                700.0,
+                690.0,
+                1030.0,
                 "spatialshot",
             )
             .expect("Failed to spawn main window");
