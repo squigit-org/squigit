@@ -12,13 +12,18 @@ import React, {
   ForwardedRef,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { TextLayer, ImageToolbar, useTextSelection } from "../../ui";
 import { useLens } from "../../../features/google";
 import {
   EditorHeader,
   EditorMenu,
   EditorMenuHandle,
 } from "../../../features/editor";
+import {
+  TextLayer,
+  ImageToolbar,
+  useTextSelection,
+  ScanningOverlay,
+} from "../../ui";
 import "./EditorLayout.css";
 
 interface OCRBox {
@@ -308,7 +313,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             onTextMouseDown={handleTextMouseDown}
           />
 
-          {loading && <div className="loading">Scanning...</div>}
+          <ScanningOverlay isVisible={loading} />
 
           <ImageToolbar
             toolbarRef={toolbarRef}

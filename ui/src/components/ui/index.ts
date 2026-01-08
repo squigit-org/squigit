@@ -12,3 +12,4 @@ export * from "./InlineMenu/InlineMenu";
 export * from "./InlineMenu/useInlineMenu";
 export * from "./TextLayer/TextLayer";
 export * from "./TextLayer/useTextSelection";
+export * from "./ScanningOverlay/ScanningOverlay";

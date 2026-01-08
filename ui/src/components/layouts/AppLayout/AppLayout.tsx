@@ -326,7 +326,11 @@ export const AppLayout: React.FC = () => {
 
   // 1. Loading State (Checking file)
   if (system.hasAgreed === null || auth.authStage === "LOADING") {
-    return <div className="h-screen w-screen bg-neutral-950" />;
+    return (
+      <div className="h-screen w-screen bg-neutral-950 flex items-center justify-center text-neutral-400">
+        Loading...
+      </div>
+    );
   }
 
   // 2. Agreement Screen

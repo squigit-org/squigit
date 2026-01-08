@@ -20,7 +20,7 @@ export const useWindowManager = (
   isLoading: boolean
 ) => {
   useEffect(() => {
-    if (isLoading) return;
+    // if (isLoading) return; // Allow window to show during loading
 
     const adjustWindow = async () => {
       const isOnboardingPage =

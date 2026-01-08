@@ -80,18 +80,6 @@
   fill: transparent;
 }
 
-.loading {
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 10, 10, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: #a1a1aa;
-  z-index: 30;
-}
-
 .editor-error {
   padding: 8px 16px;
   background: #1c1c1c;
