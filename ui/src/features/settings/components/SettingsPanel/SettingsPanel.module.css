@@ -17,7 +17,7 @@
 .settings-panel {
   position: fixed;
   top: 57px;
-  left: 17px;
+  left: 8px;
   width: 250px;
   height: auto;
   background: var(--neutral-950);

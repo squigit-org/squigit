@@ -31,9 +31,9 @@
 }
 
 .resize-handle {
-  width: 2px;
+  width: 1px;
   height: 100%;
-  background: #27272a;
+  background: var(--neutral-900);
   cursor: col-resize;
   flex-shrink: 0;
   transition: background-color 0.2s ease;

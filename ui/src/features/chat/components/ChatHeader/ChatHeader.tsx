@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { RotateCw } from "lucide-react";
+import { RotateCw, MessagesSquare } from "lucide-react";
 import { ModelSelector } from "./ModelSelector";
 import styles from "./ChatHeader.module.css";
 
@@ -29,6 +29,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
+        <MessagesSquare size={18} className={styles.chatIcon} />
         <h1 className={styles.chatTitle}>{chatTitle}</h1>
       </div>
 

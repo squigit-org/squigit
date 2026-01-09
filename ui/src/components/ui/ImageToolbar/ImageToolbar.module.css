@@ -127,10 +127,9 @@
   animation: spin 1s linear infinite;
 }
 
-/* Fullscreen mode - pin toolbar to top-left corner of window */
 :global(.image-wrap.is-fullscreen) .imageToolbar {
   position: fixed;
   top: 8px;
   left: 8px;
-  z-index: 120; /* Above fullscreen image */
+  z-index: 120;
 }

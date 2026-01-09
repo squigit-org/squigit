@@ -219,7 +219,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         isInteractionLocked ? styles.interactionLocked : ""
       }`}
       ref={toolbarRef}
-      style={isInteractionLocked ? { pointerEvents: "none" } : undefined}
+      style={{
+        ...(isInteractionLocked ? { pointerEvents: "none" } : {}),
+        ...(isTransitioning ? { opacity: 0, pointerEvents: "none" } : {}),
+      }}
     >
       {/* Only show drag handle when not in fullscreen */}
       {!isFullscreen && (
