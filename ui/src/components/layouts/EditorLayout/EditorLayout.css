@@ -26,19 +26,22 @@
 
 .viewer {
   flex: 1;
+  min-height: 0; /* Allow flex shrinking */
   position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
   background: #0a0a0a;
-  overflow: auto;
-  padding-left: 8px;
-  padding-right: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
 }
 
 .image-wrap {
   position: relative;
   display: inline-block;
+  /* Fixed padding for toolbar space - this creates the "pusher" zone */
+  padding-top: 50px;
+  /* Use margin:auto for centering - this prevents top cut-off on overflow */
+  margin: auto;
 }
 
 .image-wrap img {
@@ -73,6 +76,7 @@
   z-index: 110; /* Above backdrop (105) */
   background-color: transparent;
   display: block;
+  padding-top: 0; /* Remove toolbar pusher zone in fullscreen */
 }
 
 /* Standalone Backdrop - managed by EditorLayout.tsx */
@@ -89,6 +93,7 @@
 .fullscreen-backdrop.visible {
   opacity: 1;
   pointer-events: auto;
+  user-select: none;
 }
 
 .image-wrap.is-fullscreen img {

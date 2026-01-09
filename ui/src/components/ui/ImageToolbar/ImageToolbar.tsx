@@ -35,6 +35,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   const dragStartRef = useRef({ x: 0, left: 0 });
 
   const startDrag = (e: React.MouseEvent) => {
+    // Disable dragging in fullscreen mode
+    if (isFullscreen) return;
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -85,6 +88,31 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     document.removeEventListener("mousemove", handleDrag);
     document.removeEventListener("mouseup", stopDrag);
   };
+
+  // Clamp toolbar position when window resizes
+  useEffect(() => {
+    if (isFullscreen) return;
+
+    const clampToolbarPosition = () => {
+      const toolbar = toolbarRef.current;
+      const wrap = imgWrapRef.current;
+      if (!toolbar || !wrap) return;
+
+      const currentLeft = parseFloat(toolbar.style.left) || 0;
+      if (currentLeft === 0) return; // Not dragged, skip
+
+      const wrapWidth = wrap.clientWidth;
+      const toolbarWidth = toolbar.offsetWidth;
+      const maxLeft = wrapWidth - toolbarWidth;
+
+      if (currentLeft > maxLeft) {
+        toolbar.style.left = `${Math.max(0, maxLeft)}px`;
+      }
+    };
+
+    window.addEventListener("resize", clampToolbarPosition);
+    return () => window.removeEventListener("resize", clampToolbarPosition);
+  }, [isFullscreen, toolbarRef, imgWrapRef]);
 
   // Interaction lock to prevent sticky hover states after transition
   const [isInteractionLocked, setIsInteractionLocked] = useState(false);
@@ -193,93 +221,100 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       ref={toolbarRef}
       style={isInteractionLocked ? { pointerEvents: "none" } : undefined}
     >
-      <div
-        className={styles.toolbarDrag}
-        ref={toolbarDragRef}
-        onMouseDown={startDrag}
-        title="Drag"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style={{ transform: "rotate(0deg)" }}
+      {/* Only show drag handle when not in fullscreen */}
+      {!isFullscreen && (
+        <div
+          className={styles.toolbarDrag}
+          ref={toolbarDragRef}
+          onMouseDown={startDrag}
         >
-          <path d="M7 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-        </svg>
-      </div>
-
-      <div className={styles.toolbarSeparator}></div>
-
-      <button
-        className={styles.toolBtn}
-        onClick={(e) => {
-          e.stopPropagation();
-          onLensClick();
-        }}
-        disabled={isLensLoading}
-        onMouseEnter={handleButtonMouseEnter}
-      >
-        {isLensLoading ? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={styles.spinner}
+            fill="currentColor"
+            style={{ transform: "rotate(0deg)" }}
           >
-            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            <path d="M7 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
           </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-            <circle cx="12" cy="13" r="3" />
-          </svg>
-        )}
-        <span className={styles.tooltipText}>Search with Google Lens</span>
-      </button>
+        </div>
+      )}
 
-      <button
-        className={styles.toolBtn}
-        onClick={(e) => {
-          e.stopPropagation();
-          onCopyImage();
-        }}
-        onMouseEnter={handleButtonMouseEnter}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-        </svg>
-        <span className={styles.tooltipText}>Copy as Image</span>
-      </button>
+      {/* Only show these buttons when not in fullscreen */}
+      {!isFullscreen && (
+        <>
+          <div className={styles.toolbarSeparator}></div>
+
+          <button
+            className={styles.toolBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              onLensClick();
+            }}
+            disabled={isLensLoading}
+            onMouseEnter={handleButtonMouseEnter}
+          >
+            {isLensLoading ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={styles.spinner}
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                <circle cx="12" cy="13" r="3" />
+              </svg>
+            )}
+            <span className={styles.tooltipText}>Search with Google Lens</span>
+          </button>
+
+          <button
+            className={styles.toolBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyImage();
+            }}
+            onMouseEnter={handleButtonMouseEnter}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+            </svg>
+            <span className={styles.tooltipText}>Copy as Image</span>
+          </button>
+        </>
+      )}
 
       <button
         className={styles.toolBtn}

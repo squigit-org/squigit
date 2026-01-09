@@ -6,10 +6,10 @@
 
 .textLayer {
   position: absolute;
-  top: 0;
+  top: 50px; /* Offset for toolbar padding in .image-wrap */
   left: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 50px); /* Adjust height for the offset */
   pointer-events: none;
   z-index: 10;
 }

@@ -7,7 +7,7 @@
 .imageToolbar {
   position: absolute;
   left: 0;
-  top: -50px;
+  top: 0;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -127,8 +127,10 @@
   animation: spin 1s linear infinite;
 }
 
-/* Fullscreen mode - reposition toolbar inside the container */
+/* Fullscreen mode - pin toolbar to top-left corner of window */
 :global(.image-wrap.is-fullscreen) .imageToolbar {
-  top: -50px;
-  z-index: 110;
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 120; /* Above fullscreen image */
 }
