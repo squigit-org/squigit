@@ -5,6 +5,15 @@
  */
 
 import React from "react";
+import {
+  Moon,
+  Trash2,
+  Bug,
+  KeyRound,
+  Pencil,
+  ChevronRight,
+  Github,
+} from "lucide-react";
 import styles from "./SettingsPanel.module.css";
 
 interface MainActionsProps {
@@ -34,7 +43,7 @@ export const MainActions: React.FC<MainActionsProps> = ({
         onClick={onToggleTheme}
       >
         <div className={styles["btn-content"]}>
-          <i className="fas fa-moon" />
+          <Moon size={18} />
           <div className={styles["btn-text"]}>Dark Mode</div>
         </div>
         <label
@@ -57,14 +66,14 @@ export const MainActions: React.FC<MainActionsProps> = ({
         onClick={onClearCache}
       >
         <div className={styles["btn-content"]}>
-          <i className="fas fa-broom" />
+          <Trash2 size={18} />
           <div className={styles["btn-text"]}>Clear Cache</div>
         </div>
       </button>
 
       <button className={styles["btn"]} onClick={onReportBug}>
         <div className={styles["btn-content"]}>
-          <i className="fas fa-bug" />
+          <Bug size={18} />
           <div className={styles["btn-text"]}>Report Bug</div>
         </div>
       </button>
@@ -75,24 +84,24 @@ export const MainActions: React.FC<MainActionsProps> = ({
         onClick={onResetAPIKey}
       >
         <div className={styles["btn-content"]}>
-          <i className="fas fa-key" />
+          <KeyRound size={18} />
           <div className={styles["btn-text"]}>Reset API Key</div>
         </div>
       </button>
 
       <button className={styles["btn"]} id="promptBtn" onClick={onOpenSubview}>
         <div className={styles["btn-content"]}>
-          <i className="fas fa-edit" />
+          <Pencil size={18} />
           <div className={styles["btn-text"]}>Personal Context</div>
         </div>
         <div className={styles["btn-arrow"]}>
-          <i className="fas fa-chevron-right" />
+          <ChevronRight size={18} />
         </div>
       </button>
 
       <button className={styles["btn"]} onClick={onOpenGithub}>
         <div className={styles["btn-content"]}>
-          <i className="fab fa-github" />
+          <Github size={18} />
           <div className={styles["btn-text"]}>GitHub Repository</div>
         </div>
       </button>

@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
+import { LogOut } from "lucide-react";
 import styles from "./UserProfile.module.css";
 
 interface UserInfoProps {
@@ -116,7 +117,7 @@ export const UserInfo: React.FC<UserInfoProps> = ({
         aria-label="Log out"
         onClick={onLogout}
       >
-        <i className="fas fa-sign-out-alt" />
+        <LogOut size={18} />
       </button>
     </div>
   );

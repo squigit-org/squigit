@@ -111,6 +111,60 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorMenuRef = useRef<EditorMenuHandle>(null);
 
+  // Dynamic padding state - distributes free space in 2:3 ratio (top:bottom)
+  const [dynamicPaddingTop, setDynamicPaddingTop] = useState(0);
+
+  // Dynamic padding calculation using ResizeObserver
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const imgWrap = imgWrapRef.current;
+    if (!viewer || !imgWrap) return;
+
+    const calculatePadding = () => {
+      // Get viewer's available height
+      const viewerHeight = viewer.clientHeight;
+
+      // Get image wrap height (including toolbar padding)
+      const imgWrapHeight = imgWrap.scrollHeight;
+
+      // Available free space = viewer height - content height
+      // This is the space we can distribute between top and bottom
+      const freeSpace = viewerHeight - imgWrapHeight;
+
+      // If no free space or content overflows, no padding (avoid scrollbar)
+      if (freeSpace <= 0) {
+        setDynamicPaddingTop(0);
+        return;
+      }
+
+      // Distribute free space in 2:3 ratio (top:bottom)
+      // top = 2/5 of free space, bottom = 3/5 of free space (implicit)
+      // This gives a slight "push to top" effect
+      const topPadding = Math.floor(freeSpace * (2 / 5));
+
+      setDynamicPaddingTop(topPadding);
+    };
+
+    // Initial calculation
+    calculatePadding();
+
+    // Create ResizeObserver to monitor both viewer and image wrap
+    const resizeObserver = new ResizeObserver(() => {
+      calculatePadding();
+    });
+
+    resizeObserver.observe(viewer);
+    resizeObserver.observe(imgWrap);
+
+    // Also listen to window resize for vh unit changes
+    window.addEventListener("resize", calculatePadding);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", calculatePadding);
+    };
+  }, [startupImage, size]); // Re-run when image or size changes
+
   // Backdrop state
   const [isBackdropVisible, setIsBackdropVisible] = useState(false);
 
@@ -394,7 +448,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         onResetAPIKey={onResetAPIKey}
         toggleSubview={toggleSubview}
       />
-      <div className="viewer" ref={viewerRef}>
+      <div
+        className="viewer"
+        ref={viewerRef}
+        style={{ paddingTop: dynamicPaddingTop }} // 2:3 ratio - 40% of free space to top
+      >
         <div
           className={`image-wrap ${isFullscreen ? "is-fullscreen" : ""}`}
           ref={imgWrapRef}

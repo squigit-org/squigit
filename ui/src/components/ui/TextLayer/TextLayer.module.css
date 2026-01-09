@@ -9,7 +9,7 @@
   top: 50px; /* Offset for toolbar padding in .image-wrap */
   left: 0;
   width: 100%;
-  height: calc(100% - 50px); /* Adjust height for the offset */
+  height: calc(100% - 50px); /* Adjust height for top offset */
   pointer-events: none;
   z-index: 10;
 }

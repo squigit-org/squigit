@@ -240,7 +240,7 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
         top: 50 /* Offset for toolbar padding in .image-wrap */,
         left: 0,
         width: "100%",
-        height: "calc(100% - 50px)" /* Adjust height for the offset */,
+        height: "calc(100% - 50px)" /* Adjust height for top offset */,
         backgroundColor: "rgba(0, 0, 0, 0.2)",
         overflow: "hidden",
         zIndex: 50,

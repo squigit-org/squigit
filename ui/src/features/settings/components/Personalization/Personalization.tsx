@@ -5,6 +5,7 @@
  */
 
 import React from "react";
+import { ChevronLeft, RotateCw, ChevronRight, Save } from "lucide-react";
 import styles from "./Personalization.module.css";
 
 interface ModelInfo {
@@ -47,7 +48,7 @@ export const PersonalContext: React.FC<PersonalContextProps> = ({
           id="backPromptBtn"
           onClick={onBack}
         >
-          <i className="fas fa-chevron-left" />
+          <ChevronLeft size={18} />
         </button>
         <button
           className={styles["reset-btn"]}
@@ -55,10 +56,9 @@ export const PersonalContext: React.FC<PersonalContextProps> = ({
           onClick={onReset}
         >
           Reset{" "}
-          <i
-            className={`fas fa-sync-alt ${
-              isRotating ? styles["rotating"] : ""
-            }`}
+          <RotateCw
+            size={14}
+            className={isRotating ? styles["rotating"] : ""}
           />
         </button>
       </div>
@@ -88,13 +88,13 @@ export const PersonalContext: React.FC<PersonalContextProps> = ({
               </span>
             </div>
             <button className={styles["next-model-btn"]} onClick={onNextModel}>
-              <i className="fas fa-chevron-right" />
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
 
         <button className={styles["save-btn"]} id="saveBtn" onClick={onSave}>
-          <i className="fas fa-save" /> Save
+          <Save size={18} /> Save
         </button>
       </div>
     </div>
