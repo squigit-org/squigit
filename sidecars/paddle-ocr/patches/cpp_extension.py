@@ -12,7 +12,11 @@ import sys
 
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
 PY_VERSION = f"python{sys.version_info.major}.{sys.version_info.minor}"
-path = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddle' / 'utils' / 'cpp_extension' / '__init__.py'
+
+if sys.platform == "win32":
+    path = SCRIPT_DIR / 'venv' / 'Lib' / 'site-packages' / 'paddle' / 'utils' / 'cpp_extension' / '__init__.py'
+else:
+    path = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddle' / 'utils' / 'cpp_extension' / '__init__.py'
 
 stub = '''# Stubbed out for PyInstaller - avoids Cython dependency
 def load(*args, **kwargs):
@@ -34,4 +38,4 @@ class BuildExtension:
 with open(path, 'w') as f:
     f.write(stub)
 
-print(f"✓ Stubbed {path}")
+print(f"[OK] Stubbed {path}")

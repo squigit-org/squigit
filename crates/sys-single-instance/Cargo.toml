@@ -2,3 +2,8 @@
 name = "sys-single-instance"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+fs2 = "0.4"
+dirs = "5.0"

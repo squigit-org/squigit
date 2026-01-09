@@ -1,50 +1,16 @@
-name: 'Testing: CI'
+name: "Distribute"
 
 on:
-  push:
-    # branches:
-    #   - main
-    tags:
-      - "v*"
+  # push:
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  # =========================================================
-  # JOB 1: BUILD DAEMON (RUST)
-  # =========================================================
-  build-daemon:
-    name: Daemon ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: Linux-x64
-          - os: windows-latest
-            name: Windows-x64
-          - os: macos-15-intel
-            name: macOS-Intel
-          - os: macos-latest
-            name: macOS-ARM
-            
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build
-        uses: ./.github/actions/build-daemon
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: daemon-artifact-${{ matrix.name }}
-          path: dist-out/*
-
-  # =========================================================
-  # JOB 2: BUILD CAPTURE (C++/QT)
-  # =========================================================
+  # -----------------------------------------------------------------------------
+  # Job 1: Build Capture Engine (Qt + Rust)
+  # -----------------------------------------------------------------------------
   build-capture:
     name: Capture ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -54,60 +20,51 @@ jobs:
         include:
           - os: ubuntu-latest
             name: Linux-x64
+            target: x86_64-unknown-linux-gnu
           - os: windows-latest
             name: Windows-x64
+            target: x86_64-pc-windows-msvc
           - os: macos-15-intel
             name: macOS-Intel
+            target: x86_64-apple-darwin
           - os: macos-latest
             name: macOS-ARM
+            target: aarch64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build
-        uses: ./.github/actions/build-capture
+      - name: Build Capture Engine
+        uses: ./.github/actions/build-capture-engine
+        with:
+          target: ${{ matrix.target }}
 
-      - name: Upload Artifact
+      - name: Prepare Artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist-staging/qt-runtime
+          cp app/binaries/capture-engine-${{ matrix.target }} dist-staging/
+          cp -r app/binaries/qt-runtime/* dist-staging/qt-runtime/
+
+      - name: Prepare Artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist-staging/qt-runtime -Force
+          Copy-Item app/binaries/capture-engine-${{ matrix.target }}.exe dist-staging/
+          Copy-Item -Recurse app/binaries/qt-runtime/* dist-staging/qt-runtime/
+
+      - name: Upload Capture Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: capture-artifact-${{ matrix.name }}
-          path: dist-out/*
+          name: capture-engine-${{ matrix.target }}
+          path: dist-staging/*
 
-  # =========================================================
-  # JOB 3: BUILD APP (ELECTRON/REACT)
-  # =========================================================
-  build-app:
-    name: App ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: Linux
-          - os: windows-latest
-            name: Windows
-          - os: macos-latest
-            name: macOS
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build
-        uses: ./.github/actions/build-app
-        with:
-          google_credentials: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-artifact-${{ matrix.name }}
-          path: dist-out/*
-
-  # =========================================================
-  # JOB 4: BUILD SETUP (TAURI)
-  # =========================================================
-  build-setup:
-    name: Setup ${{ matrix.name }}
+  # -----------------------------------------------------------------------------
+  # Job 2: Build OCR Engine (Python/PyInstaller)
+  # -----------------------------------------------------------------------------
+  build-ocr:
+    name: OCR ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -115,45 +72,98 @@ jobs:
         include:
           - os: ubuntu-latest
             name: Linux-x64
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            name: Windows-x64
+            target: x86_64-pc-windows-msvc
           - os: macos-15-intel
             name: macOS-Intel
+            target: x86_64-apple-darwin
           - os: macos-latest
             name: macOS-ARM
+            target: aarch64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build
-        uses: ./.github/actions/build-setup
+      - name: Build OCR Engine
+        uses: ./.github/actions/build-ocr-engine
 
-      - name: Upload Artifact
+      - name: Prepare Artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist-staging
+          cp app/binaries/ocr-engine-${{ matrix.target }} dist-staging/
+
+      - name: Prepare Artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist-staging -Force
+          Copy-Item app/binaries/ocr-engine-${{ matrix.target }}.exe dist-staging/
+
+      - name: Upload OCR Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: setup-artifact-${{ matrix.name }}
-          path: dist-out/*
+          name: ocr-engine-${{ matrix.target }}
+          path: dist-staging/*
 
-  # =========================================================
-  # JOB 5: PUBLISH BINARIES (THE RELEASE JOB)
-  # =========================================================
-  publish-binaries:
-    needs: [build-daemon, build-capture, build-app, build-setup]
+  # -----------------------------------------------------------------------------
+  # Job 3: Package & Release
+  # -----------------------------------------------------------------------------
+  package:
+    name: Package & Release
+    needs: [build-capture, build-ocr]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Download All Artifacts
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-pc-windows-msvc
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+
+    steps:
+      - name: Download Capture Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: all-artifacts
+          name: capture-engine-${{ matrix.target }}
+          path: staging/capture
 
-      - name: Create Release & Upload Zips
+      - name: Download OCR Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ocr-engine-${{ matrix.target }}
+          path: staging/ocr
+
+      - name: Assemble & Zip
+        run: |
+          mkdir -p final/sidecars/qt-runtime
+
+          if [ -f staging/capture/capture-engine-${{ matrix.target }}.exe ]; then
+            mv staging/capture/capture-engine-${{ matrix.target }}.exe final/sidecars/
+          else
+            mv staging/capture/capture-engine-${{ matrix.target }} final/sidecars/
+          fi
+
+          cp -r staging/capture/qt-runtime/* final/sidecars/qt-runtime/
+
+          if [ -f staging/ocr/ocr-engine-${{ matrix.target }}.exe ]; then
+            mv staging/ocr/ocr-engine-${{ matrix.target }}.exe final/sidecars/
+          else
+            mv staging/ocr/ocr-engine-${{ matrix.target }} final/sidecars/
+          fi
+
+          cd final
+          zip -r ../sidecars-${{ matrix.target }}.zip sidecars
+
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          fail_on_unmatched_files: false
-          files: |
-            all-artifacts/**/*.zip
+          files: sidecars-${{ matrix.target }}.zip

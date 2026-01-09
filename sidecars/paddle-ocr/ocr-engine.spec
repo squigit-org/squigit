@@ -1,14 +1,18 @@
-# Copyright 2026 a7mddra
-# SPDX-License-Identifier: Apache-2.0
-# -*- mode: python ; coding: utf-8 -*-
+import sys
+import os
+
+if sys.platform == "win32":
+    site_packages = "venv/Lib/site-packages"
+else:
+    site_packages = f"venv/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
 
 a = Analysis(
     ['src/main.py'],
     pathex=[],
     binaries=[],
     datas=[
-        ('venv/lib/python3.12/site-packages/paddle/libs', 'paddle/libs'),
-        ('venv/lib/python3.12/site-packages/paddleocr', 'paddleocr'),
+        (f'{site_packages}/paddle/libs', 'paddle/libs'),
+        (f'{site_packages}/paddleocr', 'paddleocr'),
         ('models', 'models'),
         ('src', 'src'),
     ],

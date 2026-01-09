@@ -12,7 +12,11 @@ import sys
 
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
 PY_VERSION = f"python{sys.version_info.major}.{sys.version_info.minor}"
-path = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddleocr' / 'ppocr' / 'data' / 'imaug' / 'iaa_augment.py'
+
+if sys.platform == "win32":
+    path = SCRIPT_DIR / 'venv' / 'Lib' / 'site-packages' / 'paddleocr' / 'ppocr' / 'data' / 'imaug' / 'iaa_augment.py'
+else:
+    path = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddleocr' / 'ppocr' / 'data' / 'imaug' / 'iaa_augment.py'
 
 content = '''class IaaAugment:
     def __init__(self, **kwargs):
@@ -32,4 +36,4 @@ class ImgaugLikeResize:
 with open(path, 'w') as f:
     f.write(content)
 
-print(f"✓ Stubbed {path}")
+print(f"[OK] Stubbed {path}")

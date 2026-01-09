@@ -25,7 +25,7 @@ import {
   useTextSelection,
   ScanningOverlay,
 } from "../../ui";
-import "./EditorLayout.css";
+import styles from "./EditorLayout.module.css";
 
 interface OCRBox {
   text: string;
@@ -392,7 +392,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
   if (!startupImage) {
     return (
-      <div className="editor-layout">
+      <div className={styles.editorLayout}>
         <EditorHeader
           isPanelActive={isPanelActive}
           toggleSettingsPanel={toggleSettingsPanel}
@@ -416,14 +416,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
           onResetAPIKey={onResetAPIKey}
           toggleSubview={toggleSubview}
         />
-        <div className="editor-empty">No image loaded</div>
+        <div className={styles.editorEmpty}>No image loaded</div>
       </div>
     );
   }
 
   return (
     <div
-      className={`editor-layout ${isTransitioning ? "is-transitioning" : ""}`}
+      className={`${styles.editorLayout} ${
+        isTransitioning ? styles.isTransitioning : ""
+      }`}
     >
       <EditorHeader
         isPanelActive={isPanelActive}
@@ -449,12 +451,14 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         toggleSubview={toggleSubview}
       />
       <div
-        className="viewer"
+        className={styles.viewer}
         ref={viewerRef}
         style={{ paddingTop: dynamicPaddingTop }} // 2:3 ratio - 40% of free space to top
       >
         <div
-          className={`image-wrap ${isFullscreen ? "is-fullscreen" : ""}`}
+          className={`${styles.imageWrap} ${
+            isFullscreen ? styles.isFullscreen : ""
+          }`}
           ref={imgWrapRef}
         >
           <img
@@ -502,11 +506,13 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
       />
 
       <div
-        className={`fullscreen-backdrop ${isBackdropVisible ? "visible" : ""}`}
+        className={`${styles.fullscreenBackdrop} ${
+          isBackdropVisible ? styles.visible : ""
+        }`}
         aria-hidden="true"
       />
 
-      {error && <div className="editor-error">{error}</div>}
+      {error && <div className={styles.editorError}>{error}</div>}
     </div>
   );
 };

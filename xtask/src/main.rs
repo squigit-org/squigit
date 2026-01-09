@@ -1,25 +1,24 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Build automation for ocr-engine
-//!
 //! Usage:
-//!   cargo xtask build-sidecar    Build PaddleOCR sidecar executable
-//!   cargo xtask build-app        Build Tauri application
-//!   cargo xtask build            Build everything
-//!   cargo xtask clean            Clean all build artifacts
-//!   cargo xtask run <cmd>        Run Tauri commands (dev, build, etc.)
+//!   cargo xtask build              Build everything (OCR + Capture)
+//!   cargo xtask build-ocr          Build PaddleOCR sidecar executable
+//!   cargo xtask build-capture      Build Capture Engine (Qt + Rust)
+//!   cargo xtask build-capture-qt   Build Qt native only (no Rust)
+//!   cargo xtask clean              Clean all build artifacts
+//!   cargo xtask run <cmd>          Run Tauri commands (dev, build, etc.)
 
-mod sidecar;
-mod tauri;
-mod utils;
+mod commands;
+mod platforms;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use commands::{build, clean, dev};
 
 #[derive(Parser)]
 #[command(name = "xtask")]
-#[command(about = "Build automation for ocr-engine")]
+#[command(about = "Build automation for sidecars")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -27,54 +26,47 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Build everything (sidecar + app)
+    /// Build everything (OCR sidecar + Capture Engine)
     Build,
-    
+
     /// Build PaddleOCR sidecar executable
-    BuildSidecar,
-    
+    BuildOcr,
+
+    /// Build Capture Engine (Qt + Rust + Package)
+    BuildCapture,
+
+    /// Build Qt native only (CMake only, no Bundle)
+    BuildCaptureQt,
+
     /// Build Tauri application for release
     BuildApp,
-    
+
     /// Clean all build artifacts
     Clean,
-    
+
     /// Run Tauri commands (dev, build, etc.)
     Run {
-        /// Tauri command to run (e.g., dev, build)
         #[arg(default_value = "dev")]
         cmd: String,
     },
-    
+
     /// Start development mode
     Dev,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+
     match cli.command {
-        Commands::Build => {
-            sidecar::build()?;
-            tauri::build()?;
-        }
-        Commands::BuildSidecar => {
-            sidecar::build()?;
-        }
-        Commands::BuildApp => {
-            tauri::build()?;
-        }
-        Commands::Clean => {
-            sidecar::clean()?;
-            tauri::clean()?;
-        }
-        Commands::Run { cmd } => {
-            tauri::run(&cmd)?;
-        }
-        Commands::Dev => {
-            tauri::run("dev")?;
-        }
+        Commands::Build => build::all()?,
+        Commands::BuildOcr => build::ocr()?,
+        Commands::BuildCapture => build::capture()?,
+        Commands::BuildCaptureQt => build::capture_qt_only()?,
+        Commands::BuildApp => build::app()?,
+        Commands::Clean => clean::all()?,
+        Commands::Run { cmd } => dev::run(&cmd)?,
+        Commands::Dev => dev::run("dev")?,
     }
-    
+
     Ok(())
 }

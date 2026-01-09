@@ -7,15 +7,15 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import "katex/dist/katex.min.css";
 import "../../ui/Notifications/Toast.css";
-import "./AppLayout.css";
+import styles from "./AppLayout.module.css";
 import { ContextMenu } from "../../ui/ContextMenu/ContextMenu";
 import { EditorLayout } from "../EditorLayout/EditorLayout";
 import { ChatLayout } from "../ChatLayout/ChatLayout";
 import { Welcome } from "../../../features/onboarding";
 import { Agreement } from "../../../features/onboarding/components/Agreement/Agreement";
 import { UpdateNotes } from "../../../features/onboarding/components/UpdateNotes/UpdateNotes";
-import { GeminiSetup } from "../../../features/auth/components/BYOKey/GeminiSetup";
-import { LoginScreen } from "../../../features/auth/components/LoginScreen/LoginScreen";
+import { GeminiSetup } from "../../../features/auth/components/Setup/GeminiSetup";
+import { LoginScreen } from "../../../features/auth/components/Login/OAuthLogin";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { useSystemSync } from "../../../hooks/useSystemSync";
 import { useChatTitle } from "../../../features/chat/hooks/useChatTitle";
@@ -378,9 +378,9 @@ export const AppLayout: React.FC = () => {
     <div
       ref={containerRef}
       onContextMenu={handleContextMenu}
-      className="app-container"
+      className={styles.appContainer}
     >
-      <div className="editor-panel" style={{ width: `${splitRatio}%` }}>
+      <div className={styles.editorPanel} style={{ width: `${splitRatio}%` }}>
         <EditorLayout
           startupImage={system.startupImage}
           sessionLensUrl={system.sessionLensUrl}
@@ -409,9 +409,12 @@ export const AppLayout: React.FC = () => {
         />
       </div>
 
-      <div className="resize-handle" onMouseDown={handleResizeStart} />
+      <div className={styles.resizeHandle} onMouseDown={handleResizeStart} />
 
-      <div className="chat-panel" style={{ width: `${100 - splitRatio}%` }}>
+      <div
+        className={styles.chatPanel}
+        style={{ width: `${100 - splitRatio}%` }}
+      >
         <ChatLayout
           // Chat State
           messages={chatEngine.messages}

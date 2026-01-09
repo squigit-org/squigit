@@ -67,14 +67,11 @@ def process_base64(base64_data: str) -> int:
     @return Exit code (0 for success, 1 for error).
     """
     try:
-        # Remove data URL prefix if present
         if "," in base64_data:
             base64_data = base64_data.split(",", 1)[1]
         
-        # Decode base64 to bytes
         image_bytes = base64.b64decode(base64_data)
-        
-        # Write to temporary file
+
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             tmp.write(image_bytes)
             tmp_path = tmp.name
@@ -86,7 +83,6 @@ def process_base64(base64_data: str) -> int:
             print(json.dumps(output, cls=NumpyEncoder))
             return 0
         finally:
-            # Cleanup temp file
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
                 
@@ -153,10 +149,8 @@ def main() -> int:
     @return Exit code (0 for success, 1 for error).
     """
     if len(sys.argv) >= 2:
-        # CLI mode: ocr-engine <path>
         return process_path(sys.argv[1])
     else:
-        # IPC mode: read JSON from stdin
         return process_stdin()
 
 

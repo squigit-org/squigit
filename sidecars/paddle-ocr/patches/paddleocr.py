@@ -18,40 +18,52 @@ Patches applied:
     5. __init__.py - wraps PPStructure export in try/except
     6. rec_postprocess.py - fixes regex syntax warnings
 """
+
 import os
 import sys
 
 import pathlib
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
 PY_VERSION = f"python{sys.version_info.major}.{sys.version_info.minor}"
-BASE = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddleocr'
+
+if sys.platform == "win32":
+    BASE = SCRIPT_DIR / 'venv' / 'Lib' / 'site-packages' / 'paddleocr'
+else:
+    BASE = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddleocr'
 
 def check_base():
+    global BASE
     if not os.path.exists(BASE):
-        print(f"Error: {BASE} not found. Run this from project root with venv activated.")
-        sys.exit(1)
+        if sys.platform == "win32" and os.path.exists(SCRIPT_DIR / 'venv' / 'lib' / 'site-packages' / 'paddleocr'):
+             BASE = SCRIPT_DIR / 'venv' / 'lib' / 'site-packages' / 'paddleocr'
+        
+        if not os.path.exists(BASE):
+            print(f"Error: {BASE} not found.")
+            print(f"  Current OS: {sys.platform}")
+            print(f"  Script Dir: {SCRIPT_DIR}")
+            sys.exit(1)
 
 def patch_imaug_init():
     """Comment out latex_ocr_aug and unimernet_aug imports."""
     filepath = BASE / 'ppocr' / 'data' / 'imaug' / '__init__.py'
     print(f"1. Patching {filepath}...")
     
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
     changed = False
     for i, line in enumerate(lines):
         if 'from .latex_ocr_aug import *' in line and not line.strip().startswith('#'):
             lines[i] = '# ' + line
-            print("   ✓ Commented out latex_ocr_aug import")
+            print("   [OK] Commented out latex_ocr_aug import")
             changed = True
         if 'from .unimernet_aug import *' in line and not line.strip().startswith('#'):
             lines[i] = '# ' + line
-            print("   ✓ Commented out unimernet_aug import")
+            print("   [OK] Commented out unimernet_aug import")
             changed = True
     
     if changed:
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             f.writelines(lines)
     else:
         print("   - Already patched")
@@ -61,7 +73,7 @@ def patch_paddleocr_py():
     filepath = BASE / 'paddleocr.py'
     print(f"\n2. Patching {filepath}...")
     
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     
     changed = False
@@ -85,7 +97,7 @@ except ImportError:
 
     if old_imports in content:
         content = content.replace(old_imports, new_imports)
-        print("   ✓ Wrapped ppstructure imports in try/except")
+        print("   [OK] Wrapped ppstructure imports in try/except")
         changed = True
     elif '# Patched: wrap optional ppstructure imports' in content:
         print("   - Imports already patched")
@@ -111,7 +123,7 @@ if _HAS_PPSTRUCTURE:
                     j += 1
                 break
         content = '\n'.join(lines)
-        print("   ✓ Wrapped PPStructure class in conditional")
+        print("   [OK] Wrapped PPStructure class in conditional")
         changed = True
     elif 'if _HAS_PPSTRUCTURE:' in content:
         print("   - PPStructure class already wrapped")
@@ -134,22 +146,22 @@ if _HAS_PPSTRUCTURE:
 
     if old_parse in content:
         content = content.replace(old_parse, new_parse)
-        print("   ✓ Patched parse_args with fallback")
+        print("   [OK] Patched parse_args with fallback")
         changed = True
     elif '# Patched: handle None init_args' in content:
         print("   - parse_args already patched")
     
     if changed:
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
-        print("   ✓ File updated")
+        print("   [OK] File updated")
 
 def patch_init_py():
     """Wrap PPStructure export in try/except."""
     filepath = BASE / '__init__.py'
     print(f"\n3. Patching {filepath}...")
     
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     
     old_import = '''from .paddleocr import (
@@ -185,27 +197,27 @@ except ImportError:
 
     if old_import in content:
         content = content.replace(old_import, new_import)
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
-        print("   ✓ Patched __init__.py to handle missing PPStructure")
+        print("   [OK] Patched __init__.py to handle missing PPStructure")
     elif '# Patched: handle missing PPStructure' in content:
         print("   - Already patched")
     else:
-        print("   ✗ Could not find expected import block")
+        print("   [!] Could not find expected import block")
 
 def patch_rec_postprocess():
     """Fix regex syntax warnings by making strings raw."""
     filepath = BASE / 'ppocr' / 'postprocess' / 'rec_postprocess.py'
     print(f"\n4. Patching {filepath}...")
     
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     
     if 'noletter = "[\\W_^\\d]"' in content:
         content = content.replace('noletter = "[\\W_^\\d]"', 'noletter = r"[\\W_^\\d]"')
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
-        print("   ✓ Fixed regex warnings (made strings raw)")
+        print("   [OK] Fixed regex warnings (made strings raw)")
     elif 'noletter = r"[\\W_^\\d]"' in content:
         print("   - Already patched")
     else:
@@ -225,7 +237,7 @@ def main():
     
     print()
     print("=" * 60)
-    print("✓ All patches applied!")
+    print("[OK] All patches applied!")
     print()
     print("Next steps:")
     print("  1. Build: pyinstaller --clean ocr-engine.spec")

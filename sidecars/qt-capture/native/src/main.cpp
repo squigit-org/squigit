@@ -4,50 +4,99 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <QApplication>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
+#include <QQmlComponent>
+#include <QQuickWindow>
+#include <QCommandLineParser>
 #include <QDebug>
 #include <QScreen>
 #include <vector>
+
 #include "config.h"
-#include "surface/OverlayWindow.h"
-#include "shutter/ScreenGrabber.h"
+#include "core/CaptureMode.h"
+#include "core/ScreenGrabber.h"
+#include "controller/CaptureController.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
+#include <dwmapi.h>
+#endif
+
+#ifdef Q_OS_MAC
+#include <objc/runtime.h>
+#include <objc/message.h>
 #endif
 
 extern "C" ScreenGrabber *createWindowsEngine(QObject *parent);
 extern "C" ScreenGrabber *createUnixEngine(QObject *parent);
 
+static void applyPlatformWindowHacks(QQuickWindow *window)
+{
+#ifdef Q_OS_WIN
+    HWND hwnd = reinterpret_cast<HWND>(window->winId());
+    BOOL attrib = TRUE;
+    DwmSetWindowAttribute(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED, &attrib, sizeof(attrib));
+#endif
+
+#ifdef Q_OS_MAC
+    WId nativeId = window->winId();
+    id nsView = reinterpret_cast<id>(nativeId);
+    if (nsView)
+    {
+        id nsWindow = ((id(*)(id, SEL))objc_msgSend)(nsView, sel_registerName("window"));
+        if (nsWindow)
+        {
+            ((void (*)(id, SEL, long))objc_msgSend)(nsWindow, sel_registerName("setAnimationBehavior:"), 2);
+            ((void (*)(id, SEL, BOOL))objc_msgSend)(nsWindow, sel_registerName("setHasShadow:"), NO);
+            ((void (*)(id, SEL, long))objc_msgSend)(nsWindow, sel_registerName("setLevel:"), 5);
+        }
+    }
+#endif
+}
+
 int main(int argc, char *argv[])
 {
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-    QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 #endif
 
 #ifdef Q_OS_WIN
     HMODULE user32 = LoadLibraryW(L"user32.dll");
-    if (user32) {
+    if (user32)
+    {
         using SetProcessDpiAwarenessContextFn = BOOL(WINAPI *)(HANDLE);
         auto fn = reinterpret_cast<SetProcessDpiAwarenessContextFn>(GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
-        if (fn) {
+        if (fn)
+        {
             fn(reinterpret_cast<HANDLE>(-4));
-        } else {
+        }
+        else
+        {
             HMODULE shcore = LoadLibraryW(L"Shcore.dll");
-            if (shcore) {
-                using SetProcessDpiAwarenessFn = HRESULT(WINAPI *)(int /*PROCESS_DPI_AWARENESS*/);
+            if (shcore)
+            {
+                using SetProcessDpiAwarenessFn = HRESULT(WINAPI *)(int);
                 auto fn2 = reinterpret_cast<SetProcessDpiAwarenessFn>(GetProcAddress(shcore, "SetProcessDpiAwareness"));
-                if (fn2) {
+                if (fn2)
+                {
                     constexpr int PROCESS_PER_MONITOR_DPI_AWARE = 2;
                     fn2(PROCESS_PER_MONITOR_DPI_AWARE);
                 }
                 FreeLibrary(shcore);
-            } else {
+            }
+            else
+            {
                 using SetProcessDPIAwareFn = BOOL(WINAPI *)();
                 auto fn3 = reinterpret_cast<SetProcessDPIAwareFn>(GetProcAddress(user32, "SetProcessDPIAware"));
-                if (fn3) fn3();
+                if (fn3)
+                    fn3();
             }
         }
         FreeLibrary(user32);
@@ -58,13 +107,41 @@ int main(int argc, char *argv[])
     qputenv("QT_QPA_PLATFORM", "xcb");
 #endif
 
-    QApplication app(argc, argv);
-    
+    QGuiApplication app(argc, argv);
+
     app.setApplicationName(APP_NAME);
     app.setOrganizationName(ORG_NAME);
     app.setApplicationVersion(APP_VERSION);
     app.setQuitOnLastWindowClosed(true);
-    
+
+    QCommandLineParser parser;
+    parser.setApplicationDescription("Screen capture tool with selection modes");
+    parser.addHelpOption();
+    parser.addVersionOption();
+
+    QCommandLineOption freeshapeOption(
+        QStringList() << "f" << "freeshape",
+        "Use freeshape (squiggle) selection mode (default)");
+    parser.addOption(freeshapeOption);
+
+    QCommandLineOption rectangleOption(
+        QStringList() << "r" << "rectangle",
+        "Use rectangle selection mode");
+    parser.addOption(rectangleOption);
+
+    parser.process(app);
+
+    QString captureMode = "freeshape";
+    if (parser.isSet(rectangleOption))
+    {
+        captureMode = "rectangle";
+        qDebug() << "Capture mode: Rectangle";
+    }
+    else
+    {
+        qDebug() << "Capture mode: Freeshape";
+    }
+
     ScreenGrabber *engine = nullptr;
 #ifdef Q_OS_WIN
     engine = createWindowsEngine(&app);
@@ -86,9 +163,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    QList<OverlayWindow *> windows;
-
     QList<QScreen *> qtScreens = app.screens();
+
+    QQmlApplicationEngine qmlEngine;
+
+    std::vector<CaptureController *> controllers;
+    std::vector<QQuickWindow *> windows;
 
     for (const auto &frame : frames)
     {
@@ -98,7 +178,6 @@ int main(int argc, char *argv[])
                  << "| DPR:" << frame.devicePixelRatio;
 
         QScreen *targetScreen = nullptr;
-
         for (QScreen *s : qtScreens)
         {
             if (s->name() == frame.name)
@@ -107,7 +186,6 @@ int main(int argc, char *argv[])
                 break;
             }
         }
-
         if (!targetScreen)
         {
             for (QScreen *s : qtScreens)
@@ -120,9 +198,47 @@ int main(int argc, char *argv[])
             }
         }
 
-        OverlayWindow *win = new OverlayWindow(frame.index, frame.image, frame.geometry, targetScreen);
-        windows.append(win);
-        win->show();
+        auto *controller = new CaptureController(&app);
+        controller->setDisplayIndex(frame.index);
+        controller->setCaptureMode(captureMode);
+        controller->setBackgroundImage(frame.image, frame.devicePixelRatio);
+        controllers.push_back(controller);
+
+        QQmlComponent component(&qmlEngine, QUrl("qrc:/CaptureQml/qml/CaptureWindow.qml"));
+        
+        if (component.isError())
+        {
+            qCritical() << "QML load error:" << component.errors();
+            return 1;
+        }
+
+        QVariantMap properties;
+        properties["controller"] = QVariant::fromValue(controller);
+
+        QObject *obj = component.createWithInitialProperties(properties);
+        QQuickWindow *window = qobject_cast<QQuickWindow *>(obj);
+
+        if (!window)
+        {
+            qCritical() << "Failed to create QML window for display" << frame.index;
+            return 1;
+        }
+
+        windows.push_back(window);
+
+        if (targetScreen)
+        {
+            window->setScreen(targetScreen);
+            window->setGeometry(targetScreen->geometry());
+        }
+        else
+        {
+            window->setGeometry(frame.geometry);
+        }
+
+        applyPlatformWindowHacks(window);
+
+        window->showFullScreen();
     }
 
     return app.exec();

@@ -5,15 +5,16 @@
 .vscode
 
 venv
-target
-
 dist
 build
+target
+qt-runtime
 node_modules
 
-sidecars/paddle-ocr/models
-
-app/*.key
-app/*.key.pub
 app/binaries
+sidecars/paddle-ocr/models
 app/src/data/credentials.json
+
+*.log
+*.key
+*.key.pub

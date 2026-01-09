@@ -11,13 +11,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+cmake_policy(SET CMP0071 NEW)
+if(POLICY CMP0169)
+    cmake_policy(SET CMP0169 OLD)
+endif()
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui)
+find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Core5Compat)
+find_package(Qt6 REQUIRED COMPONENTS Qml)
 if(UNIX AND NOT APPLE)
     find_package(Qt6 REQUIRED COMPONENTS DBus)
 endif()
 
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/generated/config.h"
     @ONLY
 )
@@ -25,17 +33,17 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 set(SOURCES 
     src/main.cpp 
-    src/shutter/ScreenGrabber.h
-    src/surface/SquiggleCanvas.cpp 
-    src/surface/SquiggleCanvas.h 
-    src/surface/OverlayWindow.h
+    src/core/ScreenGrabber.h
+    src/core/CaptureMode.h
+    src/controller/CaptureController.cpp
+    src/controller/CaptureController.h
 )
 
 if(WIN32)
-    list(APPEND SOURCES src/platforms/Shutter_Win.cpp src/surface/OverlayWindow.cpp)
+    list(APPEND SOURCES src/grabber/GrabberWin.cpp)
     set(PLATFORM_LIBS dwmapi gdiplus user32 gdi32 Shcore)
 elseif(APPLE)
-    list(APPEND SOURCES src/platforms/Shutter_Mac.mm src/surface/OverlayWindow.mm)
+    list(APPEND SOURCES src/grabber/GrabberMac.mm)
     
     find_library(FOUNDATION_LIB Foundation)
     find_library(COREGRAPHICS_LIB CoreGraphics)
@@ -47,28 +55,37 @@ elseif(APPLE)
     endif()
     set(PLATFORM_LIBS ${FOUNDATION_LIB} ${COREGRAPHICS_LIB} ${COCOA_LIB} ${APPKIT_LIB})
 elseif(UNIX AND NOT APPLE)
-    list(APPEND SOURCES src/platforms/Shutter_Linux.cpp src/surface/OverlayWindow.cpp)
+    list(APPEND SOURCES src/grabber/GrabberLinux.cpp)
     set(PLATFORM_LIBS Qt6::DBus)
 endif()
 
-add_executable(capture WIN32 MACOSX_BUNDLE ${SOURCES})
+qt_add_executable(capture WIN32 MACOSX_BUNDLE ${SOURCES})
+
+qt_add_qml_module(capture
+    URI CaptureQml
+    VERSION 1.0
+    QML_FILES
+        qml/CaptureWindow.qml
+        qml/SquiggleCanvas.qml
+        qml/RectangleCanvas.qml
+)
 
 target_include_directories(capture PRIVATE 
-    src/shutter
-    src/surface
-    src/platforms
-    src/interface
+    src/core
+    src/grabber
+    src/controller
 )
 
 target_link_libraries(capture PRIVATE 
-    Qt6::Core Qt6::Gui Qt6::Widgets 
+    Qt6::Core Qt6::Gui 
+    Qt6::Quick Qt6::Core5Compat Qt6::Qml
     ${PLATFORM_LIBS}
 )
 
 if(UNIX AND NOT APPLE)
     set_target_properties(capture PROPERTIES
         OUTPUT_NAME "capture-bin"
-        INSTALL_RPATH "$ORIGIN/../libs"
+        INSTALL_RPATH "$ORIGIN/../lib" 
         BUILD_WITH_INSTALL_RPATH TRUE
     )
 endif()

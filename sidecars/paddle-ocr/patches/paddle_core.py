@@ -14,7 +14,11 @@ import sys
 
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent.absolute()
 PY_VERSION = f"python{sys.version_info.major}.{sys.version_info.minor}"
-path = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddle' / 'base' / 'core.py'
+
+if sys.platform == "win32":
+    path = SCRIPT_DIR / 'venv' / 'Lib' / 'site-packages' / 'paddle' / 'base' / 'core.py'
+else:
+    path = SCRIPT_DIR / 'venv' / 'lib' / PY_VERSION / 'site-packages' / 'paddle' / 'base' / 'core.py'
 
 print(f"Patching {path}")
 
@@ -37,9 +41,9 @@ if old_pattern in content:
     content = content.replace(old_pattern, new_pattern)
     with open(path, 'w') as f:
         f.write(content)
-    print("✓ Patch applied successfully.")
+    print("[OK] Patch applied successfully.")
 elif '# Patched: handle PyInstaller frozen executable' in content:
     print("- Already patched.")
 else:
-    print("✗ Could not find expected pattern. Manual fix may be needed.")
+    print("[ERROR] Could not find expected pattern. Manual fix may be needed.")
     sys.exit(1)
