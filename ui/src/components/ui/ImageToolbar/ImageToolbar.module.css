@@ -6,19 +6,18 @@
 
 .imageToolbar {
   position: absolute;
-  right: 16px;
-  bottom: 16px;
+  left: 0;
+  top: -50px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   background-color: rgba(24, 24, 27, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 9999px;
-  padding: 6px 4px;
+  padding: 4px 6px;
   gap: 6px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
-    0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 30;
   opacity: 0.94;
@@ -40,8 +39,8 @@
 }
 
 .toolbarSeparator {
-  width: 12px;
-  height: 1px;
+  width: 1px;
+  height: 16px;
   background-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -66,9 +65,11 @@
 
 .tooltipText {
   position: absolute;
-  right: 120%;
-  top: 50%;
-  transform: translateY(-50%);
+  /* Dynamic positioning via CSS custom properties, with fallback to centered */
+  left: var(--tooltip-left, 50%);
+  transform: translateX(var(--tooltip-translate, -50%));
+  bottom: 120%;
+  margin-bottom: 8px;
   background-color: #18181b;
   color: #e4e4e7;
   padding: 4px 8px;
@@ -83,15 +84,17 @@
   z-index: 100;
 }
 
+/* Notch pointing down (bottom of tooltip) */
 .tooltipText::after {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 100%;
-  margin-top: -4px;
+  top: 100%;
+  /* Notch position is also dynamic to point at the button */
+  left: var(--notch-left, 50%);
+  margin-left: -4px;
   border-width: 4px;
   border-style: solid;
-  border-color: transparent transparent transparent #18181b;
+  border-color: #18181b transparent transparent transparent;
 }
 
 .toolBtn:hover .tooltipText {
@@ -110,4 +113,10 @@
 
 .spinner {
   animation: spin 1s linear infinite;
+}
+
+/* Fullscreen mode - reposition toolbar inside the container */
+:global(.image-wrap.is-fullscreen) .imageToolbar {
+  top: -50px;
+  z-index: 110;
 }

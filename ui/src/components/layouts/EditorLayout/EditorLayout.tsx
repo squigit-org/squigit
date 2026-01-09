@@ -219,10 +219,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     const toolbar = toolbarRef.current;
     if (!toolbar) return;
 
+    // Clear all inline positioning styles so CSS can take over
     toolbar.style.left = "";
+    toolbar.style.right = "";
     toolbar.style.top = "";
-    toolbar.style.right = "16px";
-    toolbar.style.bottom = "16px";
+    toolbar.style.bottom = "";
   }, []);
 
   const toggleFullscreen = useCallback(
@@ -321,7 +322,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             draggable={false}
           />
 
-          {showTextLayer && (
+          {showTextLayer && !isFullscreen && (
             <TextLayer
               data={data}
               size={size}
@@ -330,7 +331,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             />
           )}
 
-          <ScanningOverlay isVisible={showOverlay} />
+          {!isFullscreen && <ScanningOverlay isVisible={showOverlay} />}
 
           <ImageToolbar
             toolbarRef={toolbarRef}

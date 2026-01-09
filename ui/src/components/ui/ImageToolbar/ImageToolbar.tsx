@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef } from "react";
+import React, { useRef, useCallback } from "react";
 import styles from "./ImageToolbar.module.css";
 
 interface ImageToolbarProps {
@@ -17,6 +17,8 @@ interface ImageToolbarProps {
   imgWrapRef: React.RefObject<HTMLDivElement | null>;
 }
 
+const EDGE_PADDING = 10;
+
 export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   toolbarRef,
   isFullscreen,
@@ -28,7 +30,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 }) => {
   const toolbarDragRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
+  const dragStartRef = useRef({ x: 0, left: 0 });
 
   const startDrag = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -40,21 +42,15 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 
     isDraggingRef.current = true;
     dragStartRef.current.x = e.clientX;
-    dragStartRef.current.y = e.clientY;
 
     const wrapRect = wrap.getBoundingClientRect();
     const toolbarRect = toolbar.getBoundingClientRect();
 
     const offsetLeft = toolbarRect.left - wrapRect.left;
-    const offsetTop = toolbarRect.top - wrapRect.top;
 
-    toolbar.style.right = "auto";
-    toolbar.style.bottom = "auto";
     toolbar.style.left = `${offsetLeft}px`;
-    toolbar.style.top = `${offsetTop}px`;
 
     dragStartRef.current.left = offsetLeft;
-    dragStartRef.current.top = offsetTop;
 
     document.addEventListener("mousemove", handleDrag);
     document.addEventListener("mouseup", stopDrag);
@@ -69,22 +65,17 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     if (!toolbar || !wrap) return;
 
     const deltaX = e.clientX - dragStartRef.current.x;
-    const deltaY = e.clientY - dragStartRef.current.y;
 
     let newLeft = dragStartRef.current.left + deltaX;
-    let newTop = dragStartRef.current.top + deltaY;
 
     const wrapRect = wrap.getBoundingClientRect();
     const toolbarRect = toolbar.getBoundingClientRect();
 
     const maxLeft = wrapRect.width - toolbarRect.width;
-    const maxTop = wrapRect.height - toolbarRect.height;
 
     newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-    newTop = Math.max(0, Math.min(newTop, maxTop));
 
     toolbar.style.left = `${newLeft}px`;
-    toolbar.style.top = `${newTop}px`;
   };
 
   const stopDrag = () => {
@@ -92,6 +83,55 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     document.removeEventListener("mousemove", handleDrag);
     document.removeEventListener("mouseup", stopDrag);
   };
+
+  // Handle tooltip positioning on button hover - dynamically adjusts for edge overflow
+  const handleButtonMouseEnter = useCallback((e: React.MouseEvent) => {
+    const button = e.currentTarget as HTMLElement;
+    const tooltip = button.querySelector(
+      `.${styles.tooltipText}`
+    ) as HTMLElement;
+    if (!tooltip) return;
+
+    const buttonRect = button.getBoundingClientRect();
+    const buttonCenterX = buttonRect.left + buttonRect.width / 2;
+
+    // Temporarily show tooltip to measure its width
+    const origDisplay = tooltip.style.display;
+    tooltip.style.visibility = "hidden";
+    tooltip.style.display = "block";
+    tooltip.style.opacity = "0";
+    const tooltipRect = tooltip.getBoundingClientRect();
+    tooltip.style.display = origDisplay;
+    tooltip.style.visibility = "";
+    tooltip.style.opacity = "";
+
+    const tooltipHalfWidth = tooltipRect.width / 2;
+    const viewportWidth = window.innerWidth;
+
+    // Default centered position
+    let tooltipLeft = "50%";
+    let tooltipTranslate = "-50%";
+    let notchLeft = "50%";
+
+    const leftEdge = buttonCenterX - tooltipHalfWidth;
+    const rightEdge = buttonCenterX + tooltipHalfWidth;
+
+    if (leftEdge < EDGE_PADDING) {
+      // Tooltip overflows left - shift right to keep 10px from left edge
+      const shiftRight = EDGE_PADDING - leftEdge;
+      tooltipLeft = `calc(50% + ${shiftRight}px)`;
+      notchLeft = `calc(50% - ${shiftRight}px)`;
+    } else if (rightEdge > viewportWidth - EDGE_PADDING) {
+      // Tooltip overflows right - shift left to keep 10px from right edge
+      const shiftLeft = rightEdge - (viewportWidth - EDGE_PADDING);
+      tooltipLeft = `calc(50% - ${shiftLeft}px)`;
+      notchLeft = `calc(50% + ${shiftLeft}px)`;
+    }
+
+    tooltip.style.setProperty("--tooltip-left", tooltipLeft);
+    tooltip.style.setProperty("--tooltip-translate", tooltipTranslate);
+    tooltip.style.setProperty("--notch-left", notchLeft);
+  }, []);
 
   return (
     <div className={styles.imageToolbar} ref={toolbarRef}>
@@ -107,7 +147,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           height="16"
           viewBox="0 0 24 24"
           fill="currentColor"
-          style={{ transform: "rotate(90deg)" }}
+          style={{ transform: "rotate(0deg)" }}
         >
           <path d="M7 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
         </svg>
@@ -122,6 +162,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           onLensClick();
         }}
         disabled={isLensLoading}
+        onMouseEnter={handleButtonMouseEnter}
       >
         {isLensLoading ? (
           <svg
@@ -163,6 +204,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           e.stopPropagation();
           onCopyImage();
         }}
+        onMouseEnter={handleButtonMouseEnter}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +223,11 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         <span className={styles.tooltipText}>Copy as Image</span>
       </button>
 
-      <button className={styles.toolBtn} onClick={onToggleFullscreen}>
+      <button
+        className={styles.toolBtn}
+        onClick={onToggleFullscreen}
+        onMouseEnter={handleButtonMouseEnter}
+      >
         {isFullscreen ? (
           <svg
             width="20"
