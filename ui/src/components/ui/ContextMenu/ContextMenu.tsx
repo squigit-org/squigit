@@ -7,7 +7,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { Copy, Check } from "lucide-react";
-import "./ContextMenu.css";
+import styles from "./ContextMenu.module.css";
 
 interface ContextMenuProps {
   x: number;
@@ -52,13 +52,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       />
       <div
         id="app-context-menu"
-        className="context-menu fixed z-[9999] min-w-[120px]"
+        className={`${styles.contextMenu} fixed z-[9999] min-w-[120px]`}
         style={{ top: y, left: x }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={handleCopy}
-          className="context-menu-item w-full text-left flex items-center gap-2"
+          className={`${styles.contextMenuItem} w-full text-left flex items-center gap-2`}
         >
           {isCopied ? <Check size={14} /> : <Copy size={14} />}
           <span>Copy</span>

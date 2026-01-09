@@ -1,4 +1,5 @@
 import React from "react";
+import styles from "./TextLayer.module.css";
 
 interface OCRBox {
   text: string;
@@ -23,7 +24,7 @@ export const TextLayer: React.FC<TextLayerProps> = ({
   return (
     <svg
       ref={svgRef}
-      className="text-layer"
+      className={styles.textLayer}
       viewBox={`0 0 ${size.w} ${size.h}`}
       preserveAspectRatio="xMidYMid meet"
     >
@@ -35,7 +36,7 @@ export const TextLayer: React.FC<TextLayerProps> = ({
 
         return (
           <g key={i}>
-            <polygon className="highlight-bg" points={points} />
+            <polygon className={styles.highlightBg} points={points} />
             <text
               id={`text-${i}`}
               x={b[0][0]}
@@ -44,7 +45,7 @@ export const TextLayer: React.FC<TextLayerProps> = ({
               fontFamily="'Arial Narrow', Arial, sans-serif"
               textLength={w}
               lengthAdjust="spacingAndGlyphs"
-              className="selectable-text"
+              className={styles.selectableText}
               onMouseDown={(e) => onTextMouseDown(e, i)}
             >
               {item.text}

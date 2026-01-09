@@ -5,6 +5,7 @@
  */
 
 import React, { useRef } from "react";
+import styles from "./ImageToolbar.module.css";
 
 interface ImageToolbarProps {
   toolbarRef: React.RefObject<HTMLDivElement | null>;
@@ -93,9 +94,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   };
 
   return (
-    <div className="image-toolbar" ref={toolbarRef}>
+    <div className={styles.imageToolbar} ref={toolbarRef}>
       <div
-        className="toolbar-drag"
+        className={styles.toolbarDrag}
         ref={toolbarDragRef}
         onMouseDown={startDrag}
         title="Drag"
@@ -112,10 +113,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         </svg>
       </div>
 
-      <div className="toolbar-separator"></div>
+      <div className={styles.toolbarSeparator}></div>
 
       <button
-        className="tool-btn"
+        className={styles.toolBtn}
         onClick={(e) => {
           e.stopPropagation();
           onLensClick();
@@ -133,7 +134,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="spinner"
+            className={styles.spinner}
           >
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
@@ -153,11 +154,11 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
             <circle cx="12" cy="13" r="3" />
           </svg>
         )}
-        <span className="tooltip-text">Search with Google Lens</span>
+        <span className={styles.tooltipText}>Search with Google Lens</span>
       </button>
 
       <button
-        className="tool-btn"
+        className={styles.toolBtn}
         onClick={(e) => {
           e.stopPropagation();
           onCopyImage();
@@ -177,10 +178,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
           <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
         </svg>
-        <span className="tooltip-text">Copy as Image</span>
+        <span className={styles.tooltipText}>Copy as Image</span>
       </button>
 
-      <button className="tool-btn" onClick={onToggleFullscreen}>
+      <button className={styles.toolBtn} onClick={onToggleFullscreen}>
         {isFullscreen ? (
           <svg
             width="20"
@@ -212,7 +213,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
             <path d="M20 14v6h-6" />
           </svg>
         )}
-        <span className="tooltip-text">
+        <span className={styles.tooltipText}>
           {isFullscreen ? "Collapse" : "Expand"}
         </span>
       </button>

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.context-menu {
+.contextMenu {
   background-color: var(--neutral-800);
   border: 1px solid var(--neutral-500);
   border-radius: 6px;
@@ -15,7 +15,7 @@
   flex-direction: column;
 }
 
-.context-menu-item {
+.contextMenuItem {
   width: 100%;
   text-align: left;
   padding: 8px 12px;
@@ -31,25 +31,25 @@
   outline: none;
 }
 
-.context-menu-item:hover,
-.context-menu-item:focus {
+.contextMenuItem:hover,
+.contextMenuItem:focus {
   background-color: rgba(255, 255, 255, 0.1);
   color: var(--neutral-100);
 }
 
-.context-menu-item svg {
+.contextMenuItem svg {
   opacity: 0.8;
 }
 
-.context-menu-item:hover svg,
-.context-menu-item:focus svg {
+.contextMenuItem:hover svg,
+.contextMenuItem:focus svg {
   opacity: 1;
 }
 
-body.light-mode .context-menu-item:hover,
-html.light .context-menu-item:hover,
-body.light-mode .context-menu-item:focus,
-html.light .context-menu-item:focus {
+:global(body.light-mode) .contextMenuItem:hover,
+:global(html.light) .contextMenuItem:hover,
+:global(body.light-mode) .contextMenuItem:focus,
+:global(html.light) .contextMenuItem:focus {
   background-color: rgba(0, 0, 0, 0.05);
   color: var(--neutral-100);
 }

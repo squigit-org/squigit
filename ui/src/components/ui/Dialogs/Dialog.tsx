@@ -7,7 +7,7 @@
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, AlertTriangle, Info, Sparkles } from "lucide-react";
-import "./Dialog.css";
+import styles from "./Dialog.module.css";
 
 export type DialogVariant = "error" | "warning" | "info" | "update";
 
@@ -94,11 +94,11 @@ export const Dialog: React.FC<DialogProps> = ({
       "rounded-full border px-4 py-1.5 text-xs font-medium transition-all duration-200 disabled:opacity-50";
     switch (btnVariant) {
       case "danger":
-        return `${base} dialog-btn-danger border-red-900/50 bg-red-950/30 text-red-200`;
+        return `${base} ${styles.dialogBtnDanger} border-red-900/50 bg-red-950/30 text-red-200`;
       case "primary":
-        return `${base} dialog-btn-primary border-neutral-600 bg-neutral-100 text-neutral-900 shadow-[0_0_10px_rgba(255,255,255,0.1)]`;
+        return `${base} ${styles.dialogBtnPrimary} border-neutral-600 bg-neutral-100 text-neutral-900 shadow-[0_0_10px_rgba(255,255,255,0.1)]`;
       default:
-        return `${base} dialog-btn-secondary border-neutral-700 bg-neutral-800 text-neutral-300`;
+        return `${base} ${styles.dialogBtnSecondary} border-neutral-700 bg-neutral-800 text-neutral-300`;
     }
   };
 
@@ -106,11 +106,13 @@ export const Dialog: React.FC<DialogProps> = ({
 
   return createPortal(
     <div
-      className="dialog-overlay"
+      className={styles.dialogOverlay}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="dialog-container animate-in fade-in zoom-in-95 duration-200 max-w-md w-full">
+      <div
+        className={`${styles.dialogContainer} animate-in fade-in zoom-in-95 duration-200 max-w-md w-full`}
+      >
         <div className="flex items-start gap-3">
           <div className="mt-0.5 shrink-0">{getIcon()}</div>
           <div className="flex-1 min-w-0">

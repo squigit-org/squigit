@@ -53,140 +53,12 @@
   -webkit-user-drag: none !important;
 }
 
-.text-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.highlight-bg {
-  fill: rgba(255, 230, 0, 0.3);
-  pointer-events: none;
-}
-
-.selectable-text {
-  fill: transparent;
-  pointer-events: auto;
-  cursor: text;
-  -webkit-user-select: text !important;
-  user-select: text !important;
-}
-
-.selectable-text::selection {
-  background: rgba(0, 120, 215, 0.4);
-  fill: transparent;
-}
-
 .editor-error {
   padding: 8px 16px;
   background: #1c1c1c;
   color: #ff4444;
   font-size: 13px;
   border-top: 1px solid #2a2a2a;
-}
-
-/* Image Toolbar */
-.image-toolbar {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background-color: rgba(24, 24, 27, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 9999px;
-  padding: 6px 4px;
-  gap: 6px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
-    0 10px 10px -5px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 30;
-  opacity: 0.94;
-  transition: opacity 0.3s ease;
-  touch-action: none;
-}
-
-.image-wrap:hover .image-toolbar,
-.image-wrap.is-fullscreen .image-toolbar {
-  opacity: 1;
-}
-
-.toolbar-drag {
-  cursor: grab;
-  color: #71717a;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toolbar-drag:active {
-  cursor: grabbing;
-}
-
-.toolbar-separator {
-  width: 12px;
-  height: 1px;
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.tool-btn {
-  position: relative;
-  padding: 4px;
-  border-radius: 9999px;
-  background: transparent;
-  border: none;
-  color: #a1a1aa;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tool-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.tooltip-text {
-  position: absolute;
-  right: 120%;
-  top: 50%;
-  transform: translateY(-50%);
-  background-color: #18181b;
-  color: #e4e4e7;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  font-weight: 500;
-  z-index: 100;
-}
-
-.tooltip-text::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 100%;
-  margin-top: -4px;
-  border-width: 4px;
-  border-style: solid;
-  border-color: transparent transparent transparent #18181b;
-}
-
-.tool-btn:hover .tooltip-text {
-  opacity: 1;
 }
 
 /* Fullscreen mode */
@@ -220,18 +92,4 @@
 /* Hide context menu when in fullscreen mode */
 .editor-layout:has(.image-wrap.is-fullscreen) #context-menu {
   display: none;
-}
-
-/* Spinner animation */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.spinner {
-  animation: spin 1s linear infinite;
 }

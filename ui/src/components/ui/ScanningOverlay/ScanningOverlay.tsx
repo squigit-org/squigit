@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useEffect, useRef } from "react";
 
 interface ScanningOverlayProps {
@@ -27,25 +33,19 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // --- State Variables ---
     let width = container.clientWidth;
     let height = container.clientHeight;
     let particles: Particle[] = [];
     let frame = 0;
     let nextSpawnFrame = 5;
 
-    // --- Boundary Configuration ---
-    // These define the "Hidden Inner Bounds"
-    // We update these on resize to ensure dynamic sizing works for small images
     let boundWidth = 0;
     let boundHeight = 0;
     let boundX = 0;
     let boundY = 0;
 
-    // Reduced count to keep center saturated but not crowded
     const PARTICLE_COUNT = 25;
 
-    // --- Particle Class ---
     class Particle {
       x: number;
       y: number;
@@ -82,59 +82,47 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
       }
 
       init() {
-        // Position: Spawn strictly inside the bounds
         this.x = boundX + Math.random() * boundWidth;
         this.y = boundY + Math.random() * boundHeight;
 
-        // Movement vector (starts stationary)
         this.vx = 0;
         this.vy = 0;
         this.moveTimer = 0;
 
-        // Size properties: 1.5px to 4.0px radius
         this.baseSize = Math.random() * 2.5 + 1.5;
 
-        // SLOW PULSE
         this.pulseSpeed = 0.02 + Math.random() * 0.03;
         this.pulseOffset = Math.random() * Math.PI * 2;
 
-        // Lifecycle
         this.life = 0;
         this.maxLife = 200 + Math.random() * 200;
         this.state = "fading_in";
         this.opacity = 0;
 
-        // SLOWER FADE: Smooth entry
         this.fadeSpeed = 0.03 + Math.random() * 0.03;
       }
 
       update() {
-        // --- 1. Movement Logic with Bounds Constraint ---
-
-        // Always Clamp: Ensure particle is inside bounds (handles resize events)
-        // If the box shrunk, this pushes the particle back in.
         if (this.x < boundX) this.x = boundX;
         if (this.x > boundX + boundWidth) this.x = boundX + boundWidth;
         if (this.y < boundY) this.y = boundY;
         if (this.y > boundY + boundHeight) this.y = boundY + boundHeight;
 
         if (this.state === "idle") {
-          // Lower chance to move (robotic scanner feel)
           if (Math.random() < 0.01) {
             this.state = "moving";
             const angle = Math.random() * Math.PI * 2;
-            // SLOW SPEED: 0.5 to 1.5 pixels
+
             const speed = 0.5 + Math.random() * 1.0;
             this.vx = Math.cos(angle) * speed;
             this.vy = Math.sin(angle) * speed;
-            // LONG SLIDE
+
             this.moveTimer = 30 + Math.random() * 40;
           }
         } else if (this.state === "moving") {
           const nextX = this.x + this.vx;
           const nextY = this.y + this.vy;
 
-          // PHYSICS CHECK: Will next step hit the boundary?
           const hitWall =
             nextX < boundX ||
             nextX > boundX + boundWidth ||
@@ -142,7 +130,6 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
             nextY > boundY + boundHeight;
 
           if (hitWall) {
-            // Stop immediately if hitting bounds (Robotic stop)
             this.state = "idle";
             this.vx = 0;
             this.vy = 0;
@@ -159,12 +146,10 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
           }
         }
 
-        // --- 2. Pulse Size ---
         const pulse = Math.sin(this.life * this.pulseSpeed + this.pulseOffset);
         const scale = 0.7 + 0.3 * pulse;
         this.currentSize = this.baseSize * scale;
 
-        // --- 3. Lifecycle ---
         this.life++;
 
         if (this.state === "fading_in") {
@@ -181,7 +166,7 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
           this.opacity -= this.fadeSpeed;
           if (this.opacity <= 0) {
             this.opacity = 0;
-            this.init(); // Respawn
+            this.init();
           }
         }
       }
@@ -194,7 +179,6 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
       }
     }
 
-    // --- Resize Handler ---
     const handleResize = () => {
       if (!container) return;
       width = container.clientWidth;
@@ -202,23 +186,16 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
       canvas.width = width;
       canvas.height = height;
 
-      // Define the "Inner Bounds"
-      // Use 70% of the container size to create a safe center zone.
-      // This guarantees they never touch the image edges.
       boundWidth = width * 0.7;
       boundHeight = height * 0.7;
 
-      // Center the bounds
       boundX = (width - boundWidth) / 2;
       boundY = (height - boundHeight) / 2;
     };
 
-    // --- Animation Loop ---
     const render = () => {
-      // Clear canvas
       ctx.clearRect(0, 0, width, height);
 
-      // --- SPAWN LOGIC ---
       if (particles.length < PARTICLE_COUNT) {
         if (frame >= nextSpawnFrame) {
           const batchSize = Math.floor(Math.random() * 5) + 8;
@@ -231,9 +208,7 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
           nextSpawnFrame = frame + (12 + Math.random() * 12);
         }
       }
-      // -------------------
 
-      // Update and Draw
       for (let i = 0; i < particles.length; i++) {
         particles[i].update();
         particles[i].draw(ctx);
@@ -243,12 +218,10 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
       animationRef.current = requestAnimationFrame(render);
     };
 
-    // Initialize
     window.addEventListener("resize", handleResize);
-    handleResize(); // Initial setup
-    render(); // Start loop
+    handleResize();
+    render();
 
-    // Cleanup
     return () => {
       window.removeEventListener("resize", handleResize);
       if (animationRef.current !== null) {
@@ -268,7 +241,6 @@ export const ScanningOverlay: React.FC<ScanningOverlayProps> = ({
         left: 0,
         width: "100%",
         height: "100%",
-        // Reduced opacity to 0.2
         backgroundColor: "rgba(0, 0, 0, 0.2)",
         overflow: "hidden",
         zIndex: 50,
