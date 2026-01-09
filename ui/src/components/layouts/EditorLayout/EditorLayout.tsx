@@ -8,6 +8,7 @@ import React, {
   useState,
   useRef,
   useEffect,
+  useLayoutEffect,
   useCallback,
   ForwardedRef,
 } from "react";
@@ -100,6 +101,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
   // Toolbar State
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const previousRect = useRef<DOMRect | null>(null);
 
   // Refs
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -107,6 +110,106 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorMenuRef = useRef<EditorMenuHandle>(null);
+
+  // Backdrop state
+  const [isBackdropVisible, setIsBackdropVisible] = useState(false);
+
+  useLayoutEffect(() => {
+    // Sync backdrop visibility
+    if (isFullscreen) {
+      // Start immediately as requested by user ("both together")
+      setIsBackdropVisible(true);
+    } else {
+      setIsBackdropVisible(false);
+    }
+  }, [isFullscreen]);
+
+  // Manage body scrollbar to prevent artifacts during transition
+  useLayoutEffect(() => {
+    if (isFullscreen || isTransitioning) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isFullscreen, isTransitioning]);
+
+  useLayoutEffect(() => {
+    const wrap = imgWrapRef.current;
+    if (!wrap) return;
+
+    // Measurement for FLIP
+    const currentRect = wrap.getBoundingClientRect();
+
+    if (previousRect.current) {
+      const prev = previousRect.current;
+
+      // Calculate invert values
+      const deltaX = prev.left - currentRect.left;
+      const deltaY = prev.top - currentRect.top;
+      const deltaW = prev.width / currentRect.width;
+      const deltaH = prev.height / currentRect.height;
+
+      // If no change, don't animate (e.g. initial render)
+      if (deltaX === 0 && deltaY === 0 && deltaW === 1 && deltaH === 1) {
+        return;
+      }
+
+      setIsTransitioning(true);
+
+      // Invert: apply transform to make it look like previous state
+      wrap.style.transformOrigin = "top left";
+      wrap.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${deltaW}, ${deltaH})`;
+      wrap.style.transition = "none";
+
+      // Force reflow
+      void wrap.offsetHeight;
+
+      // Play: remove transform to animate to current state
+      wrap.style.transform = "";
+      wrap.style.transition = "transform 300ms cubic-bezier(0.4, 0, 0.2, 1)";
+
+      // Cleanup after animation
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+        wrap.style.transition = "";
+        wrap.style.transform = "";
+        previousRect.current = null; // Reset
+      }, 300);
+
+      return () => {
+        clearTimeout(timer);
+        wrap.style.transition = "";
+        wrap.style.transform = "";
+      };
+    }
+  }, [isFullscreen]);
+
+  // --- Toolbar actions ---
+  const resetToolbarPosition = useCallback(() => {
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return;
+
+    // Clear all inline positioning styles so CSS can take over
+    toolbar.style.left = "";
+    toolbar.style.right = "";
+    toolbar.style.top = "";
+    toolbar.style.bottom = "";
+  }, []);
+
+  // Capture previous rect before state change
+  const toggleFullscreen = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (imgWrapRef.current) {
+        previousRect.current = imgWrapRef.current.getBoundingClientRect();
+      }
+      resetToolbarPosition();
+      setIsFullscreen((prev) => !prev);
+    },
+    [resetToolbarPosition]
+  );
 
   // Get image source
   const imageSrc = startupImage?.base64 || "";
@@ -214,26 +317,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     }
   };
 
-  // --- Toolbar actions ---
-  const resetToolbarPosition = useCallback(() => {
-    const toolbar = toolbarRef.current;
-    if (!toolbar) return;
-
-    // Clear all inline positioning styles so CSS can take over
-    toolbar.style.left = "";
-    toolbar.style.right = "";
-    toolbar.style.top = "";
-    toolbar.style.bottom = "";
-  }, []);
-
-  const toggleFullscreen = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      resetToolbarPosition();
-      setIsFullscreen((prev) => !prev);
-    },
-    [resetToolbarPosition]
-  );
+  // toggleFullscreen is now defined above to capture rect
 
   const handleCopyImage = useCallback(() => {
     console.log("Copy image not implemented yet");
@@ -284,7 +368,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   }
 
   return (
-    <div className="editor-layout">
+    <div
+      className={`editor-layout ${isTransitioning ? "is-transitioning" : ""}`}
+    >
       <EditorHeader
         isPanelActive={isPanelActive}
         toggleSettingsPanel={toggleSettingsPanel}
@@ -322,7 +408,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             draggable={false}
           />
 
-          {showTextLayer && !isFullscreen && (
+          {showTextLayer && !isFullscreen && !isTransitioning && (
             <TextLayer
               data={data}
               size={size}
@@ -331,7 +417,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             />
           )}
 
-          {!isFullscreen && <ScanningOverlay isVisible={showOverlay} />}
+          {!isFullscreen && !isTransitioning && (
+            <ScanningOverlay isVisible={showOverlay} />
+          )}
 
           <ImageToolbar
             toolbarRef={toolbarRef}
@@ -341,6 +429,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             onCopyImage={handleCopyImage}
             onToggleFullscreen={toggleFullscreen}
             imgWrapRef={imgWrapRef}
+            isTransitioning={isTransitioning}
           />
         </div>
       </div>
@@ -352,6 +441,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         imgRef={imgRef}
         imgWrapRef={imgWrapRef}
         viewerRef={viewerRef}
+      />
+
+      <div
+        className={`fullscreen-backdrop ${isBackdropVisible ? "visible" : ""}`}
+        aria-hidden="true"
       />
 
       {error && <div className="editor-error">{error}</div>}

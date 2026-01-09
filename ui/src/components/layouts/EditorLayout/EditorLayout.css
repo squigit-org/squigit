@@ -70,21 +70,25 @@
   height: fit-content;
   max-width: 100vw;
   max-height: 100vh;
-  z-index: 100;
+  z-index: 110; /* Above backdrop (105) */
   background-color: transparent;
   display: block;
 }
 
-/* Backdrop */
-.image-wrap.is-fullscreen::before {
-  content: "";
+/* Standalone Backdrop - managed by EditorLayout.tsx */
+.fullscreen-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background-color: #000;
-  z-index: -1;
+  z-index: 105;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.fullscreen-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .image-wrap.is-fullscreen img {
@@ -103,6 +107,24 @@
 }
 
 /* Hide context menu when in fullscreen mode */
+/* Hide context menu when in fullscreen mode */
 .editor-layout:has(.image-wrap.is-fullscreen) #context-menu {
   display: none;
+}
+
+/* Hide persistent UI elements during transition to prevent artifacts */
+.editor-layout.is-transitioning .editor-menu,
+.editor-layout.is-transitioning .inline-menu,
+.editor-layout.is-transitioning .scanning-overlay {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.1s;
+}
+
+/* Prevent scrollbars on the editor layout AND viewer during transition/fullscreen */
+.editor-layout.is-transitioning,
+.editor-layout:has(.image-wrap.is-fullscreen),
+.editor-layout.is-transitioning .viewer,
+.editor-layout:has(.image-wrap.is-fullscreen) .viewer {
+  overflow: hidden !important;
 }

@@ -101,6 +101,18 @@
   opacity: 1;
 }
 
+/* Force hide tooltips when interaction is locked */
+.interactionLocked .toolBtn .tooltipText {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Force override hover style on button when locked */
+.interactionLocked .toolBtn {
+  background-color: transparent !important;
+  color: #a1a1aa !important;
+}
+
 /* Spinner animation */
 @keyframes spin {
   from {

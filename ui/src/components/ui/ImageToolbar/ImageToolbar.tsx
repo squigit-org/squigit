@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useState, useEffect } from "react";
 import styles from "./ImageToolbar.module.css";
 
 interface ImageToolbarProps {
@@ -15,6 +15,7 @@ interface ImageToolbarProps {
   onCopyImage: () => void;
   onToggleFullscreen: (e: React.MouseEvent) => void;
   imgWrapRef: React.RefObject<HTMLDivElement | null>;
+  isTransitioning?: boolean;
 }
 
 const EDGE_PADDING = 10;
@@ -27,6 +28,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   onCopyImage,
   onToggleFullscreen,
   imgWrapRef,
+  isTransitioning = false,
 }) => {
   const toolbarDragRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -84,57 +86,113 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     document.removeEventListener("mouseup", stopDrag);
   };
 
-  // Handle tooltip positioning on button hover - dynamically adjusts for edge overflow
-  const handleButtonMouseEnter = useCallback((e: React.MouseEvent) => {
-    const button = e.currentTarget as HTMLElement;
-    const tooltip = button.querySelector(
-      `.${styles.tooltipText}`
-    ) as HTMLElement;
-    if (!tooltip) return;
+  // Interaction lock to prevent sticky hover states after transition
+  const [isInteractionLocked, setIsInteractionLocked] = useState(false);
+  const lastMousePos = useRef({ x: 0, y: 0 });
 
-    const buttonRect = button.getBoundingClientRect();
-    const buttonCenterX = buttonRect.left + buttonRect.width / 2;
-
-    // Temporarily show tooltip to measure its width
-    const origDisplay = tooltip.style.display;
-    tooltip.style.visibility = "hidden";
-    tooltip.style.display = "block";
-    tooltip.style.opacity = "0";
-    const tooltipRect = tooltip.getBoundingClientRect();
-    tooltip.style.display = origDisplay;
-    tooltip.style.visibility = "";
-    tooltip.style.opacity = "";
-
-    const tooltipHalfWidth = tooltipRect.width / 2;
-    const viewportWidth = window.innerWidth;
-
-    // Default centered position
-    let tooltipLeft = "50%";
-    let tooltipTranslate = "-50%";
-    let notchLeft = "50%";
-
-    const leftEdge = buttonCenterX - tooltipHalfWidth;
-    const rightEdge = buttonCenterX + tooltipHalfWidth;
-
-    if (leftEdge < EDGE_PADDING) {
-      // Tooltip overflows left - shift right to keep 10px from left edge
-      const shiftRight = EDGE_PADDING - leftEdge;
-      tooltipLeft = `calc(50% + ${shiftRight}px)`;
-      notchLeft = `calc(50% - ${shiftRight}px)`;
-    } else if (rightEdge > viewportWidth - EDGE_PADDING) {
-      // Tooltip overflows right - shift left to keep 10px from right edge
-      const shiftLeft = rightEdge - (viewportWidth - EDGE_PADDING);
-      tooltipLeft = `calc(50% - ${shiftLeft}px)`;
-      notchLeft = `calc(50% + ${shiftLeft}px)`;
+  useEffect(() => {
+    if (isTransitioning) {
+      setIsInteractionLocked(true);
     }
+  }, [isTransitioning]);
 
-    tooltip.style.setProperty("--tooltip-left", tooltipLeft);
-    tooltip.style.setProperty("--tooltip-translate", tooltipTranslate);
-    tooltip.style.setProperty("--notch-left", notchLeft);
-  }, []);
+  useEffect(() => {
+    if (!isInteractionLocked) return;
+
+    let moveCount = 0;
+    const handleMouseMove = (e: MouseEvent) => {
+      // Require consecutive moves or a larger distance to unlock
+      // This prevents "jitter" or immediate firing on transition end
+      const dx = Math.abs(e.clientX - lastMousePos.current.x);
+      const dy = Math.abs(e.clientY - lastMousePos.current.y);
+
+      // Ignore microscopic movements
+      if (dx < 3 && dy < 3) {
+        return;
+      }
+
+      moveCount++;
+      // Only unlock after a consistent movement pattern (2 events) or significant distance
+      if (moveCount > 1 || dx > 5 || dy > 5) {
+        setIsInteractionLocked(false);
+        lastMousePos.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    lastMousePos.current = { x: 0, y: 0 };
+    window.addEventListener("mousemove", handleMouseMove, { capture: true });
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove, {
+        capture: true,
+      });
+    };
+  }, [isInteractionLocked]);
+
+  // Handle tooltip positioning on button hover - dynamically adjusts for edge overflow
+  const handleButtonMouseEnter = useCallback(
+    (e: React.MouseEvent) => {
+      if (isInteractionLocked) return;
+
+      // Check if we are hovered properly (sometimes mouseenter fires even if pointer-events recently enabled)
+      // Extra safety: check hover state in CSS via computed style or just rely on state
+
+      const button = e.currentTarget as HTMLElement;
+      const tooltip = button.querySelector(
+        `.${styles.tooltipText}`
+      ) as HTMLElement;
+      if (!tooltip) return;
+
+      const buttonRect = button.getBoundingClientRect();
+      const buttonCenterX = buttonRect.left + buttonRect.width / 2;
+
+      // Temporarily show tooltip to measure its width
+      const origDisplay = tooltip.style.display;
+      tooltip.style.visibility = "hidden";
+      tooltip.style.display = "block";
+      tooltip.style.opacity = "0";
+      const tooltipRect = tooltip.getBoundingClientRect();
+      tooltip.style.display = origDisplay;
+      tooltip.style.visibility = "";
+      tooltip.style.opacity = "";
+
+      const tooltipHalfWidth = tooltipRect.width / 2;
+      const viewportWidth = window.innerWidth;
+
+      // Default centered position
+      let tooltipLeft = "50%";
+      let tooltipTranslate = "-50%";
+      let notchLeft = "50%";
+
+      const leftEdge = buttonCenterX - tooltipHalfWidth;
+      const rightEdge = buttonCenterX + tooltipHalfWidth;
+
+      if (leftEdge < EDGE_PADDING) {
+        // Tooltip overflows left - shift right to keep 10px from left edge
+        const shiftRight = EDGE_PADDING - leftEdge;
+        tooltipLeft = `calc(50% + ${shiftRight}px)`;
+        notchLeft = `calc(50% - ${shiftRight}px)`;
+      } else if (rightEdge > viewportWidth - EDGE_PADDING) {
+        // Tooltip overflows right - shift left to keep 10px from right edge
+        const shiftLeft = rightEdge - (viewportWidth - EDGE_PADDING);
+        tooltipLeft = `calc(50% - ${shiftLeft}px)`;
+        notchLeft = `calc(50% + ${shiftLeft}px)`;
+      }
+
+      tooltip.style.setProperty("--tooltip-left", tooltipLeft);
+      tooltip.style.setProperty("--tooltip-translate", tooltipTranslate);
+      tooltip.style.setProperty("--notch-left", notchLeft);
+    },
+    [isInteractionLocked]
+  );
 
   return (
-    <div className={styles.imageToolbar} ref={toolbarRef}>
+    <div
+      className={`${styles.imageToolbar} ${
+        isInteractionLocked ? styles.interactionLocked : ""
+      }`}
+      ref={toolbarRef}
+      style={isInteractionLocked ? { pointerEvents: "none" } : undefined}
+    >
       <div
         className={styles.toolbarDrag}
         ref={toolbarDragRef}
