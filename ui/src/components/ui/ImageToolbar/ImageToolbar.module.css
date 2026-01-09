@@ -133,3 +133,22 @@
   left: 8px;
   z-index: 120;
 }
+
+/* Fullscreen mode - tooltip on right side */
+:global(.image-wrap.is-fullscreen) .tooltipText {
+  left: 100%;
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 12px;
+  margin-bottom: 0;
+}
+
+/* Notch pointing left in fullscreen */
+:global(.image-wrap.is-fullscreen) .tooltipText::after {
+  top: 50%;
+  left: -4px;
+  margin-top: -4px;
+  margin-left: 0;
+  border-color: transparent #18181b transparent transparent;
+}
