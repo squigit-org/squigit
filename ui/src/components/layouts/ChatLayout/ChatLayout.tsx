@@ -70,14 +70,18 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       setIsRotating(false);
     }
   }, [isLoading]);
-
+  // Auto-scroll only when user sends a message (not when AI responds)
+  // This allows users to read AI responses from top to bottom naturally
   useLayoutEffect(() => {
-    if (isStreaming) return;
     if (messages.length > 0) {
-      const el = scrollContainerRef.current;
-      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      const lastMessage = messages[messages.length - 1];
+      // Only scroll when user sends a message, not when AI responds
+      if (lastMessage.role === "user") {
+        const el = scrollContainerRef.current;
+        if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      }
     }
-  }, [messages.length, isStreaming]);
+  }, [messages.length]);
 
   // --- Inline Menu (Hook) ---
   // --- Inline Menu (Hook) ---

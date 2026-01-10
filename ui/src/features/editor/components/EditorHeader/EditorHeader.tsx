@@ -5,7 +5,7 @@
  */
 
 import React, { ForwardedRef } from "react";
-import { Settings } from "lucide-react";
+import { Settings, SquarePen } from "lucide-react";
 import { SettingsPanel } from "../../../settings";
 import styles from "./EditorHeader.module.css";
 
@@ -31,6 +31,7 @@ interface EditorHeaderProps {
   onToggleTheme: () => void;
   onResetAPIKey: () => void;
   toggleSubview: (isActive: boolean) => void;
+  onNewSession: () => void;
 }
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
@@ -55,6 +56,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   onToggleTheme,
   onResetAPIKey,
   toggleSubview,
+  onNewSession,
 }) => {
   return (
     <header className={styles.header}>
@@ -68,6 +70,14 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
           title="Settings"
         >
           <Settings size={20} />
+        </button>
+
+        <button
+          onClick={onNewSession}
+          className={styles.iconButton}
+          title="Analyze another image"
+        >
+          <SquarePen size={20} />
         </button>
 
         {isPanelVisible && (

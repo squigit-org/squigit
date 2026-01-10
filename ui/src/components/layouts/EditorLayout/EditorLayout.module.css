@@ -40,8 +40,6 @@
 .imageWrap {
   position: relative;
   display: inline-block;
-  /* Fixed padding for toolbar space - this creates the "pusher" zone */
-  padding-top: 50px;
   /* Center horizontally only */
   margin-left: auto;
   margin-right: auto;
@@ -79,7 +77,6 @@
   z-index: 110; /* Above backdrop (105) */
   background-color: transparent;
   display: block;
-  padding-top: 0; /* Remove toolbar pusher zone in fullscreen */
 }
 
 /* Standalone Backdrop - managed by EditorLayout.tsx */

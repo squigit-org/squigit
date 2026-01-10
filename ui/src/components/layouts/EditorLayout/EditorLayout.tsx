@@ -63,6 +63,7 @@ interface EditorLayoutProps {
   onToggleTheme: () => void;
   onResetAPIKey: () => void;
   toggleSubview: (isActive: boolean) => void;
+  onNewSession: () => void;
 }
 
 export const EditorLayout: React.FC<EditorLayoutProps> = ({
@@ -90,6 +91,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   onToggleTheme,
   onResetAPIKey,
   toggleSubview,
+  onNewSession,
 }) => {
   const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -418,6 +420,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
           onToggleTheme={onToggleTheme}
           onResetAPIKey={onResetAPIKey}
           toggleSubview={toggleSubview}
+          onNewSession={onNewSession}
         />
         <div className={styles.editorEmpty}>No image loaded</div>
       </div>
@@ -452,6 +455,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         onToggleTheme={onToggleTheme}
         onResetAPIKey={onResetAPIKey}
         toggleSubview={toggleSubview}
+        onNewSession={onNewSession}
       />
       <div
         className={styles.viewer}
@@ -495,6 +499,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             onToggleFullscreen={toggleFullscreen}
             imgWrapRef={imgWrapRef}
             isTransitioning={isTransitioning}
+            imageHeight={imgRef.current?.clientHeight || size.h}
           />
         </div>
       </div>

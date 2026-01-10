@@ -191,6 +191,12 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     setAvatarSrc(data.avatar);
   };
 
+  const resetSession = () => {
+    setStartupImage(null);
+    setSessionLensUrl(null);
+    setSessionChatTitle(null);
+  };
+
   return {
     apiKey,
     prompt: activePrompt,
@@ -220,5 +226,6 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     setSessionLensUrl,
     sessionChatTitle,
     setSessionChatTitle,
+    resetSession,
   };
 };

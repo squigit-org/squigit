@@ -208,7 +208,7 @@ export const AppLayout: React.FC = () => {
   // Split layout state (must be before conditional returns)
   const [splitRatio, setSplitRatio] = useState(() => {
     const saved = localStorage.getItem("splitRatio");
-    return saved ? parseFloat(saved) : 62.5; // 5:3 ratio = 62.5%
+    return saved ? parseFloat(saved) : 26.67; // 1:2.75 ratio ≈ 26.67%
   });
   const isResizingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -410,6 +410,7 @@ export const AppLayout: React.FC = () => {
           onToggleTheme={system.handleToggleTheme}
           onResetAPIKey={system.handleResetAPIKey}
           toggleSubview={setIsSubviewActive}
+          onNewSession={system.resetSession}
         />
       </div>
 
