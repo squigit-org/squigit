@@ -105,6 +105,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const previousRect = useRef<DOMRect | null>(null);
+  const lastToolbarPosition = useRef<{ left: string; top: string } | null>(
+    null
+  );
 
   // Refs
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -264,10 +267,31 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
       if (imgWrapRef.current) {
         previousRect.current = imgWrapRef.current.getBoundingClientRect();
       }
-      resetToolbarPosition();
+
+      if (!isFullscreen) {
+        // Entering fullscreen: Save current position
+        if (toolbarRef.current) {
+          lastToolbarPosition.current = {
+            left: toolbarRef.current.style.left,
+            top: toolbarRef.current.style.top,
+          };
+        }
+        resetToolbarPosition();
+      } else {
+        // Exiting fullscreen: Reset first, then restore after a tick
+        // We reset first to clear fullscreen-specific styles if any (actually fullscreen uses CSS class)
+        resetToolbarPosition();
+
+        // Restore previous position
+        if (toolbarRef.current && lastToolbarPosition.current) {
+          toolbarRef.current.style.left = lastToolbarPosition.current.left;
+          toolbarRef.current.style.top = lastToolbarPosition.current.top;
+        }
+      }
+
       setIsFullscreen((prev) => !prev);
     },
-    [resetToolbarPosition]
+    [isFullscreen, resetToolbarPosition]
   );
 
   // Get image source

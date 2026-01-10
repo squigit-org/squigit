@@ -5,6 +5,7 @@
  */
 
 import React, { useRef, useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import styles from "./ImageToolbar.module.css";
 
 interface ImageToolbarProps {
@@ -22,7 +23,115 @@ interface ImageToolbarProps {
 // Toolbar dimensions for layout calculation
 // Vertical toolbar height: 4 buttons * 28px + gaps + padding ≈ 150px
 // If image height < this value, switch to horizontal layout
+// If image height < this value, switch to horizontal layout
 const VERTICAL_TOOLBAR_MIN_HEIGHT = 150;
+
+const PortalTooltip: React.FC<{
+  children: React.ReactNode;
+  parentRef: React.RefObject<HTMLElement | null>;
+  direction?: "right" | "top";
+}> = ({ children, parentRef, direction = "right" }) => {
+  const [pos, setPos] = useState({ top: 0, left: 0, visible: false });
+
+  useEffect(() => {
+    const parent = parentRef.current;
+    if (!parent) return;
+
+    const updatePos = () => {
+      const rect = parent.getBoundingClientRect();
+      if (direction === "right") {
+        // Vertical layout: tooltip to the right
+        setPos({
+          top: rect.top + rect.height / 2,
+          left: rect.right + 12,
+          visible: true,
+        });
+      } else {
+        // Horizontal layout: tooltip on top
+        setPos({
+          top: rect.top - 12,
+          left: rect.left + rect.width / 2,
+          visible: true,
+        });
+      }
+    };
+
+    const handleMouseEnter = () => {
+      updatePos();
+      window.addEventListener("scroll", updatePos, true);
+      window.addEventListener("resize", updatePos);
+    };
+
+    const handleMouseLeave = () => {
+      setPos((p) => ({ ...p, visible: false }));
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+    };
+
+    parent.addEventListener("mouseenter", handleMouseEnter);
+    parent.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      parent.removeEventListener("mouseenter", handleMouseEnter);
+      parent.removeEventListener("mouseleave", handleMouseLeave);
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+    };
+  }, [parentRef, direction]);
+
+  if (!pos.visible) return null;
+
+  return createPortal(
+    <div
+      className={styles.tooltipText}
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        transform:
+          direction === "right"
+            ? "translateY(-50%)" // Vertical center
+            : "translate(-50%, -100%)", // Horiz center, move up
+        margin: 0, // Reset CSS margins as we use fixed positioning
+        zIndex: 9999, // Ensure on top of everything
+        opacity: 1, // Force visible since we are outside the hover context
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  );
+};
+
+// Helper component for buttons with tooltips
+const ToolbarButton: React.FC<{
+  icon: React.ReactNode;
+  tooltip: string;
+  onClick: (e: React.MouseEvent) => void;
+  disabled?: boolean;
+  isHorizontal: boolean;
+}> = ({ icon, tooltip, onClick, disabled, isHorizontal }) => {
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        className={styles.toolBtn}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {icon}
+      </button>
+      <PortalTooltip
+        parentRef={btnRef}
+        direction={isHorizontal ? "top" : "right"}
+      >
+        {tooltip}
+      </PortalTooltip>
+    </>
+  );
+};
 
 export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   toolbarRef,
@@ -224,110 +333,114 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         <>
           <div className={styles.toolbarSeparator}></div>
 
-          <button
-            className={styles.toolBtn}
+          <ToolbarButton
+            icon={
+              isLensLoading ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={styles.spinner}
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                  <circle cx="12" cy="13" r="3" />
+                </svg>
+              )
+            }
+            tooltip="Search with Google Lens"
             onClick={(e) => {
               e.stopPropagation();
               onLensClick();
             }}
             disabled={isLensLoading}
-          >
-            {isLensLoading ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={styles.spinner}
-              >
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                <circle cx="12" cy="13" r="3" />
-              </svg>
-            )}
-            <span className={styles.tooltipText}>Search with Google Lens</span>
-          </button>
+            isHorizontal={isHorizontal}
+          />
 
-          <button
-            className={styles.toolBtn}
+          <ToolbarButton
+            icon={
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+              </svg>
+            }
+            tooltip="Copy as Image"
             onClick={(e) => {
               e.stopPropagation();
               onCopyImage();
             }}
-          >
+            isHorizontal={isHorizontal}
+          />
+        </>
+      )}
+
+      <ToolbarButton
+        icon={
+          isFullscreen ? (
             <svg
-              xmlns="http://www.w3.org/2000/svg"
               width="20"
               height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
+              style={{ transform: "scaleX(-1)" }}
             >
-              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+              <path d="M10 4v6H4" />
+              <path d="M14 20v-6h6" />
             </svg>
-            <span className={styles.tooltipText}>Copy as Image</span>
-          </button>
-        </>
-      )}
-
-      <button className={styles.toolBtn} onClick={onToggleFullscreen}>
-        {isFullscreen ? (
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ transform: "scaleX(-1)" }}
-          >
-            <path d="M10 4v6H4" />
-            <path d="M14 20v-6h6" />
-          </svg>
-        ) : (
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ transform: "scaleX(-1)" }}
-          >
-            <path d="M4 10V4h6" />
-            <path d="M20 14v6h-6" />
-          </svg>
-        )}
-        <span className={styles.tooltipText}>
-          {isFullscreen ? "Collapse" : "Expand"}
-        </span>
-      </button>
+          ) : (
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ transform: "scaleX(-1)" }}
+            >
+              <path d="M4 10V4h6" />
+              <path d="M20 14v6h-6" />
+            </svg>
+          )
+        }
+        tooltip={isFullscreen ? "Collapse" : "Expand"}
+        onClick={onToggleFullscreen}
+        isHorizontal={isHorizontal}
+      />
     </div>
   );
 };

@@ -256,7 +256,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
     );
 
     const triggerSelectAll = useCallback(() => {
-      const svg = document.querySelector(".text-layer");
+      const svg = document.querySelector("[data-text-layer]");
       if (svg) {
         const selection = window.getSelection();
         if (selection) {
@@ -371,7 +371,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
           // Only clear selection if clicking INSIDE the editor wrapper (background click)
           // detecting "bg" click
           if (imgWrapRef.current && imgWrapRef.current.contains(target)) {
-            if (!target.classList.contains("selectable-text")) {
+            if (!target.hasAttribute("data-selectable-text")) {
               window.getSelection()?.removeAllRanges();
             }
           }

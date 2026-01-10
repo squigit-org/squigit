@@ -25,6 +25,7 @@ export const TextLayer: React.FC<TextLayerProps> = ({
     <svg
       ref={svgRef}
       className={styles.textLayer}
+      data-text-layer
       viewBox={`0 0 ${size.w} ${size.h}`}
       preserveAspectRatio="xMidYMid meet"
     >
@@ -46,6 +47,7 @@ export const TextLayer: React.FC<TextLayerProps> = ({
               textLength={w}
               lengthAdjust="spacingAndGlyphs"
               className={styles.selectableText}
+              data-selectable-text
               onMouseDown={(e) => onTextMouseDown(e, i)}
             >
               {item.text}
