@@ -402,8 +402,38 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
   // toggleFullscreen is now defined above to capture rect
 
-  const handleCopyImage = useCallback(() => {
-    console.log("Copy image not implemented yet");
+  const handleCopyImage = useCallback(async () => {
+    const img = imgRef.current;
+    if (!img) return;
+
+    try {
+      // Create a canvas and draw the image
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Could not get canvas context");
+      }
+
+      ctx.drawImage(img, 0, 0);
+
+      // Convert to base64 PNG (without data:image/png;base64, prefix)
+      const dataUrl = canvas.toDataURL("image/png");
+      const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+
+      // Copy to clipboard using Tauri command
+      await invoke("copy_image_to_clipboard", { imageBase64: base64 });
+
+      // Show success toast
+      const { showToast } = await import("../../ui/Notifications/Toast");
+      showToast("Copied to clipboard", "success");
+    } catch (err) {
+      console.error("Failed to copy image:", err);
+      const { showToast } = await import("../../ui/Notifications/Toast");
+      showToast("Failed to copy", "error");
+    }
   }, []);
 
   // --- Effects ---

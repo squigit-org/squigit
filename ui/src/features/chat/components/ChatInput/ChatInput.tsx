@@ -7,6 +7,7 @@
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { Send } from "lucide-react";
 import { CodeBlock } from "../CodeBlock/CodeBlock";
+import { ContextMenu } from "../../../../components/ui/ContextMenu/ContextMenu";
 import styles from "./ChatInput.module.css";
 
 const ExpandIcon = () => (
@@ -53,6 +54,12 @@ interface ChatInputProps {
   isLoading: boolean;
 }
 
+interface ContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+}
+
 export const ChatInput: React.FC<ChatInputProps> = ({
   startupImage,
   input: value,
@@ -79,6 +86,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [codeValue, setCodeValue] = useState("");
   const [consecutiveEnters, setConsecutiveEnters] = useState(0);
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+  });
+  const [hasSelection, setHasSelection] = useState(false);
+
+  // Undo/Redo history
+  const historyRef = useRef<string[]>([value]);
+  const historyIndexRef = useRef<number>(0);
+  const isUndoRedoRef = useRef<boolean>(false);
+
   const isExpandedLayout = value.includes("\n") || isCodeBlockActive;
 
   useEffect(() => {
@@ -86,6 +106,47 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       codeTaRef.current?.focus();
     }
   }, [isCodeBlockActive]);
+
+  // Track value changes for undo/redo history
+  useEffect(() => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+    // Only add to history if value changed
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+    if (value !== currentHistory[currentIndex]) {
+      // Remove any redo history
+      historyRef.current = currentHistory.slice(0, currentIndex + 1);
+      historyRef.current.push(value);
+      historyIndexRef.current = historyRef.current.length - 1;
+      // Limit history size
+      if (historyRef.current.length > 100) {
+        historyRef.current = historyRef.current.slice(-100);
+        historyIndexRef.current = historyRef.current.length - 1;
+      }
+    }
+  }, [value]);
+
+  // Track selection changes
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta) return;
+
+    const handleSelectionChange = () => {
+      if (document.activeElement === ta) {
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        setHasSelection(start !== end);
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, []);
 
   const adjustHeight = React.useCallback(() => {
     const ta = taRef.current;
@@ -135,7 +196,126 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return () => observer.disconnect();
   }, [adjustHeight]);
 
+  // Context menu handlers
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+    });
+    return false;
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({ isOpen: false, x: 0, y: 0 });
+  };
+
+  const handleCopy = () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const selectedText = ta.value.substring(ta.selectionStart, ta.selectionEnd);
+    if (selectedText) {
+      navigator.clipboard.writeText(selectedText);
+    }
+  };
+
+  const handleCut = () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selectedText = ta.value.substring(start, end);
+    if (selectedText) {
+      navigator.clipboard.writeText(selectedText);
+      const newValue = ta.value.substring(0, start) + ta.value.substring(end);
+      onChange(newValue);
+      setTimeout(() => {
+        ta.setSelectionRange(start, start);
+        ta.focus();
+      }, 0);
+    }
+  };
+
+  const handlePaste = async () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const newValue =
+        ta.value.substring(0, start) + text + ta.value.substring(end);
+      onChange(newValue);
+      const newCursorPos = start + text.length;
+      setTimeout(() => {
+        ta.setSelectionRange(newCursorPos, newCursorPos);
+        ta.focus();
+      }, 0);
+    } catch (err) {
+      console.error("Failed to read clipboard:", err);
+    }
+  };
+
+  const handleSelectAll = () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    ta.select();
+    setHasSelection(true);
+  };
+
+  const handleUndo = () => {
+    if (historyIndexRef.current > 0) {
+      historyIndexRef.current -= 1;
+      isUndoRedoRef.current = true;
+      onChange(historyRef.current[historyIndexRef.current]);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      historyIndexRef.current += 1;
+      isUndoRedoRef.current = true;
+      onChange(historyRef.current[historyIndexRef.current]);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle keyboard shortcuts
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case "c":
+          e.preventDefault();
+          handleCopy();
+          return;
+        case "v":
+          e.preventDefault();
+          handlePaste();
+          return;
+        case "x":
+          e.preventDefault();
+          handleCut();
+          return;
+        case "z":
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
+          return;
+        case "y":
+          e.preventDefault();
+          handleRedo();
+          return;
+        case "a":
+          e.preventDefault();
+          handleSelectAll();
+          return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (!disabled && !isLoading && value.trim().length > 0) onSend();
@@ -228,6 +408,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onContextMenu={handleContextMenu}
             placeholder={placeholder}
             disabled={disabled}
             rows={1}
@@ -268,6 +449,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </div>
         </div>
       </div>
+
+      {contextMenu.isOpen && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={handleCloseContextMenu}
+          onCopy={handleCopy}
+          onCut={handleCut}
+          onPaste={handlePaste}
+          onSelectAll={handleSelectAll}
+          hasSelection={hasSelection}
+        />
+      )}
 
       <div className={styles.disclaimer}>
         <span>AI responses may include mistakes. </span>

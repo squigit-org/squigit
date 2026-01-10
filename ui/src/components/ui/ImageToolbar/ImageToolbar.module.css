@@ -20,7 +20,7 @@
   gap: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 30;
+  z-index: 100;
   opacity: 0.94;
   transition: opacity 0.3s ease;
   touch-action: none;
