@@ -58,8 +58,10 @@ pub fn run() {
             let handle = app.handle().clone();
 
             let args: Vec<String> = std::env::args().collect();
+            let has_cli_image = args.iter().skip(1).find(|arg| !arg.starts_with("-"));
 
-            if let Some(path) = args.iter().skip(1).find(|arg| !arg.starts_with("-")) {
+            // Process CLI image if present
+            if let Some(path) = has_cli_image.clone() {
                 println!("CLI Image argument detected: {}", path);
                 let state = handle.state::<AppState>();
                 if let Ok(_data_url) = process_and_store_image(path, &state) {
@@ -67,12 +69,20 @@ pub fn run() {
                 }
             }
 
+            // Use chat size for CLI image, onboarding size otherwise
+            // Chat: 1030x690 (landscape), Onboarding: 690x1030 (would be adjusted by frontend)
+            let (base_w, base_h) = if has_cli_image.is_some() {
+                (1030.0, 690.0) // Chat/Editor layout size
+            } else {
+                (690.0, 1030.0) // Onboarding size (will be resized by frontend)
+            };
+
             services::window::spawn_app_window(
                 &handle,
                 "main",
                 "index.html",
-                690.0,
-                1030.0,
+                base_h, // Note: spawn_app_window takes (base_w, base_h) but uses them for ratio
+                base_w,
                 "spatialshot",
             )
             .expect("Failed to spawn main window");

@@ -21,6 +21,35 @@ export const Welcome: React.FC<WelcomeProps> = ({ onImageReady }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const platformShortcut = React.useMemo(() => {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes("mac")) {
+      return (
+        <>
+          <span className={styles.key}>Cmd ⌘</span> +{" "}
+          <span className={styles.key}>Shift ⇧</span> +{" "}
+          <span className={styles.key}>A</span>
+        </>
+      );
+    } else if (ua.includes("win")) {
+      return (
+        <>
+          <span className={styles.key}>Win ⊞</span> +{" "}
+          <span className={styles.key}>Shift ⇧</span> +{" "}
+          <span className={styles.key}>A</span>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <span className={styles.key}>Super</span> +{" "}
+          <span className={styles.key}>Shift</span> +{" "}
+          <span className={styles.key}>A</span>
+        </>
+      );
+    }
+  }, []);
+
   const processFiles = async (files: FileList) => {
     const file = files[0];
     if (!file) return;
@@ -138,7 +167,8 @@ export const Welcome: React.FC<WelcomeProps> = ({ onImageReady }) => {
       <aside className={styles.rightCol} aria-label="Details">
         <div className={styles.panelTitle}>Quick notes</div>
         <div className={styles.panelBody}>
-          Files are processed immediately. There is no preview.
+          To analyze any part of your screen, simply close this window and{" "}
+          {platformShortcut}.
         </div>
         <div style={{ height: "8px" }}></div>
         <div className={styles.panelTitle}>Accessibility</div>

@@ -148,6 +148,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     // Initial calculation
     calculatePadding();
 
+    // Reset scroll to top to prevent auto-scroll on large images
+    viewer.scrollTop = 0;
+
     // Create ResizeObserver to monitor both viewer and image wrap
     const resizeObserver = new ResizeObserver(() => {
       calculatePadding();

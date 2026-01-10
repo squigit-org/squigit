@@ -48,10 +48,17 @@ enum Commands {
     Run {
         #[arg(default_value = "dev")]
         cmd: String,
+        /// Extra arguments to pass to tauri
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
     },
 
     /// Start development mode
-    Dev,
+    Dev {
+        /// Extra arguments to pass to tauri dev (e.g., -- /path/to/image.jpg)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -64,8 +71,8 @@ fn main() -> Result<()> {
         Commands::BuildCaptureQt => build::capture_qt_only()?,
         Commands::BuildApp => build::app()?,
         Commands::Clean => clean::all()?,
-        Commands::Run { cmd } => dev::run(&cmd)?,
-        Commands::Dev => dev::run("dev")?,
+        Commands::Run { cmd, args } => dev::run(&cmd, &args)?,
+        Commands::Dev { args } => dev::run("dev", &args)?,
     }
 
     Ok(())

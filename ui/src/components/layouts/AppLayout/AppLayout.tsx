@@ -325,7 +325,11 @@ export const AppLayout: React.FC = () => {
   }
 
   // 1. Loading State (Checking file)
-  if (system.hasAgreed === null || auth.authStage === "LOADING") {
+  if (
+    system.hasAgreed === null ||
+    auth.authStage === "LOADING" ||
+    isCheckingImage
+  ) {
     return (
       <div className="h-screen w-screen bg-neutral-950 flex items-center justify-center text-neutral-400">
         Loading...

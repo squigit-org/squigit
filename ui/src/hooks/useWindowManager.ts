@@ -20,7 +20,8 @@ export const useWindowManager = (
   isLoading: boolean
 ) => {
   useEffect(() => {
-    // if (isLoading) return; // Allow window to show during loading
+    // Skip resize during loading - Rust side already set correct size for CLI images
+    if (isLoading) return;
 
     const adjustWindow = async () => {
       const isOnboardingPage =
