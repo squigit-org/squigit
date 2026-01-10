@@ -26,12 +26,32 @@ interface ImageToolbarProps {
 // If image height < this value, switch to horizontal layout
 const VERTICAL_TOOLBAR_MIN_HEIGHT = 150;
 
+// Edge padding to keep tooltips away from window edges
+const EDGE_PADDING = 8;
+
+interface TooltipPosition {
+  top: number;
+  left: number;
+  visible: boolean;
+  measured: boolean; // Whether we've measured and positioned correctly
+  adjustedDirection: "right" | "left" | "top" | "bottom";
+  arrowOffset: number; // Offset for arrow to point at button center
+}
+
 const PortalTooltip: React.FC<{
   children: React.ReactNode;
   parentRef: React.RefObject<HTMLElement | null>;
   direction?: "right" | "top";
 }> = ({ children, parentRef, direction = "right" }) => {
-  const [pos, setPos] = useState({ top: 0, left: 0, visible: false });
+  const [pos, setPos] = useState<TooltipPosition>({
+    top: 0,
+    left: 0,
+    visible: false,
+    measured: false,
+    adjustedDirection: direction,
+    arrowOffset: 0,
+  });
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const parent = parentRef.current;
@@ -39,31 +59,101 @@ const PortalTooltip: React.FC<{
 
     const updatePos = () => {
       const rect = parent.getBoundingClientRect();
+      const tooltip = tooltipRef.current;
+
+      // Get tooltip dimensions (use estimate if not yet rendered)
+      const tooltipWidth = tooltip?.offsetWidth || 120;
+      const tooltipHeight = tooltip?.offsetHeight || 28;
+      const gap = 12;
+
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      let newTop: number;
+      let newLeft: number;
+      let adjustedDirection: "right" | "left" | "top" | "bottom" = direction;
+      let arrowOffset = 0; // How much to offset the arrow from center
+
       if (direction === "right") {
-        // Vertical layout: tooltip to the right
-        setPos({
-          top: rect.top + rect.height / 2,
-          left: rect.right + 12,
-          visible: true,
-        });
+        // Default: tooltip to the right of button
+        newTop = rect.top + rect.height / 2;
+        newLeft = rect.right + gap;
+
+        // Check if tooltip would overflow right edge
+        if (newLeft + tooltipWidth > windowWidth - EDGE_PADDING) {
+          // Flip to left side
+          adjustedDirection = "left";
+          newLeft = rect.left - gap - tooltipWidth;
+        }
+
+        // Check if tooltip would overflow left edge (when flipped)
+        if (newLeft < EDGE_PADDING) {
+          newLeft = EDGE_PADDING;
+        }
+
+        // Check vertical overflow and track arrow offset
+        const halfHeight = tooltipHeight / 2;
+        const idealTop = rect.top + rect.height / 2;
+        if (idealTop - halfHeight < EDGE_PADDING) {
+          newTop = EDGE_PADDING + halfHeight;
+          arrowOffset = idealTop - newTop; // Negative = arrow moves up
+        } else if (idealTop + halfHeight > windowHeight - EDGE_PADDING) {
+          newTop = windowHeight - EDGE_PADDING - halfHeight;
+          arrowOffset = idealTop - newTop; // Positive = arrow moves down
+        }
       } else {
-        // Horizontal layout: tooltip on top
-        setPos({
-          top: rect.top - 12,
-          left: rect.left + rect.width / 2,
-          visible: true,
-        });
+        // Default: tooltip above the button (horizontal layout)
+        newTop = rect.top - gap;
+        newLeft = rect.left + rect.width / 2;
+
+        // Check if tooltip would overflow top edge
+        if (newTop - tooltipHeight < EDGE_PADDING) {
+          // Flip to bottom
+          adjustedDirection = "bottom";
+          newTop = rect.bottom + gap;
+        } else {
+          adjustedDirection = "top";
+        }
+
+        // Check horizontal overflow and track arrow offset
+        const halfWidth = tooltipWidth / 2;
+        const idealLeft = rect.left + rect.width / 2;
+        if (idealLeft - halfWidth < EDGE_PADDING) {
+          newLeft = EDGE_PADDING + halfWidth;
+          arrowOffset = idealLeft - newLeft; // Negative = arrow moves left
+        } else if (idealLeft + halfWidth > windowWidth - EDGE_PADDING) {
+          newLeft = windowWidth - EDGE_PADDING - halfWidth;
+          arrowOffset = idealLeft - newLeft; // Positive = arrow moves right
+        }
       }
+
+      setPos((prev) => ({
+        top: newTop,
+        left: newLeft,
+        visible: true,
+        measured: prev.visible, // Only mark as measured on second pass
+        adjustedDirection,
+        arrowOffset,
+      }));
     };
 
     const handleMouseEnter = () => {
-      updatePos();
+      // First pass: render invisible for measurement
+      setPos((p) => ({ ...p, visible: true, measured: false }));
+      // Second pass: measure and position correctly, then show
+      requestAnimationFrame(() => {
+        updatePos();
+        // Third pass: mark as measured after positioning
+        requestAnimationFrame(() => {
+          setPos((p) => ({ ...p, measured: true }));
+        });
+      });
       window.addEventListener("scroll", updatePos, true);
       window.addEventListener("resize", updatePos);
     };
 
     const handleMouseLeave = () => {
-      setPos((p) => ({ ...p, visible: false }));
+      setPos((p) => ({ ...p, visible: false, measured: false }));
       window.removeEventListener("scroll", updatePos, true);
       window.removeEventListener("resize", updatePos);
     };
@@ -81,21 +171,43 @@ const PortalTooltip: React.FC<{
 
   if (!pos.visible) return null;
 
+  // Compute transform based on adjusted direction
+  let transform: string;
+  switch (pos.adjustedDirection) {
+    case "right":
+      transform = "translateY(-50%)";
+      break;
+    case "left":
+      transform = "translateY(-50%)";
+      break;
+    case "top":
+      transform = "translate(-50%, -100%)";
+      break;
+    case "bottom":
+      transform = "translateX(-50%)";
+      break;
+  }
+
   return createPortal(
     <div
+      ref={tooltipRef}
       className={styles.tooltipText}
-      style={{
-        position: "fixed",
-        top: pos.top,
-        left: pos.left,
-        transform:
-          direction === "right"
-            ? "translateY(-50%)" // Vertical center
-            : "translate(-50%, -100%)", // Horiz center, move up
-        margin: 0, // Reset CSS margins as we use fixed positioning
-        zIndex: 9999, // Ensure on top of everything
-        opacity: 1, // Force visible since we are outside the hover context
-      }}
+      data-direction={pos.adjustedDirection}
+      style={
+        {
+          position: "fixed",
+          top: pos.top,
+          left: pos.left,
+          transform,
+          margin: 0, // Reset CSS margins as we use fixed positioning
+          zIndex: 9999, // Ensure on top of everything
+          // Hide until measured to prevent visual jump
+          opacity: pos.measured ? 1 : 0,
+          visibility: pos.measured ? "visible" : "hidden",
+          // Pass arrow offset to CSS for positioning the notch
+          "--arrow-offset": `${pos.arrowOffset}px`,
+        } as React.CSSProperties
+      }
     >
       {children}
     </div>,

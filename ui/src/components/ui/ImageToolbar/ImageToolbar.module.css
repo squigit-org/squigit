@@ -103,11 +103,12 @@
   z-index: 100;
 }
 
-/* Notch pointing left (for vertical layout) */
+/* Notch pointing left (tooltip appears to the right) */
 .tooltipText::after {
   content: "";
   position: absolute;
-  top: 50%;
+  /* Use calc with --arrow-offset to point at button even when tooltip is shifted */
+  top: calc(50% + var(--arrow-offset, 0px));
   left: -4px;
   margin-top: -4px;
   border-width: 4px;
@@ -115,7 +116,31 @@
   border-color: transparent #18181b transparent transparent;
 }
 
-/* Horizontal mode tooltips: above the button */
+/* Dynamic arrow directions based on data-direction attribute */
+.tooltipText[data-direction="left"]::after {
+  top: calc(50% + var(--arrow-offset, 0px));
+  left: auto;
+  right: -4px;
+  border-color: transparent transparent transparent #18181b;
+}
+
+.tooltipText[data-direction="top"]::after {
+  top: 100%;
+  left: calc(50% + var(--arrow-offset, 0px));
+  margin-top: 0;
+  margin-left: -4px;
+  border-color: #18181b transparent transparent transparent;
+}
+
+.tooltipText[data-direction="bottom"]::after {
+  top: -8px;
+  left: calc(50% + var(--arrow-offset, 0px));
+  margin-top: 0;
+  margin-left: -4px;
+  border-color: transparent transparent #18181b transparent;
+}
+
+/* Horizontal mode tooltips: above the button (kept for CSS hover fallback) */
 .horizontal .tooltipText {
   left: 50%;
   top: auto;
@@ -125,7 +150,7 @@
   margin-bottom: 12px;
 }
 
-/* Notch pointing down (for horizontal layout) */
+/* Notch pointing down (for horizontal layout fallback) */
 .horizontal .tooltipText::after {
   top: 100%;
   left: 50%;
