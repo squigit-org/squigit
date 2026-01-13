@@ -27,6 +27,8 @@ export const commands = {
   closeImgbbWindow: () => invoke("close_imgbb_window"),
   resizeWindow: (width: number, height: number, show: boolean = true) =>
     invoke("resize_window", { width, height, show }),
+  setBackgroundColor: (color: string) =>
+    invoke("set_background_color", { color }),
 
   // Utils
   openExternalUrl: (url: string) => invoke("open_external_url", { url }),

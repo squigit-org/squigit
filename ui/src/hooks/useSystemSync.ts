@@ -9,6 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { showToast } from "../components/ui/Notifications/Toast";
 import { initializeGemini } from "../lib/api/gemini/client";
+import { commands } from "../lib/api/tauri/commands";
 import { useTheme } from "./useTheme";
 import {
   loadPreferences,
@@ -29,6 +30,18 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   useEffect(() => {
     onToggleSettingsRef.current = onToggleSettings;
   }, [onToggleSettings]);
+
+  useEffect(() => {
+    const updateNativeBg = async () => {
+      const color = theme === "dark" ? "#0a0a0a" : "#ffffff";
+      try {
+        await commands.setBackgroundColor(color);
+      } catch (e) {
+        console.error("Failed to set native background color", e);
+      }
+    };
+    updateNativeBg();
+  }, [theme]);
 
   const [apiKey, setApiKey] = useState<string>("");
   const [activePrompt, setActivePrompt] = useState<string>(DEFAULT_PROMPT);

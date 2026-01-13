@@ -6,6 +6,7 @@
 
 use crate::services::window;
 use tauri::{AppHandle, Emitter, Manager, Size, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::window::Color;
 
 #[tauri::command]
 pub async fn open_imgbb_window(app: AppHandle) -> Result<(), String> {
@@ -96,4 +97,23 @@ pub fn clear_cache(app: AppHandle) {
     app.webview_windows().iter().for_each(|(_, window)| {
         let _ = window.clear_all_browsing_data();
     });
+}
+
+#[tauri::command]
+pub fn set_background_color(app: AppHandle, color: String) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or("Main window not found")?;
+    
+    // Simple hex parser
+    let color = color.trim_start_matches('#');
+    let (r, g, b) = if color.len() == 6 {
+        let r = u8::from_str_radix(&color[0..2], 16).map_err(|e| e.to_string())?;
+        let g = u8::from_str_radix(&color[2..4], 16).map_err(|e| e.to_string())?;
+        let b = u8::from_str_radix(&color[4..6], 16).map_err(|e| e.to_string())?;
+        (r, g, b)
+    } else {
+        return Err("Invalid color format. Use #RRGGBB".to_string());
+    };
+
+    let _ = window.set_background_color(Some(Color(r, g, b, 255)));
+    Ok(())
 }
