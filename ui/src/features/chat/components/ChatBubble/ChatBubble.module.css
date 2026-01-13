@@ -56,8 +56,15 @@
   font-size: 1rem;
   line-height: 1.625;
   color: var(--neutral-100);
-  backdrop-filter: blur(12px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.bubble strong,
+.bubble b,
+.container strong,
+.container b {
+  font-weight: 700;
+  text-shadow: none;
 }
 
 .userBubble {

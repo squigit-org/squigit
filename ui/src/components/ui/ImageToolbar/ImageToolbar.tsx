@@ -416,7 +416,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       } ${isHorizontal ? styles.horizontal : ""}`}
       ref={toolbarRef}
       style={{
-        ...(isInteractionLocked ? { pointerEvents: "none" } : {}),
         ...(isTransitioning ? { opacity: 0, pointerEvents: "none" } : {}),
       }}
     >
@@ -516,6 +515,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       )}
 
       <ToolbarButton
+        key={isFullscreen ? "collapse" : "expand"}
         icon={
           isFullscreen ? (
             <svg
@@ -550,7 +550,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           )
         }
         tooltip={isFullscreen ? "Collapse" : "Expand"}
-        onClick={onToggleFullscreen}
+        onClick={(e) => {
+          setIsInteractionLocked(true);
+          onToggleFullscreen(e);
+        }}
         isHorizontal={isHorizontal}
       />
     </div>

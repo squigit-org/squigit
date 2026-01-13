@@ -173,6 +173,16 @@
 .interactionLocked .toolBtn {
   background-color: transparent !important;
   color: #a1a1aa !important;
+  cursor: default !important;
+  pointer-events: none;
+}
+
+.interactionLocked .toolbarDrag {
+  pointer-events: none;
+}
+
+.interactionLocked {
+  cursor: default !important;
 }
 
 /* Spinner animation */

@@ -133,7 +133,8 @@ export const AppLayout: React.FC = () => {
     isAuthPending,
     isAgreementPending,
     showUpdate,
-    isLoadingState
+    isLoadingState,
+    isImageMissing
   );
 
   // Settings panel visibility effects
