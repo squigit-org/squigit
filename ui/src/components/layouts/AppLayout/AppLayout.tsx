@@ -36,7 +36,6 @@ export const AppLayout: React.FC = () => {
     setIsPanelActive((prev) => !prev);
   }, []);
 
-  // Settings panel state and refs
   const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
     null
   );
@@ -113,7 +112,6 @@ export const AppLayout: React.FC = () => {
     enabled: isChatActive,
   });
 
-  // Chat title generation hook
   const { chatTitle } = useChatTitle({
     startupImage: system.startupImage,
     apiKey: system.apiKey,
@@ -137,7 +135,6 @@ export const AppLayout: React.FC = () => {
     isImageMissing
   );
 
-  // Settings panel visibility effects
   useEffect(() => {
     if (isPanelActive) {
       setIsPanelVisible(true);
@@ -206,10 +203,9 @@ export const AppLayout: React.FC = () => {
     selectedText: string;
   } | null>(null);
 
-  // Split layout state (must be before conditional returns)
   const [splitRatio, setSplitRatio] = useState(() => {
     const saved = localStorage.getItem("splitRatio");
-    return saved ? parseFloat(saved) : 26.67; // 1:2.75 ratio ≈ 26.67%
+    return saved ? parseFloat(saved) : 26.67;
   });
   const isResizingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -325,7 +321,6 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  // 1. Loading State (Checking file)
   if (
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
@@ -338,7 +333,6 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  // 2. Agreement Screen
   if (system.hasAgreed === false) {
     const getOSType = () => {
       const userAgent = window.navigator.userAgent.toLowerCase();
@@ -358,7 +352,6 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  // 3. Welcome / Image Upload
   if (!system.startupImage) {
     return (
       <div className="h-screen w-screen bg-neutral-950 text-neutral-100">
@@ -367,17 +360,13 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  // 2. Gemini Setup
   if (auth.authStage === "GEMINI_SETUP") {
     return <GeminiSetup onComplete={auth.completeGeminiSetup} />;
   }
 
-  // 3. Login Screen
   if (auth.authStage === "LOGIN") {
     return <LoginScreen onComplete={auth.login} />;
   }
-
-  // 4. Main Split Interface (EditorLayout + ChatLayout)
 
   return (
     <div
@@ -422,7 +411,6 @@ export const AppLayout: React.FC = () => {
         style={{ width: `${100 - splitRatio}%` }}
       >
         <ChatLayout
-          // Chat State
           messages={chatEngine.messages}
           streamingText={chatEngine.streamingText}
           isChatMode={chatEngine.isChatMode}
@@ -430,14 +418,11 @@ export const AppLayout: React.FC = () => {
           isStreaming={chatEngine.isStreaming}
           error={chatEngine.error || system.systemError}
           lastSentMessage={chatEngine.lastSentMessage}
-          // Inputs
           input={input}
           onInputChange={setInput}
-          // Models & Settings
           currentModel={system.sessionModel}
           startupImage={system.startupImage}
           chatTitle={chatTitle}
-          // Actions
           onSend={() => {
             chatEngine.handleSend(input);
             setInput("");

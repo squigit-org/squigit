@@ -63,7 +63,7 @@ pub fn build(native_dir: &Path) -> Result<()> {
 
 pub fn deploy(native_dir: &Path) -> Result<()> {
     let build_dir = native_dir.join("build");
-    let dist_dir = native_dir.join("qt-runtime"); // Changed dist to qt-runtime for consistency
+    let dist_dir = native_dir.join("qt-runtime");
 
     let qt_path = find_qt_path()?;
 

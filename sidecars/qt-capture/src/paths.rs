@@ -1,3 +1,6 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::{Context, Result};
 use std::env;
 use std::path::PathBuf;
@@ -15,13 +18,6 @@ impl QtPaths {
 
         #[cfg(target_os = "linux")]
         {
-            // linuxdeployqt structure:
-            // qt-runtime/
-            //   usr/
-            //     bin/capture-bin
-            //     lib/
-            //     plugins/
-            //     qml/
             let usr = qt_runtime.join("usr");
             let bin = usr.join("bin").join("capture-bin");
             let libs = usr.join("lib");
@@ -33,21 +29,19 @@ impl QtPaths {
             }
 
             let mut env_vars = Vec::new();
-
-            // LD_LIBRARY_PATH
             let mut ld_path = libs.to_string_lossy().to_string();
             if let Ok(existing) = env::var("LD_LIBRARY_PATH") {
                 ld_path = format!("{}:{}", ld_path, existing);
             }
             env_vars.push(("LD_LIBRARY_PATH".to_string(), ld_path));
-
-            // QT_PLUGIN_PATH
-            env_vars.push(("QT_PLUGIN_PATH".to_string(), plugins.to_string_lossy().to_string()));
-
-            // QML2_IMPORT_PATH
-            env_vars.push(("QML2_IMPORT_PATH".to_string(), qml.to_string_lossy().to_string()));
-
-            // QT_QPA_PLATFORM_PLUGIN_PATH
+            env_vars.push((
+                "QT_PLUGIN_PATH".to_string(),
+                plugins.to_string_lossy().to_string(),
+            ));
+            env_vars.push((
+                "QML2_IMPORT_PATH".to_string(),
+                qml.to_string_lossy().to_string(),
+            ));
             env_vars.push((
                 "QT_QPA_PLATFORM_PLUGIN_PATH".to_string(),
                 plugins.join("platforms").to_string_lossy().to_string(),
@@ -62,16 +56,22 @@ impl QtPaths {
             if !bin.exists() {
                 anyhow::bail!("Qt binary not found at {}", bin.display());
             }
-            Ok(QtPaths { bin, env_vars: vec![] })
+            Ok(QtPaths {
+                bin,
+                env_vars: vec![],
+            })
         }
 
         #[cfg(target_os = "windows")]
         {
             let bin = qt_runtime.join("capture.exe");
             if !bin.exists() {
-                 anyhow::bail!("Qt binary not found at {}", bin.display());
+                anyhow::bail!("Qt binary not found at {}", bin.display());
             }
-            Ok(QtPaths { bin, env_vars: vec![] })
+            Ok(QtPaths {
+                bin,
+                env_vars: vec![],
+            })
         }
 
         #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]

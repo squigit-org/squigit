@@ -79,7 +79,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
         const menuWidth = menu.offsetWidth || 180;
 
         let menuLeftViewport = selectionCenterViewport - menuWidth / 2;
-        let menuTopViewport = selectionTopViewport - MENU_HEIGHT - 12; // Adjusted offset without notch logic variable
+        let menuTopViewport = selectionTopViewport - MENU_HEIGHT - 12;
 
         const margin = 10;
 
@@ -149,7 +149,6 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       (selection: Selection) => {
         setMenuActive(true);
 
-        // Notify other instances to close
         window.dispatchEvent(
           new CustomEvent("global-inline-menu-show", {
             detail: { id: "editor-menu" },
@@ -269,7 +268,6 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
 
       setIsSelectAllMode(true);
 
-      // Notify other instances to close
       window.dispatchEvent(
         new CustomEvent("global-inline-menu-show", {
           detail: { id: "editor-menu" },
@@ -343,7 +341,6 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       [triggerSelectAll, hideMenu]
     );
 
-    // Expose methods via ref
     useImperativeHandle(
       ref,
       () => ({
@@ -353,9 +350,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       [showStandardMenu, hideMenu]
     );
 
-    // Event listeners
     useEffect(() => {
-      // Global listener for exclusivity
       const hookId = "editor-menu";
       const onGlobalShow = (e: Event) => {
         const detail = (e as CustomEvent).detail;
@@ -368,8 +363,6 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
       const onMouseDown = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
         if (menuRef.current && !menuRef.current.contains(target)) {
-          // Only clear selection if clicking INSIDE the editor wrapper (background click)
-          // detecting "bg" click
           if (imgWrapRef.current && imgWrapRef.current.contains(target)) {
             if (!target.hasAttribute("data-selectable-text")) {
               window.getSelection()?.removeAllRanges();
@@ -391,7 +384,6 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
           return;
         }
 
-        // Check if selection is inside editor
         if (
           imgWrapRef.current &&
           selection.anchorNode &&

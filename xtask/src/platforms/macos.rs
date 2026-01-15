@@ -59,7 +59,7 @@ pub fn build(native_dir: &Path) -> Result<()> {
 
 pub fn deploy(native_dir: &Path) -> Result<()> {
     let build_dir = native_dir.join("build");
-    let dist_dir = native_dir.join("qt-runtime"); // Changed to qt-runtime for consistency
+    let dist_dir = native_dir.join("qt-runtime");
 
     let qt_prefix = find_qt_prefix()?;
 
@@ -71,21 +71,15 @@ pub fn deploy(native_dir: &Path) -> Result<()> {
 
 pub fn sign(native_dir: &Path) -> Result<()> {
     println!("  Signing bundle...");
-    
-    // We expect the bundle to be in native/qt-runtime/capture.app
+
     let app_bundle = native_dir.join("qt-runtime").join("capture.app");
 
     if !app_bundle.exists() {
-         anyhow::bail!("App bundle not found at {}", app_bundle.display());
+        anyhow::bail!("App bundle not found at {}", app_bundle.display());
     }
 
     let status = Command::new("codesign")
-        .args([
-            "-s", "-", // Ad-hoc signing
-            "--deep",
-            "--force",
-            "--options", "runtime",
-        ])
+        .args(["-s", "-", "--deep", "--force", "--options", "runtime"])
         .arg(&app_bundle)
         .status()
         .context("Failed to execute codesign")?;

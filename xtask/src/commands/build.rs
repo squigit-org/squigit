@@ -1,9 +1,12 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::{Context, Result};
 use std::fs;
-use xtask::{project_root, run_cmd, run_cmd_with_node_bin, copy_dir_all};
 use xtask::{capture_sidecar_dir, qt_native_dir};
+use xtask::{copy_dir_all, project_root, run_cmd, run_cmd_with_node_bin};
 use xtask::{ocr_sidecar_dir, venv_python};
-use xtask::{ui_dir, tauri_dir};
+use xtask::{tauri_dir, ui_dir};
 
 use crate::commands::pkg;
 
@@ -15,21 +18,16 @@ pub fn all() -> Result<()> {
 }
 
 pub fn capture() -> Result<()> {
-   println!("\nBuilding Capture Engine...");
-    // 1. Build Qt
+    println!("\nBuilding Capture Engine...");
     build_qt_native()?;
-    // 2. Deploy Qt
     println!("\nDeploying Qt runtime...");
     deploy_qt_native()?;
-    // 3. Sign (macOS only)
     #[cfg(target_os = "macos")]
     {
         println!("\nSigning macOS bundle...");
         crate::platforms::macos::sign(&qt_native_dir())?;
     }
-    // 4. Build Rust Wrapper
     build_capture_rust_wrapper()?;
-    // 5. Package
     pkg::capture()?;
     println!("\nCapture Engine build complete!");
     Ok(())
@@ -43,7 +41,7 @@ pub fn capture_qt_only() -> Result<()> {
 }
 
 fn build_qt_native() -> Result<()> {
-     println!("\nRunning Qt CMake build...");
+    println!("\nRunning Qt CMake build...");
     let native_dir = qt_native_dir();
     #[cfg(target_os = "linux")]
     crate::platforms::linux::build(&native_dir)?;
@@ -67,7 +65,7 @@ fn deploy_qt_native() -> Result<()> {
 
 fn build_capture_rust_wrapper() -> Result<()> {
     println!("\nBuilding Rust wrapper...");
-    let _sidecar = capture_sidecar_dir(); 
+    let _sidecar = capture_sidecar_dir();
     run_cmd(
         "cargo",
         &["build", "--release", "-p", "capture-engine"],
@@ -85,14 +83,17 @@ pub fn ocr() -> Result<()> {
         run_cmd("python3", &["-m", "venv", "venv"], &sidecar)?;
     }
     println!("\nInstalling dependencies...");
-     let pip = if cfg!(windows) {
+    let pip = if cfg!(windows) {
         venv.join("Scripts").join("pip.exe")
     } else {
         venv.join("bin").join("pip")
     };
-    run_cmd(pip.to_str().unwrap(), &["install", "-r", "requirements.txt"], &sidecar)?;
+    run_cmd(
+        pip.to_str().unwrap(),
+        &["install", "-r", "requirements.txt"],
+        &sidecar,
+    )?;
 
-    // Patches
     println!("\nApplying patches...");
     let python = venv_python();
     let py = python.to_str().unwrap();
@@ -101,7 +102,6 @@ pub fn ocr() -> Result<()> {
     run_cmd(py, &["patches/cpp_extension.py"], &sidecar)?;
     run_cmd(py, &["patches/iaa_augment.py"], &sidecar)?;
 
-    // Models
     println!("\nDownloading models...");
     run_cmd(py, &["download_models.py"], &sidecar)?;
 
@@ -112,7 +112,10 @@ pub fn ocr() -> Result<()> {
     let model_mappings = [
         ("det/en/en_PP-OCRv3_det_infer", "en_PP-OCRv3_det"),
         ("rec/en/en_PP-OCRv4_rec_infer", "en_PP-OCRv4_rec"),
-        ("cls/ch_ppocr_mobile_v2.0_cls_infer", "ch_ppocr_mobile_v2.0_cls"),
+        (
+            "cls/ch_ppocr_mobile_v2.0_cls_infer",
+            "ch_ppocr_mobile_v2.0_cls",
+        ),
     ];
     for (src_rel, dst_name) in model_mappings {
         let src = cache.join(src_rel);
@@ -126,16 +129,18 @@ pub fn ocr() -> Result<()> {
         }
     }
 
-    // PyInstaller
     println!("\nBuilding executable...");
     let pyinstaller = if cfg!(windows) {
         venv.join("Scripts").join("pyinstaller.exe")
     } else {
         venv.join("bin").join("pyinstaller")
     };
-    run_cmd(pyinstaller.to_str().unwrap(), &["--clean", "ocr-engine.spec"], &sidecar)?;
+    run_cmd(
+        pyinstaller.to_str().unwrap(),
+        &["--clean", "ocr-engine.spec"],
+        &sidecar,
+    )?;
 
-    // Package
     pkg::ocr()?;
     println!("\nSidecar build complete!");
     Ok(())

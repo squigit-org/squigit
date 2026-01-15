@@ -1,3 +1,6 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::{Context, Result};
 use std::env;
 use std::io::{BufRead, BufReader};
@@ -27,7 +30,6 @@ impl QtApp {
         let mut child = self.spawn_process()?;
         let child_pid = child.id();
 
-        // Restart Qt process on display changes
         let watcher = DisplayWatcher::start(move || {
             eprintln!("[qt-capture] Display topology changed! Killing Qt...");
             Self::kill_process(child_pid);
@@ -45,7 +47,7 @@ impl QtApp {
     fn spawn_process(&self) -> Result<Child> {
         let paths = QtPaths::resolve()?;
         let mut cmd = Command::new(&paths.bin);
-        
+
         cmd.args(&self.args)
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());

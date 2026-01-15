@@ -116,28 +116,6 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         console.error("Config load error", e);
         setSystemError("Failed to load configuration.");
       }
-
-      // Image path handling is now done in AppLayout.tsx to support Zero-Copy
-      /*
-      const loadImageFromPath = async (path: string) => {
-        try {
-          const data = await invoke<{ base64: string; mimeType: string }>(
-            "read_image_file",
-            { path }
-          );
-          if (data) {
-            setStartupImage(data);
-          }
-        } catch (e) {
-          console.error("Failed to read image file", e);
-        }
-      };
-
-      const unlistenImage = await listen<string>("image-path", (event) => {
-        loadImageFromPath(event.payload);
-      });
-      unlisteners.push(unlistenImage);
-      */
     };
 
     setupIpc();

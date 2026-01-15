@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Shutter sound suppressor for screen capture
-//! 
+//!
 //! Mutes system audio during capture to suppress shutter sounds on:
 //! - macOS: CoreGraphics always plays a sound
 //! - Linux/Wayland: Portal may play a sound
-//! 
+//!
 //! Windows and X11 are silent by default, so no action needed.
 
 use std::env;
@@ -40,7 +40,7 @@ impl AudioGuard {
             Self::unmute_linux();
         }
     }
-    
+
     #[cfg(target_os = "macos")]
     fn mute_macos() {
         let _ = Command::new("osascript")

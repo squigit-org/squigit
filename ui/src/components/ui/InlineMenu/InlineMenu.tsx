@@ -38,7 +38,6 @@ export const InlineMenu: React.FC<
       onMouseDown={(e) => e.preventDefault()}
     >
       <div className={styles.menuSlider} ref={sliderRef}>
-        {/* Page 1: Copy, Select All, More */}
         <div className={styles.menuPage} ref={page1Ref}>
           <div
             className={styles.menuItem}
@@ -86,7 +85,6 @@ export const InlineMenu: React.FC<
           </div>
         </div>
 
-        {/* Page 2: Back, Search, Translate */}
         <div className={styles.menuPage} ref={page2Ref}>
           <div
             className={`${styles.menuItem} ${styles.navArrow}`}
@@ -134,7 +132,6 @@ export const InlineMenu: React.FC<
           </div>
         </div>
 
-        {/* Flat Page: Copy, Search, Translate (for Select All mode) */}
         <div className={styles.menuPage} ref={pageFlatRef}>
           <div
             className={styles.menuItem}

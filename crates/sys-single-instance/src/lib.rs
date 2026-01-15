@@ -19,9 +19,9 @@ impl InstanceLock {
     pub fn try_acquire(app_name: &str) -> Result<Self> {
         let dir = Self::lock_dir()?;
         fs::create_dir_all(&dir)?;
-        
+
         let path = dir.join(format!("{}.lock", app_name));
-        
+
         let file = fs::OpenOptions::new()
             .read(true)
             .write(true)
@@ -39,7 +39,7 @@ impl InstanceLock {
     pub fn force_release(app_name: &str) -> Result<()> {
         let dir = Self::lock_dir()?;
         let path = dir.join(format!("{}.lock", app_name));
-        
+
         if path.exists() {
             fs::remove_file(&path)
                 .with_context(|| format!("Failed to remove stale lock: {:?}", path))?;
@@ -68,15 +68,15 @@ mod tests {
     #[test]
     fn test_acquire_and_release() {
         let app_name = "test-single-instance-123";
-        
+
         let lock = InstanceLock::try_acquire(app_name);
         assert!(lock.is_ok(), "First lock should succeed");
-        
+
         let lock2 = InstanceLock::try_acquire(app_name);
         assert!(lock2.is_err(), "Second lock should fail");
-        
+
         drop(lock);
-        
+
         let lock3 = InstanceLock::try_acquire(app_name);
         assert!(lock3.is_ok(), "Lock after release should succeed");
     }
@@ -85,7 +85,7 @@ mod tests {
     fn test_force_release() {
         let app_name = "test-force-release-456";
         let _lock = InstanceLock::try_acquire(app_name).unwrap();
-        
+
         let result = InstanceLock::force_release(app_name);
         assert!(result.is_ok());
     }

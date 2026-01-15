@@ -27,7 +27,7 @@ impl DisplayWatcher {
 
         let handle = thread::spawn(move || {
             let mut monitor = DisplayMonitor::new();
-            
+
             while running_clone.load(Ordering::Relaxed) {
                 if monitor.check() {
                     on_change();
@@ -89,7 +89,6 @@ impl DisplayMonitor {
         false
     }
 
-    
     #[cfg(target_os = "linux")]
     fn get_monitor_count() -> i32 {
         if let Ok(entries) = std::fs::read_dir("/sys/class/drm") {
@@ -113,7 +112,6 @@ impl DisplayMonitor {
         1
     }
 
-    
     #[cfg(target_os = "macos")]
     fn get_monitor_count() -> i32 {
         use std::process::Command;
@@ -129,7 +127,6 @@ impl DisplayMonitor {
         }
     }
 
-    
     #[cfg(target_os = "windows")]
     fn get_monitor_count() -> i32 {
         use std::process::Command;
@@ -169,8 +166,7 @@ mod tests {
 
     #[test]
     fn test_watcher_can_stop() {
-        let watcher = DisplayWatcher::start(|| {
-        });
+        let watcher = DisplayWatcher::start(|| {});
         watcher.stop();
     }
 }

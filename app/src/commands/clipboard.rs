@@ -1,8 +1,5 @@
-/*
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
 
 use std::sync::atomic::Ordering;
 use std::thread;
@@ -82,26 +79,22 @@ pub async fn copy_image_to_clipboard(image_base64: String) -> Result<(), String>
     use arboard::{Clipboard, ImageData};
     use base64::{engine::general_purpose::STANDARD, Engine};
 
-    // Decode base64 to bytes
     let image_bytes = STANDARD
         .decode(&image_base64)
         .map_err(|e| format!("Failed to decode base64: {}", e))?;
 
-    // Decode PNG to raw RGBA pixels
     let img = image::load_from_memory(&image_bytes)
         .map_err(|e| format!("Failed to decode image: {}", e))?;
 
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();
 
-    // Create clipboard image data
     let img_data = ImageData {
         width: width as usize,
         height: height as usize,
         bytes: std::borrow::Cow::Owned(rgba.into_raw()),
     };
 
-    // Copy to clipboard
     let mut clipboard =
         Clipboard::new().map_err(|e| format!("Failed to access clipboard: {}", e))?;
 

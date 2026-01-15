@@ -5,8 +5,8 @@ mod paths;
 mod qt_app;
 
 use anyhow::Result;
-use std::process::ExitCode;
 use qt_app::QtApp;
+use std::process::ExitCode;
 use sys_shutter_suppressor::AudioGuard;
 
 fn main() -> ExitCode {

@@ -70,12 +70,11 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       setIsRotating(false);
     }
   }, [isLoading]);
-  // Auto-scroll only when user sends a message (not when AI responds)
-  // This allows users to read AI responses from top to bottom naturally
+
   useLayoutEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
-      // Only scroll when user sends a message, not when AI responds
+
       if (lastMessage.role === "user") {
         const el = scrollContainerRef.current;
         if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
@@ -83,8 +82,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     }
   }, [messages.length]);
 
-  // --- Inline Menu (Hook) ---
-  // --- Inline Menu (Hook) ---
   const showFlatMenuRef = useRef<
     ((rect: { left: number; width: number; top: number }) => void) | null
   >(null);
@@ -97,7 +94,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     const element =
       anchorNode instanceof Element ? anchorNode : anchorNode.parentElement;
 
-    // Find the closest chat bubble
     const bubble = element?.closest('[data-component="chat-bubble"]');
 
     if (bubble) {
@@ -106,18 +102,15 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       range.selectNodeContents(bubble);
       selection.addRange(range);
 
-      // Calculate position for flat menu
       const rect = bubble.getBoundingClientRect();
-      const menuWidth = 250; // Approximate width for flat menu
+      const menuWidth = 250;
       const MENU_HEIGHT = 48;
       const centerX = rect.left + rect.width / 2;
       const targetLeft = Math.max(
         10,
         Math.min(centerX - menuWidth / 2, window.innerWidth - menuWidth - 10)
       );
-      // Position 10px above the bubble
-      // internal positionMenu adds -48px (height) -12px (notch).
-      // We want -48px -10px. So we need to pass top + 2px.
+
       const targetTop = Math.max(10, rect.top + 2);
 
       const targetRect = {
@@ -126,7 +119,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         width: menuWidth,
       };
 
-      // Show flat menu
       if (showFlatMenuRef.current) {
         showFlatMenuRef.current(targetRect);
       }

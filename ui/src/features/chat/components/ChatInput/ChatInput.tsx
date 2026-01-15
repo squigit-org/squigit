@@ -86,7 +86,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [codeValue, setCodeValue] = useState("");
   const [consecutiveEnters, setConsecutiveEnters] = useState(0);
 
-  // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     isOpen: false,
     x: 0,
@@ -94,7 +93,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   });
   const [hasSelection, setHasSelection] = useState(false);
 
-  // Undo/Redo history
   const historyRef = useRef<string[]>([value]);
   const historyIndexRef = useRef<number>(0);
   const isUndoRedoRef = useRef<boolean>(false);
@@ -107,21 +105,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [isCodeBlockActive]);
 
-  // Track value changes for undo/redo history
   useEffect(() => {
     if (isUndoRedoRef.current) {
       isUndoRedoRef.current = false;
       return;
     }
-    // Only add to history if value changed
     const currentHistory = historyRef.current;
     const currentIndex = historyIndexRef.current;
     if (value !== currentHistory[currentIndex]) {
-      // Remove any redo history
       historyRef.current = currentHistory.slice(0, currentIndex + 1);
       historyRef.current.push(value);
       historyIndexRef.current = historyRef.current.length - 1;
-      // Limit history size
       if (historyRef.current.length > 100) {
         historyRef.current = historyRef.current.slice(-100);
         historyIndexRef.current = historyRef.current.length - 1;
@@ -129,7 +123,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [value]);
 
-  // Track selection changes
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
@@ -196,7 +189,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return () => observer.disconnect();
   }, [adjustHeight]);
 
-  // Context menu handlers
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -282,7 +274,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Handle keyboard shortcuts
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
         case "c":

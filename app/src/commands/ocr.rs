@@ -1,8 +1,5 @@
-/*
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
 
 //! OCR command module for Tauri-Python IPC.
 //!
@@ -14,7 +11,6 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 use tauri::Manager;
 
-/// OCR bounding box coordinates.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrBox {
     pub text: String,
@@ -23,7 +19,6 @@ pub struct OcrBox {
     pub confidence: f64,
 }
 
-/// Request payload for OCR IPC.
 #[derive(Debug, Serialize)]
 struct OcrRequest {
     #[serde(rename = "type")]
@@ -31,7 +26,6 @@ struct OcrRequest {
     data: String,
 }
 
-/// Raw OCR result from Python sidecar.
 #[derive(Debug, Deserialize)]
 struct RawOcrResult {
     text: String,
@@ -41,27 +35,17 @@ struct RawOcrResult {
     confidence: Option<f64>,
 }
 
-/// Error response from Python sidecar.
 #[derive(Debug, Deserialize)]
 struct OcrError {
     error: String,
 }
 
-/// Run OCR on an image.
-///
-/// # Arguments
-/// * `image_data` - Either a file path or base64-encoded image data.
-/// * `is_base64` - If true, treat `image_data` as base64; otherwise treat as file path.
-///
-/// # Returns
-/// A vector of OCR boxes containing detected text and coordinates.
 #[tauri::command]
 pub async fn ocr_image(
     app: tauri::AppHandle,
     image_data: String,
     is_base64: bool,
 ) -> Result<Vec<OcrBox>, String> {
-    // Get the sidecar path
     let sidecar_path = app
         .path()
         .resource_dir()
@@ -73,7 +57,6 @@ pub async fn ocr_image(
         return Err(format!("OCR sidecar not found at: {:?}", sidecar_path));
     }
 
-    // Build the IPC request
     let request = OcrRequest {
         request_type: if is_base64 {
             "base64".to_string()
@@ -83,10 +66,9 @@ pub async fn ocr_image(
         data: image_data,
     };
 
-    let request_json =
-        serde_json::to_string(&request).map_err(|e| format!("Failed to serialize request: {}", e))?;
+    let request_json = serde_json::to_string(&request)
+        .map_err(|e| format!("Failed to serialize request: {}", e))?;
 
-    // Spawn the sidecar process with stdin/stdout
     let mut child = Command::new(&sidecar_path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -94,14 +76,12 @@ pub async fn ocr_image(
         .spawn()
         .map_err(|e| format!("Failed to spawn OCR sidecar: {}", e))?;
 
-    // Write request to stdin
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(request_json.as_bytes())
             .map_err(|e| format!("Failed to write to sidecar stdin: {}", e))?;
     }
 
-    // Wait for process to complete
     let output = child
         .wait_with_output()
         .map_err(|e| format!("Failed to wait for sidecar: {}", e))?;
@@ -113,16 +93,13 @@ pub async fn ocr_image(
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Try to parse as error first
     if let Ok(err) = serde_json::from_str::<OcrError>(&stdout) {
         return Err(err.error);
     }
 
-    // Parse as OCR results
-    let raw_results: Vec<RawOcrResult> =
-        serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse OCR output: {} - {}", e, stdout))?;
+    let raw_results: Vec<RawOcrResult> = serde_json::from_str(&stdout)
+        .map_err(|e| format!("Failed to parse OCR output: {} - {}", e, stdout))?;
 
-    // Convert to our format
     let results: Vec<OcrBox> = raw_results
         .into_iter()
         .map(|r| OcrBox {
@@ -135,7 +112,6 @@ pub async fn ocr_image(
     Ok(results)
 }
 
-/// Get the platform-specific sidecar executable name.
 fn get_sidecar_name() -> String {
     #[cfg(target_os = "windows")]
     {
@@ -147,7 +123,6 @@ fn get_sidecar_name() -> String {
     }
     #[cfg(target_os = "linux")]
     {
-        // Use the target triple format that Tauri uses for sidecars
         "ocr-engine-x86_64-unknown-linux-gnu".to_string()
     }
 }

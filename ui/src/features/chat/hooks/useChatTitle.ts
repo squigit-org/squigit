@@ -30,12 +30,10 @@ export const useChatTitle = ({
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateTitle = useCallback(async () => {
-    // Skip if no image, no API key, or title already generated
     if (!startupImage?.base64 || !apiKey || sessionChatTitle) {
       return;
     }
 
-    // Skip if image is a file path (asset URL)
     if (startupImage.isFilePath && startupImage.base64.startsWith("asset://")) {
       return;
     }
@@ -45,7 +43,6 @@ export const useChatTitle = ({
     try {
       const ai = new GoogleGenAI({ apiKey });
 
-      // Parse the prompt from YAML
       const promptMatch = titlePrompt.match(/chat-title-prmp: \|\n([\s\S]+)/);
       const systemPrompt = promptMatch
         ? promptMatch[1]
@@ -55,7 +52,6 @@ export const useChatTitle = ({
             .join(" ")
         : "Generate a 2-3 word title describing this image.";
 
-      // Clean base64 data
       const cleanBase64 = startupImage.base64.replace(
         /^data:image\/[a-z]+;base64,/,
         ""

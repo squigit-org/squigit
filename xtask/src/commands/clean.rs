@@ -1,6 +1,9 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::Result;
 use std::fs;
-use xtask::{project_root, qt_native_dir, ocr_sidecar_dir, tauri_dir};
+use xtask::{ocr_sidecar_dir, project_root, qt_native_dir, tauri_dir};
 
 pub fn all() -> Result<()> {
     ocr()?;
@@ -64,7 +67,6 @@ pub fn app() -> Result<()> {
         for entry in fs::read_dir(&binaries)? {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy().to_string();
-            // Clean both ocr and capture binaries
             if name.starts_with("ocr-engine-") || name.starts_with("capture-engine-") {
                 println!("  Removing {}", entry.path().display());
                 fs::remove_file(entry.path())?;

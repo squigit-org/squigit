@@ -1,3 +1,6 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::Result;
 use xtask::{run_cmd, run_cmd_with_node_bin, ui_dir, tauri_dir};
 
@@ -11,7 +14,6 @@ pub fn run(cmd: &str, extra_args: &[String]) -> Result<()> {
         run_cmd("npm", &["install"], &ui)?;
     }
 
-    // Build args: [cmd, "--", ...extra_args] if extra_args provided
     let mut args: Vec<&str> = vec![cmd];
     if !extra_args.is_empty() {
         args.push("--");

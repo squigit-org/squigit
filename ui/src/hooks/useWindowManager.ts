@@ -21,14 +21,12 @@ export const useWindowManager = (
   isImageMissing: boolean
 ) => {
   useEffect(() => {
-    // Skip resize during loading - Rust side already set correct size for CLI images
     if (isLoading) return;
 
     const adjustWindow = async () => {
       const isOnboardingPage =
         !isChatActive || isAuthPending || isAgreementPending || isUpdatePending;
 
-      // Treat Welcome screen (Image Missing) as Chat size
       const isWelcomeScreen =
         isImageMissing && !isAgreementPending && !isUpdatePending;
 

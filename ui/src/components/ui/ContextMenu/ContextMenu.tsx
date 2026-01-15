@@ -21,9 +21,8 @@ interface ContextMenuProps {
   hasSelection?: boolean;
 }
 
-// Edge padding to keep menu away from window edges
 const EDGE_PADDING = 8;
-// Offset from cursor position
+
 const CURSOR_OFFSET = 4;
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -43,7 +42,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const hasText = hasSelection || selectedText.length > 0;
 
-  // Calculate safe position after menu renders
   useLayoutEffect(() => {
     if (!menuRef.current) return;
 
@@ -54,7 +52,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     let safeX = x + CURSOR_OFFSET;
     let safeY = y + CURSOR_OFFSET;
 
-    // Check right edge overflow - flip to left of cursor
     if (x + menuRect.width + EDGE_PADDING > viewportWidth) {
       safeX = Math.max(
         EDGE_PADDING,
@@ -62,12 +59,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       );
     }
 
-    // Check left edge overflow
     if (safeX < EDGE_PADDING) {
       safeX = EDGE_PADDING;
     }
 
-    // Check bottom edge overflow - flip to above cursor
     if (y + menuRect.height + EDGE_PADDING > viewportHeight) {
       safeY = Math.max(
         EDGE_PADDING,
@@ -75,7 +70,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       );
     }
 
-    // Check top edge overflow
     if (safeY < EDGE_PADDING) {
       safeY = EDGE_PADDING;
     }
@@ -90,7 +84,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     onClose();
   };
 
-  // Check if we have any actions to show
   const showCopy = onCopy && hasText;
   const showCut = onCut && hasText;
   const showPaste = onPaste;

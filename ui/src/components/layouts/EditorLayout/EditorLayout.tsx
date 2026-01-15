@@ -41,7 +41,7 @@ interface EditorLayoutProps {
   } | null;
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string) => void;
-  // Settings panel props
+
   isPanelActive: boolean;
   toggleSettingsPanel: () => void;
   isPanelVisible: boolean;
@@ -95,13 +95,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 }) => {
   const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
   const [loading, setLoading] = useState(false);
-  // Separate visibility states for sequential transition
+
   const [showOverlay, setShowOverlay] = useState(false);
   const [showTextLayer, setShowTextLayer] = useState(false);
   const [error, setError] = useState("");
   const [size, setSize] = useState({ w: 0, h: 0 });
 
-  // Toolbar State
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const previousRect = useRef<DOMRect | null>(null);
@@ -109,54 +108,40 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     null
   );
 
-  // Refs
   const viewerRef = useRef<HTMLDivElement>(null);
   const imgWrapRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorMenuRef = useRef<EditorMenuHandle>(null);
 
-  // Dynamic padding state - distributes free space in 2:3 ratio (top:bottom)
   const [dynamicPaddingTop, setDynamicPaddingTop] = useState(0);
 
-  // Dynamic padding calculation using ResizeObserver
   useEffect(() => {
     const viewer = viewerRef.current;
     const imgWrap = imgWrapRef.current;
     if (!viewer || !imgWrap) return;
 
     const calculatePadding = () => {
-      // Get viewer's available height
       const viewerHeight = viewer.clientHeight;
 
-      // Get image wrap height (including toolbar padding)
       const imgWrapHeight = imgWrap.scrollHeight;
 
-      // Available free space = viewer height - content height
-      // This is the space we can distribute between top and bottom
       const freeSpace = viewerHeight - imgWrapHeight;
 
-      // If no free space or content overflows, no padding (avoid scrollbar)
       if (freeSpace <= 0) {
         setDynamicPaddingTop(0);
         return;
       }
 
-      // Distribute free space in 2:3 ratio (top:bottom)
-      // top = 2/5 of free space, bottom = 3/5 of free space (implicit)
-      // This gives a slight "push to top" effect
       const topPadding = Math.floor(freeSpace * (2 / 5));
 
       setDynamicPaddingTop(topPadding);
     };
 
-    // Initial calculation
     calculatePadding();
 
-    // Reset scroll to top to prevent auto-scroll on large images
     viewer.scrollTop = 0;
 
-    // Create ResizeObserver to monitor both viewer and image wrap
     const resizeObserver = new ResizeObserver(() => {
       calculatePadding();
     });
@@ -164,29 +149,24 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     resizeObserver.observe(viewer);
     resizeObserver.observe(imgWrap);
 
-    // Also listen to window resize for vh unit changes
     window.addEventListener("resize", calculatePadding);
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", calculatePadding);
     };
-  }, [startupImage, size]); // Re-run when image or size changes
+  }, [startupImage, size]);
 
-  // Backdrop state
   const [isBackdropVisible, setIsBackdropVisible] = useState(false);
 
   useLayoutEffect(() => {
-    // Sync backdrop visibility
     if (isFullscreen) {
-      // Start immediately as requested by user ("both together")
       setIsBackdropVisible(true);
     } else {
       setIsBackdropVisible(false);
     }
   }, [isFullscreen]);
 
-  // Manage body scrollbar to prevent artifacts during transition
   useLayoutEffect(() => {
     if (isFullscreen || isTransitioning) {
       const originalOverflow = document.body.style.overflow;
@@ -201,43 +181,36 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     const wrap = imgWrapRef.current;
     if (!wrap) return;
 
-    // Measurement for FLIP
     const currentRect = wrap.getBoundingClientRect();
 
     if (previousRect.current) {
       const prev = previousRect.current;
 
-      // Calculate invert values
       const deltaX = prev.left - currentRect.left;
       const deltaY = prev.top - currentRect.top;
       const deltaW = prev.width / currentRect.width;
       const deltaH = prev.height / currentRect.height;
 
-      // If no change, don't animate (e.g. initial render)
       if (deltaX === 0 && deltaY === 0 && deltaW === 1 && deltaH === 1) {
         return;
       }
 
       setIsTransitioning(true);
 
-      // Invert: apply transform to make it look like previous state
       wrap.style.transformOrigin = "top left";
       wrap.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${deltaW}, ${deltaH})`;
       wrap.style.transition = "none";
 
-      // Force reflow
       void wrap.offsetHeight;
 
-      // Play: remove transform to animate to current state
       wrap.style.transform = "";
       wrap.style.transition = "transform 300ms cubic-bezier(0.4, 0, 0.2, 1)";
 
-      // Cleanup after animation
       const timer = setTimeout(() => {
         setIsTransitioning(false);
         wrap.style.transition = "";
         wrap.style.transform = "";
-        previousRect.current = null; // Reset
+        previousRect.current = null;
       }, 300);
 
       return () => {
@@ -248,19 +221,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     }
   }, [isFullscreen]);
 
-  // --- Toolbar actions ---
   const resetToolbarPosition = useCallback(() => {
     const toolbar = toolbarRef.current;
     if (!toolbar) return;
 
-    // Clear all inline positioning styles so CSS can take over
     toolbar.style.left = "";
     toolbar.style.right = "";
     toolbar.style.top = "";
     toolbar.style.bottom = "";
   }, []);
 
-  // Capture previous rect before state change
   const toggleFullscreen = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -269,7 +239,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
       }
 
       if (!isFullscreen) {
-        // Entering fullscreen: Save current position
         if (toolbarRef.current) {
           lastToolbarPosition.current = {
             left: toolbarRef.current.style.left,
@@ -278,11 +247,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         }
         resetToolbarPosition();
       } else {
-        // Exiting fullscreen: Reset first, then restore after a tick
-        // We reset first to clear fullscreen-specific styles if any (actually fullscreen uses CSS class)
         resetToolbarPosition();
 
-        // Restore previous position
         if (toolbarRef.current && lastToolbarPosition.current) {
           toolbarRef.current.style.left = lastToolbarPosition.current.left;
           toolbarRef.current.style.top = lastToolbarPosition.current.top;
@@ -294,17 +260,14 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     [isFullscreen, resetToolbarPosition]
   );
 
-  // Get image source
   const imageSrc = startupImage?.base64 || "";
 
-  // Google Lens hook
   const { isLensLoading, triggerLens } = useLens(
     startupImage,
     sessionLensUrl,
     setSessionLensUrl
   );
 
-  // Text selection hook - calls EditorMenu.showStandardMenu
   const { svgRef, handleTextMouseDown } = useTextSelection({
     data,
     onSelectionComplete: (selection) => {
@@ -312,7 +275,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     },
   });
 
-  // Auto-scan on image load using Tauri invoke
   const scan = useCallback(async () => {
     console.log("Scan called with startupImage:", startupImage);
 
@@ -334,14 +296,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         startupImage.isFilePath &&
         startupImage.base64.startsWith("asset://")
       ) {
-        // Extract file path from asset URL
         imageData = decodeURIComponent(
           startupImage.base64.replace("asset://localhost", "")
         );
         isBase64 = false;
         console.log("OCR: Using file path:", imageData);
       } else {
-        // Use base64 data directly
         imageData = startupImage.base64;
         isBase64 = true;
         console.log(
@@ -357,7 +317,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
       console.log("OCR boxes found:", results.length);
 
-      // Convert to expected format (box_coords -> box)
       const converted = results.map((r) => ({
         text: r.text,
         box: r.box_coords,
@@ -367,15 +326,13 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
       setData(converted);
 
-      // Instant transition:
-      // Toggle both at the same time. React will auto-batch these updates.
       setShowOverlay(false);
       setShowTextLayer(true);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       setError(errorMsg);
       console.error("OCR Error:", e);
-      setShowOverlay(false); // Hide on error
+      setShowOverlay(false);
     } finally {
       setLoading(false);
     }
@@ -400,14 +357,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     }
   };
 
-  // toggleFullscreen is now defined above to capture rect
-
   const handleCopyImage = useCallback(async () => {
     const img = imgRef.current;
     if (!img) return;
 
     try {
-      // Create a canvas and draw the image
       const canvas = document.createElement("canvas");
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
@@ -419,14 +373,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
       ctx.drawImage(img, 0, 0);
 
-      // Convert to base64 PNG (without data:image/png;base64, prefix)
       const dataUrl = canvas.toDataURL("image/png");
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
 
-      // Copy to clipboard using Tauri command
       await invoke("copy_image_to_clipboard", { imageBase64: base64 });
 
-      // Show success toast
       const { showToast } = await import("../../ui/Notifications/Toast");
       showToast("Copied to clipboard", "success");
     } catch (err) {
@@ -436,7 +387,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     }
   }, []);
 
-  // --- Effects ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isFullscreen) {
@@ -514,7 +464,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
       <div
         className={styles.viewer}
         ref={viewerRef}
-        style={{ paddingTop: dynamicPaddingTop }} // 2:3 ratio - 40% of free space to top
+        style={{ paddingTop: dynamicPaddingTop }}
       >
         <div
           className={`${styles.imageWrap} ${

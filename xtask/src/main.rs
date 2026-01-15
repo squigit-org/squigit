@@ -44,18 +44,16 @@ enum Commands {
     /// Clean all build artifacts
     Clean,
 
-    /// Run Tauri commands (dev, build, etc.)
+    /// Tauri commands (dev, build, etc.) + Extra arguments
+    
     Run {
         #[arg(default_value = "dev")]
         cmd: String,
-        /// Extra arguments to pass to tauri
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
 
-    /// Start development mode
     Dev {
-        /// Extra arguments to pass to tauri dev (e.g., -- /path/to/image.jpg)
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },

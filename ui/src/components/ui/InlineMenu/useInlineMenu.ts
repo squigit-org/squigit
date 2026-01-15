@@ -15,20 +15,10 @@ const MENU_HEIGHT = 48;
 const NOTCH_OFFSET = 12;
 
 interface UseInlineMenuOptions {
-  /** Ref to the container element (for scoping text selection) */
   containerRef: React.RefObject<HTMLElement | null>;
-  /** Custom handler for "Select All" action */
   onSelectAll?: () => void;
-  /** Called when menu is shown */
   onMenuShow?: () => void;
-  /** Called when menu is hidden */
   onMenuHide?: () => void;
-  /**
-   * Strategy for positioning the menu relative to the selection.
-   * - 'visual': Analysis client rects to find the top of the first visual line (best for wrapped text/chat).
-   * - 'simple': Uses the bounding rectangle of the selection range (best for Editor/single-line/transform-heavy elements).
-   * @default 'visual'
-   */
   positioningStrategy?: "visual" | "simple";
 }
 
@@ -39,33 +29,26 @@ export const useInlineMenu = ({
   onMenuHide,
   positioningStrategy = "visual",
 }: UseInlineMenuOptions) => {
-  // Refs
   const menuRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
   const page1Ref = useRef<HTMLDivElement>(null);
   const page2Ref = useRef<HTMLDivElement>(null);
   const pageFlatRef = useRef<HTMLDivElement>(null);
 
-  // State
   const [menuActive, setMenuActive] = useState(false);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
-  // Track when container is available (refs don't trigger re-renders)
   const [containerElement, setContainerElement] = useState<HTMLElement | null>(
     null
   );
 
-  // Sync containerElement with containerRef after every render
   useEffect(() => {
-    // Check if ref has been populated and state needs updating
     if (containerRef.current && containerRef.current !== containerElement) {
       setContainerElement(containerRef.current);
     }
   });
 
-  // Unique ID for this hook instance to handle global exclusivity
   const hookId = useRef(Math.random().toString(36).substr(2, 9)).current;
 
-  // Helper functions
   const getSelectedText = useCallback(() => {
     return window.getSelection()?.toString().trim() || "";
   }, []);
@@ -169,7 +152,6 @@ export const useInlineMenu = ({
       setMenuActive(true);
       onMenuShow?.();
 
-      // Notify other instances to close
       window.dispatchEvent(
         new CustomEvent("global-inline-menu-show", { detail: { id: hookId } })
       );
@@ -194,13 +176,11 @@ export const useInlineMenu = ({
             width: r.width,
           };
         } else {
-          // 'visual' strategy
           const rects = Array.from(range.getClientRects()).filter(
             (r) => r.width > 0 && r.height > 0
           );
 
           if (rects.length === 0) {
-            // Fallback to bounding rect if no client rects
             const r = range.getBoundingClientRect();
             targetRect = {
               left: r.left,
@@ -208,11 +188,8 @@ export const useInlineMenu = ({
               width: r.width,
             };
           } else {
-            // Calculate bounding box of the visual selection
-            // Y position: Top of the first visual line (minimum top value)
             const topY = Math.min(...rects.map((r) => r.top));
 
-            // X position: Full width of the visual selection
             const minLeft = Math.min(...rects.map((r) => r.left));
             const maxRight = Math.max(...rects.map((r) => r.right));
             const width = maxRight - minLeft;
@@ -244,7 +221,6 @@ export const useInlineMenu = ({
       setIsSelectAllMode(true);
       onMenuShow?.();
 
-      // Notify other instances to close
       window.dispatchEvent(
         new CustomEvent("global-inline-menu-show", { detail: { id: hookId } })
       );
@@ -304,7 +280,6 @@ export const useInlineMenu = ({
         if (onSelectAll) {
           onSelectAll();
         } else {
-          // Default: just copy all selected text
           const text = getSelectedText();
           if (text) navigator.clipboard.writeText(text);
           hideMenu();
@@ -332,7 +307,6 @@ export const useInlineMenu = ({
     const selection = window.getSelection();
     const text = selection?.toString().trim();
 
-    // Only handle selection within the container
     if (
       containerRef.current &&
       selection?.anchorNode &&
@@ -349,9 +323,7 @@ export const useInlineMenu = ({
     showStandardMenu(selection);
   }, [isSelectAllMode, menuActive, hideMenu, showStandardMenu, containerRef]);
 
-  // Selection event listeners - only register when container exists
   useEffect(() => {
-    // Global listener for exclusivity
     const onGlobalShow = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail && detail.id !== hookId && menuActive) {
@@ -381,21 +353,10 @@ export const useInlineMenu = ({
 
     const onMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Only handle if click is within or targets the menu
       if (menuRef.current && !menuRef.current.contains(target)) {
-        // Don't clear selection for selectable-text elements
         if (!target.classList.contains("selectable-text")) {
-          // Clear selection logic...
-          // If we click OUTSIDE the container, we should still hide the menu?
-          // The user says "clicking somewhere not hiding the menu".
-          // If I click inside Chat but Editor menu is open, Editor menu should hide.
-
-          // If the click is NOT in our container, handleSelection logic usually ignores it.
-          // But here we want to HIDE.
           if (menuActive) {
-            // If we clicked outside the menu...
             hideMenu();
-            // Should we also clear selection?
             if (containerElement.contains(target)) {
               window.getSelection()?.removeAllRanges();
             }
@@ -404,40 +365,27 @@ export const useInlineMenu = ({
       }
     };
 
-    // We need a GLOBAL mouse down to close menu if clicked completely outside container
     const onGlobalMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (menuActive && menuRef.current && !menuRef.current.contains(target)) {
-        // If clicked outside container entirely
         if (!containerElement.contains(target)) {
           hideMenu();
         }
       }
     };
 
-    // Scope mouseup to container only
     containerElement.addEventListener("mouseup", onMouseUp);
     document.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
-    // Use global mousedown for hiding?
-    // The previous code had: containerElement.addEventListener("mousedown", onMouseDown);
-    // If we only listen on container, clicks outside won't close it.
-    // Let's use document for mousedown to catch all clicks.
     document.addEventListener("mousedown", onMouseDown);
 
-    // Dynamic selection listener
     const onSelectionChange = () => {
       const selection = window.getSelection();
-      // If no valid selection or collapsed (cursor only), hide menu
-      // UNLESS we are in specific sticky modes like "Select All" (maybe?)
-      // Actually user said: "if selection is blue menu is showing if it gone it gone"
-      // So checks are Strict.
       if (!selection || selection.isCollapsed) {
         if (menuActive) hideMenu();
         return;
       }
 
-      // If selection is NOT in our container, hide
       if (
         containerElement &&
         selection.anchorNode &&
@@ -466,16 +414,13 @@ export const useInlineMenu = ({
   ]);
 
   return {
-    // Refs for InlineMenu component
     menuRef,
     sliderRef,
     page1Ref,
     page2Ref,
     pageFlatRef,
-    // State
     menuActive,
     isSelectAllMode,
-    // Actions
     hideMenu,
     showStandardMenu,
     showFlatMenu,

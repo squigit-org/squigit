@@ -1,8 +1,5 @@
-/*
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
 
 use crate::services::window;
 use tauri::{AppHandle, Emitter, Manager, Size, WebviewUrl, WebviewWindowBuilder, WindowEvent};
@@ -103,7 +100,6 @@ pub fn clear_cache(app: AppHandle) {
 pub fn set_background_color(app: AppHandle, color: String) -> Result<(), String> {
     let window = app.get_webview_window("main").ok_or("Main window not found")?;
     
-    // Simple hex parser
     let color = color.trim_start_matches('#');
     let (r, g, b) = if color.len() == 6 {
         let r = u8::from_str_radix(&color[0..2], 16).map_err(|e| e.to_string())?;

@@ -14,7 +14,6 @@ pub fn project_root() -> PathBuf {
         .to_path_buf()
 }
 
-// --- Capture Paths ---
 pub fn capture_sidecar_dir() -> PathBuf {
     project_root().join("sidecars").join("qt-capture")
 }
@@ -23,7 +22,6 @@ pub fn qt_native_dir() -> PathBuf {
     capture_sidecar_dir().join("native")
 }
 
-// --- OCR Paths ---
 pub fn ocr_sidecar_dir() -> PathBuf {
     project_root().join("sidecars").join("paddle-ocr")
 }
@@ -37,7 +35,6 @@ pub fn venv_python() -> PathBuf {
     }
 }
 
-// --- Tauri Paths ---
 pub fn ui_dir() -> PathBuf {
     project_root().join("ui")
 }
@@ -45,8 +42,6 @@ pub fn ui_dir() -> PathBuf {
 pub fn tauri_dir() -> PathBuf {
     project_root().join("app")
 }
-
-// --- Process Utils ---
 
 pub fn run_cmd(cmd: &str, args: &[&str], cwd: &Path) -> Result<()> {
     println!("  $ {} {}", cmd, args.join(" "));
