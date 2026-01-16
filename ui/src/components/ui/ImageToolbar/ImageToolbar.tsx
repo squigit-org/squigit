@@ -14,11 +14,8 @@ interface ImageToolbarProps {
   onLensClick: () => void;
   onCopyImage: () => void;
   onExpandClick: () => void;
-  imgWrapRef: React.RefObject<HTMLDivElement | null>;
-  imageHeight?: number;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
-
-const VERTICAL_TOOLBAR_MIN_HEIGHT = 150;
 
 const EDGE_PADDING = 8;
 
@@ -188,8 +185,7 @@ const ToolbarButton: React.FC<{
   tooltip: string;
   onClick: (e: React.MouseEvent) => void;
   disabled?: boolean;
-  isHorizontal: boolean;
-}> = ({ icon, tooltip, onClick, disabled, isHorizontal }) => {
+}> = ({ icon, tooltip, onClick, disabled }) => {
   const btnRef = useRef<HTMLButtonElement>(null);
 
   return (
@@ -202,10 +198,7 @@ const ToolbarButton: React.FC<{
       >
         {icon}
       </button>
-      <PortalTooltip
-        parentRef={btnRef}
-        direction={isHorizontal ? "top" : "right"}
-      >
+      <PortalTooltip parentRef={btnRef} direction="right">
         {tooltip}
       </PortalTooltip>
     </>
@@ -218,35 +211,31 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   onLensClick,
   onCopyImage,
   onExpandClick,
-  imgWrapRef,
-  imageHeight = 0,
+  containerRef,
 }) => {
   const toolbarDragRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
-
-  const isHorizontal = useMemo(() => {
-    return imageHeight > 0 && imageHeight < VERTICAL_TOOLBAR_MIN_HEIGHT;
-  }, [imageHeight]);
 
   const startDrag = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     const toolbar = toolbarRef.current;
-    const wrap = imgWrapRef.current;
-    if (!toolbar || !wrap) return;
+    const container = containerRef.current;
+    if (!toolbar || !container) return;
 
     isDraggingRef.current = true;
     dragStartRef.current.x = e.clientX;
     dragStartRef.current.y = e.clientY;
 
-    const wrapRect = wrap.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
     const toolbarRect = toolbar.getBoundingClientRect();
 
-    const offsetLeft = toolbarRect.left - wrapRect.left;
-    const offsetTop = toolbarRect.top - wrapRect.top;
+    const offsetLeft = toolbarRect.left - containerRect.left;
+    const offsetTop = toolbarRect.top - containerRect.top;
 
+    // Reset transform if any, relies on absolute top/left
     toolbar.style.left = `${offsetLeft}px`;
     toolbar.style.top = `${offsetTop}px`;
 
@@ -262,8 +251,8 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     e.preventDefault();
 
     const toolbar = toolbarRef.current;
-    const wrap = imgWrapRef.current;
-    if (!toolbar || !wrap) return;
+    const container = containerRef.current;
+    if (!toolbar || !container) return;
 
     const deltaX = e.clientX - dragStartRef.current.x;
     const deltaY = e.clientY - dragStartRef.current.y;
@@ -271,20 +260,17 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     let newLeft = dragStartRef.current.left + deltaX;
     let newTop = dragStartRef.current.top + deltaY;
 
-    const wrapRect = wrap.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
     const toolbarRect = toolbar.getBoundingClientRect();
 
-    const maxLeft = wrapRect.width - toolbarRect.width;
-    const maxTop = wrapRect.height - toolbarRect.height;
+    const maxLeft = containerRect.width - toolbarRect.width;
+    const maxTop = containerRect.height - toolbarRect.height;
 
     newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-
-    if (!isHorizontal) {
-      newTop = Math.max(0, Math.min(newTop, maxTop));
-      toolbar.style.top = `${newTop}px`;
-    }
+    newTop = Math.max(0, Math.min(newTop, maxTop));
 
     toolbar.style.left = `${newLeft}px`;
+    toolbar.style.top = `${newTop}px`;
   };
 
   const stopDrag = () => {
@@ -296,19 +282,21 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   useEffect(() => {
     const clampToolbarPosition = () => {
       const toolbar = toolbarRef.current;
-      const wrap = imgWrapRef.current;
-      if (!toolbar || !wrap) return;
+      const container = containerRef.current;
+      if (!toolbar || !container) return;
 
       const currentLeft = parseFloat(toolbar.style.left) || 0;
       const currentTop = parseFloat(toolbar.style.top) || 0;
-      if (currentLeft === 0 && currentTop === 0) return;
 
-      const wrapWidth = wrap.clientWidth;
-      const wrapHeight = wrap.clientHeight;
+      // If we are essentially at 0,0 (initial), keep it there, or let CSS handle it?
+      // CSS likely positions it absolutely.
+
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
       const toolbarWidth = toolbar.offsetWidth;
       const toolbarHeight = toolbar.offsetHeight;
-      const maxLeft = wrapWidth - toolbarWidth;
-      const maxTop = wrapHeight - toolbarHeight;
+      const maxLeft = containerWidth - toolbarWidth;
+      const maxTop = containerHeight - toolbarHeight;
 
       if (currentLeft > maxLeft) {
         toolbar.style.left = `${Math.max(0, maxLeft)}px`;
@@ -320,15 +308,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 
     window.addEventListener("resize", clampToolbarPosition);
     return () => window.removeEventListener("resize", clampToolbarPosition);
-  }, [isHorizontal, toolbarRef, imgWrapRef]);
+  }, [toolbarRef, containerRef]);
 
   return (
-    <div
-      className={`${styles.imageToolbar} ${
-        isHorizontal ? styles.horizontal : ""
-      }`}
-      ref={toolbarRef}
-    >
+    <div className={styles.imageToolbar} ref={toolbarRef}>
       <div
         className={styles.toolbarDrag}
         ref={toolbarDragRef}
@@ -388,7 +371,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           onLensClick();
         }}
         disabled={isLensLoading}
-        isHorizontal={isHorizontal}
       />
 
       <ToolbarButton
@@ -413,7 +395,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           e.stopPropagation();
           onCopyImage();
         }}
-        isHorizontal={isHorizontal}
       />
 
       <ToolbarButton
@@ -438,7 +419,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           e.stopPropagation();
           onExpandClick();
         }}
-        isHorizontal={isHorizontal}
       />
     </div>
   );

@@ -21,6 +21,18 @@
   transition: height 0.7s cubic-bezier(0.68, -0.15, 0.265, 1.15);
   z-index: 20; /* Ensure it floats above chat */
   flex-shrink: 0;
+  will-change: height;
+  transform: translateZ(0);
+  -webkit-mask-image: -webkit-radial-gradient(
+    white,
+    black
+  ); /* Force clipping */
+  will-change: height;
+  transform: translateZ(0);
+  -webkit-mask-image: -webkit-radial-gradient(
+    white,
+    black
+  ); /* Force clipping */
 }
 
 /* Expanded State Class */

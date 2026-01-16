@@ -201,72 +201,75 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   if (!isVisible) return null; // Or logic to show/hide entire bar.
 
   return (
-    <div className={`${styles.container} ${isExpanded ? styles.expanded : ""}`}>
-      {/* Header Bar (Always visible) */}
-      <div className={styles.barHeader} onClick={toggleExpand}>
-        <div className={styles.thumbnailWrapper}>
-          <img src={imageSrc} alt="Thumbnail" className={styles.miniThumb} />
-          <span className={styles.label}>Image Preview</span>
+    <>
+      <div
+        className={`${styles.container} ${isExpanded ? styles.expanded : ""}`}
+      >
+        {/* Header Bar (Always visible) */}
+        <div className={styles.barHeader} onClick={toggleExpand}>
+          <div className={styles.thumbnailWrapper}>
+            <img src={imageSrc} alt="Thumbnail" className={styles.miniThumb} />
+            <span className={styles.label}>Image Preview</span>
+          </div>
+
+          {/* The Icon */}
+          <div className={styles.toggleIcon}>
+            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </div>
         </div>
 
-        {/* The Icon */}
-        <div className={styles.toggleIcon}>
-          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </div>
-      </div>
-
-      {/* Expanded Content Area */}
-      <div className={styles.expandedContent}>
-        <div className={styles.bigImageBox}>
-          <div className={styles.viewer} ref={viewerRef}>
-            <div className={styles.imageWrap}>
-              <div className={styles.innerContent} ref={imgWrapRef}>
-                <img
-                  ref={imgRef}
-                  src={imageSrc}
-                  alt=""
-                  onLoad={onLoad}
-                  onError={() => setError("Failed to load image")}
-                  draggable={false}
-                  className={styles.bigImage}
-                />
-
-                {showTextLayer && isExpanded && (
-                  <TextLayer
-                    data={data}
-                    size={size}
-                    svgRef={svgRef}
-                    onTextMouseDown={handleTextMouseDown}
+        {/* Expanded Content Area */}
+        <div className={styles.expandedContent}>
+          <div className={styles.bigImageBox}>
+            <div className={styles.viewer} ref={viewerRef}>
+              <div className={styles.imageWrap}>
+                <div className={styles.innerContent} ref={imgWrapRef}>
+                  <img
+                    ref={imgRef}
+                    src={imageSrc}
+                    alt=""
+                    onLoad={onLoad}
+                    onError={() => setError("Failed to load image")}
+                    draggable={false}
+                    className={styles.bigImage}
                   />
-                )}
 
-                <ScanningOverlay isVisible={showOverlay} />
+                  {showTextLayer && isExpanded && (
+                    <TextLayer
+                      data={data}
+                      size={size}
+                      svgRef={svgRef}
+                      onTextMouseDown={handleTextMouseDown}
+                    />
+                  )}
 
-                {isExpanded && (
-                  <ImageToolbar
-                    toolbarRef={toolbarRef}
-                    isLensLoading={isLensLoading}
-                    onLensClick={triggerLens}
-                    onCopyImage={handleCopyImage}
-                    onExpandClick={handleExpandClick}
-                    imgWrapRef={imgWrapRef}
-                    imageHeight={imgRef.current?.clientHeight || size.h}
-                  />
-                )}
+                  <ScanningOverlay isVisible={showOverlay} />
+                </div>
               </div>
-            </div>
 
-            <EditorMenu
-              ref={editorMenuRef}
-              data={data}
-              size={size}
-              imgRef={imgRef}
-              imgWrapRef={imgWrapRef}
-              viewerRef={viewerRef}
-            />
+              {isExpanded && (
+                <ImageToolbar
+                  toolbarRef={toolbarRef}
+                  isLensLoading={isLensLoading}
+                  onLensClick={triggerLens}
+                  onCopyImage={handleCopyImage}
+                  onExpandClick={handleExpandClick}
+                  containerRef={viewerRef}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      <EditorMenu
+        ref={editorMenuRef}
+        data={data}
+        size={size}
+        imgRef={imgRef}
+        imgWrapRef={imgWrapRef}
+        viewerRef={viewerRef}
+      />
 
       {error && <div className={styles.editorError}>{error}</div>}
 
@@ -279,6 +282,6 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         onSave={handleExpandSave}
         onSubmit={handleDescribeEdits}
       />
-    </div>
+    </>
   );
 };
