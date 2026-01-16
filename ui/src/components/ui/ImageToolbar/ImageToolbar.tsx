@@ -10,13 +10,10 @@ import styles from "./ImageToolbar.module.css";
 
 interface ImageToolbarProps {
   toolbarRef: React.RefObject<HTMLDivElement | null>;
-  isFullscreen: boolean;
   isLensLoading?: boolean;
   onLensClick: () => void;
   onCopyImage: () => void;
-  onToggleFullscreen: (e: React.MouseEvent) => void;
   imgWrapRef: React.RefObject<HTMLDivElement | null>;
-  isTransitioning?: boolean;
   imageHeight?: number;
 }
 
@@ -216,13 +213,10 @@ const ToolbarButton: React.FC<{
 
 export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   toolbarRef,
-  isFullscreen,
   isLensLoading = false,
   onLensClick,
   onCopyImage,
-  onToggleFullscreen,
   imgWrapRef,
-  isTransitioning = false,
   imageHeight = 0,
 }) => {
   const toolbarDragRef = useRef<HTMLDivElement>(null);
@@ -234,8 +228,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   }, [imageHeight]);
 
   const startDrag = (e: React.MouseEvent) => {
-    if (isFullscreen) return;
-
     e.preventDefault();
     e.stopPropagation();
 
@@ -300,8 +292,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   };
 
   useEffect(() => {
-    if (isFullscreen) return;
-
     const clampToolbarPosition = () => {
       const toolbar = toolbarRef.current;
       const wrap = imgWrapRef.current;
@@ -328,188 +318,124 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 
     window.addEventListener("resize", clampToolbarPosition);
     return () => window.removeEventListener("resize", clampToolbarPosition);
-  }, [isFullscreen, isHorizontal, toolbarRef, imgWrapRef]);
-
-  const [isInteractionLocked, setIsInteractionLocked] = useState(false);
-  const lastMousePos = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    if (isTransitioning) {
-      setIsInteractionLocked(true);
-    }
-  }, [isTransitioning]);
-
-  useEffect(() => {
-    if (!isInteractionLocked) return;
-
-    let moveCount = 0;
-    const handleMouseMove = (e: MouseEvent) => {
-      const dx = Math.abs(e.clientX - lastMousePos.current.x);
-      const dy = Math.abs(e.clientY - lastMousePos.current.y);
-
-      if (dx < 3 && dy < 3) {
-        return;
-      }
-
-      moveCount++;
-
-      if (moveCount > 1 || dx > 5 || dy > 5) {
-        setIsInteractionLocked(false);
-        lastMousePos.current = { x: e.clientX, y: e.clientY };
-      }
-    };
-
-    lastMousePos.current = { x: 0, y: 0 };
-    window.addEventListener("mousemove", handleMouseMove, { capture: true });
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove, {
-        capture: true,
-      });
-    };
-  }, [isInteractionLocked]);
+  }, [isHorizontal, toolbarRef, imgWrapRef]);
 
   return (
     <div
       className={`${styles.imageToolbar} ${
-        isInteractionLocked ? styles.interactionLocked : ""
-      } ${isHorizontal ? styles.horizontal : ""}`}
+        isHorizontal ? styles.horizontal : ""
+      }`}
       ref={toolbarRef}
-      style={{
-        ...(isTransitioning ? { opacity: 0, pointerEvents: "none" } : {}),
-      }}
     >
-      {!isFullscreen && (
-        <div
-          className={styles.toolbarDrag}
-          ref={toolbarDragRef}
-          onMouseDown={startDrag}
+      <div
+        className={styles.toolbarDrag}
+        ref={toolbarDragRef}
+        onMouseDown={startDrag}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{ transform: "rotate(90deg)" }}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            style={{ transform: "rotate(90deg)" }}
-          >
-            <path d="M7 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-          </svg>
-        </div>
-      )}
+          <path d="M7 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+        </svg>
+      </div>
 
-      {!isFullscreen && (
-        <>
-          <div className={styles.toolbarSeparator}></div>
-
-          <ToolbarButton
-            icon={
-              isLensLoading ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={styles.spinner}
-                >
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                  <circle cx="12" cy="13" r="3" />
-                </svg>
-              )
-            }
-            tooltip="Search with Google Lens"
-            onClick={(e) => {
-              e.stopPropagation();
-              onLensClick();
-            }}
-            disabled={isLensLoading}
-            isHorizontal={isHorizontal}
-          />
-
-          <ToolbarButton
-            icon={
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-              </svg>
-            }
-            tooltip="Copy as Image"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCopyImage();
-            }}
-            isHorizontal={isHorizontal}
-          />
-        </>
-      )}
+      <div className={styles.toolbarSeparator}></div>
 
       <ToolbarButton
-        key={isFullscreen ? "collapse" : "expand"}
         icon={
-          isFullscreen ? (
+          isLensLoading ? (
             <svg
+              xmlns="http://www.w3.org/2000/svg"
               width="20"
               height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.5"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ transform: "scaleX(-1)" }}
+              className={styles.spinner}
             >
-              <path d="M10 4v6H4" />
-              <path d="M14 20v-6h6" />
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
             </svg>
           ) : (
             <svg
+              xmlns="http://www.w3.org/2000/svg"
               width="20"
               height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.5"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ transform: "scaleX(-1)" }}
             >
-              <path d="M4 10V4h6" />
-              <path d="M20 14v6h-6" />
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+              <circle cx="12" cy="13" r="3" />
             </svg>
           )
         }
-        tooltip={isFullscreen ? "Collapse" : "Expand"}
+        tooltip="Search with Google Lens"
         onClick={(e) => {
-          setIsInteractionLocked(true);
-          onToggleFullscreen(e);
+          e.stopPropagation();
+          onLensClick();
+        }}
+        disabled={isLensLoading}
+        isHorizontal={isHorizontal}
+      />
+
+      <ToolbarButton
+        icon={
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+          </svg>
+        }
+        tooltip="Copy as Image"
+        onClick={(e) => {
+          e.stopPropagation();
+          onCopyImage();
+        }}
+        isHorizontal={isHorizontal}
+      />
+
+      {/* TODO: Implement new expanded view */}
+      <ToolbarButton
+        icon={
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ transform: "scaleX(-1)" }}
+          >
+            <path d="M4 10V4h6" />
+            <path d="M20 14v6h-6" />
+          </svg>
+        }
+        tooltip="Expand"
+        onClick={(e) => {
+          e.stopPropagation();
+          // TODO: Implement new expanded view
         }}
         isHorizontal={isHorizontal}
       />
