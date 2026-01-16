@@ -82,7 +82,7 @@ pub fn run() {
                 "index.html",
                 base_h,
                 base_w,
-                "spatialshot",
+                "",
             )
             .expect("Failed to spawn main window");
 

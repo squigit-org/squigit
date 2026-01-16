@@ -87,7 +87,6 @@
   position: absolute;
   left: 100%;
   top: 50%;
-  transform: translateY(-50%);
   margin-left: 12px;
   background-color: #18181b;
   color: #e4e4e7;

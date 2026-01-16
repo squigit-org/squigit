@@ -69,7 +69,8 @@ const PortalTooltip: React.FC<{
       let arrowOffset = 0;
 
       if (direction === "right") {
-        newTop = rect.top + rect.height / 2;
+        // Calculate center position directly (no CSS transform needed)
+        newTop = rect.top + rect.height / 2 - tooltipHeight / 2;
         newLeft = rect.right + gap;
 
         if (newLeft + tooltipWidth > windowWidth - EDGE_PADDING) {
@@ -81,45 +82,48 @@ const PortalTooltip: React.FC<{
           newLeft = EDGE_PADDING;
         }
 
-        const halfHeight = tooltipHeight / 2;
-        const idealTop = rect.top + rect.height / 2;
-        if (idealTop - halfHeight < EDGE_PADDING) {
-          newTop = EDGE_PADDING + halfHeight;
-          arrowOffset = idealTop - newTop;
-        } else if (idealTop + halfHeight > windowHeight - EDGE_PADDING) {
-          newTop = windowHeight - EDGE_PADDING - halfHeight;
-          arrowOffset = idealTop - newTop;
+        const idealTop = rect.top + rect.height / 2 - tooltipHeight / 2;
+        if (idealTop < EDGE_PADDING) {
+          newTop = EDGE_PADDING;
+          arrowOffset =
+            rect.top + rect.height / 2 - (newTop + tooltipHeight / 2);
+        } else if (idealTop + tooltipHeight > windowHeight - EDGE_PADDING) {
+          newTop = windowHeight - EDGE_PADDING - tooltipHeight;
+          arrowOffset =
+            rect.top + rect.height / 2 - (newTop + tooltipHeight / 2);
         }
       } else {
-        newTop = rect.top - gap;
-        newLeft = rect.left + rect.width / 2;
+        // Calculate center position directly (no CSS transform needed)
+        newLeft = rect.left + rect.width / 2 - tooltipWidth / 2;
+        newTop = rect.top - gap - tooltipHeight;
 
-        if (newTop - tooltipHeight < EDGE_PADDING) {
+        if (newTop < EDGE_PADDING) {
           adjustedDirection = "bottom";
           newTop = rect.bottom + gap;
         } else {
           adjustedDirection = "top";
         }
 
-        const halfWidth = tooltipWidth / 2;
-        const idealLeft = rect.left + rect.width / 2;
-        if (idealLeft - halfWidth < EDGE_PADDING) {
-          newLeft = EDGE_PADDING + halfWidth;
-          arrowOffset = idealLeft - newLeft;
-        } else if (idealLeft + halfWidth > windowWidth - EDGE_PADDING) {
-          newLeft = windowWidth - EDGE_PADDING - halfWidth;
-          arrowOffset = idealLeft - newLeft;
+        const idealLeft = rect.left + rect.width / 2 - tooltipWidth / 2;
+        if (idealLeft < EDGE_PADDING) {
+          newLeft = EDGE_PADDING;
+          arrowOffset =
+            rect.left + rect.width / 2 - (newLeft + tooltipWidth / 2);
+        } else if (idealLeft + tooltipWidth > windowWidth - EDGE_PADDING) {
+          newLeft = windowWidth - EDGE_PADDING - tooltipWidth;
+          arrowOffset =
+            rect.left + rect.width / 2 - (newLeft + tooltipWidth / 2);
         }
       }
 
-      setPos((prev) => ({
-        top: newTop,
-        left: newLeft,
+      setPos({
+        top: Math.round(newTop),
+        left: Math.round(newLeft),
         visible: true,
-        measured: prev.visible,
+        measured: true,
         adjustedDirection,
-        arrowOffset,
-      }));
+        arrowOffset: Math.round(arrowOffset),
+      });
     };
 
     const handleMouseEnter = () => {
@@ -155,22 +159,6 @@ const PortalTooltip: React.FC<{
 
   if (!pos.visible) return null;
 
-  let transform: string;
-  switch (pos.adjustedDirection) {
-    case "right":
-      transform = "translateY(-50%)";
-      break;
-    case "left":
-      transform = "translateY(-50%)";
-      break;
-    case "top":
-      transform = "translate(-50%, -100%)";
-      break;
-    case "bottom":
-      transform = "translateX(-50%)";
-      break;
-  }
-
   return createPortal(
     <div
       ref={tooltipRef}
@@ -181,7 +169,6 @@ const PortalTooltip: React.FC<{
           position: "fixed",
           top: pos.top,
           left: pos.left,
-          transform,
           margin: 0,
           zIndex: 9999,
 
