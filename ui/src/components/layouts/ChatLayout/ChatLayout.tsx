@@ -7,7 +7,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   Message,
-  ChatHeader,
   ChatArea,
   ChatInput,
   ChatSession,
@@ -57,29 +56,22 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   isStreaming,
   error,
   input,
-  currentModel,
+  /* currentModel, removed usage */
   startupImage,
-  chatTitle,
-  sessions,
-  activeSessionId,
-  onSessionSelect,
-  onNewChat,
+  /* chatTitle, removed usage */
+  /* sessions, removed usage */
+  /* activeSessionId, removed usage */
+  /* onSessionSelect, removed usage */
+  /* onNewChat, removed usage */
   onSend,
-  onModelChange,
+  /* onModelChange, removed usage */
   onRetry,
   onInputChange,
   onCheckSettings,
-  onReload,
+  /* onReload, removed usage */
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isRotating, setIsRotating] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
-
-  useEffect(() => {
-    if (!isLoading) {
-      setIsRotating(false);
-    }
-  }, [isLoading]);
 
   useLayoutEffect(() => {
     if (messages.length > 0) {
@@ -152,28 +144,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     showFlatMenuRef.current = showFlatMenu;
   }, [showFlatMenu]);
 
-  const handleReload = () => {
-    if (onReload) {
-      setIsRotating(true);
-      onReload();
-    }
-  };
-
   return (
-    <div className="flex h-screen flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100">
-      <ChatHeader
-        chatTitle={chatTitle}
-        onReload={handleReload}
-        isRotating={isRotating}
-        currentModel={currentModel}
-        onModelChange={onModelChange}
-        isLoading={isLoading}
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSessionSelect={onSessionSelect}
-        onNewChat={onNewChat}
-      />
-
+    <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
       <ChatArea
         ref={scrollContainerRef}
         startupImage={startupImage}

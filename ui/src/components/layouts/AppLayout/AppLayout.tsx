@@ -9,7 +9,6 @@ import "katex/dist/katex.min.css";
 import "../../ui/Notifications/Toast.css";
 import styles from "./AppLayout.module.css";
 import { ContextMenu } from "../../ui/ContextMenu/ContextMenu";
-import { EditorLayout } from "../EditorLayout/EditorLayout";
 import { ChatLayout } from "../ChatLayout/ChatLayout";
 import { Welcome } from "../../../features/onboarding";
 import { Agreement } from "../../../features/onboarding/components/Agreement/Agreement";
@@ -30,6 +29,8 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "../../../lib/api/tauri/commands";
+import { AppHeader } from "../../ui/AppHeader/AppHeader";
+import { InlineEditor } from "../InlineEditor/InlineEditor";
 
 export const AppLayout: React.FC = () => {
   const [isPanelActive, setIsPanelActive] = useState(false);
@@ -226,44 +227,21 @@ export const AppLayout: React.FC = () => {
     selectedText: string;
   } | null>(null);
 
-  const [splitRatio, setSplitRatio] = useState(() => {
-    const saved = localStorage.getItem("splitRatio");
-    return saved ? parseFloat(saved) : 26.67;
-  });
-  const isResizingRef = useRef(false);
+  // Default editor visibility logic:
+  // If we have a startup image, we might want to start with it hidden or shown?
+  // User said "content below it start with inline editor view as a hidden dropdown"
+  // But also "drop button should toggle the editor view down... think of it like the folders tree in vscode"
+  // I'll default to false.
+  const [isEditorVisible, setIsEditorVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      isResizingRef.current = true;
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        if (!isResizingRef.current || !containerRef.current) return;
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const newRatio =
-          ((moveEvent.clientX - containerRect.left) / containerRect.width) *
-          100;
-        const clampedRatio = Math.max(30, Math.min(70, newRatio));
-        setSplitRatio(clampedRatio);
-      };
-
-      const handleMouseUp = () => {
-        isResizingRef.current = false;
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-        localStorage.setItem("splitRatio", splitRatio.toString());
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    [splitRatio]
-  );
+  // Rotating state for reload
+  const [isRotating, setIsRotating] = useState(false);
+  useEffect(() => {
+    if (!chatEngine.isLoading) {
+      setIsRotating(false);
+    }
+  }, [chatEngine.isLoading]);
 
   useEffect(() => {
     const unlisten = listen<any>("auth-success", (event) => {
@@ -289,6 +267,8 @@ export const AppLayout: React.FC = () => {
         mimeType: mimeType,
         isFilePath: false,
       });
+      // When new image is loaded, maybe show editor?
+      // setIsEditorVisible(true);
     } else {
       if (imageData.path) {
         system.setStartupImage({
@@ -397,52 +377,99 @@ export const AppLayout: React.FC = () => {
       onContextMenu={handleContextMenu}
       className={styles.appContainer}
     >
-      <div className={styles.editorPanel} style={{ width: `${splitRatio}%` }}>
-        <EditorLayout
-          startupImage={system.startupImage}
-          sessionLensUrl={system.sessionLensUrl}
-          setSessionLensUrl={system.setSessionLensUrl}
-          isPanelActive={isPanelActive}
-          toggleSettingsPanel={handleToggleSettings}
-          isPanelVisible={isPanelVisible}
-          isPanelActiveAndVisible={isPanelActiveAndVisible}
-          isPanelClosing={isPanelClosing}
-          settingsButtonRef={settingsButtonRef}
-          panelRef={panelRef}
-          settingsPanelRef={settingsPanelRef}
-          prompt={system.editingPrompt}
-          editingModel={system.editingModel}
-          setPrompt={system.setEditingPrompt}
-          onEditingModelChange={system.setEditingModel}
-          userName={system.userName}
-          userEmail={system.userEmail}
-          avatarSrc={system.avatarSrc}
-          onSave={system.saveSettings}
-          onLogout={performLogout}
-          isDarkMode={system.isDarkMode}
-          onToggleTheme={system.handleToggleTheme}
-          onResetAPIKey={system.handleResetAPIKey}
-          toggleSubview={setIsSubviewActive}
-          onNewSession={system.resetSession}
-          chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
-          onDescribeEdits={async (description) => {
-            const existingTitles = chatSessions.sessions.map((s) => s.title);
-            const editTitle = await generateSubTitle(
-              description,
-              existingTitles
-            );
-            chatSessions.createSession("edit", editTitle);
-            chatEngine.handleDescribeEdits(description);
-          }}
-        />
-      </div>
+      <AppHeader
+        chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
+        onReload={() => {
+          setIsRotating(true);
+          chatEngine.handleReload();
+        }}
+        isRotating={isRotating}
+        currentModel={system.sessionModel}
+        onModelChange={system.setSessionModel}
+        isLoading={chatEngine.isLoading}
+        sessions={chatSessions.sessions}
+        activeSessionId={chatSessions.activeSessionId}
+        onSessionSelect={(id) => {
+          if (chatSessions.activeSessionId) {
+            const currentState = chatEngine.getCurrentState();
+            chatSessions.updateSession(chatSessions.activeSessionId, {
+              messages: currentState.messages,
+              streamingText: currentState.streamingText,
+              firstResponseId: currentState.firstResponseId,
+            });
+          }
 
-      <div className={styles.resizeHandle} onMouseDown={handleResizeStart} />
+          chatSessions.switchSession(id);
 
-      <div
-        className={styles.chatPanel}
-        style={{ width: `${100 - splitRatio}%` }}
-      >
+          const targetSession = chatSessions.getSessionById(id);
+          if (targetSession) {
+            chatEngine.restoreState({
+              messages: targetSession.messages,
+              streamingText: targetSession.streamingText,
+              firstResponseId: targetSession.firstResponseId,
+              isChatMode: targetSession.messages.length > 0,
+            });
+          }
+        }}
+        onNewChat={async () => {
+          if (chatSessions.activeSessionId) {
+            const currentState = chatEngine.getCurrentState();
+            chatSessions.updateSession(chatSessions.activeSessionId, {
+              messages: currentState.messages,
+              streamingText: currentState.streamingText,
+              firstResponseId: currentState.firstResponseId,
+            });
+          }
+
+          const existingTitles = chatSessions.sessions.map((s) => s.title);
+          const newTitle = await generateImageTitle(existingTitles);
+          chatSessions.createSession("default", newTitle);
+          chatEngine.handleReload();
+        }}
+        // Editor/App Header Props
+        isPanelActive={isPanelActive}
+        toggleSettingsPanel={handleToggleSettings}
+        isPanelVisible={isPanelVisible}
+        isPanelActiveAndVisible={isPanelActiveAndVisible}
+        isPanelClosing={isPanelClosing}
+        settingsButtonRef={settingsButtonRef}
+        panelRef={panelRef}
+        settingsPanelRef={settingsPanelRef}
+        prompt={system.editingPrompt}
+        editingModel={system.editingModel}
+        setPrompt={system.setEditingPrompt}
+        onEditingModelChange={system.setEditingModel}
+        userName={system.userName}
+        userEmail={system.userEmail}
+        avatarSrc={system.avatarSrc}
+        onSave={system.saveSettings}
+        onLogout={performLogout}
+        isDarkMode={system.isDarkMode}
+        onToggleTheme={system.handleToggleTheme}
+        onResetAPIKey={system.handleResetAPIKey}
+        toggleSubview={setIsSubviewActive}
+        onNewSession={system.resetSession}
+        // New Props
+        isEditorVisible={isEditorVisible}
+        onToggleEditor={() => setIsEditorVisible(!isEditorVisible)}
+        hasImageLoaded={!!system.startupImage}
+      />
+
+      <InlineEditor
+        startupImage={system.startupImage}
+        sessionLensUrl={system.sessionLensUrl}
+        setSessionLensUrl={system.setSessionLensUrl}
+        chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
+        onDescribeEdits={async (description) => {
+          const existingTitles = chatSessions.sessions.map((s) => s.title);
+          const editTitle = await generateSubTitle(description, existingTitles);
+          chatSessions.createSession("edit", editTitle);
+          chatEngine.handleDescribeEdits(description);
+        }}
+        isVisible={isEditorVisible}
+      />
+
+      <div className={styles.chatPanel}>
         <ChatLayout
           messages={chatEngine.messages}
           streamingText={chatEngine.streamingText}
@@ -459,6 +486,7 @@ export const AppLayout: React.FC = () => {
           sessions={chatSessions.sessions}
           activeSessionId={chatSessions.activeSessionId}
           onSessionSelect={(id) => {
+            // Already handled in AppHeader, passing for compatibility if needed
             if (chatSessions.activeSessionId) {
               const currentState = chatEngine.getCurrentState();
               chatSessions.updateSession(chatSessions.activeSessionId, {
@@ -481,6 +509,7 @@ export const AppLayout: React.FC = () => {
             }
           }}
           onNewChat={async () => {
+            // Same here
             if (chatSessions.activeSessionId) {
               const currentState = chatEngine.getCurrentState();
               chatSessions.updateSession(chatSessions.activeSessionId, {

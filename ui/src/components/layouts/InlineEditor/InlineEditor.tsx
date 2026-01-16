@@ -4,20 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  ForwardedRef,
-} from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useLens } from "../../../features/google";
-import {
-  EditorHeader,
-  EditorMenu,
-  EditorMenuHandle,
-} from "../../../features/editor";
+import { EditorMenu, EditorMenuHandle } from "../../../features/editor";
 import {
   TextLayer,
   ImageToolbar,
@@ -25,7 +15,7 @@ import {
   ScanningOverlay,
   ExpandedView,
 } from "../../ui";
-import styles from "./EditorLayout.module.css";
+import styles from "./InlineEditor.module.css";
 
 interface OCRBox {
   text: string;
@@ -33,7 +23,7 @@ interface OCRBox {
   confidence?: number;
 }
 
-interface EditorLayoutProps {
+interface InlineEditorProps {
   startupImage: {
     base64: string;
     mimeType: string;
@@ -41,61 +31,18 @@ interface EditorLayoutProps {
   } | null;
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string) => void;
-
-  isPanelActive: boolean;
-  toggleSettingsPanel: () => void;
-  isPanelVisible: boolean;
-  isPanelActiveAndVisible: boolean;
-  isPanelClosing: boolean;
-  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
-  panelRef: React.RefObject<HTMLDivElement | null>;
-  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
-  prompt: string;
-  editingModel: string;
-  setPrompt: (prompt: string) => void;
-  onEditingModelChange: (model: string) => void;
-  userName: string;
-  userEmail: string;
-  avatarSrc: string;
-  onSave: (prompt: string, model: string) => void;
-  onLogout: () => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
-  onResetAPIKey: () => void;
-  toggleSubview: (isActive: boolean) => void;
-  onNewSession: () => void;
   chatTitle: string;
   onDescribeEdits: (description: string) => void;
+  isVisible: boolean;
 }
 
-export const EditorLayout: React.FC<EditorLayoutProps> = ({
+export const InlineEditor: React.FC<InlineEditorProps> = ({
   startupImage,
   sessionLensUrl,
   setSessionLensUrl,
-  isPanelActive,
-  toggleSettingsPanel,
-  isPanelVisible,
-  isPanelActiveAndVisible,
-  isPanelClosing,
-  settingsButtonRef,
-  panelRef,
-  settingsPanelRef,
-  prompt,
-  editingModel,
-  setPrompt,
-  onEditingModelChange,
-  userName,
-  userEmail,
-  avatarSrc,
-  onSave,
-  onLogout,
-  isDarkMode,
-  onToggleTheme,
-  onResetAPIKey,
-  toggleSubview,
-  onNewSession,
   chatTitle,
   onDescribeEdits,
+  isVisible,
 }) => {
   const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -111,49 +58,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorMenuRef = useRef<EditorMenuHandle>(null);
-
-  const [dynamicPaddingTop, setDynamicPaddingTop] = useState(0);
-
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    const imgWrap = imgWrapRef.current;
-    if (!viewer || !imgWrap) return;
-
-    const calculatePadding = () => {
-      const viewerHeight = viewer.clientHeight;
-
-      const imgWrapHeight = imgWrap.scrollHeight;
-
-      const freeSpace = viewerHeight - imgWrapHeight;
-
-      if (freeSpace <= 0) {
-        setDynamicPaddingTop(0);
-        return;
-      }
-
-      const topPadding = Math.floor(freeSpace * (2 / 5));
-
-      setDynamicPaddingTop(topPadding);
-    };
-
-    calculatePadding();
-
-    viewer.scrollTop = 0;
-
-    const resizeObserver = new ResizeObserver(() => {
-      calculatePadding();
-    });
-
-    resizeObserver.observe(viewer);
-    resizeObserver.observe(imgWrap);
-
-    window.addEventListener("resize", calculatePadding);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", calculatePadding);
-    };
-  }, [startupImage, size]);
 
   const imageSrc = startupImage?.base64 || "";
 
@@ -219,8 +123,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
       setData(converted);
 
-      setData(converted);
-
       setShowOverlay(false);
       setShowTextLayer(true);
     } catch (e) {
@@ -234,10 +136,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   }, [startupImage]);
 
   useEffect(() => {
-    console.log(
-      "Scan effect triggered, startupImage:",
-      startupImage?.isFilePath
-    );
     if (startupImage) {
       scan();
     }
@@ -245,6 +143,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
   const onLoad = () => {
     if (imgRef.current) {
+      // Just set natural size initially
       setSize({
         w: imgRef.current.naturalWidth,
         h: imgRef.current.naturalHeight,
@@ -304,69 +203,13 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     [onDescribeEdits]
   );
 
-  if (!startupImage) {
-    return (
-      <div className={styles.editorLayout}>
-        <EditorHeader
-          isPanelActive={isPanelActive}
-          toggleSettingsPanel={toggleSettingsPanel}
-          isPanelVisible={isPanelVisible}
-          isPanelActiveAndVisible={isPanelActiveAndVisible}
-          isPanelClosing={isPanelClosing}
-          settingsButtonRef={settingsButtonRef}
-          panelRef={panelRef}
-          settingsPanelRef={settingsPanelRef}
-          prompt={prompt}
-          editingModel={editingModel}
-          setPrompt={setPrompt}
-          onEditingModelChange={onEditingModelChange}
-          userName={userName}
-          userEmail={userEmail}
-          avatarSrc={avatarSrc}
-          onSave={onSave}
-          onLogout={onLogout}
-          isDarkMode={isDarkMode}
-          onToggleTheme={onToggleTheme}
-          onResetAPIKey={onResetAPIKey}
-          toggleSubview={toggleSubview}
-          onNewSession={onNewSession}
-        />
-        <div className={styles.editorEmpty}>No image loaded</div>
-      </div>
-    );
+  if (!startupImage || !isVisible) {
+    return null;
   }
 
   return (
-    <div className={styles.editorLayout}>
-      <EditorHeader
-        isPanelActive={isPanelActive}
-        toggleSettingsPanel={toggleSettingsPanel}
-        isPanelVisible={isPanelVisible}
-        isPanelActiveAndVisible={isPanelActiveAndVisible}
-        isPanelClosing={isPanelClosing}
-        settingsButtonRef={settingsButtonRef}
-        panelRef={panelRef}
-        settingsPanelRef={settingsPanelRef}
-        prompt={prompt}
-        editingModel={editingModel}
-        setPrompt={setPrompt}
-        onEditingModelChange={onEditingModelChange}
-        userName={userName}
-        userEmail={userEmail}
-        avatarSrc={avatarSrc}
-        onSave={onSave}
-        onLogout={onLogout}
-        isDarkMode={isDarkMode}
-        onToggleTheme={onToggleTheme}
-        onResetAPIKey={onResetAPIKey}
-        toggleSubview={toggleSubview}
-        onNewSession={onNewSession}
-      />
-      <div
-        className={styles.viewer}
-        ref={viewerRef}
-        style={{ paddingTop: dynamicPaddingTop }}
-      >
+    <div className={styles.editorContainer}>
+      <div className={styles.viewer} ref={viewerRef}>
         <div className={styles.imageWrap} ref={imgWrapRef}>
           <img
             ref={imgRef}

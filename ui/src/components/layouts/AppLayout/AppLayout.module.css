@@ -6,6 +6,7 @@
 
 .appContainer {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   width: 100%;
   background: var(--neutral-950);
@@ -13,42 +14,9 @@
   overflow: hidden;
 }
 
-.editorPanel {
-  height: 100%;
-  min-width: min(300px, 30vw);
-  overflow: hidden;
-  padding-right: 2px;
-  flex-shrink: 1;
-}
-
 .chatPanel {
-  height: 100%;
-  min-width: min(300px, 30vw);
+  flex: 1;
+  width: 100%;
   overflow: hidden;
-  flex-shrink: 1;
-  flex-grow: 1;
-  padding-right: 8px;
-}
-
-.resizeHandle {
-  width: 1px;
-  height: 100%;
-  background: var(--neutral-900);
-  cursor: col-resize;
-  flex-shrink: 0;
-  transition: background-color 0.2s ease;
   position: relative;
-}
-
-.resizeHandle:hover {
-  background: var(--neutral-800);
-}
-
-.resizeHandle::before {
-  content: "";
-  position: absolute;
-  left: -4px;
-  right: -4px;
-  top: 0;
-  bottom: 0;
 }
