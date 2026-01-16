@@ -29,6 +29,14 @@ export const TextLayer: React.FC<TextLayerProps> = ({
       viewBox={`0 0 ${size.w} ${size.h}`}
       preserveAspectRatio="xMidYMid meet"
     >
+      {/* Dim overlay - reduces exposure across entire image */}
+      <rect
+        x="0"
+        y="0"
+        width={size.w}
+        height={size.h}
+        className={styles.dimOverlay}
+      />
       {data.map((item, i) => {
         const b = item.box;
         const points = b.map((p) => `${p[0]},${p[1]}`).join(" ");

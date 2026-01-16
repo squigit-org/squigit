@@ -8,7 +8,10 @@
   width: 90%;
   max-width: 616px;
   /* Collapsed Height: 48px */
-  height: 48px;
+  /* Collapsed Height: auto to fit text, min 48px */
+  min-height: 48px;
+  height: auto;
+  max-height: 48px; /* Start collapsed */
   background-color: var(--neutral-900);
   border-radius: 12px;
   overflow: hidden;
@@ -18,16 +21,10 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 
   /* Smooth Animation with Bezier Curve */
-  transition: height 0.7s cubic-bezier(0.68, -0.15, 0.265, 1.15);
+  transition: max-height 0.5s cubic-bezier(0.68, -0.15, 0.265, 1.15);
   z-index: 20; /* Ensure it floats above chat */
   flex-shrink: 0;
-  will-change: height;
-  transform: translateZ(0);
-  -webkit-mask-image: -webkit-radial-gradient(
-    white,
-    black
-  ); /* Force clipping */
-  will-change: height;
+  will-change: max-height;
   transform: translateZ(0);
   -webkit-mask-image: -webkit-radial-gradient(
     white,
@@ -38,18 +35,21 @@
 /* Expanded State Class */
 .container.expanded {
   /* Expanded Height */
-  height: 424px;
+  /* Expanded Height */
+  height: auto;
+  max-height: 1200px; /* Allow growth up to large value to approximate "auto" animation */
   background-color: var(--neutral-900);
 }
 
 /* The Top Bar (Header) */
 .barHeader {
-  height: 48px;
+  min-height: 48px;
+  height: auto;
   width: 100%;
+  flex-shrink: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 16px;
+  align-items: flex-start; /* Align top so if it grows, icon stays top or follows? Default center might be better for single line. Let's try top with padding */
+  padding: 8px 16px; /* Update padding to balance with 48px min height (48 - 16 = 32px content) */
   cursor: pointer;
   z-index: 2;
   position: relative;
@@ -57,10 +57,12 @@
 }
 
 /* Thumbnail in the bar */
+/* Thumbnail in the bar */
 .thumbnailWrapper {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-right: 12px;
 }
 
 .miniThumb {
@@ -72,10 +74,12 @@
   transition: opacity 0.3s ease;
 }
 
-.label {
-  color: var(--neutral-400);
-  font-size: 0.9rem;
-  font-weight: 500;
+/* Container for the transparent input */
+.inputContainer {
+  flex: 1;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
 }
 
 /* Toggle Icon */
@@ -91,35 +95,52 @@
 }
 
 /* The Expanded Content */
+
 .expandedContent {
-  position: absolute;
-  top: 48px;
-  left: 0;
+  /* Replaces absolute positioning with flex item behavior */
+  position: relative;
   width: 100%;
-  height: calc(424px - 48px);
-  padding: 10px; /* Reduced pudding to maximize image space */
-  opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.4s ease;
-  transition-delay: 0.1s;
+  /* Content is always "visible" - container overflow clips it */
+  opacity: 1;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  padding: 0 8px 8px 8px; /* Add padding to inset image from container edges */
 }
 
 .container.expanded .expandedContent {
+  height: auto; /* Let image determine height */
+}
+
+/* Toolbar fade animation - hidden when collapsed */
+.container :global(.imageToolbar) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.container.expanded :global(.imageToolbar) {
+  opacity: 0.94;
+  pointer-events: auto;
+}
+
+/* TextLayer fade animation - hidden when collapsed */
+.container :global(.textLayer) {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.container.expanded :global(.textLayer) {
   opacity: 1;
-  transform: translateY(0);
 }
 
 /* The big box with rounded corners */
 .bigImageBox {
   width: 100%;
   height: 100%;
-  background-color: var(--black);
+  background-color: var(--neutral-850);
   border-radius: 8px; /* Slightly reduced radius */
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   position: relative;
   display: flex;
 }
@@ -128,6 +149,7 @@
   flex: 1;
   width: 100%;
   height: 100%;
+  min-height: 300px; /* Ensure space for toolbar if image is small */
   display: flex;
   justify-content: center;
   overflow: hidden; /* Changed from auto to hidden for contained view */
@@ -135,8 +157,8 @@
 }
 
 .imageWrap {
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,7 +174,7 @@
 
 .bigImage {
   max-width: 100%;
-  max-height: 100%;
+  max-height: 80vh; /* Limit to viewport height but allow expansion */
   width: auto;
   height: auto;
   object-fit: contain;

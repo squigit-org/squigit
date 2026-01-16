@@ -154,3 +154,16 @@
 .link:hover {
   color: var(--neutral-200);
 }
+
+.transparentVariant {
+  border: none;
+  background-color: transparent;
+  padding: 0;
+  box-shadow: none !important;
+}
+
+.textareaTransparent {
+  padding-left: 0;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}

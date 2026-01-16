@@ -9,12 +9,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { ChevronDown, ChevronUp } from "lucide-react"; // Or custom icon as requested
 import { useLens } from "../../../features/google";
 import { EditorMenu, EditorMenuHandle } from "../../../features/editor";
+import ChatInput from "../../../features/chat/components/ChatInput/ChatInput";
 import {
   TextLayer,
   ImageToolbar,
   useTextSelection,
   ScanningOverlay,
-  ExpandedView,
 } from "../../ui";
 import styles from "./InlineEditor.module.css";
 
@@ -53,11 +53,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   const [showTextLayer, setShowTextLayer] = useState(false);
   const [error, setError] = useState("");
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const [isExpandedViewOpen, setIsExpandedViewOpen] = useState(false);
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const imgWrapRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const [imagePrompt, setImagePrompt] = useState("");
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorMenuRef = useRef<EditorMenuHandle>(null);
 
@@ -167,26 +167,10 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     }
   }, []);
 
-  const handleExpandClick = useCallback(() => {
-    setIsExpandedViewOpen(true);
-  }, []);
-
-  const handleExpandClose = useCallback(() => {
-    setIsExpandedViewOpen(false);
-  }, []);
-
   const handleExpandSave = useCallback(async () => {
     const { showToast } = await import("../../ui/Notifications/Toast");
     showToast("Save feature coming soon", "success");
   }, []);
-
-  const handleDescribeEdits = useCallback(
-    (description: string) => {
-      setIsExpandedViewOpen(false);
-      onDescribeEdits(description);
-    },
-    [onDescribeEdits]
-  );
 
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
@@ -206,14 +190,26 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         className={`${styles.container} ${isExpanded ? styles.expanded : ""}`}
       >
         {/* Header Bar (Always visible) */}
-        <div className={styles.barHeader} onClick={toggleExpand}>
+        {/* Header Bar (Always visible) */}
+        <div className={styles.barHeader}>
           <div className={styles.thumbnailWrapper}>
             <img src={imageSrc} alt="Thumbnail" className={styles.miniThumb} />
-            <span className={styles.label}>Image Preview</span>
+          </div>
+
+          <div className={styles.inputContainer}>
+            <ChatInput
+              startupImage={startupImage}
+              input={imagePrompt}
+              onInputChange={setImagePrompt}
+              onSend={() => onDescribeEdits(imagePrompt)}
+              isLoading={false}
+              placeholder="Ask about this image"
+              variant="transparent"
+            />
           </div>
 
           {/* The Icon */}
-          <div className={styles.toggleIcon}>
+          <div className={styles.toggleIcon} onClick={toggleExpand}>
             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </div>
         </div>
@@ -234,7 +230,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                     className={styles.bigImage}
                   />
 
-                  {showTextLayer && isExpanded && (
+                  {showTextLayer && (
                     <TextLayer
                       data={data}
                       size={size}
@@ -247,16 +243,14 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                 </div>
               </div>
 
-              {isExpanded && (
-                <ImageToolbar
-                  toolbarRef={toolbarRef}
-                  isLensLoading={isLensLoading}
-                  onLensClick={triggerLens}
-                  onCopyImage={handleCopyImage}
-                  onExpandClick={handleExpandClick}
-                  containerRef={viewerRef}
-                />
-              )}
+              <ImageToolbar
+                toolbarRef={toolbarRef}
+                isLensLoading={isLensLoading}
+                onLensClick={triggerLens}
+                onCopyImage={handleCopyImage}
+                onSaveClick={handleExpandSave}
+                containerRef={viewerRef}
+              />
             </div>
           </div>
         </div>
@@ -272,16 +266,6 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       />
 
       {error && <div className={styles.editorError}>{error}</div>}
-
-      <ExpandedView
-        isOpen={isExpandedViewOpen}
-        imageSrc={imageSrc}
-        chatTitle={chatTitle}
-        startupImage={startupImage}
-        onClose={handleExpandClose}
-        onSave={handleExpandSave}
-        onSubmit={handleDescribeEdits}
-      />
     </>
   );
 };

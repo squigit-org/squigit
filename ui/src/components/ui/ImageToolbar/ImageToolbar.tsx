@@ -13,7 +13,7 @@ interface ImageToolbarProps {
   isLensLoading?: boolean;
   onLensClick: () => void;
   onCopyImage: () => void;
-  onExpandClick: () => void;
+  onSaveClick: () => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -210,7 +210,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   isLensLoading = false,
   onLensClick,
   onCopyImage,
-  onExpandClick,
+  onSaveClick,
   containerRef,
 }) => {
   const toolbarDragRef = useRef<HTMLDivElement>(null);
@@ -400,24 +400,25 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       <ToolbarButton
         icon={
           <svg
+            xmlns="http://www.w3.org/2000/svg"
             width="20"
             height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.5"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ transform: "scaleX(-1)" }}
           >
-            <path d="M4 10V4h6" />
-            <path d="M20 14v6h-6" />
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
           </svg>
         }
-        tooltip="Expand"
+        tooltip="Save"
         onClick={(e) => {
           e.stopPropagation();
-          onExpandClick();
+          onSaveClick();
         }}
       />
     </div>

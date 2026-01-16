@@ -53,6 +53,9 @@ interface ChatInputProps {
   onSend: () => void;
   isLoading: boolean;
   placeholder?: string;
+  variant?: "default" | "transparent";
+  className?: string;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
 interface ContextMenuState {
@@ -68,6 +71,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onSend,
   isLoading,
   placeholder: customPlaceholder,
+  variant = "default",
 }) => {
   if (!startupImage) return null;
 
@@ -374,74 +378,75 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     !isLoading &&
     (value.trim().length > 0 || codeValue.trim().length > 0);
 
-  return (
-    <footer className={styles.footer}>
-      <div className={styles.inputWrapper}>
-        <div
-          className={`
-            ${styles.container}
-            ${disabled ? styles.disabled : ""}
-            ${isExpandedLayout ? styles.expandedLayout : styles.standardLayout}
-          `}
-        >
-          {showExpandBtn && isExpandedLayout && !isCodeBlockActive && (
-            <div className={styles.expandButtonWrapper}>
-              <button
-                type="button"
-                onClick={() => setIsManualExpanded(!isManualExpanded)}
-                className={styles.expandButton}
-                title={isManualExpanded ? "Collapse" : "Expand"}
-              >
-                {isManualExpanded ? <CollapseIcon /> : <ExpandIcon />}
-              </button>
-            </div>
-          )}
-
-          <textarea
-            ref={taRef}
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onContextMenu={handleContextMenu}
-            placeholder={placeholder}
-            disabled={disabled}
-            rows={1}
-            className={styles.textarea}
-            style={{ width: isExpandedLayout ? "calc(100% - 2rem)" : "100%" }}
-          />
-
-          {isCodeBlockActive && (
-            <CodeBlock
-              ref={codeTaRef}
-              language={codeLanguage}
-              value={codeValue}
-              isEditable={true}
-              onChange={setCodeValue}
-              onKeyDown={handleCodeKeyDown}
-              placeholder={`Enter ${codeLanguage} code... (3 newlines to exit)`}
-            />
-          )}
-
-          <div
-            className={`${styles.actions} ${
-              isExpandedLayout ? styles.expanded : ""
-            }`}
+  const containerContent = (
+    <div
+      className={`
+        ${styles.container}
+        ${disabled ? styles.disabled : ""}
+        ${isExpandedLayout ? styles.expandedLayout : styles.standardLayout}
+        ${variant === "transparent" ? styles.transparentVariant : ""} 
+      `}
+    >
+      {showExpandBtn && isExpandedLayout && !isCodeBlockActive && (
+        <div className={styles.expandButtonWrapper}>
+          <button
+            type="button"
+            onClick={() => setIsManualExpanded(!isManualExpanded)}
+            className={styles.expandButton}
+            title={isManualExpanded ? "Collapse" : "Expand"}
           >
-            <button
-              type="button"
-              onClick={() => {
-                if (isButtonActive) onSend();
-              }}
-              disabled={!isButtonActive}
-              title={isLoading ? "Thinking..." : "Send"}
-              className={`${styles.sendButton} ${
-                isButtonActive ? styles.active : styles.inactive
-              }`}
-            >
-              <Send size={20} />
-            </button>
-          </div>
+            {isManualExpanded ? <CollapseIcon /> : <ExpandIcon />}
+          </button>
         </div>
+      )}
+
+      <textarea
+        ref={taRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onContextMenu={handleContextMenu}
+        placeholder={placeholder}
+        disabled={disabled}
+        rows={1}
+        className={`${styles.textarea} ${
+          variant === "transparent" ? styles.textareaTransparent : ""
+        }`}
+        style={{ width: isExpandedLayout ? "calc(100% - 2rem)" : "100%" }}
+      />
+
+      {isCodeBlockActive && (
+        <CodeBlock
+          ref={codeTaRef}
+          language={codeLanguage}
+          value={codeValue}
+          isEditable={true}
+          onChange={setCodeValue}
+          onKeyDown={handleCodeKeyDown}
+          placeholder={`Enter ${codeLanguage} code... (3 newlines to exit)`}
+        />
+      )}
+
+      <div
+        className={`${styles.actions} ${
+          isExpandedLayout ? styles.expanded : ""
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isButtonActive) onSend();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          disabled={!isButtonActive}
+          title={isLoading ? "Thinking..." : "Send"}
+          className={`${styles.sendButton} ${
+            isButtonActive ? styles.active : styles.inactive
+          }`}
+        >
+          <Send size={20} />
+        </button>
       </div>
 
       {contextMenu.isOpen && (
@@ -456,6 +461,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           hasSelection={hasSelection}
         />
       )}
+    </div>
+  );
+
+  if (variant === "transparent") {
+    return containerContent;
+  }
+
+  return (
+    <footer className={styles.footer}>
+      <div className={styles.inputWrapper}>{containerContent}</div>
 
       <div className={styles.disclaimer}>
         <span>AI responses may include mistakes. </span>
