@@ -73,7 +73,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const maxRows = 7;
   const placeholder =
-    customPlaceholder || (isLoading ? "Thinking..." : "Ask anything...");
+    customPlaceholder || (isLoading ? "Thinking..." : "Ask anything");
   const disabled = isLoading;
 
   const taRef = useRef<HTMLTextAreaElement | null>(null);

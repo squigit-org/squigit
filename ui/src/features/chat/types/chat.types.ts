@@ -26,3 +26,13 @@ export interface AppConfig {
     project_number: string;
   };
 }
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: Message[];
+  streamingText: string;
+  firstResponseId: string | null;
+  createdAt: number;
+  type: "default" | "edit";
+}

@@ -5,8 +5,10 @@
  */
 
 import React from "react";
-import { RotateCw, MessagesSquare } from "lucide-react";
+import { RotateCw, Plus } from "lucide-react";
 import { ModelSelector } from "./ModelSelector";
+import { ChatSelector } from "./ChatSelector";
+import { ChatSession } from "../../types/chat.types";
 import styles from "./ChatHeader.module.css";
 
 interface ChatHeaderProps {
@@ -16,6 +18,10 @@ interface ChatHeaderProps {
   currentModel: string;
   onModelChange: (model: string) => void;
   isLoading: boolean;
+  sessions: ChatSession[];
+  activeSessionId: string | null;
+  onSessionSelect: (id: string) => void;
+  onNewChat: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -25,15 +31,32 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   currentModel,
   onModelChange,
   isLoading,
+  sessions,
+  activeSessionId,
+  onSessionSelect,
+  onNewChat,
 }) => {
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
-        <MessagesSquare size={18} className={styles.chatIcon} />
+        <ChatSelector
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSessionSelect={onSessionSelect}
+          onNewChat={onNewChat}
+        />
         <h1 className={styles.chatTitle}>{chatTitle}</h1>
       </div>
 
       <div className={styles.rightSection}>
+        <button
+          className={styles.iconButton}
+          onClick={onNewChat}
+          title="New chat"
+        >
+          <Plus size={20} />
+        </button>
+
         <ModelSelector
           currentModel={currentModel}
           onModelChange={onModelChange}

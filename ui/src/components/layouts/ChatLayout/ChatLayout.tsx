@@ -10,6 +10,7 @@ import {
   ChatHeader,
   ChatArea,
   ChatInput,
+  ChatSession,
 } from "../../../features/chat";
 import { InlineMenu, useInlineMenu } from "../../../components/ui";
 import "katex/dist/katex.min.css";
@@ -35,6 +36,11 @@ export interface ChatLayoutProps {
 
   chatTitle: string;
 
+  sessions: ChatSession[];
+  activeSessionId: string | null;
+  onSessionSelect: (id: string) => void;
+  onNewChat: () => void;
+
   onSend: () => void;
   onModelChange: (model: string) => void;
   onRetry: () => void;
@@ -54,6 +60,10 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   currentModel,
   startupImage,
   chatTitle,
+  sessions,
+  activeSessionId,
+  onSessionSelect,
+  onNewChat,
   onSend,
   onModelChange,
   onRetry,
@@ -104,7 +114,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
 
       const rect = bubble.getBoundingClientRect();
       const menuWidth = 250;
-      const MENU_HEIGHT = 48;
       const centerX = rect.left + rect.width / 2;
       const targetLeft = Math.max(
         10,
@@ -159,6 +168,10 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         currentModel={currentModel}
         onModelChange={onModelChange}
         isLoading={isLoading}
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onSessionSelect={onSessionSelect}
+        onNewChat={onNewChat}
       />
 
       <ChatArea

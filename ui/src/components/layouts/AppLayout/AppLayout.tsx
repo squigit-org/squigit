@@ -20,6 +20,7 @@ import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { useSystemSync } from "../../../hooks/useSystemSync";
 import { useChatTitle } from "../../../features/chat/hooks/useChatTitle";
 import { useChatEngine } from "../../../features/chat/hooks/useChat";
+import { useChatSessions } from "../../../features/chat/hooks/useChatSessions";
 import {
   useUpdateCheck,
   getPendingUpdate,
@@ -112,12 +113,34 @@ export const AppLayout: React.FC = () => {
     enabled: isChatActive,
   });
 
-  const { chatTitle } = useChatTitle({
+  const { chatTitle, generateSubTitle, generateImageTitle } = useChatTitle({
     startupImage: system.startupImage,
     apiKey: system.apiKey,
     sessionChatTitle: system.sessionChatTitle,
     setSessionChatTitle: system.setSessionChatTitle,
   });
+
+  const chatSessions = useChatSessions();
+  const [hasInitializedSession, setHasInitializedSession] = useState(false);
+
+  useEffect(() => {
+    if (isChatActive && !hasInitializedSession) {
+      chatSessions.createSession("default", chatTitle);
+      setHasInitializedSession(true);
+    }
+  }, [isChatActive, hasInitializedSession]);
+
+  useEffect(() => {
+    if (chatSessions.activeSessionId && chatTitle && chatTitle !== "New Chat") {
+      const activeSession = chatSessions.getActiveSession();
+      if (activeSession && activeSession.title === "New Chat") {
+        chatSessions.updateSessionTitle(
+          chatSessions.activeSessionId,
+          chatTitle
+        );
+      }
+    }
+  }, [chatTitle, chatSessions.activeSessionId]);
 
   const [input, setInput] = useState("");
   const [pendingUpdate] = useState(() => getPendingUpdate());
@@ -401,8 +424,14 @@ export const AppLayout: React.FC = () => {
           onResetAPIKey={system.handleResetAPIKey}
           toggleSubview={setIsSubviewActive}
           onNewSession={system.resetSession}
-          chatTitle={chatTitle}
-          onDescribeEdits={(description) => {
+          chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
+          onDescribeEdits={async (description) => {
+            const existingTitles = chatSessions.sessions.map((s) => s.title);
+            const editTitle = await generateSubTitle(
+              description,
+              existingTitles
+            );
+            chatSessions.createSession("edit", editTitle);
             chatEngine.handleDescribeEdits(description);
           }}
         />
@@ -426,7 +455,46 @@ export const AppLayout: React.FC = () => {
           onInputChange={setInput}
           currentModel={system.sessionModel}
           startupImage={system.startupImage}
-          chatTitle={chatTitle}
+          chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
+          sessions={chatSessions.sessions}
+          activeSessionId={chatSessions.activeSessionId}
+          onSessionSelect={(id) => {
+            if (chatSessions.activeSessionId) {
+              const currentState = chatEngine.getCurrentState();
+              chatSessions.updateSession(chatSessions.activeSessionId, {
+                messages: currentState.messages,
+                streamingText: currentState.streamingText,
+                firstResponseId: currentState.firstResponseId,
+              });
+            }
+
+            chatSessions.switchSession(id);
+
+            const targetSession = chatSessions.getSessionById(id);
+            if (targetSession) {
+              chatEngine.restoreState({
+                messages: targetSession.messages,
+                streamingText: targetSession.streamingText,
+                firstResponseId: targetSession.firstResponseId,
+                isChatMode: targetSession.messages.length > 0,
+              });
+            }
+          }}
+          onNewChat={async () => {
+            if (chatSessions.activeSessionId) {
+              const currentState = chatEngine.getCurrentState();
+              chatSessions.updateSession(chatSessions.activeSessionId, {
+                messages: currentState.messages,
+                streamingText: currentState.streamingText,
+                firstResponseId: currentState.firstResponseId,
+              });
+            }
+
+            const existingTitles = chatSessions.sessions.map((s) => s.title);
+            const newTitle = await generateImageTitle(existingTitles);
+            chatSessions.createSession("default", newTitle);
+            chatEngine.handleReload();
+          }}
           onSend={() => {
             chatEngine.handleSend(input);
             setInput("");

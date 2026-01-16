@@ -105,7 +105,7 @@ export const ExpandedView: React.FC<ExpandedViewProps> = ({
             onInputChange={setEditInput}
             onSend={handleSend}
             isLoading={false}
-            placeholder="Describe edits"
+            placeholder="Ask about this image"
           />
         </footer>
       </div>

@@ -297,6 +297,29 @@ export const useChatEngine = ({
     }
   };
 
+  // Get current state for saving to session
+  const getCurrentState = () => ({
+    messages,
+    streamingText,
+    firstResponseId,
+    isChatMode,
+  });
+
+  // Restore state from a session
+  const restoreState = (state: {
+    messages: Message[];
+    streamingText: string;
+    firstResponseId: string | null;
+    isChatMode: boolean;
+  }) => {
+    setMessages(state.messages);
+    setStreamingText(state.streamingText);
+    setFirstResponseId(state.firstResponseId);
+    setIsChatMode(state.isChatMode);
+    setIsLoading(false);
+    setIsStreaming(false);
+  };
+
   return {
     messages,
     isLoading,
@@ -311,5 +334,7 @@ export const useChatEngine = ({
     handleReload,
     handleDescribeEdits,
     startSession,
+    getCurrentState,
+    restoreState,
   };
 };
