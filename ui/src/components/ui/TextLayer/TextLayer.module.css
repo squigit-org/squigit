@@ -16,7 +16,7 @@
 
 /* Dim overlay - 10% darken effect across entire image */
 .dimOverlay {
-  fill: rgba(0, 0, 0, 0.1);
+  fill: rgba(0, 0, 0, 0.2);
   pointer-events: none;
 }
 
