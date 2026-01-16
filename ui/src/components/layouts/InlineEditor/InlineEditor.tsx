@@ -6,6 +6,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { ChevronDown, ChevronUp } from "lucide-react"; // Or custom icon as requested
 import { useLens } from "../../../features/google";
 import { EditorMenu, EditorMenuHandle } from "../../../features/editor";
 import {
@@ -33,7 +34,7 @@ interface InlineEditorProps {
   setSessionLensUrl: (url: string) => void;
   chatTitle: string;
   onDescribeEdits: (description: string) => void;
-  isVisible: boolean;
+  isVisible: boolean; // Retaining prop for compatibility, but mainly internal toggle now
 }
 
 export const InlineEditor: React.FC<InlineEditorProps> = ({
@@ -44,6 +45,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   onDescribeEdits,
   isVisible,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -75,12 +77,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   });
 
   const scan = useCallback(async () => {
-    console.log("Scan called with startupImage:", startupImage);
-
-    if (!startupImage?.base64) {
-      console.log("No image to scan");
-      return;
-    }
+    if (!startupImage?.base64) return;
 
     setLoading(true);
     setShowOverlay(true);
@@ -99,22 +96,15 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
           startupImage.base64.replace("asset://localhost", "")
         );
         isBase64 = false;
-        console.log("OCR: Using file path:", imageData);
       } else {
         imageData = startupImage.base64;
         isBase64 = true;
-        console.log(
-          "OCR: Using base64 data (length: " + imageData.length + ")"
-        );
       }
 
-      console.log("Running OCR via Tauri invoke...");
       const results = await invoke<OCRBox[]>("ocr_image", {
         imageData,
         isBase64,
       });
-
-      console.log("OCR boxes found:", results.length);
 
       const converted = results.map((r) => ({
         text: r.text,
@@ -122,13 +112,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       }));
 
       setData(converted);
-
       setShowOverlay(false);
       setShowTextLayer(true);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       setError(errorMsg);
-      console.error("OCR Error:", e);
       setShowOverlay(false);
     } finally {
       setLoading(false);
@@ -138,12 +126,12 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   useEffect(() => {
     if (startupImage) {
       scan();
+      // Optional: Auto-expand on load? Or keep collapsed. User mockup implies collapsed.
     }
   }, [startupImage, scan]);
 
   const onLoad = () => {
     if (imgRef.current) {
-      // Just set natural size initially
       setSize({
         w: imgRef.current.naturalWidth,
         h: imgRef.current.naturalHeight,
@@ -161,9 +149,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       canvas.height = img.naturalHeight;
 
       const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        throw new Error("Could not get canvas context");
-      }
+      if (!ctx) throw new Error("Could not get canvas context");
 
       ctx.drawImage(img, 0, 0);
 
@@ -190,7 +176,6 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   }, []);
 
   const handleExpandSave = useCallback(async () => {
-    // TODO: Implement save functionality
     const { showToast } = await import("../../ui/Notifications/Toast");
     showToast("Save feature coming soon", "success");
   }, []);
@@ -203,54 +188,85 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     [onDescribeEdits]
   );
 
-  if (!startupImage || !isVisible) {
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
+  };
+
+  if (!startupImage) {
     return null;
   }
 
+  // isVisible prop can be used to completely hide if needed, but the mockup suggests internal toggle.
+  // We'll respect isVisible if passed as false for now, or ignore it if we want it always present.
+  if (!isVisible) return null; // Or logic to show/hide entire bar.
+
   return (
-    <div className={styles.editorContainer}>
-      <div className={styles.viewer} ref={viewerRef}>
-        <div className={styles.imageWrap} ref={imgWrapRef}>
-          <img
-            ref={imgRef}
-            src={imageSrc}
-            alt=""
-            onLoad={onLoad}
-            onError={() => setError("Failed to load image")}
-            draggable={false}
-          />
+    <div className={`${styles.container} ${isExpanded ? styles.expanded : ""}`}>
+      {/* Header Bar (Always visible) */}
+      <div className={styles.barHeader} onClick={toggleExpand}>
+        <div className={styles.thumbnailWrapper}>
+          <img src={imageSrc} alt="Thumbnail" className={styles.miniThumb} />
+          <span className={styles.label}>Image Preview</span>
+        </div>
 
-          {showTextLayer && (
-            <TextLayer
-              data={data}
-              size={size}
-              svgRef={svgRef}
-              onTextMouseDown={handleTextMouseDown}
-            />
-          )}
-
-          <ScanningOverlay isVisible={showOverlay} />
-
-          <ImageToolbar
-            toolbarRef={toolbarRef}
-            isLensLoading={isLensLoading}
-            onLensClick={triggerLens}
-            onCopyImage={handleCopyImage}
-            onExpandClick={handleExpandClick}
-            imgWrapRef={imgWrapRef}
-            imageHeight={imgRef.current?.clientHeight || size.h}
-          />
+        {/* The Icon */}
+        <div className={styles.toggleIcon}>
+          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </div>
       </div>
 
-      <EditorMenu
-        ref={editorMenuRef}
-        data={data}
-        size={size}
-        imgRef={imgRef}
-        imgWrapRef={imgWrapRef}
-        viewerRef={viewerRef}
-      />
+      {/* Expanded Content Area */}
+      <div className={styles.expandedContent}>
+        <div className={styles.bigImageBox}>
+          <div className={styles.viewer} ref={viewerRef}>
+            <div className={styles.imageWrap}>
+              <div className={styles.innerContent} ref={imgWrapRef}>
+                <img
+                  ref={imgRef}
+                  src={imageSrc}
+                  alt=""
+                  onLoad={onLoad}
+                  onError={() => setError("Failed to load image")}
+                  draggable={false}
+                  className={styles.bigImage}
+                />
+
+                {showTextLayer && isExpanded && (
+                  <TextLayer
+                    data={data}
+                    size={size}
+                    svgRef={svgRef}
+                    onTextMouseDown={handleTextMouseDown}
+                  />
+                )}
+
+                <ScanningOverlay isVisible={showOverlay} />
+
+                {isExpanded && (
+                  <ImageToolbar
+                    toolbarRef={toolbarRef}
+                    isLensLoading={isLensLoading}
+                    onLensClick={triggerLens}
+                    onCopyImage={handleCopyImage}
+                    onExpandClick={handleExpandClick}
+                    imgWrapRef={imgWrapRef}
+                    imageHeight={imgRef.current?.clientHeight || size.h}
+                  />
+                )}
+              </div>
+            </div>
+
+            <EditorMenu
+              ref={editorMenuRef}
+              data={data}
+              size={size}
+              imgRef={imgRef}
+              imgWrapRef={imgWrapRef}
+              viewerRef={viewerRef}
+            />
+          </div>
+        </div>
+      </div>
 
       {error && <div className={styles.editorError}>{error}</div>}
 

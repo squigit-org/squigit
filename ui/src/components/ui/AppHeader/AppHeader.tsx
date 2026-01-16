@@ -57,8 +57,6 @@ interface AppHeaderProps {
   onNewSession: () => void; // Analyzes new image
 
   // New Props
-  isEditorVisible: boolean;
-  onToggleEditor: () => void;
   hasImageLoaded: boolean;
 }
 
@@ -95,8 +93,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onResetAPIKey,
   toggleSubview,
   onNewSession,
-  isEditorVisible,
-  onToggleEditor,
   hasImageLoaded,
 }) => {
   return (
@@ -112,20 +108,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </div>
 
       <div className={styles.rightSection}>
-        {hasImageLoaded && (
-          <button
-            className={styles.iconButton}
-            onClick={onToggleEditor}
-            title={isEditorVisible ? "Hide editor" : "Show editor"}
-          >
-            {isEditorVisible ? (
-              <ChevronUp size={20} />
-            ) : (
-              <ChevronDown size={20} />
-            )}
-          </button>
-        )}
-
         {hasImageLoaded && (
           <button
             onClick={onNewSession}

@@ -4,15 +4,112 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.editorContainer {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  width: 100%;
+.container {
+  width: 90%;
+  max-width: 616px;
+  /* Collapsed Height: 48px */
+  height: 48px;
   background-color: var(--neutral-900);
-  border-bottom: 1px solid var(--neutral-800);
+  border-radius: 12px;
   overflow: hidden;
-  transition: height 0.3s ease-in-out;
+  position: relative;
+  margin: 1rem auto 0 auto;
+  border: 1px solid var(--neutral-800);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+  /* Smooth Animation with Bezier Curve */
+  transition: height 0.7s cubic-bezier(0.68, -0.15, 0.265, 1.15);
+  z-index: 20; /* Ensure it floats above chat */
+  flex-shrink: 0;
+}
+
+/* Expanded State Class */
+.container.expanded {
+  /* Expanded Height */
+  height: 424px;
+  background-color: var(--neutral-900);
+}
+
+/* The Top Bar (Header) */
+.barHeader {
+  height: 48px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  cursor: pointer;
+  z-index: 2;
+  position: relative;
+  background-color: var(--neutral-900);
+}
+
+/* Thumbnail in the bar */
+.thumbnailWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.miniThumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--neutral-700);
+  transition: opacity 0.3s ease;
+}
+
+.label {
+  color: var(--neutral-400);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Toggle Icon */
+.toggleIcon {
+  color: var(--neutral-100);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  user-select: none;
+}
+
+/* The Expanded Content */
+.expandedContent {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  width: 100%;
+  height: calc(424px - 48px);
+  padding: 10px; /* Reduced pudding to maximize image space */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s ease;
+  transition-delay: 0.1s;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.container.expanded .expandedContent {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* The big box with rounded corners */
+.bigImageBox {
+  width: 100%;
+  height: 100%;
+  background-color: var(--black);
+  border-radius: 8px; /* Slightly reduced radius */
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  position: relative;
+  display: flex;
 }
 
 .viewer {
@@ -21,42 +118,33 @@
   height: 100%;
   display: flex;
   justify-content: center;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden; /* Changed from auto to hidden for contained view */
   position: relative;
-  /* Custom scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: var(--neutral-700) transparent;
-  padding: 2rem;
-}
-
-.viewer::-webkit-scrollbar {
-  width: 6px;
-}
-
-.viewer::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.viewer::-webkit-scrollbar-thumb {
-  background-color: var(--neutral-700);
-  border-radius: 3px;
 }
 
 .imageWrap {
-  position: relative;
   width: 100%;
-  max-width: 900px;
-  align-self: flex-start;
-  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
-.imageWrap img {
-  display: block;
-  width: 100%;
+.innerContent {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+}
+
+.bigImage {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
   height: auto;
-  user-select: none;
-  -webkit-user-drag: none;
+  object-fit: contain;
+  display: block;
 }
 
 .editorError {

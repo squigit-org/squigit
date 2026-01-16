@@ -30,7 +30,6 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "../../../lib/api/tauri/commands";
 import { AppHeader } from "../../ui/AppHeader/AppHeader";
-import { InlineEditor } from "../InlineEditor/InlineEditor";
 
 export const AppLayout: React.FC = () => {
   const [isPanelActive, setIsPanelActive] = useState(false);
@@ -227,12 +226,6 @@ export const AppLayout: React.FC = () => {
     selectedText: string;
   } | null>(null);
 
-  // Default editor visibility logic:
-  // If we have a startup image, we might want to start with it hidden or shown?
-  // User said "content below it start with inline editor view as a hidden dropdown"
-  // But also "drop button should toggle the editor view down... think of it like the folders tree in vscode"
-  // I'll default to false.
-  const [isEditorVisible, setIsEditorVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Rotating state for reload
@@ -450,23 +443,7 @@ export const AppLayout: React.FC = () => {
         toggleSubview={setIsSubviewActive}
         onNewSession={system.resetSession}
         // New Props
-        isEditorVisible={isEditorVisible}
-        onToggleEditor={() => setIsEditorVisible(!isEditorVisible)}
         hasImageLoaded={!!system.startupImage}
-      />
-
-      <InlineEditor
-        startupImage={system.startupImage}
-        sessionLensUrl={system.sessionLensUrl}
-        setSessionLensUrl={system.setSessionLensUrl}
-        chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
-        onDescribeEdits={async (description) => {
-          const existingTitles = chatSessions.sessions.map((s) => s.title);
-          const editTitle = await generateSubTitle(description, existingTitles);
-          chatSessions.createSession("edit", editTitle);
-          chatEngine.handleDescribeEdits(description);
-        }}
-        isVisible={isEditorVisible}
       />
 
       <div className={styles.chatPanel}>
@@ -541,6 +518,17 @@ export const AppLayout: React.FC = () => {
             chatEngine.clearError();
           }}
           onReload={chatEngine.handleReload}
+          sessionLensUrl={system.sessionLensUrl}
+          setSessionLensUrl={system.setSessionLensUrl}
+          onDescribeEdits={async (description) => {
+            const existingTitles = chatSessions.sessions.map((s) => s.title);
+            const editTitle = await generateSubTitle(
+              description,
+              existingTitles
+            );
+            chatSessions.createSession("edit", editTitle);
+            chatEngine.handleDescribeEdits(description);
+          }}
         />
       </div>
 
