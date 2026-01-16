@@ -52,6 +52,7 @@ interface ChatInputProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   isLoading: boolean;
+  placeholder?: string;
 }
 
 interface ContextMenuState {
@@ -66,11 +67,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onInputChange: onChange,
   onSend,
   isLoading,
+  placeholder: customPlaceholder,
 }) => {
   if (!startupImage) return null;
 
   const maxRows = 7;
-  const placeholder = isLoading ? "Thinking..." : "Ask anything...";
+  const placeholder =
+    customPlaceholder || (isLoading ? "Thinking..." : "Ask anything...");
   const disabled = isLoading;
 
   const taRef = useRef<HTMLTextAreaElement | null>(null);

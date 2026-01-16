@@ -156,6 +156,75 @@ export const useChatEngine = ({
     }
   };
 
+  const handleDescribeEdits = async (editDescription: string) => {
+    if (!apiKey || !startupImage || !prompt) {
+      setError("Cannot start session. Missing required data.");
+      return;
+    }
+
+    // Combine prompt with edit description
+    const combinedPrompt = `${prompt}\n\n[User Edit Request]: ${editDescription}`;
+
+    setIsLoading(true);
+    setError(null);
+    resetInitialUi();
+    setMessages([]);
+    setFirstResponseId(null);
+    setLastSentMessage(null);
+
+    setIsStreaming(true);
+
+    try {
+      let fullResponse = "";
+      const responseId = Date.now().toString();
+      setFirstResponseId(responseId);
+
+      const fullPrompt = `<sys-prmp>\n${systemPrompt}\n</sys-prmp>\nMSS: ${combinedPrompt}`;
+
+      let finalBase64 = startupImage.base64;
+      if (startupImage.isFilePath) {
+        try {
+          const res = await fetch(startupImage.base64);
+          const blob = await res.blob();
+          finalBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (e) {
+          console.error("Failed to fetch asset for Gemini", e);
+          throw new Error("Failed to load image file.");
+        }
+      }
+
+      await startNewChatStream(
+        currentModel,
+        finalBase64,
+        startupImage.mimeType,
+        fullPrompt,
+        (token: string) => {
+          fullResponse += token;
+          setStreamingText(fullResponse);
+        }
+      );
+      setIsStreaming(false);
+      setIsLoading(false);
+    } catch (apiError: any) {
+      console.error(apiError);
+      let errorMsg = "Failed to connect to Gemini.";
+      if (apiError.message?.includes("429"))
+        errorMsg = "Quota limit reached or server busy.";
+      else if (apiError.message?.includes("503"))
+        errorMsg = "Service temporarily unavailable.";
+      else if (apiError.message) errorMsg = apiError.message;
+
+      setError(errorMsg);
+      setIsStreaming(false);
+      setIsLoading(false);
+    }
+  };
+
   const handleRetrySend = async () => {
     if (!lastSentMessage) return;
     setError(null);
@@ -240,6 +309,7 @@ export const useChatEngine = ({
     handleSend,
     handleRetrySend,
     handleReload,
+    handleDescribeEdits,
     startSession,
   };
 };

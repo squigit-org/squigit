@@ -401,6 +401,10 @@ export const AppLayout: React.FC = () => {
           onResetAPIKey={system.handleResetAPIKey}
           toggleSubview={setIsSubviewActive}
           onNewSession={system.resetSession}
+          chatTitle={chatTitle}
+          onDescribeEdits={(description) => {
+            chatEngine.handleDescribeEdits(description);
+          }}
         />
       </div>
 

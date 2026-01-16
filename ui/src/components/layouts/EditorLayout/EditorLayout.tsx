@@ -23,6 +23,7 @@ import {
   ImageToolbar,
   useTextSelection,
   ScanningOverlay,
+  ExpandedView,
 } from "../../ui";
 import styles from "./EditorLayout.module.css";
 
@@ -63,6 +64,8 @@ interface EditorLayoutProps {
   onResetAPIKey: () => void;
   toggleSubview: (isActive: boolean) => void;
   onNewSession: () => void;
+  chatTitle: string;
+  onDescribeEdits: (description: string) => void;
 }
 
 export const EditorLayout: React.FC<EditorLayoutProps> = ({
@@ -91,6 +94,8 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   onResetAPIKey,
   toggleSubview,
   onNewSession,
+  chatTitle,
+  onDescribeEdits,
 }) => {
   const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -99,6 +104,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   const [showTextLayer, setShowTextLayer] = useState(false);
   const [error, setError] = useState("");
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [isExpandedViewOpen, setIsExpandedViewOpen] = useState(false);
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const imgWrapRef = useRef<HTMLDivElement>(null);
@@ -276,6 +282,28 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
     }
   }, []);
 
+  const handleExpandClick = useCallback(() => {
+    setIsExpandedViewOpen(true);
+  }, []);
+
+  const handleExpandClose = useCallback(() => {
+    setIsExpandedViewOpen(false);
+  }, []);
+
+  const handleExpandSave = useCallback(async () => {
+    // TODO: Implement save functionality
+    const { showToast } = await import("../../ui/Notifications/Toast");
+    showToast("Save feature coming soon", "success");
+  }, []);
+
+  const handleDescribeEdits = useCallback(
+    (description: string) => {
+      setIsExpandedViewOpen(false);
+      onDescribeEdits(description);
+    },
+    [onDescribeEdits]
+  );
+
   if (!startupImage) {
     return (
       <div className={styles.editorLayout}>
@@ -365,6 +393,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
             isLensLoading={isLensLoading}
             onLensClick={triggerLens}
             onCopyImage={handleCopyImage}
+            onExpandClick={handleExpandClick}
             imgWrapRef={imgWrapRef}
             imageHeight={imgRef.current?.clientHeight || size.h}
           />
@@ -381,6 +410,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
       />
 
       {error && <div className={styles.editorError}>{error}</div>}
+
+      <ExpandedView
+        isOpen={isExpandedViewOpen}
+        imageSrc={imageSrc}
+        chatTitle={chatTitle}
+        startupImage={startupImage}
+        onClose={handleExpandClose}
+        onSave={handleExpandSave}
+        onSubmit={handleDescribeEdits}
+      />
     </div>
   );
 };

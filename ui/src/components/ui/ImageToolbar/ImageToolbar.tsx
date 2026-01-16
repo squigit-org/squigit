@@ -13,6 +13,7 @@ interface ImageToolbarProps {
   isLensLoading?: boolean;
   onLensClick: () => void;
   onCopyImage: () => void;
+  onExpandClick: () => void;
   imgWrapRef: React.RefObject<HTMLDivElement | null>;
   imageHeight?: number;
 }
@@ -216,6 +217,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   isLensLoading = false,
   onLensClick,
   onCopyImage,
+  onExpandClick,
   imgWrapRef,
   imageHeight = 0,
 }) => {
@@ -414,7 +416,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         isHorizontal={isHorizontal}
       />
 
-      {/* TODO: Implement new expanded view */}
       <ToolbarButton
         icon={
           <svg
@@ -435,7 +436,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         tooltip="Expand"
         onClick={(e) => {
           e.stopPropagation();
-          // TODO: Implement new expanded view
+          onExpandClick();
         }}
         isHorizontal={isHorizontal}
       />
