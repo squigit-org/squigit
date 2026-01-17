@@ -13,7 +13,7 @@ import React, {
 } from "react";
 
 import {
-  OCRArea,
+  ImageArea,
   Message,
   ChatArea,
   ChatInput,
@@ -94,7 +94,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   streamingText,
   isChatMode,
   isLoading,
-  isStreaming,
   error,
   input,
   startupImage,
@@ -113,7 +112,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   onSessionSelect,
   onNewChat,
   onReload,
-  // ChatHeader Props
   isRotating,
   isPanelActive,
   toggleSettingsPanel,
@@ -215,44 +213,46 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
 
   return (
     <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
-      <ChatHeader
-        chatTitle={chatTitle}
-        onReload={onReload || (() => {})}
-        isRotating={isRotating}
-        currentModel={currentModel}
-        onModelChange={onModelChange}
-        isLoading={isLoading}
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSessionSelect={onSessionSelect}
-        onNewChat={onNewChat}
-        isPanelActive={isPanelActive}
-        toggleSettingsPanel={toggleSettingsPanel}
-        isPanelVisible={isPanelVisible}
-        isPanelActiveAndVisible={isPanelActiveAndVisible}
-        isPanelClosing={isPanelClosing}
-        settingsButtonRef={settingsButtonRef}
-        panelRef={panelRef}
-        settingsPanelRef={settingsPanelRef}
-        prompt={prompt}
-        editingModel={editingModel}
-        setPrompt={setPrompt}
-        onEditingModelChange={onEditingModelChange}
-        userName={userName}
-        userEmail={userEmail}
-        avatarSrc={avatarSrc}
-        onSave={onSave}
-        onLogout={onLogout}
-        isDarkMode={isDarkMode}
-        onToggleTheme={onToggleTheme}
-        onResetAPIKey={onResetAPIKey}
-        toggleSubview={toggleSubview}
-        onNewSession={onNewSession}
-        hasImageLoaded={hasImageLoaded}
-      />
+      <div className="flex-shrink-0">
+        <ChatHeader
+          chatTitle={chatTitle}
+          onReload={onReload || (() => {})}
+          isRotating={isRotating}
+          currentModel={currentModel}
+          onModelChange={onModelChange}
+          isLoading={isLoading}
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSessionSelect={onSessionSelect}
+          onNewChat={onNewChat}
+          isPanelActive={isPanelActive}
+          toggleSettingsPanel={toggleSettingsPanel}
+          isPanelVisible={isPanelVisible}
+          isPanelActiveAndVisible={isPanelActiveAndVisible}
+          isPanelClosing={isPanelClosing}
+          settingsButtonRef={settingsButtonRef}
+          panelRef={panelRef}
+          settingsPanelRef={settingsPanelRef}
+          prompt={prompt}
+          editingModel={editingModel}
+          setPrompt={setPrompt}
+          onEditingModelChange={onEditingModelChange}
+          userName={userName}
+          userEmail={userEmail}
+          avatarSrc={avatarSrc}
+          onSave={onSave}
+          onLogout={onLogout}
+          isDarkMode={isDarkMode}
+          onToggleTheme={onToggleTheme}
+          onResetAPIKey={onResetAPIKey}
+          toggleSubview={toggleSubview}
+          onNewSession={onNewSession}
+          hasImageLoaded={hasImageLoaded}
+        />
+      </div>
 
-      <div className="z-10 relative">
-        <OCRArea
+      <div className="z-10 relative flex-shrink-0">
+        <ImageArea
           startupImage={startupImage}
           sessionLensUrl={sessionLensUrl}
           setSessionLensUrl={setSessionLensUrl}

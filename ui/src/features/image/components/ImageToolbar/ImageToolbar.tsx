@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import styles from "./ImageToolbar.module.css";
 
@@ -14,169 +14,74 @@ interface ImageToolbarProps {
   onLensClick: () => void;
   onCopyImage: () => void;
   onSaveClick: () => void;
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  constraintRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const EDGE_PADDING = 8;
 
-interface TooltipPosition {
-  top: number;
-  left: number;
-  visible: boolean;
-  measured: boolean;
-  adjustedDirection: "right" | "left" | "top" | "bottom";
-  arrowOffset: number;
-}
-
-const PortalTooltip: React.FC<{
-  children: React.ReactNode;
+const Tooltip: React.FC<{
+  text: string;
   parentRef: React.RefObject<HTMLElement | null>;
-  direction?: "right" | "top";
-}> = ({ children, parentRef, direction = "right" }) => {
-  const [pos, setPos] = useState<TooltipPosition>({
-    top: 0,
-    left: 0,
-    visible: false,
-    measured: false,
-    adjustedDirection: direction,
-    arrowOffset: 0,
+  show: boolean;
+}> = ({ text, parentRef, show }) => {
+  const [style, setStyle] = useState<React.CSSProperties>({
+    opacity: 0,
+    visibility: "hidden",
   });
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const parent = parentRef.current;
-    if (!parent) return;
+    if (!show || !parentRef.current) {
+      setStyle({ opacity: 0, visibility: "hidden" });
+      return;
+    }
 
-    const updatePos = () => {
-      const rect = parent.getBoundingClientRect();
-      const tooltip = tooltipRef.current;
-
-      const tooltipWidth = tooltip?.offsetWidth || 120;
-      const tooltipHeight = tooltip?.offsetHeight || 28;
-      const gap = 12;
-
+    const update = () => {
+      if (!parentRef.current || !ref.current) return;
+      const parentRect = parentRef.current.getBoundingClientRect();
+      const tooltipRect = ref.current.getBoundingClientRect();
       const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
 
-      let newTop: number;
-      let newLeft: number;
-      let adjustedDirection: "right" | "left" | "top" | "bottom" = direction;
-      let arrowOffset = 0;
+      const gap = 8;
+      let left = parentRect.right + gap;
+      let top = parentRect.top + parentRect.height / 2 - tooltipRect.height / 2;
 
-      if (direction === "right") {
-        // Calculate center position directly (no CSS transform needed)
-        newTop = rect.top + rect.height / 2 - tooltipHeight / 2;
-        newLeft = rect.right + gap;
-
-        if (newLeft + tooltipWidth > windowWidth - EDGE_PADDING) {
-          adjustedDirection = "left";
-          newLeft = rect.left - gap - tooltipWidth;
-        }
-
-        if (newLeft < EDGE_PADDING) {
-          newLeft = EDGE_PADDING;
-        }
-
-        const idealTop = rect.top + rect.height / 2 - tooltipHeight / 2;
-        if (idealTop < EDGE_PADDING) {
-          newTop = EDGE_PADDING;
-          arrowOffset =
-            rect.top + rect.height / 2 - (newTop + tooltipHeight / 2);
-        } else if (idealTop + tooltipHeight > windowHeight - EDGE_PADDING) {
-          newTop = windowHeight - EDGE_PADDING - tooltipHeight;
-          arrowOffset =
-            rect.top + rect.height / 2 - (newTop + tooltipHeight / 2);
-        }
-      } else {
-        // Calculate center position directly (no CSS transform needed)
-        newLeft = rect.left + rect.width / 2 - tooltipWidth / 2;
-        newTop = rect.top - gap - tooltipHeight;
-
-        if (newTop < EDGE_PADDING) {
-          adjustedDirection = "bottom";
-          newTop = rect.bottom + gap;
-        } else {
-          adjustedDirection = "top";
-        }
-
-        const idealLeft = rect.left + rect.width / 2 - tooltipWidth / 2;
-        if (idealLeft < EDGE_PADDING) {
-          newLeft = EDGE_PADDING;
-          arrowOffset =
-            rect.left + rect.width / 2 - (newLeft + tooltipWidth / 2);
-        } else if (idealLeft + tooltipWidth > windowWidth - EDGE_PADDING) {
-          newLeft = windowWidth - EDGE_PADDING - tooltipWidth;
-          arrowOffset =
-            rect.left + rect.width / 2 - (newLeft + tooltipWidth / 2);
-        }
+      if (left + tooltipRect.width > windowWidth - EDGE_PADDING) {
+        left = parentRect.left - gap - tooltipRect.width;
       }
 
-      setPos({
-        top: Math.round(newTop),
-        left: Math.round(newLeft),
-        visible: true,
-        measured: true,
-        adjustedDirection,
-        arrowOffset: Math.round(arrowOffset),
+      setStyle({
+        position: "fixed",
+        top: top,
+        left: left,
+        opacity: 1,
+        visibility: "visible",
+        zIndex: 9999,
       });
     };
 
-    const handleMouseEnter = () => {
-      setPos((p) => ({ ...p, visible: true, measured: false }));
-
-      requestAnimationFrame(() => {
-        updatePos();
-
-        requestAnimationFrame(() => {
-          setPos((p) => ({ ...p, measured: true }));
-        });
-      });
-      window.addEventListener("scroll", updatePos, true);
-      window.addEventListener("resize", updatePos);
-    };
-
-    const handleMouseLeave = () => {
-      setPos((p) => ({ ...p, visible: false, measured: false }));
-      window.removeEventListener("scroll", updatePos, true);
-      window.removeEventListener("resize", updatePos);
-    };
-
-    parent.addEventListener("mouseenter", handleMouseEnter);
-    parent.addEventListener("mouseleave", handleMouseLeave);
-
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
     return () => {
-      parent.removeEventListener("mouseenter", handleMouseEnter);
-      parent.removeEventListener("mouseleave", handleMouseLeave);
-      window.removeEventListener("scroll", updatePos, true);
-      window.removeEventListener("resize", updatePos);
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
     };
-  }, [parentRef, direction]);
+  }, [show, text]);
 
-  if (!pos.visible) return null;
+  if (!show)
+    return createPortal(
+      <div ref={ref} className={styles.tooltipText} style={{ opacity: 0 }}>
+        {text}
+      </div>,
+      document.body,
+    );
 
   return createPortal(
-    <div
-      ref={tooltipRef}
-      className={styles.tooltipText}
-      data-direction={pos.adjustedDirection}
-      style={
-        {
-          position: "fixed",
-          top: pos.top,
-          left: pos.left,
-          margin: 0,
-          zIndex: 9999,
-
-          opacity: pos.measured ? 1 : 0,
-          visibility: pos.measured ? "visible" : "hidden",
-
-          "--arrow-offset": `${pos.arrowOffset}px`,
-        } as React.CSSProperties
-      }
-    >
-      {children}
+    <div ref={ref} className={styles.tooltipText} style={style}>
+      {text}
     </div>,
-    document.body
+    document.body,
   );
 };
 
@@ -187,6 +92,7 @@ const ToolbarButton: React.FC<{
   disabled?: boolean;
 }> = ({ icon, tooltip, onClick, disabled }) => {
   const btnRef = useRef<HTMLButtonElement>(null);
+  const [hover, setHover] = useState(false);
 
   return (
     <>
@@ -195,12 +101,12 @@ const ToolbarButton: React.FC<{
         className={styles.toolBtn}
         onClick={onClick}
         disabled={disabled}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
       >
         {icon}
       </button>
-      <PortalTooltip parentRef={btnRef} direction="right">
-        {tooltip}
-      </PortalTooltip>
+      <Tooltip text={tooltip} parentRef={btnRef} show={hover} />
     </>
   );
 };
@@ -211,36 +117,34 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   onLensClick,
   onCopyImage,
   onSaveClick,
-  containerRef,
+  constraintRef,
 }) => {
-  const toolbarDragRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
+  const isDraggingRef = useRef(false);
 
   const startDrag = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     const toolbar = toolbarRef.current;
-    const container = containerRef.current;
-    if (!toolbar || !container) return;
+    const constraint = constraintRef.current;
+    if (!toolbar || !constraint) return;
 
     isDraggingRef.current = true;
     dragStartRef.current.x = e.clientX;
     dragStartRef.current.y = e.clientY;
 
-    const containerRect = container.getBoundingClientRect();
+    const offsetParent = toolbar.offsetParent as HTMLElement;
+    if (!offsetParent) return;
+
     const toolbarRect = toolbar.getBoundingClientRect();
+    const parentRect = offsetParent.getBoundingClientRect();
 
-    const offsetLeft = toolbarRect.left - containerRect.left;
-    const offsetTop = toolbarRect.top - containerRect.top;
+    const currentLeft = toolbarRect.left - parentRect.left;
+    const currentTop = toolbarRect.top - parentRect.top;
 
-    // Reset transform if any, relies on absolute top/left
-    toolbar.style.left = `${offsetLeft}px`;
-    toolbar.style.top = `${offsetTop}px`;
-
-    dragStartRef.current.left = offsetLeft;
-    dragStartRef.current.top = offsetTop;
+    dragStartRef.current.left = currentLeft;
+    dragStartRef.current.top = currentTop;
 
     document.addEventListener("mousemove", handleDrag);
     document.addEventListener("mouseup", stopDrag);
@@ -251,8 +155,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     e.preventDefault();
 
     const toolbar = toolbarRef.current;
-    const container = containerRef.current;
-    if (!toolbar || !container) return;
+    const constraint = constraintRef.current;
+    const offsetParent = toolbar?.offsetParent as HTMLElement;
+
+    if (!toolbar || !constraint || !offsetParent) return;
 
     const deltaX = e.clientX - dragStartRef.current.x;
     const deltaY = e.clientY - dragStartRef.current.y;
@@ -260,14 +166,25 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     let newLeft = dragStartRef.current.left + deltaX;
     let newTop = dragStartRef.current.top + deltaY;
 
-    const containerRect = container.getBoundingClientRect();
+    const constraintRect = constraint.getBoundingClientRect();
+    const parentRect = offsetParent.getBoundingClientRect();
     const toolbarRect = toolbar.getBoundingClientRect();
 
-    const maxLeft = containerRect.width - toolbarRect.width;
-    const maxTop = containerRect.height - toolbarRect.height;
+    const minLeft = constraintRect.left - parentRect.left;
+    const minTop = constraintRect.top - parentRect.top;
+    const maxLeft =
+      constraintRect.left -
+      parentRect.left +
+      constraintRect.width -
+      toolbarRect.width;
+    const maxTop =
+      constraintRect.top -
+      parentRect.top +
+      constraintRect.height -
+      toolbarRect.height;
 
-    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-    newTop = Math.max(0, Math.min(newTop, maxTop));
+    newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+    newTop = Math.max(minTop, Math.min(newTop, maxTop));
 
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
@@ -279,44 +196,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     document.removeEventListener("mouseup", stopDrag);
   };
 
-  useEffect(() => {
-    const clampToolbarPosition = () => {
-      const toolbar = toolbarRef.current;
-      const container = containerRef.current;
-      if (!toolbar || !container) return;
-
-      const currentLeft = parseFloat(toolbar.style.left) || 0;
-      const currentTop = parseFloat(toolbar.style.top) || 0;
-
-      // If we are essentially at 0,0 (initial), keep it there, or let CSS handle it?
-      // CSS likely positions it absolutely.
-
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-      const toolbarWidth = toolbar.offsetWidth;
-      const toolbarHeight = toolbar.offsetHeight;
-      const maxLeft = containerWidth - toolbarWidth;
-      const maxTop = containerHeight - toolbarHeight;
-
-      if (currentLeft > maxLeft) {
-        toolbar.style.left = `${Math.max(0, maxLeft)}px`;
-      }
-      if (currentTop > maxTop) {
-        toolbar.style.top = `${Math.max(0, maxTop)}px`;
-      }
-    };
-
-    window.addEventListener("resize", clampToolbarPosition);
-    return () => window.removeEventListener("resize", clampToolbarPosition);
-  }, [toolbarRef, containerRef]);
-
   return (
     <div className={styles.imageToolbar} ref={toolbarRef}>
-      <div
-        className={styles.toolbarDrag}
-        ref={toolbarDragRef}
-        onMouseDown={startDrag}
-      >
+      <div className={styles.toolbarDrag} onMouseDown={startDrag}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"

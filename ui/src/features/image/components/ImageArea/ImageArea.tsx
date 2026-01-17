@@ -16,7 +16,7 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { useGoogleLens } from "../../hooks/useGoogleLens";
 import { useTextSelection } from "../../hooks/useTextSelection";
 import { ActionMenu, ActionMenuHandle } from "../OCRLayer/ActionMenu";
-import ChatInput from "../InlineInput/InlineInput";
+import { ChatInput } from "../InlineInput/InlineInput";
 import { TextLayer } from "../OCRLayer/TextLayer";
 import { ImageToolbar } from "../ImageToolbar";
 import styles from "./ImageArea.module.css";
@@ -27,7 +27,7 @@ interface OCRBox {
   confidence?: number;
 }
 
-interface OCRAreaProps {
+interface ImageAreaProps {
   startupImage: {
     base64: string;
     mimeType: string;
@@ -37,11 +37,11 @@ interface OCRAreaProps {
   setSessionLensUrl: (url: string) => void;
   chatTitle: string;
   onDescribeEdits: (description: string) => void;
-  isVisible: boolean; // Retaining prop for compatibility, but mainly internal toggle now
-  scrollContainerRef?: RefObject<HTMLDivElement | null>; // For scroll-based auto-collapse
+  isVisible: boolean;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
-export const OCRArea: React.FC<OCRAreaProps> = ({
+export const ImageArea: React.FC<ImageAreaProps> = ({
   startupImage,
   sessionLensUrl,
   setSessionLensUrl,
@@ -63,6 +63,7 @@ export const OCRArea: React.FC<OCRAreaProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
   const [imagePrompt, setImagePrompt] = useState("");
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const expandedContentRef = useRef<HTMLDivElement>(null);
   const ActionMenuRef = useRef<ActionMenuHandle>(null);
 
   const imageSrc = startupImage?.base64 || "";
@@ -115,7 +116,7 @@ export const OCRArea: React.FC<OCRAreaProps> = ({
 
       setData(converted);
       setShowOverlay(false);
-      setIsExpanded(true); // Auto-expand when OCR completes
+      setIsExpanded(true);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       setError(errorMsg);
@@ -128,47 +129,49 @@ export const OCRArea: React.FC<OCRAreaProps> = ({
   useEffect(() => {
     if (startupImage) {
       scan();
-      // Optional: Auto-expand on load? Or keep collapsed. User mockup implies collapsed.
     }
   }, [startupImage, scan]);
 
-  // Track if we're blocking scroll (after collapse triggered, until user releases)
   const isScrollBlockedRef = useRef(false);
   const wheelEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Auto-collapse on wheel down when expanded - STRICT two-step behavior
   useEffect(() => {
-    // We need to attach the listener to the window/document to catch ALL events
-    // capturing phase is important to intercept before anyone else
     const handleWheel = (e: WheelEvent) => {
-      // Only care if we are possibly interacting with the editor
       if (!isExpanded && !isScrollBlockedRef.current) return;
 
-      // Only handle scroll down (positive deltaY)
+      const scrollContainer = scrollWrapperRef.current;
+      const target = e.target as Node;
+
+      const isInside = scrollContainer && scrollContainer.contains(target);
+      const isScrollable =
+        scrollContainer &&
+        scrollContainer.scrollHeight > scrollContainer.clientHeight;
+
+      if (isInside && isScrollable) {
+        return;
+      }
+
       if (e.deltaY <= 0) return;
 
-      // If expanded, trigger collapse and START BLOCKING
       if (isExpanded) {
         setIsExpanded(false);
         isScrollBlockedRef.current = true;
 
-        // Stop this event immediately
         e.preventDefault();
         e.stopPropagation();
         return;
       }
 
-      // If we are in the blocked state, SWALLOW the event
       if (isScrollBlockedRef.current) {
         e.preventDefault();
         e.stopPropagation();
 
-        // Reset timer - we keep blocking as long as the user keeps scrolling
         if (wheelEndTimeoutRef.current) {
           clearTimeout(wheelEndTimeoutRef.current);
         }
 
-        // Wait for user to STOP scrolling for 500ms before releasing the block
         wheelEndTimeoutRef.current = setTimeout(() => {
           isScrollBlockedRef.current = false;
         }, 500);
@@ -176,7 +179,6 @@ export const OCRArea: React.FC<OCRAreaProps> = ({
       }
     };
 
-    // Attach to window with capture=true to ensure we get it first
     window.addEventListener("wheel", handleWheel, {
       passive: false,
       capture: true,
@@ -238,19 +240,16 @@ export const OCRArea: React.FC<OCRAreaProps> = ({
     return null;
   }
 
-  // isVisible prop can be used to completely hide if needed, but the mockup suggests internal toggle.
-  // We'll respect isVisible if passed as false for now, or ignore it if we want it always present.
-  if (!isVisible) return null; // Or logic to show/hide entire bar.
+  if (!isVisible) return null;
 
   return (
     <>
       <div
+        ref={containerRef}
         className={`${styles.container} ${isExpanded ? styles.expanded : ""}`}
       >
-        {/* Header Bar (Always visible) */}
-        {/* Header Bar (Always visible) */}
         <div className={styles.barHeader}>
-          <div className={styles.thumbnailWrapper}>
+          <div className={styles.thumbnailWrapper} onClick={toggleExpand}>
             <img src={imageSrc} alt="Thumbnail" className={styles.miniThumb} />
           </div>
 
@@ -266,7 +265,6 @@ export const OCRArea: React.FC<OCRAreaProps> = ({
             />
           </div>
 
-          {/* The Icon - shows loading spinner during OCR */}
           <div
             className={styles.toggleIcon}
             onClick={loading ? undefined : toggleExpand}
@@ -281,9 +279,8 @@ export const OCRArea: React.FC<OCRAreaProps> = ({
           </div>
         </div>
 
-        {/* Expanded Content Area */}
-        <div className={styles.expandedContent}>
-          <div className={styles.bigImageBox}>
+        <div className={styles.expandedContent} ref={expandedContentRef}>
+          <div className={styles.bigImageBox} ref={scrollWrapperRef}>
             <div className={styles.viewer} ref={viewerRef}>
               <div className={styles.imageWrap}>
                 <div className={styles.innerContent} ref={imgWrapRef}>
@@ -307,17 +304,17 @@ export const OCRArea: React.FC<OCRAreaProps> = ({
                   )}
                 </div>
               </div>
-
-              <ImageToolbar
-                toolbarRef={toolbarRef}
-                isLensLoading={isLensLoading}
-                onLensClick={triggerLens}
-                onCopyImage={handleCopyImage}
-                onSaveClick={handleExpandSave}
-                containerRef={viewerRef}
-              />
             </div>
           </div>
+
+          <ImageToolbar
+            toolbarRef={toolbarRef}
+            isLensLoading={isLensLoading}
+            onLensClick={triggerLens}
+            onCopyImage={handleCopyImage}
+            onSaveClick={handleExpandSave}
+            constraintRef={scrollWrapperRef}
+          />
         </div>
       </div>
 

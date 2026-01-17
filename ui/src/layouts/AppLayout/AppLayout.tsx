@@ -234,7 +234,6 @@ export const AppLayout: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Rotating state for reload
   const [isRotating, setIsRotating] = useState(false);
   useEffect(() => {
     if (!chatEngine.isLoading) {

@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* Default: Vertical layout inside image */
+@import "../../../../styles/variables.css";
+
 .imageToolbar {
   position: absolute;
-  left: 10px;
+  left: 18px;
   top: 10px;
   display: flex;
   flex-direction: column;
@@ -21,23 +22,11 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 100;
-  opacity: 0.94;
-  transition: opacity 0.3s ease;
-  touch-action: none;
-}
-
-/* Horizontal mode: outside image, pinned above with 10px gap */
-.imageToolbar.horizontal {
-  position: absolute;
-  left: 0;
-  top: auto;
-  bottom: calc(100% + 10px);
-  flex-direction: row;
-  border-radius: 9999px;
-  padding: 4px 6px;
+  user-select: none;
 }
 
 .toolbarDrag {
+  cursor: -webkit-grab;
   cursor: grab;
   color: #71717a;
   padding: 2px;
@@ -47,20 +36,14 @@
 }
 
 .toolbarDrag:active {
+  cursor: -webkit-grabbing;
   cursor: grabbing;
 }
 
-/* Vertical separator (for vertical layout - horizontal line) */
 .toolbarSeparator {
   width: 16px;
   height: 1px;
   background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Horizontal mode separator (vertical line) */
-.horizontal .toolbarSeparator {
-  width: 1px;
-  height: 16px;
 }
 
 .toolBtn {
@@ -84,126 +67,21 @@
   color: white;
 }
 
-/* Default tooltip: right side (for vertical layout) */
 .tooltipText {
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  margin-left: 12px;
+  position: fixed;
   background-color: #18181b;
   color: #e4e4e7;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
   white-space: nowrap;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
   font-weight: 500;
-  z-index: 100;
-}
-
-/* Notch pointing left (tooltip appears to the right) */
-.tooltipText::after {
-  content: "";
-  position: absolute;
-  /* Use calc with --arrow-offset to point at button even when tooltip is shifted */
-  top: calc(50% + var(--arrow-offset, 0px));
-  left: -4px;
-  margin-top: -4px;
-  border-width: 4px;
-  border-style: solid;
-  border-color: transparent #18181b transparent transparent;
-}
-
-/* Dynamic arrow directions based on data-direction attribute */
-.tooltipText[data-direction="left"]::after {
-  top: calc(50% + var(--arrow-offset, 0px));
-  left: auto;
-  right: -4px;
-  border-color: transparent transparent transparent #18181b;
-}
-
-.tooltipText[data-direction="top"]::after {
-  top: 100%;
-  left: calc(50% + var(--arrow-offset, 0px));
-  margin-top: 0;
-  margin-left: -4px;
-  border-color: #18181b transparent transparent transparent;
-}
-
-.tooltipText[data-direction="bottom"]::after {
-  top: -8px;
-  left: calc(50% + var(--arrow-offset, 0px));
-  margin-top: 0;
-  margin-left: -4px;
-  border-color: transparent transparent #18181b transparent;
-}
-
-/* Horizontal mode tooltips: above the button (kept for CSS hover fallback) */
-.horizontal .tooltipText {
-  left: 50%;
-  top: auto;
-  bottom: 100%;
-  transform: translateX(-50%);
-  margin-left: 0;
-  margin-bottom: 12px;
-}
-
-/* Notch pointing down (for horizontal layout fallback) */
-.horizontal .tooltipText::after {
-  top: 100%;
-  left: 50%;
-  margin-top: 0;
-  margin-left: -4px;
-  border-color: #18181b transparent transparent transparent;
-}
-
-.toolBtn:hover .tooltipText {
-  opacity: 1;
-}
-
-/* Force hide tooltips when interaction is locked */
-.interactionLocked .toolBtn .tooltipText {
-  opacity: 0 !important;
-  visibility: hidden !important;
-}
-
-/* Force override hover style on button when locked */
-.interactionLocked .toolBtn {
-  background-color: transparent !important;
-  color: #a1a1aa !important;
-  cursor: default !important;
-  pointer-events: none;
-}
-
-.interactionLocked .toolbarDrag {
-  pointer-events: none;
-}
-
-.interactionLocked {
-  cursor: default !important;
-}
-
-/* Spinner animation */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  z-index: 9999;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .spinner {
-  animation: spin 1s linear infinite;
-}
-
-/* Fullscreen mode - pin to top left corner of viewport */
-:global(.image-wrap.is-fullscreen) .imageToolbar {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 120;
+  animation: rotate 1s linear infinite;
 }

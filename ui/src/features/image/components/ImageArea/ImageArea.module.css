@@ -9,11 +9,9 @@
 .container {
   width: 90%;
   max-width: 616px;
-  /* Collapsed Height: 48px */
-  /* Collapsed Height: auto to fit text, min 48px */
-  min-height: 48px;
+  min-height: 57px;
   height: auto;
-  max-height: 48px; /* Start collapsed */
+  max-height: 57px;
   background-color: var(--neutral-900);
   border-radius: 12px;
   overflow: hidden;
@@ -22,49 +20,45 @@
   border: 1px solid var(--neutral-800);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 
-  /* Smooth Animation with Bezier Curve */
   transition: max-height 0.5s cubic-bezier(0.68, -0.15, 0.265, 1.15);
-  z-index: 20; /* Ensure it floats above chat */
+  z-index: 20;
   flex-shrink: 0;
   will-change: max-height;
   transform: translateZ(0);
-  -webkit-mask-image: -webkit-radial-gradient(
-    white,
-    black
-  ); /* Force clipping */
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
+  display: flex;
+  flex-direction: column;
 }
 
-/* Expanded State Class */
 .container.expanded {
-  /* Expanded Height */
-  /* Expanded Height */
   height: auto;
-  max-height: 1200px; /* Allow growth up to large value to approximate "auto" animation */
+  max-height: 85vh;
   background-color: var(--neutral-900);
+  overflow: hidden;
 }
 
-/* The Top Bar (Header) */
 .barHeader {
   min-height: 48px;
   height: auto;
   width: 100%;
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start; /* Align top so if it grows, icon stays top or follows? Default center might be better for single line. Let's try top with padding */
-  padding: 8px 16px; /* Update padding to balance with 48px min height (48 - 16 = 32px content) */
+  align-items: flex-start;
+  padding: 8px 16px;
   cursor: pointer;
   z-index: 2;
   position: relative;
   background-color: var(--neutral-900);
 }
 
-/* Thumbnail in the bar */
-/* Thumbnail in the bar */
 .thumbnailWrapper {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-right: 12px;
+  margin-top: 4px;
+  cursor: pointer;
 }
 
 .miniThumb {
@@ -76,7 +70,6 @@
   transition: opacity 0.3s ease;
 }
 
-/* Container for the transparent input */
 .inputContainer {
   flex: 1;
   margin-right: 12px;
@@ -84,7 +77,6 @@
   align-items: center;
 }
 
-/* Toggle Icon */
 .toggleIcon {
   color: var(--neutral-100);
   width: 32px;
@@ -96,25 +88,21 @@
   user-select: none;
 }
 
-/* The Expanded Content */
-
 .expandedContent {
-  /* Replaces absolute positioning with flex item behavior */
   position: relative;
   width: 100%;
-  /* Content is always "visible" - container overflow clips it */
   opacity: 1;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0 8px 8px 8px; /* Add padding to inset image from container edges */
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 0 8px 8px 8px;
+  flex: 1;
+  min-height: 0;
+  max-height: 60vh;
+  overflow: hidden;
 }
 
-.container.expanded .expandedContent {
-  height: auto; /* Let image determine height */
-}
-
-/* Toolbar fade animation - hidden when collapsed */
 .container :global(.imageToolbar) {
   opacity: 0;
   pointer-events: none;
@@ -126,7 +114,6 @@
   pointer-events: auto;
 }
 
-/* TextLayer fade animation - hidden when collapsed */
 .container :global(.textLayer) {
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -136,34 +123,32 @@
   opacity: 1;
 }
 
-/* The big box with rounded corners */
 .bigImageBox {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background-color: var(--neutral-850);
-  border-radius: 8px; /* Slightly reduced radius */
-  overflow: hidden;
+  border-radius: 8px;
   position: relative;
   display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--neutral-700) var(--neutral-900);
 }
 
 .viewer {
-  flex: 1;
   width: 100%;
-  height: 100%;
-  min-height: 300px; /* Ensure space for toolbar if image is small */
   display: flex;
   justify-content: center;
-  overflow: hidden; /* Changed from auto to hidden for contained view */
   position: relative;
 }
 
 .imageWrap {
-  width: auto;
-  height: auto;
+  width: 100%;
   display: flex;
   padding: 8px;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   position: relative;
 }
@@ -171,17 +156,19 @@
 .innerContent {
   position: relative;
   max-width: 100%;
-  max-height: 100%;
   display: flex;
 }
 
 .bigImage {
   max-width: 100%;
-  max-height: 80vh; /* Limit to viewport height but allow expansion */
   width: auto;
   height: auto;
   object-fit: contain;
   display: block;
+}
+
+.container.expanded .bigImage {
+  max-height: none;
 }
 
 .ocrError {
@@ -197,7 +184,6 @@
   z-index: 100;
 }
 
-/* Spinning animation using global rotate keyframe */
 .spinning {
   animation: rotate 1s linear infinite;
 }
