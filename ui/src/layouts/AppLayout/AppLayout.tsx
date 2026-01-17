@@ -10,7 +10,7 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "../../lib/api/tauri/commands";
-import { AppHeader, ContextMenu } from "../../components";
+import { ContextMenu } from "../../components";
 
 import {
   useUpdateCheck,
@@ -20,7 +20,7 @@ import {
 } from "../../hooks";
 
 import "katex/dist/katex.min.css";
-import "../../components/Notifications/Toast.css";
+import "../../components/Toast/Toast.module.css";
 import styles from "./AppLayout.module.css";
 
 import { ChatLayout } from "..";
@@ -44,7 +44,7 @@ export const AppLayout: React.FC = () => {
   }, []);
 
   const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
-    null
+    null,
   );
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -142,7 +142,7 @@ export const AppLayout: React.FC = () => {
       if (activeSession && activeSession.title === "New Chat") {
         chatSessions.updateSessionTitle(
           chatSessions.activeSessionId,
-          chatTitle
+          chatTitle,
         );
       }
     }
@@ -161,7 +161,7 @@ export const AppLayout: React.FC = () => {
     isAgreementPending,
     showUpdate,
     isLoadingState,
-    isImageMissing
+    isImageMissing,
   );
 
   useEffect(() => {
@@ -253,7 +253,7 @@ export const AppLayout: React.FC = () => {
   }, []);
 
   const handleImageReady = (
-    imageData: string | { path?: string; base64?: string; mimeType: string }
+    imageData: string | { path?: string; base64?: string; mimeType: string },
   ) => {
     if (typeof imageData === "string") {
       if (!imageData || !imageData.includes(",")) return;
@@ -376,82 +376,6 @@ export const AppLayout: React.FC = () => {
       onContextMenu={handleContextMenu}
       className={styles.appContainer}
     >
-      <AppHeader
-        chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
-        onReload={() => {
-          setIsRotating(true);
-          chatEngine.handleReload();
-        }}
-        isRotating={isRotating}
-        currentModel={system.sessionModel}
-        onModelChange={system.setSessionModel}
-        isLoading={chatEngine.isLoading}
-        sessions={chatSessions.sessions}
-        activeSessionId={chatSessions.activeSessionId}
-        onSessionSelect={(id) => {
-          if (chatSessions.activeSessionId) {
-            const currentState = chatEngine.getCurrentState();
-            chatSessions.updateSession(chatSessions.activeSessionId, {
-              messages: currentState.messages,
-              streamingText: currentState.streamingText,
-              firstResponseId: currentState.firstResponseId,
-            });
-          }
-
-          chatSessions.switchSession(id);
-
-          const targetSession = chatSessions.getSessionById(id);
-          if (targetSession) {
-            chatEngine.restoreState({
-              messages: targetSession.messages,
-              streamingText: targetSession.streamingText,
-              firstResponseId: targetSession.firstResponseId,
-              isChatMode: targetSession.messages.length > 0,
-            });
-          }
-        }}
-        onNewChat={async () => {
-          if (chatSessions.activeSessionId) {
-            const currentState = chatEngine.getCurrentState();
-            chatSessions.updateSession(chatSessions.activeSessionId, {
-              messages: currentState.messages,
-              streamingText: currentState.streamingText,
-              firstResponseId: currentState.firstResponseId,
-            });
-          }
-
-          const existingTitles = chatSessions.sessions.map((s) => s.title);
-          const newTitle = await generateImageTitle(existingTitles);
-          chatSessions.createSession("default", newTitle);
-          chatEngine.handleReload();
-        }}
-        // Editor/App Header Props
-        isPanelActive={isPanelActive}
-        toggleSettingsPanel={handleToggleSettings}
-        isPanelVisible={isPanelVisible}
-        isPanelActiveAndVisible={isPanelActiveAndVisible}
-        isPanelClosing={isPanelClosing}
-        settingsButtonRef={settingsButtonRef}
-        panelRef={panelRef}
-        settingsPanelRef={settingsPanelRef}
-        prompt={system.editingPrompt}
-        editingModel={system.editingModel}
-        setPrompt={system.setEditingPrompt}
-        onEditingModelChange={system.setEditingModel}
-        userName={system.userName}
-        userEmail={system.userEmail}
-        avatarSrc={system.avatarSrc}
-        onSave={system.saveSettings}
-        onLogout={performLogout}
-        isDarkMode={system.isDarkMode}
-        onToggleTheme={system.handleToggleTheme}
-        onResetAPIKey={system.handleResetAPIKey}
-        toggleSubview={setIsSubviewActive}
-        onNewSession={system.resetSession}
-        // New Props
-        hasImageLoaded={!!system.startupImage}
-      />
-
       <div className={styles.chatPanel}>
         <ChatLayout
           messages={chatEngine.messages}
@@ -469,7 +393,6 @@ export const AppLayout: React.FC = () => {
           sessions={chatSessions.sessions}
           activeSessionId={chatSessions.activeSessionId}
           onSessionSelect={(id) => {
-            // Already handled in AppHeader, passing for compatibility if needed
             if (chatSessions.activeSessionId) {
               const currentState = chatEngine.getCurrentState();
               chatSessions.updateSession(chatSessions.activeSessionId, {
@@ -492,7 +415,6 @@ export const AppLayout: React.FC = () => {
             }
           }}
           onNewChat={async () => {
-            // Same here
             if (chatSessions.activeSessionId) {
               const currentState = chatEngine.getCurrentState();
               chatSessions.updateSession(chatSessions.activeSessionId, {
@@ -523,18 +445,46 @@ export const AppLayout: React.FC = () => {
             setIsPanelActive(true);
             chatEngine.clearError();
           }}
-          onReload={chatEngine.handleReload}
+          onReload={() => {
+            setIsRotating(true);
+            chatEngine.handleReload();
+          }}
           sessionLensUrl={system.sessionLensUrl}
           setSessionLensUrl={system.setSessionLensUrl}
           onDescribeEdits={async (description) => {
             const existingTitles = chatSessions.sessions.map((s) => s.title);
             const editTitle = await generateSubTitle(
               description,
-              existingTitles
+              existingTitles,
             );
             chatSessions.createSession("edit", editTitle);
             chatEngine.handleDescribeEdits(description);
           }}
+          // ChatHeader Props
+          isRotating={isRotating}
+          isPanelActive={isPanelActive}
+          toggleSettingsPanel={handleToggleSettings}
+          isPanelVisible={isPanelVisible}
+          isPanelActiveAndVisible={isPanelActiveAndVisible}
+          isPanelClosing={isPanelClosing}
+          settingsButtonRef={settingsButtonRef}
+          panelRef={panelRef}
+          settingsPanelRef={settingsPanelRef}
+          prompt={system.editingPrompt}
+          editingModel={system.editingModel}
+          setPrompt={system.setEditingPrompt}
+          onEditingModelChange={system.setEditingModel}
+          userName={system.userName}
+          userEmail={system.userEmail}
+          avatarSrc={system.avatarSrc}
+          onSave={system.saveSettings}
+          onLogout={performLogout}
+          isDarkMode={system.isDarkMode}
+          onToggleTheme={system.handleToggleTheme}
+          onResetAPIKey={system.handleResetAPIKey}
+          toggleSubview={setIsSubviewActive}
+          onNewSession={system.resetSession}
+          hasImageLoaded={!!system.startupImage}
         />
       </div>
 

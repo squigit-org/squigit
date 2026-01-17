@@ -4,7 +4,4 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./Dialog";
 export * from "./Toast";
-export * from "./ContextMenu";
-export * from "./InlineMenu";

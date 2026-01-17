@@ -1,0 +1,87 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import "../../../../styles/variables.css";
+@import "../../../../styles/animations.css";
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  min-height: 0;
+  border-bottom: 1px solid var(--neutral-800);
+  background-color: var(--neutral-900);
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: visible;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.chatTitle {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--neutral-100);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.iconButton {
+  padding: 0.375rem;
+  border-radius: 0.375rem;
+  color: var(--neutral-400);
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconButton:hover {
+  color: var(--neutral-100);
+  background-color: var(--neutral-800);
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iconButton.active {
+  background-color: var(--neutral-800);
+  color: var(--neutral-100);
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+.controlsWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

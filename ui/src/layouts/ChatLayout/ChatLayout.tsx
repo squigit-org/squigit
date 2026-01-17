@@ -4,13 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+  ForwardedRef,
+} from "react";
 
 import {
   OCRArea,
   Message,
   ChatArea,
   ChatInput,
+  ChatHeader,
   ChatSession,
 } from "../../features";
 
@@ -54,6 +61,32 @@ export interface ChatLayoutProps {
   onInputChange: (value: string) => void;
   onCheckSettings: () => void;
   onReload?: () => void;
+
+  // ChatHeader Props
+  isRotating: boolean;
+  isPanelActive: boolean;
+  toggleSettingsPanel: () => void;
+  isPanelVisible: boolean;
+  isPanelActiveAndVisible: boolean;
+  isPanelClosing: boolean;
+  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
+  prompt: string;
+  editingModel: string;
+  setPrompt: (prompt: string) => void;
+  onEditingModelChange: (model: string) => void;
+  userName: string;
+  userEmail: string;
+  avatarSrc: string;
+  onSave: (prompt: string, model: string) => void;
+  onLogout: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
+  onResetAPIKey: () => void;
+  toggleSubview: (isActive: boolean) => void;
+  onNewSession: () => void;
+  hasImageLoaded: boolean;
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
@@ -73,6 +106,38 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   setSessionLensUrl,
   onDescribeEdits,
   chatTitle,
+  currentModel,
+  onModelChange,
+  sessions,
+  activeSessionId,
+  onSessionSelect,
+  onNewChat,
+  onReload,
+  // ChatHeader Props
+  isRotating,
+  isPanelActive,
+  toggleSettingsPanel,
+  isPanelVisible,
+  isPanelActiveAndVisible,
+  isPanelClosing,
+  settingsButtonRef,
+  panelRef,
+  settingsPanelRef,
+  prompt,
+  editingModel,
+  setPrompt,
+  onEditingModelChange,
+  userName,
+  userEmail,
+  avatarSrc,
+  onSave,
+  onLogout,
+  isDarkMode,
+  onToggleTheme,
+  onResetAPIKey,
+  toggleSubview,
+  onNewSession,
+  hasImageLoaded,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
@@ -113,7 +178,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       const centerX = rect.left + rect.width / 2;
       const targetLeft = Math.max(
         10,
-        Math.min(centerX - menuWidth / 2, window.innerWidth - menuWidth - 10)
+        Math.min(centerX - menuWidth / 2, window.innerWidth - menuWidth - 10),
       );
 
       const targetTop = Math.max(10, rect.top + 2);
@@ -150,6 +215,42 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
 
   return (
     <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
+      <ChatHeader
+        chatTitle={chatTitle}
+        onReload={onReload || (() => {})}
+        isRotating={isRotating}
+        currentModel={currentModel}
+        onModelChange={onModelChange}
+        isLoading={isLoading}
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onSessionSelect={onSessionSelect}
+        onNewChat={onNewChat}
+        isPanelActive={isPanelActive}
+        toggleSettingsPanel={toggleSettingsPanel}
+        isPanelVisible={isPanelVisible}
+        isPanelActiveAndVisible={isPanelActiveAndVisible}
+        isPanelClosing={isPanelClosing}
+        settingsButtonRef={settingsButtonRef}
+        panelRef={panelRef}
+        settingsPanelRef={settingsPanelRef}
+        prompt={prompt}
+        editingModel={editingModel}
+        setPrompt={setPrompt}
+        onEditingModelChange={onEditingModelChange}
+        userName={userName}
+        userEmail={userEmail}
+        avatarSrc={avatarSrc}
+        onSave={onSave}
+        onLogout={onLogout}
+        isDarkMode={isDarkMode}
+        onToggleTheme={onToggleTheme}
+        onResetAPIKey={onResetAPIKey}
+        toggleSubview={toggleSubview}
+        onNewSession={onNewSession}
+        hasImageLoaded={hasImageLoaded}
+      />
+
       <div className="z-10 relative">
         <OCRArea
           startupImage={startupImage}
