@@ -5,14 +5,17 @@
  */
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
+
 import {
+  OCRArea,
   Message,
   ChatArea,
   ChatInput,
   ChatSession,
-} from "../../../features/chat";
-import { InlineMenu, useInlineMenu } from "../../../components/ui";
-import { InlineEditor } from "../../layouts/InlineEditor/InlineEditor";
+} from "../../features";
+
+import { InlineMenu, useInlineMenu } from "../../components";
+
 import "katex/dist/katex.min.css";
 import "./ChatLayout.module.css";
 
@@ -36,7 +39,6 @@ export interface ChatLayoutProps {
 
   chatTitle: string;
 
-  // Inline Editor Props
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string | null) => void;
   onDescribeEdits: (description: string) => Promise<void>;
@@ -62,29 +64,19 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   isStreaming,
   error,
   input,
-  /* currentModel, removed usage */
   startupImage,
-  /* chatTitle, removed usage */
-  /* sessions, removed usage */
-  /* activeSessionId, removed usage */
-  /* onSessionSelect, removed usage */
-  /* onNewChat, removed usage */
   onSend,
-  /* onModelChange, removed usage */
   onRetry,
   onInputChange,
   onCheckSettings,
-  /* onReload, removed usage */
   sessionLensUrl,
   setSessionLensUrl,
   onDescribeEdits,
   chatTitle,
 }) => {
-  /* ... hooks ... */
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
 
-  /* ... useLayoutEffect ... */
   useLayoutEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
@@ -100,9 +92,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     ((rect: { left: number; width: number; top: number }) => void) | null
   >(null);
 
-  /* ... handleSelectAll and useInlineMenu ... */
   const handleSelectAll = () => {
-    /* ... logic ... */
     const selection = window.getSelection();
     if (!selection || !selection.anchorNode) return;
 
@@ -161,13 +151,14 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   return (
     <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
       <div className="z-10 relative">
-        <InlineEditor
+        <OCRArea
           startupImage={startupImage}
           sessionLensUrl={sessionLensUrl}
           setSessionLensUrl={setSessionLensUrl}
           chatTitle={chatTitle}
           onDescribeEdits={onDescribeEdits}
           isVisible={true}
+          scrollContainerRef={scrollContainerRef}
         />
       </div>
 

@@ -10,7 +10,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Check, Copy } from "lucide-react";
-import { CodeBlock } from "../CodeBlock/CodeBlock";
+import { CodeBlock } from "../../../../components";
 import { Message } from "../../types/chat.types";
 import styles from "./ChatBubble.module.css";
 import "katex/dist/katex.min.css";

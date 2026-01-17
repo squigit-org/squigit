@@ -5,31 +5,37 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import "katex/dist/katex.min.css";
-import "../../ui/Notifications/Toast.css";
-import styles from "./AppLayout.module.css";
-import { ContextMenu } from "../../ui/ContextMenu/ContextMenu";
-import { ChatLayout } from "../ChatLayout/ChatLayout";
-import { Welcome } from "../../../features/onboarding";
-import { Agreement } from "../../../features/onboarding/components/Agreement/Agreement";
-import { UpdateNotes } from "../../../features/onboarding/components/UpdateNotes/UpdateNotes";
-import { GeminiSetup } from "../../../features/auth/components/Setup/GeminiSetup";
-import { LoginScreen } from "../../../features/auth/components/Login/OAuthLogin";
-import { useAuth } from "../../../features/auth/hooks/useAuth";
-import { useSystemSync } from "../../../hooks/useSystemSync";
-import { useChatTitle } from "../../../features/chat/hooks/useChatTitle";
-import { useChatEngine } from "../../../features/chat/hooks/useChat";
-import { useChatSessions } from "../../../features/chat/hooks/useChatSessions";
-import {
-  useUpdateCheck,
-  getPendingUpdate,
-} from "../../../hooks/useUpdateCheck";
-import { useWindowManager } from "../../../hooks/useWindowManager";
+
 import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
-import { commands } from "../../../lib/api/tauri/commands";
-import { AppHeader } from "../../ui/AppHeader/AppHeader";
+import { commands } from "../../lib/api/tauri/commands";
+import { AppHeader, ContextMenu } from "../../components";
+
+import {
+  useUpdateCheck,
+  getPendingUpdate,
+  useSystemSync,
+  useWindowManager,
+} from "../../hooks";
+
+import "katex/dist/katex.min.css";
+import "../../components/Notifications/Toast.css";
+import styles from "./AppLayout.module.css";
+
+import { ChatLayout } from "..";
+
+import {
+  Welcome,
+  Agreement,
+  UpdateNotes,
+  GeminiSetup,
+  LoginScreen,
+  useAuth,
+  useChatTitle,
+  useChatEngine,
+  useChatSessions,
+} from "../../features";
 
 export const AppLayout: React.FC = () => {
   const [isPanelActive, setIsPanelActive] = useState(false);

@@ -13,15 +13,15 @@ import React, {
   useImperativeHandle,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { generateSearchUrl, generateTranslateUrl } from "../../../google";
-import { InlineMenu } from "../../../../components/ui";
+import { generateSearchUrl, generateTranslateUrl } from "../../features/google";
+import { InlineMenu } from "..";
 
 interface OCRBox {
   text: string;
   box: number[][];
 }
 
-interface EditorMenuProps {
+interface OCRMenuProps {
   data: OCRBox[];
   size: { w: number; h: number };
   imgRef: React.RefObject<HTMLImageElement | null>;
@@ -29,12 +29,12 @@ interface EditorMenuProps {
   viewerRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export interface EditorMenuHandle {
+export interface OCRMenuHandle {
   showStandardMenu: (selection: Selection) => void;
   hideMenu: () => void;
 }
 
-export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
+export const OCRMenu = forwardRef<OCRMenuHandle, OCRMenuProps>(
   ({ data, size, imgRef, imgWrapRef, viewerRef }, ref) => {
     const [menuActive, setMenuActive] = useState(false);
     const [isSelectAllMode, setIsSelectAllMode] = useState(false);
@@ -151,7 +151,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
 
         window.dispatchEvent(
           new CustomEvent("global-inline-menu-show", {
-            detail: { id: "editor-menu" },
+            detail: { id: "ocr-menu" },
           })
         );
 
@@ -270,7 +270,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
 
       window.dispatchEvent(
         new CustomEvent("global-inline-menu-show", {
-          detail: { id: "editor-menu" },
+          detail: { id: "ocr-menu" },
         })
       );
 
@@ -351,7 +351,7 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
     );
 
     useEffect(() => {
-      const hookId = "editor-menu";
+      const hookId = "ocr-menu";
       const onGlobalShow = (e: Event) => {
         const detail = (e as CustomEvent).detail;
         if (detail && detail.id !== hookId && menuActive) {
@@ -404,8 +404,8 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
 
     return (
       <InlineMenu
-        id="editor-menu"
-        className="editor-menu"
+        id="ocr-menu"
+        className="ocr-menu"
         menuRef={menuRef}
         sliderRef={sliderRef}
         page1Ref={page1Ref}
@@ -418,4 +418,4 @@ export const EditorMenu = forwardRef<EditorMenuHandle, EditorMenuProps>(
   }
 );
 
-EditorMenu.displayName = "EditorMenu";
+OCRMenu.displayName = "OCRMenu";

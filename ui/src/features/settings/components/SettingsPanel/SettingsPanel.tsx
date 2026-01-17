@@ -15,7 +15,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { GITHUB, MAILTO } from "../..";
 import { MODELS, ModelType } from "../../../../lib/config/models";
 import { DEFAULT_MODEL, DEFAULT_PROMPT } from "../../../../lib/utils/constants";
-import { Dialog, showToast } from "../../../../components/ui";
+import { Dialog, showToast } from "../../../../components";
 import { UserInfo, MainActions, PersonalContext } from "../..";
 import styles from "./SettingsPanel.module.css";
 

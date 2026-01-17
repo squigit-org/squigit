@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import styles from "./InlineMenu.module.css";
+import styles from "./styles/InlineMenu.module.css";
 
 interface InlineMenuProps {
   menuRef: React.RefObject<HTMLDivElement | null>;

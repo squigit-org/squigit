@@ -13,10 +13,10 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { ModelSelector } from "../../../features/chat/components/ModelSelector/ModelSelector";
-import { ChatSelector } from "../../../features/chat/components/ChatSelector/ChatSelector";
-import { ChatSession } from "../../../features/chat/types/chat.types";
-import { SettingsPanel } from "../../../features/settings";
+import { ModelSelector } from "../../features/chat/components/ModelSelector/ModelSelector";
+import { ChatSelector } from "../../features/chat/components/ChatSelector/ChatSelector";
+import { ChatSession } from "../../features/chat/types/chat.types";
+import { SettingsPanel } from "../../features/settings";
 import styles from "./AppHeader.module.css";
 
 interface AppHeaderProps {

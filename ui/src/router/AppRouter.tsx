@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { AppLayout } from "../components/layouts/AppLayout/AppLayout";
+import { AppLayout } from "../layouts";
 
 export const AppRouter: React.FC = () => {
   return <AppLayout />;

@@ -5,7 +5,7 @@
  */
 
 import React, { forwardRef } from "react";
-import { Dialog } from "../../../../components/ui";
+import { Dialog } from "../../../../components";
 import { ChatBubble, StreamingResponse, Message } from "../..";
 import styles from "./ChatArea.module.css";
 

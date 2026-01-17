@@ -7,7 +7,7 @@
 import React, { useRef, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Copy, ClipboardPaste, Scissors, TextSelect } from "lucide-react";
-import styles from "./ContextMenu.module.css";
+import styles from "./styles/ContextMenu.module.css";
 
 interface ContextMenuProps {
   x: number;

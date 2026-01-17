@@ -4,19 +4,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  RefObject,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ChevronDown, ChevronUp } from "lucide-react"; // Or custom icon as requested
-import { useLens } from "../../../features/google";
-import { EditorMenu, EditorMenuHandle } from "../../../features/editor";
-import ChatInput from "../../../features/chat/components/ChatInput/ChatInput";
+import { useLens } from "../../../google";
+import { OCRMenu, OCRMenuHandle } from "../../../../components";
+import ChatInput from "../InlineInput/InlineInput";
 import {
   TextLayer,
   ImageToolbar,
   useTextSelection,
   ScanningOverlay,
-} from "../../ui";
-import styles from "./InlineEditor.module.css";
+} from "../../../../components";
+import styles from "./OCRArea.module.css";
 
 interface OCRBox {
   text: string;
@@ -24,7 +30,7 @@ interface OCRBox {
   confidence?: number;
 }
 
-interface InlineEditorProps {
+interface OCRAreaProps {
   startupImage: {
     base64: string;
     mimeType: string;
@@ -35,15 +41,17 @@ interface InlineEditorProps {
   chatTitle: string;
   onDescribeEdits: (description: string) => void;
   isVisible: boolean; // Retaining prop for compatibility, but mainly internal toggle now
+  scrollContainerRef?: RefObject<HTMLDivElement | null>; // For scroll-based auto-collapse
 }
 
-export const InlineEditor: React.FC<InlineEditorProps> = ({
+export const OCRArea: React.FC<OCRAreaProps> = ({
   startupImage,
   sessionLensUrl,
   setSessionLensUrl,
   chatTitle,
   onDescribeEdits,
   isVisible,
+  scrollContainerRef,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
@@ -59,7 +67,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
   const [imagePrompt, setImagePrompt] = useState("");
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const editorMenuRef = useRef<EditorMenuHandle>(null);
+  const ocrMenuRef = useRef<OCRMenuHandle>(null);
 
   const imageSrc = startupImage?.base64 || "";
 
@@ -72,7 +80,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   const { svgRef, handleTextMouseDown } = useTextSelection({
     data,
     onSelectionComplete: (selection) => {
-      editorMenuRef.current?.showStandardMenu(selection);
+      ocrMenuRef.current?.showStandardMenu(selection);
     },
   });
 
@@ -130,6 +138,62 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     }
   }, [startupImage, scan]);
 
+  // Track if we're blocking scroll (after collapse triggered, until user releases)
+  const isScrollBlockedRef = useRef(false);
+  const wheelEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-collapse on wheel down when expanded - STRICT two-step behavior
+  useEffect(() => {
+    // We need to attach the listener to the window/document to catch ALL events
+    // capturing phase is important to intercept before anyone else
+    const handleWheel = (e: WheelEvent) => {
+      // Only care if we are possibly interacting with the editor
+      if (!isExpanded && !isScrollBlockedRef.current) return;
+
+      // Only handle scroll down (positive deltaY)
+      if (e.deltaY <= 0) return;
+
+      // If expanded, trigger collapse and START BLOCKING
+      if (isExpanded) {
+        setIsExpanded(false);
+        isScrollBlockedRef.current = true;
+
+        // Stop this event immediately
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      // If we are in the blocked state, SWALLOW the event
+      if (isScrollBlockedRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Reset timer - we keep blocking as long as the user keeps scrolling
+        if (wheelEndTimeoutRef.current) {
+          clearTimeout(wheelEndTimeoutRef.current);
+        }
+
+        // Wait for user to STOP scrolling for 500ms before releasing the block
+        wheelEndTimeoutRef.current = setTimeout(() => {
+          isScrollBlockedRef.current = false;
+        }, 500);
+        return;
+      }
+    };
+
+    // Attach to window with capture=true to ensure we get it first
+    window.addEventListener("wheel", handleWheel, {
+      passive: false,
+      capture: true,
+    });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel, { capture: true });
+      if (wheelEndTimeoutRef.current) clearTimeout(wheelEndTimeoutRef.current);
+    };
+  }, [isExpanded]);
+
   const onLoad = () => {
     if (imgRef.current) {
       setSize({
@@ -158,17 +222,23 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
 
       await invoke("copy_image_to_clipboard", { imageBase64: base64 });
 
-      const { showToast } = await import("../../ui/Notifications/Toast");
+      const { showToast } = await import(
+        "../../../../components/Notifications/Toast"
+      );
       showToast("Copied to clipboard", "success");
     } catch (err) {
       console.error("Failed to copy image:", err);
-      const { showToast } = await import("../../ui/Notifications/Toast");
+      const { showToast } = await import(
+        "../../../../components/Notifications/Toast"
+      );
       showToast("Failed to copy", "error");
     }
   }, []);
 
   const handleExpandSave = useCallback(async () => {
-    const { showToast } = await import("../../ui/Notifications/Toast");
+    const { showToast } = await import(
+      "../../../../components/Notifications/Toast"
+    );
     showToast("Save feature coming soon", "success");
   }, []);
 
@@ -256,8 +326,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         </div>
       </div>
 
-      <EditorMenu
-        ref={editorMenuRef}
+      <OCRMenu
+        ref={ocrMenuRef}
         data={data}
         size={size}
         imgRef={imgRef}

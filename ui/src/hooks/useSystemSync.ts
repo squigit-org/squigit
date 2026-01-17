@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { showToast } from "../components/ui/Notifications/Toast";
+import { showToast } from "../components/Notifications/Toast";
 import { initializeGemini } from "../lib/api/gemini/client";
 import { commands } from "../lib/api/tauri/commands";
 import { useTheme } from "./useTheme";

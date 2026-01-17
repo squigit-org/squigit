@@ -7,7 +7,7 @@
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { Send } from "lucide-react";
 import { CodeBlock, ContextMenu } from "../../../../components";
-import styles from "./ChatInput.module.css";
+import styles from "./InlineInput.module.css";
 
 const ExpandIcon = () => (
   <svg
