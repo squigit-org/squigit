@@ -113,3 +113,25 @@ pub fn set_background_color(app: AppHandle, color: String) -> Result<(), String>
     let _ = window.set_background_color(Some(Color(r, g, b, 255)));
     Ok(())
 }
+
+#[tauri::command]
+pub fn minimize_window(app: AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or("Main window not found")?;
+    window.minimize().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn maximize_window(app: AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or("Main window not found")?;
+    if window.is_maximized().unwrap_or(false) {
+        window.unmaximize().map_err(|e| e.to_string())
+    } else {
+        window.maximize().map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+pub fn close_window(app: AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or("Main window not found")?;
+    window.close().map_err(|e| e.to_string())
+}

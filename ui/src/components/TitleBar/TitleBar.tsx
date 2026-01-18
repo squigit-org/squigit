@@ -1,0 +1,292 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { ForwardedRef, useEffect, useState } from "react";
+import {
+  RotateCw,
+  Plus,
+  Settings,
+  SquarePen,
+  Minus,
+  Square,
+  X,
+} from "lucide-react";
+import { ModelSwitcher } from "../../features/chat/components/ModelSwitcher/ModelSwitcher";
+import { ChatHistory } from "../../features/chat/components/ChatHistory/ChatHistory";
+import { ChatSession } from "../../features/chat/types/chat.types";
+import { SettingsPanel } from "../../features/settings";
+import { invoke } from "@tauri-apps/api/core";
+import styles from "./TitleBar.module.css";
+
+type Platform = "macos" | "linux" | "windows";
+
+interface TitleBarProps {
+  chatTitle: string;
+  onReload: () => void;
+  isRotating: boolean;
+  currentModel: string;
+  onModelChange: (model: string) => void;
+  isLoading: boolean;
+  sessions: ChatSession[];
+  activeSessionId: string | null;
+  onSessionSelect: (id: string) => void;
+  onNewChat: () => void;
+
+  isPanelActive: boolean;
+  toggleSettingsPanel: () => void;
+  isPanelVisible: boolean;
+  isPanelActiveAndVisible: boolean;
+  isPanelClosing: boolean;
+  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
+  prompt: string;
+  editingModel: string;
+  setPrompt: (prompt: string) => void;
+  onEditingModelChange: (model: string) => void;
+  userName: string;
+  userEmail: string;
+  avatarSrc: string;
+  onSave: (prompt: string, model: string) => void;
+  onLogout: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
+  onResetAPIKey: () => void;
+  toggleSubview: (isActive: boolean) => void;
+  onNewSession: () => void;
+  hasImageLoaded: boolean;
+}
+
+const detectPlatform = (): Platform => {
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  console.log("TitleBar Platform Detection - UA:", userAgent);
+  if (userAgent.includes("mac os")) return "macos";
+  if (userAgent.includes("windows")) return "windows";
+  // Default to linux (traffic lights) if not explicitly Mac or Windows
+  return "linux";
+};
+
+const TrafficLights: React.FC = () => {
+  const handleClose = () => invoke("close_window");
+  const handleMinimize = () => invoke("minimize_window");
+  const handleMaximize = () => invoke("maximize_window");
+
+  return (
+    <div className={styles.trafficLights}>
+      <button
+        className={`${styles.trafficButton} ${styles.close}`}
+        onClick={handleClose}
+        title="Close"
+      >
+        <X className={styles.icon} />
+      </button>
+      <button
+        className={`${styles.trafficButton} ${styles.minimize}`}
+        onClick={handleMinimize}
+        title="Minimize"
+      >
+        <Minus className={styles.icon} />
+      </button>
+      <button
+        className={`${styles.trafficButton} ${styles.maximize}`}
+        onClick={handleMaximize}
+        title="Maximize"
+      >
+        <Plus className={styles.icon} />
+      </button>
+    </div>
+  );
+};
+
+const WindowsControls: React.FC = () => {
+  const handleClose = () => invoke("close_window");
+  const handleMinimize = () => invoke("minimize_window");
+  const handleMaximize = () => invoke("maximize_window");
+
+  return (
+    <div className={styles.windowsControls}>
+      <button
+        className={`${styles.windowsButton} ${styles.winMinimize}`}
+        onClick={handleMinimize}
+        title="Minimize"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.1"
+        >
+          <line x1="1" y1="6" x2="11" y2="6" />
+        </svg>
+      </button>
+      <button
+        className={`${styles.windowsButton} ${styles.winMaximize}`}
+        onClick={handleMaximize}
+        title="Maximize"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.1"
+        >
+          <rect x="1" y="1" width="10" height="10" />
+        </svg>
+      </button>
+      <button
+        className={`${styles.windowsButton} ${styles.winClose}`}
+        onClick={handleClose}
+        title="Close"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.1"
+        >
+          <line x1="1" y1="1" x2="11" y2="11" />
+          <line x1="11" y1="1" x2="1" y2="11" />
+        </svg>
+      </button>
+    </div>
+  );
+};
+
+export const TitleBar: React.FC<TitleBarProps> = ({
+  chatTitle,
+  onReload,
+  isRotating,
+  currentModel,
+  onModelChange,
+  isLoading,
+  sessions,
+  activeSessionId,
+  onSessionSelect,
+  onNewChat,
+  isPanelActive,
+  toggleSettingsPanel,
+  isPanelVisible,
+  isPanelActiveAndVisible,
+  isPanelClosing,
+  settingsButtonRef,
+  panelRef,
+  settingsPanelRef,
+  prompt,
+  editingModel,
+  setPrompt,
+  onEditingModelChange,
+  userName,
+  userEmail,
+  avatarSrc,
+  onSave,
+  onLogout,
+  isDarkMode,
+  onToggleTheme,
+  onResetAPIKey,
+  toggleSubview,
+  onNewSession,
+  hasImageLoaded,
+}) => {
+  const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
+
+  const isUnix = platform === "macos" || platform === "linux";
+
+  return (
+    <header className={styles.header} data-tauri-drag-region>
+      <div className={styles.leftSection}>
+        {isUnix && <TrafficLights />}
+
+        <div className={styles.controlsWrapper}>
+          <button
+            ref={settingsButtonRef}
+            onClick={toggleSettingsPanel}
+            className={`${styles.iconButton} ${
+              isPanelActive ? styles.active : ""
+            }`}
+            title="Settings"
+          >
+            <Settings size={20} />
+          </button>
+
+          {isPanelVisible && (
+            <div style={{ pointerEvents: "auto", display: "contents" }}>
+              <SettingsPanel
+                ref={settingsPanelRef}
+                isOpen={isPanelActiveAndVisible}
+                isClosing={isPanelClosing}
+                currentPrompt={prompt}
+                currentModel={editingModel}
+                onPromptChange={setPrompt}
+                onModelChange={onEditingModelChange}
+                userName={userName}
+                userEmail={userEmail}
+                avatarSrc={avatarSrc}
+                onSave={onSave}
+                onLogout={onLogout}
+                isDarkMode={isDarkMode}
+                onToggleTheme={onToggleTheme}
+                onResetAPIKey={onResetAPIKey}
+                toggleSubview={toggleSubview}
+                toggleSettingsPanel={toggleSettingsPanel}
+              />
+            </div>
+          )}
+        </div>
+
+        <ChatHistory
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSessionSelect={onSessionSelect}
+          onNewChat={onNewChat}
+        />
+        <h1 className={styles.chatTitle}>{chatTitle}</h1>
+      </div>
+
+      <div className={styles.rightSection}>
+        {hasImageLoaded && (
+          <button
+            onClick={onNewSession}
+            className={styles.iconButton}
+            title="Analyze another image"
+          >
+            <SquarePen size={20} />
+          </button>
+        )}
+
+        <button
+          className={styles.iconButton}
+          onClick={onNewChat}
+          title="New chat"
+        >
+          <Plus size={20} />
+        </button>
+
+        <button
+          onClick={onReload}
+          className={styles.iconButton}
+          title="Reload chat"
+          disabled={isRotating}
+        >
+          <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
+        </button>
+
+        <ModelSwitcher
+          currentModel={currentModel}
+          onModelChange={onModelChange}
+          isLoading={isLoading}
+        />
+
+        {platform === "windows" && <WindowsControls />}
+      </div>
+    </header>
+  );
+};

@@ -1,9 +1,3 @@
-/**
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, {
   useState,
   useEffect,
@@ -17,11 +11,11 @@ import {
   Message,
   ChatArea,
   ChatInput,
-  ChatHeader,
   ChatSession,
 } from "../../features";
 
-import { InlineMenu, useInlineMenu } from "../../components";
+import { TitleBar, InlineMenu } from "../../components";
+import { useInlineMenu } from "../../components/InlineMenu/useInlineMenu";
 
 import "katex/dist/katex.min.css";
 import "./ChatLayout.module.css";
@@ -214,7 +208,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   return (
     <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative pb-24">
       <div className="flex-shrink-0">
-        <ChatHeader
+        <TitleBar
           chatTitle={chatTitle}
           onReload={onReload || (() => {})}
           isRotating={isRotating}

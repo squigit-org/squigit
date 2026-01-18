@@ -54,7 +54,7 @@ pub fn spawn_app_window(
         .inner_size(w, h)
         .visible(visible)
         .resizable(true)
-        .decorations(true)
+        .decorations(false)
         .background_color(tauri::window::Color(10, 10, 10, 255))
         .build()
         .map_err(|e| e.to_string())?;

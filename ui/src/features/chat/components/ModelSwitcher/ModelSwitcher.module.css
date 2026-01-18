@@ -6,6 +6,7 @@
 
 .selectorContainer {
   position: relative;
+  pointer-events: auto;
 }
 
 .selectorButton {
@@ -17,10 +18,11 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--neutral-300);
-  background-color: var(--neutral-800);
-  border: 1px solid var(--neutral-700);
+  background-color: transparent;
+  border: none;
   cursor: pointer;
   transition: all 0.2s;
+  -webkit-app-region: no-drag;
 }
 
 .selectorButton:hover:not(:disabled) {
@@ -52,7 +54,8 @@
   background-color: var(--neutral-900);
   border: 1px solid var(--neutral-800);
   border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 50;
   overflow: hidden;
@@ -72,7 +75,9 @@
   font-size: 0.875rem;
   color: var(--neutral-300);
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
   border-radius: 0.25rem;
 }
 

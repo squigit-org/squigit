@@ -19,8 +19,8 @@ use commands::image::{
 use commands::ocr::ocr_image;
 use commands::security::{check_file_exists, encrypt_and_save};
 use commands::window::{
-    clear_cache, close_imgbb_window, open_external_url, open_imgbb_window, resize_window,
-    set_background_color,
+    clear_cache, close_imgbb_window, close_window, maximize_window, minimize_window,
+    open_external_url, open_imgbb_window, resize_window, set_background_color,
 };
 use services::image::process_and_store_image;
 use state::AppState;
@@ -55,6 +55,9 @@ pub fn run() {
             resize_window,
             ocr_image,
             set_background_color,
+            minimize_window,
+            maximize_window,
+            close_window,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
