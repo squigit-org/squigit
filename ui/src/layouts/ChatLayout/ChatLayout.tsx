@@ -212,7 +212,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   }, [showFlatMenu]);
 
   return (
-    <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
+    <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative pb-24">
       <div className="flex-shrink-0">
         <ChatHeader
           chatTitle={chatTitle}

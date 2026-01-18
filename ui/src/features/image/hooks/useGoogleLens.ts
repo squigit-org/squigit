@@ -116,12 +116,20 @@ export const useGoogleLens = (
     };
   }, [waitingForKey]);
 
-  const triggerLens = async () => {
+  const triggerLens = async (searchQuery?: string) => {
     if (!startupImage) return;
     if (isLensLoading || waitingForKey) return;
 
+    // Helper to append query to URL
+    const appendQuery = (url: string, query?: string) => {
+      if (!query || !query.trim()) return url;
+      const encodedQuery = encodeURIComponent(query.trim());
+      return `${url}&q=${encodedQuery}`;
+    };
+
     if (cachedUrl) {
-      await invoke("open_external_url", { url: cachedUrl });
+      const finalUrl = appendQuery(cachedUrl, searchQuery);
+      await invoke("open_external_url", { url: finalUrl });
       return;
     }
 
@@ -131,7 +139,15 @@ export const useGoogleLens = (
 
       if (apiKey) {
         const realBase64 = await getRealBase64(startupImage);
-        await runLensSearch(realBase64, apiKey);
+        setIsLensLoading(true);
+
+        const publicUrl = await uploadToImgBB(realBase64, apiKey);
+        const lensUrl = generateLensUrl(publicUrl);
+
+        setCachedUrl(lensUrl);
+        const finalUrl = appendQuery(lensUrl, searchQuery);
+        await invoke("open_external_url", { url: finalUrl });
+        setIsLensLoading(false);
       } else {
         await invoke("open_imgbb_window");
         setWaitingForKey(true);

@@ -7,11 +7,14 @@
 @import "../../../../styles/variables.css";
 
 .footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   width: 100%;
   background-color: var(--neutral-950);
   padding-top: 0.5rem;
-  z-index: 50;
-  flex-shrink: 0;
+  z-index: 999;
 }
 
 .inputWrapper {
@@ -112,7 +115,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
   border: none;
   background: transparent;
 }

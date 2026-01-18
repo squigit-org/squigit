@@ -12,13 +12,14 @@ import React, {
   RefObject,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { ChevronUp, Loader2 } from "lucide-react";
 import { useGoogleLens } from "../../hooks/useGoogleLens";
 import { useTextSelection } from "../../hooks/useTextSelection";
 import { ActionMenu, ActionMenuHandle } from "../OCRLayer/ActionMenu";
-import { ChatInput } from "../InlineInput/InlineInput";
+import { SearchInput } from "../InlineInput/InlineInput";
 import { TextLayer } from "../OCRLayer/TextLayer";
 import { ImageToolbar } from "../ImageToolbar";
+import { generateTranslateUrl } from "../../../google";
 import styles from "./ImageArea.module.css";
 
 interface OCRBox {
@@ -57,6 +58,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   const [showOverlay, setShowOverlay] = useState(false);
   const [error, setError] = useState("");
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [showScrollbar, setShowScrollbar] = useState(false);
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const imgWrapRef = useRef<HTMLDivElement>(null);
@@ -138,43 +140,39 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
     const handleWheel = (e: WheelEvent) => {
-      if (!isExpanded && !isScrollBlockedRef.current) return;
+      const target = e.target as HTMLElement;
 
-      const scrollContainer = scrollWrapperRef.current;
-      const target = e.target as Node;
+      // Ignore scroll events from the footer/ChatInput area
+      const isInFooter =
+        target.closest("footer") || target.closest('[class*="footer"]');
+      if (isInFooter) return;
 
-      const isInside = scrollContainer && scrollContainer.contains(target);
-      const isScrollable =
-        scrollContainer &&
-        scrollContainer.scrollHeight > scrollContainer.clientHeight;
+      // Ignore scroll events inside the bigImageBox scrollable area (imgWrap scrollbar)
+      const scrollWrapper = scrollWrapperRef.current;
+      if (scrollWrapper && scrollWrapper.contains(target)) return;
 
-      if (isInside && isScrollable) {
+      // Get the image area row bounds (full width at the container's Y position)
+      const containerRect = container.getBoundingClientRect();
+      const isInImageRow =
+        e.clientY >= containerRect.top && e.clientY <= containerRect.bottom;
+
+      // Scroll UP on image row when collapsed → expand
+      if (!isExpanded && e.deltaY < 0 && isInImageRow) {
+        setIsExpanded(true);
+        e.preventDefault();
+        e.stopPropagation();
         return;
       }
 
-      if (e.deltaY <= 0) return;
-
-      if (isExpanded) {
+      // Scroll DOWN when expanded → collapse (from image row OR chat area)
+      if (isExpanded && e.deltaY > 0) {
         setIsExpanded(false);
-        isScrollBlockedRef.current = true;
-
         e.preventDefault();
         e.stopPropagation();
-        return;
-      }
-
-      if (isScrollBlockedRef.current) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (wheelEndTimeoutRef.current) {
-          clearTimeout(wheelEndTimeoutRef.current);
-        }
-
-        wheelEndTimeoutRef.current = setTimeout(() => {
-          isScrollBlockedRef.current = false;
-        }, 500);
         return;
       }
     };
@@ -186,8 +184,21 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
     return () => {
       window.removeEventListener("wheel", handleWheel, { capture: true });
-      if (wheelEndTimeoutRef.current) clearTimeout(wheelEndTimeoutRef.current);
     };
+  }, [isExpanded]);
+
+  // Control scrollbar visibility with delay after animation
+  useEffect(() => {
+    if (isExpanded) {
+      // Delay showing scrollbar until after animation (0.25s)
+      const timer = setTimeout(() => {
+        setShowScrollbar(true);
+      }, 250);
+      return () => clearTimeout(timer);
+    } else {
+      // Hide scrollbar immediately when collapsing
+      setShowScrollbar(false);
+    }
   }, [isExpanded]);
 
   const onLoad = () => {
@@ -236,6 +247,15 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     setIsExpanded(!isExpanded);
   };
 
+  // Translate all detected text silently
+  const handleTranslateAll = useCallback(() => {
+    if (data.length === 0) return;
+    const allText = data.map((item) => item.text).join(" ");
+    if (allText.trim()) {
+      invoke("open_external_url", { url: generateTranslateUrl(allText) });
+    }
+  }, [data]);
+
   if (!startupImage) {
     return null;
   }
@@ -244,43 +264,45 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
   return (
     <>
+      {/* Placeholder to maintain space in the layout flow */}
+      <div className={styles.placeholder} />
+
+      {/* Floating container with all content */}
       <div
         ref={containerRef}
-        className={`${styles.container} ${isExpanded ? styles.expanded : ""}`}
+        className={`${styles.floatingContainer} ${isExpanded ? styles.expanded : ""}`}
       >
         <div className={styles.barHeader}>
-          <div className={styles.thumbnailWrapper} onClick={toggleExpand}>
+          {/* Thumbnail - expands when collapsed, disabled when loading or expanded */}
+          <div
+            className={`${styles.thumbnailWrapper} ${loading ? styles.thumbnailLoading : ""} ${isExpanded ? styles.thumbnailExpanded : ""}`}
+            onClick={loading || isExpanded ? undefined : toggleExpand}
+            title={loading ? "Processing..." : undefined}
+          >
             <img src={imageSrc} alt="Thumbnail" className={styles.miniThumb} />
           </div>
 
           <div className={styles.inputContainer}>
-            <ChatInput
-              startupImage={startupImage}
-              input={imagePrompt}
-              onInputChange={setImagePrompt}
-              onSend={() => onDescribeEdits(imagePrompt)}
-              isLoading={false}
-              placeholder="Ask about this image"
-              variant="transparent"
+            <SearchInput
+              value={imagePrompt}
+              onChange={setImagePrompt}
+              onLensClick={(query) => triggerLens(query)}
+              onTranslateClick={handleTranslateAll}
+              onCollapse={toggleExpand}
+              isLensLoading={isLensLoading}
+              isTranslateDisabled={data.length === 0}
+              isOCRLoading={loading}
+              isExpanded={isExpanded}
+              placeholder="Add to your search"
             />
-          </div>
-
-          <div
-            className={styles.toggleIcon}
-            onClick={loading ? undefined : toggleExpand}
-          >
-            {loading ? (
-              <Loader2 size={20} className={styles.spinning} />
-            ) : isExpanded ? (
-              <ChevronUp size={20} />
-            ) : (
-              <ChevronDown size={20} />
-            )}
           </div>
         </div>
 
         <div className={styles.expandedContent} ref={expandedContentRef}>
-          <div className={styles.bigImageBox} ref={scrollWrapperRef}>
+          <div
+            className={`${styles.bigImageBox} ${showScrollbar ? styles.showScrollbar : ""}`}
+            ref={scrollWrapperRef}
+          >
             <div className={styles.viewer} ref={viewerRef}>
               <div className={styles.imageWrap}>
                 <div className={styles.innerContent} ref={imgWrapRef}>
