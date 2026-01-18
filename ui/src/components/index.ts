@@ -8,4 +8,4 @@ export * from "./ContextMenu/ContextMenu";
 export * from "./Dialog/Dialog";
 export * from "./InlineMenu/InlineMenu";
 export * from "./Toast/Toast";
-export * from "./TitleBar/TitleBar";
+export * from "./TitleBar";

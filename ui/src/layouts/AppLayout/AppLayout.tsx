@@ -390,8 +390,10 @@ export const AppLayout: React.FC = () => {
           startupImage={system.startupImage}
           chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
           sessions={chatSessions.sessions}
+          openTabs={chatSessions.openTabs}
           activeSessionId={chatSessions.activeSessionId}
-          onSessionSelect={(id) => {
+          onSessionSelect={chatSessions.switchSession}
+          onOpenSession={(id: string) => {
             if (chatSessions.activeSessionId) {
               const currentState = chatEngine.getCurrentState();
               chatSessions.updateSession(chatSessions.activeSessionId, {
@@ -401,7 +403,7 @@ export const AppLayout: React.FC = () => {
               });
             }
 
-            chatSessions.switchSession(id);
+            chatSessions.openSession(id); // Use openSession instead of switchSession
 
             const targetSession = chatSessions.getSessionById(id);
             if (targetSession) {
@@ -414,6 +416,7 @@ export const AppLayout: React.FC = () => {
             }
           }}
           onNewChat={async () => {
+            system.setSessionChatTitle(null);
             if (chatSessions.activeSessionId) {
               const currentState = chatEngine.getCurrentState();
               chatSessions.updateSession(chatSessions.activeSessionId, {
@@ -423,11 +426,25 @@ export const AppLayout: React.FC = () => {
               });
             }
 
-            const existingTitles = chatSessions.sessions.map((s) => s.title);
-            const newTitle = await generateImageTitle(existingTitles);
-            chatSessions.createSession("default", newTitle);
+            // Create session immediately for instant UI feedback
+            const newId = chatSessions.createSession("default", "New Chat");
             chatEngine.handleReload();
+
+            // Generate title in background
+            const existingTitles = chatSessions.sessions.map((s) => s.title);
+            generateImageTitle(existingTitles).then((newTitle) => {
+              chatSessions.updateSessionTitle(newId, newTitle);
+            });
           }}
+          onCloseSession={(id: string) => {
+            const shouldShowWelcome = chatSessions.closeSession(id);
+            if (shouldShowWelcome) {
+              system.resetSession();
+            }
+            return shouldShowWelcome;
+          }}
+          onCloseOtherSessions={chatSessions.closeOtherSessions}
+          onCloseSessionsToRight={chatSessions.closeSessionsToRight}
           onSend={() => {
             chatEngine.handleSend(input);
             setInput("");

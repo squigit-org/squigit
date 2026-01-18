@@ -74,3 +74,35 @@
     transform: translateX(-100%);
   }
 }
+@keyframes jellyBirth {
+  0% {
+    flex: 0 0 0px;
+    min-width: 0;
+    max-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: 0;
+    opacity: 0;
+    transform: scaleX(0.5) scaleY(0.5);
+  }
+  1% {
+    flex: 0.0001 1 0%;
+    opacity: 0.1;
+  }
+  40% {
+    opacity: 1;
+    transform: scaleX(1.1) scaleY(0.9);
+  }
+  70% {
+    transform: scaleX(0.95) scaleY(1.05);
+  }
+  100% {
+    flex: 1 1 0%;
+    min-width: 60px;
+    max-width: 180px;
+    padding-left: 10px;
+    padding-right: 10px;
+    transform: scale(1);
+    opacity: 1;
+  }
+}

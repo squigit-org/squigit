@@ -45,9 +45,14 @@ export interface ChatLayoutProps {
   onDescribeEdits: (description: string) => Promise<void>;
 
   sessions: ChatSession[];
+  openTabs: ChatSession[];
   activeSessionId: string | null;
   onSessionSelect: (id: string) => void;
+  onOpenSession: (id: string) => void;
   onNewChat: () => void;
+  onCloseSession: (id: string) => boolean;
+  onCloseOtherSessions: (keepId: string) => void;
+  onCloseSessionsToRight: (fromId: string) => void;
 
   onSend: () => void;
   onModelChange: (model: string) => void;
@@ -102,9 +107,14 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   currentModel,
   onModelChange,
   sessions,
+  openTabs,
   activeSessionId,
   onSessionSelect,
+  onOpenSession,
   onNewChat,
+  onCloseSession,
+  onCloseOtherSessions,
+  onCloseSessionsToRight,
   onReload,
   isRotating,
   isPanelActive,
@@ -216,9 +226,14 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
           onModelChange={onModelChange}
           isLoading={isLoading}
           sessions={sessions}
+          openTabs={openTabs}
           activeSessionId={activeSessionId}
           onSessionSelect={onSessionSelect}
+          onOpenSession={onOpenSession}
           onNewChat={onNewChat}
+          onCloseSession={onCloseSession}
+          onCloseOtherSessions={onCloseOtherSessions}
+          onCloseSessionsToRight={onCloseSessionsToRight}
           isPanelActive={isPanelActive}
           toggleSettingsPanel={toggleSettingsPanel}
           isPanelVisible={isPanelVisible}

@@ -1,0 +1,201 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import "../../styles/variables.css";
+@import "../../styles/animations.css";
+
+.tabBar {
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  height: 32px;
+}
+
+.tabsContainer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background-color: transparent;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  min-width: 60px;
+  max-width: 180px;
+  flex: 1 1 0;
+  overflow: hidden;
+  position: relative;
+  height: 28px;
+
+  transition:
+    flex 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.15s ease;
+}
+
+.tab:hover {
+  background-color: var(--neutral-850);
+}
+
+.tabActive {
+  background-color: var(--neutral-900);
+  z-index: 1;
+}
+
+.tabCurveLeft,
+.tabCurveRight {
+  position: absolute;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+}
+
+.tabCurveLeft {
+  left: -8px;
+  background: radial-gradient(
+    circle at 0 0,
+    transparent 8px,
+    var(--neutral-900) 8px
+  );
+}
+
+.tabCurveRight {
+  right: -8px;
+  background: radial-gradient(
+    circle at 100% 0,
+    transparent 8px,
+    var(--neutral-900) 8px
+  );
+}
+
+.tabClosing {
+  flex: 0 0 0;
+  min-width: 0;
+  max-width: 0;
+  padding: 6px 0;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left bottom;
+  transition: none !important;
+  animation-fill-mode: both !important;
+  contain: layout paint;
+  will-change: flex, transform, opacity;
+}
+
+.tabNew {
+  animation: jellyBirth 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  transform-origin: left bottom;
+  overflow: hidden;
+  transition: none !important;
+  animation-fill-mode: both !important;
+  contain: layout paint;
+  will-change: flex, transform, opacity;
+}
+
+.tabTitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--neutral-400);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.tab:hover .tabTitle {
+  color: var(--neutral-200);
+}
+
+.tabActive .tabTitle {
+  color: var(--neutral-100);
+}
+
+.tabButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--neutral-500);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.tabButton:hover {
+  background-color: var(--neutral-700);
+  color: var(--neutral-100);
+}
+
+.tabCloseButton {
+  opacity: 0.6;
+}
+
+.tab:hover .tabCloseButton {
+  opacity: 1;
+}
+
+.tabCloseButton:hover {
+  background-color: var(--red-600);
+  color: white;
+}
+
+.tabAddButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--neutral-400);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.tabAddButton:hover {
+  background-color: var(--neutral-800);
+  color: var(--neutral-100);
+}
+
+.tabAddDisabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tabAddDisabled:hover {
+  background-color: transparent;
+  color: var(--neutral-400);
+}

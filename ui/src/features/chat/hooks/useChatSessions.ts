@@ -4,16 +4,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ChatSession, Message } from "../types/chat.types";
 
 export const useChatSessions = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [openTabIds, setOpenTabIds] = useState<string[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  // Get only the sessions that are currently open as tabs (in tab order)
+  const openTabs = useMemo(() => {
+    return openTabIds
+      .map((id) => sessions.find((s) => s.id === id))
+      .filter((s): s is ChatSession => s !== undefined);
+  }, [sessions, openTabIds]);
 
   const createSession = useCallback(
     (type: "default" | "edit", title: string = "New Chat"): string => {
-      const id = Date.now().toString();
+      // Use crypto.randomUUID if available, otherwise fallback to high-precision timestamp + random
+      const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
       const newSession: ChatSession = {
         id,
         title,
@@ -24,12 +37,24 @@ export const useChatSessions = () => {
         type,
       };
 
-      setSessions((prev) => [newSession, ...prev]);
+      // Add to sessions history
+      setSessions((prev) => [...prev, newSession]);
+      // Add to open tabs at the end
+      setOpenTabIds((prev) => [...prev, id]);
       setActiveSessionId(id);
       return id;
     },
-    []
+    [],
   );
+
+  const openSession = useCallback((id: string): void => {
+    // Add to open tabs if not already open
+    setOpenTabIds((prev) => {
+      if (prev.includes(id)) return prev;
+      return [...prev, id];
+    });
+    setActiveSessionId(id);
+  }, []);
 
   const switchSession = useCallback((id: string) => {
     setActiveSessionId(id);
@@ -38,22 +63,22 @@ export const useChatSessions = () => {
   const updateSession = useCallback(
     (
       id: string,
-      updates: Partial<Omit<ChatSession, "id" | "createdAt" | "type">>
+      updates: Partial<Omit<ChatSession, "id" | "createdAt" | "type">>,
     ) => {
       setSessions((prev) =>
         prev.map((session) =>
-          session.id === id ? { ...session, ...updates } : session
-        )
+          session.id === id ? { ...session, ...updates } : session,
+        ),
       );
     },
-    []
+    [],
   );
 
   const updateSessionTitle = useCallback((id: string, title: string) => {
     setSessions((prev) =>
       prev.map((session) =>
-        session.id === id ? { ...session, title } : session
-      )
+        session.id === id ? { ...session, title } : session,
+      ),
     );
   }, []);
 
@@ -68,58 +93,105 @@ export const useChatSessions = () => {
         prev.map((session) =>
           session.id === sessionId
             ? { ...session, messages: [...session.messages, message] }
-            : session
-        )
+            : session,
+        ),
       );
     },
-    []
+    [],
   );
 
   const setSessionMessages = useCallback(
     (sessionId: string, messages: Message[]) => {
       setSessions((prev) =>
         prev.map((session) =>
-          session.id === sessionId ? { ...session, messages } : session
-        )
+          session.id === sessionId ? { ...session, messages } : session,
+        ),
       );
     },
-    []
+    [],
   );
 
   const setSessionStreamingText = useCallback(
     (sessionId: string, streamingText: string) => {
       setSessions((prev) =>
         prev.map((session) =>
-          session.id === sessionId ? { ...session, streamingText } : session
-        )
+          session.id === sessionId ? { ...session, streamingText } : session,
+        ),
       );
     },
-    []
+    [],
   );
 
   const setSessionFirstResponseId = useCallback(
     (sessionId: string, firstResponseId: string | null) => {
       setSessions((prev) =>
         prev.map((session) =>
-          session.id === sessionId ? { ...session, firstResponseId } : session
-        )
+          session.id === sessionId ? { ...session, firstResponseId } : session,
+        ),
       );
     },
-    []
+    [],
   );
 
   const getSessionById = useCallback(
     (id: string): ChatSession | null => {
       return sessions.find((s) => s.id === id) || null;
     },
-    [sessions]
+    [sessions],
   );
+
+  // Close tab (remove from open tabs, but keep in history)
+  const closeSession = useCallback(
+    (id: string): boolean => {
+      let shouldShowWelcome = false;
+
+      setOpenTabIds((prev) => {
+        const index = prev.indexOf(id);
+        if (index === -1) return prev;
+
+        const newOpenIds = prev.filter((tabId) => tabId !== id);
+
+        if (newOpenIds.length === 0) {
+          shouldShowWelcome = true;
+          setActiveSessionId(null);
+        } else if (id === activeSessionId) {
+          // Switch to adjacent tab
+          const nextIndex = Math.min(index, newOpenIds.length - 1);
+          setActiveSessionId(newOpenIds[nextIndex]);
+        }
+
+        return newOpenIds;
+      });
+
+      return shouldShowWelcome;
+    },
+    [activeSessionId],
+  );
+
+  const closeOtherSessions = useCallback((keepId: string): void => {
+    setOpenTabIds([keepId]);
+    setActiveSessionId(keepId);
+  }, []);
+
+  const closeSessionsToRight = useCallback((fromId: string): void => {
+    setOpenTabIds((prev) => {
+      const index = prev.indexOf(fromId);
+      if (index === -1) return prev;
+      return prev.slice(0, index + 1);
+    });
+  }, []);
 
   return {
     sessions,
+    openTabs,
+    openTabIds,
     activeSessionId,
     createSession,
+    openSession,
     switchSession,
+    closeSession,
+    closeOtherSessions,
+    closeSessionsToRight,
     updateSession,
     updateSessionTitle,
     getActiveSession,

@@ -4,22 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { ForwardedRef, useEffect, useState } from "react";
-import {
-  RotateCw,
-  Plus,
-  Settings,
-  SquarePen,
-  Minus,
-  Square,
-  X,
-} from "lucide-react";
+import React, { ForwardedRef, useState } from "react";
+import { RotateCw, Settings, SquarePen } from "lucide-react";
 import { ModelSwitcher } from "../../features/chat/components/ModelSwitcher/ModelSwitcher";
 import { ChatHistory } from "../../features/chat/components/ChatHistory/ChatHistory";
 import { ChatSession } from "../../features/chat/types/chat.types";
 import { SettingsPanel } from "../../features/settings";
-import { invoke } from "@tauri-apps/api/core";
 import styles from "./TitleBar.module.css";
+import { TrafficLights, WindowsControls } from "./WindowControls";
+import { TabBar } from "./TabBar";
 
 type Platform = "macos" | "linux" | "windows";
 
@@ -31,9 +24,14 @@ interface TitleBarProps {
   onModelChange: (model: string) => void;
   isLoading: boolean;
   sessions: ChatSession[];
+  openTabs: ChatSession[];
   activeSessionId: string | null;
   onSessionSelect: (id: string) => void;
+  onOpenSession: (id: string) => void;
   onNewChat: () => void;
+  onCloseSession: (id: string) => boolean;
+  onCloseOtherSessions: (keepId: string) => void;
+  onCloseSessionsToRight: (fromId: string) => void;
 
   isPanelActive: boolean;
   toggleSettingsPanel: () => void;
@@ -65,100 +63,7 @@ const detectPlatform = (): Platform => {
   console.log("TitleBar Platform Detection - UA:", userAgent);
   if (userAgent.includes("mac os")) return "macos";
   if (userAgent.includes("windows")) return "windows";
-  // Default to linux (traffic lights) if not explicitly Mac or Windows
   return "linux";
-};
-
-const TrafficLights: React.FC = () => {
-  const handleClose = () => invoke("close_window");
-  const handleMinimize = () => invoke("minimize_window");
-  const handleMaximize = () => invoke("maximize_window");
-
-  return (
-    <div className={styles.trafficLights}>
-      <button
-        className={`${styles.trafficButton} ${styles.close}`}
-        onClick={handleClose}
-        title="Close"
-      >
-        <X className={styles.icon} />
-      </button>
-      <button
-        className={`${styles.trafficButton} ${styles.minimize}`}
-        onClick={handleMinimize}
-        title="Minimize"
-      >
-        <Minus className={styles.icon} />
-      </button>
-      <button
-        className={`${styles.trafficButton} ${styles.maximize}`}
-        onClick={handleMaximize}
-        title="Maximize"
-      >
-        <Plus className={styles.icon} />
-      </button>
-    </div>
-  );
-};
-
-const WindowsControls: React.FC = () => {
-  const handleClose = () => invoke("close_window");
-  const handleMinimize = () => invoke("minimize_window");
-  const handleMaximize = () => invoke("maximize_window");
-
-  return (
-    <div className={styles.windowsControls}>
-      <button
-        className={`${styles.windowsButton} ${styles.winMinimize}`}
-        onClick={handleMinimize}
-        title="Minimize"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.1"
-        >
-          <line x1="1" y1="6" x2="11" y2="6" />
-        </svg>
-      </button>
-      <button
-        className={`${styles.windowsButton} ${styles.winMaximize}`}
-        onClick={handleMaximize}
-        title="Maximize"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.1"
-        >
-          <rect x="1" y="1" width="10" height="10" />
-        </svg>
-      </button>
-      <button
-        className={`${styles.windowsButton} ${styles.winClose}`}
-        onClick={handleClose}
-        title="Close"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.1"
-        >
-          <line x1="1" y1="1" x2="11" y2="11" />
-          <line x1="11" y1="1" x2="1" y2="11" />
-        </svg>
-      </button>
-    </div>
-  );
 };
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -169,9 +74,14 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onModelChange,
   isLoading,
   sessions,
+  openTabs,
   activeSessionId,
   onSessionSelect,
+  onOpenSession,
   onNewChat,
+  onCloseSession,
+  onCloseOtherSessions,
+  onCloseSessionsToRight,
   isPanelActive,
   toggleSettingsPanel,
   isPanelVisible,
@@ -248,7 +158,18 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onSessionSelect={onSessionSelect}
           onNewChat={onNewChat}
         />
-        <h1 className={styles.chatTitle}>{chatTitle}</h1>
+
+        <TabBar
+          sessions={sessions}
+          openTabs={openTabs}
+          activeSessionId={activeSessionId}
+          onSessionSelect={onSessionSelect}
+          onNewChat={onNewChat}
+          onCloseSession={onCloseSession}
+          onCloseOtherSessions={onCloseOtherSessions}
+          onCloseSessionsToRight={onCloseSessionsToRight}
+          onNewSession={onNewSession}
+        />
       </div>
 
       <div className={styles.rightSection}>
@@ -261,14 +182,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             <SquarePen size={20} />
           </button>
         )}
-
-        <button
-          className={styles.iconButton}
-          onClick={onNewChat}
-          title="New chat"
-        >
-          <Plus size={20} />
-        </button>
 
         <button
           onClick={onReload}
