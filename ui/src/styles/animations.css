@@ -106,3 +106,24 @@
     opacity: 1;
   }
 }
+
+@keyframes slideLeftFadeOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+    flex: 1 1 0%;
+    min-width: 60px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-20px);
+    flex: 0 0 0;
+    min-width: 0;
+    max-width: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+  }
+}

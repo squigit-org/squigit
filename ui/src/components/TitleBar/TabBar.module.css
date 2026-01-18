@@ -13,8 +13,6 @@
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
-  pointer-events: auto;
-  -webkit-app-region: no-drag;
   height: 32px;
 }
 
@@ -42,6 +40,8 @@
   overflow: hidden;
   position: relative;
   height: 28px;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
 
   transition:
     flex 0.25s cubic-bezier(0.4, 0, 0.2, 1),
@@ -89,17 +89,13 @@
 }
 
 .tabClosing {
-  flex: 0 0 0;
-  min-width: 0;
-  max-width: 0;
-  padding: 6px 0;
-  opacity: 0;
-  transform: scaleX(0);
+  animation: slideLeftFadeOut 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
   transform-origin: left bottom;
+  pointer-events: none;
   transition: none !important;
   animation-fill-mode: both !important;
   contain: layout paint;
-  will-change: flex, transform, opacity;
+  will-change: flex, min-width, max-width, padding, opacity, transform;
 }
 
 .tabNew {
@@ -183,6 +179,8 @@
     opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   margin-left: 2px;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
 }
 
 .tabAddButton:hover {
