@@ -106,7 +106,6 @@ export const TabBar: React.FC<TabBarProps> = ({
   useLayoutEffect(() => {
     const currentIds = new Set(openTabs.map((t) => t.id));
 
-    // Find if a specifically new ID has appeared
     const addedTab = openTabs.find((t) => !prevOpenTabIds.current.has(t.id));
 
     if (addedTab) {

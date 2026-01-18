@@ -265,8 +265,6 @@ export const AppLayout: React.FC = () => {
         mimeType: mimeType,
         isFilePath: false,
       });
-      // When new image is loaded, maybe show editor?
-      // setIsEditorVisible(true);
     } else {
       if (imageData.path) {
         system.setStartupImage({
@@ -403,7 +401,7 @@ export const AppLayout: React.FC = () => {
               });
             }
 
-            chatSessions.openSession(id); // Use openSession instead of switchSession
+            chatSessions.openSession(id);
 
             const targetSession = chatSessions.getSessionById(id);
             if (targetSession) {
@@ -426,11 +424,9 @@ export const AppLayout: React.FC = () => {
               });
             }
 
-            // Create session immediately for instant UI feedback
             const newId = chatSessions.createSession("default", "New Chat");
             chatEngine.handleReload();
 
-            // Generate title in background
             const existingTitles = chatSessions.sessions.map((s) => s.title);
             generateImageTitle(existingTitles).then((newTitle) => {
               chatSessions.updateSessionTitle(newId, newTitle);
@@ -476,7 +472,6 @@ export const AppLayout: React.FC = () => {
             chatSessions.createSession("edit", editTitle);
             chatEngine.handleDescribeEdits(description);
           }}
-          // ChatHeader Props
           isRotating={isRotating}
           isPanelActive={isPanelActive}
           toggleSettingsPanel={handleToggleSettings}

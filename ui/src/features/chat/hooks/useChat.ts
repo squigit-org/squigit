@@ -64,7 +64,7 @@ export const useChatEngine = ({
       mimeType: string;
       isFilePath?: boolean;
     } | null,
-    isRetry = false
+    isRetry = false,
   ) => {
     setIsLoading(true);
     setError(null);
@@ -120,7 +120,7 @@ export const useChatEngine = ({
         (token: string) => {
           fullResponse += token;
           setStreamingText(fullResponse);
-        }
+        },
       );
       setIsStreaming(false);
       setIsLoading(false);
@@ -162,7 +162,6 @@ export const useChatEngine = ({
       return;
     }
 
-    // Combine prompt with edit description
     const combinedPrompt = `${prompt}\n\n[User Edit Request]: ${editDescription}`;
 
     setIsLoading(true);
@@ -206,7 +205,7 @@ export const useChatEngine = ({
         (token: string) => {
           fullResponse += token;
           setStreamingText(fullResponse);
-        }
+        },
       );
       setIsStreaming(false);
       setIsLoading(false);
@@ -297,7 +296,6 @@ export const useChatEngine = ({
     }
   };
 
-  // Get current state for saving to session
   const getCurrentState = () => ({
     messages,
     streamingText,
@@ -305,7 +303,6 @@ export const useChatEngine = ({
     isChatMode,
   });
 
-  // Restore state from a session
   const restoreState = (state: {
     messages: Message[];
     streamingText: string;

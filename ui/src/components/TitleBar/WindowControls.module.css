@@ -6,14 +6,13 @@
 
 @import "../../styles/variables.css";
 
-/* Traffic Lights (macOS/Linux style) */
 .trafficLights {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-right: 0.5rem;
-  padding-left: 4px; /* Slight offset */
-  pointer-events: none; /* Gap between buttons should drag */
+  padding-left: 4px;
+  pointer-events: none;
 }
 
 .trafficButton {
@@ -33,7 +32,7 @@
   transition:
     transform 0.1s ease,
     filter 0.1s ease;
-  pointer-events: auto; /* Re-enable interaction */
+  pointer-events: auto;
 }
 
 .trafficButton .icon {
@@ -81,7 +80,6 @@
   background-color: #27c93f;
 }
 
-/* Windows Controls (Win11 Style) */
 .windowsControls {
   display: flex;
   align-items: center;
@@ -117,7 +115,6 @@
   color: #ffffff;
 }
 
-/* Light theme override for Windows controls */
 :global(body.light-mode) .windowsButton,
 :global(html.light) .windowsButton {
   color: #1a1a1a;

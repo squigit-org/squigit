@@ -12,7 +12,6 @@ export const useChatSessions = () => {
   const [openTabIds, setOpenTabIds] = useState<string[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
-  // Get only the sessions that are currently open as tabs (in tab order)
   const openTabs = useMemo(() => {
     return openTabIds
       .map((id) => sessions.find((s) => s.id === id))
@@ -21,7 +20,6 @@ export const useChatSessions = () => {
 
   const createSession = useCallback(
     (type: "default" | "edit", title: string = "New Chat"): string => {
-      // Use crypto.randomUUID if available, otherwise fallback to high-precision timestamp + random
       const id =
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
@@ -37,9 +35,8 @@ export const useChatSessions = () => {
         type,
       };
 
-      // Add to sessions history
       setSessions((prev) => [...prev, newSession]);
-      // Add to open tabs at the end
+
       setOpenTabIds((prev) => [...prev, id]);
       setActiveSessionId(id);
       return id;
@@ -48,7 +45,6 @@ export const useChatSessions = () => {
   );
 
   const openSession = useCallback((id: string): void => {
-    // Add to open tabs if not already open
     setOpenTabIds((prev) => {
       if (prev.includes(id)) return prev;
       return [...prev, id];
@@ -140,7 +136,6 @@ export const useChatSessions = () => {
     [sessions],
   );
 
-  // Close tab (remove from open tabs, but keep in history)
   const closeSession = useCallback(
     (id: string): boolean => {
       let shouldShowWelcome = false;
@@ -155,7 +150,6 @@ export const useChatSessions = () => {
           shouldShowWelcome = true;
           setActiveSessionId(null);
         } else if (id === activeSessionId) {
-          // Switch to adjacent tab
           const nextIndex = Math.min(index, newOpenIds.length - 1);
           setActiveSessionId(newOpenIds[nextIndex]);
         }

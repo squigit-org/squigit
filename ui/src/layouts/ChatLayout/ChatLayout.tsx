@@ -61,7 +61,6 @@ export interface ChatLayoutProps {
   onCheckSettings: () => void;
   onReload?: () => void;
 
-  // ChatHeader Props
   isRotating: boolean;
   isPanelActive: boolean;
   toggleSettingsPanel: () => void;
