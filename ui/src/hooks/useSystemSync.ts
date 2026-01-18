@@ -59,7 +59,6 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     isFilePath?: boolean;
   } | null>(null);
 
-  const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
   const [sessionChatTitle, setSessionChatTitle] = useState<string | null>(null);
   const [systemError, setSystemError] = useState<string | null>(null);
   const clearSystemError = () => setSystemError(null);
@@ -183,7 +182,6 @@ export const useSystemSync = (onToggleSettings: () => void) => {
 
   const resetSession = () => {
     setStartupImage(null);
-    setSessionLensUrl(null);
     setSessionChatTitle(null);
   };
 
@@ -212,8 +210,6 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     hasAgreed,
     setHasAgreed,
     updateUserData,
-    sessionLensUrl,
-    setSessionLensUrl,
     sessionChatTitle,
     setSessionChatTitle,
     resetSession,

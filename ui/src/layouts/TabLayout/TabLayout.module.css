@@ -11,12 +11,15 @@
   width: 100%;
   background-color: var(--neutral-950, #0a0a0a);
   color: var(--neutral-100, #fafafa);
-  position: relative;
-  padding-bottom: 96px;
+  overflow: hidden;
 }
 
-.imageSection {
+.header {
   flex-shrink: 0;
-  z-index: 10;
+}
+
+.content {
+  flex: 1;
+  overflow: hidden;
   position: relative;
 }

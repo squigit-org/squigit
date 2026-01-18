@@ -35,4 +35,13 @@ export interface ChatSession {
   firstResponseId: string | null;
   createdAt: number;
   type: "default" | "edit";
+  imageData: {
+    base64: string;
+    mimeType: string;
+    isFilePath?: boolean;
+  } | null;
+  lensUrl: string | null;
+  inputText: string;
+  isLoading?: boolean;
+  error?: string | null;
 }

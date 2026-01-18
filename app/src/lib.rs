@@ -11,7 +11,7 @@ pub mod services;
 
 use commands::auth::{get_api_key, get_user_data, logout, reset_api_key, start_google_auth};
 use commands::clipboard::{
-    copy_image_to_clipboard, start_clipboard_watcher, stop_clipboard_watcher,
+    copy_image_to_clipboard, read_clipboard_image, start_clipboard_watcher, stop_clipboard_watcher,
 };
 use commands::image::{
     get_initial_image, process_image_bytes, process_image_path, read_image_file,
@@ -40,6 +40,7 @@ pub fn run() {
             get_initial_image,
             start_clipboard_watcher,
             stop_clipboard_watcher,
+            read_clipboard_image,
             copy_image_to_clipboard,
             encrypt_and_save,
             check_file_exists,
@@ -68,9 +69,7 @@ pub fn run() {
             if let Some(path) = has_cli_image.clone() {
                 println!("CLI Image argument detected: {}", path);
                 let state = handle.state::<AppState>();
-                if let Ok(_data_url) = process_and_store_image(path, &state) {
-                    let _ = handle.emit("image-path", path);
-                }
+                let _ = process_and_store_image(path, &state);
             }
 
             let (base_w, base_h) = if has_cli_image.is_some() {

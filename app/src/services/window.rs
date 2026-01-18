@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Emitter, WindowEvent};
 
 pub fn calculate_dynamic_window(
     app: &AppHandle,
@@ -48,7 +48,7 @@ pub fn spawn_app_window(
 
     let visible = label != "main";
 
-    WebviewWindowBuilder::new(app, label, WebviewUrl::App(url.into()))
+    let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App(url.into()))
         .title(title)
         .position(x, y)
         .inner_size(w, h)
@@ -58,6 +58,29 @@ pub fn spawn_app_window(
         .background_color(tauri::window::Color(10, 10, 10, 255))
         .build()
         .map_err(|e| e.to_string())?;
+
+    let window_clone = window.clone();
+    window.on_window_event(move |event| {
+        if let WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+            if let Some(first_path) = paths.first() {
+                let path_str = first_path.to_string_lossy().to_string();
+                let state = window_clone.state::<crate::state::AppState>();
+
+                match crate::services::image::process_and_store_image(&path_str, &state) {
+                    Ok(data_url) => {
+                        let payload = serde_json::json!({
+                            "base64": data_url,
+                            "mimeType": data_url.split(";").next().unwrap_or("").replace("data:", "")
+                        });
+                        let _ = window_clone.emit("drag-drop-image", payload);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to process dropped file: {}", e);
+                    }
+                }
+            }
+        }
+    });
 
     Ok(())
 }

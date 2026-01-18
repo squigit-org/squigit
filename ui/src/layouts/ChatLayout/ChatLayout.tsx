@@ -1,24 +1,22 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useLayoutEffect,
-  ForwardedRef,
-} from "react";
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-import {
-  ImageArea,
-  Message,
-  ChatArea,
-  ChatInput,
-  ChatSession,
-} from "../../features";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 
-import { TitleBar, InlineMenu } from "../../components";
+import { invoke } from "@tauri-apps/api/core";
+import { ImageArea, Message, ChatArea, ChatInput } from "../../features";
+
+import { InlineMenu } from "../../components";
 import { useInlineMenu } from "../../components/InlineMenu/useInlineMenu";
 
 import "katex/dist/katex.min.css";
-import "./ChatLayout.module.css";
+import styles from "./ChatLayout.module.css";
+
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 export interface ChatLayoutProps {
   messages: Message[];
@@ -28,9 +26,6 @@ export interface ChatLayoutProps {
   isStreaming: boolean;
   error: string | null;
   lastSentMessage: Message | null;
-
-  input: string;
-  currentModel: string;
 
   startupImage: {
     base64: string;
@@ -43,48 +38,13 @@ export interface ChatLayoutProps {
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string | null) => void;
   onDescribeEdits: (description: string) => Promise<void>;
+  onImageUpload: (
+    data: string | { path?: string; base64?: string; mimeType: string },
+  ) => void;
 
-  sessions: ChatSession[];
-  openTabs: ChatSession[];
-  activeSessionId: string | null;
-  onSessionSelect: (id: string) => void;
-  onOpenSession: (id: string) => void;
-  onNewChat: () => void;
-  onCloseSession: (id: string) => boolean;
-  onCloseOtherSessions: (keepId: string) => void;
-  onCloseSessionsToRight: (fromId: string) => void;
-
-  onSend: () => void;
-  onModelChange: (model: string) => void;
   onRetry: () => void;
-  onInputChange: (value: string) => void;
   onCheckSettings: () => void;
-  onReload?: () => void;
-
-  isRotating: boolean;
-  isPanelActive: boolean;
-  toggleSettingsPanel: () => void;
-  isPanelVisible: boolean;
-  isPanelActiveAndVisible: boolean;
-  isPanelClosing: boolean;
-  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
-  panelRef: React.RefObject<HTMLDivElement | null>;
-  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
-  prompt: string;
-  editingModel: string;
-  setPrompt: (prompt: string) => void;
-  onEditingModelChange: (model: string) => void;
-  userName: string;
-  userEmail: string;
-  avatarSrc: string;
-  onSave: (prompt: string, model: string) => void;
-  onLogout: () => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
-  onResetAPIKey: () => void;
-  toggleSubview: (isActive: boolean) => void;
-  onNewSession: () => void;
-  hasImageLoaded: boolean;
+  onSend: (text: string) => void;
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
@@ -93,55 +53,90 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   isChatMode,
   isLoading,
   error,
-  input,
   startupImage,
-  onSend,
   onRetry,
-  onInputChange,
   onCheckSettings,
   sessionLensUrl,
   setSessionLensUrl,
   onDescribeEdits,
+  onImageUpload,
   chatTitle,
-  currentModel,
-  onModelChange,
-  sessions,
-  openTabs,
-  activeSessionId,
-  onSessionSelect,
-  onOpenSession,
-  onNewChat,
-  onCloseSession,
-  onCloseOtherSessions,
-  onCloseSessionsToRight,
-  onReload,
-  isRotating,
-  isPanelActive,
-  toggleSettingsPanel,
-  isPanelVisible,
-  isPanelActiveAndVisible,
-  isPanelClosing,
-  settingsButtonRef,
-  panelRef,
-  settingsPanelRef,
-  prompt,
-  editingModel,
-  setPrompt,
-  onEditingModelChange,
-  userName,
-  userEmail,
-  avatarSrc,
-  onSave,
-  onLogout,
-  isDarkMode,
-  onToggleTheme,
-  onResetAPIKey,
-  toggleSubview,
-  onNewSession,
-  hasImageLoaded,
+  onSend,
 }) => {
+  // Each tab instance owns its own input state
+  const [input, setInput] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+
+  const processFiles = async (files: FileList) => {
+    const file = files[0];
+    if (!file || !ALLOWED_TYPES.includes(file.type) || file.size > MAX_SIZE) {
+      return;
+    }
+
+    try {
+      let result: string | { path?: string; mimeType: string };
+
+      // @ts-ignore
+      if ((file as any).path) {
+        // @ts-ignore
+        result = await invoke("read_image_file", { path: (file as any).path });
+      } else {
+        const buffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        result = await invoke("process_image_bytes", {
+          bytes: Array.from(bytes),
+        });
+      }
+      onImageUpload(result);
+    } catch (error) {
+      console.error("Failed to process file", error);
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (dragCounter.current === 1) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDragging(false);
+
+    if (e.dataTransfer.files?.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
+  // Handle send - clears input after sending
+  const handleSend = () => {
+    if (input.trim()) {
+      onSend(input);
+      setInput("");
+    }
+  };
 
   useLayoutEffect(() => {
     if (messages.length > 0) {
@@ -215,51 +210,32 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   }, [showFlatMenu]);
 
   return (
-    <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative pb-24">
-      <div className="flex-shrink-0">
-        <TitleBar
-          chatTitle={chatTitle}
-          onReload={onReload || (() => {})}
-          isRotating={isRotating}
-          currentModel={currentModel}
-          onModelChange={onModelChange}
-          isLoading={isLoading}
-          sessions={sessions}
-          openTabs={openTabs}
-          activeSessionId={activeSessionId}
-          onSessionSelect={onSessionSelect}
-          onOpenSession={onOpenSession}
-          onNewChat={onNewChat}
-          onCloseSession={onCloseSession}
-          onCloseOtherSessions={onCloseOtherSessions}
-          onCloseSessionsToRight={onCloseSessionsToRight}
-          isPanelActive={isPanelActive}
-          toggleSettingsPanel={toggleSettingsPanel}
-          isPanelVisible={isPanelVisible}
-          isPanelActiveAndVisible={isPanelActiveAndVisible}
-          isPanelClosing={isPanelClosing}
-          settingsButtonRef={settingsButtonRef}
-          panelRef={panelRef}
-          settingsPanelRef={settingsPanelRef}
-          prompt={prompt}
-          editingModel={editingModel}
-          setPrompt={setPrompt}
-          onEditingModelChange={onEditingModelChange}
-          userName={userName}
-          userEmail={userEmail}
-          avatarSrc={avatarSrc}
-          onSave={onSave}
-          onLogout={onLogout}
-          isDarkMode={isDarkMode}
-          onToggleTheme={onToggleTheme}
-          onResetAPIKey={onResetAPIKey}
-          toggleSubview={toggleSubview}
-          onNewSession={onNewSession}
-          hasImageLoaded={hasImageLoaded}
-        />
-      </div>
-
-      <div className="z-10 relative flex-shrink-0">
+    <div
+      className={styles.container}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.8)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            color: "white",
+            fontSize: "1.5rem",
+          }}
+        >
+          Drop to replace image
+        </div>
+      )}
+      <div className={styles.imageSection}>
         <ImageArea
           startupImage={startupImage}
           sessionLensUrl={sessionLensUrl}
@@ -289,8 +265,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       <ChatInput
         startupImage={startupImage}
         input={input}
-        onInputChange={onInputChange}
-        onSend={onSend}
+        onInputChange={setInput}
+        onSend={handleSend}
         isLoading={isLoading}
       />
 

@@ -29,7 +29,6 @@
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--neutral-800);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   z-index: 500;
   display: flex;
   flex-direction: column;

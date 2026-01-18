@@ -54,7 +54,7 @@ export const useChatTitle = ({
 
       const cleanBase64 = startupImage.base64.replace(
         /^data:image\/[a-z]+;base64,/,
-        ""
+        "",
       );
 
       const response = await ai.models.generateContent({
@@ -94,7 +94,7 @@ export const useChatTitle = ({
   const generateSubTitle = useCallback(
     async (
       editDescription: string,
-      existingTitles: string[] = []
+      existingTitles: string[] = [],
     ): Promise<string> => {
       if (!apiKey) return "Edit Request";
 
@@ -102,7 +102,7 @@ export const useChatTitle = ({
         const ai = new GoogleGenAI({ apiKey });
 
         const promptMatch = subTitlePrompt.match(
-          /sub-title-prmp: \|\n([\s\S]+)/
+          /sub-title-prmp: \|\n([\s\S]+)/,
         );
         const parsedPrompt = promptMatch
           ? promptMatch[1]
@@ -115,7 +115,7 @@ export const useChatTitle = ({
         const titlesContext =
           existingTitles.length > 0
             ? `\n\nExisting titles (DO NOT USE ANY OF THESE): ${existingTitles.join(
-                ", "
+                ", ",
               )}`
             : "";
 
@@ -139,25 +139,31 @@ export const useChatTitle = ({
         return "Edit Request";
       }
     },
-    [apiKey]
+    [apiKey],
   );
 
   const generateImageTitle = useCallback(
     async (existingTitles: string[] = []): Promise<string> => {
-      if (!startupImage?.base64 || !apiKey) return "New Chat";
+      if (!startupImage?.base64 && !apiKey) return "New Chat";
 
-      if (
-        startupImage.isFilePath &&
-        startupImage.base64.startsWith("asset://")
-      ) {
-        return "New Chat";
-      }
+      return "New Chat";
+    },
+    [startupImage, apiKey],
+  );
+
+  const generateTitleForImage = useCallback(
+    async (
+      base64Data: string,
+      mimeType: string,
+      existingTitles: string[] = [],
+    ): Promise<string> => {
+      if (!apiKey) return "New Chat";
 
       try {
         const ai = new GoogleGenAI({ apiKey });
 
         const promptMatch = titlePrompt.match(/chat-title-prmp: \|\n([\s\S]+)/);
-        const parsedPrompt = promptMatch
+        const systemPrompt = promptMatch
           ? promptMatch[1]
               .split("\n")
               .map((line) => line.trim())
@@ -168,13 +174,13 @@ export const useChatTitle = ({
         const titlesContext =
           existingTitles.length > 0
             ? `\n\nExisting titles (DO NOT USE ANY OF THESE): ${existingTitles.join(
-                ", "
+                ", ",
               )}`
             : "";
 
-        const cleanBase64 = startupImage.base64.replace(
+        const cleanBase64 = base64Data.replace(
           /^data:image\/[a-z]+;base64,/,
-          ""
+          "",
         );
 
         const response = await ai.models.generateContent({
@@ -185,12 +191,12 @@ export const useChatTitle = ({
               parts: [
                 {
                   inlineData: {
-                    mimeType: startupImage.mimeType,
+                    mimeType: mimeType,
                     data: cleanBase64,
                   },
                 },
                 {
-                  text: `${parsedPrompt}${titlesContext}`,
+                  text: `${systemPrompt}${titlesContext}`,
                 },
               ],
             },
@@ -203,13 +209,13 @@ export const useChatTitle = ({
         return "New Chat";
       }
     },
-    [startupImage, apiKey]
+    [apiKey],
   );
 
   return {
     chatTitle: sessionChatTitle || "New Chat",
     isGeneratingTitle: isGenerating,
     generateSubTitle,
-    generateImageTitle,
+    generateImageTitle: generateTitleForImage,
   };
 };

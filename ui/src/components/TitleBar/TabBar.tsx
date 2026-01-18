@@ -66,11 +66,10 @@ interface TabBarProps {
   openTabs: ChatSession[];
   activeSessionId: string | null;
   onSessionSelect: (id: string) => void;
-  onNewChat: () => void;
   onCloseSession: (id: string) => boolean;
   onCloseOtherSessions: (keepId: string) => void;
   onCloseSessionsToRight: (fromId: string) => void;
-  onNewSession: () => void;
+  onShowWelcome: () => void;
 }
 
 export const TabBar: React.FC<TabBarProps> = ({
@@ -78,11 +77,10 @@ export const TabBar: React.FC<TabBarProps> = ({
   openTabs,
   activeSessionId,
   onSessionSelect,
-  onNewChat,
   onCloseSession,
   onCloseOtherSessions,
   onCloseSessionsToRight,
-  onNewSession,
+  onShowWelcome,
 }) => {
   const [closingTabId, setClosingTabId] = useState<string | null>(null);
   const [newTabId, setNewTabId] = useState<string | null>(null);
@@ -133,7 +131,7 @@ export const TabBar: React.FC<TabBarProps> = ({
     setTimeout(() => {
       const shouldShowWelcome = onCloseSession(id);
       if (shouldShowWelcome) {
-        onNewSession();
+        onShowWelcome();
       }
       setClosingTabId(null);
     }, 200);
@@ -141,7 +139,7 @@ export const TabBar: React.FC<TabBarProps> = ({
 
   const handleAddTab = () => {
     if (isAtLimit) return;
-    onNewChat();
+    onShowWelcome();
   };
 
   const handleContextMenu = (

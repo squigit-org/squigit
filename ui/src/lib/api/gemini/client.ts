@@ -7,50 +7,9 @@
 import { GoogleGenAI, Chat, Part } from "@google/genai";
 
 let ai: GoogleGenAI | null = null;
-let chatSession: Chat | null = null;
 
 export const initializeGemini = (apiKey: string) => {
   ai = new GoogleGenAI({ apiKey });
-};
-
-export const startNewChat = async (
-  modelId: string,
-  imageBase64: string,
-  mimeType: string,
-  systemPrompt: string
-): Promise<string> => {
-  if (!ai) throw new Error("Gemini AI not initialized");
-
-  chatSession = ai.chats.create({
-    model: modelId,
-    config: {
-      systemInstruction:
-        "You are a helpful AI assistant specialized in analyzing images.",
-    },
-  });
-
-  const parts: Part[] = [
-    {
-      inlineData: {
-        mimeType,
-        data: imageBase64,
-      },
-    },
-    {
-      text: systemPrompt,
-    },
-  ];
-
-  try {
-    const response = await chatSession.sendMessage({
-      message: parts,
-    });
-
-    return response.text || "No response text generated.";
-  } catch (error) {
-    console.error("Error starting chat:", error);
-    throw error;
-  }
 };
 
 const cleanBase64 = (data: string) => {
@@ -63,10 +22,10 @@ export const startNewChatStream = async (
   mimeType: string,
   systemPrompt: string,
   onToken: (token: string) => void
-): Promise<string> => {
+): Promise<{ text: string; chat: Chat }> => {
   if (!ai) throw new Error("Gemini AI not initialized");
 
-  chatSession = ai.chats.create({
+  const chat = ai.chats.create({
     model: modelId,
     config: {
       systemInstruction: systemPrompt,
@@ -88,7 +47,7 @@ export const startNewChatStream = async (
   try {
     let fullText = "";
 
-    const stream = await chatSession.sendMessageStream({
+    const stream = await chat.sendMessageStream({
       message: parts,
     });
 
@@ -101,11 +60,11 @@ export const startNewChatStream = async (
       }
     }
 
-    return fullText || "No response text generated.";
+    return { text: fullText || "No response text generated.", chat };
   } catch (error) {
     console.error("Streaming error, falling back:", error);
     try {
-      const response = await chatSession.sendMessage({
+      const response = await chat.sendMessage({
         message: parts,
       });
       const text = response.text || "No response text generated.";
@@ -114,7 +73,7 @@ export const startNewChatStream = async (
         onToken(word + " ");
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
-      return text;
+      return { text, chat };
     } catch (fallbackError) {
       console.error("Error starting chat:", fallbackError);
       throw fallbackError;
@@ -122,11 +81,9 @@ export const startNewChatStream = async (
   }
 };
 
-export const sendMessage = async (text: string): Promise<string> => {
-  if (!chatSession) throw new Error("Chat session not started");
-
+export const sendMessage = async (chat: Chat, text: string): Promise<string> => {
   try {
-    const response = await chatSession.sendMessage({
+    const response = await chat.sendMessage({
       message: text,
     });
 

@@ -6,3 +6,4 @@
 
 export * from "./AppLayout/AppLayout";
 export * from "./ChatLayout/ChatLayout";
+export * from "./TabLayout/TabLayout";

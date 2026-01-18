@@ -23,18 +23,17 @@ import "katex/dist/katex.min.css";
 import "../../components/Toast/Toast.module.css";
 import styles from "./AppLayout.module.css";
 
-import { ChatLayout } from "..";
+import { ChatLayout, TabLayout } from "..";
 
 import {
-  Welcome,
   Agreement,
   UpdateNotes,
   GeminiSetup,
   LoginScreen,
   useAuth,
   useChatTitle,
-  useChatEngine,
   useChatSessions,
+  Welcome,
 } from "../../features";
 
 export const AppLayout: React.FC = () => {
@@ -64,8 +63,36 @@ export const AppLayout: React.FC = () => {
 
   const [isCheckingImage, setIsCheckingImage] = useState(true);
 
+  // Chat Sessions Hook
+  const chatSessions = useChatSessions();
+  const activeSession = chatSessions.getActiveSession();
+  const activeImage = activeSession?.imageData || null;
+  
+  const activeSessionIdRef = useRef(chatSessions.activeSessionId);
   useEffect(() => {
+    activeSessionIdRef.current = chatSessions.activeSessionId;
+  }, [chatSessions.activeSessionId]);
+
+  // Processing flag to prevent duplicate event handling
+  const isProcessingRef = useRef(false);
+  const hasProcessedStartupImage = useRef(false);
+  
+  // Ref for handleImageReady to avoid stale closures in event listener
+  const handleImageReadyRef = useRef<any>(null);
+  useEffect(() => {
+      handleImageReadyRef.current = handleImageReady;
+  });
+
+  useEffect(() => {
+    if (auth.authStage === 'LOADING') return;
+    if (hasProcessedStartupImage.current) return;
+
+    // If we are fully authenticated (not in setup/login screens), wait for API key
+    const isAuthComplete = auth.authStage !== 'GEMINI_SETUP' && auth.authStage !== 'LOGIN';
+    if (isAuthComplete && !system.apiKey) return;
+
     const initStartupImage = async () => {
+      hasProcessedStartupImage.current = true;
       try {
         const initialImage = await invoke<string | null>("get_initial_image");
         if (initialImage) {
@@ -80,22 +107,46 @@ export const AppLayout: React.FC = () => {
     };
 
     initStartupImage();
+  }, [auth.authStage, system.apiKey]);
 
-    const unlisten = listen<string>("image-path", async (event) => {
+  useEffect(() => {
+    const unlistenImagePath = listen<string>("image-path", async (event) => {
+      if (isProcessingRef.current) return;
+      isProcessingRef.current = true;
+
       const imagePath = event.payload;
       if (imagePath) {
         try {
           console.log("Event received for image:", imagePath);
           const result = await commands.processImagePath(imagePath);
-          handleImageReady(result);
+          if (handleImageReadyRef.current) handleImageReadyRef.current(result);
         } catch (error) {
           console.error("Failed to process CLI image event:", error);
+        } finally {
+          // Simple debounce/cooldown
+          setTimeout(() => {
+            isProcessingRef.current = false;
+          }, 500);
         }
+      } else {
+        isProcessingRef.current = false;
       }
     });
 
+    const unlistenDragDrop = listen<any>("drag-drop-image", (event) => {
+        const payload = event.payload;
+        if (payload) {
+             console.log("Received global drag-drop-image event");
+             const targetId = activeSessionIdRef.current;
+             if (handleImageReadyRef.current) {
+                 handleImageReadyRef.current(payload, targetId || undefined);
+             }
+        }
+    });
+
     return () => {
-      unlisten.then((f) => f());
+      unlistenImagePath.then((f) => f());
+      unlistenDragDrop.then((f) => f());
     };
   }, []);
 
@@ -104,51 +155,23 @@ export const AppLayout: React.FC = () => {
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
     isCheckingImage;
-  const isImageMissing = !system.startupImage;
+  const isImageMissing = false;
   const isAuthPending =
     auth.authStage === "GEMINI_SETUP" || auth.authStage === "LOGIN";
-  const isChatActive =
-    !isLoadingState && !isAgreementPending && !isImageMissing && !isAuthPending;
+  const isChatActive = !isLoadingState && !isAgreementPending && !isAuthPending;
 
-  const chatEngine = useChatEngine({
+  // Enable AI Title Generation
+  const { chatTitle, generateImageTitle } = useChatTitle({
+    startupImage: activeImage,
     apiKey: system.apiKey,
-    currentModel: system.sessionModel,
-    startupImage: system.startupImage,
-    prompt: system.prompt,
-    setCurrentModel: system.setSessionModel,
-    enabled: isChatActive,
-  });
-
-  const { chatTitle, generateSubTitle, generateImageTitle } = useChatTitle({
-    startupImage: system.startupImage,
-    apiKey: system.apiKey,
-    sessionChatTitle: system.sessionChatTitle,
-    setSessionChatTitle: system.setSessionChatTitle,
-  });
-
-  const chatSessions = useChatSessions();
-  const [hasInitializedSession, setHasInitializedSession] = useState(false);
-
-  useEffect(() => {
-    if (isChatActive && !hasInitializedSession) {
-      chatSessions.createSession("default", chatTitle);
-      setHasInitializedSession(true);
-    }
-  }, [isChatActive, hasInitializedSession]);
-
-  useEffect(() => {
-    if (chatSessions.activeSessionId && chatTitle && chatTitle !== "New Chat") {
-      const activeSession = chatSessions.getActiveSession();
-      if (activeSession && activeSession.title === "New Chat") {
-        chatSessions.updateSessionTitle(
-          chatSessions.activeSessionId,
-          chatTitle,
-        );
+    sessionChatTitle: activeSession?.title || null,
+    setSessionChatTitle: (title) => {
+      if (chatSessions.activeSessionId) {
+        chatSessions.updateSessionTitle(chatSessions.activeSessionId, title);
       }
-    }
-  }, [chatTitle, chatSessions.activeSessionId]);
+    },
+  });
 
-  const [input, setInput] = useState("");
   const [pendingUpdate] = useState(() => getPendingUpdate());
   const [showUpdate, setShowUpdate] = useState(() => {
     const wasDismissed = sessionStorage.getItem("update_dismissed");
@@ -236,10 +259,10 @@ export const AppLayout: React.FC = () => {
 
   const [isRotating, setIsRotating] = useState(false);
   useEffect(() => {
-    if (!chatEngine.isLoading) {
+    if (!activeSession?.isLoading) {
       setIsRotating(false);
     }
-  }, [chatEngine.isLoading]);
+  }, [activeSession?.isLoading]);
 
   useEffect(() => {
     const unlisten = listen<any>("auth-success", (event) => {
@@ -250,36 +273,83 @@ export const AppLayout: React.FC = () => {
       unlisten.then((f) => f());
     };
   }, []);
-
+  // Image upload handler - accepts explicit sessionId to prevent cross-tab bugs
   const handleImageReady = (
     imageData: string | { path?: string; base64?: string; mimeType: string },
+    targetSessionId?: string,
   ) => {
+    let imageObj: {
+      base64: string;
+      mimeType: string;
+      isFilePath?: boolean;
+    } | null = null;
+
     if (typeof imageData === "string") {
       if (!imageData || !imageData.includes(",")) return;
 
-      const [header, base64Data] = imageData.split(",");
+      const [header] = imageData.split(",");
       const mimeType = header.replace("data:", "").replace(";base64", "");
 
-      system.setStartupImage({
+      imageObj = {
         base64: imageData,
         mimeType: mimeType,
         isFilePath: false,
-      });
+      };
     } else {
       if (imageData.path) {
-        system.setStartupImage({
+        imageObj = {
           base64: convertFileSrc(imageData.path),
           mimeType: imageData.mimeType,
           isFilePath: true,
-        });
+        };
       } else if (imageData.base64) {
-        system.setStartupImage({
+        imageObj = {
           base64: imageData.base64,
           mimeType: imageData.mimeType,
           isFilePath: false,
-        });
+        };
       }
     }
+
+    if (!imageObj) return;
+
+    let sessionId = targetSessionId;
+
+    // Use explicit sessionId if provided, otherwise create new session
+    if (targetSessionId) {
+      chatSessions.updateSessionImage(targetSessionId, imageObj);
+    } else {
+      // No session specified - create a new one
+      const newId = chatSessions.createSession("default", "New Chat");
+      chatSessions.updateSessionImage(newId, imageObj);
+      sessionId = newId;
+    }
+
+    system.setStartupImage(null);
+
+    // Auto-generate title
+    if (sessionId && imageObj.base64 && imageObj.mimeType) {
+      // Start Chat Session immediately with explicit image data
+      chatSessions.startChatSession(
+        sessionId,
+        system.apiKey,
+        system.sessionModel,
+        system.prompt,
+        imageObj
+      );
+
+      generateImageTitle(imageObj.base64, imageObj.mimeType)
+        .then((title) => {
+          if (sessionId) {
+            chatSessions.updateSessionTitle(sessionId, title);
+          }
+        })
+        .catch((err) => console.error("Title generation failed:", err));
+    }
+  };
+
+  const handleShowWelcome = () => {
+    chatSessions.createSession("default", "New Chat");
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -351,14 +421,6 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  if (!system.startupImage) {
-    return (
-      <div className="h-screen w-screen bg-neutral-950 text-neutral-100">
-        <Welcome onImageReady={handleImageReady} />
-      </div>
-    );
-  }
-
   if (auth.authStage === "GEMINI_SETUP") {
     return <GeminiSetup onComplete={auth.completeGeminiSetup} />;
   }
@@ -373,131 +435,117 @@ export const AppLayout: React.FC = () => {
       onContextMenu={handleContextMenu}
       className={styles.appContainer}
     >
-      <div className={styles.chatPanel}>
-        <ChatLayout
-          messages={chatEngine.messages}
-          streamingText={chatEngine.streamingText}
-          isChatMode={chatEngine.isChatMode}
-          isLoading={chatEngine.isLoading}
-          isStreaming={chatEngine.isStreaming}
-          error={chatEngine.error || system.systemError}
-          lastSentMessage={chatEngine.lastSentMessage}
-          input={input}
-          onInputChange={setInput}
-          currentModel={system.sessionModel}
-          startupImage={system.startupImage}
-          chatTitle={chatSessions.getActiveSession()?.title || chatTitle}
-          sessions={chatSessions.sessions}
-          openTabs={chatSessions.openTabs}
-          activeSessionId={chatSessions.activeSessionId}
-          onSessionSelect={chatSessions.switchSession}
-          onOpenSession={(id: string) => {
-            if (chatSessions.activeSessionId) {
-              const currentState = chatEngine.getCurrentState();
-              chatSessions.updateSession(chatSessions.activeSessionId, {
-                messages: currentState.messages,
-                streamingText: currentState.streamingText,
-                firstResponseId: currentState.firstResponseId,
-              });
-            }
-
-            chatSessions.openSession(id);
-
-            const targetSession = chatSessions.getSessionById(id);
-            if (targetSession) {
-              chatEngine.restoreState({
-                messages: targetSession.messages,
-                streamingText: targetSession.streamingText,
-                firstResponseId: targetSession.firstResponseId,
-                isChatMode: targetSession.messages.length > 0,
-              });
-            }
-          }}
-          onNewChat={async () => {
-            system.setSessionChatTitle(null);
-            if (chatSessions.activeSessionId) {
-              const currentState = chatEngine.getCurrentState();
-              chatSessions.updateSession(chatSessions.activeSessionId, {
-                messages: currentState.messages,
-                streamingText: currentState.streamingText,
-                firstResponseId: currentState.firstResponseId,
-              });
-            }
-
-            const newId = chatSessions.createSession("default", "New Chat");
-            chatEngine.handleReload();
-
-            const existingTitles = chatSessions.sessions.map((s) => s.title);
-            generateImageTitle(existingTitles).then((newTitle) => {
-              chatSessions.updateSessionTitle(newId, newTitle);
-            });
-          }}
-          onCloseSession={(id: string) => {
-            const shouldShowWelcome = chatSessions.closeSession(id);
-            if (shouldShowWelcome) {
-              system.resetSession();
-            }
-            return shouldShowWelcome;
-          }}
-          onCloseOtherSessions={chatSessions.closeOtherSessions}
-          onCloseSessionsToRight={chatSessions.closeSessionsToRight}
-          onSend={() => {
-            chatEngine.handleSend(input);
-            setInput("");
-          }}
-          onModelChange={system.setSessionModel}
-          onRetry={() => {
-            if (chatEngine.messages.length === 0) {
-              chatEngine.handleReload();
-            } else {
-              chatEngine.handleRetrySend();
-            }
-          }}
-          onCheckSettings={() => {
-            setIsPanelActive(true);
-            chatEngine.clearError();
-          }}
-          onReload={() => {
-            setIsRotating(true);
-            chatEngine.handleReload();
-          }}
-          sessionLensUrl={system.sessionLensUrl}
-          setSessionLensUrl={system.setSessionLensUrl}
-          onDescribeEdits={async (description) => {
-            const existingTitles = chatSessions.sessions.map((s) => s.title);
-            const editTitle = await generateSubTitle(
-              description,
-              existingTitles,
+      <TabLayout
+        onImageReady={handleImageReady}
+        chatTitle={activeSession?.title || "New Chat"}
+        onReload={() => {
+          setIsRotating(true);
+          if (chatSessions.activeSessionId) {
+            chatSessions.startChatSession(
+              chatSessions.activeSessionId,
+              system.apiKey,
+              system.sessionModel,
+              system.prompt
             );
-            chatSessions.createSession("edit", editTitle);
-            chatEngine.handleDescribeEdits(description);
-          }}
-          isRotating={isRotating}
-          isPanelActive={isPanelActive}
-          toggleSettingsPanel={handleToggleSettings}
-          isPanelVisible={isPanelVisible}
-          isPanelActiveAndVisible={isPanelActiveAndVisible}
-          isPanelClosing={isPanelClosing}
-          settingsButtonRef={settingsButtonRef}
-          panelRef={panelRef}
-          settingsPanelRef={settingsPanelRef}
-          prompt={system.editingPrompt}
-          editingModel={system.editingModel}
-          setPrompt={system.setEditingPrompt}
-          onEditingModelChange={system.setEditingModel}
-          userName={system.userName}
-          userEmail={system.userEmail}
-          avatarSrc={system.avatarSrc}
-          onSave={system.saveSettings}
-          onLogout={performLogout}
-          isDarkMode={system.isDarkMode}
-          onToggleTheme={system.handleToggleTheme}
-          onResetAPIKey={system.handleResetAPIKey}
-          toggleSubview={setIsSubviewActive}
-          onNewSession={system.resetSession}
-          hasImageLoaded={!!system.startupImage}
-        />
-      </div>
+          }
+        }}
+        isRotating={isRotating}
+        currentModel={system.sessionModel}
+        onModelChange={system.setSessionModel}
+        isLoading={activeSession?.isLoading || false}
+        sessions={chatSessions.sessions}
+        openTabs={chatSessions.openTabs}
+        activeSessionId={chatSessions.activeSessionId}
+        onSessionSelect={chatSessions.switchSession}
+        onOpenSession={(id: string) => {
+          chatSessions.openSession(id);
+        }}
+        onNewChat={() => {
+          chatSessions.createSession("default", "New Chat");
+        }}
+        onCloseSession={(id: string) => {
+          return chatSessions.closeSession(id);
+        }}
+        onCloseOtherSessions={chatSessions.closeOtherSessions}
+        onCloseSessionsToRight={chatSessions.closeSessionsToRight}
+        onShowWelcome={handleShowWelcome}
+        isPanelActive={isPanelActive}
+        toggleSettingsPanel={handleToggleSettings}
+        isPanelVisible={isPanelVisible}
+        isPanelActiveAndVisible={isPanelActiveAndVisible}
+        isPanelClosing={isPanelClosing}
+        settingsButtonRef={settingsButtonRef}
+        panelRef={panelRef}
+        settingsPanelRef={settingsPanelRef}
+        prompt={system.editingPrompt}
+        editingModel={system.editingModel}
+        setPrompt={system.setEditingPrompt}
+        onEditingModelChange={system.setEditingModel}
+        userName={system.userName}
+        userEmail={system.userEmail}
+        avatarSrc={system.avatarSrc}
+        onSave={system.saveSettings}
+        onLogout={performLogout}
+        isDarkMode={system.isDarkMode}
+        onToggleTheme={system.handleToggleTheme}
+        onResetAPIKey={system.handleResetAPIKey}
+        toggleSubview={setIsSubviewActive}
+      >
+        {/* ALL TABS MOUNTED - CSS visibility toggle, no remounting */}
+        {chatSessions.openTabs.map((session) => (
+          <div
+            key={session.id}
+            style={{
+              display:
+                session.id === chatSessions.activeSessionId
+                  ? "contents"
+                  : "none",
+            }}
+          >
+            {session.imageData ? (
+              <ChatLayout
+                messages={session.messages || []}
+                streamingText={session.streamingText || ""}
+                isChatMode={(session.messages?.length || 0) > 0}
+                isLoading={session.isLoading || false}
+                isStreaming={!!session.streamingText}
+                error={
+                  session.id === chatSessions.activeSessionId
+                    ? session.error || system.systemError
+                    : null
+                }
+                lastSentMessage={null}
+                startupImage={session.imageData}
+                chatTitle={session.title || "New Chat"}
+                sessionLensUrl={session.lensUrl}
+                setSessionLensUrl={(url) =>
+                  chatSessions.updateSessionLensUrl(session.id, url)
+                }
+                onDescribeEdits={async (description) => {
+                  // Feature not fully implemented
+                }}
+                onImageUpload={(data) => handleImageReady(data, session.id)}
+                onRetry={() => {
+                  chatSessions.retryChatMessage(session.id);
+                }}
+                onCheckSettings={() => {
+                  setIsPanelActive(true);
+                }}
+                onSend={(text) => chatSessions.sendChatMessage(session.id, text)}
+              />
+            ) : (
+              <Welcome
+                onImageReady={(data) => handleImageReady(data, session.id)}
+                isActive={session.id === chatSessions.activeSessionId}
+              />
+            )}
+          </div>
+        ))}
+        {/* Show Welcome when no tabs are open */}
+        {chatSessions.openTabs.length === 0 && (
+          <Welcome onImageReady={(data) => handleImageReady(data)} isActive={true} />
+        )}
+      </TabLayout>
 
       <div id="toast" className="toast"></div>
 

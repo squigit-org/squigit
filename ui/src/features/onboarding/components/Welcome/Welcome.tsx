@@ -1,133 +1,185 @@
-import React, {
-  useState,
-  useRef,
-  DragEvent,
-  ChangeEvent,
-  ClipboardEvent,
-} from "react";
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import styles from "./Welcome.module.css";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 interface WelcomeProps {
   onImageReady: (
-    data: string | { path?: string; base64?: string; mimeType: string }
+    data: string | { path?: string; base64?: string; mimeType: string },
   ) => void;
+  isActive?: boolean;
 }
 
-export const Welcome: React.FC<WelcomeProps> = ({ onImageReady }) => {
+export const Welcome: React.FC<WelcomeProps> = ({
+  onImageReady,
+  isActive = true,
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCounter = useRef(0);
 
-  const platformShortcut = React.useMemo(() => {
+  const platformInfo = React.useMemo(() => {
     const ua = navigator.userAgent.toLowerCase();
     if (ua.includes("mac")) {
-      return (
-        <>
-          <span className={styles.key}>Cmd ⌘</span> +{" "}
-          <span className={styles.key}>Shift ⇧</span> +{" "}
-          <span className={styles.key}>A</span>
-        </>
-      );
+      return {
+        screenshotKeys: (
+          <>
+            <span className={styles.key}>⌘</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>⇧</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>S</span>
+          </>
+        ),
+        pasteKeys: (
+          <>
+            <span className={styles.key}>⌘</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>V</span>
+          </>
+        ),
+      };
     } else if (ua.includes("win")) {
-      return (
-        <>
-          <span className={styles.key}>Win ⊞</span> +{" "}
-          <span className={styles.key}>Shift ⇧</span> +{" "}
-          <span className={styles.key}>A</span>
-        </>
-      );
+      return {
+        screenshotKeys: (
+          <>
+            <span className={styles.key}>Win</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>Shift</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>S</span>
+          </>
+        ),
+        pasteKeys: (
+          <>
+            <span className={styles.key}>Ctrl</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>V</span>
+          </>
+        ),
+      };
     } else {
-      return (
-        <>
-          <span className={styles.key}>Super</span> +{" "}
-          <span className={styles.key}>Shift</span> +{" "}
-          <span className={styles.key}>A</span>
-        </>
-      );
+      return {
+        screenshotKeys: (
+          <>
+            <span className={styles.key}>Super</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>Shift</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>S</span>
+          </>
+        ),
+        pasteKeys: (
+          <>
+            <span className={styles.key}>Ctrl</span>
+            <span className={styles.keySep}>+</span>
+            <span className={styles.key}>V</span>
+          </>
+        ),
+      };
     }
   }, []);
 
-  const processFiles = async (files: FileList) => {
-    const file = files[0];
-    if (!file) return;
+  useEffect(() => {
+    if (!isActive) return;
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      console.warn("Invalid file type:", file.type);
-      return;
-    }
-    if (file.size > MAX_SIZE) {
-      console.warn("File too large");
-      return;
-    }
+    const handlePaste = async (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        try {
+          const result = await invoke("read_clipboard_image");
+          if (result) {
+            onImageReady(result as string);
+          }
+        } catch (error) {
+          console.error("Failed to read clipboard image:", error);
+        }
+      }
+    };
 
+    window.addEventListener("keydown", handlePaste);
+
+    return () => {
+      window.removeEventListener("keydown", handlePaste);
+    };
+  }, [onImageReady, isActive]);
+
+  const handleDragEnter = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (dragCounter.current === 1) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDragging(false);
+  };
+
+  const handleFileProcess = async (file: File) => {
     try {
-      let result: string | { path?: string; mimeType: string };
-
-      // @ts-ignore - Check for path (Tauri specific)
+      // @ts-ignore
       if (file.path) {
         // @ts-ignore
-        result = await invoke("process_image_path", { path: file.path });
+        const result = await invoke("read_image_file", { path: file.path });
+        // @ts-ignore
+        onImageReady(result);
       } else {
+        // Fallback
         const buffer = await file.arrayBuffer();
         const bytes = new Uint8Array(buffer);
-        result = await invoke("process_image_bytes", {
+        const result = await invoke("process_image_bytes", {
           bytes: Array.from(bytes),
         });
+        // @ts-ignore
+        onImageReady(result);
       }
-
-      onImageReady(result);
     } catch (error) {
       console.error("Failed to process file", error);
     }
   };
 
-  const handleDragEnter = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    if (e.dataTransfer.files?.length > 0) processFiles(e.dataTransfer.files);
-  };
-
-  const handlePaste = (e: ClipboardEvent<HTMLDivElement>) => {
-    if (e.clipboardData.files?.length > 0) {
-      e.preventDefault();
-      processFiles(e.clipboardData.files);
-    }
-  };
-
-  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      processFiles(files);
-    }
-  };
-
-  const triggerFileInput = () => fileInputRef.current?.click();
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      triggerFileInput();
+  const handleFileInputChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFileProcess(e.target.files[0]);
     }
   };
 
   return (
-    <div className={styles.container} onPaste={handlePaste} tabIndex={-1}>
+    <div
+      className={`${styles.container} ${isDragging ? styles.dragging : ""}`}
+      tabIndex={-1}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <input
         ref={fileInputRef}
         className={styles.fileInput}
@@ -136,51 +188,43 @@ export const Welcome: React.FC<WelcomeProps> = ({ onImageReady }) => {
         onChange={handleFileInputChange}
       />
 
-      <section
-        className={`${styles.uploadArea} ${isDragging ? styles.dragging : ""}`}
-        tabIndex={0}
-        role="button"
-        onClick={triggerFileInput}
-        onKeyDown={handleKeyDown}
-        onDragEnter={handleDragEnter}
-        onDragOver={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <svg
-          className={styles.uploadSvg}
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M21 16v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"></path>
-          <polyline points="7 11 12 6 17 11"></polyline>
-          <line x1="12" y1="6" x2="12" y2="18"></line>
-        </svg>
-        <div className={styles.title}>Upload your image</div>
-        <div className={styles.subtitle}>Click, drop, or paste a file</div>
-        <div className={styles.hint} aria-hidden="true">
-          <span>• JPG, PNG, WEBP</span>
-          <span>• Max 20 MB</span>
-        </div>
-      </section>
+      <div className={styles.content}>
+        <img
+          src="/assets/raw.svg"
+          alt="Spatialshot logo"
+          className={styles.logo}
+        />
+        <h1 className={styles.title}>Spatialshot</h1>
 
-      <aside className={styles.rightCol} aria-label="Details">
-        <div className={styles.panelTitle}>Quick notes</div>
-        <div className={styles.panelBody}>
-          To analyze any part of your screen, simply close this window and{" "}
-          {platformShortcut}.
+        <div className={styles.actions}>
+          <div className={styles.actionRow}>
+            <span className={styles.actionLabel}>
+              Analyze part of your screen
+            </span>
+            <span className={styles.actionKeys}>
+              {platformInfo.screenshotKeys}
+            </span>
+          </div>
+          <div className={styles.actionRow}>
+            <span className={styles.actionLabel}>Paste an image</span>
+            <span className={styles.actionKeys}>{platformInfo.pasteKeys}</span>
+          </div>
+          <div className={styles.actionRow}>
+            <span className={styles.actionLabel}>Drop an image</span>
+            <span className={styles.actionKeys}>
+              <span className={styles.key}>D</span>
+              <span className={styles.keySep}>&</span>
+              <span className={styles.key}>D</span>
+            </span>
+          </div>
         </div>
-        <div style={{ height: "8px" }}></div>
-        <div className={styles.panelTitle}>Accessibility</div>
-        <div className={styles.panelBody}>
-          You can tab to the upload area and press Enter to open the file
-          dialog.
-        </div>
+      </div>
 
-        <div className={styles.footer} aria-hidden="true">
-          <p className={styles.footerText}>Spatialshot &copy; 2026</p>
+      {isDragging && (
+        <div className={styles.dropOverlay}>
+          <span>Drop your image here</span>
         </div>
-      </aside>
+      )}
     </div>
   );
 };

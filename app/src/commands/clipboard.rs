@@ -6,7 +6,42 @@ use std::thread;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 
+use crate::services::image::process_bytes_internal;
 use crate::state::AppState;
+
+#[tauri::command]
+pub async fn read_clipboard_image(state: State<'_, AppState>) -> Result<String, String> {
+    use arboard::Clipboard;
+    use image::ImageEncoder;
+
+    let mut clipboard =
+        Clipboard::new().map_err(|e| format!("Failed to access clipboard: {}", e))?;
+
+    let image_data = clipboard
+        .get_image()
+        .map_err(|e| format!("Failed to get image from clipboard: {}", e))?;
+
+    let img = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
+        image_data.width as u32,
+        image_data.height as u32,
+        image_data.bytes.into_owned(),
+    )
+    .ok_or("Failed to create image buffer")?;
+
+    let mut buffer = Vec::new();
+    let cursor = std::io::Cursor::new(&mut buffer);
+
+    image::codecs::png::PngEncoder::new(cursor)
+        .write_image(
+            &img,
+            image_data.width as u32,
+            image_data.height as u32,
+            image::ColorType::Rgba8.into(),
+        )
+        .map_err(|e| format!("Failed to encode image: {}", e))?;
+
+    process_bytes_internal(buffer, &state)
+}
 
 #[tauri::command]
 pub async fn start_clipboard_watcher(

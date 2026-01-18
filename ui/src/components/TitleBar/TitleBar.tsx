@@ -5,7 +5,7 @@
  */
 
 import React, { ForwardedRef, useState } from "react";
-import { RotateCw, Settings, SquarePen } from "lucide-react";
+import { RotateCw, Settings } from "lucide-react";
 import { ModelSwitcher } from "../../features/chat/components/ModelSwitcher/ModelSwitcher";
 import { ChatHistory } from "../../features/chat/components/ChatHistory/ChatHistory";
 import { ChatSession } from "../../features/chat/types/chat.types";
@@ -32,6 +32,7 @@ interface TitleBarProps {
   onCloseSession: (id: string) => boolean;
   onCloseOtherSessions: (keepId: string) => void;
   onCloseSessionsToRight: (fromId: string) => void;
+  onShowWelcome: () => void;
 
   isPanelActive: boolean;
   toggleSettingsPanel: () => void;
@@ -54,8 +55,6 @@ interface TitleBarProps {
   onToggleTheme: () => void;
   onResetAPIKey: () => void;
   toggleSubview: (isActive: boolean) => void;
-  onNewSession: () => void;
-  hasImageLoaded: boolean;
 }
 
 const detectPlatform = (): Platform => {
@@ -67,7 +66,6 @@ const detectPlatform = (): Platform => {
 };
 
 export const TitleBar: React.FC<TitleBarProps> = ({
-  chatTitle,
   onReload,
   isRotating,
   currentModel,
@@ -77,18 +75,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   openTabs,
   activeSessionId,
   onSessionSelect,
-  onOpenSession,
   onNewChat,
   onCloseSession,
   onCloseOtherSessions,
   onCloseSessionsToRight,
+  onShowWelcome,
   isPanelActive,
   toggleSettingsPanel,
   isPanelVisible,
   isPanelActiveAndVisible,
   isPanelClosing,
   settingsButtonRef,
-  panelRef,
   settingsPanelRef,
   prompt,
   editingModel,
@@ -103,12 +100,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onToggleTheme,
   onResetAPIKey,
   toggleSubview,
-  onNewSession,
-  hasImageLoaded,
 }) => {
   const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
 
   const isUnix = platform === "macos" || platform === "linux";
+
+  const hasTabs = openTabs.length > 0;
 
   return (
     <header className={styles.header} data-tauri-drag-region>
@@ -152,54 +149,55 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           )}
         </div>
 
-        <ChatHistory
-          sessions={sessions}
-          activeSessionId={activeSessionId}
-          onSessionSelect={onSessionSelect}
-          onNewChat={onNewChat}
-        />
+        {hasTabs && (
+          <>
+            <ChatHistory
+              sessions={sessions}
+              activeSessionId={activeSessionId}
+              onSessionSelect={onSessionSelect}
+              onNewChat={onNewChat}
+            />
 
-        <TabBar
-          sessions={sessions}
-          openTabs={openTabs}
-          activeSessionId={activeSessionId}
-          onSessionSelect={onSessionSelect}
-          onNewChat={onNewChat}
-          onCloseSession={onCloseSession}
-          onCloseOtherSessions={onCloseOtherSessions}
-          onCloseSessionsToRight={onCloseSessionsToRight}
-          onNewSession={onNewSession}
-        />
-      </div>
-
-      <div className={styles.rightSection}>
-        {hasImageLoaded && (
-          <button
-            onClick={onNewSession}
-            className={styles.iconButton}
-            title="Analyze another image"
-          >
-            <SquarePen size={20} />
-          </button>
+            <TabBar
+              sessions={sessions}
+              openTabs={openTabs}
+              activeSessionId={activeSessionId}
+              onSessionSelect={onSessionSelect}
+              onCloseSession={onCloseSession}
+              onCloseOtherSessions={onCloseOtherSessions}
+              onCloseSessionsToRight={onCloseSessionsToRight}
+              onShowWelcome={onShowWelcome}
+            />
+          </>
         )}
-
-        <button
-          onClick={onReload}
-          className={styles.iconButton}
-          title="Reload chat"
-          disabled={isRotating}
-        >
-          <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
-        </button>
-
-        <ModelSwitcher
-          currentModel={currentModel}
-          onModelChange={onModelChange}
-          isLoading={isLoading}
-        />
-
-        {platform === "windows" && <WindowsControls />}
       </div>
+
+      {hasTabs && (
+        <div className={styles.rightSection}>
+          <button
+            onClick={onReload}
+            className={styles.iconButton}
+            title="Reload chat"
+            disabled={isRotating}
+          >
+            <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
+          </button>
+
+          <ModelSwitcher
+            currentModel={currentModel}
+            onModelChange={onModelChange}
+            isLoading={isLoading}
+          />
+
+          {platform === "windows" && <WindowsControls />}
+        </div>
+      )}
+
+      {!hasTabs && platform === "windows" && (
+        <div className={styles.rightSection}>
+          <WindowsControls />
+        </div>
+      )}
     </header>
   );
 };

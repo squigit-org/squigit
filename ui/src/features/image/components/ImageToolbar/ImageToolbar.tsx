@@ -122,7 +122,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const isDraggingRef = useRef(false);
 
-  // Set initial position inside the constraintRef (bigImageBox) bounds
   useEffect(() => {
     const toolbar = toolbarRef.current;
     const constraint = constraintRef.current;
@@ -134,7 +133,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     const constraintRect = constraint.getBoundingClientRect();
     const parentRect = offsetParent.getBoundingClientRect();
 
-    // Position toolbar at top-left of the constraint area with padding
     const initialLeft = constraintRect.left - parentRect.left + 8;
     const initialTop = constraintRect.top - parentRect.top + 8;
 

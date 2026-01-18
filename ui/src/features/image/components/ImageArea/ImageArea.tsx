@@ -128,77 +128,13 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     }
   }, [startupImage]);
 
-  useEffect(() => {
-    if (startupImage) {
-      scan();
-    }
-  }, [startupImage, scan]);
-
   const isScrollBlockedRef = useRef(false);
   const wheelEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      const target = e.target as HTMLElement;
-
-      // Ignore scroll events from the footer/ChatInput area
-      const isInFooter =
-        target.closest("footer") || target.closest('[class*="footer"]');
-      if (isInFooter) return;
-
-      // Ignore scroll events inside the bigImageBox scrollable area (imgWrap scrollbar)
-      const scrollWrapper = scrollWrapperRef.current;
-      if (scrollWrapper && scrollWrapper.contains(target)) return;
-
-      // Get the image area row bounds (full width at the container's Y position)
-      const containerRect = container.getBoundingClientRect();
-      const isInImageRow =
-        e.clientY >= containerRect.top && e.clientY <= containerRect.bottom;
-
-      // Scroll UP on image row when collapsed → expand
-      if (!isExpanded && e.deltaY < 0 && isInImageRow) {
-        setIsExpanded(true);
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-
-      // Scroll DOWN when expanded → collapse (from image row OR chat area)
-      if (isExpanded && e.deltaY > 0) {
-        setIsExpanded(false);
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-    };
-
-    window.addEventListener("wheel", handleWheel, {
-      passive: false,
-      capture: true,
-    });
-
-    return () => {
-      window.removeEventListener("wheel", handleWheel, { capture: true });
-    };
-  }, [isExpanded]);
-
-  // Control scrollbar visibility with delay after animation
-  useEffect(() => {
-    if (isExpanded) {
-      // Delay showing scrollbar until after animation (0.25s)
-      const timer = setTimeout(() => {
-        setShowScrollbar(true);
-      }, 250);
-      return () => clearTimeout(timer);
-    } else {
-      // Hide scrollbar immediately when collapsing
-      setShowScrollbar(false);
-    }
+    setShowScrollbar(isExpanded);
   }, [isExpanded]);
 
   const onLoad = () => {
@@ -247,7 +183,6 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     setIsExpanded(!isExpanded);
   };
 
-  // Translate all detected text silently
   const handleTranslateAll = useCallback(() => {
     if (data.length === 0) return;
     const allText = data.map((item) => item.text).join(" ");
@@ -264,16 +199,13 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
   return (
     <>
-      {/* Placeholder to maintain space in the layout flow */}
       <div className={styles.placeholder} />
 
-      {/* Floating container with all content */}
       <div
         ref={containerRef}
         className={`${styles.floatingContainer} ${isExpanded ? styles.expanded : ""}`}
       >
         <div className={styles.barHeader}>
-          {/* Thumbnail - expands when collapsed, disabled when loading or expanded */}
           <div
             className={`${styles.thumbnailWrapper} ${loading ? styles.thumbnailLoading : ""} ${isExpanded ? styles.thumbnailExpanded : ""}`}
             onClick={loading || isExpanded ? undefined : toggleExpand}
@@ -315,15 +247,6 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
                     draggable={false}
                     className={styles.bigImage}
                   />
-
-                  {data.length > 0 && (
-                    <TextLayer
-                      data={data}
-                      size={size}
-                      svgRef={svgRef}
-                      onTextMouseDown={handleTextMouseDown}
-                    />
-                  )}
                 </div>
               </div>
             </div>
