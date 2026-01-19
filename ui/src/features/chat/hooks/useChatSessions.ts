@@ -260,45 +260,63 @@ export const useChatSessions = () => {
     loadHistory();
   }, []);
 
+  const saveTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
   // Auto-save chats when they have messages
-  const saveSessionDebounced = useCallback(async (session: ChatSession) => {
+  const saveSessionDebounced = useCallback((session: ChatSession) => {
     if (session.messages.length > 0 && session.type !== "settings") {
-      try {
-        await saveChat(session);
-        // Update metadata
-        setChatMetadata((prev) => {
-          const exists = prev.find((c) => c.id === session.id);
-          if (exists) {
-            return prev.map((c) =>
-              c.id === session.id
-                ? {
-                    ...c,
-                    title: session.title,
-                    messageCount: session.messages.length,
-                    updatedAt: Date.now(),
-                  }
-                : c,
-            );
-          } else {
-            return [
-              {
-                id: session.id,
-                title: session.title,
-                createdAt: session.createdAt,
-                updatedAt: Date.now(),
-                isPinned: false,
-                messageCount: session.messages.length,
-                hasImage: !!session.imageData,
-              },
-              ...prev,
-            ];
-          }
-        });
-      } catch (error) {
-        console.error("Failed to save chat:", error);
-      }
+      const existing = saveTimeouts.current.get(session.id);
+      if (existing) clearTimeout(existing);
+
+      const timeout = setTimeout(async () => {
+        try {
+          await saveChat(session);
+          // Update metadata
+          setChatMetadata((prev) => {
+            const exists = prev.find((c) => c.id === session.id);
+            if (exists) {
+              return prev.map((c) =>
+                c.id === session.id
+                  ? {
+                      ...c,
+                      title: session.title,
+                      messageCount: session.messages.length,
+                      updatedAt: Date.now(),
+                    }
+                  : c,
+              );
+            } else {
+              return [
+                {
+                  id: session.id,
+                  title: session.title,
+                  createdAt: session.createdAt,
+                  updatedAt: Date.now(),
+                  isPinned: false,
+                  messageCount: session.messages.length,
+                  hasImage: !!session.imageData,
+                },
+                ...prev,
+              ];
+            }
+          });
+        } catch (error) {
+          console.error("Failed to save chat:", error);
+        }
+      }, 1000); // 1s debounce
+
+      saveTimeouts.current.set(session.id, timeout);
     }
   }, []);
+
+  // Effect to auto-save sessions when they change
+  useEffect(() => {
+    sessions.forEach((session) => {
+      if (session.messages.length > 0 && session.type !== "settings") {
+        saveSessionDebounced(session);
+      }
+    });
+  }, [sessions, saveSessionDebounced]);
 
   // Open a chat from history
   const openChatFromHistory = useCallback(

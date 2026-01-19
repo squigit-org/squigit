@@ -24,6 +24,7 @@
   min-width: 0;
   overflow: hidden;
   height: 100%;
+  position: relative;
 }
 
 .tab {
@@ -42,6 +43,7 @@
   height: 28px;
   -webkit-app-region: no-drag;
   pointer-events: auto;
+  user-select: none;
 
   transition:
     flex 0.25s cubic-bezier(0.4, 0, 0.2, 1),
@@ -213,22 +215,20 @@
 }
 
 /* ===== Drag and Drop ===== */
-.tabDragging {
-  opacity: 0.5;
-  cursor: grabbing !important;
+.tabPlaceholder {
+  opacity: 0;
+  pointer-events: none;
 }
 
-.tabDragOver {
-  position: relative;
-}
-
-.tabDragOver::before {
-  content: "";
+.tabFloating {
   position: absolute;
-  left: -2px;
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
-  background: var(--primary, #6366f1);
-  border-radius: 1px;
+  top: 0;
+  height: 100%;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  cursor: grabbing;
+  pointer-events: none; /* Let events pass through to track mouse */
+  background-color: var(--neutral-900);
+  border: 1px solid var(--neutral-700);
+  border-bottom: none;
 }

@@ -26,3 +26,16 @@
   overflow: hidden;
   position: relative;
 }
+
+.sidePanelWrapper {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  flex-shrink: 0;
+  border-right: 0 solid var(--neutral-800);
+}
+
+.sidePanelOpen {
+  width: 280px;
+  border-right-width: 1px;
+}

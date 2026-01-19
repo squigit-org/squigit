@@ -27,6 +27,7 @@ import {
   Bug,
   Moon,
   Sun,
+  Download,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { MODELS, ModelType } from "../../../../lib/config/models";
@@ -45,15 +46,15 @@ interface ModelInfo {
 const modelsWithInfo: ModelInfo[] = [
   {
     ...MODELS.find((m) => m.id === "gemini-2.5-pro")!,
-    description: "Strongest",
+    description: "Complex reasoning & creative work",
   },
   {
     ...MODELS.find((m) => m.id === "gemini-2.5-flash")!,
-    description: "Good",
+    description: "Fast, versatile & efficient",
   },
   {
     ...MODELS.find((m) => m.id === "gemini-flash-lite-latest")!,
-    description: "Fastest",
+    description: "Ultra-fast, lightweight tasks",
   },
 ];
 
@@ -401,7 +402,7 @@ export const SettingsTab = forwardRef<SettingsTabHandle, SettingsTabProps>(
               </div>
 
               <div className={styles.section}>
-                <label className={styles.label}>Custom Prompt</label>
+                <label className={styles.label}>Prompts</label>
                 <p className={styles.description}>
                   Add context about yourself, your preferences, or specific
                   instructions for the AI.
@@ -417,9 +418,9 @@ export const SettingsTab = forwardRef<SettingsTabHandle, SettingsTabProps>(
               </div>
 
               <div className={styles.section}>
-                <label className={styles.label}>Default Model</label>
+                <label className={styles.label}>Models</label>
                 <p className={styles.description}>
-                  Choose your preferred AI model for new conversations.
+                  Choose your preferred AI and OCR models for new conversations.
                 </p>
                 <div className={styles.modelSelector}>
                   <div className={styles.modelInfo}>
@@ -436,6 +437,25 @@ export const SettingsTab = forwardRef<SettingsTabHandle, SettingsTabProps>(
                     title="Next model"
                   >
                     <ChevronRight size={20} />
+                  </button>
+                </div>
+
+                <div
+                  className={styles.modelSelector}
+                  style={{ marginTop: "12px" }}
+                >
+                  <div className={styles.modelInfo}>
+                    <span className={styles.modelName}>PP-OCRv4 (English)</span>
+                    <span className={styles.modelDescription}>
+                      High accuracy on-device OCR
+                    </span>
+                  </div>
+                  <button
+                    className={styles.nextModelBtn}
+                    title="Download model (Coming soon)"
+                    style={{ opacity: 0.5, cursor: "not-allowed" }}
+                  >
+                    <Download size={20} />
                   </button>
                 </div>
               </div>

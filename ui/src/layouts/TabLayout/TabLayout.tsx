@@ -94,7 +94,11 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
       </div>
 
       <div className={styles.content}>
-        {isSidePanelOpen && sidePanel}
+        <div
+          className={`${styles.sidePanelWrapper} ${isSidePanelOpen ? styles.sidePanelOpen : ""}`}
+        >
+          {sidePanel}
+        </div>
         {children ? children : <Welcome onImageReady={onImageReady} />}
       </div>
     </div>
