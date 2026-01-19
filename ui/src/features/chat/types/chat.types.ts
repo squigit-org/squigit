@@ -45,4 +45,6 @@ export interface ChatSession {
   isLoading?: boolean;
   error?: string | null;
   ocrData?: { text: string; box: number[][] }[];
+  isStarred?: boolean;
+  projectId?: string;
 }

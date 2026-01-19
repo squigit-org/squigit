@@ -259,3 +259,194 @@
   color: var(--light);
   outline: none;
 }
+
+/* ===== Selection Mode ===== */
+.selectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--neutral-900);
+  border-bottom: 1px solid var(--neutral-800);
+}
+
+.selectionCount {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--light);
+}
+
+.selectionActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--gray);
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  background: var(--neutral-800);
+  color: var(--light);
+}
+
+.iconBtn.danger {
+  color: #ef4444;
+}
+
+.iconBtn.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Checkbox */
+.checkboxContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 0.5rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--neutral-600);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.checkbox.checked {
+  background: var(--primary, #6366f1);
+  border-color: var(--primary, #6366f1);
+}
+
+.checkboxIcon {
+  color: white;
+}
+
+/* ===== Dialog ===== */
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: fadeIn 0.2s forwards;
+}
+
+.dialog {
+  background: var(--neutral-900);
+  border: 1px solid var(--neutral-800);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  transform: scale(0.95);
+  opacity: 0;
+  animation: popIn 0.2s 0.1s forwards;
+}
+
+.dialogTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--light);
+  margin: 0 0 0.75rem 0;
+}
+
+.dialogMessage {
+  font-size: 0.9rem;
+  color: var(--gray);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btnCancel {
+  background: var(--neutral-800);
+  color: var(--light);
+}
+
+.btnCancel:hover {
+  background: var(--neutral-700);
+}
+
+.btnDanger {
+  background: #ef4444;
+  color: white;
+}
+
+.btnDanger:hover {
+  background: #dc2626;
+}
+
+.btnPrimary {
+  background: var(--primary, #6366f1);
+  color: white;
+}
+
+.btnPrimary:hover {
+  background: var(--primary-light, #818cf8);
+}
+
+.input {
+  width: 100%;
+  background: var(--neutral-800);
+  border: 1px solid var(--neutral-700);
+  color: var(--light);
+  padding: 0.75rem;
+  border-radius: 6px;
+  outline: none;
+  margin-bottom: 1rem;
+}
+
+.input:focus {
+  border-color: var(--primary, #6366f1);
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

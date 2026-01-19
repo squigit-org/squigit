@@ -26,13 +26,22 @@ export interface ChatMetadata {
   createdAt: number;
   updatedAt: number;
   isPinned: boolean;
+  isStarred?: boolean;
+  projectId?: string;
   messageCount: number;
   hasImage: boolean;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: number;
 }
 
 export interface ChatsIndex {
   version: number;
   chats: ChatMetadata[];
+  projects?: Project[];
 }
 
 /**
@@ -84,13 +93,24 @@ export async function loadChatIndex(): Promise<ChatMetadata[]> {
 /**
  * Save chat index
  */
-export async function saveChatIndex(chats: ChatMetadata[]): Promise<void> {
+export async function saveChatIndex(
+  chats: ChatMetadata[],
+  projects?: Project[],
+): Promise<void> {
   try {
     await ensureChatsDir();
+
+    // Preserve existing projects if not provided
+    let finalProjects = projects;
+    if (!finalProjects) {
+      const existing = await loadChatIndexData();
+      finalProjects = existing.projects || [];
+    }
 
     const index: ChatsIndex = {
       version: 1,
       chats,
+      projects: finalProjects,
     };
 
     await writeTextFile(INDEX_FILE, JSON.stringify(index, null, 2), {
@@ -100,6 +120,43 @@ export async function saveChatIndex(chats: ChatMetadata[]): Promise<void> {
     console.error("Failed to save chat index:", error);
     throw error;
   }
+}
+
+async function loadChatIndexData(): Promise<ChatsIndex> {
+  try {
+    await ensureChatsDir();
+    const indexExists = await exists(INDEX_FILE, {
+      baseDir: BaseDirectory.AppConfig,
+    });
+    if (!indexExists) return { version: 1, chats: [], projects: [] };
+
+    const content = await readTextFile(INDEX_FILE, {
+      baseDir: BaseDirectory.AppConfig,
+    });
+    return JSON.parse(content);
+  } catch (error) {
+    return { version: 1, chats: [], projects: [] };
+  }
+}
+
+export async function loadProjects(): Promise<Project[]> {
+  const data = await loadChatIndexData();
+  return data.projects || [];
+}
+
+export async function createProject(name: string): Promise<Project> {
+  const data = await loadChatIndexData();
+  const projects = data.projects || [];
+
+  const newProject: Project = {
+    id: crypto.randomUUID(),
+    name,
+    createdAt: Date.now(),
+  };
+
+  projects.push(newProject);
+  await saveChatIndex(data.chats, projects);
+  return newProject;
 }
 
 /**
@@ -152,7 +209,8 @@ function markdownToMessages(md: string): Message[] {
 
     const message: Message = {
       id: idMatch ? idMatch[1] : crypto.randomUUID(),
-      role: role === "assistant" ? "model" : role,
+      role:
+        (role as string) === "assistant" ? "model" : (role as "user" | "model"),
       text,
       timestamp: timestampMatch
         ? new Date(timestampMatch[1]).getTime()
@@ -179,11 +237,10 @@ function getChatDir(chatId: string): string {
 /**
  * Load a full chat from storage
  */
-export async function loadChat(
-  chatId: string,
-): Promise<{
+export async function loadChat(chatId: string): Promise<{
   messages: Message[];
   imageData: ChatSession["imageData"];
+  ocrData?: ChatSession["ocrData"];
 } | null> {
   try {
     const chatDir = getChatDir(chatId);
@@ -217,7 +274,25 @@ export async function loadChat(
       imageData = JSON.parse(imageMeta);
     }
 
-    return { messages, imageData };
+    // Try to load ocr data if exists
+    let ocrData: ChatSession["ocrData"] = undefined;
+    const ocrFile = `${chatDir}/ocr.json`;
+    const ocrExists = await exists(ocrFile, {
+      baseDir: BaseDirectory.AppConfig,
+    });
+
+    if (ocrExists) {
+      try {
+        const ocrContent = await readTextFile(ocrFile, {
+          baseDir: BaseDirectory.AppConfig,
+        });
+        ocrData = JSON.parse(ocrContent);
+      } catch (e) {
+        console.error("Failed to parse OCR cache", e);
+      }
+    }
+
+    return { messages, imageData, ocrData };
   } catch (error) {
     console.error(`Failed to load chat ${chatId}:`, error);
     return null;
@@ -229,7 +304,11 @@ export async function loadChat(
  */
 export async function saveChat(session: ChatSession): Promise<void> {
   // Don't save chats without messages
-  if (!session.messages || session.messages.length === 0) {
+  // Save if we have messages OR an image (0-prompt chat support)
+  if (
+    (!session.messages || session.messages.length === 0) &&
+    !session.imageData
+  ) {
     return;
   }
 
@@ -267,16 +346,32 @@ export async function saveChat(session: ChatSession): Promise<void> {
       });
     }
 
+    // Save OCR Data if exists
+    if (session.ocrData) {
+      const ocrFile = `${chatDir}/ocr.json`;
+      await writeTextFile(ocrFile, JSON.stringify(session.ocrData), {
+        baseDir: BaseDirectory.AppConfig,
+      });
+    }
+
     // Update index
-    const index = await loadChatIndex();
+    const data = await loadChatIndexData();
+    const index = data.chats;
     const existingIndex = index.findIndex((c) => c.id === session.id);
 
+    // Keep existing metadata properties if updating
+    const existingMeta =
+      existingIndex >= 0 ? index[existingIndex] : ({} as ChatMetadata);
+
     const metadata: ChatMetadata = {
+      ...existingMeta, // Preservation of isStarred, projectId, etc.
       id: session.id,
       title: session.title,
       createdAt: session.createdAt,
       updatedAt: Date.now(),
-      isPinned: (session as any).isPinned || false,
+      isPinned: (session as any).isPinned || existingMeta.isPinned || false,
+      isStarred: session.isStarred || existingMeta.isStarred || false,
+      projectId: session.projectId || existingMeta.projectId,
       messageCount: session.messages.length,
       hasImage: !!session.imageData,
     };
@@ -287,7 +382,7 @@ export async function saveChat(session: ChatSession): Promise<void> {
       index.unshift(metadata);
     }
 
-    await saveChatIndex(index);
+    await saveChatIndex(index, data.projects);
   } catch (error) {
     console.error(`Failed to save chat ${session.id}:`, error);
     throw error;
@@ -313,11 +408,40 @@ export async function deleteChat(chatId: string): Promise<void> {
     }
 
     // Update index
-    const index = await loadChatIndex();
-    const updatedIndex = index.filter((c) => c.id !== chatId);
-    await saveChatIndex(updatedIndex);
+    const data = await loadChatIndexData();
+    const updatedIndex = data.chats.filter((c) => c.id !== chatId);
+    await saveChatIndex(updatedIndex, data.projects);
   } catch (error) {
     console.error(`Failed to delete chat ${chatId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Bulk delete chats
+ */
+export async function deleteChats(chatIds: string[]): Promise<void> {
+  try {
+    const data = await loadChatIndexData();
+    const remainingChats = data.chats.filter((c) => !chatIds.includes(c.id));
+
+    // Save index first to update UI quickly
+    await saveChatIndex(remainingChats, data.projects);
+
+    // Delete files concurrently
+    await Promise.all(
+      chatIds.map(async (id) => {
+        const chatDir = getChatDir(id);
+        if (await exists(chatDir, { baseDir: BaseDirectory.AppConfig })) {
+          await remove(chatDir, {
+            baseDir: BaseDirectory.AppConfig,
+            recursive: true,
+          });
+        }
+      }),
+    );
+  } catch (error) {
+    console.error("Failed to bulk delete chats:", error);
     throw error;
   }
 }
@@ -367,10 +491,55 @@ export async function pinChat(
 }
 
 /**
+ * Toggle star status
+ */
+export async function starChat(
+  chatId: string,
+  isStarred: boolean,
+): Promise<void> {
+  try {
+    const index = await loadChatIndex();
+    const chat = index.find((c) => c.id === chatId);
+
+    if (chat) {
+      chat.isStarred = isStarred;
+      chat.updatedAt = Date.now();
+      await saveChatIndex(index);
+    }
+  } catch (error) {
+    console.error(`Failed to star chat ${chatId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Add chat to project
+ */
+export async function setChatProject(
+  chatId: string,
+  projectId: string | undefined, // undefined to remove
+): Promise<void> {
+  try {
+    const index = await loadChatIndex();
+    const chat = index.find((c) => c.id === chatId);
+
+    if (chat) {
+      chat.projectId = projectId;
+      chat.updatedAt = Date.now();
+      await saveChatIndex(index);
+    }
+  } catch (error) {
+    console.error(`Failed to pin chat ${chatId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Group chats by date categories
  */
 export function groupChatsByDate(
   chats: ChatMetadata[],
+  projects: Project[] = [],
 ): Map<string, ChatMetadata[]> {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -379,6 +548,13 @@ export function groupChatsByDate(
   const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const groups = new Map<string, ChatMetadata[]>();
+
+  // Initialize project groups
+  projects.forEach((p) => {
+    groups.set(`Project:${p.name}`, []);
+  });
+
+  groups.set("Favorites", []);
   groups.set("Pinned", []);
   groups.set("Today", []);
   groups.set("Yesterday", []);
@@ -387,8 +563,33 @@ export function groupChatsByDate(
   groups.set("Older", []);
 
   for (const chat of chats) {
+    // Add to Project group if assigned
+    if (chat.projectId) {
+      const project = projects.find((p) => p.id === chat.projectId);
+      if (project) {
+        groups.get(`Project:${project.name}`)?.push(chat);
+        // Chats in projects don't show in date lists to avoid duplication?
+        // User request didn't specify. Usually projects are separate.
+        // Let's assume projects are a primary grouping.
+        continue;
+      }
+    }
+
+    if (chat.isStarred) {
+      groups.get("Favorites")!.push(chat);
+    }
+
     if (chat.isPinned) {
       groups.get("Pinned")!.push(chat);
+      continue;
+    }
+
+    // If starred but not pinned/project, still show in date?
+    // Usually favorites is a filter or a top section.
+    // Let's behave like Pinned: if Pinned, it's removed from date list.
+    // If Starred, should it be removed? "add chat start under option pin" implies it's a property.
+    // "Favorites" usually sits at top.
+    if (chat.isStarred) {
       continue;
     }
 
@@ -408,9 +609,16 @@ export function groupChatsByDate(
   }
 
   // Remove empty groups (except Pinned which we'll always show if there are pins)
-  if (groups.get("Pinned")!.length === 0) {
-    groups.delete("Pinned");
-  }
+  // Remove empty groups (except Pinned/Favorites if relevant?)
+  // Actually, we should clean up any empty standard groups
+  const keysToDelete: string[] = [];
+  groups.forEach((value, key) => {
+    if (value.length === 0) {
+      keysToDelete.push(key);
+    }
+  });
+
+  keysToDelete.forEach((key) => groups.delete(key));
 
   return groups;
 }

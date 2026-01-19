@@ -388,10 +388,12 @@ export const AppLayout: React.FC = () => {
         sidePanel={
           <ChatPanel
             chats={chatSessions.chatMetadata}
+            projects={chatSessions.projects}
             activeSessionId={chatSessions.activeSessionId}
             onSelectChat={chatSessions.openChatFromHistory}
             onNewChat={() => chatSessions.createSession("default", "New Chat")}
             onDeleteChat={chatSessions.deleteSession}
+            onDeleteChats={chatSessions.deleteSessions}
             onRenameChat={chatSessions.renameSession}
             onTogglePinChat={(id: string) => {
               const chat = chatSessions.chatMetadata.find((c) => c.id === id);
@@ -399,6 +401,14 @@ export const AppLayout: React.FC = () => {
                 chatSessions.pinSession(id, !chat.isPinned);
               }
             }}
+            onToggleStarChat={(id: string) => {
+              const chat = chatSessions.chatMetadata.find((c) => c.id === id);
+              if (chat) {
+                chatSessions.starSession(id, !chat.isStarred);
+              }
+            }}
+            onCreateProject={chatSessions.createNewProject}
+            onMoveChatToProject={chatSessions.moveChatToProject}
           />
         }
         onImageReady={handleImageReady}

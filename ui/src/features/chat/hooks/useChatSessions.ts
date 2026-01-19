@@ -18,9 +18,15 @@ import {
   loadChat,
   saveChat,
   deleteChat,
+  deleteChats,
   renameChat,
   pinChat,
+  starChat,
+  createProject,
+  loadProjects,
+  setChatProject,
   ChatMetadata,
+  Project,
 } from "../../../lib/storage/chatStorage";
 
 import { parseGeminiError } from "../../../lib/utils/errorParser";
@@ -204,31 +210,64 @@ export const useChatSessions = () => {
 
   // Delete session from storage and state
   const deleteSession = useCallback(
-    async (id: string) => {
+    async (id: string, skipStateUpdate?: boolean) => {
+      // skipStateUpdate is for bulk delete usage
       try {
         await deleteChat(id);
-        setChatMetadata((prev) => prev.filter((c) => c.id !== id));
-        setSessions((prev) => prev.filter((s) => s.id !== id));
+        if (!skipStateUpdate) {
+          setChatMetadata((prev) => prev.filter((c) => c.id !== id));
+          setSessions((prev) => prev.filter((s) => s.id !== id));
 
-        // Close tab if open
-        setOpenTabIds((prev) => {
-          if (!prev.includes(id)) return prev;
-          const index = prev.indexOf(id);
-          const newOpenIds = prev.filter((tabId) => tabId !== id);
+          // Close tab if open
+          setOpenTabIds((prev) => {
+            if (!prev.includes(id)) return prev;
+            const index = prev.indexOf(id);
+            const newOpenIds = prev.filter((tabId) => tabId !== id);
 
-          if (id === activeSessionId) {
-            if (newOpenIds.length === 0) {
-              setActiveSessionId(null);
-            } else {
-              const nextIndex = Math.min(index, newOpenIds.length - 1);
-              setActiveSessionId(newOpenIds[nextIndex]);
+            if (id === activeSessionId) {
+              if (newOpenIds.length === 0) {
+                setActiveSessionId(null);
+              } else {
+                const nextIndex = Math.min(index, newOpenIds.length - 1);
+                setActiveSessionId(newOpenIds[nextIndex]);
+              }
             }
+            return newOpenIds;
+          });
+        }
+      } catch (error) {
+        console.error("Failed to delete session:", error);
+      }
+    },
+    [activeSessionId],
+  );
+
+  const deleteSessions = useCallback(
+    async (ids: string[]) => {
+      try {
+        await deleteChats(ids);
+
+        // Batch update state
+        setChatMetadata((prev) => prev.filter((c) => !ids.includes(c.id)));
+        setSessions((prev) => prev.filter((s) => !ids.includes(s.id)));
+
+        setOpenTabIds((prev) => {
+          const newOpenIds = prev.filter((tabId) => !ids.includes(tabId));
+
+          if (newOpenIds.length === 0) {
+            // If all open tabs were deleted, show welcome if we were viewing one
+            if (activeSessionId && ids.includes(activeSessionId)) {
+              setActiveSessionId(null);
+            }
+          } else if (activeSessionId && ids.includes(activeSessionId)) {
+            // If active session deleted, switch to last available
+            setActiveSessionId(newOpenIds[newOpenIds.length - 1]);
           }
 
           return newOpenIds;
         });
       } catch (error) {
-        console.error("Failed to delete session:", error);
+        console.error("Failed to batch delete sessions:", error);
       }
     },
     [activeSessionId],
@@ -249,12 +288,71 @@ export const useChatSessions = () => {
     }
   }, []);
 
+  // Star session
+  const starSession = useCallback(async (id: string, isStarred: boolean) => {
+    try {
+      await starChat(id, isStarred);
+      setChatMetadata((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, isStarred } : c)),
+      );
+      // Update active session if loaded
+      setSessions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, isStarred } : s)),
+      );
+    } catch (error) {
+      console.error("Failed to star session:", error);
+    }
+  }, []);
+
+  // Projects
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  const refreshProjects = useCallback(async () => {
+    try {
+      const loaded = await loadProjects();
+      setProjects(loaded);
+    } catch (e) {
+      console.error("Failed to load projects", e);
+    }
+  }, []);
+
+  const createNewProject = useCallback(async (name: string) => {
+    try {
+      const project = await createProject(name);
+      setProjects((prev) => [...prev, project]);
+      return project;
+    } catch (e) {
+      console.error("Failed to create project", e);
+      return null;
+    }
+  }, []);
+
+  const moveChatToProject = useCallback(
+    async (chatId: string, projectId: string | undefined) => {
+      try {
+        await setChatProject(chatId, projectId);
+        setChatMetadata((prev) =>
+          prev.map((c) => (c.id === chatId ? { ...c, projectId } : c)),
+        );
+        setSessions((prev) =>
+          prev.map((s) => (s.id === chatId ? { ...s, projectId } : s)),
+        );
+      } catch (e) {
+        console.error("Failed to set chat project", e);
+      }
+    },
+    [],
+  );
+
   // Load chat history on mount
   useEffect(() => {
     const loadHistory = async () => {
       try {
         const metadata = await loadChatIndex();
         setChatMetadata(metadata);
+
+        const loadedProjects = await loadProjects();
+        setProjects(loadedProjects);
       } catch (error) {
         console.error("Failed to load chat history:", error);
       }
@@ -268,7 +366,13 @@ export const useChatSessions = () => {
 
   // Auto-save chats when they have messages
   const saveSessionDebounced = useCallback((session: ChatSession) => {
-    if (session.messages.length > 0 && session.type !== "settings") {
+    // Save logic has changed in storage to check for image too,
+    // but the debounce trigger here was checking messages.length > 0.
+    // We update it to run if messages OR image exists.
+    if (
+      (session.messages.length > 0 || session.imageData) &&
+      session.type !== "settings"
+    ) {
       const existing = saveTimeouts.current.get(session.id);
       if (existing) clearTimeout(existing);
 
@@ -286,6 +390,11 @@ export const useChatSessions = () => {
                       title: session.title,
                       messageCount: session.messages.length,
                       updatedAt: Date.now(),
+                      // Ensure robust metadata preservation
+                      isPinned:
+                        (session as any).isPinned || c.isPinned || false,
+                      isStarred: session.isStarred || c.isStarred,
+                      projectId: session.projectId || c.projectId,
                     }
                   : c,
               );
@@ -299,6 +408,8 @@ export const useChatSessions = () => {
                   isPinned: false,
                   messageCount: session.messages.length,
                   hasImage: !!session.imageData,
+                  isStarred: session.isStarred,
+                  projectId: session.projectId,
                 },
                 ...prev,
               ];
@@ -314,9 +425,14 @@ export const useChatSessions = () => {
   }, []);
 
   // Effect to auto-save sessions when they change
+  // Also watch for OCR data updates which might happen silently
   useEffect(() => {
     sessions.forEach((session) => {
-      if (session.messages.length > 0 && session.type !== "settings") {
+      // Now triggering save on image presence too
+      if (
+        (session.messages.length > 0 || session.imageData) &&
+        session.type !== "settings"
+      ) {
         saveSessionDebounced(session);
       }
     });
@@ -352,6 +468,9 @@ export const useChatSessions = () => {
           inputText: "",
           isLoading: false,
           error: null,
+          ocrData: chatData.ocrData,
+          isStarred: metadata?.isStarred,
+          projectId: metadata?.projectId,
         };
 
         setSessions((prev) => [...prev, session]);
@@ -389,13 +508,22 @@ export const useChatSessions = () => {
   const updateSessionOCRData = useCallback(
     (sessionId: string, ocrData: { text: string; box: number[][] }[]) => {
       setSessions((prev) =>
-        prev.map((session) =>
-          session.id === sessionId ? { ...session, ocrData } : session,
-        ),
+        prev.map((session) => {
+          if (session.id === sessionId) {
+            const updated = { ...session, ocrData };
+            // Trigger save immediately for OCR data
+            saveSessionDebounced(updated);
+            return updated;
+          }
+          return session;
+        }),
       );
     },
-    [],
+    [saveSessionDebounced],
   );
+
+  // Update state when metadata changes from outside (like starring in sidebar but tab is open)
+  // This is handled by managing specific updates in the functions above (starSession, moveChatToProject)
 
   // --- Chat Logic ---
 
@@ -579,6 +707,7 @@ MSS: ${prompt}`;
     openTabIds,
     activeSessionId,
     chatMetadata,
+    projects,
     createSession,
     openSession,
     switchSession,
@@ -598,8 +727,12 @@ MSS: ${prompt}`;
     reorderTabs,
     pinSession,
     deleteSession,
+    deleteSessions,
     renameSession,
     openChatFromHistory,
     saveSessionDebounced,
+    starSession,
+    createNewProject,
+    moveChatToProject,
   };
 };
