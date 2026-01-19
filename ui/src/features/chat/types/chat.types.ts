@@ -34,7 +34,7 @@ export interface ChatSession {
   streamingText: string;
   firstResponseId: string | null;
   createdAt: number;
-  type: "default" | "edit";
+  type: "default" | "edit" | "settings";
   imageData: {
     base64: string;
     mimeType: string;

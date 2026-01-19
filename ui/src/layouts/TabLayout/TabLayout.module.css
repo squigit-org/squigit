@@ -7,8 +7,9 @@
 .container {
   display: flex;
   flex-direction: column;
+  flex: 1;
   height: 100%;
-  width: 100%;
+  min-width: 0;
   background-color: var(--neutral-950, #0a0a0a);
   color: var(--neutral-100, #fafafa);
   overflow: hidden;
@@ -19,6 +20,8 @@
 }
 
 .content {
+  display: flex;
+  flex-direction: row;
   flex: 1;
   overflow: hidden;
   position: relative;

@@ -85,25 +85,27 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
             </button>
           </div>
           <ul className={styles.chatSelectorList}>
-            {sessions.length === 0 ? (
+            {sessions.filter((s) => s.type !== "settings").length === 0 ? (
               <li className={styles.chatSelectorEmpty}>No chats yet</li>
             ) : (
-              sessions.map((session) => (
-                <li
-                  key={session.id}
-                  onClick={() => handleSessionSelect(session.id)}
-                  className={`${styles.dropdownItem} ${
-                    session.id === activeSessionId ? styles.selected : ""
-                  }`}
-                >
-                  <span className={styles.chatSelectorTitle}>
-                    {session.title}
-                  </span>
-                  {session.id === activeSessionId && (
-                    <Check size={16} className={styles.checkIcon} />
-                  )}
-                </li>
-              ))
+              sessions
+                .filter((s) => s.type !== "settings")
+                .map((session) => (
+                  <li
+                    key={session.id}
+                    onClick={() => handleSessionSelect(session.id)}
+                    className={`${styles.dropdownItem} ${
+                      session.id === activeSessionId ? styles.selected : ""
+                    }`}
+                  >
+                    <span className={styles.chatSelectorTitle}>
+                      {session.title}
+                    </span>
+                    {session.id === activeSessionId && (
+                      <Check size={16} className={styles.checkIcon} />
+                    )}
+                  </li>
+                ))
             )}
           </ul>
         </div>

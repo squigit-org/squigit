@@ -42,11 +42,16 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   }, [theme]);
 
   const [apiKey, setApiKey] = useState<string>("");
+  const [imgbbKey, setImgbbKey] = useState<string>("");
   const [activePrompt, setActivePrompt] = useState<string>(DEFAULT_PROMPT);
   const [editingPrompt, setEditingPrompt] = useState<string>(DEFAULT_PROMPT);
   const [startupModel, setStartupModel] = useState<string>(DEFAULT_MODEL);
   const [editingModel, setEditingModel] = useState<string>(DEFAULT_MODEL);
   const [sessionModel, setSessionModel] = useState<string>(DEFAULT_MODEL);
+  const [autoExpandOCR, setAutoExpandOCR] = useState<boolean>(true);
+  const [captureType, setCaptureType] = useState<"rectangular" | "squiggle">(
+    "rectangular",
+  );
 
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -80,6 +85,13 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         setEditingModel(loadedModel);
         setSessionModel(loadedModel);
 
+        if (prefs.autoExpandOCR !== undefined) {
+          setAutoExpandOCR(prefs.autoExpandOCR);
+        }
+        if (prefs.captureType) {
+          setCaptureType(prefs.captureType);
+        }
+
         if (prefs.theme) {
           setTheme(prefs.theme);
         }
@@ -109,6 +121,18 @@ export const useSystemSync = (onToggleSettings: () => void) => {
           setUserEmail(userData.email);
           setAvatarSrc(userData.avatar);
         }
+
+        // Load imgbb key
+        try {
+          const imgbbApiKey = await invoke<string>("get_api_key", {
+            provider: "imgbb",
+          });
+          if (imgbbApiKey) {
+            setImgbbKey(imgbbApiKey);
+          }
+        } catch (e) {
+          // imgbb key is optional
+        }
       } catch (e) {
         console.error("Config load error", e);
         setSystemError("Failed to load configuration.");
@@ -122,17 +146,26 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     };
   }, [onToggleSettings]);
 
-  const saveSettingsHandler = async (newPrompt: string, newModel: string) => {
+  const saveSettingsHandler = async (
+    newPrompt: string,
+    newModel: string,
+    newAutoExpandOCR?: boolean,
+    newCaptureType?: "rectangular" | "squiggle",
+  ) => {
     setStartupModel(newModel);
     setEditingModel(newModel);
     setActivePrompt(newPrompt);
     setEditingPrompt(newPrompt);
+    if (newAutoExpandOCR !== undefined) setAutoExpandOCR(newAutoExpandOCR);
+    if (newCaptureType) setCaptureType(newCaptureType);
 
     try {
       await savePreferences({
         prompt: newPrompt,
         model: newModel,
         theme: theme,
+        autoExpandOCR: newAutoExpandOCR ?? autoExpandOCR,
+        captureType: newCaptureType ?? captureType,
       });
     } catch (e) {
       console.error(e);
@@ -209,5 +242,11 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     sessionChatTitle,
     setSessionChatTitle,
     resetSession,
+    autoExpandOCR,
+    setAutoExpandOCR,
+    captureType,
+    setCaptureType,
+    imgbbKey,
+    setImgbbKey,
   };
 };

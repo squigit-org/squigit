@@ -23,12 +23,16 @@ export interface UserPreferences {
   model: string;
   theme: "dark" | "light";
   prompt: string;
+  autoExpandOCR: boolean;
+  captureType: "rectangular" | "squiggle";
 }
 
 export const defaultPreferences: UserPreferences = {
   model: DEFAULT_MODEL,
   theme: DEFAULT_THEME as "dark" | "light",
   prompt: DEFAULT_PROMPT,
+  autoExpandOCR: true,
+  captureType: "rectangular",
 };
 
 export async function hasPreferencesFile(): Promise<boolean> {

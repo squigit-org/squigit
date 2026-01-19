@@ -197,3 +197,38 @@
   background-color: transparent;
   color: var(--neutral-400);
 }
+
+.tabIcon {
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.tabSettings .tabIcon {
+  color: var(--neutral-400);
+}
+
+.tabSettings:hover .tabIcon,
+.tabSettings.tabActive .tabIcon {
+  color: inherit;
+}
+
+/* ===== Drag and Drop ===== */
+.tabDragging {
+  opacity: 0.5;
+  cursor: grabbing !important;
+}
+
+.tabDragOver {
+  position: relative;
+}
+
+.tabDragOver::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--primary, #6366f1);
+  border-radius: 1px;
+}

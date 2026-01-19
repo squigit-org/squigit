@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { ForwardedRef, useState } from "react";
-import { RotateCw, Settings } from "lucide-react";
+import React, { useState } from "react";
+import { RotateCw, Settings, PanelLeft } from "lucide-react";
 import { ModelSwitcher } from "../../features/chat/components/ModelSwitcher/ModelSwitcher";
-import { ChatHistory } from "../../features/chat/components/ChatHistory/ChatHistory";
 import { ChatSession } from "../../features/chat/types/chat.types";
-import { SettingsPanel } from "../../features/settings";
 import styles from "./TitleBar.module.css";
 import { TrafficLights, WindowsControls } from "./WindowControls";
 import { TabBar } from "./TabBar";
@@ -27,39 +25,19 @@ interface TitleBarProps {
   openTabs: ChatSession[];
   activeSessionId: string | null;
   onSessionSelect: (id: string) => void;
-  onOpenSession: (id: string) => void;
   onNewChat: () => void;
   onCloseSession: (id: string) => boolean;
   onCloseOtherSessions: (keepId: string) => void;
   onCloseSessionsToRight: (fromId: string) => void;
   onShowWelcome: () => void;
-
-  isPanelActive: boolean;
-  toggleSettingsPanel: () => void;
-  isPanelVisible: boolean;
-  isPanelActiveAndVisible: boolean;
-  isPanelClosing: boolean;
-  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
-  panelRef: React.RefObject<HTMLDivElement | null>;
-  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
-  prompt: string;
-  editingModel: string;
-  setPrompt: (prompt: string) => void;
-  onEditingModelChange: (model: string) => void;
-  userName: string;
-  userEmail: string;
-  avatarSrc: string;
-  onSave: (prompt: string, model: string) => void;
-  onLogout: () => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
-  onResetAPIKey: () => void;
-  toggleSubview: (isActive: boolean) => void;
+  onOpenSettingsTab: () => void;
+  isSidePanelOpen: boolean;
+  onToggleSidePanel: () => void;
+  onReorderTabs?: (fromIndex: number, toIndex: number) => void;
 }
 
 const detectPlatform = (): Platform => {
   const userAgent = window.navigator.userAgent.toLowerCase();
-  console.log("TitleBar Platform Detection - UA:", userAgent);
   if (userAgent.includes("mac os")) return "macos";
   if (userAgent.includes("windows")) return "windows";
   return "linux";
@@ -75,130 +53,87 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   openTabs,
   activeSessionId,
   onSessionSelect,
-  onOpenSession,
   onNewChat,
   onCloseSession,
   onCloseOtherSessions,
   onCloseSessionsToRight,
   onShowWelcome,
-  isPanelActive,
-  toggleSettingsPanel,
-  isPanelVisible,
-  isPanelActiveAndVisible,
-  isPanelClosing,
-  settingsButtonRef,
-  settingsPanelRef,
-  prompt,
-  editingModel,
-  setPrompt,
-  onEditingModelChange,
-  userName,
-  userEmail,
-  avatarSrc,
-  onSave,
-  onLogout,
-  isDarkMode,
-  onToggleTheme,
-  onResetAPIKey,
-  toggleSubview,
+  onOpenSettingsTab,
+  isSidePanelOpen,
+  onToggleSidePanel,
+  onReorderTabs,
 }) => {
-  const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
+  const [platform] = useState<Platform>(() => detectPlatform());
 
   const isUnix = platform === "macos" || platform === "linux";
 
-  const hasTabs = openTabs.length > 0;
+  // Check if active tab is a chat tab
+  const activeTab = openTabs.find((t) => t.id === activeSessionId);
+  const isActiveChatTab = activeTab && activeTab.type !== "settings";
+  // Check if Settings tab is open
+  const isSettingsOpen = openTabs.some((t) => t.type === "settings");
 
   return (
     <header className={styles.header} data-tauri-drag-region>
       <div className={styles.leftSection}>
         {isUnix && <TrafficLights />}
 
-        <div className={styles.controlsWrapper}>
-          <button
-            ref={settingsButtonRef}
-            onClick={toggleSettingsPanel}
-            className={`${styles.iconButton} ${
-              isPanelActive ? styles.active : ""
-            }`}
-            title="Settings"
-          >
-            <Settings size={20} />
-          </button>
+        {/* Side panel toggle button */}
+        <button
+          onClick={onToggleSidePanel}
+          className={`${styles.iconButton} ${isSidePanelOpen ? styles.active : ""}`}
+          title={isSidePanelOpen ? "Close sidebar" : "Open sidebar"}
+        >
+          <PanelLeft size={20} />
+        </button>
 
-          {isPanelVisible && (
-            <div style={{ pointerEvents: "auto", display: "contents" }}>
-              <SettingsPanel
-                ref={settingsPanelRef}
-                isOpen={isPanelActiveAndVisible}
-                isClosing={isPanelClosing}
-                currentPrompt={prompt}
-                currentModel={editingModel}
-                onPromptChange={setPrompt}
-                onModelChange={onEditingModelChange}
-                userName={userName}
-                userEmail={userEmail}
-                avatarSrc={avatarSrc}
-                onSave={onSave}
-                onLogout={onLogout}
-                isDarkMode={isDarkMode}
-                onToggleTheme={onToggleTheme}
-                onResetAPIKey={onResetAPIKey}
-                toggleSubview={toggleSubview}
-                toggleSettingsPanel={toggleSettingsPanel}
-              />
-            </div>
-          )}
-        </div>
+        <TabBar
+          sessions={sessions}
+          openTabs={openTabs}
+          activeSessionId={activeSessionId}
+          onSessionSelect={onSessionSelect}
+          onCloseSession={onCloseSession}
+          onCloseOtherSessions={onCloseOtherSessions}
+          onCloseSessionsToRight={onCloseSessionsToRight}
+          onShowWelcome={onShowWelcome}
+          onReorderTabs={onReorderTabs}
+        />
+      </div>
 
-        {hasTabs && (
+      <div className={styles.rightSection}>
+        {/* Only show reload and model switcher when active tab is a chat */}
+        {isActiveChatTab && (
           <>
-            <ChatHistory
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              onSessionSelect={onOpenSession}
-              onNewChat={onNewChat}
-            />
+            <button
+              onClick={onReload}
+              className={styles.iconButton}
+              title="Reload chat"
+              disabled={isRotating}
+            >
+              <RotateCw
+                size={20}
+                className={isRotating ? styles.rotating : ""}
+              />
+            </button>
 
-            <TabBar
-              sessions={sessions}
-              openTabs={openTabs}
-              activeSessionId={activeSessionId}
-              onSessionSelect={onSessionSelect}
-              onCloseSession={onCloseSession}
-              onCloseOtherSessions={onCloseOtherSessions}
-              onCloseSessionsToRight={onCloseSessionsToRight}
-              onShowWelcome={onShowWelcome}
+            <ModelSwitcher
+              currentModel={currentModel}
+              onModelChange={onModelChange}
+              isLoading={isLoading}
             />
           </>
         )}
+
+        <button
+          onClick={onOpenSettingsTab}
+          className={`${styles.iconButton} ${isSettingsOpen ? styles.active : ""}`}
+          title="Settings"
+        >
+          <Settings size={20} />
+        </button>
+
+        {platform === "windows" && <WindowsControls />}
       </div>
-
-      {hasTabs && (
-        <div className={styles.rightSection}>
-          <button
-            onClick={onReload}
-            className={styles.iconButton}
-            title="Reload chat"
-            disabled={isRotating}
-          >
-            <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
-          </button>
-
-          <ModelSwitcher
-            currentModel={currentModel}
-            onModelChange={onModelChange}
-            isLoading={isLoading}
-          />
-
-          {platform === "windows" && <WindowsControls />}
-        </div>
-      )}
-
-      {!hasTabs && platform === "windows" && (
-        <div className={styles.rightSection}>
-          <WindowsControls />
-        </div>
-      )}
     </header>
   );
 };

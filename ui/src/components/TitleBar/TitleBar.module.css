@@ -72,7 +72,26 @@
   background-color: var(--neutral-800);
 }
 
-.iconButton.active {
-  background-color: var(--neutral-800);
-  color: var(--neutral-100);
+.iconButton:active {
+  background-color: var(--neutral-700);
+}
+
+.controlsWrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  pointer-events: auto;
+}
+
+.rotating {
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

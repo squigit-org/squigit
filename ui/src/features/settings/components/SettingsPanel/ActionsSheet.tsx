@@ -5,32 +5,23 @@
  */
 
 import React from "react";
-import {
-  Moon,
-  Bug,
-  KeyRound,
-  Pencil,
-  ChevronRight,
-  Github,
-} from "lucide-react";
+import { Moon, Bug, Settings, Github } from "lucide-react";
 import styles from "./SettingsPanel.module.css";
 
 interface MainActionsProps {
   isDarkMode: boolean;
   onToggleTheme: () => void;
   onReportBug: () => void;
-  onResetAPIKey: () => void;
   onOpenGithub: () => void;
-  onOpenSubview: () => void;
+  onOpenSettingsTab: () => void;
 }
 
 export const MainActions: React.FC<MainActionsProps> = ({
   isDarkMode,
   onToggleTheme,
   onReportBug,
-  onResetAPIKey,
   onOpenGithub,
-  onOpenSubview,
+  onOpenSettingsTab,
 }) => {
   return (
     <div className={styles["button-group"]}>
@@ -66,22 +57,12 @@ export const MainActions: React.FC<MainActionsProps> = ({
 
       <button
         className={styles["btn"]}
-        id="resetAPIKeyBtn"
-        onClick={onResetAPIKey}
+        id="settingsBtn"
+        onClick={onOpenSettingsTab}
       >
         <div className={styles["btn-content"]}>
-          <KeyRound size={18} />
-          <div className={styles["btn-text"]}>Reset API Key</div>
-        </div>
-      </button>
-
-      <button className={styles["btn"]} id="promptBtn" onClick={onOpenSubview}>
-        <div className={styles["btn-content"]}>
-          <Pencil size={18} />
-          <div className={styles["btn-text"]}>Personal Context</div>
-        </div>
-        <div className={styles["btn-arrow"]}>
-          <ChevronRight size={18} />
+          <Settings size={18} />
+          <div className={styles["btn-text"]}>Settings</div>
         </div>
       </button>
 

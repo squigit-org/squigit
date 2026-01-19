@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
@@ -33,30 +33,29 @@ import {
   useChatTitle,
   useChatSessions,
   Welcome,
+  SettingsTab,
+  SettingsTabHandle,
 } from "../../features";
+import { ChatPanel } from "../../features/chat/components/ChatPanel/ChatPanel";
+import { Dialog } from "../../components";
 
 export const AppLayout: React.FC = () => {
-  const [isPanelActive, setIsPanelActive] = useState(false);
-  const handleToggleSettings = useCallback(() => {
-    setIsPanelActive((prev) => !prev);
-  }, []);
+  // Side panel state
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const toggleSidePanel = () => setIsSidePanelOpen((prev) => !prev);
 
-  const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
-    null,
-  );
-  const settingsButtonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [isSubviewActive, setIsSubviewActive] = useState(false);
-  const [isPanelVisible, setIsPanelVisible] = useState(false);
-  const [isPanelClosing, setIsPanelClosing] = useState(false);
-  const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
+  // SettingsTab dirty state handling
+  const settingsTabRef = useRef<SettingsTabHandle>(null);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [pendingCloseSessionId, setPendingCloseSessionId] = useState<
+    string | null
+  >(null);
 
-  const system = useSystemSync(handleToggleSettings);
+  const system = useSystemSync(() => {});
   const auth = useAuth();
   const performLogout = async () => {
     await system.handleLogout();
     auth.logout();
-    setIsPanelActive(false);
   };
   useUpdateCheck();
 
@@ -187,68 +186,6 @@ export const AppLayout: React.FC = () => {
     isImageMissing,
   );
 
-  useEffect(() => {
-    if (isPanelActive) {
-      setIsPanelVisible(true);
-      const timer = setTimeout(() => {
-        setIsPanelActiveAndVisible(true);
-      }, 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsPanelActiveAndVisible(false);
-      setIsPanelClosing(true);
-      const timer = setTimeout(() => {
-        setIsPanelVisible(false);
-        setIsPanelClosing(false);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isPanelActive]);
-
-  const closeSettingsPanel = async () => {
-    if (isPanelActive) {
-      if (settingsPanelRef.current) {
-        const canClose = await settingsPanelRef.current.handleClose();
-        if (canClose) handleToggleSettings();
-      } else {
-        handleToggleSettings();
-      }
-    }
-  };
-
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isPanelActive) closeSettingsPanel();
-    };
-
-    const handleOutsideClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-
-      const isMsgBoxClick =
-        target.closest(".error-overlay") || target.closest(".error-container");
-      const isContextMenuClick = target.closest("#app-context-menu");
-
-      if (
-        isPanelActive &&
-        panelRef.current &&
-        !panelRef.current.contains(target as Node) &&
-        settingsButtonRef.current &&
-        !settingsButtonRef.current.contains(target as Node) &&
-        !isMsgBoxClick &&
-        !isContextMenuClick
-      ) {
-        closeSettingsPanel();
-      }
-    };
-
-    document.addEventListener("keydown", handleEsc);
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("keydown", handleEsc);
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [isPanelActive, isSubviewActive]);
-
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -352,6 +289,18 @@ export const AppLayout: React.FC = () => {
     chatSessions.createSession("default", "New Chat");
   };
 
+  const handleOpenPersonalizationTab = () => {
+    // Check if settings tab already exists
+    const existingSettingsTab = chatSessions.openTabs.find(
+      (t) => t.type === "settings",
+    );
+    if (existingSettingsTab) {
+      chatSessions.switchSession(existingSettingsTab.id);
+    } else {
+      chatSessions.createSession("settings", "Settings");
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     const selectedText = window.getSelection()?.toString() || "";
@@ -436,6 +385,22 @@ export const AppLayout: React.FC = () => {
       className={styles.appContainer}
     >
       <TabLayout
+        sidePanel={
+          <ChatPanel
+            chats={chatSessions.chatMetadata}
+            activeSessionId={chatSessions.activeSessionId}
+            onSelectChat={chatSessions.openChatFromHistory}
+            onNewChat={() => chatSessions.createSession("default", "New Chat")}
+            onDeleteChat={chatSessions.deleteSession}
+            onRenameChat={chatSessions.renameSession}
+            onTogglePinChat={(id: string) => {
+              const chat = chatSessions.chatMetadata.find((c) => c.id === id);
+              if (chat) {
+                chatSessions.pinSession(id, !chat.isPinned);
+              }
+            }}
+          />
+        }
         onImageReady={handleImageReady}
         chatTitle={activeSession?.title || "New Chat"}
         onReload={() => {
@@ -457,39 +422,29 @@ export const AppLayout: React.FC = () => {
         openTabs={chatSessions.openTabs}
         activeSessionId={chatSessions.activeSessionId}
         onSessionSelect={chatSessions.switchSession}
-        onOpenSession={(id: string) => {
-          chatSessions.openSession(id);
-        }}
         onNewChat={() => {
           chatSessions.createSession("default", "New Chat");
         }}
         onCloseSession={(id: string) => {
+          // Check if this is a settings tab with unsaved changes
+          const sessionToClose = chatSessions.openTabs.find((s) => s.id === id);
+          if (
+            sessionToClose?.type === "settings" &&
+            settingsTabRef.current?.isDirty()
+          ) {
+            setPendingCloseSessionId(id);
+            setShowUnsavedDialog(true);
+            return false;
+          }
           return chatSessions.closeSession(id);
         }}
         onCloseOtherSessions={chatSessions.closeOtherSessions}
         onCloseSessionsToRight={chatSessions.closeSessionsToRight}
         onShowWelcome={handleShowWelcome}
-        isPanelActive={isPanelActive}
-        toggleSettingsPanel={handleToggleSettings}
-        isPanelVisible={isPanelVisible}
-        isPanelActiveAndVisible={isPanelActiveAndVisible}
-        isPanelClosing={isPanelClosing}
-        settingsButtonRef={settingsButtonRef}
-        panelRef={panelRef}
-        settingsPanelRef={settingsPanelRef}
-        prompt={system.editingPrompt}
-        editingModel={system.editingModel}
-        setPrompt={system.setEditingPrompt}
-        onEditingModelChange={system.setEditingModel}
-        userName={system.userName}
-        userEmail={system.userEmail}
-        avatarSrc={system.avatarSrc}
-        onSave={system.saveSettings}
-        onLogout={performLogout}
-        isDarkMode={system.isDarkMode}
-        onToggleTheme={system.handleToggleTheme}
-        onResetAPIKey={system.handleResetAPIKey}
-        toggleSubview={setIsSubviewActive}
+        onOpenSettingsTab={handleOpenPersonalizationTab}
+        isSidePanelOpen={isSidePanelOpen}
+        onToggleSidePanel={toggleSidePanel}
+        onReorderTabs={chatSessions.reorderTabs}
       >
         {/* ALL TABS MOUNTED - CSS visibility toggle, no remounting */}
         {chatSessions.openTabs.map((session) => (
@@ -502,7 +457,24 @@ export const AppLayout: React.FC = () => {
                   : "none",
             }}
           >
-            {session.imageData ? (
+            {session.type === "settings" ? (
+              <SettingsTab
+                ref={settingsTabRef}
+                autoExpandOCR={system.autoExpandOCR}
+                captureType={system.captureType}
+                isDarkMode={system.isDarkMode}
+                onToggleTheme={system.handleToggleTheme}
+                geminiKey={system.apiKey}
+                imgbbKey={system.imgbbKey}
+                currentPrompt={system.editingPrompt}
+                currentModel={system.editingModel}
+                userName={system.userName}
+                userEmail={system.userEmail}
+                avatarSrc={system.avatarSrc}
+                onLogout={performLogout}
+                onSave={system.saveSettings}
+              />
+            ) : session.imageData ? (
               <ChatLayout
                 messages={session.messages || []}
                 streamingText={session.streamingText || ""}
@@ -528,9 +500,7 @@ export const AppLayout: React.FC = () => {
                 onRetry={() => {
                   chatSessions.retryChatMessage(session.id);
                 }}
-                onCheckSettings={() => {
-                  setIsPanelActive(true);
-                }}
+                onCheckSettings={handleOpenPersonalizationTab}
                 onSend={(text) =>
                   chatSessions.sendChatMessage(session.id, text)
                 }
@@ -556,6 +526,38 @@ export const AppLayout: React.FC = () => {
           />
         )}
       </TabLayout>
+
+      <Dialog
+        isOpen={showUnsavedDialog}
+        variant="warning"
+        title="Unsaved Changes"
+        message="Do you want to save your changes before closing?"
+        actions={[
+          {
+            label: "Discard",
+            onClick: () => {
+              setShowUnsavedDialog(false);
+              if (pendingCloseSessionId) {
+                chatSessions.closeSession(pendingCloseSessionId);
+                setPendingCloseSessionId(null);
+              }
+            },
+            variant: "secondary",
+          },
+          {
+            label: "Save",
+            onClick: () => {
+              settingsTabRef.current?.save();
+              setShowUnsavedDialog(false);
+              if (pendingCloseSessionId) {
+                chatSessions.closeSession(pendingCloseSessionId);
+                setPendingCloseSessionId(null);
+              }
+            },
+            variant: "primary",
+          },
+        ]}
+      />
 
       {contextMenu && (
         <ContextMenu
