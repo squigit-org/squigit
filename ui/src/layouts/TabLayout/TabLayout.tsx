@@ -35,6 +35,7 @@ export interface TabLayoutProps {
   onCloseSessionsToRight: (fromId: string) => void;
   onShowWelcome: () => void;
   onOpenSettingsTab: () => void;
+  onBeforeCloseSession?: (id: string) => boolean;
 
   // Side panel props
   isSidePanelOpen: boolean;
@@ -62,6 +63,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   onCloseSessionsToRight,
   onShowWelcome,
   onOpenSettingsTab,
+  onBeforeCloseSession,
   isSidePanelOpen,
   onToggleSidePanel,
   onReorderTabs,
@@ -87,6 +89,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
           onCloseSessionsToRight={onCloseSessionsToRight}
           onShowWelcome={onShowWelcome}
           onOpenSettingsTab={onOpenSettingsTab}
+          onBeforeCloseSession={onBeforeCloseSession}
           isSidePanelOpen={isSidePanelOpen}
           onToggleSidePanel={onToggleSidePanel}
           onReorderTabs={onReorderTabs}

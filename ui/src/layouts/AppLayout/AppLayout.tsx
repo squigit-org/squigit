@@ -442,6 +442,19 @@ export const AppLayout: React.FC = () => {
         onCloseSessionsToRight={chatSessions.closeSessionsToRight}
         onShowWelcome={handleShowWelcome}
         onOpenSettingsTab={handleOpenPersonalizationTab}
+        onBeforeCloseSession={(id: string) => {
+          // Check if this is a settings tab with unsaved changes
+          const sessionToClose = chatSessions.openTabs.find((s) => s.id === id);
+          if (
+            sessionToClose?.type === "settings" &&
+            settingsTabRef.current?.isDirty()
+          ) {
+            setPendingCloseSessionId(id);
+            setShowUnsavedDialog(true);
+            return false;
+          }
+          return true;
+        }}
         isSidePanelOpen={isSidePanelOpen}
         onToggleSidePanel={toggleSidePanel}
         onReorderTabs={chatSessions.reorderTabs}

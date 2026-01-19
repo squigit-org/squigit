@@ -94,6 +94,7 @@ interface TabBarProps {
   onCloseOtherSessions: (keepId: string) => void;
   onCloseSessionsToRight: (fromId: string) => void;
   onShowWelcome: () => void;
+  onBeforeCloseSession?: (id: string) => boolean;
   onReorderTabs?: (fromIndex: number, toIndex: number) => void;
 }
 
@@ -106,6 +107,7 @@ export const TabBar: React.FC<TabBarProps> = ({
   onCloseOtherSessions,
   onCloseSessionsToRight,
   onShowWelcome,
+  onBeforeCloseSession,
   onReorderTabs,
 }) => {
   const [closingTabId, setClosingTabId] = useState<string | null>(null);
@@ -166,6 +168,11 @@ export const TabBar: React.FC<TabBarProps> = ({
   const isAtLimit = openTabs.length >= MAX_VISIBLE_TABS;
 
   const handleCloseTab = (id: string) => {
+    // Check if we are allowed to close
+    if (onBeforeCloseSession && !onBeforeCloseSession(id)) {
+      return;
+    }
+
     setClosingTabId(id);
 
     setTimeout(() => {

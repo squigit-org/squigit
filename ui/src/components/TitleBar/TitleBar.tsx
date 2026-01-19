@@ -31,6 +31,9 @@ interface TitleBarProps {
   onCloseSessionsToRight: (fromId: string) => void;
   onShowWelcome: () => void;
   onOpenSettingsTab: () => void;
+  onBeforeCloseSession?: (id: string) => boolean;
+
+  // Side panel propsen: boolean;
   isSidePanelOpen: boolean;
   onToggleSidePanel: () => void;
   onReorderTabs?: (fromIndex: number, toIndex: number) => void;
@@ -59,6 +62,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onCloseSessionsToRight,
   onShowWelcome,
   onOpenSettingsTab,
+  onBeforeCloseSession,
   isSidePanelOpen,
   onToggleSidePanel,
   onReorderTabs,
@@ -96,6 +100,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onCloseOtherSessions={onCloseOtherSessions}
           onCloseSessionsToRight={onCloseSessionsToRight}
           onShowWelcome={onShowWelcome}
+          onBeforeCloseSession={onBeforeCloseSession}
           onReorderTabs={onReorderTabs}
         />
       </div>

@@ -23,6 +23,8 @@ import {
   ChatMetadata,
 } from "../../../lib/storage/chatStorage";
 
+import { parseGeminiError } from "../../../lib/utils/errorParser";
+
 export const useChatSessions = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [openTabIds, setOpenTabIds] = useState<string[]>([]);
@@ -260,7 +262,9 @@ export const useChatSessions = () => {
     loadHistory();
   }, []);
 
-  const saveTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const saveTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
 
   // Auto-save chats when they have messages
   const saveSessionDebounced = useCallback((session: ChatSession) => {
@@ -474,9 +478,10 @@ MSS: ${prompt}`;
         });
       } catch (err: any) {
         console.error("Chat start error", err);
+        const parsed = parseGeminiError(err);
         updateSession(sessionId, {
           isLoading: false,
-          error: err.message || "Failed to start chat",
+          error: parsed.message,
         });
       }
     },
@@ -545,16 +550,28 @@ MSS: ${prompt}`;
           ),
         );
       } catch (err: any) {
+        const parsed = parseGeminiError(err);
         updateSession(sessionId, {
           isLoading: false,
-          error: err.message || "Failed to send message",
+          error: parsed.message,
         });
       }
     },
     [updateSession],
   );
 
-  const retryChatMessage = useCallback(async (sessionId: string) => {}, []);
+  const retryChatMessage = useCallback(
+    async (sessionId: string) => {
+      const session = sessions.find((s) => s.id === sessionId);
+      if (!session) return;
+
+      // Clear error to hide dialog.
+      // The actual reload logic is handled by the UI component calling onRetry
+      // which triggers the reload sequence (startChatSession)
+      updateSession(sessionId, { error: null, isLoading: true });
+    },
+    [sessions, updateSession],
+  );
 
   return {
     sessions,

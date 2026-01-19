@@ -5,6 +5,7 @@
  */
 
 import React, { forwardRef } from "react";
+import { parseGeminiError } from "../../../../lib/utils/errorParser";
 import { Dialog } from "../../../../components";
 import { ChatBubble, StreamingResponse, Message } from "../..";
 import styles from "./ChatArea.module.css";
@@ -38,11 +39,9 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       onCheckSettings,
       onRetry,
       prompt,
-      showUpdate,
-      setShowUpdate,
       messages,
     },
-    ref
+    ref,
   ) => {
     return (
       <div className="flex-1 overflow-y-auto" ref={ref}>
@@ -83,47 +82,64 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               </div>
             )}
 
-            <Dialog
-              isOpen={!!error}
-              variant="error"
-              title="Connection Error"
-              message={error || ""}
-              actions={[
-                {
-                  label: "Check Settings",
-                  onClick: onCheckSettings,
-                  variant: "secondary",
-                },
-                {
-                  label: "Retry",
-                  onClick: onRetry,
-                  variant: "danger",
-                  disabled: !startupImage || !prompt,
-                },
-              ]}
-            />
+            {/* Error Dialog handling */}
+            {(() => {
+              if (!error) return null;
 
-            <Dialog
-              isOpen={showUpdate}
-              variant="update"
-              title="New Update Available"
-              message="Version 1.2.0 is available with better caching."
-              actions={[
-                {
-                  label: "Maybe Later",
-                  onClick: () => setShowUpdate(false),
-                  variant: "secondary",
-                },
-                {
-                  label: "Update Now",
-                  onClick: () => {
-                    alert("Backend not connected yet!");
-                    setShowUpdate(false);
-                  },
-                  variant: "primary",
-                },
-              ]}
-            />
+              const parsedError = parseGeminiError(error);
+
+              const getActions = () => {
+                const actions: any[] = [];
+
+                // Primary Action: Retry or Dismiss
+                if (parsedError.actionType !== "DISMISS_ONLY") {
+                  actions.push({
+                    label: "Retry",
+                    onClick: onRetry,
+                    variant: "danger",
+                  });
+                } else {
+                  actions.push({
+                    label: "Dismiss",
+                    onClick: onRetry, // Reuse onRetry to clear error -> reload/reset
+                    variant: "secondary",
+                  });
+                }
+
+                // Secondary Action: Settings or Link
+                if (parsedError.actionType === "RETRY_OR_SETTINGS") {
+                  actions.push({
+                    label: "Change API Key",
+                    onClick: onCheckSettings,
+                    variant: "secondary",
+                  });
+                }
+
+                if (
+                  parsedError.actionType === "RETRY_OR_LINK" &&
+                  parsedError.meta?.link
+                ) {
+                  actions.push({
+                    label: parsedError.meta.linkLabel || "Open Link",
+                    onClick: () =>
+                      window.open(parsedError.meta?.link, "_blank"),
+                    variant: "secondary",
+                  });
+                }
+
+                return actions;
+              };
+
+              return (
+                <Dialog
+                  isOpen={!!error}
+                  variant="error"
+                  title={parsedError.title}
+                  message={parsedError.message}
+                  actions={getActions()}
+                />
+              );
+            })()}
 
             {isChatMode && (
               <div className="space-y-8 flex flex-col-reverse">
@@ -152,7 +168,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         </main>
       </div>
     );
-  }
+  },
 );
 
 ChatArea.displayName = "ChatArea";
