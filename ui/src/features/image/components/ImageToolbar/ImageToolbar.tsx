@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import styles from "./ImageToolbar.module.css";
 
@@ -12,7 +12,7 @@ interface ImageToolbarProps {
   toolbarRef: React.RefObject<HTMLDivElement | null>;
   isLensLoading?: boolean;
   onLensClick: () => void;
-  onCopyImage: () => void;
+  onCopyImage: () => Promise<boolean>;
   onSaveClick: () => void;
   constraintRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -121,6 +121,19 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 }) => {
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const isDraggingRef = useRef(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const handleCopyClick = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const success = await onCopyImage();
+      if (success) {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 1500);
+      }
+    },
+    [onCopyImage],
+  );
 
   useEffect(() => {
     const toolbar = toolbarRef.current;
@@ -275,26 +288,39 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 
       <ToolbarButton
         icon={
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-          </svg>
+          copySuccess ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+            </svg>
+          )
         }
-        tooltip="Copy as Image"
-        onClick={(e) => {
-          e.stopPropagation();
-          onCopyImage();
-        }}
+        tooltip={copySuccess ? "Copied to clipboard" : "Copy as Image"}
+        onClick={handleCopyClick}
       />
 
       <ToolbarButton

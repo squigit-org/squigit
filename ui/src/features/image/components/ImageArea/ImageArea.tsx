@@ -159,9 +159,9 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     }
   };
 
-  const handleCopyImage = useCallback(async () => {
+  const handleCopyImage = useCallback(async (): Promise<boolean> => {
     const img = imgRef.current;
-    if (!img) return;
+    if (!img) return false;
 
     try {
       const canvas = document.createElement("canvas");
@@ -177,19 +177,15 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
 
       await invoke("copy_image_to_clipboard", { imageBase64: base64 });
-
-      const { showToast } = await import("../../../../components/Toast");
-      showToast("Copied to clipboard", "success");
+      return true;
     } catch (err) {
       console.error("Failed to copy image:", err);
-      const { showToast } = await import("../../../../components/Toast");
-      showToast("Failed to copy", "error");
+      return false;
     }
   }, []);
 
   const handleExpandSave = useCallback(async () => {
-    const { showToast } = await import("../../../../components/Toast");
-    showToast("Save feature coming soon", "success");
+    // Save feature coming soon - no-op for now
   }, []);
 
   const toggleExpand = () => {

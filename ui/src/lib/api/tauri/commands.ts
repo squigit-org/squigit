@@ -32,9 +32,6 @@ export const commands = {
 
   // Utils
   openExternalUrl: (url: string) => invoke("open_external_url", { url }),
-  clearCache: () => invoke("clear_cache"),
-
-  // Clipboard Watcher
   startClipboardWatcher: () => invoke("start_clipboard_watcher"),
   stopClipboardWatcher: () => invoke("stop_clipboard_watcher"),
 };

@@ -15,7 +15,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { GITHUB, MAILTO } from "../..";
 import { MODELS, ModelType } from "../../../../lib/config/models";
 import { DEFAULT_MODEL, DEFAULT_PROMPT } from "../../../../lib/utils/constants";
-import { Dialog, showToast } from "../../../../components";
+import { Dialog } from "../../../../components";
 import { UserInfo, MainActions, PersonalContext } from "../..";
 import styles from "./SettingsPanel.module.css";
 
@@ -74,7 +74,7 @@ export const SettingsPanel = forwardRef<
       toggleSubview,
       toggleSettingsPanel,
     },
-    ref
+    ref,
   ) => {
     const [isSubviewActive, setIsSubviewActive] = useState(false);
     const [localPrompt, setLocalPrompt] = useState(currentPrompt);
@@ -107,7 +107,6 @@ export const SettingsPanel = forwardRef<
       onSave(localPrompt, localModel);
       setIsSubviewActive(false);
       toggleSubview(false);
-      showToast("Settings saved", "done");
     };
 
     const handleClose = async (): Promise<boolean> => {
@@ -143,11 +142,6 @@ export const SettingsPanel = forwardRef<
     useImperativeHandle(ref, () => ({
       handleClose,
     }));
-
-    const handleClearCache = () => {
-      invoke("clear_cache");
-      showToast("Cache cleared", "success");
-    };
 
     const handleOpenExternalUrl = (url: string) => {
       invoke("open_external_url", { url });
@@ -233,7 +227,6 @@ export const SettingsPanel = forwardRef<
             <MainActions
               isDarkMode={isDarkMode}
               onToggleTheme={onToggleTheme}
-              onClearCache={handleClearCache}
               onResetAPIKey={onResetAPIKey}
               onOpenSubview={handleOpenSubview}
               onReportBug={() => handleOpenExternalUrl(MAILTO)}
@@ -258,7 +251,7 @@ export const SettingsPanel = forwardRef<
           </div>
         </div>
       </>,
-      document.body
+      document.body,
     );
-  }
+  },
 );

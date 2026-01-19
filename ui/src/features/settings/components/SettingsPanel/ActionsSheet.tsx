@@ -7,7 +7,6 @@
 import React from "react";
 import {
   Moon,
-  Trash2,
   Bug,
   KeyRound,
   Pencil,
@@ -19,7 +18,6 @@ import styles from "./SettingsPanel.module.css";
 interface MainActionsProps {
   isDarkMode: boolean;
   onToggleTheme: () => void;
-  onClearCache: () => void;
   onReportBug: () => void;
   onResetAPIKey: () => void;
   onOpenGithub: () => void;
@@ -29,7 +27,6 @@ interface MainActionsProps {
 export const MainActions: React.FC<MainActionsProps> = ({
   isDarkMode,
   onToggleTheme,
-  onClearCache,
   onReportBug,
   onResetAPIKey,
   onOpenGithub,
@@ -58,17 +55,6 @@ export const MainActions: React.FC<MainActionsProps> = ({
           />
           <span className={styles["toggle-slider"]} />
         </label>
-      </button>
-
-      <button
-        className={styles["btn"]}
-        id="clearCacheBtn"
-        onClick={onClearCache}
-      >
-        <div className={styles["btn-content"]}>
-          <Trash2 size={18} />
-          <div className={styles["btn-text"]}>Clear Cache</div>
-        </div>
       </button>
 
       <button className={styles["btn"]} onClick={onReportBug}>

@@ -20,7 +20,6 @@ import {
 } from "../../hooks";
 
 import "katex/dist/katex.min.css";
-import "../../components/Toast/Toast.module.css";
 import styles from "./AppLayout.module.css";
 
 import { ChatLayout, TabLayout } from "..";
@@ -67,7 +66,7 @@ export const AppLayout: React.FC = () => {
   const chatSessions = useChatSessions();
   const activeSession = chatSessions.getActiveSession();
   const activeImage = activeSession?.imageData || null;
-  
+
   const activeSessionIdRef = useRef(chatSessions.activeSessionId);
   useEffect(() => {
     activeSessionIdRef.current = chatSessions.activeSessionId;
@@ -76,19 +75,20 @@ export const AppLayout: React.FC = () => {
   // Processing flag to prevent duplicate event handling
   const isProcessingRef = useRef(false);
   const hasProcessedStartupImage = useRef(false);
-  
+
   // Ref for handleImageReady to avoid stale closures in event listener
   const handleImageReadyRef = useRef<any>(null);
   useEffect(() => {
-      handleImageReadyRef.current = handleImageReady;
+    handleImageReadyRef.current = handleImageReady;
   });
 
   useEffect(() => {
-    if (auth.authStage === 'LOADING') return;
+    if (auth.authStage === "LOADING") return;
     if (hasProcessedStartupImage.current) return;
 
     // If we are fully authenticated (not in setup/login screens), wait for API key
-    const isAuthComplete = auth.authStage !== 'GEMINI_SETUP' && auth.authStage !== 'LOGIN';
+    const isAuthComplete =
+      auth.authStage !== "GEMINI_SETUP" && auth.authStage !== "LOGIN";
     if (isAuthComplete && !system.apiKey) return;
 
     const initStartupImage = async () => {
@@ -134,14 +134,14 @@ export const AppLayout: React.FC = () => {
     });
 
     const unlistenDragDrop = listen<any>("drag-drop-image", (event) => {
-        const payload = event.payload;
-        if (payload) {
-             console.log("Received global drag-drop-image event");
-             const targetId = activeSessionIdRef.current;
-             if (handleImageReadyRef.current) {
-                 handleImageReadyRef.current(payload, targetId || undefined);
-             }
+      const payload = event.payload;
+      if (payload) {
+        console.log("Received global drag-drop-image event");
+        const targetId = activeSessionIdRef.current;
+        if (handleImageReadyRef.current) {
+          handleImageReadyRef.current(payload, targetId || undefined);
         }
+      }
     });
 
     return () => {
@@ -335,7 +335,7 @@ export const AppLayout: React.FC = () => {
         system.apiKey,
         system.sessionModel,
         system.prompt,
-        imageObj
+        imageObj,
       );
 
       generateImageTitle(imageObj.base64, imageObj.mimeType)
@@ -445,7 +445,7 @@ export const AppLayout: React.FC = () => {
               chatSessions.activeSessionId,
               system.apiKey,
               system.sessionModel,
-              system.prompt
+              system.prompt,
             );
           }
         }}
@@ -531,7 +531,9 @@ export const AppLayout: React.FC = () => {
                 onCheckSettings={() => {
                   setIsPanelActive(true);
                 }}
-                onSend={(text) => chatSessions.sendChatMessage(session.id, text)}
+                onSend={(text) =>
+                  chatSessions.sendChatMessage(session.id, text)
+                }
                 ocrData={session.ocrData}
                 onUpdateOCRData={(data) =>
                   chatSessions.updateSessionOCRData(session.id, data)
@@ -548,11 +550,12 @@ export const AppLayout: React.FC = () => {
         ))}
         {/* Show Welcome when no tabs are open */}
         {chatSessions.openTabs.length === 0 && (
-          <Welcome onImageReady={(data) => handleImageReady(data)} isActive={true} />
+          <Welcome
+            onImageReady={(data) => handleImageReady(data)}
+            isActive={true}
+          />
         )}
       </TabLayout>
-
-      <div id="toast" className="toast"></div>
 
       {contextMenu && (
         <ContextMenu

@@ -90,13 +90,6 @@ pub async fn open_external_url(url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn clear_cache(app: AppHandle) {
-    app.webview_windows().iter().for_each(|(_, window)| {
-        let _ = window.clear_all_browsing_data();
-    });
-}
-
-#[tauri::command]
 pub fn set_background_color(app: AppHandle, color: String) -> Result<(), String> {
     let window = app.get_webview_window("main").ok_or("Main window not found")?;
     

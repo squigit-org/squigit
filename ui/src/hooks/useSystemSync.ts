@@ -6,7 +6,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { showToast } from "../components/Toast";
 import { initializeGemini } from "../lib/api/gemini/client";
 import { commands } from "../lib/api/tauri/commands";
 import { useTheme } from "./useTheme";
@@ -135,11 +134,8 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         model: newModel,
         theme: theme,
       });
-      showToast("Settings saved", "done");
     } catch (e) {
       console.error(e);
-      const msg = e instanceof Error ? e.message : String(e);
-      showToast(`Failed to save`, "error");
     }
   };
 
@@ -166,7 +162,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
       sessionStorage.setItem("update_dismissed", "true");
       window.location.reload();
     } catch (e) {
-      showToast("Reset failed", "error");
+      console.error("Reset API key failed", e);
     }
   };
 
