@@ -44,4 +44,5 @@ export interface ChatSession {
   inputText: string;
   isLoading?: boolean;
   error?: string | null;
+  ocrData?: { text: string; box: number[][] }[];
 }

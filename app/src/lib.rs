@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use tauri::{Builder, Emitter, Manager};
+use tauri::{Builder, Manager};
 
 pub mod state;
 pub mod utils;

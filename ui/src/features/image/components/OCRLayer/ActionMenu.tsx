@@ -13,7 +13,7 @@ import React, {
   useImperativeHandle,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { generateSearchUrl, generateTranslateUrl } from "../../../google";
+import { generateSearchUrl, generateTranslateUrl } from "../..";
 import { InlineMenu } from "../../../../components";
 
 interface OCRBox {
@@ -27,6 +27,7 @@ interface ActionMenuProps {
   imgRef: React.RefObject<HTMLImageElement | null>;
   imgWrapRef: React.RefObject<HTMLDivElement | null>;
   viewerRef: React.RefObject<HTMLDivElement | null>;
+  sessionId: string;
 }
 
 export interface ActionMenuHandle {
@@ -35,9 +36,11 @@ export interface ActionMenuHandle {
 }
 
 export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
-  ({ data, size, imgRef, imgWrapRef, viewerRef }, ref) => {
+  ({ data, size, imgRef, imgWrapRef, viewerRef, sessionId }, ref) => {
     const [menuActive, setMenuActive] = useState(false);
     const [isSelectAllMode, setIsSelectAllMode] = useState(false);
+
+    const menuId = `action-menu-${sessionId}`;
 
     const menuRef = useRef<HTMLDivElement>(null);
     const sliderRef = useRef<HTMLDivElement>(null);
@@ -151,7 +154,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
 
         window.dispatchEvent(
           new CustomEvent("global-inline-menu-show", {
-            detail: { id: "action-menu" },
+            detail: { id: menuId },
           }),
         );
 
@@ -215,7 +218,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
           if (menuRef.current) menuRef.current.classList.add("active");
         });
       },
-      [positionMenu, renderPage],
+      [positionMenu, renderPage, menuId],
     );
 
     const switchPage = useCallback(
@@ -255,7 +258,8 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
     );
 
     const triggerSelectAll = useCallback(() => {
-      const svg = document.querySelector("[data-text-layer]");
+      // Scope selector to this component's image wrapper
+      const svg = imgWrapRef.current?.querySelector("[data-text-layer]");
       if (svg) {
         const selection = window.getSelection();
         if (selection) {
@@ -270,7 +274,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
 
       window.dispatchEvent(
         new CustomEvent("global-inline-menu-show", {
-          detail: { id: "action-menu" },
+          detail: { id: menuId },
         }),
       );
 
@@ -318,7 +322,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
       requestAnimationFrame(() => {
         if (menuRef.current) menuRef.current.classList.add("active");
       });
-    }, [data, size.h, imgRef, imgWrapRef, viewerRef, renderPage]);
+    }, [data, size.h, imgRef, imgWrapRef, viewerRef, renderPage, menuId]);
 
     const handleAction = useCallback(
       (action: string) => {
@@ -351,10 +355,9 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
     );
 
     useEffect(() => {
-      const hookId = "action-menu";
       const onGlobalShow = (e: Event) => {
         const detail = (e as CustomEvent).detail;
-        if (detail && detail.id !== hookId && menuActive) {
+        if (detail && detail.id !== menuId && menuActive) {
           hideMenu();
         }
       };
@@ -400,11 +403,11 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
         window.removeEventListener("resize", onResize);
         document.removeEventListener("selectionchange", onSelectionChange);
       };
-    }, [menuActive, isSelectAllMode, hideMenu]);
+    }, [menuActive, isSelectAllMode, hideMenu, menuId, imgWrapRef]);
 
     return (
       <InlineMenu
-        id="action-menu"
+        id={menuId}
         className="action-menu"
         menuRef={menuRef}
         sliderRef={sliderRef}

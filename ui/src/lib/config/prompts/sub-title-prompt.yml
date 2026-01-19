@@ -1,9 +1,0 @@
-sub-title-prmp: |
-  Summarize this user edit request into 2-3 words.
-  Examples: "Add Shadow", "Fix Colors", "Crop Image", "Remove Background"
-  Rules:
-    - No punctuation
-    - Title case
-    - Be concise
-    - Focus on the main action
-    - IMPORTANT: Generate a UNIQUE title that is NOT in the existing titles list

@@ -5,3 +5,6 @@
  */
 
 export * from "./components/ImageArea/ImageArea";
+export * from "./services/lens.google";
+export * from "./services/search.google";
+export * from "./services/translate.google";

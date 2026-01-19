@@ -45,6 +45,9 @@ export interface ChatLayoutProps {
   onRetry: () => void;
   onCheckSettings: () => void;
   onSend: (text: string) => void;
+  ocrData?: { text: string; box: number[][] }[];
+  onUpdateOCRData: (data: { text: string; box: number[][] }[]) => void;
+  sessionId: string;
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
@@ -62,6 +65,9 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   onImageUpload,
   chatTitle,
   onSend,
+  ocrData,
+  onUpdateOCRData,
+  sessionId,
 }) => {
   // Each tab instance owns its own input state
   const [input, setInput] = useState("");
@@ -244,6 +250,9 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
           onDescribeEdits={onDescribeEdits}
           isVisible={true}
           scrollContainerRef={scrollContainerRef}
+          ocrData={ocrData || []}
+          onUpdateOCRData={onUpdateOCRData}
+          sessionId={sessionId}
         />
       </div>
 

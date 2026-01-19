@@ -75,6 +75,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   openTabs,
   activeSessionId,
   onSessionSelect,
+  onOpenSession,
   onNewChat,
   onCloseSession,
   onCloseOtherSessions,
@@ -154,7 +155,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             <ChatHistory
               sessions={sessions}
               activeSessionId={activeSessionId}
-              onSessionSelect={onSessionSelect}
+              onSessionSelect={onOpenSession}
               onNewChat={onNewChat}
             />
 

@@ -14,11 +14,13 @@ interface OCRBox {
 interface UseTextSelectionParams {
   data: OCRBox[];
   onSelectionComplete?: (selection: Selection) => void;
+  sessionId: string;
 }
 
 export const useTextSelection = ({
   data,
   onSelectionComplete,
+  sessionId,
 }: UseTextSelectionParams) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const isCustomSelectingRef = useRef(false);
@@ -93,7 +95,7 @@ export const useTextSelection = ({
       if (!selection) return;
 
       const getTextNode = (bIdx: number) => {
-        const textEl = document.getElementById(`text-${bIdx}`);
+        const textEl = document.getElementById(`text-${sessionId}-${bIdx}`);
         return textEl?.firstChild || null;
       };
 
@@ -120,7 +122,7 @@ export const useTextSelection = ({
         }
       }
     },
-    []
+    [sessionId]
   );
 
   const handleSelectionMouseMove = useCallback(

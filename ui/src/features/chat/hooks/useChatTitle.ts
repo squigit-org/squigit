@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { GoogleGenAI } from "@google/genai";
-import { titlePrompt, subTitlePrompt } from "../../../lib/config/prompts";
+import { titlePrompt } from "../../../lib/config/prompts";
 
 const TITLE_MODEL = "gemini-flash-lite-latest";
 
@@ -91,66 +91,6 @@ export const useChatTitle = ({
     generateTitle();
   }, [generateTitle]);
 
-  const generateSubTitle = useCallback(
-    async (
-      editDescription: string,
-      existingTitles: string[] = [],
-    ): Promise<string> => {
-      if (!apiKey) return "Edit Request";
-
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-
-        const promptMatch = subTitlePrompt.match(
-          /sub-title-prmp: \|\n([\s\S]+)/,
-        );
-        const parsedPrompt = promptMatch
-          ? promptMatch[1]
-              .split("\n")
-              .map((line) => line.trim())
-              .filter(Boolean)
-              .join(" ")
-          : "Summarize this user edit request into 2-3 words.";
-
-        const titlesContext =
-          existingTitles.length > 0
-            ? `\n\nExisting titles (DO NOT USE ANY OF THESE): ${existingTitles.join(
-                ", ",
-              )}`
-            : "";
-
-        const response = await ai.models.generateContent({
-          model: TITLE_MODEL,
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `${parsedPrompt}${titlesContext}\n\nUser request: "${editDescription}"`,
-                },
-              ],
-            },
-          ],
-        });
-
-        return response.text?.trim() || "Edit Request";
-      } catch (error) {
-        console.error("Failed to generate sub-title:", error);
-        return "Edit Request";
-      }
-    },
-    [apiKey],
-  );
-
-  const generateImageTitle = useCallback(
-    async (existingTitles: string[] = []): Promise<string> => {
-      if (!startupImage?.base64 && !apiKey) return "New Chat";
-
-      return "New Chat";
-    },
-    [startupImage, apiKey],
-  );
-
   const generateTitleForImage = useCallback(
     async (
       base64Data: string,
@@ -215,7 +155,6 @@ export const useChatTitle = ({
   return {
     chatTitle: sessionChatTitle || "New Chat",
     isGeneratingTitle: isGenerating,
-    generateSubTitle,
     generateImageTitle: generateTitleForImage,
   };
 };

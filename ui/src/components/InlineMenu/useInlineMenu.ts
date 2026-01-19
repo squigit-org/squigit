@@ -6,7 +6,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { generateSearchUrl, generateTranslateUrl } from "../../features/google";
+import { generateSearchUrl, generateTranslateUrl } from "../../features/image";
 
 const MENU_HEIGHT = 48;
 const NOTCH_OFFSET = 12;
@@ -35,7 +35,7 @@ export const useInlineMenu = ({
   const [menuActive, setMenuActive] = useState(false);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [containerElement, setContainerElement] = useState<HTMLElement | null>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -102,13 +102,13 @@ export const useInlineMenu = ({
       }
       slider.style.transform = `translateX(${slideOffset}px)`;
     },
-    []
+    [],
   );
 
   const positionMenu = useCallback(
     (
       selectionRectViewport: { left: number; width: number; top: number },
-      showNotch: boolean = true
+      showNotch: boolean = true,
     ) => {
       const menu = menuRef.current;
       if (!menu) return;
@@ -138,19 +138,19 @@ export const useInlineMenu = ({
       menu.style.left = `${menuLeftViewport}px`;
       menu.style.top = `${menuTopViewport}px`;
     },
-    []
+    [],
   );
 
   const showStandardMenu = useCallback(
     (
       selection: Selection,
-      overrideRect?: { left: number; width: number; top: number }
+      overrideRect?: { left: number; width: number; top: number },
     ) => {
       setMenuActive(true);
       onMenuShow?.();
 
       window.dispatchEvent(
-        new CustomEvent("global-inline-menu-show", { detail: { id: hookId } })
+        new CustomEvent("global-inline-menu-show", { detail: { id: hookId } }),
       );
 
       const menu = menuRef.current;
@@ -174,7 +174,7 @@ export const useInlineMenu = ({
           };
         } else {
           const rects = Array.from(range.getClientRects()).filter(
-            (r) => r.width > 0 && r.height > 0
+            (r) => r.width > 0 && r.height > 0,
           );
 
           if (rects.length === 0) {
@@ -209,7 +209,7 @@ export const useInlineMenu = ({
         if (menuRef.current) menuRef.current.classList.add("active");
       });
     },
-    [positionMenu, renderPage, onMenuShow, hookId, positioningStrategy]
+    [positionMenu, renderPage, onMenuShow, hookId, positioningStrategy],
   );
 
   const showFlatMenu = useCallback(
@@ -219,7 +219,7 @@ export const useInlineMenu = ({
       onMenuShow?.();
 
       window.dispatchEvent(
-        new CustomEvent("global-inline-menu-show", { detail: { id: hookId } })
+        new CustomEvent("global-inline-menu-show", { detail: { id: hookId } }),
       );
 
       const menu = menuRef.current;
@@ -234,7 +234,7 @@ export const useInlineMenu = ({
         if (menuRef.current) menuRef.current.classList.add("active");
       });
     },
-    [positionMenu, renderPage, onMenuShow, hookId]
+    [positionMenu, renderPage, onMenuShow, hookId],
   );
 
   const switchPage = useCallback(
@@ -268,7 +268,7 @@ export const useInlineMenu = ({
 
       renderPage(targetIndex, true);
     },
-    [renderPage]
+    [renderPage],
   );
 
   const handleAction = useCallback(
@@ -295,7 +295,7 @@ export const useInlineMenu = ({
         hideMenu();
       }
     },
-    [hideMenu, onSelectAll, getSelectedText]
+    [hideMenu, onSelectAll, getSelectedText],
   );
 
   const handleSelection = useCallback(() => {

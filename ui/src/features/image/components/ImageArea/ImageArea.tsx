@@ -19,7 +19,7 @@ import { ActionMenu, ActionMenuHandle } from "../OCRLayer/ActionMenu";
 import { SearchInput } from "../InlineInput/InlineInput";
 import { TextLayer } from "../OCRLayer/TextLayer";
 import { ImageToolbar } from "../ImageToolbar";
-import { generateTranslateUrl } from "../../../google";
+import { generateTranslateUrl } from "../..";
 import styles from "./ImageArea.module.css";
 
 interface OCRBox {
@@ -40,6 +40,9 @@ interface ImageAreaProps {
   onDescribeEdits: (description: string) => void;
   isVisible: boolean;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  ocrData: { text: string; box: number[][] }[];
+  onUpdateOCRData: (data: { text: string; box: number[][] }[]) => void;
+  sessionId: string;
 }
 
 export const ImageArea: React.FC<ImageAreaProps> = ({
@@ -50,9 +53,11 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   onDescribeEdits,
   isVisible,
   scrollContainerRef,
+  ocrData,
+  onUpdateOCRData,
+  sessionId,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [data, setData] = useState<{ text: string; box: number[][] }[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [showOverlay, setShowOverlay] = useState(false);
@@ -77,10 +82,11 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   );
 
   const { svgRef, handleTextMouseDown } = useTextSelection({
-    data,
+    data: ocrData,
     onSelectionComplete: (selection) => {
       ActionMenuRef.current?.showStandardMenu(selection);
     },
+    sessionId,
   });
 
   const scan = useCallback(async () => {
@@ -116,7 +122,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
         box: r.box_coords,
       }));
 
-      setData(converted);
+      onUpdateOCRData(converted);
       setShowOverlay(false);
       setIsExpanded(true);
     } catch (e) {
@@ -126,7 +132,14 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [startupImage]);
+  }, [startupImage, onUpdateOCRData]);
+
+  // Auto-scan if no data present
+  useEffect(() => {
+    if (startupImage && ocrData.length === 0 && !loading && !error) {
+      scan();
+    }
+  }, [startupImage, ocrData.length, loading, error, scan]);
 
   const isScrollBlockedRef = useRef(false);
   const wheelEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -184,12 +197,12 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   };
 
   const handleTranslateAll = useCallback(() => {
-    if (data.length === 0) return;
-    const allText = data.map((item) => item.text).join(" ");
+    if (ocrData.length === 0) return;
+    const allText = ocrData.map((item) => item.text).join(" ");
     if (allText.trim()) {
       invoke("open_external_url", { url: generateTranslateUrl(allText) });
     }
-  }, [data]);
+  }, [ocrData]);
 
   if (!startupImage) {
     return null;
@@ -222,7 +235,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
               onTranslateClick={handleTranslateAll}
               onCollapse={toggleExpand}
               isLensLoading={isLensLoading}
-              isTranslateDisabled={data.length === 0}
+              isTranslateDisabled={ocrData.length === 0}
               isOCRLoading={loading}
               isExpanded={isExpanded}
               placeholder="Add to your search"
@@ -247,6 +260,14 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
                     draggable={false}
                     className={styles.bigImage}
                   />
+                  {/* Render TextLayer here */}
+                  <TextLayer
+                    data={ocrData}
+                    size={size}
+                    svgRef={svgRef}
+                    onTextMouseDown={handleTextMouseDown}
+                    sessionId={sessionId}
+                  />
                 </div>
               </div>
             </div>
@@ -265,11 +286,12 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
       <ActionMenu
         ref={ActionMenuRef}
-        data={data}
+        data={ocrData}
         size={size}
         imgRef={imgRef}
         imgWrapRef={imgWrapRef}
         viewerRef={viewerRef}
+        sessionId={sessionId}
       />
 
       {error && <div className={styles.ocrError}>{error}</div>}

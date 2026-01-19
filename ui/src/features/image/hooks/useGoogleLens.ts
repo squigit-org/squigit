@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { uploadToImgBB, generateLensUrl } from "../../google";
+import { uploadToImgBB, generateLensUrl } from "..";
 
 export const useGoogleLens = (
   startupImage: {

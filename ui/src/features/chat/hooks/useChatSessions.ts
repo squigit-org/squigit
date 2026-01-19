@@ -185,6 +185,19 @@ export const useChatSessions = () => {
     [],
   );
 
+  const updateSessionOCRData = useCallback(
+    (sessionId: string, ocrData: { text: string; box: number[][] }[]) => {
+      setSessions((prev) =>
+        prev.map((session) =>
+          session.id === sessionId ? { ...session, ocrData } : session,
+        ),
+      );
+    },
+    [],
+  );
+
+  // --- Chat Logic ---
+
   const startChatSession = useCallback(
     async (
       sessionId: string,
@@ -363,6 +376,7 @@ MSS: ${prompt}`;
     updateSessionImage,
     setSessionInputText,
     updateSessionLensUrl,
+    updateSessionOCRData,
     startChatSession,
     sendChatMessage,
     retryChatMessage,

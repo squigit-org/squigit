@@ -532,6 +532,11 @@ export const AppLayout: React.FC = () => {
                   setIsPanelActive(true);
                 }}
                 onSend={(text) => chatSessions.sendChatMessage(session.id, text)}
+                ocrData={session.ocrData}
+                onUpdateOCRData={(data) =>
+                  chatSessions.updateSessionOCRData(session.id, data)
+                }
+                sessionId={session.id}
               />
             ) : (
               <Welcome
