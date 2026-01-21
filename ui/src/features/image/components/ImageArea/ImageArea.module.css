@@ -19,7 +19,7 @@
 /* Floating container with all content */
 .floatingContainer {
   position: absolute;
-  top: 60px;
+  top: 5px;
   left: 50%;
   transform: translateX(-50%);
   width: 90%;
