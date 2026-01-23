@@ -27,7 +27,6 @@ interface ActionMenuProps {
   imgRef: React.RefObject<HTMLImageElement | null>;
   imgWrapRef: React.RefObject<HTMLDivElement | null>;
   viewerRef: React.RefObject<HTMLDivElement | null>;
-  sessionId: string;
 }
 
 export interface ActionMenuHandle {
@@ -36,11 +35,9 @@ export interface ActionMenuHandle {
 }
 
 export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
-  ({ data, size, imgRef, imgWrapRef, viewerRef, sessionId }, ref) => {
+  ({ data, size, imgRef, imgWrapRef, viewerRef }, ref) => {
     const [menuActive, setMenuActive] = useState(false);
     const [isSelectAllMode, setIsSelectAllMode] = useState(false);
-
-    const menuId = `action-menu-${sessionId}`;
 
     const menuRef = useRef<HTMLDivElement>(null);
     const sliderRef = useRef<HTMLDivElement>(null);
@@ -154,7 +151,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
 
         window.dispatchEvent(
           new CustomEvent("global-inline-menu-show", {
-            detail: { id: menuId },
+            detail: { id: "action-menu" },
           }),
         );
 
@@ -218,7 +215,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
           if (menuRef.current) menuRef.current.classList.add("active");
         });
       },
-      [positionMenu, renderPage, menuId],
+      [positionMenu, renderPage],
     );
 
     const switchPage = useCallback(
@@ -258,8 +255,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
     );
 
     const triggerSelectAll = useCallback(() => {
-      // Scope selector to this component's image wrapper
-      const svg = imgWrapRef.current?.querySelector("[data-text-layer]");
+      const svg = document.querySelector("[data-text-layer]");
       if (svg) {
         const selection = window.getSelection();
         if (selection) {
@@ -274,7 +270,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
 
       window.dispatchEvent(
         new CustomEvent("global-inline-menu-show", {
-          detail: { id: menuId },
+          detail: { id: "action-menu" },
         }),
       );
 
@@ -322,7 +318,7 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
       requestAnimationFrame(() => {
         if (menuRef.current) menuRef.current.classList.add("active");
       });
-    }, [data, size.h, imgRef, imgWrapRef, viewerRef, renderPage, menuId]);
+    }, [data, size.h, imgRef, imgWrapRef, viewerRef, renderPage]);
 
     const handleAction = useCallback(
       (action: string) => {
@@ -355,9 +351,10 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
     );
 
     useEffect(() => {
+      const hookId = "action-menu";
       const onGlobalShow = (e: Event) => {
         const detail = (e as CustomEvent).detail;
-        if (detail && detail.id !== menuId && menuActive) {
+        if (detail && detail.id !== hookId && menuActive) {
           hideMenu();
         }
       };
@@ -403,11 +400,11 @@ export const ActionMenu = forwardRef<ActionMenuHandle, ActionMenuProps>(
         window.removeEventListener("resize", onResize);
         document.removeEventListener("selectionchange", onSelectionChange);
       };
-    }, [menuActive, isSelectAllMode, hideMenu, menuId, imgWrapRef]);
+    }, [menuActive, isSelectAllMode, hideMenu]);
 
     return (
       <InlineMenu
-        id={menuId}
+        id="action-menu"
         className="action-menu"
         menuRef={menuRef}
         sliderRef={sliderRef}

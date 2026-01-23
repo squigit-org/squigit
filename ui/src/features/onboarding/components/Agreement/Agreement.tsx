@@ -13,9 +13,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { OnboardingLayout } from "../..";
+import { OnboardingLayout, styles } from "../../../../layouts";
 import "katex/dist/katex.min.css";
-import styles from "../../layouts/OnboardingLayout.module.css";
 
 interface AgreementProps {
   osType: string;
@@ -42,7 +41,7 @@ export const Agreement: React.FC<AgreementProps> = ({
       .catch((err) => {
         console.error("Failed to load instructions:", err);
         setMarkdownContent(
-          "# Error\nCould not load installation instructions."
+          "# Error\nCould not load installation instructions.",
         );
       });
   }, [osType]);

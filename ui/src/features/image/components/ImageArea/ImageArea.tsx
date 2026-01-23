@@ -12,7 +12,6 @@ import React, {
   RefObject,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronUp, Loader2 } from "lucide-react";
 import { useGoogleLens } from "../../hooks/useGoogleLens";
 import { useTextSelection } from "../../hooks/useTextSelection";
 import { ActionMenu, ActionMenuHandle } from "../OCRLayer/ActionMenu";
@@ -42,20 +41,15 @@ interface ImageAreaProps {
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
   ocrData: { text: string; box: number[][] }[];
   onUpdateOCRData: (data: { text: string; box: number[][] }[]) => void;
-  sessionId: string;
 }
 
 export const ImageArea: React.FC<ImageAreaProps> = ({
   startupImage,
   sessionLensUrl,
   setSessionLensUrl,
-  chatTitle,
-  onDescribeEdits,
   isVisible,
-  scrollContainerRef,
   ocrData,
   onUpdateOCRData,
-  sessionId,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,7 +80,6 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     onSelectionComplete: (selection) => {
       ActionMenuRef.current?.showStandardMenu(selection);
     },
-    sessionId,
   });
 
   const scan = useCallback(async () => {
@@ -262,7 +255,6 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
                     size={size}
                     svgRef={svgRef}
                     onTextMouseDown={handleTextMouseDown}
-                    sessionId={sessionId}
                   />
                 </div>
               </div>
@@ -287,7 +279,6 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
         imgRef={imgRef}
         imgWrapRef={imgWrapRef}
         viewerRef={viewerRef}
-        sessionId={sessionId}
       />
 
       {error && <div className={styles.ocrError}>{error}</div>}

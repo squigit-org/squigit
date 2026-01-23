@@ -34,17 +34,5 @@ export interface ChatSession {
   streamingText: string;
   firstResponseId: string | null;
   createdAt: number;
-  type: "default" | "edit" | "settings";
-  imageData: {
-    base64: string;
-    mimeType: string;
-    isFilePath?: boolean;
-  } | null;
-  lensUrl: string | null;
-  inputText: string;
-  isLoading?: boolean;
-  error?: string | null;
-  ocrData?: { text: string; box: number[][] }[];
-  isStarred?: boolean;
-  projectId?: string;
+  type: "default" | "edit";
 }

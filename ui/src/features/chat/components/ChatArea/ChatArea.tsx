@@ -38,7 +38,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       error,
       onCheckSettings,
       onRetry,
-      prompt,
       messages,
     },
     ref,

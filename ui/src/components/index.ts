@@ -7,4 +7,4 @@
 export * from "./ContextMenu/ContextMenu";
 export * from "./Dialog/Dialog";
 export * from "./InlineMenu/InlineMenu";
-export * from "./TitleBar";
+export * from "./TitleBar/TitleBar";

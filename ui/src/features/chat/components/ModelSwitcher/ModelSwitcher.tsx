@@ -62,12 +62,12 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   };
 
   return (
-    <div className={styles.selectorContainer} ref={dropdownRef}>
+    <div className={styles.switcherContainer} ref={dropdownRef}>
       <button
         ref={buttonRef}
         onClick={toggleOpen}
         disabled={isLoading}
-        className={styles.selectorButton}
+        className={styles.switcherButton}
       >
         <span>
           {selectedModel?.id === "gemini-2.5-pro"

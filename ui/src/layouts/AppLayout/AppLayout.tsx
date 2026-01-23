@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "../../lib/api/tauri/commands";
-import { ContextMenu } from "../../components";
+import { ContextMenu, TitleBar } from "../../components";
 
 import {
   useUpdateCheck,
@@ -22,76 +22,54 @@ import {
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
 
-import { ChatLayout, TabLayout } from "..";
+import { ChatLayout } from "..";
 
 import {
+  Welcome,
   Agreement,
   UpdateNotes,
   GeminiSetup,
   LoginScreen,
   useAuth,
   useChatTitle,
-  useChatSessions,
-  Welcome,
-  SettingsTab,
-  SettingsTabHandle,
+  useChatEngine,
 } from "../../features";
-import { ChatPanel } from "../../features/chat/components/ChatPanel/ChatPanel";
 import { Dialog } from "../../components";
 
 export const AppLayout: React.FC = () => {
-  // Side panel state
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-  const toggleSidePanel = () => setIsSidePanelOpen((prev) => !prev);
+  const [isPanelActive, setIsPanelActive] = useState(false);
+  const handleToggleSettings = useCallback(() => {
+    setIsPanelActive((prev) => !prev);
+  }, []);
 
-  // SettingsTab dirty state handling
-  const settingsTabRef = useRef<SettingsTabHandle>(null);
-  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  const [pendingCloseSessionId, setPendingCloseSessionId] = useState<
-    string | null
-  >(null);
+  const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
+    null,
+  );
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [isSubviewActive, setIsSubviewActive] = useState(false);
+  const [isPanelVisible, setIsPanelVisible] = useState(false);
+  const [isPanelClosing, setIsPanelClosing] = useState(false);
+  const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
 
-  const system = useSystemSync(() => {});
+  const system = useSystemSync(handleToggleSettings);
   const auth = useAuth();
   const performLogout = async () => {
     await system.handleLogout();
     auth.logout();
+    setIsPanelActive(false);
   };
   useUpdateCheck();
 
+  const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
+  const [ocrData, setOcrData] = useState<{ text: string; box: number[][] }[]>(
+    [],
+  );
+
   const [isCheckingImage, setIsCheckingImage] = useState(true);
 
-  // Chat Sessions Hook
-  const chatSessions = useChatSessions();
-  const activeSession = chatSessions.getActiveSession();
-  const activeImage = activeSession?.imageData || null;
-
-  const activeSessionIdRef = useRef(chatSessions.activeSessionId);
   useEffect(() => {
-    activeSessionIdRef.current = chatSessions.activeSessionId;
-  }, [chatSessions.activeSessionId]);
-
-  // Processing flag to prevent duplicate event handling
-  const isProcessingRef = useRef(false);
-  const hasProcessedStartupImage = useRef(false);
-
-  // Ref for handleImageReady to avoid stale closures in event listener
-  const handleImageReadyRef = useRef<any>(null);
-  useEffect(() => {
-    handleImageReadyRef.current = handleImageReady;
-  });
-
-  useEffect(() => {
-    if (auth.authStage === "LOADING") return;
-    if (hasProcessedStartupImage.current) return;
-
-    // If we are fully authenticated (not in setup/login screens), wait for API key
-    const isAuthComplete =
-      auth.authStage !== "GEMINI_SETUP" && auth.authStage !== "LOGIN";
-    if (isAuthComplete && !system.apiKey) return;
-
     const initStartupImage = async () => {
-      hasProcessedStartupImage.current = true;
       try {
         const initialImage = await invoke<string | null>("get_initial_image");
         if (initialImage) {
@@ -106,46 +84,22 @@ export const AppLayout: React.FC = () => {
     };
 
     initStartupImage();
-  }, [auth.authStage, system.apiKey]);
 
-  useEffect(() => {
-    const unlistenImagePath = listen<string>("image-path", async (event) => {
-      if (isProcessingRef.current) return;
-      isProcessingRef.current = true;
-
+    const unlisten = listen<string>("image-path", async (event) => {
       const imagePath = event.payload;
       if (imagePath) {
         try {
           console.log("Event received for image:", imagePath);
           const result = await commands.processImagePath(imagePath);
-          if (handleImageReadyRef.current) handleImageReadyRef.current(result);
+          handleImageReady(result);
         } catch (error) {
           console.error("Failed to process CLI image event:", error);
-        } finally {
-          // Simple debounce/cooldown
-          setTimeout(() => {
-            isProcessingRef.current = false;
-          }, 500);
-        }
-      } else {
-        isProcessingRef.current = false;
-      }
-    });
-
-    const unlistenDragDrop = listen<any>("drag-drop-image", (event) => {
-      const payload = event.payload;
-      if (payload) {
-        console.log("Received global drag-drop-image event");
-        const targetId = activeSessionIdRef.current;
-        if (handleImageReadyRef.current) {
-          handleImageReadyRef.current(payload, targetId || undefined);
         }
       }
     });
 
     return () => {
-      unlistenImagePath.then((f) => f());
-      unlistenDragDrop.then((f) => f());
+      unlisten.then((f) => f());
     };
   }, []);
 
@@ -154,23 +108,31 @@ export const AppLayout: React.FC = () => {
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
     isCheckingImage;
-  const isImageMissing = false;
+  const isImageMissing = !system.startupImage;
   const isAuthPending =
     auth.authStage === "GEMINI_SETUP" || auth.authStage === "LOGIN";
-  const isChatActive = !isLoadingState && !isAgreementPending && !isAuthPending;
+  const isChatActive =
+    !isLoadingState && !isAgreementPending && !isImageMissing && !isAuthPending;
 
-  // Enable AI Title Generation
-  const { chatTitle, generateImageTitle } = useChatTitle({
-    startupImage: activeImage,
+  const chatEngine = useChatEngine({
     apiKey: system.apiKey,
-    sessionChatTitle: activeSession?.title || null,
-    setSessionChatTitle: (title) => {
-      if (chatSessions.activeSessionId) {
-        chatSessions.updateSessionTitle(chatSessions.activeSessionId, title);
-      }
-    },
+    currentModel: system.sessionModel,
+    startupImage: system.startupImage,
+    prompt: system.prompt,
+    setCurrentModel: system.setSessionModel,
+    enabled: isChatActive,
   });
 
+  const { chatTitle } = useChatTitle({
+    startupImage: system.startupImage,
+    apiKey: system.apiKey,
+    sessionChatTitle: system.sessionChatTitle,
+    setSessionChatTitle: system.setSessionChatTitle,
+  });
+
+  // Session logic removed
+
+  const [input, setInput] = useState("");
   const [pendingUpdate] = useState(() => getPendingUpdate());
   const [showUpdate, setShowUpdate] = useState(() => {
     const wasDismissed = sessionStorage.getItem("update_dismissed");
@@ -186,6 +148,68 @@ export const AppLayout: React.FC = () => {
     isImageMissing,
   );
 
+  useEffect(() => {
+    if (isPanelActive) {
+      setIsPanelVisible(true);
+      const timer = setTimeout(() => {
+        setIsPanelActiveAndVisible(true);
+      }, 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsPanelActiveAndVisible(false);
+      setIsPanelClosing(true);
+      const timer = setTimeout(() => {
+        setIsPanelVisible(false);
+        setIsPanelClosing(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isPanelActive]);
+
+  const closeSettingsPanel = async () => {
+    if (isPanelActive) {
+      if (settingsPanelRef.current) {
+        const canClose = await settingsPanelRef.current.handleClose();
+        if (canClose) handleToggleSettings();
+      } else {
+        handleToggleSettings();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isPanelActive) closeSettingsPanel();
+    };
+
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      const isMsgBoxClick =
+        target.closest(".error-overlay") || target.closest(".error-container");
+      const isContextMenuClick = target.closest("#app-context-menu");
+
+      if (
+        isPanelActive &&
+        panelRef.current &&
+        !panelRef.current.contains(target as Node) &&
+        settingsButtonRef.current &&
+        !settingsButtonRef.current.contains(target as Node) &&
+        !isMsgBoxClick &&
+        !isContextMenuClick
+      ) {
+        closeSettingsPanel();
+      }
+    };
+
+    document.addEventListener("keydown", handleEsc);
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("keydown", handleEsc);
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isPanelActive, isSubviewActive]);
+
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -196,10 +220,10 @@ export const AppLayout: React.FC = () => {
 
   const [isRotating, setIsRotating] = useState(false);
   useEffect(() => {
-    if (!activeSession?.isLoading) {
+    if (!chatEngine.isLoading) {
       setIsRotating(false);
     }
-  }, [activeSession?.isLoading]);
+  }, [chatEngine.isLoading]);
 
   useEffect(() => {
     const unlisten = listen<any>("auth-success", (event) => {
@@ -210,94 +234,37 @@ export const AppLayout: React.FC = () => {
       unlisten.then((f) => f());
     };
   }, []);
-  // Image upload handler - accepts explicit sessionId to prevent cross-tab bugs
+
   const handleImageReady = (
     imageData: string | { path?: string; base64?: string; mimeType: string },
-    targetSessionId?: string,
   ) => {
-    let imageObj: {
-      base64: string;
-      mimeType: string;
-      isFilePath?: boolean;
-    } | null = null;
-
     if (typeof imageData === "string") {
       if (!imageData || !imageData.includes(",")) return;
 
-      const [header] = imageData.split(",");
+      const [header, base64Data] = imageData.split(",");
       const mimeType = header.replace("data:", "").replace(";base64", "");
 
-      imageObj = {
+      system.setStartupImage({
         base64: imageData,
         mimeType: mimeType,
         isFilePath: false,
-      };
+      });
+      // When new image is loaded, maybe show editor?
+      // setIsEditorVisible(true);
     } else {
       if (imageData.path) {
-        imageObj = {
+        system.setStartupImage({
           base64: convertFileSrc(imageData.path),
           mimeType: imageData.mimeType,
           isFilePath: true,
-        };
+        });
       } else if (imageData.base64) {
-        imageObj = {
+        system.setStartupImage({
           base64: imageData.base64,
           mimeType: imageData.mimeType,
           isFilePath: false,
-        };
+        });
       }
-    }
-
-    if (!imageObj) return;
-
-    let sessionId = targetSessionId;
-
-    // Use explicit sessionId if provided, otherwise create new session
-    if (targetSessionId) {
-      chatSessions.updateSessionImage(targetSessionId, imageObj);
-    } else {
-      // No session specified - create a new one
-      const newId = chatSessions.createSession("default", "New Chat");
-      chatSessions.updateSessionImage(newId, imageObj);
-      sessionId = newId;
-    }
-
-    system.setStartupImage(null);
-
-    // Auto-generate title
-    if (sessionId && imageObj.base64 && imageObj.mimeType) {
-      // Start Chat Session immediately with explicit image data
-      chatSessions.startChatSession(
-        sessionId,
-        system.apiKey,
-        system.sessionModel,
-        system.prompt,
-        imageObj,
-      );
-
-      generateImageTitle(imageObj.base64, imageObj.mimeType)
-        .then((title) => {
-          if (sessionId) {
-            chatSessions.updateSessionTitle(sessionId, title);
-          }
-        })
-        .catch((err) => console.error("Title generation failed:", err));
-    }
-  };
-
-  const handleShowWelcome = () => {
-    chatSessions.createSession("default", "New Chat");
-  };
-
-  const handleOpenPersonalizationTab = () => {
-    // Check if settings tab already exists
-    const existingSettingsTab = chatSessions.openTabs.find(
-      (t) => t.type === "settings",
-    );
-    if (existingSettingsTab) {
-      chatSessions.switchSession(existingSettingsTab.id);
-    } else {
-      chatSessions.createSession("settings", "Settings");
     }
   };
 
@@ -370,6 +337,47 @@ export const AppLayout: React.FC = () => {
     );
   }
 
+  if (!system.startupImage) {
+    return (
+      <div className="h-screen w-screen bg-neutral-950 text-neutral-100 flex flex-col">
+        <TitleBar
+          chatTitle="Spatialshot"
+          onReload={() => {}}
+          isRotating={false}
+          currentModel={system.sessionModel}
+          onModelChange={system.setSessionModel}
+          isLoading={false}
+          isPanelActive={isPanelActive}
+          toggleSettingsPanel={handleToggleSettings}
+          isPanelVisible={isPanelVisible}
+          isPanelActiveAndVisible={isPanelActiveAndVisible}
+          isPanelClosing={isPanelClosing}
+          settingsButtonRef={settingsButtonRef}
+          panelRef={panelRef}
+          settingsPanelRef={settingsPanelRef}
+          prompt={system.editingPrompt}
+          editingModel={system.editingModel}
+          setPrompt={system.setEditingPrompt}
+          onEditingModelChange={system.setEditingModel}
+          userName={system.userName}
+          userEmail={system.userEmail}
+          avatarSrc={system.avatarSrc}
+          onSave={system.saveSettings}
+          onLogout={performLogout}
+          isDarkMode={system.isDarkMode}
+          onToggleTheme={system.handleToggleTheme}
+          onResetAPIKey={system.handleResetAPIKey}
+          toggleSubview={setIsSubviewActive}
+          onNewSession={system.resetSession}
+          hasImageLoaded={false}
+        />
+        <div className="flex-1 overflow-hidden relative">
+          <Welcome onImageReady={handleImageReady} />
+        </div>
+      </div>
+    );
+  }
+
   if (auth.authStage === "GEMINI_SETUP") {
     return <GeminiSetup onComplete={auth.completeGeminiSetup} />;
   }
@@ -384,203 +392,74 @@ export const AppLayout: React.FC = () => {
       onContextMenu={handleContextMenu}
       className={styles.appContainer}
     >
-      <TabLayout
-        sidePanel={
-          <ChatPanel
-            chats={chatSessions.chatMetadata}
-            projects={chatSessions.projects}
-            activeSessionId={chatSessions.activeSessionId}
-            onSelectChat={chatSessions.openChatFromHistory}
-            onNewChat={() => chatSessions.createSession("default", "New Chat")}
-            onDeleteChat={chatSessions.deleteSession}
-            onDeleteChats={chatSessions.deleteSessions}
-            onRenameChat={chatSessions.renameSession}
-            onTogglePinChat={(id: string) => {
-              const chat = chatSessions.chatMetadata.find((c) => c.id === id);
-              if (chat) {
-                chatSessions.pinSession(id, !chat.isPinned);
-              }
-            }}
-            onToggleStarChat={(id: string) => {
-              const chat = chatSessions.chatMetadata.find((c) => c.id === id);
-              if (chat) {
-                chatSessions.starSession(id, !chat.isStarred);
-              }
-            }}
-            onCreateProject={chatSessions.createNewProject}
-            onMoveChatToProject={chatSessions.moveChatToProject}
-          />
-        }
-        onImageReady={handleImageReady}
-        chatTitle={activeSession?.title || "New Chat"}
-        onReload={() => {
-          setIsRotating(true);
-          if (chatSessions.activeSessionId) {
-            chatSessions.startChatSession(
-              chatSessions.activeSessionId,
-              system.apiKey,
-              system.sessionModel,
-              system.prompt,
-            );
-          }
-        }}
-        isRotating={isRotating}
-        currentModel={system.sessionModel}
-        onModelChange={system.setSessionModel}
-        isLoading={activeSession?.isLoading || false}
-        sessions={chatSessions.sessions}
-        openTabs={chatSessions.openTabs}
-        activeSessionId={chatSessions.activeSessionId}
-        onSessionSelect={chatSessions.switchSession}
-        onNewChat={() => {
-          chatSessions.createSession("default", "New Chat");
-        }}
-        onCloseSession={(id: string) => {
-          // Check if this is a settings tab with unsaved changes
-          const sessionToClose = chatSessions.openTabs.find((s) => s.id === id);
-          if (
-            sessionToClose?.type === "settings" &&
-            settingsTabRef.current?.isDirty()
-          ) {
-            setPendingCloseSessionId(id);
-            setShowUnsavedDialog(true);
-            return false;
-          }
-          return chatSessions.closeSession(id);
-        }}
-        onCloseOtherSessions={chatSessions.closeOtherSessions}
-        onCloseSessionsToRight={chatSessions.closeSessionsToRight}
-        onShowWelcome={handleShowWelcome}
-        onOpenSettingsTab={handleOpenPersonalizationTab}
-        onBeforeCloseSession={(id: string) => {
-          // Check if this is a settings tab with unsaved changes
-          const sessionToClose = chatSessions.openTabs.find((s) => s.id === id);
-          if (
-            sessionToClose?.type === "settings" &&
-            settingsTabRef.current?.isDirty()
-          ) {
-            setPendingCloseSessionId(id);
-            setShowUnsavedDialog(true);
-            return false;
-          }
-          return true;
-        }}
-        isSidePanelOpen={isSidePanelOpen}
-        onToggleSidePanel={toggleSidePanel}
-        onReorderTabs={chatSessions.reorderTabs}
-      >
-        {/* ALL TABS MOUNTED - CSS visibility toggle, no remounting */}
-        {chatSessions.openTabs.map((session) => (
-          <div
-            key={session.id}
-            style={{
-              display:
-                session.id === chatSessions.activeSessionId
-                  ? "contents"
-                  : "none",
-            }}
-          >
-            {session.type === "settings" ? (
-              <SettingsTab
-                ref={settingsTabRef}
-                autoExpandOCR={system.autoExpandOCR}
-                captureType={system.captureType}
-                isDarkMode={system.isDarkMode}
-                onToggleTheme={system.handleToggleTheme}
-                geminiKey={system.apiKey}
-                imgbbKey={system.imgbbKey}
-                currentPrompt={system.editingPrompt}
-                currentModel={system.editingModel}
-                userName={system.userName}
-                userEmail={system.userEmail}
-                avatarSrc={system.avatarSrc}
-                onLogout={performLogout}
-                onSave={system.saveSettings}
-              />
-            ) : session.imageData ? (
-              <ChatLayout
-                messages={session.messages || []}
-                streamingText={session.streamingText || ""}
-                isChatMode={(session.messages?.length || 0) > 0}
-                isLoading={session.isLoading || false}
-                isStreaming={!!session.streamingText}
-                error={
-                  session.id === chatSessions.activeSessionId
-                    ? session.error || system.systemError
-                    : null
-                }
-                lastSentMessage={null}
-                startupImage={session.imageData}
-                chatTitle={session.title || "New Chat"}
-                sessionLensUrl={session.lensUrl}
-                setSessionLensUrl={(url) =>
-                  chatSessions.updateSessionLensUrl(session.id, url)
-                }
-                onDescribeEdits={async (description) => {
-                  // Feature not fully implemented
-                }}
-                onImageUpload={(data) => handleImageReady(data, session.id)}
-                onRetry={() => {
-                  chatSessions.retryChatMessage(session.id);
-                }}
-                onCheckSettings={handleOpenPersonalizationTab}
-                onSend={(text) =>
-                  chatSessions.sendChatMessage(session.id, text)
-                }
-                ocrData={session.ocrData}
-                onUpdateOCRData={(data) =>
-                  chatSessions.updateSessionOCRData(session.id, data)
-                }
-                sessionId={session.id}
-              />
-            ) : (
-              <Welcome
-                onImageReady={(data) => handleImageReady(data, session.id)}
-                isActive={session.id === chatSessions.activeSessionId}
-              />
-            )}
-          </div>
-        ))}
-        {/* Show Welcome when no tabs are open */}
-        {chatSessions.openTabs.length === 0 && (
-          <Welcome
-            onImageReady={(data) => handleImageReady(data)}
-            isActive={true}
-          />
-        )}
-      </TabLayout>
-
-      <Dialog
-        isOpen={showUnsavedDialog}
-        variant="warning"
-        title="Unsaved Changes"
-        message="Do you want to save your changes before closing?"
-        actions={[
-          {
-            label: "Discard",
-            onClick: () => {
-              setShowUnsavedDialog(false);
-              if (pendingCloseSessionId) {
-                chatSessions.closeSession(pendingCloseSessionId);
-                setPendingCloseSessionId(null);
-              }
-            },
-            variant: "secondary",
-          },
-          {
-            label: "Save",
-            onClick: () => {
-              settingsTabRef.current?.save();
-              setShowUnsavedDialog(false);
-              if (pendingCloseSessionId) {
-                chatSessions.closeSession(pendingCloseSessionId);
-                setPendingCloseSessionId(null);
-              }
-            },
-            variant: "primary",
-          },
-        ]}
-      />
+      <div className={styles.chatPanel}>
+        <ChatLayout
+          messages={chatEngine.messages}
+          streamingText={chatEngine.streamingText}
+          isChatMode={chatEngine.isChatMode}
+          isLoading={chatEngine.isLoading}
+          isStreaming={chatEngine.isStreaming}
+          error={chatEngine.error || system.systemError}
+          lastSentMessage={chatEngine.lastSentMessage}
+          input={input}
+          onInputChange={setInput}
+          currentModel={system.sessionModel}
+          startupImage={system.startupImage}
+          chatTitle={chatTitle}
+          onSend={() => {
+            chatEngine.handleSend(input);
+            setInput("");
+          }}
+          onModelChange={system.setSessionModel}
+          onRetry={() => {
+            if (chatEngine.messages.length === 0) {
+              chatEngine.handleReload();
+            } else {
+              chatEngine.handleRetrySend();
+            }
+          }}
+          onCheckSettings={() => {
+            setIsPanelActive(true);
+            chatEngine.clearError();
+          }}
+          onReload={() => {
+            setIsRotating(true);
+            chatEngine.handleReload();
+          }}
+          onDescribeEdits={async (description) => {
+            chatEngine.handleDescribeEdits(description);
+          }}
+          sessionLensUrl={sessionLensUrl}
+          setSessionLensUrl={setSessionLensUrl}
+          ocrData={ocrData}
+          onUpdateOCRData={setOcrData}
+          // ChatHeader Props
+          isRotating={isRotating}
+          isPanelActive={isPanelActive}
+          toggleSettingsPanel={handleToggleSettings}
+          isPanelVisible={isPanelVisible}
+          isPanelActiveAndVisible={isPanelActiveAndVisible}
+          isPanelClosing={isPanelClosing}
+          settingsButtonRef={settingsButtonRef}
+          panelRef={panelRef}
+          settingsPanelRef={settingsPanelRef}
+          prompt={system.editingPrompt}
+          editingModel={system.editingModel}
+          setPrompt={system.setEditingPrompt}
+          onEditingModelChange={system.setEditingModel}
+          userName={system.userName}
+          userEmail={system.userEmail}
+          avatarSrc={system.avatarSrc}
+          onSave={system.saveSettings}
+          onLogout={performLogout}
+          isDarkMode={system.isDarkMode}
+          onToggleTheme={system.handleToggleTheme}
+          onResetAPIKey={system.handleResetAPIKey}
+          toggleSubview={setIsSubviewActive}
+          onNewSession={system.resetSession}
+          hasImageLoaded={!!system.startupImage}
+        />
+      </div>
 
       {contextMenu && (
         <ContextMenu

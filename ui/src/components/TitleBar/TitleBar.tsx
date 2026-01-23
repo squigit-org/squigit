@@ -4,13 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
-import { RotateCw, Settings, PanelLeft } from "lucide-react";
+import React, { ForwardedRef, useEffect, useState } from "react";
+import {
+  RotateCw,
+  Plus,
+  Settings,
+  SquarePen,
+  Minus,
+  Square,
+  X,
+} from "lucide-react";
 import { ModelSwitcher } from "../../features/chat/components/ModelSwitcher/ModelSwitcher";
-import { ChatSession } from "../../features/chat/types/chat.types";
+import { SettingsPanel } from "../../features/settings";
+import { invoke } from "@tauri-apps/api/core";
 import styles from "./TitleBar.module.css";
-import { TrafficLights, WindowsControls } from "./WindowControls";
-import { TabBar } from "./TabBar";
 
 type Platform = "macos" | "linux" | "windows";
 
@@ -21,121 +28,242 @@ interface TitleBarProps {
   currentModel: string;
   onModelChange: (model: string) => void;
   isLoading: boolean;
-  sessions: ChatSession[];
-  openTabs: ChatSession[];
-  activeSessionId: string | null;
-  onSessionSelect: (id: string) => void;
-  onNewChat: () => void;
-  onCloseSession: (id: string) => boolean;
-  onCloseOtherSessions: (keepId: string) => void;
-  onCloseSessionsToRight: (fromId: string) => void;
-  onShowWelcome: () => void;
-  onOpenSettingsTab: () => void;
-  onBeforeCloseSession?: (id: string) => boolean;
 
-  // Side panel propsen: boolean;
-  isSidePanelOpen: boolean;
-  onToggleSidePanel: () => void;
-  onReorderTabs?: (fromIndex: number, toIndex: number) => void;
+  isPanelActive: boolean;
+  toggleSettingsPanel: () => void;
+  isPanelVisible: boolean;
+  isPanelActiveAndVisible: boolean;
+  isPanelClosing: boolean;
+  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
+  prompt: string;
+  editingModel: string;
+  setPrompt: (prompt: string) => void;
+  onEditingModelChange: (model: string) => void;
+  userName: string;
+  userEmail: string;
+  avatarSrc: string;
+  onSave: (prompt: string, model: string) => void;
+  onLogout: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
+  onResetAPIKey: () => void;
+  toggleSubview: (isActive: boolean) => void;
+  onNewSession: () => void;
+  hasImageLoaded: boolean;
 }
 
 const detectPlatform = (): Platform => {
   const userAgent = window.navigator.userAgent.toLowerCase();
+  console.log("TitleBar Platform Detection - UA:", userAgent);
   if (userAgent.includes("mac os")) return "macos";
   if (userAgent.includes("windows")) return "windows";
+  // Default to linux (traffic lights) if not explicitly Mac or Windows
   return "linux";
 };
 
+const TrafficLights: React.FC = () => {
+  const handleClose = () => invoke("close_window");
+  const handleMinimize = () => invoke("minimize_window");
+  const handleMaximize = () => invoke("maximize_window");
+
+  return (
+    <div className={styles.trafficLights}>
+      <button
+        className={`${styles.trafficButton} ${styles.close}`}
+        onClick={handleClose}
+        title="Close"
+      >
+        <X className={styles.icon} />
+      </button>
+      <button
+        className={`${styles.trafficButton} ${styles.minimize}`}
+        onClick={handleMinimize}
+        title="Minimize"
+      >
+        <Minus className={styles.icon} />
+      </button>
+      <button
+        className={`${styles.trafficButton} ${styles.maximize}`}
+        onClick={handleMaximize}
+        title="Maximize"
+      >
+        <Plus className={styles.icon} />
+      </button>
+    </div>
+  );
+};
+
+const WindowsControls: React.FC = () => {
+  const handleClose = () => invoke("close_window");
+  const handleMinimize = () => invoke("minimize_window");
+  const handleMaximize = () => invoke("maximize_window");
+
+  return (
+    <div className={styles.windowsControls}>
+      <button
+        className={`${styles.windowsButton} ${styles.winMinimize}`}
+        onClick={handleMinimize}
+        title="Minimize"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.1"
+        >
+          <line x1="1" y1="6" x2="11" y2="6" />
+        </svg>
+      </button>
+      <button
+        className={`${styles.windowsButton} ${styles.winMaximize}`}
+        onClick={handleMaximize}
+        title="Maximize"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.1"
+        >
+          <rect x="1" y="1" width="10" height="10" />
+        </svg>
+      </button>
+      <button
+        className={`${styles.windowsButton} ${styles.winClose}`}
+        onClick={handleClose}
+        title="Close"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.1"
+        >
+          <line x1="1" y1="1" x2="11" y2="11" />
+          <line x1="11" y1="1" x2="1" y2="11" />
+        </svg>
+      </button>
+    </div>
+  );
+};
+
 export const TitleBar: React.FC<TitleBarProps> = ({
+  chatTitle,
   onReload,
   isRotating,
   currentModel,
   onModelChange,
   isLoading,
-  sessions,
-  openTabs,
-  activeSessionId,
-  onSessionSelect,
-  onNewChat,
-  onCloseSession,
-  onCloseOtherSessions,
-  onCloseSessionsToRight,
-  onShowWelcome,
-  onOpenSettingsTab,
-  onBeforeCloseSession,
-  isSidePanelOpen,
-  onToggleSidePanel,
-  onReorderTabs,
+  isPanelActive,
+  toggleSettingsPanel,
+  isPanelVisible,
+  isPanelActiveAndVisible,
+  isPanelClosing,
+  settingsButtonRef,
+  panelRef,
+  settingsPanelRef,
+  prompt,
+  editingModel,
+  setPrompt,
+  onEditingModelChange,
+  userName,
+  userEmail,
+  avatarSrc,
+  onSave,
+  onLogout,
+  isDarkMode,
+  onToggleTheme,
+  onResetAPIKey,
+  toggleSubview,
+  onNewSession,
+  hasImageLoaded,
 }) => {
-  const [platform] = useState<Platform>(() => detectPlatform());
+  const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
 
   const isUnix = platform === "macos" || platform === "linux";
 
-  // Check if active tab is a chat tab
-  const activeTab = openTabs.find((t) => t.id === activeSessionId);
-  const isActiveChatTab = activeTab && activeTab.type !== "settings";
-  // Check if Settings tab is open
-  const isSettingsOpen = openTabs.some((t) => t.type === "settings");
-
   return (
     <header className={styles.header} data-tauri-drag-region>
+      <h1 className={styles.chatTitle}>{chatTitle}</h1>
+
       <div className={styles.leftSection}>
         {isUnix && <TrafficLights />}
 
-        {/* Side panel toggle button */}
-        <button
-          onClick={onToggleSidePanel}
-          className={`${styles.iconButton} ${isSidePanelOpen ? styles.active : ""}`}
-          title={isSidePanelOpen ? "Close sidebar" : "Open sidebar"}
-        >
-          <PanelLeft size={20} />
-        </button>
+        <div className={styles.controlsWrapper}>
+          <button
+            ref={settingsButtonRef}
+            onClick={toggleSettingsPanel}
+            className={`${styles.iconButton} ${
+              isPanelActive ? styles.active : ""
+            }`}
+            title="Settings"
+          >
+            <Settings size={20} />
+          </button>
 
-        <TabBar
-          sessions={sessions}
-          openTabs={openTabs}
-          activeSessionId={activeSessionId}
-          onSessionSelect={onSessionSelect}
-          onCloseSession={onCloseSession}
-          onCloseOtherSessions={onCloseOtherSessions}
-          onCloseSessionsToRight={onCloseSessionsToRight}
-          onShowWelcome={onShowWelcome}
-          onBeforeCloseSession={onBeforeCloseSession}
-          onReorderTabs={onReorderTabs}
-        />
+          {isPanelVisible && (
+            <div style={{ pointerEvents: "auto", display: "contents" }}>
+              <SettingsPanel
+                ref={settingsPanelRef}
+                isOpen={isPanelActiveAndVisible}
+                isClosing={isPanelClosing}
+                currentPrompt={prompt}
+                currentModel={editingModel}
+                onPromptChange={setPrompt}
+                onModelChange={onEditingModelChange}
+                userName={userName}
+                userEmail={userEmail}
+                avatarSrc={avatarSrc}
+                onSave={onSave}
+                onLogout={onLogout}
+                isDarkMode={isDarkMode}
+                onToggleTheme={onToggleTheme}
+                onResetAPIKey={onResetAPIKey}
+                toggleSubview={toggleSubview}
+                toggleSettingsPanel={toggleSettingsPanel}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className={styles.rightSection}>
-        {/* Only show reload and model switcher when active tab is a chat */}
-        {isActiveChatTab && (
-          <>
-            <button
-              onClick={onReload}
-              className={styles.iconButton}
-              title="Reload chat"
-              disabled={isRotating}
-            >
-              <RotateCw
-                size={20}
-                className={isRotating ? styles.rotating : ""}
-              />
-            </button>
-
-            <ModelSwitcher
-              currentModel={currentModel}
-              onModelChange={onModelChange}
-              isLoading={isLoading}
-            />
-          </>
+        {hasImageLoaded && (
+          <button
+            onClick={onNewSession}
+            className={styles.iconButton}
+            title="Analyze another image"
+          >
+            <SquarePen size={20} />
+          </button>
         )}
 
-        <button
-          onClick={onOpenSettingsTab}
-          className={`${styles.iconButton} ${isSettingsOpen ? styles.active : ""}`}
-          title="Settings"
-        >
-          <Settings size={20} />
-        </button>
+        {/* New Chat button removed */}
+
+        {hasImageLoaded && (
+          <button
+            onClick={onReload}
+            className={styles.iconButton}
+            title="Reload chat"
+            disabled={isRotating}
+          >
+            <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
+          </button>
+        )}
+
+        <ModelSwitcher
+          currentModel={currentModel}
+          onModelChange={onModelChange}
+          isLoading={isLoading}
+        />
 
         {platform === "windows" && <WindowsControls />}
       </div>

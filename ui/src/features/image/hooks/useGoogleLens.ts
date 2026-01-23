@@ -48,6 +48,26 @@ export const useGoogleLens = (
     return img.base64;
   };
 
+  useEffect(() => {
+    if (!startupImage || cachedUrl) return;
+
+    const prefetchLensUrl = async () => {
+      try {
+        const apiKey = await invoke<string>("get_api_key", {
+          provider: "imgbb",
+        });
+        if (apiKey) {
+          console.log("Background: Uploading to ImgBB...");
+          const realBase64 = await getRealBase64(startupImage);
+          const publicUrl = await uploadToImgBB(realBase64, apiKey);
+          const url = generateLensUrl(publicUrl);
+          setCachedUrl(url);
+        }
+      } catch (e) {}
+    };
+    prefetchLensUrl();
+  }, [startupImage, cachedUrl]);
+
   const runLensSearch = async (imgData: string, key: string) => {
     try {
       setIsLensLoading(true);
@@ -100,6 +120,7 @@ export const useGoogleLens = (
     if (!startupImage) return;
     if (isLensLoading || waitingForKey) return;
 
+    // Helper to append query to URL
     const appendQuery = (url: string, query?: string) => {
       if (!query || !query.trim()) return url;
       const encodedQuery = encodeURIComponent(query.trim());

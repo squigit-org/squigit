@@ -11,7 +11,6 @@ interface TextLayerProps {
   size: { w: number; h: number };
   svgRef: React.RefObject<SVGSVGElement | null>;
   onTextMouseDown: (e: React.MouseEvent, boxIndex: number) => void;
-  sessionId: string;
 }
 
 export const TextLayer: React.FC<TextLayerProps> = ({
@@ -19,7 +18,6 @@ export const TextLayer: React.FC<TextLayerProps> = ({
   size,
   svgRef,
   onTextMouseDown,
-  sessionId,
 }) => {
   if (data.length === 0 || size.w === 0) return null;
 
@@ -33,7 +31,7 @@ export const TextLayer: React.FC<TextLayerProps> = ({
     >
       {/* Define mask: white background with black cutouts for text areas */}
       <defs>
-        <mask id={`textCutoutMask-${sessionId}`}>
+        <mask id="textCutoutMask">
           {/* White = visible, Black = hidden */}
           <rect x="0" y="0" width={size.w} height={size.h} fill="white" />
           {data.map((item, i) => {
@@ -50,7 +48,7 @@ export const TextLayer: React.FC<TextLayerProps> = ({
         width={size.w}
         height={size.h}
         className={styles.dimOverlay}
-        mask={`url(#textCutoutMask-${sessionId})`}
+        mask="url(#textCutoutMask)"
       />
 
       {/* Highlight and text layers */}
@@ -65,7 +63,7 @@ export const TextLayer: React.FC<TextLayerProps> = ({
             {/* Brightness highlight on text area */}
             <polygon className={styles.highlightBg} points={points} />
             <text
-              id={`text-${sessionId}-${i}`}
+              id={`text-${i}`}
               x={b[0][0]}
               y={b[0][1] + h * 0.78}
               fontSize={h * 0.85}

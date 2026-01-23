@@ -5,7 +5,6 @@
  */
 
 export * from "./components/Personalization/Personalization";
-export * from "./components/SettingsTab/SettingsTab";
 export * from "./components/SettingsPanel/ActionsSheet";
 export * from "./components/SettingsPanel/SettingsPanel";
 export * from "./components/UserProfile/UserProfile";

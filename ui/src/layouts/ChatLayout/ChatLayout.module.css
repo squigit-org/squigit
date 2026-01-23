@@ -4,19 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  background-color: var(--neutral-950, #0a0a0a);
-  color: var(--neutral-100, #fafafa);
-  position: relative;
-  padding-bottom: 96px;
-}
+@import "../../styles/animations.css";
 
-.imageSection {
-  flex-shrink: 0;
-  z-index: 10;
-  position: relative;
+.rotating {
+  animation: rotate 1s linear infinite;
 }
