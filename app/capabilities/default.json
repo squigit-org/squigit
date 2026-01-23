@@ -17,7 +17,18 @@
     "updater:default",
     {
       "identifier": "fs:scope",
-      "allow": ["$APPCONFIG", "$APPCONFIG/**"]
+      "allow": [
+        "$APPCONFIG",
+        "$APPCONFIG/**",
+        "$APPDATA",
+        "$APPDATA/**",
+        "$APPCACHE",
+        "$APPCACHE/**",
+        "$TEMP",
+        "$TEMP/**",
+        "$HOME",
+        "$HOME/**"
+      ]
     }
   ]
 }

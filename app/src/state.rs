@@ -1,11 +1,12 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use ops_chat_storage::StoredImage;
 use parking_lot::Mutex;
 use std::sync::{atomic::AtomicBool, Arc};
 
 pub struct AppState {
-    pub image_data: Arc<Mutex<Option<String>>>,
+    pub image_data: Arc<Mutex<Option<StoredImage>>>,
     pub watcher_running: Arc<AtomicBool>,
     pub auth_running: Arc<AtomicBool>,
 }

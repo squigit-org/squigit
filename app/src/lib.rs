@@ -10,6 +10,12 @@ pub mod commands;
 pub mod services;
 
 use commands::auth::{get_api_key, get_user_data, logout, reset_api_key, start_google_auth};
+use commands::chat::{
+    append_chat_message, create_chat, create_project, delete_chat, delete_project,
+    get_image_path, get_imgbb_url, get_ocr_data, list_chats, list_projects, load_chat,
+    save_imgbb_url, save_ocr_data, store_image_bytes, store_image_from_path,
+    update_chat_metadata,
+};
 use commands::clipboard::{
     copy_image_to_clipboard, read_clipboard_image, start_clipboard_watcher, stop_clipboard_watcher,
 };
@@ -34,30 +40,57 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
+            // Image processing (legacy)
             process_image_path,
             process_image_bytes,
             read_image_file,
             get_initial_image,
+            // Clipboard
             start_clipboard_watcher,
             stop_clipboard_watcher,
             read_clipboard_image,
             copy_image_to_clipboard,
+            // Security
             encrypt_and_save,
             check_file_exists,
+            // Auth
             get_api_key,
             reset_api_key,
             start_google_auth,
             logout,
             get_user_data,
+            // Window
             open_imgbb_window,
             close_imgbb_window,
             open_external_url,
             resize_window,
-            ocr_image,
             set_background_color,
             minimize_window,
             maximize_window,
             close_window,
+            // OCR
+            ocr_image,
+            // CAS Image Storage
+            store_image_bytes,
+            store_image_from_path,
+            get_image_path,
+            // Chat Storage
+            create_chat,
+            load_chat,
+            list_chats,
+            delete_chat,
+            update_chat_metadata,
+            append_chat_message,
+            // OCR Storage
+            save_ocr_data,
+            get_ocr_data,
+            // ImgBB Storage
+            save_imgbb_url,
+            get_imgbb_url,
+            // Projects
+            list_projects,
+            create_project,
+            delete_project,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -68,7 +101,7 @@ pub fn run() {
             if let Some(path) = has_cli_image.clone() {
                 println!("CLI Image argument detected: {}", path);
                 let state = handle.state::<AppState>();
-                let _ = process_and_store_image(path, &state);
+                let _ = process_and_store_image(path.clone(), &state);
             }
 
             let (base_w, base_h) = if has_cli_image.is_some() {

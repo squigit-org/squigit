@@ -6,3 +6,5 @@ export * from "./components/ChatInput/ChatInput";
 export * from "./hooks/useChat";
 export * from "./hooks/useChatTitle";
 export * from "./types/chat.types";
+export * from "./components/ChatPanel/ChatPanel";
+export * from "./components/ModelSwitcher/ModelSwitcher"; // Also exporting ModelSwitcher if needed by TitleBar updates? TitleBar imports it from correct path already.

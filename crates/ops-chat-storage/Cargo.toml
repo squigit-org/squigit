@@ -1,0 +1,14 @@
+[package]
+name = "ops-chat-storage"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+blake3 = "1.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+dirs = "6.0"
+image = "0.25"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }

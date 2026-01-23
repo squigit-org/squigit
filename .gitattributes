@@ -49,6 +49,7 @@
 # Linguist Overrides
 # -----------------------------------------------------------------------------
 *.css     linguist-vendored
+*.tsx     linguist-vendored
 *.html    linguist-vendored
 *.yml     linguist-vendored
 *.sh      linguist-vendored

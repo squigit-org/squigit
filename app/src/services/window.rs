@@ -66,11 +66,13 @@ pub fn spawn_app_window(
                 let path_str = first_path.to_string_lossy().to_string();
                 let state = window_clone.state::<crate::state::AppState>();
 
-                match crate::services::image::process_and_store_image(&path_str, &state) {
-                    Ok(data_url) => {
+                match crate::services::image::process_and_store_image(path_str.clone(), &state) {
+                    Ok(stored) => {
+                        let mime = mime_guess::from_path(&stored.path).first_or_octet_stream().to_string();
                         let payload = serde_json::json!({
-                            "base64": data_url,
-                            "mimeType": data_url.split(";").next().unwrap_or("").replace("data:", "")
+                            "imageId": stored.hash,
+                            "path": stored.path,
+                            "mimeType": mime
                         });
                         let _ = window_clone.emit("drag-drop-image", payload);
                     }

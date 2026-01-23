@@ -7,13 +7,22 @@
 import React, { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import styles from "./Welcome.module.css";
+import {
+  ImageResult,
+  storeImageFromPath,
+} from "../../../../lib/storage/chatStorage";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
+/** Image data from CAS storage. */
+export interface CASImageData {
+  imageId: string;
+  path: string;
+}
+
 interface WelcomeProps {
-  onImageReady: (
-    data: string | { path?: string; base64?: string; mimeType: string },
-  ) => void;
+  /** Called when image is stored in CAS with its hash and path. */
+  onImageReady: (data: CASImageData) => void;
   isActive?: boolean;
 }
 
@@ -87,15 +96,20 @@ export const Welcome: React.FC<WelcomeProps> = ({
     }
   }, []);
 
+  // Handle Ctrl+V paste - Rust handles decoding and stores in CAS
   useEffect(() => {
     if (!isActive) return;
 
     const handlePaste = async (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "v") {
         try {
-          const result = await invoke("read_clipboard_image");
+          // Rust now returns { image_id, path } instead of base64
+          const result = await invoke<ImageResult>("read_clipboard_image");
           if (result) {
-            onImageReady(result as string);
+            onImageReady({
+              imageId: result.image_id,
+              path: result.path,
+            });
           }
         } catch (error) {
           console.error("Failed to read clipboard image:", error);
@@ -133,33 +147,46 @@ export const Welcome: React.FC<WelcomeProps> = ({
     }
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current = 0;
     setIsDragging(false);
+
+    // Handle dropped files
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      await handleFileProcess(files[0]);
+    }
   };
 
+  // Process file - Rust handles storage in CAS
   const handleFileProcess = async (file: File) => {
     try {
-      // @ts-ignore
+      // @ts-expect-error Tauri provides file.path for dropped files
       if (file.path) {
-        // @ts-ignore
-        const result = await invoke("read_image_file", { path: file.path });
-        // @ts-ignore
-        onImageReady(result);
-      } else {
-        // Fallback
-        const buffer = await file.arrayBuffer();
-        const bytes = new Uint8Array(buffer);
-        const result = await invoke("process_image_bytes", {
-          bytes: Array.from(bytes),
+        // Use Rust to store the file in CAS
+        // @ts-expect-error Tauri provides file.path for dropped files
+        const result = await storeImageFromPath(file.path);
+        onImageReady({
+          imageId: result.hash,
+          path: result.path,
         });
-        // @ts-ignore
-        onImageReady(result);
+      } else {
+        // Fallback for web clipboard API - read bytes and store
+        const buffer = await file.arrayBuffer();
+        const bytes = Array.from(new Uint8Array(buffer));
+        const result = await invoke<{ hash: string; path: string }>(
+          "store_image_bytes",
+          { bytes },
+        );
+        onImageReady({
+          imageId: result.hash,
+          path: result.path,
+        });
       }
     } catch (error) {
-      console.error("Failed to process file", error);
+      console.error("Failed to process file:", error);
     }
   };
 
@@ -167,7 +194,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleFileProcess(e.target.files[0]);
+      await handleFileProcess(e.target.files[0]);
     }
   };
 

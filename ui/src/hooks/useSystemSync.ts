@@ -61,6 +61,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     base64: string;
     mimeType: string;
     isFilePath?: boolean;
+    imageId?: string; // CAS hash for chat association
   } | null>(null);
 
   const [sessionChatTitle, setSessionChatTitle] = useState<string | null>(null);

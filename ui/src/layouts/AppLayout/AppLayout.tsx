@@ -33,8 +33,11 @@ import {
   useAuth,
   useChatTitle,
   useChatEngine,
+  ChatPanel,
 } from "../../features";
 import { Dialog } from "../../components";
+import { loadChat, getImagePath } from "../../lib/storage/chatStorage";
+import { useChatHistory } from "../../hooks";
 
 export const AppLayout: React.FC = () => {
   const [isPanelActive, setIsPanelActive] = useState(false);
@@ -52,8 +55,12 @@ export const AppLayout: React.FC = () => {
   const [isPanelClosing, setIsPanelClosing] = useState(false);
   const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
 
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+  const toggleChatPanel = () => setIsChatPanelOpen((prev) => !prev);
+
   const system = useSystemSync(handleToggleSettings);
   const auth = useAuth();
+  const chatHistory = useChatHistory();
   const performLogout = async () => {
     await system.handleLogout();
     auth.logout();
@@ -71,10 +78,13 @@ export const AppLayout: React.FC = () => {
   useEffect(() => {
     const initStartupImage = async () => {
       try {
-        const initialImage = await invoke<string | null>("get_initial_image");
+        const initialImage = await commands.getInitialImage();
         if (initialImage) {
           console.log("Found CLI image in state, loading...");
-          handleImageReady(initialImage);
+          handleImageReady({
+            imageId: initialImage.hash,
+            path: initialImage.path,
+          });
         }
       } catch (e) {
         console.error("Failed to check initial image:", e);
@@ -91,7 +101,10 @@ export const AppLayout: React.FC = () => {
         try {
           console.log("Event received for image:", imagePath);
           const result = await commands.processImagePath(imagePath);
-          handleImageReady(result);
+          handleImageReady({
+            imageId: result.hash,
+            path: result.path,
+          });
         } catch (error) {
           console.error("Failed to process CLI image event:", error);
         }
@@ -130,7 +143,62 @@ export const AppLayout: React.FC = () => {
     setSessionChatTitle: system.setSessionChatTitle,
   });
 
-  // Session logic removed
+  // Handle selecting a chat from history
+  const handleSelectChat = async (id: string) => {
+    try {
+      const chatData = await loadChat(id);
+
+      // 1. Get image path from hash
+      const imagePath = await getImagePath(chatData.metadata.image_hash);
+      const imageUrl = convertFileSrc(imagePath);
+
+      // 2. Set startup image
+      system.setStartupImage({
+        base64: imageUrl,
+        mimeType: "image/png",
+        isFilePath: true,
+        imageId: chatData.metadata.image_hash,
+      });
+
+      // 3. Set chat title
+      system.setSessionChatTitle(chatData.metadata.title);
+
+      // 4. Restore chat engine state
+      // Map ChatMessage to Message type
+      const messages = chatData.messages.map((m, idx) => ({
+        id: idx.toString(), // or generate UUID
+        role: m.role as "user" | "model",
+        text: m.content,
+        timestamp: new Date(m.timestamp).getTime(),
+      }));
+
+      chatEngine.restoreState({
+        messages,
+        streamingText: "",
+        firstResponseId: null,
+        isChatMode: true,
+      });
+
+      // 5. Restore OCR data if present
+      if (chatData.ocr_data && chatData.ocr_data.length > 0) {
+        setOcrData(
+          chatData.ocr_data.map((o) => ({
+            text: o.text,
+            box: o.bbox,
+          })),
+        );
+      }
+
+      chatHistory.setActiveSessionId(id);
+    } catch (e) {
+      console.error("Failed to load chat:", e);
+    }
+  };
+
+  const handleNewSession = () => {
+    system.resetSession();
+    chatHistory.setActiveSessionId(null);
+  };
 
   const [input, setInput] = useState("");
   const [pendingUpdate] = useState(() => getPendingUpdate());
@@ -235,37 +303,15 @@ export const AppLayout: React.FC = () => {
     };
   }, []);
 
-  const handleImageReady = (
-    imageData: string | { path?: string; base64?: string; mimeType: string },
-  ) => {
-    if (typeof imageData === "string") {
-      if (!imageData || !imageData.includes(",")) return;
-
-      const [header, base64Data] = imageData.split(",");
-      const mimeType = header.replace("data:", "").replace(";base64", "");
-
-      system.setStartupImage({
-        base64: imageData,
-        mimeType: mimeType,
-        isFilePath: false,
-      });
-      // When new image is loaded, maybe show editor?
-      // setIsEditorVisible(true);
-    } else {
-      if (imageData.path) {
-        system.setStartupImage({
-          base64: convertFileSrc(imageData.path),
-          mimeType: imageData.mimeType,
-          isFilePath: true,
-        });
-      } else if (imageData.base64) {
-        system.setStartupImage({
-          base64: imageData.base64,
-          mimeType: imageData.mimeType,
-          isFilePath: false,
-        });
-      }
-    }
+  // Handle CAS image data from Welcome component
+  const handleImageReady = (imageData: { imageId: string; path: string }) => {
+    // Store using file path and convertFileSrc for rendering
+    system.setStartupImage({
+      base64: convertFileSrc(imageData.path),
+      mimeType: "image/png", // CAS stores as PNG
+      isFilePath: true,
+      imageId: imageData.imageId, // Store the hash for chat association
+    });
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -368,11 +414,33 @@ export const AppLayout: React.FC = () => {
           onToggleTheme={system.handleToggleTheme}
           onResetAPIKey={system.handleResetAPIKey}
           toggleSubview={setIsSubviewActive}
-          onNewSession={system.resetSession}
+          onNewSession={handleNewSession}
           hasImageLoaded={false}
+          toggleChatPanel={toggleChatPanel}
+          isChatPanelOpen={isChatPanelOpen}
         />
-        <div className="flex-1 overflow-hidden relative">
-          <Welcome onImageReady={handleImageReady} />
+        <div className="flex-1 overflow-hidden relative flex">
+          {isChatPanelOpen && (
+            <div className="w-[300px] border-r border-neutral-800 bg-neutral-900 flex flex-col">
+              <ChatPanel
+                chats={chatHistory.chats}
+                projects={chatHistory.projects}
+                activeSessionId={chatHistory.activeSessionId}
+                onSelectChat={handleSelectChat}
+                onNewChat={handleNewSession}
+                onDeleteChat={chatHistory.handleDeleteChat}
+                onDeleteChats={chatHistory.handleDeleteChats}
+                onRenameChat={chatHistory.handleRenameChat}
+                onTogglePinChat={chatHistory.handleTogglePinChat}
+                onToggleStarChat={chatHistory.handleToggleStarChat}
+                onCreateProject={chatHistory.handleCreateProject}
+                onMoveChatToProject={chatHistory.handleMoveChatToProject}
+              />
+            </div>
+          )}
+          <div className="flex-1 relative">
+            <Welcome onImageReady={handleImageReady} />
+          </div>
         </div>
       </div>
     );
@@ -392,73 +460,96 @@ export const AppLayout: React.FC = () => {
       onContextMenu={handleContextMenu}
       className={styles.appContainer}
     >
-      <div className={styles.chatPanel}>
-        <ChatLayout
-          messages={chatEngine.messages}
-          streamingText={chatEngine.streamingText}
-          isChatMode={chatEngine.isChatMode}
-          isLoading={chatEngine.isLoading}
-          isStreaming={chatEngine.isStreaming}
-          error={chatEngine.error || system.systemError}
-          lastSentMessage={chatEngine.lastSentMessage}
-          input={input}
-          onInputChange={setInput}
-          currentModel={system.sessionModel}
-          startupImage={system.startupImage}
-          chatTitle={chatTitle}
-          onSend={() => {
-            chatEngine.handleSend(input);
-            setInput("");
-          }}
-          onModelChange={system.setSessionModel}
-          onRetry={() => {
-            if (chatEngine.messages.length === 0) {
+      <div className="flex flex-1 h-full overflow-hidden">
+        {isChatPanelOpen && (
+          <div className="w-[300px] flex-shrink-0 border-r border-neutral-800 bg-neutral-900 z-20 flex flex-col">
+            <ChatPanel
+              chats={chatHistory.chats}
+              projects={chatHistory.projects}
+              activeSessionId={chatHistory.activeSessionId}
+              onSelectChat={handleSelectChat}
+              onNewChat={handleNewSession}
+              onDeleteChat={chatHistory.handleDeleteChat}
+              onDeleteChats={chatHistory.handleDeleteChats}
+              onRenameChat={chatHistory.handleRenameChat}
+              onTogglePinChat={chatHistory.handleTogglePinChat}
+              onToggleStarChat={chatHistory.handleToggleStarChat}
+              onCreateProject={chatHistory.handleCreateProject}
+              onMoveChatToProject={chatHistory.handleMoveChatToProject}
+            />
+          </div>
+        )}
+
+        <div className="flex-1 flex flex-col min-w-0 h-full relative">
+          <ChatLayout
+            messages={chatEngine.messages}
+            streamingText={chatEngine.streamingText}
+            isChatMode={chatEngine.isChatMode}
+            isLoading={chatEngine.isLoading}
+            isStreaming={chatEngine.isStreaming}
+            error={chatEngine.error || system.systemError}
+            lastSentMessage={chatEngine.lastSentMessage}
+            input={input}
+            onInputChange={setInput}
+            currentModel={system.sessionModel}
+            startupImage={system.startupImage}
+            chatTitle={chatTitle}
+            onSend={() => {
+              chatEngine.handleSend(input);
+              setInput("");
+            }}
+            onModelChange={system.setSessionModel}
+            onRetry={() => {
+              if (chatEngine.messages.length === 0) {
+                chatEngine.handleReload();
+              } else {
+                chatEngine.handleRetrySend();
+              }
+            }}
+            onCheckSettings={() => {
+              setIsPanelActive(true);
+              chatEngine.clearError();
+            }}
+            onReload={() => {
+              setIsRotating(true);
               chatEngine.handleReload();
-            } else {
-              chatEngine.handleRetrySend();
-            }
-          }}
-          onCheckSettings={() => {
-            setIsPanelActive(true);
-            chatEngine.clearError();
-          }}
-          onReload={() => {
-            setIsRotating(true);
-            chatEngine.handleReload();
-          }}
-          onDescribeEdits={async (description) => {
-            chatEngine.handleDescribeEdits(description);
-          }}
-          sessionLensUrl={sessionLensUrl}
-          setSessionLensUrl={setSessionLensUrl}
-          ocrData={ocrData}
-          onUpdateOCRData={setOcrData}
-          // ChatHeader Props
-          isRotating={isRotating}
-          isPanelActive={isPanelActive}
-          toggleSettingsPanel={handleToggleSettings}
-          isPanelVisible={isPanelVisible}
-          isPanelActiveAndVisible={isPanelActiveAndVisible}
-          isPanelClosing={isPanelClosing}
-          settingsButtonRef={settingsButtonRef}
-          panelRef={panelRef}
-          settingsPanelRef={settingsPanelRef}
-          prompt={system.editingPrompt}
-          editingModel={system.editingModel}
-          setPrompt={system.setEditingPrompt}
-          onEditingModelChange={system.setEditingModel}
-          userName={system.userName}
-          userEmail={system.userEmail}
-          avatarSrc={system.avatarSrc}
-          onSave={system.saveSettings}
-          onLogout={performLogout}
-          isDarkMode={system.isDarkMode}
-          onToggleTheme={system.handleToggleTheme}
-          onResetAPIKey={system.handleResetAPIKey}
-          toggleSubview={setIsSubviewActive}
-          onNewSession={system.resetSession}
-          hasImageLoaded={!!system.startupImage}
-        />
+            }}
+            onDescribeEdits={async (description) => {
+              chatEngine.handleDescribeEdits(description);
+            }}
+            sessionLensUrl={sessionLensUrl}
+            setSessionLensUrl={setSessionLensUrl}
+            ocrData={ocrData}
+            onUpdateOCRData={setOcrData}
+            // ChatHeader Props
+            isRotating={isRotating}
+            isPanelActive={isPanelActive}
+            toggleSettingsPanel={handleToggleSettings}
+            isPanelVisible={isPanelVisible}
+            isPanelActiveAndVisible={isPanelActiveAndVisible}
+            isPanelClosing={isPanelClosing}
+            settingsButtonRef={settingsButtonRef}
+            panelRef={panelRef}
+            settingsPanelRef={settingsPanelRef}
+            prompt={system.editingPrompt}
+            editingModel={system.editingModel}
+            setPrompt={system.setEditingPrompt}
+            onEditingModelChange={system.setEditingModel}
+            userName={system.userName}
+            userEmail={system.userEmail}
+            avatarSrc={system.avatarSrc}
+            onSave={system.saveSettings}
+            onLogout={performLogout}
+            isDarkMode={system.isDarkMode}
+            onToggleTheme={system.handleToggleTheme}
+            onResetAPIKey={system.handleResetAPIKey}
+            toggleSubview={setIsSubviewActive}
+            onNewSession={handleNewSession}
+            hasImageLoaded={!!system.startupImage}
+            toggleChatPanel={toggleChatPanel}
+            isChatPanelOpen={isChatPanelOpen}
+          />
+        </div>
       </div>
 
       {contextMenu && (

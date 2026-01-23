@@ -11,6 +11,7 @@
 #include <QDebug>
 #include <iostream>
 #include <cmath>
+#include <QDateTime>
 
 CaptureController::CaptureController(QObject *parent)
     : QObject(parent)
@@ -142,7 +143,8 @@ void CaptureController::cropAndSave(const QRectF &logicalRect)
     QImage cropped = m_backgroundImage.copy(physX, physY, physW, physH);
     cropped.setDevicePixelRatio(1.0);
     
-    QString finalPath = QDir::temp().filePath("spatial_capture.png");
+    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss_zzz");
+    QString finalPath = QDir::temp().filePath(QString("spatial_capture_%1.png").arg(timestamp));
     
     if (cropped.save(finalPath, "PNG", -1))
     {

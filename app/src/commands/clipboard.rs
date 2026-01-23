@@ -6,11 +6,13 @@ use std::thread;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 
-use crate::services::image::process_bytes_internal;
+use ops_chat_storage::{ChatStorage, StoredImage};
 use crate::state::AppState;
 
+/// Read image from clipboard and store in CAS.
+/// Returns StoredImage { hash, path }.
 #[tauri::command]
-pub async fn read_clipboard_image(state: State<'_, AppState>) -> Result<String, String> {
+pub async fn read_clipboard_image(_state: State<'_, AppState>) -> Result<StoredImage, String> {
     use arboard::Clipboard;
     use image::ImageEncoder;
 
@@ -40,7 +42,11 @@ pub async fn read_clipboard_image(state: State<'_, AppState>) -> Result<String, 
         )
         .map_err(|e| format!("Failed to encode image: {}", e))?;
 
-    process_bytes_internal(buffer, &state)
+    // Store in CAS instead of base64 encoding
+    let storage = ChatStorage::new().map_err(|e| e.to_string())?;
+    let stored = storage.store_image(&buffer).map_err(|e| e.to_string())?;
+
+    Ok(stored)
 }
 
 #[tauri::command]
@@ -110,13 +116,17 @@ pub async fn stop_clipboard_watcher(state: State<'_, AppState>) -> Result<(), St
 }
 
 #[tauri::command]
-pub async fn copy_image_to_clipboard(image_base64: String) -> Result<(), String> {
+pub async fn copy_image_to_clipboard(image_path: String) -> Result<(), String> {
     use arboard::{Clipboard, ImageData};
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use std::fs::File;
+    use std::io::Read;
 
-    let image_bytes = STANDARD
-        .decode(&image_base64)
-        .map_err(|e| format!("Failed to decode base64: {}", e))?;
+    // Read image from file path instead of base64
+    let mut file = File::open(&image_path)
+        .map_err(|e| format!("Failed to open image file: {}", e))?;
+    let mut image_bytes = Vec::new();
+    file.read_to_end(&mut image_bytes)
+        .map_err(|e| format!("Failed to read image file: {}", e))?;
 
     let img = image::load_from_memory(&image_bytes)
         .map_err(|e| format!("Failed to decode image: {}", e))?;

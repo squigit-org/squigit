@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod auth;
+pub mod chat;
 pub mod clipboard;
 pub mod image;
 pub mod ocr;

@@ -9,10 +9,11 @@ import { invoke } from "@tauri-apps/api/core";
 export const commands = {
   // Image Processing
   processImagePath: (path: string) =>
-    invoke<{ path: string; mimeType: string }>("process_image_path", { path }),
+    invoke<{ hash: string; path: string }>("process_image_path", { path }),
   processImageBytes: (bytes: number[]) =>
-    invoke<string>("process_image_bytes", { bytes }),
-  getInitialImage: () => invoke<string | null>("get_initial_image"),
+    invoke<{ hash: string; path: string }>("process_image_bytes", { bytes }),
+  getInitialImage: () =>
+    invoke<{ hash: string; path: string } | null>("get_initial_image"),
 
   // Auth & Keys
   getApiKey: (provider: "gemini" | "imgbb") =>

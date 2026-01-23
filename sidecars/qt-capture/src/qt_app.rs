@@ -79,10 +79,31 @@ impl QtApp {
                             }
                             _ => {
                                 if trimmed.starts_with('/') && capture_success {
-                                    capture_path = Some(trimmed.to_string());
+                                    // Store in CAS
+                                    match ops_chat_storage::ChatStorage::new() {
+                                        Ok(storage) => {
+                                            match storage.store_image_from_path(trimmed) {
+                                                Ok(stored) => {
+                                                    capture_path = Some(stored.path);
+                                                    // Try to delete original temp file
+                                                    let _ = std::fs::remove_file(trimmed);
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("[QtWrapper] Failed to store image: {}", e);
+                                                    capture_path = Some(trimmed.to_string());
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("[QtWrapper] Failed to init storage: {}", e);
+                                            capture_path = Some(trimmed.to_string());
+                                        }
+                                    }
                                     break;
                                 } else {
-                                    eprintln!("[Qt] {}", trimmed);
+                                    if !trimmed.is_empty() {
+                                        eprintln!("[Qt] {}", trimmed);
+                                    }
                                 }
                             }
                         }

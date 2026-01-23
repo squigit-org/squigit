@@ -52,6 +52,8 @@ interface TitleBarProps {
   toggleSubview: (isActive: boolean) => void;
   onNewSession: () => void;
   hasImageLoaded: boolean;
+  toggleChatPanel: () => void;
+  isChatPanelOpen: boolean;
 }
 
 const detectPlatform = (): Platform => {
@@ -185,6 +187,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   toggleSubview,
   onNewSession,
   hasImageLoaded,
+  toggleChatPanel,
+  isChatPanelOpen,
 }) => {
   const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
 
@@ -196,6 +200,50 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
       <div className={styles.leftSection}>
         {isUnix && <TrafficLights />}
+
+        <div className={styles.controlsWrapper}>
+          <button
+            onClick={toggleChatPanel}
+            className={`${styles.iconButton} ${
+              isChatPanelOpen ? styles.active : ""
+            }`}
+            title="Toggle Chat History"
+          >
+            <Square
+              size={20}
+              fill={isChatPanelOpen ? "currentColor" : "none"}
+            />
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.rightSection}>
+        {hasImageLoaded && (
+          <button
+            onClick={onNewSession}
+            className={styles.iconButton}
+            title="Analyze another image"
+          >
+            <SquarePen size={20} />
+          </button>
+        )}
+
+        {hasImageLoaded && (
+          <button
+            onClick={onReload}
+            className={styles.iconButton}
+            title="Reload chat"
+            disabled={isRotating}
+          >
+            <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
+          </button>
+        )}
+
+        <ModelSwitcher
+          currentModel={currentModel}
+          onModelChange={onModelChange}
+          isLoading={isLoading}
+        />
 
         <div className={styles.controlsWrapper}>
           <button
@@ -233,37 +281,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             </div>
           )}
         </div>
-      </div>
-
-      <div className={styles.rightSection}>
-        {hasImageLoaded && (
-          <button
-            onClick={onNewSession}
-            className={styles.iconButton}
-            title="Analyze another image"
-          >
-            <SquarePen size={20} />
-          </button>
-        )}
-
-        {/* New Chat button removed */}
-
-        {hasImageLoaded && (
-          <button
-            onClick={onReload}
-            className={styles.iconButton}
-            title="Reload chat"
-            disabled={isRotating}
-          >
-            <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
-          </button>
-        )}
-
-        <ModelSwitcher
-          currentModel={currentModel}
-          onModelChange={onModelChange}
-          isLoading={isLoading}
-        />
 
         {platform === "windows" && <WindowsControls />}
       </div>

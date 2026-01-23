@@ -41,6 +41,7 @@ opener = "0.8.3"
 tauri-plugin-updater = "2.9.0"
 tauri-plugin-process = "2.3.1"
 webbrowser = "1.0.6"
+ops-chat-storage = { path = "../crates/ops-chat-storage" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = "0.9.7"
