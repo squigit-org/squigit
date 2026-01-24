@@ -41,6 +41,9 @@ import {
   getImagePath,
   createChat,
   updateChatMetadata,
+  appendChatMessage,
+  saveOcrData,
+  saveImgbbUrl,
 } from "../../lib/storage/chatStorage";
 import { useChatHistory } from "../../hooks";
 
@@ -74,8 +77,51 @@ export const AppLayout: React.FC = () => {
   useUpdateCheck();
 
   const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
+  
+  const handleUpdateLensUrl = useCallback(
+    (url: string | null) => {
+      setSessionLensUrl(url);
+      const activeId = chatHistory.activeSessionId;
+      if (activeId && url) {
+        saveImgbbUrl(activeId, url).catch((e) =>
+          console.error("Failed to save ImgBB URL", e),
+        );
+      }
+    },
+    [chatHistory.activeSessionId],
+  );
+
   const [ocrData, setOcrData] = useState<{ text: string; box: number[][] }[]>(
     [],
+  );
+
+  const handleUpdateOCRData = useCallback(
+    (data: { text: string; box: number[][] }[]) => {
+      setOcrData(data);
+    },
+    [],
+  );
+
+  // Persist OCR data when available and chat is active
+  useEffect(() => {
+    const activeId = chatHistory.activeSessionId;
+    if (activeId && ocrData.length > 0) {
+      const ocrRegions = ocrData.map((d) => ({ text: d.text, bbox: d.box }));
+      saveOcrData(activeId, ocrRegions).catch((e) =>
+        console.error("Failed to save OCR", e),
+      );
+    }
+  }, [ocrData, chatHistory.activeSessionId]);
+
+  const handleMessageAdded = useCallback(
+    (msg: any, targetChatId?: string) => {
+      const activeId = targetChatId || chatHistory.activeSessionId;
+      if (activeId) {
+        const role = msg.role === "user" ? "user" : "assistant";
+        appendChatMessage(activeId, role, msg.text).catch(console.error);
+      }
+    },
+    [chatHistory.activeSessionId],
   );
 
   const [isCheckingImage, setIsCheckingImage] = useState(true);
@@ -139,6 +185,8 @@ export const AppLayout: React.FC = () => {
     prompt: system.prompt,
     setCurrentModel: system.setSessionModel,
     enabled: isChatActive,
+    onMessage: handleMessageAdded,
+    chatId: chatHistory.activeSessionId,
   });
 
   const { chatTitle } = useChatTitle({
@@ -182,7 +230,8 @@ export const AppLayout: React.FC = () => {
         mimeType: "image/png",
         isFilePath: true,
         imageId: chatData.metadata.image_hash,
-      });
+        fromHistory: true,
+      } as any);
 
       // 3. Set chat title
       system.setSessionChatTitle(chatData.metadata.title);
@@ -213,6 +262,9 @@ export const AppLayout: React.FC = () => {
         );
       }
 
+      // 6. Restore ImgBB URL if present
+      setSessionLensUrl(chatData.imgbb_url || null);
+
       chatHistory.setActiveSessionId(id);
     } catch (e) {
       console.error("Failed to load chat:", e);
@@ -223,6 +275,7 @@ export const AppLayout: React.FC = () => {
     system.resetSession();
     chatHistory.setActiveSessionId(null);
     setOcrData([]); // Clear OCR data
+    setSessionLensUrl(null); // Clear ImgBB URL
   };
 
   const [input, setInput] = useState("");
@@ -574,6 +627,7 @@ export const AppLayout: React.FC = () => {
             currentModel={system.sessionModel}
             startupImage={system.startupImage}
             chatTitle={chatTitle}
+            chatId={chatHistory.activeSessionId}
             onSend={() => {
               chatEngine.handleSend(input);
               setInput("");
@@ -598,9 +652,9 @@ export const AppLayout: React.FC = () => {
               chatEngine.handleDescribeEdits(description);
             }}
             sessionLensUrl={sessionLensUrl}
-            setSessionLensUrl={setSessionLensUrl}
+            setSessionLensUrl={handleUpdateLensUrl}
             ocrData={ocrData}
-            onUpdateOCRData={setOcrData}
+            onUpdateOCRData={handleUpdateOCRData}
             // ChatHeader Props
             isRotating={isRotating}
             isPanelActive={isPanelActive}

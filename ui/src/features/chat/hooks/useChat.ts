@@ -19,6 +19,8 @@ export const useChatEngine = ({
   prompt,
   setCurrentModel,
   enabled,
+  onMessage,
+  chatId,
 }: {
   apiKey: string;
   currentModel: string;
@@ -26,10 +28,13 @@ export const useChatEngine = ({
     base64: string;
     mimeType: string;
     isFilePath?: boolean;
+    fromHistory?: boolean;
   } | null;
   prompt: string;
   setCurrentModel: (model: string) => void;
   enabled: boolean;
+  onMessage?: (message: Message, chatId: string) => void;
+  chatId: string | null;
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
@@ -41,12 +46,16 @@ export const useChatEngine = ({
   const [lastSentMessage, setLastSentMessage] = useState<Message | null>(null);
   const clearError = () => setError(null);
 
+  // Capture the chatId when the session starts to use it in callbacks
+  // This prevents race conditions if the user switches chats during generation
+  const sessionChatIdRef = useState(chatId)[0];
+
   useEffect(() => {
     if (enabled) setIsLoading(true);
   }, [enabled]);
 
   useEffect(() => {
-    if (enabled && startupImage && prompt && apiKey) {
+    if (enabled && startupImage && prompt && apiKey && !startupImage.fromHistory) {
       startSession(apiKey, currentModel, startupImage);
     }
   }, [apiKey, prompt, startupImage, currentModel, enabled]);
@@ -68,6 +77,7 @@ export const useChatEngine = ({
   ) => {
     setIsLoading(true);
     setError(null);
+    const targetChatId = chatId;
 
     if (!key) {
       return;
@@ -122,6 +132,16 @@ export const useChatEngine = ({
           setStreamingText(fullResponse);
         }
       );
+      
+      if (onMessage && targetChatId) {
+        onMessage({
+          id: responseId,
+          role: "model",
+          text: fullResponse,
+          timestamp: Date.now(),
+        }, targetChatId);
+      }
+
       setIsStreaming(false);
       setIsLoading(false);
     } catch (apiError: any) {
@@ -161,6 +181,7 @@ export const useChatEngine = ({
       setError("Cannot start session. Missing required data.");
       return;
     }
+    const targetChatId = chatId;
 
     // Combine prompt with edit description
     const combinedPrompt = `${prompt}\n\n[User Edit Request]: ${editDescription}`;
@@ -208,6 +229,16 @@ export const useChatEngine = ({
           setStreamingText(fullResponse);
         }
       );
+      
+      if (onMessage && targetChatId) {
+        onMessage({
+          id: responseId,
+          role: "model",
+          text: fullResponse,
+          timestamp: Date.now(),
+        }, targetChatId);
+      }
+
       setIsStreaming(false);
       setIsLoading(false);
     } catch (apiError: any) {
@@ -230,6 +261,7 @@ export const useChatEngine = ({
     setError(null);
     setIsLoading(true);
     setMessages((prev) => [...prev, lastSentMessage]);
+    const targetChatId = chatId;
 
     try {
       const responseText = await sendMessage(lastSentMessage.text);
@@ -240,6 +272,7 @@ export const useChatEngine = ({
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, botMsg]);
+      if (onMessage && targetChatId) onMessage(botMsg, targetChatId);
       setLastSentMessage(null);
     } catch (apiError: any) {
       setError("Failed to send message. " + (apiError.message || ""));
@@ -251,6 +284,7 @@ export const useChatEngine = ({
 
   const handleSend = async (userText: string) => {
     if (!userText.trim() || isLoading) return;
+    const targetChatId = chatId;
 
     if (!isChatMode) {
       setIsChatMode(true);
@@ -276,6 +310,7 @@ export const useChatEngine = ({
 
     setLastSentMessage(userMsg);
     setMessages((prev) => [...prev, userMsg]);
+    if (onMessage && targetChatId) onMessage(userMsg, targetChatId);
     setIsLoading(true);
     setError(null);
 
@@ -288,6 +323,7 @@ export const useChatEngine = ({
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, botMsg]);
+      if (onMessage && targetChatId) onMessage(botMsg, targetChatId);
       setLastSentMessage(null);
     } catch (apiError: any) {
       setError("Failed to send message. " + (apiError.message || ""));

@@ -30,9 +30,11 @@ export interface ChatLayoutProps {
     base64: string;
     mimeType: string;
     isFilePath?: boolean;
+    fromHistory?: boolean;
   } | null;
 
   chatTitle: string;
+  chatId: string | null;
 
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string | null) => void;
@@ -95,6 +97,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   onUpdateOCRData,
 
   chatTitle,
+  chatId,
   currentModel,
   onModelChange,
 
@@ -213,6 +216,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
           onUpdateOCRData={onUpdateOCRData}
           isVisible={true}
           scrollContainerRef={scrollContainerRef}
+          chatId={chatId}
         />
       </div>
 

@@ -32,6 +32,7 @@ interface ImageAreaProps {
     base64: string;
     mimeType: string;
     isFilePath?: boolean;
+    fromHistory?: boolean;
   } | null;
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string) => void;
@@ -41,6 +42,7 @@ interface ImageAreaProps {
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
   ocrData: { text: string; box: number[][] }[];
   onUpdateOCRData: (data: { text: string; box: number[][] }[]) => void;
+  chatId: string | null;
 }
 
 export const ImageArea: React.FC<ImageAreaProps> = ({
@@ -50,6 +52,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   isVisible,
   ocrData,
   onUpdateOCRData,
+  chatId,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -84,6 +87,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
   const scan = useCallback(async () => {
     if (!startupImage?.base64) return;
+    const currentChatId = chatId;
 
     setLoading(true);
     setError("");
@@ -153,21 +157,34 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
         box: r.box_coords,
       }));
 
-      onUpdateOCRData(converted);
-      setShowOverlay(false);
+      // Prevent race condition: Check if we are still on the same chat
+      if (currentChatId === chatId) {
+        onUpdateOCRData(converted);
+        setShowOverlay(false);
+      }
       // setIsExpanded(true); // Don't auto-expand, user finds it annoying
     } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : String(e);
-      setError(errorMsg);
-      setShowOverlay(false);
+      if (currentChatId === chatId) {
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        setError(errorMsg);
+        setShowOverlay(false);
+      }
     } finally {
-      setLoading(false);
+      if (currentChatId === chatId) {
+        setLoading(false);
+      }
     }
-  }, [startupImage, onUpdateOCRData]);
+  }, [startupImage, onUpdateOCRData, chatId]);
 
   // Auto-scan if no data present
   useEffect(() => {
-    if (startupImage && ocrData.length === 0 && !loading && !error) {
+    if (
+      startupImage &&
+      ocrData.length === 0 &&
+      !loading &&
+      !error &&
+      !startupImage.fromHistory
+    ) {
       scan();
     }
   }, [startupImage, ocrData.length, loading, error, scan]);
