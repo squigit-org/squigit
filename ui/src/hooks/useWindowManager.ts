@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 const SIZES = {
@@ -18,8 +18,10 @@ export const useWindowManager = (
   isAgreementPending: boolean,
   isUpdatePending: boolean,
   isLoading: boolean,
-  isImageMissing: boolean
+  isImageMissing: boolean,
 ) => {
+  const prevModeRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -30,21 +32,25 @@ export const useWindowManager = (
       const isWelcomeScreen =
         isImageMissing && !isAgreementPending && !isUpdatePending;
 
+      const targetMode =
+        isOnboardingPage && !isWelcomeScreen ? "ONBOARDING" : "CHAT";
+
+      // If mode hasn't changed, don't resize (prevents resetting user resizing/movement)
+      if (prevModeRef.current === targetMode) {
+        return;
+      }
+
       const target =
-        isOnboardingPage && !isWelcomeScreen ? SIZES.ONBOARDING : SIZES.CHAT;
+        targetMode === "ONBOARDING" ? SIZES.ONBOARDING : SIZES.CHAT;
 
       try {
-        console.log(
-          `Resizing window to ${
-            target === SIZES.ONBOARDING ? "Onboarding" : "Chat"
-          } mode:`,
-          target
-        );
+        console.log(`Resizing window to ${targetMode} mode:`, target);
         await invoke("resize_window", {
           width: target.w,
           height: target.h,
           show: true,
         });
+        prevModeRef.current = targetMode;
       } catch (e) {
         console.error("Failed to resize window:", e);
       }

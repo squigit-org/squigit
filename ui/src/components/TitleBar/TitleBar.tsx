@@ -209,27 +209,29 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             }`}
             title="Toggle Chat History"
           >
-            <PanelLeft
-              size={20}
-              color={
-                isChatPanelOpen ? "var(--neutral-100)" : "var(--neutral-400)"
-              }
-            />
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <path
+                d="M9 3V21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9Z"
+                fill={isChatPanelOpen ? "currentColor" : "none"}
+                stroke={isChatPanelOpen ? "none" : "currentColor"}
+              />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
           </button>
         </div>
       </div>
 
       <div className={styles.rightSection}>
-        {hasImageLoaded && (
-          <button
-            onClick={onNewSession}
-            className={styles.iconButton}
-            title="Analyze another image"
-          >
-            <SquarePen size={20} />
-          </button>
-        )}
-
         {hasImageLoaded && (
           <button
             onClick={onReload}

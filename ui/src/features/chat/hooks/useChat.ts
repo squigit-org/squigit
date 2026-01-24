@@ -434,66 +434,101 @@ export const useChatEngine = ({
 
     // If image provided, initialize the Gemini session with history
     if (image) {
-      try {
-        let finalBase64 = image.base64;
+      // OPTIMIZATION: If messages exist, use a lightweight context summary (First + Last message)
+      // This avoids re-sending the heavy image data, saving tokens and bandwidth.
+      if (state.messages.length > 0) {
+        try {
+          const history: any[] = [];
+          const firstMsg = state.messages[0];
+          const lastMsg = state.messages[state.messages.length - 1];
 
-        // If it's an asset URL (file path), fetch it to get the blob/base64
-        if (
-          image.base64.startsWith("asset://") ||
-          image.base64.startsWith("http")
-        ) {
-          try {
-            const res = await fetch(image.base64);
-            const blob = await res.blob();
-            finalBase64 = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            });
-          } catch (e) {
-            console.error("Failed to fetch asset for restore", e);
-            return;
-          }
-        }
+          const contextPrompt = `[System]: Resuming chat session.
+To save resources, the original image is NOT re-sent.
+Here is the context from the conversation history:
 
-        const history: any[] = [];
+---
+**Initial AI Analysis (First Message):**
+${firstMsg.text}
 
-        // 1. Add the initial User message (Image + Prompt)
-        const cleanBase64 = finalBase64.replace(
-          /^data:image\/[a-z]+;base64,/,
-          "",
-        );
-        history.push({
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                mimeType: image.mimeType,
-                data: cleanBase64,
-              },
-            },
-            {
-              text: systemPrompt, // Using the system prompt as the initial prompt context
-            },
-            {
-              text: prompt || "Analyze this image.", // Use current prompt or default
-            },
-          ],
-        });
+---
+**Most Recent Message:**
+${lastMsg.role === "user" ? "User" : "AI"}: ${lastMsg.text}
 
-        // 2. Add subsequent history
-        // state.messages usually starts with Assistant response
-        state.messages.forEach((msg) => {
+---
+Please continue the conversation focusing on the User's next prompt, using the above context.`;
+
           history.push({
-            role: msg.role === "model" ? "model" : "user",
-            parts: [{ text: msg.text }],
+            role: "user",
+            parts: [{ text: contextPrompt }],
           });
-        });
 
-        apiRestoreSession(currentModel, history, systemPrompt);
-      } catch (e) {
-        console.error("Failed to restore Gemini session:", e);
+          // Add a placeholder acknowledgment to set the turn
+          history.push({
+            role: "model",
+            parts: [
+              {
+                text: "Understood. I have the context and am ready for the new prompt.",
+              },
+            ],
+          });
+
+          // Initialize session with this lightweight history
+          apiRestoreSession(currentModel, history, systemPrompt);
+        } catch (e) {
+          console.error("Failed to restore Gemini session (optimized):", e);
+        }
+      } else {
+        // FALLBACK: If no messages (empty chat), we must send the image to start the analysis.
+        try {
+          let finalBase64 = image.base64;
+
+          if (
+            image.base64.startsWith("asset://") ||
+            image.base64.startsWith("http")
+          ) {
+            try {
+              const res = await fetch(image.base64);
+              const blob = await res.blob();
+              finalBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            } catch (e) {
+              console.error("Failed to fetch asset for restore", e);
+              return;
+            }
+          }
+
+          const history: any[] = [];
+          const cleanBase64 = finalBase64.replace(
+            /^data:image\/[a-z]+;base64,/,
+            "",
+          );
+
+          history.push({
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: image.mimeType,
+                  data: cleanBase64,
+                },
+              },
+              {
+                text: systemPrompt,
+              },
+              {
+                text: prompt || "Analyze this image.",
+              },
+            ],
+          });
+
+          apiRestoreSession(currentModel, history, systemPrompt);
+        } catch (e) {
+          console.error("Failed to restore Gemini session (fallback):", e);
+        }
       }
     }
   };

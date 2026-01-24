@@ -284,7 +284,22 @@ export const AppLayout: React.FC = () => {
     setSessionLensUrl(null); // Clear ImgBB URL
   };
 
-  const [input, setInput] = useState("");
+  // Drafts state
+  const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
+  const [imageDrafts, setImageDrafts] = useState<Record<string, string>>({});
+
+  const activeDraftId = chatHistory.activeSessionId || "new_session";
+
+  const input = chatDrafts[activeDraftId] || "";
+  const setInput = (val: string) => {
+    setChatDrafts((prev) => ({ ...prev, [activeDraftId]: val }));
+  };
+
+  const imageInput = imageDrafts[activeDraftId] || "";
+  const setImageInput = (val: string) => {
+    setImageDrafts((prev) => ({ ...prev, [activeDraftId]: val }));
+  };
+
   const [pendingUpdate] = useState(() => getPendingUpdate());
   const [showUpdate, setShowUpdate] = useState(() => {
     const wasDismissed = sessionStorage.getItem("update_dismissed");
@@ -486,6 +501,14 @@ export const AppLayout: React.FC = () => {
     );
   }
 
+  if (auth.authStage === "GEMINI_SETUP") {
+    return <GeminiSetup onComplete={auth.completeGeminiSetup} />;
+  }
+
+  if (auth.authStage === "LOGIN") {
+    return <LoginScreen onComplete={auth.login} />;
+  }
+
   if (!system.startupImage) {
     return (
       <div className={styles.appContainer}>
@@ -547,14 +570,6 @@ export const AppLayout: React.FC = () => {
         </div>
       </div>
     );
-  }
-
-  if (auth.authStage === "GEMINI_SETUP") {
-    return <GeminiSetup onComplete={auth.completeGeminiSetup} />;
-  }
-
-  if (auth.authStage === "LOGIN") {
-    return <LoginScreen onComplete={auth.login} />;
   }
 
   return (
@@ -688,6 +703,8 @@ export const AppLayout: React.FC = () => {
             hasImageLoaded={!!system.startupImage}
             toggleChatPanel={toggleChatPanel}
             isChatPanelOpen={isChatPanelOpen}
+            imageInputValue={imageInput}
+            onImageInputChange={setImageInput}
           />
         </div>
       </div>

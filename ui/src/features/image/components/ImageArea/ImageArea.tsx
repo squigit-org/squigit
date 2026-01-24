@@ -43,6 +43,8 @@ interface ImageAreaProps {
   ocrData: { text: string; box: number[][] }[];
   onUpdateOCRData: (data: { text: string; box: number[][] }[]) => void;
   chatId: string | null;
+  inputValue: string;
+  onInputChange: (value: string) => void;
 }
 
 export const ImageArea: React.FC<ImageAreaProps> = ({
@@ -53,6 +55,8 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   ocrData,
   onUpdateOCRData,
   chatId,
+  inputValue,
+  onInputChange,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -65,7 +69,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   const viewerRef = useRef<HTMLDivElement>(null);
   const imgWrapRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const [imagePrompt, setImagePrompt] = useState("");
+  // Removed local imagePrompt state
   const toolbarRef = useRef<HTMLDivElement>(null);
   const expandedContentRef = useRef<HTMLDivElement>(null);
   const ActionMenuRef = useRef<ActionMenuHandle>(null);
@@ -213,6 +217,11 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     }
   };
 
+  // Reset expansion state when switching chats
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [chatId]);
+
   const handleCopyImage = useCallback(async (): Promise<boolean> => {
     const img = imgRef.current;
     if (!img) return false;
@@ -277,8 +286,8 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
           <div className={styles.inputContainer}>
             <SearchInput
-              value={imagePrompt}
-              onChange={setImagePrompt}
+              value={inputValue}
+              onChange={onInputChange}
               onLensClick={(query) => triggerLens(query)}
               onTranslateClick={handleTranslateAll}
               onCollapse={toggleExpand}
@@ -321,6 +330,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
           </div>
 
           <ImageToolbar
+            key={chatId} // Reset position on chat switch
             toolbarRef={toolbarRef}
             isLensLoading={isLensLoading}
             onLensClick={triggerLens}

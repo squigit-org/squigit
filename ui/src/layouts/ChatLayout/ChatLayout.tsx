@@ -76,6 +76,8 @@ export interface ChatLayoutProps {
   hasImageLoaded: boolean;
   toggleChatPanel: () => void;
   isChatPanelOpen: boolean;
+  imageInputValue: string;
+  onImageInputChange: (value: string) => void;
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
@@ -95,12 +97,10 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   onDescribeEdits,
   ocrData,
   onUpdateOCRData,
-
   chatTitle,
   chatId,
   currentModel,
   onModelChange,
-
   onReload,
   isRotating,
   isPanelActive,
@@ -128,20 +128,29 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   hasImageLoaded,
   toggleChatPanel,
   isChatPanelOpen,
+  imageInputValue,
+  onImageInputChange,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
+  const prevChatIdRef = useRef(chatId);
 
   useLayoutEffect(() => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
+    const el = scrollContainerRef.current;
+    if (!el) return;
 
+    if (prevChatIdRef.current !== chatId) {
+      // Chat Switched: Instant Scroll to bottom
+      el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+      prevChatIdRef.current = chatId;
+    } else if (messages.length > 0) {
+      // Message Update: Smooth Scroll (if applicable, e.g. user message)
+      const lastMessage = messages[messages.length - 1];
       if (lastMessage.role === "user") {
-        const el = scrollContainerRef.current;
-        if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
       }
     }
-  }, [messages.length]);
+  }, [messages, chatId]);
 
   const showFlatMenuRef = useRef<
     ((rect: { left: number; width: number; top: number }) => void) | null
@@ -217,6 +226,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
           isVisible={true}
           scrollContainerRef={scrollContainerRef}
           chatId={chatId}
+          inputValue={imageInputValue}
+          onInputChange={onImageInputChange}
         />
       </div>
 
