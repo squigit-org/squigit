@@ -58,7 +58,7 @@ export interface StoredImage {
 
 /** Result from clipboard image read. */
 export interface ImageResult {
-  image_id: string;
+  hash: string;
   path: string;
 }
 

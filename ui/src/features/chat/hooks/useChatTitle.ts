@@ -34,10 +34,6 @@ export const useChatTitle = ({
       return;
     }
 
-    if (startupImage.isFilePath && startupImage.base64.startsWith("asset://")) {
-      return;
-    }
-
     setIsGenerating(true);
 
     try {
@@ -52,10 +48,39 @@ export const useChatTitle = ({
             .join(" ")
         : "Generate a 2-3 word title describing this image.";
 
-      const cleanBase64 = startupImage.base64.replace(
-        /^data:image\/[a-z]+;base64,/,
-        "",
-      );
+      let imageBase64: string;
+      let imageMimeType = startupImage.mimeType;
+
+      // If this is a file path (asset URL), fetch the actual image data
+      if (startupImage.isFilePath) {
+        try {
+          const response = await fetch(startupImage.base64);
+          const blob = await response.blob();
+          imageMimeType = blob.type || "image/png";
+
+          const reader = new FileReader();
+          const base64Promise = new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => {
+              const result = reader.result as string;
+              // Remove data URL prefix to get raw base64
+              const base64 = result.replace(/^data:image\/[a-z]+;base64,/, "");
+              resolve(base64);
+            };
+            reader.onerror = reject;
+          });
+          reader.readAsDataURL(blob);
+          imageBase64 = await base64Promise;
+        } catch (e) {
+          console.error("Failed to fetch image for title generation:", e);
+          setSessionChatTitle("New Chat");
+          return;
+        }
+      } else {
+        imageBase64 = startupImage.base64.replace(
+          /^data:image\/[a-z]+;base64,/,
+          "",
+        );
+      }
 
       const response = await ai.models.generateContent({
         model: TITLE_MODEL,
@@ -65,8 +90,8 @@ export const useChatTitle = ({
             parts: [
               {
                 inlineData: {
-                  mimeType: startupImage.mimeType,
-                  data: cleanBase64,
+                  mimeType: imageMimeType,
+                  data: imageBase64,
                 },
               },
               {

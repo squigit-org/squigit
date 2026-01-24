@@ -1,11 +1,6 @@
-/**
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
 import {
   ImageResult,
@@ -13,6 +8,7 @@ import {
 } from "../../../../lib/storage/chatStorage";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 /** Image data from CAS storage. */
 export interface CASImageData {
@@ -32,7 +28,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dragCounter = useRef(0);
 
   const platformInfo = React.useMemo(() => {
     const ua = navigator.userAgent.toLowerCase();
@@ -103,11 +98,11 @@ export const Welcome: React.FC<WelcomeProps> = ({
     const handlePaste = async (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "v") {
         try {
-          // Rust now returns { image_id, path } instead of base64
+          // Rust now returns { hash, path } instead of base64
           const result = await invoke<ImageResult>("read_clipboard_image");
           if (result) {
             onImageReady({
-              imageId: result.image_id,
+              imageId: result.hash,
               path: result.path,
             });
           }
@@ -124,41 +119,65 @@ export const Welcome: React.FC<WelcomeProps> = ({
     };
   }, [onImageReady, isActive]);
 
-  const handleDragEnter = (e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current++;
-    if (dragCounter.current === 1) {
-      setIsDragging(true);
-    }
-  };
+  // Handle Tauri v2 native drag-drop events
+  useEffect(() => {
+    if (!isActive) return;
 
-  const handleDragOver = (e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+    // Listen for drag hover events
+    const unlistenHover = listen<{ paths: string[] }>(
+      "tauri://drag-over",
+      () => {
+        setIsDragging(true);
+      },
+    );
 
-  const handleDragLeave = (e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current--;
-    if (dragCounter.current === 0) {
+    // Listen for drag leave events
+    const unlistenLeave = listen("tauri://drag-leave", () => {
       setIsDragging(false);
-    }
-  };
+    });
 
-  const handleDrop = async (e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current = 0;
-    setIsDragging(false);
+    // Listen for drop events - Tauri v2 provides file paths directly
+    const unlistenDrop = listen<{ paths: string[] }>(
+      "tauri://drag-drop",
+      async (event) => {
+        setIsDragging(false);
+        const paths = event.payload.paths;
 
-    // Handle dropped files
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      await handleFileProcess(files[0]);
-    }
-  };
+        if (paths && paths.length > 0) {
+          const filePath = paths[0];
+          // Check if file has allowed extension
+          const lowerPath = filePath.toLowerCase();
+          const isAllowed = ALLOWED_EXTENSIONS.some((ext) =>
+            lowerPath.endsWith(ext),
+          );
+
+          if (isAllowed) {
+            try {
+              console.log("Processing dropped file:", filePath);
+              const result = await storeImageFromPath(filePath);
+              onImageReady({
+                imageId: result.hash,
+                path: result.path,
+              });
+            } catch (error) {
+              console.error("Failed to process dropped file:", error);
+            }
+          } else {
+            console.warn(
+              "Dropped file is not an allowed image type:",
+              filePath,
+            );
+          }
+        }
+      },
+    );
+
+    return () => {
+      unlistenHover.then((fn) => fn());
+      unlistenLeave.then((fn) => fn());
+      unlistenDrop.then((fn) => fn());
+    };
+  }, [onImageReady, isActive]);
 
   // Process file - Rust handles storage in CAS
   const handleFileProcess = async (file: File) => {
@@ -202,10 +221,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
     <div
       className={`${styles.container} ${isDragging ? styles.dragging : ""}`}
       tabIndex={-1}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
       <input
         ref={fileInputRef}

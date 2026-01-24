@@ -36,7 +36,12 @@ import {
   ChatPanel,
 } from "../../features";
 import { Dialog } from "../../components";
-import { loadChat, getImagePath } from "../../lib/storage/chatStorage";
+import {
+  loadChat,
+  getImagePath,
+  createChat,
+  updateChatMetadata,
+} from "../../lib/storage/chatStorage";
 import { useChatHistory } from "../../hooks";
 
 export const AppLayout: React.FC = () => {
@@ -143,9 +148,28 @@ export const AppLayout: React.FC = () => {
     setSessionChatTitle: system.setSessionChatTitle,
   });
 
+  // Persist chat title when it changes
+  useEffect(() => {
+    const activeId = chatHistory.activeSessionId;
+    if (activeId && chatTitle && chatTitle !== "New Chat") {
+      // Find current chat to get metadata
+      const currentChat = chatHistory.chats.find((c) => c.id === activeId);
+      if (currentChat && currentChat.title !== chatTitle) {
+        updateChatMetadata({
+          ...currentChat,
+          title: chatTitle,
+          updated_at: new Date().toISOString(),
+        }).then(() => {
+          chatHistory.handleRenameChat(activeId, chatTitle);
+        });
+      }
+    }
+  }, [chatTitle, chatHistory.activeSessionId]);
+
   // Handle selecting a chat from history
   const handleSelectChat = async (id: string) => {
     try {
+      setOcrData([]); // Clear previous OCR data immediately
       const chatData = await loadChat(id);
 
       // 1. Get image path from hash
@@ -198,6 +222,7 @@ export const AppLayout: React.FC = () => {
   const handleNewSession = () => {
     system.resetSession();
     chatHistory.setActiveSessionId(null);
+    setOcrData([]); // Clear OCR data
   };
 
   const [input, setInput] = useState("");
@@ -304,14 +329,33 @@ export const AppLayout: React.FC = () => {
   }, []);
 
   // Handle CAS image data from Welcome component
-  const handleImageReady = (imageData: { imageId: string; path: string }) => {
+  const handleImageReady = async (imageData: {
+    imageId: string;
+    path: string;
+  }) => {
     // Store using file path and convertFileSrc for rendering
+    console.log("Raw image path:", imageData.path);
+    const assetUrl = convertFileSrc(imageData.path);
+    console.log("Converted asset URL:", assetUrl);
+
+    setOcrData([]); // Clear previous OCR data immediately
+
     system.setStartupImage({
-      base64: convertFileSrc(imageData.path),
+      base64: assetUrl,
       mimeType: "image/png", // CAS stores as PNG
       isFilePath: true,
       imageId: imageData.imageId, // Store the hash for chat association
     });
+
+    // Create a new chat in storage
+    try {
+      const newChat = await createChat("New Chat", imageData.imageId);
+      chatHistory.setActiveSessionId(newChat.id);
+      chatHistory.refreshChats();
+      console.log("Created new chat:", newChat.id);
+    } catch (e) {
+      console.error("Failed to create chat:", e);
+    }
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -385,7 +429,7 @@ export const AppLayout: React.FC = () => {
 
   if (!system.startupImage) {
     return (
-      <div className="h-screen w-screen bg-neutral-950 text-neutral-100 flex flex-col">
+      <div className={styles.appContainer}>
         <TitleBar
           chatTitle="Spatialshot"
           onReload={() => {}}
@@ -419,26 +463,26 @@ export const AppLayout: React.FC = () => {
           toggleChatPanel={toggleChatPanel}
           isChatPanelOpen={isChatPanelOpen}
         />
-        <div className="flex-1 overflow-hidden relative flex">
-          {isChatPanelOpen && (
-            <div className="w-[300px] border-r border-neutral-800 bg-neutral-900 flex flex-col">
-              <ChatPanel
-                chats={chatHistory.chats}
-                projects={chatHistory.projects}
-                activeSessionId={chatHistory.activeSessionId}
-                onSelectChat={handleSelectChat}
-                onNewChat={handleNewSession}
-                onDeleteChat={chatHistory.handleDeleteChat}
-                onDeleteChats={chatHistory.handleDeleteChats}
-                onRenameChat={chatHistory.handleRenameChat}
-                onTogglePinChat={chatHistory.handleTogglePinChat}
-                onToggleStarChat={chatHistory.handleToggleStarChat}
-                onCreateProject={chatHistory.handleCreateProject}
-                onMoveChatToProject={chatHistory.handleMoveChatToProject}
-              />
-            </div>
-          )}
-          <div className="flex-1 relative">
+        <div className={styles.mainContent}>
+          <div
+            className={`${styles.chatPanelWrapper} ${!isChatPanelOpen ? styles.hidden : ""}`}
+          >
+            <ChatPanel
+              chats={chatHistory.chats}
+              projects={chatHistory.projects}
+              activeSessionId={chatHistory.activeSessionId}
+              onSelectChat={handleSelectChat}
+              onNewChat={handleNewSession}
+              onDeleteChat={chatHistory.handleDeleteChat}
+              onDeleteChats={chatHistory.handleDeleteChats}
+              onRenameChat={chatHistory.handleRenameChat}
+              onTogglePinChat={chatHistory.handleTogglePinChat}
+              onToggleStarChat={chatHistory.handleToggleStarChat}
+              onCreateProject={chatHistory.handleCreateProject}
+              onMoveChatToProject={chatHistory.handleMoveChatToProject}
+            />
+          </div>
+          <div className={styles.contentArea}>
             <Welcome onImageReady={handleImageReady} />
           </div>
         </div>
@@ -460,27 +504,63 @@ export const AppLayout: React.FC = () => {
       onContextMenu={handleContextMenu}
       className={styles.appContainer}
     >
-      <div className="flex flex-1 h-full overflow-hidden">
-        {isChatPanelOpen && (
-          <div className="w-[300px] flex-shrink-0 border-r border-neutral-800 bg-neutral-900 z-20 flex flex-col">
-            <ChatPanel
-              chats={chatHistory.chats}
-              projects={chatHistory.projects}
-              activeSessionId={chatHistory.activeSessionId}
-              onSelectChat={handleSelectChat}
-              onNewChat={handleNewSession}
-              onDeleteChat={chatHistory.handleDeleteChat}
-              onDeleteChats={chatHistory.handleDeleteChats}
-              onRenameChat={chatHistory.handleRenameChat}
-              onTogglePinChat={chatHistory.handleTogglePinChat}
-              onToggleStarChat={chatHistory.handleToggleStarChat}
-              onCreateProject={chatHistory.handleCreateProject}
-              onMoveChatToProject={chatHistory.handleMoveChatToProject}
-            />
-          </div>
-        )}
+      <TitleBar
+        chatTitle={chatTitle}
+        onReload={() => {
+          setIsRotating(true);
+          chatEngine.handleReload();
+        }}
+        isRotating={isRotating}
+        currentModel={system.sessionModel}
+        onModelChange={system.setSessionModel}
+        isLoading={chatEngine.isLoading}
+        isPanelActive={isPanelActive}
+        toggleSettingsPanel={handleToggleSettings}
+        isPanelVisible={isPanelVisible}
+        isPanelActiveAndVisible={isPanelActiveAndVisible}
+        isPanelClosing={isPanelClosing}
+        settingsButtonRef={settingsButtonRef}
+        panelRef={panelRef}
+        settingsPanelRef={settingsPanelRef}
+        prompt={system.editingPrompt}
+        editingModel={system.editingModel}
+        setPrompt={system.setEditingPrompt}
+        onEditingModelChange={system.setEditingModel}
+        userName={system.userName}
+        userEmail={system.userEmail}
+        avatarSrc={system.avatarSrc}
+        onSave={system.saveSettings}
+        onLogout={performLogout}
+        isDarkMode={system.isDarkMode}
+        onToggleTheme={system.handleToggleTheme}
+        onResetAPIKey={system.handleResetAPIKey}
+        toggleSubview={setIsSubviewActive}
+        onNewSession={handleNewSession}
+        hasImageLoaded={!!system.startupImage}
+        toggleChatPanel={toggleChatPanel}
+        isChatPanelOpen={isChatPanelOpen}
+      />
+      <div className={styles.mainContent}>
+        <div
+          className={`${styles.chatPanelWrapper} ${!isChatPanelOpen ? styles.hidden : ""}`}
+        >
+          <ChatPanel
+            chats={chatHistory.chats}
+            projects={chatHistory.projects}
+            activeSessionId={chatHistory.activeSessionId}
+            onSelectChat={handleSelectChat}
+            onNewChat={handleNewSession}
+            onDeleteChat={chatHistory.handleDeleteChat}
+            onDeleteChats={chatHistory.handleDeleteChats}
+            onRenameChat={chatHistory.handleRenameChat}
+            onTogglePinChat={chatHistory.handleTogglePinChat}
+            onToggleStarChat={chatHistory.handleToggleStarChat}
+            onCreateProject={chatHistory.handleCreateProject}
+            onMoveChatToProject={chatHistory.handleMoveChatToProject}
+          />
+        </div>
 
-        <div className="flex-1 flex flex-col min-w-0 h-full relative">
+        <div className={styles.contentArea}>
           <ChatLayout
             messages={chatEngine.messages}
             streamingText={chatEngine.streamingText}

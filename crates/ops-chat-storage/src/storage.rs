@@ -25,11 +25,9 @@ pub struct ChatStorage {
 impl ChatStorage {
     /// Create a new storage manager.
     ///
-    /// Uses `~/.local/share/spatialshot/chats/` on Linux,
-    /// `~/Library/Application Support/spatialshot/chats/` on macOS,
-    /// `%APPDATA%/spatialshot/chats/` on Windows.
+    /// Uses `~/.config/spatialshot/chats/` on Linux (and appropriate config dirs on other OSs).
     pub fn new() -> Result<Self> {
-        let base_dir = dirs::data_dir()
+        let base_dir = dirs::config_dir()
             .ok_or(StorageError::NoDataDir)?
             .join("spatialshot")
             .join("chats");
@@ -82,8 +80,8 @@ impl ChatStorage {
         let subdir = self.objects_dir.join(prefix);
         fs::create_dir_all(&subdir)?;
 
-        // Full path: objects/<prefix>/<hash>.bin
-        let file_path = subdir.join(format!("{}.bin", hash));
+        // Full path: objects/<prefix>/<hash>.png
+        let file_path = subdir.join(format!("{}.png", hash));
 
         // Only write if file doesn't exist (deduplication)
         if !file_path.exists() {
@@ -108,7 +106,7 @@ impl ChatStorage {
     /// Get the path to a stored image by its hash.
     pub fn get_image_path(&self, hash: &str) -> Result<String> {
         let prefix = hash.get(..2).ok_or(StorageError::InvalidHash)?;
-        let file_path = self.objects_dir.join(prefix).join(format!("{}.bin", hash));
+        let file_path = self.objects_dir.join(prefix).join(format!("{}.png", hash));
 
         if file_path.exists() {
             Ok(file_path.to_string_lossy().to_string())

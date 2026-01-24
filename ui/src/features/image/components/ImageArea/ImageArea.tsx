@@ -92,13 +92,51 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
       let imageData: string;
       let isBase64: boolean;
 
-      if (
-        startupImage.isFilePath &&
-        startupImage.base64.startsWith("asset://")
-      ) {
-        imageData = decodeURIComponent(
-          startupImage.base64.replace("asset://localhost", ""),
-        );
+      if (startupImage.isFilePath) {
+        const urlStr = startupImage.base64;
+        console.log("ImageArea: processing URL:", urlStr);
+
+        // Try to parse as URL to handle encoding and protocol safely
+        try {
+          // Handle custom protocols by creating a dummy base if needed,
+          // but convertFileSrc returns a full URL usually.
+          const urlObj = new URL(urlStr);
+          // On Linux/Tauri v2, protocol might be http: and host asset.localhost
+          if (
+            urlObj.hostname === "asset.localhost" ||
+            urlObj.protocol === "asset:"
+          ) {
+            // pathname is the file path. It is URL-encoded by the URL object parsing if using href,
+            // but pathname property is usually decoded? No, it's often encoded.
+            // decodeURIComponent is safest on the pathname.
+            imageData = decodeURIComponent(urlObj.pathname);
+          } else {
+            // Fallback for simple string replacement if URL parsing fails or doesn't match
+            imageData = urlStr;
+          }
+        } catch (e) {
+          console.log(
+            "ImageArea: URL parsing failed, falling back to manual strip",
+            e,
+          );
+          // Fallback manual strip
+          let url = urlStr;
+          const patterns = [
+            "asset://localhost",
+            "http://asset.localhost",
+            "https://asset.localhost",
+            "asset:",
+          ];
+          for (const pattern of patterns) {
+            if (url.startsWith(pattern)) {
+              url = url.replace(pattern, "");
+              break;
+            }
+          }
+          imageData = decodeURIComponent(url);
+        }
+
+        console.log("ImageArea: extracted path:", imageData);
         isBase64 = false;
       } else {
         imageData = startupImage.base64;
@@ -117,7 +155,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
       onUpdateOCRData(converted);
       setShowOverlay(false);
-      setIsExpanded(true);
+      // setIsExpanded(true); // Don't auto-expand, user finds it annoying
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       setError(errorMsg);
@@ -201,8 +239,6 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
   return (
     <>
-      <div className={styles.placeholder} />
-
       <div
         ref={containerRef}
         className={`${styles.floatingContainer} ${isExpanded ? styles.expanded : ""}`}

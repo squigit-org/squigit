@@ -72,6 +72,8 @@ export interface ChatLayoutProps {
   toggleSubview: (isActive: boolean) => void;
   onNewSession: () => void;
   hasImageLoaded: boolean;
+  toggleChatPanel: () => void;
+  isChatPanelOpen: boolean;
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
@@ -121,6 +123,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   toggleSubview,
   onNewSession,
   hasImageLoaded,
+  toggleChatPanel,
+  isChatPanelOpen,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
@@ -197,41 +201,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   }, [showFlatMenu]);
 
   return (
-    <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative pb-24">
-      <div className="flex-shrink-0">
-        <TitleBar
-          chatTitle={chatTitle}
-          onReload={onReload || (() => {})}
-          isRotating={isRotating}
-          currentModel={currentModel}
-          onModelChange={onModelChange}
-          isLoading={isLoading}
-          isPanelActive={isPanelActive}
-          toggleSettingsPanel={toggleSettingsPanel}
-          isPanelVisible={isPanelVisible}
-          isPanelActiveAndVisible={isPanelActiveAndVisible}
-          isPanelClosing={isPanelClosing}
-          settingsButtonRef={settingsButtonRef}
-          panelRef={panelRef}
-          settingsPanelRef={settingsPanelRef}
-          prompt={prompt}
-          editingModel={editingModel}
-          setPrompt={setPrompt}
-          onEditingModelChange={onEditingModelChange}
-          userName={userName}
-          userEmail={userEmail}
-          avatarSrc={avatarSrc}
-          onSave={onSave}
-          onLogout={onLogout}
-          isDarkMode={isDarkMode}
-          onToggleTheme={onToggleTheme}
-          onResetAPIKey={onResetAPIKey}
-          toggleSubview={toggleSubview}
-          onNewSession={onNewSession}
-          hasImageLoaded={hasImageLoaded}
-        />
-      </div>
-
+    <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
       <div className="z-10 relative flex-shrink-0">
         <ImageArea
           startupImage={startupImage}

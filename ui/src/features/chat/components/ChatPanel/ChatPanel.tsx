@@ -203,7 +203,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
           <span className={styles.chatItemTitle}>{chat.title}</span>
         )}
 
-        {chat.isStarred && (
+        {chat.is_starred && (
           <Star
             size={12}
             fill="var(--primary)"
@@ -211,7 +211,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
             style={{ marginRight: 4 }}
           />
         )}
-        {chat.isPinned && <Pin size={12} className={styles.pinnedIcon} />}
+        {chat.is_pinned && <Pin size={12} className={styles.pinnedIcon} />}
 
         {!isSelectionMode && (
           <button
@@ -240,9 +240,9 @@ const ChatItem: React.FC<ChatItemProps> = ({
             <Star
               size={14}
               className={styles.contextMenuIcon}
-              fill={chat.isStarred ? "currentColor" : "none"}
+              fill={chat.is_starred ? "currentColor" : "none"}
             />
-            {chat.isStarred ? "Unstar" : "Star"}
+            {chat.is_starred ? "Unstar" : "Star"}
           </button>
 
           <button
@@ -253,7 +253,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
             }}
           >
             <Pin size={14} className={styles.contextMenuIcon} />
-            {chat.isPinned ? "Unpin" : "Pin"}
+            {chat.is_pinned ? "Unpin" : "Pin"}
           </button>
 
           <button
@@ -548,7 +548,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         ) : (
           groupOrder.map((groupName) => {
-            const groupChats = groupedChats.get(groupName);
+            const groupChats = groupedChats.get(groupName as any);
             if (!groupChats || groupChats.length === 0) return null;
 
             return (

@@ -11,7 +11,7 @@ import {
   Settings,
   SquarePen,
   Minus,
-  Square,
+  PanelLeft,
   X,
 } from "lucide-react";
 import { ModelSwitcher } from "../../features/chat/components/ModelSwitcher/ModelSwitcher";
@@ -209,9 +209,11 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             }`}
             title="Toggle Chat History"
           >
-            <Square
+            <PanelLeft
               size={20}
-              fill={isChatPanelOpen ? "currentColor" : "none"}
+              color={
+                isChatPanelOpen ? "var(--neutral-100)" : "var(--neutral-400)"
+              }
             />
           </button>
         </div>
