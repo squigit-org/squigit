@@ -147,6 +147,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
         isBase64 = true;
       }
 
+      /*
       const results = await invoke<OCRBox[]>("ocr_image", {
         imageData,
         isBase64,
@@ -163,6 +164,11 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
         setShowOverlay(false);
       }
       // setIsExpanded(true); // Don't auto-expand, user finds it annoying
+      */
+      console.log("OCR Disabled temporarily via comments");
+      if (currentChatId === chatId) {
+        setLoading(false);
+      }
     } catch (e) {
       if (currentChatId === chatId) {
         const errorMsg = e instanceof Error ? e.message : String(e);
@@ -303,12 +309,12 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
                     className={styles.bigImage}
                   />
                   {/* Render TextLayer here */}
-                  <TextLayer
+                  {/* <TextLayer
                     data={ocrData}
                     size={size}
                     svgRef={svgRef}
                     onTextMouseDown={handleTextMouseDown}
-                  />
+                  /> */}
                 </div>
               </div>
             </div>

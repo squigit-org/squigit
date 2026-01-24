@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenAI, Chat, Part } from "@google/genai";
+import { GoogleGenAI, Chat, Part, Content } from "@google/genai";
 
 let ai: GoogleGenAI | null = null;
 let chatSession: Chat | null = null;
@@ -17,7 +17,7 @@ export const startNewChat = async (
   modelId: string,
   imageBase64: string,
   mimeType: string,
-  systemPrompt: string
+  systemPrompt: string,
 ): Promise<string> => {
   if (!ai) throw new Error("Gemini AI not initialized");
 
@@ -62,7 +62,7 @@ export const startNewChatStream = async (
   imageBase64: string,
   mimeType: string,
   systemPrompt: string,
-  onToken: (token: string) => void
+  onToken: (token: string) => void,
 ): Promise<string> => {
   if (!ai) throw new Error("Gemini AI not initialized");
 
@@ -135,4 +135,20 @@ export const sendMessage = async (text: string): Promise<string> => {
     console.error("Error sending message:", error);
     throw error;
   }
+};
+
+export const restoreSession = (
+  modelId: string,
+  history: Content[],
+  systemPrompt: string,
+) => {
+  if (!ai) throw new Error("Gemini AI not initialized");
+
+  chatSession = ai.chats.create({
+    model: modelId,
+    config: {
+      systemInstruction: systemPrompt,
+    },
+    history: history,
+  });
 };

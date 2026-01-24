@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Message, ModelType } from "../types/chat.types";
 import { systemPrompt } from "../../../lib/config/prompts";
 import {
   startNewChatStream,
   sendMessage,
+  restoreSession as apiRestoreSession,
 } from "../../../lib/api/gemini/client";
 
 export const useChatEngine = ({
@@ -48,17 +49,35 @@ export const useChatEngine = ({
 
   // Capture the chatId when the session starts to use it in callbacks
   // This prevents race conditions if the user switches chats during generation
-  const sessionChatIdRef = useState(chatId)[0];
+  const sessionChatIdRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (enabled) setIsLoading(true);
-  }, [enabled]);
+    if (enabled && !startupImage?.fromHistory) {
+      setIsLoading(true);
+    }
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, [enabled, startupImage?.fromHistory]);
 
   useEffect(() => {
-    if (enabled && startupImage && prompt && apiKey && !startupImage.fromHistory) {
+    // Only start if we have a valid chatId to attach the session to
+    if (
+      enabled &&
+      startupImage &&
+      prompt &&
+      apiKey &&
+      !startupImage.fromHistory &&
+      chatId
+    ) {
       startSession(apiKey, currentModel, startupImage);
     }
-  }, [apiKey, prompt, startupImage, currentModel, enabled]);
+  }, [apiKey, prompt, startupImage, currentModel, enabled, chatId]);
 
   const resetInitialUi = () => {
     setStreamingText("");
@@ -73,11 +92,20 @@ export const useChatEngine = ({
       mimeType: string;
       isFilePath?: boolean;
     } | null,
-    isRetry = false
+    isRetry = false,
   ) => {
+    // Cancel any previous session
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
+    // Capture the current chat ID at start of session
+    sessionChatIdRef.current = chatId;
+
     setIsLoading(true);
     setError(null);
-    const targetChatId = chatId;
 
     if (!key) {
       return;
@@ -89,6 +117,10 @@ export const useChatEngine = ({
       setFirstResponseId(null);
       setLastSentMessage(null);
       await new Promise((resolve) => setTimeout(resolve, 3000));
+      if (signal.aborted) {
+        setIsLoading(false);
+        return;
+      }
     }
 
     if (!imgData || !prompt) {
@@ -122,29 +154,51 @@ export const useChatEngine = ({
         }
       }
 
+      if (signal.aborted) {
+        setIsLoading(false);
+        return;
+      }
+
       await startNewChatStream(
         modelId,
         finalBase64,
         imgData.mimeType,
         combinedPrompt,
         (token: string) => {
+          if (signal.aborted) return;
           fullResponse += token;
           setStreamingText(fullResponse);
-        }
+        },
       );
-      
+
+      if (signal.aborted) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Use the captured chatId, not the current state one
+      const targetChatId = sessionChatIdRef.current;
+
       if (onMessage && targetChatId) {
-        onMessage({
-          id: responseId,
-          role: "model",
-          text: fullResponse,
-          timestamp: Date.now(),
-        }, targetChatId);
+        onMessage(
+          {
+            id: responseId,
+            role: "model",
+            text: fullResponse,
+            timestamp: Date.now(),
+          },
+          targetChatId,
+        );
       }
 
       setIsStreaming(false);
       setIsLoading(false);
     } catch (apiError: any) {
+      if (signal.aborted) {
+        setIsLoading(false);
+        return;
+      }
+
       console.error(apiError);
       if (
         !isRetry &&
@@ -164,6 +218,10 @@ export const useChatEngine = ({
       setError(errorMsg);
       setIsStreaming(false);
       setIsLoading(false);
+    } finally {
+      if (abortControllerRef.current?.signal === signal) {
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -227,16 +285,19 @@ export const useChatEngine = ({
         (token: string) => {
           fullResponse += token;
           setStreamingText(fullResponse);
-        }
+        },
       );
-      
+
       if (onMessage && targetChatId) {
-        onMessage({
-          id: responseId,
-          role: "model",
-          text: fullResponse,
-          timestamp: Date.now(),
-        }, targetChatId);
+        onMessage(
+          {
+            id: responseId,
+            role: "model",
+            text: fullResponse,
+            timestamp: Date.now(),
+          },
+          targetChatId,
+        );
       }
 
       setIsStreaming(false);
@@ -289,6 +350,12 @@ export const useChatEngine = ({
     if (!isChatMode) {
       setIsChatMode(true);
       if (streamingText && firstResponseId) {
+        // Abort the background stream effectively "claiming" the response as is
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+
         const botMsg: Message = {
           id: firstResponseId,
           role: "model",
@@ -296,6 +363,13 @@ export const useChatEngine = ({
           timestamp: Date.now(),
         };
         setMessages([botMsg]);
+
+        // Persist the initial message immediately ONLY if we are interrupting the stream.
+        // If streaming finished naturally (!isStreaming), it was already saved by startSession.
+        if (isStreaming && onMessage && targetChatId) {
+          onMessage(botMsg, targetChatId);
+        }
+
         setStreamingText("");
         setFirstResponseId(null);
       }
@@ -342,18 +416,86 @@ export const useChatEngine = ({
   });
 
   // Restore state from a session
-  const restoreState = (state: {
-    messages: Message[];
-    streamingText: string;
-    firstResponseId: string | null;
-    isChatMode: boolean;
-  }) => {
+  const restoreState = async (
+    state: {
+      messages: Message[];
+      streamingText: string;
+      firstResponseId: string | null;
+      isChatMode: boolean;
+    },
+    image?: { base64: string; mimeType: string },
+  ) => {
     setMessages(state.messages);
     setStreamingText(state.streamingText);
     setFirstResponseId(state.firstResponseId);
     setIsChatMode(state.isChatMode);
     setIsLoading(false);
     setIsStreaming(false);
+
+    // If image provided, initialize the Gemini session with history
+    if (image) {
+      try {
+        let finalBase64 = image.base64;
+
+        // If it's an asset URL (file path), fetch it to get the blob/base64
+        if (
+          image.base64.startsWith("asset://") ||
+          image.base64.startsWith("http")
+        ) {
+          try {
+            const res = await fetch(image.base64);
+            const blob = await res.blob();
+            finalBase64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+          } catch (e) {
+            console.error("Failed to fetch asset for restore", e);
+            return;
+          }
+        }
+
+        const history: any[] = [];
+
+        // 1. Add the initial User message (Image + Prompt)
+        const cleanBase64 = finalBase64.replace(
+          /^data:image\/[a-z]+;base64,/,
+          "",
+        );
+        history.push({
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                mimeType: image.mimeType,
+                data: cleanBase64,
+              },
+            },
+            {
+              text: systemPrompt, // Using the system prompt as the initial prompt context
+            },
+            {
+              text: prompt || "Analyze this image.", // Use current prompt or default
+            },
+          ],
+        });
+
+        // 2. Add subsequent history
+        // state.messages usually starts with Assistant response
+        state.messages.forEach((msg) => {
+          history.push({
+            role: msg.role === "model" ? "model" : "user",
+            parts: [{ text: msg.text }],
+          });
+        });
+
+        apiRestoreSession(currentModel, history, systemPrompt);
+      } catch (e) {
+        console.error("Failed to restore Gemini session:", e);
+      }
+    }
   };
 
   return {

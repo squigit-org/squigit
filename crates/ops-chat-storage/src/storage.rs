@@ -139,10 +139,12 @@ impl ChatStorage {
         let ocr_json = serde_json::to_string_pretty(&chat.ocr_data)?;
         fs::write(&ocr_path, ocr_json)?;
 
-        // Always save messages file (create if missing)
-        let messages_path = chat_dir.join("messages.md");
-        let md_content = self.messages_to_markdown(&chat.messages);
-        fs::write(&messages_path, md_content)?;
+        // Only save messages file if there are messages
+        if !chat.messages.is_empty() {
+            let messages_path = chat_dir.join("messages.md");
+            let md_content = self.messages_to_markdown(&chat.messages);
+            fs::write(&messages_path, md_content)?;
+        }
 
         // Save imgbb URL if present
         if let Some(ref url) = chat.imgbb_url {

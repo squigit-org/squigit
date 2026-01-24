@@ -77,7 +77,7 @@ export const AppLayout: React.FC = () => {
   useUpdateCheck();
 
   const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
-  
+
   const handleUpdateLensUrl = useCallback(
     (url: string | null) => {
       setSessionLensUrl(url);
@@ -245,12 +245,18 @@ export const AppLayout: React.FC = () => {
         timestamp: new Date(m.timestamp).getTime(),
       }));
 
-      chatEngine.restoreState({
-        messages,
-        streamingText: "",
-        firstResponseId: null,
-        isChatMode: true,
-      });
+      chatEngine.restoreState(
+        {
+          messages,
+          streamingText: "",
+          firstResponseId: null,
+          isChatMode: true,
+        },
+        {
+          base64: imageUrl,
+          mimeType: "image/png",
+        },
+      );
 
       // 5. Restore OCR data if present
       if (chatData.ocr_data && chatData.ocr_data.length > 0) {
