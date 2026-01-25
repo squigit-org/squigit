@@ -66,7 +66,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: var(--bg-hover);
+  background: #272727;
   border: 1px solid transparent;
   border-radius: 8px;
   color: var(--text-main);
@@ -77,8 +77,8 @@
 }
 
 .newChatBtn:hover {
-  background: #333;
-  border-color: #444;
+  background: #3a3a3a;
+  border-color: #575757;
 }
 
 .iconBtn {
@@ -184,11 +184,11 @@
 }
 
 .chatRow:hover {
-  background: var(--bg-hover);
+  background: #272727;
 }
 
 .chatRow.active {
-  background: var(--bg-hover);
+  background: #272727;
   color: var(--text-main);
 }
 
@@ -250,6 +250,30 @@
 .chatMenuBtn:hover {
   background: var(--neutral-900);
   color: var(--text-main);
+}
+
+.chatMenuBtn.visible {
+  opacity: 1;
+}
+
+.iconDefault {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconHover {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.chatRow:hover .iconDefault {
+  display: none;
+}
+
+.chatRow:hover .iconHover {
+  display: flex;
 }
 
 /* --- Context Menu --- */

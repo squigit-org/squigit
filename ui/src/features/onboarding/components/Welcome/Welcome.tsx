@@ -35,16 +35,16 @@ export const Welcome: React.FC<WelcomeProps> = ({
       return {
         screenshotKeys: (
           <>
-            <span className={styles.key}>⌘</span>
+            <span className={styles.key}>CMD ⌘</span>
             <span className={styles.keySep}>+</span>
-            <span className={styles.key}>⇧</span>
+            <span className={styles.key}>Shift ⇧</span>
             <span className={styles.keySep}>+</span>
-            <span className={styles.key}>S</span>
+            <span className={styles.key}>A</span>
           </>
         ),
         pasteKeys: (
           <>
-            <span className={styles.key}>⌘</span>
+            <span className={styles.key}>CMD ⌘</span>
             <span className={styles.keySep}>+</span>
             <span className={styles.key}>V</span>
           </>
@@ -58,7 +58,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
             <span className={styles.keySep}>+</span>
             <span className={styles.key}>Shift</span>
             <span className={styles.keySep}>+</span>
-            <span className={styles.key}>S</span>
+            <span className={styles.key}>A</span>
           </>
         ),
         pasteKeys: (
@@ -77,7 +77,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
             <span className={styles.keySep}>+</span>
             <span className={styles.key}>Shift</span>
             <span className={styles.keySep}>+</span>
-            <span className={styles.key}>S</span>
+            <span className={styles.key}>A</span>
           </>
         ),
         pasteKeys: (
@@ -254,9 +254,13 @@ export const Welcome: React.FC<WelcomeProps> = ({
           <div className={styles.actionRow}>
             <span className={styles.actionLabel}>Drop an image</span>
             <span className={styles.actionKeys}>
-              <span className={styles.key}>D</span>
+              <span className={styles.key} title="Drag">
+                D
+              </span>
               <span className={styles.keySep}>&</span>
-              <span className={styles.key}>D</span>
+              <span className={styles.key} title="Drop">
+                D
+              </span>
             </span>
           </div>
         </div>

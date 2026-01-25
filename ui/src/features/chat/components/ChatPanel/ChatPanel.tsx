@@ -17,6 +17,8 @@ import {
   Check,
   X,
   CheckSquare,
+  PinOff,
+  StarOff,
 } from "lucide-react";
 
 import { Dialog } from "../../../../components/Dialog";
@@ -190,26 +192,6 @@ const ChatItem: React.FC<ChatItemProps> = ({
           <Checkbox checked={isSelected} onChange={onToggleSelection} />
         )}
 
-        {!isSelectionMode && (
-          <React.Fragment>
-            {chat.is_pinned ? (
-              <Pin
-                size={14}
-                className={styles.chatIconMain}
-                style={{ transform: "rotate(45deg)" }}
-              />
-            ) : chat.is_starred ? (
-              <Star
-                size={14}
-                className={styles.chatIconMain}
-                fill="currentColor"
-              />
-            ) : (
-              <MessageSquare size={16} className={styles.chatIconMain} />
-            )}
-          </React.Fragment>
-        )}
-
         {isRenaming ? (
           <input
             ref={inputRef}
@@ -229,10 +211,31 @@ const ChatItem: React.FC<ChatItemProps> = ({
         {!isSelectionMode && (
           <button
             ref={menuBtnRef}
-            className={styles.chatMenuBtn}
+            className={`${styles.chatMenuBtn} ${
+              chat.is_pinned || chat.is_starred ? styles.visible : ""
+            }`}
             onClick={handleMenuClick}
           >
-            <MoreHorizontal size={14} />
+            <div className={styles.iconDefault}>
+              {chat.is_pinned ? (
+                <Pin
+                  size={14}
+                  className={styles.chatIconMain}
+                  style={{ transform: "rotate(45deg)" }}
+                  fill="currentColor"
+                />
+              ) : chat.is_starred ? (
+                <Star
+                  size={14}
+                  className={styles.chatIconMain}
+                  fill="currentColor"
+                  style={{ transform: "rotate(45deg)" }}
+                />
+              ) : null}
+            </div>
+            <div className={styles.iconHover}>
+              <MoreHorizontal size={14} />
+            </div>
           </button>
         )}
       </div>
@@ -261,7 +264,11 @@ const ChatItem: React.FC<ChatItemProps> = ({
               onCloseContextMenu();
             }}
           >
-            <Star size={14} fill={chat.is_starred ? "currentColor" : "none"} />
+            {chat.is_starred ? (
+              <StarOff size={14} style={{ transform: "rotate(45deg)" }} />
+            ) : (
+              <Star size={14} style={{ transform: "rotate(45deg)" }} />
+            )}
             {chat.is_starred ? "Unstar" : "Star"}
           </button>
 
@@ -272,8 +279,12 @@ const ChatItem: React.FC<ChatItemProps> = ({
               onCloseContextMenu();
             }}
           >
-            <Pin size={14} />
-            {chat.is_pinned ? "Unpin" : "Pin"}
+            {chat.is_pinned ? (
+              <PinOff size={14} style={{ transform: "rotate(45deg)" }} />
+            ) : (
+              <Pin size={14} style={{ transform: "rotate(45deg)" }} />
+            )}
+            {chat.is_pinned ? "Unpin Chat" : "Pin Chat"}
           </button>
 
           <button
