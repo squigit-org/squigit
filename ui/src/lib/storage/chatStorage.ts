@@ -19,7 +19,7 @@ export interface ChatMetadata {
   image_hash: string;
   is_pinned: boolean;
   is_starred: boolean;
-  project_id: string | null;
+  pinned_at: string | null;
 }
 
 /** A single chat message (matches Rust ChatMessage). */
@@ -41,13 +41,6 @@ export interface ChatData {
   messages: ChatMessage[];
   ocr_data: OcrRegion[];
   imgbb_url: string | null;
-}
-
-/** Project for grouping chats (matches Rust Project). */
-export interface Project {
-  id: string;
-  name: string;
-  created_at: string;
 }
 
 /** Result from storing an image (matches Rust StoredImage). */
@@ -124,6 +117,14 @@ export async function appendChatMessage(
   return invoke("append_chat_message", { chatId, role, content });
 }
 
+/** Overwrite all messages in a chat. */
+export async function overwriteChatMessages(
+  chatId: string,
+  messages: ChatMessage[],
+): Promise<void> {
+  return invoke("overwrite_chat_messages", { chatId, messages });
+}
+
 // =============================================================================
 // OCR Commands
 // =============================================================================
@@ -156,96 +157,52 @@ export async function getImgbbUrl(chatId: string): Promise<string | null> {
 }
 
 // =============================================================================
-// Project Commands
-// =============================================================================
-
-/** List all projects. */
-export async function listProjects(): Promise<Project[]> {
-  return invoke("list_projects");
-}
-
-/** Create a new project. */
-export async function createProject(name: string): Promise<Project> {
-  return invoke("create_project", { name });
-}
-
-/** Delete a project. */
-export async function deleteProject(projectId: string): Promise<void> {
-  return invoke("delete_project", { projectId });
-}
-
-// =============================================================================
 // Helpers
 // =============================================================================
 
-type DateGroup =
-  | "Favorites"
-  | "Pinned"
-  | "Today"
-  | "Yesterday"
-  | "Last Week"
-  | "Last Month"
-  | "Older"
-  | `Project:${string}`;
+type ChatGroupKey = "Starred" | "Recents";
 
-/** Group chats by date and special categories. */
+/** Group chats by Starred and Recents. */
 export function groupChatsByDate(
   chats: ChatMetadata[],
-  projects: Project[],
-): Map<DateGroup, ChatMetadata[]> {
-  const groups = new Map<DateGroup, ChatMetadata[]>();
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+): Map<ChatGroupKey, ChatMetadata[]> {
+  const groups = new Map<ChatGroupKey, ChatMetadata[]>();
 
   // Initialize group arrays
-  groups.set("Favorites", []);
-  groups.set("Pinned", []);
-  projects.forEach((p) => groups.set(`Project:${p.name}`, []));
-  groups.set("Today", []);
-  groups.set("Yesterday", []);
-  groups.set("Last Week", []);
-  groups.set("Last Month", []);
-  groups.set("Older", []);
+  groups.set("Starred", []);
+  groups.set("Recents", []);
 
   for (const chat of chats) {
-    // Starred chats go to Favorites
+    let targetGroup: ChatGroupKey = "Recents";
+
+    // 1. Starred takes precedence
     if (chat.is_starred) {
-      groups.get("Favorites")!.push(chat);
-      continue;
+      targetGroup = "Starred";
     }
 
-    // Pinned chats go to Pinned
-    if (chat.is_pinned) {
-      groups.get("Pinned")!.push(chat);
-      continue;
-    }
-
-    // Project chats
-    if (chat.project_id) {
-      const project = projects.find((p) => p.id === chat.project_id);
-      if (project) {
-        groups.get(`Project:${project.name}`)!.push(chat);
-        continue;
-      }
-    }
-
-    // Date-based grouping
-    const updatedAt = new Date(chat.updated_at);
-    if (updatedAt >= today) {
-      groups.get("Today")!.push(chat);
-    } else if (updatedAt >= yesterday) {
-      groups.get("Yesterday")!.push(chat);
-    } else if (updatedAt >= lastWeek) {
-      groups.get("Last Week")!.push(chat);
-    } else if (updatedAt >= lastMonth) {
-      groups.get("Last Month")!.push(chat);
-    } else {
-      groups.get("Older")!.push(chat);
-    }
+    groups.get(targetGroup)?.push(chat);
   }
+
+  // Sort each group: Pinned first (sorted by pinned_at desc), then by Created Date (descending)
+  groups.forEach((groupChats) => {
+    groupChats.sort((a, b) => {
+      // 1. Pinned check
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+
+      // 2. If both pinned, sort by pinned_at desc
+      if (a.is_pinned && b.is_pinned) {
+        const pinnedA = a.pinned_at ? new Date(a.pinned_at).getTime() : 0;
+        const pinnedB = b.pinned_at ? new Date(b.pinned_at).getTime() : 0;
+        return pinnedB - pinnedA;
+      }
+
+      // 3. Date check (created_at descending)
+      return (
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    });
+  });
 
   return groups;
 }

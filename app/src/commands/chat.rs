@@ -78,7 +78,6 @@ pub fn update_chat_metadata(metadata: ChatMetadata) -> Result<(), String> {
 // Message Commands
 // =============================================================================
 
-/// Append a message to a chat.
 #[tauri::command]
 pub fn append_chat_message(chat_id: String, role: String, content: String) -> Result<(), String> {
     let storage = ChatStorage::new().map_err(|e| e.to_string())?;
@@ -88,6 +87,15 @@ pub fn append_chat_message(chat_id: String, role: String, content: String) -> Re
         ChatMessage::assistant(content)
     };
     storage.append_message(&chat_id, &message).map_err(|e| e.to_string())
+}
+
+/// Overwrite all messages in a chat.
+#[tauri::command]
+pub fn overwrite_chat_messages(chat_id: String, messages: Vec<ChatMessage>) -> Result<(), String> {
+    let storage = ChatStorage::new().map_err(|e| e.to_string())?;
+    let mut chat = storage.load_chat(&chat_id).map_err(|e| e.to_string())?;
+    chat.messages = messages;
+    storage.save_chat(&chat).map_err(|e| e.to_string())
 }
 
 // =============================================================================

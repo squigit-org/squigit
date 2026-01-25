@@ -29,6 +29,9 @@ pub struct ChatMetadata {
     /// Optional project ID for grouping.
     #[serde(default)]
     pub project_id: Option<String>,
+    /// When the chat was pinned.
+    #[serde(default)]
+    pub pinned_at: Option<DateTime<Utc>>,
 }
 
 impl ChatMetadata {
@@ -44,6 +47,7 @@ impl ChatMetadata {
             is_pinned: false,
             is_starred: false,
             project_id: None,
+            pinned_at: None,
         }
     }
 }

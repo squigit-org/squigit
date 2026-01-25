@@ -237,7 +237,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             onClick={onReload}
             className={styles.iconButton}
             title="Reload chat"
-            disabled={isRotating}
+            disabled={isRotating || isLoading}
           >
             <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
           </button>

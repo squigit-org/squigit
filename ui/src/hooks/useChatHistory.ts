@@ -7,18 +7,13 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   ChatMetadata,
-  Project,
   listChats,
-  listProjects,
   deleteChat,
   updateChatMetadata as updateChatMeta,
-  createProject as createProj,
-  deleteProject as deleteProj,
 } from "../lib/storage/chatStorage";
 
 export const useChatHistory = () => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,19 +26,9 @@ export const useChatHistory = () => {
     }
   }, []);
 
-  const refreshProjects = useCallback(async () => {
-    try {
-      const projectList = await listProjects();
-      setProjects(projectList);
-    } catch (e) {
-      console.error("Failed to load projects:", e);
-    }
-  }, []);
-
   useEffect(() => {
     refreshChats();
-    refreshProjects();
-  }, [refreshChats, refreshProjects]);
+  }, [refreshChats]);
 
   const handleDeleteChat = async (id: string) => {
     try {
@@ -90,9 +75,11 @@ export const useChatHistory = () => {
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
+    const newPinnedState = !chat.is_pinned;
     const updated = {
       ...chat,
-      is_pinned: !chat.is_pinned,
+      is_pinned: newPinnedState,
+      pinned_at: newPinnedState ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     };
     try {
@@ -120,52 +107,16 @@ export const useChatHistory = () => {
     }
   };
 
-  const handleCreateProject = async (name: string): Promise<Project | null> => {
-    try {
-      const project = await createProj(name);
-      setProjects((prev) => [...prev, project]);
-      return project;
-    } catch (e) {
-      console.error("Failed to create project:", e);
-      return null;
-    }
-  };
-
-  const handleMoveChatToProject = async (
-    chatId: string,
-    projectId: string | undefined,
-  ) => {
-    const chat = chats.find((c) => c.id === chatId);
-    if (!chat) return;
-
-    // undefined/null means remove from project
-    const updated = {
-      ...chat,
-      project_id: projectId || null,
-      updated_at: new Date().toISOString(),
-    };
-    try {
-      await updateChatMeta(updated);
-      setChats((prev) => prev.map((c) => (c.id === chatId ? updated : c)));
-    } catch (e) {
-      console.error("Failed to move chat:", e);
-    }
-  };
-
   return {
     chats,
-    projects,
     activeSessionId,
     setActiveSessionId,
     isLoading,
     refreshChats,
-    refreshProjects,
     handleDeleteChat,
     handleDeleteChats,
     handleRenameChat,
     handleTogglePinChat,
     handleToggleStarChat,
-    handleCreateProject,
-    handleMoveChatToProject,
   };
 };

@@ -13,67 +13,66 @@ import {
   Trash2,
   Pencil,
   ChevronDown,
-  MessageCircle,
   Star,
   Check,
-  FolderPlus,
   X,
   CheckSquare,
-  Folder,
 } from "lucide-react";
+
+import { Dialog } from "../../../../components/Dialog";
 import {
   ChatMetadata,
-  Project,
   groupChatsByDate,
 } from "../../../../lib/storage/chatStorage";
 import styles from "./ChatPanel.module.css";
 import { createPortal } from "react-dom";
 
-// --- Dialog Component ---
-interface DialogProps {
+// --- Internal "Prompt" Dialog ---
+interface PromptDialogProps {
   isOpen: boolean;
   title: string;
-  message?: string;
-  children?: React.ReactNode;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  isDanger?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
+  children: React.ReactNode;
+  onClose: () => void;
+  primaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
-const Dialog: React.FC<DialogProps> = ({
+const PromptDialog: React.FC<PromptDialogProps> = ({
   isOpen,
   title,
-  message,
   children,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
-  isDanger = false,
-  onConfirm,
-  onCancel,
+  onClose,
+  primaryAction,
 }) => {
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={styles.dialogOverlay}>
-      <div className={styles.dialog}>
-        <h3 className={styles.dialogTitle}>{title}</h3>
-        {message && <p className={styles.dialogMessage}>{message}</p>}
+    <div className={styles.modalOverlay} onMouseDown={onClose}>
+      <div
+        className={styles.modalContainer}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <h4 className={styles.modalTitle}>{title}</h4>
+
         {children}
-        <div className={styles.dialogActions}>
+
+        <div className={styles.modalActions}>
           <button
-            className={`${styles.btn} ${styles.btnCancel}`}
-            onClick={onCancel}
+            className={`${styles.btn} ${styles.btnSecondary}`}
+            onClick={onClose}
           >
-            {cancelLabel}
+            Cancel
           </button>
-          <button
-            className={`${styles.btn} ${isDanger ? styles.btnDanger : styles.btnPrimary}`}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
+          {primaryAction && (
+            <button
+              className={`${styles.btn} ${styles.btnPrimary}`}
+              onClick={primaryAction.onClick}
+            >
+              {primaryAction.label}
+            </button>
+          )}
         </div>
       </div>
     </div>,
@@ -81,21 +80,21 @@ const Dialog: React.FC<DialogProps> = ({
   );
 };
 
-// --- Checkbox Component ---
+// --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
   checked,
   onChange,
 }) => (
   <div
-    className={styles.checkboxContainer}
+    className={`${styles.checkbox} ${checked ? styles.checked : ""}`}
     onClick={(e) => {
       e.stopPropagation();
       onChange();
     }}
   >
-    <div className={`${styles.checkbox} ${checked ? styles.checked : ""}`}>
-      {checked && <Check size={12} className={styles.checkboxIcon} />}
-    </div>
+    {checked && (
+      <Check size={10} className={styles.checkboxInner} strokeWidth={4} />
+    )}
   </div>
 );
 
@@ -112,7 +111,10 @@ interface ChatItemProps {
   onRename: (newTitle: string) => void;
   onTogglePin: () => void;
   onToggleStar: () => void;
-  onMoveToProject: () => void;
+  activeContextMenu: { id: string; x: number; y: number } | null;
+  onOpenContextMenu: (id: string, x: number, y: number) => void;
+  onCloseContextMenu: () => void;
+  onEnableSelectionMode: () => void;
 }
 
 const ChatItem: React.FC<ChatItemProps> = ({
@@ -126,14 +128,17 @@ const ChatItem: React.FC<ChatItemProps> = ({
   onRename,
   onTogglePin,
   onToggleStar,
-  onMoveToProject,
+  activeContextMenu,
+  onOpenContextMenu,
+  onCloseContextMenu,
+  onEnableSelectionMode,
 }) => {
-  const [showMenu, setShowMenu] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(chat.title);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const showMenu = activeContextMenu?.id === chat.id;
 
   useEffect(() => {
     if (isRenaming && inputRef.current) {
@@ -142,23 +147,17 @@ const ChatItem: React.FC<ChatItemProps> = ({
     }
   }, [isRenaming]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (showMenu) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, [showMenu]);
-
   const handleMenuClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
+    if (showMenu) {
+      onCloseContextMenu();
+      return;
+    }
     const rect = menuBtnRef.current?.getBoundingClientRect();
     if (rect) {
-      setMenuPosition({ x: rect.right + 4, y: rect.top });
+      onOpenContextMenu(chat.id, e.clientX, e.clientY);
     }
-    setShowMenu(!showMenu);
   };
 
   const handleRenameSubmit = () => {
@@ -169,9 +168,8 @@ const ChatItem: React.FC<ChatItemProps> = ({
   };
 
   const handleRenameKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleRenameSubmit();
-    } else if (e.key === "Escape") {
+    if (e.key === "Enter") handleRenameSubmit();
+    else if (e.key === "Escape") {
       setRenameValue(chat.title);
       setIsRenaming(false);
     }
@@ -180,19 +178,42 @@ const ChatItem: React.FC<ChatItemProps> = ({
   return (
     <>
       <div
-        className={`${styles.chatItem} ${isActive ? styles.active : ""}`}
+        className={`${styles.chatRow} ${isActive ? styles.active : ""}`}
         onClick={isSelectionMode ? onToggleSelection : onSelect}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenContextMenu(chat.id, e.clientX, e.clientY);
+        }}
       >
         {isSelectionMode && (
           <Checkbox checked={isSelected} onChange={onToggleSelection} />
         )}
 
-        <MessageSquare size={14} className={styles.chatItemIcon} />
+        {!isSelectionMode && (
+          <React.Fragment>
+            {chat.is_pinned ? (
+              <Pin
+                size={14}
+                className={styles.chatIconMain}
+                style={{ transform: "rotate(45deg)" }}
+              />
+            ) : chat.is_starred ? (
+              <Star
+                size={14}
+                className={styles.chatIconMain}
+                fill="currentColor"
+              />
+            ) : (
+              <MessageSquare size={16} className={styles.chatIconMain} />
+            )}
+          </React.Fragment>
+        )}
 
         {isRenaming ? (
           <input
             ref={inputRef}
-            className={styles.renameInput}
+            className={styles.chatTitleInput}
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onBlur={handleRenameSubmit}
@@ -200,23 +221,15 @@ const ChatItem: React.FC<ChatItemProps> = ({
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className={styles.chatItemTitle}>{chat.title}</span>
+          <span className={styles.chatTitle} title={chat.title}>
+            {chat.title}
+          </span>
         )}
-
-        {chat.is_starred && (
-          <Star
-            size={12}
-            fill="var(--primary)"
-            className={styles.pinnedIcon}
-            style={{ marginRight: 4 }}
-          />
-        )}
-        {chat.is_pinned && <Pin size={12} className={styles.pinnedIcon} />}
 
         {!isSelectionMode && (
           <button
             ref={menuBtnRef}
-            className={styles.chatItemMenu}
+            className={styles.chatMenuBtn}
             onClick={handleMenuClick}
           >
             <MoreHorizontal size={14} />
@@ -224,24 +237,31 @@ const ChatItem: React.FC<ChatItemProps> = ({
         )}
       </div>
 
-      {showMenu && (
+      {showMenu && activeContextMenu && (
         <div
           className={styles.contextMenu}
-          style={{ left: menuPosition.x, top: menuPosition.y }}
+          style={{ left: activeContextMenu.x, top: activeContextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             className={styles.contextMenuItem}
             onClick={() => {
-              onToggleStar(); // Toggle Star
-              setShowMenu(false);
+              onEnableSelectionMode();
+              if (!isSelected) onToggleSelection();
+              onCloseContextMenu();
             }}
           >
-            <Star
-              size={14}
-              className={styles.contextMenuIcon}
-              fill={chat.is_starred ? "currentColor" : "none"}
-            />
+            <CheckSquare size={14} /> Select
+          </button>
+
+          <button
+            className={styles.contextMenuItem}
+            onClick={() => {
+              onToggleStar();
+              onCloseContextMenu();
+            }}
+          >
+            <Star size={14} fill={chat.is_starred ? "currentColor" : "none"} />
             {chat.is_starred ? "Unstar" : "Star"}
           </button>
 
@@ -249,43 +269,40 @@ const ChatItem: React.FC<ChatItemProps> = ({
             className={styles.contextMenuItem}
             onClick={() => {
               onTogglePin();
-              setShowMenu(false);
+              onCloseContextMenu();
             }}
           >
-            <Pin size={14} className={styles.contextMenuIcon} />
+            <Pin size={14} />
             {chat.is_pinned ? "Unpin" : "Pin"}
           </button>
 
           <button
             className={styles.contextMenuItem}
             onClick={() => {
-              onMoveToProject();
-              setShowMenu(false);
-            }}
-          >
-            <Folder size={14} className={styles.contextMenuIcon} />
-            Add to Project
-          </button>
-
-          <button
-            className={styles.contextMenuItem}
-            onClick={() => {
               setIsRenaming(true);
-              setShowMenu(false);
+              onCloseContextMenu();
             }}
           >
-            <Pencil size={14} className={styles.contextMenuIcon} />
+            <Pencil size={14} />
             Rename
           </button>
+
+          <div
+            style={{
+              height: 1,
+              background: "var(--border-color)",
+              margin: "4px 0",
+            }}
+          />
 
           <button
             className={`${styles.contextMenuItem} ${styles.danger}`}
             onClick={() => {
               onDelete();
-              setShowMenu(false);
+              onCloseContextMenu();
             }}
           >
-            <Trash2 size={14} className={styles.contextMenuIcon} />
+            <Trash2 size={14} />
             Delete
           </button>
         </div>
@@ -303,13 +320,16 @@ interface ChatGroupProps {
   isSelectionMode: boolean;
   selectedIds: string[];
   onSelectChat: (id: string) => void;
-  onToggleChatSelection: (id: string, shiftKey?: boolean) => void;
+  onToggleChatSelection: (id: string) => void;
   onDeleteChat: (id: string) => void;
   onRenameChat: (id: string, title: string) => void;
   onTogglePinChat: (id: string) => void;
   onToggleStarChat: (id: string) => void;
-  onMoveChatToProject: (id: string) => void;
   defaultExpanded?: boolean;
+  activeContextMenu: { id: string; x: number; y: number } | null;
+  onOpenContextMenu: (id: string, x: number, y: number) => void;
+  onCloseContextMenu: () => void;
+  onEnableSelectionMode: () => void;
 }
 
 const ChatGroup: React.FC<ChatGroupProps> = ({
@@ -324,55 +344,65 @@ const ChatGroup: React.FC<ChatGroupProps> = ({
   onRenameChat,
   onTogglePinChat,
   onToggleStarChat,
-  onMoveChatToProject,
   defaultExpanded = true,
+  activeContextMenu,
+  onOpenContextMenu,
+  onCloseContextMenu,
+  onEnableSelectionMode,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-  if (chats.length === 0) return null;
+  // If it's a project group, we show it even if empty (but show "No chats" inside)
+  // For standard groups (Today, Yesterday), we only show if not empty.
+  // Logic handled in parent: parent only passes "Time" groups if they have items.
+  // Parent passes Projects always.
 
   return (
-    <div className={styles.group}>
+    <div className={styles.groupWrapper}>
       <div
         className={styles.groupHeader}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <span
-          className={`${styles.groupIcon} ${!isExpanded ? styles.collapsed : ""}`}
-        >
-          ⌄
-        </span>
+        <ChevronDown
+          className={`${styles.groupChevron} ${!isExpanded ? styles.collapsed : ""}`}
+        />
         <h4 className={styles.groupTitle}>{title}</h4>
       </div>
       <div
-        className={`${styles.groupItems} ${!isExpanded ? styles.collapsed : ""}`}
+        className={`${styles.groupContent} ${!isExpanded ? styles.collapsed : ""}`}
       >
-        {chats.map((chat) => (
-          <ChatItem
-            key={chat.id}
-            chat={chat}
-            isActive={chat.id === activeSessionId}
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes(chat.id)}
-            onSelect={() => onSelectChat(chat.id)}
-            onToggleSelection={() => onToggleChatSelection(chat.id)}
-            onDelete={() => onDeleteChat(chat.id)}
-            onRename={(newTitle) => onRenameChat(chat.id, newTitle)}
-            onTogglePin={() => onTogglePinChat(chat.id)}
-            onToggleStar={() => onToggleStarChat(chat.id)}
-            onMoveToProject={() => onMoveChatToProject(chat.id)}
-          />
-        ))}
+        {chats.length === 0 ? (
+          <div className={styles.groupEmpty}>This project is empty</div>
+        ) : (
+          chats.map((chat) => (
+            <ChatItem
+              key={chat.id}
+              chat={chat}
+              isActive={chat.id === activeSessionId}
+              isSelectionMode={isSelectionMode}
+              isSelected={selectedIds.includes(chat.id)}
+              onSelect={() => onSelectChat(chat.id)}
+              onToggleSelection={() => onToggleChatSelection(chat.id)}
+              onDelete={() => onDeleteChat(chat.id)}
+              onRename={(newTitle) => onRenameChat(chat.id, newTitle)}
+              onTogglePin={() => onTogglePinChat(chat.id)}
+              onToggleStar={() => onToggleStarChat(chat.id)}
+              activeContextMenu={activeContextMenu}
+              onOpenContextMenu={onOpenContextMenu}
+              onCloseContextMenu={onCloseContextMenu}
+              onEnableSelectionMode={onEnableSelectionMode}
+            />
+          ))
+        )}
       </div>
     </div>
   );
 };
 
-// --- ChatPanel Component ---
+// --- Main ChatPanel Component ---
 
 interface ChatPanelProps {
   chats: ChatMetadata[];
-  projects: Project[];
   activeSessionId: string | null;
   onSelectChat: (id: string) => void;
   onNewChat: () => void;
@@ -381,13 +411,10 @@ interface ChatPanelProps {
   onRenameChat: (id: string, title: string) => void;
   onTogglePinChat: (id: string) => void;
   onToggleStarChat: (id: string) => void;
-  onCreateProject: (name: string) => Promise<Project | null>;
-  onMoveChatToProject: (chatId: string, projectId: string | undefined) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   chats,
-  projects,
   activeSessionId,
   onSelectChat,
   onNewChat,
@@ -396,35 +423,35 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onRenameChat,
   onTogglePinChat,
   onToggleStarChat,
-  onCreateProject,
-  onMoveChatToProject,
 }) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeContextMenu, setActiveContextMenu] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
-  // Dialog States
+  // -- Modal States --
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
-  const [showProjectDialog, setShowProjectDialog] = useState(false);
-  const [projectInput, setProjectInput] = useState("");
-  const [chatToMove, setChatToMove] = useState<string | null>(null);
+  // Group chats (now only Starred and Recents)
+  const groupedChats = groupChatsByDate(chats);
 
-  const [showProjectSelector, setShowProjectSelector] = useState(false);
+  // Close context menu on global click
+  useEffect(() => {
+    const handleClick = () => setActiveContextMenu(null);
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, []);
 
-  const groupedChats = groupChatsByDate(chats, projects);
-  const groupOrder = [
-    "Favorites",
-    "Pinned",
-    ...projects.map((p) => `Project:${p.name}`),
-    "Today",
-    "Yesterday",
-    "Last Week",
-    "Last Month",
-    "Older",
-  ];
+  const handleOpenContextMenu = (id: string, x: number, y: number) => {
+    const xPos = x + 180 > window.innerWidth ? x - 180 : x;
+    setActiveContextMenu({ id, x: xPos, y });
+  };
 
-  // Selection Logic
+  // -- Selection Logic --
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     setSelectedIds([]);
@@ -437,53 +464,53 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   const selectAll = () => {
-    if (selectedIds.length === chats.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(chats.map((c) => c.id));
-    }
+    setSelectedIds(
+      selectedIds.length === chats.length ? [] : chats.map((c) => c.id),
+    );
   };
 
-  // Delete Handlers
-  const handleDeleteRequest = (id: string) => {
-    setDeleteId(id);
-  };
+  // -- Action Handlers --
 
-  const confirmDelete = () => {
+  const handleDeleteChat = () => {
     if (deleteId) {
       onDeleteChat(deleteId);
       setDeleteId(null);
     }
   };
 
-  const confirmBulkDelete = () => {
+  const handleBulkDelete = () => {
     onDeleteChats(selectedIds);
     setSelectedIds([]);
     setIsSelectionMode(false);
-    setShowBulkDeleteConfirm(false);
+    setShowBulkDelete(false);
   };
 
-  // Project Handlers
-  const handleCreateProject = async () => {
-    if (projectInput.trim()) {
-      await onCreateProject(projectInput.trim());
-      setProjectInput("");
-      setShowProjectDialog(false);
-    }
-  };
-
-  const handleMoveToProjectRequest = (chatId: string) => {
-    setChatToMove(chatId);
-    setShowProjectSelector(true);
-  };
-
-  const handleProjectSelect = (projectId: string | undefined) => {
-    if (chatToMove) {
-      onMoveChatToProject(chatToMove, projectId);
-      setChatToMove(null);
-      setShowProjectSelector(false);
-    }
-  };
+  // Helper to render a generic group
+  const renderGroup = (
+    title: string,
+    groupChats: ChatMetadata[],
+    expanded = true,
+  ) => (
+    <ChatGroup
+      key={title}
+      title={title}
+      chats={groupChats}
+      activeSessionId={activeSessionId}
+      isSelectionMode={isSelectionMode}
+      selectedIds={selectedIds}
+      onSelectChat={onSelectChat}
+      onToggleChatSelection={toggleChatSelection}
+      onDeleteChat={setDeleteId}
+      onRenameChat={onRenameChat}
+      onTogglePinChat={onTogglePinChat}
+      onToggleStarChat={onToggleStarChat}
+      defaultExpanded={expanded}
+      activeContextMenu={activeContextMenu}
+      onOpenContextMenu={handleOpenContextMenu}
+      onCloseContextMenu={() => setActiveContextMenu(null)}
+      onEnableSelectionMode={() => setIsSelectionMode(true)}
+    />
+  );
 
   return (
     <div className={styles.panel}>
@@ -491,22 +518,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {isSelectionMode ? (
         <div className={styles.selectionHeader}>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <Checkbox
-              checked={selectedIds.length === chats.length && chats.length > 0}
-              onChange={selectAll}
-            />
+            <button className={styles.selectAllBtn} onClick={selectAll}>
+              {selectedIds.length === chats.length ? "None" : "All"}
+            </button>
             <span className={styles.selectionCount}>
-              {selectedIds.length} Selected
+              {selectedIds.length} selected
             </span>
           </div>
-          <div className={styles.selectionActions}>
+          <div style={{ display: "flex", gap: 4 }}>
             <button
               className={`${styles.iconBtn} ${styles.danger}`}
-              onClick={() => {
-                if (selectedIds.length > 0) setShowBulkDeleteConfirm(true);
-              }}
+              onClick={() => selectedIds.length > 0 && setShowBulkDelete(true)}
+              style={{ color: "var(--danger)" }}
+              disabled={selectedIds.length === 0}
             >
-              <Trash2 size={18} />
+              <Trash2 size={16} />
             </button>
             <button className={styles.iconBtn} onClick={toggleSelectionMode}>
               <X size={18} />
@@ -514,155 +540,78 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         </div>
       ) : (
-        <div className={styles.panelHeader}>
-          <h3 className={styles.panelTitle}>Chats</h3>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className={styles.headerArea}>
+          <div className={styles.utilityBar}>
             <button
-              className={styles.iconBtn}
-              onClick={toggleSelectionMode}
-              title="Edit List"
+              className={styles.newChatBtn}
+              onClick={onNewChat}
+              style={{ flex: 1 }}
             >
-              <CheckSquare size={16} />
-            </button>
-            <button
-              className={styles.iconBtn}
-              onClick={() => setShowProjectDialog(true)}
-              title="New Project"
-            >
-              <FolderPlus size={16} />
-            </button>
-            <button className={styles.newChatBtn} onClick={onNewChat}>
-              <Plus size={14} />
-              New
+              <span>New chat</span>
+              <Plus size={16} />
             </button>
           </div>
         </div>
       )}
 
       {/* List */}
-      <div className={styles.chatList}>
-        {chats.length === 0 ? (
-          <div className={styles.emptyState}>
-            <MessageCircle size={32} className={styles.emptyIcon} />
-            <p className={styles.emptyText}>No chats yet</p>
-          </div>
-        ) : (
-          groupOrder.map((groupName) => {
-            const groupChats = groupedChats.get(groupName as any);
-            if (!groupChats || groupChats.length === 0) return null;
+      <div className={styles.scrollArea}>
+        {/* 1. Starred Group */}
+        {groupedChats.get("Starred") &&
+          groupedChats.get("Starred")!.length > 0 &&
+          renderGroup("Starred", groupedChats.get("Starred")!)}
 
-            return (
-              <ChatGroup
-                key={groupName}
-                title={groupName.replace("Project:", "")}
-                chats={groupChats}
-                activeSessionId={activeSessionId}
-                isSelectionMode={isSelectionMode}
-                selectedIds={selectedIds}
-                onSelectChat={onSelectChat}
-                onToggleChatSelection={toggleChatSelection}
-                onDeleteChat={handleDeleteRequest}
-                onRenameChat={onRenameChat}
-                onTogglePinChat={onTogglePinChat}
-                onToggleStarChat={onToggleStarChat}
-                onMoveChatToProject={handleMoveToProjectRequest}
-                defaultExpanded={
-                  groupName === "Pinned" ||
-                  groupName === "Today" ||
-                  groupName === "Favorites" ||
-                  groupName.startsWith("Project:")
-                }
-              />
-            );
-          })
+        {/* 2. Recents Group */}
+        {groupedChats.get("Recents") &&
+          groupedChats.get("Recents")!.length > 0 &&
+          renderGroup("Recents", groupedChats.get("Recents")!)}
+
+        {/* Empty State if absolutely nothing exists */}
+        {chats.length === 0 && (
+          <div
+            style={{
+              padding: "40px 20px",
+              textAlign: "center",
+              color: "var(--text-muted)",
+            }}
+          >
+            <p style={{ fontSize: "0.9rem", marginBottom: 8 }}>
+              No chats found
+            </p>
+          </div>
         )}
       </div>
 
-      {/* Modals */}
-
-      {/* Delete Single Confirmation */}
+      {/* --- CONFIRMATION DIALOGS --- */}
       <Dialog
         isOpen={!!deleteId}
-        title="Delete Chat?"
-        message="Are you sure you want to delete this chat? All media and data will be removed locally."
-        isDanger={true}
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleteId(null)}
+        variant="error"
+        title="Delete Chat"
+        message="Are you sure you want to delete this chat?\nThis action cannot be undone."
+        actions={[
+          {
+            label: "Cancel",
+            onClick: () => setDeleteId(null),
+            variant: "secondary",
+          },
+          { label: "Delete", onClick: handleDeleteChat, variant: "danger" },
+        ]}
       />
 
-      {/* Delete Bulk Confirmation */}
       <Dialog
-        isOpen={showBulkDeleteConfirm}
-        title={`Delete ${selectedIds.length} Chats?`}
-        message="Are you sure you want to delete these chats? This action cannot be undone."
-        isDanger={true}
-        onConfirm={confirmBulkDelete}
-        onCancel={() => setShowBulkDeleteConfirm(false)}
+        isOpen={showBulkDelete}
+        variant="error"
+        title="Delete Multiple Chats"
+        message={`Are you sure you want to delete ${selectedIds.length} chats?\nThis action cannot be undone.`}
+        actions={[
+          {
+            label: "Cancel",
+            onClick: () => setShowBulkDelete(false),
+            variant: "secondary",
+          },
+          { label: "Delete All", onClick: handleBulkDelete, variant: "danger" },
+        ]}
       />
-
-      {/* New Project Dialog */}
-      <Dialog
-        isOpen={showProjectDialog}
-        title="New Project"
-        confirmLabel="Create"
-        onConfirm={handleCreateProject}
-        onCancel={() => setShowProjectDialog(false)}
-      >
-        <input
-          autoFocus
-          className={styles.input}
-          placeholder="Project Name"
-          value={projectInput}
-          onChange={(e) => setProjectInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
-        />
-      </Dialog>
-
-      {/* Project Selector Dialog (Simple List) */}
-      <Dialog
-        isOpen={showProjectSelector}
-        title="Move to Project"
-        confirmLabel=""
-        cancelLabel="Close"
-        onConfirm={() => {}}
-        onCancel={() => setShowProjectSelector(false)}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.5rem",
-            maxHeight: "300px",
-            overflowY: "auto",
-          }}
-        >
-          <button
-            className={styles.btn}
-            style={{
-              textAlign: "left",
-              background: "var(--neutral-800)",
-              color: "var(--light)",
-            }}
-            onClick={() => handleProjectSelect(undefined)}
-          >
-            No Project (Remove)
-          </button>
-          {projects.map((p) => (
-            <button
-              key={p.id}
-              className={styles.btn}
-              style={{
-                textAlign: "left",
-                background: "var(--neutral-700)",
-                color: "var(--light)",
-              }}
-              onClick={() => handleProjectSelect(p.id)}
-            >
-              {p.name}
-            </button>
-          ))}
-        </div>
-      </Dialog>
     </div>
   );
 };

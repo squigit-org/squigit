@@ -7,6 +7,10 @@
 @import "../../styles/variables.css";
 @import "../../styles/animations.css";
 
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
 .header {
   display: flex;
   align-items: center;

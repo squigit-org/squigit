@@ -133,23 +133,33 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
-  const prevChatIdRef = useRef(chatId);
+  const prevChatIdRef = useRef<string | null>(null);
+  const prevMessageCountRef = useRef(messages.length);
 
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
 
-    if (prevChatIdRef.current !== chatId) {
+    const chatChanged = prevChatIdRef.current !== chatId;
+    const messageCountChanged = messages.length !== prevMessageCountRef.current;
+
+    if (chatChanged) {
       // Chat Switched: Instant Scroll to bottom
       el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
       prevChatIdRef.current = chatId;
-    } else if (messages.length > 0) {
-      // Message Update: Smooth Scroll (if applicable, e.g. user message)
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === "user") {
-        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    } else if (messageCountChanged) {
+      // If messages populated from empty (initial load), instant scroll
+      if (prevMessageCountRef.current === 0 && messages.length > 0) {
+        el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+      } else {
+        // Message Update: Smooth Scroll (e.g. user message)
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.role === "user") {
+          el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        }
       }
     }
+    prevMessageCountRef.current = messages.length;
   }, [messages, chatId]);
 
   const showFlatMenuRef = useRef<

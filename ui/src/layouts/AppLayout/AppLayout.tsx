@@ -44,6 +44,7 @@ import {
   appendChatMessage,
   saveOcrData,
   saveImgbbUrl,
+  overwriteChatMessages,
 } from "../../lib/storage/chatStorage";
 import { useChatHistory } from "../../hooks";
 
@@ -177,6 +178,13 @@ export const AppLayout: React.FC = () => {
     auth.authStage === "GEMINI_SETUP" || auth.authStage === "LOGIN";
   const isChatActive =
     !isLoadingState && !isAgreementPending && !isImageMissing && !isAuthPending;
+
+  // Auto-open side panel if no image
+  useEffect(() => {
+    if (!isLoadingState && !system.startupImage) {
+      setIsChatPanelOpen(true);
+    }
+  }, [isLoadingState, system.startupImage]);
 
   const chatEngine = useChatEngine({
     apiKey: system.apiKey,
@@ -551,7 +559,6 @@ export const AppLayout: React.FC = () => {
           >
             <ChatPanel
               chats={chatHistory.chats}
-              projects={chatHistory.projects}
               activeSessionId={chatHistory.activeSessionId}
               onSelectChat={handleSelectChat}
               onNewChat={handleNewSession}
@@ -560,8 +567,6 @@ export const AppLayout: React.FC = () => {
               onRenameChat={chatHistory.handleRenameChat}
               onTogglePinChat={chatHistory.handleTogglePinChat}
               onToggleStarChat={chatHistory.handleToggleStarChat}
-              onCreateProject={chatHistory.handleCreateProject}
-              onMoveChatToProject={chatHistory.handleMoveChatToProject}
             />
           </div>
           <div className={styles.contentArea}>
@@ -571,6 +576,25 @@ export const AppLayout: React.FC = () => {
       </div>
     );
   }
+
+  // Wrappers for deletion to handle active session reset
+  const handleDeleteChatWrapper = async (id: string) => {
+    // Check if we are deleting the active chat
+    const isActive = chatHistory.activeSessionId === id;
+    await chatHistory.handleDeleteChat(id);
+    if (isActive) {
+      handleNewSession();
+    }
+  };
+
+  const handleDeleteChatsWrapper = async (ids: string[]) => {
+    const isActiveIncluded =
+      chatHistory.activeSessionId && ids.includes(chatHistory.activeSessionId);
+    await chatHistory.handleDeleteChats(ids);
+    if (isActiveIncluded) {
+      handleNewSession();
+    }
+  };
 
   return (
     <div
@@ -582,7 +606,15 @@ export const AppLayout: React.FC = () => {
         chatTitle={chatTitle}
         onReload={() => {
           setIsRotating(true);
-          chatEngine.handleReload();
+          const activeId = chatHistory.activeSessionId;
+          if (activeId) {
+            // Clear messages in storage before reloading
+            overwriteChatMessages(activeId, []).then(() => {
+              chatEngine.handleReload();
+            });
+          } else {
+            chatEngine.handleReload();
+          }
         }}
         isRotating={isRotating}
         currentModel={system.sessionModel}
@@ -620,17 +652,14 @@ export const AppLayout: React.FC = () => {
         >
           <ChatPanel
             chats={chatHistory.chats}
-            projects={chatHistory.projects}
             activeSessionId={chatHistory.activeSessionId}
             onSelectChat={handleSelectChat}
             onNewChat={handleNewSession}
-            onDeleteChat={chatHistory.handleDeleteChat}
-            onDeleteChats={chatHistory.handleDeleteChats}
+            onDeleteChat={handleDeleteChatWrapper}
+            onDeleteChats={handleDeleteChatsWrapper}
             onRenameChat={chatHistory.handleRenameChat}
             onTogglePinChat={chatHistory.handleTogglePinChat}
             onToggleStarChat={chatHistory.handleToggleStarChat}
-            onCreateProject={chatHistory.handleCreateProject}
-            onMoveChatToProject={chatHistory.handleMoveChatToProject}
           />
         </div>
 
