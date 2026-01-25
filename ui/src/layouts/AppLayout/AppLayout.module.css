@@ -24,7 +24,6 @@
 .chatPanelWrapper {
   width: 280px;
   flex-shrink: 0;
-  border-right: 1px solid var(--neutral-800);
   background: var(--neutral-950);
   overflow: hidden;
   transition:

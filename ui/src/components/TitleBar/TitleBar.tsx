@@ -207,7 +207,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             className={`${styles.iconButton} ${
               isChatPanelOpen ? styles.active : ""
             }`}
-            title="Toggle Chat History"
+            title="Recent Chats"
           >
             <svg
               width="20"
@@ -215,7 +215,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="1.2"
               strokeLinecap="round"
               strokeLinejoin="round"
             >

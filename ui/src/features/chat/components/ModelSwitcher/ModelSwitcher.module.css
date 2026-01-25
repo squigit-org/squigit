@@ -48,7 +48,7 @@
 
 .dropdownMenu {
   position: absolute;
-  top: calc(100% + 20px);
+  top: calc(100% + 16px);
   right: 0;
   width: 200px;
   background-color: var(--neutral-900);

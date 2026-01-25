@@ -45,7 +45,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     return (
       <div className="flex-1 overflow-y-auto" ref={ref}>
         <main>
-          <div className="mx-auto w-full max-w-4xl px-4 md:px-8 pb-12">
+          <div className="mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-40">
             {startupImage && !isChatMode && (
               <div className="min-h-[60vh]">
                 {isLoading && !streamingText ? (
@@ -157,7 +157,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                   .slice()
                   .reverse()
                   .map((msg) => (
-                    <div key={msg.id} className="mb-8">
+                    <div key={msg.id} className="mb-2">
                       <ChatBubble message={msg} />
                     </div>
                   ))}

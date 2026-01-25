@@ -7,21 +7,25 @@
 @import "../../../../styles/variables.css";
 
 .footer {
-  position: relative;
-  width: 100%;
-  background-color: var(--neutral-950);
-  padding-top: 0.5rem;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 14px;
+  width: auto;
+  background: linear-gradient(to top, var(--neutral-950) 40%, transparent 100%);
+  /* padding-bottom: 0.5rem; */
   z-index: 50;
-  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .inputWrapper {
   width: 100%;
-  max-width: 56rem;
+  max-width: 43.5rem;
   margin-left: auto;
   margin-right: auto;
   padding-left: 1rem;
   padding-right: 1rem;
+  pointer-events: auto;
 }
 
 .container {
@@ -30,15 +34,10 @@
   width: 100%;
   gap: 0.5rem;
   padding: 0.5rem;
-  background-color: transparent;
-  border-radius: 1rem;
-  border: 1px solid var(--chat-input-border);
+  background-color: #171717;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   transition: all 0.2s ease;
-}
-
-.container:focus-within {
-  border-color: var(--neutral-500);
-  box-shadow: var(--chat-input-focus-shadow);
 }
 
 .disabled {

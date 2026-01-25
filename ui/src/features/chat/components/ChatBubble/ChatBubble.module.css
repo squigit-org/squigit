@@ -33,6 +33,8 @@
 
 .botContainer {
   flex-direction: row;
+  width: 100%;
+  max-width: 100%;
 }
 
 .contentColumn {
@@ -68,12 +70,11 @@
 }
 
 .userBubble {
-  background-color: var(--neutral-900);
-  border: 1px solid var(--neutral-700);
+  background-color: #171717;
 }
 
 .botBubble {
-  background-color: var(--neutral-950);
+  background-color: transparent;
   border: none;
   padding-left: 10;
 }
