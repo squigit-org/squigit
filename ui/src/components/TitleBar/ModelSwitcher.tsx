@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
-import { MODELS } from "../../../../lib/config/models";
+import { MODELS } from "../../lib/config/models";
 import styles from "./ModelSwitcher.module.css";
 
 interface ModelSwitcherProps {

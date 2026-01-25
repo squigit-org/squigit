@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import "../../../../styles/variables.css";
+
 .container {
-  --bg: #0a0a0a;
   --muted: #71717a;
   --accent: #fafafa;
   --border: #27272a;
@@ -15,7 +16,7 @@
   height: 100%;
   margin: 0;
   box-sizing: border-box;
-  background-color: var(--bg);
+  background-color: var(--neutral-950);
   color: var(--accent);
   display: flex;
   align-items: center;

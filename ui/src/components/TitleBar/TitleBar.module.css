@@ -20,7 +20,7 @@
   min-height: 0;
   background-color: transparent;
   -webkit-app-region: drag;
-  position: relative; /* Added for absolute positioning of title */
+  position: relative;
 }
 
 .leftSection {
@@ -30,7 +30,7 @@
   flex: 1 1 0;
   min-width: 0;
   overflow: visible;
-  pointer-events: none; /* Let clicks pass to header (drag region) */
+  pointer-events: none;
 }
 
 .rightSection {
@@ -38,7 +38,7 @@
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
-  pointer-events: none; /* Let clicks pass to header (drag region) */
+  pointer-events: none;
 }
 
 .chatTitle {
@@ -50,13 +50,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: default;
-  pointer-events: none; /* Title acts as drag handle */
+  pointer-events: none;
 
-  /* Absolute centering */
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 40%; /* Prevent overlapping with controls */
+  max-width: 40%;
   text-align: center;
 }
 
@@ -74,7 +73,7 @@
   align-items: center;
   justify-content: center;
   -webkit-app-region: no-drag;
-  pointer-events: auto; /* Re-enable clicks */
+  pointer-events: auto;
 }
 
 .iconButton:hover {
@@ -87,16 +86,13 @@
   color: var(--neutral-100);
 }
 
-/* ... existing styles ... */
-
-/* Traffic Lights (macOS/Linux style) */
 .trafficLights {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-right: 0.5rem;
-  padding-left: 4px; /* Slight offset */
-  pointer-events: none; /* Gap between buttons should drag */
+  padding-left: 4px;
+  pointer-events: none;
 }
 
 .trafficButton {
@@ -116,7 +112,7 @@
   transition:
     transform 0.1s ease,
     filter 0.1s ease;
-  pointer-events: auto; /* Re-enable interaction */
+  pointer-events: auto;
 }
 
 .trafficButton .icon {
@@ -164,7 +160,6 @@
   background-color: #27c93f;
 }
 
-/* Windows Controls (Win11 Style) */
 .windowsControls {
   display: flex;
   align-items: center;
@@ -200,7 +195,6 @@
   color: #ffffff;
 }
 
-/* Light theme override for Windows controls */
 :global(body.light-mode) .windowsButton,
 :global(html.light) .windowsButton {
   color: #1a1a1a;

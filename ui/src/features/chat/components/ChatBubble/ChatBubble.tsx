@@ -60,7 +60,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
         />
       ),
     }),
-    []
+    [],
   );
 
   return (
@@ -130,8 +130,8 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
             <button
               onClick={handleCopy}
               className={styles.copyButton}
-              title="Copy markdown"
-              aria-label="Copy message"
+              title="Copy"
+              aria-label="Copy"
             >
               {isCopied ? (
                 <Check size={14} className={styles.copiedIcon} />

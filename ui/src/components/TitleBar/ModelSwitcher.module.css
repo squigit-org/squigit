@@ -26,9 +26,8 @@
 }
 
 .switcherButton:hover:not(:disabled) {
-  background-color: var(--neutral-700);
+  background-color: var(--neutral-800);
   color: var(--neutral-100);
-  border-color: var(--neutral-600);
 }
 
 .switcherButton:disabled {
@@ -51,12 +50,10 @@
   top: calc(100% + 16px);
   right: 0;
   width: 200px;
-  background-color: var(--neutral-900);
-  border: 1px solid var(--neutral-800);
+  background-color: #171717;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: 0.5px solid #0f0f0f;
   border-radius: 0.5rem;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 50;
   overflow: hidden;
 }

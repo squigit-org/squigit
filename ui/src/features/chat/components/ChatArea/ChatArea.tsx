@@ -43,7 +43,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     ref,
   ) => {
     return (
-      <div className="flex-1 overflow-y-auto" ref={ref}>
+      <div className="flex-1 overflow-y-auto mr-2" ref={ref}>
         <main>
           <div className="mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-40">
             {startupImage && !isChatMode && (

@@ -21,12 +21,12 @@
 .floatingContainer {
   position: relative;
   width: 95%;
-  max-width: 40rem;
+  max-width: 41.5rem;
   height: 57px;
   margin: 10px auto 1rem auto;
-  background-color: #171717;
   border-radius: 12px;
   overflow: hidden;
+  background-color: #171717;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   z-index: 10;
   display: flex;

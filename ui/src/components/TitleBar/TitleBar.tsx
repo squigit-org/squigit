@@ -14,7 +14,7 @@ import {
   PanelLeft,
   X,
 } from "lucide-react";
-import { ModelSwitcher } from "../../features/chat/components/ModelSwitcher/ModelSwitcher";
+import { ModelSwitcher } from "./ModelSwitcher";
 import { SettingsPanel } from "../../features/settings";
 import { invoke } from "@tauri-apps/api/core";
 import styles from "./TitleBar.module.css";

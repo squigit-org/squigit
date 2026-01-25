@@ -6,18 +6,6 @@
 
 @import "../../../../styles/variables.css";
 
-.footer {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 14px;
-  width: auto;
-  background: linear-gradient(to top, var(--neutral-950) 40%, transparent 100%);
-  /* padding-bottom: 0.5rem; */
-  z-index: 50;
-  pointer-events: none;
-}
-
 .inputWrapper {
   width: 100%;
   max-width: 43.5rem;
