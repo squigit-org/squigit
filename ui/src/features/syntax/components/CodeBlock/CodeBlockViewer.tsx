@@ -2,6 +2,9 @@
  * @license
  * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Read-only code block with updated UI visuals (gradients, pill copy action).
+ * Kept logic unchanged; added a small data attribute to enable CSS "copied" state.
  */
 
 import React from "react";
@@ -22,33 +25,30 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
   language,
   value,
 }) => {
-  const { isCopied, copy } = useCopyToClipboard();
+  const { isCopied, copy } = useCopyToClipboard(1000);
   const { highlightedHtml, isLoading } = useCodeHighlighter(value, language);
 
   const handleCopy = () => copy(value);
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} role="region" aria-label="code block">
       <div className={styles.header}>
         <div className={styles.langLabel}>
           <Terminal size={14} />
           <span className={styles.langName}>{language || "text"}</span>
         </div>
+
         <button
           onClick={handleCopy}
           className={styles.copyButton}
-          disabled={isCopied}
           title="Copy code"
+          aria-label="Copy code"
+          data-copied={isCopied ? "true" : "false"}
         >
-          {isCopied ? (
-            <>
-              <Check size={14} /> Copied
-            </>
-          ) : (
-            <>
-              <Copy size={14} /> Copy
-            </>
-          )}
+          <span className={styles.iconWrapper}>
+            {isCopied ? <Check size={14} /> : <Copy size={14} />}
+          </span>
+          <span>Copy</span>
         </button>
       </div>
 

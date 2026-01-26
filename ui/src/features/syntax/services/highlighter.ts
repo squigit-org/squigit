@@ -2,6 +2,9 @@
  * @license
  * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Highlighter service: swapped dark theme 'dracula' -> 'vesper' (cursor-like).
+ * No logic changes besides theme identifier.
  */
 
 import { createHighlighter, type Highlighter } from "shiki";
@@ -14,9 +17,14 @@ let highlighterPromise: Promise<Highlighter> | null = null;
 
 /**
  * Supported themes for dual-theme syntax highlighting.
+ *
+ * NOTE: Dark theme intentionally changed from 'dracula' to 'vesper'
+ * (a cursor-like/darker theme requested). If your Shiki build doesn't
+ * include 'vesper', ensure it's available in your project or vendor
+ * the theme file into your build.
  */
 export const SYNTAX_THEMES = {
-  dark: "dracula",
+  dark: "vesper",
   light: "github-light",
 } as const;
 
@@ -49,7 +57,7 @@ export const getHighlighter = async (): Promise<Highlighter> => {
  */
 export const highlightCode = async (
   code: string,
-  language: string
+  language: string,
 ): Promise<string> => {
   const highlighter = await getHighlighter();
 

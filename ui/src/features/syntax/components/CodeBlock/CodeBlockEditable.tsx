@@ -2,6 +2,10 @@
  * @license
  * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Editable code block UI tweaks:
+ * - Reuse updated gradient header and pill-like language label
+ * - Minimal markup changes; visuals handled in module CSS
  */
 
 import React, { forwardRef } from "react";
@@ -25,7 +29,11 @@ export const CodeBlockEditable = forwardRef<
   CodeBlockEditableProps
 >(({ language, value, onChange, onKeyDown, placeholder }, ref) => {
   return (
-    <div className={styles.wrapper}>
+    <div
+      className={styles.wrapper}
+      role="region"
+      aria-label="editable code block"
+    >
       <div className={styles.header}>
         <div className={styles.langLabel}>
           <Terminal size={14} />
@@ -40,6 +48,7 @@ export const CodeBlockEditable = forwardRef<
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         rows={5}
+        aria-label="code editor"
       />
     </div>
   );
