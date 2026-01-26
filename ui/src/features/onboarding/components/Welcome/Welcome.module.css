@@ -119,9 +119,10 @@
 
 /* The '+' separator */
 .keySep {
-  color: #52525b; /* Darker grey than the text */
+  color: #52525b;
   font-size: 14px;
   margin: 0 0.5px;
+  cursor: default;
   font-weight: 400;
 }
 

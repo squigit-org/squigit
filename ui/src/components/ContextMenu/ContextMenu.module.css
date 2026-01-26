@@ -1,55 +1,72 @@
-/**
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
-
 .contextMenu {
-  background-color: var(--neutral-800);
-  border: 1px solid var(--neutral-500);
-  border-radius: 6px;
-  box-shadow: var(--shadow);
-  padding: 0;
-  overflow: hidden;
+  background: #171717;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 140px;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  animation: fadeIn 0.1s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .contextMenuItem {
-  width: 100%;
-  text-align: left;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: var(--neutral-200);
-  background: transparent;
-  border: none;
-  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: background-color 0.2s ease, color 0.2s ease;
-  outline: none;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.contextMenuItem:hover,
-.contextMenuItem:focus {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--neutral-100);
+.contextMenuItem:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .contextMenuItem svg {
-  opacity: 0.8;
+  color: var(--text-muted);
 }
 
-.contextMenuItem:hover svg,
-.contextMenuItem:focus svg {
-  opacity: 1;
+.contextMenuItem.danger {
+  color: var(--danger);
 }
 
-:global(body.light-mode) .contextMenuItem:hover,
-:global(html.light) .contextMenuItem:hover,
-:global(body.light-mode) .contextMenuItem:focus,
-:global(html.light) .contextMenuItem:focus {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--neutral-100);
+.contextMenuItem.danger svg {
+  color: var(--danger);
+}
+
+.contextMenuItem.danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.shortcut {
+  margin-left: auto;
+  font-size: 0.75rem;
+  opacity: 0.5;
+  padding-left: 12px;
+}
+
+.separator {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
 }

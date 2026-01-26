@@ -49,6 +49,19 @@ pub async fn read_clipboard_image(_state: State<'_, AppState>) -> Result<StoredI
     Ok(stored)
 }
 
+/// Read text from clipboard.
+#[tauri::command]
+pub async fn read_clipboard_text() -> Result<String, String> {
+    use arboard::Clipboard;
+
+    let mut clipboard =
+        Clipboard::new().map_err(|e| format!("Failed to access clipboard: {}", e))?;
+
+    clipboard
+        .get_text()
+        .map_err(|e| format!("Failed to get text from clipboard: {}", e))
+}
+
 #[tauri::command]
 pub async fn start_clipboard_watcher(
     app: AppHandle,

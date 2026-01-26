@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { forwardRef } from "react";
+import React, { forwardRef, useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { parseGeminiError } from "../../../../lib/utils/errorParser";
 import { Dialog } from "../../../../components";
 import { ChatBubble, StreamingResponse, Message } from "../..";
@@ -42,10 +43,21 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     },
     ref,
   ) => {
+    const hasMessages = messages.filter((m) => m.role === "user").length > 0;
+    const [isErrorDismissed, setIsErrorDismissed] = useState(false);
+
+    useEffect(() => {
+      setIsErrorDismissed(false);
+    }, [error]);
+
     return (
-      <div className="flex-1 overflow-y-auto mr-2" ref={ref}>
+      <div className="flex-1 overflow-y-auto mr-2 custom-scrollbar" ref={ref}>
         <main>
-          <div className="mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-4">
+          <div
+            className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-4 ${
+              hasMessages ? "pt-12" : "pt-20"
+            }`}
+          >
             {startupImage && !isChatMode && (
               <div className="min-h-[60vh]">
                 {isLoading && !streamingText ? (
@@ -100,7 +112,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                 } else {
                   actions.push({
                     label: "Dismiss",
-                    onClick: onRetry, // Reuse onRetry to clear error -> reload/reset
+                    onClick: () => setIsErrorDismissed(true),
                     variant: "secondary",
                   });
                 }
@@ -109,7 +121,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                 if (parsedError.actionType === "RETRY_OR_SETTINGS") {
                   actions.push({
                     label: "Change API Key",
-                    onClick: onCheckSettings,
+                    onClick: () => {
+                      onCheckSettings();
+                      setIsErrorDismissed(true);
+                    },
                     variant: "secondary",
                   });
                 }
@@ -120,8 +135,12 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                 ) {
                   actions.push({
                     label: parsedError.meta.linkLabel || "Open Link",
-                    onClick: () =>
-                      window.open(parsedError.meta?.link, "_blank"),
+                    onClick: () => {
+                      invoke("open_external_url", {
+                        url: parsedError.meta?.link,
+                      });
+                      setIsErrorDismissed(true);
+                    },
                     variant: "secondary",
                   });
                 }
@@ -131,7 +150,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
 
               return (
                 <Dialog
-                  isOpen={!!error}
+                  isOpen={!!error && !isErrorDismissed}
                   variant="error"
                   title={parsedError.title}
                   message={parsedError.message}

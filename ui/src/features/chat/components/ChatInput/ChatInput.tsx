@@ -7,7 +7,7 @@
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { Send } from "lucide-react";
 import { CodeBlock } from "../../../syntax";
-import { ContextMenu } from "../../../../components";
+import { TextContextMenu, useClipboard } from "../../../../components";
 import styles from "./ChatInput.module.css";
 
 const ExpandIcon = () => (
@@ -103,6 +103,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const historyRef = useRef<string[]>([value]);
   const historyIndexRef = useRef<number>(0);
   const isUndoRedoRef = useRef<boolean>(false);
+
+  const { readText } = useClipboard();
 
   const isExpandedLayout = value.includes("\n") || isCodeBlockActive;
 
@@ -240,8 +242,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const handlePaste = async () => {
     const ta = taRef.current;
     if (!ta) return;
+
+    // Ensure focus is on the textarea to satisfy clipboard API requirements
+    ta.focus();
+
     try {
-      const text = await navigator.clipboard.readText();
+      const text = await readText();
+
+      if (!text) return;
+
       const start = ta.selectionStart;
       const end = ta.selectionEnd;
       const newValue =
@@ -250,6 +259,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       const newCursorPos = start + text.length;
       setTimeout(() => {
         ta.setSelectionRange(newCursorPos, newCursorPos);
+        // focus is already called but ensure it stays
         ta.focus();
       }, 0);
     } catch (err) {
@@ -283,18 +293,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
-        case "c":
-          e.preventDefault();
-          handleCopy();
-          return;
-        case "v":
-          e.preventDefault();
-          handlePaste();
-          return;
-        case "x":
-          e.preventDefault();
-          handleCut();
-          return;
         case "z":
           e.preventDefault();
           if (e.shiftKey) {
@@ -311,6 +309,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           e.preventDefault();
           handleSelectAll();
           return;
+        // Native Copy/Cut/Paste work better for textarea
       }
     }
 
@@ -450,7 +449,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </div>
 
       {contextMenu.isOpen && (
-        <ContextMenu
+        <TextContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={handleCloseContextMenu}

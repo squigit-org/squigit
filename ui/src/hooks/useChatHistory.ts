@@ -90,13 +90,18 @@ export const useChatHistory = () => {
     }
   };
 
-  const handleToggleStarChat = async (id: string) => {
+  const handleToggleStarChat = async (id: string, overrides?: Partial<ChatMetadata>) => {
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
+    const newStarredState = !chat.is_starred;
     const updated = {
       ...chat,
-      is_starred: !chat.is_starred,
+      is_starred: newStarredState,
+      // When moving between categories (Starred <-> Recents), always unpin.
+      is_pinned: false,
+      pinned_at: null,
+      ...overrides,
       updated_at: new Date().toISOString(),
     };
     try {

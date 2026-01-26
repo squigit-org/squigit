@@ -45,6 +45,8 @@ interface ImageAreaProps {
   chatId: string | null;
   inputValue: string;
   onInputChange: (value: string) => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 export const ImageArea: React.FC<ImageAreaProps> = ({
@@ -57,8 +59,9 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   chatId,
   inputValue,
   onInputChange,
+  isExpanded = false,
+  onToggleExpand,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [showOverlay, setShowOverlay] = useState(false);
@@ -204,10 +207,6 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setShowScrollbar(isExpanded);
-  }, [isExpanded]);
-
   const onLoad = () => {
     if (imgRef.current) {
       setSize({
@@ -217,10 +216,10 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     }
   };
 
-  // Reset expansion state when switching chats
-  useEffect(() => {
-    setIsExpanded(false);
-  }, [chatId]);
+  // Reset expansion state when switching chats - Handled by parent now
+  // useEffect(() => {
+  //   setIsExpanded(false);
+  // }, [chatId]);
 
   const handleCopyImage = useCallback(async (): Promise<boolean> => {
     const img = imgRef.current;
@@ -252,7 +251,9 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   }, []);
 
   const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
+    if (onToggleExpand) {
+      onToggleExpand();
+    }
   };
 
   const handleTranslateAll = useCallback(() => {
@@ -262,6 +263,70 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
       invoke("open_external_url", { url: generateTranslateUrl(allText) });
     }
   }, [ocrData]);
+
+  // Removed handleWheel as logic moved to parent
+
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    setIsAnimating(true);
+    const timer = setTimeout(() => {
+      setIsAnimating(false);
+    }, 300); // Match CSS transition duration
+    return () => clearTimeout(timer);
+  }, [isExpanded]);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      const el = scrollWrapperRef.current;
+      if (el) {
+        const hasOverflow = el.scrollHeight > el.clientHeight;
+        setShowScrollbar(isExpanded && hasOverflow);
+      }
+    };
+
+    if (isExpanded) {
+      if (!isAnimating) {
+        checkOverflow();
+      }
+      window.addEventListener("resize", checkOverflow);
+    } else {
+      setShowScrollbar(false);
+    }
+
+    return () => window.removeEventListener("resize", checkOverflow);
+  }, [isExpanded, size, isAnimating]);
+
+  const isExpandedRef = useRef(isExpanded);
+  isExpandedRef.current = isExpanded;
+
+  useEffect(() => {
+    // Attach listener to the bigImageBox to ONLY catch scrolls inside the image area
+    const imageBox = scrollWrapperRef.current;
+    if (!imageBox) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // If we are collapsed, we want the scroll to bubble up so the parent (ChatLayout)
+      // can handle the "Expand on scroll up" gesture.
+      if (!isExpandedRef.current) return;
+
+      // Use Math.ceil to handle fractional pixels potentially
+      // Recalculate overflow on the fly
+      const isScrollable =
+        Math.ceil(imageBox.scrollHeight) > Math.ceil(imageBox.clientHeight);
+
+      if (isScrollable) {
+        // If the image area has a scrollbar, we want to consume the scroll event
+        // to prevent the parent layout from triggering the collapse gesture.
+        e.stopPropagation();
+      }
+      // If image is NOT scrollable, we let the event bubble.
+    };
+
+    // Use passive: false to ensure we can control event propagation reliably
+    imageBox.addEventListener("wheel", handleWheel, { passive: false });
+    return () => imageBox.removeEventListener("wheel", handleWheel);
+  }, []);
 
   if (!startupImage) {
     return null;
@@ -304,6 +369,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
           <div
             className={`${styles.bigImageBox} ${showScrollbar ? styles.showScrollbar : ""}`}
             ref={scrollWrapperRef}
+            style={isAnimating ? { overflow: "hidden" } : undefined}
           >
             <div className={styles.viewer} ref={viewerRef}>
               <div className={styles.imageWrap}>

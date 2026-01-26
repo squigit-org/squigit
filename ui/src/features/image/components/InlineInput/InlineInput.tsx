@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
+import { TextContextMenu, useClipboard } from "../../../../components";
 import styles from "./InlineInput.module.css";
 
 interface SearchInputProps {
@@ -21,6 +22,12 @@ interface SearchInputProps {
   placeholder?: string;
 }
 
+interface ContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+}
+
 export const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChange,
@@ -34,8 +41,168 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   placeholder = "Add to your search",
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+  });
+  const [hasSelection, setHasSelection] = useState(false);
+  const { readText } = useClipboard();
+
+  const historyRef = useRef<string[]>([value]);
+  const historyIndexRef = useRef<number>(0);
+  const isUndoRedoRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+    if (value !== currentHistory[currentIndex]) {
+      historyRef.current = currentHistory.slice(0, currentIndex + 1);
+      historyRef.current.push(value);
+      historyIndexRef.current = historyRef.current.length - 1;
+      if (historyRef.current.length > 100) {
+        historyRef.current = historyRef.current.slice(-100);
+        historyIndexRef.current = historyRef.current.length - 1;
+      }
+    }
+  }, [value]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const handleSelectionChange = () => {
+      if (document.activeElement === input) {
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        setHasSelection(start !== end);
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, []);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+    });
+    return false;
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({ isOpen: false, x: 0, y: 0 });
+  };
+
+  const handleCopy = () => {
+    const input = inputRef.current;
+    if (!input) return;
+    const selectedText = input.value.substring(
+      input.selectionStart || 0,
+      input.selectionEnd || 0,
+    );
+    if (selectedText) {
+      navigator.clipboard.writeText(selectedText);
+    }
+  };
+
+  const handleCut = () => {
+    const input = inputRef.current;
+    if (!input) return;
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const selectedText = input.value.substring(start, end);
+    if (selectedText) {
+      navigator.clipboard.writeText(selectedText);
+      const newValue =
+        input.value.substring(0, start) + input.value.substring(end);
+      onChange(newValue);
+      setTimeout(() => {
+        input.setSelectionRange(start, start);
+        input.focus();
+      }, 0);
+    }
+  };
+
+  const handlePaste = async () => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    // Ensure focus is on the input to satisfy clipboard API requirements
+    input.focus();
+
+    try {
+      const text = await readText();
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const newValue =
+        input.value.substring(0, start) + text + input.value.substring(end);
+      onChange(newValue);
+      const newCursorPos = start + text.length;
+      setTimeout(() => {
+        input.setSelectionRange(newCursorPos, newCursorPos);
+        input.focus();
+      }, 0);
+    } catch (err) {
+      console.error("Failed to read clipboard:", err);
+    }
+  };
+
+  const handleSelectAll = () => {
+    const input = inputRef.current;
+    if (!input) return;
+    input.select();
+    setHasSelection(true);
+  };
+
+  const handleUndo = () => {
+    if (historyIndexRef.current > 0) {
+      historyIndexRef.current -= 1;
+      isUndoRedoRef.current = true;
+      onChange(historyRef.current[historyIndexRef.current]);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      historyIndexRef.current += 1;
+      isUndoRedoRef.current = true;
+      onChange(historyRef.current[historyIndexRef.current]);
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case "z":
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
+          return;
+        case "y":
+          e.preventDefault();
+          handleRedo();
+          return;
+        case "a":
+          e.preventDefault();
+          handleSelectAll();
+          return;
+      }
+    }
+
     // Prevent new lines
     if (e.key === "Enter") {
       e.preventDefault();
@@ -54,6 +221,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onContextMenu={handleContextMenu}
         placeholder={placeholder}
         disabled={isOCRLoading}
         className={styles.searchInput}
@@ -130,6 +298,19 @@ export const SearchInput: React.FC<SearchInputProps> = ({
           </button>
         )}
       </div>
+
+      {contextMenu.isOpen && (
+        <TextContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={handleCloseContextMenu}
+          onCopy={handleCopy}
+          onCut={handleCut}
+          onPaste={handlePaste}
+          onSelectAll={handleSelectAll}
+          hasSelection={hasSelection}
+        />
+      )}
     </div>
   );
 };

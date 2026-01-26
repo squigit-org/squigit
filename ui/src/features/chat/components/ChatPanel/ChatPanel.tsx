@@ -11,76 +11,23 @@ import {
   MoreHorizontal,
   Pin,
   Trash2,
-  Pencil,
   ChevronDown,
   Star,
   Check,
   X,
-  CheckSquare,
-  PinOff,
   StarOff,
 } from "lucide-react";
 
+import {
+  ContextMenu,
+  PanelContextMenu,
+} from "../../../../components/ContextMenu";
 import { Dialog } from "../../../../components/Dialog";
 import {
   ChatMetadata,
   groupChatsByDate,
 } from "../../../../lib/storage/chatStorage";
 import styles from "./ChatPanel.module.css";
-import { createPortal } from "react-dom";
-
-// --- Internal "Prompt" Dialog ---
-interface PromptDialogProps {
-  isOpen: boolean;
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-  primaryAction?: {
-    label: string;
-    onClick: () => void;
-  };
-}
-
-const PromptDialog: React.FC<PromptDialogProps> = ({
-  isOpen,
-  title,
-  children,
-  onClose,
-  primaryAction,
-}) => {
-  if (!isOpen) return null;
-
-  return createPortal(
-    <div className={styles.modalOverlay} onMouseDown={onClose}>
-      <div
-        className={styles.modalContainer}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <h4 className={styles.modalTitle}>{title}</h4>
-
-        {children}
-
-        <div className={styles.modalActions}>
-          <button
-            className={`${styles.btn} ${styles.btnSecondary}`}
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-          {primaryAction && (
-            <button
-              className={`${styles.btn} ${styles.btnPrimary}`}
-              onClick={primaryAction.onClick}
-            >
-              {primaryAction.label}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
-};
 
 // --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
@@ -208,115 +155,68 @@ const ChatItem: React.FC<ChatItemProps> = ({
           </span>
         )}
 
+        {/* Actions Group (Hover or Persistent) */}
         {!isSelectionMode && (
-          <button
-            ref={menuBtnRef}
-            className={`${styles.chatMenuBtn} ${
-              chat.is_pinned || chat.is_starred ? styles.visible : ""
-            }`}
-            onClick={handleMenuClick}
-          >
-            <div className={styles.iconDefault}>
-              {chat.is_pinned ? (
-                <Pin
-                  size={14}
-                  className={styles.chatIconMain}
-                  style={{ transform: "rotate(45deg)" }}
-                  fill="currentColor"
-                />
-              ) : chat.is_starred ? (
-                <Star
-                  size={14}
-                  className={styles.chatIconMain}
-                  fill="currentColor"
-                  style={{ transform: "rotate(45deg)" }}
-                />
-              ) : null}
+          <div className={styles.chatActions}>
+            <div className={styles.statusRow}>
+              {chat.is_pinned && (
+                <div className={styles.pinIcon}>
+                  <Pin
+                    size={14}
+                    style={{ transform: "rotate(45deg)" }}
+                    fill="currentColor"
+                  />
+                </div>
+              )}
+
+              <button
+                className={styles.starBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleStar();
+                }}
+                title={chat.is_starred ? "Unstar" : "Star"}
+              >
+                {chat.is_starred ? <StarOff size={14} /> : <Star size={14} />}
+              </button>
             </div>
-            <div className={styles.iconHover}>
+
+            <button
+              ref={menuBtnRef}
+              className={styles.menuBtn}
+              onClick={handleMenuClick}
+            >
               <MoreHorizontal size={14} />
-            </div>
-          </button>
+            </button>
+          </div>
         )}
       </div>
 
       {showMenu && activeContextMenu && (
-        <div
-          className={styles.contextMenu}
-          style={{ left: activeContextMenu.x, top: activeContextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className={styles.contextMenuItem}
-            onClick={() => {
-              onEnableSelectionMode();
-              if (!isSelected) onToggleSelection();
-              onCloseContextMenu();
-            }}
-          >
-            <CheckSquare size={14} /> Select
-          </button>
-
-          <button
-            className={styles.contextMenuItem}
-            onClick={() => {
-              onToggleStar();
-              onCloseContextMenu();
-            }}
-          >
-            {chat.is_starred ? (
-              <StarOff size={14} style={{ transform: "rotate(45deg)" }} />
-            ) : (
-              <Star size={14} style={{ transform: "rotate(45deg)" }} />
-            )}
-            {chat.is_starred ? "Unstar" : "Star"}
-          </button>
-
-          <button
-            className={styles.contextMenuItem}
-            onClick={() => {
-              onTogglePin();
-              onCloseContextMenu();
-            }}
-          >
-            {chat.is_pinned ? (
-              <PinOff size={14} style={{ transform: "rotate(45deg)" }} />
-            ) : (
-              <Pin size={14} style={{ transform: "rotate(45deg)" }} />
-            )}
-            {chat.is_pinned ? "Unpin Chat" : "Pin Chat"}
-          </button>
-
-          <button
-            className={styles.contextMenuItem}
-            onClick={() => {
-              setIsRenaming(true);
-              onCloseContextMenu();
-            }}
-          >
-            <Pencil size={14} />
-            Rename
-          </button>
-
-          <div
-            style={{
-              height: 1,
-              background: "var(--border-color)",
-              margin: "4px 0",
-            }}
-          />
-
-          <button
-            className={`${styles.contextMenuItem} ${styles.danger}`}
-            onClick={() => {
-              onDelete();
-              onCloseContextMenu();
-            }}
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
-        </div>
+        <PanelContextMenu
+          x={activeContextMenu.x}
+          y={activeContextMenu.y}
+          onClose={onCloseContextMenu}
+          onRename={() => {
+            setIsRenaming(true);
+            onCloseContextMenu();
+          }}
+          onTogglePin={() => {
+            onTogglePin();
+            onCloseContextMenu();
+          }}
+          onToggleSelection={() => {
+            onEnableSelectionMode();
+            if (!isSelected) onToggleSelection();
+            onCloseContextMenu();
+          }}
+          onDelete={() => {
+            onDelete();
+            onCloseContextMenu();
+          }}
+          isPinned={chat.is_pinned}
+          isSelected={isSelected}
+        />
       )}
     </>
   );
@@ -528,15 +428,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Header */}
       {isSelectionMode ? (
         <div className={styles.selectionHeader}>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <button className={styles.selectAllBtn} onClick={selectAll}>
-              {selectedIds.length === chats.length ? "None" : "All"}
-            </button>
+          <div className={styles.selectionLeft}>
+            <Checkbox
+              checked={selectedIds.length === chats.length && chats.length > 0}
+              onChange={selectAll}
+            />
+            <span className={styles.labelAll}>All</span>
+          </div>
+
+          <div className={styles.selectionCenter}>
             <span className={styles.selectionCount}>
               {selectedIds.length} selected
             </span>
           </div>
-          <div style={{ display: "flex", gap: 4 }}>
+
+          <div className={styles.selectionRight}>
             <button
               className={`${styles.iconBtn} ${styles.danger}`}
               onClick={() => selectedIds.length > 0 && setShowBulkDelete(true)}

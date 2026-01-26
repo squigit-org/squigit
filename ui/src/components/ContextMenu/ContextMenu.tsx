@@ -4,43 +4,31 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useLayoutEffect, useState } from "react";
+import React, { useRef, useLayoutEffect, useState, ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Copy, ClipboardPaste, Scissors, TextSelect } from "lucide-react";
 import styles from "./ContextMenu.module.css";
 
 interface ContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
-  onCopy?: () => void;
-  onPaste?: () => void;
-  onCut?: () => void;
-  onSelectAll?: () => void;
-  selectedText?: string;
-  hasSelection?: boolean;
+  children: ReactNode;
+  width?: number;
 }
 
 const EDGE_PADDING = 8;
-
 const CURSOR_OFFSET = 4;
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
   x,
   y,
   onClose,
-  onCopy,
-  onPaste,
-  onCut,
-  onSelectAll,
-  selectedText = "",
-  hasSelection = false,
+  children,
+  width,
 }) => {
   const [position, setPosition] = useState({ x, y });
   const [isPositioned, setIsPositioned] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const hasText = hasSelection || selectedText.length > 0;
 
   useLayoutEffect(() => {
     if (!menuRef.current) return;
@@ -55,7 +43,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     if (x + menuRect.width + EDGE_PADDING > viewportWidth) {
       safeX = Math.max(
         EDGE_PADDING,
-        viewportWidth - menuRect.width - EDGE_PADDING
+        viewportWidth - menuRect.width - EDGE_PADDING,
       );
     }
 
@@ -66,7 +54,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     if (y + menuRect.height + EDGE_PADDING > viewportHeight) {
       safeY = Math.max(
         EDGE_PADDING,
-        viewportHeight - menuRect.height - EDGE_PADDING
+        viewportHeight - menuRect.height - EDGE_PADDING,
       );
     }
 
@@ -78,23 +66,14 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     setIsPositioned(true);
   }, [x, y]);
 
-  const handleAction = (e: React.MouseEvent, action: () => void) => {
-    e.stopPropagation();
-    action();
-    onClose();
-  };
-
-  const showCopy = onCopy && hasText;
-  const showCut = onCut && hasText;
-  const showPaste = onPaste;
-  const showSelectAll = onSelectAll;
-
-  if (!showCopy && !showCut && !showPaste && !showSelectAll) return null;
-
   return createPortal(
     <>
       <div
-        className="fixed inset-0 z-[9998] cursor-default"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9999,
+        }}
         onClick={(e) => {
           e.stopPropagation();
           onClose();
@@ -106,53 +85,50 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       />
       <div
         ref={menuRef}
-        id="app-context-menu"
-        className={`${styles.contextMenu} fixed z-[9999] min-w-[120px]`}
+        className={styles.contextMenu}
         style={{
-          top: position.y,
-          left: position.x,
-          visibility: isPositioned ? "visible" : "hidden",
+          position: "fixed",
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          opacity: isPositioned ? 1 : 0,
+          zIndex: 10000,
+          ...(width ? { width } : {}),
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {showCut && (
-          <button
-            onClick={(e) => handleAction(e, onCut!)}
-            className={`${styles.contextMenuItem} w-full text-left flex items-center gap-2`}
-          >
-            <Scissors size={14} />
-            <span>Cut</span>
-          </button>
-        )}
-        {showCopy && (
-          <button
-            onClick={(e) => handleAction(e, onCopy!)}
-            className={`${styles.contextMenuItem} w-full text-left flex items-center gap-2`}
-          >
-            <Copy size={14} />
-            <span>Copy</span>
-          </button>
-        )}
-        {showPaste && (
-          <button
-            onClick={(e) => handleAction(e, onPaste!)}
-            className={`${styles.contextMenuItem} w-full text-left flex items-center gap-2`}
-          >
-            <ClipboardPaste size={14} />
-            <span>Paste</span>
-          </button>
-        )}
-        {showSelectAll && (
-          <button
-            onClick={(e) => handleAction(e, onSelectAll!)}
-            className={`${styles.contextMenuItem} w-full text-left flex items-center gap-2`}
-          >
-            <TextSelect size={14} />
-            <span>Select All</span>
-          </button>
-        )}
+        {children}
       </div>
     </>,
-    document.body
+    document.body,
   );
 };
+
+interface ContextMenuItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  icon?: ReactNode;
+  variant?: "default" | "danger";
+  shortcut?: string;
+}
+
+export const ContextMenuItem: React.FC<ContextMenuItemProps> = ({
+  children,
+  icon,
+  className,
+  variant = "default",
+  shortcut,
+  ...props
+}) => {
+  return (
+    <button
+      className={`${styles.contextMenuItem} ${variant === "danger" ? styles.danger : ""} ${className || ""}`}
+      {...props}
+    >
+      {icon}
+      {children}
+      {shortcut && <span className={styles.shortcut}>{shortcut}</span>}
+    </button>
+  );
+};
+
+export const ContextMenuSeparator: React.FC = () => (
+  <div className={styles.separator} />
+);

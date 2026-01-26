@@ -42,6 +42,7 @@
   --border-radius: 12px;
   --shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
   --transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  --titlebar-height: 44px;
 
   --red-200: #ffcccc;
   --red-900-50: #ffc0c08e;

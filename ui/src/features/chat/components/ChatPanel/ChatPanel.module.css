@@ -1,18 +1,6 @@
 /* ChatPanel.module.css */
 @import "../../../../styles/variables.css";
 
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background-color: var(--overlay);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 /* ChatPanel.module.css */
 
 .panel {
@@ -103,6 +91,12 @@
 .iconBtn.active {
   background: var(--bg-hover);
   color: var(--text-main);
+}
+
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* --- Scroll Area --- */
@@ -227,119 +221,115 @@
   color: var(--text-main);
 }
 
-.chatMenuBtn {
-  opacity: 0;
+/* Main Actions Container */
+.chatActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Status Row: Holds Pin (default) and Star (hover) */
+.statusRow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+}
+
+/* Base button style */
+.menuBtn,
+.starBtn,
+.pinIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   border-radius: 4px;
+  background: transparent;
+  border: none;
   color: var(--text-muted);
-  background: transparent;
-  border: none;
+  transition: all 0.2s;
+}
+
+/* Pin Icon: Visible by default if pinned */
+.pinIcon {
+  cursor: default;
+}
+
+/* Star Button: Hidden by default */
+.starBtn {
+  display: none;
   cursor: pointer;
-  transition: opacity 0.1s;
 }
 
-.chatRow:hover .chatMenuBtn,
-.chatRow:focus-within .chatMenuBtn {
-  opacity: 1;
+/* On Hover: Hide Pin, Show Star */
+.chatRow:hover .pinIcon {
+  display: none;
 }
 
-.chatMenuBtn:hover {
+.chatRow:hover .starBtn {
+  display: flex;
+}
+
+.starBtn:hover {
   background: var(--neutral-900);
   color: var(--text-main);
 }
 
-.chatMenuBtn.visible {
+/* Menu Button (3 dots): Visible on hover */
+.menuBtn {
+  cursor: pointer;
+  opacity: 0;
+}
+
+.chatRow:hover .menuBtn {
   opacity: 1;
 }
 
-.iconDefault {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.iconHover {
-  display: none;
-  align-items: center;
-  justify-content: center;
-}
-
-.chatRow:hover .iconDefault {
-  display: none;
-}
-
-.chatRow:hover .iconHover {
-  display: flex;
-}
-
-/* --- Context Menu --- */
-.contextMenu {
-  position: fixed;
-  z-index: 9000;
+.menuBtn:hover {
   background: var(--neutral-900);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 4px;
-  min-width: 180px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-}
-
-.contextMenuItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  text-align: left;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.85rem;
   color: var(--text-main);
-  cursor: pointer;
-}
-
-.contextMenuItem:hover {
-  background: var(--bg-hover);
-}
-
-.contextMenuItem.danger {
-  color: var(--danger);
-}
-.contextMenuItem.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
 }
 
 /* --- Selection Mode --- */
+/* --- Selection Mode --- */
 .selectionHeader {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  background: var(--bg-subtle);
+  padding: 12px 18px;
+  background: var(--neutral-950);
   border-bottom: 1px solid var(--border-color);
 }
+
+.selectionLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selectionCenter {
+  justify-self: center;
+}
+
+.selectionRight {
+  display: flex;
+  justify-self: end;
+  gap: 4px;
+}
+
 .selectionCount {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-main);
 }
-.selectAllBtn {
-  background: none;
-  border: none;
+
+.labelAll {
   color: var(--text-muted);
   font-size: 0.85rem;
-  cursor: pointer;
-  margin-right: 8px;
-  padding: 0;
-}
-.selectAllBtn:hover {
-  text-decoration: underline;
-  color: var(--text-main);
+  font-weight: 500;
 }
 
 .checkbox {
@@ -352,6 +342,7 @@
   justify-content: center;
   flex-shrink: 0;
   margin-right: 8px;
+  cursor: pointer;
 }
 .checkbox.checked {
   background: var(--text-main);
@@ -359,121 +350,4 @@
 }
 .checkboxInner {
   color: var(--bg-panel);
-}
-
-.modalContainer {
-  position: relative;
-  z-index: 10000;
-  background-color: var(--neutral-950);
-  border-radius: 12px;
-  border: 1px solid var(--neutral-800);
-  padding: 1.5rem;
-  width: 90%;
-  max-width: 420px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes modalPop {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.modalTitle {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #f5f5f5;
-  margin: 0 0 16px 0;
-}
-
-.modalInput {
-  width: 100%;
-  background: transparent;
-  border: 1px solid var(--neutral-800);
-  color: #f5f5f5;
-  padding: 10px 12px;
-  border-radius: 6px;
-  outline: none;
-  font-size: 0.9rem;
-}
-.modalInput:focus {
-  border-color: #737373;
-}
-
-.modalTip {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-top: 12px;
-  line-height: 1.5;
-}
-
-.modalActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 24px;
-}
-
-.btn {
-  border-radius: 9999px;
-  padding: 6px 16px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border: 1px solid;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btnSecondary {
-  background-color: var(--neutral-800);
-  border-color: var(--neutral-700);
-  color: #d4d4d4;
-}
-.btnSecondary:hover {
-  background-color: #404040;
-  color: #f5f5f5;
-}
-
-.btnPrimary {
-  background-color: #f5f5f5;
-  border-color: #f5f5f5;
-  color: #171717;
-}
-.btnPrimary:hover {
-  opacity: 0.9;
-}
-
-.projectList {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 240px;
-  overflow-y: auto;
-}
-
-.projectItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
-  text-align: left;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--text-main);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.projectItem:hover {
-  background: var(--bg-hover);
-  color: #fff;
 }

@@ -25,6 +25,12 @@
   -webkit-app-region: no-drag;
 }
 
+:global(body.has-open-dialog) .switcherButton {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.7;
+}
+
 .switcherButton:hover:not(:disabled) {
   background-color: var(--neutral-800);
   color: var(--neutral-100);

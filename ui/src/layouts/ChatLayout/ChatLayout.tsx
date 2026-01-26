@@ -12,7 +12,6 @@ import { TitleBar, InlineMenu } from "../../components";
 import { useInlineMenu } from "../../components/InlineMenu/useInlineMenu";
 
 import "katex/dist/katex.min.css";
-import "./ChatLayout.module.css";
 
 export interface ChatLayoutProps {
   messages: Message[];
@@ -49,7 +48,6 @@ export interface ChatLayoutProps {
   onCheckSettings: () => void;
   onReload?: () => void;
 
-  // ChatHeader Props
   isRotating: boolean;
   isPanelActive: boolean;
   toggleSettingsPanel: () => void;
@@ -115,15 +113,12 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     const messageCountChanged = messages.length !== prevMessageCountRef.current;
 
     if (chatChanged) {
-      // Chat Switched: Instant Scroll to bottom
       el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
       prevChatIdRef.current = chatId;
     } else if (messageCountChanged) {
-      // If messages populated from empty (initial load), instant scroll
       if (prevMessageCountRef.current === 0 && messages.length > 0) {
         el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
       } else {
-        // Message Update: Smooth Scroll (e.g. user message)
         const lastMessage = messages[messages.length - 1];
         if (lastMessage?.role === "user") {
           el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
@@ -193,9 +188,53 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
     showFlatMenuRef.current = showFlatMenu;
   }, [showFlatMenu]);
 
+  const [isImageExpanded, setIsImageExpanded] = useState(false);
+
+  useEffect(() => {
+    setIsImageExpanded(false);
+  }, [chatId]);
+
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) < 5) return;
+
+      if (e.deltaY < 0) {
+        if (!isImageExpanded) {
+          setIsImageExpanded(true);
+          e.preventDefault();
+        }
+      } else {
+        if (isImageExpanded) {
+          setIsImageExpanded(false);
+          e.preventDefault();
+        }
+      }
+    };
+
+    header.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      header.removeEventListener("wheel", handleWheel);
+    };
+  }, [isImageExpanded]);
+
   return (
-    <div className="flex h-full flex-col bg-neutral-950 text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
-      <div className="z-10 relative flex-shrink-0">
+    <div className="flex h-full flex-col bg-neutral-transparent text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
+      <div
+        ref={headerRef}
+        className="z-10 absolute top-0 w-full flex-shrink-0"
+        style={{
+          backgroundColor: "var(--neutral-950)",
+          maskImage:
+            "linear-gradient(to bottom, black calc(100% - 12px), transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, black calc(100% - 12px), transparent 100%)",
+        }}
+      >
         <ImageArea
           startupImage={startupImage}
           sessionLensUrl={sessionLensUrl}
@@ -209,6 +248,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
           chatId={chatId}
           inputValue={imageInputValue}
           onInputChange={onImageInputChange}
+          isExpanded={isImageExpanded}
+          onToggleExpand={() => setIsImageExpanded(!isImageExpanded)}
         />
       </div>
 

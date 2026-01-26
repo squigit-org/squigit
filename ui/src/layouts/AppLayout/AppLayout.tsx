@@ -10,7 +10,7 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "../../lib/api/tauri/commands";
-import { ContextMenu, TitleBar } from "../../components";
+import { ContextMenu, ContextMenuItem, TitleBar } from "../../components";
 
 import {
   useUpdateCheck,
@@ -65,6 +65,7 @@ export const AppLayout: React.FC = () => {
   const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
 
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+  const [enablePanelAnimation, setEnablePanelAnimation] = useState(false);
   const toggleChatPanel = () => setIsChatPanelOpen((prev) => !prev);
 
   const system = useSystemSync(handleToggleSettings);
@@ -183,6 +184,11 @@ export const AppLayout: React.FC = () => {
   useEffect(() => {
     if (!isLoadingState && !system.startupImage) {
       setIsChatPanelOpen(true);
+      // Enable animation on next tick/shortly after to allow initial render without it
+      setTimeout(() => setEnablePanelAnimation(true), 100);
+    } else if (!isLoadingState) {
+      // If we didn't auto-open (e.g. image present), enable animation immediately
+      setEnablePanelAnimation(true);
     }
   }, [isLoadingState, system.startupImage]);
 
@@ -555,7 +561,7 @@ export const AppLayout: React.FC = () => {
         />
         <div className={styles.mainContent}>
           <div
-            className={`${styles.chatPanelWrapper} ${!isChatPanelOpen ? styles.hidden : ""}`}
+            className={`${styles.chatPanelWrapper} ${!isChatPanelOpen ? styles.hidden : ""} ${enablePanelAnimation ? styles.animated : ""}`}
           >
             <ChatPanel
               chats={chatHistory.chats}
@@ -594,6 +600,10 @@ export const AppLayout: React.FC = () => {
     if (isActiveIncluded) {
       handleNewSession();
     }
+  };
+
+  const handleToggleStarChatWrapper = async (id: string) => {
+    await chatHistory.handleToggleStarChat(id);
   };
 
   return (
@@ -648,7 +658,7 @@ export const AppLayout: React.FC = () => {
       />
       <div className={styles.mainContent}>
         <div
-          className={`${styles.chatPanelWrapper} ${!isChatPanelOpen ? styles.hidden : ""}`}
+          className={`${styles.chatPanelWrapper} ${!isChatPanelOpen ? styles.hidden : ""} ${enablePanelAnimation ? styles.animated : ""}`}
         >
           <ChatPanel
             chats={chatHistory.chats}
@@ -659,7 +669,7 @@ export const AppLayout: React.FC = () => {
             onDeleteChats={handleDeleteChatsWrapper}
             onRenameChat={chatHistory.handleRenameChat}
             onTogglePinChat={chatHistory.handleTogglePinChat}
-            onToggleStarChat={chatHistory.handleToggleStarChat}
+            onToggleStarChat={handleToggleStarChatWrapper}
           />
         </div>
 
@@ -742,10 +752,17 @@ export const AppLayout: React.FC = () => {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          selectedText={contextMenu.selectedText}
-          onCopy={handleCopy}
           onClose={handleCloseContextMenu}
-        />
+        >
+          <ContextMenuItem
+            onClick={() => {
+              handleCopy();
+              handleCloseContextMenu();
+            }}
+          >
+            Copy
+          </ContextMenuItem>
+        </ContextMenu>
       )}
     </div>
   );

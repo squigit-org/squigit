@@ -26,6 +26,10 @@
   flex-shrink: 0;
   background: var(--neutral-950);
   overflow: hidden;
+  overflow: hidden;
+}
+
+.chatPanelWrapper.animated {
   transition:
     width 0.25s ease,
     margin-left 0.25s ease;

@@ -56,7 +56,7 @@ export const Dialog: React.FC<DialogProps> = ({
           osc.frequency.setValueAtTime(500, ctx.currentTime);
           osc.frequency.exponentialRampToValueAtTime(
             100,
-            ctx.currentTime + 0.15
+            ctx.currentTime + 0.15,
           );
 
           gain.gain.setValueAtTime(0.1, ctx.currentTime);
@@ -72,6 +72,19 @@ export const Dialog: React.FC<DialogProps> = ({
         /**/
       }
     }
+  }, [isOpen]);
+
+  // Toggle body class for TitleBar interactivity
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add("has-open-dialog");
+    } else {
+      document.body.classList.remove("has-open-dialog");
+    }
+
+    return () => {
+      document.body.classList.remove("has-open-dialog");
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -159,6 +172,6 @@ export const Dialog: React.FC<DialogProps> = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
