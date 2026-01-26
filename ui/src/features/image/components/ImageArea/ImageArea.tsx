@@ -12,6 +12,7 @@ import React, {
   RefObject,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import { useGoogleLens } from "../../hooks/useGoogleLens";
 import { useTextSelection } from "../../hooks/useTextSelection";
 import { ActionMenu, ActionMenuHandle } from "../OCRLayer/ActionMenu";
@@ -222,33 +223,140 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   // }, [chatId]);
 
   const handleCopyImage = useCallback(async (): Promise<boolean> => {
-    const img = imgRef.current;
-    if (!img) return false;
+    if (!startupImage?.base64) return false;
+
+    let sourcePath = startupImage.base64;
+
+    if (startupImage.isFilePath) {
+      try {
+        const urlObj = new URL(sourcePath);
+        if (
+          urlObj.hostname === "asset.localhost" ||
+          urlObj.protocol === "asset:"
+        ) {
+          sourcePath = decodeURIComponent(urlObj.pathname);
+        }
+      } catch (e) {
+        console.error("Failed to parse URL for copy:", e);
+        const patterns = [
+          "asset://localhost",
+          "http://asset.localhost",
+          "https://asset.localhost",
+          "asset:",
+        ];
+        for (const pattern of patterns) {
+          if (sourcePath.startsWith(pattern)) {
+            sourcePath = sourcePath.replace(pattern, "");
+            break;
+          }
+        }
+        sourcePath = decodeURIComponent(sourcePath);
+      }
+    } else {
+      // Fallback for base64 content if needed, though strictly we prefer file path copy
+      const img = imgRef.current;
+      if (!img) return false;
+
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Could not get canvas context");
+
+        ctx.drawImage(img, 0, 0);
+
+        const dataUrl = canvas.toDataURL("image/png");
+        const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+
+        await invoke("copy_image_to_clipboard", { image_base64: base64 });
+        return true;
+      } catch (err) {
+        console.error("Failed to copy base64 image:", err);
+        return false;
+      }
+    }
 
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Could not get canvas context");
-
-      ctx.drawImage(img, 0, 0);
-
-      const dataUrl = canvas.toDataURL("image/png");
-      const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
-
-      await invoke("copy_image_to_clipboard", { imageBase64: base64 });
+      await invoke("copy_image_from_path_to_clipboard", { path: sourcePath });
       return true;
     } catch (err) {
-      console.error("Failed to copy image:", err);
+      console.error("Failed to copy image from path:", err);
       return false;
     }
-  }, []);
+  }, [startupImage]);
 
   const handleExpandSave = useCallback(async () => {
-    // Save feature coming soon - no-op for now
-  }, []);
+    if (!startupImage?.base64) return;
+
+    let sourcePath = startupImage.base64;
+
+    if (startupImage.isFilePath) {
+      try {
+        const urlObj = new URL(sourcePath);
+        if (
+          urlObj.hostname === "asset.localhost" ||
+          urlObj.protocol === "asset:"
+        ) {
+          sourcePath = decodeURIComponent(urlObj.pathname);
+          // Remove leading slash if windows? No, this is linux specific for now mostly but we should be careful.
+          // On linux pathname from /home/user is /home/user.
+          // On windows it might be /C:/Users...
+        }
+      } catch (e) {
+        console.error("Failed to parse URL for save:", e);
+        // Fallback cleanup if URL extraction fails
+        const patterns = [
+          "asset://localhost",
+          "http://asset.localhost",
+          "https://asset.localhost",
+          "asset:",
+        ];
+        for (const pattern of patterns) {
+          if (sourcePath.startsWith(pattern)) {
+            sourcePath = sourcePath.replace(pattern, "");
+            break;
+          }
+        }
+        sourcePath = decodeURIComponent(sourcePath);
+      }
+    } else {
+      // If it's pure base64, we can't easily "save" using a simple copy command on backend without saving it to a temp file first.
+      // But the requirements say "copy from chat folder".
+      // If it is NOT a file path (isFilePath=false), it might be raw base64.
+      // Most usage in this app seems to be file-backed.
+      // If it is base64, we might need a different command or just ignore for now as per "copy from chat folder" instruction.
+      // However, looking at `scan` logic:
+      // if (startupImage.isFilePath) { ... } else { imageData = startupImage.base64; isBase64 = true; }
+      // If it IS base64, we probably want to support saving it too?
+      // The user said: "the bts will be copy from chat folder and paste to user chosen location because the image already saved in disk by CAS model"
+      // This implies we should have a path even if we passed base64 to frontend, OR we should rely on the fact that we have it in CAS.
+      // But `startupImage` here comes from props.
+      // If `isFilePath` is false, it's a raw base64 string?
+      // If so, we can't use `fs::copy`.
+      // Let's assume for now we only handle the `isFilePath` case or `asset` url case as that's what "saved in chat folder" implies.
+      // If it's pure base64, we can't easily "save" using a simple copy command on backend without saving it to a temp file first.
+    }
+
+    try {
+      const filePath = await save({
+        title: "Save Image As",
+        filters: [
+          { name: "Image", extensions: ["png", "jpg", "jpeg", "webp"] },
+        ],
+      });
+
+      if (filePath) {
+        await invoke("copy_image_to_path", {
+          sourcePath,
+          targetPath: filePath,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to save image:", error);
+    }
+  }, [startupImage]);
 
   const toggleExpand = () => {
     if (onToggleExpand) {

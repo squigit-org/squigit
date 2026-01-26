@@ -127,17 +127,8 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
               </span>
             )}
 
-            <button
-              onClick={handleCopy}
-              className={styles.copyButton}
-              title="Copy"
-              aria-label="Copy"
-            >
-              {isCopied ? (
-                <Check size={14} className={styles.copiedIcon} />
-              ) : (
-                <Copy size={14} />
-              )}
+            <button onClick={handleCopy} title="Copy" aria-label="Copy">
+              {isCopied ? <Check size={14} /> : <Copy size={14} />}
             </button>
           </div>
         </div>

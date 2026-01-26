@@ -159,10 +159,6 @@
   color: var(--neutral-300);
 }
 
-.copiedIcon {
-  color: var(--green-500);
-}
-
 .streamingContainer {
   color: var(--neutral-300);
   line-height: 1.625;

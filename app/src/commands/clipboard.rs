@@ -129,19 +129,16 @@ pub async fn stop_clipboard_watcher(state: State<'_, AppState>) -> Result<(), St
 }
 
 #[tauri::command]
-pub async fn copy_image_to_clipboard(image_path: String) -> Result<(), String> {
+pub async fn copy_image_to_clipboard(image_base64: String) -> Result<(), String> {
     use arboard::{Clipboard, ImageData};
-    use std::fs::File;
-    use std::io::Read;
+    use base64::Engine;
 
-    // Read image from file path instead of base64
-    let mut file = File::open(&image_path)
-        .map_err(|e| format!("Failed to open image file: {}", e))?;
-    let mut image_bytes = Vec::new();
-    file.read_to_end(&mut image_bytes)
-        .map_err(|e| format!("Failed to read image file: {}", e))?;
+    // Decode base64
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(image_base64)
+        .map_err(|e| format!("Failed to decode base64: {}", e))?;
 
-    let img = image::load_from_memory(&image_bytes)
+    let img = image::load_from_memory(&bytes)
         .map_err(|e| format!("Failed to decode image: {}", e))?;
 
     let rgba = img.to_rgba8();
@@ -159,6 +156,20 @@ pub async fn copy_image_to_clipboard(image_path: String) -> Result<(), String> {
     clipboard
         .set_image(img_data)
         .map_err(|e| format!("Failed to copy image: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn copy_image_from_path_to_clipboard(path: String) -> Result<(), String> {
+    use clipboard_rs::{Clipboard, ClipboardContext};
+
+    let ctx = ClipboardContext::new()
+        .map_err(|e| format!("Failed to create clipboard context: {}", e))?;
+
+    let files = vec![path];
+    ctx.set_files(files)
+        .map_err(|e| format!("Failed to copy files: {}", e))?;
 
     Ok(())
 }

@@ -26,3 +26,9 @@ pub fn process_image_bytes(bytes: Vec<u8>, state: State<AppState>) -> Result<Sto
 pub fn read_image_file(path: String, state: State<AppState>) -> Result<StoredImage, String> {
     image::process_and_store_image(path, &state)
 }
+
+#[tauri::command]
+pub fn copy_image_to_path(source_path: String, target_path: String) -> Result<(), String> {
+    std::fs::copy(&source_path, &target_path).map_err(|e| e.to_string())?;
+    Ok(())
+}
