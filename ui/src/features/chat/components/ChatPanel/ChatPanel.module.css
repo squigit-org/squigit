@@ -49,24 +49,38 @@
 }
 
 .newChatBtn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #272727;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: var(--text-main);
-  font-size: 0.85rem;
+  /* Minimal dark grey background */
+  background-color: rgba(255, 255, 255, 0.08);
+  /* Subtle border for definition */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  /* 3D Mechanical Effect */
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+
+  /* Typography */
+  color: #a1a1aa; /* Muted grey text */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
   font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  line-height: 1;
+
+  /* Spacing */
+  padding: 4px 8px;
+  min-width: 24px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+
+  transition:
+    transform 0.1s ease-out,
+    box-shadow 0.1s ease-out;
 }
 
 .newChatBtn:hover {
-  background: #3a3a3a;
-  border-color: #575757;
+  transform: translateY(3px);
+  box-shadow: none;
 }
 
 .iconBtn {
@@ -128,8 +142,8 @@
 }
 
 .groupTitle {
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -274,8 +288,12 @@
 }
 
 .starBtn:hover {
-  background: var(--neutral-900);
+  background: transparent;
   color: var(--text-main);
+}
+
+.starBtn:hover svg {
+  fill: currentColor;
 }
 
 /* Menu Button (3 dots): Visible on hover */
@@ -289,7 +307,7 @@
 }
 
 .menuBtn:hover {
-  background: var(--neutral-900);
+  background: transparent;
   color: var(--text-main);
 }
 

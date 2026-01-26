@@ -6,8 +6,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Plus,
-  MessageSquare,
   MoreHorizontal,
   Pin,
   Trash2,
@@ -465,7 +463,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               style={{ flex: 1 }}
             >
               <span>New chat</span>
-              <Plus size={16} />
             </button>
           </div>
         </div>
