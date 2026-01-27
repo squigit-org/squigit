@@ -1,6 +1,4 @@
 [toolchain]
-channel = "stable" 
-# or specific version like "1.75.0" if you want to be hardcore
+channel = "stable"
 components = ["clippy", "rustfmt"]
-targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"] 
-# listing targets proves you care about cross-platform compilation
+targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]

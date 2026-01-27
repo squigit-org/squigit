@@ -1,3 +1,3 @@
 # Contributing
 
-Please see our [contributing guidelines](./docs/03-development/CONTRIBUTING.md).
+Please refer to our [Contributing Guidelines](./docs/03-development/CONTRIBUTING.md).
