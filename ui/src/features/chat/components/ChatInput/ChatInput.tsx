@@ -108,6 +108,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const isExpandedLayout = value.includes("\n") || isCodeBlockActive;
 
+  // flag to request scrolling caret into view after controlled updates
+  const shouldScrollToCaretRef = useRef<boolean>(false);
+
+  // small helper to count newlines quickly
+  const countNewlines = (s: string) => (s.match(/\n/g) || []).length;
+
   useEffect(() => {
     if (isCodeBlockActive) {
       codeTaRef.current?.focus();
@@ -154,6 +160,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const ta = taRef.current;
     if (!ta) return;
 
+    // keep auto height adjustment minimal and synchronous to avoid layout artifacts
     ta.style.height = "auto";
     const scrollHeight = ta.scrollHeight;
 
@@ -176,8 +183,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       ta.style.overflowY = "hidden";
     }
 
+    // If we've expanded manually, keep top at 0 to avoid jump
     if (isManualExpanded) {
       ta.scrollTop = 0;
+    } else {
+      // If the area became scrollable because of newlines and we intended to follow caret,
+      // make sure caret stays visible by scrolling to bottom.
+      if (shouldScrollToCaretRef.current && ta.style.overflowY === "auto") {
+        ta.scrollTop = ta.scrollHeight;
+      }
     }
   }, [isManualExpanded, maxRows]);
 
@@ -255,13 +269,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       const end = ta.selectionEnd;
       const newValue =
         ta.value.substring(0, start) + text + ta.value.substring(end);
+
+      // mark scroll intent if paste contains newlines
+      if (text.includes("\n")) {
+        shouldScrollToCaretRef.current = true;
+      }
+
       onChange(newValue);
       const newCursorPos = start + text.length;
-      setTimeout(() => {
-        ta.setSelectionRange(newCursorPos, newCursorPos);
-        // focus is already called but ensure it stays
-        ta.focus();
-      }, 0);
+      // restore cursor after render and ensure caret visible if needed
+      window.requestAnimationFrame(() => {
+        const t = taRef.current;
+        if (t) {
+          const pos = Math.min(newCursorPos, t.value.length);
+          t.setSelectionRange(pos, pos);
+          t.focus();
+          if (shouldScrollToCaretRef.current) {
+            t.scrollTop = t.scrollHeight;
+            shouldScrollToCaretRef.current = false;
+          }
+        }
+      });
     } catch (err) {
       console.error("Failed to read clipboard:", err);
     }
@@ -290,7 +318,41 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  // Helper: insert text at current cursor and restore caret reliably.
+  // Marks intention to scroll if inserted text contains newline(s).
+  const insertAtCursor = (textToInsert: string) => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const oldValue = ta.value;
+    const newValue =
+      oldValue.substring(0, start) + textToInsert + oldValue.substring(end);
+
+    // If insertion includes newline(s), indicate we should scroll caret into view.
+    if (textToInsert.includes("\n")) {
+      shouldScrollToCaretRef.current = true;
+    }
+
+    onChange(newValue);
+
+    // restore caret after the controlled value updates and scroll if needed
+    window.requestAnimationFrame(() => {
+      const t = taRef.current;
+      if (t && document.activeElement === t) {
+        const pos = Math.min(start + textToInsert.length, t.value.length);
+        t.setSelectionRange(pos, pos);
+        t.focus();
+        if (shouldScrollToCaretRef.current) {
+          t.scrollTop = t.scrollHeight;
+          shouldScrollToCaretRef.current = false;
+        }
+      }
+    });
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // ctrl/meta combos
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
         case "z":
@@ -311,6 +373,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           return;
         // Native Copy/Cut/Paste work better for textarea
       }
+    }
+
+    // Intercept Shift+Enter to perform a controlled insertion of newline.
+    // This avoids browser/OS caret artifacts that can appear with repeated Shift+Enter.
+    if (e.key === "Enter" && e.shiftKey) {
+      e.preventDefault();
+      insertAtCursor("\n");
+      return;
     }
 
     if (e.key === "Enter" && !e.shiftKey) {
@@ -354,7 +424,25 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const ta = taRef.current;
+    if (!ta) {
+      onChange(e.target.value);
+      return;
+    }
+
+    // Save selection and previous value so we can restore and decide whether to scroll.
+    const prevStart = ta.selectionStart;
+    const prevEnd = ta.selectionEnd;
+    const oldValue = ta.value;
     const newValue = e.target.value;
+
+    // If this change added more newline characters than before, mark for scroll.
+    const oldNl = countNewlines(oldValue);
+    const newNl = countNewlines(newValue);
+    if (newNl > oldNl) {
+      shouldScrollToCaretRef.current = true;
+    }
+
     const match = newValue.match(/(^|\n)```([^\n]*)\n$/);
 
     if (match && !isCodeBlockActive) {
@@ -363,12 +451,53 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         setIsCodeBlockActive(true);
         setOriginalCodeLanguage(match[2]);
         setCodeLanguage(match[2] || "text");
+        // remove the opening ``` line from the textarea content
         onChange(newValue.replace(/(^|\n)```([^\n]*)\n$/, "$1"));
+        // restore selection on next frame and scroll if needed
+        window.requestAnimationFrame(() => {
+          const t = taRef.current;
+          if (t && document.activeElement === t) {
+            const rs = Math.min(prevStart, t.value.length);
+            const re = Math.min(prevEnd, t.value.length);
+            t.setSelectionRange(rs, re);
+            if (shouldScrollToCaretRef.current) {
+              t.scrollTop = t.scrollHeight;
+              shouldScrollToCaretRef.current = false;
+            }
+          }
+        });
+        return;
       } else {
         onChange(newValue);
+        window.requestAnimationFrame(() => {
+          const t = taRef.current;
+          if (t && document.activeElement === t) {
+            const rs = Math.min(prevStart, t.value.length);
+            const re = Math.min(prevEnd, t.value.length);
+            t.setSelectionRange(rs, re);
+            if (shouldScrollToCaretRef.current) {
+              t.scrollTop = t.scrollHeight;
+              shouldScrollToCaretRef.current = false;
+            }
+          }
+        });
+        return;
       }
     } else {
       onChange(newValue);
+      // restore selection after React updates the controlled value and scroll if needed
+      window.requestAnimationFrame(() => {
+        const t = taRef.current;
+        if (t && document.activeElement === t) {
+          const rs = Math.min(prevStart, t.value.length);
+          const re = Math.min(prevEnd, t.value.length);
+          t.setSelectionRange(rs, re);
+          if (shouldScrollToCaretRef.current) {
+            t.scrollTop = t.scrollHeight;
+            shouldScrollToCaretRef.current = false;
+          }
+        }
+      });
     }
   };
 
@@ -408,6 +537,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
+        spellCheck={false}
         className={`${styles.textarea} ${
           variant === "transparent" ? styles.textareaTransparent : ""
         }`}

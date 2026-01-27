@@ -344,6 +344,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // -- Modal States --
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [isHoverDisabled, setIsHoverDisabled] = useState(false);
 
   // Group chats (now only Starred and Recents)
   const groupedChats = groupChatsByDate(chats);
@@ -362,6 +363,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // -- Selection Logic --
   const toggleSelectionMode = () => {
+    setIsHoverDisabled(true);
     setIsSelectionMode(!isSelectionMode);
     setSelectedIds([]);
   };
@@ -458,8 +460,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div className={styles.headerArea}>
           <div className={styles.utilityBar}>
             <button
-              className={styles.newChatBtn}
+              className={`${styles.newChatBtn} ${isHoverDisabled ? styles.noHover : ""}`}
               onClick={onNewChat}
+              onMouseLeave={() => setIsHoverDisabled(false)}
               style={{ flex: 1 }}
             >
               <span>New chat</span>

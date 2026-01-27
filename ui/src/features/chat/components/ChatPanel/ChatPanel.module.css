@@ -40,6 +40,7 @@
   top: 0;
   z-index: 10;
   background: var(--bg-panel);
+  border-bottom: 1px solid transparent;
 }
 
 .utilityBar {
@@ -76,11 +77,22 @@
   transition:
     transform 0.1s ease-out,
     box-shadow 0.1s ease-out;
+
+  /* Prevent flickering */
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
 .newChatBtn:hover {
-  transform: translateY(3px);
+  transform: translate3d(0, 3px, 0);
   box-shadow: none;
+}
+
+.newChatBtn.noHover:hover {
+  transform: translate3d(0, 0, 0) !important;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4) !important;
+  cursor: default !important;
 }
 
 .iconBtn {
@@ -135,6 +147,9 @@
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.2s;
+  /* Isolate layer */
+  will-change: opacity;
+  transform: translate3d(0, 0, 0);
 }
 
 .groupHeader:hover {
@@ -317,7 +332,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 12px 18px;
+  padding: 6px 18px;
   background: var(--neutral-950);
   border-bottom: 1px solid var(--border-color);
 }
