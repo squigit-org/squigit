@@ -35,16 +35,16 @@ export const Welcome: React.FC<WelcomeProps> = ({
       return {
         screenshotKeys: (
           <>
-            <span className={styles.key}>CMD ⌘</span>
+            <span className={styles.key}>⌘</span>
             <span className={styles.keySep}>+</span>
-            <span className={styles.key}>Shift ⇧</span>
+            <span className={styles.key}>⇧</span>
             <span className={styles.keySep}>+</span>
             <span className={styles.key}>A</span>
           </>
         ),
         pasteKeys: (
           <>
-            <span className={styles.key}>CMD ⌘</span>
+            <span className={styles.key}>⌘</span>
             <span className={styles.keySep}>+</span>
             <span className={styles.key}>V</span>
           </>
