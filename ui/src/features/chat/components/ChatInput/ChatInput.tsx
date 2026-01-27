@@ -91,7 +91,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [codeLanguage, setCodeLanguage] = useState("");
   const [originalCodeLanguage, setOriginalCodeLanguage] = useState("");
   const [codeValue, setCodeValue] = useState("");
+  // keep a state version for UI (optional) but use ref for accurate key handling
   const [consecutiveEnters, setConsecutiveEnters] = useState(0);
+  const consecutiveEntersRef = useRef<number>(0);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     isOpen: false,
@@ -288,6 +290,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             t.scrollTop = t.scrollHeight;
             shouldScrollToCaretRef.current = false;
           }
+          // extra guard: if empty now, force reset to remove any ghost caret
+          // only blur+focus when the caret previously was NOT at left (prevStart > 0)
+          if (t.value.length === 0 && start > 0) {
+            // quick reflow then blur+focus to force repaint and clear ghost caret
+            void t.offsetHeight;
+            t.blur();
+            setTimeout(() => {
+              t.focus();
+              t.setSelectionRange(0, 0);
+              t.scrollTop = 0;
+            }, 0);
+          }
         }
       });
     } catch (err) {
@@ -318,6 +332,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  const checkCodeBlock = (
+    newValue: string,
+    onSuccess: (codeLanguage: string, cleanValue: string) => void,
+    onFailure: () => void,
+  ) => {
+    const match = newValue.match(/(^|\n)```([^\n]*)\n$/);
+    if (match && !isCodeBlockActive) {
+      const codeBlockCount = (newValue.match(/```/g) || []).length;
+      if (codeBlockCount % 2 === 1) {
+        onSuccess(
+          match[2] || "text",
+          newValue.replace(/(^|\n)```([^\n]*)\n$/, "$1"),
+        );
+        return true;
+      }
+    }
+    onFailure();
+    return false;
+  };
+
   // Helper: insert text at current cursor and restore caret reliably.
   // Marks intention to scroll if inserted text contains newline(s).
   const insertAtCursor = (textToInsert: string) => {
@@ -334,24 +368,69 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       shouldScrollToCaretRef.current = true;
     }
 
-    onChange(newValue);
-
-    // restore caret after the controlled value updates and scroll if needed
-    window.requestAnimationFrame(() => {
-      const t = taRef.current;
-      if (t && document.activeElement === t) {
-        const pos = Math.min(start + textToInsert.length, t.value.length);
-        t.setSelectionRange(pos, pos);
-        t.focus();
-        if (shouldScrollToCaretRef.current) {
-          t.scrollTop = t.scrollHeight;
-          shouldScrollToCaretRef.current = false;
-        }
-      }
-    });
+    checkCodeBlock(
+      newValue,
+      (lang, cleanValue) => {
+        setIsCodeBlockActive(true);
+        setOriginalCodeLanguage(lang);
+        setCodeLanguage(lang);
+        onChange(cleanValue);
+        // restore selection on next frame and scroll if needed
+        window.requestAnimationFrame(() => {
+          const t = taRef.current;
+          if (t && document.activeElement === t) {
+            const rs = Math.min(start, t.value.length);
+            const re = Math.min(start, t.value.length);
+            t.setSelectionRange(rs, re);
+            if (shouldScrollToCaretRef.current) {
+              t.scrollTop = t.scrollHeight;
+              shouldScrollToCaretRef.current = false;
+            }
+            // guard for empty value artifact: only do blur+focus if previous caret wasn't at left
+            if (t.value.length === 0 && start > 0) {
+              void t.offsetHeight;
+              t.blur();
+              setTimeout(() => {
+                t.focus();
+                t.setSelectionRange(0, 0);
+                t.scrollTop = 0;
+              }, 0);
+            }
+          }
+        });
+      },
+      () => {
+        onChange(newValue);
+        // restore caret after the controlled value updates and scroll if needed
+        window.requestAnimationFrame(() => {
+          const t = taRef.current;
+          if (t && document.activeElement === t) {
+            const pos = Math.min(start + textToInsert.length, t.value.length);
+            t.setSelectionRange(pos, pos);
+            t.focus();
+            if (shouldScrollToCaretRef.current) {
+              t.scrollTop = t.scrollHeight;
+              shouldScrollToCaretRef.current = false;
+            }
+            // guard for empty value artifact: only do blur+focus if previous caret wasn't at left
+            if (t.value.length === 0 && start > 0) {
+              void t.offsetHeight;
+              t.blur();
+              setTimeout(() => {
+                t.focus();
+                t.setSelectionRange(0, 0);
+                t.scrollTop = 0;
+              }, 0);
+            }
+          }
+        });
+      },
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const ta = taRef.current;
+
     // ctrl/meta combos
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
@@ -376,13 +455,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
 
     // Intercept Shift+Enter to perform a controlled insertion of newline.
-    // This avoids browser/OS caret artifacts that can appear with repeated Shift+Enter.
+    // This avoids browser/OS caret artifacts that can appear with repeated Shift+Enter,
+    // and is the mechanism you use to trigger code-block entry.
     if (e.key === "Enter" && e.shiftKey) {
       e.preventDefault();
       insertAtCursor("\n");
       return;
     }
 
+    // Enter WITHOUT shift: always send (per your workflow)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (!disabled && !isLoading && value.trim().length > 0) onSend();
@@ -398,6 +479,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setCodeLanguage("");
       setOriginalCodeLanguage("");
       setConsecutiveEnters(0);
+      consecutiveEntersRef.current = 0;
       setTimeout(() => {
         const ta = taRef.current;
         if (ta) {
@@ -407,8 +489,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         }
       }, 0);
     } else if (e.key === "Enter") {
-      setConsecutiveEnters((prev) => prev + 1);
-      if (consecutiveEnters >= 2) {
+      // increment both ref + state (state kept for any UI use)
+      consecutiveEntersRef.current += 1;
+      setConsecutiveEnters(consecutiveEntersRef.current);
+      // if user has typed 3+ Enter presses (3 newlines to exit)
+      if (consecutiveEntersRef.current >= 3) {
+        e.preventDefault();
         setIsCodeBlockActive(false);
         const newPrompt = `${value}\n\`\`\`${codeLanguage}\n${codeValue.trim()}\n\`\`\`\n`;
         onChange(newPrompt);
@@ -416,9 +502,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         setCodeLanguage("");
         setOriginalCodeLanguage("");
         setConsecutiveEnters(0);
+        consecutiveEntersRef.current = 0;
         setTimeout(() => taRef.current?.focus(), 0);
       }
     } else {
+      // any other key resets counter
+      consecutiveEntersRef.current = 0;
       setConsecutiveEnters(0);
     }
   };
@@ -443,16 +532,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       shouldScrollToCaretRef.current = true;
     }
 
-    const match = newValue.match(/(^|\n)```([^\n]*)\n$/);
-
-    if (match && !isCodeBlockActive) {
-      const codeBlockCount = (newValue.match(/```/g) || []).length;
-      if (codeBlockCount % 2 === 1) {
+    checkCodeBlock(
+      newValue,
+      (lang, cleanValue) => {
         setIsCodeBlockActive(true);
-        setOriginalCodeLanguage(match[2]);
-        setCodeLanguage(match[2] || "text");
-        // remove the opening ``` line from the textarea content
-        onChange(newValue.replace(/(^|\n)```([^\n]*)\n$/, "$1"));
+        setOriginalCodeLanguage(lang);
+        setCodeLanguage(lang);
+        onChange(cleanValue);
         // restore selection on next frame and scroll if needed
         window.requestAnimationFrame(() => {
           const t = taRef.current;
@@ -464,11 +550,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               t.scrollTop = t.scrollHeight;
               shouldScrollToCaretRef.current = false;
             }
+            // guard for empty value artifact: only do blur+focus if previous caret wasn't at left
+            if (t.value.length === 0 && prevStart > 0) {
+              void t.offsetHeight;
+              t.blur();
+              setTimeout(() => {
+                t.focus();
+                t.setSelectionRange(0, 0);
+                t.scrollTop = 0;
+              }, 0);
+            }
           }
         });
-        return;
-      } else {
+      },
+      () => {
         onChange(newValue);
+        // restore selection after React updates the controlled value and scroll if needed
         window.requestAnimationFrame(() => {
           const t = taRef.current;
           if (t && document.activeElement === t) {
@@ -479,26 +576,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               t.scrollTop = t.scrollHeight;
               shouldScrollToCaretRef.current = false;
             }
+            // guard for empty value artifact: only do blur+focus if previous caret wasn't at left
+            if (t.value.length === 0 && prevStart > 0) {
+              void t.offsetHeight;
+              t.blur();
+              setTimeout(() => {
+                t.focus();
+                t.setSelectionRange(0, 0);
+                t.scrollTop = 0;
+              }, 0);
+            }
           }
         });
-        return;
-      }
-    } else {
-      onChange(newValue);
-      // restore selection after React updates the controlled value and scroll if needed
-      window.requestAnimationFrame(() => {
-        const t = taRef.current;
-        if (t && document.activeElement === t) {
-          const rs = Math.min(prevStart, t.value.length);
-          const re = Math.min(prevEnd, t.value.length);
-          t.setSelectionRange(rs, re);
-          if (shouldScrollToCaretRef.current) {
-            t.scrollTop = t.scrollHeight;
-            shouldScrollToCaretRef.current = false;
-          }
-        }
-      });
-    }
+      },
+    );
   };
 
   const isButtonActive =
