@@ -5,7 +5,7 @@
  */
 
 export * from "./AppLayout/AppLayout";
-export * from "./ChatLayout/ChatLayout";
+export * from "./TabLayout";
 export * from "./OnboardingLayout/OnboardingLayout";
 import styles from "./OnboardingLayout/OnboardingLayout.module.css";
 export { styles };

@@ -15,7 +15,6 @@ import {
   X,
 } from "lucide-react";
 import { ModelSwitcher } from "./ModelSwitcher";
-import { SettingsPanel } from "../../features/settings";
 import { invoke } from "@tauri-apps/api/core";
 import styles from "./TitleBar.module.css";
 
@@ -260,30 +259,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           >
             <Settings size={20} />
           </button>
-
-          {isPanelVisible && (
-            <div style={{ pointerEvents: "auto", display: "contents" }}>
-              <SettingsPanel
-                ref={settingsPanelRef}
-                isOpen={isPanelActiveAndVisible}
-                isClosing={isPanelClosing}
-                currentPrompt={prompt}
-                currentModel={editingModel}
-                onPromptChange={setPrompt}
-                onModelChange={onEditingModelChange}
-                userName={userName}
-                userEmail={userEmail}
-                avatarSrc={avatarSrc}
-                onSave={onSave}
-                onLogout={onLogout}
-                isDarkMode={isDarkMode}
-                onToggleTheme={onToggleTheme}
-                onResetAPIKey={onResetAPIKey}
-                toggleSubview={toggleSubview}
-                toggleSettingsPanel={toggleSettingsPanel}
-              />
-            </div>
-          )}
         </div>
 
         {platform === "windows" && <WindowsControls />}

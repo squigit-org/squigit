@@ -1,0 +1,48 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.appContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background: var(--neutral-950);
+  color: var(--dark);
+  overflow: hidden;
+}
+
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.chatPanelWrapper {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--neutral-950);
+  overflow: hidden;
+}
+
+.chatPanelWrapper.animated {
+  transition: width 0.25s ease, margin-left 0.25s ease;
+}
+
+.chatPanelWrapper.hidden {
+  width: 0;
+  margin-left: 0;
+  border-right: none;
+}
+
+.contentArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+

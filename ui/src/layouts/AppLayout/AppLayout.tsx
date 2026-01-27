@@ -22,7 +22,8 @@ import {
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
 
-import { ChatLayout } from "..";
+import { TabLayout } from "../TabLayout";
+import { SettingsChild } from "../TabLayout/SettingsChild";
 
 import {
   Welcome,
@@ -524,10 +525,20 @@ export const AppLayout: React.FC = () => {
   }
 
   if (!system.startupImage) {
+    // Handle chat selection - toggle settings off and open chat
+    const handleSelectChatWithSettings = (id: string) => {
+      if (isPanelActive) {
+        handleToggleSettings();
+      }
+      handleSelectChat(id);
+    };
+
+    const displayTitle = isPanelActive ? "Settings" : "Spatialshot";
+
     return (
       <div className={styles.appContainer}>
         <TitleBar
-          chatTitle="Spatialshot"
+          chatTitle={displayTitle}
           onReload={() => {}}
           isRotating={false}
           currentModel={system.sessionModel}
@@ -566,7 +577,7 @@ export const AppLayout: React.FC = () => {
             <ChatPanel
               chats={chatHistory.chats}
               activeSessionId={chatHistory.activeSessionId}
-              onSelectChat={handleSelectChat}
+              onSelectChat={handleSelectChatWithSettings}
               onNewChat={handleNewSession}
               onDeleteChat={chatHistory.handleDeleteChat}
               onDeleteChats={chatHistory.handleDeleteChats}
@@ -576,7 +587,24 @@ export const AppLayout: React.FC = () => {
             />
           </div>
           <div className={styles.contentArea}>
-            <Welcome onImageReady={handleImageReady} />
+            {isPanelActive ? (
+              <SettingsChild
+                currentPrompt={system.editingPrompt}
+                currentModel={system.editingModel}
+                userName={system.userName}
+                userEmail={system.userEmail}
+                avatarSrc={system.avatarSrc}
+                onPromptChange={system.setEditingPrompt}
+                onModelChange={system.setEditingModel}
+                onSave={system.saveSettings}
+                onLogout={performLogout}
+                isDarkMode={system.isDarkMode}
+                onToggleTheme={system.handleToggleTheme}
+                onResetAPIKey={system.handleResetAPIKey}
+              />
+            ) : (
+              <Welcome onImageReady={handleImageReady} />
+            )}
           </div>
         </div>
       </div>
@@ -612,8 +640,36 @@ export const AppLayout: React.FC = () => {
       onContextMenu={handleContextMenu}
       className={styles.appContainer}
     >
-      <TitleBar
+      <TabLayout
+        messages={chatEngine.messages}
+        streamingText={chatEngine.streamingText}
+        isChatMode={chatEngine.isChatMode}
+        isLoading={chatEngine.isLoading}
+        isStreaming={chatEngine.isStreaming}
+        error={chatEngine.error || system.systemError}
+        lastSentMessage={chatEngine.lastSentMessage}
+        input={input}
+        onInputChange={setInput}
+        currentModel={system.sessionModel}
+        startupImage={system.startupImage}
         chatTitle={chatTitle}
+        chatId={chatHistory.activeSessionId}
+        onSend={() => {
+          chatEngine.handleSend(input);
+          setInput("");
+        }}
+        onModelChange={system.setSessionModel}
+        onRetry={() => {
+          if (chatEngine.messages.length === 0) {
+            chatEngine.handleReload();
+          } else {
+            chatEngine.handleRetrySend();
+          }
+        }}
+            onCheckSettings={() => {
+              handleToggleSettings();
+              chatEngine.clearError();
+            }}
         onReload={() => {
           setIsRotating(true);
           const activeId = chatHistory.activeSessionId;
@@ -626,22 +682,18 @@ export const AppLayout: React.FC = () => {
             chatEngine.handleReload();
           }
         }}
-        isRotating={isRotating}
-        currentModel={system.sessionModel}
-        onModelChange={system.setSessionModel}
-        isLoading={chatEngine.isLoading}
-        isPanelActive={isPanelActive}
-        toggleSettingsPanel={handleToggleSettings}
-        isPanelVisible={isPanelVisible}
-        isPanelActiveAndVisible={isPanelActiveAndVisible}
-        isPanelClosing={isPanelClosing}
-        settingsButtonRef={settingsButtonRef}
-        panelRef={panelRef}
-        settingsPanelRef={settingsPanelRef}
-        prompt={system.editingPrompt}
+        onDescribeEdits={async (description) => {
+          chatEngine.handleDescribeEdits(description);
+        }}
+        sessionLensUrl={sessionLensUrl}
+        setSessionLensUrl={handleUpdateLensUrl}
+        ocrData={ocrData}
+        onUpdateOCRData={handleUpdateOCRData}
+        imageInputValue={imageInput}
+        onImageInputChange={setImageInput}
+        // Settings props
+        currentPrompt={system.editingPrompt}
         editingModel={system.editingModel}
-        setPrompt={system.setEditingPrompt}
-        onEditingModelChange={system.setEditingModel}
         userName={system.userName}
         userEmail={system.userEmail}
         avatarSrc={system.avatarSrc}
@@ -650,103 +702,36 @@ export const AppLayout: React.FC = () => {
         isDarkMode={system.isDarkMode}
         onToggleTheme={system.handleToggleTheme}
         onResetAPIKey={system.handleResetAPIKey}
+        onPromptChange={system.setEditingPrompt}
+        onModelChange={system.setEditingModel}
+        // TitleBar props
+        isRotating={isRotating}
+        isPanelActive={isPanelActive}
+        toggleSettingsPanel={handleToggleSettings}
+        isPanelVisible={isPanelVisible}
+        isPanelActiveAndVisible={isPanelActiveAndVisible}
+        isPanelClosing={isPanelClosing}
+        settingsButtonRef={settingsButtonRef}
+        panelRef={panelRef}
+        settingsPanelRef={settingsPanelRef}
+        setPrompt={system.setEditingPrompt}
+        onEditingModelChange={system.setEditingModel}
         toggleSubview={setIsSubviewActive}
         onNewSession={handleNewSession}
         hasImageLoaded={!!system.startupImage}
         toggleChatPanel={toggleChatPanel}
         isChatPanelOpen={isChatPanelOpen}
+        enablePanelAnimation={enablePanelAnimation}
+        // ChatPanel props
+        chats={chatHistory.chats}
+        activeSessionId={chatHistory.activeSessionId}
+        onSelectChat={handleSelectChat}
+        onDeleteChat={handleDeleteChatWrapper}
+        onDeleteChats={handleDeleteChatsWrapper}
+        onRenameChat={chatHistory.handleRenameChat}
+        onTogglePinChat={chatHistory.handleTogglePinChat}
+        onToggleStarChat={handleToggleStarChatWrapper}
       />
-      <div className={styles.mainContent}>
-        <div
-          className={`${styles.chatPanelWrapper} ${!isChatPanelOpen ? styles.hidden : ""} ${enablePanelAnimation ? styles.animated : ""}`}
-        >
-          <ChatPanel
-            chats={chatHistory.chats}
-            activeSessionId={chatHistory.activeSessionId}
-            onSelectChat={handleSelectChat}
-            onNewChat={handleNewSession}
-            onDeleteChat={handleDeleteChatWrapper}
-            onDeleteChats={handleDeleteChatsWrapper}
-            onRenameChat={chatHistory.handleRenameChat}
-            onTogglePinChat={chatHistory.handleTogglePinChat}
-            onToggleStarChat={handleToggleStarChatWrapper}
-          />
-        </div>
-
-        <div className={styles.contentArea}>
-          <ChatLayout
-            messages={chatEngine.messages}
-            streamingText={chatEngine.streamingText}
-            isChatMode={chatEngine.isChatMode}
-            isLoading={chatEngine.isLoading}
-            isStreaming={chatEngine.isStreaming}
-            error={chatEngine.error || system.systemError}
-            lastSentMessage={chatEngine.lastSentMessage}
-            input={input}
-            onInputChange={setInput}
-            currentModel={system.sessionModel}
-            startupImage={system.startupImage}
-            chatTitle={chatTitle}
-            chatId={chatHistory.activeSessionId}
-            onSend={() => {
-              chatEngine.handleSend(input);
-              setInput("");
-            }}
-            onModelChange={system.setSessionModel}
-            onRetry={() => {
-              if (chatEngine.messages.length === 0) {
-                chatEngine.handleReload();
-              } else {
-                chatEngine.handleRetrySend();
-              }
-            }}
-            onCheckSettings={() => {
-              setIsPanelActive(true);
-              chatEngine.clearError();
-            }}
-            onReload={() => {
-              setIsRotating(true);
-              chatEngine.handleReload();
-            }}
-            onDescribeEdits={async (description) => {
-              chatEngine.handleDescribeEdits(description);
-            }}
-            sessionLensUrl={sessionLensUrl}
-            setSessionLensUrl={handleUpdateLensUrl}
-            ocrData={ocrData}
-            onUpdateOCRData={handleUpdateOCRData}
-            // ChatHeader Props
-            isRotating={isRotating}
-            isPanelActive={isPanelActive}
-            toggleSettingsPanel={handleToggleSettings}
-            isPanelVisible={isPanelVisible}
-            isPanelActiveAndVisible={isPanelActiveAndVisible}
-            isPanelClosing={isPanelClosing}
-            settingsButtonRef={settingsButtonRef}
-            panelRef={panelRef}
-            settingsPanelRef={settingsPanelRef}
-            prompt={system.editingPrompt}
-            editingModel={system.editingModel}
-            setPrompt={system.setEditingPrompt}
-            onEditingModelChange={system.setEditingModel}
-            userName={system.userName}
-            userEmail={system.userEmail}
-            avatarSrc={system.avatarSrc}
-            onSave={system.saveSettings}
-            onLogout={performLogout}
-            isDarkMode={system.isDarkMode}
-            onToggleTheme={system.handleToggleTheme}
-            onResetAPIKey={system.handleResetAPIKey}
-            toggleSubview={setIsSubviewActive}
-            onNewSession={handleNewSession}
-            hasImageLoaded={!!system.startupImage}
-            toggleChatPanel={toggleChatPanel}
-            isChatPanelOpen={isChatPanelOpen}
-            imageInputValue={imageInput}
-            onImageInputChange={setImageInput}
-          />
-        </div>
-      </div>
 
       {contextMenu && (
         <ContextMenu
