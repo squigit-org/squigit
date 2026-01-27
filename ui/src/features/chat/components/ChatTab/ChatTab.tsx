@@ -1,19 +1,22 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useLayoutEffect,
-  ForwardedRef,
-} from "react";
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-import { ImageArea, Message, ChatArea, ChatInput } from "../../features";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 
-import { TitleBar, InlineMenu } from "../../components";
-import { useInlineMenu } from "../../components/InlineMenu/useInlineMenu";
+import { Message } from "../../types/chat.types";
+import { ChatInput } from "../../components/ChatInput/ChatInput";
+import { ChatArea } from "../ChatArea/ChatArea";
+import { ImageArea } from "../../../image/components/ImageArea/ImageArea";
+import { InlineMenu } from "../../../../components/InlineMenu/InlineMenu";
+import { useInlineMenu } from "../../../../components/InlineMenu/useInlineMenu";
 
 import "katex/dist/katex.min.css";
 
-export interface ChatLayoutProps {
+// Re-export ChatChildProps as ChatTabProps
+export interface ChatTabProps {
   messages: Message[];
   streamingText: string;
   isChatMode: boolean;
@@ -48,37 +51,13 @@ export interface ChatLayoutProps {
   onCheckSettings: () => void;
   onReload?: () => void;
 
-  isRotating: boolean;
-  isPanelActive: boolean;
-  toggleSettingsPanel: () => void;
-  isPanelVisible: boolean;
-  isPanelActiveAndVisible: boolean;
-  isPanelClosing: boolean;
-  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
-  panelRef: React.RefObject<HTMLDivElement | null>;
-  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
-  prompt: string;
-  editingModel: string;
-  setPrompt: (prompt: string) => void;
-  onEditingModelChange: (model: string) => void;
-  userName: string;
-  userEmail: string;
-  avatarSrc: string;
-  onSave: (prompt: string, model: string) => void;
-  onLogout: () => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
-  onResetAPIKey: () => void;
-  toggleSubview: (isActive: boolean) => void;
-  onNewSession: () => void;
-  hasImageLoaded: boolean;
-  toggleChatPanel: () => void;
-  isChatPanelOpen: boolean;
   imageInputValue: string;
   onImageInputChange: (value: string) => void;
 }
 
-export const ChatLayout: React.FC<ChatLayoutProps> = ({
+import styles from "./ChatTab.module.css";
+
+export const ChatTab: React.FC<ChatTabProps> = ({
   messages,
   streamingText,
   isChatMode,
@@ -223,18 +202,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   }, [isImageExpanded]);
 
   return (
-    <div className="flex h-full flex-col bg-neutral-transparent text-neutral-100 selection:bg-black-500-30 selection:text-neutral-100 relative">
-      <div
-        ref={headerRef}
-        className="z-10 absolute top-0 w-full flex-shrink-0"
-        style={{
-          backgroundColor: "var(--neutral-950)",
-          maskImage:
-            "linear-gradient(to bottom, black calc(100% - 12px), transparent 100%)",
-          WebkitMaskImage:
-            "linear-gradient(to bottom, black calc(100% - 12px), transparent 100%)",
-        }}
-      >
+    <div className={styles.container}>
+      <div ref={headerRef} className={styles.headerContainer}>
         <ImageArea
           startupImage={startupImage}
           sessionLensUrl={sessionLensUrl}

@@ -8,3 +8,5 @@ export * from "./hooks/useChatTitle";
 export * from "./types/chat.types";
 export * from "./components/ChatPanel/ChatPanel";
 export * from "../../components/TitleBar/ModelSwitcher"; // Also exporting ModelSwitcher if needed by TitleBar updates? TitleBar imports it from correct path already.
+
+export * from "./components/ChatTab/ChatTab";

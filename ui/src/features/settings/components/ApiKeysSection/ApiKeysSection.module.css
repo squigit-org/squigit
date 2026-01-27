@@ -1,0 +1,120 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.sectionBlock {
+  margin-bottom: 3rem;
+  scroll-margin-top: 2rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--neutral-800);
+}
+
+.sectionIcon {
+  color: var(--primary);
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--neutral-100);
+  margin: 0;
+}
+
+.section {
+  background-color: var(--neutral-900);
+  border: 1px solid var(--neutral-800);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--neutral-200);
+  font-size: 0.95rem;
+}
+
+.keyInputRow {
+  display: flex;
+  align-items: center;
+  background-color: var(--neutral-950);
+  border: 1px solid var(--neutral-800);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.keyLabel {
+  color: var(--neutral-400);
+  font-size: 0.9rem;
+  margin-right: 0.75rem;
+}
+
+.keyValue {
+  flex: 1;
+  font-family: monospace;
+  color: var(--neutral-100);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keyNotSet {
+  color: var(--neutral-500);
+  font-style: italic;
+}
+
+.keyBtn {
+  background: var(--neutral-800);
+  border: none;
+  color: var(--neutral-200);
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.3rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: 1rem;
+  transition: all 0.2s;
+}
+
+.keyBtn:hover {
+  background: var(--neutral-700);
+  color: white;
+}
+
+.keyInstructions {
+  font-size: 0.8rem;
+  color: var(--neutral-500);
+  margin-top: 0.5rem;
+}
+
+/* Specific button styles override */
+.resetBtn {
+  margin-left: 0;
+  margin-top: 1rem;
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.resetBtn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}

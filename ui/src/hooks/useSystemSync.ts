@@ -191,13 +191,30 @@ export const useSystemSync = (onToggleSettings: () => void) => {
 
   const handleResetAPIKey = async () => {
     try {
-      await invoke("reset_api_key");
+      await commands.resetApiKey();
       setApiKey("");
+      setImgbbKey("");
       setHasAgreed(null);
       sessionStorage.setItem("update_dismissed", "true");
       window.location.reload();
     } catch (e) {
       console.error("Reset API key failed", e);
+    }
+  };
+
+  const handleSetAPIKey = async (provider: "gemini" | "imgbb", key: string) => {
+    try {
+      await commands.setApiKey(provider, key);
+      if (provider === "gemini") {
+        setApiKey(key);
+        initializeGemini(key);
+      } else {
+        setImgbbKey(key);
+      }
+      return true;
+    } catch (e) {
+      console.error(`Failed to set ${provider} API key`, e);
+      return false;
     }
   };
 
@@ -250,5 +267,6 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     setCaptureType,
     imgbbKey,
     setImgbbKey,
+    handleSetAPIKey,
   };
 };

@@ -22,8 +22,7 @@ import {
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
 
-import { TabLayout } from "../TabLayout";
-import { SettingsChild } from "../TabLayout/SettingsChild";
+import { TabLayout } from "..";
 
 import {
   Welcome,
@@ -35,8 +34,9 @@ import {
   useChatTitle,
   useChatEngine,
   ChatPanel,
+  SettingsTab,
 } from "../../features";
-import { Dialog } from "../../components";
+
 import {
   loadChat,
   getImagePath,
@@ -588,7 +588,7 @@ export const AppLayout: React.FC = () => {
           </div>
           <div className={styles.contentArea}>
             {isPanelActive ? (
-              <SettingsChild
+              <SettingsTab
                 currentPrompt={system.editingPrompt}
                 currentModel={system.editingModel}
                 userName={system.userName}
@@ -601,6 +601,13 @@ export const AppLayout: React.FC = () => {
                 isDarkMode={system.isDarkMode}
                 onToggleTheme={system.handleToggleTheme}
                 onResetAPIKey={system.handleResetAPIKey}
+                autoExpandOCR={system.autoExpandOCR}
+                setAutoExpandOCR={system.setAutoExpandOCR}
+                captureType={system.captureType}
+                setCaptureType={system.setCaptureType}
+                geminiKey={system.apiKey}
+                imgbbKey={system.imgbbKey}
+                onSetAPIKey={system.handleSetAPIKey}
               />
             ) : (
               <Welcome onImageReady={handleImageReady} />
@@ -666,10 +673,10 @@ export const AppLayout: React.FC = () => {
             chatEngine.handleRetrySend();
           }
         }}
-            onCheckSettings={() => {
-              handleToggleSettings();
-              chatEngine.clearError();
-            }}
+        onCheckSettings={() => {
+          handleToggleSettings();
+          chatEngine.clearError();
+        }}
         onReload={() => {
           setIsRotating(true);
           const activeId = chatHistory.activeSessionId;
@@ -703,7 +710,13 @@ export const AppLayout: React.FC = () => {
         onToggleTheme={system.handleToggleTheme}
         onResetAPIKey={system.handleResetAPIKey}
         onPromptChange={system.setEditingPrompt}
-        onModelChange={system.setEditingModel}
+        autoExpandOCR={system.autoExpandOCR}
+        setAutoExpandOCR={system.setAutoExpandOCR}
+        captureType={system.captureType}
+        setCaptureType={system.setCaptureType}
+        geminiKey={system.apiKey}
+        imgbbKey={system.imgbbKey}
+        onSetAPIKey={system.handleSetAPIKey}
         // TitleBar props
         isRotating={isRotating}
         isPanelActive={isPanelActive}

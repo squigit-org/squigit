@@ -7,11 +7,14 @@
 import React, { ForwardedRef } from "react";
 import { TitleBar } from "../../components";
 import { ChatPanel } from "../../features";
-import { ChatChild, ChatChildProps } from "./ChatChild";
-import { SettingsChild, SettingsChildProps } from "./SettingsChild";
+import { ChatTab, ChatTabProps } from "../../features/chat";
+import { SettingsTab, SettingsTabProps } from "../../features/settings";
 import styles from "./TabLayout.module.css";
 
-export interface TabLayoutProps extends ChatChildProps, SettingsChildProps {
+export interface TabLayoutProps extends ChatTabProps, SettingsTabProps {
+  // Common props
+  editingModel: string;
+
   // TitleBar props
   chatTitle: string;
   onReload: () => void;
@@ -84,6 +87,13 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   isDarkMode,
   onToggleTheme,
   onResetAPIKey,
+  autoExpandOCR,
+  setAutoExpandOCR,
+  captureType,
+  setCaptureType,
+  geminiKey,
+  imgbbKey,
+  onSetAPIKey,
   setPrompt,
   onEditingModelChange,
 
@@ -182,7 +192,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
 
         <div className={styles.contentArea}>
           {isPanelActive ? (
-            <SettingsChild
+            <SettingsTab
               currentPrompt={currentPrompt}
               currentModel={editingModel}
               userName={userName}
@@ -197,9 +207,16 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               isDarkMode={isDarkMode}
               onToggleTheme={onToggleTheme}
               onResetAPIKey={onResetAPIKey}
+              autoExpandOCR={autoExpandOCR}
+              setAutoExpandOCR={setAutoExpandOCR}
+              captureType={captureType}
+              setCaptureType={setCaptureType}
+              geminiKey={geminiKey}
+              imgbbKey={imgbbKey}
+              onSetAPIKey={onSetAPIKey}
             />
           ) : (
-            <ChatChild
+            <ChatTab
               messages={messages}
               streamingText={streamingText}
               isChatMode={isChatMode}
@@ -232,4 +249,3 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
     </div>
   );
 };
-

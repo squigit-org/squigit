@@ -18,6 +18,8 @@ export const commands = {
   // Auth & Keys
   getApiKey: (provider: "gemini" | "imgbb") =>
     invoke<string>("get_api_key", { provider }),
+  setApiKey: (provider: "gemini" | "imgbb", key: string) =>
+    invoke("set_api_key", { provider, key }),
   resetApiKey: () => invoke("reset_api_key"),
   startGoogleAuth: () => invoke("start_google_auth"),
   logout: () => invoke("logout"),
