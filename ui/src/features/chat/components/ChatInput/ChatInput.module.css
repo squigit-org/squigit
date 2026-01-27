@@ -62,10 +62,6 @@
   color: var(--neutral-300);
 }
 
-/* Textarea styling
-   - keep caret-color explicit
-   - reduce layout jank by avoiding expensive properties
-*/
 .textarea {
   background-color: transparent;
   font-size: 1rem;
@@ -79,14 +75,6 @@
   padding-right: 1rem;
   min-height: 24px;
   caret-color: var(--neutral-400);
-  /* Improve text rendering and avoid weird artifacts in some browsers */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  /* prevent accidental selection artifacts when quickly typing newlines */
-  -webkit-user-select: text;
-  user-select: text;
-  /* allow the textarea to scroll when content exceeds height */
-  overflow-wrap: break-word;
 }
 
 .textarea::placeholder {
