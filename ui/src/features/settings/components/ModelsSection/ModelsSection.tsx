@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { Sparkles, Download, Check } from "lucide-react";
+import { HardDrive, Download, Check } from "lucide-react";
 import { ModelType } from "../../../../lib/config/models";
 import styles from "./ModelsSection.module.css";
 import { modelsWithInfo, ocrModels } from "../../types/settings.types";
@@ -119,12 +119,11 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
   return (
     <div className={styles.sectionBlock}>
       <div className={styles.sectionHeader}>
-        <Sparkles size={22} className={styles.sectionIcon} />
+        <HardDrive size={22} className={styles.sectionIcon} />
         <h2 className={styles.sectionTitle}>Models</h2>
       </div>
 
       <div className={styles.section}>
-        <label className={styles.label}>Models</label>
         <p className={styles.description}>
           Choose your preferred AI and OCR models for new conversations.
         </p>
