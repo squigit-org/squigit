@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef } from "react";
 
 import styles from "./SettingsTab.module.css";
 import { GeneralSection } from "../GeneralSection/GeneralSection";
+import { ModelsSection } from "../ModelsSection/ModelsSection";
 import { PersonalContextSection } from "../PersonalSection/PersonalContextSection";
 import { ApiKeysSection } from "../ApiKeysSection/ApiKeysSection";
 import { SupportSection } from "../SupportSection/SupportSection";
@@ -43,12 +44,13 @@ export interface SettingsTabProps {
 
 export type Topic =
   | "General"
-  | "Personal Context"
   | "API & BYOK"
+  | "Models"
+  | "Personal Context"
   | "Docs"
-  | "App Version"
   | "Github"
-  | "Report Bug";
+  | "Report Bug"
+  | "App Version";
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   currentPrompt,
@@ -116,17 +118,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onToggleAutoExpand={handleToggleAutoExpand}
             captureType={localCaptureType}
             onCaptureTypeChange={handleCaptureTypeChange}
-          />
-        );
-      case "Personal Context":
-        return (
-          <PersonalContextSection
-            localPrompt={localPrompt}
-            setLocalPrompt={setLocalPrompt}
-            onSavePersonalContext={handleSavePersonalContext}
-            localModel={localModel}
-            currentModel={currentModel}
-            setLocalModel={setLocalModel}
+            onLogout={onLogout}
           />
         );
       case "API & BYOK":
@@ -137,6 +129,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onSetAPIKey={onSetAPIKey}
             onResetAPIKey={onResetAPIKey}
             ref={apiSectionRef}
+          />
+        );
+      case "Models":
+        return (
+          <ModelsSection
+            onSavePersonalContext={handleSavePersonalContext}
+            localModel={localModel}
+            currentModel={currentModel}
+            setLocalModel={setLocalModel}
+          />
+        );
+      case "Personal Context":
+        return (
+          <PersonalContextSection
+            localPrompt={localPrompt}
+            setLocalPrompt={setLocalPrompt}
+            onSavePersonalContext={handleSavePersonalContext}
           />
         );
       case "Docs":

@@ -7,10 +7,11 @@
 import React from "react";
 import {
   Settings,
+  HardDrive,
   Sparkles,
-  Key,
-  FileText,
-  Github,
+  Lock,
+  BookOpen,
+  Code2,
   Bug,
   Activity,
   LogOut,
@@ -58,7 +59,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       <div className={styles.topicsList}>
         <div className={styles.topicGroup}>
-          <div className={styles.groupLabel}>Settings</div>
           <button
             className={`${styles.topicItem} ${activeTopic === "General" ? styles.active : ""}`}
             onClick={() => setActiveTopic("General")}
@@ -72,20 +72,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <Sparkles size={18} className={styles.topicIcon} /> Personal Context
           </button>
           <button
+            className={`${styles.topicItem} ${activeTopic === "Models" ? styles.active : ""}`}
+            onClick={() => setActiveTopic("Models")}
+          >
+            <HardDrive size={18} className={styles.topicIcon} /> Models
+          </button>
+          <button
             className={`${styles.topicItem} ${activeTopic === "API & BYOK" ? styles.active : ""}`}
             onClick={() => setActiveTopic("API & BYOK")}
           >
-            <Key size={18} className={styles.topicIcon} /> API & BYOK
+            <Lock size={18} className={styles.topicIcon} /> API & BYOK
           </button>
         </div>
 
         <div className={styles.topicGroup}>
-          <div className={styles.groupLabel}>Support</div>
           <button
-            className={`${styles.topicItem} ${activeTopic === "Docs" ? styles.active : ""}`}
-            onClick={() => setActiveTopic("Docs")}
+            className={`${styles.topicItem} ${activeTopic === "Report Bug" ? styles.active : ""}`}
+            onClick={() => setActiveTopic("Report Bug")}
           >
-            <FileText size={18} className={styles.topicIcon} /> Docs
+            <Bug size={18} className={styles.topicIcon} /> Report Bug
           </button>
           <button
             className={`${styles.topicItem} ${activeTopic === "App Version" ? styles.active : ""}`}
@@ -93,31 +98,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           >
             <Activity size={18} className={styles.topicIcon} /> App Version
           </button>
+        </div>
+
+        <div className={styles.topicGroup}>
+          <button
+            className={`${styles.topicItem} ${activeTopic === "Docs" ? styles.active : ""}`}
+            onClick={() => setActiveTopic("Docs")}
+          >
+            <BookOpen size={18} className={styles.topicIcon} /> Docs
+          </button>
           <button
             className={`${styles.topicItem} ${activeTopic === "Github" ? styles.active : ""}`}
             onClick={() => setActiveTopic("Github")}
           >
-            <Github size={18} className={styles.topicIcon} /> Github
-          </button>
-          <button
-            className={`${styles.topicItem} ${activeTopic === "Report Bug" ? styles.active : ""}`}
-            onClick={() => setActiveTopic("Report Bug")}
-          >
-            <Bug size={18} className={styles.topicIcon} /> Report Bug
+            <Code2 size={18} className={styles.topicIcon} /> Github
           </button>
         </div>
-      </div>
-
-      <div className={styles.logoutSection}>
-        <button
-          className={`${styles.topicItem} ${styles.logoutItem}`}
-          onClick={onLogout}
-        >
-          <div className={styles.logoutContent}>
-            <LogOut size={18} />
-            Logout
-          </div>
-        </button>
       </div>
     </div>
   );

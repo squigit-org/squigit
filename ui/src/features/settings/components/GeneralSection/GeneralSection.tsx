@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { Settings, Image as ImageIcon } from "lucide-react";
+import { Settings, Image as ImageIcon, LogOut } from "lucide-react";
 import styles from "./GeneralSection.module.css";
 
 interface GeneralSectionProps {
@@ -15,6 +15,7 @@ interface GeneralSectionProps {
   onToggleAutoExpand: (checked: boolean) => void;
   captureType: "rectangular" | "squiggle";
   onCaptureTypeChange: (type: "rectangular" | "squiggle") => void;
+  onLogout: () => void;
 }
 
 export const GeneralSection: React.FC<GeneralSectionProps> = ({
@@ -24,6 +25,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
   onToggleAutoExpand,
   captureType,
   onCaptureTypeChange,
+  onLogout,
 }) => {
   return (
     <div className={styles.sectionBlock}>
@@ -124,6 +126,11 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
           </label>
         </div>
       </div>
+
+      <button className={styles.logoutButton} onClick={onLogout}>
+        <LogOut size={18} />
+        Log out
+      </button>
     </div>
   );
 };

@@ -75,30 +75,6 @@
   color: white;
 }
 
-.textareaWrapper {
-  background-color: var(--neutral-950);
-  border: 1px solid var(--neutral-800);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  transition: border-color 0.2s;
-}
-
-.textareaWrapper:focus-within {
-  border-color: var(--primary);
-}
-
-.textarea {
-  width: 100%;
-  min-height: 120px;
-  background: transparent;
-  border: none;
-  color: var(--neutral-100);
-  font-family: inherit;
-  font-size: 0.9rem;
-  resize: vertical;
-  outline: none;
-}
-
 .modelSelector {
   display: flex;
   justify-content: space-between;
@@ -144,7 +120,6 @@
   border-color: var(--neutral-500);
 }
 
-/* Inline style replacements */
 .saveBtnContainer {
   margin-top: 1rem;
   display: flex;
@@ -155,7 +130,28 @@
   margin-top: 12px;
 }
 
-.disabledBtn {
-  opacity: 0.5;
-  cursor: not-allowed;
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.downloadBtn {
+  background: transparent;
+  border: 1px solid var(--neutral-700);
+  color: var(--neutral-300);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.downloadBtn:hover {
+  background-color: var(--neutral-800);
+  color: var(--neutral-100);
+  border-color: var(--neutral-500);
 }
