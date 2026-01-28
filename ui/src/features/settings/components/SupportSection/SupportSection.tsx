@@ -5,13 +5,20 @@
  */
 
 import React from "react";
-import { Github, ExternalLink, Mail } from "lucide-react";
+import {
+  Github,
+  ExternalLink,
+  Mail,
+  RefreshCw,
+  Info,
+  Star,
+} from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { GITHUB, MAILTO } from "../../types/settings.types";
 import styles from "./SupportSection.module.css";
 
 interface SupportSectionProps {
-  type: "Docs" | "Github" | "Report Bug" | "App Version";
+  type: "Help & Support";
 }
 
 const handleOpenExternalUrl = (url: string) => {
@@ -19,14 +26,83 @@ const handleOpenExternalUrl = (url: string) => {
 };
 
 export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
-  if (type === "Report Bug") {
+  if (type === "Help & Support") {
     return (
-      <div className={styles.sectionBlock}>
+      <div>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Report Issues</h2>
+          <h2 className={styles.sectionTitle}>Help & Support</h2>
         </div>
 
+        {/* About & Version */}
         <div className={styles.section}>
+          <div className={styles.controlRow}>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <Info size={18} color="var(--neutral-400)" />
+              <span className={styles.label} style={{ marginBottom: 0 }}>
+                Spatialshot
+              </span>
+            </div>
+            <span className={`${styles.keyValue} ${styles.versionValue}`}>
+              v1.0.0
+            </span>
+          </div>
+          <p
+            className={styles.description}
+            style={{ marginTop: "0.5rem", marginBottom: 0 }}
+          >
+            A powerful screenshot tool for developers.
+          </p>
+        </div>
+
+        {/* Update Checker */}
+        <div className={styles.section}>
+          <div className={styles.controlRow}>
+            <span className={styles.label} style={{ marginBottom: 0 }}>
+              Updates
+            </span>
+            <button
+              className={`${styles.keyBtn} ${styles.actionBtn}`}
+              onClick={() => {
+                /* Placeholder for update check */
+              }}
+            >
+              <RefreshCw size={14} /> Check for Updates
+            </button>
+          </div>
+          <p
+            className={`${styles.description} ${styles.upToDateMsg}`}
+            style={{ marginTop: "0.5rem", marginBottom: 0 }}
+          >
+            You are on the latest version.
+          </p>
+        </div>
+
+        {/* Feedback */}
+        <div className={styles.section}>
+          <div className={styles.controlRow}>
+            <span className={styles.label} style={{ marginBottom: 0 }}>
+              Feedback
+            </span>
+            <button
+              className={`${styles.keyBtn} ${styles.actionBtn}`}
+              onClick={() => handleOpenExternalUrl(GITHUB)} // Redirect to repo or specific feedback form
+            >
+              <Star size={14} /> Rate Spatialshot
+            </button>
+          </div>
+          <p
+            className={styles.description}
+            style={{ marginTop: "0.5rem", marginBottom: 0 }}
+          >
+            Enjoying the app? Give us a star or rating!
+          </p>
+        </div>
+
+        {/* Report Issues */}
+        <div className={styles.section}>
+          <p className={styles.label}>Report Issues</p>
           <p className={styles.description}>
             Found a bug or have a suggestion? Let me know!
           </p>
@@ -41,7 +117,11 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
 
             <button
               className={`${styles.keyBtn} ${styles.actionBtn}`}
-              onClick={() => handleOpenExternalUrl(GITHUB + "/issues/new")}
+              onClick={() =>
+                handleOpenExternalUrl(
+                  GITHUB + "/issues/new?template=bug_report.md",
+                )
+              }
             >
               <Github size={16} /> Open GitHub Issue
             </button>
@@ -50,49 +130,5 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
       </div>
     );
   }
-
-  if (type === "App Version") {
-    return (
-      <div className={styles.sectionBlock}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>App Version</h2>
-        </div>
-        <div className={styles.section}>
-          <div className={styles.controlRow}>
-            <span className={styles.label}>Current Version</span>
-            <span className={`${styles.keyValue} ${styles.versionValue}`}>
-              1.0.0
-            </span>
-          </div>
-          <p className={`${styles.description} ${styles.upToDateMsg}`}>
-            Spatialshot is up to date.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Docs or Github generic
-  return (
-    <div className={styles.sectionBlock}>
-      <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>{type}</h2>
-      </div>
-      <div className={styles.section}>
-        <p className={styles.description}>
-          {type === "Docs"
-            ? "Read the documentation to learn more about Spatialshot."
-            : "View the source code, star the project, or contribute on GitHub."}
-        </p>
-        <button
-          className={`${styles.keyBtn} ${styles.actionBtn}`}
-          onClick={() =>
-            handleOpenExternalUrl(type === "Docs" ? GITHUB : GITHUB)
-          }
-        >
-          <ExternalLink size={16} /> Open {type}
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 };

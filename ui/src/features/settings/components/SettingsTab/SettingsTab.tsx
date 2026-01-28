@@ -44,13 +44,11 @@ export interface SettingsTabProps {
 
 export type Topic =
   | "General"
-  | "API & BYOK"
   | "Models"
   | "Personal Context"
-  | "Docs"
-  | "Github"
-  | "Report Bug"
-  | "App Version";
+  | "Providers & Keys"
+  | "Help & Support"
+  | "Docs";
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   currentPrompt,
@@ -121,7 +119,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onLogout={onLogout}
           />
         );
-      case "API & BYOK":
+      case "Providers & Keys":
         return (
           <ApiKeysSection
             geminiKey={geminiKey}
@@ -148,10 +146,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onSavePersonalContext={handleSavePersonalContext}
           />
         );
-      case "Docs":
-      case "Github":
-      case "Report Bug":
-      case "App Version":
+      case "Help & Support":
         return <SupportSection type={activeTopic} />;
       default:
         return null;

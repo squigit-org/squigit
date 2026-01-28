@@ -5,16 +5,16 @@
  */
 
 import React from "react";
+import { invoke } from "@tauri-apps/api/core";
+
 import {
   Settings,
   HardDrive,
   Sparkles,
   Lock,
   BookOpen,
-  Code2,
-  Bug,
-  Activity,
-  LogOut,
+  ExternalLink,
+  HelpCircle,
 } from "lucide-react";
 import styles from "./SettingsPanel.module.css";
 import { Topic } from "../SettingsTab/SettingsTab";
@@ -63,55 +63,45 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             className={`${styles.topicItem} ${activeTopic === "General" ? styles.active : ""}`}
             onClick={() => setActiveTopic("General")}
           >
-            <Settings size={18} className={styles.topicIcon} /> General
-          </button>
-          <button
-            className={`${styles.topicItem} ${activeTopic === "Personal Context" ? styles.active : ""}`}
-            onClick={() => setActiveTopic("Personal Context")}
-          >
-            <Sparkles size={18} className={styles.topicIcon} /> Personal Context
+            <Settings size={20} className={styles.topicIcon} /> General
           </button>
           <button
             className={`${styles.topicItem} ${activeTopic === "Models" ? styles.active : ""}`}
             onClick={() => setActiveTopic("Models")}
           >
-            <HardDrive size={18} className={styles.topicIcon} /> Models
+            <HardDrive size={20} className={styles.topicIcon} /> Models
           </button>
           <button
-            className={`${styles.topicItem} ${activeTopic === "API & BYOK" ? styles.active : ""}`}
-            onClick={() => setActiveTopic("API & BYOK")}
+            className={`${styles.topicItem} ${activeTopic === "Personal Context" ? styles.active : ""}`}
+            onClick={() => setActiveTopic("Personal Context")}
           >
-            <Lock size={18} className={styles.topicIcon} /> API & BYOK
-          </button>
-        </div>
-
-        <div className={styles.topicGroup}>
-          <button
-            className={`${styles.topicItem} ${activeTopic === "Report Bug" ? styles.active : ""}`}
-            onClick={() => setActiveTopic("Report Bug")}
-          >
-            <Bug size={18} className={styles.topicIcon} /> Report Bug
+            <Sparkles size={20} className={styles.topicIcon} /> Personal Context
           </button>
           <button
-            className={`${styles.topicItem} ${activeTopic === "App Version" ? styles.active : ""}`}
-            onClick={() => setActiveTopic("App Version")}
+            className={`${styles.topicItem} ${activeTopic === "Providers & Keys" ? styles.active : ""}`}
+            onClick={() => setActiveTopic("Providers & Keys")}
           >
-            <Activity size={18} className={styles.topicIcon} /> App Version
+            <Lock size={20} className={styles.topicIcon} /> Providers & Keys
+          </button>
+          <button
+            className={`${styles.topicItem} ${activeTopic === "Help & Support" ? styles.active : ""}`}
+            onClick={() => setActiveTopic("Help & Support")}
+          >
+            <HelpCircle size={20} className={styles.topicIcon} /> Help & Support
           </button>
         </div>
 
         <div className={styles.topicGroup}>
           <button
             className={`${styles.topicItem} ${activeTopic === "Docs" ? styles.active : ""}`}
-            onClick={() => setActiveTopic("Docs")}
+            onClick={() =>
+              invoke("open_external_url", {
+                url: "https://github.com/a7mddra/spatialshot/tree/main/docs",
+              })
+            }
           >
-            <BookOpen size={18} className={styles.topicIcon} /> Docs
-          </button>
-          <button
-            className={`${styles.topicItem} ${activeTopic === "Github" ? styles.active : ""}`}
-            onClick={() => setActiveTopic("Github")}
-          >
-            <Code2 size={18} className={styles.topicIcon} /> Github
+            <BookOpen size={20} className={styles.topicIcon} /> Docs
+            <ExternalLink size={16} className={styles.topicIcon} />
           </button>
         </div>
       </div>

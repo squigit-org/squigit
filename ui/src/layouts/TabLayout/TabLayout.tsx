@@ -5,10 +5,14 @@
  */
 
 import React, { ForwardedRef } from "react";
-import { TitleBar } from "../../components";
-import { ChatPanel } from "../../features";
-import { ChatTab, ChatTabProps } from "../../features/chat";
-import { SettingsTab, SettingsTabProps } from "../../features/settings";
+import { TitleBar } from "../../components/";
+import {
+  ChatPanel,
+  ChatTab,
+  ChatTabProps,
+  SettingsTab,
+  SettingsTabProps,
+} from "../../features/";
 import styles from "./TabLayout.module.css";
 
 export interface TabLayoutProps extends ChatTabProps, SettingsTabProps {
