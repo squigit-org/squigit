@@ -124,9 +124,19 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
       </div>
 
       <div className={styles.section}>
-        <p className={styles.description}>
-          Choose your preferred AI and OCR models for new conversations.
-        </p>
+        <div className={styles.controlsRow}>
+          <p className={styles.description}>
+            Choose your preferred AI and OCR models for new conversations.
+          </p>
+
+          <button
+            className={styles.keyBtn}
+            onClick={onSavePersonalContext}
+            disabled={!hasChanges}
+          >
+            Apply Model Change
+          </button>
+        </div>
 
         {/* AI Model Reel */}
         <ModelReel
@@ -142,16 +152,6 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
           onValueChange={handleOcrChange}
           showDownloadButton
         />
-
-        <div className={styles.saveBtnContainer}>
-          <button
-            className={`${styles.keyBtn} ${!hasChanges ? styles.keyBtnDisabled : ""}`}
-            onClick={onSavePersonalContext}
-            disabled={!hasChanges}
-          >
-            Apply Model Change
-          </button>
-        </div>
       </div>
     </div>
   );
