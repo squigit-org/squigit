@@ -5,14 +5,7 @@
  */
 
 import React from "react";
-import {
-  FileText,
-  Github,
-  Bug,
-  Activity,
-  ExternalLink,
-  Mail,
-} from "lucide-react";
+import { Github, ExternalLink, Mail } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { GITHUB, MAILTO } from "../../types/settings.types";
 import styles from "./SupportSection.module.css";
@@ -30,7 +23,6 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
     return (
       <div className={styles.sectionBlock}>
         <div className={styles.sectionHeader}>
-          <Bug size={22} className={styles.sectionIcon} />
           <h2 className={styles.sectionTitle}>Report Issues</h2>
         </div>
 
@@ -63,7 +55,6 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
     return (
       <div className={styles.sectionBlock}>
         <div className={styles.sectionHeader}>
-          <Activity size={22} className={styles.sectionIcon} />
           <h2 className={styles.sectionTitle}>App Version</h2>
         </div>
         <div className={styles.section}>
@@ -85,11 +76,6 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
   return (
     <div className={styles.sectionBlock}>
       <div className={styles.sectionHeader}>
-        {type === "Docs" ? (
-          <FileText size={22} className={styles.sectionIcon} />
-        ) : (
-          <Github size={22} className={styles.sectionIcon} />
-        )}
         <h2 className={styles.sectionTitle}>{type}</h2>
       </div>
       <div className={styles.section}>

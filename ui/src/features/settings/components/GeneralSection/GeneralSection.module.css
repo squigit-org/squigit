@@ -3,28 +3,16 @@
  * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
  */
-
-.sectionBlock {
-  margin-bottom: 3rem;
-  scroll-margin-top: 2rem;
-}
-
 .sectionHeader {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--neutral-800);
-}
-
-.sectionIcon {
-  color: var(--neutral-100);
+  padding-top: 0;
+  margin-bottom: 0.33rem;
+  padding-bottom: 0.33rem;
 }
 
 .sectionTitle {
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 450;
   color: var(--neutral-100);
   margin: 0;
 }
@@ -34,10 +22,6 @@
   border-radius: 0.75rem;
   padding: 1.5rem;
   margin-bottom: 1rem;
-}
-
-.section:last-child {
-  margin-bottom: 0;
 }
 
 .label {
@@ -82,7 +66,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--neutral-700);
+  background-color: #343434;
   transition: 0.4s;
   border-radius: 24px;
 }
@@ -100,72 +84,37 @@
 }
 
 .toggleInput:checked + .toggleSlider {
-  background-color: var(--primary);
+  background-color: #3fa266;
 }
 
 .toggleInput:checked + .toggleSlider:before {
   transform: translateX(20px);
 }
 
-/* Radio Buttons for Capture Mode */
-.radioGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.radioLabel {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s;
-}
-
-.radioLabel:hover {
-  background-color: var(--neutral-800);
-}
-
-.radioInput {
-  accent-color: var(--primary);
-  width: 18px;
-  height: 18px;
-}
-
-/* Inline overrides */
-.prefCaptureHeader {
-  margin-top: 2rem;
-}
-
-.imgOcrRow {
-  margin-bottom: 1rem;
-}
-
-.imgOcrLabel {
-  font-size: 0.9rem;
-}
-
 .logoutButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.75rem;
+  width: auto;
+  height: auto;
+  padding: 0.3rem 0.5rem 0.3rem 0.5rem;
   border-radius: 0.5rem;
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background-color: transparent;
+  color: var(--neutral-100);
+  border: 1px solid rgba(211, 211, 211, 0.2);
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 350;
+  font-family: Arial, Helvetica, sans-serif;
   cursor: pointer;
-  transition: all 0.2s ease;
   margin-top: 1rem;
 }
 
 .logoutButton:hover {
-  background-color: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.3);
+  opacity: 0.7;
+}
+
+.footer {
+  padding-top: 1.5rem;
+  display: flex;
+  justify-content: flex-start;
 }

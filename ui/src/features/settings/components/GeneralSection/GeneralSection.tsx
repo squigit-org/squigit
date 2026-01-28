@@ -5,7 +5,6 @@
  */
 
 import React from "react";
-import { Settings, Image as ImageIcon, LogOut } from "lucide-react";
 import styles from "./GeneralSection.module.css";
 
 interface GeneralSectionProps {
@@ -30,14 +29,13 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
   return (
     <div className={styles.sectionBlock}>
       <div className={styles.sectionHeader}>
-        <Settings size={22} className={styles.sectionIcon} />
-        <h2 className={styles.sectionTitle}>Preferences</h2>
+        <h2 className={styles.sectionTitle}>General</h2>
       </div>
 
       <div className={styles.section}>
         <div className={styles.controlRow}>
           <div>
-            <span className={styles.label}>App Theme</span>
+            <span className={styles.label}>Dark Mode</span>
             <span className={styles.description}>
               Toggle between dark and light mode
             </span>
@@ -55,7 +53,6 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
       </div>
 
       <div className={styles.section}>
-        <span className={styles.label}>Image Processing</span>
         <div className={`${styles.controlRow} ${styles.imgOcrRow}`}>
           <div>
             <span className={`${styles.label} ${styles.imgOcrLabel}`}>
@@ -82,7 +79,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               Auto-extend Content
             </span>
             <span className={styles.description}>
-              Automatically expand image analysis
+              Automatically expand image on finish
             </span>
           </div>
           <div className={styles.toggleSwitch}>
@@ -95,11 +92,6 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
             <span className={styles.toggleSlider}></span>
           </div>
         </div>
-      </div>
-
-      <div className={`${styles.sectionHeader} ${styles.prefCaptureHeader}`}>
-        <ImageIcon size={22} className={styles.sectionIcon} />
-        <h2 className={styles.sectionTitle}>Preferred Capture</h2>
       </div>
 
       <div className={styles.section}>
@@ -127,10 +119,11 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
         </div>
       </div>
 
-      <button className={styles.logoutButton} onClick={onLogout}>
-        <LogOut size={18} />
-        Log out
-      </button>
+      <div className={styles.footer}>
+        <button className={styles.logoutButton} onClick={onLogout}>
+          Log Out
+        </button>
+      </div>
     </div>
   );
 };

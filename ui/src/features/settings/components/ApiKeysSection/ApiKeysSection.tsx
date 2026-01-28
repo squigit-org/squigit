@@ -5,7 +5,7 @@
  */
 
 import React, { useState, forwardRef } from "react";
-import { Key, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import styles from "./ApiKeysSection.module.css";
 
@@ -63,7 +63,6 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
     return (
       <div ref={ref} className={styles.sectionBlock}>
         <div className={styles.sectionHeader}>
-          <Key size={22} className={styles.sectionIcon} />
           <h2 className={styles.sectionTitle}>API Keys</h2>
         </div>
 

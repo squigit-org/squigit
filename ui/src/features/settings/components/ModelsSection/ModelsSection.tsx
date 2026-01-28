@@ -5,14 +5,11 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { HardDrive, Download, Check } from "lucide-react";
+import { Download, Check } from "lucide-react";
 import { ModelType } from "../../../../lib/config/models";
-import styles from "./ModelsSection.module.css";
 import { modelsWithInfo, ocrModels } from "../../types/settings.types";
-import {
-  WheelPicker,
-  WheelPickerWrapper,
-} from "../../../../components/ncdai/wheel-picker";
+import { WheelPicker, WheelPickerWrapper } from "../../../../components";
+import styles from "./ModelsSection.module.css";
 
 interface ModelsSectionProps {
   onSavePersonalContext: () => void;
@@ -32,6 +29,54 @@ interface ModelReelProps {
   onValueChange: (value: string) => void;
   showDownloadButton?: boolean;
 }
+
+interface DownloadButtonProps {
+  isDownloaded?: boolean;
+  className?: string;
+}
+
+const DownloadButton: React.FC<DownloadButtonProps> = ({
+  isDownloaded: initialDownloaded,
+  className,
+}) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(initialDownloaded);
+
+  // Update local state if prop changes (e.g. switching models)
+  React.useEffect(() => {
+    setIsDownloaded(initialDownloaded);
+    setIsDownloading(false);
+  }, [initialDownloaded]);
+
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDownloading || isDownloaded) return;
+
+    setIsDownloading(true);
+
+    // Mock download time
+    setTimeout(() => {
+      setIsDownloading(false);
+      setIsDownloaded(true);
+    }, 3000);
+  };
+
+  return (
+    <button
+      className={className}
+      onClick={handleDownload}
+      title={isDownloaded ? "Downloaded" : "Download model"}
+      disabled={isDownloaded || isDownloading}
+    >
+      {isDownloading && (
+        <svg className={styles.progressSvg} viewBox="0 0 34 34">
+          <circle cx="17" cy="17" r="16" className={styles.progressCircle} />
+        </svg>
+      )}
+      {isDownloaded ? <Check size={16} /> : <Download size={16} />}
+    </button>
+  );
+};
 
 const ModelReel: React.FC<ModelReelProps> = ({
   items,
@@ -61,7 +106,12 @@ const ModelReel: React.FC<ModelReelProps> = ({
             value={currentValue}
             // @ts-ignore - The value type is string, which is compatible
             onValueChange={onValueChange}
-            optionItemHeight={36}
+            // KEY FIX 1: Count must be divisible by 4.
+            // 12 is the sweet spot (low repetition, valid math).
+            visibleCount={12}
+            // KEY FIX 2: Increase height to compensate for the lower count.
+            // This keeps the radius large (~100px) so it feels "flat" and stable.
+            optionItemHeight={35}
             infinite
             classNames={{
               optionItem: styles.optionItem,
@@ -77,19 +127,13 @@ const ModelReel: React.FC<ModelReelProps> = ({
         <span className={styles.descriptionText}>
           {currentItem.description}
         </span>
-        {showDownloadButton &&
-          (currentItem.isDownloaded ? (
-            <div className={styles.downloadedBadge} title="Downloaded">
-              <Check size={16} />
-            </div>
-          ) : (
-            <button
-              className={styles.downloadBtn}
-              title="Download model (Coming soon)"
-            >
-              <Download size={16} />
-            </button>
-          ))}
+        {showDownloadButton && (
+          <DownloadButton
+            key={currentItem.id || currentItem.name}
+            isDownloaded={!!currentItem.isDownloaded}
+            className={styles.downloadBtn}
+          />
+        )}
       </div>
     </div>
   );
@@ -117,9 +161,8 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
   const hasChanges = localModel !== currentModel;
 
   return (
-    <div className={styles.sectionBlock}>
+    <div>
       <div className={styles.sectionHeader}>
-        <HardDrive size={22} className={styles.sectionIcon} />
         <h2 className={styles.sectionTitle}>Models</h2>
       </div>
 
@@ -130,11 +173,11 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
           </p>
 
           <button
-            className={styles.keyBtn}
+            className={`${styles.keyBtn} ${!hasChanges ? styles.keyBtnDisabled : ""}`}
             onClick={onSavePersonalContext}
             disabled={!hasChanges}
           >
-            Apply Model Change
+            Apply Changes
           </button>
         </div>
 

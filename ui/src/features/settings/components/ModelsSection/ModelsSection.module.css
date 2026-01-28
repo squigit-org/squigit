@@ -4,27 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.sectionBlock {
-  margin-bottom: 3rem;
-  scroll-margin-top: 2rem;
-}
-
 .sectionHeader {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--neutral-800);
-}
-
-.sectionIcon {
-  color: var(--neutral-100);
+  padding-top: 0;
+  margin-bottom: 0.33rem;
+  padding-bottom: 0.33rem;
 }
 
 .sectionTitle {
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 450;
   color: var(--neutral-100);
   margin: 0;
 }
@@ -34,10 +23,6 @@
   border-radius: 0.75rem;
   padding: 1.5rem;
   margin-bottom: 1rem;
-}
-
-.section:last-child {
-  margin-bottom: 0;
 }
 
 .label {
@@ -61,6 +46,9 @@
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+  /* Ensure controls sit above the 3D context of the wheels conceptually */
+  position: relative;
+  z-index: 5;
 }
 
 .keyBtn {
@@ -73,7 +61,17 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  transition: all 0.2s;
+
+  /* FIX: Do not use transition: all. It conflicts with heavy rendering neighbors. */
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+
+  /* FIX: Force hardware acceleration/layer promotion to isolate from WheelPicker 3D context */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: opacity, transform;
 }
 
 .keyBtn:hover:not(:disabled) {
@@ -84,6 +82,8 @@
 .keyBtn:disabled {
   opacity: 0.2;
   cursor: not-allowed;
+  /* Ensure pointer events are killed immediately */
+  pointer-events: none;
 }
 
 /* ==========================================
@@ -99,8 +99,10 @@
   border-radius: 0.75rem;
   border: 1px solid var(--neutral-800);
   /* Fixed height to accommodate the wheel picker */
-  height: 300px;
+  height: 200px;
   overflow: hidden;
+  /* Isolate the 3D context of the reel within itself */
+  transform: translateZ(0);
 }
 
 .reelContainer + .reelContainer {
@@ -157,12 +159,50 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
 }
 
-.downloadBtn:hover {
+.downloadBtn:hover:not(:disabled) {
   background-color: var(--neutral-800);
   color: var(--neutral-100);
   border-color: var(--neutral-500);
+}
+
+.downloadBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  background: transparent;
+  color: var(--neutral-500);
+  border-color: var(--neutral-800);
+}
+
+.progressSvg {
+  position: absolute;
+  top: -1px; /* Align with border */
+  left: -1px;
+  width: 34px; /* 32px + 2px border */
+  height: 34px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.progressCircle {
+  fill: none;
+  stroke: var(--neutral-100);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 100; /* Circumference approx 2 * pi * 16 */
+  stroke-dashoffset: 100;
+  animation: progressRotate 3s linear forwards;
+}
+
+@keyframes progressRotate {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* Wheel Picker Customization */

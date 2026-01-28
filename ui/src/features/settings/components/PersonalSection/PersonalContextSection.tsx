@@ -5,8 +5,6 @@
  */
 
 import React from "react";
-import { Sparkles, ChevronRight, Download } from "lucide-react";
-import { MODELS, ModelType } from "../../../../lib/config/models";
 import styles from "./PersonalContextSection.module.css";
 
 interface PersonalContextSectionProps {
@@ -23,7 +21,6 @@ export const PersonalContextSection: React.FC<PersonalContextSectionProps> = ({
   return (
     <div className={styles.sectionBlock}>
       <div className={styles.sectionHeader}>
-        <Sparkles size={22} className={styles.sectionIcon} />
         <h2 className={styles.sectionTitle}>Personal Context</h2>
       </div>
 
