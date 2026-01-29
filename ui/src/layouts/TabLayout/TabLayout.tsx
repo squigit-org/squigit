@@ -218,6 +218,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               geminiKey={geminiKey}
               imgbbKey={imgbbKey}
               onSetAPIKey={onSetAPIKey}
+              isChatPanelOpen={isChatPanelOpen}
             />
           ) : (
             <ChatTab

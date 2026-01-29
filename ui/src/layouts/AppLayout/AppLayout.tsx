@@ -526,17 +526,17 @@ export const AppLayout: React.FC = () => {
 
   if (!system.startupImage) {
     // Handle chat selection - toggle settings off and open chat
-    const handleSelectChatWithSettings = (id: string) => {
+    const handleSelectChatWithSettings = async (id: string) => {
+      await handleSelectChat(id);
       if (isPanelActive) {
         handleToggleSettings();
       }
-      handleSelectChat(id);
     };
 
     const displayTitle = isPanelActive ? "Settings" : "Spatialshot";
 
     return (
-      <div className={styles.appContainer}>
+      <div className={styles.appContainer} onContextMenu={handleContextMenu}>
         <TitleBar
           chatTitle={displayTitle}
           onReload={() => {}}
@@ -615,6 +615,22 @@ export const AppLayout: React.FC = () => {
             )}
           </div>
         </div>
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            onClose={handleCloseContextMenu}
+          >
+            <ContextMenuItem
+              onClick={() => {
+                handleCopy();
+                handleCloseContextMenu();
+              }}
+            >
+              Copy
+            </ContextMenuItem>
+          </ContextMenu>
+        )}
       </div>
     );
   }
