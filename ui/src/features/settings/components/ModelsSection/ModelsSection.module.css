@@ -90,6 +90,10 @@
    Model Reel Container
    ========================================== */
 
+/* ==========================================
+   Model Reel Container
+   ========================================== */
+
 .reelContainer {
   display: flex;
   align-items: center;
@@ -103,6 +107,12 @@
   overflow: hidden;
   /* Isolate the 3D context of the reel within itself */
   transform: translateZ(0);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reelContainer.centered {
+  justify-content: center;
+  gap: 0;
 }
 
 .reelContainer + .reelContainer {
@@ -118,6 +128,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .wheelPickerWrapper {
@@ -136,6 +147,26 @@
   gap: 12px;
   min-width: 0;
   height: 100%;
+
+  /* Transition properties */
+  opacity: 1;
+  transform: translateX(0);
+  overflow: hidden; /* Ensure clipping during animation */
+  transition:
+    opacity 0.2s ease,
+    /* Fade out faster */ transform 0.4s ease,
+    flex 0.4s ease,
+    max-width 0.4s ease;
+}
+
+.descriptionPanel.hidden {
+  opacity: 0;
+  pointer-events: none;
+  flex: 0;
+  max-width: 0;
+  overflow: hidden;
+  transform: translateX(20px);
+  margin: 0;
 }
 
 .descriptionText {
@@ -143,7 +174,13 @@
   font-size: 0.9rem;
   color: var(--neutral-400);
   line-height: 1.5;
-  min-width: 0;
+  min-width: 240px; /* Prevent reflow: keep text wide enough even when container shrinks */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
 }
 
 .downloadBtn {

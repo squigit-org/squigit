@@ -40,6 +40,7 @@ export interface SettingsTabProps {
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (provider: "gemini" | "imgbb", key: string) => Promise<boolean>;
+  isChatPanelOpen: boolean;
 }
 
 export type Topic =
@@ -70,6 +71,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onSetAPIKey,
   onPromptChange,
   onModelChange,
+  isChatPanelOpen,
 }) => {
   const [activeTopic, setActiveTopic] = useState<Topic>("General");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -136,6 +138,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             localModel={localModel}
             currentModel={currentModel}
             setLocalModel={setLocalModel}
+            isChatPanelOpen={isChatPanelOpen}
           />
         );
       case "Personal Context":

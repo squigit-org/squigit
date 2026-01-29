@@ -608,6 +608,7 @@ export const AppLayout: React.FC = () => {
                 geminiKey={system.apiKey}
                 imgbbKey={system.imgbbKey}
                 onSetAPIKey={system.handleSetAPIKey}
+                isChatPanelOpen={isChatPanelOpen}
               />
             ) : (
               <Welcome onImageReady={handleImageReady} />

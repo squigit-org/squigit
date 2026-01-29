@@ -16,6 +16,7 @@ interface ModelsSectionProps {
   localModel: string;
   currentModel: string;
   setLocalModel: (model: string) => void;
+  isChatPanelOpen: boolean;
 }
 
 interface ModelReelProps {
@@ -28,6 +29,7 @@ interface ModelReelProps {
   currentValue: string;
   onValueChange: (value: string) => void;
   showDownloadButton?: boolean;
+  isChatPanelOpen: boolean;
 }
 
 interface DownloadButtonProps {
@@ -83,6 +85,7 @@ const ModelReel: React.FC<ModelReelProps> = ({
   currentValue,
   onValueChange,
   showDownloadButton = false,
+  isChatPanelOpen,
 }) => {
   const currentIndex = items.findIndex(
     (item) => item.id === currentValue || item.name === currentValue,
@@ -97,7 +100,9 @@ const ModelReel: React.FC<ModelReelProps> = ({
   }));
 
   return (
-    <div className={styles.reelContainer}>
+    <div
+      className={`${styles.reelContainer} ${isChatPanelOpen ? styles.centered : ""}`}
+    >
       {/* Wheel Picker */}
       <div className={styles.wheelWrapper}>
         <WheelPickerWrapper className={styles.wheelPickerWrapper}>
@@ -122,8 +127,10 @@ const ModelReel: React.FC<ModelReelProps> = ({
         </WheelPickerWrapper>
       </div>
 
-      {/* Description Panel */}
-      <div className={styles.descriptionPanel}>
+      {/* Description Panel - Always render for animation, but hide via class */}
+      <div
+        className={`${styles.descriptionPanel} ${isChatPanelOpen ? styles.hidden : ""}`}
+      >
         <span className={styles.descriptionText}>
           {currentItem.description}
         </span>
@@ -144,6 +151,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
   localModel,
   currentModel,
   setLocalModel,
+  isChatPanelOpen,
 }) => {
   const [ocrValue, setOcrValue] = useState(ocrModels[0].name);
 
@@ -186,6 +194,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
           items={modelsWithInfo}
           currentValue={localModel}
           onValueChange={handleModelChange}
+          isChatPanelOpen={isChatPanelOpen}
         />
 
         {/* OCR Model Reel */}
@@ -194,6 +203,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
           currentValue={ocrValue}
           onValueChange={handleOcrChange}
           showDownloadButton
+          isChatPanelOpen={isChatPanelOpen}
         />
       </div>
     </div>
