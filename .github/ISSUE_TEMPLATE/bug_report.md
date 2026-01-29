@@ -10,6 +10,11 @@ assignees: ""
 A clear and concise description of what the bug is.
 
 **To Reproduce**
+
+1. Copy your app debug info (go to Settings -> Help -> Copy Debug Info).
+2. Paste it here.
+
+**What happened?**
 Steps to reproduce the behavior:
 
 1. Go to '...'
@@ -20,8 +25,8 @@ Steps to reproduce the behavior:
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Screenshots or Console Logs**
+If applicable, add screenshots or console logs to help explain your problem.
 
 **Environment (please complete the following information):**
 

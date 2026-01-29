@@ -47,13 +47,21 @@ body {
   margin: 0;
   overscroll-behavior: none;
   background-color: var(--neutral-950);
-  font-family: "Inter", "Inter var", system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    "Inter",
+    "Inter var",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
 body {
   color: #e5e5e5;
-  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  transition:
+    background-color 0.3s ease-in-out,
+    color 0.3s ease-in-out;
   overflow: hidden;
 }
 
@@ -63,6 +71,7 @@ body.light-mode {
 
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {

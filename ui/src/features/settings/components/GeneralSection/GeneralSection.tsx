@@ -1,11 +1,7 @@
-/**
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./GeneralSection.module.css";
+// Import the new component (adjust path as needed)
+import { CapturePreview } from "./CapturePreview";
 
 interface GeneralSectionProps {
   isDarkMode: boolean;
@@ -14,7 +10,6 @@ interface GeneralSectionProps {
   onToggleAutoExpand: (checked: boolean) => void;
   captureType: "rectangular" | "squiggle";
   onCaptureTypeChange: (type: "rectangular" | "squiggle") => void;
-  onLogout: () => void;
 }
 
 export const GeneralSection: React.FC<GeneralSectionProps> = ({
@@ -24,14 +19,20 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
   onToggleAutoExpand,
   captureType,
   onCaptureTypeChange,
-  onLogout,
 }) => {
+  const [localCaptureType, setLocalCaptureType] = useState(captureType);
+
+  useEffect(() => {
+    setLocalCaptureType(captureType);
+  }, [captureType]);
+
   return (
-    <div className={styles.sectionBlock}>
+    <>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>General</h2>
       </div>
 
+      {/* --- SECTION 1: GLOBAL TOGGLES --- */}
       <div className={styles.section}>
         <div className={styles.controlRow}>
           <div>
@@ -50,9 +51,9 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
             <span className={styles.toggleSlider}></span>
           </div>
         </div>
-      </div>
 
-      <div className={styles.section}>
+        <div className={styles.divider} />
+
         <div className={`${styles.controlRow} ${styles.imgOcrRow}`}>
           <div>
             <span className={`${styles.label} ${styles.imgOcrLabel}`}>
@@ -72,6 +73,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
             <span className={styles.toggleSlider}></span>
           </div>
         </div>
+        <div className={styles.divider} />
 
         <div className={styles.controlRow}>
           <div>
@@ -92,38 +94,41 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
             <span className={styles.toggleSlider}></span>
           </div>
         </div>
-      </div>
+        <div className={styles.divider} />
 
-      <div className={styles.section}>
-        <div className={styles.radioGroup}>
-          <label className={styles.radioLabel}>
+        <div className={styles.controlRow}>
+          <div>
+            <span className={`${styles.label} ${styles.imgOcrLabel}`}>
+              Circle to search
+            </span>
+            <span className={styles.description}>
+              {localCaptureType === "squiggle"
+                ? "Turn off for standard box capture"
+                : "Turn on for free-form capture"}
+            </span>
+          </div>
+          <label className={styles.toggleSwitch}>
             <input
-              type="radio"
-              name="capture"
-              className={styles.radioInput}
-              checked={captureType === "rectangular"}
-              onChange={() => onCaptureTypeChange("rectangular")}
+              type="checkbox"
+              className={styles.toggleInput}
+              checked={localCaptureType === "squiggle"}
+              onChange={(e) => {
+                const newType = e.target.checked ? "squiggle" : "rectangular";
+                setLocalCaptureType(newType);
+                onCaptureTypeChange(newType);
+              }}
             />
-            <span>Rectangular Selection</span>
-          </label>
-          <label className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="capture"
-              className={styles.radioInput}
-              checked={captureType === "squiggle"}
-              onChange={() => onCaptureTypeChange("squiggle")}
-            />
-            <span>Free-form (Squiggle)</span>
+            <span className={styles.toggleSlider}></span>
           </label>
         </div>
-      </div>
 
-      <div className={styles.footer}>
-        <button className={styles.logoutButton} onClick={onLogout}>
-          Log Out
-        </button>
+        <div className={styles.captureGrid}>
+          {/* Right Column: React Component instead of Iframe */}
+          <div className={styles.iframeWrapper}>
+            <CapturePreview type={localCaptureType} />
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };

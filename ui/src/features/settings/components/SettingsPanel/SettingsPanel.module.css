@@ -52,6 +52,24 @@
   text-overflow: ellipsis;
 }
 
+.logoutButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--neutral-400);
+  padding: 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.logoutButton:hover {
+  background-color: var(--neutral-800);
+  color: #ff4d4f; /* Red color for logout action */
+}
+
 .topicsList {
   flex: 1;
   padding: 1rem 0.5rem;

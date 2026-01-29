@@ -27,7 +27,7 @@
 .label {
   display: block;
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.2rem;
   color: var(--neutral-200);
   font-size: 0.95rem;
 }
@@ -35,16 +35,43 @@
 .description {
   font-size: 0.85rem;
   color: var(--neutral-400);
-  margin-bottom: 1rem;
   line-height: 1.4;
 }
 
-/* Form Controls */
+/* --- CAPTURE GRID LAYOUT --- */
+
+.captureGrid {
+  display: flex;
+  justify-content: flex-end; /* Align capture preview to the right */
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* --- SQUARE IFRAME --- */
+.iframeWrapper {
+  width: 200px;
+  height: 200px;
+  flex-shrink: 0; /* Prevent it from shrinking */
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #1f1f1f;
+  border: 1px solid var(--neutral-800);
+}
+
+/* --- TOGGLES --- */
 .controlRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  padding: 8px 0;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--neutral-800);
+  opacity: 0.5;
+  margin: 4px 0;
 }
 
 .toggleSwitch {
@@ -89,32 +116,4 @@
 
 .toggleInput:checked + .toggleSlider:before {
   transform: translateX(20px);
-}
-
-.logoutButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: auto;
-  height: auto;
-  padding: 0.3rem 0.5rem 0.3rem 0.5rem;
-  border-radius: 0.5rem;
-  background-color: transparent;
-  color: var(--neutral-100);
-  border: 1px solid rgba(211, 211, 211, 0.2);
-  font-size: 0.95rem;
-  font-weight: 350;
-  font-family: Arial, Helvetica, sans-serif;
-  cursor: pointer;
-  margin-top: 1rem;
-}
-
-.logoutButton:hover {
-  opacity: 0.7;
-}
-
-.footer {
-  padding-top: 1.5rem;
-  display: flex;
-  justify-content: flex-start;
 }

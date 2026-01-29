@@ -1,9 +1,10 @@
-/**
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
+.container {
+  display: flex;
+  flex-direction: column;
+  max-width: 800px;
+}
 
+/* --- USER PROVIDED STYLES START --- */
 .sectionHeader {
   display: flex;
   padding-top: 0;
@@ -22,76 +23,94 @@
   background-color: #1f1f1f;
   border-radius: 0.75rem;
   padding: 1.5rem;
+  padding-top: 0;
   margin-bottom: 1rem;
 }
 
-.description {
-  font-size: 0.85rem;
-  color: var(--neutral-400);
-  margin-bottom: 1rem;
-  line-height: 1.4;
-}
-
-.controlRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--neutral-200);
-  font-size: 0.95rem;
-}
-
-.keyBtn {
-  background: var(--neutral-800);
-  border: none;
-  color: var(--neutral-200);
-  padding: 0.4rem 0.8rem;
-  border-radius: 0.3rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-left: 1rem;
-  transition: all 0.2s;
-}
-
-.keyBtn:hover {
-  background: var(--neutral-700);
-  color: white;
-}
-
-.keyValue {
-  flex: 1;
-  font-family: monospace;
-  color: var(--neutral-100);
+.subLabel {
   font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--neutral-300);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.iconDimmed {
+  color: var(--neutral-500);
+}
+
+/* Spec Sheet Grid */
+.specsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-family: "JetBrains Mono", monospace; /* Monospace for alignment */
+}
+
+.specRow {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: baseline;
+}
+
+.specKey {
+  color: var(--neutral-500);
+  font-size: 0.85rem;
+}
+
+.specValue {
+  color: var(--neutral-200);
+  font-size: 0.85rem;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-/* Specific overrides */
-.supportBtnGroup {
-  justify-content: flex-start;
-  gap: 1rem;
+.divider {
+  height: 1px;
+  background-color: var(--neutral-800);
+  margin: 16px 0;
+  opacity: 0.5;
 }
 
-.actionBtn {
-  margin-left: 0;
+/* Action Buttons (Copy / Update) */
+.actionRow {
+  display: flex;
+  gap: 12px;
 }
 
-.versionValue {
-  font-size: 1.2rem;
-  font-weight: 600;
+.noteText {
+  color: var(--neutral-400);
+  font-size: 0.85rem;
+  margin: 0;
 }
 
-.upToDateMsg {
+/* Bottom Links Grid */
+.linksGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
+  gap: 12px;
+}
+
+.linkBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  padding: 0.3rem 0.5rem 0.3rem 0.5rem;
+  border-radius: 0.5rem;
+  background-color: transparent;
+  color: var(--neutral-100);
+  border: 1px solid rgba(211, 211, 211, 0.2);
+  font-size: 0.95rem;
+  font-weight: 350;
+  font-family: Arial, Helvetica, sans-serif;
+  cursor: pointer;
   margin-top: 1rem;
+}
+
+.linkBtn:hover {
+  opacity: 0.7;
 }

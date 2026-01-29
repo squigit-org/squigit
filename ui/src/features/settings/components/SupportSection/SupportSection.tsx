@@ -4,131 +4,97 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
-import {
-  Github,
-  ExternalLink,
-  Mail,
-  RefreshCw,
-  Info,
-  Star,
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Github, Mail, Star, Terminal } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { getName, getVersion, getTauriVersion } from "@tauri-apps/api/app";
+// import { type, arch, version } from "@tauri-apps/api/os";
 import { GITHUB, MAILTO } from "../../types/settings.types";
+import { CodeBlock } from "../../../syntax";
 import styles from "./SupportSection.module.css";
 
 interface SupportSectionProps {
   type: "Help & Support";
 }
 
-const handleOpenExternalUrl = (url: string) => {
-  invoke("open_external_url", { url });
-};
-
 export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
-  if (type === "Help & Support") {
-    return (
-      <div>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Help & Support</h2>
-        </div>
+  const [sysInfo, setSysInfo] = useState<Record<string, string>>({
+    SpatialShot: "v1.0.0",
+    Tauri: "Loading...",
+    React: React.version,
+    Qt: "v6.6.0",
+    PaddlePaddle: "v2.6.0",
+    OS: "Loading...",
+    Webview: "Loading...",
+  });
 
-        {/* About & Version */}
-        <div className={styles.section}>
-          <div className={styles.controlRow}>
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-            >
-              <Info size={18} color="var(--neutral-400)" />
-              <span className={styles.label} style={{ marginBottom: 0 }}>
-                Spatialshot
-              </span>
-            </div>
-            <span className={`${styles.keyValue} ${styles.versionValue}`}>
-              v1.0.0
-            </span>
-          </div>
-          <p
-            className={styles.description}
-            style={{ marginTop: "0.5rem", marginBottom: 0 }}
-          >
-            A powerful screenshot tool for developers.
+  useEffect(() => {
+    const loadSystemData = async () => {
+      try {
+        const [appName, appVer, tauriVer /*, osType, osArch, osVer*/] =
+          await Promise.all([
+            getName(),
+            getVersion(),
+            getTauriVersion(),
+            // type(),
+            // arch(),
+            // version(),
+          ]);
+
+        setSysInfo((prev) => ({
+          ...prev,
+          SpatialShot: `v${appVer}`,
+          Tauri: `v${tauriVer}`,
+          OS: "Linux x64 6.14.0-37-generic", //`${osType} ${osArch} ${osVer}`,
+          Webview: navigator.userAgent, // Best guess from browser side
+        }));
+      } catch (e) {
+        console.error("Failed to load system specs", e);
+      }
+    };
+    loadSystemData();
+  }, []);
+
+  const handleOpen = (url: string) => invoke("open_external_url", { url });
+
+  if (type !== "Help & Support") return null;
+
+  return (
+    <div className={styles.container}>
+      {/* HEADER */}
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>Help & Support</h2>
+      </div>
+
+      {/* SECTION 1: SYSTEM DIAGNOSTICS */}
+      <div className={styles.section}>
+        <CodeBlock language="json" value={JSON.stringify(sysInfo, null, 2)} />
+
+        <div className={styles.actionRow}>
+          <p className={styles.noteText}>
+            ⚙ Include the system info above in your bug report to help us fix
+            issues faster.
           </p>
-        </div>
-
-        {/* Update Checker */}
-        <div className={styles.section}>
-          <div className={styles.controlRow}>
-            <span className={styles.label} style={{ marginBottom: 0 }}>
-              Updates
-            </span>
-            <button
-              className={`${styles.keyBtn} ${styles.actionBtn}`}
-              onClick={() => {
-                /* Placeholder for update check */
-              }}
-            >
-              <RefreshCw size={14} /> Check for Updates
-            </button>
-          </div>
-          <p
-            className={`${styles.description} ${styles.upToDateMsg}`}
-            style={{ marginTop: "0.5rem", marginBottom: 0 }}
-          >
-            You are on the latest version.
-          </p>
-        </div>
-
-        {/* Feedback */}
-        <div className={styles.section}>
-          <div className={styles.controlRow}>
-            <span className={styles.label} style={{ marginBottom: 0 }}>
-              Feedback
-            </span>
-            <button
-              className={`${styles.keyBtn} ${styles.actionBtn}`}
-              onClick={() => handleOpenExternalUrl(GITHUB)} // Redirect to repo or specific feedback form
-            >
-              <Star size={14} /> Rate Spatialshot
-            </button>
-          </div>
-          <p
-            className={styles.description}
-            style={{ marginTop: "0.5rem", marginBottom: 0 }}
-          >
-            Enjoying the app? Give us a star or rating!
-          </p>
-        </div>
-
-        {/* Report Issues */}
-        <div className={styles.section}>
-          <p className={styles.label}>Report Issues</p>
-          <p className={styles.description}>
-            Found a bug or have a suggestion? Let me know!
-          </p>
-
-          <div className={`${styles.controlRow} ${styles.supportBtnGroup}`}>
-            <button
-              className={`${styles.keyBtn} ${styles.actionBtn}`}
-              onClick={() => handleOpenExternalUrl(MAILTO)}
-            >
-              <Mail size={16} /> Contact Support
-            </button>
-
-            <button
-              className={`${styles.keyBtn} ${styles.actionBtn}`}
-              onClick={() =>
-                handleOpenExternalUrl(
-                  GITHUB + "/issues/new?template=bug_report.md",
-                )
-              }
-            >
-              <Github size={16} /> Open GitHub Issue
-            </button>
-          </div>
         </div>
       </div>
-    );
-  }
-  return null;
+
+      <div className={styles.linksGrid}>
+        <button className={styles.linkBtn} onClick={() => handleOpen(GITHUB)}>
+          GitHub
+        </button>
+
+        <button className={styles.linkBtn} onClick={() => handleOpen(MAILTO)}>
+          Email Us
+        </button>
+        <button
+          className={styles.linkBtn}
+          onClick={() =>
+            handleOpen(GITHUB + "/issues/new?template=bug_report.md")
+          }
+        >
+          Report Bug
+        </button>
+      </div>
+    </div>
+  );
 };

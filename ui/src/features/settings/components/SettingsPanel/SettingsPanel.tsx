@@ -15,6 +15,7 @@ import {
   BookOpen,
   ExternalLink,
   HelpCircle,
+  LogOut,
 } from "lucide-react";
 import styles from "./SettingsPanel.module.css";
 import { Topic } from "../SettingsTab/SettingsTab";
@@ -54,6 +55,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               {userEmail || "Sign in to sync"}
             </div>
           </div>
+          <button
+            className={styles.logoutButton}
+            onClick={onLogout}
+            title="Log out"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
 
