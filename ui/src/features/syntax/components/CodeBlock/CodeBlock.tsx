@@ -11,34 +11,19 @@ import type { CodeBlockProps } from "../../types";
 
 /**
  * CodeBlock component for displaying and editing code.
- *
- * Renders as either:
- * - **Editable**: A textarea for code input (when `isEditable` is true)
- * - **Viewer**: Syntax-highlighted read-only code (default)
- *
- * Features:
- * - Dual-theme syntax highlighting (Shiki)
- * - Copy to clipboard with visual feedback
- * - Language detection and fallback
- *
- * @example
- * ```tsx
- * // Read-only code display
- * <CodeBlock language="typescript" value={code} />
- *
- * // Editable code input
- * <CodeBlock
- *   language="javascript"
- *   value={code}
- *   isEditable
- *   onChange={setCode}
- * />
- * ```
  */
 const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
   (
-    { language, value, isEditable = false, onChange, onKeyDown, placeholder },
-    ref
+    {
+      language,
+      value,
+      isEditable = false,
+      onChange,
+      onKeyDown,
+      placeholder,
+      stickyHeader, // <--- Destructure this
+    },
+    ref,
   ) => {
     if (isEditable) {
       return (
@@ -53,13 +38,16 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
       );
     }
 
-    return <CodeBlockViewer language={language} value={value} />;
-  }
+    return (
+      <CodeBlockViewer
+        language={language}
+        value={value}
+        stickyHeader={stickyHeader} // <--- Pass it down
+      />
+    );
+  },
 );
 
 CodeBlockComponent.displayName = "CodeBlock";
 
-/**
- * Memoized CodeBlock component to prevent unnecessary re-renders.
- */
 export const CodeBlock = memo(CodeBlockComponent);

@@ -68,7 +68,11 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
 
       {/* SECTION 1: SYSTEM DIAGNOSTICS */}
       <div className={styles.section}>
-        <CodeBlock language="json" value={JSON.stringify(sysInfo, null, 2)} />
+        <CodeBlock
+          language="json"
+          value={JSON.stringify(sysInfo, null, 2)}
+          stickyHeader={false}
+        />
 
         <div className={styles.actionRow}>
           <p className={styles.noteText}>

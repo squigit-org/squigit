@@ -17,4 +17,6 @@ export interface CodeBlockProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   /** Placeholder text for empty editable blocks */
   placeholder?: string;
+  /** Enable/Disable sticky header (Default: true) */
+  stickyHeader?: boolean;
 }
