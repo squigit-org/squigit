@@ -56,6 +56,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [avatarSrc, setAvatarSrc] = useState("");
+  const [originalPicture, setOriginalPicture] = useState<string | null>(null);
 
   const [startupImage, setStartupImage] = useState<{
     base64: string;
@@ -122,6 +123,9 @@ export const useSystemSync = (onToggleSettings: () => void) => {
           setUserName(userData.name);
           setUserEmail(userData.email);
           setAvatarSrc(userData.avatar);
+          if (userData.original_picture) {
+            setOriginalPicture(userData.original_picture);
+          }
         }
 
         // Load imgbb key
@@ -184,21 +188,9 @@ export const useSystemSync = (onToggleSettings: () => void) => {
       setUserName("");
       setUserEmail("");
       setAvatarSrc("");
+      setOriginalPicture(null);
     } catch (e) {
       console.error("Logout failed", e);
-    }
-  };
-
-  const handleResetAPIKey = async () => {
-    try {
-      await commands.resetApiKey();
-      setApiKey("");
-      setImgbbKey("");
-      setHasAgreed(null);
-      sessionStorage.setItem("update_dismissed", "true");
-      window.location.reload();
-    } catch (e) {
-      console.error("Reset API key failed", e);
     }
   };
 
@@ -222,10 +214,14 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     name: string;
     email: string;
     avatar: string;
+    original_picture?: string;
   }) => {
     setUserName(data.name);
     setUserEmail(data.email);
     setAvatarSrc(data.avatar);
+    if (data.original_picture) {
+      setOriginalPicture(data.original_picture);
+    }
   };
 
   const resetSession = () => {
@@ -248,13 +244,13 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     userName,
     userEmail,
     avatarSrc,
+    originalPicture,
     isDarkMode: theme === "dark",
     systemError,
     clearSystemError,
     saveSettings: saveSettingsHandler,
     handleToggleTheme,
     handleLogout,
-    handleResetAPIKey,
     hasAgreed,
     setHasAgreed,
     updateUserData,

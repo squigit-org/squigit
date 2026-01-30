@@ -9,7 +9,7 @@ pub mod utils;
 pub mod commands;
 pub mod services;
 
-use commands::auth::{get_api_key, get_user_data, logout, reset_api_key, start_google_auth};
+use commands::auth::{get_api_key, get_user_data, logout, start_google_auth};
 use commands::chat::{
     append_chat_message, create_chat, create_project, delete_chat, delete_project,
     get_image_path, get_imgbb_url, get_ocr_data, list_chats, list_projects, load_chat,
@@ -59,7 +59,6 @@ pub fn run() {
             check_file_exists,
             // Auth
             get_api_key,
-            reset_api_key,
             start_google_auth,
             logout,
             get_user_data,

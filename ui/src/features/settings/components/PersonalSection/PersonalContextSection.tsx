@@ -181,17 +181,20 @@ export const PersonalContextSection: React.FC<PersonalContextSectionProps> = ({
   };
 
   return (
-    <div className={styles.sectionBlock}>
+    <>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Personal Context</h2>
       </div>
 
       <div className={styles.section}>
-        <label className={styles.label}>Prompts</label>
-        <p className={styles.description}>
-          Add context about yourself, your preferences, or specific instructions
-          for the AI.
-        </p>
+        <div className={styles.controlsRow}>
+          <p className={styles.description}>System Prompt</p>
+
+          <button className={styles.keyBtn} onClick={onSavePersonalContext}>
+            Apply Changes
+          </button>
+        </div>
+
         <div className={styles.textareaWrapper}>
           <textarea
             ref={taRef}
@@ -203,11 +206,10 @@ export const PersonalContextSection: React.FC<PersonalContextSectionProps> = ({
             onKeyDown={handleKeyDown}
           />
         </div>
-        <div className={styles.saveBtnContainer}>
-          <button className={styles.keyBtn} onClick={onSavePersonalContext}>
-            Save Changes
-          </button>
-        </div>
+        <p className={styles.noteText}>
+          ➤ Add context about yourself, your preferences, or specific
+          instructions for the AI.
+        </p>
       </div>
 
       {contextMenu.isOpen && (
@@ -222,6 +224,6 @@ export const PersonalContextSection: React.FC<PersonalContextSectionProps> = ({
           hasSelection={hasSelection}
         />
       )}
-    </div>
+    </>
   );
 };

@@ -563,7 +563,6 @@ export const AppLayout: React.FC = () => {
           onLogout={performLogout}
           isDarkMode={system.isDarkMode}
           onToggleTheme={system.handleToggleTheme}
-          onResetAPIKey={system.handleResetAPIKey}
           toggleSubview={setIsSubviewActive}
           onNewSession={handleNewSession}
           hasImageLoaded={false}
@@ -594,13 +593,13 @@ export const AppLayout: React.FC = () => {
                 userName={system.userName}
                 userEmail={system.userEmail}
                 avatarSrc={system.avatarSrc}
+                originalPicture={system.originalPicture}
                 onPromptChange={system.setEditingPrompt}
                 onModelChange={system.setEditingModel}
                 onSave={system.saveSettings}
                 onLogout={performLogout}
                 isDarkMode={system.isDarkMode}
                 onToggleTheme={system.handleToggleTheme}
-                onResetAPIKey={system.handleResetAPIKey}
                 autoExpandOCR={system.autoExpandOCR}
                 setAutoExpandOCR={system.setAutoExpandOCR}
                 captureType={system.captureType}
@@ -725,7 +724,6 @@ export const AppLayout: React.FC = () => {
         onLogout={performLogout}
         isDarkMode={system.isDarkMode}
         onToggleTheme={system.handleToggleTheme}
-        onResetAPIKey={system.handleResetAPIKey}
         onPromptChange={system.setEditingPrompt}
         autoExpandOCR={system.autoExpandOCR}
         setAutoExpandOCR={system.setAutoExpandOCR}

@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 
 import {
   Settings,
@@ -26,6 +26,7 @@ interface SettingsPanelProps {
   userName: string;
   userEmail: string;
   avatarSrc: string;
+  originalPicture: string | null;
   onLogout: () => void;
 }
 
@@ -35,25 +36,92 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   userName,
   userEmail,
   avatarSrc,
+  originalPicture,
   onLogout,
 }) => {
+  const [imgSrc, setImgSrc] = React.useState<string>("");
+  const [imgError, setImgError] = React.useState(false);
+
+  React.useEffect(() => {
+    if (avatarSrc) {
+      setImgSrc(convertFileSrc(avatarSrc));
+      setImgError(false);
+    } else if (originalPicture) {
+      setImgSrc(originalPicture);
+      setImgError(false);
+    } else {
+      setImgError(true);
+    }
+  }, [avatarSrc, originalPicture]);
+
+  const handleImgError = () => {
+    if (imgSrc === originalPicture) {
+      setImgError(true);
+    } else if (originalPicture) {
+      setImgSrc(originalPicture);
+    } else {
+      setImgError(true);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    const names = name.trim().split(" ");
+    if (names.length === 0) return "";
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return (names[0].charAt(0) + names[1].charAt(0)).toUpperCase();
+  };
+
+  // Generate a consistent color based on the name
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      "#F87171",
+      "#FB923C",
+      "#FBBF24",
+      "#A3E635",
+      "#34D399",
+      "#22D3EE",
+      "#818CF8",
+      "#A78BFA",
+      "#F472B6",
+      "#FB7185",
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   return (
     <div className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
         <div className={styles.userProfile}>
-          <img
-            src={
-              avatarSrc ||
-              "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-            }
-            alt="User"
-            className={styles.avatar}
-          />
-          <div className={styles.userInfo}>
-            <div className={styles.userName}>{userName || "Guest User"}</div>
-            <div className={styles.userEmail}>
-              {userEmail || "Sign in to sync"}
+          {!imgError ? (
+            <img
+              src={imgSrc}
+              alt="User"
+              className={styles.avatar}
+              onError={handleImgError}
+            />
+          ) : (
+            <div
+              className={styles.avatar}
+              style={{
+                backgroundColor: getAvatarColor(userName),
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#1f2937",
+                fontWeight: "bold",
+                fontSize: "1.2rem",
+              }}
+            >
+              {getInitials(userName)}
             </div>
+          )}
+          <div className={styles.userInfo}>
+            <div className={styles.userName}>{userName}</div>
+            <div className={styles.userEmail}>{userEmail}</div>
           </div>
           <button
             className={styles.logoutButton}

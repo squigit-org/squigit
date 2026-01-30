@@ -64,6 +64,7 @@ struct SavedProfile {
     name: String,
     email: String,
     avatar: String,
+    original_picture: Option<String>,
 }
 
 pub fn start_google_auth_flow(app: AppHandle, config_dir: PathBuf) -> Result<(), String> {
@@ -154,14 +155,37 @@ pub fn start_google_auth_flow(app: AppHandle, config_dir: PathBuf) -> Result<(),
                 .photos
                 .and_then(|p| p.first().and_then(|x| x.url.clone()))
                 .unwrap_or_default();
-            if avatar.starts_with("http://") {
-                avatar = avatar.replace("http://", "https://");
+            
+            let original_picture = if !avatar.is_empty() {
+                Some(avatar.clone())
+            } else {
+                None
+            };
+            
+            // Try to download and save the avatar locally
+            if !avatar.is_empty() {
+                // Ensure https
+                if avatar.starts_with("http://") {
+                    avatar = avatar.replace("http://", "https://");
+                }
+                
+                // Download and save to CAS
+                if let Ok(response) = client.get(&avatar).send() {
+                    if let Ok(bytes) = response.bytes() {
+                        if let Ok(storage) = ops_chat_storage::storage::ChatStorage::new() {
+                            if let Ok(stored_image) = storage.store_image(&bytes) {
+                                avatar = stored_image.path;
+                            }
+                        }
+                    }
+                }
             }
 
             let user_data = SavedProfile {
                 name,
                 email,
                 avatar,
+                original_picture,
             };
             let profile_path = config_dir.join("profile.json");
             let mut file = File::create(profile_path).map_err(|e| e.to_string())?;

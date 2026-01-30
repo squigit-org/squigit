@@ -20,6 +20,7 @@ export interface SettingsTabProps {
   userName: string;
   userEmail: string;
   avatarSrc: string;
+  originalPicture: string | null;
   onPromptChange: (prompt: string) => void;
   onModelChange: (model: string) => void;
   onSave: (
@@ -31,7 +32,6 @@ export interface SettingsTabProps {
   onLogout: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
-  onResetAPIKey: () => void;
 
   autoExpandOCR: boolean;
   setAutoExpandOCR: (enabled: boolean) => void;
@@ -57,11 +57,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   userName,
   userEmail,
   avatarSrc,
+  originalPicture,
   onSave,
   onLogout,
   isDarkMode,
   onToggleTheme,
-  onResetAPIKey,
   autoExpandOCR,
   setAutoExpandOCR,
   captureType,
@@ -118,7 +118,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onToggleAutoExpand={handleToggleAutoExpand}
             captureType={localCaptureType}
             onCaptureTypeChange={handleCaptureTypeChange}
-            onLogout={onLogout}
           />
         );
       case "Providers & Keys":
@@ -127,7 +126,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             geminiKey={geminiKey}
             imgbbKey={imgbbKey}
             onSetAPIKey={onSetAPIKey}
-            onResetAPIKey={onResetAPIKey}
             ref={apiSectionRef}
           />
         );
@@ -165,6 +163,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         userName={userName}
         userEmail={userEmail}
         avatarSrc={avatarSrc}
+        originalPicture={originalPicture}
         onLogout={onLogout}
       />
 

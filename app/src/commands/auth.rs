@@ -77,17 +77,3 @@ pub async fn get_api_key(app: AppHandle, provider: String) -> Result<String, Str
     .await
     .map_err(|e| e.to_string())
 }
-
-#[tauri::command]
-pub async fn reset_api_key(app: AppHandle) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let config_dir = get_app_config_dir(&app);
-
-        let _ = fs::remove_file(config_dir.join("gemini_key.json")).ok();
-        let _ = fs::remove_file(config_dir.join("imgbb_key.json")).ok();
-        let _ = fs::remove_file(config_dir.join("profile.json")).ok();
-        Ok(())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}

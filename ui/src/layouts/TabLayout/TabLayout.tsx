@@ -90,7 +90,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   onLogout,
   isDarkMode,
   onToggleTheme,
-  onResetAPIKey,
   autoExpandOCR,
   setAutoExpandOCR,
   captureType,
@@ -167,7 +166,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
         onLogout={onLogout}
         isDarkMode={isDarkMode}
         onToggleTheme={onToggleTheme}
-        onResetAPIKey={onResetAPIKey}
         toggleSubview={toggleSubview}
         onNewSession={onNewSession}
         hasImageLoaded={hasImageLoaded}
@@ -210,7 +208,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               onLogout={onLogout}
               isDarkMode={isDarkMode}
               onToggleTheme={onToggleTheme}
-              onResetAPIKey={onResetAPIKey}
               autoExpandOCR={autoExpandOCR}
               setAutoExpandOCR={setAutoExpandOCR}
               captureType={captureType}

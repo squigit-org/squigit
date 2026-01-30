@@ -28,6 +28,11 @@
   box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+  /* 1. This padding defines the "stop line" for the sticky header. 
+       The header cannot go past the content box, so it stops 20px early.
+  */
+  padding-bottom: 1.25rem;
 }
 
 .header {
@@ -43,6 +48,13 @@
   /* Ensure header corners round with the wrapper since wrapper overflow is gone */
   border-top-left-radius: 0.75rem;
   border-top-right-radius: 0.75rem;
+
+  z-index: 5;
+}
+
+.sticky {
+  position: sticky;
+  top: 72px;
 }
 
 .langLabel {
@@ -56,9 +68,6 @@
   font-weight: 600;
   text-transform: lowercase;
   letter-spacing: 0.02em;
-  padding: 0.125rem 0.5rem;
-  border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.05);
   color: var(--neutral-200);
   display: inline-flex;
   align-items: center;
@@ -134,6 +143,12 @@
   overflow-x: auto;
   padding: 1rem;
   background-color: var(--solid-17);
+
+  /* 2. This negative margin pulls the content box (and scrollbar) 
+       DOWN into the wrapper's padding area.
+       Result: Header stops 20px early, but scrollbar is at the bottom.
+  */
+  margin-bottom: -1.25rem;
 
   /* Ensure bottom corners round */
   border-bottom-left-radius: 0.75rem;

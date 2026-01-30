@@ -5,15 +5,7 @@
  */
 
 import React, { ForwardedRef, useEffect, useState } from "react";
-import {
-  RotateCw,
-  Plus,
-  Settings,
-  SquarePen,
-  Minus,
-  PanelLeft,
-  X,
-} from "lucide-react";
+import { RotateCw, Plus, Settings, Minus, X } from "lucide-react";
 import { ModelSwitcher } from "./ModelSwitcher";
 import { invoke } from "@tauri-apps/api/core";
 import styles from "./TitleBar.module.css";
@@ -47,7 +39,6 @@ interface TitleBarProps {
   onLogout: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
-  onResetAPIKey: () => void;
   toggleSubview: (isActive: boolean) => void;
   onNewSession: () => void;
   hasImageLoaded: boolean;
@@ -165,26 +156,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   isLoading,
   isPanelActive,
   toggleSettingsPanel,
-  isPanelVisible,
-  isPanelActiveAndVisible,
-  isPanelClosing,
   settingsButtonRef,
-  panelRef,
-  settingsPanelRef,
-  prompt,
-  editingModel,
-  setPrompt,
-  onEditingModelChange,
-  userName,
-  userEmail,
-  avatarSrc,
-  onSave,
-  onLogout,
-  isDarkMode,
-  onToggleTheme,
-  onResetAPIKey,
-  toggleSubview,
-  onNewSession,
   hasImageLoaded,
   toggleChatPanel,
   isChatPanelOpen,
@@ -231,7 +203,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       <div className={styles.rightSection}>
-        {hasImageLoaded && (
+        {hasImageLoaded && !isPanelActive && (
           <button
             onClick={onReload}
             className={styles.iconButton}
@@ -242,11 +214,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           </button>
         )}
 
-        <ModelSwitcher
-          currentModel={currentModel}
-          onModelChange={onModelChange}
-          isLoading={isLoading}
-        />
+        {!isPanelActive && (
+          <ModelSwitcher
+            currentModel={currentModel}
+            onModelChange={onModelChange}
+            isLoading={isLoading}
+          />
+        )}
 
         <div className={styles.controlsWrapper}>
           <button

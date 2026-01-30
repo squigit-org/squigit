@@ -5,132 +5,224 @@
  */
 
 import React, { useState, forwardRef } from "react";
-import { ExternalLink } from "lucide-react";
+import {
+  ExternalLink,
+  Check,
+  Loader2,
+  ChevronRight,
+  ChevronLeft,
+  Search,
+} from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import styles from "./ApiKeysSection.module.css";
+import { GITHUB } from "../../types/settings.types";
 
 interface ApiKeysSectionProps {
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (provider: "gemini" | "imgbb", key: string) => Promise<boolean>;
-  onResetAPIKey: () => void;
 }
 
+type ViewState = "main" | "gemini" | "imgbb";
+
+const PRIVACY_URL = `${GITHUB}/blob/main/docs/06-policies/SECURITY.md`;
+
 export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
-  ({ geminiKey, imgbbKey, onSetAPIKey, onResetAPIKey }, ref) => {
-    const [isChangingGeminiKey, setIsChangingGeminiKey] = useState(false);
-    const [isChangingImgbbKey, setIsChangingImgbbKey] = useState(false);
+  ({ geminiKey, imgbbKey, onSetAPIKey }, ref) => {
+    const [view, setView] = useState<ViewState>("main");
+    const [isDetecting, setIsDetecting] = useState(false);
 
-    const maskKey = (key: string) => {
-      if (!key || key.length < 8) return "********";
-      return key.slice(0, 4) + "..." + key.slice(-4);
+    const handleOpenUrl = async (url: string) => {
+      await invoke("open_external_url", { url });
     };
 
-    const handleChangeGeminiKey = async () => {
-      setIsChangingGeminiKey(true);
+    const handleDetectKey = async (provider: "gemini" | "imgbb") => {
+      setIsDetecting(true);
       try {
         const text = await invoke<string>("read_clipboard_text").catch(
           () => "",
         );
-        if (text && text.length > 20 && !text.includes(" ")) {
-          await onSetAPIKey("gemini", text);
-        } else if (text) {
-          await onSetAPIKey("gemini", text);
+        if (provider === "gemini") {
+          if (text && text.length > 20 && !text.includes(" ")) {
+            await onSetAPIKey("gemini", text);
+            setView("main");
+          } else if (text) {
+            // Fallback attempt
+            await onSetAPIKey("gemini", text);
+            setView("main");
+          }
+        } else {
+          if (text && text.length > 10) {
+            await onSetAPIKey("imgbb", text);
+            setView("main");
+          }
         }
       } catch (e) {
         console.error(e);
       } finally {
-        setIsChangingGeminiKey(false);
+        setIsDetecting(false);
       }
     };
 
-    const handleChangeImgbbKey = async () => {
-      setIsChangingImgbbKey(true);
-      try {
-        const text = await invoke<string>("read_clipboard_text").catch(
-          () => "",
-        );
-        if (text && text.length > 10) {
-          await onSetAPIKey("imgbb", text);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setIsChangingImgbbKey(false);
-      }
+    const renderMainView = () => (
+      <>
+        <div className={styles.providersList}>
+          {/* Gemini Row */}
+          <div
+            className={styles.providerRow}
+            role="button"
+            onClick={() => setView("gemini")}
+          >
+            <div className={styles.providerInfo}>
+              <div className={styles.providerName}>Google Gemini</div>
+              <div className={styles.providerMeta}>
+                Required for AI features
+              </div>
+            </div>
+            <div className={styles.rowActions}>
+              <div
+                className={`${styles.statusTag} ${
+                  geminiKey ? styles.active : ""
+                }`}
+              >
+                {geminiKey ? (
+                  <>
+                    <Check size={12} /> Configured
+                  </>
+                ) : (
+                  <>Not configured</>
+                )}
+              </div>
+              <ChevronRight size={16} className="text-neutral-500" />
+            </div>
+          </div>
+
+          {/* ImgBB Row */}
+          <div
+            className={styles.providerRow}
+            role="button"
+            onClick={() => setView("imgbb")}
+          >
+            <div className={styles.providerInfo}>
+              <div className={styles.providerName}>ImgBB</div>
+              <div className={styles.providerMeta}>Reverse Image Search</div>
+            </div>
+            <div className={styles.rowActions}>
+              <div
+                className={`${styles.statusTag} ${
+                  imgbbKey ? styles.active : ""
+                }`}
+              >
+                {imgbbKey ? (
+                  <>
+                    <Check size={12} /> Configured
+                  </>
+                ) : (
+                  <>Not configured</>
+                )}
+              </div>
+              <ChevronRight size={16} className="text-neutral-500" />
+            </div>
+          </div>
+        </div>
+      </>
+    );
+
+    const renderDetailView = (provider: "gemini" | "imgbb") => {
+      const isGemini = provider === "gemini";
+      const title = isGemini ? "Google Gemini" : "ImgBB";
+      const url = isGemini
+        ? "https://aistudio.google.com/app/apikey"
+        : "https://api.imgbb.com/";
+
+      return (
+        <div className={styles.detailView}>
+          <div className={styles.sectionHeader}>
+            <button
+              className={styles.backBtn}
+              onClick={() => setView("main")}
+              aria-label="Back"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <h2 className={styles.sectionTitle}>{title} Setup</h2>
+          </div>
+
+          <div className={styles.detailContent}>
+            <div className={styles.instructionCard}>
+              <div className={styles.instructionTitle}>Step-by-step Guide</div>
+              <ol className={styles.stepList}>
+                <li>
+                  Click <strong>Get API Key</strong> below to open the
+                  provider's dashboard.
+                </li>
+                <li>
+                  {isGemini
+                    ? "Locate or create your Default Gemini API Key."
+                    : "Locate ImgBB API v1 or add a new key."}
+                </li>
+                <li>Copy the key to your clipboard.</li>
+                <li>
+                  Click <strong>Detect Key from Clipboard</strong>.
+                </li>
+              </ol>
+            </div>
+
+            <div className={styles.detailActions}>
+              <button
+                className={styles.secondaryBtn}
+                onClick={() => handleOpenUrl(url)}
+              >
+                <ExternalLink size={16} />
+                Get API Key
+              </button>
+              <button
+                className={styles.primaryBtn}
+                onClick={() => handleDetectKey(provider)}
+                disabled={isDetecting}
+              >
+                {isDetecting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Search size={16} />
+                )}
+                {isDetecting ? "Detecting..." : "Detect Key from Clipboard"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     };
+
+    const handleOpen = (url: string) => invoke("open_external_url", { url });
 
     return (
-      <div ref={ref} className={styles.sectionBlock}>
+      <div ref={ref} className={styles.container}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>API Keys</h2>
         </div>
-
-        {/* Gemini API Key */}
-        <div className={styles.section}>
-          <label className={styles.label}>Gemini API Key</label>
-          <div className={styles.keyInputRow}>
-            <span className={styles.keyLabel}>Key:</span>
-            <span className={styles.keyValue}>
-              {geminiKey ? (
-                maskKey(geminiKey)
-              ) : (
-                <span className={styles.keyNotSet}>Not set</span>
-              )}
-            </span>
-            <button
-              className={styles.keyBtn}
-              onClick={handleChangeGeminiKey}
-              disabled={isChangingGeminiKey}
-            >
-              <ExternalLink size={14} />
-              {isChangingGeminiKey ? "Waiting..." : "Change"}
-            </button>
+        <div className={styles.scrollContent}>
+          <div className={styles.section}>
+            {view === "main" && renderMainView()}
+            {view === "gemini" && renderDetailView("gemini")}
+            {view === "imgbb" && renderDetailView("imgbb")}
           </div>
-          <p className={styles.keyInstructions}>
-            Required for AI features. Copy a new key from Google AI Studio and
-            it will be detected automatically.
-          </p>
-
-          <button
-            className={`${styles.keyBtn} ${styles.resetBtn}`}
-            onClick={onResetAPIKey}
-          >
-            Reset All Keys
-          </button>
         </div>
 
-        {/* ImgBB API Key */}
-        <div className={styles.section}>
-          <label className={styles.label}>ImgBB API Key (Optional)</label>
-          <div className={styles.keyInputRow}>
-            <span className={styles.keyLabel}>Key:</span>
-            <span className={styles.keyValue}>
-              {imgbbKey ? (
-                maskKey(imgbbKey)
-              ) : (
-                <span className={styles.keyNotSet}>Not set</span>
-              )}
+        {/* FOOTER: PRIVACY */}
+        <div className={styles.aboutSection}>
+          <div className={styles.divider} />
+          <div className={styles.legalRow}>
+            <span>Your keys are stored locally on your device — </span>
+            <span>
+              <button
+                className={styles.privacyLink}
+                onClick={() => handleOpen(PRIVACY_URL)}
+              >
+                We never see them.
+              </button>
             </span>
-            <button
-              className={styles.keyBtn}
-              onClick={handleChangeImgbbKey}
-              disabled={isChangingImgbbKey}
-            >
-              <ExternalLink size={14} />
-              {imgbbKey
-                ? isChangingImgbbKey
-                  ? "Waiting..."
-                  : "Change"
-                : isChangingImgbbKey
-                  ? "Waiting..."
-                  : "Set up"}
-            </button>
           </div>
-          <p className={styles.keyInstructions}>
-            Enables Google Lens integration for reverse image search. Copy your
-            key from ImgBB and it will be detected automatically.
-          </p>
         </div>
       </div>
     );
