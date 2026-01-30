@@ -4,7 +4,7 @@
 //! Chat storage Tauri commands.
 
 use ops_chat_storage::{
-    ChatData, ChatMessage, ChatMetadata, ChatStorage, OcrRegion, Project, StoredImage,
+    ChatData, ChatMessage, ChatMetadata, ChatStorage, OcrRegion, StoredImage,
 };
 
 // =============================================================================
@@ -132,29 +132,4 @@ pub fn save_imgbb_url(chat_id: String, url: String) -> Result<(), String> {
 pub fn get_imgbb_url(chat_id: String) -> Result<Option<String>, String> {
     let storage = ChatStorage::new().map_err(|e| e.to_string())?;
     storage.get_imgbb_url(&chat_id).map_err(|e| e.to_string())
-}
-
-// =============================================================================
-// Project Commands
-// =============================================================================
-
-/// List all projects.
-#[tauri::command]
-pub fn list_projects() -> Result<Vec<Project>, String> {
-    let storage = ChatStorage::new().map_err(|e| e.to_string())?;
-    storage.list_projects().map_err(|e| e.to_string())
-}
-
-/// Create a new project.
-#[tauri::command]
-pub fn create_project(name: String) -> Result<Project, String> {
-    let storage = ChatStorage::new().map_err(|e| e.to_string())?;
-    storage.create_project(name).map_err(|e| e.to_string())
-}
-
-/// Delete a project.
-#[tauri::command]
-pub fn delete_project(project_id: String) -> Result<(), String> {
-    let storage = ChatStorage::new().map_err(|e| e.to_string())?;
-    storage.delete_project(&project_id).map_err(|e| e.to_string())
 }

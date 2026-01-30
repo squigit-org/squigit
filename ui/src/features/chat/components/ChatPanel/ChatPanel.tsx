@@ -261,11 +261,6 @@ const ChatGroup: React.FC<ChatGroupProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-  // If it's a project group, we show it even if empty (but show "No chats" inside)
-  // For standard groups (Today, Yesterday), we only show if not empty.
-  // Logic handled in parent: parent only passes "Time" groups if they have items.
-  // Parent passes Projects always.
-
   return (
     <div className={styles.groupWrapper}>
       <div
@@ -280,29 +275,25 @@ const ChatGroup: React.FC<ChatGroupProps> = ({
       <div
         className={`${styles.groupContent} ${!isExpanded ? styles.collapsed : ""}`}
       >
-        {chats.length === 0 ? (
-          <div className={styles.groupEmpty}>This project is empty</div>
-        ) : (
-          chats.map((chat) => (
-            <ChatItem
-              key={chat.id}
-              chat={chat}
-              isActive={chat.id === activeSessionId}
-              isSelectionMode={isSelectionMode}
-              isSelected={selectedIds.includes(chat.id)}
-              onSelect={() => onSelectChat(chat.id)}
-              onToggleSelection={() => onToggleChatSelection(chat.id)}
-              onDelete={() => onDeleteChat(chat.id)}
-              onRename={(newTitle) => onRenameChat(chat.id, newTitle)}
-              onTogglePin={() => onTogglePinChat(chat.id)}
-              onToggleStar={() => onToggleStarChat(chat.id)}
-              activeContextMenu={activeContextMenu}
-              onOpenContextMenu={onOpenContextMenu}
-              onCloseContextMenu={onCloseContextMenu}
-              onEnableSelectionMode={onEnableSelectionMode}
-            />
-          ))
-        )}
+        {chats.map((chat) => (
+          <ChatItem
+            key={chat.id}
+            chat={chat}
+            isActive={chat.id === activeSessionId}
+            isSelectionMode={isSelectionMode}
+            isSelected={selectedIds.includes(chat.id)}
+            onSelect={() => onSelectChat(chat.id)}
+            onToggleSelection={() => onToggleChatSelection(chat.id)}
+            onDelete={() => onDeleteChat(chat.id)}
+            onRename={(newTitle) => onRenameChat(chat.id, newTitle)}
+            onTogglePin={() => onTogglePinChat(chat.id)}
+            onToggleStar={() => onToggleStarChat(chat.id)}
+            activeContextMenu={activeContextMenu}
+            onOpenContextMenu={onOpenContextMenu}
+            onCloseContextMenu={onCloseContextMenu}
+            onEnableSelectionMode={onEnableSelectionMode}
+          />
+        ))}
       </div>
     </div>
   );

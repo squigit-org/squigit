@@ -32,4 +32,4 @@ pub mod types;
 
 pub use error::{Result, StorageError};
 pub use storage::ChatStorage;
-pub use types::{ChatData, ChatMessage, ChatMetadata, OcrRegion, Project, StoredImage};
+pub use types::{ChatData, ChatMessage, ChatMetadata, OcrRegion, StoredImage};

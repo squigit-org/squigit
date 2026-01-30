@@ -26,9 +26,6 @@ pub struct ChatMetadata {
     /// Whether the chat is starred (favorite).
     #[serde(default)]
     pub is_starred: bool,
-    /// Optional project ID for grouping.
-    #[serde(default)]
-    pub project_id: Option<String>,
     /// When the chat was pinned.
     #[serde(default)]
     pub pinned_at: Option<DateTime<Utc>>,
@@ -46,7 +43,6 @@ impl ChatMetadata {
             image_hash,
             is_pinned: false,
             is_starred: false,
-            project_id: None,
             pinned_at: None,
         }
     }
@@ -116,28 +112,6 @@ impl ChatData {
             messages: Vec::new(),
             ocr_data: Vec::new(),
             imgbb_url: None,
-        }
-    }
-}
-
-/// Project for grouping chats.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Project {
-    /// Unique project ID.
-    pub id: String,
-    /// Project name.
-    pub name: String,
-    /// When the project was created.
-    pub created_at: DateTime<Utc>,
-}
-
-impl Project {
-    /// Create a new project.
-    pub fn new(name: String) -> Self {
-        Self {
-            id: Uuid::new_v4().to_string(),
-            name,
-            created_at: Utc::now(),
         }
     }
 }

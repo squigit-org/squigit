@@ -11,8 +11,8 @@ pub mod services;
 
 use commands::auth::{get_api_key, get_user_data, logout, start_google_auth};
 use commands::chat::{
-    append_chat_message, create_chat, create_project, delete_chat, delete_project,
-    get_image_path, get_imgbb_url, get_ocr_data, list_chats, list_projects, load_chat,
+    append_chat_message, create_chat, delete_chat,
+    get_image_path, get_imgbb_url, get_ocr_data, list_chats, load_chat,
     overwrite_chat_messages, save_imgbb_url, save_ocr_data, store_image_bytes,
     store_image_from_path, update_chat_metadata,
 };
@@ -91,10 +91,6 @@ pub fn run() {
             // ImgBB Storage
             save_imgbb_url,
             get_imgbb_url,
-            // Projects
-            list_projects,
-            create_project,
-            delete_project,
             // Native File IO
             copy_image_to_path,
         ])

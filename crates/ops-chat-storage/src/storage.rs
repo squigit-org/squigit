@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 
 use crate::error::{Result, StorageError};
-use crate::types::{ChatData, ChatMetadata, ChatMessage, OcrRegion, Project, StoredImage};
+use crate::types::{ChatData, ChatMetadata, ChatMessage, OcrRegion, StoredImage};
 
 /// Main storage manager for chats and images.
 pub struct ChatStorage {
@@ -18,8 +18,6 @@ pub struct ChatStorage {
     objects_dir: PathBuf,
     /// Path to the chat index file.
     index_path: PathBuf,
-    /// Path to the projects file.
-    projects_path: PathBuf,
 }
 
 impl ChatStorage {
@@ -34,7 +32,6 @@ impl ChatStorage {
 
         let objects_dir = base_dir.join("objects");
         let index_path = base_dir.join("index.json");
-        let projects_path = base_dir.join("projects.json");
 
         // Create directories if they don't exist
         fs::create_dir_all(&objects_dir)?;
@@ -43,7 +40,6 @@ impl ChatStorage {
             base_dir,
             objects_dir,
             index_path,
-            projects_path,
         };
 
         Ok(storage)
@@ -329,45 +325,6 @@ impl ChatStorage {
             fs::write(&meta_path, updated_json)?;
             self.update_index(&metadata)?;
         }
-
-        Ok(())
-    }
-
-    // =========================================================================
-    // Projects
-    // =========================================================================
-
-    /// List all projects.
-    pub fn list_projects(&self) -> Result<Vec<Project>> {
-        if !self.projects_path.exists() {
-            return Ok(Vec::new());
-        }
-
-        let json = fs::read_to_string(&self.projects_path)?;
-        let projects: Vec<Project> = serde_json::from_str(&json)?;
-        Ok(projects)
-    }
-
-    /// Create a new project.
-    pub fn create_project(&self, name: String) -> Result<Project> {
-        let mut projects = self.list_projects()?;
-
-        let project = Project::new(name);
-        projects.push(project.clone());
-
-        let json = serde_json::to_string_pretty(&projects)?;
-        fs::write(&self.projects_path, json)?;
-
-        Ok(project)
-    }
-
-    /// Delete a project.
-    pub fn delete_project(&self, project_id: &str) -> Result<()> {
-        let mut projects = self.list_projects()?;
-        projects.retain(|p| p.id != project_id);
-
-        let json = serde_json::to_string_pretty(&projects)?;
-        fs::write(&self.projects_path, json)?;
 
         Ok(())
     }
