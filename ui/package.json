@@ -1,10 +1,10 @@
 {
-  "name": "spatialshot",
+  "name": "snapllm",
   "version": "1.0.0",
   "description": "AI and contextual analysis module for screenshot data.",
   "author": "a7mddra <a7mddra@gmail.com>",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/a7mddra/spatialshot",
+  "homepage": "https://github.com/a7mddra/snapllm",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

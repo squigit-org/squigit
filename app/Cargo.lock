@@ -4850,7 +4850,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "spatialshot"
+name = "snapllm"
 version = "1.0.0"
 dependencies = [
  "aes-gcm",

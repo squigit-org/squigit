@@ -7,7 +7,7 @@
 import packageJson from "../../../../package.json";
 
 const RELEASE_NOTES_URL =
-  "https://raw.githubusercontent.com/a7mddra/spatialshot/main/CHANGELOG.md";
+  "https://raw.githubusercontent.com/a7mddra/snapllm/main/CHANGELOG.md";
 
 export interface ReleaseInfo {
   version: string;

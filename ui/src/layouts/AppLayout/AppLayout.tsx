@@ -536,7 +536,7 @@ export const AppLayout: React.FC = () => {
       }
     };
 
-    const displayTitle = isPanelActive ? "Settings" : "Spatialshot";
+    const displayTitle = isPanelActive ? "Settings" : "SnapLLM";
 
     return (
       <div className={styles.appContainer} onContextMenu={handleContextMenu}>

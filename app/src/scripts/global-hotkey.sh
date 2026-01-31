@@ -7,8 +7,8 @@ shift || true
 
 BINARY_PATH="${1:-}"
 USER_KEYS="${2:-}"
-APP_NAME="${3:-Spatialshot}"
-UNIQUE_ID="spatialshot-binding"
+APP_NAME="${3:-SnapLLM}"
+UNIQUE_ID="snapllm-binding"
 WRAPPER_NAME="${UNIQUE_ID}.sh"
 
 KEY_GNOME="${USER_KEYS:-<Super><Shift>A}"

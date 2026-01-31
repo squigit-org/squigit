@@ -231,12 +231,8 @@ export const Welcome: React.FC<WelcomeProps> = ({
       />
 
       <div className={styles.content}>
-        <img
-          src="/assets/raw.svg"
-          alt="Spatialshot logo"
-          className={styles.logo}
-        />
-        <h1 className={styles.title}>Spatialshot</h1>
+        <img src="/assets/raw.svg" alt="SnapLLM logo" className={styles.logo} />
+        <h1 className={styles.title}>SnapLLM</h1>
 
         <div className={styles.actions}>
           <div className={styles.actionRow}>

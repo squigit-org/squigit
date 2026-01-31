@@ -145,7 +145,7 @@ pub fn start_google_auth_flow(app: AppHandle, config_dir: PathBuf) -> Result<(),
             let name = profile
                 .names
                 .and_then(|n| n.first().and_then(|x| x.display_name.clone()))
-                .unwrap_or("Spatial User".to_string());
+                .unwrap_or("SnapLLM User".to_string());
             let email = profile
                 .email_addresses
                 .and_then(|e| e.first().and_then(|x| x.value.clone()))
@@ -197,7 +197,7 @@ pub fn start_google_auth_flow(app: AppHandle, config_dir: PathBuf) -> Result<(),
             let _ = respond_html(
                 request,
                 "Authentication Successful",
-                "<p>Spatialshot is now connected to your Google Account.</p><p>You can close this tab.</p>",
+                "<p>SnapLLM is now connected to your Google Account.</p><p>You can close this tab.</p>",
                 false,
             );
 

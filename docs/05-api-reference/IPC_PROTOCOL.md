@@ -1,6 +1,6 @@
-# Spatialshot IPC Protocol
+# SnapLLM IPC Protocol
 
-The `spatialshot` package uses Electron's Inter-Process Communication (IPC) to communicate between the main process and renderer processes. There are two main preload scripts that set up the IPC bridges:
+The `snapllm` package uses Electron's Inter-Process Communication (IPC) to communicate between the main process and renderer processes. There are two main preload scripts that set up the IPC bridges:
 
 1. **`source/preload.js`**: This is the primary preload script for the main `BrowserWindow`. It exposes two bridge objects: `window.electron` and `window.electronAPI`.
 2. **`source/spaload.js`**: This is the preload script for the `BrowserView` that hosts the main single-page application (SPA) interface. It exposes a single bridge object, `window.ipc`.

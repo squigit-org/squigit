@@ -172,7 +172,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             className={`${styles.topicItem} ${activeTopic === "Docs" ? styles.active : ""}`}
             onClick={() =>
               invoke("open_external_url", {
-                url: "https://github.com/a7mddra/spatialshot/tree/main/docs",
+                url: "https://github.com/a7mddra/snapllm/tree/main/docs",
               })
             }
           >

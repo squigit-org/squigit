@@ -4,7 +4,7 @@
 
 ```text
 [ INSTALLATION DIRECTORY ]
-Path: %LOCALAPPDATA%\Programs\Spatialshot\
+Path: %LOCALAPPDATA%\Programs\SnapLLM\
 (Read Only / User Scope)
 │
 ├── daemon.exe                  <-- [BACKGROUND SERVICE] Rust Orchestrator
@@ -15,20 +15,20 @@ Path: %LOCALAPPDATA%\Programs\Spatialshot\
 │   └── {Qt DLLs}
 │
 └── App\                        <-- [CONTAINER] Electron Dist
-    ├── spatialshot.exe         <-- [APP CORE] The UI Host
+    ├── snapllm.exe         <-- [APP CORE] The UI Host
     ├── {DLLs & Locales}        <-- Electron Dependencies
     └── resources\
         └── app.asar            <-- [SOURCE] Bundled Source
 
 
 [ UPDATE/SETUP STAGING ]
-Path: %APPDATA%\Spatialshot\updates\
+Path: %APPDATA%\SnapLLM\updates\
 │
-└── Spatialshot-Setup.exe       <-- [TAURI] The Updater/Bootstrapper
+└── SnapLLM-Setup.exe       <-- [TAURI] The Updater/Bootstrapper
 
 
 [ USER DATA DIRECTORY ]
-Path: %APPDATA%\Spatialshot\
+Path: %APPDATA%\SnapLLM\
 (Read + Write / Persists forever)
 │
 ├── preferences.json
@@ -41,24 +41,24 @@ Path: %APPDATA%\Spatialshot\
 [ TEMP DIRECTORY ]
 Path: %TEMP%\
 │
-└── spatial_capture.png
-````
+└── snapllm_capture.png
+```
 
------
+---
 
 ## 2\. macOS Blueprint
 
 ```text
 [ INSTALLATION DIRECTORY ]
-Path: /Applications/Spatialshot.app
+Path: /Applications/SnapLLM.app
 (Read Only / Signed Bundle / Hybrid Structure)
 │
 └── Contents/
-    ├── Info.plist              <-- Points to 'Spatialshot' (The Core)
+    ├── Info.plist              <-- Points to 'SnapLLM' (The Core)
     ├── Frameworks/             <-- Chromium Dylibs
     │
     ├── MacOS/
-    │   ├── Spatialshot         <-- [APP CORE] Main Binary
+    │   ├── SnapLLM         <-- [APP CORE] Main Binary
     │   └── daemon              <-- [BACKGROUND SERVICE] Injected Rust Binary
     │
     └── Resources/
@@ -68,18 +68,18 @@ Path: /Applications/Spatialshot.app
 
 
 [ UPDATE/SETUP STAGING ]
-Path: ~/Library/Application Support/Spatialshot/updates/
+Path: ~/Library/Application Support/SnapLLM/updates/
 │
-└── Spatialshot-Setup.dmg       <-- [TAURI] The Updater (Mounts & Copies)
+└── SnapLLM-Setup.dmg       <-- [TAURI] The Updater (Mounts & Copies)
 
 
 [ LAUNCH AGENT ]
-Path: ~/Library/LaunchAgents/com.spatialshot.daemon.plist
+Path: ~/Library/LaunchAgents/com.snapllm.daemon.plist
 (Triggers ../Contents/MacOS/daemon at Login)
 
 
 [ USER DATA DIRECTORY ]
-Path: ~/Library/Application Support/Spatialshot/
+Path: ~/Library/Application Support/SnapLLM/
 (Read + Write / Sandboxed Safe)
 │
 ├── preferences.json
@@ -89,13 +89,13 @@ Path: ~/Library/Application Support/Spatialshot/
 └── session.json
 ```
 
------
+---
 
 ## 3\. Linux Blueprint
 
 ```text
 [ INSTALLATION DIRECTORY ]
-Path: $HOME/.local/share/spatialshot/
+Path: $HOME/.local/share/snapllm/
 (Read Only / XDG Compliant)
 │
 ├── daemon                      <-- [ORCHESTRATOR] Rust Binary
@@ -105,25 +105,25 @@ Path: $HOME/.local/share/spatialshot/
 │   └── {Qt Libs}
 │
 └── app/                        <-- [CONTAINER] Electron Dist
-    ├── spatialshot             <-- [APP CORE] Main Binary
+    ├── snapllm             <-- [APP CORE] Main Binary
     ├── libffmpeg.so
     └── resources/
         └── app.asar
 
 
 [ UPDATE/SETUP STAGING ]
-Path: $HOME/.config/spatialshot/updates/
+Path: $HOME/.config/snapllm/updates/
 │
-└── Spatialshot-Setup           <-- [TAURI] The Updater Binary
+└── SnapLLM-Setup           <-- [TAURI] The Updater Binary
 
 
 [ DESKTOP ENTRY ]
-Path: $HOME/.local/share/applications/spatialshot.desktop
-(Points to .../app/spatialshot)
+Path: $HOME/.local/share/applications/snapllm.desktop
+(Points to .../app/snapllm)
 
 
 [ USER DATA DIRECTORY ]
-Path: $HOME/.config/spatialshot/
+Path: $HOME/.config/snapllm/
 (Read + Write)
 │
 ├── preferences.json

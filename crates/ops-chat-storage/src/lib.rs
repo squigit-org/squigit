@@ -3,7 +3,7 @@
 
 //! Content Addressable Storage (CAS) for images and chat data.
 //!
-//! This crate provides a Git-like storage system for the Spatialshot application,
+//! This crate provides a Git-like storage system for the SnapLLM application,
 //! storing images by their BLAKE3 hash (deduplication) and managing chat data
 //! with persistent storage.
 //!

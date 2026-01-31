@@ -2,15 +2,15 @@
 
 ## 1\. System Overview
 
-The **Spatialshot** application utilizes a polyglot Monorepo architecture designed to optimize performance across specific operational layers. The system is composed of three distinct subsystems, each requiring a specialized build environment and compilation strategy:
+The **SnapLLM** application utilizes a polyglot Monorepo architecture designed to optimize performance across specific operational layers. The system is composed of three distinct subsystems, each requiring a specialized build environment and compilation strategy:
 
 1. **CaptureKit (C++/Qt6):** A high-performance, low-level engine responsible for frame buffering, screen geometry calculations, and rendering overlays.
 2. **Orchestrator (Rust):** A systems-programming middleware that manages global input hooks, OS-level event propagation, and Inter-Process Communication (IPC).
-3. **Presentation Layer (TypeScript/Electron):** The user-facing application container combining a Vite-bundled React frontend (`Core`) with an Electron backend (`Spatialshot`).
+3. **Presentation Layer (TypeScript/Electron):** The user-facing application container combining a Vite-bundled React frontend (`Core`) with an Electron backend (`SnapLLM`).
 
 To mitigate the complexity of cross-compilation and dependency management across these heterogenous environments, a unified Python-based build orchestrator (`setup.py`) has been developed. This script abstracts the underlying platform-specific logic, ensuring deterministic builds.
 
------
+---
 
 ## 2\. Automated Build Pipeline
 
@@ -28,10 +28,10 @@ The orchestrator performs the following sequential operations:
 1. **Environment Sanitization:** Scans for and rectifies execution permission bit discrepancies on Unix systems (chmod `+x` on shell scripts) and unblocks PowerShell execution policies on Windows.
 2. **Native Compilation:** Triggers the platform-specific build routines for `CaptureKit` (CMake/Ninja) and `Orchestrator` (Cargo).
 3. **Frontend Bundling:** Compiles the `Core` React application via Vite.
-4. **Artifact Injection:** Transplants the compiled `Core` distribution assets into the `Spatialshot` Electron renderer directory.
+4. **Artifact Injection:** Transplants the compiled `Core` distribution assets into the `SnapLLM` Electron renderer directory.
 5. **Integration Testing:** Executes the `pytest` suite to validate component interoperability.
 
------
+---
 
 ## 3\. Subsystem: CaptureKit
 
@@ -65,15 +65,15 @@ docker build -t capkit packages/capturekit
 
 The Windows build process is governed by `PKGBUILD.ps1`.
 
-* **Dependency Provisioning:** The script utilizes `aqtinstall` to automatically download and configure a hermetic instance of Qt 6.6.0 (MSVC 2019). This removes the requirement for a pre-existing manual Qt installation.
-* **Compilation:** Leverages `Ninja` and `CMake` for accelerated build times.
-* **Deployment:** Invokes `windeployqt` to analyze the generated `.exe` files and copy the requisite Dynamic Link Libraries (DLLs) and plugins to the distribution folder.
+- **Dependency Provisioning:** The script utilizes `aqtinstall` to automatically download and configure a hermetic instance of Qt 6.6.0 (MSVC 2019). This removes the requirement for a pre-existing manual Qt installation.
+- **Compilation:** Leverages `Ninja` and `CMake` for accelerated build times.
+- **Deployment:** Invokes `windeployqt` to analyze the generated `.exe` files and copy the requisite Dynamic Link Libraries (DLLs) and plugins to the distribution folder.
 
 ### 3.3 macOS Build Strategy
 
 The macOS build relies on `macdeployqt` to generate a standard `.app` bundle. This process injects the necessary frameworks, modifies the `Info.plist`, and handles the `install_name_tool` adjustments required for relative path linking.
 
------
+---
 
 ## 4\. Subsystem: Orchestrator
 
@@ -92,26 +92,26 @@ codegen-units = 1
 panic = 'abort'
 ```
 
-* **Optimization:** The configuration prioritizes binary size (`opt-level = 'z'`) and aggressively strips symbols to ensure a minimal footprint.
-* **Windows Subsystem:** The `Cargo.toml` specifies `#![windows_subsystem = "windows"]`. This directive is critical for the integration with Electron; it prevents the spawning of a visible console window when the process is initialized in the background.
+- **Optimization:** The configuration prioritizes binary size (`opt-level = 'z'`) and aggressively strips symbols to ensure a minimal footprint.
+- **Windows Subsystem:** The `Cargo.toml` specifies `#![windows_subsystem = "windows"]`. This directive is critical for the integration with Electron; it prevents the spawning of a visible console window when the process is initialized in the background.
 
------
+---
 
-## 5\. Subsystem: Presentation Layer (Core & Spatialshot)
+## 5\. Subsystem: Presentation Layer (Core & SnapLLM)
 
-**Locations:** `packages/core/` and `packages/spatialshot/`
+**Locations:** `packages/core/` and `packages/snapllm/`
 
-The frontend architecture separates the UI logic (`Core`) from the desktop container (`Spatialshot`). This requires a strict dependency injection workflow during the build process.
+The frontend architecture separates the UI logic (`Core`) from the desktop container (`SnapLLM`). This requires a strict dependency injection workflow during the build process.
 
 **Integration Workflow:**
 
 1. **Core Compilation:** The `Core` package is built via `vite build`, generating a minified static web application in `packages/core/dist/`.
-2. **Asset Migration:** The contents of `dist/` must be physically copied to `packages/spatialshot/source/renderer/view/`. The Electron application is configured to load the User Interface from this directory.
+2. **Asset Migration:** The contents of `dist/` must be physically copied to `packages/snapllm/source/renderer/view/`. The Electron application is configured to load the User Interface from this directory.
 3. **Electron Packaging:** Once the assets are in place, `electron-builder` is invoked to produce the final OS-specific installers (`.exe`, `.dmg`, `.AppImage`).
 
-*Note: The `setup.py` orchestrator automates the directory cleaning and asset migration to prevent stale cache issues.*
+_Note: The `setup.py` orchestrator automates the directory cleaning and asset migration to prevent stale cache issues._
 
------
+---
 
 ## 6\. Troubleshooting and Verification
 

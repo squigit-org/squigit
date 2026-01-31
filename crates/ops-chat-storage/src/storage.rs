@@ -23,11 +23,11 @@ pub struct ChatStorage {
 impl ChatStorage {
     /// Create a new storage manager.
     ///
-    /// Uses `~/.config/spatialshot/chats/` on Linux (and appropriate config dirs on other OSs).
+    /// Uses `~/.config/snapllm/chats/` on Linux (and appropriate config dirs on other OSs).
     pub fn new() -> Result<Self> {
         let base_dir = dirs::config_dir()
             .ok_or(StorageError::NoDataDir)?
-            .join("spatialshot")
+            .join("snapllm")
             .join("chats");
 
         let objects_dir = base_dir.join("objects");

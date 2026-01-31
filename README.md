@@ -1,16 +1,16 @@
 # <img src="docs/data/header.svg" alt="logo">
 
-[![Spatialshot CI](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/spatialshot/actions/workflows/distribute.yml)
-[![spatialshot](https://img.shields.io/github/package-json/v/a7mddra/spatialshot?filename=package.json&label=spatialshot&color=orange)](https://github.com/a7mddra/spatialshot/blob/main/package.json)
-[![License](https://img.shields.io/github/license/a7mddra/spatialshot)](https://github.com/a7mddra/spatialshot/blob/main/LICENSE)
+[![SnapLLM CI](https://github.com/a7mddra/snapllm/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/snapllm/actions/workflows/distribute.yml)
+[![snapllm](https://img.shields.io/github/package-json/v/a7mddra/snapllm?filename=package.json&label=snapllm&color=orange)](https://github.com/a7mddra/snapllm/blob/main/package.json)
+[![License](https://img.shields.io/github/license/a7mddra/snapllm)](https://github.com/a7mddra/snapllm/blob/main/LICENSE)
 
-![Spatialshot demo](docs/data/demo.gif)
+![SnapLLM demo](docs/data/demo.gif)
 
-Spatialshot is an open-source "Circle to Search" desktop utility that brings the power of AI vision directly to your screen. It provides seamless screen capture, analysis, and visual search capabilities with a single hotkey.
+SnapLLM is an open-source "Circle to Search" desktop utility that brings the power of AI vision directly to your screen. It provides seamless screen capture, analysis, and visual search capabilities with a single hotkey.
 
-Explore detailed guides and architecture in our [documentation](https://github.com/a7mddra/spatialshot/tree/main/docs).
+Explore detailed guides and architecture in our [documentation](https://github.com/a7mddra/snapllm/tree/main/docs).
 
-## 🚀 Why Spatialshot?
+## 🚀 Why SnapLLM?
 
 - **🎯 Native Performance**: Polyglot architecture with C++ capture, Rust orchestration, and Tauri UI.
 - **🔗 Bring Your Own Key (BYOK)**: No middleman. Plug your own Gemini and ImgBB API keys for direct, cost-effective access.
@@ -32,15 +32,15 @@ Download the appropriate installer for your operating system:
 
 #### Windows
 
-Download [`Spatialshot_Installer.exe`](https://github.com/a7mddra/spatialshot/releases/download/installers/spatialshot-installer-win-x64.zip).
+Download [`SnapLLM_Installer.exe`](https://github.com/a7mddra/snapllm/releases/download/installers/snapllm-installer-win-x64.zip).
 
 #### macOS
 
-Download [`spatialshot-installer.dmg`](https://github.com/a7mddra/spatialshot/releases/download/installers/spatialshot-installer-mac-x64.zip).
+Download [`snapllm-installer.dmg`](https://github.com/a7mddra/snapllm/releases/download/installers/snapllm-installer-mac-x64.zip).
 
 #### Linux
 
-Download [`spatialshot-installer`](https://github.com/a7mddra/spatialshot/releases/download/installers/spatialshot-installer-linux-x64.zip).
+Download [`snapllm-installer`](https://github.com/a7mddra/snapllm/releases/download/installers/snapllm-installer-linux-x64.zip).
 
 ## ⭐ Key Features
 
@@ -71,15 +71,15 @@ Download [`spatialshot-installer`](https://github.com/a7mddra/spatialshot/releas
 
 ## 🔐 Authentication: Bring Your Own Key ([BYOK](docs/06-policies/BYOK.md))
 
-Spatialshot operates on a zero-trust, local-first model where you provide your own API keys.
+SnapLLM operates on a zero-trust, local-first model where you provide your own API keys.
 
 ### Setup Process
 
-1. **Launch Spatialshot** and signup
+1. **Launch SnapLLM** and signup
 2. **Generate API Keys** on the official provider sites:
    - **Gemini**: [Google AI Studio](https://aistudio.google.com/app/apikey)
    - **ImgBB**: [ImgBB API](https://api.imgbb.com/)
-3. **Copy to Clipboard** - Spatialshot automatically detects and securely stores your keys
+3. **Copy to Clipboard** - SnapLLM automatically detects and securely stores your keys
 
 ### Security Guarantees
 
@@ -96,11 +96,11 @@ Spatialshot operates on a zero-trust, local-first model where you provide your o
 
 1. Press `Super/Cmd/Win + Shift + A`
 2. Draw a shape around the content you want to analyze
-3. Release to capture and open Spatialshot with AI analysis
+3. Release to capture and open SnapLLM with AI analysis
 
 #### Direct Application Launch
 
-1. Open Spatialshot from your applications menu
+1. Open SnapLLM from your applications menu
 2. Drag & drop an image or use the file dialog
 3. Chat with the AI about your uploaded image
 
@@ -150,7 +150,7 @@ Spatialshot operates on a zero-trust, local-first model where you provide your o
 - [**Build System**](docs/02-architecture/BUILD.md) - Compilation and packaging
 - [**CaptureKit**](docs/02-architecture/CAPTUREKIT.md) - Screen capture engine (C++/Qt6)
 - [**Orchestrator**](docs/02-architecture/ORCHESTRATOR.md) - Core lifecycle manager (Rust)
-- [**Spatialshot App**](docs/02-architecture/SPATIALSHOT.md) - Electron/React application
+- [**SnapLLM App**](docs/02-architecture/SNAPLLM.md) - Electron/React application
 
 ### Development & Contribution
 
@@ -176,7 +176,7 @@ Spatialshot operates on a zero-trust, local-first model where you provide your o
 
 ## 🤝 Contributing
 
-We welcome contributions! Spatialshot is fully open source, and we encourage the community to:
+We welcome contributions! SnapLLM is fully open source, and we encourage the community to:
 
 - Report bugs and suggest features
 - Improve documentation
@@ -189,8 +189,8 @@ Check our [TODO List](TODO.md) for planned features and priorities.
 
 ## 📖 Resources
 
-- **[Documentation](https://github.com/a7mddra/spatialshot/tree/main/docs)** - Complete documentation hub
-- **[GitHub Issues](https://github.com/a7mddra/spatialshot/issues)** - Report bugs or request features
+- **[Documentation](https://github.com/a7mddra/snapllm/tree/main/docs)** - Complete documentation hub
+- **[GitHub Issues](https://github.com/a7mddra/snapllm/issues)** - Report bugs or request features
 - **[Security Policy](docs/06-policies/SECURITY.md)** - Security updates and reporting
 
 ## 📄 Legal

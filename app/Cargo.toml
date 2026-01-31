@@ -1,10 +1,10 @@
 [package]
-name = "spatialshot"
+name = "snapllm"
 version = "1.0.0"
 description = "AI and contextual analysis module for screenshot data."
 authors = ["a7mddra"]
 license = "Apache-2.0"
-repository = "https://github.com/a7mddra/spatialshot"
+repository = "https://github.com/a7mddra/snapllm"
 edition = "2021"
 rust-version = "1.77.2"
 

@@ -14,8 +14,8 @@ runs:
       if: runner.os == 'Linux'
       shell: bash
       run: |
-        docker build -t spatial-builder -f sidecars/qt-capture/Dockerfile .
-        docker run --rm -v $PWD:/build -w /build spatial-builder bash -c "cargo xtask build-capture"
+        docker build -t snapllm-builder -f sidecars/qt-capture/Dockerfile .
+        docker run --rm -v $PWD:/build -w /build snapllm-builder bash -c "cargo xtask build-capture"
 
     - name: Install Qt (macOS)
       if: runner.os == 'macOS'

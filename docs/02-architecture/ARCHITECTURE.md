@@ -1,6 +1,6 @@
-# Spatialshot Architecture
+# SnapLLM Architecture
 
-Spatialshot is built on a **modular, polyglot architecture**. Its core principle is **separation of concerns**: independent components communicate through simple interfaces (files & IPC), allowing deep specialization without system-wide expertise.
+SnapLLM is built on a **modular, polyglot architecture**. Its core principle is **separation of concerns**: independent components communicate through simple interfaces (files & IPC), allowing deep specialization without system-wide expertise.
 
 ## Primary Flow: Global Hotkey Capture
 
@@ -44,7 +44,7 @@ This is the main "Circle to Search" flow, triggered by `Super/Cmd/Win + Shift + 
          └───────────────┼────────┼──────────────────────┘
                          ▼        ▼
                ┌─────────────────────────────────┐     ┌──────────────────┐
-               │      Spatialshot (Electron)     │────▶│   Core (React)   │
+               │      SnapLLM (Electron)     │────▶│   Core (React)   │
                │                                 │     │                  │
                │  Launches with `/tmp/o1.png`    │     │ Image converted  │
                │       as startup argument       │     │  to Base64, AI   │
@@ -54,11 +54,11 @@ This is the main "Circle to Search" flow, triggered by `Super/Cmd/Win + Shift + 
 
 ## Direct Application Launch
 
-When the user opens Spatialshot directly to analyze an existing image file.
+When the user opens SnapLLM directly to analyze an existing image file.
 
 ```ascii
 ┌─────────────┐     ┌─────────────────────────────────┐     ┌────────────────────┐
-│    User     │     │      Spatialshot (Electron)     │     │   Core (React)     │
+│    User     │     │      SnapLLM (Electron)     │     │   Core (React)     │
 │  Opens App  │────▶│                                 │────▶│                    │
 │  or Drags   │     │  Shows upload screen. User      │     │ Image converted    │
 │   Image     │     │  provides image via drag-drop   │     │ to Base64, ready   │
@@ -77,7 +77,7 @@ How the application manages state, credentials, and external services.
 ```ascii
            ┌──────────────────────────────────────────────────────┐
            │         User's Local Application Directory           │
-           │      (~/.local/share/spatialshot or equivalent)      │
+           │      (~/.local/share/snapllm or equivalent)      │
            ├──────────────────────────────────────────────────────┤
  App       │ ► session.json    - Tracks current image for re-use. │
  Startup───│ ► profile.json    - User info from Google OAuth.     │
@@ -91,7 +91,7 @@ How the application manages state, credentials, and external services.
 ```ascii
 ┌─────────────┐    Uploads Image     ┌─────────────┐     Injects URL    ┌───────────────────┐
 │             │─────────────────────▶│    ImgBB    │───────────────────▶│  lens.google.com  │
-│ Spatialshot │                      │    (API)    │                    │  (User's Browser) │
+│ SnapLLM │                      │    (API)    │                    │  (User's Browser) │
 │     App     │                      └─────────────┘                    └───────────────────┘
 │             │
 │             │    Sends Prompt +    ┌──────────────┐

@@ -1,4 +1,4 @@
-# Development Guide for Spatialshot
+# Development Guide for SnapLLM
 
 The fragility of having a monorepo with 7+ programming languages and 5+ frameworks makes it a sophisticated challenge for debugging but creates an optimal path for contributors. In this project, we have meticulously engineered the separation of concerns such that a React web developer doesn't need to understand how we hijack low-level system APIs to capture screens, freeze the desktop, or enable drawing capabilities. A web developer can contribute to the React section and improve our user interface without touching Rust or C++ code. Similarly, a systems programmer can optimize the capture engine without understanding React state management or Electron IPC protocols.
 
@@ -8,7 +8,7 @@ This document provides comprehensive guidance for contributors at all technical 
 
 ### Prerequisites
 
-The Spatialshot ecosystem requires the following foundational tools:
+The SnapLLM ecosystem requires the following foundational tools:
 
 - **Git**: Version control system
 - **Python 3.8+**: Build orchestration and scripting
@@ -46,20 +46,20 @@ Refer to `docs/BUILD.md` for detailed architecture and troubleshooting guidance.
 For contributors focusing on specific components without requiring full compilation capabilities.
 
 1. **Download Prebuilt Binaries**:
-   - Navigate to the [latest GitHub Release](https://github.com/a7mddra/spatialshot/releases/latest)
+   - Navigate to the [latest GitHub Release](https://github.com/a7mddra/snapllm/releases/latest)
    - Download the platform-specific archives for:
    - `capturekit-{os}-x64.zip`
    - `orchestrator-{os}-x64.zip`
-   - `spatialshot-{os}-x64.zip`
+   - `snapllm-{os}-x64.zip`
 
 2. **Extract to Appropriate Locations**:
    - Place CaptureKit binaries in `packages/capturekit/dist/`
    - Place Orchestrator binary in `packages/orchestrator/target/release/`
-   - Place Spatialshot binaries in `packages/spatialshot/dist/`
+   - Place SnapLLM binaries in `packages/snapllm/dist/`
 
 3. **Develop Specialized Components**:
    - **React Developers**: Work in `packages/core/` using standard React development workflows
-   - **Electron Developers**: Work in `packages/spatialshot/source/` with hot-reload capabilities
+   - **Electron Developers**: Work in `packages/snapllm/source/` with hot-reload capabilities
    - **Systems Developers**: Work in `packages/orchestrator/src/` or `packages/capturekit/src/` with component-specific toolchains
 
 4. **Integration Testing**:
@@ -97,12 +97,12 @@ The build artifacts will be automatically injected into the Electron application
 
 ### Electron Application Development
 
-**Location**: `packages/spatialshot/`
+**Location**: `packages/snapllm/`
 
 The Electron application serves as the container for the React frontend.
 
 ```bash
-cd packages/spatialshot
+cd packages/snapllm
 npm install
 npm start
 ```
@@ -183,7 +183,7 @@ Each component can be developed and tested independently:
 1. **CaptureKit**: Test with static images without Orchestrator coordination
 2. **Orchestrator**: Test with mock file system events without actual capture
 3. **Core**: Test as standard web application without Electron container
-4. **Spatialshot**: Test with prebuilt binaries for other components
+4. **SnapLLM**: Test with prebuilt binaries for other components
 
 ### Integration Testing
 
@@ -203,7 +203,7 @@ pytest tests/integration/
 - **Electron**: Use `electron-log` for main/renderer process logging
 - **Orchestrator**: Use Rust's `env_logger` with `RUST_LOG` environment variable
 - **CaptureKit**: Use Qt's `qDebug()` with `QT_LOGGING_RULES` environment variable
-- **Cross-component**: Check `~/.local/share/spatialshot/logs/` (platform-dependent)
+- **Cross-component**: Check `~/.local/share/snapllm/logs/` (platform-dependent)
 
 ## Contribution Workflow
 
@@ -253,4 +253,4 @@ Contributors are encouraged to review the TODO document to identify areas where 
 - **Discussion**: Use GitHub Discussions for design questions and architectural decisions
 - **Maintainers**: Contact project maintainers for critical issues or security concerns
 
-The separation of concerns in Spatialshot enables contributors to engage at their comfort level, from superficial UI improvements to deep systems programming. Each component maintains clear interfaces and contracts, allowing focused development without requiring expertise across the entire technology stack.
+The separation of concerns in SnapLLM enables contributors to engage at their comfort level, from superficial UI improvements to deep systems programming. Each component maintains clear interfaces and contracts, allowing focused development without requiring expertise across the entire technology stack.

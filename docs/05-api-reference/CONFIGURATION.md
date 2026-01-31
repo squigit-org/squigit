@@ -1,14 +1,14 @@
-# Spatialshot Configuration
+# SnapLLM Configuration
 
-The `spatialshot` package offers several configuration options, from build-time settings to user-specific preferences that are managed dynamically at runtime.
+The `snapllm` package offers several configuration options, from build-time settings to user-specific preferences that are managed dynamically at runtime.
 
 ## Runtime Configuration Files
 
-At runtime, Spatialshot creates and manages several configuration and data files in the user's data directory. The location of this directory varies by operating system:
+At runtime, SnapLLM creates and manages several configuration and data files in the user's data directory. The location of this directory varies by operating system:
 
-- **Windows**: `%LOCALAPPDATA%\\Spatialshot`
-- **macOS**: `~/Library/Application Support/Spatialshot`
-- **Linux**: `~/.local/share/spatialshot`
+- **Windows**: `%LOCALAPPDATA%\\SnapLLM`
+- **macOS**: `~/Library/Application Support/SnapLLM`
+- **Linux**: `~/.local/share/snapllm`
 
 ### `preferences.json`
 
@@ -25,8 +25,7 @@ module.exports = {
   APP_DEFAULTS: {
     theme: "dark",
     language: "en-US",
-    prompt:
-      "Analyze this image and provide a detailed description.",
+    prompt: "Analyze this image and provide a detailed description.",
     model: "gemini-2.5-flash",
   },
 };

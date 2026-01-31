@@ -4,7 +4,7 @@
  * spdx-license-identifier: apache-2.0
  */
 
-export const APP_NAME = "Spatialshot";
+export const APP_NAME = "SnapLLM";
 
 export const DEFAULT_MODEL = "gemini-2.5-flash";
 export const DEFAULT_THEME = "dark";

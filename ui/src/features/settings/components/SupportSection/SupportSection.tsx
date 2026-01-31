@@ -21,7 +21,7 @@ const LICENSE_URL = `${GITHUB}/blob/main/LICENSE`;
 
 export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
   const [sysInfo, setSysInfo] = useState<Record<string, string>>({
-    Spatialshot: "v1.0.0",
+    SnapLLM: "v1.0.0",
     Commit: "7a8657542180fb8440c8dcc20d83285fe11360ed",
     Tauri: "Loading...",
     React: React.version,
@@ -42,7 +42,7 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
 
         setSysInfo((prev) => ({
           ...prev,
-          Spatialshot: `v${appVer}`,
+          SnapLLM: `v${appVer}`,
           Tauri: `v${tauriVer}`,
           OS: "Linux x64 6.14.0-37-generic",
           Webview: navigator.userAgent,
@@ -111,7 +111,7 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
       <div className={styles.aboutSection}>
         <div className={styles.divider} />
         <div className={styles.legalRow}>
-          <span>Spatialshot &copy; 2026</span>
+          <span>SnapLLM &copy; 2026</span>
           <span className={styles.dot}>•</span>
           <span>
             <button

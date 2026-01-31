@@ -1,24 +1,24 @@
-# Spatialshot Application Architecture
+# SnapLLM Application Architecture
 
-**Spatialshot** is the user-facing terminal of the utility. It is a "Circle to Search" clone designed for desktop environments. It serves as the bridge between the local screenshot captured by the kernel and the cloud-based AI models (Gemini) or OCR services (Google Lens).
+**SnapLLM** is the user-facing terminal of the utility. It is a "Circle to Search" clone designed for desktop environments. It serves as the bridge between the local screenshot captured by the kernel and the cloud-based AI models (Gemini) or OCR services (Google Lens).
 
 ## 1. High-Level Architecture: The "Shell + View" Model
 
-Spatialshot does not use a standard Electron architecture (a single `BrowserWindow` loading a URL). Instead, it implements a **Shell + View** composite architecture to ensure maximum performance and security isolation.
+SnapLLM does not use a standard Electron architecture (a single `BrowserWindow` loading a URL). Instead, it implements a **Shell + View** composite architecture to ensure maximum performance and security isolation.
 
-| Component | Path | Technology | Role |
- | ----- | ----- | ----- | ----- |
-| **The Shell** | `spatialshot/source/renderer` | HTML/Vanilla JS | The "frame" of the window. Handles traffic lights, window dragging, and the login state. Lightweight and instant-loading. |
-| **The View** | `packages/core` | React 19 + Vite | The heavy "Brain". Loaded inside a `BrowserView` (a separate process). Contains the Chat Engine and Gemini Logic. |
+| Component     | Path                      | Technology      | Role                                                                                                                      |
+| ------------- | ------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **The Shell** | `snapllm/source/renderer` | HTML/Vanilla JS | The "frame" of the window. Handles traffic lights, window dragging, and the login state. Lightweight and instant-loading. |
+| **The View**  | `packages/core`           | React 19 + Vite | The heavy "Brain". Loaded inside a `BrowserView` (a separate process). Contains the Chat Engine and Gemini Logic.         |
 
-````mermaid
+```mermaid
 graph TD
     %% Styles
     classDef container fill:#ffffff,stroke:#333,stroke-width:2px,color:black;
     classDef node fill:#ffffff,stroke:#666,stroke-width:1px,color:black;
     classDef bridge fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5,color:black;
 
-    subgraph Spatialshot [Spatialshot Application]
+    subgraph SnapLLM [SnapLLM Application]
         direction TB
 
         %% Main Process Components
@@ -41,14 +41,14 @@ graph TD
         %% Orchestration
         Main -->|Creates| Shell
         Main -->|Embeds| React
-        
+
         %% Bridge Connections
         Shell -.-> Preload
         React -.-> SpaLoad
-        
+
         Preload <==>|Window Controls| IPC
         SpaLoad <==>|System Logic| IPC
-        
+
         %% Internal Logic
         React --- Chat
         IPC --- Auth
@@ -58,8 +58,8 @@ graph TD
         IPC -.->|Proxy Upload| Cloud
     end
 
-    class Spatialshot container
-````
+    class SnapLLM container
+```
 
 ## 2\. The Core (Frontend Intelligence)
 
@@ -73,15 +73,15 @@ This hook manages the conversational state. It abstracts the complexity of strea
 
 2. **Streaming:** Uses `startNewChatStream` to open a socket-like connection to Gemini.
 
-3. **Fallback Logic:** If Gemini 2.5 Flash hits a `429` (Rate Limit) or `503` (Overloaded), the engine automatically downgrades to **Gemini Flash Lite** to ensure the user gets *some* answer.
+3. **Fallback Logic:** If Gemini 2.5 Flash hits a `429` (Rate Limit) or `503` (Overloaded), the engine automatically downgrades to **Gemini Flash Lite** to ensure the user gets _some_ answer.
 
 ### System Synchronization (`useSystemSync.ts`)
 
 Since React is stateless regarding the file system, this hook binds React state to Electron's persistent JSON store.
 
-* Listens for `ipc.onThemeChanged`.
+- Listens for `ipc.onThemeChanged`.
 
-* Syncs API Keys, User Profiles, and Prompts from disk on mount.
+- Syncs API Keys, User Profiles, and Prompts from disk on mount.
 
 ## 3\. The Backend (Electron Logic)
 
@@ -89,43 +89,41 @@ The `source/main.js` entry point orchestrates the application lifecycle. To main
 
 ### 🔐 Security & BYOK (Bring Your Own Key)
 
-Spatialshot operates on a zero-trust model regarding API keys.
+SnapLLM operates on a zero-trust model regarding API keys.
 
 1. **Clipboard Watcher (`ipc-handlers/byok.js`):**
+   - When the user clicks "Setup", the app polls the clipboard.
 
-      * When the user clicks "Setup", the app polls the clipboard.
+   - It regex-matches for Google Keys (`AIzaS...`) or ImgBB keys (32-char hex).
 
-      * It regex-matches for Google Keys (`AIzaS...`) or ImgBB keys (32-char hex).
-
-    ***UX Benefit:** The user never has to paste sensitive keys; the app grabs them, encrypts them, and clears them from memory.
+   **\*UX Benefit:** The user never has to paste sensitive keys; the app grabs them, encrypts them, and clears them from memory.
 
 2. **Encryption (`utilities.js`):**
+   - Keys are **never** stored in plain text.
 
-      * Keys are **never** stored in plain text.
+   - We derive a key using **PBKDF2** (using the OS Home Directory as a stable salt component).
 
-      * We derive a key using **PBKDF2** (using the OS Home Directory as a stable salt component).
-
-      * Data is encrypted using **AES-256-GCM**.
+   - Data is encrypted using **AES-256-GCM**.
 
 ### 📸 Dynamic Window Sizing (`utilities.js`)
 
-Unlike standard apps with fixed sizes, Spatialshot attempts to mimic a native OS overlay.
+Unlike standard apps with fixed sizes, SnapLLM attempts to mimic a native OS overlay.
 
-* **Logic:** `getDynamicDims` calculates the window size relative to the monitor's work area. It creates a window that feels proportional to the screen resolution (approx. 1/13th width ratio), centered perfectly.
+- **Logic:** `getDynamicDims` calculates the window size relative to the monitor's work area. It creates a window that feels proportional to the screen resolution (approx. 1/13th width ratio), centered perfectly.
 
 ## 4\. External Integrations
 
-Spatialshot connects to two primary external services:
+SnapLLM connects to two primary external services:
 
 ### 1\. Google Gemini (Intelligence)
 
-* **Direct SDK:** Uses `@google/genai` directly in the renderer (Core).
+- **Direct SDK:** Uses `@google/genai` directly in the renderer (Core).
 
-* **Prompt Engineering:** Injects a system prompt (`prompt.yml`) that defines the persona as "Friendly, Informal, and Brief".
+- **Prompt Engineering:** Injects a system prompt (`prompt.yml`) that defines the persona as "Friendly, Informal, and Brief".
 
 ### 2\. Google Lens (OCR & Visual Search)
 
-Since Google Lens has no public API, Spatialshot implements a clever "Bridge" technique in `ipc-handlers/lens.js`.
+Since Google Lens has no public API, SnapLLM implements a clever "Bridge" technique in `ipc-handlers/lens.js`.
 
 1. **Upload:** The local screenshot is uploaded to **ImgBB** (using the user's private key).
 

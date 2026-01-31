@@ -1,8 +1,8 @@
 {
   "$schema": "../ui/node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "spatialshot",
+  "productName": "snapllm",
   "version": "1.0.0",
-  "identifier": "spatialshot",
+  "identifier": "snapllm",
   "build": {
     "beforeDevCommand": "npm --prefix ui run dev",
     "devUrl": "http://localhost:1420",
@@ -22,12 +22,12 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/a7mddra/spatialshot/releases/latest/download/latest.json"
+        "https://github.com/a7mddra/snapllm/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhBRkVGRUQxQ0Q3M0IxODUKUldTRnNYUE4wZjcraXBpNkgyS0ZnTVdzUFlTVjdwMk14dFNDRUZsUC9iM2FjSGxNbTlxaGoxa20K"
     },
     "cli": {
-      "description": "spatialshot",
+      "description": "snapllm",
       "args": [
         {
           "name": "image",

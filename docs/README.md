@@ -1,4 +1,4 @@
-# Spatialshot Documentation
+# SnapLLM Documentation
 
 ## Quick Links
 
@@ -10,7 +10,7 @@
 ## Documentation Structure
 
 1. **Getting Started** - Installation and basic usage
-2. **Architecture** - How Spatialshot works internally
+2. **Architecture** - How SnapLLM works internally
 3. **Development** - Contributing and debugging
 4. **Deployment** - CI/CD and release management
 5. **API Reference** - Technical specifications
@@ -19,5 +19,5 @@
 ## Need Help?
 
 - Check the [troubleshooting guide](03-development/DEBUGGING.md)
-- Review [common issues](https://github.com/a7mddra/spatialshot/issues)
+- Review [common issues](https://github.com/a7mddra/snapllm/issues)
 - Join project discussions

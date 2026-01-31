@@ -66,7 +66,7 @@ export const UpdateNotes: React.FC<UpdateNotesProps> = ({
         setStatus("Opening download page...");
         setTimeout(() => {
           invoke("open_external_url", {
-            url: "https://github.com/a7mddra/spatialshot/releases/latest",
+            url: "https://github.com/a7mddra/snapllm/releases/latest",
           });
           onClose();
         }, 1500);
@@ -76,7 +76,7 @@ export const UpdateNotes: React.FC<UpdateNotesProps> = ({
       setStatus("Error. Opening browser...");
       setTimeout(() => {
         invoke("open_external_url", {
-          url: "https://github.com/a7mddra/spatialshot/releases/latest",
+          url: "https://github.com/a7mddra/snapllm/releases/latest",
         });
         onClose();
       }, 1500);

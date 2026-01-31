@@ -4878,6 +4878,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
+name = "snapllm"
+version = "1.0.0"
+dependencies = [
+ "aes-gcm",
+ "arboard",
+ "base64 0.22.1",
+ "clipboard-rs",
+ "dbus",
+ "dirs 5.0.1",
+ "hex",
+ "hmac",
+ "image",
+ "mime_guess",
+ "opener",
+ "ops-chat-storage",
+ "parking_lot",
+ "pbkdf2",
+ "rand 0.8.5",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-cli",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-updater",
+ "tiny_http",
+ "url",
+ "webbrowser",
+]
+
+[[package]]
 name = "socket2"
 version = "0.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4943,42 +4979,6 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps",
-]
-
-[[package]]
-name = "spatialshot"
-version = "1.0.0"
-dependencies = [
- "aes-gcm",
- "arboard",
- "base64 0.22.1",
- "clipboard-rs",
- "dbus",
- "dirs 5.0.1",
- "hex",
- "hmac",
- "image",
- "mime_guess",
- "opener",
- "ops-chat-storage",
- "parking_lot",
- "pbkdf2",
- "rand 0.8.5",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "sha2",
- "tauri",
- "tauri-build",
- "tauri-plugin-cli",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-updater",
- "tiny_http",
- "url",
- "webbrowser",
 ]
 
 [[package]]
