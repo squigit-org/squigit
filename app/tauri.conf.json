@@ -1,6 +1,6 @@
 {
   "$schema": "../ui/node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "snapllm",
+  "productName": "SnapLLM",
   "version": "1.0.0",
   "identifier": "snapllm",
   "build": {

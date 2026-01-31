@@ -1,5 +1,5 @@
 [package]
-name = "snapllm"
+name = "SnapLLM"
 version = "1.0.0"
 description = "AI and contextual analysis module for screenshot data."
 authors = ["a7mddra"]
