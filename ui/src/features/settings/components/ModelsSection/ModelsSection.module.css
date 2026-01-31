@@ -55,12 +55,12 @@
 .keyBtn {
   background: var(--neutral-800);
   height: 28px;
+  width: 110px;
+  min-width: 110px;
   color: var(--neutral-200);
-  padding: 0.4rem 0.8rem;
   border-radius: 0.3rem;
   font-size: 0.8rem;
   cursor: pointer;
-  display: flex;
   align-items: center;
   gap: 0.4rem;
 

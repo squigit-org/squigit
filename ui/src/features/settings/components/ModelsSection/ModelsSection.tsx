@@ -99,9 +99,40 @@ const ModelReel: React.FC<ModelReelProps> = ({
     value: item.id || item.name,
   }));
 
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [shouldHideDescription, setShouldHideDescription] = useState(false);
+
+  React.useEffect(() => {
+    const checkVisibility = () => {
+      if (containerRef.current) {
+        const reelContainerWidth = containerRef.current.offsetWidth;
+        // Simplified Logic: Hide if container width is less than 600px
+        setShouldHideDescription(reelContainerWidth < 600);
+      }
+    };
+
+    // Check initially
+    checkVisibility();
+
+    // Listen for window resize
+    window.addEventListener("resize", checkVisibility);
+
+    // Also use ResizeObserver for the container itself
+    const observer = new ResizeObserver(checkVisibility);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkVisibility);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div
-      className={`${styles.reelContainer} ${isChatPanelOpen ? styles.centered : ""}`}
+      ref={containerRef}
+      className={`${styles.reelContainer} ${shouldHideDescription ? styles.centered : ""}`}
     >
       {/* Wheel Picker */}
       <div className={styles.wheelWrapper}>
@@ -129,7 +160,7 @@ const ModelReel: React.FC<ModelReelProps> = ({
 
       {/* Description Panel - Always render for animation, but hide via class */}
       <div
-        className={`${styles.descriptionPanel} ${isChatPanelOpen ? styles.hidden : ""}`}
+        className={`${styles.descriptionPanel} ${shouldHideDescription ? styles.hidden : ""}`}
       >
         <span className={styles.descriptionText}>
           {currentItem.description}
