@@ -12,6 +12,7 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { CodeBlock } from "../../../syntax";
 import styles from "./ChatBubble.module.css";
+import { remarkDisableIndentedCode } from "../../markdownPlugins";
 
 export const StreamingResponse: React.FC<{ text: string }> = ({ text }) => {
   const markdownComponents = useMemo(
@@ -44,7 +45,7 @@ export const StreamingResponse: React.FC<{ text: string }> = ({ text }) => {
         />
       ),
     }),
-    []
+    [],
   );
 
   if (!text) return null;
@@ -53,7 +54,7 @@ export const StreamingResponse: React.FC<{ text: string }> = ({ text }) => {
     <div className={styles.streamingContainer} data-component="chat-bubble">
       <div className={`${styles.bubble} ${styles.botBubble}`}>
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkMath]}
+          remarkPlugins={[remarkGfm, remarkMath, remarkDisableIndentedCode]}
           rehypePlugins={[rehypeKatex]}
           components={markdownComponents}
         >

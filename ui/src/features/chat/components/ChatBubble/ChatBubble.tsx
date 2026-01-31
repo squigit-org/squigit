@@ -14,6 +14,7 @@ import { CodeBlock } from "../../../syntax";
 import { Message } from "../../types/chat.types";
 import styles from "./ChatBubble.module.css";
 import "katex/dist/katex.min.css";
+import { remarkDisableIndentedCode } from "../../markdownPlugins";
 
 interface ChatBubbleProps {
   message: Message;
@@ -79,7 +80,6 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
             isUser ? styles.userContent : styles.botContent
           }`}
         >
-          {/* Main Bubble Text */}
           <div
             dir="auto"
             data-component="chat-bubble"
@@ -88,7 +88,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
             }`}
           >
             <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkMath]}
+              remarkPlugins={[remarkGfm, remarkMath, remarkDisableIndentedCode]}
               rehypePlugins={[rehypeKatex]}
               components={markdownComponents}
             >
@@ -96,7 +96,6 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
             </ReactMarkdown>
           </div>
 
-          {/* Image Attachment (if any) */}
           {message.image && (
             <div className={styles.imageWrapper}>
               <img
@@ -112,7 +111,6 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
             </div>
           )}
 
-          {/* Footer: Timestamp & Copy Button */}
           <div
             className={`${styles.footer} ${
               isUser ? styles.userFooter : styles.botFooter
