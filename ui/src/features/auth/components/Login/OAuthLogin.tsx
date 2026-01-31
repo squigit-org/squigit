@@ -6,9 +6,9 @@
 
 import React, { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import layoutStyles from "../../styles/Layout.module.css";
 import typoStyles from "../../styles/Typography.module.css";
-import buttonStyles from "../../styles/Button.module.css";
+import layoutStyles from "../../styles/AuthLayout.module.css";
+import buttonStyles from "../../styles/AuthButton.module.css";
 
 interface LoginScreenProps {
   onComplete: () => void;

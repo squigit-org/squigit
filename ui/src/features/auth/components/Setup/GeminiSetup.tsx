@@ -5,9 +5,9 @@
  */
 
 import React, { useState } from "react";
-import layoutStyles from "../../styles/Layout.module.css";
 import typoStyles from "../../styles/Typography.module.css";
-import buttonStyles from "../../styles/Button.module.css";
+import layoutStyles from "../../styles/AuthLayout.module.css";
+import buttonStyles from "../../styles/AuthButton.module.css";
 
 interface GeminiSetupProps {
   onComplete: () => void;

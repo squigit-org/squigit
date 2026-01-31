@@ -5,10 +5,10 @@
  */
 
 import React, { useState } from "react";
-import layoutStyles from "../../styles/Layout.module.css";
-import typoStyles from "../../styles/Typography.module.css";
-import buttonStyles from "../../styles/Button.module.css";
 import { invoke } from "@tauri-apps/api/core";
+import typoStyles from "../../styles/Typography.module.css";
+import layoutStyles from "../../styles/AuthLayout.module.css";
+import buttonStyles from "../../styles/AuthButton.module.css";
 
 export const ImgbbSetup: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
