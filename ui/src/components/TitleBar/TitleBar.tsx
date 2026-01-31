@@ -214,13 +214,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           </button>
         )}
 
-        {!isPanelActive && (
-          <ModelSwitcher
-            currentModel={currentModel}
-            onModelChange={onModelChange}
-            isLoading={isLoading}
-          />
-        )}
+        <ModelSwitcher
+          currentModel={currentModel}
+          onModelChange={onModelChange}
+          isLoading={isLoading}
+          isHidden={isPanelActive}
+        />
 
         <div className={styles.controlsWrapper}>
           <button

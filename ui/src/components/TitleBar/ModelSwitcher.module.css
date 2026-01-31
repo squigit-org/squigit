@@ -9,6 +9,11 @@
   pointer-events: auto;
 }
 
+.switcherContainer.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .switcherButton {
   display: flex;
   align-items: center;

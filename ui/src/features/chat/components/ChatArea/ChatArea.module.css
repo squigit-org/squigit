@@ -181,19 +181,17 @@ body:global(.light-mode) .shimmer-line-8 {
   );
 }
 
-/* Custom Scrollbar for ChatArea */
 :global(.custom-scrollbar)::-webkit-scrollbar {
   width: 10px;
 }
 
 :global(.custom-scrollbar)::-webkit-scrollbar-track {
   background: transparent;
-  margin-top: 50px; /* Push track down to start below header */
-  border-left: 1px solid transparent; /* Optional separator */
+
+  margin-top: 50px;
+  border-left: 1px solid transparent;
 }
 
-/* Fallback/Correction: margin-top on track works in some browsers but simply transparent bg check */
-/* To effectively "start" lower, we use a transparent border-top on the button or track piece if margin fails */
 :global(.custom-scrollbar)::-webkit-scrollbar-track-piece:start {
   background: transparent;
   margin-top: 50px;

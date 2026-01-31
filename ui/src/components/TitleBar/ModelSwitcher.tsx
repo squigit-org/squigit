@@ -13,12 +13,14 @@ interface ModelSwitcherProps {
   currentModel: string;
   onModelChange: (modelId: string) => void;
   isLoading: boolean;
+  isHidden?: boolean;
 }
 
 export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   currentModel,
   onModelChange,
   isLoading,
+  isHidden = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -62,7 +64,10 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   };
 
   return (
-    <div className={styles.switcherContainer} ref={dropdownRef}>
+    <div
+      className={`${styles.switcherContainer} ${isHidden ? styles.hidden : ""}`}
+      ref={dropdownRef}
+    >
       <button
         ref={buttonRef}
         onClick={toggleOpen}

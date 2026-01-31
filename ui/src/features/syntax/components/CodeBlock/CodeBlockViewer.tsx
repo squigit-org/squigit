@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { Check, Copy, Terminal } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useCopyToClipboard, useCodeHighlighter } from "../../hooks";
 import styles from "./CodeBlock.module.css";
 
@@ -15,10 +15,6 @@ interface CodeBlockViewerProps {
   stickyHeader?: boolean;
 }
 
-/**
- * Read-only code block with syntax highlighting.
- * Switched to CSS native sticky positioning for buttery smooth performance.
- */
 export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
   language,
   value,
@@ -31,25 +27,24 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
 
   return (
     <div className={styles.wrapper} role="region" aria-label="code block">
-      <div className={`${styles.header} ${stickyHeader ? styles.sticky : ""}`}>
+      <div className={styles.header}>
         <div className={styles.langLabel}>
-          <Terminal size={14} />
           <span className={styles.langName}>{language || "text"}</span>
         </div>
-
-        <button
-          onClick={handleCopy}
-          className={styles.copyButton}
-          title="Copy code"
-          aria-label="Copy code"
-          data-copied={isCopied ? "true" : "false"}
-        >
-          <span className={styles.iconWrapper}>
-            {isCopied ? <Check size={14} /> : <Copy size={14} />}
-          </span>
-          <span>Copy</span>
-        </button>
       </div>
+
+      <button
+        onClick={handleCopy}
+        className={`${styles.copyButton} ${stickyHeader ? styles.stickyButton : ""}`}
+        title="Copy code"
+        aria-label="Copy code"
+        data-copied={isCopied ? "true" : "false"}
+      >
+        <span className={styles.iconWrapper}>
+          {isCopied ? <Check size={14} /> : <Copy size={14} />}
+        </span>
+        <span>Copy</span>
+      </button>
 
       <div className={styles.content}>
         {isLoading ? (

@@ -86,6 +86,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   userName,
   userEmail,
   avatarSrc,
+  originalPicture,
   onSave,
   onLogout,
   isDarkMode,
@@ -200,6 +201,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               userName={userName}
               userEmail={userEmail}
               avatarSrc={avatarSrc}
+              originalPicture={originalPicture}
               onPromptChange={setPrompt}
               onModelChange={(model) => {
                 onEditingModelChange(model);

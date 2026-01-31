@@ -9,9 +9,6 @@ import { CodeBlockEditable } from "./CodeBlockEditable";
 import { CodeBlockViewer } from "./CodeBlockViewer";
 import type { CodeBlockProps } from "../../types";
 
-/**
- * CodeBlock component for displaying and editing code.
- */
 const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
   (
     {
@@ -21,7 +18,7 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
       onChange,
       onKeyDown,
       placeholder,
-      stickyHeader, // <--- Destructure this
+      stickyHeader,
     },
     ref,
   ) => {
@@ -42,7 +39,7 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
       <CodeBlockViewer
         language={language}
         value={value}
-        stickyHeader={stickyHeader} // <--- Pass it down
+        stickyHeader={stickyHeader}
       />
     );
   },

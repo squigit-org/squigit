@@ -13,7 +13,7 @@ import {
   restoreSession as apiRestoreSession,
 } from "../../../lib/api/gemini/client";
 
-export const useChatEngine = ({
+export const useChat = ({
   apiKey,
   currentModel,
   startupImage,

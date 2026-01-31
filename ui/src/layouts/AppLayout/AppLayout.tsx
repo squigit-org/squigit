@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 
 import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "../../lib/api/tauri/commands";
 import { ContextMenu, ContextMenuItem, TitleBar } from "../../components";
 
@@ -32,7 +32,7 @@ import {
   LoginScreen,
   useAuth,
   useChatTitle,
-  useChatEngine,
+  useChat,
   ChatPanel,
   SettingsTab,
 } from "../../features";
@@ -193,7 +193,7 @@ export const AppLayout: React.FC = () => {
     }
   }, [isLoadingState, system.startupImage]);
 
-  const chatEngine = useChatEngine({
+  const chat = useChat({
     apiKey: system.apiKey,
     currentModel: system.sessionModel,
     startupImage: system.startupImage,
@@ -260,7 +260,7 @@ export const AppLayout: React.FC = () => {
         timestamp: new Date(m.timestamp).getTime(),
       }));
 
-      chatEngine.restoreState(
+      chat.restoreState(
         {
           messages,
           streamingText: "",
@@ -293,6 +293,9 @@ export const AppLayout: React.FC = () => {
   };
 
   const handleNewSession = () => {
+    if (isPanelActive) {
+      handleToggleSettings();
+    }
     system.resetSession();
     chatHistory.setActiveSessionId(null);
     setOcrData([]); // Clear OCR data
@@ -402,10 +405,10 @@ export const AppLayout: React.FC = () => {
 
   const [isRotating, setIsRotating] = useState(false);
   useEffect(() => {
-    if (!chatEngine.isLoading) {
+    if (!chat.isLoading) {
       setIsRotating(false);
     }
-  }, [chatEngine.isLoading]);
+  }, [chat.isLoading]);
 
   useEffect(() => {
     const unlisten = listen<any>("auth-success", (event) => {
@@ -664,13 +667,13 @@ export const AppLayout: React.FC = () => {
       className={styles.appContainer}
     >
       <TabLayout
-        messages={chatEngine.messages}
-        streamingText={chatEngine.streamingText}
-        isChatMode={chatEngine.isChatMode}
-        isLoading={chatEngine.isLoading}
-        isStreaming={chatEngine.isStreaming}
-        error={chatEngine.error || system.systemError}
-        lastSentMessage={chatEngine.lastSentMessage}
+        messages={chat.messages}
+        streamingText={chat.streamingText}
+        isChatMode={chat.isChatMode}
+        isLoading={chat.isLoading}
+        isStreaming={chat.isStreaming}
+        error={chat.error || system.systemError}
+        lastSentMessage={chat.lastSentMessage}
         input={input}
         onInputChange={setInput}
         currentModel={system.sessionModel}
@@ -678,20 +681,20 @@ export const AppLayout: React.FC = () => {
         chatTitle={chatTitle}
         chatId={chatHistory.activeSessionId}
         onSend={() => {
-          chatEngine.handleSend(input);
+          chat.handleSend(input);
           setInput("");
         }}
         onModelChange={system.setSessionModel}
         onRetry={() => {
-          if (chatEngine.messages.length === 0) {
-            chatEngine.handleReload();
+          if (chat.messages.length === 0) {
+            chat.handleReload();
           } else {
-            chatEngine.handleRetrySend();
+            chat.handleRetrySend();
           }
         }}
         onCheckSettings={() => {
           handleToggleSettings();
-          chatEngine.clearError();
+          chat.clearError();
         }}
         onReload={() => {
           setIsRotating(true);
@@ -699,14 +702,14 @@ export const AppLayout: React.FC = () => {
           if (activeId) {
             // Clear messages in storage before reloading
             overwriteChatMessages(activeId, []).then(() => {
-              chatEngine.handleReload();
+              chat.handleReload();
             });
           } else {
-            chatEngine.handleReload();
+            chat.handleReload();
           }
         }}
         onDescribeEdits={async (description) => {
-          chatEngine.handleDescribeEdits(description);
+          chat.handleDescribeEdits(description);
         }}
         sessionLensUrl={sessionLensUrl}
         setSessionLensUrl={handleUpdateLensUrl}
@@ -720,6 +723,7 @@ export const AppLayout: React.FC = () => {
         userName={system.userName}
         userEmail={system.userEmail}
         avatarSrc={system.avatarSrc}
+        originalPicture={system.originalPicture}
         onSave={system.saveSettings}
         onLogout={performLogout}
         isDarkMode={system.isDarkMode}

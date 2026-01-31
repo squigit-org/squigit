@@ -13,8 +13,6 @@
 .wrapper {
   margin-top: 1rem;
   margin-bottom: 1rem;
-  /* REMOVED overflow: hidden to fix global scrollbar issues */
-  /* overflow: hidden; */
   border-radius: 0.75rem;
 
   background-color: var(--solid-17);
@@ -29,10 +27,8 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 
-  /* 1. This padding defines the "stop line" for the sticky header. 
-       The header cannot go past the content box, so it stops 20px early.
-  */
-  padding-bottom: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .header {
@@ -45,33 +41,8 @@
   background-color: var(--solid-17);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 
-  /* Ensure header corners round with the wrapper since wrapper overflow is gone */
   border-top-left-radius: 0.75rem;
   border-top-right-radius: 0.75rem;
-
-  z-index: 5;
-}
-
-.sticky {
-  position: sticky;
-  top: 72px;
-}
-
-.langLabel {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.langName {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: lowercase;
-  letter-spacing: 0.02em;
-  color: var(--neutral-200);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
 }
 
 .textarea {
@@ -90,26 +61,52 @@
   caret-color: var(--neutral-100);
 }
 
+.langLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.langName {
+  font-size: 0.75rem;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  color: var(--neutral-200);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 .copyButton {
+  float: right;
+  margin-right: 8px;
+
+  margin-top: -2.1rem;
+
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.35rem 0.65rem;
+  background-color: #171717;
   border-radius: 999px;
+  padding: 0.35rem 0.65rem;
   cursor: pointer;
   color: var(--neutral-200);
   transition:
     background-color 120ms ease,
     opacity 120ms ease;
-  align-self: center;
+
   white-space: nowrap;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   min-width: 4rem;
   justify-content: center;
+}
+
+.stickyButton {
+  position: sticky;
+  top: 72px;
+  z-index: 5;
 }
 
 .iconWrapper {
@@ -122,8 +119,7 @@
 }
 
 .copyButton:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  opacity: 1;
+  opacity: 0.7;
 }
 
 .copyButton:disabled,
@@ -132,25 +128,14 @@
   opacity: 0.7;
 }
 
-.copyButton[data-copied="true"] {
-  border-color: rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
 .content {
   position: relative;
   width: 100%;
   overflow-x: auto;
   padding: 1rem;
   background-color: var(--solid-17);
-
-  /* 2. This negative margin pulls the content box (and scrollbar) 
-       DOWN into the wrapper's padding area.
-       Result: Header stops 20px early, but scrollbar is at the bottom.
-  */
-  margin-bottom: -1.25rem;
-
-  /* Ensure bottom corners round */
+  box-sizing: border-box;
+  max-width: 100%;
   border-bottom-left-radius: 0.75rem;
   border-bottom-right-radius: 0.75rem;
 }

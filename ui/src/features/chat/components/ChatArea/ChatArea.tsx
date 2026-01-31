@@ -51,7 +51,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }, [error]);
 
     return (
-      <div className="flex-1 overflow-y-auto mr-2 custom-scrollbar" ref={ref}>
+      <div
+        className="flex-1 min-h-0 overflow-y-auto mr-2 custom-scrollbar"
+        ref={ref}
+        style={{ transform: "translateZ(0)" }}
+      >
         <main>
           <div
             className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-4 ${

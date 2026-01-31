@@ -2,10 +2,6 @@
  * @license
  * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
- *
- * Editable code block UI tweaks:
- * - Reuse updated gradient header and pill-like language label
- * - Minimal markup changes; visuals handled in module CSS
  */
 
 import React, { forwardRef } from "react";
@@ -20,10 +16,6 @@ interface CodeBlockEditableProps {
   placeholder?: string;
 }
 
-/**
- * Editable code block variant with textarea input.
- * Used for code input forms and editors.
- */
 export const CodeBlockEditable = forwardRef<
   HTMLTextAreaElement,
   CodeBlockEditableProps
