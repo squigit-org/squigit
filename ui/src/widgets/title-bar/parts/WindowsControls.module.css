@@ -1,0 +1,61 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import "../../../styles/variables.css";
+
+.windowsControls {
+  display: flex;
+  align-items: center;
+  margin-left: 0.5rem;
+  pointer-events: none;
+}
+
+.windowsButton {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  transition:
+    background-color 0.1s ease,
+    color 0.1s ease;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+}
+
+.windowsButton.winMinimize:hover,
+.windowsButton.winMaximize:hover {
+  background-color: #3c3c3c;
+  color: var(--neutral-100);
+}
+
+.windowsButton.winClose:hover {
+  background-color: #e81123;
+  color: #ffffff;
+}
+
+:global(body.light-mode) .windowsButton,
+:global(html.light) .windowsButton {
+  color: #1a1a1a;
+}
+
+:global(body.light-mode) .windowsButton.winMinimize:hover,
+:global(body.light-mode) .windowsButton.winMaximize:hover,
+:global(html.light) .windowsButton.winMinimize:hover,
+:global(html.light) .windowsButton.winMaximize:hover {
+  background-color: #e0e0e0;
+  color: #1a1a1a;
+}
+
+:global(body.light-mode) .windowsButton.winClose:hover,
+:global(html.light) .windowsButton.winClose:hover {
+  background-color: #e81123;
+  color: #ffffff;
+}

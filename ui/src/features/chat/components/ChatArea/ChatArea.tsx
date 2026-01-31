@@ -6,9 +6,9 @@
 
 import React, { forwardRef, useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { parseGeminiError } from "../../../../lib/utils/errorParser";
-import { Dialog } from "../../../../components";
 import { ChatBubble, StreamingResponse, Message } from "../..";
+import { parseGeminiError } from "../../../../lib/utils/errorParser";
+import { Dialog } from "../../../../widgets";
 import styles from "./ChatArea.module.css";
 
 interface ChatAreaProps {
@@ -97,7 +97,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               </div>
             )}
 
-            {/* Error Dialog handling */}
             {(() => {
               if (!error) return null;
 
@@ -106,7 +105,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               const getActions = () => {
                 const actions: any[] = [];
 
-                // Primary Action: Retry or Dismiss
                 if (parsedError.actionType !== "DISMISS_ONLY") {
                   actions.push({
                     label: "Retry",
@@ -121,7 +119,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                   });
                 }
 
-                // Secondary Action: Settings or Link
                 if (parsedError.actionType === "RETRY_OR_SETTINGS") {
                   actions.push({
                     label: "Change API Key",

@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import styles from "./PersonalContextSection.module.css";
-import { TextContextMenu, useClipboard } from "../../../../components";
+import { TextContextMenu, useClipboard } from "../../../../widgets";
 
 interface PersonalContextSectionProps {
   localPrompt: string;

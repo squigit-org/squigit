@@ -108,7 +108,6 @@
   overflow: hidden;
   /* Isolate the 3D context of the reel within itself */
   transform: translateZ(0);
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .reelContainer.centered {
@@ -129,7 +128,6 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .wheelPickerWrapper {
@@ -149,13 +147,12 @@
   min-width: 0;
   height: 100%;
 
-  /* Transition properties */
   opacity: 1;
   transform: translateX(0);
-  overflow: hidden; /* Ensure clipping during animation */
+  overflow: hidden;
   transition:
     opacity 0.2s ease,
-    /* Fade out faster */ transform 0.4s ease,
+    transform 0.4s ease,
     flex 0.4s ease,
     max-width 0.4s ease;
 }

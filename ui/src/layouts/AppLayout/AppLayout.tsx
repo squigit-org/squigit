@@ -10,7 +10,7 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "../../lib/api/tauri/commands";
-import { ContextMenu, ContextMenuItem, TitleBar } from "../../components";
+import { ContextMenu, ContextMenuItem, TitleBar } from "../../widgets";
 
 import {
   useUpdateCheck,

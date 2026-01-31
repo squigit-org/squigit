@@ -6,7 +6,7 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
-import { TextContextMenu, useClipboard } from "../../../../components";
+import { TextContextMenu, useClipboard } from "../../../../widgets";
 import styles from "./InlineInput.module.css";
 
 interface SearchInputProps {

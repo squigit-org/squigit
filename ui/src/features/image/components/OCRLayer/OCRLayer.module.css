@@ -14,14 +14,11 @@
   z-index: 10;
 }
 
-/* Dim overlay - 10% darken effect across entire image */
 .dimOverlay {
   fill: rgba(0, 0, 0, 0.2);
   pointer-events: none;
 }
 
-/* Highlight background - "exposure +20" effect */
-/* Uses white with screen blend mode to brighten text areas */
 .highlightBg {
   fill: rgba(255, 255, 255, 0.25);
   mix-blend-mode: screen;

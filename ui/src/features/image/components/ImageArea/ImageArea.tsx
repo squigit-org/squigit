@@ -15,7 +15,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useGoogleLens } from "../../hooks/useGoogleLens";
 import { useTextSelection } from "../../hooks/useTextSelection";
-import { ActionMenu, ActionMenuHandle } from "../OCRLayer/ActionMenu";
+import {
+  ActionMenu,
+  ActionMenuHandle,
+} from "../../../../widgets/menu/variants/OCRInlineMenu";
 import { SearchInput } from "../InlineInput/InlineInput";
 import { TextLayer } from "../OCRLayer/TextLayer";
 import { ImageToolbar } from "../ImageToolbar";

@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React from "react";
 import styles from "./OCRLayer.module.css";
 
@@ -29,10 +35,8 @@ export const TextLayer: React.FC<TextLayerProps> = ({
       viewBox={`0 0 ${size.w} ${size.h}`}
       preserveAspectRatio="xMidYMid meet"
     >
-      {/* Define mask: white background with black cutouts for text areas */}
       <defs>
         <mask id="textCutoutMask">
-          {/* White = visible, Black = hidden */}
           <rect x="0" y="0" width={size.w} height={size.h} fill="white" />
           {data.map((item, i) => {
             const points = item.box.map((p) => `${p[0]},${p[1]}`).join(" ");
@@ -41,7 +45,6 @@ export const TextLayer: React.FC<TextLayerProps> = ({
         </mask>
       </defs>
 
-      {/* Dim overlay with mask - doesn't cover text areas */}
       <rect
         x="0"
         y="0"
@@ -51,7 +54,6 @@ export const TextLayer: React.FC<TextLayerProps> = ({
         mask="url(#textCutoutMask)"
       />
 
-      {/* Highlight and text layers */}
       {data.map((item, i) => {
         const b = item.box;
         const points = b.map((p) => `${p[0]},${p[1]}`).join(" ");
@@ -60,7 +62,6 @@ export const TextLayer: React.FC<TextLayerProps> = ({
 
         return (
           <g key={i}>
-            {/* Brightness highlight on text area */}
             <polygon className={styles.highlightBg} points={points} />
             <text
               id={`text-${i}`}

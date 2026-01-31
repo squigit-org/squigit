@@ -8,7 +8,7 @@ import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getName, getVersion, getTauriVersion } from "@tauri-apps/api/app";
 import { GITHUB, MAILTO } from "../../types/settings.types";
-import { CodeBlock } from "../../../syntax";
+import { CodeBlock } from "../../../../widgets";
 import { SpotlightCard } from "./SpotlightCard";
 import styles from "./SupportSection.module.css";
 

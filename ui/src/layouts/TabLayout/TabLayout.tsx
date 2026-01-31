@@ -5,7 +5,7 @@
  */
 
 import React, { ForwardedRef } from "react";
-import { TitleBar } from "../../components/";
+import { TitleBar } from "../../widgets";
 import {
   ChatPanel,
   ChatTab,

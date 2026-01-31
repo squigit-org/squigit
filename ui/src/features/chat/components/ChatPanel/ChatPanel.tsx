@@ -17,15 +17,11 @@ import {
 } from "lucide-react";
 
 import {
-  ContextMenu,
-  PanelContextMenu,
-} from "../../../../components/ContextMenu";
-import { Dialog } from "../../../../components/Dialog";
-import {
   ChatMetadata,
   groupChatsByDate,
 } from "../../../../lib/storage/chatStorage";
 import styles from "./ChatPanel.module.css";
+import { PanelContextMenu, Dialog } from "../../../../widgets";
 
 // --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({

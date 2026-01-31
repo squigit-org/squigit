@@ -5,9 +5,8 @@
  */
 
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
+import { TextContextMenu, useClipboard, CodeBlock } from "../../../../widgets";
 import { Send } from "lucide-react";
-import { CodeBlock } from "../../../syntax";
-import { TextContextMenu, useClipboard } from "../../../../components";
 import styles from "./ChatInput.module.css";
 
 const ExpandIcon = () => (

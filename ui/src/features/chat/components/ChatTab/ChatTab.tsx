@@ -9,9 +9,8 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Message } from "../../types/chat.types";
 import { ChatInput } from "../../components/ChatInput/ChatInput";
 import { ChatArea } from "../ChatArea/ChatArea";
+import { InlineMenu, useInlineMenu } from "../../../../widgets";
 import { ImageArea } from "../../../image/components/ImageArea/ImageArea";
-import { InlineMenu } from "../../../../components/InlineMenu/InlineMenu";
-import { useInlineMenu } from "../../../../components/InlineMenu/useInlineMenu";
 
 import "katex/dist/katex.min.css";
 
