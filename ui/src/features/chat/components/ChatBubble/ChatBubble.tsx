@@ -14,7 +14,7 @@ import { CodeBlock } from "../../../syntax";
 import { Message } from "../../types/chat.types";
 import styles from "./ChatBubble.module.css";
 import "katex/dist/katex.min.css";
-import { remarkDisableIndentedCode } from "../../markdownPlugins";
+import { remarkDisableIndentedCode } from "./markdownPlugins";
 
 interface ChatBubbleProps {
   message: Message;

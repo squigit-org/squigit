@@ -12,7 +12,7 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { CodeBlock } from "../../../syntax";
 import styles from "./ChatBubble.module.css";
-import { remarkDisableIndentedCode } from "../../markdownPlugins";
+import { remarkDisableIndentedCode } from "./markdownPlugins";
 
 export const StreamingResponse: React.FC<{ text: string }> = ({ text }) => {
   const markdownComponents = useMemo(
