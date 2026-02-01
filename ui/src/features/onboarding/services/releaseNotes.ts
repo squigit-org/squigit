@@ -5,9 +5,9 @@
  */
 
 import packageJson from "../../../../package.json";
+import { github } from "@/lib/config";
 
-const RELEASE_NOTES_URL =
-  "https://raw.githubusercontent.com/a7mddra/snapllm/main/CHANGELOG.md";
+const RELEASE_NOTES_URL = github.rawChangelog;
 
 export interface ReleaseInfo {
   version: string;

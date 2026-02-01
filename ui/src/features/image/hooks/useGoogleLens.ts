@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { uploadToImgBB, generateLensUrl } from "..";
+import { uploadToImgBB, generateLensUrl } from "../services/lens.google";
 
 export const useGoogleLens = (
   startupImage: {
@@ -100,7 +100,6 @@ export const useGoogleLens = (
     if (!startupImage) return;
     if (isLensLoading || waitingForKey) return;
 
-    // Helper to append query to URL
     const appendQuery = (url: string, query?: string) => {
       if (!query || !query.trim()) return url;
       const encodedQuery = encodeURIComponent(query.trim());

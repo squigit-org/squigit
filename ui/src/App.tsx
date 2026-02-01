@@ -8,7 +8,6 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AppProvider } from "./providers/AppProvider";
 import { AppRouter } from "./router/AppRouter";
-import { ImgbbSetup } from "./features/auth";
 
 function App() {
   const [mode] = useState<"app" | "imgbb">(() => {
@@ -31,10 +30,6 @@ function App() {
     document.addEventListener("click", handleAnchorClick);
     return () => document.removeEventListener("click", handleAnchorClick);
   }, []);
-
-  if (mode === "imgbb") {
-    return <ImgbbSetup />;
-  }
 
   return (
     <AppProvider>

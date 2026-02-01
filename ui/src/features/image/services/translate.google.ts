@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { google } from "@/lib/config";
+
 /**
  * Generates a Google Translate URL for the given text.
  * @param text - The text to translate
@@ -14,8 +16,14 @@
 export function generateTranslateUrl(
   text: string,
   targetLang: string = "en",
-  sourceLang: string = "auto"
+  sourceLang: string = "auto",
 ): string {
-  const encodedText = text.replace(/ /g, "+");
-  return `https://translate.google.com/?text=${encodedText}&sl=${sourceLang}&tl=${targetLang}&op=translate`;
+  const params = new URLSearchParams({
+    text,
+    sl: sourceLang,
+    tl: targetLang,
+    op: "translate",
+  });
+
+  return `${google.translate}/?${params.toString()}`;
 }

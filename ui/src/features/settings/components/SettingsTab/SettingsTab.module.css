@@ -13,7 +13,6 @@
   overflow: hidden;
 }
 
-/* ===== RIGHT CONTENT AREA ===== */
 .contentArea {
   flex: 1;
   overflow-y: auto;

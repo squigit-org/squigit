@@ -6,32 +6,22 @@ labels: bug
 assignees: ""
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**Summary**
+A concise description of the issue.
 
-**To Reproduce**
+**Description**
+Please provide a detailed description of the bug, including what happened and what you expected to happen.
 
-1. Copy your app debug info (go to Settings -> Help -> Copy Debug Info).
-2. Paste it here.
+**Steps to Reproduce**
 
-**What happened?**
-Steps to reproduce the behavior:
+1.
+2.
+3.
 
-1. Go to '...'
-2. Click on '...'
-3. Scroll down to '...'
-4. See error
+**System Diagnostics**
+Please paste the output from **Settings → Help → Copy Debug Info** below. This information is critical for debugging.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+[Paste diagnostics here]
 
-**Screenshots or Console Logs**
-If applicable, add screenshots or console logs to help explain your problem.
-
-**Environment (please complete the following information):**
-
-- OS: [e.g. macOS, Windows, Linux]
-- Version [e.g. 1.0.0]
-
-**Additional context**
-Add any other context about the problem here.
+**Additional Context**
+Add any other context, screenshots, or logs that might be helpful.

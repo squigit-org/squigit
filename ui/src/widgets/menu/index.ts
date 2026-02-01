@@ -8,5 +8,6 @@ export * from "./ContextMenu";
 export * from "./InlineMenu";
 export * from "./hooks/useClipboard";
 export * from "./hooks/useInlineMenu";
+export * from "./hooks/useTextContextMenu";
 export * from "./variants/TextContextMenu";
 export * from "./variants/PanelContextMenu";

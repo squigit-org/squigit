@@ -13,6 +13,7 @@ import { OnboardingLayout, styles } from "../../../../layouts";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { invoke } from "@tauri-apps/api/core";
+import { github } from "@/lib/config";
 import "katex/dist/katex.min.css";
 
 interface UpdateNotesProps {
@@ -66,7 +67,7 @@ export const UpdateNotes: React.FC<UpdateNotesProps> = ({
         setStatus("Opening download page...");
         setTimeout(() => {
           invoke("open_external_url", {
-            url: "https://github.com/a7mddra/snapllm/releases/latest",
+            url: github.latestRelease,
           });
           onClose();
         }, 1500);
@@ -76,7 +77,7 @@ export const UpdateNotes: React.FC<UpdateNotesProps> = ({
       setStatus("Error. Opening browser...");
       setTimeout(() => {
         invoke("open_external_url", {
-          url: "https://github.com/a7mddra/snapllm/releases/latest",
+          url: github.latestRelease,
         });
         onClose();
       }, 1500);

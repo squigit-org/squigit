@@ -40,7 +40,7 @@ export const useTextSelection = ({
   const getClosestTextIndex = useCallback(
     (
       point: DOMPoint,
-      boxIndex: number
+      boxIndex: number,
     ): { boxIndex: number; charIndex: number } | null => {
       const item = data[boxIndex];
       if (!item) return null;
@@ -65,7 +65,7 @@ export const useTextSelection = ({
 
       return { boxIndex, charIndex };
     },
-    [data]
+    [data],
   );
 
   const getWordRange = useCallback((text: string, index: number) => {
@@ -87,7 +87,7 @@ export const useTextSelection = ({
   const updateNativeSelection = useCallback(
     (
       anchor: { boxIndex: number; charIndex: number },
-      focus: { boxIndex: number; charIndex: number }
+      focus: { boxIndex: number; charIndex: number },
     ) => {
       const selection = window.getSelection();
       if (!selection) return;
@@ -112,15 +112,13 @@ export const useTextSelection = ({
               anchorNode,
               anchor.charIndex,
               focusNode,
-              focus.charIndex
+              focus.charIndex,
             );
           }
-        } catch {
-          // Ignore range errors
-        }
+        } catch {}
       }
     },
-    []
+    [],
   );
 
   const handleSelectionMouseMove = useCallback(
@@ -181,7 +179,7 @@ export const useTextSelection = ({
       getClosestTextIndex,
       getWordRange,
       updateNativeSelection,
-    ]
+    ],
   );
 
   const handleGlobalMouseUp = useCallback(() => {
@@ -249,7 +247,7 @@ export const useTextSelection = ({
       updateNativeSelection,
       handleSelectionMouseMove,
       handleGlobalMouseUp,
-    ]
+    ],
   );
 
   return {

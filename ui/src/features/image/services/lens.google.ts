@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { google, imgbb } from "@/lib/config";
+
 interface ImgBBResponse {
   success: boolean;
   data: {
@@ -15,9 +17,15 @@ interface ImgBBResponse {
   };
 }
 
+/**
+ * Uploads a base64 encoded image to ImgBB and returns the hosted URL.
+ * @param base64Image - The base64 string of the image
+ * @param apiKey - The ImgBB API key
+ * @returns The public URL of the uploaded image
+ */
 export async function uploadToImgBB(
   base64Image: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<string> {
   const cleanBase64 = base64Image.replace(/^data:image\/[a-z]+;base64,/, "");
 
@@ -25,7 +33,7 @@ export async function uploadToImgBB(
   formData.append("key", apiKey);
   formData.append("image", cleanBase64);
 
-  const response = await fetch("https://api.imgbb.com/1/upload", {
+  const response = await fetch(imgbb.upload, {
     method: "POST",
     body: formData,
   });
@@ -39,6 +47,11 @@ export async function uploadToImgBB(
   return result.data.url;
 }
 
+/**
+ * Generates a Google Lens search URL for the given image URL.
+ * @param imageUrl - The public URL of the image
+ * @returns The full Google Lens URL
+ */
 export function generateLensUrl(imageUrl: string): string {
   const params = new URLSearchParams();
   params.append("url", imageUrl);
@@ -48,5 +61,5 @@ export function generateLensUrl(imageUrl: string): string {
   params.append("hl", "en");
   params.append("gl", "US");
 
-  return `https://lens.google.com/uploadbyurl?${params.toString()}`;
+  return `${google.lens}/uploadbyurl?${params.toString()}`;
 }

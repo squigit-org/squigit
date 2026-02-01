@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import styles from "./SettingsPanel.module.css";
 import { Topic } from "../SettingsTab/SettingsTab";
+import { DOCS } from "../../types/settings.types";
 
 interface SettingsPanelProps {
   activeTopic: Topic;
@@ -71,7 +72,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     return (names[0].charAt(0) + names[1].charAt(0)).toUpperCase();
   };
 
-  // Generate a consistent color based on the name
   const getAvatarColor = (name: string) => {
     const colors = [
       "#F87171",
@@ -170,11 +170,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <div className={styles.topicGroup}>
           <button
             className={`${styles.topicItem} ${activeTopic === "Docs" ? styles.active : ""}`}
-            onClick={() =>
-              invoke("open_external_url", {
-                url: "https://github.com/a7mddra/snapllm/tree/main/docs",
-              })
-            }
+            onClick={() => invoke("open_external_url", { url: DOCS })}
           >
             <BookOpen size={20} className={styles.topicIcon} /> Docs
             <ExternalLink size={16} className={styles.topicIcon} />

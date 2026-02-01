@@ -5,6 +5,5 @@
  */
 
 export * from "./components/Setup/GeminiSetup";
-export * from "./components/Setup/ImgbbSetup";
 export * from "./components/Login/OAuthLogin";
 export * from "./hooks/useAuth";

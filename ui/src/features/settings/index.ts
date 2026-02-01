@@ -6,5 +6,4 @@
 
 export * from "./hooks/useSettings";
 export * from "./types/settings.types";
-
 export * from "./components/SettingsTab/SettingsTab";

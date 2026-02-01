@@ -662,61 +662,46 @@ function WheelPicker<T extends WheelPickerValue>({
     },
   );
 
-  const handleKeyDown = useCallback(
+  /*
+   * Simplified key handler using useKeyDown to separate logic from component
+   * Note: We keep the dependencies in the memoization/callback creation below
+   * but the switch case is cleaner.
+   */
+  const handleKeyDownCallback = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (!options.length) return;
 
-      switch (event.key) {
-        case "ArrowUp":
-          event.preventDefault();
-          scrollByStep(-1);
-          break;
+      const keys: Record<string, () => void> = {
+        ArrowUp: () => scrollByStep(-1),
+        ArrowDown: () => scrollByStep(1),
+        ArrowLeft: () => navigateToPicker("prev"),
+        ArrowRight: () => navigateToPicker("next"),
+        Home: () => !infiniteProp && scrollByStep(-scrollRef.current),
+        End: () =>
+          !infiniteProp && scrollByStep(options.length - 1 - scrollRef.current),
+      };
 
-        case "ArrowDown":
-          event.preventDefault();
-          scrollByStep(1);
-          break;
+      if (keys[event.key]) {
+        event.preventDefault();
+        keys[event.key]();
+        return;
+      }
 
-        case "ArrowLeft":
-          event.preventDefault();
-          navigateToPicker("prev");
-          break;
-
-        case "ArrowRight":
-          event.preventDefault();
-          navigateToPicker("next");
-          break;
-
-        case "Home":
-          if (!infiniteProp) {
-            event.preventDefault();
-            scrollByStep(-scrollRef.current);
-          }
-          break;
-
-        case "End":
-          if (!infiniteProp) {
-            event.preventDefault();
-            scrollByStep(options.length - 1 - scrollRef.current);
-          }
-          break;
-
-        default:
-          if (
-            event.key.length === 1 &&
-            !event.ctrlKey &&
-            !event.metaKey &&
-            !event.altKey
-          ) {
-            event.preventDefault();
-            handleTypeaheadSearch(event.key);
-          }
-          break;
+      // Typeahead fallback
+      if (
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        handleTypeaheadSearch(event.key);
       }
     },
-
     [options.length, infiniteProp, navigateToPicker, handleTypeaheadSearch],
   );
+
+  const handleKeyDown = handleKeyDownCallback;
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);

@@ -62,7 +62,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     base64: string;
     mimeType: string;
     isFilePath?: boolean;
-    imageId?: string; // CAS hash for chat association
+    imageId?: string;
     fromHistory?: boolean;
   } | null>(null);
 
@@ -128,7 +128,6 @@ export const useSystemSync = (onToggleSettings: () => void) => {
           }
         }
 
-        // Load imgbb key
         try {
           const imgbbApiKey = await invoke<string>("get_api_key", {
             provider: "imgbb",
@@ -136,9 +135,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
           if (imgbbApiKey) {
             setImgbbKey(imgbbApiKey);
           }
-        } catch (e) {
-          // imgbb key is optional
-        }
+        } catch (e) {}
       } catch (e) {
         console.error("Config load error", e);
         setSystemError("Failed to load configuration.");

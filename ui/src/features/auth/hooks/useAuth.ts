@@ -7,6 +7,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { google } from "@/lib/config";
 
 type AuthStage = "LOADING" | "GEMINI_SETUP" | "LOGIN" | "AUTHENTICATED";
 
@@ -59,7 +60,7 @@ export const useAuth = () => {
           setAuthStage(hasProfile ? "AUTHENTICATED" : "LOGIN");
           window.location.reload();
         }
-      }
+      },
     );
 
     return () => {
@@ -75,7 +76,7 @@ export const useAuth = () => {
   };
 
   const completeGeminiSetup = () => {
-    const deepLink = "https://aistudio.google.com/app/apikey";
+    const deepLink = google.aiStudio.key;
     invoke("open_external_url", { url: deepLink });
     startWatcher();
   };

@@ -7,15 +7,17 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getName, getVersion, getTauriVersion } from "@tauri-apps/api/app";
-import { GITHUB, MAILTO } from "../../types/settings.types";
+import { github } from "@/lib/config";
+import {
+  prepareMailReport,
+  prepareGitHubIssueReport,
+} from "@/lib/config/external/contact";
 import { CodeBlock, GlowCard } from "../../../../widgets";
 import styles from "./SupportSection.module.css";
 
 interface SupportSectionProps {
   type: "Help & Support";
 }
-
-const LICENSE_URL = `${GITHUB}/blob/main/LICENSE`;
 
 export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
   const [sysInfo, setSysInfo] = useState<Record<string, string>>({
@@ -54,6 +56,39 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
 
   const handleOpen = (url: string) => invoke("open_external_url", { url });
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error("Failed to copy system info", err);
+    }
+  };
+
+  const handleContactSupport = async () => {
+    const diag = JSON.stringify(sysInfo, null, 2);
+    const action = prepareMailReport({ diagnostics: diag });
+
+    if (action.didCopy && action.copyText) {
+      await copyToClipboard(action.copyText);
+      // Optional: Show toast message here if you have a toast system
+      // "System info copied to clipboard"
+    }
+
+    handleOpen(action.openUrl);
+  };
+
+  const handleReportBug = async () => {
+    const diag = JSON.stringify(sysInfo, null, 2);
+    const action = prepareGitHubIssueReport({ diagnostics: diag });
+
+    if (action.didCopy && action.copyText) {
+      await copyToClipboard(action.copyText);
+      // Optional: Show toast message here
+    }
+
+    handleOpen(action.openUrl);
+  };
+
   if (type !== "Help & Support") return null;
 
   return (
@@ -79,21 +114,17 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
         </div>
 
         <div className={styles.linksGrid}>
-          <GlowCard onClick={() => handleOpen(GITHUB)}>
+          <GlowCard onClick={() => handleOpen(github.repo)}>
             <span className={styles.actionTitle}>GitHub Repository</span>
             <span className={styles.actionDesc}>View source code & stars</span>
           </GlowCard>
 
-          <GlowCard onClick={() => handleOpen(MAILTO)}>
+          <GlowCard onClick={handleContactSupport}>
             <span className={styles.actionTitle}>Contact Support</span>
             <span className={styles.actionDesc}>Send us an email</span>
           </GlowCard>
 
-          <GlowCard
-            onClick={() =>
-              handleOpen(GITHUB + "/issues/new?template=bug_report.md")
-            }
-          >
+          <GlowCard onClick={handleReportBug}>
             <span className={styles.actionTitle}>Report a Bug</span>
             <span className={styles.actionDesc}>
               Found an issue? Let us know
@@ -110,7 +141,7 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
           <span>
             <button
               className={styles.licenseLink}
-              onClick={() => handleOpen(LICENSE_URL)}
+              onClick={() => handleOpen(github.license)}
             >
               Licensed under Apache 2.0
             </button>

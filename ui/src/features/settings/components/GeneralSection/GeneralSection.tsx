@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import styles from "./GeneralSection.module.css";
-// Import the new component (adjust path as needed)
 import { CapturePreview } from "./CapturePreview";
 
 interface GeneralSectionProps {
@@ -32,7 +31,6 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
         <h2 className={styles.sectionTitle}>General</h2>
       </div>
 
-      {/* --- SECTION 1: GLOBAL TOGGLES --- */}
       <div className={styles.section}>
         <div className={styles.controlRow}>
           <div>
@@ -123,7 +121,6 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
         </div>
 
         <div className={styles.captureGrid}>
-          {/* Right Column: React Component instead of Iframe */}
           <div className={styles.iframeWrapper}>
             <CapturePreview type={localCaptureType} />
           </div>

@@ -4,11 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { google } from "@/lib/config";
+
 /**
  * Generates a Google Search URL for the given query.
  * @param query - The search query text
  * @returns The full Google Search URL
  */
 export function generateSearchUrl(query: string): string {
-  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  const params = new URLSearchParams({ q: query });
+  return `${google.search}/search?${params.toString()}`;
 }

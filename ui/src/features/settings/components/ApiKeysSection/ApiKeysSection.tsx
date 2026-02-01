@@ -4,13 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, forwardRef, useEffect } from "react";
-import { ChevronRight, Eye, EyeOff, Save, Loader2 } from "lucide-react";
+import React, { useState, forwardRef } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import styles from "./ApiKeysSection.module.css";
-import { GITHUB } from "../../types/settings.types";
+import { google, github } from "@/lib/config";
 import { GlowCard } from "../../../../widgets/glow-card";
 import { TextContextMenu } from "../../../../widgets/menu";
+import styles from "./ApiKeysSection.module.css";
+import { useTextEditor } from "../../../../hooks/useTextEditor";
+import { useTextContextMenu } from "../../../../widgets/menu/hooks/useTextContextMenu";
 
 interface ApiKeysSectionProps {
   geminiKey: string;
@@ -21,17 +23,13 @@ interface ApiKeysSectionProps {
   ) => Promise<boolean>;
 }
 
-const PRIVACY_URL = `${GITHUB}/blob/main/docs/06-policies/BYOK.md`;
-const SECURITY_URL = `${GITHUB}/blob/main/docs/06-policies/SECURITY.md`;
-
-/**
- * Modern row component with inline input
- */
 const ProviderRow = ({
   title,
   providerKeyName,
   description,
   dashboardUrl,
+  currentKey,
+  onSave,
 }: {
   title: string;
   providerKeyName: string;
@@ -42,136 +40,41 @@ const ProviderRow = ({
   onToggle: () => void;
   onSave: (key: string) => Promise<boolean>;
 }) => {
+  // Initialize with currentKey if needed, but usually API keys are hidden or managed separately.
+  // The original code initialized useState("") but had currentKey prop.
+  // It seems the input is for *setting* a new key, not necessarily viewing the old one (which might be security masked).
+  // However, the original code: `const [inputValue, setInputValue] = useState("");`
+
   const [inputValue, setInputValue] = useState("");
-  const [history, setHistory] = useState<string[]>([""]);
-  const [historyIndex, setHistoryIndex] = useState(0);
   const [showKey, setShowKey] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    hasSelection: boolean;
-  } | null>(null);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const {
+    ref,
+    hasSelection,
+    handleCopy,
+    handleCut,
+    handlePaste,
+    handleSelectAll,
+    handleKeyDown,
+  } = useTextEditor({
+    value: inputValue,
+    onChange: setInputValue,
+    preventNewLine: true,
+  });
+
+  const {
+    data: contextMenu,
+    handleContextMenu,
+    handleClose: handleCloseContextMenu,
+  } = useTextContextMenu({
+    hasSelection,
+  });
 
   const handleOpenUrl = (url: string) => {
     invoke("open_external_url", { url });
   };
 
-  const addToHistory = (newValue: string) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newValue);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  };
-
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const prevIndex = historyIndex - 1;
-      setHistoryIndex(prevIndex);
-      setInputValue(history[prevIndex]);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const nextIndex = historyIndex + 1;
-      setHistoryIndex(nextIndex);
-      setInputValue(history[nextIndex]);
-    }
-  };
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const hasSelection =
-      !!inputRef.current &&
-      (inputRef.current.selectionEnd || 0) -
-        (inputRef.current.selectionStart || 0) >
-        0;
-    setContextMenu({ x: e.clientX, y: e.clientY, hasSelection });
-  };
-
-  const handleCopy = () => {
-    const selection = inputRef.current?.value.substring(
-      inputRef.current.selectionStart || 0,
-      inputRef.current.selectionEnd || 0,
-    );
-    if (selection) {
-      navigator.clipboard.writeText(selection);
-    }
-  };
-
-  const handleCut = () => {
-    if (!inputRef.current) return;
-    const start = inputRef.current.selectionStart || 0;
-    const end = inputRef.current.selectionEnd || 0;
-    const value = inputRef.current.value;
-    const selection = value.substring(start, end);
-    if (selection) {
-      navigator.clipboard.writeText(selection);
-      const newValue = value.substring(0, start) + value.substring(end);
-      setInputValue(newValue);
-      addToHistory(newValue);
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(start, start);
-        inputRef.current?.focus();
-      }, 0);
-    }
-  };
-
-  const handlePaste = async () => {
-    if (!inputRef.current) return;
-    inputRef.current.focus();
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!inputRef.current) return;
-      const start = inputRef.current.selectionStart || 0;
-      const end = inputRef.current.selectionEnd || 0;
-      const value = inputRef.current.value;
-      const newValue = value.substring(0, start) + text + value.substring(end);
-      setInputValue(newValue);
-      addToHistory(newValue);
-      const newCursorPos = start + text.length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
-        inputRef.current?.focus();
-      }, 0);
-    } catch (err) {
-      console.error("Failed to read clipboard contents: ", err);
-    }
-  };
-
-  const handleSelectAll = () => {
-    inputRef.current?.select();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.ctrlKey || e.metaKey) {
-      const key = e.key.toLowerCase();
-      if (key === "z") {
-        e.preventDefault();
-        if (e.shiftKey) {
-          handleRedo();
-        } else {
-          handleUndo();
-        }
-      } else if (key === "y") {
-        e.preventDefault();
-        handleRedo();
-      } else if (key === "a") {
-        e.preventDefault();
-        handleSelectAll();
-      } else if (key === "c") {
-        e.preventDefault();
-        handleCopy();
-      } else if (key === "x") {
-        e.preventDefault();
-        handleCut();
-      } else if (key === "v") {
-        e.preventDefault();
-        handlePaste();
-      }
-    }
-  };
+  const inputRef = ref as React.RefObject<HTMLInputElement>;
 
   return (
     <div className={`${styles.providerWrapper} ${styles.expanded}`}>
@@ -210,15 +113,16 @@ const ProviderRow = ({
                 className={styles.modernInput}
                 placeholder={`Enter your ${providerKeyName} API Key`}
                 value={inputValue}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setInputValue(val);
-                  addToHistory(val);
-                }}
+                onChange={(e) => setInputValue(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 onContextMenu={handleContextMenu}
-                onKeyDown={handleKeyDown}
+                onKeyDown={handleKeyDown as any}
                 autoComplete="off"
+                onBlur={() => {
+                  if (inputValue.trim()) {
+                    onSave(inputValue);
+                  }
+                }}
               />
               <button
                 className={styles.iconBtn}
@@ -234,16 +138,16 @@ const ProviderRow = ({
           </div>
         </div>
       </div>
-      {contextMenu && (
+      {contextMenu.isOpen && (
         <TextContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          onClose={handleCloseContextMenu}
           onCopy={handleCopy}
           onCut={handleCut}
           onPaste={handlePaste}
           onSelectAll={handleSelectAll}
-          hasSelection={contextMenu.hasSelection}
+          hasSelection={hasSelection}
         />
       )}
     </div>
@@ -268,10 +172,8 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
       });
     };
 
-    const handleOpenPrivacy = () =>
-      invoke("open_external_url", { url: PRIVACY_URL });
-    const handleOpenSecurity = () =>
-      invoke("open_external_url", { url: SECURITY_URL });
+    const handleOpenUrl = (url: string) =>
+      invoke("open_external_url", { url: url });
 
     return (
       <div ref={ref} className={styles.container}>
@@ -286,7 +188,7 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
               providerKeyName="Google AI Studio"
               description="Required for AI features"
               currentKey={geminiKey}
-              dashboardUrl="https://aistudio.google.com/app/apikey"
+              dashboardUrl={google.aiStudio.key}
               isExpanded={expandedProviders.has("gemini")}
               onToggle={() => toggleProvider("gemini")}
               onSave={(key) => onSetAPIKey("google ai studio", key)}
@@ -297,7 +199,7 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
               providerKeyName="ImgBB"
               description="Reverse Image Search"
               currentKey={imgbbKey}
-              dashboardUrl="https://api.imgbb.com/"
+              dashboardUrl={"https://api.imgbb.com/"}
               isExpanded={expandedProviders.has("imgbb")}
               onToggle={() => toggleProvider("imgbb")}
               onSave={(key) => onSetAPIKey("imgbb", key)}
@@ -312,7 +214,7 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
                 and public service.{" "}
                 <button
                   className={styles.privacyLink}
-                  onClick={handleOpenSecurity}
+                  onClick={() => handleOpenUrl(github.security)}
                 >
                   Learn more.
                 </button>
@@ -325,7 +227,10 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
           <div className={styles.divider} />
           <div className={styles.legalRow}>
             <span>Your keys are stored locally — </span>
-            <button className={styles.privacyLink} onClick={handleOpenPrivacy}>
+            <button
+              className={styles.privacyLink}
+              onClick={() => handleOpenUrl(github.privacy)}
+            >
               We never see them.
             </button>
           </div>

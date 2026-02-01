@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { google } from "@/lib/config";
+
 export interface ParsedError {
   title: string;
   message: string;
@@ -75,7 +77,7 @@ export const parseGeminiError = (error: any): ParsedError => {
       code: "403",
       actionType: "RETRY_OR_LINK",
       meta: {
-        link: "https://aistudio.google.com/",
+        link: google.aiStudio.dashboard,
         linkLabel: "Check Account",
       },
     };

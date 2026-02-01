@@ -5,9 +5,11 @@
  */
 
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
-import { TextContextMenu, useClipboard, CodeBlock } from "../../../../widgets";
+import { TextContextMenu, useTextContextMenu, CodeBlock } from "@/widgets";
 import { Send } from "lucide-react";
 import styles from "./ChatInput.module.css";
+import { google } from "@/lib/config";
+import { useTextEditor } from "@/hooks/useTextEditor";
 
 const ExpandIcon = () => (
   <svg
@@ -57,12 +59,6 @@ interface ChatInputProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
-interface ContextMenuState {
-  isOpen: boolean;
-  x: number;
-  y: number;
-}
-
 export const ChatInput: React.FC<ChatInputProps> = ({
   startupImage,
   input: value,
@@ -79,7 +75,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     customPlaceholder || (isLoading ? "Thinking..." : "Ask anything");
   const disabled = isLoading;
 
-  const taRef = useRef<HTMLTextAreaElement | null>(null);
   const codeTaRef = useRef<HTMLTextAreaElement | null>(null);
   const lineHeightRef = useRef<number>(24);
 
@@ -92,18 +87,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [codeValue, setCodeValue] = useState("");
   const [consecutiveEnters, setConsecutiveEnters] = useState(0);
 
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
-    isOpen: false,
-    x: 0,
-    y: 0,
+  const {
+    ref: taRef,
+    hasSelection,
+    handleCopy,
+    handleCut,
+    handlePaste,
+    handleSelectAll,
+    handleKeyDown: handleEditorKeyDown,
+  } = useTextEditor({
+    value,
+    onChange,
+    onSubmit: () => {
+      if (!disabled && !isLoading && value.trim().length > 0) onSend();
+    },
   });
-  const [hasSelection, setHasSelection] = useState(false);
 
-  const historyRef = useRef<string[]>([value]);
-  const historyIndexRef = useRef<number>(0);
-  const isUndoRedoRef = useRef<boolean>(false);
-
-  const { readText } = useClipboard();
+  const {
+    data: contextMenu,
+    handleContextMenu,
+    handleClose: handleCloseContextMenu,
+  } = useTextContextMenu({
+    hasSelection,
+  });
 
   const isExpandedLayout = value.includes("\n") || isCodeBlockActive;
 
@@ -113,47 +119,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [isCodeBlockActive]);
 
-  useEffect(() => {
-    if (isUndoRedoRef.current) {
-      isUndoRedoRef.current = false;
-      return;
-    }
-    const currentHistory = historyRef.current;
-    const currentIndex = historyIndexRef.current;
-    if (value !== currentHistory[currentIndex]) {
-      historyRef.current = currentHistory.slice(0, currentIndex + 1);
-      historyRef.current.push(value);
-      historyIndexRef.current = historyRef.current.length - 1;
-      if (historyRef.current.length > 100) {
-        historyRef.current = historyRef.current.slice(-100);
-        historyIndexRef.current = historyRef.current.length - 1;
-      }
-    }
-  }, [value]);
-
-  useEffect(() => {
-    const ta = taRef.current;
-    if (!ta) return;
-
-    const handleSelectionChange = () => {
-      if (document.activeElement === ta) {
-        const start = ta.selectionStart;
-        const end = ta.selectionEnd;
-        setHasSelection(start !== end);
-      }
-    };
-
-    document.addEventListener("selectionchange", handleSelectionChange);
-    return () => {
-      document.removeEventListener("selectionchange", handleSelectionChange);
-    };
-  }, []);
-
   const adjustHeight = React.useCallback(() => {
-    const ta = taRef.current;
+    const ta = taRef.current as HTMLTextAreaElement;
     if (!ta) return;
 
-    // Save the current selection before adjusting height
     const currentSelectionStart = ta.selectionStart;
     const currentSelectionEnd = ta.selectionEnd;
     const currentValue = ta.value;
@@ -184,24 +153,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       ta.scrollTop = 0;
     }
 
-    // Restore the caret position if the value hasn't changed during height adjustment
-    // This prevents ghost caret artifacts
     if (ta.value === currentValue && document.activeElement === ta) {
-      // Use requestAnimationFrame to ensure the DOM has updated
       requestAnimationFrame(() => {
         if (ta && ta.value === currentValue) {
           ta.setSelectionRange(currentSelectionStart, currentSelectionEnd);
         }
       });
     }
-  }, [isManualExpanded, maxRows]);
+  }, [isManualExpanded, maxRows, taRef]);
 
   useLayoutEffect(() => {
     adjustHeight();
   }, [value, maxRows, isManualExpanded, isExpandedLayout, adjustHeight]);
 
   useEffect(() => {
-    const ta = taRef.current;
+    const ta = taRef.current as HTMLTextAreaElement;
     if (!ta) return;
 
     const observer = new ResizeObserver(() => {
@@ -211,128 +177,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     observer.observe(ta);
 
     return () => observer.disconnect();
-  }, [adjustHeight]);
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({
-      isOpen: true,
-      x: e.clientX,
-      y: e.clientY,
-    });
-    return false;
-  };
-
-  const handleCloseContextMenu = () => {
-    setContextMenu({ isOpen: false, x: 0, y: 0 });
-  };
-
-  const handleCopy = () => {
-    const ta = taRef.current;
-    if (!ta) return;
-    const selectedText = ta.value.substring(ta.selectionStart, ta.selectionEnd);
-    if (selectedText) {
-      navigator.clipboard.writeText(selectedText);
-    }
-  };
-
-  const handleCut = () => {
-    const ta = taRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selectedText = ta.value.substring(start, end);
-    if (selectedText) {
-      navigator.clipboard.writeText(selectedText);
-      const newValue = ta.value.substring(0, start) + ta.value.substring(end);
-      onChange(newValue);
-      setTimeout(() => {
-        ta.setSelectionRange(start, start);
-        ta.focus();
-      }, 0);
-    }
-  };
-
-  const handlePaste = async () => {
-    const ta = taRef.current;
-    if (!ta) return;
-
-    // Ensure focus is on the textarea to satisfy clipboard API requirements
-    ta.focus();
-
-    try {
-      const text = await readText();
-
-      if (!text) return;
-
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const newValue =
-        ta.value.substring(0, start) + text + ta.value.substring(end);
-      onChange(newValue);
-      const newCursorPos = start + text.length;
-      setTimeout(() => {
-        ta.setSelectionRange(newCursorPos, newCursorPos);
-        // focus is already called but ensure it stays
-        ta.focus();
-      }, 0);
-    } catch (err) {
-      console.error("Failed to read clipboard:", err);
-    }
-  };
-
-  const handleSelectAll = () => {
-    const ta = taRef.current;
-    if (!ta) return;
-    ta.select();
-    setHasSelection(true);
-  };
-
-  const handleUndo = () => {
-    if (historyIndexRef.current > 0) {
-      historyIndexRef.current -= 1;
-      isUndoRedoRef.current = true;
-      onChange(historyRef.current[historyIndexRef.current]);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndexRef.current < historyRef.current.length - 1) {
-      historyIndexRef.current += 1;
-      isUndoRedoRef.current = true;
-      onChange(historyRef.current[historyIndexRef.current]);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case "z":
-          e.preventDefault();
-          if (e.shiftKey) {
-            handleRedo();
-          } else {
-            handleUndo();
-          }
-          return;
-        case "y":
-          e.preventDefault();
-          handleRedo();
-          return;
-        case "a":
-          e.preventDefault();
-          handleSelectAll();
-          return;
-        // Native Copy/Cut/Paste work better for textarea
-      }
-    }
-
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (!disabled && !isLoading && value.trim().length > 0) onSend();
-    }
-  };
+  }, [adjustHeight, taRef]);
 
   const handleCodeKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Escape") {
@@ -344,7 +189,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setOriginalCodeLanguage("");
       setConsecutiveEnters(0);
       setTimeout(() => {
-        const ta = taRef.current;
+        const ta = taRef.current as HTMLTextAreaElement;
         if (ta) {
           ta.focus();
           const end = ta.value.length;
@@ -361,7 +206,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         setCodeLanguage("");
         setOriginalCodeLanguage("");
         setConsecutiveEnters(0);
-        setTimeout(() => taRef.current?.focus(), 0);
+        setTimeout(() => (taRef.current as HTMLTextAreaElement)?.focus(), 0);
       }
     } else {
       setConsecutiveEnters(0);
@@ -415,10 +260,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       )}
 
       <textarea
-        ref={taRef}
+        ref={taRef as React.RefObject<HTMLTextAreaElement>}
         value={value}
         onChange={handleChange}
-        onKeyDown={handleKeyDown}
+        onKeyDown={handleEditorKeyDown as any}
         onContextMenu={handleContextMenu}
         placeholder={placeholder}
         disabled={disabled}
@@ -489,7 +334,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <div className={styles.disclaimer}>
         <span>AI responses may include mistakes. </span>
         <a
-          href="https://support.google.com/websearch?p=ai_overviews"
+          href={`${google.support}/websearch?p=ai_overviews`}
           className={styles.link}
           target="_blank"
           rel="noopener noreferrer"
