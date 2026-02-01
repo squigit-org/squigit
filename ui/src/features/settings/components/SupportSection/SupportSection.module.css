@@ -1,14 +1,20 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 .container {
   display: flex;
   flex-direction: column;
-  height: 100%; /* Changed from min-height to ensure flex layout works vertically */
+  height: 100%;
   flex: 1;
   width: 100%;
   box-sizing: border-box;
 }
 
 .scrollContent {
-  flex: 1; /* Pushes the footer down naturally */
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -27,9 +33,8 @@
   margin: 0;
 }
 
-/* --- CARD STYLING --- */
 .card {
-  min-height: 395px;
+  min-height: 409px;
   background-color: #1f1f1f;
   border-radius: 0.75rem;
   padding: 1rem;
@@ -51,7 +56,6 @@
   line-height: 1.4;
 }
 
-/* --- ACTION GRID (Replaces simple buttons) --- */
 .linksGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -69,7 +73,6 @@
   font-size: 0.8rem;
 }
 
-/* --- FOOTER / LEGAL SECTION --- */
 .aboutSection {
   margin-top: 0.8rem;
   padding-bottom: 0.65rem;

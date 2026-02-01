@@ -39,8 +39,10 @@ export interface SettingsTabProps {
   setCaptureType: (type: "rectangular" | "squiggle") => void;
   geminiKey: string;
   imgbbKey: string;
-  onSetAPIKey: (provider: "gemini" | "imgbb", key: string) => Promise<boolean>;
-  isChatPanelOpen: boolean;
+  onSetAPIKey: (
+    provider: "google ai studio" | "imgbb",
+    key: string,
+  ) => Promise<boolean>;
 }
 
 export type Topic =
@@ -69,9 +71,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   geminiKey,
   imgbbKey,
   onSetAPIKey,
-  onPromptChange,
-  onModelChange,
-  isChatPanelOpen,
 }) => {
   const [activeTopic, setActiveTopic] = useState<Topic>("General");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -101,12 +100,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setCaptureType(type);
   };
 
-  const handleSavePersonalContext = () => {
-    onSave(localPrompt, localModel, localAutoExpand, localCaptureType);
-    onPromptChange(localPrompt);
-    onModelChange(localModel);
-  };
-
   const renderContent = () => {
     switch (activeTopic) {
       case "General":
@@ -132,11 +125,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       case "Models":
         return (
           <ModelsSection
-            onSavePersonalContext={handleSavePersonalContext}
             localModel={localModel}
             currentModel={currentModel}
             setLocalModel={setLocalModel}
-            isChatPanelOpen={isChatPanelOpen}
           />
         );
       case "Personal Context":
@@ -144,7 +135,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <PersonalContextSection
             localPrompt={localPrompt}
             setLocalPrompt={setLocalPrompt}
-            onSavePersonalContext={handleSavePersonalContext}
           />
         );
       case "Help & Support":
@@ -156,7 +146,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* Left Sidebar */}
       <SettingsPanel
         activeTopic={activeTopic}
         setActiveTopic={setActiveTopic}
@@ -167,7 +156,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         onLogout={onLogout}
       />
 
-      {/* Right Content */}
       <div className={styles.contentArea} ref={scrollRef}>
         <div className={styles.contentWrapper}>{renderContent()}</div>
       </div>

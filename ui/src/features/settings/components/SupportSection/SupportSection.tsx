@@ -8,15 +8,13 @@ import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getName, getVersion, getTauriVersion } from "@tauri-apps/api/app";
 import { GITHUB, MAILTO } from "../../types/settings.types";
-import { CodeBlock } from "../../../../widgets";
-import { SpotlightCard } from "./SpotlightCard";
+import { CodeBlock, GlowCard } from "../../../../widgets";
 import styles from "./SupportSection.module.css";
 
 interface SupportSectionProps {
   type: "Help & Support";
 }
 
-// Ideally, move this to your settings types or env config
 const LICENSE_URL = `${GITHUB}/blob/main/LICENSE`;
 
 export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
@@ -60,13 +58,11 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
 
   return (
     <div className={styles.container}>
-      {/* HEADER */}
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Help & Support</h2>
       </div>
 
       <div className={styles.scrollContent}>
-        {/* SECTION 1: SYSTEM DIAGNOSTICS */}
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <span className={styles.subLabel}>System Diagnostics</span>
@@ -82,19 +78,18 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
           </p>
         </div>
 
-        {/* SECTION 2: ACTIONS GRID */}
         <div className={styles.linksGrid}>
-          <SpotlightCard onClick={() => handleOpen(GITHUB)}>
+          <GlowCard onClick={() => handleOpen(GITHUB)}>
             <span className={styles.actionTitle}>GitHub Repository</span>
             <span className={styles.actionDesc}>View source code & stars</span>
-          </SpotlightCard>
+          </GlowCard>
 
-          <SpotlightCard onClick={() => handleOpen(MAILTO)}>
+          <GlowCard onClick={() => handleOpen(MAILTO)}>
             <span className={styles.actionTitle}>Contact Support</span>
             <span className={styles.actionDesc}>Send us an email</span>
-          </SpotlightCard>
+          </GlowCard>
 
-          <SpotlightCard
+          <GlowCard
             onClick={() =>
               handleOpen(GITHUB + "/issues/new?template=bug_report.md")
             }
@@ -103,11 +98,10 @@ export const SupportSection: React.FC<SupportSectionProps> = ({ type }) => {
             <span className={styles.actionDesc}>
               Found an issue? Let us know
             </span>
-          </SpotlightCard>
+          </GlowCard>
         </div>
       </div>
 
-      {/* FOOTER: LICENSE & COPY */}
       <div className={styles.aboutSection}>
         <div className={styles.divider} />
         <div className={styles.legalRow}>

@@ -11,13 +11,11 @@ import { TextContextMenu, useClipboard } from "../../../../widgets";
 interface PersonalContextSectionProps {
   localPrompt: string;
   setLocalPrompt: (prompt: string) => void;
-  onSavePersonalContext: () => void;
 }
 
 export const PersonalContextSection: React.FC<PersonalContextSectionProps> = ({
   localPrompt,
   setLocalPrompt,
-  onSavePersonalContext,
 }) => {
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
@@ -35,7 +33,6 @@ export const PersonalContextSection: React.FC<PersonalContextSectionProps> = ({
   const isUndoRedoRef = useRef<boolean>(false);
   const { readText } = useClipboard();
 
-  // Sync history when prop changes (unless it's an undo/redo action)
   useEffect(() => {
     if (isUndoRedoRef.current) {
       isUndoRedoRef.current = false;
@@ -189,10 +186,6 @@ export const PersonalContextSection: React.FC<PersonalContextSectionProps> = ({
       <div className={styles.section}>
         <div className={styles.controlsRow}>
           <p className={styles.description}>System Prompt</p>
-
-          <button className={styles.keyBtn} onClick={onSavePersonalContext}>
-            Apply Changes
-          </button>
         </div>
 
         <div className={styles.textareaWrapper}>

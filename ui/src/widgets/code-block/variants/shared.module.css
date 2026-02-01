@@ -138,6 +138,7 @@
   max-width: 100%;
   border-bottom-left-radius: 0.75rem;
   border-bottom-right-radius: 0.75rem;
+  display: grid;
 }
 
 .pre {

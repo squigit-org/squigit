@@ -12,11 +12,9 @@ import { WheelPicker, WheelPickerWrapper } from "../../../../widgets";
 import styles from "./ModelsSection.module.css";
 
 interface ModelsSectionProps {
-  onSavePersonalContext: () => void;
   localModel: string;
   currentModel: string;
   setLocalModel: (model: string) => void;
-  isChatPanelOpen: boolean;
 }
 
 interface ModelReelProps {
@@ -29,7 +27,6 @@ interface ModelReelProps {
   currentValue: string;
   onValueChange: (value: string) => void;
   showDownloadButton?: boolean;
-  isChatPanelOpen: boolean;
 }
 
 interface DownloadButtonProps {
@@ -44,7 +41,6 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(initialDownloaded);
 
-  // Update local state if prop changes (e.g. switching models)
   React.useEffect(() => {
     setIsDownloaded(initialDownloaded);
     setIsDownloading(false);
@@ -56,7 +52,6 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({
 
     setIsDownloading(true);
 
-    // Mock download time
     setTimeout(() => {
       setIsDownloading(false);
       setIsDownloaded(true);
@@ -85,7 +80,6 @@ const ModelReel: React.FC<ModelReelProps> = ({
   currentValue,
   onValueChange,
   showDownloadButton = false,
-  isChatPanelOpen,
 }) => {
   const currentIndex = items.findIndex(
     (item) => item.id === currentValue || item.name === currentValue,
@@ -93,7 +87,6 @@ const ModelReel: React.FC<ModelReelProps> = ({
   const safeIndex = currentIndex >= 0 ? currentIndex : 0;
   const currentItem = items[safeIndex];
 
-  // Convert items to wheel picker options
   const options = items.map((item) => ({
     label: item.name,
     value: item.id || item.name,
@@ -106,18 +99,14 @@ const ModelReel: React.FC<ModelReelProps> = ({
     const checkVisibility = () => {
       if (containerRef.current) {
         const reelContainerWidth = containerRef.current.offsetWidth;
-        // Simplified Logic: Hide if container width is less than 600px
         setShouldHideDescription(reelContainerWidth < 600);
       }
     };
 
-    // Check initially
     checkVisibility();
 
-    // Listen for window resize
     window.addEventListener("resize", checkVisibility);
 
-    // Also use ResizeObserver for the container itself
     const observer = new ResizeObserver(checkVisibility);
     if (containerRef.current) {
       observer.observe(containerRef.current);
@@ -134,19 +123,13 @@ const ModelReel: React.FC<ModelReelProps> = ({
       ref={containerRef}
       className={`${styles.reelContainer} ${shouldHideDescription ? styles.centered : ""}`}
     >
-      {/* Wheel Picker */}
       <div className={styles.wheelWrapper}>
         <WheelPickerWrapper className={styles.wheelPickerWrapper}>
           <WheelPicker
             options={options}
             value={currentValue}
-            // @ts-ignore - The value type is string, which is compatible
             onValueChange={onValueChange}
-            // KEY FIX 1: Count must be divisible by 4.
-            // 12 is the sweet spot (low repetition, valid math).
             visibleCount={12}
-            // KEY FIX 2: Increase height to compensate for the lower count.
-            // This keeps the radius large (~100px) so it feels "flat" and stable.
             optionItemHeight={35}
             infinite
             classNames={{
@@ -158,7 +141,6 @@ const ModelReel: React.FC<ModelReelProps> = ({
         </WheelPickerWrapper>
       </div>
 
-      {/* Description Panel - Always render for animation, but hide via class */}
       <div
         className={`${styles.descriptionPanel} ${shouldHideDescription ? styles.hidden : ""}`}
       >
@@ -178,11 +160,9 @@ const ModelReel: React.FC<ModelReelProps> = ({
 };
 
 export const ModelsSection: React.FC<ModelsSectionProps> = ({
-  onSavePersonalContext,
   localModel,
   currentModel,
   setLocalModel,
-  isChatPanelOpen,
 }) => {
   const [ocrValue, setOcrValue] = useState(ocrModels[0].name);
 
@@ -197,8 +177,6 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
     setOcrValue(value);
   }, []);
 
-  const hasChanges = localModel !== currentModel;
-
   return (
     <div>
       <div className={styles.sectionHeader}>
@@ -210,31 +188,19 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
           <p className={styles.description}>
             Choose your preferred AI and OCR models for new conversations.
           </p>
-
-          <button
-            className={`${styles.keyBtn} ${!hasChanges ? styles.keyBtnDisabled : ""}`}
-            onClick={onSavePersonalContext}
-            disabled={!hasChanges}
-          >
-            Apply Changes
-          </button>
         </div>
 
-        {/* AI Model Reel */}
         <ModelReel
           items={modelsWithInfo}
           currentValue={localModel}
           onValueChange={handleModelChange}
-          isChatPanelOpen={isChatPanelOpen}
         />
 
-        {/* OCR Model Reel */}
         <ModelReel
           items={ocrModels}
           currentValue={ocrValue}
           onValueChange={handleOcrChange}
           showDownloadButton
-          isChatPanelOpen={isChatPanelOpen}
         />
       </div>
     </div>

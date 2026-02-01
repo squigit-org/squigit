@@ -451,6 +451,14 @@ export const AppLayout: React.FC = () => {
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
+
     e.preventDefault();
     const selectedText = window.getSelection()?.toString() || "";
     if (selectedText) {

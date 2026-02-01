@@ -1,75 +1,56 @@
-/* OUTER WRAPPER: Handles the Move */
-.spotlightCard {
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.container {
   position: relative;
-  border: none;
   background: transparent;
   padding: 0;
   cursor: pointer;
-
-  /* MOVEMENT ONLY */
   transition: transform 0.2s ease;
   will-change: transform;
-
-  /* Defaults for mouse position to avoid glitches before first hover */
   --mouse-x: 50%;
   --mouse-y: 50%;
-
-  /* CRITICAL: Do NOT put overflow: hidden or border-radius here */
 }
 
-.spotlightCard:hover {
-  transform: translateY(-1px);
-}
-
-/* INNER WRAPPER: Handles the Look & Clipping */
-.cardInner {
+.inner {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   text-align: left;
-
-  /* SIZING */
   width: 100%;
   height: 100%;
-  padding: 1px; /* The border container padding */
-
-  /* CLIPPING - The cause of the bug is isolated here, where it doesn't move */
+  padding: 1px;
   border-radius: 0.75rem;
   overflow: hidden;
-
-  /* Force hardware acceleration on the STATIC inner part to keep it painted */
   transform: translateZ(0);
 }
 
-/* SPOTLIGHT BACKGROUND (Attached to Inner) */
-.cardInner::before {
+.inner::before {
   content: "";
   position: absolute;
-  inset: 0; /* shorthand for top/left/right/bottom: 0 */
+  inset: 0;
   z-index: 1;
   opacity: 0;
   transition: opacity 0.3s ease;
   border-radius: 0.75rem;
-
-  /* Your Gradient */
   background: radial-gradient(
     400px circle at var(--mouse-x) var(--mouse-y),
     rgba(255, 255, 255, 0.1),
     transparent 40%
   );
-
-  /* Prevent gradient banding/flicker */
   will-change: opacity;
 }
 
-.spotlightCard:hover .cardInner::before {
+.container:hover .inner::before {
   opacity: 1;
 }
 
-/* CONTENT ( sits on top ) */
-.spotlightContent {
+.content {
   position: relative;
   z-index: 2;
   width: 100%;

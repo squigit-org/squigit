@@ -1,12 +1,19 @@
-import React, { useRef } from "react";
-import styles from "./SpotlightCard.module.css";
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-interface SpotlightCardProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+import React, { useRef } from "react";
+import styles from "./GlowCard.module.css";
+
+interface GlowCardProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-export const SpotlightCard: React.FC<SpotlightCardProps> = ({
+export const GlowCard: React.FC<GlowCardProps> = ({
   children,
+  className,
   ...props
 }) => {
   const divRef = useRef<HTMLButtonElement>(null);
@@ -26,12 +33,11 @@ export const SpotlightCard: React.FC<SpotlightCardProps> = ({
     <button
       ref={divRef}
       onMouseMove={handleMouseMove}
-      className={styles.spotlightCard}
+      className={`${styles.container} ${className || ""}`}
       {...props}
     >
-      {/* ISOLATION LAYER: This handles clipping but DOES NOT transform */}
-      <span className={styles.cardInner}>
-        <div className={styles.spotlightContent}>{children}</div>
+      <span className={styles.inner}>
+        <div className={styles.content}>{children}</div>
       </span>
     </button>
   );
