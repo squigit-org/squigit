@@ -79,6 +79,18 @@ export const useChat = ({
     }
   }, [apiKey, prompt, startupImage, currentModel, enabled, chatId]);
 
+  // Clear state when switching sessions (chatId becomes null)
+  useEffect(() => {
+    if (chatId === null) {
+      setMessages([]);
+      setStreamingText("");
+      setIsChatMode(false);
+      setFirstResponseId(null);
+      setLastSentMessage(null);
+      setError(null);
+    }
+  }, [chatId]);
+
   const resetInitialUi = () => {
     setStreamingText("");
     setIsChatMode(false);

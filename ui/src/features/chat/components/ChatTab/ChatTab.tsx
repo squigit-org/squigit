@@ -97,10 +97,21 @@ export const ChatTab: React.FC<ChatTabProps> = ({
 
     if (chatChanged) {
       el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+      // Fix for rare cases where layout isn't fully settled (e.g. complex markdown/images)
+      setTimeout(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+      }, 50);
       prevChatIdRef.current = chatId;
     } else if (messageCountChanged) {
+      // When going from 0 to messages, check if this is a history load or stream completion
       if (prevMessageCountRef.current === 0 && messages.length > 0) {
-        el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+        // If loading multiple messages or first message is from user, it's history load - scroll
+        // If only 1 model message, it's stream completion transition - don't scroll
+        const isStreamCompletion =
+          messages.length === 1 && messages[0]?.role === "model";
+        if (!isStreamCompletion) {
+          el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+        }
       } else {
         const lastMessage = messages[messages.length - 1];
         if (lastMessage?.role === "user") {

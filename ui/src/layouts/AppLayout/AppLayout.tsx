@@ -430,7 +430,10 @@ export const AppLayout: React.FC = () => {
     const assetUrl = convertFileSrc(imageData.path);
     console.log("Converted asset URL:", assetUrl);
 
-    setOcrData([]); // Clear previous OCR data immediately
+    // Clear previous session state FIRST to prevent flicker of old chat
+    chatHistory.setActiveSessionId(null);
+    setOcrData([]);
+    setSessionLensUrl(null);
 
     system.setStartupImage({
       base64: assetUrl,
