@@ -77,3 +77,56 @@ pub async fn get_api_key(app: AppHandle, provider: String) -> Result<String, Str
     .await
     .map_err(|e| e.to_string())
 }
+
+/// Cache an avatar image from a remote URL to local CAS storage.
+/// Returns the local file path on success.
+#[tauri::command]
+pub async fn cache_avatar(app: AppHandle, url: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let config_dir = get_app_config_dir(&app);
+        
+        // Download image
+        let client = reqwest::blocking::Client::new();
+        let response = client
+            .get(&url)
+            .send()
+            .map_err(|e| format!("Failed to download avatar: {}", e))?;
+        
+        if !response.status().is_success() {
+            return Err(format!("Failed to download avatar: HTTP {}", response.status()));
+        }
+        
+        let bytes = response
+            .bytes()
+            .map_err(|e| format!("Failed to read avatar bytes: {}", e))?;
+        
+        // Save to CAS
+        let storage = ops_chat_storage::storage::ChatStorage::new()
+            .map_err(|e| format!("Failed to initialize storage: {}", e))?;
+        
+        let stored_image = storage
+            .store_image(&bytes)
+            .map_err(|e| format!("Failed to store avatar: {}", e))?;
+        
+        let local_path = stored_image.path.clone();
+        
+        // Update profile.json with new avatar path
+        let profile_path = config_dir.join("profile.json");
+        if profile_path.exists() {
+            if let Ok(file) = File::open(&profile_path) {
+                if let Ok(mut profile) = serde_json::from_reader::<_, serde_json::Value>(file) {
+                    if let Some(obj) = profile.as_object_mut() {
+                        obj.insert("avatar".to_string(), serde_json::Value::String(local_path.clone()));
+                        if let Ok(updated_json) = serde_json::to_string_pretty(&profile) {
+                            let _ = fs::write(&profile_path, updated_json);
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(local_path)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}

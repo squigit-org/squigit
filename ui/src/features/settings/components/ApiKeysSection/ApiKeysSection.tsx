@@ -18,7 +18,7 @@ interface ApiKeysSectionProps {
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
+    provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => Promise<boolean>;
 }
@@ -186,7 +186,7 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
               dashboardUrl={google.aiStudio.key}
               isExpanded={expandedProviders.has("gemini")}
               onToggle={() => toggleProvider("gemini")}
-              onSave={(key) => onSetAPIKey("google ai studio", key)}
+              onSave={(key) => onSetAPIKey("gemini", key)}
             />
 
             <ProviderRow

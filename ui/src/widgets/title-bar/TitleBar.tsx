@@ -34,7 +34,7 @@ interface TitleBarProps {
   userName: string;
   userEmail: string;
   avatarSrc: string;
-  onSave: (prompt: string, model: string) => void;
+  onSave?: (prompt: string, model: string) => void;
   onLogout: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;

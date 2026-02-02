@@ -1,17 +1,33 @@
-/**
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
-import { GoogleGenAI, Chat, Part, Content } from "@google/genai";
+let currentAbortController: AbortController | null = null;
+let currentChatHistory: Content[] = [];
 
-let ai: GoogleGenAI | null = null;
-let chatSession: Chat | null = null;
+// Types matching Backend structs
+interface GeminiPart {
+  text?: string;
+  inlineData?: {
+    mimeType: string;
+    data: string;
+  };
+}
+
+interface GeminiContent {
+  role: string;
+  parts: GeminiPart[];
+}
+
+export type Content = GeminiContent;
+
+let storedApiKey: string | null = null;
 
 export const initializeGemini = (apiKey: string) => {
-  ai = new GoogleGenAI({ apiKey });
+  storedApiKey = apiKey;
 };
+
+// No longer needs direct frontend initialization for Chat object,
+// but we keep history in memory for session continuity if needed.
 
 export const startNewChat = async (
   modelId: string,
@@ -19,43 +35,29 @@ export const startNewChat = async (
   mimeType: string,
   systemPrompt: string,
 ): Promise<string> => {
-  if (!ai) throw new Error("Gemini AI not initialized");
+  // Single-shot chat not utilizing stream - can reuse stream logic or implement separate command.
+  // For consistency with user request (everything streamed), we can use the stream function but collect text.
+  // Check if user actually uses this function - seems mostly unused or for single-turn.
+  // We'll implement it via the streaming command for simplicity as backend only has streaming now.
 
-  chatSession = ai.chats.create({
-    model: modelId,
-    config: {
-      systemInstruction:
-        "You are a helpful AI assistant specialized in analyzing images.",
-    },
-  });
-
-  const parts: Part[] = [
-    {
-      inlineData: {
-        mimeType,
-        data: imageBase64,
-      },
-    },
-    {
-      text: systemPrompt,
-    },
-  ];
-
-  try {
-    const response = await chatSession.sendMessage({
-      message: parts,
-    });
-
-    return response.text || "No response text generated.";
-  } catch (error) {
-    console.error("Error starting chat:", error);
-    throw error;
-  }
+  let fullText = "";
+  await startNewChatStream(
+    modelId,
+    imageBase64,
+    mimeType,
+    systemPrompt,
+    (token) => (fullText += token),
+  );
+  return fullText;
 };
 
 const cleanBase64 = (data: string) => {
   return data.replace(/^data:image\/[a-z]+;base64,/, "");
 };
+
+interface GeminiEvent {
+  token: string;
+}
 
 export const startNewChatStream = async (
   modelId: string,
@@ -64,91 +66,129 @@ export const startNewChatStream = async (
   systemPrompt: string,
   onToken: (token: string) => void,
 ): Promise<string> => {
-  if (!ai) throw new Error("Gemini AI not initialized");
+  if (!storedApiKey) throw new Error("Gemini API Key not set");
 
-  chatSession = ai.chats.create({
-    model: modelId,
-    config: {
-      systemInstruction: systemPrompt,
-    },
+  if (currentAbortController) {
+    currentAbortController.abort();
+  }
+  currentAbortController = new AbortController();
+
+  const channelId = `gemini-stream-${Date.now()}`;
+  const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    onToken(event.payload.token);
   });
 
-  const parts: Part[] = [
+  // Construct initial contents
+  // User strategy: Image first + System Prompt + Prompt
+  // But wait! This function signature takes 'systemPrompt' which usually contains the user's initial instructions + context.
+
+  // Note: Gemini API treats 'system_instruction' separately in newer APIs,
+  // but 'streamGenerateContent' REST API takes 'contents' and 'systemInstruction' (optional).
+  // Our backend command currently takes 'contents' vector.
+  // We will pack system prompt into the first user message or as a separate 'system' role if supported?
+  // 'system' role is supported in 'contents' for some models, or via 'systemInstruction' field.
+  // To keep it simple and matching previous logic which combined them:
+  // Previous logic: parts = [{inlineData}, {text: systemPrompt}]
+
+  const contents: GeminiContent[] = [
     {
-      inlineData: {
-        mimeType,
-        data: cleanBase64(imageBase64),
-      },
-    },
-    {
-      text: systemPrompt,
+      role: "user",
+      parts: [
+        {
+          inlineData: {
+            mimeType: mimeType,
+            data: cleanBase64(imageBase64),
+          },
+        },
+        {
+          text: systemPrompt, // This contains sys prompt + user prompt combined by useChat
+        },
+      ],
     },
   ];
 
-  try {
-    let fullText = "";
-
-    const stream = await chatSession.sendMessageStream({
-      message: parts,
-    });
-
-    for await (const chunk of stream) {
-      const token = chunk.text || "";
-      if (token) {
-        fullText += token;
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        onToken(token);
-      }
-    }
-
-    return fullText || "No response text generated.";
-  } catch (error) {
-    console.error("Streaming error, falling back:", error);
-    try {
-      const response = await chatSession.sendMessage({
-        message: parts,
-      });
-      const text = response.text || "No response text generated.";
-      const words = text.split(" ");
-      for (const word of words) {
-        onToken(word + " ");
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-      return text;
-    } catch (fallbackError) {
-      console.error("Error starting chat:", fallbackError);
-      throw fallbackError;
-    }
-  }
-};
-
-export const sendMessage = async (text: string): Promise<string> => {
-  if (!chatSession) throw new Error("Chat session not started");
+  // Update local history
+  currentChatHistory = [...contents];
 
   try {
-    const response = await chatSession.sendMessage({
-      message: text,
+    await invoke("stream_gemini_chat", {
+      apiKey: storedApiKey,
+      model: modelId,
+      contents: contents,
+      channelId: channelId,
     });
 
-    return response.text || "No response text generated.";
+    // Cleanup
+    unlisten();
+    currentAbortController = null;
+    return "Stream completed"; // Full text is collected by caller via onToken usually
   } catch (error) {
-    console.error("Error sending message:", error);
+    unlisten();
+    currentAbortController = null;
+    console.error("Backend stream error:", error);
     throw error;
   }
 };
 
+export const sendMessage = async (text: string): Promise<string> => {
+  // Used for subsequent turns.
+  // We need the history + new prompt.
+  // Since 'startNewChatStream' resets history, we must rely on 'restoreSession' or manual history tracking.
+  // The 'useChat' hook manages 'messages' state, but 'client.ts' also had 'chatSession' state from SDK.
+  // We need to mirror that state here since we lost the SDK object.
+
+  if (!storedApiKey) throw new Error("Gemini API Key not set");
+
+  // Append user message to history
+  currentChatHistory.push({
+    role: "user",
+    parts: [{ text: text }],
+  });
+
+  const channelId = `gemini-stream-${Date.now()}`;
+  let fullResponse = "";
+
+  const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    fullResponse += event.payload.token;
+  });
+
+  try {
+    await invoke("stream_gemini_chat", {
+      apiKey: storedApiKey,
+      model: currentModelId || "gemini-flash-lite-latest",
+      contents: currentChatHistory,
+      channelId: channelId,
+    });
+
+    unlisten();
+
+    // Append model response to history
+    currentChatHistory.push({
+      role: "model",
+      parts: [{ text: fullResponse }],
+    });
+
+    return fullResponse;
+  } catch (error) {
+    unlisten();
+    console.error("SendMessage error:", error);
+    throw error;
+  }
+};
+
+let currentModelId = "gemini-flash-lite-latest";
+
 export const restoreSession = (
   modelId: string,
-  history: Content[],
+  history: Content[], // This comes from useChat logic (optimized or full)
   systemPrompt: string,
 ) => {
-  if (!ai) throw new Error("Gemini AI not initialized");
-
-  chatSession = ai.chats.create({
-    model: modelId,
-    config: {
-      systemInstruction: systemPrompt,
-    },
-    history: history,
-  });
+  currentModelId = modelId;
+  currentChatHistory = history;
+  // We don't need to do anything else, the next 'sendMessage' will use this history.
+  // However, if the intent is to immediately start a chat *with* this history,
+  // usually 'restoreSession' just sets state.
+  // But 'useChat.ts' calls 'apiRestoreSession(..., history, ...)'
+  // and then expects to be ready for 'handleSend' which calls 'sendMessage'.
+  // So setting state is correct.
 };

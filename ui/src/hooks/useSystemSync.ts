@@ -13,6 +13,7 @@ import {
   loadPreferences,
   savePreferences,
   hasPreferencesFile,
+  UserPreferences,
 } from "@/lib/config/preferences";
 import {
   DEFAULT_MODEL,
@@ -49,6 +50,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   const [editingModel, setEditingModel] = useState<string>(DEFAULT_MODEL);
   const [sessionModel, setSessionModel] = useState<string>(DEFAULT_MODEL);
   const [autoExpandOCR, setAutoExpandOCR] = useState<boolean>(true);
+  const [ocrEnabled, setOcrEnabled] = useState<boolean>(true);
   const [captureType, setCaptureType] = useState<"rectangular" | "squiggle">(
     "rectangular",
   );
@@ -91,6 +93,9 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         if (prefs.autoExpandOCR !== undefined) {
           setAutoExpandOCR(prefs.autoExpandOCR);
         }
+        if (prefs.ocrEnabled !== undefined) {
+          setOcrEnabled(prefs.ocrEnabled);
+        }
         if (prefs.captureType) {
           setCaptureType(prefs.captureType);
         }
@@ -111,7 +116,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     const setupIpc = async () => {
       try {
         const apiKey = await invoke<string>("get_api_key", {
-          provider: "google ai studio",
+          provider: "gemini",
         });
         if (apiKey) {
           setApiKey(apiKey);
@@ -149,29 +154,36 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     };
   }, [onToggleSettings]);
 
-  const saveSettingsHandler = async (
-    newPrompt: string,
-    newModel: string,
-    newAutoExpandOCR?: boolean,
-    newCaptureType?: "rectangular" | "squiggle",
-  ) => {
-    setStartupModel(newModel);
-    setEditingModel(newModel);
-    setActivePrompt(newPrompt);
-    setEditingPrompt(newPrompt);
-    if (newAutoExpandOCR !== undefined) setAutoExpandOCR(newAutoExpandOCR);
-    if (newCaptureType) setCaptureType(newCaptureType);
+  const updatePreferences = async (updates: Partial<UserPreferences>) => {
+    // Update local state immediately
+    if (updates.model !== undefined) {
+      setStartupModel(updates.model);
+      setEditingModel(updates.model);
+      setSessionModel(updates.model);
+    }
+    if (updates.prompt !== undefined) {
+      setActivePrompt(updates.prompt);
+      setEditingPrompt(updates.prompt);
+    }
+    if (updates.autoExpandOCR !== undefined) {
+      setAutoExpandOCR(updates.autoExpandOCR);
+    }
+    if (updates.ocrEnabled !== undefined) {
+      setOcrEnabled(updates.ocrEnabled);
+    }
+    if (updates.captureType !== undefined) {
+      setCaptureType(updates.captureType);
+    }
+    if (updates.theme !== undefined) {
+      setTheme(updates.theme);
+    }
 
+    // Merge with current state and save
     try {
-      await savePreferences({
-        prompt: newPrompt,
-        model: newModel,
-        theme: theme,
-        autoExpandOCR: newAutoExpandOCR ?? autoExpandOCR,
-        captureType: newCaptureType ?? captureType,
-      });
+      const currentPrefs = await loadPreferences();
+      await savePreferences({ ...currentPrefs, ...updates });
     } catch (e) {
-      console.error(e);
+      console.error("Failed to save preferences:", e);
     }
   };
 
@@ -192,12 +204,12 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   };
 
   const handleSetAPIKey = async (
-    provider: "google ai studio" | "imgbb",
+    provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => {
     try {
       await commands.setApiKey(provider, key);
-      if (provider === "google ai studio") {
+      if (provider === "google ai studio" || provider === "gemini") {
         setApiKey(key);
         initializeGemini(key);
       } else {
@@ -248,7 +260,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     isDarkMode: theme === "dark",
     systemError,
     clearSystemError,
-    saveSettings: saveSettingsHandler,
+    updatePreferences,
     handleToggleTheme,
     handleLogout,
     hasAgreed,
@@ -258,11 +270,11 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     setSessionChatTitle,
     resetSession,
     autoExpandOCR,
-    setAutoExpandOCR,
+    ocrEnabled,
     captureType,
-    setCaptureType,
     imgbbKey,
     setImgbbKey,
     handleSetAPIKey,
+    setAvatarSrc,
   };
 };

@@ -15,7 +15,20 @@ import {
 } from "@/features/";
 import styles from "./TabLayout.module.css";
 
-export interface TabLayoutProps extends ChatTabProps, SettingsTabProps {
+export interface TabLayoutProps
+  extends
+    ChatTabProps,
+    Omit<
+      SettingsTabProps,
+      | "onModelChange"
+      | "onPromptChange"
+      | "currentModel"
+      | "autoExpandOCR"
+      | "ocrEnabled"
+    > {
+  onPromptChange?: (prompt: string) => void;
+  autoExpandOCR: boolean;
+  ocrEnabled: boolean;
   // Common props
   editingModel: string;
 
@@ -87,17 +100,17 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   userEmail,
   avatarSrc,
   originalPicture,
-  onSave,
+  updatePreferences,
   onLogout,
   isDarkMode,
   onToggleTheme,
   autoExpandOCR,
-  setAutoExpandOCR,
+  ocrEnabled,
   captureType,
-  setCaptureType,
   geminiKey,
   imgbbKey,
   onSetAPIKey,
+  onUpdateAvatarSrc,
   setPrompt,
   onEditingModelChange,
 
@@ -163,7 +176,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
         userName={userName}
         userEmail={userEmail}
         avatarSrc={avatarSrc}
-        onSave={onSave}
         onLogout={onLogout}
         isDarkMode={isDarkMode}
         onToggleTheme={onToggleTheme}
@@ -194,7 +206,12 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
         </div>
 
         <div className={styles.contentArea}>
-          {isPanelActive ? (
+          <div
+            style={{
+              display: isPanelActive ? "block" : "none",
+              height: "100%",
+            }}
+          >
             <SettingsTab
               currentPrompt={currentPrompt}
               currentModel={editingModel}
@@ -206,19 +223,25 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               onModelChange={(model) => {
                 onEditingModelChange(model);
               }}
-              onSave={onSave}
+              updatePreferences={updatePreferences}
               onLogout={onLogout}
               isDarkMode={isDarkMode}
               onToggleTheme={onToggleTheme}
               autoExpandOCR={autoExpandOCR}
-              setAutoExpandOCR={setAutoExpandOCR}
+              ocrEnabled={ocrEnabled}
               captureType={captureType}
-              setCaptureType={setCaptureType}
               geminiKey={geminiKey}
               imgbbKey={imgbbKey}
               onSetAPIKey={onSetAPIKey}
+              onUpdateAvatarSrc={onUpdateAvatarSrc}
             />
-          ) : (
+          </div>
+          <div
+            style={{
+              display: !isPanelActive ? "block" : "none",
+              height: "100%",
+            }}
+          >
             <ChatTab
               messages={messages}
               streamingText={streamingText}
@@ -245,8 +268,10 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               onReload={onReload}
               imageInputValue={imageInputValue}
               onImageInputChange={onImageInputChange}
+              ocrEnabled={ocrEnabled}
+              autoExpandOCR={autoExpandOCR}
             />
-          )}
+          </div>
         </div>
       </div>
     </div>

@@ -570,7 +570,6 @@ export const AppLayout: React.FC = () => {
           userName={system.userName}
           userEmail={system.userEmail}
           avatarSrc={system.avatarSrc}
-          onSave={system.saveSettings}
           onLogout={performLogout}
           isDarkMode={system.isDarkMode}
           onToggleTheme={system.handleToggleTheme}
@@ -607,14 +606,13 @@ export const AppLayout: React.FC = () => {
                 originalPicture={system.originalPicture}
                 onPromptChange={system.setEditingPrompt}
                 onModelChange={system.setEditingModel}
-                onSave={system.saveSettings}
+                updatePreferences={system.updatePreferences}
                 onLogout={performLogout}
                 isDarkMode={system.isDarkMode}
                 onToggleTheme={system.handleToggleTheme}
                 autoExpandOCR={system.autoExpandOCR}
-                setAutoExpandOCR={system.setAutoExpandOCR}
+                ocrEnabled={system.ocrEnabled}
                 captureType={system.captureType}
-                setCaptureType={system.setCaptureType}
                 geminiKey={system.apiKey}
                 imgbbKey={system.imgbbKey}
                 onSetAPIKey={system.handleSetAPIKey}
@@ -731,18 +729,18 @@ export const AppLayout: React.FC = () => {
         userEmail={system.userEmail}
         avatarSrc={system.avatarSrc}
         originalPicture={system.originalPicture}
-        onSave={system.saveSettings}
+        updatePreferences={system.updatePreferences}
         onLogout={performLogout}
         isDarkMode={system.isDarkMode}
         onToggleTheme={system.handleToggleTheme}
         onPromptChange={system.setEditingPrompt}
         autoExpandOCR={system.autoExpandOCR}
-        setAutoExpandOCR={system.setAutoExpandOCR}
+        ocrEnabled={system.ocrEnabled}
         captureType={system.captureType}
-        setCaptureType={system.setCaptureType}
         geminiKey={system.apiKey}
         imgbbKey={system.imgbbKey}
         onSetAPIKey={system.handleSetAPIKey}
+        onUpdateAvatarSrc={system.setAvatarSrc}
         // TitleBar props
         isRotating={isRotating}
         isPanelActive={isPanelActive}

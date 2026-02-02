@@ -8,3 +8,4 @@ pub mod image;
 pub mod ocr;
 pub mod security;
 pub mod window;
+pub mod gemini;

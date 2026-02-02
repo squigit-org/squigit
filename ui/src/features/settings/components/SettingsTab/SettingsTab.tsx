@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 
 import styles from "./SettingsTab.module.css";
 import {
@@ -15,6 +15,7 @@ import {
   SupportSection,
   SettingsPanel,
 } from "@/features/settings";
+import { UserPreferences } from "@/lib/config/preferences";
 
 export interface SettingsTabProps {
   currentPrompt: string;
@@ -23,28 +24,23 @@ export interface SettingsTabProps {
   userEmail: string;
   avatarSrc: string;
   originalPicture: string | null;
-  onPromptChange: (prompt: string) => void;
-  onModelChange: (model: string) => void;
-  onSave: (
-    prompt: string,
-    model: string,
-    autoExpandOCR?: boolean,
-    captureType?: "rectangular" | "squiggle",
-  ) => void;
+  onPromptChange?: (prompt: string) => void;
+  onModelChange?: (model: string) => void;
+  updatePreferences: (updates: Partial<UserPreferences>) => void;
   onLogout: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
 
   autoExpandOCR: boolean;
-  setAutoExpandOCR: (enabled: boolean) => void;
+  ocrEnabled: boolean;
   captureType: "rectangular" | "squiggle";
-  setCaptureType: (type: "rectangular" | "squiggle") => void;
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
+    provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => Promise<boolean>;
+  onUpdateAvatarSrc?: (path: string) => void;
 }
 
 export type Topic =
@@ -62,17 +58,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   userEmail,
   avatarSrc,
   originalPicture,
-  onSave,
+  updatePreferences,
   onLogout,
   isDarkMode,
   onToggleTheme,
   autoExpandOCR,
-  setAutoExpandOCR,
+  ocrEnabled,
   captureType,
-  setCaptureType,
   geminiKey,
   imgbbKey,
   onSetAPIKey,
+  onUpdateAvatarSrc,
 }) => {
   const [activeTopic, setActiveTopic] = useState<Topic>("General");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -80,26 +76,27 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const [localPrompt, setLocalPrompt] = useState(currentPrompt);
   const [localModel, setLocalModel] = useState(currentModel);
-  const [localAutoExpand, setLocalAutoExpand] = useState(autoExpandOCR);
-  const [localCaptureType, setLocalCaptureType] = useState(captureType);
-
-  useEffect(() => {
-    setLocalPrompt(currentPrompt);
-    setLocalModel(currentModel);
-    setLocalAutoExpand(autoExpandOCR);
-    setLocalCaptureType(captureType);
-  }, [currentPrompt, currentModel, autoExpandOCR, captureType]);
 
   const handleToggleAutoExpand = (checked: boolean) => {
-    setLocalAutoExpand(checked);
-    onSave(localPrompt, localModel, checked, localCaptureType);
-    setAutoExpandOCR(checked);
+    updatePreferences({ autoExpandOCR: checked });
+  };
+
+  const handleToggleOcrEnabled = (checked: boolean) => {
+    updatePreferences({ ocrEnabled: checked });
+    // If disabling OCR, also disable auto-expand
+    if (!checked) {
+      updatePreferences({ autoExpandOCR: false });
+    }
   };
 
   const handleCaptureTypeChange = (type: "rectangular" | "squiggle") => {
-    setLocalCaptureType(type);
-    onSave(localPrompt, localModel, localAutoExpand, type);
-    setCaptureType(type);
+    updatePreferences({ captureType: type });
+  };
+
+  const handleToggleTheme = () => {
+    // Toggle theme via updatePreferences
+    const newTheme = isDarkMode ? "light" : "dark";
+    updatePreferences({ theme: newTheme });
   };
 
   const renderContent = () => {
@@ -108,10 +105,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         return (
           <GeneralSection
             isDarkMode={isDarkMode}
-            onToggleTheme={onToggleTheme}
-            autoExpandOCR={localAutoExpand}
+            onToggleTheme={handleToggleTheme}
+            autoExpandOCR={autoExpandOCR}
             onToggleAutoExpand={handleToggleAutoExpand}
-            captureType={localCaptureType}
+            ocrEnabled={ocrEnabled}
+            onToggleOcrEnabled={handleToggleOcrEnabled}
+            captureType={captureType}
             onCaptureTypeChange={handleCaptureTypeChange}
           />
         );
@@ -156,6 +155,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         avatarSrc={avatarSrc}
         originalPicture={originalPicture}
         onLogout={onLogout}
+        onUpdateAvatarSrc={onUpdateAvatarSrc}
       />
 
       <div className={styles.contentArea} ref={scrollRef}>

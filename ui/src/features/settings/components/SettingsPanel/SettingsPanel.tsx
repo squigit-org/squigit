@@ -29,6 +29,7 @@ interface SettingsPanelProps {
   avatarSrc: string;
   originalPicture: string | null;
   onLogout: () => void;
+  onUpdateAvatarSrc?: (path: string) => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -39,27 +40,59 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   avatarSrc,
   originalPicture,
   onLogout,
+  onUpdateAvatarSrc,
 }) => {
   const [imgSrc, setImgSrc] = React.useState<string>("");
+  const [imgLoaded, setImgLoaded] = React.useState(false);
   const [imgError, setImgError] = React.useState(false);
+  const [isCaching, setIsCaching] = React.useState(false);
 
   React.useEffect(() => {
+    setImgLoaded(false);
+    setImgError(false);
+
     if (avatarSrc) {
-      setImgSrc(convertFileSrc(avatarSrc));
-      setImgError(false);
+      // Check if avatarSrc is a remote URL (http/https) or a local file path
+      if (avatarSrc.startsWith("http://") || avatarSrc.startsWith("https://")) {
+        setImgSrc(avatarSrc);
+      } else {
+        setImgSrc(convertFileSrc(avatarSrc));
+      }
     } else if (originalPicture) {
       setImgSrc(originalPicture);
-      setImgError(false);
     } else {
       setImgError(true);
     }
   }, [avatarSrc, originalPicture]);
 
+  const handleImgLoad = async () => {
+    setImgLoaded(true);
+    setImgError(false);
+
+    // If we loaded from a remote URL and don't have a local avatar, cache it
+    const isRemoteSource =
+      imgSrc.startsWith("http://") || imgSrc.startsWith("https://");
+    const needsCaching =
+      isRemoteSource && (!avatarSrc || avatarSrc.startsWith("http"));
+
+    if (needsCaching && !isCaching && onUpdateAvatarSrc) {
+      setIsCaching(true);
+      try {
+        const localPath = await invoke<string>("cache_avatar", { url: imgSrc });
+        onUpdateAvatarSrc(localPath);
+      } catch (e) {
+        console.error("Failed to cache avatar:", e);
+      } finally {
+        setIsCaching(false);
+      }
+    }
+  };
+
   const handleImgError = () => {
-    if (imgSrc === originalPicture) {
-      setImgError(true);
-    } else if (originalPicture) {
+    if (imgSrc !== originalPicture && originalPicture) {
+      // Try falling back to originalPicture (Google URL)
       setImgSrc(originalPicture);
+      setImgLoaded(false);
     } else {
       setImgError(true);
     }
@@ -92,33 +125,44 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     return colors[Math.abs(hash) % colors.length];
   };
 
+  // Show fallback avatar only if there is an error or no image source at all.
+  // We do NOT show fallback while loading (silent loading).
+  const showFallback = imgError || !imgSrc;
+
   return (
     <div className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
         <div className={styles.userProfile}>
-          {!imgError ? (
+          {/* Fallback Avatar (Initials) */}
+          <div
+            className={styles.avatar}
+            style={{
+              backgroundColor: getAvatarColor(userName),
+              display: showFallback ? "flex" : "none",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#1f2937",
+              fontWeight: "bold",
+              fontSize: "1.2rem",
+            }}
+          >
+            {getInitials(userName)}
+          </div>
+
+          {/* User Image - Instant appear (no fade) */}
+          {!imgError && imgSrc && (
             <img
               src={imgSrc}
               alt="User"
               className={styles.avatar}
+              style={{
+                display: showFallback ? "none" : "block",
+              }}
+              onLoad={handleImgLoad}
               onError={handleImgError}
             />
-          ) : (
-            <div
-              className={styles.avatar}
-              style={{
-                backgroundColor: getAvatarColor(userName),
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#1f2937",
-                fontWeight: "bold",
-                fontSize: "1.2rem",
-              }}
-            >
-              {getInitials(userName)}
-            </div>
           )}
+
           <div className={styles.userInfo}>
             <div className={styles.userName}>{userName}</div>
             <div className={styles.userEmail}>{userEmail}</div>

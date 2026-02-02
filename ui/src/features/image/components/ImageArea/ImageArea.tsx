@@ -50,6 +50,8 @@ interface ImageAreaProps {
   onInputChange: (value: string) => void;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  ocrEnabled?: boolean;
+  autoExpandOCR?: boolean;
 }
 
 export const ImageArea: React.FC<ImageAreaProps> = ({
@@ -64,6 +66,8 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   onInputChange,
   isExpanded = false,
   onToggleExpand,
+  ocrEnabled = true,
+  autoExpandOCR = true,
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -95,102 +99,69 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
     },
   });
 
+  const hasScannedRef = useRef(false);
+  const hasAutoExpandedRef = useRef(false);
+  const prevImageBase64Ref = useRef<string | null>(null);
+
+  // Reset refs when image changes
+  if (startupImage?.base64 !== prevImageBase64Ref.current) {
+    hasScannedRef.current = false;
+    hasAutoExpandedRef.current = false;
+    prevImageBase64Ref.current = startupImage?.base64 || null;
+  }
+
   const scan = useCallback(async () => {
     if (!startupImage?.base64) return;
+    if (!ocrEnabled) {
+      console.log("OCR disabled, skipping scan");
+      return;
+    }
     const currentChatId = chatId;
 
-    setLoading(true);
-    setError("");
+    if (!hasAutoExpandedRef.current) {
+      setLoading(true);
+      setError("");
 
-    try {
-      let imageData: string;
-      let isBase64: boolean;
+      try {
+        // Dummy 3-second delay to simulate OCR processing
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
-      if (startupImage.isFilePath) {
-        const urlStr = startupImage.base64;
-        console.log("ImageArea: processing URL:", urlStr);
+        console.log("Dummy OCR complete");
 
-        // Try to parse as URL to handle encoding and protocol safely
-        try {
-          // Handle custom protocols by creating a dummy base if needed,
-          // but convertFileSrc returns a full URL usually.
-          const urlObj = new URL(urlStr);
-          // On Linux/Tauri v2, protocol might be http: and host asset.localhost
+        if (currentChatId === chatId) {
+          setLoading(false);
+
+          // Auto-expand if setting is enabled - Only once per image
           if (
-            urlObj.hostname === "asset.localhost" ||
-            urlObj.protocol === "asset:"
+            autoExpandOCR &&
+            onToggleExpand &&
+            !hasAutoExpandedRef.current &&
+            !isExpanded
           ) {
-            // pathname is the file path. It is URL-encoded by the URL object parsing if using href,
-            // but pathname property is usually decoded? No, it's often encoded.
-            // decodeURIComponent is safest on the pathname.
-            imageData = decodeURIComponent(urlObj.pathname);
-          } else {
-            // Fallback for simple string replacement if URL parsing fails or doesn't match
-            imageData = urlStr;
+            hasAutoExpandedRef.current = true;
+            onToggleExpand();
           }
-        } catch (e) {
-          console.log(
-            "ImageArea: URL parsing failed, falling back to manual strip",
-            e,
-          );
-          // Fallback manual strip
-          let url = urlStr;
-          const patterns = [
-            "asset://localhost",
-            "http://asset.localhost",
-            "https://asset.localhost",
-            "asset:",
-          ];
-          for (const pattern of patterns) {
-            if (url.startsWith(pattern)) {
-              url = url.replace(pattern, "");
-              break;
-            }
-          }
-          imageData = decodeURIComponent(url);
         }
-
-        console.log("ImageArea: extracted path:", imageData);
-        isBase64 = false;
-      } else {
-        imageData = startupImage.base64;
-        isBase64 = true;
-      }
-
-      /*
-      const results = await invoke<OCRBox[]>("ocr_image", {
-        imageData,
-        isBase64,
-      });
-
-      const converted = results.map((r) => ({
-        text: r.text,
-        box: r.box_coords,
-      }));
-
-      // Prevent race condition: Check if we are still on the same chat
-      if (currentChatId === chatId) {
-        onUpdateOCRData(converted);
-        setShowOverlay(false);
-      }
-      // setIsExpanded(true); // Don't auto-expand, user finds it annoying
-      */
-      console.log("OCR Disabled temporarily via comments");
-      if (currentChatId === chatId) {
-        setLoading(false);
-      }
-    } catch (e) {
-      if (currentChatId === chatId) {
-        const errorMsg = e instanceof Error ? e.message : String(e);
-        setError(errorMsg);
-        setShowOverlay(false);
-      }
-    } finally {
-      if (currentChatId === chatId) {
-        setLoading(false);
+      } catch (e) {
+        if (currentChatId === chatId) {
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          setError(errorMsg);
+          setShowOverlay(false);
+        }
+      } finally {
+        if (currentChatId === chatId) {
+          setLoading(false);
+        }
       }
     }
-  }, [startupImage, onUpdateOCRData, chatId]);
+  }, [
+    startupImage,
+    chatId,
+    ocrEnabled,
+    autoExpandOCR,
+    onToggleExpand,
+    isExpanded,
+  ]);
 
   // Auto-scan if no data present
   useEffect(() => {
@@ -199,8 +170,10 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
       ocrData.length === 0 &&
       !loading &&
       !error &&
-      !startupImage.fromHistory
+      !startupImage.fromHistory &&
+      !hasScannedRef.current
     ) {
+      hasScannedRef.current = true;
       scan();
     }
   }, [startupImage, ocrData.length, loading, error, scan]);

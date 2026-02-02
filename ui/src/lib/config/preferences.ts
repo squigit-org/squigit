@@ -23,6 +23,7 @@ export interface UserPreferences {
   model: string;
   theme: "dark" | "light";
   prompt: string;
+  ocrEnabled: boolean;
   autoExpandOCR: boolean;
   captureType: "rectangular" | "squiggle";
 }
@@ -31,6 +32,7 @@ export const defaultPreferences: UserPreferences = {
   model: DEFAULT_MODEL,
   theme: DEFAULT_THEME as "dark" | "light",
   prompt: DEFAULT_PROMPT,
+  ocrEnabled: true,
   autoExpandOCR: true,
   captureType: "rectangular",
 };

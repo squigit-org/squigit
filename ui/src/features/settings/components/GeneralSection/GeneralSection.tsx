@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import styles from "./GeneralSection.module.css";
 import { CapturePreview } from "./CapturePreview";
 
@@ -7,6 +7,8 @@ interface GeneralSectionProps {
   onToggleTheme: () => void;
   autoExpandOCR: boolean;
   onToggleAutoExpand: (checked: boolean) => void;
+  ocrEnabled: boolean;
+  onToggleOcrEnabled: (checked: boolean) => void;
   captureType: "rectangular" | "squiggle";
   onCaptureTypeChange: (type: "rectangular" | "squiggle") => void;
 }
@@ -16,15 +18,11 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
   onToggleTheme,
   autoExpandOCR,
   onToggleAutoExpand,
+  ocrEnabled,
+  onToggleOcrEnabled,
   captureType,
   onCaptureTypeChange,
 }) => {
-  const [localCaptureType, setLocalCaptureType] = useState(captureType);
-
-  useEffect(() => {
-    setLocalCaptureType(captureType);
-  }, [captureType]);
-
   return (
     <>
       <div className={styles.sectionHeader}>
@@ -43,7 +41,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
             <input
               type="checkbox"
               className={styles.toggleInput}
-              checked={!isDarkMode}
+              checked={isDarkMode}
               onChange={onToggleTheme}
             />
             <span className={styles.toggleSlider}></span>
@@ -65,15 +63,17 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
             <input
               type="checkbox"
               className={styles.toggleInput}
-              checked={true}
-              disabled
+              checked={ocrEnabled}
+              onChange={(e) => onToggleOcrEnabled(e.target.checked)}
             />
             <span className={styles.toggleSlider}></span>
           </div>
         </div>
         <div className={styles.divider} />
 
-        <div className={styles.controlRow}>
+        <div
+          className={`${styles.controlRow} ${!ocrEnabled ? styles.disabled : ""}`}
+        >
           <div>
             <span className={`${styles.label} ${styles.imgOcrLabel}`}>
               Auto-extend Content
@@ -87,6 +87,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               type="checkbox"
               className={styles.toggleInput}
               checked={autoExpandOCR}
+              disabled={!ocrEnabled}
               onChange={(e) => onToggleAutoExpand(e.target.checked)}
             />
             <span className={styles.toggleSlider}></span>
@@ -100,7 +101,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               Circle to search
             </span>
             <span className={styles.description}>
-              {localCaptureType === "squiggle"
+              {captureType === "squiggle"
                 ? "Turn off for standard box capture"
                 : "Turn on for free-form capture"}
             </span>
@@ -109,10 +110,9 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
             <input
               type="checkbox"
               className={styles.toggleInput}
-              checked={localCaptureType === "squiggle"}
+              checked={captureType === "squiggle"}
               onChange={(e) => {
                 const newType = e.target.checked ? "squiggle" : "rectangular";
-                setLocalCaptureType(newType);
                 onCaptureTypeChange(newType);
               }}
             />
@@ -122,7 +122,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
 
         <div className={styles.captureGrid}>
           <div className={styles.iframeWrapper}>
-            <CapturePreview type={localCaptureType} />
+            <CapturePreview type={captureType} />
           </div>
         </div>
       </div>

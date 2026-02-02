@@ -50,6 +50,9 @@ export interface ChatTabProps {
 
   imageInputValue: string;
   onImageInputChange: (value: string) => void;
+
+  ocrEnabled?: boolean;
+  autoExpandOCR?: boolean;
 }
 
 import styles from "./ChatTab.module.css";
@@ -75,6 +78,8 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   chatId,
   imageInputValue,
   onImageInputChange,
+  ocrEnabled = true,
+  autoExpandOCR = true,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
@@ -216,6 +221,8 @@ export const ChatTab: React.FC<ChatTabProps> = ({
           onInputChange={onImageInputChange}
           isExpanded={isImageExpanded}
           onToggleExpand={() => setIsImageExpanded(!isImageExpanded)}
+          ocrEnabled={ocrEnabled}
+          autoExpandOCR={autoExpandOCR}
         />
       </div>
 
