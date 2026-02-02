@@ -174,3 +174,16 @@
     padding: 0.1rem 0.45rem;
   }
 }
+
+.streamCursor {
+  display: inline-block;
+  margin-left: 2px;
+  animation: cursorBlink 1s step-end infinite;
+  color: var(--neutral-400);
+}
+
+@keyframes cursorBlink {
+  50% {
+    opacity: 0;
+  }
+}

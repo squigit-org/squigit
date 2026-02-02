@@ -27,6 +27,7 @@ interface ChatAreaProps {
   showUpdate: boolean;
   setShowUpdate: (show: boolean) => void;
   messages: Message[];
+  onStreamComplete?: () => void;
 }
 
 export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
@@ -40,6 +41,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       onCheckSettings,
       onRetry,
       messages,
+      onStreamComplete,
     },
     ref,
   ) => {
@@ -92,7 +94,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                     />
                   </div>
                 ) : (
-                  <StreamingResponse text={streamingText} />
+                  <StreamingResponse
+                    text={streamingText}
+                    onComplete={onStreamComplete}
+                  />
                 )}
               </div>
             )}

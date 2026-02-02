@@ -19,4 +19,6 @@ export interface CodeBlockProps {
   placeholder?: string;
   /** Enable/Disable sticky header (Default: true) */
   stickyHeader?: boolean;
+  /** Indicates code is being streamed (shows cursor, skips highlighting) */
+  isStreaming?: boolean;
 }

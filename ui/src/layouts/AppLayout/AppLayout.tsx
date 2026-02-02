@@ -722,6 +722,7 @@ export const AppLayout: React.FC = () => {
         onUpdateOCRData={handleUpdateOCRData}
         imageInputValue={imageInput}
         onImageInputChange={setImageInput}
+        onStreamComplete={chat.handleStreamComplete}
         // Settings props
         currentPrompt={system.editingPrompt}
         editingModel={system.editingModel}

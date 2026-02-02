@@ -14,17 +14,27 @@ interface CodeBlockViewerProps {
   language: string;
   value: string;
   stickyHeader?: boolean;
+  /** When true, shows plain text with cursor (skips syntax highlighting) */
+  isStreaming?: boolean;
 }
 
 export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
   language,
   value,
   stickyHeader = true,
+  isStreaming = false,
 }) => {
   const { isCopied, copy } = useCopyToClipboard(1000);
-  const { highlightedHtml, isLoading } = useCodeHighlighter(value, language);
+  // Skip highlighting during streaming for performance
+  const { highlightedHtml, isLoading } = useCodeHighlighter(
+    isStreaming ? "" : value,
+    language,
+  );
 
   const handleCopy = () => copy(value);
+
+  // During streaming, show plain text with cursor
+  const shouldShowPlain = isStreaming || isLoading || language === "text";
 
   return (
     <div className={styles.wrapper} role="region" aria-label="code block">
@@ -48,10 +58,11 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
       </button>
 
       <div className={styles.content}>
-        {isLoading ? (
-          <pre className={styles.pre}>{value}</pre>
-        ) : language === "text" ? (
-          <pre className={styles.pre}>{value}</pre>
+        {shouldShowPlain ? (
+          <pre className={styles.pre}>
+            {value}
+            {isStreaming && <span className={styles.streamCursor}>▋</span>}
+          </pre>
         ) : (
           <div
             className={`${styles.shikiContainer} shiki-dual-theme`}

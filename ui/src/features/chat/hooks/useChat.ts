@@ -533,6 +533,22 @@ Please continue the conversation focusing on the User's next prompt, using the a
     }
   };
 
+  // Handle stream animation completion - auto-transition to chat mode
+  const handleStreamComplete = () => {
+    if (streamingText && firstResponseId && !isChatMode) {
+      const botMsg: Message = {
+        id: firstResponseId,
+        role: "model",
+        text: streamingText,
+        timestamp: Date.now(),
+      };
+      setMessages([botMsg]);
+      setStreamingText("");
+      setFirstResponseId(null);
+      setIsChatMode(true);
+    }
+  };
+
   return {
     messages,
     isLoading,
@@ -546,6 +562,7 @@ Please continue the conversation focusing on the User's next prompt, using the a
     handleRetrySend,
     handleReload,
     handleDescribeEdits,
+    handleStreamComplete,
     startSession,
     getCurrentState,
     restoreState,

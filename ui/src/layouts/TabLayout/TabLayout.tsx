@@ -92,6 +92,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   onReload,
   imageInputValue,
   onImageInputChange,
+  onStreamComplete,
 
   // Settings props
   currentPrompt,
@@ -270,6 +271,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               onImageInputChange={onImageInputChange}
               ocrEnabled={ocrEnabled}
               autoExpandOCR={autoExpandOCR}
+              onStreamComplete={onStreamComplete}
             />
           </div>
         </div>
