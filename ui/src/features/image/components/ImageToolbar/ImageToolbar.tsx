@@ -15,6 +15,7 @@ interface ImageToolbarProps {
   onCopyImage: () => Promise<boolean>;
   onSaveClick: () => void;
   constraintRef: React.RefObject<HTMLDivElement | null>;
+  isExpanded: boolean;
 }
 
 const EDGE_PADDING = 8;
@@ -90,7 +91,8 @@ const ToolbarButton: React.FC<{
   tooltip: string;
   onClick: (e: React.MouseEvent) => void;
   disabled?: boolean;
-}> = ({ icon, tooltip, onClick, disabled }) => {
+  tabIndex?: number;
+}> = ({ icon, tooltip, onClick, disabled, tabIndex }) => {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [hover, setHover] = useState(false);
 
@@ -103,6 +105,7 @@ const ToolbarButton: React.FC<{
         disabled={disabled}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
+        tabIndex={tabIndex}
       >
         {icon}
       </button>
@@ -118,6 +121,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   onCopyImage,
   onSaveClick,
   constraintRef,
+  isExpanded,
 }) => {
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const isDraggingRef = useRef(false);
@@ -136,21 +140,81 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   );
 
   useEffect(() => {
+    // If not expanded, we don't need to calculate position or observe
+    // This also helps performance
+    if (!isExpanded) return;
+
     const toolbar = toolbarRef.current;
     const constraint = constraintRef.current;
     if (!toolbar || !constraint) return;
 
-    const offsetParent = toolbar.offsetParent as HTMLElement;
-    if (!offsetParent) return;
+    // Helper to clamp and position the toolbar
 
-    const constraintRect = constraint.getBoundingClientRect();
-    const parentRect = offsetParent.getBoundingClientRect();
+    const updatePosition = () => {
+      const offsetParent = toolbar.offsetParent as HTMLElement;
+      if (!offsetParent) return;
 
-    const initialLeft = constraintRect.left - parentRect.left + 8;
-    const initialTop = constraintRect.top - parentRect.top + 8;
+      const constraintRect = constraint.getBoundingClientRect();
+      const parentRect = offsetParent.getBoundingClientRect();
+      const toolbarRect = toolbar.getBoundingClientRect();
 
-    toolbar.style.left = `${initialLeft}px`;
-    toolbar.style.top = `${initialTop}px`;
+      const minLeft = constraintRect.left - parentRect.left;
+      const minTop = constraintRect.top - parentRect.top;
+
+      // Ensure we have valid dimensions before calculating max
+      // If constraint is hidden (e.g. 0 height), max might be invalid but logic handles it
+      const maxLeft = Math.max(
+        minLeft,
+        minLeft + constraintRect.width - toolbarRect.width,
+      );
+      const maxTop = Math.max(
+        minTop,
+        minTop + constraintRect.height - toolbarRect.height,
+      );
+
+      // Determine current intended position
+      // If styles are unset, default to top-left + padding
+      let currentLeft: number;
+      let currentTop: number;
+
+      if (!toolbar.style.left || !toolbar.style.top) {
+        currentLeft = minLeft + 8;
+        currentTop = minTop + 8;
+      } else {
+        // Calculate where it visually is right now relative to parent
+        // This handles the case where parent moved but toolbar didn't update yet
+        currentLeft = toolbarRect.left - parentRect.left;
+        currentTop = toolbarRect.top - parentRect.top;
+      }
+
+      const newLeft = Math.max(minLeft, Math.min(currentLeft, maxLeft));
+      const newTop = Math.max(minTop, Math.min(currentTop, maxTop));
+
+      toolbar.style.left = `${newLeft}px`;
+      toolbar.style.top = `${newTop}px`;
+    };
+
+    // Initial position
+    updatePosition();
+
+    // Watch for size changes in the constraint (BigImageBox) or parent
+    const resizeObserver = new ResizeObserver(() => {
+      // Use requestAnimationFrame to avoid "ResizeObserver loop limit exceeded"
+      requestAnimationFrame(updatePosition);
+    });
+
+    resizeObserver.observe(constraint);
+    if (toolbar.offsetParent instanceof Element) {
+      resizeObserver.observe(toolbar.offsetParent);
+    }
+
+    // Also watch window resize for good measure
+    window.addEventListener("resize", updatePosition);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updatePosition);
+    };
   }, [toolbarRef, constraintRef]);
 
   const startDrag = (e: React.MouseEvent) => {
@@ -227,8 +291,17 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     document.removeEventListener("mouseup", stopDrag);
   };
 
+  const toolbarStyle: React.CSSProperties = {
+    opacity: isExpanded ? 0.94 : 0,
+    visibility: isExpanded ? "visible" : "hidden",
+    pointerEvents: isExpanded ? "auto" : "none",
+    transition: "opacity 0.3s ease, visibility 0.3s",
+  };
+
+  const tabIndex = isExpanded ? 0 : -1;
+
   return (
-    <div className={styles.imageToolbar} ref={toolbarRef}>
+    <div className={styles.imageToolbar} ref={toolbarRef} style={toolbarStyle}>
       <div className={styles.toolbarDrag} onMouseDown={startDrag}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -284,6 +357,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           onLensClick();
         }}
         disabled={isLensLoading}
+        tabIndex={tabIndex}
       />
 
       <ToolbarButton
@@ -321,6 +395,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         }
         tooltip={copySuccess ? "Copied to clipboard" : "Copy as Image"}
         onClick={handleCopyClick}
+        tabIndex={tabIndex}
       />
 
       <ToolbarButton
@@ -346,6 +421,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
           e.stopPropagation();
           onSaveClick();
         }}
+        tabIndex={tabIndex}
       />
     </div>
   );

@@ -173,17 +173,22 @@
   flex-direction: column;
   padding: 0 8px 8px 8px;
   overflow: hidden;
+  position: relative;
 }
 
 .floatingContainer :global(.imageToolbar) {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s;
 }
 
 .floatingContainer.expanded :global(.imageToolbar) {
   opacity: 0.94;
   pointer-events: auto;
+  visibility: visible;
 }
 
 .floatingContainer :global(.textLayer) {

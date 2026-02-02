@@ -486,6 +486,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
             onCopyImage={handleCopyImage}
             onSaveClick={handleExpandSave}
             constraintRef={scrollWrapperRef}
+            isExpanded={isExpanded}
           />
         </div>
       </div>
