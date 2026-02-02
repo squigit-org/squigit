@@ -12,14 +12,14 @@ interface OCRBox {
   box: number[][];
 }
 
-interface TextLayerProps {
+interface OCRLayerProps {
   data: OCRBox[];
   size: { w: number; h: number };
   svgRef: React.RefObject<SVGSVGElement | null>;
   onTextMouseDown: (e: React.MouseEvent, boxIndex: number) => void;
 }
 
-export const TextLayer: React.FC<TextLayerProps> = ({
+export const OCRLayer: React.FC<OCRLayerProps> = ({
   data,
   size,
   svgRef,

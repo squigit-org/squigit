@@ -1,12 +1,12 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useHistoryState } from "./useHistoryState";
-import { useClipboard } from "../widgets"; // Assuming this is where it is, based on previous file reads
+import { useClipboard } from "@/widgets";
 
 interface UseTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit?: () => void;
-  preventNewLine?: boolean; // For single-line inputs like search bars
+  preventNewLine?: boolean;
 }
 
 export function useTextEditor({
@@ -74,7 +74,6 @@ export function useTextEditor({
       const newValue = el.value.substring(0, start) + el.value.substring(end);
       onChange(newValue);
 
-      // We need to restore cursor position after render
       setTimeout(() => {
         if (ref.current) {
           ref.current.setSelectionRange(start, start);
@@ -88,7 +87,6 @@ export function useTextEditor({
     const el = ref.current;
     if (!el) return;
 
-    // Ensure focus
     el.focus();
 
     try {
@@ -135,14 +133,6 @@ export function useTextEditor({
             e.preventDefault();
             handleSelectAll();
             return;
-          // Native copy/cut/paste often work better, but for custom inputs we might need them?
-          // The previous code kept custom handlers mostly for context menu consistency,
-          // but for keydown, native behavior is usually preferred unless we are overriding history.
-          // However, to match previous behavior explicitly:
-          /* case 'c': 
-              // Native copy is usually fine
-              break;
-           */
         }
       }
 
@@ -151,7 +141,6 @@ export function useTextEditor({
           e.preventDefault();
           if (onSubmit) onSubmit();
         } else if (!e.shiftKey && onSubmit) {
-          // For multiline textareas, Enter sends, Shift+Enter newlines
           e.preventDefault();
           if (value.trim().length > 0) onSubmit();
         }

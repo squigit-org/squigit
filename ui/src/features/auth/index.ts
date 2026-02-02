@@ -7,3 +7,4 @@
 export * from "./components/Setup/GeminiSetup";
 export * from "./components/Login/OAuthLogin";
 export * from "./hooks/useAuth";
+export * from "./styles";

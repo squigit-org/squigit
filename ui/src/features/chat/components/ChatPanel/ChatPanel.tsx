@@ -16,12 +16,9 @@ import {
   StarOff,
 } from "lucide-react";
 
-import {
-  ChatMetadata,
-  groupChatsByDate,
-} from "../../../../lib/storage/chatStorage";
+import { ChatMetadata, groupChatsByDate } from "@/lib/storage/chatStorage";
 import styles from "./ChatPanel.module.css";
-import { PanelContextMenu, Dialog } from "../../../../widgets";
+import { PanelContextMenu, Dialog } from "@/widgets";
 
 // --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({

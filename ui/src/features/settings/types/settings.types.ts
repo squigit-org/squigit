@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { MODELS } from "../../../lib/config/models";
+import { MODELS } from "@/lib/config/models";
 
 export const modelsWithInfo = [
   {

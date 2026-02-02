@@ -8,11 +8,11 @@ import React, { useState, forwardRef } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { google, github } from "@/lib/config";
-import { GlowCard } from "../../../../widgets/glow-card";
-import { TextContextMenu } from "../../../../widgets/menu";
+import { GlowCard } from "@/widgets/glow-card";
+import { TextContextMenu } from "@/widgets/menu";
 import styles from "./ApiKeysSection.module.css";
-import { useTextEditor } from "../../../../hooks/useTextEditor";
-import { useTextContextMenu } from "../../../../widgets/menu/hooks/useTextContextMenu";
+import { useTextEditor } from "@/hooks/useTextEditor";
+import { useTextContextMenu } from "@/widgets/menu/hooks/useTextContextMenu";
 
 interface ApiKeysSectionProps {
   geminiKey: string;
@@ -40,11 +40,6 @@ const ProviderRow = ({
   onToggle: () => void;
   onSave: (key: string) => Promise<boolean>;
 }) => {
-  // Initialize with currentKey if needed, but usually API keys are hidden or managed separately.
-  // The original code initialized useState("") but had currentKey prop.
-  // It seems the input is for *setting* a new key, not necessarily viewing the old one (which might be security masked).
-  // However, the original code: `const [inputValue, setInputValue] = useState("");`
-
   const [inputValue, setInputValue] = useState("");
   const [showKey, setShowKey] = useState(false);
 
@@ -214,7 +209,9 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
                 and public service.{" "}
                 <button
                   className={styles.privacyLink}
-                  onClick={() => handleOpenUrl(github.security)}
+                  onClick={() =>
+                    handleOpenUrl(github.docs("06-policies/SECURITY.md"))
+                  }
                 >
                   Learn more.
                 </button>
@@ -229,7 +226,7 @@ export const ApiKeysSection = forwardRef<HTMLDivElement, ApiKeysSectionProps>(
             <span>Your keys are stored locally — </span>
             <button
               className={styles.privacyLink}
-              onClick={() => handleOpenUrl(github.privacy)}
+              onClick={() => handleOpenUrl(github.docs("06-policies/BYOK.md"))}
             >
               We never see them.
             </button>

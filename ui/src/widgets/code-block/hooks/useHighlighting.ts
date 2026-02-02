@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { highlightCode } from "../../../features/syntax";
+import { highlightCode } from "@/features/syntax";
 
 /**
  * Hook for syntax highlighting code using Shiki.

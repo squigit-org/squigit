@@ -5,13 +5,13 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Message, ModelType } from "../types/chat.types";
-import { systemPrompt } from "../../../lib/config/prompts";
+import { Message, ModelType } from "@/features/chat";
+import { systemPrompt } from "@/lib/config/prompts";
 import {
   startNewChatStream,
   sendMessage,
   restoreSession as apiRestoreSession,
-} from "../../../lib/api/gemini/client";
+} from "@/lib/api/gemini/client";
 
 export const useChat = ({
   apiKey,

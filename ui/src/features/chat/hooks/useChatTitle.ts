@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { GoogleGenAI } from "@google/genai";
-import { titlePrompt } from "../../../lib/config/prompts";
+import { titlePrompt } from "@/lib/config/prompts";
 
 const TITLE_MODEL = "gemini-flash-lite-latest";
 

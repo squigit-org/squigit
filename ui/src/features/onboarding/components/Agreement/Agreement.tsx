@@ -5,15 +5,12 @@
  */
 
 import React, { useEffect, useState } from "react";
-import {
-  savePreferences,
-  defaultPreferences,
-} from "../../../../lib/config/preferences";
+import { savePreferences, defaultPreferences } from "@/lib/config/preferences";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { OnboardingLayout, styles } from "../../../../layouts";
+import { OnboardingLayout, styles } from "@/layouts";
 import "katex/dist/katex.min.css";
 
 interface AgreementProps {

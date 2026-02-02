@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./services/lens.google";
-export * from "./services/search.google";
-export * from "./services/translate.google";
-export * from "./components/ImageArea/ImageArea";
+export * from "./components";
+export * from "./services";
+export * from "./hooks";

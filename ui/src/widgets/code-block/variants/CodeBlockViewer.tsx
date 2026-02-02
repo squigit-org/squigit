@@ -6,8 +6,8 @@
 
 import React from "react";
 import { Check, Copy } from "lucide-react";
-import { useCopyToClipboard } from "../../../hooks";
-import { useCodeHighlighter } from "../hooks/useHighlighting";
+import { useCopyToClipboard } from "@/hooks";
+import { useCodeHighlighter } from "@/widgets";
 import styles from "./shared.module.css";
 
 interface CodeBlockViewerProps {

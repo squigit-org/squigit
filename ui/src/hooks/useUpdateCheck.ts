@@ -5,7 +5,7 @@
  */
 
 import { useEffect } from "react";
-import { fetchReleaseNotes } from "../features/onboarding";
+import { fetchReleaseNotes } from "@/features/onboarding";
 import packageJson from "../../package.json";
 
 const STORAGE_KEYS = {
@@ -58,7 +58,7 @@ export function getPendingUpdate() {
 
   if (compareVersions(storedVersion, currentVersion) <= 0) {
     console.log(
-      `Clearing stale update: stored ${storedVersion} <= current ${currentVersion}`
+      `Clearing stale update: stored ${storedVersion} <= current ${currentVersion}`,
     );
     clearPendingUpdate();
     return null;

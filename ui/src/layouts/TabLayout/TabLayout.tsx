@@ -5,14 +5,14 @@
  */
 
 import React, { ForwardedRef } from "react";
-import { TitleBar } from "../../widgets";
+import { TitleBar } from "@/widgets";
 import {
   ChatPanel,
   ChatTab,
   ChatTabProps,
   SettingsTab,
   SettingsTabProps,
-} from "../../features/";
+} from "@/features/";
 import styles from "./TabLayout.module.css";
 
 export interface TabLayoutProps extends ChatTabProps, SettingsTabProps {
@@ -217,7 +217,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               geminiKey={geminiKey}
               imgbbKey={imgbbKey}
               onSetAPIKey={onSetAPIKey}
-              isChatPanelOpen={isChatPanelOpen}
             />
           ) : (
             <ChatTab

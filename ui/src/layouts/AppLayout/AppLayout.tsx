@@ -9,15 +9,15 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { commands } from "../../lib/api/tauri/commands";
-import { ContextMenu, ContextMenuItem, TitleBar } from "../../widgets";
+import { commands } from "@/lib/api/tauri/commands";
+import { ContextMenu, ContextMenuItem, TitleBar } from "@/widgets";
 
 import {
   useUpdateCheck,
   getPendingUpdate,
   useSystemSync,
   useWindowManager,
-} from "../../hooks";
+} from "@/hooks";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
@@ -35,7 +35,8 @@ import {
   useChat,
   ChatPanel,
   SettingsTab,
-} from "../../features";
+  useChatHistory,
+} from "@/features";
 
 import {
   loadChat,
@@ -46,8 +47,7 @@ import {
   saveOcrData,
   saveImgbbUrl,
   overwriteChatMessages,
-} from "../../lib/storage/chatStorage";
-import { useChatHistory } from "../../hooks";
+} from "@/lib/storage/chatStorage";
 
 export const AppLayout: React.FC = () => {
   const [isPanelActive, setIsPanelActive] = useState(false);
@@ -216,7 +216,7 @@ export const AppLayout: React.FC = () => {
     const activeId = chatHistory.activeSessionId;
     if (activeId && chatTitle && chatTitle !== "New Chat") {
       // Find current chat to get metadata
-      const currentChat = chatHistory.chats.find((c) => c.id === activeId);
+      const currentChat = chatHistory.chats.find((c: any) => c.id === activeId);
       if (currentChat && currentChat.title !== chatTitle) {
         updateChatMetadata({
           ...currentChat,
@@ -618,7 +618,6 @@ export const AppLayout: React.FC = () => {
                 geminiKey={system.apiKey}
                 imgbbKey={system.imgbbKey}
                 onSetAPIKey={system.handleSetAPIKey}
-                isChatPanelOpen={isChatPanelOpen}
               />
             ) : (
               <Welcome onImageReady={handleImageReady} />

@@ -6,9 +6,9 @@
 
 import React, { useState } from "react";
 import styles from "./PersonalContextSection.module.css";
-import { TextContextMenu } from "../../../../widgets";
-import { useTextEditor } from "../../../../hooks/useTextEditor";
-import { useTextContextMenu } from "../../../../widgets/menu/hooks/useTextContextMenu";
+import { TextContextMenu } from "@/widgets";
+import { useTextEditor } from "@/hooks/useTextEditor";
+import { useTextContextMenu } from "@/widgets/menu/hooks/useTextContextMenu";
 
 interface PersonalContextSectionProps {
   localPrompt: string;

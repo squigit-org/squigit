@@ -6,9 +6,9 @@
 
 import React, { forwardRef, useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ChatBubble, StreamingResponse, Message } from "../..";
-import { parseGeminiError } from "../../../../lib/utils/errorParser";
-import { Dialog } from "../../../../widgets";
+import { ChatBubble, StreamingResponse, Message } from "@/features/chat";
+import { parseGeminiError } from "@/lib/utils/errorParser";
+import { Dialog } from "@/widgets";
 import styles from "./ChatArea.module.css";
 
 interface ChatAreaProps {

@@ -13,16 +13,15 @@ import React, {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import { useGoogleLens } from "../../hooks/useGoogleLens";
-import { useTextSelection } from "../../hooks/useTextSelection";
 import {
-  ActionMenu,
-  ActionMenuHandle,
-} from "../../../../widgets/menu/variants/OCRInlineMenu";
-import { SearchInput } from "../InlineInput/InlineInput";
-import { TextLayer } from "../OCRLayer/TextLayer";
-import { ImageToolbar } from "../ImageToolbar";
-import { generateTranslateUrl } from "../..";
+  useGoogleLens,
+  useTextSelection,
+  generateTranslateUrl,
+  ImageToolbar,
+  SearchInput,
+  OCRLayer,
+} from "@/features/image";
+import { ActionMenu, ActionMenuHandle } from "@/widgets/menu";
 import styles from "./ImageArea.module.css";
 
 interface OCRBox {
@@ -494,8 +493,8 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
                     draggable={false}
                     className={styles.bigImage}
                   />
-                  {/* Render TextLayer here */}
-                  {/* <TextLayer
+                  {/* Render OCRLayer here */}
+                  {/* <OCRLayer
                     data={ocrData}
                     size={size}
                     svgRef={svgRef}

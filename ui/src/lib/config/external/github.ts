@@ -17,8 +17,5 @@ export const github = {
   },
   license: `${BASE()}/blob/main/LICENSE`,
   docs: (path: string = "") => `${BASE()}/blob/main/docs/${path}`,
-  privacy: `${BASE()}/blob/main/docs/06-policies/BYOK.md`,
-  security: `${BASE()}/blob/main/docs/06-policies/SECURITY.md`,
-
   blob: (branch: string, path: string) => `${BASE()}/blob/${branch}/${path}`,
 };

@@ -7,12 +7,14 @@
 import React, { useState, useEffect, useRef } from "react";
 
 import styles from "./SettingsTab.module.css";
-import { GeneralSection } from "../GeneralSection/GeneralSection";
-import { ModelsSection } from "../ModelsSection/ModelsSection";
-import { PersonalContextSection } from "../PersonalSection/PersonalContextSection";
-import { ApiKeysSection } from "../ApiKeysSection/ApiKeysSection";
-import { SupportSection } from "../SupportSection/SupportSection";
-import { SettingsPanel } from "../SettingsPanel/SettingsPanel";
+import {
+  GeneralSection,
+  ModelsSection,
+  PersonalContextSection,
+  ApiKeysSection,
+  SupportSection,
+  SettingsPanel,
+} from "@/features/settings";
 
 export interface SettingsTabProps {
   currentPrompt: string;

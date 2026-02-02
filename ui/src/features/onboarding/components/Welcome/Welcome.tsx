@@ -2,10 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
-import {
-  ImageResult,
-  storeImageFromPath,
-} from "../../../../lib/storage/chatStorage";
+import { ImageResult, storeImageFromPath } from "@/lib/storage/chatStorage";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];

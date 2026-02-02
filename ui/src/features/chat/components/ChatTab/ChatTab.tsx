@@ -6,11 +6,9 @@
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 
-import { Message } from "../../types/chat.types";
-import { ChatInput } from "../../components/ChatInput/ChatInput";
-import { ChatArea } from "../ChatArea/ChatArea";
-import { InlineMenu, useInlineMenu } from "../../../../widgets";
-import { ImageArea } from "../../../image/components/ImageArea/ImageArea";
+import { Message, ChatInput, ChatArea } from "@/features/chat";
+import { InlineMenu, useInlineMenu } from "@/widgets";
+import { ImageArea } from "@/features/image";
 
 import "katex/dist/katex.min.css";
 

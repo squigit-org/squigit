@@ -6,9 +6,9 @@
 
 import React, { useState, useCallback } from "react";
 import { Download, Check } from "lucide-react";
-import { ModelType } from "../../../../lib/config/models";
-import { modelsWithInfo, ocrModels } from "../../types/settings.types";
-import { WheelPicker, WheelPickerWrapper } from "../../../../widgets";
+import { ModelType } from "@/lib/config/models";
+import { modelsWithInfo, ocrModels } from "@/features/settings";
+import { WheelPicker, WheelPickerWrapper } from "@/widgets";
 import styles from "./ModelsSection.module.css";
 
 interface ModelsSectionProps {

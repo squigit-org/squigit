@@ -7,3 +7,4 @@
 export * from "./CodeBlock";
 export * from "./variants/CodeBlockEditable";
 export * from "./variants/CodeBlockViewer";
+export * from "./hooks/useHighlighting";

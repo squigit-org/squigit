@@ -6,19 +6,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { initializeGemini } from "../lib/api/gemini/client";
-import { commands } from "../lib/api/tauri/commands";
+import { initializeGemini } from "@/lib/api/gemini/client";
+import { commands } from "@/lib/api/tauri/commands";
 import { useTheme } from "./useTheme";
 import {
   loadPreferences,
   savePreferences,
   hasPreferencesFile,
-} from "../lib/config/preferences";
+} from "@/lib/config/preferences";
 import {
   DEFAULT_MODEL,
   DEFAULT_PROMPT,
   DEFAULT_THEME,
-} from "../lib/utils/constants";
+} from "@/lib/utils/constants";
 
 export const useSystemSync = (onToggleSettings: () => void) => {
   const { theme, toggleTheme, setTheme } = useTheme();
@@ -111,7 +111,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     const setupIpc = async () => {
       try {
         const apiKey = await invoke<string>("get_api_key", {
-          provider: "gemini",
+          provider: "google ai studio",
         });
         if (apiKey) {
           setApiKey(apiKey);
@@ -191,10 +191,13 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     }
   };
 
-  const handleSetAPIKey = async (provider: "gemini" | "imgbb", key: string) => {
+  const handleSetAPIKey = async (
+    provider: "google ai studio" | "imgbb",
+    key: string,
+  ) => {
     try {
       await commands.setApiKey(provider, key);
-      if (provider === "gemini") {
+      if (provider === "google ai studio") {
         setApiKey(key);
         initializeGemini(key);
       } else {

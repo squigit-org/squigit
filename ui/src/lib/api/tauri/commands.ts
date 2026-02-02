@@ -16,9 +16,9 @@ export const commands = {
     invoke<{ hash: string; path: string } | null>("get_initial_image"),
 
   // Auth & Keys
-  getApiKey: (provider: "gemini" | "imgbb") =>
+  getApiKey: (provider: "google ai studio" | "imgbb") =>
     invoke<string>("get_api_key", { provider }),
-  setApiKey: (provider: "gemini" | "imgbb", key: string) =>
+  setApiKey: (provider: "google ai studio" | "imgbb", key: string) =>
     invoke("set_api_key", { provider, key }),
   startGoogleAuth: () => invoke("start_google_auth"),
   logout: () => invoke("logout"),

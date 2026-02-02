@@ -6,8 +6,8 @@
 
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { AppProvider } from "./providers/AppProvider";
-import { AppRouter } from "./router/AppRouter";
+import { AppProvider } from "@/providers/AppProvider";
+import { AppRouter } from "@/router/AppRouter";
 
 function App() {
   const [mode] = useState<"app" | "imgbb">(() => {

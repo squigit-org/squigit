@@ -10,7 +10,7 @@ import {
   listChats,
   deleteChat,
   updateChatMetadata as updateChatMeta,
-} from "../lib/storage/chatStorage";
+} from "@/lib/storage/chatStorage";
 
 export const useChatHistory = () => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
@@ -90,7 +90,10 @@ export const useChatHistory = () => {
     }
   };
 
-  const handleToggleStarChat = async (id: string, overrides?: Partial<ChatMetadata>) => {
+  const handleToggleStarChat = async (
+    id: string,
+    overrides?: Partial<ChatMetadata>,
+  ) => {
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 

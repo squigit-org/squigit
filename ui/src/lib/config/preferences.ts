@@ -17,7 +17,7 @@ import {
   DEFAULT_PROMPT,
   DEFAULT_THEME,
   PREFERENCES_FILE_NAME,
-} from "../utils/constants";
+} from "@/lib/utils/constants";
 
 export interface UserPreferences {
   model: string;

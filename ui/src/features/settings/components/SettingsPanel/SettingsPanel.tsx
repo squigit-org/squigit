@@ -18,8 +18,8 @@ import {
   LogOut,
 } from "lucide-react";
 import styles from "./SettingsPanel.module.css";
-import { Topic } from "../SettingsTab/SettingsTab";
-import { DOCS } from "../../types/settings.types";
+import { Topic } from "@/features/settings";
+import { github } from "@/lib/config";
 
 interface SettingsPanelProps {
   activeTopic: Topic;
@@ -170,7 +170,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <div className={styles.topicGroup}>
           <button
             className={`${styles.topicItem} ${activeTopic === "Docs" ? styles.active : ""}`}
-            onClick={() => invoke("open_external_url", { url: DOCS })}
+            onClick={() => invoke("open_external_url", { url: github.docs() })}
           >
             <BookOpen size={20} className={styles.topicIcon} /> Docs
             <ExternalLink size={16} className={styles.topicIcon} />

@@ -7,7 +7,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
 import { TextContextMenu, useTextContextMenu } from "@/widgets";
-import styles from "./InlineInput.module.css";
+import styles from "./SearchInput.module.css";
 import { useTextEditor } from "@/hooks/useTextEditor";
 
 interface SearchInputProps {
@@ -159,15 +159,5 @@ export const SearchInput: React.FC<SearchInputProps> = ({
     </div>
   );
 };
-
-export const ChatInput: React.FC<{
-  startupImage: any;
-  input: string;
-  onInputChange: (value: string) => void;
-  onSend: () => void;
-  isLoading: boolean;
-  placeholder?: string;
-  variant?: string;
-}> = () => null;
 
 export default SearchInput;

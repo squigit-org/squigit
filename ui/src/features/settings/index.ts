@@ -4,6 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./hooks/useSettings";
-export * from "./types/settings.types";
-export * from "./components/SettingsTab/SettingsTab";
+export * from "./components";
+export * from "./hooks";
+export * from "./types";

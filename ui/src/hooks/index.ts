@@ -8,5 +8,4 @@ export * from "./useSystemSync";
 export * from "./useTheme";
 export * from "./useUpdateCheck";
 export * from "./useWindowManager";
-export * from "./useChatHistory";
 export * from "./useCopyToClipboard";

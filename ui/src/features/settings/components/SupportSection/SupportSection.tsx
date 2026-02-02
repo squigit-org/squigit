@@ -12,7 +12,7 @@ import {
   prepareMailReport,
   prepareGitHubIssueReport,
 } from "@/lib/config/external/contact";
-import { CodeBlock, GlowCard } from "../../../../widgets";
+import { CodeBlock, GlowCard } from "@/widgets";
 import styles from "./SupportSection.module.css";
 
 interface SupportSectionProps {

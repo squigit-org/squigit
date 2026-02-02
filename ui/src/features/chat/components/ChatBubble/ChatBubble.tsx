@@ -10,11 +10,11 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Check, Copy } from "lucide-react";
-import { CodeBlock } from "../../../../widgets";
-import { Message } from "../../types/chat.types";
+import { CodeBlock } from "@/widgets";
+import { Message } from "@/features/chat";
+import { remarkDisableIndentedCode } from "./markdownPlugins";
 import styles from "./ChatBubble.module.css";
 import "katex/dist/katex.min.css";
-import { remarkDisableIndentedCode } from "./markdownPlugins";
 
 interface ChatBubbleProps {
   message: Message;

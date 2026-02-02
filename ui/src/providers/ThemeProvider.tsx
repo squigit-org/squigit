@@ -5,9 +5,9 @@
  */
 
 import React, { useEffect, useState, useCallback } from "react";
-import { ThemeContext } from "../hooks/useTheme";
-import { loadPreferences, savePreferences } from "../lib/config/preferences";
-import { DEFAULT_THEME } from "../lib/utils/constants";
+import { ThemeContext } from "@/hooks/useTheme";
+import { loadPreferences, savePreferences } from "@/lib/config/preferences";
+import { DEFAULT_THEME } from "@/lib/utils/constants";
 
 const THEME_STORAGE_KEY = "theme";
 
