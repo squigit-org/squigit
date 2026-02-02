@@ -35,8 +35,14 @@ impl ChatMetadata {
     /// Create new chat metadata with a generated ID.
     pub fn new(title: String, image_hash: String) -> Self {
         let now = Utc::now();
+        // Generate ID: YYYYMMDD-HHMMSS-<UUID_SUFFIX>
+        // Use first 8 chars of a UUID for randomness
+        let date_part = now.format("%Y%m%d-%H%M%S").to_string();
+        let uuid_part = Uuid::new_v4().to_string();
+        let id = format!("{}-{}", date_part, &uuid_part[..8]);
+        
         Self {
-            id: Uuid::new_v4().to_string(),
+            id,
             title,
             created_at: now,
             updated_at: now,
