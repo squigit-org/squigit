@@ -27,9 +27,16 @@ pub fn derive_key(passphrase: &str, salt: &[u8]) -> [u8; 32] {
     key
 }
 
-pub fn get_decrypted_key_internal(app: &AppHandle, provider: &str) -> Option<String> {
+pub fn get_decrypted_key_internal(
+    app: &AppHandle,
+    provider: &str,
+    profile_id: &str,
+) -> Option<String> {
     let config_dir = get_app_config_dir(app);
-    let file_path = config_dir.join(format!("{}_key.json", provider));
+    let file_path = config_dir
+        .join("Local Storage")
+        .join(profile_id)
+        .join(format!("{}_key.json", provider));
 
     if !file_path.exists() {
         return None;

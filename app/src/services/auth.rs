@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter};
 use tiny_http::{Header, Response, Server};
 use url::Url;
+
+use ops_profile_store::{Profile, ProfileStore};
 
 const SECRETS_JSON: &str = include_str!("../data/credentials.json");
 
@@ -59,8 +61,9 @@ struct Photo {
     url: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct SavedProfile {
+    id: String,
     name: String,
     email: String,
     avatar: String,
@@ -162,35 +165,53 @@ pub fn start_google_auth_flow(app: AppHandle, config_dir: PathBuf) -> Result<(),
                 None
             };
             
+            // Generate profile ID from email
+            let profile_id = Profile::id_from_email(&email);
+
             // Try to download and save the avatar locally
+            let mut local_avatar = String::new();
             if !avatar.is_empty() {
                 // Ensure https
                 if avatar.starts_with("http://") {
                     avatar = avatar.replace("http://", "https://");
                 }
                 
-                // Download and save to CAS
-                if let Ok(response) = client.get(&avatar).send() {
-                    if let Ok(bytes) = response.bytes() {
-                        if let Ok(storage) = ops_chat_storage::storage::ChatStorage::new() {
-                            if let Ok(stored_image) = storage.store_image(&bytes) {
-                                avatar = stored_image.path;
+                // Get profile store and create profile's chats dir for CAS
+                if let Ok(profile_store) = ProfileStore::new() {
+                    let chats_dir = profile_store.get_chats_dir(&profile_id);
+                    if let Ok(storage) = ops_chat_storage::ChatStorage::with_base_dir(chats_dir) {
+                        // Download and save to CAS
+                        if let Ok(response) = client.get(&avatar).send() {
+                            if let Ok(bytes) = response.bytes() {
+                                if let Ok(stored_image) = storage.store_image(&bytes) {
+                                    local_avatar = stored_image.path;
+                                }
                             }
                         }
                     }
                 }
             }
 
+            // Create and save profile using ops-profile-store
+            let profile = Profile::new(
+                &email,
+                &name,
+                if local_avatar.is_empty() { None } else { Some(local_avatar.clone()) },
+                original_picture.clone(),
+            );
+
+            let profile_store = ProfileStore::new().map_err(|e| e.to_string())?;
+            profile_store.upsert_profile(&profile).map_err(|e| e.to_string())?;
+            profile_store.set_active_profile_id(&profile.id).map_err(|e| e.to_string())?;
+
+            // Build response data for frontend
             let user_data = SavedProfile {
-                name,
-                email,
-                avatar,
+                id: profile.id.clone(),
+                name: profile.name.clone(),
+                email: profile.email.clone(),
+                avatar: local_avatar,
                 original_picture,
             };
-            let profile_path = config_dir.join("profile.json");
-            let mut file = File::create(profile_path).map_err(|e| e.to_string())?;
-            serde_json::to_writer_pretty(&mut file, &user_data).map_err(|e| e.to_string())?;
-            file.flush().map_err(|e| e.to_string())?;
 
             let _ = app.emit("auth-success", &user_data);
 

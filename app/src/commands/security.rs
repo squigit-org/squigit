@@ -19,6 +19,7 @@ pub async fn encrypt_and_save(
     app: AppHandle,
     plaintext: String,
     provider: String,
+    profile_id: String,
 ) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let passphrase = security::get_stable_passphrase();
@@ -47,12 +48,13 @@ pub async fn encrypt_and_save(
             "ciphertext": general_purpose::STANDARD.encode(ciphertext)
         });
 
-        let config_dir = get_app_config_dir(&app);
-        if !config_dir.exists() {
-            fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
-        }
+        // Store in profile-specific directory: Local Storage/{profile_id}/{provider}_key.json
+        let profile_dir = get_app_config_dir(&app)
+            .join("Local Storage")
+            .join(&profile_id);
+        fs::create_dir_all(&profile_dir).map_err(|e| e.to_string())?;
 
-        let file_path = config_dir.join(format!("{}_key.json", provider));
+        let file_path = profile_dir.join(format!("{}_key.json", provider));
         let mut file = File::create(&file_path).map_err(|e| e.to_string())?;
 
         file.write_all(serde_json::to_string_pretty(&payload).unwrap().as_bytes())
@@ -71,7 +73,11 @@ pub async fn encrypt_and_save(
 }
 
 #[tauri::command]
-pub fn check_file_exists(app: AppHandle, filename: String) -> bool {
-    let path = get_app_config_dir(&app).join(filename);
+pub fn check_file_exists(app: AppHandle, filename: String, profile_id: Option<String>) -> bool {
+    let base_dir = get_app_config_dir(&app);
+    let path = match profile_id {
+        Some(id) => base_dir.join("Local Storage").join(id).join(filename),
+        None => base_dir.join(filename),
+    };
     path.exists()
 }

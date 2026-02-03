@@ -21,29 +21,53 @@ pub struct ChatStorage {
 }
 
 impl ChatStorage {
-    /// Create a new storage manager.
+    /// Create a new storage manager with a custom base directory.
     ///
-    /// Uses `~/.config/snapllm/chats/` on Linux (and appropriate config dirs on other OSs).
-    pub fn new() -> Result<Self> {
-        let base_dir = dirs::config_dir()
-            .ok_or(StorageError::NoDataDir)?
-            .join("snapllm")
-            .join("chats");
-
+    /// This is the primary constructor for profile-aware storage.
+    /// Use this with a profile's chats directory.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use ops_chat_storage::ChatStorage;
+    /// use std::path::PathBuf;
+    ///
+    /// let profile_chats_dir = PathBuf::from("/path/to/profile/chats");
+    /// let storage = ChatStorage::with_base_dir(profile_chats_dir).unwrap();
+    /// ```
+    pub fn with_base_dir(base_dir: PathBuf) -> Result<Self> {
         let objects_dir = base_dir.join("objects");
         let index_path = base_dir.join("index.json");
 
         // Create directories if they don't exist
         fs::create_dir_all(&objects_dir)?;
 
-        let storage = Self {
+        Ok(Self {
             base_dir,
             objects_dir,
             index_path,
-        };
-
-        Ok(storage)
+        })
     }
+
+    /// Create a new storage manager using the default location.
+    ///
+    /// Uses `~/.config/snapllm/chats/` on Linux (and appropriate config dirs on other OSs).
+    ///
+    /// **Note**: This constructor is provided for backward compatibility.
+    /// New code should use `with_base_dir()` with a profile-specific path.
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use with_base_dir() for profile-aware storage"
+    )]
+    pub fn new() -> Result<Self> {
+        let base_dir = dirs::config_dir()
+            .ok_or(StorageError::NoDataDir)?
+            .join("snapllm")
+            .join("chats");
+
+        Self::with_base_dir(base_dir)
+    }
+
 
     /// Get the base storage directory path.
     pub fn base_dir(&self) -> &PathBuf {

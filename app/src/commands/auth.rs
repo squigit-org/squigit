@@ -70,9 +70,13 @@ pub fn get_user_data(app: AppHandle) -> serde_json::Value {
 }
 
 #[tauri::command]
-pub async fn get_api_key(app: AppHandle, provider: String) -> Result<String, String> {
+pub async fn get_api_key(
+    app: AppHandle,
+    provider: String,
+    profile_id: String,
+) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        security::get_decrypted_key_internal(&app, &provider).unwrap_or_default()
+        security::get_decrypted_key_internal(&app, &provider, &profile_id).unwrap_or_default()
     })
     .await
     .map_err(|e| e.to_string())

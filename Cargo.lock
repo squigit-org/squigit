@@ -18,6 +18,7 @@ dependencies = [
  "mime_guess",
  "opener",
  "ops-chat-storage",
+ "ops-profile-store",
  "parking_lot",
  "pbkdf2",
  "rand 0.8.5",
@@ -3463,6 +3464,18 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.17",
  "uuid",
+]
+
+[[package]]
+name = "ops-profile-store"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "chrono",
+ "dirs 6.0.0",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
 ]
 
 [[package]]

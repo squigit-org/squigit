@@ -1,0 +1,12 @@
+[package]
+name = "ops-profile-store"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+dirs = "6.0"
+chrono = { version = "0.4", features = ["serde"] }
+blake3 = "1.5"
