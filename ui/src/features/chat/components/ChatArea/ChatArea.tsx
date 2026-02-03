@@ -30,7 +30,7 @@ interface ChatAreaProps {
   onStreamComplete?: () => void;
 }
 
-export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
+const ChatAreaComponent = forwardRef<HTMLDivElement, ChatAreaProps>(
   (
     {
       startupImage,
@@ -195,4 +195,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   },
 );
 
-ChatArea.displayName = "ChatArea";
+ChatAreaComponent.displayName = "ChatArea";
+
+/**
+ * Memoized ChatArea - prevents unnecessary re-renders of the message list.
+ * This is critical for performance as it contains all ChatBubble components.
+ */
+export const ChatArea = React.memo(ChatAreaComponent);

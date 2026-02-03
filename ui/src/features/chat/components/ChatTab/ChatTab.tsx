@@ -59,7 +59,7 @@ export interface ChatTabProps {
 
 import styles from "./ChatTab.module.css";
 
-export const ChatTab: React.FC<ChatTabProps> = ({
+const ChatTabComponent: React.FC<ChatTabProps> = ({
   messages,
   streamingText,
   isChatMode,
@@ -277,3 +277,9 @@ export const ChatTab: React.FC<ChatTabProps> = ({
     </div>
   );
 };
+
+/**
+ * Memoized ChatTab - prevents unnecessary re-renders when settings panel toggles.
+ * This isolates the heavy chat rendering from settings display changes.
+ */
+export const ChatTab = React.memo(ChatTabComponent);

@@ -54,7 +54,7 @@ export type Topic =
   | "Help & Support"
   | "Docs";
 
-export const SettingsTab: React.FC<SettingsTabProps> = ({
+const SettingsTabComponent: React.FC<SettingsTabProps> = ({
   currentPrompt,
   currentModel,
   userName,
@@ -119,7 +119,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         return (
           <GeneralSection
             isDarkMode={isDarkMode}
-            onToggleTheme={handleToggleTheme}
+            onToggleTheme={onToggleTheme}
             autoExpandOCR={autoExpandOCR}
             onToggleAutoExpand={handleToggleAutoExpand}
             ocrEnabled={ocrEnabled}
@@ -183,3 +183,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     </div>
   );
 };
+
+/**
+ * Memoized SettingsTab - prevents unnecessary re-renders when chat view toggles.
+ */
+export const SettingsTab = React.memo(SettingsTabComponent);

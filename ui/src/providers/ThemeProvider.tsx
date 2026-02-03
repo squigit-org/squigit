@@ -16,11 +16,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [theme, setThemeState] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
+      // 1. Check local storage first (user preference overrides everything)
       const cached = localStorage.getItem(THEME_STORAGE_KEY);
       if (cached === "light" || cached === "dark") {
         return cached;
       }
+
+      // 2. If no preference, check OS preference once (First Run Logic)
+      if (
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+      ) {
+        return "dark";
+      }
+      return "light";
     }
+    // SSR / Fallback
     return DEFAULT_THEME as "light" | "dark";
   });
 
@@ -44,13 +55,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     setTheme(theme === "dark" ? "light" : "dark");
   }, [theme, setTheme]);
 
+  // Load preferences from file on mount (sync across instances)
   useEffect(() => {
     let mounted = true;
     loadPreferences().then((prefs) => {
       if (!mounted) return;
-
+      // If the file explicitly has a theme different from current state, sync it.
       if (prefs.theme && prefs.theme !== theme) {
-        setTheme(prefs.theme);
+        setTheme(prefs.theme as "light" | "dark");
       }
     });
     return () => {
@@ -58,11 +70,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
+  // Ensure DOM is synced on first mount
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     document.documentElement.style.colorScheme = theme;
     document.body.classList.toggle("light-mode", theme === "light");
   }, [theme]);
+
+  // We explicitly removed the "System" listener here as requested.
+  // The system theme is only detected once as the initial default.
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>

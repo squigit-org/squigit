@@ -67,6 +67,10 @@
 .container b {
   font-weight: 700;
   text-shadow: none;
+  /* Prevent faux-bold synthesis (the "smear" effect) */
+  font-synthesis: none;
+  /* Stabilize GPU layer compositing */
+  backface-visibility: hidden;
 }
 
 .userBubble {

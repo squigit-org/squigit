@@ -55,6 +55,10 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  /* WebKitGTK fix: prevents smudgy bold text on light backgrounds */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {

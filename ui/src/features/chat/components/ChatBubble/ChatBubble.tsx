@@ -20,7 +20,7 @@ interface ChatBubbleProps {
   message: Message;
 }
 
-export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
+const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({ message }) => {
   const isUser = message.role === "user";
   const [isCopied, setIsCopied] = useState(false);
 
@@ -134,3 +134,17 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
     </div>
   );
 };
+
+/**
+ * Memoized ChatBubble - only re-renders when message content actually changes.
+ * This is critical for performance when toggling settings in heavy chats.
+ */
+export const ChatBubble = React.memo(
+  ChatBubbleComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.message.id === nextProps.message.id &&
+      prevProps.message.text === nextProps.message.text
+    );
+  },
+);
