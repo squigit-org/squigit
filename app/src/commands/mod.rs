@@ -4,8 +4,10 @@
 pub mod auth;
 pub mod chat;
 pub mod clipboard;
+pub mod gemini;
 pub mod image;
 pub mod ocr;
+pub mod profile;
 pub mod security;
 pub mod window;
-pub mod gemini;
+

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
-use std::fs::{self, File};
-use std::io::Write;
+use std::fs;
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter};
 use tiny_http::{Header, Response, Server};
@@ -70,7 +69,7 @@ struct SavedProfile {
     original_picture: Option<String>,
 }
 
-pub fn start_google_auth_flow(app: AppHandle, config_dir: PathBuf) -> Result<(), String> {
+pub fn start_google_auth_flow(app: AppHandle, _config_dir: PathBuf) -> Result<(), String> {
     let wrapper: GoogleCredentials = serde_json::from_str(SECRETS_JSON)
         .map_err(|e| format!("Failed to parse credentials.json: {}", e))?;
 

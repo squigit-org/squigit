@@ -24,6 +24,10 @@ use commands::image::{
     get_initial_image, process_image_bytes, process_image_path, read_image_file, copy_image_to_path,
 };
 use commands::ocr::ocr_image;
+use commands::profile::{
+    get_active_profile, get_active_profile_id, set_active_profile,
+    list_profiles, delete_profile, has_profiles, get_profile_count,
+};
 use commands::security::{check_file_exists, encrypt_and_save};
 use commands::window::{
     close_imgbb_window, close_window, maximize_window, minimize_window,
@@ -98,6 +102,14 @@ pub fn run() {
             get_imgbb_url,
             // Native File IO
             copy_image_to_path,
+            // Profile Management
+            get_active_profile,
+            get_active_profile_id,
+            set_active_profile,
+            list_profiles,
+            delete_profile,
+            has_profiles,
+            get_profile_count,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

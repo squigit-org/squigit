@@ -85,10 +85,8 @@ pub async fn get_api_key(
 /// Cache an avatar image from a remote URL to local CAS storage.
 /// Returns the local file path on success.
 #[tauri::command]
-pub async fn cache_avatar(app: AppHandle, url: String) -> Result<String, String> {
+pub async fn cache_avatar(_app: AppHandle, url: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let config_dir = get_app_config_dir(&app);
-        
         // Download image
         let client = reqwest::blocking::Client::new();
         let response = client
@@ -104,8 +102,17 @@ pub async fn cache_avatar(app: AppHandle, url: String) -> Result<String, String>
             .bytes()
             .map_err(|e| format!("Failed to read avatar bytes: {}", e))?;
         
-        // Save to CAS
-        let storage = ops_chat_storage::storage::ChatStorage::new()
+        // Save to CAS using active profile's storage
+        let profile_store = ops_profile_store::ProfileStore::new()
+            .map_err(|e| format!("Failed to initialize profile store: {}", e))?;
+        
+        let active_id = profile_store
+            .get_active_profile_id()
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "No active profile. Please log in first.".to_string())?;
+        
+        let chats_dir = profile_store.get_chats_dir(&active_id);
+        let storage = ops_chat_storage::ChatStorage::with_base_dir(chats_dir)
             .map_err(|e| format!("Failed to initialize storage: {}", e))?;
         
         let stored_image = storage
@@ -114,19 +121,10 @@ pub async fn cache_avatar(app: AppHandle, url: String) -> Result<String, String>
         
         let local_path = stored_image.path.clone();
         
-        // Update profile.json with new avatar path
-        let profile_path = config_dir.join("profile.json");
-        if profile_path.exists() {
-            if let Ok(file) = File::open(&profile_path) {
-                if let Ok(mut profile) = serde_json::from_reader::<_, serde_json::Value>(file) {
-                    if let Some(obj) = profile.as_object_mut() {
-                        obj.insert("avatar".to_string(), serde_json::Value::String(local_path.clone()));
-                        if let Ok(updated_json) = serde_json::to_string_pretty(&profile) {
-                            let _ = fs::write(&profile_path, updated_json);
-                        }
-                    }
-                }
-            }
+        // Update profile with new avatar path
+        if let Some(mut profile) = profile_store.get_profile(&active_id).ok().flatten() {
+            profile.avatar = Some(local_path.clone());
+            let _ = profile_store.upsert_profile(&profile);
         }
         
         Ok(local_path)
