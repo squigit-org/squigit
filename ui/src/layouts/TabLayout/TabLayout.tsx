@@ -12,6 +12,7 @@ import {
   ChatTabProps,
   SettingsTab,
   SettingsTabProps,
+  Topic,
 } from "@/features/";
 import styles from "./TabLayout.module.css";
 
@@ -29,8 +30,11 @@ export interface TabLayoutProps
   onPromptChange?: (prompt: string) => void;
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
+  ocrLanguage: string;
+  downloadedOcrLanguages: string[];
   // Common props
   editingModel: string;
+  forceTopic?: Topic;
 
   // TitleBar props
   chatTitle: string;
@@ -107,6 +111,8 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   onToggleTheme,
   autoExpandOCR,
   ocrEnabled,
+  ocrLanguage,
+  downloadedOcrLanguages,
   captureType,
   geminiKey,
   imgbbKey,
@@ -114,6 +120,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   onUpdateAvatarSrc,
   setPrompt,
   onEditingModelChange,
+  forceTopic,
 
   // TitleBar props
   isRotating,
@@ -145,6 +152,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   // Handle chat selection - toggle settings off and open chat
   const handleSelectChatWithSettings = (id: string) => {
     if (isPanelActive) {
+      // Close settings if open when selecting chat
       toggleSettingsPanel();
     }
     onSelectChat(id);
@@ -230,11 +238,14 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               onToggleTheme={onToggleTheme}
               autoExpandOCR={autoExpandOCR}
               ocrEnabled={ocrEnabled}
+              ocrLanguage={ocrLanguage}
+              downloadedOcrLanguages={downloadedOcrLanguages}
               captureType={captureType}
               geminiKey={geminiKey}
               imgbbKey={imgbbKey}
               onSetAPIKey={onSetAPIKey}
               onUpdateAvatarSrc={onUpdateAvatarSrc}
+              forceTopic={forceTopic}
             />
           </div>
           <div

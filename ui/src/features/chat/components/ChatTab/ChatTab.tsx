@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Message, ChatInput, ChatArea } from "@/features/chat";
 import { InlineMenu, useInlineMenu } from "@/widgets";
 import { ImageArea } from "@/features/image";
+import { Topic } from "@/features/settings/components/SettingsTab/SettingsTab";
 
 import "katex/dist/katex.min.css";
 
@@ -45,7 +46,7 @@ export interface ChatTabProps {
   onModelChange: (model: string) => void;
   onRetry: () => void;
   onInputChange: (value: string) => void;
-  onCheckSettings: () => void;
+  onCheckSettings: (topic?: Topic) => void;
   onReload?: () => void;
 
   imageInputValue: string;
@@ -236,6 +237,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
           onToggleExpand={() => setIsImageExpanded(!isImageExpanded)}
           ocrEnabled={ocrEnabled}
           autoExpandOCR={autoExpandOCR}
+          onOpenSettings={onCheckSettings}
         />
       </div>
 

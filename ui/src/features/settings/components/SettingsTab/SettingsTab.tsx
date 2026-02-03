@@ -33,6 +33,8 @@ export interface SettingsTabProps {
 
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
+  ocrLanguage: string;
+  downloadedOcrLanguages: string[];
   captureType: "rectangular" | "squiggle";
   geminiKey: string;
   imgbbKey: string;
@@ -41,6 +43,7 @@ export interface SettingsTabProps {
     key: string,
   ) => Promise<boolean>;
   onUpdateAvatarSrc?: (path: string) => void;
+  forceTopic?: Topic;
 }
 
 export type Topic =
@@ -64,13 +67,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onToggleTheme,
   autoExpandOCR,
   ocrEnabled,
+  ocrLanguage,
+  downloadedOcrLanguages,
   captureType,
   geminiKey,
   imgbbKey,
   onSetAPIKey,
   onUpdateAvatarSrc,
+  forceTopic,
 }) => {
   const [activeTopic, setActiveTopic] = useState<Topic>("General");
+
+  React.useEffect(() => {
+    if (forceTopic) {
+      setActiveTopic(forceTopic);
+    }
+  }, [forceTopic]);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const apiSectionRef = useRef<HTMLDivElement>(null);
 
@@ -82,10 +95,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   const handleToggleOcrEnabled = (checked: boolean) => {
-    updatePreferences({ ocrEnabled: checked });
     // If disabling OCR, also disable auto-expand
     if (!checked) {
-      updatePreferences({ autoExpandOCR: false });
+      updatePreferences({ ocrEnabled: checked, autoExpandOCR: false });
+    } else {
+      updatePreferences({ ocrEnabled: checked });
     }
   };
 
@@ -129,13 +143,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             localModel={localModel}
             currentModel={currentModel}
             setLocalModel={setLocalModel}
+            ocrLanguage={ocrLanguage}
+            downloadedOcrLanguages={downloadedOcrLanguages}
+            updatePreferences={updatePreferences}
           />
         );
       case "Personal Context":
         return (
           <PersonalContextSection
             localPrompt={localPrompt}
+            currentPrompt={currentPrompt}
             setLocalPrompt={setLocalPrompt}
+            updatePreferences={updatePreferences}
           />
         );
       case "Help & Support":

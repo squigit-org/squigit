@@ -26,6 +26,8 @@ export interface UserPreferences {
   ocrEnabled: boolean;
   autoExpandOCR: boolean;
   captureType: "rectangular" | "squiggle";
+  ocrLanguage: string;
+  downloadedOcrLanguages: string[];
 }
 
 export const defaultPreferences: UserPreferences = {
@@ -35,6 +37,8 @@ export const defaultPreferences: UserPreferences = {
   ocrEnabled: true,
   autoExpandOCR: true,
   captureType: "rectangular",
+  ocrLanguage: "PP-OCRv4 (English)",
+  downloadedOcrLanguages: ["PP-OCRv4 (English)"],
 };
 
 export async function hasPreferencesFile(): Promise<boolean> {

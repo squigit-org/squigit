@@ -10,15 +10,34 @@ import { TextContextMenu } from "@/widgets";
 import { useTextEditor } from "@/hooks/useTextEditor";
 import { useTextContextMenu } from "@/widgets/menu/hooks/useTextContextMenu";
 
+import { UserPreferences } from "@/lib/config/preferences";
+
 interface PersonalContextSectionProps {
   localPrompt: string;
+  currentPrompt: string;
   setLocalPrompt: (prompt: string) => void;
+  updatePreferences: (updates: Partial<UserPreferences>) => void;
 }
 
 export const PersonalContextSection: React.FC<PersonalContextSectionProps> = ({
   localPrompt,
+  currentPrompt,
   setLocalPrompt,
+  updatePreferences,
 }) => {
+  React.useEffect(() => {
+    // Avoid saving if values are identical (e.g. on mount or after save)
+    if (localPrompt === currentPrompt) return;
+
+    const handler = setTimeout(() => {
+      updatePreferences({ prompt: localPrompt });
+    }, 1000);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [localPrompt, currentPrompt, updatePreferences]);
+
   const {
     ref,
     hasSelection,

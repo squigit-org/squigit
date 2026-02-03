@@ -37,7 +37,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               Toggle between dark and light mode
             </span>
           </div>
-          <div className={styles.toggleSwitch}>
+          <label className={styles.toggleSwitch}>
             <input
               type="checkbox"
               className={styles.toggleInput}
@@ -45,7 +45,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               onChange={onToggleTheme}
             />
             <span className={styles.toggleSlider}></span>
-          </div>
+          </label>
         </div>
 
         <div className={styles.divider} />
@@ -59,7 +59,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               Extract text from screenshots
             </span>
           </div>
-          <div className={styles.toggleSwitch}>
+          <label className={styles.toggleSwitch}>
             <input
               type="checkbox"
               className={styles.toggleInput}
@@ -67,7 +67,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               onChange={(e) => onToggleOcrEnabled(e.target.checked)}
             />
             <span className={styles.toggleSlider}></span>
-          </div>
+          </label>
         </div>
         <div className={styles.divider} />
 
@@ -82,7 +82,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               Automatically expand image on finish
             </span>
           </div>
-          <div className={styles.toggleSwitch}>
+          <label className={styles.toggleSwitch}>
             <input
               type="checkbox"
               className={styles.toggleInput}
@@ -91,7 +91,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               onChange={(e) => onToggleAutoExpand(e.target.checked)}
             />
             <span className={styles.toggleSlider}></span>
-          </div>
+          </label>
         </div>
         <div className={styles.divider} />
 

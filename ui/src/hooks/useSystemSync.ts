@@ -54,6 +54,10 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   const [captureType, setCaptureType] = useState<"rectangular" | "squiggle">(
     "rectangular",
   );
+  const [ocrLanguage, setOcrLanguage] = useState<string>("PP-OCRv4 (English)");
+  const [downloadedOcrLanguages, setDownloadedOcrLanguages] = useState<
+    string[]
+  >(["PP-OCRv4 (English)"]);
 
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -98,6 +102,12 @@ export const useSystemSync = (onToggleSettings: () => void) => {
         }
         if (prefs.captureType) {
           setCaptureType(prefs.captureType);
+        }
+        if (prefs.ocrLanguage) {
+          setOcrLanguage(prefs.ocrLanguage);
+        }
+        if (prefs.downloadedOcrLanguages) {
+          setDownloadedOcrLanguages(prefs.downloadedOcrLanguages);
         }
 
         if (prefs.theme) {
@@ -173,6 +183,12 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     }
     if (updates.captureType !== undefined) {
       setCaptureType(updates.captureType);
+    }
+    if (updates.ocrLanguage !== undefined) {
+      setOcrLanguage(updates.ocrLanguage);
+    }
+    if (updates.downloadedOcrLanguages !== undefined) {
+      setDownloadedOcrLanguages(updates.downloadedOcrLanguages);
     }
     if (updates.theme !== undefined) {
       setTheme(updates.theme);
@@ -272,6 +288,8 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     autoExpandOCR,
     ocrEnabled,
     captureType,
+    ocrLanguage,
+    downloadedOcrLanguages,
     imgbbKey,
     setImgbbKey,
     handleSetAPIKey,

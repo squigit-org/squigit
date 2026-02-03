@@ -194,6 +194,8 @@
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  /* Ensure space for the progress ring which is larger than the button */
+  margin-right: 4px;
 }
 
 .downloadBtn:hover:not(:disabled) {
@@ -212,9 +214,9 @@
 
 .progressSvg {
   position: absolute;
-  top: -1px; /* Align with border */
+  top: -1px;
   left: -1px;
-  width: 34px; /* 32px + 2px border */
+  width: 34px;
   height: 34px;
   transform: rotate(-90deg);
   pointer-events: none;
@@ -225,7 +227,7 @@
   stroke: var(--neutral-100);
   stroke-width: 2;
   stroke-linecap: round;
-  stroke-dasharray: 100; /* Circumference approx 2 * pi * 16 */
+  stroke-dasharray: 100;
   stroke-dashoffset: 100;
   animation: progressRotate 3s linear forwards;
 }

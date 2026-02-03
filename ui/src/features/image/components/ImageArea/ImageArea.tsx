@@ -23,6 +23,8 @@ import {
 } from "@/features/image";
 import { ActionMenu, ActionMenuHandle } from "@/widgets/menu";
 import styles from "./ImageArea.module.css";
+import { Dialog } from "@/widgets";
+import { Topic } from "@/features/settings/components/SettingsTab/SettingsTab";
 
 interface OCRBox {
   text: string;
@@ -52,6 +54,7 @@ interface ImageAreaProps {
   onToggleExpand?: () => void;
   ocrEnabled?: boolean;
   autoExpandOCR?: boolean;
+  onOpenSettings: (topic?: Topic) => void;
 }
 
 export const ImageArea: React.FC<ImageAreaProps> = ({
@@ -68,6 +71,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   onToggleExpand,
   ocrEnabled = true,
   autoExpandOCR = true,
+  onOpenSettings,
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -86,11 +90,8 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
 
   const imageSrc = startupImage?.base64 || "";
 
-  const { isLensLoading, triggerLens } = useGoogleLens(
-    startupImage,
-    sessionLensUrl,
-    setSessionLensUrl,
-  );
+  const { isLensLoading, triggerLens, showAuthDialog, setShowAuthDialog } =
+    useGoogleLens(startupImage, sessionLensUrl, setSessionLensUrl);
 
   const { svgRef, handleTextMouseDown } = useTextSelection({
     data: ocrData,
@@ -498,6 +499,28 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
         imgRef={imgRef}
         imgWrapRef={imgWrapRef}
         viewerRef={viewerRef}
+      />
+
+      <Dialog
+        isOpen={showAuthDialog}
+        title="ImgBB API Key Required"
+        message="To use Google Lens features, you need to configure your ImgBB API key (free)."
+        variant="info"
+        actions={[
+          {
+            label: "Cancel",
+            onClick: () => setShowAuthDialog(false),
+            variant: "secondary",
+          },
+          {
+            label: "Setup API Key",
+            onClick: () => {
+              setShowAuthDialog(false);
+              onOpenSettings("Providers & Keys");
+            },
+            variant: "primary",
+          },
+        ]}
       />
 
       {error && <div className={styles.ocrError}>{error}</div>}

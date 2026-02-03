@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, forwardRef } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import React, { useState, forwardRef, useEffect, useRef } from "react";
+import { Eye, EyeOff, Info } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { google, github } from "@/lib/config";
 import { GlowCard } from "@/widgets/glow-card";
@@ -40,8 +40,83 @@ const ProviderRow = ({
   onToggle: () => void;
   onSave: (key: string) => Promise<boolean>;
 }) => {
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(currentKey);
   const [showKey, setShowKey] = useState(false);
+  const [isValid, setIsValid] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync input with external currentKey (e.g., on mount or prop change)
+  useEffect(() => {
+    setInputValue(currentKey);
+    setIsValid(true);
+  }, [currentKey]);
+
+  // Validation Logic
+  const validate = (key: string): boolean => {
+    if (!key) return true; // Empty is valid (clearing key)
+
+    if (providerKeyName === "Google AI Studio") {
+      // Gemini: Starts with "AIzaS", length 39
+      return key.startsWith("AIzaS") && key.length === 39;
+    }
+
+    if (providerKeyName === "ImgBB") {
+      // ImgBB: Length 32
+      return key.length === 32;
+    }
+
+    return true;
+  };
+
+  // Handle input change with debounced validation and save
+  const handleInputChange = (newValue: string) => {
+    setInputValue(newValue);
+
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    // Start a new 1s timer
+    timerRef.current = setTimeout(() => {
+      const valid = validate(newValue);
+      setIsValid(valid);
+
+      if (valid && newValue !== currentKey) {
+        // Only save if valid AND different from current
+        onSave(newValue);
+      }
+      // If not valid, red border is shown via isValid state
+    }, 1000);
+  };
+
+  // On blur: if invalid, reset to last saved key
+  const handleBlur = () => {
+    // Clear pending timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const valid = validate(inputValue);
+    if (!valid) {
+      // Reset to last saved key
+      setInputValue(currentKey);
+      setIsValid(true);
+    } else if (inputValue !== currentKey) {
+      // Save if valid and changed
+      onSave(inputValue);
+    }
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   const {
     ref,
@@ -53,7 +128,7 @@ const ProviderRow = ({
     handleKeyDown,
   } = useTextEditor({
     value: inputValue,
-    onChange: setInputValue,
+    onChange: handleInputChange,
     preventNewLine: true,
   });
 
@@ -72,7 +147,7 @@ const ProviderRow = ({
   const inputRef = ref as React.RefObject<HTMLInputElement>;
 
   return (
-    <div className={`${styles.providerWrapper} ${styles.expanded}`}>
+    <div className={styles.providerWrapper}>
       <GlowCard className={styles.glowProviderRow}>
         <div className={styles.providerRowInternal}>
           <div className={styles.providerInfo}>
@@ -101,23 +176,20 @@ const ProviderRow = ({
           </p>
 
           <div className={styles.inputGroup}>
-            <div className={styles.inputWrapper}>
+            <div
+              className={`${styles.inputWrapper} ${!isValid ? styles.error : ""}`}
+            >
               <input
                 ref={inputRef}
                 type={showKey ? "text" : "password"}
                 className={styles.modernInput}
                 placeholder={`Enter your ${providerKeyName} API Key`}
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => handleInputChange(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 onContextMenu={handleContextMenu}
                 onKeyDown={handleKeyDown as any}
                 autoComplete="off"
-                onBlur={() => {
-                  if (inputValue.trim()) {
-                    onSave(inputValue);
-                  }
-                }}
               />
               <button
                 className={styles.iconBtn}
@@ -133,6 +205,7 @@ const ProviderRow = ({
           </div>
         </div>
       </div>
+
       {contextMenu.isOpen && (
         <TextContextMenu
           x={contextMenu.x}

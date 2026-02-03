@@ -20,6 +20,7 @@ export const useGoogleLens = (
 ) => {
   const [isLensLoading, setIsLensLoading] = useState(false);
   const [waitingForKey, setWaitingForKey] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   const imageRef = useRef(startupImage);
   useEffect(() => {
@@ -127,9 +128,9 @@ export const useGoogleLens = (
         const finalUrl = appendQuery(lensUrl, searchQuery);
         await invoke("open_external_url", { url: finalUrl });
         setIsLensLoading(false);
+        setIsLensLoading(false);
       } else {
-        await invoke("open_imgbb_window");
-        setWaitingForKey(true);
+        setShowAuthDialog(true);
         setIsLensLoading(false);
       }
     } catch (error) {
@@ -142,5 +143,7 @@ export const useGoogleLens = (
   return {
     isLensLoading: isLensLoading || waitingForKey,
     triggerLens,
+    showAuthDialog,
+    setShowAuthDialog,
   };
 };

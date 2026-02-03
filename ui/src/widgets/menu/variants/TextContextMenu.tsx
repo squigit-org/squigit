@@ -1,12 +1,5 @@
-/**
- * @license
- * Copyright 2026 a7mddra
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React from "react";
-import { Copy, ClipboardPaste, Scissors, TextSelect } from "lucide-react";
-import { ContextMenu, ContextMenuItem } from "..";
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "..";
 
 interface TextContextMenuProps {
   x: number;
@@ -16,6 +9,8 @@ interface TextContextMenuProps {
   onPaste?: () => void;
   onCut?: () => void;
   onSelectAll?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
   selectedText?: string;
   hasSelection?: boolean;
 }
@@ -28,6 +23,8 @@ export const TextContextMenu: React.FC<TextContextMenuProps> = ({
   onPaste,
   onCut,
   onSelectAll,
+  onUndo,
+  onRedo,
   selectedText = "",
   hasSelection = false,
 }) => {
@@ -36,67 +33,80 @@ export const TextContextMenu: React.FC<TextContextMenuProps> = ({
   const isMac = navigator.userAgent.toLowerCase().includes("mac");
   const mod = isMac ? "⌘" : "Ctrl+";
 
-  const showCopy = onCopy && hasText;
-  const showCut = onCut && hasText;
-  const showPaste = onPaste;
-  const showSelectAll = onSelectAll;
-
-  if (!showCopy && !showCut && !showPaste && !showSelectAll) return null;
-
   return (
-    <ContextMenu x={x} y={y} onClose={onClose} width={180}>
-      {showCut && (
-        <ContextMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            onCut!();
-            onClose();
-          }}
-          icon={<Scissors size={14} />}
-          shortcut={`${mod}X`}
-        >
-          Cut
-        </ContextMenuItem>
-      )}
-      {showCopy && (
-        <ContextMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            onCopy!();
-            onClose();
-          }}
-          icon={<Copy size={14} />}
-          shortcut={`${mod}C`}
-        >
-          Copy
-        </ContextMenuItem>
-      )}
-      {showPaste && (
-        <ContextMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            onPaste!();
-            onClose();
-          }}
-          icon={<ClipboardPaste size={14} />}
-          shortcut={`${mod}V`}
-        >
-          Paste
-        </ContextMenuItem>
-      )}
-      {showSelectAll && (
-        <ContextMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectAll!();
-            onClose();
-          }}
-          icon={<TextSelect size={14} />}
-          shortcut={`${mod}A`}
-        >
-          Select All
-        </ContextMenuItem>
-      )}
+    <ContextMenu x={x} y={y} onClose={onClose} width={200}>
+      <ContextMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          onUndo?.();
+          onClose();
+        }}
+        disabled={!onUndo}
+        shortcut={`${mod}Z`}
+      >
+        Undo
+      </ContextMenuItem>
+      <ContextMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          onRedo?.();
+          onClose();
+        }}
+        disabled={!onRedo}
+        shortcut={isMac ? `${mod}Shift+Z` : `${mod}Y`}
+      >
+        Redo
+      </ContextMenuItem>
+
+      <ContextMenuSeparator />
+
+      <ContextMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          onCut?.();
+          onClose();
+        }} // Cut requires selection
+        disabled={!onCut || !hasText}
+        shortcut={`${mod}X`}
+      >
+        Cut
+      </ContextMenuItem>
+      <ContextMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          onCopy?.();
+          onClose();
+        }} // Copy requires selection
+        disabled={!onCopy || !hasText}
+        shortcut={`${mod}C`}
+      >
+        Copy
+      </ContextMenuItem>
+      <ContextMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          onPaste?.();
+          onClose();
+        }}
+        disabled={!onPaste}
+        shortcut={`${mod}V`}
+      >
+        Paste
+      </ContextMenuItem>
+
+      <ContextMenuSeparator />
+
+      <ContextMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelectAll?.();
+          onClose();
+        }}
+        disabled={!onSelectAll}
+        shortcut={`${mod}A`}
+      >
+        Select All
+      </ContextMenuItem>
     </ContextMenu>
   );
 };

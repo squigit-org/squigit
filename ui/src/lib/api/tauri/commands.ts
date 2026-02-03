@@ -19,7 +19,7 @@ export const commands = {
   getApiKey: (provider: "google ai studio" | "imgbb" | "gemini") =>
     invoke<string>("get_api_key", { provider }),
   setApiKey: (provider: "google ai studio" | "imgbb" | "gemini", key: string) =>
-    invoke("set_api_key", { provider, key }),
+    invoke("encrypt_and_save", { provider, plaintext: key }),
   startGoogleAuth: () => invoke("start_google_auth"),
   logout: () => invoke("logout"),
   getUserData: () => invoke<any>("get_user_data"),

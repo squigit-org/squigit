@@ -35,6 +35,7 @@ import {
   useChat,
   ChatPanel,
   SettingsTab,
+  Topic,
   useChatHistory,
 } from "@/features";
 
@@ -51,9 +52,39 @@ import {
 
 export const AppLayout: React.FC = () => {
   const [isPanelActive, setIsPanelActive] = useState(false);
-  const handleToggleSettings = useCallback(() => {
-    setIsPanelActive((prev) => !prev);
-  }, []);
+  const [settingsTopic, setSettingsTopic] = useState<Topic | undefined>(
+    undefined,
+  );
+
+  const handleToggleSettings = useCallback(
+    (topic?: Topic | React.MouseEvent) => {
+      // If called from onClick, topic might be a MouseEvent object.
+      // If called programmatically with a string, it's a Topic.
+      const isTopicString = typeof topic === "string";
+
+      setIsPanelActive((prev) => {
+        // If we are passing a specific topic, force open to that topic
+        if (isTopicString && topic) {
+          setSettingsTopic(topic as Topic);
+          return true;
+        }
+
+        // If simply toggling via gear icon (no topic string), assume toggle behavior.
+        // We might want to clear the forced topic so next time it opens cleanly?
+        // Or keep it? Let's clear it if closing.
+        if (prev) {
+          // Closing
+          setSettingsTopic(undefined);
+          return false;
+        } else {
+          // Opening without specific topic -> General or last state
+          setSettingsTopic(undefined);
+          return true;
+        }
+      });
+    },
+    [],
+  );
 
   const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
     null,
@@ -618,7 +649,10 @@ export const AppLayout: React.FC = () => {
                 captureType={system.captureType}
                 geminiKey={system.apiKey}
                 imgbbKey={system.imgbbKey}
+                ocrLanguage={system.ocrLanguage}
+                downloadedOcrLanguages={system.downloadedOcrLanguages}
                 onSetAPIKey={system.handleSetAPIKey}
+                forceTopic={settingsTopic}
               />
             ) : (
               <Welcome onImageReady={handleImageReady} />
@@ -738,11 +772,14 @@ export const AppLayout: React.FC = () => {
         isDarkMode={system.isDarkMode}
         onToggleTheme={system.handleToggleTheme}
         onPromptChange={system.setEditingPrompt}
+        forceTopic={settingsTopic}
         autoExpandOCR={system.autoExpandOCR}
         ocrEnabled={system.ocrEnabled}
         captureType={system.captureType}
         geminiKey={system.apiKey}
         imgbbKey={system.imgbbKey}
+        ocrLanguage={system.ocrLanguage}
+        downloadedOcrLanguages={system.downloadedOcrLanguages}
         onSetAPIKey={system.handleSetAPIKey}
         onUpdateAvatarSrc={system.setAvatarSrc}
         // TitleBar props

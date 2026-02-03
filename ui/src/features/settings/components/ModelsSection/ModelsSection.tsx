@@ -7,7 +7,11 @@
 import React, { useState, useCallback } from "react";
 import { Download, Check } from "lucide-react";
 import { ModelType } from "@/lib/config/models";
-import { modelsWithInfo, ocrModels } from "@/features/settings";
+import { UserPreferences } from "@/lib/config/preferences";
+import {
+  ocrModels as defaultOcrModels,
+  modelsWithInfo,
+} from "@/features/settings";
 import { WheelPicker, WheelPickerWrapper } from "@/widgets";
 import styles from "./ModelsSection.module.css";
 
@@ -15,6 +19,9 @@ interface ModelsSectionProps {
   localModel: string;
   currentModel: string;
   setLocalModel: (model: string) => void;
+  ocrLanguage: string;
+  downloadedOcrLanguages: string[];
+  updatePreferences: (updates: Partial<UserPreferences>) => void;
 }
 
 interface ModelReelProps {
@@ -27,16 +34,19 @@ interface ModelReelProps {
   currentValue: string;
   onValueChange: (value: string) => void;
   showDownloadButton?: boolean;
+  onDownloadComplete?: (model: string) => void;
 }
 
 interface DownloadButtonProps {
   isDownloaded?: boolean;
   className?: string;
+  onDownloadComplete?: () => void;
 }
 
 const DownloadButton: React.FC<DownloadButtonProps> = ({
   isDownloaded: initialDownloaded,
   className,
+  onDownloadComplete,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(initialDownloaded);
@@ -55,7 +65,10 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({
     setTimeout(() => {
       setIsDownloading(false);
       setIsDownloaded(true);
-    }, 3000);
+      if (onDownloadComplete) {
+        onDownloadComplete();
+      }
+    }, 1500);
   };
 
   return (
@@ -80,6 +93,7 @@ const ModelReel: React.FC<ModelReelProps> = ({
   currentValue,
   onValueChange,
   showDownloadButton = false,
+  onDownloadComplete,
 }) => {
   const currentIndex = items.findIndex(
     (item) => item.id === currentValue || item.name === currentValue,
@@ -152,6 +166,11 @@ const ModelReel: React.FC<ModelReelProps> = ({
             key={currentItem.id || currentItem.name}
             isDownloaded={!!currentItem.isDownloaded}
             className={styles.downloadBtn}
+            onDownloadComplete={() => {
+              if (onDownloadComplete) {
+                onDownloadComplete(currentItem.id || currentItem.name);
+              }
+            }}
           />
         )}
       </div>
@@ -161,21 +180,66 @@ const ModelReel: React.FC<ModelReelProps> = ({
 
 export const ModelsSection: React.FC<ModelsSectionProps> = ({
   localModel,
-  currentModel,
   setLocalModel,
+  ocrLanguage,
+  downloadedOcrLanguages,
+  updatePreferences,
 }) => {
-  const [ocrValue, setOcrValue] = useState(ocrModels[0].name);
+  const [ocrValue, setOcrValue] = useState(ocrLanguage);
+
+  // Sync internal state if prop changes (e.g. reload or external change)
+  React.useEffect(() => {
+    setOcrValue(ocrLanguage);
+  }, [ocrLanguage]);
+
+  // Construct items with dynamic isDownloaded status
+  const ocrItems = React.useMemo(() => {
+    return defaultOcrModels.map((m) => ({
+      ...m,
+      isDownloaded: downloadedOcrLanguages.includes(m.name),
+    }));
+  }, [downloadedOcrLanguages]);
 
   const handleModelChange = useCallback(
     (value: string) => {
-      setLocalModel(value as ModelType);
+      setLocalModel(value);
+      // Direct update for Gemini models
+      updatePreferences({ model: value });
     },
-    [setLocalModel],
+    [setLocalModel, updatePreferences],
   );
 
-  const handleOcrChange = useCallback((value: string) => {
-    setOcrValue(value);
-  }, []);
+  const handleOcrChange = useCallback(
+    (value: string) => {
+      setOcrValue(value);
+      // Only save preference if model is already downloaded
+      if (downloadedOcrLanguages.includes(value)) {
+        updatePreferences({ ocrLanguage: value });
+      }
+    },
+    [downloadedOcrLanguages, updatePreferences],
+  );
+
+  const handleDownloadComplete = useCallback(
+    (modelId: string) => {
+      // Add to persisted list
+      const newList = [...downloadedOcrLanguages];
+      if (!newList.includes(modelId)) {
+        newList.push(modelId);
+      }
+
+      const updates: Partial<UserPreferences> = {
+        downloadedOcrLanguages: newList,
+      };
+
+      // If the model just downloaded is the one currently selected, save it now
+      if (modelId === ocrValue) {
+        updates.ocrLanguage = modelId;
+      }
+      updatePreferences(updates);
+    },
+    [ocrValue, downloadedOcrLanguages, updatePreferences],
+  );
 
   return (
     <div>
@@ -197,10 +261,11 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
         />
 
         <ModelReel
-          items={ocrModels}
+          items={ocrItems}
           currentValue={ocrValue}
           onValueChange={handleOcrChange}
           showDownloadButton
+          onDownloadComplete={handleDownloadComplete}
         />
       </div>
     </div>
