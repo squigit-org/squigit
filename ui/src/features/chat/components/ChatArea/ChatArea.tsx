@@ -8,8 +8,7 @@ import React, { forwardRef, useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ChatBubble, StreamingResponse, Message } from "@/features/chat";
 import { parseGeminiError } from "@/lib/utils/errorParser";
-import { Dialog } from "@/widgets";
-import styles from "./ChatArea.module.css";
+import { Dialog, TextShimmer } from "@/widgets";
 
 interface ChatAreaProps {
   startupImage: {
@@ -67,32 +66,7 @@ const ChatAreaComponent = forwardRef<HTMLDivElement, ChatAreaProps>(
             {startupImage && !isChatMode && (
               <div className="min-h-[60vh]">
                 {isLoading && !streamingText ? (
-                  <div className="space-y-4 pt-8" aria-hidden="true">
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-1"]} w-3/4`}
-                    />
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-2"]} w-full`}
-                    />
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-3"]} w-full`}
-                    />
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-4"]} w-5/6`}
-                    />
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-5"]} w-1/2`}
-                    />
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-6"]} w-3/4`}
-                    />
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-7"]} w-4/5`}
-                    />
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-8"]} w-2/3`}
-                    />
-                  </div>
+                  <TextShimmer variant="full" />
                 ) : (
                   <StreamingResponse
                     text={streamingText}
@@ -167,16 +141,7 @@ const ChatAreaComponent = forwardRef<HTMLDivElement, ChatAreaProps>(
 
             {isChatMode && (
               <div className="space-y-8 flex flex-col-reverse">
-                {isLoading && (
-                  <div className="space-y-4 pt-8 pb-4" aria-hidden="true">
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-1"]} w-3/4`}
-                    />
-                    <div
-                      className={`${styles["shimmer-line"]} ${styles["shimmer-line-2"]} w-full`}
-                    />
-                  </div>
-                )}
+                {isLoading && <TextShimmer variant="simple" />}
 
                 {messages
                   .slice()

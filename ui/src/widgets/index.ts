@@ -10,3 +10,4 @@ export * from "./menu";
 export * from "./wheel-picker";
 export * from "./code-block";
 export * from "./glow-card";
+export * from "./text-shimmer";
