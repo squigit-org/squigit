@@ -12,3 +12,4 @@ export * from "./hooks/useTextContextMenu";
 export * from "./variants/OCRInlineMenu";
 export * from "./variants/TextContextMenu";
 export * from "./variants/PanelContextMenu";
+export * from "./variants/ShellContextMenu";

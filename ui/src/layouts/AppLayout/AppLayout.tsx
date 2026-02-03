@@ -10,7 +10,12 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "@/lib/api/tauri/commands";
-import { ContextMenu, ContextMenuItem, TitleBar } from "@/widgets";
+import {
+  ContextMenu,
+  ContextMenuItem,
+  ShellContextMenu,
+  TitleBar,
+} from "@/widgets";
 
 import {
   useUpdateCheck,
@@ -660,20 +665,14 @@ export const AppLayout: React.FC = () => {
           </div>
         </div>
         {contextMenu && (
-          <ContextMenu
+          <ShellContextMenu
             x={contextMenu.x}
             y={contextMenu.y}
             onClose={handleCloseContextMenu}
-          >
-            <ContextMenuItem
-              onClick={() => {
-                handleCopy();
-                handleCloseContextMenu();
-              }}
-            >
-              Copy
-            </ContextMenuItem>
-          </ContextMenu>
+            onCopy={handleCopy}
+            selectedText={contextMenu.selectedText}
+            hasSelection={true}
+          />
         )}
       </div>
     );
@@ -812,20 +811,14 @@ export const AppLayout: React.FC = () => {
       />
 
       {contextMenu && (
-        <ContextMenu
+        <ShellContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={handleCloseContextMenu}
-        >
-          <ContextMenuItem
-            onClick={() => {
-              handleCopy();
-              handleCloseContextMenu();
-            }}
-          >
-            Copy
-          </ContextMenuItem>
-        </ContextMenu>
+          onCopy={handleCopy}
+          selectedText={contextMenu.selectedText}
+          hasSelection={true}
+        />
       )}
     </div>
   );
