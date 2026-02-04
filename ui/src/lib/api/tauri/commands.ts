@@ -6,6 +6,13 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
+export interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+}
+
 export const commands = {
   // Image Processing
   processImagePath: (path: string) =>
@@ -15,14 +22,29 @@ export const commands = {
   getInitialImage: () =>
     invoke<{ hash: string; path: string } | null>("get_initial_image"),
 
-  // Auth & Keys
-  getApiKey: (provider: "google ai studio" | "imgbb" | "gemini") =>
-    invoke<string>("get_api_key", { provider }),
-  setApiKey: (provider: "google ai studio" | "imgbb" | "gemini", key: string) =>
-    invoke("encrypt_and_save", { provider, plaintext: key }),
+  // Auth & Keys (profile-aware)
+  getApiKey: (
+    provider: "google ai studio" | "imgbb" | "gemini",
+    profileId: string,
+  ) => invoke<string>("get_api_key", { provider, profileId }),
+  setApiKey: (
+    provider: "google ai studio" | "imgbb" | "gemini",
+    key: string,
+    profileId: string,
+  ) => invoke("encrypt_and_save", { provider, plaintext: key, profileId }),
   startGoogleAuth: () => invoke("start_google_auth"),
   logout: () => invoke("logout"),
   getUserData: () => invoke<any>("get_user_data"),
+
+  // Profile Management
+  getActiveProfile: () => invoke<Profile | null>("get_active_profile"),
+  getActiveProfileId: () => invoke<string | null>("get_active_profile_id"),
+  listProfiles: () => invoke<Profile[]>("list_profiles"),
+  setActiveProfile: (profileId: string) =>
+    invoke("set_active_profile", { profileId }),
+  deleteProfile: (profileId: string) => invoke("delete_profile", { profileId }),
+  hasProfiles: () => invoke<boolean>("has_profiles"),
+  getProfileCount: () => invoke<number>("get_profile_count"),
 
   // Window Mgmt
   openImgbbWindow: () => invoke("open_imgbb_window"),
@@ -34,6 +56,4 @@ export const commands = {
 
   // Utils
   openExternalUrl: (url: string) => invoke("open_external_url", { url }),
-  startClipboardWatcher: () => invoke("start_clipboard_watcher"),
-  stopClipboardWatcher: () => invoke("stop_clipboard_watcher"),
 };

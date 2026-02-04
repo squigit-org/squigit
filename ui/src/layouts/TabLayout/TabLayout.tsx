@@ -14,6 +14,7 @@ import {
   SettingsTabProps,
   Topic,
 } from "@/features/";
+import { Profile } from "@/lib/api/tauri/commands";
 import styles from "./TabLayout.module.css";
 
 export interface TabLayoutProps
@@ -40,6 +41,7 @@ export interface TabLayoutProps
   chatTitle: string;
   onReload: () => void;
   isRotating: boolean;
+  onModelChange: (model: string) => void;
   isLoading: boolean;
   isPanelActive: boolean;
   toggleSettingsPanel: () => void;
@@ -51,6 +53,7 @@ export interface TabLayoutProps
   settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
   setPrompt: (prompt: string) => void;
   onEditingModelChange: (model: string) => void;
+  onLogout: () => void;
   toggleSubview: (isActive: boolean) => void;
   onNewSession: () => void;
   hasImageLoaded: boolean;
@@ -67,6 +70,13 @@ export interface TabLayoutProps
   onRenameChat: (id: string, title: string) => void;
   onTogglePinChat: (id: string) => void;
   onToggleStarChat: (id: string) => void;
+
+  // Profile props
+  activeProfile: Profile | null;
+  profiles: Profile[];
+  onSwitchProfile: (profileId: string) => void;
+  onAddAccount: () => void;
+  activeProfileId: string | null;
 }
 
 export const TabLayout: React.FC<TabLayoutProps> = ({
@@ -101,10 +111,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   // Settings props
   currentPrompt,
   editingModel,
-  userName,
-  userEmail,
-  avatarSrc,
-  originalPicture,
   updatePreferences,
   onLogout,
   isDarkMode,
@@ -117,7 +123,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   geminiKey,
   imgbbKey,
   onSetAPIKey,
-  onUpdateAvatarSrc,
   setPrompt,
   onEditingModelChange,
   forceTopic,
@@ -148,6 +153,11 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
   onRenameChat,
   onTogglePinChat,
   onToggleStarChat,
+  activeProfile,
+  profiles,
+  onSwitchProfile,
+  onAddAccount,
+  activeProfileId,
 }) => {
   // Handle chat selection - toggle settings off and open chat
   const handleSelectChatWithSettings = (id: string) => {
@@ -182,9 +192,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
         editingModel={editingModel}
         setPrompt={setPrompt}
         onEditingModelChange={onEditingModelChange}
-        userName={userName}
-        userEmail={userEmail}
-        avatarSrc={avatarSrc}
         onLogout={onLogout}
         isDarkMode={isDarkMode}
         onToggleTheme={onToggleTheme}
@@ -193,6 +200,10 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
         hasImageLoaded={hasImageLoaded}
         toggleChatPanel={toggleChatPanel}
         isChatPanelOpen={isChatPanelOpen}
+        activeProfile={activeProfile}
+        profiles={profiles}
+        onSwitchProfile={onSwitchProfile}
+        onAddAccount={onAddAccount}
       />
 
       <div className={styles.mainContent}>
@@ -224,16 +235,11 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
             <SettingsTab
               currentPrompt={currentPrompt}
               currentModel={editingModel}
-              userName={userName}
-              userEmail={userEmail}
-              avatarSrc={avatarSrc}
-              originalPicture={originalPicture}
               onPromptChange={setPrompt}
               onModelChange={(model) => {
                 onEditingModelChange(model);
               }}
               updatePreferences={updatePreferences}
-              onLogout={onLogout}
               isDarkMode={isDarkMode}
               onToggleTheme={onToggleTheme}
               autoExpandOCR={autoExpandOCR}
@@ -244,7 +250,6 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               geminiKey={geminiKey}
               imgbbKey={imgbbKey}
               onSetAPIKey={onSetAPIKey}
-              onUpdateAvatarSrc={onUpdateAvatarSrc}
               forceTopic={forceTopic}
             />
           </div>
@@ -283,6 +288,7 @@ export const TabLayout: React.FC<TabLayoutProps> = ({
               ocrEnabled={ocrEnabled}
               autoExpandOCR={autoExpandOCR}
               onStreamComplete={onStreamComplete}
+              activeProfileId={activeProfileId}
             />
           </div>
         </div>

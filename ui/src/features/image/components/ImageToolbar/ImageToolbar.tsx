@@ -18,73 +18,9 @@ interface ImageToolbarProps {
   isExpanded: boolean;
 }
 
+import { Tooltip } from "@/widgets";
+
 const EDGE_PADDING = 8;
-
-const Tooltip: React.FC<{
-  text: string;
-  parentRef: React.RefObject<HTMLElement | null>;
-  show: boolean;
-}> = ({ text, parentRef, show }) => {
-  const [style, setStyle] = useState<React.CSSProperties>({
-    opacity: 0,
-    visibility: "hidden",
-  });
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!show || !parentRef.current) {
-      setStyle({ opacity: 0, visibility: "hidden" });
-      return;
-    }
-
-    const update = () => {
-      if (!parentRef.current || !ref.current) return;
-      const parentRect = parentRef.current.getBoundingClientRect();
-      const tooltipRect = ref.current.getBoundingClientRect();
-      const windowWidth = window.innerWidth;
-
-      const gap = 8;
-      let left = parentRect.right + gap;
-      let top = parentRect.top + parentRect.height / 2 - tooltipRect.height / 2;
-
-      if (left + tooltipRect.width > windowWidth - EDGE_PADDING) {
-        left = parentRect.left - gap - tooltipRect.width;
-      }
-
-      setStyle({
-        position: "fixed",
-        top: top,
-        left: left,
-        opacity: 1,
-        visibility: "visible",
-        zIndex: 9999,
-      });
-    };
-
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [show, text]);
-
-  if (!show)
-    return createPortal(
-      <div ref={ref} className={styles.tooltipText} style={{ opacity: 0 }}>
-        {text}
-      </div>,
-      document.body,
-    );
-
-  return createPortal(
-    <div ref={ref} className={styles.tooltipText} style={style}>
-      {text}
-    </div>,
-    document.body,
-  );
-};
 
 const ToolbarButton: React.FC<{
   icon: React.ReactNode;

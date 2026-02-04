@@ -1,0 +1,157 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import "@/styles/variables.css";
+
+.bigSettingsPanel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  -webkit-app-region: no-drag;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
+}
+
+.bigSettingsPanel.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.bigDropdown {
+  position: relative;
+  /* ... existing styles ... */
+  pointer-events: auto; /* Ensure the menu itself is interactable */
+  top: 0;
+  right: 0;
+  height: 570px;
+  width: 700px;
+  background-color: #171717;
+  border: 1px solid rgba(63, 63, 70, 0.5);
+  border-radius: 12px;
+  z-index: 1000;
+  display: flex;
+  overflow: hidden;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.4),
+    0 8px 10px -6px rgba(0, 0, 0, 0.3);
+
+  opacity: 0;
+  visibility: hidden;
+  /* pointer-events: none; */
+  transform: translateY(-4px);
+  transition:
+    opacity 0.15s ease,
+    visibility 0.15s ease,
+    transform 0.15s ease;
+}
+
+.bigDropdown.open {
+  opacity: 1;
+  visibility: visible;
+  /* pointer-events: auto; */
+  transform: translateY(0);
+}
+
+.sidebar {
+  width: 50px;
+  background-color: #121212;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 100%; /* Ensure full height for spacing */
+}
+
+.sidebarSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.sidebarSection.footer {
+  gap: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.sidebarButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--neutral-400);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebarButton:hover {
+  color: #ffffff;
+}
+
+.sidebarButton.active {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ededed;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0;
+}
+
+/* Close button - now just a styled sidebar button variant if needed, 
+   but we can reuse sidebarButton class or keep specific styles 
+   without absolute positioning */
+.closeButton {
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  color: var(--neutral-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.closeButton:hover {
+  color: #fff;
+}
+
+.sectionContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ededed;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 20px;
+  text-align: center;
+}

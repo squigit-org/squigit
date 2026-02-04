@@ -167,9 +167,10 @@
   width: 12px;
   color: var(--text-muted);
   transition: transform 0.2s;
+  transform: translateZ(0);
 }
 .groupChevron.collapsed {
-  transform: rotate(-90deg);
+  transform: rotate(-90deg) translateZ(0);
 }
 
 .groupContent {

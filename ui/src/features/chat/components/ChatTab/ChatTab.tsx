@@ -55,6 +55,7 @@ export interface ChatTabProps {
   ocrEnabled?: boolean;
   autoExpandOCR?: boolean;
   onStreamComplete?: () => void;
+  activeProfileId: string | null;
 }
 
 import styles from "./ChatTab.module.css";
@@ -83,6 +84,7 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
   ocrEnabled = true,
   autoExpandOCR = true,
   onStreamComplete,
+  activeProfileId,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
@@ -238,6 +240,7 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
           ocrEnabled={ocrEnabled}
           autoExpandOCR={autoExpandOCR}
           onOpenSettings={onCheckSettings}
+          activeProfileId={activeProfileId}
         />
       </div>
 

@@ -7,7 +7,6 @@ use std::sync::{atomic::AtomicBool, Arc};
 
 pub struct AppState {
     pub image_data: Arc<Mutex<Option<StoredImage>>>,
-    pub watcher_running: Arc<AtomicBool>,
     pub auth_running: Arc<AtomicBool>,
 }
 
@@ -15,7 +14,6 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             image_data: Arc::new(Mutex::new(None)),
-            watcher_running: Arc::new(AtomicBool::new(false)),
             auth_running: Arc::new(AtomicBool::new(false)),
         }
     }

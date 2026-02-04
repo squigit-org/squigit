@@ -9,77 +9,37 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { google } from "@/lib/config";
 
-type AuthStage = "LOADING" | "GEMINI_SETUP" | "LOGIN" | "AUTHENTICATED";
+type AuthStage = "LOADING" | "LOGIN" | "AUTHENTICATED";
 
 export const useAuth = () => {
   const [authStage, setAuthStage] = useState<AuthStage>("LOADING");
-  const [isWatcherActive, setIsWatcherActive] = useState(false);
 
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const hasKey = await invoke<boolean>("check_file_exists", {
-          filename: "gemini_key.json",
-        });
-
-        if (hasKey) {
-          const hasProfile = await invoke<boolean>("check_file_exists", {
-            filename: "profile.json",
-          });
-          setAuthStage(hasProfile ? "AUTHENTICATED" : "LOGIN");
+        const activeProfile = await invoke<any>("get_active_profile");
+        if (activeProfile) {
+          setAuthStage("AUTHENTICATED");
         } else {
-          setAuthStage("GEMINI_SETUP");
+          // Check if any profiles exist
+          const hasProfiles = await invoke<boolean>("has_profiles");
+          if (hasProfiles) {
+            // We have profiles but none active? This shouldn't happen usually,
+            // but we can default to LOGIN or try to set one active.
+            // For now, let's force login screen (which lists profiles).
+            setAuthStage("LOGIN");
+          } else {
+            setAuthStage("LOGIN");
+          }
         }
       } catch (e) {
         console.error("Auth check failed:", e);
-        setAuthStage("GEMINI_SETUP");
+        setAuthStage("LOGIN");
       }
     };
 
     checkAuthStatus();
   }, []);
-
-  useEffect(() => {
-    const unlisten = listen<{ provider: string; key: string }>(
-      "clipboard-text",
-      async (event) => {
-        const { provider, key } = event.payload;
-
-        if (provider === "imgbb") {
-          invoke("close_imgbb_window");
-        }
-
-        await invoke("stop_clipboard_watcher");
-        setIsWatcherActive(false);
-        await invoke("encrypt_and_save", { plaintext: key, provider });
-
-        if (provider === "gemini") {
-          const hasProfile = await invoke("check_file_exists", {
-            filename: "profile.json",
-          });
-          setAuthStage(hasProfile ? "AUTHENTICATED" : "LOGIN");
-          window.location.reload();
-        }
-      },
-    );
-
-    return () => {
-      unlisten.then((f) => f());
-      invoke("stop_clipboard_watcher");
-    };
-  }, []);
-
-  const startWatcher = async () => {
-    if (isWatcherActive) return;
-    setIsWatcherActive(true);
-    await invoke("start_clipboard_watcher");
-  };
-
-  const completeGeminiSetup = () => {
-    const deepLink = google.aiStudio.key;
-    invoke("open_external_url", { url: deepLink });
-    startWatcher();
-  };
 
   const login = () => {
     setAuthStage("AUTHENTICATED");
@@ -92,8 +52,6 @@ export const useAuth = () => {
   return {
     authStage,
     isAuthenticated: authStage === "AUTHENTICATED",
-    completeGeminiSetup,
-    isWatcherActive,
     login,
     logout,
   };

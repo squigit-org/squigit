@@ -17,8 +17,8 @@ use commands::chat::{
     store_image_from_path, update_chat_metadata,
 };
 use commands::clipboard::{
-    copy_image_to_clipboard, read_clipboard_image, read_clipboard_text, start_clipboard_watcher,
-    stop_clipboard_watcher, copy_image_from_path_to_clipboard,
+    copy_image_to_clipboard, read_clipboard_image, read_clipboard_text,
+    copy_image_from_path_to_clipboard,
 };
 use commands::image::{
     get_initial_image, process_image_bytes, process_image_path, read_image_file, copy_image_to_path,
@@ -52,8 +52,8 @@ pub fn run() {
             read_image_file,
             get_initial_image,
             // Clipboard
-            start_clipboard_watcher,
-            stop_clipboard_watcher,
+            // Clipboard
+
             read_clipboard_image,
             read_clipboard_text,
             copy_image_to_clipboard,

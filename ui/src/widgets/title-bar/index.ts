@@ -7,4 +7,7 @@
 export * from "./parts/ModelSwitcher";
 export * from "./parts/TrafficLights";
 export * from "./parts/WindowsControls";
+export * from "./parts/AccountSwitcher";
+export * from "./parts/SettingsPanel";
+export * from "./parts/Settings";
 export * from "./TitleBar";

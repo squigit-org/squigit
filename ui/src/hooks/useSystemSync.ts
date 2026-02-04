@@ -6,8 +6,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { initializeGemini } from "@/lib/api/gemini/client";
-import { commands } from "@/lib/api/tauri/commands";
+import { commands, Profile } from "@/lib/api/tauri/commands";
 import { useTheme } from "./useTheme";
 import {
   loadPreferences,
@@ -63,6 +64,10 @@ export const useSystemSync = (onToggleSettings: () => void) => {
   const [userEmail, setUserEmail] = useState("");
   const [avatarSrc, setAvatarSrc] = useState("");
   const [originalPicture, setOriginalPicture] = useState<string | null>(null);
+
+  // Profile management
+  const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
 
   const [startupImage, setStartupImage] = useState<{
     base64: string;
@@ -125,37 +130,68 @@ export const useSystemSync = (onToggleSettings: () => void) => {
 
     const setupIpc = async () => {
       try {
+        // First, get active profile
+        const profile = await commands.getActiveProfile();
+        if (!profile) {
+          // No active profile - user needs to log in
+          console.log("No active profile found");
+          return;
+        }
+
+        setActiveProfile(profile);
+        setUserName(profile.name);
+        setUserEmail(profile.email);
+        if (profile.avatar) {
+          setAvatarSrc(profile.avatar);
+        }
+
+        // Get API keys for active profile
         const apiKey = await invoke<string>("get_api_key", {
           provider: "gemini",
+          profileId: profile.id,
         });
         if (apiKey) {
           setApiKey(apiKey);
           initializeGemini(apiKey);
         }
 
-        const userData = await invoke<any>("get_user_data");
-        if (userData) {
-          setUserName(userData.name);
-          setUserEmail(userData.email);
-          setAvatarSrc(userData.avatar);
-          if (userData.original_picture) {
-            setOriginalPicture(userData.original_picture);
-          }
-        }
-
         try {
           const imgbbApiKey = await invoke<string>("get_api_key", {
             provider: "imgbb",
+            profileId: profile.id,
           });
           if (imgbbApiKey) {
             setImgbbKey(imgbbApiKey);
           }
         } catch (e) {}
+
+        // Load all profiles for switcher
+        const allProfiles = await commands.listProfiles();
+        setProfiles(allProfiles);
       } catch (e) {
         console.error("Config load error", e);
         setSystemError("Failed to load configuration.");
       }
     };
+
+    // Listen for auth-success to refresh profile data
+    const authListen = listen<any>("auth-success", async (event) => {
+      const data = event.payload;
+      if (data) {
+        setUserName(data.name);
+        setUserEmail(data.email);
+        setAvatarSrc(data.avatar || "");
+        if (data.original_picture) {
+          setOriginalPicture(data.original_picture);
+        }
+        // Refresh profiles
+        const allProfiles = await commands.listProfiles();
+        setProfiles(allProfiles);
+        const active = await commands.getActiveProfile();
+        setActiveProfile(active);
+      }
+    });
+    authListen.then((unlisten) => unlisteners.push(unlisten));
 
     setupIpc();
 
@@ -223,8 +259,12 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => {
+    if (!activeProfile) {
+      console.error("No active profile - cannot save API key");
+      return false;
+    }
     try {
-      await commands.setApiKey(provider, key);
+      await commands.setApiKey(provider, key, activeProfile.id);
       if (provider === "google ai studio" || provider === "gemini") {
         setApiKey(key);
         initializeGemini(key);
@@ -235,6 +275,23 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     } catch (e) {
       console.error(`Failed to set ${provider} API key`, e);
       return false;
+    }
+  };
+
+  const switchProfile = async (profileId: string) => {
+    try {
+      await commands.setActiveProfile(profileId);
+      window.location.reload();
+    } catch (e) {
+      console.error("Failed to switch profile:", e);
+    }
+  };
+
+  const addAccount = async () => {
+    try {
+      await commands.startGoogleAuth();
+    } catch (e) {
+      console.error("Failed to start auth:", e);
     }
   };
 
@@ -294,5 +351,10 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     setImgbbKey,
     handleSetAPIKey,
     setAvatarSrc,
+    // Profile management
+    activeProfile,
+    profiles,
+    switchProfile,
+    addAccount,
   };
 };

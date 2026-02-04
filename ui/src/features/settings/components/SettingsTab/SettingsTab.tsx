@@ -16,18 +16,14 @@ import {
   SettingsPanel,
 } from "@/features/settings";
 import { UserPreferences } from "@/lib/config/preferences";
+import { Profile } from "@/lib/api/tauri/commands";
 
 export interface SettingsTabProps {
   currentPrompt: string;
   currentModel: string;
-  userName: string;
-  userEmail: string;
-  avatarSrc: string;
-  originalPicture: string | null;
   onPromptChange?: (prompt: string) => void;
   onModelChange?: (model: string) => void;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
-  onLogout: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
 
@@ -42,7 +38,6 @@ export interface SettingsTabProps {
     provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => Promise<boolean>;
-  onUpdateAvatarSrc?: (path: string) => void;
   forceTopic?: Topic;
 }
 
@@ -57,12 +52,7 @@ export type Topic =
 const SettingsTabComponent: React.FC<SettingsTabProps> = ({
   currentPrompt,
   currentModel,
-  userName,
-  userEmail,
-  avatarSrc,
-  originalPicture,
   updatePreferences,
-  onLogout,
   isDarkMode,
   onToggleTheme,
   autoExpandOCR,
@@ -73,7 +63,6 @@ const SettingsTabComponent: React.FC<SettingsTabProps> = ({
   geminiKey,
   imgbbKey,
   onSetAPIKey,
-  onUpdateAvatarSrc,
   forceTopic,
 }) => {
   const [activeTopic, setActiveTopic] = useState<Topic>("General");
@@ -169,12 +158,6 @@ const SettingsTabComponent: React.FC<SettingsTabProps> = ({
       <SettingsPanel
         activeTopic={activeTopic}
         setActiveTopic={setActiveTopic}
-        userName={userName}
-        userEmail={userEmail}
-        avatarSrc={avatarSrc}
-        originalPicture={originalPicture}
-        onLogout={onLogout}
-        onUpdateAvatarSrc={onUpdateAvatarSrc}
       />
 
       <div className={styles.contentArea} ref={scrollRef}>

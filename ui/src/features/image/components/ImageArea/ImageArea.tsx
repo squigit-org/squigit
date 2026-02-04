@@ -55,6 +55,7 @@ interface ImageAreaProps {
   ocrEnabled?: boolean;
   autoExpandOCR?: boolean;
   onOpenSettings: (topic?: Topic) => void;
+  activeProfileId: string | null;
 }
 
 export const ImageArea: React.FC<ImageAreaProps> = ({
@@ -72,6 +73,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   ocrEnabled = true,
   autoExpandOCR = true,
   onOpenSettings,
+  activeProfileId,
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -91,7 +93,12 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   const imageSrc = startupImage?.base64 || "";
 
   const { isLensLoading, triggerLens, showAuthDialog, setShowAuthDialog } =
-    useGoogleLens(startupImage, sessionLensUrl, setSessionLensUrl);
+    useGoogleLens(
+      startupImage,
+      sessionLensUrl,
+      setSessionLensUrl,
+      activeProfileId,
+    );
 
   const { svgRef, handleTextMouseDown } = useTextSelection({
     data: ocrData,

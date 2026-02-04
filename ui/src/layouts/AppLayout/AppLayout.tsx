@@ -33,7 +33,6 @@ import {
   Welcome,
   Agreement,
   UpdateNotes,
-  GeminiSetup,
   LoginScreen,
   useAuth,
   useChatTitle,
@@ -212,8 +211,7 @@ export const AppLayout: React.FC = () => {
     auth.authStage === "LOADING" ||
     isCheckingImage;
   const isImageMissing = !system.startupImage;
-  const isAuthPending =
-    auth.authStage === "GEMINI_SETUP" || auth.authStage === "LOGIN";
+  const isAuthPending = auth.authStage === "LOGIN";
   const isChatActive =
     !isLoadingState && !isAgreementPending && !isImageMissing && !isAuthPending;
 
@@ -566,10 +564,6 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  if (auth.authStage === "GEMINI_SETUP") {
-    return <GeminiSetup onComplete={auth.completeGeminiSetup} />;
-  }
-
   if (auth.authStage === "LOGIN") {
     return <LoginScreen onComplete={auth.login} />;
   }
@@ -606,9 +600,6 @@ export const AppLayout: React.FC = () => {
           editingModel={system.editingModel}
           setPrompt={system.setEditingPrompt}
           onEditingModelChange={system.setEditingModel}
-          userName={system.userName}
-          userEmail={system.userEmail}
-          avatarSrc={system.avatarSrc}
           onLogout={performLogout}
           isDarkMode={system.isDarkMode}
           onToggleTheme={system.handleToggleTheme}
@@ -617,6 +608,10 @@ export const AppLayout: React.FC = () => {
           hasImageLoaded={false}
           toggleChatPanel={toggleChatPanel}
           isChatPanelOpen={isChatPanelOpen}
+          activeProfile={system.activeProfile}
+          profiles={system.profiles}
+          onSwitchProfile={system.switchProfile}
+          onAddAccount={system.addAccount}
         />
         <div className={styles.mainContent}>
           <div
@@ -639,14 +634,9 @@ export const AppLayout: React.FC = () => {
               <SettingsTab
                 currentPrompt={system.editingPrompt}
                 currentModel={system.editingModel}
-                userName={system.userName}
-                userEmail={system.userEmail}
-                avatarSrc={system.avatarSrc}
-                originalPicture={system.originalPicture}
                 onPromptChange={system.setEditingPrompt}
                 onModelChange={system.setEditingModel}
                 updatePreferences={system.updatePreferences}
-                onLogout={performLogout}
                 isDarkMode={system.isDarkMode}
                 onToggleTheme={system.handleToggleTheme}
                 autoExpandOCR={system.autoExpandOCR}
@@ -762,12 +752,7 @@ export const AppLayout: React.FC = () => {
         // Settings props
         currentPrompt={system.editingPrompt}
         editingModel={system.editingModel}
-        userName={system.userName}
-        userEmail={system.userEmail}
-        avatarSrc={system.avatarSrc}
-        originalPicture={system.originalPicture}
         updatePreferences={system.updatePreferences}
-        onLogout={performLogout}
         isDarkMode={system.isDarkMode}
         onToggleTheme={system.handleToggleTheme}
         onPromptChange={system.setEditingPrompt}
@@ -780,8 +765,11 @@ export const AppLayout: React.FC = () => {
         ocrLanguage={system.ocrLanguage}
         downloadedOcrLanguages={system.downloadedOcrLanguages}
         onSetAPIKey={system.handleSetAPIKey}
-        onUpdateAvatarSrc={system.setAvatarSrc}
         // TitleBar props
+        activeProfile={system.activeProfile}
+        profiles={system.profiles}
+        onSwitchProfile={system.switchProfile}
+        onAddAccount={system.addAccount}
         isRotating={isRotating}
         isPanelActive={isPanelActive}
         toggleSettingsPanel={handleToggleSettings}
@@ -808,6 +796,10 @@ export const AppLayout: React.FC = () => {
         onRenameChat={chatHistory.handleRenameChat}
         onTogglePinChat={chatHistory.handleTogglePinChat}
         onToggleStarChat={handleToggleStarChatWrapper}
+        onLogout={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        activeProfileId={null}
       />
 
       {contextMenu && (

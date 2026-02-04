@@ -4,7 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useLayoutEffect, useState, ReactNode } from "react";
+import React, {
+  useRef,
+  useLayoutEffect,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
 import { createPortal } from "react-dom";
 import styles from "./ContextMenu.module.css";
 
@@ -66,39 +72,45 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     setIsPositioned(true);
   }, [x, y]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // If menu is mounted and click is outside
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    // Use mousedown to capture the event before click handlers might fire/bubble
+    // and potentially trigger other UI changes.
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
+
   return createPortal(
-    <>
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 9999,
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onClose();
-        }}
-      />
-      <div
-        ref={menuRef}
-        className={styles.contextMenu}
-        style={{
-          position: "fixed",
-          left: `${position.x}px`,
-          top: `${position.y}px`,
-          opacity: isPositioned ? 1 : 0,
-          zIndex: 10000,
-          ...(width ? { width } : {}),
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </>,
+    <div
+      ref={menuRef}
+      className={styles.contextMenu}
+      style={{
+        position: "fixed",
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        opacity: isPositioned ? 1 : 0,
+        zIndex: 10000,
+        ...(width ? { width } : {}),
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        // Optionally close on right click outside?
+        // Standard behavior is often to let the new context menu handle it,
+        // but for this specific component, let's keep it simple.
+      }}
+    >
+      {children}
+    </div>,
     document.body,
   );
 };

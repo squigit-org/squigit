@@ -17,6 +17,7 @@ export const useGoogleLens = (
   } | null,
   cachedUrl: string | null,
   setCachedUrl: (url: string) => void,
+  activeProfileId: string | null,
 ) => {
   const [isLensLoading, setIsLensLoading] = useState(false);
   const [waitingForKey, setWaitingForKey] = useState(false);
@@ -115,7 +116,10 @@ export const useGoogleLens = (
 
     try {
       setIsLensLoading(true);
-      const apiKey = await invoke<string>("get_api_key", { provider: "imgbb" });
+      const apiKey = await invoke<string>("get_api_key", {
+        provider: "imgbb",
+        profileId: activeProfileId,
+      });
 
       if (apiKey) {
         const realBase64 = await getRealBase64(startupImage);

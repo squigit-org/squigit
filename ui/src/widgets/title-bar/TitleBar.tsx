@@ -5,9 +5,19 @@
  */
 
 import React, { ForwardedRef, useState } from "react";
-import { RotateCw, Settings } from "lucide-react";
-import { ModelSwitcher, TrafficLights, WindowsControls } from ".";
+import { RotateCw, Settings as SettingsIcon } from "lucide-react";
+import {
+  ModelSwitcher,
+  SettingsPanel,
+  TrafficLights,
+  WindowsControls,
+  AccountSwitcher,
+  Settings,
+  SettingsSection,
+} from ".";
 import styles from "./TitleBar.module.css";
+import { Profile } from "@/lib/api/tauri/commands";
+import { MModelSwitcher } from "./parts/MModelSwitcher";
 
 type Platform = "macos" | "linux" | "windows";
 
@@ -18,7 +28,6 @@ interface TitleBarProps {
   currentModel: string;
   onModelChange: (model: string) => void;
   isLoading: boolean;
-
   isPanelActive: boolean;
   toggleSettingsPanel: () => void;
   isPanelVisible: boolean;
@@ -27,22 +36,15 @@ interface TitleBarProps {
   settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
   panelRef: React.RefObject<HTMLDivElement | null>;
   settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
-  prompt: string;
-  editingModel: string;
-  setPrompt: (prompt: string) => void;
-  onEditingModelChange: (model: string) => void;
-  userName: string;
-  userEmail: string;
-  avatarSrc: string;
-  onSave?: (prompt: string, model: string) => void;
   onLogout: () => void;
   isDarkMode: boolean;
-  onToggleTheme: () => void;
-  toggleSubview: (isActive: boolean) => void;
-  onNewSession: () => void;
   hasImageLoaded: boolean;
   toggleChatPanel: () => void;
   isChatPanelOpen: boolean;
+  activeProfile: Profile | null;
+  profiles: Profile[];
+  onSwitchProfile: (profileId: string) => void;
+  onAddAccount: () => void;
 }
 
 const detectPlatform = (): Platform => {
@@ -66,10 +68,23 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   hasImageLoaded,
   toggleChatPanel,
   isChatPanelOpen,
+  activeProfile,
+  profiles,
+  onSwitchProfile,
+  onAddAccount,
+  onLogout,
 }) => {
   const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] =
+    useState<SettingsSection>("general");
 
   const isUnix = platform === "macos" || platform === "linux";
+
+  const handleOpenSettings = (section: SettingsSection) => {
+    setSettingsSection(section);
+    setIsSettingsOpen(true);
+  };
 
   return (
     <header className={styles.header} data-tauri-drag-region>
@@ -109,6 +124,22 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       <div className={styles.rightSection}>
+        <MModelSwitcher
+          currentModel={currentModel}
+          onModelChange={onModelChange}
+          isLoading={isLoading}
+          isHidden={isPanelActive}
+          onOpenSettings={handleOpenSettings}
+        />
+
+        <AccountSwitcher
+          activeProfile={activeProfile}
+          profiles={profiles}
+          onSwitchProfile={onSwitchProfile}
+          onAddAccount={onAddAccount}
+          onLogout={onLogout}
+        />
+
         {hasImageLoaded && !isPanelActive && (
           <button
             onClick={onReload}
@@ -120,15 +151,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           </button>
         )}
 
-        <ModelSwitcher
-          currentModel={currentModel}
-          onModelChange={onModelChange}
-          isLoading={isLoading}
-          isHidden={isPanelActive}
+        <SettingsPanel onOpenSettings={handleOpenSettings} />
+
+        <Settings
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          activeSection={settingsSection}
+          onSectionChange={setSettingsSection}
         />
 
-        <div className={styles.controlsWrapper}>
-          <button
+        {/* <button
             ref={settingsButtonRef}
             onClick={toggleSettingsPanel}
             className={`${styles.iconButton} ${
@@ -137,8 +169,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             title="Settings"
           >
             <Settings size={20} />
-          </button>
-        </div>
+          </button> */}
+        {/* </div> */}
 
         {platform === "windows" && <WindowsControls />}
       </div>
