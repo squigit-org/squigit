@@ -141,9 +141,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className={styles.chatTitle} title={chat.title}>
-            {chat.title}
-          </span>
+          <span className={styles.chatTitle}>{chat.title}</span>
         )}
 
         {/* Actions Group (Hover or Persistent) */}
