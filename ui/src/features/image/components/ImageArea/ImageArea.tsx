@@ -24,7 +24,6 @@ import {
 import { ActionMenu, ActionMenuHandle } from "@/widgets/menu";
 import styles from "./ImageArea.module.css";
 import { Dialog } from "@/widgets";
-import { Topic } from "@/features/settings/components/SettingsTab/SettingsTab";
 
 interface OCRBox {
   text: string;
@@ -54,7 +53,6 @@ interface ImageAreaProps {
   onToggleExpand?: () => void;
   ocrEnabled?: boolean;
   autoExpandOCR?: boolean;
-  onOpenSettings: (topic?: Topic) => void;
   activeProfileId: string | null;
 }
 
@@ -72,7 +70,6 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
   onToggleExpand,
   ocrEnabled = true,
   autoExpandOCR = true,
-  onOpenSettings,
   activeProfileId,
 }) => {
   const [loading, setLoading] = useState(false);
@@ -523,7 +520,7 @@ export const ImageArea: React.FC<ImageAreaProps> = ({
             label: "Setup API Key",
             onClick: () => {
               setShowAuthDialog(false);
-              onOpenSettings("Providers & Keys");
+              // onOpenSettings("Providers & Keys");
             },
             variant: "primary",
           },

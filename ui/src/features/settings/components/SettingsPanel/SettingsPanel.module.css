@@ -6,107 +6,118 @@
 
 @import "@/styles/variables.css";
 
-.sidebar {
-  --bg-sidebar: var(--neutral-950);
-  --bg-hover: #1e1e1e;
-  --bg-active: #262626;
-  --bg-dropdown: rgba(30, 30, 30, 0.95);
-
-  --text-primary: #ededed;
-  --text-secondary: #a1a1aa;
-  --text-muted: #52525b;
-
-  --border-subtle: #27272a;
-  --border-focus: #3f3f46;
-
-  --accent-color: #3b82f6; /* Adjust to match your brand */
-  --danger-color: #ef4444;
-
-  background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  flex-shrink: 0;
-  user-select: none;
-  font-family: "Inter", sans-serif;
+.settingsPanel {
+  position: relative;
+  pointer-events: auto;
 }
 
-.navigation {
-  flex: 1;
-  padding: 0.5rem 1rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  overflow-y: auto;
-}
-
-.navGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.navItem {
+.trigger {
+  padding: 0.375rem;
+  border-radius: 0.375rem;
+  color: var(--neutral-400);
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+}
+
+.trigger:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.trigger.active {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.triggerIcon {
+  transform: translateZ(0);
+  transition: transform 0.15s linear;
+  transform-origin: center;
+  will-change: transform;
+  shape-rendering: geometricPrecision;
+  display: "block";
+}
+
+.triggerIcon.active {
+  transform: translateZ(0) rotate(27.5deg);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  max-width: 280px;
+  background-color: rgba(24, 24, 27, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(63, 63, 70, 0.5);
+  border-radius: 12px;
+  padding: 8px;
+  z-index: 1000;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.4),
+    0 8px 10px -6px rgba(0, 0, 0, 0.3);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.15s ease,
+    visibility 0.15s ease,
+    transform 0.15s ease;
+}
+
+.dropdown.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.sectionTitle {
+  padding: 8px 10px 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #71717a);
+}
+
+.divider {
+  height: 1px;
+  background-color: rgba(63, 63, 70, 0.5);
+  margin: 6px 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
   width: 100%;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-size: 0.85rem;
+  color: #cdcdd8;
   transition: all 0.15s ease;
+  font-family: "Inter", sans-serif;
 }
 
-.navItem:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.navActive,
-.navActive:hover {
-  background-color: var(--bg-active);
-  color: var(--text-primary);
-  border-radius: 6px;
-}
-
-.navIcon {
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-
-.navItem:hover .navIcon,
-.navActive .navIcon {
-  opacity: 1;
-}
-
-.navFooter {
-  margin-top: auto;
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 1rem;
-}
-
-.externalIcon {
-  margin-left: auto;
-  opacity: 0.5;
-}
-
-.tooltipText {
-  position: fixed;
-  background-color: #18181b;
-  color: #e4e4e7;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  pointer-events: none;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  font-weight: 500;
-  z-index: 9999;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.actionButton:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #ededed;
 }

@@ -10,9 +10,3 @@ export interface AppConfig {
     api_endpoint: string;
   };
 }
-
-export interface UserPreferences {
-  model: string;
-  theme: "dark" | "light";
-  prompt: string;
-}

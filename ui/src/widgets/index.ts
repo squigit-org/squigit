@@ -11,4 +11,5 @@ export * from "./wheel-picker";
 export * from "./code-block";
 export * from "./glow-card";
 export * from "./tooltip";
+export * from "./dropdown";
 export * from "./text-shimmer";

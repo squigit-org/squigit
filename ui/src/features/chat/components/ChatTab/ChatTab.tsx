@@ -9,7 +9,6 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Message, ChatInput, ChatArea } from "@/features/chat";
 import { InlineMenu, useInlineMenu } from "@/widgets";
 import { ImageArea } from "@/features/image";
-import { Topic } from "@/features/settings/components/SettingsTab/SettingsTab";
 
 import "katex/dist/katex.min.css";
 
@@ -46,7 +45,6 @@ export interface ChatTabProps {
   onModelChange: (model: string) => void;
   onRetry: () => void;
   onInputChange: (value: string) => void;
-  onCheckSettings: (topic?: Topic) => void;
   onReload?: () => void;
 
   imageInputValue: string;
@@ -71,7 +69,6 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
   onSend,
   onRetry,
   onInputChange,
-  onCheckSettings,
   sessionLensUrl,
   setSessionLensUrl,
   onDescribeEdits,
@@ -239,7 +236,6 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
           onToggleExpand={() => setIsImageExpanded(!isImageExpanded)}
           ocrEnabled={ocrEnabled}
           autoExpandOCR={autoExpandOCR}
-          onOpenSettings={onCheckSettings}
           activeProfileId={activeProfileId}
         />
       </div>
@@ -251,7 +247,6 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
         isLoading={isLoading}
         streamingText={streamingText}
         error={error}
-        onCheckSettings={onCheckSettings}
         onRetry={onRetry}
         prompt={""}
         showUpdate={showUpdate}
@@ -281,8 +276,4 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
   );
 };
 
-/**
- * Memoized ChatTab - prevents unnecessary re-renders when settings panel toggles.
- * This isolates the heavy chat rendering from settings display changes.
- */
 export const ChatTab = React.memo(ChatTabComponent);

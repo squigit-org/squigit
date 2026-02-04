@@ -4,6 +4,5 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./components/Login/OAuthLogin";
-export * from "./hooks/useAuth";
-export * from "./styles";
+export * from "./components";
+export * from "./hooks";

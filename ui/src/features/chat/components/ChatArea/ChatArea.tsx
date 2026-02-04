@@ -20,7 +20,6 @@ interface ChatAreaProps {
   isLoading: boolean;
   streamingText: string;
   error: string | null;
-  onCheckSettings: () => void;
   onRetry: () => void;
   prompt: string;
   showUpdate: boolean;
@@ -37,7 +36,6 @@ const ChatAreaComponent = forwardRef<HTMLDivElement, ChatAreaProps>(
       isLoading,
       streamingText,
       error,
-      onCheckSettings,
       onRetry,
       messages,
       onStreamComplete,
@@ -102,7 +100,6 @@ const ChatAreaComponent = forwardRef<HTMLDivElement, ChatAreaProps>(
                   actions.push({
                     label: "Change API Key",
                     onClick: () => {
-                      onCheckSettings();
                       setIsErrorDismissed(true);
                     },
                     variant: "secondary",
@@ -161,9 +158,4 @@ const ChatAreaComponent = forwardRef<HTMLDivElement, ChatAreaProps>(
 );
 
 ChatAreaComponent.displayName = "ChatArea";
-
-/**
- * Memoized ChatArea - prevents unnecessary re-renders of the message list.
- * This is critical for performance as it contains all ChatBubble components.
- */
 export const ChatArea = React.memo(ChatAreaComponent);

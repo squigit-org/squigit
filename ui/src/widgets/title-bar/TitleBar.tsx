@@ -5,19 +5,18 @@
  */
 
 import React, { ForwardedRef, useState } from "react";
-import { RotateCw, Settings as SettingsIcon } from "lucide-react";
-import {
-  ModelSwitcher,
-  SettingsPanel,
-  TrafficLights,
-  WindowsControls,
-  AccountSwitcher,
-  Settings,
-  SettingsSection,
-} from ".";
+import { RotateCw } from "lucide-react";
+import { TrafficLights, WindowsControls } from ".";
 import styles from "./TitleBar.module.css";
 import { Profile } from "@/lib/api/tauri/commands";
-import { MModelSwitcher } from "./parts/MModelSwitcher";
+import {
+  AccountSwitcher,
+  ModelSwitcher,
+  SettingsPanel,
+  SettingsSection,
+  SettingsShell,
+} from "@/features";
+import { UserPreferences } from "@/lib/config/preferences";
 
 type Platform = "macos" | "linux" | "windows";
 
@@ -28,14 +27,6 @@ interface TitleBarProps {
   currentModel: string;
   onModelChange: (model: string) => void;
   isLoading: boolean;
-  isPanelActive: boolean;
-  toggleSettingsPanel: () => void;
-  isPanelVisible: boolean;
-  isPanelActiveAndVisible: boolean;
-  isPanelClosing: boolean;
-  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
-  panelRef: React.RefObject<HTMLDivElement | null>;
-  settingsPanelRef: ForwardedRef<{ handleClose: () => Promise<boolean> }>;
   onLogout: () => void;
   isDarkMode: boolean;
   hasImageLoaded: boolean;
@@ -62,9 +53,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   currentModel,
   onModelChange,
   isLoading,
-  isPanelActive,
-  toggleSettingsPanel,
-  settingsButtonRef,
   hasImageLoaded,
   toggleChatPanel,
   isChatPanelOpen,
@@ -124,11 +112,10 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       <div className={styles.rightSection}>
-        <MModelSwitcher
+        <ModelSwitcher
           currentModel={currentModel}
           onModelChange={onModelChange}
           isLoading={isLoading}
-          isHidden={isPanelActive}
           onOpenSettings={handleOpenSettings}
         />
 
@@ -140,7 +127,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onLogout={onLogout}
         />
 
-        {hasImageLoaded && !isPanelActive && (
+        {hasImageLoaded && (
           <button
             onClick={onReload}
             className={styles.iconButton}
@@ -153,24 +140,35 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
         <SettingsPanel onOpenSettings={handleOpenSettings} />
 
-        <Settings
+        <SettingsShell
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           activeSection={settingsSection}
           onSectionChange={setSettingsSection}
+          currentPrompt={""}
+          currentModel={""}
+          updatePreferences={function (
+            updates: Partial<UserPreferences>,
+          ): void {
+            throw new Error("Function not implemented.");
+          }}
+          isDarkMode={false}
+          onToggleTheme={function (): void {
+            throw new Error("Function not implemented.");
+          }}
+          autoExpandOCR={false}
+          ocrEnabled={false}
+          ocrLanguage={""}
+          captureType={"rectangular"}
+          geminiKey={""}
+          imgbbKey={""}
+          onSetAPIKey={function (
+            provider: "google ai studio" | "imgbb",
+            key: string,
+          ): Promise<boolean> {
+            throw new Error("Function not implemented.");
+          }}
         />
-
-        {/* <button
-            ref={settingsButtonRef}
-            onClick={toggleSettingsPanel}
-            className={`${styles.iconButton} ${
-              isPanelActive ? styles.active : ""
-            }`}
-            title="Settings"
-          >
-            <Settings size={20} />
-          </button> */}
-        {/* </div> */}
 
         {platform === "windows" && <WindowsControls />}
       </div>

@@ -22,14 +22,8 @@ import {
   DEFAULT_THEME,
 } from "@/lib/utils/constants";
 
-export const useSystemSync = (onToggleSettings: () => void) => {
+export const useSystemSync = () => {
   const { theme, toggleTheme, setTheme } = useTheme();
-
-  const onToggleSettingsRef = useRef(onToggleSettings);
-
-  useEffect(() => {
-    onToggleSettingsRef.current = onToggleSettings;
-  }, [onToggleSettings]);
 
   useEffect(() => {
     const updateNativeBg = async () => {
@@ -198,7 +192,7 @@ export const useSystemSync = (onToggleSettings: () => void) => {
     return () => {
       unlisteners.forEach((fn) => fn());
     };
-  }, [onToggleSettings]);
+  });
 
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     // Update local state immediately

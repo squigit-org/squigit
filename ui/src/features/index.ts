@@ -8,4 +8,5 @@ export * from "./chat";
 export * from "./image";
 export * from "./onboarding";
 export * from "./settings";
+export * from "./models";
 export * from "./auth";

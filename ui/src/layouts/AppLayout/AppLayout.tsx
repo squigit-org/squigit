@@ -10,36 +10,29 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "@/lib/api/tauri/commands";
-import {
-  ContextMenu,
-  ContextMenuItem,
-  ShellContextMenu,
-  TitleBar,
-} from "@/widgets";
+import { ShellContextMenu, TitleBar } from "@/widgets";
 
 import {
-  useUpdateCheck,
-  getPendingUpdate,
   useSystemSync,
   useWindowManager,
+  useUpdateCheck,
+  getPendingUpdate,
 } from "@/hooks";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
 
-import { TabLayout } from "..";
+import { ChatLayout } from "..";
 
 import {
   Welcome,
   Agreement,
   UpdateNotes,
-  LoginScreen,
+  OAuthLogin,
   useAuth,
   useChatTitle,
   useChat,
   ChatPanel,
-  SettingsTab,
-  Topic,
   useChatHistory,
 } from "@/features";
 
@@ -55,62 +48,16 @@ import {
 } from "@/lib/storage/chatStorage";
 
 export const AppLayout: React.FC = () => {
-  const [isPanelActive, setIsPanelActive] = useState(false);
-  const [settingsTopic, setSettingsTopic] = useState<Topic | undefined>(
-    undefined,
-  );
-
-  const handleToggleSettings = useCallback(
-    (topic?: Topic | React.MouseEvent) => {
-      // If called from onClick, topic might be a MouseEvent object.
-      // If called programmatically with a string, it's a Topic.
-      const isTopicString = typeof topic === "string";
-
-      setIsPanelActive((prev) => {
-        // If we are passing a specific topic, force open to that topic
-        if (isTopicString && topic) {
-          setSettingsTopic(topic as Topic);
-          return true;
-        }
-
-        // If simply toggling via gear icon (no topic string), assume toggle behavior.
-        // We might want to clear the forced topic so next time it opens cleanly?
-        // Or keep it? Let's clear it if closing.
-        if (prev) {
-          // Closing
-          setSettingsTopic(undefined);
-          return false;
-        } else {
-          // Opening without specific topic -> General or last state
-          setSettingsTopic(undefined);
-          return true;
-        }
-      });
-    },
-    [],
-  );
-
-  const settingsPanelRef = useRef<{ handleClose: () => Promise<boolean> }>(
-    null,
-  );
-  const settingsButtonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [isSubviewActive, setIsSubviewActive] = useState(false);
-  const [isPanelVisible, setIsPanelVisible] = useState(false);
-  const [isPanelClosing, setIsPanelClosing] = useState(false);
-  const [isPanelActiveAndVisible, setIsPanelActiveAndVisible] = useState(false);
-
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
   const [enablePanelAnimation, setEnablePanelAnimation] = useState(false);
   const toggleChatPanel = () => setIsChatPanelOpen((prev) => !prev);
 
-  const system = useSystemSync(handleToggleSettings);
+  const system = useSystemSync();
   const auth = useAuth();
   const chatHistory = useChatHistory();
   const performLogout = async () => {
     await system.handleLogout();
     auth.logout();
-    setIsPanelActive(false);
   };
   useUpdateCheck();
 
@@ -140,7 +87,6 @@ export const AppLayout: React.FC = () => {
     [],
   );
 
-  // Persist OCR data when available and chat is active
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
     if (activeId && ocrData.length > 0) {
@@ -215,14 +161,11 @@ export const AppLayout: React.FC = () => {
   const isChatActive =
     !isLoadingState && !isAgreementPending && !isImageMissing && !isAuthPending;
 
-  // Auto-open side panel if no image
   useEffect(() => {
     if (!isLoadingState && !system.startupImage) {
       setIsChatPanelOpen(true);
-      // Enable animation on next tick/shortly after to allow initial render without it
       setTimeout(() => setEnablePanelAnimation(true), 100);
     } else if (!isLoadingState) {
-      // If we didn't auto-open (e.g. image present), enable animation immediately
       setEnablePanelAnimation(true);
     }
   }, [isLoadingState, system.startupImage]);
@@ -245,11 +188,9 @@ export const AppLayout: React.FC = () => {
     setSessionChatTitle: system.setSessionChatTitle,
   });
 
-  // Persist chat title when it changes
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
     if (activeId && chatTitle && chatTitle !== "New Chat") {
-      // Find current chat to get metadata
       const currentChat = chatHistory.chats.find((c: any) => c.id === activeId);
       if (currentChat && currentChat.title !== chatTitle) {
         updateChatMetadata({
@@ -263,17 +204,13 @@ export const AppLayout: React.FC = () => {
     }
   }, [chatTitle, chatHistory.activeSessionId]);
 
-  // Handle selecting a chat from history
   const handleSelectChat = async (id: string) => {
     try {
-      setOcrData([]); // Clear previous OCR data immediately
+      setOcrData([]);
       const chatData = await loadChat(id);
-
-      // 1. Get image path from hash
       const imagePath = await getImagePath(chatData.metadata.image_hash);
       const imageUrl = convertFileSrc(imagePath);
 
-      // 2. Set startup image
       system.setStartupImage({
         base64: imageUrl,
         mimeType: "image/png",
@@ -282,11 +219,8 @@ export const AppLayout: React.FC = () => {
         fromHistory: true,
       } as any);
 
-      // 3. Set chat title
       system.setSessionChatTitle(chatData.metadata.title);
 
-      // 4. Restore chat engine state
-      // Map ChatMessage to Message type
       const messages = chatData.messages.map((m, idx) => ({
         id: idx.toString(), // or generate UUID
         role: m.role as "user" | "model",
@@ -307,7 +241,6 @@ export const AppLayout: React.FC = () => {
         },
       );
 
-      // 5. Restore OCR data if present
       if (chatData.ocr_data && chatData.ocr_data.length > 0) {
         setOcrData(
           chatData.ocr_data.map((o) => ({
@@ -317,7 +250,6 @@ export const AppLayout: React.FC = () => {
         );
       }
 
-      // 6. Restore ImgBB URL if present
       setSessionLensUrl(chatData.imgbb_url || null);
 
       chatHistory.setActiveSessionId(id);
@@ -327,16 +259,12 @@ export const AppLayout: React.FC = () => {
   };
 
   const handleNewSession = () => {
-    if (isPanelActive) {
-      handleToggleSettings();
-    }
     system.resetSession();
     chatHistory.setActiveSessionId(null);
-    setOcrData([]); // Clear OCR data
-    setSessionLensUrl(null); // Clear ImgBB URL
+    setOcrData([]);
+    setSessionLensUrl(null);
   };
 
-  // Drafts state
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
   const [imageDrafts, setImageDrafts] = useState<Record<string, string>>({});
 
@@ -367,68 +295,6 @@ export const AppLayout: React.FC = () => {
     isImageMissing,
   );
 
-  useEffect(() => {
-    if (isPanelActive) {
-      setIsPanelVisible(true);
-      const timer = setTimeout(() => {
-        setIsPanelActiveAndVisible(true);
-      }, 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsPanelActiveAndVisible(false);
-      setIsPanelClosing(true);
-      const timer = setTimeout(() => {
-        setIsPanelVisible(false);
-        setIsPanelClosing(false);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isPanelActive]);
-
-  const closeSettingsPanel = async () => {
-    if (isPanelActive) {
-      if (settingsPanelRef.current) {
-        const canClose = await settingsPanelRef.current.handleClose();
-        if (canClose) handleToggleSettings();
-      } else {
-        handleToggleSettings();
-      }
-    }
-  };
-
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isPanelActive) closeSettingsPanel();
-    };
-
-    const handleOutsideClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-
-      const isMsgBoxClick =
-        target.closest(".error-overlay") || target.closest(".error-container");
-      const isContextMenuClick = target.closest("#app-context-menu");
-
-      if (
-        isPanelActive &&
-        panelRef.current &&
-        !panelRef.current.contains(target as Node) &&
-        settingsButtonRef.current &&
-        !settingsButtonRef.current.contains(target as Node) &&
-        !isMsgBoxClick &&
-        !isContextMenuClick
-      ) {
-        closeSettingsPanel();
-      }
-    };
-
-    document.addEventListener("keydown", handleEsc);
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("keydown", handleEsc);
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [isPanelActive, isSubviewActive]);
-
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -454,29 +320,25 @@ export const AppLayout: React.FC = () => {
     };
   }, []);
 
-  // Handle CAS image data from Welcome component
   const handleImageReady = async (imageData: {
     imageId: string;
     path: string;
   }) => {
-    // Store using file path and convertFileSrc for rendering
     console.log("Raw image path:", imageData.path);
     const assetUrl = convertFileSrc(imageData.path);
     console.log("Converted asset URL:", assetUrl);
 
-    // Clear previous session state FIRST to prevent flicker of old chat
     chatHistory.setActiveSessionId(null);
     setOcrData([]);
     setSessionLensUrl(null);
 
     system.setStartupImage({
       base64: assetUrl,
-      mimeType: "image/png", // CAS stores as PNG
+      mimeType: "image/png",
       isFilePath: true,
-      imageId: imageData.imageId, // Store the hash for chat association
+      imageId: imageData.imageId,
     });
 
-    // Create a new chat in storage
     try {
       const newChat = await createChat("New Chat", imageData.imageId);
       chatHistory.setActiveSessionId(newChat.id);
@@ -565,46 +427,27 @@ export const AppLayout: React.FC = () => {
   }
 
   if (auth.authStage === "LOGIN") {
-    return <LoginScreen onComplete={auth.login} />;
+    return <OAuthLogin onComplete={auth.login} />;
   }
 
   if (!system.startupImage) {
-    // Handle chat selection - toggle settings off and open chat
-    const handleSelectChatWithSettings = async (id: string) => {
-      await handleSelectChat(id);
-      if (isPanelActive) {
-        handleToggleSettings();
-      }
-    };
-
-    const displayTitle = isPanelActive ? "Settings" : "SnapLLM";
-
     return (
       <div className={styles.appContainer} onContextMenu={handleContextMenu}>
         <TitleBar
-          chatTitle={displayTitle}
+          chatTitle={"SnapLLM"}
           onReload={() => {}}
           isRotating={false}
           currentModel={system.sessionModel}
           onModelChange={system.setSessionModel}
           isLoading={false}
-          isPanelActive={isPanelActive}
-          toggleSettingsPanel={handleToggleSettings}
-          isPanelVisible={isPanelVisible}
-          isPanelActiveAndVisible={isPanelActiveAndVisible}
-          isPanelClosing={isPanelClosing}
-          settingsButtonRef={settingsButtonRef}
-          panelRef={panelRef}
-          settingsPanelRef={settingsPanelRef}
-          prompt={system.editingPrompt}
-          editingModel={system.editingModel}
-          setPrompt={system.setEditingPrompt}
-          onEditingModelChange={system.setEditingModel}
           onLogout={performLogout}
           isDarkMode={system.isDarkMode}
-          onToggleTheme={system.handleToggleTheme}
-          toggleSubview={setIsSubviewActive}
-          onNewSession={handleNewSession}
+          // prompt={system.editingPrompt}
+          // editingModel={system.editingModel}
+          // setPrompt={system.setEditingPrompt}
+          // onEditingModelChange={system.setEditingModel}
+          // onToggleTheme={system.handleToggleTheme}
+          // onNewSession={handleNewSession}
           hasImageLoaded={false}
           toggleChatPanel={toggleChatPanel}
           isChatPanelOpen={isChatPanelOpen}
@@ -620,7 +463,7 @@ export const AppLayout: React.FC = () => {
             <ChatPanel
               chats={chatHistory.chats}
               activeSessionId={chatHistory.activeSessionId}
-              onSelectChat={handleSelectChatWithSettings}
+              onSelectChat={handleSelectChat}
               onNewChat={handleNewSession}
               onDeleteChat={chatHistory.handleDeleteChat}
               onDeleteChats={chatHistory.handleDeleteChats}
@@ -630,28 +473,7 @@ export const AppLayout: React.FC = () => {
             />
           </div>
           <div className={styles.contentArea}>
-            {isPanelActive ? (
-              <SettingsTab
-                currentPrompt={system.editingPrompt}
-                currentModel={system.editingModel}
-                onPromptChange={system.setEditingPrompt}
-                onModelChange={system.setEditingModel}
-                updatePreferences={system.updatePreferences}
-                isDarkMode={system.isDarkMode}
-                onToggleTheme={system.handleToggleTheme}
-                autoExpandOCR={system.autoExpandOCR}
-                ocrEnabled={system.ocrEnabled}
-                captureType={system.captureType}
-                geminiKey={system.apiKey}
-                imgbbKey={system.imgbbKey}
-                ocrLanguage={system.ocrLanguage}
-                downloadedOcrLanguages={system.downloadedOcrLanguages}
-                onSetAPIKey={system.handleSetAPIKey}
-                forceTopic={settingsTopic}
-              />
-            ) : (
-              <Welcome onImageReady={handleImageReady} />
-            )}
+            <Welcome onImageReady={handleImageReady} />
           </div>
         </div>
         {contextMenu && (
@@ -668,9 +490,7 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  // Wrappers for deletion to handle active session reset
   const handleDeleteChatWrapper = async (id: string) => {
-    // Check if we are deleting the active chat
     const isActive = chatHistory.activeSessionId === id;
     await chatHistory.handleDeleteChat(id);
     if (isActive) {
@@ -697,7 +517,7 @@ export const AppLayout: React.FC = () => {
       onContextMenu={handleContextMenu}
       className={styles.appContainer}
     >
-      <TabLayout
+      <ChatLayout
         messages={chat.messages}
         streamingText={chat.streamingText}
         isChatMode={chat.isChatMode}
@@ -723,15 +543,10 @@ export const AppLayout: React.FC = () => {
             chat.handleRetrySend();
           }
         }}
-        onCheckSettings={() => {
-          handleToggleSettings();
-          chat.clearError();
-        }}
         onReload={() => {
           setIsRotating(true);
           const activeId = chatHistory.activeSessionId;
           if (activeId) {
-            // Clear messages in storage before reloading
             overwriteChatMessages(activeId, []).then(() => {
               chat.handleReload();
             });
@@ -749,39 +564,12 @@ export const AppLayout: React.FC = () => {
         imageInputValue={imageInput}
         onImageInputChange={setImageInput}
         onStreamComplete={chat.handleStreamComplete}
-        // Settings props
-        currentPrompt={system.editingPrompt}
-        editingModel={system.editingModel}
-        updatePreferences={system.updatePreferences}
-        isDarkMode={system.isDarkMode}
-        onToggleTheme={system.handleToggleTheme}
-        onPromptChange={system.setEditingPrompt}
-        forceTopic={settingsTopic}
-        autoExpandOCR={system.autoExpandOCR}
-        ocrEnabled={system.ocrEnabled}
-        captureType={system.captureType}
-        geminiKey={system.apiKey}
-        imgbbKey={system.imgbbKey}
-        ocrLanguage={system.ocrLanguage}
-        downloadedOcrLanguages={system.downloadedOcrLanguages}
-        onSetAPIKey={system.handleSetAPIKey}
         // TitleBar props
         activeProfile={system.activeProfile}
         profiles={system.profiles}
         onSwitchProfile={system.switchProfile}
         onAddAccount={system.addAccount}
         isRotating={isRotating}
-        isPanelActive={isPanelActive}
-        toggleSettingsPanel={handleToggleSettings}
-        isPanelVisible={isPanelVisible}
-        isPanelActiveAndVisible={isPanelActiveAndVisible}
-        isPanelClosing={isPanelClosing}
-        settingsButtonRef={settingsButtonRef}
-        panelRef={panelRef}
-        settingsPanelRef={settingsPanelRef}
-        setPrompt={system.setEditingPrompt}
-        onEditingModelChange={system.setEditingModel}
-        toggleSubview={setIsSubviewActive}
         onNewSession={handleNewSession}
         hasImageLoaded={!!system.startupImage}
         toggleChatPanel={toggleChatPanel}
@@ -796,9 +584,6 @@ export const AppLayout: React.FC = () => {
         onRenameChat={chatHistory.handleRenameChat}
         onTogglePinChat={chatHistory.handleTogglePinChat}
         onToggleStarChat={handleToggleStarChatWrapper}
-        onLogout={function (): void {
-          throw new Error("Function not implemented.");
-        }}
         activeProfileId={null}
       />
 
