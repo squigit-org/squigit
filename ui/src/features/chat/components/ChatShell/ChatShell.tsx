@@ -5,15 +5,20 @@
  */
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
-
-import { Message, ChatInput, ChatArea } from "@/features/chat";
-import { InlineMenu, useInlineMenu } from "@/widgets";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  Message,
+  ChatInput,
+  ChatBubble,
+  StreamingResponse,
+} from "@/features/chat";
+import { InlineMenu, useInlineMenu, Dialog, TextShimmer } from "@/widgets";
 import { ImageArea } from "@/features/image";
-
+import { parseGeminiError } from "@/lib/utils/errorParser";
+import styles from "./ChatShell.module.css";
 import "katex/dist/katex.min.css";
 
-// Re-export ChatChildProps as ChatTabProps
-export interface ChatTabProps {
+export interface ChatShellProps {
   messages: Message[];
   streamingText: string;
   isChatMode: boolean;
@@ -56,9 +61,7 @@ export interface ChatTabProps {
   activeProfileId: string | null;
 }
 
-import styles from "./ChatTab.module.css";
-
-const ChatTabComponent: React.FC<ChatTabProps> = ({
+const ChatShellComponent: React.FC<ChatShellProps> = ({
   messages,
   streamingText,
   isChatMode,
@@ -83,10 +86,15 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
   onStreamComplete,
   activeProfileId,
 }) => {
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showUpdate, setShowUpdate] = useState(false);
   const prevChatIdRef = useRef<string | null>(null);
   const prevMessageCountRef = useRef(messages.length);
+  const [isErrorDismissed, setIsErrorDismissed] = useState(false);
+
+  useEffect(() => {
+    setIsErrorDismissed(false);
+  }, [error]);
 
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
@@ -97,16 +105,12 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
 
     if (chatChanged) {
       el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
-      // Fix for rare cases where layout isn't fully settled (e.g. complex markdown/images)
       setTimeout(() => {
         el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
       }, 50);
       prevChatIdRef.current = chatId;
     } else if (messageCountChanged) {
-      // When going from 0 to messages, check if this is a history load or stream completion
       if (prevMessageCountRef.current === 0 && messages.length > 0) {
-        // If loading multiple messages or first message is from user, it's history load - scroll
-        // If only 1 model message, it's stream completion transition - don't scroll
         const isStreamCompletion =
           messages.length === 1 && messages[0]?.role === "model";
         if (!isStreamCompletion) {
@@ -216,6 +220,70 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
     };
   }, [isImageExpanded]);
 
+  const renderError = () => {
+    if (!error) return null;
+
+    const parsedError = parseGeminiError(error);
+
+    const getActions = () => {
+      const actions: any[] = [];
+
+      if (parsedError.actionType !== "DISMISS_ONLY") {
+        actions.push({
+          label: "Retry",
+          onClick: onRetry,
+          variant: "danger",
+        });
+      } else {
+        actions.push({
+          label: "Dismiss",
+          onClick: () => setIsErrorDismissed(true),
+          variant: "secondary",
+        });
+      }
+
+      if (parsedError.actionType === "RETRY_OR_SETTINGS") {
+        actions.push({
+          label: "Change API Key",
+          onClick: () => {
+            setIsErrorDismissed(true);
+          },
+          variant: "secondary",
+        });
+      }
+
+      if (
+        parsedError.actionType === "RETRY_OR_LINK" &&
+        parsedError.meta?.link
+      ) {
+        actions.push({
+          label: parsedError.meta.linkLabel || "Open Link",
+          onClick: () => {
+            invoke("open_external_url", {
+              url: parsedError.meta?.link,
+            });
+            setIsErrorDismissed(true);
+          },
+          variant: "secondary",
+        });
+      }
+
+      return actions;
+    };
+
+    return (
+      <Dialog
+        isOpen={!!error && !isErrorDismissed}
+        variant="error"
+        title={parsedError.title}
+        message={parsedError.message}
+        actions={getActions()}
+      />
+    );
+  };
+
+  const hasMessages = messages.filter((m) => m.role === "user").length > 0;
+
   return (
     <div className={styles.container}>
       <div ref={headerRef} className={styles.headerContainer}>
@@ -240,20 +308,45 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
         />
       </div>
 
-      <ChatArea
-        ref={scrollContainerRef}
-        startupImage={startupImage}
-        isChatMode={isChatMode}
-        isLoading={isLoading}
-        streamingText={streamingText}
-        error={error}
-        onRetry={onRetry}
-        prompt={""}
-        showUpdate={showUpdate}
-        setShowUpdate={setShowUpdate}
-        messages={messages}
-        onStreamComplete={onStreamComplete}
-      />
+      <div className={styles.chatArea} ref={scrollContainerRef}>
+        <main>
+          <div
+            className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-4 ${
+              hasMessages ? "pt-12" : "pt-20"
+            }`}
+          >
+            {startupImage && !isChatMode && (
+              <div className="min-h-[60vh]">
+                {isLoading && !streamingText ? (
+                  <TextShimmer variant="full" />
+                ) : (
+                  <StreamingResponse
+                    text={streamingText}
+                    onComplete={onStreamComplete}
+                  />
+                )}
+              </div>
+            )}
+
+            {renderError()}
+
+            {isChatMode && (
+              <div className="space-y-8 flex flex-col-reverse">
+                {isLoading && <TextShimmer variant="simple" />}
+
+                {messages
+                  .slice()
+                  .reverse()
+                  .map((msg) => (
+                    <div key={msg.id} className="mb-2">
+                      <ChatBubble message={msg} />
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
 
       <ChatInput
         startupImage={startupImage}
@@ -276,4 +369,4 @@ const ChatTabComponent: React.FC<ChatTabProps> = ({
   );
 };
 
-export const ChatTab = React.memo(ChatTabComponent);
+export const ChatShell = React.memo(ChatShellComponent);

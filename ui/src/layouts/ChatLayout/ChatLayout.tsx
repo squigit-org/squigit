@@ -6,13 +6,14 @@
 
 import React, { ForwardedRef } from "react";
 import { TitleBar } from "@/widgets";
-import { ChatPanel, ChatTab, ChatTabProps } from "@/features/";
+import { ChatPanel, ChatShell, ChatShellProps } from "@/features/";
+
 import { Profile } from "@/lib/api/tauri/commands";
 import styles from "./ChatLayout.module.css";
 
 import { UserPreferences } from "@/lib/config/preferences";
 
-export interface ChatLayoutProps extends ChatTabProps {
+export interface ChatLayoutProps extends ChatShellProps {
   // TitleBar props
   chatTitle: string;
   onReload: () => void;
@@ -168,47 +169,34 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         </div>
 
         <div className={styles.contentArea}>
-          <div
-            style={{
-              display: "none",
-              height: "100%",
-            }}
-          ></div>
-          <div
-            style={{
-              display: "none",
-              height: "100%",
-            }}
-          >
-            <ChatTab
-              messages={messages}
-              streamingText={streamingText}
-              isChatMode={isChatMode}
-              isLoading={isLoading}
-              isStreaming={isStreaming}
-              error={error}
-              lastSentMessage={lastSentMessage}
-              input={input}
-              currentModel={currentModel}
-              startupImage={startupImage}
-              chatTitle={chatTitle}
-              chatId={chatId}
-              sessionLensUrl={sessionLensUrl}
-              setSessionLensUrl={setSessionLensUrl}
-              onDescribeEdits={onDescribeEdits}
-              ocrData={ocrData}
-              onUpdateOCRData={onUpdateOCRData}
-              onSend={onSend}
-              onModelChange={onModelChange}
-              onRetry={onRetry}
-              onInputChange={onInputChange}
-              onReload={onReload}
-              imageInputValue={imageInputValue}
-              onImageInputChange={onImageInputChange}
-              onStreamComplete={onStreamComplete}
-              activeProfileId={activeProfileId}
-            />
-          </div>
+          <ChatShell
+            messages={messages}
+            streamingText={streamingText}
+            isChatMode={isChatMode}
+            isLoading={isLoading}
+            isStreaming={isStreaming}
+            error={error}
+            lastSentMessage={lastSentMessage}
+            input={input}
+            currentModel={currentModel}
+            startupImage={startupImage}
+            chatTitle={chatTitle}
+            chatId={chatId}
+            sessionLensUrl={sessionLensUrl}
+            setSessionLensUrl={setSessionLensUrl}
+            onDescribeEdits={onDescribeEdits}
+            ocrData={ocrData}
+            onUpdateOCRData={onUpdateOCRData}
+            onSend={onSend}
+            onModelChange={onModelChange}
+            onRetry={onRetry}
+            onInputChange={onInputChange}
+            onReload={onReload}
+            imageInputValue={imageInputValue}
+            onImageInputChange={onImageInputChange}
+            onStreamComplete={onStreamComplete}
+            activeProfileId={activeProfileId}
+          />
         </div>
       </div>
     </div>

@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./ChatArea";
 export * from "./ChatBubble";
 export * from "./ChatInput";
 export * from "./ChatPanel";
-export * from "./ChatTab";
+export * from "./ChatShell";
