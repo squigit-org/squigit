@@ -419,7 +419,10 @@ export const AppLayout: React.FC = () => {
       <div className="h-screen w-screen bg-neutral-950 text-neutral-100">
         <Agreement
           osType={getOSType()}
-          onNext={() => system.setHasAgreed(true)}
+          onNext={() => {
+            system.setHasAgreed(true);
+            system.updatePreferences({});
+          }}
           onCancel={() => exit(0)}
         />
       </div>
@@ -437,8 +440,12 @@ export const AppLayout: React.FC = () => {
           chatTitle={"SnapLLM"}
           onReload={() => {}}
           isRotating={false}
+          currentPrompt={system.prompt}
           currentModel={system.sessionModel}
-          onModelChange={system.setSessionModel}
+          onModelChange={(model) => system.updatePreferences({ model })}
+          onOcrModelChange={(ocrLanguage) =>
+            system.updatePreferences({ ocrLanguage })
+          }
           isLoading={false}
           onLogout={performLogout}
           isSettingsOpen={system.isSettingsOpen}
@@ -452,6 +459,7 @@ export const AppLayout: React.FC = () => {
           autoExpandOCR={system.autoExpandOCR}
           ocrEnabled={system.ocrEnabled}
           ocrLanguage={system.ocrLanguage}
+          downloadedOcrLanguages={system.downloadedOcrLanguages}
           captureType={system.captureType}
           geminiKey={system.apiKey}
           imgbbKey={system.imgbbKey}
@@ -526,6 +534,7 @@ export const AppLayout: React.FC = () => {
       className={styles.appContainer}
     >
       <ChatLayout
+        currentPrompt={system.prompt}
         messages={chat.messages}
         streamingText={chat.streamingText}
         isChatMode={chat.isChatMode}
@@ -593,6 +602,7 @@ export const AppLayout: React.FC = () => {
         autoExpandOCR={system.autoExpandOCR}
         ocrEnabled={system.ocrEnabled}
         ocrLanguage={system.ocrLanguage}
+        downloadedOcrLanguages={system.downloadedOcrLanguages}
         captureType={system.captureType}
         geminiKey={system.apiKey}
         imgbbKey={system.imgbbKey}

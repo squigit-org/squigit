@@ -7,7 +7,7 @@
 export const APP_NAME = "SnapLLM";
 
 export const DEFAULT_MODEL = "gemini-2.5-flash";
-export const DEFAULT_THEME = "dark";
+export const DEFAULT_THEME = "system";
 
 export const DEFAULT_PROMPT =
   "analyze this image and explain it or discuss fixes about the issue it discribes.";

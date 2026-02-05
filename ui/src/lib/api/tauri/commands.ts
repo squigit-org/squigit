@@ -31,7 +31,12 @@ export const commands = {
     provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
     profileId: string,
-  ) => invoke("encrypt_and_save", { provider, plaintext: key, profileId }),
+  ) =>
+    invoke("encrypt_and_save", {
+      provider,
+      plaintext: key,
+      profile_id: profileId,
+    }),
   startGoogleAuth: () => invoke("start_google_auth"),
   logout: () => invoke("logout"),
   getUserData: () => invoke<any>("get_user_data"),

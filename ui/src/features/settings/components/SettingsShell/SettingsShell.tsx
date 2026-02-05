@@ -54,11 +54,12 @@ interface SettingsShellProps {
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
   ocrLanguage: string;
+  downloadedOcrLanguages: string[];
   captureType: "rectangular" | "squiggle";
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
+    provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => Promise<boolean>;
 }
@@ -78,6 +79,7 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
   autoExpandOCR,
   ocrEnabled,
   ocrLanguage,
+  downloadedOcrLanguages,
   captureType,
   geminiKey,
   imgbbKey,
@@ -94,11 +96,7 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
   };
 
   const handleToggleOcrEnabled = (checked: boolean) => {
-    if (!checked) {
-      updatePreferences({ ocrEnabled: checked, autoExpandOCR: false });
-    } else {
-      updatePreferences({ ocrEnabled: checked });
-    }
+    updatePreferences({ ocrEnabled: checked });
   };
 
   const handleCaptureTypeChange = (type: "rectangular" | "squiggle") => {
@@ -208,6 +206,7 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
                 localModel={localModel}
                 setLocalModel={setLocalModel}
                 ocrLanguage={ocrLanguage}
+                downloadedOcrLanguages={downloadedOcrLanguages}
                 updatePreferences={updatePreferences}
               />
             )}

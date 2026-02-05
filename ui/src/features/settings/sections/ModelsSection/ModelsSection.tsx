@@ -4,40 +4,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/widgets";
 import { Download, Check, Loader2 } from "lucide-react";
 import { UserPreferences } from "@/lib/config/preferences";
 
-interface OcrModelDownloable {
-  id: string;
-  name: string;
-  size: string;
-  state: "idle" | "downloading" | "downloaded";
-}
+import { AVAILABLE_MODELS, OcrModelDownloable } from "@/features/models";
 
 interface ModelsSectionProps {
   localModel: string;
   setLocalModel: (model: string) => void;
   ocrLanguage: string;
+  downloadedOcrLanguages: string[];
   updatePreferences: (updates: Partial<UserPreferences>) => void;
 }
-
-const AVAILABLE_MODELS: OcrModelDownloable[] = [
-  { id: "pp-ocr-v4-ru", name: "Russian", size: "12 MB", state: "idle" },
-  { id: "pp-ocr-v4-ko", name: "Korean", size: "15 MB", state: "idle" },
-  { id: "pp-ocr-v4-ja", name: "Japanese", size: "14 MB", state: "idle" },
-  { id: "pp-ocr-v4-es", name: "Spanish", size: "11 MB", state: "idle" },
-  { id: "pp-ocr-v4-it", name: "Italian", size: "11 MB", state: "idle" },
-  { id: "pp-ocr-v4-pt", name: "Portuguese", size: "11 MB", state: "idle" },
-  { id: "pp-ocr-v4-hi", name: "Hindi", size: "18 MB", state: "idle" },
-];
 
 export const ModelsSection: React.FC<ModelsSectionProps> = ({
   localModel,
   setLocalModel,
   ocrLanguage,
+  downloadedOcrLanguages,
   updatePreferences,
 }) => {
   const [activeModel, setActiveModel] = useState(localModel);
@@ -46,7 +33,53 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [ocrMenuOpen, setOcrMenuOpen] = useState(false);
 
-  const [downloadList, setDownloadList] = useState(AVAILABLE_MODELS);
+  // Initialize download list state based on downloadedOcrLanguages
+  const [downloadList, setDownloadList] = useState<OcrModelDownloable[]>(() => {
+    return AVAILABLE_MODELS.map((model) => {
+      // Check if this model ID is in the downloaded list
+      // Note: downloadedOcrLanguages stores generic names like "PP-OCRv4 (English)"
+      // but AVAILABLE_MODELS has IDs like "pp-ocr-v4-ru".
+      // We need to map IDs to the stored names or change how we store them.
+      // Based on defaults: "PP-OCRv4 (English)" corresponds to id "pp-ocr-v4-en".
+      // Let's assume downloadedOcrLanguages stores the IDs for robust matching,
+      // OR we need a mapping.
+      // The current preferences.ts default is ["PP-OCRv4 (English)"].
+      // This is the NAME, not the ID. This is fragile.
+      // Ideally we should store IDs.
+      // But looking at existing code:
+      // ocrLanguage: "PP-OCRv4 (English)"
+      // handleOcrSelect("pp-ocr-v4-en") -> sets activeOcrModel to ID.
+      // Wait, let's check `handleOcrSelect` implementation below.
+
+      // Let's check if the model is "downloaded".
+      // For now, let's assume we store IDs in downloadedOcrLanguages to be safe?
+      // Or check if the name matches?
+      // The defaults use names. Let's stick to names for compatibility if established,
+      // or better, switch to IDs if possible.
+      // The snippet below cleans this up.
+      return model;
+    });
+  });
+
+  // Re-sync local state when props change
+  useEffect(() => {
+    setActiveOcrModel(ocrLanguage);
+  }, [ocrLanguage]);
+
+  // Update download list state when preferences change
+  useEffect(() => {
+    setDownloadList((prev) =>
+      prev.map((model) => {
+        const isDownloaded = downloadedOcrLanguages.some((langName) =>
+          langName.includes(model.name),
+        );
+        if (isDownloaded && model.state !== "downloaded") {
+          return { ...model, state: "downloaded" };
+        }
+        return model;
+      }),
+    );
+  }, [downloadedOcrLanguages]);
 
   const handleModelSelect = useCallback(
     (id: string) => {
@@ -57,8 +90,9 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
     [setLocalModel, updatePreferences],
   );
 
-  const handleOcrSelect = (id: string) => {
-    setActiveOcrModel(id);
+  const handleOcrSelect = (id: string, name: string) => {
+    setActiveOcrModel(name);
+    updatePreferences({ ocrLanguage: name }); // Store the Name as per existing convention
     setOcrMenuOpen(false);
   };
 
@@ -68,10 +102,20 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
     );
 
     setTimeout(() => {
-      setDownloadList((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, state: "downloaded" } : m)),
-      );
-    }, 3000);
+      const model = downloadList.find((m) => m.id === id);
+      if (model) {
+        // Add to preferences
+        const newLabel = `PP-OCRv4 (${model.name})`;
+        const newDownloaded = [...downloadedOcrLanguages, newLabel];
+        // Remove duplicates just in case
+        const uniqueDownloaded = Array.from(new Set(newDownloaded));
+        updatePreferences({ downloadedOcrLanguages: uniqueDownloaded });
+
+        setDownloadList((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, state: "downloaded" } : m)),
+        );
+      }
+    }, 2000);
   };
 
   const getModelLabel = (id: string) => {
@@ -87,17 +131,16 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
     }
   };
 
-  const getOcrLabel = (id: string) => {
-    const ocrModels = [
-      { id: "pp-ocr-v4-en", name: "English" },
-      { id: "pp-ocr-v4-ar", name: "Arabic" },
-      { id: "pp-ocr-v4-zh", name: "Chinese" },
-      { id: "pp-ocr-v4-fr", name: "French" },
-      { id: "pp-ocr-v4-de", name: "German" },
-    ];
-    const found = ocrModels.find((m) => m.id === id);
-    return found ? found.name : "Select Model";
-  };
+  // Helper to map current generic name to ID if needed, or just display name.
+  // The dropdown label displays the name.
+
+  // Combine installed static models with downloaded ones for the dropdown
+  // Combine installed static models with downloaded ones for the dropdown
+  // We treat preferences.json (downloadedOcrLanguages) as the single source of truth.
+  const installedModels = downloadedOcrLanguages.map((name) => ({
+    id: name,
+    name: name,
+  }));
 
   return (
     <section className={styles.container} aria-labelledby="models-heading">
@@ -155,38 +198,21 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
           </div>
           <div className={styles.rowControl}>
             <Dropdown
-              label={getOcrLabel(activeOcrModel)}
-              width={200}
+              label={activeOcrModel}
+              width={230}
               isOpen={ocrMenuOpen}
               onOpenChange={setOcrMenuOpen}
             >
               <DropdownSectionTitle>Installed Models</DropdownSectionTitle>
               <div className={`${styles.list} ${styles.ocr}`}>
-                <DropdownItem
-                  label="PP-OCRv4 (English)"
-                  isActive={activeOcrModel === "pp-ocr-v4-en"}
-                  onClick={() => handleOcrSelect("pp-ocr-v4-en")}
-                />
-                <DropdownItem
-                  label="PP-OCRv4 (Arabic)"
-                  isActive={activeOcrModel === "pp-ocr-v4-ar"}
-                  onClick={() => handleOcrSelect("pp-ocr-v4-ar")}
-                />
-                <DropdownItem
-                  label="PP-OCRv4 (Chinese)"
-                  isActive={activeOcrModel === "pp-ocr-v4-zh"}
-                  onClick={() => handleOcrSelect("pp-ocr-v4-zh")}
-                />
-                <DropdownItem
-                  label="PP-OCRv4 (French)"
-                  isActive={activeOcrModel === "pp-ocr-v4-fr"}
-                  onClick={() => handleOcrSelect("pp-ocr-v4-fr")}
-                />
-                <DropdownItem
-                  label="PP-OCRv4 (German)"
-                  isActive={activeOcrModel === "pp-ocr-v4-de"}
-                  onClick={() => handleOcrSelect("pp-ocr-v4-de")}
-                />
+                {installedModels.map((m) => (
+                  <DropdownItem
+                    key={m.id}
+                    label={m.name}
+                    isActive={activeOcrModel === m.name}
+                    onClick={() => handleOcrSelect(m.id, m.name)}
+                  />
+                ))}
               </div>
             </Dropdown>
           </div>

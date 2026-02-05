@@ -16,7 +16,7 @@ interface APIKeysSectionProps {
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
+    provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => Promise<boolean>;
 }
@@ -218,7 +218,7 @@ export const APIKeysSection: React.FC<APIKeysSectionProps> = ({
           description="Required for AI features"
           currentKey={geminiKey}
           dashboardUrl={google.aiStudio.key}
-          onSave={(key) => onSetAPIKey("google ai studio", key)}
+          onSave={(key) => onSetAPIKey("gemini", key)}
         />
         <ProviderRow
           title="ImgBB"

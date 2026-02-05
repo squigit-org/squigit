@@ -24,6 +24,7 @@ interface TitleBarProps {
   chatTitle: string;
   onReload: () => void;
   isRotating: boolean;
+  currentPrompt: string;
   currentModel: string;
   onModelChange: (model: string) => void;
   isLoading: boolean;
@@ -46,13 +47,15 @@ interface TitleBarProps {
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
   ocrLanguage: string;
+  downloadedOcrLanguages: string[];
   captureType: "rectangular" | "squiggle";
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
+    provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => Promise<boolean>;
+  onOcrModelChange: (model: string) => void;
 }
 
 const detectPlatform = (): Platform => {
@@ -67,6 +70,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   chatTitle,
   onReload,
   isRotating,
+  currentPrompt,
   currentModel,
   onModelChange,
   isLoading,
@@ -89,10 +93,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   autoExpandOCR,
   ocrEnabled,
   ocrLanguage,
+  downloadedOcrLanguages,
   captureType,
   geminiKey,
   imgbbKey,
   onSetAPIKey,
+  onOcrModelChange,
 }) => {
   const [platform] = useState<Platform>(() => detectPlatform());
 
@@ -141,6 +147,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onModelChange={onModelChange}
           isLoading={isLoading}
           onOpenSettings={openSettings}
+          downloadedOcrLanguages={downloadedOcrLanguages}
+          currentOcrModel={ocrLanguage}
+          onOcrModelChange={onOcrModelChange}
         />
 
         <AccountSwitcher
@@ -169,14 +178,15 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onClose={onCloseSettings}
           activeSection={settingsSection}
           onSectionChange={onSectionChange}
-          currentPrompt={""}
-          currentModel={""}
+          currentPrompt={currentPrompt}
+          currentModel={currentModel}
           updatePreferences={updatePreferences}
           themePreference={themePreference}
           onSetTheme={onSetTheme}
           autoExpandOCR={autoExpandOCR}
           ocrEnabled={ocrEnabled}
           ocrLanguage={ocrLanguage}
+          downloadedOcrLanguages={downloadedOcrLanguages}
           captureType={captureType}
           geminiKey={geminiKey}
           imgbbKey={imgbbKey}

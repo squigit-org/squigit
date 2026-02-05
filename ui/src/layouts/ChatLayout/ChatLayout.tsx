@@ -19,6 +19,7 @@ import styles from "./ChatLayout.module.css";
 import { UserPreferences } from "@/lib/config/preferences";
 
 export interface ChatLayoutProps extends ChatShellProps {
+  currentPrompt: string;
   // TitleBar props
   chatTitle: string;
   onReload: () => void;
@@ -34,12 +35,14 @@ export interface ChatLayoutProps extends ChatShellProps {
   onSetTheme: (theme: "dark" | "light" | "system") => void;
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
+
   ocrLanguage: string;
+  downloadedOcrLanguages: string[];
   captureType: "rectangular" | "squiggle";
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
+    provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => Promise<boolean>;
   onCloseSettings: () => void;
@@ -66,6 +69,7 @@ export interface ChatLayoutProps extends ChatShellProps {
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
+  currentPrompt,
   // Chat props
   messages,
   streamingText,
@@ -111,6 +115,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   autoExpandOCR,
   ocrEnabled,
   ocrLanguage,
+  downloadedOcrLanguages,
   captureType,
   geminiKey,
   imgbbKey,
@@ -137,6 +142,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         chatTitle={chatTitle}
         onReload={onReload}
         isRotating={isRotating}
+        currentPrompt={currentPrompt}
         currentModel={currentModel}
         onModelChange={onModelChange}
         isLoading={isLoading}
@@ -154,6 +160,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         autoExpandOCR={autoExpandOCR}
         ocrEnabled={ocrEnabled}
         ocrLanguage={ocrLanguage}
+        downloadedOcrLanguages={downloadedOcrLanguages}
         captureType={captureType}
         geminiKey={geminiKey}
         imgbbKey={imgbbKey}

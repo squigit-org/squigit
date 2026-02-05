@@ -16,6 +16,9 @@ interface ModelSwitcherProps {
   isLoading: boolean;
   isHidden?: boolean;
   onOpenSettings: (section: SettingsSection) => void;
+  downloadedOcrLanguages: string[];
+  currentOcrModel: string;
+  onOcrModelChange: (model: string) => void;
 }
 
 export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
@@ -24,6 +27,9 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   isLoading,
   isHidden = false,
   onOpenSettings,
+  downloadedOcrLanguages,
+  currentOcrModel,
+  onOcrModelChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showOcrMenu, setShowOcrMenu] = useState(false);
@@ -38,19 +44,14 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   ].filter((m): m is (typeof MODELS)[number] => !!m);
   const selectedModel = MODELS.find((m) => m.id === currentModel);
 
-  const [currentOcrModel, setCurrentOcrModel] = useState("pp-ocr-v4-en");
-
   const handleOCRModelSelect = (modelId: string) => {
-    setCurrentOcrModel(modelId);
+    onOcrModelChange(modelId);
   };
 
-  const ocrModels = [
-    { id: "pp-ocr-v4-en", name: "PP-OCRv4 (English)" },
-    { id: "pp-ocr-v4-ar", name: "PP-OCRv4 (Arabic)" },
-    { id: "pp-ocr-v4-zh", name: "PP-OCRv4 (Chinese)" },
-    { id: "pp-ocr-v4-fr", name: "PP-OCRv4 (French)" },
-    { id: "pp-ocr-v4-de", name: "PP-OCRv4 (German)" },
-  ];
+  const ocrModels = downloadedOcrLanguages.map((name) => ({
+    id: name, // Using name as ID for now to match TitleBar/Settings behavior
+    name: name,
+  }));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
