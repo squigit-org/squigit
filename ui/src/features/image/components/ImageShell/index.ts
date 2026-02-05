@@ -4,4 +4,4 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export { StreamRenderer } from "./StreamRenderer";
+export * from "./ImageShell";

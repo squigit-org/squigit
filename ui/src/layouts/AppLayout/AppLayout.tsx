@@ -441,6 +441,11 @@ export const AppLayout: React.FC = () => {
           onModelChange={system.setSessionModel}
           isLoading={false}
           onLogout={performLogout}
+          isSettingsOpen={system.isSettingsOpen}
+          onCloseSettings={() => system.setSettingsOpen(false)}
+          settingsSection={system.settingsSection}
+          onSectionChange={system.setSettingsSection}
+          openSettings={system.openSettings}
           updatePreferences={system.updatePreferences}
           themePreference={system.themePreference}
           onSetTheme={system.onSetTheme}
@@ -530,6 +535,7 @@ export const AppLayout: React.FC = () => {
         lastSentMessage={chat.lastSentMessage}
         input={input}
         onInputChange={setInput}
+        onOpenSettings={system.openSettings}
         currentModel={system.sessionModel}
         startupImage={system.startupImage}
         chatTitle={chatTitle}
@@ -566,7 +572,10 @@ export const AppLayout: React.FC = () => {
         onUpdateOCRData={handleUpdateOCRData}
         imageInputValue={imageInput}
         onImageInputChange={setImageInput}
-        onStreamComplete={chat.handleStreamComplete}
+        onCloseSettings={() => system.setSettingsOpen(false)}
+        isSettingsOpen={system.isSettingsOpen}
+        settingsSection={system.settingsSection}
+        onSectionChange={system.setSettingsSection}
         // TitleBar props
         activeProfile={system.activeProfile}
         profiles={system.profiles}
@@ -574,7 +583,6 @@ export const AppLayout: React.FC = () => {
         onAddAccount={system.addAccount}
         isRotating={isRotating}
         onNewSession={handleNewSession}
-        hasImageLoaded={!!system.startupImage}
         toggleChatPanel={toggleChatPanel}
         isChatPanelOpen={isChatPanelOpen}
         enablePanelAnimation={enablePanelAnimation}

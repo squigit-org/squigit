@@ -13,10 +13,11 @@ import {
   StreamingResponse,
 } from "@/features/chat";
 import { InlineMenu, useInlineMenu, Dialog, TextShimmer } from "@/widgets";
-import { ImageArea } from "@/features/image";
+import { ImageShell } from "@/features/image";
 import { parseGeminiError } from "@/lib/utils/errorParser";
 import styles from "./ChatShell.module.css";
 import "katex/dist/katex.min.css";
+import { SettingsSection } from "@/features/settings";
 
 export interface ChatShellProps {
   messages: Message[];
@@ -51,6 +52,7 @@ export interface ChatShellProps {
   onRetry: () => void;
   onInputChange: (value: string) => void;
   onReload?: () => void;
+  onOpenSettings: (section: SettingsSection) => void;
 
   imageInputValue: string;
   onImageInputChange: (value: string) => void;
@@ -75,6 +77,7 @@ const ChatShellComponent: React.FC<ChatShellProps> = ({
   sessionLensUrl,
   setSessionLensUrl,
   onDescribeEdits,
+  onOpenSettings,
   ocrData,
   onUpdateOCRData,
   chatTitle,
@@ -246,6 +249,7 @@ const ChatShellComponent: React.FC<ChatShellProps> = ({
         actions.push({
           label: "Change API Key",
           onClick: () => {
+            onOpenSettings("apikeys");
             setIsErrorDismissed(true);
           },
           variant: "secondary",
@@ -287,7 +291,7 @@ const ChatShellComponent: React.FC<ChatShellProps> = ({
   return (
     <div className={styles.container}>
       <div ref={headerRef} className={styles.headerContainer}>
-        <ImageArea
+        <ImageShell
           startupImage={startupImage}
           sessionLensUrl={sessionLensUrl}
           setSessionLensUrl={setSessionLensUrl}
@@ -308,7 +312,7 @@ const ChatShellComponent: React.FC<ChatShellProps> = ({
         />
       </div>
 
-      <div className={styles.chatArea} ref={scrollContainerRef}>
+      <div className={styles.chatShell} ref={scrollContainerRef}>
         <main>
           <div
             className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-4 ${

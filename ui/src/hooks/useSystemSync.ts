@@ -21,6 +21,7 @@ import {
   DEFAULT_PROMPT,
   DEFAULT_THEME,
 } from "@/lib/utils/constants";
+import { SettingsSection } from "@/features/settings";
 
 export const useSystemSync = () => {
   const { theme, resolvedTheme, setTheme } = useTheme();
@@ -72,6 +73,10 @@ export const useSystemSync = () => {
   } | null>(null);
 
   const [sessionChatTitle, setSessionChatTitle] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] =
+    useState<SettingsSection>("general");
+
   const [systemError, setSystemError] = useState<string | null>(null);
   const clearSystemError = () => setSystemError(null);
 
@@ -233,6 +238,11 @@ export const useSystemSync = () => {
     }
   };
 
+  const openSettings = (section: SettingsSection) => {
+    setSettingsSection(section);
+    setIsSettingsOpen(true);
+  };
+
   const handleLogout = async () => {
     try {
       await invoke("logout");
@@ -316,6 +326,11 @@ export const useSystemSync = () => {
     setSessionModel,
     startupImage,
     setStartupImage,
+    isSettingsOpen,
+    setSettingsOpen: setIsSettingsOpen,
+    settingsSection,
+    setSettingsSection,
+    openSettings,
     userName,
     userEmail,
     avatarSrc,
@@ -342,7 +357,6 @@ export const useSystemSync = () => {
     setImgbbKey,
     handleSetAPIKey,
     setAvatarSrc,
-    // Profile management
     activeProfile,
     profiles,
     switchProfile,

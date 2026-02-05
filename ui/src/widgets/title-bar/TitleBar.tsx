@@ -28,6 +28,11 @@ interface TitleBarProps {
   onModelChange: (model: string) => void;
   isLoading: boolean;
   onLogout: () => void;
+  isSettingsOpen: boolean;
+  onCloseSettings: () => void;
+  settingsSection: SettingsSection;
+  onSectionChange: (section: SettingsSection) => void;
+  openSettings: (section: SettingsSection) => void;
   hasImageLoaded: boolean;
   toggleChatPanel: () => void;
   isChatPanelOpen: boolean;
@@ -65,6 +70,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   currentModel,
   onModelChange,
   isLoading,
+  onLogout,
+  isSettingsOpen,
+  onCloseSettings,
+  settingsSection,
+  onSectionChange,
+  openSettings,
   hasImageLoaded,
   toggleChatPanel,
   isChatPanelOpen,
@@ -72,7 +83,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   profiles,
   onSwitchProfile,
   onAddAccount,
-  onLogout,
   updatePreferences,
   themePreference,
   onSetTheme,
@@ -84,17 +94,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   imgbbKey,
   onSetAPIKey,
 }) => {
-  const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settingsSection, setSettingsSection] =
-    useState<SettingsSection>("general");
+  const [platform] = useState<Platform>(() => detectPlatform());
 
   const isUnix = platform === "macos" || platform === "linux";
-
-  const handleOpenSettings = (section: SettingsSection) => {
-    setSettingsSection(section);
-    setIsSettingsOpen(true);
-  };
 
   return (
     <header className={styles.header} data-tauri-drag-region>
@@ -138,7 +140,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           currentModel={currentModel}
           onModelChange={onModelChange}
           isLoading={isLoading}
-          onOpenSettings={handleOpenSettings}
+          onOpenSettings={openSettings}
         />
 
         <AccountSwitcher
@@ -160,13 +162,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           </button>
         )}
 
-        <SettingsPanel onOpenSettings={handleOpenSettings} />
+        <SettingsPanel onOpenSettings={openSettings} />
 
         <SettingsShell
           isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
+          onClose={onCloseSettings}
           activeSection={settingsSection}
-          onSectionChange={setSettingsSection}
+          onSectionChange={onSectionChange}
           currentPrompt={""}
           currentModel={""}
           updatePreferences={updatePreferences}

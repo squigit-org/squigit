@@ -6,7 +6,12 @@
 
 import React, { ForwardedRef } from "react";
 import { TitleBar } from "@/widgets";
-import { ChatPanel, ChatShell, ChatShellProps } from "@/features/";
+import {
+  ChatPanel,
+  ChatShell,
+  ChatShellProps,
+  SettingsSection,
+} from "@/features";
 
 import { Profile } from "@/lib/api/tauri/commands";
 import styles from "./ChatLayout.module.css";
@@ -20,12 +25,10 @@ export interface ChatLayoutProps extends ChatShellProps {
   isRotating: boolean;
   isLoading: boolean;
   onNewSession: () => void;
-  hasImageLoaded: boolean;
   toggleChatPanel: () => void;
   isChatPanelOpen: boolean;
   enablePanelAnimation?: boolean;
   onLogout: () => void;
-
   updatePreferences: (updates: Partial<UserPreferences>) => void;
   themePreference: "dark" | "light" | "system";
   onSetTheme: (theme: "dark" | "light" | "system") => void;
@@ -39,6 +42,17 @@ export interface ChatLayoutProps extends ChatShellProps {
     provider: "google ai studio" | "imgbb",
     key: string,
   ) => Promise<boolean>;
+  onCloseSettings: () => void;
+  isSettingsOpen: boolean;
+  settingsSection: SettingsSection;
+  onSectionChange: (section: SettingsSection) => void;
+
+  // Profile props
+  activeProfile: Profile | null;
+  profiles: Profile[];
+  onSwitchProfile: (profileId: string) => void;
+  onAddAccount: () => void;
+  activeProfileId: string | null;
 
   // ChatPanel props
   chats: any[];
@@ -49,13 +63,6 @@ export interface ChatLayoutProps extends ChatShellProps {
   onRenameChat: (id: string, title: string) => void;
   onTogglePinChat: (id: string) => void;
   onToggleStarChat: (id: string) => void;
-
-  // Profile props
-  activeProfile: Profile | null;
-  profiles: Profile[];
-  onSwitchProfile: (profileId: string) => void;
-  onAddAccount: () => void;
-  activeProfileId: string | null;
 }
 
 export const ChatLayout: React.FC<ChatLayoutProps> = ({
@@ -85,11 +92,15 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   imageInputValue,
   onImageInputChange,
   onStreamComplete,
+  onOpenSettings,
+  onCloseSettings,
+  isSettingsOpen,
+  settingsSection,
+  onSectionChange,
 
   // TitleBar props
   isRotating,
   onNewSession,
-  hasImageLoaded,
   toggleChatPanel,
   isChatPanelOpen,
   enablePanelAnimation = false,
@@ -129,7 +140,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         currentModel={currentModel}
         onModelChange={onModelChange}
         isLoading={isLoading}
-        hasImageLoaded={hasImageLoaded}
+        hasImageLoaded={!!startupImage} // TitleBar needs hasImageLoaded
         toggleChatPanel={toggleChatPanel}
         isChatPanelOpen={isChatPanelOpen}
         activeProfile={activeProfile}
@@ -147,6 +158,11 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         geminiKey={geminiKey}
         imgbbKey={imgbbKey}
         onSetAPIKey={onSetAPIKey}
+        isSettingsOpen={isSettingsOpen}
+        onCloseSettings={onCloseSettings}
+        settingsSection={settingsSection}
+        onSectionChange={onSectionChange}
+        openSettings={onOpenSettings}
       />
 
       <div className={styles.mainContent}>
@@ -190,6 +206,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
             onSend={onSend}
             onModelChange={onModelChange}
             onRetry={onRetry}
+            onOpenSettings={onOpenSettings}
             onInputChange={onInputChange}
             onReload={onReload}
             imageInputValue={imageInputValue}

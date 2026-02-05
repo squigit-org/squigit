@@ -22,7 +22,7 @@ import {
   OCRLayer,
 } from "@/features/image";
 import { ActionMenu, ActionMenuHandle } from "@/widgets/menu";
-import styles from "./ImageArea.module.css";
+import styles from "./ImageShell.module.css";
 import { Dialog } from "@/widgets";
 
 interface OCRBox {
@@ -31,7 +31,7 @@ interface OCRBox {
   confidence?: number;
 }
 
-interface ImageAreaProps {
+interface ImageShellProps {
   startupImage: {
     base64: string;
     mimeType: string;
@@ -56,7 +56,7 @@ interface ImageAreaProps {
   activeProfileId: string | null;
 }
 
-export const ImageArea: React.FC<ImageAreaProps> = ({
+export const ImageShell: React.FC<ImageShellProps> = ({
   startupImage,
   sessionLensUrl,
   setSessionLensUrl,
