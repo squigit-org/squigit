@@ -442,10 +442,9 @@ export const AppLayout: React.FC = () => {
           isRotating={false}
           currentPrompt={system.prompt}
           currentModel={system.sessionModel}
-          onModelChange={(model) => system.updatePreferences({ model })}
-          onOcrModelChange={(ocrLanguage) =>
-            system.updatePreferences({ ocrLanguage })
-          }
+          defaultModel={system.startupModel}
+          onModelChange={system.setSessionModel}
+          onOcrModelChange={system.setSessionOcrLanguage}
           isLoading={false}
           onLogout={performLogout}
           isSettingsOpen={system.isSettingsOpen}
@@ -458,7 +457,8 @@ export const AppLayout: React.FC = () => {
           onSetTheme={system.onSetTheme}
           autoExpandOCR={system.autoExpandOCR}
           ocrEnabled={system.ocrEnabled}
-          ocrLanguage={system.ocrLanguage}
+          ocrLanguage={system.sessionOcrLanguage}
+          defaultOcrLanguage={system.startupOcrLanguage}
           downloadedOcrLanguages={system.downloadedOcrLanguages}
           captureType={system.captureType}
           geminiKey={system.apiKey}
@@ -585,6 +585,8 @@ export const AppLayout: React.FC = () => {
         isSettingsOpen={system.isSettingsOpen}
         settingsSection={system.settingsSection}
         onSectionChange={system.setSettingsSection}
+        autoExpandOCR={system.autoExpandOCR}
+        ocrEnabled={system.ocrEnabled}
         // TitleBar props
         activeProfile={system.activeProfile}
         profiles={system.profiles}
@@ -599,14 +601,15 @@ export const AppLayout: React.FC = () => {
         updatePreferences={system.updatePreferences}
         themePreference={system.themePreference}
         onSetTheme={system.onSetTheme}
-        autoExpandOCR={system.autoExpandOCR}
-        ocrEnabled={system.ocrEnabled}
-        ocrLanguage={system.ocrLanguage}
+        ocrLanguage={system.sessionOcrLanguage}
+        defaultOcrLanguage={system.startupOcrLanguage}
+        defaultModel={system.startupModel}
         downloadedOcrLanguages={system.downloadedOcrLanguages}
         captureType={system.captureType}
         geminiKey={system.apiKey}
         imgbbKey={system.imgbbKey}
         onSetAPIKey={system.handleSetAPIKey}
+        onOcrModelChange={system.setSessionOcrLanguage}
         // ChatPanel props
         chats={chatHistory.chats}
         activeSessionId={chatHistory.activeSessionId}

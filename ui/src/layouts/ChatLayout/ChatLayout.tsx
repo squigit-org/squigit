@@ -37,6 +37,8 @@ export interface ChatLayoutProps extends ChatShellProps {
   ocrEnabled: boolean;
 
   ocrLanguage: string;
+  defaultOcrLanguage: string;
+  defaultModel: string;
   downloadedOcrLanguages: string[];
   captureType: "rectangular" | "squiggle";
   geminiKey: string;
@@ -45,6 +47,7 @@ export interface ChatLayoutProps extends ChatShellProps {
     provider: "google ai studio" | "imgbb" | "gemini",
     key: string,
   ) => Promise<boolean>;
+  onOcrModelChange: (model: string) => void;
   onCloseSettings: () => void;
   isSettingsOpen: boolean;
   settingsSection: SettingsSection;
@@ -101,6 +104,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   isSettingsOpen,
   settingsSection,
   onSectionChange,
+  autoExpandOCR,
+  ocrEnabled,
 
   // TitleBar props
   isRotating,
@@ -112,14 +117,15 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   updatePreferences,
   themePreference,
   onSetTheme,
-  autoExpandOCR,
-  ocrEnabled,
   ocrLanguage,
+  defaultOcrLanguage,
+  defaultModel,
   downloadedOcrLanguages,
   captureType,
   geminiKey,
   imgbbKey,
   onSetAPIKey,
+  onOcrModelChange,
 
   // ChatPanel props
   chats,
@@ -160,11 +166,14 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         autoExpandOCR={autoExpandOCR}
         ocrEnabled={ocrEnabled}
         ocrLanguage={ocrLanguage}
+        defaultOcrLanguage={defaultOcrLanguage}
+        defaultModel={defaultModel}
         downloadedOcrLanguages={downloadedOcrLanguages}
         captureType={captureType}
         geminiKey={geminiKey}
         imgbbKey={imgbbKey}
         onSetAPIKey={onSetAPIKey}
+        onOcrModelChange={onOcrModelChange}
         isSettingsOpen={isSettingsOpen}
         onCloseSettings={onCloseSettings}
         settingsSection={settingsSection}
@@ -216,6 +225,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
             onOpenSettings={onOpenSettings}
             onInputChange={onInputChange}
             onReload={onReload}
+            autoExpandOCR={autoExpandOCR}
+            ocrEnabled={ocrEnabled}
             imageInputValue={imageInputValue}
             onImageInputChange={onImageInputChange}
             onStreamComplete={onStreamComplete}

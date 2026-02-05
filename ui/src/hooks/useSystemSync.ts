@@ -50,7 +50,10 @@ export const useSystemSync = () => {
   const [captureType, setCaptureType] = useState<"rectangular" | "squiggle">(
     "rectangular",
   );
-  const [ocrLanguage, setOcrLanguage] = useState<string>("PP-OCRv4 (English)");
+  const [startupOcrLanguage, setStartupOcrLanguage] =
+    useState<string>("PP-OCRv4 (English)");
+  const [sessionOcrLanguage, setSessionOcrLanguage] =
+    useState<string>("PP-OCRv4 (English)");
   const [downloadedOcrLanguages, setDownloadedOcrLanguages] = useState<
     string[]
   >(["PP-OCRv4 (English)"]);
@@ -108,7 +111,8 @@ export const useSystemSync = () => {
           setCaptureType(prefs.captureType);
         }
         if (prefs.ocrLanguage) {
-          setOcrLanguage(prefs.ocrLanguage);
+          setStartupOcrLanguage(prefs.ocrLanguage);
+          setSessionOcrLanguage(prefs.ocrLanguage);
         }
         if (prefs.downloadedOcrLanguages) {
           setDownloadedOcrLanguages(prefs.downloadedOcrLanguages);
@@ -220,7 +224,8 @@ export const useSystemSync = () => {
       setCaptureType(updates.captureType);
     }
     if (updates.ocrLanguage !== undefined) {
-      setOcrLanguage(updates.ocrLanguage);
+      setStartupOcrLanguage(updates.ocrLanguage);
+      setSessionOcrLanguage(updates.ocrLanguage);
     }
     if (updates.downloadedOcrLanguages !== undefined) {
       setDownloadedOcrLanguages(updates.downloadedOcrLanguages);
@@ -351,7 +356,9 @@ export const useSystemSync = () => {
     autoExpandOCR,
     ocrEnabled,
     captureType,
-    ocrLanguage,
+    startupOcrLanguage,
+    sessionOcrLanguage,
+    setSessionOcrLanguage,
     downloadedOcrLanguages,
     imgbbKey,
     setImgbbKey,

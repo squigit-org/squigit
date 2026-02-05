@@ -24,6 +24,7 @@ import {
 import { ActionMenu, ActionMenuHandle } from "@/widgets/menu";
 import styles from "./ImageShell.module.css";
 import { Dialog } from "@/widgets";
+import { SettingsSection } from "@/features/settings";
 
 interface OCRBox {
   text: string;
@@ -54,6 +55,7 @@ interface ImageShellProps {
   ocrEnabled?: boolean;
   autoExpandOCR?: boolean;
   activeProfileId: string | null;
+  onOpenSettings: (section: SettingsSection) => void;
 }
 
 export const ImageShell: React.FC<ImageShellProps> = ({
@@ -63,13 +65,14 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   isVisible,
   ocrData,
   onUpdateOCRData,
+  onOpenSettings,
   chatId,
   inputValue,
   onInputChange,
   isExpanded = false,
   onToggleExpand,
-  ocrEnabled = true,
-  autoExpandOCR = true,
+  ocrEnabled,
+  autoExpandOCR,
   activeProfileId,
 }) => {
   const [loading, setLoading] = useState(false);
@@ -519,8 +522,8 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           {
             label: "Setup API Key",
             onClick: () => {
+              onOpenSettings("apikeys");
               setShowAuthDialog(false);
-              // onOpenSettings("Providers & Keys");
             },
             variant: "primary",
           },

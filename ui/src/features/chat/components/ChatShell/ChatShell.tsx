@@ -299,6 +299,7 @@ const ChatShellComponent: React.FC<ChatShellProps> = ({
           onDescribeEdits={onDescribeEdits}
           ocrData={ocrData}
           onUpdateOCRData={onUpdateOCRData}
+          onOpenSettings={onOpenSettings}
           isVisible={true}
           scrollContainerRef={scrollContainerRef}
           chatId={chatId}

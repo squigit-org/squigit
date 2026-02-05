@@ -46,6 +46,7 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
 
   const handleOCRModelSelect = (modelId: string) => {
     onOcrModelChange(modelId);
+    setShowOcrMenu(false);
   };
 
   const ocrModels = downloadedOcrLanguages.map((name) => ({
@@ -73,6 +74,7 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
 
   const handleModelSelect = (modelId: string) => {
     onModelChange(modelId);
+    setIsOpen(false);
   };
 
   const handleOcrMouseEnter = () => {

@@ -42,18 +42,14 @@ interface SettingsShellProps {
   onClose: () => void;
   activeSection: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
-
   currentPrompt: string;
-  currentModel: string;
-  onPromptChange?: (prompt: string) => void;
-  onModelChange?: (model: string) => void;
+  defaultModel: string;
+  defaultOcrLanguage: string;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
   themePreference: "dark" | "light" | "system";
   onSetTheme: (theme: "dark" | "light" | "system") => void;
-
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
-  ocrLanguage: string;
   downloadedOcrLanguages: string[];
   captureType: "rectangular" | "squiggle";
   geminiKey: string;
@@ -70,15 +66,13 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
   activeSection,
   onSectionChange,
   currentPrompt,
-  currentModel,
-  onPromptChange,
-  onModelChange,
+  defaultModel,
+  defaultOcrLanguage,
   updatePreferences,
   themePreference,
   onSetTheme,
   autoExpandOCR,
   ocrEnabled,
-  ocrLanguage,
   downloadedOcrLanguages,
   captureType,
   geminiKey,
@@ -89,7 +83,7 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
   const shellRef = useRef<HTMLDivElement>(null);
 
   const [localPrompt, setLocalPrompt] = useState(currentPrompt);
-  const [localModel, setLocalModel] = useState(currentModel);
+  const [localModel, setLocalModel] = useState(defaultModel);
 
   const handleToggleAutoExpand = (checked: boolean) => {
     updatePreferences({ autoExpandOCR: checked });
@@ -105,10 +99,14 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      const isContextMenu = target.closest('[data-is-context-menu="true"]');
+
       if (
         isOpen &&
         shellRef.current &&
-        !shellRef.current.contains(event.target as Node)
+        !shellRef.current.contains(target as Node) &&
+        !isContextMenu
       ) {
         onClose();
       }
@@ -205,7 +203,7 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
               <ModelsSection
                 localModel={localModel}
                 setLocalModel={setLocalModel}
-                ocrLanguage={ocrLanguage}
+                ocrLanguage={defaultOcrLanguage}
                 downloadedOcrLanguages={downloadedOcrLanguages}
                 updatePreferences={updatePreferences}
               />

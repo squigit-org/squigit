@@ -47,6 +47,8 @@ interface TitleBarProps {
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
   ocrLanguage: string;
+  defaultOcrLanguage: string;
+  defaultModel: string;
   downloadedOcrLanguages: string[];
   captureType: "rectangular" | "squiggle";
   geminiKey: string;
@@ -93,6 +95,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   autoExpandOCR,
   ocrEnabled,
   ocrLanguage,
+  defaultOcrLanguage,
+  defaultModel,
   downloadedOcrLanguages,
   captureType,
   geminiKey,
@@ -179,13 +183,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           activeSection={settingsSection}
           onSectionChange={onSectionChange}
           currentPrompt={currentPrompt}
-          currentModel={currentModel}
+          defaultModel={defaultModel}
+          defaultOcrLanguage={defaultOcrLanguage}
           updatePreferences={updatePreferences}
           themePreference={themePreference}
           onSetTheme={onSetTheme}
           autoExpandOCR={autoExpandOCR}
           ocrEnabled={ocrEnabled}
-          ocrLanguage={ocrLanguage}
           downloadedOcrLanguages={downloadedOcrLanguages}
           captureType={captureType}
           geminiKey={geminiKey}

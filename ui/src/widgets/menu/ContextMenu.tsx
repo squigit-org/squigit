@@ -108,6 +108,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         // Standard behavior is often to let the new context menu handle it,
         // but for this specific component, let's keep it simple.
       }}
+      data-is-context-menu="true"
     >
       {children}
     </div>,
