@@ -28,7 +28,6 @@ interface TitleBarProps {
   onModelChange: (model: string) => void;
   isLoading: boolean;
   onLogout: () => void;
-  isDarkMode: boolean;
   hasImageLoaded: boolean;
   toggleChatPanel: () => void;
   isChatPanelOpen: boolean;
@@ -36,6 +35,19 @@ interface TitleBarProps {
   profiles: Profile[];
   onSwitchProfile: (profileId: string) => void;
   onAddAccount: () => void;
+  updatePreferences: (updates: Partial<UserPreferences>) => void;
+  themePreference: "dark" | "light" | "system";
+  onSetTheme: (theme: "dark" | "light" | "system") => void;
+  autoExpandOCR: boolean;
+  ocrEnabled: boolean;
+  ocrLanguage: string;
+  captureType: "rectangular" | "squiggle";
+  geminiKey: string;
+  imgbbKey: string;
+  onSetAPIKey: (
+    provider: "google ai studio" | "imgbb",
+    key: string,
+  ) => Promise<boolean>;
 }
 
 const detectPlatform = (): Platform => {
@@ -61,6 +73,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onSwitchProfile,
   onAddAccount,
   onLogout,
+  updatePreferences,
+  themePreference,
+  onSetTheme,
+  autoExpandOCR,
+  ocrEnabled,
+  ocrLanguage,
+  captureType,
+  geminiKey,
+  imgbbKey,
+  onSetAPIKey,
 }) => {
   const [platform, setPlatform] = useState<Platform>(() => detectPlatform());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -147,27 +169,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onSectionChange={setSettingsSection}
           currentPrompt={""}
           currentModel={""}
-          updatePreferences={function (
-            updates: Partial<UserPreferences>,
-          ): void {
-            throw new Error("Function not implemented.");
-          }}
-          isDarkMode={false}
-          onToggleTheme={function (): void {
-            throw new Error("Function not implemented.");
-          }}
-          autoExpandOCR={false}
-          ocrEnabled={false}
-          ocrLanguage={""}
-          captureType={"rectangular"}
-          geminiKey={""}
-          imgbbKey={""}
-          onSetAPIKey={function (
-            provider: "google ai studio" | "imgbb",
-            key: string,
-          ): Promise<boolean> {
-            throw new Error("Function not implemented.");
-          }}
+          updatePreferences={updatePreferences}
+          themePreference={themePreference}
+          onSetTheme={onSetTheme}
+          autoExpandOCR={autoExpandOCR}
+          ocrEnabled={ocrEnabled}
+          ocrLanguage={ocrLanguage}
+          captureType={captureType}
+          geminiKey={geminiKey}
+          imgbbKey={imgbbKey}
+          onSetAPIKey={onSetAPIKey}
         />
 
         {platform === "windows" && <WindowsControls />}

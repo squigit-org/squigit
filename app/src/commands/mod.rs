@@ -9,5 +9,6 @@ pub mod image;
 pub mod ocr;
 pub mod profile;
 pub mod security;
+pub mod theme;
 pub mod window;
 

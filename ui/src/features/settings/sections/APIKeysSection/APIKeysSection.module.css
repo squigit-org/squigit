@@ -1,7 +1,268 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
 .container {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: 100%;
+  gap: 0.75rem;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
+  padding: 2px 4px 8px 4px;
+  box-sizing: border-box;
   height: 100%;
+}
+
+.sectionHeader {
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  margin-bottom: 0.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--neutral-100);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 1rem;
+  flex: 1;
+}
+
+.providerWrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.85rem;
+  overflow: visible;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.glowProviderRow {
+  width: 100%;
+  cursor: default;
+}
+
+.providerRowInternal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.providerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.providerName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--neutral-100);
+}
+
+.providerMeta {
+  font-size: 0.78rem;
+  color: var(--neutral-400);
+}
+
+.accordionContent {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.innerPadding {
+  overflow: hidden;
+  padding: 0 0.75rem 0.75rem 0.75rem;
+}
+
+.helperText {
+  font-size: 0.78rem;
+  color: var(--neutral-400);
+  margin: 0.25rem 0 0.65rem 0;
+  line-height: 1.5;
+}
+
+.providerLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #81a1c1;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    color 0.15s,
+    text-decoration 0.15s;
+}
+
+.providerLink:hover {
+  color: #8caecf;
+}
+
+.inputGroup {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.inputWrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.modernInput {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.03);
+  color: var(--neutral-200);
+  padding: 0.5rem 2rem 0.5rem 0.7rem;
+  border-radius: 0.4rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  transition: border-color 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modernInput:focus {
+  outline: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.inputWrapper.error .modernInput {
+  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  border: 1px solid #e0443e;
+}
+
+/* iOS-style decaying shake animation */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10% {
+    transform: translateX(-8px);
+  }
+
+  20% {
+    transform: translateX(7px);
+  }
+
+  30% {
+    transform: translateX(-5px);
+  }
+
+  40% {
+    transform: translateX(4px);
+  }
+
+  50% {
+    transform: translateX(-2px);
+  }
+
+  60% {
+    transform: translateX(1px);
+  }
+
+  70% {
+    transform: translateX(0);
+  }
+}
+
+.iconBtn {
+  position: absolute;
+  right: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--neutral-500);
+  cursor: pointer;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.iconBtn:hover {
+  color: var(--neutral-300);
+}
+
+.legalNote {
+  padding: 0 4px;
+  color: var(--neutral-500);
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.legalNoteStar {
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.legalNoteText {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.aboutSection {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.legalRow {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--neutral-500);
+  font-size: 0.78rem;
+}
+
+.privacyLink {
+  background: none;
+  border: none;
+  color: var(--neutral-400);
+  font-size: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--neutral-600);
+  cursor: pointer;
+  padding: 0;
+}
+
+.privacyLink:hover {
+  color: var(--neutral-200);
 }

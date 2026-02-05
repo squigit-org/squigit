@@ -118,7 +118,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
           <div className={styles.rowControl}>
             <Dropdown
               label={getModelLabel(activeModel)}
-              width={200}
+              width={180}
               isOpen={aiMenuOpen}
               onOpenChange={setAiMenuOpen}
             >
@@ -161,7 +161,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
               onOpenChange={setOcrMenuOpen}
             >
               <DropdownSectionTitle>Installed Models</DropdownSectionTitle>
-              <div className={styles.list}>
+              <div className={`${styles.list} ${styles.ocr}`}>
                 <DropdownItem
                   label="PP-OCRv4 (English)"
                   isActive={activeOcrModel === "pp-ocr-v4-en"}

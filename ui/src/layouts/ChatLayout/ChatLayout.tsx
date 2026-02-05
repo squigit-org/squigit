@@ -10,6 +10,8 @@ import { ChatPanel, ChatTab, ChatTabProps } from "@/features/";
 import { Profile } from "@/lib/api/tauri/commands";
 import styles from "./ChatLayout.module.css";
 
+import { UserPreferences } from "@/lib/config/preferences";
+
 export interface ChatLayoutProps extends ChatTabProps {
   // TitleBar props
   chatTitle: string;
@@ -21,6 +23,21 @@ export interface ChatLayoutProps extends ChatTabProps {
   toggleChatPanel: () => void;
   isChatPanelOpen: boolean;
   enablePanelAnimation?: boolean;
+  onLogout: () => void;
+
+  updatePreferences: (updates: Partial<UserPreferences>) => void;
+  themePreference: "dark" | "light" | "system";
+  onSetTheme: (theme: "dark" | "light" | "system") => void;
+  autoExpandOCR: boolean;
+  ocrEnabled: boolean;
+  ocrLanguage: string;
+  captureType: "rectangular" | "squiggle";
+  geminiKey: string;
+  imgbbKey: string;
+  onSetAPIKey: (
+    provider: "google ai studio" | "imgbb",
+    key: string,
+  ) => Promise<boolean>;
 
   // ChatPanel props
   chats: any[];
@@ -75,6 +92,17 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   toggleChatPanel,
   isChatPanelOpen,
   enablePanelAnimation = false,
+  onLogout,
+  updatePreferences,
+  themePreference,
+  onSetTheme,
+  autoExpandOCR,
+  ocrEnabled,
+  ocrLanguage,
+  captureType,
+  geminiKey,
+  imgbbKey,
+  onSetAPIKey,
 
   // ChatPanel props
   chats,
@@ -107,10 +135,17 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         profiles={profiles}
         onSwitchProfile={onSwitchProfile}
         onAddAccount={onAddAccount}
-        onLogout={function (): void {
-          throw new Error("Function not implemented.");
-        }}
-        isDarkMode={false}
+        onLogout={onLogout}
+        updatePreferences={updatePreferences}
+        themePreference={themePreference}
+        onSetTheme={onSetTheme}
+        autoExpandOCR={autoExpandOCR}
+        ocrEnabled={ocrEnabled}
+        ocrLanguage={ocrLanguage}
+        captureType={captureType}
+        geminiKey={geminiKey}
+        imgbbKey={imgbbKey}
+        onSetAPIKey={onSetAPIKey}
       />
 
       <div className={styles.mainContent}>

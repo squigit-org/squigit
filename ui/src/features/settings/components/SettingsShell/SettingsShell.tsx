@@ -48,8 +48,8 @@ interface SettingsShellProps {
   onPromptChange?: (prompt: string) => void;
   onModelChange?: (model: string) => void;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
+  themePreference: "dark" | "light" | "system";
+  onSetTheme: (theme: "dark" | "light" | "system") => void;
 
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
@@ -73,8 +73,8 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
   onPromptChange,
   onModelChange,
   updatePreferences,
-  isDarkMode,
-  onToggleTheme,
+  themePreference,
+  onSetTheme,
   autoExpandOCR,
   ocrEnabled,
   ocrLanguage,
@@ -105,11 +105,6 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
     updatePreferences({ captureType: type });
   };
 
-  const handleToggleTheme = () => {
-    const newTheme = isDarkMode ? "light" : "dark";
-    updatePreferences({ theme: newTheme });
-  };
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -128,36 +123,6 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, onClose]);
-
-  const SidebarButtonWithTooltip = ({
-    icon,
-    label,
-    isActive,
-    onClick,
-  }: {
-    icon: React.ReactNode;
-    label: string;
-    isActive?: boolean;
-    onClick: () => void;
-  }) => {
-    const [hover, setHover] = useState(false);
-    const btnRef = useRef<HTMLButtonElement>(null);
-
-    return (
-      <>
-        <button
-          ref={btnRef}
-          className={`${styles.sidebarButton} ${isActive ? styles.active : ""}`}
-          onClick={onClick}
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-        >
-          {icon}
-        </button>
-        <Tooltip text={label} parentRef={btnRef} show={hover} />
-      </>
-    );
-  };
 
   return (
     <div
@@ -228,8 +193,8 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
           <div className={styles.sectionContent}>
             {activeSection === "general" && (
               <GeneralSection
-                isDarkMode={isDarkMode}
-                onToggleTheme={onToggleTheme}
+                themePreference={themePreference}
+                onSetTheme={onSetTheme}
                 autoExpandOCR={autoExpandOCR}
                 onToggleAutoExpand={handleToggleAutoExpand}
                 ocrEnabled={ocrEnabled}
@@ -248,17 +213,17 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
             )}
             {activeSection === "apikeys" && (
               <APIKeysSection
-              // geminiKey={geminiKey}
-              // imgbbKey={imgbbKey}
-              // onSetAPIKey={onSetAPIKey}
+                geminiKey={geminiKey}
+                imgbbKey={imgbbKey}
+                onSetAPIKey={onSetAPIKey}
               />
             )}
             {activeSection === "personalization" && (
               <PersonalizationSection
-              // localPrompt={localPrompt}
-              // currentPrompt={currentPrompt}
-              // setLocalPrompt={setLocalPrompt}
-              // updatePreferences={updatePreferences}
+                localPrompt={localPrompt}
+                currentPrompt={currentPrompt}
+                setLocalPrompt={setLocalPrompt}
+                updatePreferences={updatePreferences}
               />
             )}
             {activeSection === "help" && <HelpSection />}
@@ -266,5 +231,35 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+const SidebarButtonWithTooltip = ({
+  icon,
+  label,
+  isActive,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  isActive?: boolean;
+  onClick: () => void;
+}) => {
+  const [hover, setHover] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        className={`${styles.sidebarButton} ${isActive ? styles.active : ""}`}
+        onClick={onClick}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        {icon}
+      </button>
+      <Tooltip text={label} parentRef={btnRef} show={hover} />
+    </>
   );
 };

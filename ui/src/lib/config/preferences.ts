@@ -21,7 +21,7 @@ import {
 
 export interface UserPreferences {
   model: string;
-  theme: "dark" | "light";
+  theme: "dark" | "light" | "system";
   prompt: string;
   ocrEnabled: boolean;
   autoExpandOCR: boolean;
@@ -32,7 +32,7 @@ export interface UserPreferences {
 
 export const defaultPreferences: UserPreferences = {
   model: DEFAULT_MODEL,
-  theme: DEFAULT_THEME as "dark" | "light",
+  theme: "system",
   prompt: DEFAULT_PROMPT,
   ocrEnabled: true,
   autoExpandOCR: true,

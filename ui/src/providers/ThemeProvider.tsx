@@ -8,41 +8,49 @@ import React, { useEffect, useState, useCallback } from "react";
 import { ThemeContext } from "@/hooks/useTheme";
 import { loadPreferences, savePreferences } from "@/lib/config/preferences";
 import { DEFAULT_THEME } from "@/lib/utils/constants";
+import { invoke } from "@tauri-apps/api/core";
 
 const THEME_STORAGE_KEY = "theme";
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [theme, setThemeState] = useState<"light" | "dark">(() => {
+  const [theme, setThemeState] = useState<"light" | "dark" | "system">(() => {
     if (typeof window !== "undefined") {
-      // 1. Check local storage first (user preference overrides everything)
       const cached = localStorage.getItem(THEME_STORAGE_KEY);
-      if (cached === "light" || cached === "dark") {
+      if (cached === "light" || cached === "dark" || cached === "system") {
         return cached;
       }
-
-      // 2. If no preference, check OS preference once (First Run Logic)
-      if (
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      ) {
-        return "dark";
-      }
-      return "light";
+      return "system";
     }
-    // SSR / Fallback
-    return DEFAULT_THEME as "light" | "dark";
+    return "system";
   });
 
-  const setTheme = useCallback((newTheme: "light" | "dark") => {
+  const getSystemThemeFallback = useCallback((): "light" | "dark" => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    ) {
+      return "dark";
+    }
+    return "light";
+  }, []);
+
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => {
+    if (theme === "system") return getSystemThemeFallback();
+    return theme;
+  });
+
+  const applyDomTheme = useCallback((targetTheme: "light" | "dark") => {
+    document.documentElement.classList.toggle("dark", targetTheme === "dark");
+    document.documentElement.style.colorScheme = targetTheme;
+    document.body.classList.toggle("light-mode", targetTheme === "light");
+  }, []);
+
+  const setTheme = useCallback((newTheme: "light" | "dark" | "system") => {
     setThemeState(newTheme);
-
     localStorage.setItem(THEME_STORAGE_KEY, newTheme);
-
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-    document.documentElement.style.colorScheme = newTheme;
-    document.body.classList.toggle("light-mode", newTheme === "light");
 
     loadPreferences().then((prefs) => {
       if (prefs.theme !== newTheme) {
@@ -51,18 +59,46 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, []);
 
-  const toggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  }, [theme, setTheme]);
+  useEffect(() => {
+    let abortController = new AbortController();
 
-  // Load preferences from file on mount (sync across instances)
+    const setupTheme = async () => {
+      if (theme === "system") {
+        // 1. Initial Fetch from Rust (Nuclear/Robust method)
+        try {
+           const sysTheme = await invoke<string>("get_system_theme");
+           if (abortController.signal.aborted) return;
+           const newResolved = sysTheme === "dark" ? "dark" : "light";
+           setResolvedTheme(newResolved);
+           applyDomTheme(newResolved);
+        } catch (e) {
+           console.warn("Failed to get system theme from Rust, using fallback", e);
+           // Fallback is already set by initial state, but we can re-check
+           const fallback = getSystemThemeFallback();
+           setResolvedTheme(fallback);
+           applyDomTheme(fallback);
+        }
+      } else {
+        // Manual override
+        setResolvedTheme(theme);
+        applyDomTheme(theme);
+      }
+    };
+
+    setupTheme();
+
+    return () => {
+      abortController.abort();
+    };
+  }, [theme, applyDomTheme, getSystemThemeFallback]);
+
+  // Load preferences from file on mount
   useEffect(() => {
     let mounted = true;
     loadPreferences().then((prefs) => {
       if (!mounted) return;
-      // If the file explicitly has a theme different from current state, sync it.
       if (prefs.theme && prefs.theme !== theme) {
-        setTheme(prefs.theme as "light" | "dark");
+        setTheme(prefs.theme as "light" | "dark" | "system");
       }
     });
     return () => {
@@ -70,18 +106,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  // Ensure DOM is synced on first mount
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    document.documentElement.style.colorScheme = theme;
-    document.body.classList.toggle("light-mode", theme === "light");
-  }, [theme]);
-
-  // We explicitly removed the "System" listener here as requested.
-  // The system theme is only detected once as the initial default.
-
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

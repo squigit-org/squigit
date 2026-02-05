@@ -7,9 +7,9 @@
 import { useContext, createContext } from "react";
 
 export interface ThemeContextType {
-  theme: "light" | "dark";
-  toggleTheme: () => void;
-  setTheme: (theme: "light" | "dark") => void;
+  theme: "light" | "dark" | "system";
+  resolvedTheme: "light" | "dark";
+  setTheme: (theme: "light" | "dark" | "system") => void;
 }
 
 export const ThemeContext = createContext<ThemeContextType | undefined>(

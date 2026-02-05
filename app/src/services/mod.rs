@@ -4,4 +4,5 @@
 pub mod auth;
 pub mod image;
 pub mod security;
+pub mod theme;
 pub mod window;

@@ -23,11 +23,11 @@ import {
 } from "@/lib/utils/constants";
 
 export const useSystemSync = () => {
-  const { theme, toggleTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
     const updateNativeBg = async () => {
-      const color = theme === "dark" ? "#0a0a0a" : "#ffffff";
+      const color = resolvedTheme === "dark" ? "#0a0a0a" : "#ffffff";
       try {
         await commands.setBackgroundColor(color);
       } catch (e) {
@@ -35,7 +35,7 @@ export const useSystemSync = () => {
       }
     };
     updateNativeBg();
-  }, [theme]);
+  }, [resolvedTheme]);
 
   const [apiKey, setApiKey] = useState<string>("");
   const [imgbbKey, setImgbbKey] = useState<string>("");
@@ -113,7 +113,7 @@ export const useSystemSync = () => {
           setTheme(prefs.theme);
         }
       } else {
-        setTheme(DEFAULT_THEME as "light" | "dark");
+        setTheme("system");
       }
     };
     init();
@@ -192,7 +192,7 @@ export const useSystemSync = () => {
     return () => {
       unlisteners.forEach((fn) => fn());
     };
-  });
+  }, []);
 
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     // Update local state immediately
@@ -231,10 +231,6 @@ export const useSystemSync = () => {
     } catch (e) {
       console.error("Failed to save preferences:", e);
     }
-  };
-
-  const handleToggleTheme = () => {
-    toggleTheme();
   };
 
   const handleLogout = async () => {
@@ -324,11 +320,12 @@ export const useSystemSync = () => {
     userEmail,
     avatarSrc,
     originalPicture,
-    isDarkMode: theme === "dark",
+    isDarkMode: resolvedTheme === "dark",
+    themePreference: theme,
+    onSetTheme: setTheme,
     systemError,
     clearSystemError,
     updatePreferences,
-    handleToggleTheme,
     handleLogout,
     hasAgreed,
     setHasAgreed,

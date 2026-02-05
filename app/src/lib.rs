@@ -38,6 +38,9 @@ use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    std::env::set_var("GDK_BACKEND", "x11");
+
     Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -110,6 +113,8 @@ pub fn run() {
             delete_profile,
             has_profiles,
             get_profile_count,
+            // Theme
+            commands::theme::get_system_theme,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

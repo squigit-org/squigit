@@ -10,8 +10,8 @@ import { CapturePreview } from "./CapturePreview";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/widgets";
 
 interface GeneralSectionProps {
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
+  themePreference: "dark" | "light" | "system";
+  onSetTheme: (theme: "dark" | "light" | "system") => void;
   autoExpandOCR: boolean;
   onToggleAutoExpand: (checked: boolean) => void;
   ocrEnabled: boolean;
@@ -21,8 +21,8 @@ interface GeneralSectionProps {
 }
 
 export const GeneralSection: React.FC<GeneralSectionProps> = ({
-  isDarkMode,
-  onToggleTheme,
+  themePreference,
+  onSetTheme,
   autoExpandOCR,
   onToggleAutoExpand,
   ocrEnabled,
@@ -32,6 +32,19 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
 }) => {
   const [appearanceMenuOpen, setAppearanceMenuOpen] = useState(false);
   const [captureMenuOpen, setCaptureMenuOpen] = useState(false);
+
+  const getThemeLabel = () => {
+    switch (themePreference) {
+      case "dark":
+        return "Dark";
+      case "light":
+        return "Light";
+      case "system":
+        return "System";
+      default:
+        return "System";
+    }
+  };
 
   return (
     <section className={styles.container} aria-labelledby="general-heading">
@@ -51,9 +64,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
           </div>
           <div className={styles.rowControl}>
             <Dropdown
-              label={
-                isDarkMode === null ? "System" : isDarkMode ? "Dark" : "Light"
-              }
+              label={getThemeLabel()}
               width={160}
               isOpen={appearanceMenuOpen}
               onOpenChange={setAppearanceMenuOpen}
@@ -62,24 +73,25 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               <div className={styles.list}>
                 <DropdownItem
                   label="Dark"
-                  isActive={isDarkMode === true}
+                  isActive={themePreference === "dark"}
                   onClick={() => {
-                    onToggleTheme;
+                    onSetTheme("dark");
                     setAppearanceMenuOpen(false);
                   }}
                 />
                 <DropdownItem
                   label="Light"
-                  isActive={isDarkMode === false}
+                  isActive={themePreference === "light"}
                   onClick={() => {
-                    onToggleTheme;
+                    onSetTheme("light");
                     setAppearanceMenuOpen(false);
                   }}
                 />
                 <DropdownItem
                   label="System"
-                  isActive={isDarkMode === null}
+                  isActive={themePreference === "system"}
                   onClick={() => {
+                    onSetTheme("system");
                     setAppearanceMenuOpen(false);
                   }}
                 />
