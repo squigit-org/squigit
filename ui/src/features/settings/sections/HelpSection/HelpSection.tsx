@@ -12,6 +12,7 @@ import {
   prepareMailReport,
   prepareGitHubIssueReport,
 } from "@/lib/config/external/contact";
+import { MarkGithubIcon, MailIcon, BugIcon } from "@primer/octicons-react";
 import { CodeBlock } from "@/widgets";
 import styles from "./HelpSection.module.css";
 
@@ -86,7 +87,6 @@ export const HelpSection: React.FC = () => {
           Help & Support
         </h2>
       </header>
-
       <div className={styles.code}>
         <span className={styles.subLabel}>System Diagnostics</span>
         <CodeBlock
@@ -95,15 +95,30 @@ export const HelpSection: React.FC = () => {
           stickyHeader={false}
         />
       </div>
-
       <div className={styles.group}>
-        {/* 
-        onClick={() => handleOpen(github.repo)}>
-        onClick={handleContactSupport}>
-        onClick={handleReportBug}>
-        */}
-      </div>
+        <div className={styles.actionRow}>
+          <button
+            className={styles.actionButton}
+            onClick={() => handleOpen(github.repo)}
+          >
+            <MarkGithubIcon size={18} className={styles.actionIcon} />
+            <span className={styles.actionLabel}>View Repository</span>
+          </button>
 
+          <button
+            className={styles.actionButton}
+            onClick={handleContactSupport}
+          >
+            <MailIcon size={18} className={styles.actionIcon} />
+            <span className={styles.actionLabel}>Contact Support</span>
+          </button>
+
+          <button className={styles.actionButton} onClick={handleReportBug}>
+            <BugIcon size={18} className={styles.actionIcon} />
+            <span className={styles.actionLabel}>Report Bug</span>
+          </button>
+        </div>
+      </div>
       <div className={styles.aboutSection}>
         <div className={styles.legalNote}>
           <p className={styles.legalNoteText}>

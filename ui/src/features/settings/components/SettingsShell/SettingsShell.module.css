@@ -50,6 +50,9 @@
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
+  will-change: opacity, transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   transition:
     opacity 0.15s ease,
     visibility 0.15s ease,
@@ -147,4 +150,5 @@
   padding: 20px;
   text-align: left;
   overflow-y: auto;
+  background-color: #171717;
 }

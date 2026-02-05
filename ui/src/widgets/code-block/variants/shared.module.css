@@ -14,7 +14,7 @@
   margin-top: 1rem;
   margin-bottom: 1rem;
   border-radius: 0.75rem;
-
+  overflow-y: hidden;
   background-color: var(--solid-17);
   border: 1px solid rgba(255, 255, 255, 0.04);
 
@@ -29,6 +29,24 @@
 
   min-width: 0;
   max-width: 100%;
+}
+
+.content::-webkit-scrollbar {
+  height: 8px;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background-color: #444;
+  border-radius: 4px;
+}
+.content::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
+.content::-webkit-scrollbar-track {
+  margin-left: 3px;
+  margin-right: 3px;
+  background-color: transparent;
 }
 
 .header {
@@ -131,14 +149,14 @@
 .content {
   position: relative;
   width: 100%;
-  overflow-x: auto;
+  overflow-x: scroll;
   padding: 1rem;
   background-color: var(--solid-17);
   box-sizing: border-box;
   max-width: 100%;
   border-bottom-left-radius: 0.75rem;
   border-bottom-right-radius: 0.75rem;
-  display: grid;
+  display: block;
 }
 
 .pre {
