@@ -44,7 +44,7 @@ export interface ChatLayoutProps extends ChatShellProps {
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb" | "gemini",
+    provider: "google ai studio" | "imgbb",
     key: string,
   ) => Promise<boolean>;
   onOcrModelChange: (model: string) => void;
@@ -58,7 +58,9 @@ export interface ChatLayoutProps extends ChatShellProps {
   profiles: Profile[];
   onSwitchProfile: (profileId: string) => void;
   onAddAccount: () => void;
+  onDeleteProfile: (profileId: string) => void;
   activeProfileId: string | null;
+  switchingProfileId?: string | null;
 
   // ChatPanel props
   chats: any[];
@@ -140,7 +142,9 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   profiles,
   onSwitchProfile,
   onAddAccount,
+  onDeleteProfile,
   activeProfileId,
+  switchingProfileId,
 }) => {
   return (
     <div className={styles.appContainer}>
@@ -153,12 +157,14 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         onModelChange={onModelChange}
         isLoading={isLoading}
         hasImageLoaded={!!startupImage} // TitleBar needs hasImageLoaded
+        onNewSession={onNewSession}
         toggleChatPanel={toggleChatPanel}
         isChatPanelOpen={isChatPanelOpen}
         activeProfile={activeProfile}
         profiles={profiles}
         onSwitchProfile={onSwitchProfile}
         onAddAccount={onAddAccount}
+        onDeleteProfile={onDeleteProfile}
         onLogout={onLogout}
         updatePreferences={updatePreferences}
         themePreference={themePreference}
@@ -179,6 +185,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         settingsSection={settingsSection}
         onSectionChange={onSectionChange}
         openSettings={onOpenSettings}
+        switchingProfileId={switchingProfileId}
       />
 
       <div className={styles.mainContent}>

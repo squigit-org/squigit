@@ -10,7 +10,7 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "@/lib/api/tauri/commands";
-import { ShellContextMenu, TitleBar } from "@/widgets";
+import { ShellContextMenu, TitleBar, Dialog } from "@/widgets";
 
 import {
   useSystemSync,
@@ -34,6 +34,8 @@ import {
   useChat,
   ChatPanel,
   useChatHistory,
+  GeminiAuthDialog,
+  ExistingProfileDialog,
 } from "@/features";
 
 import {
@@ -52,9 +54,11 @@ export const AppLayout: React.FC = () => {
   const [enablePanelAnimation, setEnablePanelAnimation] = useState(false);
   const toggleChatPanel = () => setIsChatPanelOpen((prev) => !prev);
 
+  const [showGeminiAuthDialog, setShowGeminiAuthDialog] = useState(false);
+
   const system = useSystemSync();
   const auth = useAuth();
-  const chatHistory = useChatHistory();
+  const chatHistory = useChatHistory(system.activeProfile?.id || null);
   const performLogout = async () => {
     await system.handleLogout();
     auth.logout();
@@ -179,6 +183,10 @@ export const AppLayout: React.FC = () => {
     enabled: isChatActive,
     onMessage: handleMessageAdded,
     chatId: chatHistory.activeSessionId,
+    onMissingApiKey: () => {
+      setShowGeminiAuthDialog(true);
+      setIsRotating(false);
+    },
   });
 
   const { chatTitle } = useChatTitle({
@@ -265,6 +273,10 @@ export const AppLayout: React.FC = () => {
     setSessionLensUrl(null);
   };
 
+  const handleAddAccount = () => {
+    system.addAccount();
+  };
+
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
   const [imageDrafts, setImageDrafts] = useState<Record<string, string>>({});
 
@@ -302,6 +314,11 @@ export const AppLayout: React.FC = () => {
   } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const activeProfileRef = useRef<any>(null);
+
+  useEffect(() => {
+    activeProfileRef.current = system.activeProfile;
+  }, [system.activeProfile]);
 
   const [isRotating, setIsRotating] = useState(false);
   useEffect(() => {
@@ -312,8 +329,20 @@ export const AppLayout: React.FC = () => {
 
   useEffect(() => {
     const unlisten = listen<any>("auth-success", (event) => {
-      system.updateUserData(event.payload);
+      // Check if re-authenticating the same active profile
+      if (
+        activeProfileRef.current &&
+        event.payload &&
+        activeProfileRef.current.id === event.payload.id
+      ) {
+        return;
+      }
+
+      // 1. Reset Session UI (Chat History, OCR, etc.)
+      handleNewSession();
+      // 2. Switch to Main View (if not already)
       auth.login();
+      // Note: useSystemSync hook handles locking, key clearing, and user data update
     });
     return () => {
       unlisten.then((f) => f());
@@ -351,15 +380,31 @@ export const AppLayout: React.FC = () => {
 
   const handleContextMenu = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (
+    const isInput =
       target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement
+      target instanceof HTMLTextAreaElement;
+
+    // Allow native menu on editable inputs
+    if (
+      isInput &&
+      !(target as HTMLInputElement | HTMLTextAreaElement).readOnly
     ) {
       return;
     }
 
     e.preventDefault();
-    const selectedText = window.getSelection()?.toString() || "";
+
+    let selectedText = "";
+    if (isInput) {
+      const input = target as HTMLInputElement | HTMLTextAreaElement;
+      selectedText = input.value.substring(
+        input.selectionStart || 0,
+        input.selectionEnd || 0,
+      );
+    } else {
+      selectedText = window.getSelection()?.toString() || "";
+    }
+
     if (selectedText) {
       setContextMenu({ x: e.clientX, y: e.clientY, selectedText });
     }
@@ -439,6 +484,7 @@ export const AppLayout: React.FC = () => {
         <TitleBar
           chatTitle={"SnapLLM"}
           onReload={() => {}}
+          onNewSession={handleNewSession}
           isRotating={false}
           currentPrompt={system.prompt}
           currentModel={system.sessionModel}
@@ -470,7 +516,9 @@ export const AppLayout: React.FC = () => {
           activeProfile={system.activeProfile}
           profiles={system.profiles}
           onSwitchProfile={system.switchProfile}
-          onAddAccount={system.addAccount}
+          onAddAccount={handleAddAccount}
+          onDeleteProfile={system.deleteProfile}
+          switchingProfileId={system.switchingProfileId}
         />
         <div className={styles.mainContent}>
           <div
@@ -502,6 +550,20 @@ export const AppLayout: React.FC = () => {
             hasSelection={true}
           />
         )}
+
+        <GeminiAuthDialog
+          isOpen={showGeminiAuthDialog}
+          onClose={() => setShowGeminiAuthDialog(false)}
+          onSetup={() => {
+            system.openSettings("apikeys");
+            setShowGeminiAuthDialog(false);
+          }}
+        />
+
+        <ExistingProfileDialog
+          isOpen={system.showExistingProfileDialog}
+          onClose={() => system.setShowExistingProfileDialog(false)}
+        />
       </div>
     );
   }
@@ -590,8 +652,12 @@ export const AppLayout: React.FC = () => {
         // TitleBar props
         activeProfile={system.activeProfile}
         profiles={system.profiles}
-        onSwitchProfile={system.switchProfile}
-        onAddAccount={system.addAccount}
+        onSwitchProfile={async (profileId) => {
+          handleNewSession();
+          await system.switchProfile(profileId);
+        }}
+        onAddAccount={handleAddAccount}
+        onDeleteProfile={system.deleteProfile}
         isRotating={isRotating}
         onNewSession={handleNewSession}
         toggleChatPanel={toggleChatPanel}
@@ -619,7 +685,8 @@ export const AppLayout: React.FC = () => {
         onRenameChat={chatHistory.handleRenameChat}
         onTogglePinChat={chatHistory.handleTogglePinChat}
         onToggleStarChat={handleToggleStarChatWrapper}
-        activeProfileId={null}
+        activeProfileId={system.activeProfile?.id || null}
+        switchingProfileId={system.switchingProfileId}
       />
 
       {contextMenu && (
@@ -632,6 +699,20 @@ export const AppLayout: React.FC = () => {
           hasSelection={true}
         />
       )}
+
+      <GeminiAuthDialog
+        isOpen={showGeminiAuthDialog}
+        onClose={() => setShowGeminiAuthDialog(false)}
+        onSetup={() => {
+          system.openSettings("apikeys");
+          setShowGeminiAuthDialog(false);
+        }}
+      />
+
+      <ExistingProfileDialog
+        isOpen={system.showExistingProfileDialog}
+        onClose={() => system.setShowExistingProfileDialog(false)}
+      />
     </div>
   );
 };

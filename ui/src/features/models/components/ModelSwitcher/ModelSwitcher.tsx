@@ -16,6 +16,7 @@ interface ModelSwitcherProps {
   isLoading: boolean;
   isHidden?: boolean;
   onOpenSettings: (section: SettingsSection) => void;
+  ocrEnabled: boolean;
   downloadedOcrLanguages: string[];
   currentOcrModel: string;
   onOcrModelChange: (model: string) => void;
@@ -27,6 +28,7 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   isLoading,
   isHidden = false,
   onOpenSettings,
+  ocrEnabled,
   downloadedOcrLanguages,
   currentOcrModel,
   onOcrModelChange,
@@ -141,53 +143,65 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
         <div className={styles.divider} />
 
         <div className={styles.actions}>
-          <div
-            className={styles.ocrWrapper}
-            onMouseEnter={handleOcrMouseEnter}
-            onMouseLeave={handleOcrMouseLeave}
-          >
-            <button className={`${styles.actionButton} ${styles.extraButton}`}>
+          {ocrEnabled ? (
+            <div
+              className={styles.ocrWrapper}
+              onMouseEnter={handleOcrMouseEnter}
+              onMouseLeave={handleOcrMouseLeave}
+            >
+              <button
+                className={`${styles.actionButton} ${styles.extraButton}`}
+              >
+                <ChevronLeft size={14} />
+                <span>OCR Model</span>
+              </button>
+              <div
+                className={`${styles.sideDropdown} ${showOcrMenu ? styles.visible : ""}`}
+              >
+                <div className={styles.sectionTitle}>OCR Model</div>
+                <div className={styles.ocrModelList}>
+                  {ocrModels.map((model) => (
+                    <button
+                      key={model.id}
+                      className={`${styles.modelItem} ${
+                        model.id === currentOcrModel ? styles.activeModel : ""
+                      }`}
+                      onClick={() => handleOCRModelSelect(model.id)}
+                    >
+                      <div className={styles.modelInfo}>
+                        <span className={styles.modelName}>{model.name}</span>
+                      </div>
+                      {model.id === currentOcrModel && (
+                        <Check size={14} className={styles.checkIcon} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className={styles.divider} />
+                <div className={styles.actions}>
+                  <button
+                    className={styles.actionButton}
+                    onClick={() => {
+                      onOpenSettings("models");
+                      setIsOpen(false);
+                      setShowOcrMenu(false);
+                    }}
+                  >
+                    <PackagePlus size={18} />
+                    <span>Get more models</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              className={`${styles.actionButton} ${styles.extraButton} ${styles.disabled}`}
+              disabled
+            >
               <ChevronLeft size={14} />
               <span>OCR Model</span>
             </button>
-            <div
-              className={`${styles.sideDropdown} ${showOcrMenu ? styles.visible : ""}`}
-            >
-              <div className={styles.sectionTitle}>OCR Model</div>
-              <div className={styles.ocrModelList}>
-                {ocrModels.map((model) => (
-                  <button
-                    key={model.id}
-                    className={`${styles.modelItem} ${
-                      model.id === currentOcrModel ? styles.activeModel : ""
-                    }`}
-                    onClick={() => handleOCRModelSelect(model.id)}
-                  >
-                    <div className={styles.modelInfo}>
-                      <span className={styles.modelName}>{model.name}</span>
-                    </div>
-                    {model.id === currentOcrModel && (
-                      <Check size={14} className={styles.checkIcon} />
-                    )}
-                  </button>
-                ))}
-              </div>
-              <div className={styles.divider} />
-              <div className={styles.actions}>
-                <button
-                  className={styles.actionButton}
-                  onClick={() => {
-                    onOpenSettings("models");
-                    setIsOpen(false);
-                    setShowOcrMenu(false);
-                  }}
-                >
-                  <PackagePlus size={18} />
-                  <span>Get more models</span>
-                </button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -22,6 +22,7 @@ export const useChat = ({
   enabled,
   onMessage,
   chatId,
+  onMissingApiKey,
 }: {
   apiKey: string;
   currentModel: string;
@@ -36,6 +37,7 @@ export const useChat = ({
   enabled: boolean;
   onMessage?: (message: Message, chatId: string) => void;
   chatId: string | null;
+  onMissingApiKey?: () => void;
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
@@ -71,11 +73,15 @@ export const useChat = ({
       enabled &&
       startupImage &&
       prompt &&
-      apiKey &&
       !startupImage.fromHistory &&
       chatId
     ) {
-      startSession(apiKey, currentModel, startupImage);
+      if (apiKey) {
+        startSession(apiKey, currentModel, startupImage);
+      } else {
+        if (onMissingApiKey) onMissingApiKey();
+        setIsLoading(false);
+      }
     }
   }, [apiKey, prompt, startupImage, currentModel, enabled, chatId]);
 
@@ -120,6 +126,8 @@ export const useChat = ({
     setError(null);
 
     if (!key) {
+      if (onMissingApiKey) onMissingApiKey();
+      setIsLoading(false);
       return;
     }
 
@@ -241,13 +249,22 @@ export const useChat = ({
     if (apiKey && startupImage && prompt) {
       startSession(apiKey, currentModel, startupImage, false);
     } else if (!apiKey) {
-      setError("API Key missing. Please reset in settings.");
-      setIsLoading(false);
+      if (onMissingApiKey) {
+        onMissingApiKey();
+        setIsLoading(false);
+      } else {
+        setError("API Key missing. Please reset in settings.");
+        setIsLoading(false);
+      }
     }
   };
 
   const handleDescribeEdits = async (editDescription: string) => {
     if (!apiKey || !startupImage || !prompt) {
+      if (!apiKey && onMissingApiKey) {
+        onMissingApiKey();
+        return;
+      }
       setError("Cannot start session. Missing required data.");
       return;
     }

@@ -16,7 +16,7 @@ interface APIKeysSectionProps {
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb" | "gemini",
+    provider: "google ai studio" | "imgbb",
     key: string,
   ) => Promise<boolean>;
 }
@@ -66,13 +66,24 @@ const ProviderRow = ({
     }
     // Start a new 1s timer
     timerRef.current = setTimeout(() => {
-      const valid = validate(newValue);
-      setIsValid(valid);
-      if (valid && newValue !== currentKey) {
+      const trimmed = newValue.trim();
+      const valid = validate(trimmed);
+      if (valid && trimmed !== currentKey) {
         // Only save if valid AND different from current
-        onSave(newValue);
+        onSave(trimmed).then((success) => {
+          if (!success) {
+            setIsValid(false);
+            // Temporary feedback for debugging/user info
+            alert(
+              "Failed to save API key. Please ensure you are logged in to a profile.",
+            );
+          } else {
+            setIsValid(true);
+          }
+        });
+      } else {
+        setIsValid(valid);
       }
-      // If not valid, red border is shown via isValid state
     }, 1000);
   };
   // On blur: if invalid, reset to last saved key
@@ -82,14 +93,22 @@ const ProviderRow = ({
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    const valid = validate(inputValue);
+    const trimmed = inputValue.trim();
+    const valid = validate(trimmed);
     if (!valid) {
       // Reset to last saved key
       setInputValue(currentKey);
       setIsValid(true);
-    } else if (inputValue !== currentKey) {
+    } else if (trimmed !== currentKey) {
       // Save if valid and changed
-      onSave(inputValue);
+      onSave(trimmed).then((success) => {
+        if (!success) {
+          setIsValid(false);
+          alert(
+            "Failed to save API key. Please ensure you are logged in to a profile.",
+          );
+        }
+      });
     }
   };
   // Cleanup timer on unmount

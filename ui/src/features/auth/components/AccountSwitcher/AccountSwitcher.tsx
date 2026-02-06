@@ -7,29 +7,50 @@
 import React, { useRef, useEffect, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Profile } from "@/lib/api/tauri/commands";
-import { ChevronDown, UserPlus, LogOut, Check } from "lucide-react";
+import { RemoveAccountDialog } from "@/features/dialogs";
+import {
+  ChevronDown,
+  UserPlus,
+  LogOut,
+  Check,
+  Loader2,
+  Trash2,
+} from "lucide-react";
 import styles from "./AccountSwitcher.module.css";
 
 interface AccountSwitcherProps {
   activeProfile: Profile | null;
   profiles: Profile[];
   onSwitchProfile: (profileId: string) => void;
+  onNewSession: () => void;
   onAddAccount: () => void;
   onLogout: () => void;
+  onDeleteProfile: (profileId: string) => void;
+  switchingProfileId?: string | null;
 }
 
 export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
   activeProfile,
   profiles,
   onSwitchProfile,
+  onNewSession,
   onAddAccount,
   onLogout,
+  onDeleteProfile,
+  switchingProfileId,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
+  const [deletingProfileId, setDeletingProfileId] = useState<string | null>(
+    null,
+  );
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Don't close if dialog is open (profileToDelete is set)
+      if (profileToDelete) return;
+
       if (
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
@@ -44,33 +65,29 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, profileToDelete]);
+
+  const handleConfirmDelete = () => {
+    if (profileToDelete) {
+      const id = profileToDelete;
+      setProfileToDelete(null);
+      setDeletingProfileId(id);
+      // Split UI update from IO operation to prevent freezing
+      setTimeout(async () => {
+        try {
+          await onDeleteProfile(id);
+        } finally {
+          setDeletingProfileId(null);
+        }
+      }, 50);
+    }
+  };
 
   const getInitials = (name: string) => {
     const names = name.trim().split(" ");
     if (names.length === 0) return "";
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return (names[0].charAt(0) + names[1].charAt(0)).toUpperCase();
-  };
-
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      "#ef4444",
-      "#f97316",
-      "#f59e0b",
-      "#84cc16",
-      "#10b981",
-      "#06b6d4",
-      "#6366f1",
-      "#8b5cf6",
-      "#ec4899",
-      "#f43f5e",
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
   };
 
   const getAvatarSrc = (avatar: string | null) => {
@@ -82,37 +99,30 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
   };
 
   const activeAvatarSrc = getAvatarSrc(activeProfile?.avatar ?? null);
+  const isSwitching = !!switchingProfileId;
 
   return (
     <div className={styles.accountSwitcher} ref={containerRef}>
       <button
         className={`${styles.trigger} ${isOpen ? styles.active : ""}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !isSwitching && setIsOpen(!isOpen)}
+        disabled={isSwitching}
       >
-        <div
-          className={styles.avatar}
-          style={{
-            backgroundColor: activeAvatarSrc
-              ? "transparent"
-              : getAvatarColor(activeProfile?.name ?? "User"),
-          }}
-        >
-          {activeAvatarSrc ? (
-            <img
-              src={activeAvatarSrc}
-              alt={activeProfile?.name ?? "User"}
-              className={styles.avatarImage}
-            />
-          ) : (
-            <span className={styles.avatarInitials}>
-              {getInitials(activeProfile?.name ?? "User")}
-            </span>
-          )}
+        <div className={styles.avatar}>
+          <img
+            src={activeAvatarSrc || ""}
+            alt={activeProfile?.name ?? "User"}
+            className={styles.avatarImage}
+          />
         </div>
-        <ChevronDown
-          size={18}
-          className={`${styles.chevron} ${isOpen ? styles.rotate : ""}`}
-        />
+        {isSwitching ? (
+          <Loader2 size={18} className={`${styles.chevron} ${styles.spin}`} />
+        ) : (
+          <ChevronDown
+            size={18}
+            className={`${styles.chevron} ${isOpen ? styles.rotate : ""}`}
+          />
+        )}
       </button>
 
       {/* Dropdown - always mounted */}
@@ -121,27 +131,29 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
         <div className={styles.accountList}>
           {profiles.map((profile) => {
             const profileAvatarSrc = getAvatarSrc(profile.avatar);
+            const isActive = activeProfile?.id === profile.id;
+            const isDeleting = deletingProfileId === profile.id;
+            const isConfirming = profileToDelete === profile.id;
+            const showLoader = isDeleting || isConfirming;
+
             return (
-              <button
+              <div
                 key={profile.id}
                 className={`${styles.accountItem} ${
-                  activeProfile?.id === profile.id ? styles.activeAccount : ""
+                  isActive ? styles.activeAccount : ""
                 }`}
+                style={{
+                  pointerEvents: showLoader ? "none" : "auto",
+                  opacity: isDeleting ? 0.7 : 1,
+                }}
                 onClick={() => {
-                  if (activeProfile?.id !== profile.id) {
+                  if (activeProfile?.id !== profile.id && !showLoader) {
+                    setIsOpen(false);
                     onSwitchProfile(profile.id);
                   }
-                  setIsOpen(false);
                 }}
               >
-                <div
-                  className={styles.itemAvatar}
-                  style={{
-                    backgroundColor: profileAvatarSrc
-                      ? "transparent"
-                      : getAvatarColor(profile.name),
-                  }}
-                >
+                <div className={styles.itemAvatar}>
                   {profileAvatarSrc ? (
                     <img
                       src={profileAvatarSrc}
@@ -158,10 +170,30 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
                   <span className={styles.accountName}>{profile.name}</span>
                   <span className={styles.accountEmail}>{profile.email}</span>
                 </div>
-                {activeProfile?.id === profile.id && (
+                {isActive ? (
                   <Check size={14} className={styles.checkIcon} />
+                ) : (
+                  <button
+                    className={`${styles.deleteButton} ${
+                      showLoader ? styles.loading : ""
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!showLoader) {
+                        setProfileToDelete(profile.id);
+                      }
+                    }}
+                    title={showLoader ? "Removing..." : "Remove account"}
+                    disabled={showLoader}
+                  >
+                    {showLoader ? (
+                      <Loader2 size={14} className={styles.spin} />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
+                  </button>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
@@ -192,6 +224,12 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
           </button>
         </div>
       </div>
+
+      <RemoveAccountDialog
+        isOpen={!!profileToDelete}
+        onClose={() => setProfileToDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };

@@ -116,10 +116,21 @@ export const useGoogleLens = (
 
     try {
       setIsLensLoading(true);
+      console.log("[useGoogleLens] triggerLens called with activeProfileId:", activeProfileId);
+      
+      if (!activeProfileId) {
+        console.error("[useGoogleLens] No active profile ID!");
+        setShowAuthDialog(true);
+        setIsLensLoading(false);
+        return;
+      }
+
       const apiKey = await invoke<string>("get_api_key", {
         provider: "imgbb",
         profileId: activeProfileId,
       });
+
+      console.log("[useGoogleLens] Retrieved API key for imgbb:", apiKey ? "FOUND" : "EMPTY");
 
       if (apiKey) {
         const realBase64 = await getRealBase64(startupImage);
@@ -139,6 +150,8 @@ export const useGoogleLens = (
       }
     } catch (error) {
       console.error("Lens Trigger Error:", error);
+      // If error is likely due to missing key or generic failure in getting key, show dialog
+      setShowAuthDialog(true);
       setIsLensLoading(false);
       setWaitingForKey(false);
     }

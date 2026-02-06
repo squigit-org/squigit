@@ -65,7 +65,14 @@ export const useSystemSync = () => {
 
   // Profile management
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
+  const activeProfileRef = useRef<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [showExistingProfileDialog, setShowExistingProfileDialog] =
+    useState(false);
+
+  useEffect(() => {
+    activeProfileRef.current = activeProfile;
+  }, [activeProfile]);
 
   const [startupImage, setStartupImage] = useState<{
     base64: string;
@@ -128,58 +135,124 @@ export const useSystemSync = () => {
     init();
   }, []);
 
-  useEffect(() => {
-    let unlisteners: (() => void)[] = [];
+  const [switchingProfileId, setSwitchingProfileId] = useState<string | null>(
+    null,
+  );
 
-    const setupIpc = async () => {
+  // Moved loadProfileData outside useEffect to be reusable
+  const loadProfileData = async () => {
+    try {
+      // First, get active profile
+      const profile = await commands.getActiveProfile();
+      if (!profile) {
+        // No active profile - user needs to log in
+        console.log("No active profile found");
+        setActiveProfile(null);
+        setUserName("");
+        setUserEmail("");
+        setAvatarSrc("");
+        setOriginalPicture(null);
+        setApiKey("");
+        setImgbbKey("");
+        return;
+      }
+
+      setActiveProfile(profile);
+      setUserName(profile.name);
+      setUserEmail(profile.email);
+      if (profile.avatar) {
+        setAvatarSrc(profile.avatar);
+      }
+
+      // Get API keys for active profile
       try {
-        // First, get active profile
-        const profile = await commands.getActiveProfile();
-        if (!profile) {
-          // No active profile - user needs to log in
-          console.log("No active profile found");
-          return;
-        }
-
-        setActiveProfile(profile);
-        setUserName(profile.name);
-        setUserEmail(profile.email);
-        if (profile.avatar) {
-          setAvatarSrc(profile.avatar);
-        }
-
-        // Get API keys for active profile
         const apiKey = await invoke<string>("get_api_key", {
           provider: "gemini",
           profileId: profile.id,
         });
+        console.log(
+          "[useSystemSync] Gemini key retrieved:",
+          apiKey ? "FOUND" : "EMPTY",
+        );
         if (apiKey) {
           setApiKey(apiKey);
           initializeGemini(apiKey);
+        } else {
+          setApiKey("");
         }
-
-        try {
-          const imgbbApiKey = await invoke<string>("get_api_key", {
-            provider: "imgbb",
-            profileId: profile.id,
-          });
-          if (imgbbApiKey) {
-            setImgbbKey(imgbbApiKey);
-          }
-        } catch (e) {}
-
-        // Load all profiles for switcher
-        const allProfiles = await commands.listProfiles();
-        setProfiles(allProfiles);
       } catch (e) {
-        console.error("Config load error", e);
-        setSystemError("Failed to load configuration.");
+        console.error("[useSystemSync] Failed to retrieve Gemini key:", e);
+        setApiKey("");
       }
-    };
+
+      try {
+        const imgbbApiKey = await invoke<string>("get_api_key", {
+          provider: "imgbb",
+          profileId: profile.id,
+        });
+        console.log(
+          "[useSystemSync] ImgBB key retrieved:",
+          imgbbApiKey ? "FOUND" : "EMPTY",
+        );
+        if (imgbbApiKey) {
+          setImgbbKey(imgbbApiKey);
+        } else {
+          setImgbbKey("");
+        }
+      } catch (e) {
+        console.error("[useSystemSync] Failed to retrieve ImgBB key:", e);
+        setImgbbKey("");
+      }
+
+      // Load all profiles for switcher
+      const allProfiles = await commands.listProfiles();
+      // Sort profiles by name to keep order stable
+      allProfiles.sort((a, b) => a.name.localeCompare(b.name));
+      setProfiles(allProfiles);
+    } catch (e) {
+      console.error("Config load error", e);
+      setSystemError("Failed to load configuration.");
+    }
+  };
+
+  useEffect(() => {
+    let unlisteners: (() => void)[] = [];
+    loadProfileData();
 
     // Listen for auth-success to refresh profile data
     const authListen = listen<any>("auth-success", async (event) => {
       const data = event.payload;
+
+      // Check if re-authenticating the same active profile
+      if (
+        activeProfileRef.current &&
+        data &&
+        activeProfileRef.current.id === data.id
+      ) {
+        console.log("Re-authenticated same profile, showing dialog");
+        setShowExistingProfileDialog(true);
+        return;
+      }
+
+      // 1. LOCK: Show loading state immediately to prevent race conditions
+      setSwitchingProfileId("creating_account");
+
+      // 2. RESET: Clear the board to avoid "ghost data"
+      console.log("[useSystemSync] Auth Success: Resetting Session & Keys");
+      setStartupImage(null);
+      setSessionChatTitle(null);
+      setApiKey("");
+      setImgbbKey("");
+      setActiveProfile(null);
+      setUserName("");
+      setUserEmail("");
+      setAvatarSrc("");
+      setOriginalPicture(null);
+
+      // Artificial delay to let React flush the "Reset" state to UI
+      // This ensures the user sees the empty state before new data loads
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       if (data) {
         setUserName(data.name);
         setUserEmail(data.email);
@@ -187,21 +260,31 @@ export const useSystemSync = () => {
         if (data.original_picture) {
           setOriginalPicture(data.original_picture);
         }
-        // Refresh profiles
-        const allProfiles = await commands.listProfiles();
-        setProfiles(allProfiles);
-        const active = await commands.getActiveProfile();
-        setActiveProfile(active);
+
+        // 3. PROCESS: Load new profile data
+        try {
+          const allProfiles = await commands.listProfiles();
+          allProfiles.sort((a, b) => a.name.localeCompare(b.name));
+          setProfiles(allProfiles);
+
+          const active = await commands.getActiveProfile();
+          setActiveProfile(active);
+        } catch (e) {
+          console.error("Failed to load profile data after auth:", e);
+        }
       }
+
+      // 4. UNLOCK: Restore UI interactivity
+      setSwitchingProfileId(null);
     });
     authListen.then((unlisten) => unlisteners.push(unlisten));
-
-    setupIpc();
 
     return () => {
       unlisteners.forEach((fn) => fn());
     };
   }, []);
+
+  // ... (rest of code)
 
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     // Update local state immediately
@@ -261,16 +344,22 @@ export const useSystemSync = () => {
   };
 
   const handleSetAPIKey = async (
-    provider: "google ai studio" | "imgbb" | "gemini",
+    provider: "google ai studio" | "imgbb",
     key: string,
   ) => {
     if (!activeProfile) {
-      console.error("No active profile - cannot save API key");
+      console.error(
+        "[useSystemSync] No active profile - cannot save API key. Profile state:",
+        activeProfile,
+      );
       return false;
     }
     try {
+      console.log(
+        `[useSystemSync] Saving ${provider} key for profile ${activeProfile.id}`,
+      );
       await commands.setApiKey(provider, key, activeProfile.id);
-      if (provider === "google ai studio" || provider === "gemini") {
+      if (provider === "google ai studio") {
         setApiKey(key);
         initializeGemini(key);
       } else {
@@ -278,25 +367,55 @@ export const useSystemSync = () => {
       }
       return true;
     } catch (e) {
-      console.error(`Failed to set ${provider} API key`, e);
+      console.error(`[useSystemSync] Failed to set ${provider} API key:`, e);
       return false;
     }
   };
 
   const switchProfile = async (profileId: string) => {
     try {
+      setSwitchingProfileId(profileId);
       await commands.setActiveProfile(profileId);
-      window.location.reload();
+
+      // Do NOT clear state here. Wait for loadProfileData to update it atomically.
+
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Delay for spinner visibility
+
+      await loadProfileData();
     } catch (e) {
       console.error("Failed to switch profile:", e);
+    } finally {
+      setSwitchingProfileId(null);
     }
   };
 
   const addAccount = async () => {
     try {
       await commands.startGoogleAuth();
+    } catch (e: any) {
+      const errorMsg = String(e);
+      if (errorMsg.includes("Authentication already in progress")) {
+        console.warn("Auth in progress, attempting to cancel and retry...");
+        try {
+          await commands.cancelGoogleAuth();
+          // Give it a moment to release the port
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          await commands.startGoogleAuth();
+        } catch (retryErr) {
+          console.error("Failed to restart auth:", retryErr);
+        }
+      } else {
+        console.error("Failed to start auth:", e);
+      }
+    }
+  };
+
+  const deleteProfile = async (profileId: string) => {
+    try {
+      await commands.deleteProfile(profileId);
+      await loadProfileData();
     } catch (e) {
-      console.error("Failed to start auth:", e);
+      console.error("Failed to delete profile:", e);
     }
   };
 
@@ -320,6 +439,7 @@ export const useSystemSync = () => {
   };
 
   return {
+    switchingProfileId,
     apiKey,
     prompt: activePrompt,
     editingPrompt,
@@ -368,5 +488,8 @@ export const useSystemSync = () => {
     profiles,
     switchProfile,
     addAccount,
+    deleteProfile,
+    showExistingProfileDialog,
+    setShowExistingProfileDialog,
   };
 };

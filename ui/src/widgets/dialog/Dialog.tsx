@@ -118,11 +118,7 @@ export const Dialog: React.FC<DialogProps> = ({
   const displayMessage = message ? message.replace(/\\n/g, "\n").trim() : "";
 
   return createPortal(
-    <div
-      className={styles.dialogOverlay}
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className={styles.dialogOverlay}>
       <div
         className={`${styles.dialogContainer} animate-in fade-in zoom-in-95 duration-200 max-w-md w-full`}
       >

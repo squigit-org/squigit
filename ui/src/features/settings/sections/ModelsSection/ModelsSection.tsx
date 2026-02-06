@@ -191,9 +191,9 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
 
         <div className={styles.row}>
           <div className={styles.rowMeta}>
-            <span className={styles.label}>OCR model</span>
+            <span className={styles.label}>OCR language</span>
             <span className={styles.description}>
-              Choose your preferred model for future chats
+              Choose your preferred language for future chats
             </span>
           </div>
           <div className={styles.rowControl}>

@@ -38,6 +38,24 @@ pub async fn start_google_auth(app: AppHandle, state: State<'_, AppState>) -> Re
 }
 
 #[tauri::command]
+pub async fn cancel_google_auth(_app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    if !state.auth_running.load(Ordering::SeqCst) {
+        return Ok(()); // Nothing to cancel
+    }
+
+    // Trigger the cancellation by sending a request to the local server
+    tauri::async_runtime::spawn_blocking(|| {
+        let client = reqwest::blocking::Client::new();
+        // Fire and forget - if it fails, the server might already be down
+        let _ = client.get("http://localhost:3000/snapllm-cancel").send();
+    }).await.map_err(|e| e.to_string())?;
+
+    // We don't manually clear the flag here because the start_google_auth command
+    // will clear it when the server loop breaks and the function returns.
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn logout(app: AppHandle) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let config_dir = get_app_config_dir(&app);

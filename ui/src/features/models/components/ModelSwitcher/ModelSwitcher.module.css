@@ -203,7 +203,7 @@
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.85rem;
-  color: #a1a1aa;
+  color: #edededef;
   transition: all 0.15s ease;
   font-family: "Inter", sans-serif;
 }
@@ -215,6 +215,12 @@
 
 .extraButton {
   cursor: default;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .ocrWrapper {
@@ -249,4 +255,10 @@
   visibility: visible;
   pointer-events: auto;
   transform: translateX(0);
+}
+
+.actionButton.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }

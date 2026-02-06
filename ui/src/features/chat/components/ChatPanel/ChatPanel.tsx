@@ -18,7 +18,11 @@ import {
 
 import { ChatMetadata, groupChatsByDate } from "@/lib/storage/chatStorage";
 import styles from "./ChatPanel.module.css";
-import { PanelContextMenu, Dialog } from "@/widgets";
+import { PanelContextMenu } from "@/widgets";
+import {
+  DeleteChatDialog,
+  DeleteMultipleChatsDialog,
+} from "@/features/dialogs";
 
 // --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
@@ -141,7 +145,16 @@ const ChatItem: React.FC<ChatItemProps> = ({
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className={styles.chatTitle}>{chat.title}</span>
+          <span
+            className={styles.chatTitle}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setIsRenaming(true);
+            }}
+          >
+            {chat.title}
+          </span>
         )}
 
         {/* Actions Group (Hover or Persistent) */}
@@ -482,34 +495,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* --- CONFIRMATION DIALOGS --- */}
-      <Dialog
+      <DeleteChatDialog
         isOpen={!!deleteId}
-        variant="error"
-        title="Delete Chat"
-        message="Are you sure you want to delete this chat?\nThis action cannot be undone."
-        actions={[
-          {
-            label: "Cancel",
-            onClick: () => setDeleteId(null),
-            variant: "secondary",
-          },
-          { label: "Delete", onClick: handleDeleteChat, variant: "danger" },
-        ]}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDeleteChat}
       />
 
-      <Dialog
+      <DeleteMultipleChatsDialog
         isOpen={showBulkDelete}
-        variant="error"
-        title="Delete Multiple Chats"
-        message={`Are you sure you want to delete ${selectedIds.length} chats?\nThis action cannot be undone.`}
-        actions={[
-          {
-            label: "Cancel",
-            onClick: () => setShowBulkDelete(false),
-            variant: "secondary",
-          },
-          { label: "Delete All", onClick: handleBulkDelete, variant: "danger" },
-        ]}
+        count={selectedIds.length}
+        onClose={() => setShowBulkDelete(false)}
+        onConfirm={handleBulkDelete}
       />
     </div>
   );

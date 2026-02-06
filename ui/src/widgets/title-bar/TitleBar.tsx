@@ -40,7 +40,9 @@ interface TitleBarProps {
   activeProfile: Profile | null;
   profiles: Profile[];
   onSwitchProfile: (profileId: string) => void;
+  onNewSession: () => void;
   onAddAccount: () => void;
+  onDeleteProfile: (profileId: string) => void;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
   themePreference: "dark" | "light" | "system";
   onSetTheme: (theme: "dark" | "light" | "system") => void;
@@ -54,10 +56,11 @@ interface TitleBarProps {
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb" | "gemini",
+    provider: "google ai studio" | "imgbb",
     key: string,
   ) => Promise<boolean>;
   onOcrModelChange: (model: string) => void;
+  switchingProfileId?: string | null;
 }
 
 const detectPlatform = (): Platform => {
@@ -71,6 +74,7 @@ const detectPlatform = (): Platform => {
 export const TitleBar: React.FC<TitleBarProps> = ({
   chatTitle,
   onReload,
+  onNewSession,
   isRotating,
   currentPrompt,
   currentModel,
@@ -89,6 +93,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   profiles,
   onSwitchProfile,
   onAddAccount,
+  onDeleteProfile,
   updatePreferences,
   themePreference,
   onSetTheme,
@@ -103,6 +108,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   imgbbKey,
   onSetAPIKey,
   onOcrModelChange,
+  switchingProfileId,
 }) => {
   const [platform] = useState<Platform>(() => detectPlatform());
 
@@ -151,6 +157,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onModelChange={onModelChange}
           isLoading={isLoading}
           onOpenSettings={openSettings}
+          ocrEnabled={ocrEnabled}
           downloadedOcrLanguages={downloadedOcrLanguages}
           currentOcrModel={ocrLanguage}
           onOcrModelChange={onOcrModelChange}
@@ -158,10 +165,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
         <AccountSwitcher
           activeProfile={activeProfile}
+          onNewSession={onNewSession}
           profiles={profiles}
           onSwitchProfile={onSwitchProfile}
           onAddAccount={onAddAccount}
           onLogout={onLogout}
+          onDeleteProfile={onDeleteProfile}
+          switchingProfileId={switchingProfileId}
         />
 
         {hasImageLoaded && (

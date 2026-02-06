@@ -55,7 +55,7 @@ interface SettingsShellProps {
   geminiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
-    provider: "google ai studio" | "imgbb" | "gemini",
+    provider: "google ai studio" | "imgbb",
     key: string,
   ) => Promise<boolean>;
 }

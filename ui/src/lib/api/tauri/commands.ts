@@ -23,21 +23,20 @@ export const commands = {
     invoke<{ hash: string; path: string } | null>("get_initial_image"),
 
   // Auth & Keys (profile-aware)
-  getApiKey: (
-    provider: "google ai studio" | "imgbb" | "gemini",
-    profileId: string,
-  ) => invoke<string>("get_api_key", { provider, profileId }),
+  getApiKey: (provider: "google ai studio" | "imgbb", profileId: string) =>
+    invoke<string>("get_api_key", { provider, profileId }),
   setApiKey: (
-    provider: "google ai studio" | "imgbb" | "gemini",
+    provider: "google ai studio" | "imgbb",
     key: string,
     profileId: string,
   ) =>
     invoke("encrypt_and_save", {
       provider,
-      plaintext: key,
-      profile_id: profileId,
+      plaintext: key, // "plaintext"
+      profileId,
     }),
   startGoogleAuth: () => invoke("start_google_auth"),
+  cancelGoogleAuth: () => invoke("cancel_google_auth"),
   logout: () => invoke("logout"),
   getUserData: () => invoke<any>("get_user_data"),
 

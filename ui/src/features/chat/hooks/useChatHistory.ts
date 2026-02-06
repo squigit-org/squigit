@@ -12,23 +12,36 @@ import {
   updateChatMetadata as updateChatMeta,
 } from "@/lib/storage/chatStorage";
 
-export const useChatHistory = () => {
+export const useChatHistory = (activeProfileId: string | null = null) => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const refreshChats = useCallback(async () => {
+    if (!activeProfileId) {
+      setChats([]);
+      return;
+    }
+    setIsLoading(true);
     try {
       const chatList = await listChats();
       setChats(chatList);
     } catch (e) {
       console.error("Failed to load chats:", e);
+      setChats([]);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [activeProfileId]);
 
   useEffect(() => {
     refreshChats();
   }, [refreshChats]);
+
+  // Reset active session when profile changes
+  useEffect(() => {
+    setActiveSessionId(null);
+  }, [activeProfileId]);
 
   const handleDeleteChat = async (id: string) => {
     try {

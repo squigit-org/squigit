@@ -23,7 +23,7 @@ import {
 } from "@/features/image";
 import { ActionMenu, ActionMenuHandle } from "@/widgets/menu";
 import styles from "./ImageShell.module.css";
-import { Dialog } from "@/widgets";
+import { ImgBBAuthDialog } from "@/features/dialogs";
 import { SettingsSection } from "@/features/settings";
 
 interface OCRBox {
@@ -508,26 +508,13 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         viewerRef={viewerRef}
       />
 
-      <Dialog
+      <ImgBBAuthDialog
         isOpen={showAuthDialog}
-        title="ImgBB API Key Required"
-        message="To use Google Lens features, you need to configure your ImgBB API key (free)."
-        variant="info"
-        actions={[
-          {
-            label: "Cancel",
-            onClick: () => setShowAuthDialog(false),
-            variant: "secondary",
-          },
-          {
-            label: "Setup API Key",
-            onClick: () => {
-              onOpenSettings("apikeys");
-              setShowAuthDialog(false);
-            },
-            variant: "primary",
-          },
-        ]}
+        onClose={() => setShowAuthDialog(false)}
+        onSetup={() => {
+          onOpenSettings("apikeys");
+          setShowAuthDialog(false);
+        }}
       />
 
       {error && <div className={styles.ocrError}>{error}</div>}

@@ -4,4 +4,4 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./WheelPicker";
+export * from "./SystemDialogs";

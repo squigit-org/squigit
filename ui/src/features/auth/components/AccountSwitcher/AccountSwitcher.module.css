@@ -63,6 +63,19 @@
   transform: rotate(180deg);
 }
 
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Dropdown - always mounted, animated with opacity */
 .dropdown {
   position: absolute;
@@ -198,6 +211,38 @@
 .checkIcon {
   color: #ffffff;
   flex-shrink: 0;
+}
+
+.deleteButton {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.accountItem:hover .deleteButton {
+  opacity: 1;
+}
+
+.deleteButton.loading {
+  opacity: 1;
+  pointer-events: none;
+  color: var(--text-muted, #71717a);
+}
+
+.deleteButton:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 .divider {

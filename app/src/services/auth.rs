@@ -108,6 +108,12 @@ pub fn start_google_auth_flow(app: AppHandle, _config_dir: PathBuf) -> Result<()
             continue;
         }
 
+        if url_string.contains("/snapllm-cancel") {
+            let _ = request.respond(Response::empty(200));
+            println!("Auth cancelled via local request.");
+            break;
+        }
+
         let url = Url::parse(&url_string).map_err(|_| "Failed to parse callback URL")?;
         let code_pair = url.query_pairs().find(|(key, _)| key == "code");
 

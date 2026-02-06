@@ -225,7 +225,7 @@
 
 .chatTitleInput {
   flex: 1;
-  background: var(--bg-panel);
+  background: transparent;
   color: var(--text-main);
   font-size: 0.85rem;
   padding: 2px 4px;
