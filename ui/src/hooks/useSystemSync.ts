@@ -16,11 +16,7 @@ import {
   hasPreferencesFile,
   UserPreferences,
 } from "@/lib/config/preferences";
-import {
-  DEFAULT_MODEL,
-  DEFAULT_PROMPT,
-  DEFAULT_THEME,
-} from "@/lib/utils/constants";
+import { DEFAULT_MODEL, DEFAULT_PROMPT } from "@/lib/utils/constants";
 import { SettingsSection } from "@/features/settings";
 
 export const useSystemSync = () => {
@@ -90,6 +86,9 @@ export const useSystemSync = () => {
   const [systemError, setSystemError] = useState<string | null>(null);
   const clearSystemError = () => setSystemError(null);
 
+  // Flag to coordinate startup: loadProfileData waits for prefs to be applied
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+
   const [hasAgreed, setHasAgreed] = useState<boolean | null>(null);
   useEffect(() => {
     const init = async () => {
@@ -128,9 +127,52 @@ export const useSystemSync = () => {
         if (prefs.theme) {
           setTheme(prefs.theme);
         }
+
+        // Handle Active Account Logic
+        const activeAccountId = prefs.activeAccount;
+        console.log(
+          "[useSystemSync] Checking active account preference:",
+          activeAccountId,
+        );
+
+        if (activeAccountId && activeAccountId !== "Guest") {
+          // We have a stored profile ID, try to activate it
+          try {
+            // Verify it exists first to avoid errors?
+            // Actually setActiveProfile in backend should handle if it doesn't exist (or we catch error)
+            // But let's check if it's in the list later?
+            // For now, let's just try to set it.
+            // NOTE: We need to make sure we don't conflict with loadProfileData()
+            // which runs right after.
+            // Ideally, we set the active profile in backend BEFORE loadProfileData runs.
+            await commands.setActiveProfile(activeAccountId);
+          } catch (e) {
+            console.error(
+              "[useSystemSync] Failed to restore active account:",
+              e,
+            );
+            // Fallback to Guest
+            await invoke("logout");
+            updatePreferences({ activeAccount: "Guest" });
+          }
+        } else {
+          // Guest mode or explicit logout
+          // Ensure backend is also logged out
+          try {
+            await invoke("logout");
+          } catch (e) {
+            console.error("[useSystemSync] Failed to ensure guest mode:", e);
+          }
+        }
       } else {
         setTheme("system");
+        // No prefs file yet, default is Guest. Ensure backend matches.
+        try {
+          await invoke("logout");
+        } catch (e) {}
       }
+      // Signal that prefs are loaded and backend state is set
+      setPrefsLoaded(true);
     };
     init();
   }, []);
@@ -167,7 +209,7 @@ export const useSystemSync = () => {
       // Get API keys for active profile
       try {
         const apiKey = await invoke<string>("get_api_key", {
-          provider: "gemini",
+          provider: "google ai studio",
           profileId: profile.id,
         });
         console.log(
@@ -216,6 +258,9 @@ export const useSystemSync = () => {
   };
 
   useEffect(() => {
+    // Wait for preferences to be loaded before reading profile data
+    if (!prefsLoaded) return;
+
     let unlisteners: (() => void)[] = [];
     loadProfileData();
 
@@ -253,36 +298,27 @@ export const useSystemSync = () => {
       // This ensures the user sees the empty state before new data loads
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      if (data) {
-        setUserName(data.name);
-        setUserEmail(data.email);
-        setAvatarSrc(data.avatar || "");
-        if (data.original_picture) {
-          setOriginalPicture(data.original_picture);
-        }
-
-        // 3. PROCESS: Load new profile data
-        try {
-          const allProfiles = await commands.listProfiles();
-          allProfiles.sort((a, b) => a.name.localeCompare(b.name));
-          setProfiles(allProfiles);
-
-          const active = await commands.getActiveProfile();
-          setActiveProfile(active);
-        } catch (e) {
-          console.error("Failed to load profile data after auth:", e);
-        }
+      // 3. PROCESS: Load ALL profile data from backend (including keys)
+      try {
+        await loadProfileData();
+      } catch (e) {
+        console.error("Failed to load profile data after auth:", e);
       }
 
       // 4. UNLOCK: Restore UI interactivity
       setSwitchingProfileId(null);
+
+      // 5. PERSIST: Update preferences
+      if (data && data.id) {
+        updatePreferences({ activeAccount: data.id });
+      }
     });
     authListen.then((unlisten) => unlisteners.push(unlisten));
 
     return () => {
       unlisteners.forEach((fn) => fn());
     };
-  }, []);
+  }, [prefsLoaded]);
 
   // ... (rest of code)
 
@@ -334,10 +370,16 @@ export const useSystemSync = () => {
   const handleLogout = async () => {
     try {
       await invoke("logout");
+      setActiveProfile(null);
+      setApiKey("");
+      setImgbbKey("");
+      setStartupImage(null);
+      setSessionChatTitle(null);
       setUserName("");
       setUserEmail("");
       setAvatarSrc("");
       setOriginalPicture(null);
+      await updatePreferences({ activeAccount: "Guest" });
     } catch (e) {
       console.error("Logout failed", e);
     }
@@ -382,6 +424,7 @@ export const useSystemSync = () => {
       await new Promise((resolve) => setTimeout(resolve, 500)); // Delay for spinner visibility
 
       await loadProfileData();
+      await updatePreferences({ activeAccount: profileId });
     } catch (e) {
       console.error("Failed to switch profile:", e);
     } finally {
@@ -390,23 +433,58 @@ export const useSystemSync = () => {
   };
 
   const addAccount = async () => {
+    setSwitchingProfileId("creating_account");
+
+    const performAuth = async () => {
+      // 2 minutes timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Auth Timeout")), 120000),
+      );
+      await Promise.race([commands.startGoogleAuth(), timeoutPromise]);
+    };
+
     try {
-      await commands.startGoogleAuth();
+      await performAuth();
+      // Don't reset here! Loading clears on auth-success event or cancellation
     } catch (e: any) {
       const errorMsg = String(e);
-      if (errorMsg.includes("Authentication already in progress")) {
-        console.warn("Auth in progress, attempting to cancel and retry...");
+      if (
+        errorMsg.includes("Authentication already in progress") ||
+        errorMsg.includes("Address in use") ||
+        errorMsg.includes("OSError")
+      ) {
+        console.warn("Auth blocked, attempting to cleanup and retry...");
         try {
           await commands.cancelGoogleAuth();
-          // Give it a moment to release the port
           await new Promise((resolve) => setTimeout(resolve, 500));
-          await commands.startGoogleAuth();
+          await performAuth();
+          // Don't reset here - auth-success will handle it
         } catch (retryErr) {
           console.error("Failed to restart auth:", retryErr);
+          setSwitchingProfileId(null);
         }
       } else {
         console.error("Failed to start auth:", e);
+        if (errorMsg.includes("Auth Timeout")) {
+          console.warn("Auth timed out, cancelling backend process...");
+          try {
+            await commands.cancelGoogleAuth();
+          } catch (cancelErr) {
+            console.error("Failed to cancel timed out auth:", cancelErr);
+          }
+        }
+        setSwitchingProfileId(null);
       }
+    }
+  };
+
+  const cancelAuth = async () => {
+    try {
+      await commands.cancelGoogleAuth();
+    } catch (e) {
+      console.error("Failed to cancel auth:", e);
+    } finally {
+      setSwitchingProfileId(null);
     }
   };
 
@@ -488,6 +566,7 @@ export const useSystemSync = () => {
     profiles,
     switchProfile,
     addAccount,
+    cancelAuth,
     deleteProfile,
     showExistingProfileDialog,
     setShowExistingProfileDialog,

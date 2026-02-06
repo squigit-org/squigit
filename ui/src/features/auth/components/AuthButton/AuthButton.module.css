@@ -1,0 +1,82 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import "../../../../styles/variables.css";
+
+.loginBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background-color: transparent;
+  color: var(--neutral-100);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 100;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 32px;
+  width: 143px;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.loginBtn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.google {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid ffffffdf;
+  border-left-color: #ffffffdf;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dot {
+  animation: blink 1.4s infinite both;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}

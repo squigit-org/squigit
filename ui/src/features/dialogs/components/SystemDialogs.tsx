@@ -182,3 +182,36 @@ export const DeleteMultipleChatsDialog: React.FC<
     />
   );
 };
+
+interface LoginRequiredDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onLogin: () => void;
+}
+
+export const LoginRequiredDialog: React.FC<LoginRequiredDialogProps> = ({
+  isOpen,
+  onClose,
+  onLogin,
+}) => {
+  return (
+    <Dialog
+      isOpen={isOpen}
+      title="Login Required"
+      message="You need to sign in to upload images or use AI features."
+      variant="info"
+      actions={[
+        {
+          label: "Cancel",
+          onClick: onClose,
+          variant: "secondary",
+        },
+        {
+          label: "Sign In",
+          onClick: onLogin,
+          variant: "primary",
+        },
+      ]}
+    />
+  );
+};

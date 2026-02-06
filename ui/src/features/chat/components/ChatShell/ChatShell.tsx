@@ -317,13 +317,13 @@ const ChatShellComponent: React.FC<ChatShellProps> = ({
         <main>
           <div
             className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-4 ${
-              hasMessages ? "pt-12" : "pt-20"
+              hasMessages ? "pt-12" : "pt-16"
             }`}
           >
             {startupImage && !isChatMode && (
               <div className="min-h-[60vh]">
                 {isLoading && !streamingText ? (
-                  <TextShimmer variant="full" />
+                  <TextShimmer text="Analyzing your image" />
                 ) : (
                   <StreamingResponse
                     text={streamingText}
@@ -337,7 +337,7 @@ const ChatShellComponent: React.FC<ChatShellProps> = ({
 
             {isChatMode && (
               <div className="space-y-8 flex flex-col-reverse">
-                {isLoading && <TextShimmer variant="simple" />}
+                {isLoading && <TextShimmer text="Planning next moves" />}
 
                 {messages
                   .slice()

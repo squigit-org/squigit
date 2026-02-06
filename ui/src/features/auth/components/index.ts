@@ -4,5 +4,5 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./OAuthLogin";
+export * from "./AuthButton";
 export * from "./AccountSwitcher";

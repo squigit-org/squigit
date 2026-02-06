@@ -17,7 +17,10 @@ pub async fn start_google_auth(app: AppHandle, state: State<'_, AppState>) -> Re
     }
 
     state.auth_running.store(true, Ordering::SeqCst);
+    // Clear cancelled flag when starting fresh auth
+    state.auth_cancelled.store(false, Ordering::SeqCst);
     let auth_lock = state.auth_running.clone();
+    let auth_cancelled = state.auth_cancelled.clone();
 
     let result = tauri::async_runtime::spawn_blocking(move || {
         let config_dir = get_app_config_dir(&app);
@@ -28,7 +31,7 @@ pub async fn start_google_auth(app: AppHandle, state: State<'_, AppState>) -> Re
             }
         }
 
-        auth::start_google_auth_flow(app, config_dir)
+        auth::start_google_auth_flow(app, config_dir, auth_cancelled)
     })
     .await;
 
@@ -43,6 +46,9 @@ pub async fn cancel_google_auth(_app: AppHandle, state: State<'_, AppState>) -> 
         return Ok(()); // Nothing to cancel
     }
 
+    // Mark as cancelled so late callbacks are rejected
+    state.auth_cancelled.store(true, Ordering::SeqCst);
+
     // Trigger the cancellation by sending a request to the local server
     tauri::async_runtime::spawn_blocking(|| {
         let client = reqwest::blocking::Client::new();
@@ -56,11 +62,13 @@ pub async fn cancel_google_auth(_app: AppHandle, state: State<'_, AppState>) -> 
 }
 
 #[tauri::command]
-pub async fn logout(app: AppHandle) -> Result<(), String> {
+pub async fn logout(_app: AppHandle) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let config_dir = get_app_config_dir(&app);
-
-        let _ = fs::remove_file(config_dir.join("profile.json")).ok();
+        // Clear active profile in index (Guest mode)
+        // Profile data stays on disk for re-login
+        if let Ok(store) = ops_profile_store::ProfileStore::new() {
+            let _ = store.clear_active_profile_id();
+        }
         Ok(())
     })
     .await

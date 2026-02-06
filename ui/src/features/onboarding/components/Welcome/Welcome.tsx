@@ -17,11 +17,15 @@ interface WelcomeProps {
   /** Called when image is stored in CAS with its hash and path. */
   onImageReady: (data: CASImageData) => void;
   isActive?: boolean;
+  isGuest?: boolean;
+  onLoginRequired?: () => void;
 }
 
 export const Welcome: React.FC<WelcomeProps> = ({
   onImageReady,
   isActive = true,
+  isGuest = false,
+  onLoginRequired,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,6 +98,10 @@ export const Welcome: React.FC<WelcomeProps> = ({
 
     const handlePaste = async (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        if (isGuest) {
+          onLoginRequired?.();
+          return;
+        }
         try {
           // Rust now returns { hash, path } instead of base64
           const result = await invoke<ImageResult>("read_clipboard_image");
@@ -149,6 +157,10 @@ export const Welcome: React.FC<WelcomeProps> = ({
           );
 
           if (isAllowed) {
+            if (isGuest) {
+              onLoginRequired?.();
+              return;
+            }
             try {
               console.log("Processing dropped file:", filePath);
               const result = await storeImageFromPath(filePath);
@@ -178,6 +190,10 @@ export const Welcome: React.FC<WelcomeProps> = ({
 
   // Process file - Rust handles storage in CAS
   const handleFileProcess = async (file: File) => {
+    if (isGuest) {
+      onLoginRequired?.();
+      return;
+    }
     try {
       // @ts-expect-error Tauri provides file.path for dropped files
       if (file.path) {

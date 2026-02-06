@@ -7,9 +7,8 @@
 const BASE = (sub: string) => `https://${sub}.google.com`;
 
 export const google = {
-  base: BASE("www"),
-  lens: BASE("lens"),
   search: BASE("www"),
+  lens: BASE("lens"),
   translate: BASE("translate"),
   aiStudio: {
     dashboard: BASE("aistudio"),

@@ -117,6 +117,14 @@ impl ProfileStore {
         Ok(())
     }
 
+    /// Clear the active profile (for Guest mode logout).
+    pub fn clear_active_profile_id(&self) -> Result<()> {
+        let mut index = self.load_index()?;
+        index.active_profile_id = None;
+        self.save_index(&index)?;
+        Ok(())
+    }
+
     // =========================================================================
     // Profile CRUD
     // =========================================================================

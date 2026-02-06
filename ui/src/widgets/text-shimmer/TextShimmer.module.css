@@ -13,24 +13,40 @@
 }
 
 .shimmerText {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 500;
-  letter-spacing: 0.01em;
+  font-family:
+    -apple-system, "Inter", system-ui, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial;
   color: transparent;
-  background: linear-gradient(
-    90deg,
-    #6b7280 0%,
-    #6b7280 35%,
-    #22d3ee 50%,
-    #a78bfa 55%,
-    #6b7280 65%,
-    #6b7280 100%
-  );
-  background-size: 300% 100%;
-  background-clip: text;
+  background-image:
+    linear-gradient(
+      50deg,
+      transparent 0%,
+      transparent 20%,
+      #4a4a4a 30%,
+      #9a9a9a 45%,
+      #c0c0c0 50%,
+      #9a9a9a 55%,
+      #4a4a4a 70%,
+      transparent 80%,
+      transparent 100%
+    ),
+    linear-gradient(#343434, #343434);
+
+  background-size:
+    170% 100%,
+    100% 100%;
+
+  background-repeat: no-repeat, repeat;
   -webkit-background-clip: text;
-  animation: textShimmer 2.5s ease-in-out infinite;
-  transition: opacity 0.2s ease-out;
+  background-clip: text;
+
+  animation: shimmer 2s infinite linear;
+
+  will-change: background-position;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .fadeIn {
@@ -45,28 +61,11 @@
   opacity: 0.7;
 }
 
-@keyframes textShimmer {
+@keyframes shimmer {
   0% {
-    background-position: 100% 50%;
+    background-position-x: 250%, 0;
   }
   100% {
-    background-position: -100% 50%;
+    background-position-x: -150%, 0;
   }
-}
-
-/* Light mode adjustments */
-body:global(.light-mode) .shimmerText {
-  background: linear-gradient(
-    90deg,
-    #9ca3af 0%,
-    #9ca3af 35%,
-    #0891b2 50%,
-    #7c3aed 55%,
-    #9ca3af 65%,
-    #9ca3af 100%
-  );
-  background-size: 300% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  animation: textShimmer 2.5s ease-in-out infinite;
 }

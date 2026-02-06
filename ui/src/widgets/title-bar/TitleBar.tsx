@@ -15,6 +15,7 @@ import {
   SettingsPanel,
   SettingsSection,
   SettingsShell,
+  AuthButton,
 } from "@/features";
 import { UserPreferences } from "@/lib/config/preferences";
 
@@ -42,6 +43,7 @@ interface TitleBarProps {
   onSwitchProfile: (profileId: string) => void;
   onNewSession: () => void;
   onAddAccount: () => void;
+  onCancelAuth: () => void;
   onDeleteProfile: (profileId: string) => void;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
   themePreference: "dark" | "light" | "system";
@@ -93,6 +95,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   profiles,
   onSwitchProfile,
   onAddAccount,
+  onCancelAuth,
   onDeleteProfile,
   updatePreferences,
   themePreference,
@@ -152,27 +155,37 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       <div className={styles.rightSection}>
-        <ModelSwitcher
-          currentModel={currentModel}
-          onModelChange={onModelChange}
-          isLoading={isLoading}
-          onOpenSettings={openSettings}
-          ocrEnabled={ocrEnabled}
-          downloadedOcrLanguages={downloadedOcrLanguages}
-          currentOcrModel={ocrLanguage}
-          onOcrModelChange={onOcrModelChange}
-        />
+        {activeProfile ? (
+          <>
+            <ModelSwitcher
+              currentModel={currentModel}
+              onModelChange={onModelChange}
+              isLoading={isLoading}
+              onOpenSettings={openSettings}
+              ocrEnabled={ocrEnabled}
+              downloadedOcrLanguages={downloadedOcrLanguages}
+              currentOcrModel={ocrLanguage}
+              onOcrModelChange={onOcrModelChange}
+            />
 
-        <AccountSwitcher
-          activeProfile={activeProfile}
-          onNewSession={onNewSession}
-          profiles={profiles}
-          onSwitchProfile={onSwitchProfile}
-          onAddAccount={onAddAccount}
-          onLogout={onLogout}
-          onDeleteProfile={onDeleteProfile}
-          switchingProfileId={switchingProfileId}
-        />
+            <AccountSwitcher
+              activeProfile={activeProfile}
+              onNewSession={onNewSession}
+              profiles={profiles}
+              onSwitchProfile={onSwitchProfile}
+              onAddAccount={onAddAccount}
+              onLogout={onLogout}
+              onDeleteProfile={onDeleteProfile}
+              switchingProfileId={switchingProfileId}
+            />
+          </>
+        ) : (
+          <AuthButton
+            onLogin={onAddAccount}
+            onCancel={onCancelAuth}
+            isLoading={switchingProfileId === "creating_account"}
+          />
+        )}
 
         {hasImageLoaded && (
           <button
@@ -205,6 +218,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           geminiKey={geminiKey}
           imgbbKey={imgbbKey}
           onSetAPIKey={onSetAPIKey}
+          isGuest={!activeProfile}
         />
 
         {platform === "windows" && <WindowsControls />}

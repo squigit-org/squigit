@@ -6,8 +6,6 @@
 
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { google } from "@/lib/config";
 
 type AuthStage = "LOADING" | "LOGIN" | "AUTHENTICATED";
 

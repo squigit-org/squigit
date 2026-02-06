@@ -8,6 +8,8 @@ use std::sync::{atomic::AtomicBool, Arc};
 pub struct AppState {
     pub image_data: Arc<Mutex<Option<StoredImage>>>,
     pub auth_running: Arc<AtomicBool>,
+    /// Flag set when auth is cancelled or timed out - prevents late auth from succeeding
+    pub auth_cancelled: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -15,6 +17,7 @@ impl AppState {
         Self {
             image_data: Arc::new(Mutex::new(None)),
             auth_running: Arc::new(AtomicBool::new(false)),
+            auth_cancelled: Arc::new(AtomicBool::new(false)),
         }
     }
 }

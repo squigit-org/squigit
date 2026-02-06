@@ -58,6 +58,7 @@ interface SettingsShellProps {
     provider: "google ai studio" | "imgbb",
     key: string,
   ) => Promise<boolean>;
+  isGuest?: boolean;
 }
 
 export const SettingsShell: React.FC<SettingsShellProps> = ({
@@ -78,6 +79,7 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
   geminiKey,
   imgbbKey,
   onSetAPIKey,
+  isGuest = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -213,6 +215,7 @@ export const SettingsShell: React.FC<SettingsShellProps> = ({
                 geminiKey={geminiKey}
                 imgbbKey={imgbbKey}
                 onSetAPIKey={onSetAPIKey}
+                isGuest={isGuest}
               />
             )}
             {activeSection === "personalization" && (

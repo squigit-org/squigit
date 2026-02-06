@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use tauri::{AppHandle, Emitter};
 use tiny_http::{Header, Response, Server};
 use url::Url;
@@ -69,7 +70,11 @@ struct SavedProfile {
     original_picture: Option<String>,
 }
 
-pub fn start_google_auth_flow(app: AppHandle, _config_dir: PathBuf) -> Result<(), String> {
+pub fn start_google_auth_flow(
+    app: AppHandle,
+    _config_dir: PathBuf,
+    auth_cancelled: Arc<AtomicBool>,
+) -> Result<(), String> {
     let wrapper: GoogleCredentials = serde_json::from_str(SECRETS_JSON)
         .map_err(|e| format!("Failed to parse credentials.json: {}", e))?;
 
@@ -217,6 +222,17 @@ pub fn start_google_auth_flow(app: AppHandle, _config_dir: PathBuf) -> Result<()
                 avatar: local_avatar,
                 original_picture,
             };
+
+            // Check if auth was cancelled/timed out before processing
+            if auth_cancelled.load(Ordering::SeqCst) {
+                let _ = respond_html(
+                    request,
+                    "Authentication Expired",
+                    "<p>The authentication request has expired or was cancelled.</p><p>Please close this tab and try again from SnapLLM.</p>",
+                    true,
+                );
+                return Ok(());
+            }
 
             let _ = app.emit("auth-success", &user_data);
 

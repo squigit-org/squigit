@@ -15,6 +15,7 @@ import { useTextContextMenu } from "@/widgets/menu/hooks/useTextContextMenu";
 interface APIKeysSectionProps {
   geminiKey: string;
   imgbbKey: string;
+  isGuest?: boolean;
   onSetAPIKey: (
     provider: "google ai studio" | "imgbb",
     key: string,
@@ -27,6 +28,7 @@ const ProviderRow = ({
   dashboardUrl,
   currentKey,
   onSave,
+  isGuest = false,
 }: {
   title: string;
   providerKeyName: string;
@@ -34,6 +36,7 @@ const ProviderRow = ({
   currentKey: string;
   dashboardUrl: string;
   onSave: (key: string) => Promise<boolean>;
+  isGuest?: boolean;
 }) => {
   const [inputValue, setInputValue] = useState(currentKey);
   const [showKey, setShowKey] = useState(false);
@@ -69,6 +72,11 @@ const ProviderRow = ({
       const trimmed = newValue.trim();
       const valid = validate(trimmed);
       if (valid && trimmed !== currentKey) {
+        if (isGuest) {
+          setIsValid(false);
+          setTimeout(() => setIsValid(true), 1000);
+          return;
+        }
         // Only save if valid AND different from current
         onSave(trimmed).then((success) => {
           if (!success) {
@@ -100,6 +108,11 @@ const ProviderRow = ({
       setInputValue(currentKey);
       setIsValid(true);
     } else if (trimmed !== currentKey) {
+      if (isGuest) {
+        setIsValid(false);
+        setTimeout(() => setIsValid(true), 1000);
+        return;
+      }
       // Save if valid and changed
       onSave(trimmed).then((success) => {
         if (!success) {
@@ -220,6 +233,7 @@ export const APIKeysSection: React.FC<APIKeysSectionProps> = ({
   geminiKey,
   imgbbKey,
   onSetAPIKey,
+  isGuest,
 }) => {
   const handleOpenUrl = (url: string) =>
     invoke("open_external_url", { url: url });
@@ -237,7 +251,8 @@ export const APIKeysSection: React.FC<APIKeysSectionProps> = ({
           description="Required for AI features"
           currentKey={geminiKey}
           dashboardUrl={google.aiStudio.key}
-          onSave={(key) => onSetAPIKey("gemini", key)}
+          onSave={(key) => onSetAPIKey("google ai studio", key)}
+          isGuest={isGuest}
         />
         <ProviderRow
           title="ImgBB"
@@ -246,6 +261,7 @@ export const APIKeysSection: React.FC<APIKeysSectionProps> = ({
           currentKey={imgbbKey}
           dashboardUrl={"https://api.imgbb.com/"}
           onSave={(key) => onSetAPIKey("imgbb", key)}
+          isGuest={isGuest}
         />
         <div className={styles.legalNote}>
           <span className={styles.legalNoteStar}>*</span>

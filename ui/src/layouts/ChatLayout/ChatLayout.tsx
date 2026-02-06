@@ -58,6 +58,7 @@ export interface ChatLayoutProps extends ChatShellProps {
   profiles: Profile[];
   onSwitchProfile: (profileId: string) => void;
   onAddAccount: () => void;
+  onCancelAuth: () => void;
   onDeleteProfile: (profileId: string) => void;
   activeProfileId: string | null;
   switchingProfileId?: string | null;
@@ -142,6 +143,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   profiles,
   onSwitchProfile,
   onAddAccount,
+  onCancelAuth,
   onDeleteProfile,
   activeProfileId,
   switchingProfileId,
@@ -156,7 +158,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         currentModel={currentModel}
         onModelChange={onModelChange}
         isLoading={isLoading}
-        hasImageLoaded={!!startupImage} // TitleBar needs hasImageLoaded
+        hasImageLoaded={!!startupImage}
         onNewSession={onNewSession}
         toggleChatPanel={toggleChatPanel}
         isChatPanelOpen={isChatPanelOpen}
@@ -164,6 +166,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         profiles={profiles}
         onSwitchProfile={onSwitchProfile}
         onAddAccount={onAddAccount}
+        onCancelAuth={onCancelAuth}
         onDeleteProfile={onDeleteProfile}
         onLogout={onLogout}
         updatePreferences={updatePreferences}

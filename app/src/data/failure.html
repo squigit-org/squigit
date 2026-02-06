@@ -1,0 +1,195 @@
+<!--
+ * @license
+ * copyright 2026 a7mddra
+ * spdx-license-identifier: apache-2.0
+-->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${title} - SnapLLM</title>
+    ${dynamicStyle}
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          "Roboto",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Helvetica,
+          Arial,
+          sans-serif;
+        background-color: #f8f9fa;
+        color: #202124;
+        line-height: 1.5;
+        font-size: 14px;
+        -webkit-font-smoothing: antialiased;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      header {
+        background-color: #ffffff;
+        height: 64px;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #dadce0;
+        flex-shrink: 0;
+      }
+      .header-logo {
+        font-size: 22px;
+        color: #5f6368;
+        font-weight: 400;
+        letter-spacing: -0.5px;
+      }
+      main {
+        flex: 1;
+        padding: 24px;
+        display: flex;
+        justify-content: flex-start;
+        flex-direction: column;
+        max-width: 100%;
+      }
+      .content-container {
+        background-color: #ffffff;
+        border: 1px solid #dadce0;
+        border-radius: 8px;
+        padding: 48px;
+        margin: 24px 0;
+        max-width: 900px;
+        width: 100%;
+        align-self: center;
+      }
+      .breadcrumbs {
+        font-size: 12px;
+        color: #5f6368;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+      }
+      .breadcrumbs span {
+        margin: 0 4px;
+      }
+      h1 {
+        font-family: "Google Sans", "Roboto", sans-serif;
+        font-size: 28px;
+        font-weight: 400;
+        color: var(--title-color, #d93025);
+        margin-bottom: 24px;
+        letter-spacing: normal;
+      }
+      p {
+        font-size: 16px;
+        color: #202124;
+        margin-bottom: 16px;
+      }
+      ul {
+        margin: 16px 0 24px 24px;
+      }
+      li {
+        margin-bottom: 12px;
+        font-size: 16px;
+      }
+      a {
+        color: #1a73e8;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .error-box {
+        background-color: #fce8e6;
+        color: #d93025;
+        padding: 16px;
+        border-radius: 4px;
+        margin-bottom: 24px;
+        font-family: monospace;
+        word-break: break-word;
+      }
+
+      footer {
+        padding: 24px;
+        font-size: 12px;
+        color: #5f6368;
+        border-top: 1px solid #dadce0;
+        background-color: #f8f9fa;
+        margin-top: auto;
+      }
+      .footer-content {
+        max-width: 900px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
+      .footer-content p {
+        font-size: 12px;
+        color: #5f6368;
+        margin-bottom: 8px;
+      }
+
+      @media (max-width: 600px) {
+        .content-container {
+          padding: 24px;
+          margin: 0;
+          border: none;
+          border-top: 1px solid #dadce0;
+          border-bottom: 1px solid #dadce0;
+        }
+        main {
+          padding: 0;
+        }
+        h1 {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-logo">SnapLLM</div>
+    </header>
+    <main>
+      <div class="content-container">
+        <div class="breadcrumbs">
+          Home <span>&rsaquo;</span> Auth <span>&rsaquo;</span> ${breadcrumb}
+        </div>
+        <h1>${title}</h1>
+
+        ${bodyContent}
+      </div>
+    </main>
+    <footer>
+      <div class="footer-content">
+        <p>
+          The authentication request could not be completed as expected. This
+          may happen if the request timed out or was cancelled from SnapLLM.
+          Please close this tab and try signing in again.
+        </p>
+        <p>
+          Except as otherwise noted, the content of this application is licensed
+          under the
+          <a
+            href="https://github.com/a7mddra/snapllm?tab=Apache-2.0-1-ov-file"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Apache-2 License</a
+          >. SnapLLM is a trademark of its respective contributors.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

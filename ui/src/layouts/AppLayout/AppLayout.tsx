@@ -28,7 +28,6 @@ import {
   Welcome,
   Agreement,
   UpdateNotes,
-  OAuthLogin,
   useAuth,
   useChatTitle,
   useChat,
@@ -36,6 +35,7 @@ import {
   useChatHistory,
   GeminiAuthDialog,
   ExistingProfileDialog,
+  LoginRequiredDialog,
 } from "@/features";
 
 import {
@@ -55,8 +55,15 @@ export const AppLayout: React.FC = () => {
   const toggleChatPanel = () => setIsChatPanelOpen((prev) => !prev);
 
   const [showGeminiAuthDialog, setShowGeminiAuthDialog] = useState(false);
+  const [showLoginRequiredDialog, setShowLoginRequiredDialog] = useState(false);
 
   const system = useSystemSync();
+  const activeProfileRef = useRef<any>(null);
+
+  useEffect(() => {
+    activeProfileRef.current = system.activeProfile;
+  }, [system.activeProfile]);
+
   const auth = useAuth();
   const chatHistory = useChatHistory(system.activeProfile?.id || null);
   const performLogout = async () => {
@@ -137,6 +144,15 @@ export const AppLayout: React.FC = () => {
     const unlisten = listen<string>("image-path", async (event) => {
       const imagePath = event.payload;
       if (imagePath) {
+        // Guest Mode Check
+        if (!activeProfileRef.current) {
+          console.log(
+            "CLI/External image drop attempted in guest mode - requiring login",
+          );
+          setShowLoginRequiredDialog(true);
+          return;
+        }
+
         try {
           console.log("Event received for image:", imagePath);
           const result = await commands.processImagePath(imagePath);
@@ -314,11 +330,6 @@ export const AppLayout: React.FC = () => {
   } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const activeProfileRef = useRef<any>(null);
-
-  useEffect(() => {
-    activeProfileRef.current = system.activeProfile;
-  }, [system.activeProfile]);
 
   const [isRotating, setIsRotating] = useState(false);
   useEffect(() => {
@@ -353,6 +364,13 @@ export const AppLayout: React.FC = () => {
     imageId: string;
     path: string;
   }) => {
+    // Guest Mode Check: Require login for image upload/OCR features
+    if (!system.activeProfile) {
+      console.log("Image upload attempted in guest mode - requiring login");
+      setShowLoginRequiredDialog(true);
+      return;
+    }
+
     console.log("Raw image path:", imageData.path);
     const assetUrl = convertFileSrc(imageData.path);
     console.log("Converted asset URL:", assetUrl);
@@ -474,10 +492,6 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  if (auth.authStage === "LOGIN") {
-    return <OAuthLogin onComplete={auth.login} />;
-  }
-
   if (!system.startupImage) {
     return (
       <div className={styles.appContainer} onContextMenu={handleContextMenu}>
@@ -517,6 +531,7 @@ export const AppLayout: React.FC = () => {
           profiles={system.profiles}
           onSwitchProfile={system.switchProfile}
           onAddAccount={handleAddAccount}
+          onCancelAuth={system.cancelAuth}
           onDeleteProfile={system.deleteProfile}
           switchingProfileId={system.switchingProfileId}
         />
@@ -537,7 +552,11 @@ export const AppLayout: React.FC = () => {
             />
           </div>
           <div className={styles.contentArea}>
-            <Welcome onImageReady={handleImageReady} />
+            <Welcome
+              onImageReady={handleImageReady}
+              isGuest={!system.activeProfile}
+              onLoginRequired={() => setShowLoginRequiredDialog(true)}
+            />
           </div>
         </div>
         {contextMenu && (
@@ -563,6 +582,15 @@ export const AppLayout: React.FC = () => {
         <ExistingProfileDialog
           isOpen={system.showExistingProfileDialog}
           onClose={() => system.setShowExistingProfileDialog(false)}
+        />
+
+        <LoginRequiredDialog
+          isOpen={showLoginRequiredDialog}
+          onClose={() => setShowLoginRequiredDialog(false)}
+          onLogin={() => {
+            setShowLoginRequiredDialog(false);
+            system.addAccount();
+          }}
         />
       </div>
     );
@@ -657,6 +685,7 @@ export const AppLayout: React.FC = () => {
           await system.switchProfile(profileId);
         }}
         onAddAccount={handleAddAccount}
+        onCancelAuth={system.cancelAuth}
         onDeleteProfile={system.deleteProfile}
         isRotating={isRotating}
         onNewSession={handleNewSession}
@@ -712,6 +741,15 @@ export const AppLayout: React.FC = () => {
       <ExistingProfileDialog
         isOpen={system.showExistingProfileDialog}
         onClose={() => system.setShowExistingProfileDialog(false)}
+      />
+
+      <LoginRequiredDialog
+        isOpen={showLoginRequiredDialog}
+        onClose={() => setShowLoginRequiredDialog(false)}
+        onLogin={() => {
+          setShowLoginRequiredDialog(false);
+          system.addAccount();
+        }}
       />
     </div>
   );
