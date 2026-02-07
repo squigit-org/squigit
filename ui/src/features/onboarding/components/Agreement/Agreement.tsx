@@ -5,7 +5,10 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { savePreferences, defaultPreferences } from "@/lib/config/preferences";
+import {
+  savePreferences,
+  defaultPreferences,
+} from "@/lib/storage/app-settings";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";

@@ -8,7 +8,7 @@ import React, { useCallback, useState, useEffect } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/widgets";
 import { Download, Check, Loader2 } from "lucide-react";
-import { UserPreferences } from "@/lib/config/preferences";
+import { UserPreferences } from "@/lib/storage/app-settings";
 
 import { AVAILABLE_MODELS, OcrModelDownloable } from "@/features/models";
 

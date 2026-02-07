@@ -16,7 +16,7 @@ import {
 import { Profile } from "@/lib/api/tauri/commands";
 import styles from "./ChatLayout.module.css";
 
-import { UserPreferences } from "@/lib/config/preferences";
+import { UserPreferences } from "@/lib/storage/app-settings";
 
 export interface ChatLayoutProps extends ChatShellProps {
   currentPrompt: string;

@@ -15,8 +15,8 @@ import {
   savePreferences,
   hasPreferencesFile,
   UserPreferences,
-} from "@/lib/config/preferences";
-import { DEFAULT_MODEL, DEFAULT_PROMPT } from "@/lib/utils/constants";
+} from "@/lib/storage/app-settings";
+import { DEFAULT_MODEL, DEFAULT_PROMPT } from "@/lib/helpers/constants";
 import { SettingsSection } from "@/features/settings";
 
 export const useSystemSync = () => {

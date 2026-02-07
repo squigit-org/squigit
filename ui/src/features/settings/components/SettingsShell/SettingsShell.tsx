@@ -15,9 +15,9 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { UserPreferences } from "@/lib/config/preferences";
+import { UserPreferences } from "@/lib/storage/app-settings";
 import { invoke } from "@tauri-apps/api/core";
-import { github } from "@/lib/config";
+import { github } from "@/lib/config/services";
 import { Tooltip } from "@/widgets";
 
 import {

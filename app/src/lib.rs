@@ -116,6 +116,8 @@ pub fn run() {
             get_profile_count,
             // Theme
             commands::theme::get_system_theme,
+            // Sound
+            commands::sound::play_pop_sound,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

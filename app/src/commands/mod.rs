@@ -11,4 +11,6 @@ pub mod profile;
 pub mod security;
 pub mod theme;
 pub mod window;
+pub mod sound;
+
 

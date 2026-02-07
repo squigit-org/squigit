@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { github } from "./github";
+import { github } from "@/lib/config/services";
 
 const MAX_URL_LENGTH = 1900;
 

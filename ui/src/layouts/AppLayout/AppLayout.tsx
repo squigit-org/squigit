@@ -33,9 +33,6 @@ import {
   useChat,
   ChatPanel,
   useChatHistory,
-  GeminiAuthDialog,
-  ExistingProfileDialog,
-  LoginRequiredDialog,
 } from "@/features";
 
 import {
@@ -47,7 +44,7 @@ import {
   saveOcrData,
   saveImgbbUrl,
   overwriteChatMessages,
-} from "@/lib/storage/chatStorage";
+} from "@/lib/storage/chat";
 
 export const AppLayout: React.FC = () => {
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
@@ -570,26 +567,31 @@ export const AppLayout: React.FC = () => {
           />
         )}
 
-        <GeminiAuthDialog
+        <Dialog
           isOpen={showGeminiAuthDialog}
-          onClose={() => setShowGeminiAuthDialog(false)}
-          onSetup={() => {
-            system.openSettings("apikeys");
+          type="GEMINI_AUTH"
+          onAction={(key) => {
+            if (key === "confirm") {
+              system.openSettings("apikeys");
+            }
             setShowGeminiAuthDialog(false);
           }}
         />
 
-        <ExistingProfileDialog
+        <Dialog
           isOpen={system.showExistingProfileDialog}
-          onClose={() => system.setShowExistingProfileDialog(false)}
+          type="EXISTING_PROFILE"
+          onAction={() => system.setShowExistingProfileDialog(false)}
         />
 
-        <LoginRequiredDialog
+        <Dialog
           isOpen={showLoginRequiredDialog}
-          onClose={() => setShowLoginRequiredDialog(false)}
-          onLogin={() => {
+          type="LOGIN_REQUIRED"
+          onAction={(key) => {
+            if (key === "confirm") {
+              system.addAccount();
+            }
             setShowLoginRequiredDialog(false);
-            system.addAccount();
           }}
         />
       </div>
@@ -729,26 +731,31 @@ export const AppLayout: React.FC = () => {
         />
       )}
 
-      <GeminiAuthDialog
+      <Dialog
         isOpen={showGeminiAuthDialog}
-        onClose={() => setShowGeminiAuthDialog(false)}
-        onSetup={() => {
-          system.openSettings("apikeys");
+        type="GEMINI_AUTH"
+        onAction={(key) => {
+          if (key === "confirm") {
+            system.openSettings("apikeys");
+          }
           setShowGeminiAuthDialog(false);
         }}
       />
 
-      <ExistingProfileDialog
+      <Dialog
         isOpen={system.showExistingProfileDialog}
-        onClose={() => system.setShowExistingProfileDialog(false)}
+        type="EXISTING_PROFILE"
+        onAction={() => system.setShowExistingProfileDialog(false)}
       />
 
-      <LoginRequiredDialog
+      <Dialog
         isOpen={showLoginRequiredDialog}
-        onClose={() => setShowLoginRequiredDialog(false)}
-        onLogin={() => {
+        type="LOGIN_REQUIRED"
+        onAction={(key) => {
+          if (key === "confirm") {
+            system.addAccount();
+          }
           setShowLoginRequiredDialog(false);
-          system.addAccount();
         }}
       />
     </div>

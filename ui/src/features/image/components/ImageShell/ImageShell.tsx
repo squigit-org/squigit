@@ -23,7 +23,7 @@ import {
 } from "@/features/image";
 import { ActionMenu, ActionMenuHandle } from "@/widgets/menu";
 import styles from "./ImageShell.module.css";
-import { ImgBBAuthDialog } from "@/features/dialogs";
+import { Dialog } from "@/widgets";
 import { SettingsSection } from "@/features/settings";
 
 interface OCRBox {
@@ -508,11 +508,13 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         viewerRef={viewerRef}
       />
 
-      <ImgBBAuthDialog
+      <Dialog
         isOpen={showAuthDialog}
-        onClose={() => setShowAuthDialog(false)}
-        onSetup={() => {
-          onOpenSettings("apikeys");
+        type="IMGBB_AUTH"
+        onAction={(key) => {
+          if (key === "confirm") {
+            onOpenSettings("apikeys");
+          }
           setShowAuthDialog(false);
         }}
       />

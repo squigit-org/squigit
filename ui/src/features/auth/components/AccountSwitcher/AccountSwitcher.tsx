@@ -7,7 +7,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Profile } from "@/lib/api/tauri/commands";
-import { RemoveAccountDialog } from "@/features/dialogs";
+import { Dialog } from "@/widgets";
 import {
   ChevronDown,
   UserPlus,
@@ -225,10 +225,13 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
         </div>
       </div>
 
-      <RemoveAccountDialog
+      <Dialog
         isOpen={!!profileToDelete}
-        onClose={() => setProfileToDelete(null)}
-        onConfirm={handleConfirmDelete}
+        type="REMOVE_ACCOUNT"
+        onAction={(key) => {
+          if (key === "confirm") handleConfirmDelete();
+          else setProfileToDelete(null);
+        }}
       />
     </div>
   );

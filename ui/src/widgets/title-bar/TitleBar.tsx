@@ -17,7 +17,7 @@ import {
   SettingsShell,
   AuthButton,
 } from "@/features";
-import { UserPreferences } from "@/lib/config/preferences";
+import { UserPreferences } from "@/lib/storage/app-settings";
 
 type Platform = "macos" | "linux" | "windows";
 

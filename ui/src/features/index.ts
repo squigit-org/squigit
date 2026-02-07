@@ -10,4 +10,3 @@ export * from "./onboarding";
 export * from "./settings";
 export * from "./models";
 export * from "./auth";
-export * from "./dialogs";

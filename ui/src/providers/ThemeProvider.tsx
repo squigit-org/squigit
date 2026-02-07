@@ -6,8 +6,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { ThemeContext } from "@/hooks/useTheme";
-import { loadPreferences, savePreferences } from "@/lib/config/preferences";
-import { DEFAULT_THEME } from "@/lib/utils/constants";
+import { loadPreferences, savePreferences } from "@/lib/storage/app-settings";
 import { invoke } from "@tauri-apps/api/core";
 
 const THEME_STORAGE_KEY = "theme";
@@ -66,17 +65,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       if (theme === "system") {
         // 1. Initial Fetch from Rust (Nuclear/Robust method)
         try {
-           const sysTheme = await invoke<string>("get_system_theme");
-           if (abortController.signal.aborted) return;
-           const newResolved = sysTheme === "dark" ? "dark" : "light";
-           setResolvedTheme(newResolved);
-           applyDomTheme(newResolved);
+          const sysTheme = await invoke<string>("get_system_theme");
+          if (abortController.signal.aborted) return;
+          const newResolved = sysTheme === "dark" ? "dark" : "light";
+          setResolvedTheme(newResolved);
+          applyDomTheme(newResolved);
         } catch (e) {
-           console.warn("Failed to get system theme from Rust, using fallback", e);
-           // Fallback is already set by initial state, but we can re-check
-           const fallback = getSystemThemeFallback();
-           setResolvedTheme(fallback);
-           applyDomTheme(fallback);
+          console.warn(
+            "Failed to get system theme from Rust, using fallback",
+            e,
+          );
+          // Fallback is already set by initial state, but we can re-check
+          const fallback = getSystemThemeFallback();
+          setResolvedTheme(fallback);
+          applyDomTheme(fallback);
         }
       } else {
         // Manual override

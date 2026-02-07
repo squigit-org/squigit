@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { createPortal } from "react-dom";
 import { AlertCircle, AlertTriangle, Info, Sparkles } from "lucide-react";
 import styles from "./Dialog.module.css";
@@ -18,12 +19,16 @@ export interface DialogAction {
   disabled?: boolean;
 }
 
+import { DIALOGS, DialogContent } from "@/lib/helpers/dialogs";
+
 interface DialogProps {
   variant?: DialogVariant;
   title?: string;
-  message: string;
-  actions: DialogAction[];
+  message?: string;
+  actions?: DialogAction[];
   isOpen: boolean;
+  type?: keyof typeof DIALOGS | DialogContent;
+  onAction?: (actionKey: string) => void;
 }
 
 export const Dialog: React.FC<DialogProps> = ({
@@ -32,7 +37,29 @@ export const Dialog: React.FC<DialogProps> = ({
   message,
   actions,
   isOpen,
+  type,
+  onAction,
 }) => {
+  let activeContent: Partial<DialogContent> = {};
+
+  if (typeof type === "string" && DIALOGS[type]) {
+    activeContent = DIALOGS[type];
+  } else if (typeof type === "object") {
+    activeContent = type;
+  }
+
+  const finalVariant = activeContent.variant || variant;
+  const finalTitle = activeContent.title || title;
+  const finalMessage = activeContent.message || message || "";
+
+  // Merge actions logic
+  const finalActions = activeContent.actions
+    ? activeContent.actions.map((a) => ({
+        ...a,
+        onClick: () => onAction?.(a.actionKey),
+      }))
+    : actions || [];
+
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -40,37 +67,11 @@ export const Dialog: React.FC<DialogProps> = ({
       textAreaRef.current.style.height = "auto";
       textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
     }
-  }, [isOpen, message]);
+  }, [isOpen, finalMessage]);
 
   useEffect(() => {
     if (isOpen) {
-      try {
-        const AudioContext =
-          window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContext) {
-          const ctx = new AudioContext();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(500, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(
-            100,
-            ctx.currentTime + 0.15,
-          );
-
-          gain.gain.setValueAtTime(0.1, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-
-          osc.start();
-          osc.stop(ctx.currentTime + 0.15);
-        }
-      } catch (e) {
-        /**/
-      }
+      invoke("play_pop_sound").catch(console.error);
     }
   }, [isOpen]);
 
@@ -90,69 +91,57 @@ export const Dialog: React.FC<DialogProps> = ({
   if (!isOpen) return null;
 
   const getIcon = () => {
-    switch (variant) {
+    switch (finalVariant) {
       case "error":
-        return <AlertCircle size={18} className="text-red-200" />;
+        return <AlertCircle size={18} className={styles.iconError} />;
       case "warning":
-        return <AlertTriangle size={18} className="text-dialogWarning" />;
+        return <AlertTriangle size={18} className={styles.iconWarning} />;
       case "info":
-        return <Info size={18} className="text-blue-200" />;
+        return <Info size={18} className={styles.iconInfo} />;
       case "update":
-        return <Sparkles size={18} className="text-purple-300" />;
+        return <Sparkles size={18} className={styles.iconUpdate} />;
     }
   };
 
   const getButtonClass = (btnVariant?: "primary" | "secondary" | "danger") => {
-    const base =
-      "rounded-full border px-4 py-1.5 text-xs font-medium transition-all duration-200 disabled:opacity-50";
+    const base = styles.btnBase;
     switch (btnVariant) {
       case "danger":
-        return `${base} ${styles.dialogBtnDanger} border-red-900/50 bg-red-950/30 text-red-200`;
+        return `${base} ${styles.btnDanger}`;
       case "primary":
-        return `${base} ${styles.dialogBtnPrimary} border-neutral-600 bg-neutral-100 text-neutral-900 shadow-[0_0_10px_rgba(255,255,255,0.1)]`;
+        return `${base} ${styles.btnPrimary}`;
       default:
-        return `${base} ${styles.dialogBtnSecondary} border-neutral-700 bg-neutral-800 text-neutral-300`;
+        return `${base} ${styles.btnSecondary}`;
     }
   };
 
-  const displayMessage = message ? message.replace(/\\n/g, "\n").trim() : "";
+  const displayMessage = finalMessage
+    ? finalMessage.replace(/\\n/g, "\n").trim()
+    : "";
 
   return createPortal(
     <div className={styles.dialogOverlay}>
-      <div
-        className={`${styles.dialogContainer} animate-in fade-in zoom-in-95 duration-200 max-w-md w-full`}
-      >
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 shrink-0">{getIcon()}</div>
-          <div className="flex-1 min-w-0">
-            {title && (
-              <h4 className="text-sm font-semibold text-neutral-100 mb-2">
-                {title}
-              </h4>
-            )}
+      <div className={styles.dialogContainer}>
+        <div className={styles.header}>
+          <div className={styles.iconWrapper}>{getIcon()}</div>
+          <div className={styles.contentWrapper}>
+            {finalTitle && <h4 className={styles.title}>{finalTitle}</h4>}
 
             <textarea
               ref={textAreaRef}
               readOnly
               value={displayMessage}
               rows={1}
-              className={`
-                w-full resize-none border-none bg-transparent p-0
-                text-xs font-mono leading-relaxed outline-none focus:ring-0
-                whitespace-pre-wrap
-                max-h-20 overflow-y-auto
-                scrollbar-thin scrollbar-track-transparent
-                ${
-                  variant === "error"
-                    ? "text-red-200/90 scrollbar-thumb-red-900/50"
-                    : "text-neutral-300 scrollbar-thumb-neutral-700"
-                }
-              `}
+              className={`${styles.messageArea} ${
+                finalVariant === "error"
+                  ? styles.messageError
+                  : styles.messageDefault
+              }`}
             />
           </div>
         </div>
-        <div className="mt-4 flex justify-end gap-2">
-          {actions.map((action, idx) => (
+        <div className={styles.footer}>
+          {finalActions.map((action, idx) => (
             <button
               key={idx}
               onClick={(e) => {

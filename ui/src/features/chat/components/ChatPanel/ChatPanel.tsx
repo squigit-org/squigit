@@ -16,13 +16,11 @@ import {
   StarOff,
 } from "lucide-react";
 
-import { ChatMetadata, groupChatsByDate } from "@/lib/storage/chatStorage";
+import { ChatMetadata, groupChatsByDate } from "@/lib/storage/chat";
 import styles from "./ChatPanel.module.css";
 import { PanelContextMenu } from "@/widgets";
-import {
-  DeleteChatDialog,
-  DeleteMultipleChatsDialog,
-} from "@/features/dialogs";
+import { DIALOGS, getDeleteMultipleChatsDialog } from "@/lib/helpers/dialogs";
+import { Dialog } from "@/widgets";
 
 // --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
@@ -495,17 +493,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* --- CONFIRMATION DIALOGS --- */}
-      <DeleteChatDialog
+      <Dialog
         isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
-        onConfirm={handleDeleteChat}
+        type="DELETE_CHAT"
+        onAction={(key) => {
+          if (key === "confirm") handleDeleteChat();
+          else setDeleteId(null);
+        }}
       />
 
-      <DeleteMultipleChatsDialog
+      <Dialog
         isOpen={showBulkDelete}
-        count={selectedIds.length}
-        onClose={() => setShowBulkDelete(false)}
-        onConfirm={handleBulkDelete}
+        type={getDeleteMultipleChatsDialog(selectedIds.length)}
+        onAction={(key) => {
+          if (key === "confirm") handleBulkDelete();
+          else setShowBulkDelete(false);
+        }}
       />
     </div>
   );

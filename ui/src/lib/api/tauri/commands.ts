@@ -5,13 +5,8 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
-
-export interface Profile {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string | null;
-}
+import { Profile, UserData, ImageResponse } from "./types";
+export * from "./types";
 
 export const commands = {
   // Image Processing
@@ -38,7 +33,7 @@ export const commands = {
   startGoogleAuth: () => invoke("start_google_auth"),
   cancelGoogleAuth: () => invoke("cancel_google_auth"),
   logout: () => invoke("logout"),
-  getUserData: () => invoke<any>("get_user_data"),
+  getUserData: () => invoke<UserData>("get_user_data"),
 
   // Profile Management
   getActiveProfile: () => invoke<Profile | null>("get_active_profile"),

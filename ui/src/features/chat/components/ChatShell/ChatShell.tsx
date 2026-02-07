@@ -14,7 +14,7 @@ import {
 } from "@/features/chat";
 import { InlineMenu, useInlineMenu, Dialog, TextShimmer } from "@/widgets";
 import { ImageShell } from "@/features/image";
-import { parseGeminiError } from "@/lib/utils/errorParser";
+import { parseGeminiError } from "@/lib/helpers/errorParser";
 import styles from "./ChatShell.module.css";
 import "katex/dist/katex.min.css";
 import { SettingsSection } from "@/features/settings";

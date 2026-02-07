@@ -14,3 +14,10 @@ export interface UserData {
   email: string;
   avatar: string;
 }
+
+export interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+}

@@ -7,11 +7,11 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getName, getVersion, getTauriVersion } from "@tauri-apps/api/app";
-import { github } from "@/lib/config";
+import { github } from "@/lib/config/services";
 import {
-  prepareMailReport,
   prepareGitHubIssueReport,
-} from "@/lib/config/external/contact";
+  prepareMailReport,
+} from "@/lib/helpers/reporting";
 import { MarkGithubIcon, MailIcon, BugIcon } from "@primer/octicons-react";
 import { CodeBlock } from "@/widgets";
 import styles from "./HelpSection.module.css";

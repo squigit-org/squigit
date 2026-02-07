@@ -17,7 +17,11 @@ import {
   DEFAULT_PROMPT,
   DEFAULT_THEME,
   PREFERENCES_FILE_NAME,
-} from "@/lib/utils/constants";
+  DEFAULT_CAPTURE_TYPE,
+  DEFAULT_OCR_LANGUAGE,
+  DEFAULT_DOWNLOADED_OCR_LANGUAGES,
+  DEFAULT_ACTIVE_ACCOUNT,
+} from "@/lib/helpers/constants";
 
 export interface UserPreferences {
   model: string;
@@ -33,14 +37,14 @@ export interface UserPreferences {
 
 export const defaultPreferences: UserPreferences = {
   model: DEFAULT_MODEL,
-  theme: "system",
+  theme: DEFAULT_THEME,
   prompt: DEFAULT_PROMPT,
   ocrEnabled: true,
   autoExpandOCR: true,
-  captureType: "rectangular",
-  ocrLanguage: "PP-OCRv4 (English)",
-  downloadedOcrLanguages: ["PP-OCRv4 (English)"],
-  activeAccount: "Guest",
+  captureType: DEFAULT_CAPTURE_TYPE,
+  ocrLanguage: DEFAULT_OCR_LANGUAGE,
+  downloadedOcrLanguages: DEFAULT_DOWNLOADED_OCR_LANGUAGES,
+  activeAccount: DEFAULT_ACTIVE_ACCOUNT,
 };
 
 export async function hasPreferencesFile(): Promise<boolean> {

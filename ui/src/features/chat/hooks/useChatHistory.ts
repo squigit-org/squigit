@@ -10,7 +10,7 @@ import {
   listChats,
   deleteChat,
   updateChatMetadata as updateChatMeta,
-} from "@/lib/storage/chatStorage";
+} from "@/lib/storage/chat";
 
 export const useChatHistory = (activeProfileId: string | null = null) => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
