@@ -5,7 +5,9 @@
  */
 
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
-import { TextContextMenu, useTextContextMenu, CodeBlock } from "@/widgets";
+import { CodeBlock } from "@/widgets";
+import { TextContextMenu } from "@/shell";
+import { useTextContextMenu } from "@/hooks";
 import { Send } from "lucide-react";
 import styles from "./ChatInput.module.css";
 import { google } from "@/lib/config";

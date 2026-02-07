@@ -5,10 +5,11 @@
  */
 import React from "react";
 import styles from "./PersonalizationSection.module.css";
-import { TextContextMenu } from "@/widgets";
-import { useTextEditor } from "@/hooks/useTextEditor";
-import { useTextContextMenu } from "@/widgets/menu/hooks/useTextContextMenu";
+
+import { TextContextMenu } from "@/shell";
+import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { UserPreferences } from "@/lib/storage/app-settings";
+
 interface PersonalizationSectionProps {
   localPrompt: string;
   currentPrompt: string;

@@ -5,7 +5,6 @@
  */
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
 import styles from "./ImageToolbar.module.css";
 
 interface ImageToolbarProps {

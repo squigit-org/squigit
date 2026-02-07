@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useState, useEffect } from "react";
+import React from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
-import { TextContextMenu, useTextContextMenu } from "@/widgets";
+import { TextContextMenu } from "@/shell";
+import { useTextContextMenu } from "@/hooks";
 import styles from "./SearchInput.module.css";
 import { useTextEditor } from "@/hooks/useTextEditor";
 

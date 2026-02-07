@@ -6,5 +6,5 @@
 
 export * from "./ImageToolbar";
 export * from "./SearchInput";
-export * from "./ImageShell";
 export * from "./OCRLayer";
+export * from "./OCRMenu";

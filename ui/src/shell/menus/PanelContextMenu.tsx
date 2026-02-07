@@ -1,0 +1,86 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React from "react";
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@/widgets";
+import { Pencil, Pin, PinOff, CheckSquare, Trash2 } from "lucide-react";
+
+interface PanelContextMenuProps {
+  x: number;
+  y: number;
+  onClose: () => void;
+  onRename: () => void;
+  onTogglePin: () => void;
+  onToggleSelection: () => void;
+  onDelete: () => void;
+  isPinned: boolean;
+  isSelected: boolean;
+}
+
+export const PanelContextMenu: React.FC<PanelContextMenuProps> = ({
+  x,
+  y,
+  onClose,
+  onRename,
+  onTogglePin,
+  onToggleSelection,
+  onDelete,
+  isPinned,
+  isSelected,
+}) => {
+  return (
+    <ContextMenu x={x} y={y} onClose={onClose} width={180}>
+      <ContextMenuItem
+        onClick={() => {
+          onRename();
+          onClose();
+        }}
+        icon={<Pencil size={14} />}
+      >
+        Rename
+      </ContextMenuItem>
+
+      <ContextMenuItem
+        onClick={() => {
+          onTogglePin();
+          onClose();
+        }}
+        icon={
+          isPinned ? (
+            <PinOff size={14} style={{ transform: "rotate(45deg)" }} />
+          ) : (
+            <Pin size={14} style={{ transform: "rotate(45deg)" }} />
+          )
+        }
+      >
+        {isPinned ? "Unpin Chat" : "Pin Chat"}
+      </ContextMenuItem>
+
+      <ContextMenuSeparator />
+
+      <ContextMenuItem
+        onClick={() => {
+          onToggleSelection();
+          onClose();
+        }}
+        icon={<CheckSquare size={14} />}
+      >
+        Select
+      </ContextMenuItem>
+
+      <ContextMenuItem
+        variant="danger"
+        onClick={() => {
+          onDelete();
+          onClose();
+        }}
+        icon={<Trash2 size={14} />}
+      >
+        Delete
+      </ContextMenuItem>
+    </ContextMenu>
+  );
+};

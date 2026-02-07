@@ -5,20 +5,20 @@
  */
 
 import React, { ForwardedRef } from "react";
-import { TitleBar } from "@/widgets";
 import {
-  ChatPanel,
-  ChatShell,
-  ChatShellProps,
+  TitleBar,
+  SidePanel,
+  AppShell,
+  AppShellProps,
   SettingsSection,
-} from "@/features";
+} from "@/shell";
 
 import { Profile } from "@/lib/api/tauri/commands";
 import styles from "./ChatLayout.module.css";
 
 import { UserPreferences } from "@/lib/storage/app-settings";
 
-export interface ChatLayoutProps extends ChatShellProps {
+export interface ChatLayoutProps extends AppShellProps {
   currentPrompt: string;
   // TitleBar props
   chatTitle: string;
@@ -26,8 +26,8 @@ export interface ChatLayoutProps extends ChatShellProps {
   isRotating: boolean;
   isLoading: boolean;
   onNewSession: () => void;
-  toggleChatPanel: () => void;
-  isChatPanelOpen: boolean;
+  toggleSidePanel: () => void;
+  isSidePanelOpen: boolean;
   enablePanelAnimation?: boolean;
   onLogout: () => void;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
@@ -63,7 +63,7 @@ export interface ChatLayoutProps extends ChatShellProps {
   activeProfileId: string | null;
   switchingProfileId?: string | null;
 
-  // ChatPanel props
+  // SidePanel props
   chats: any[];
   activeSessionId: string | null;
   onSelectChat: (id: string) => void;
@@ -113,8 +113,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   // TitleBar props
   isRotating,
   onNewSession,
-  toggleChatPanel,
-  isChatPanelOpen,
+  toggleSidePanel,
+  isSidePanelOpen,
   enablePanelAnimation = false,
   onLogout,
   updatePreferences,
@@ -130,7 +130,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   onSetAPIKey,
   onOcrModelChange,
 
-  // ChatPanel props
+  // SidePanel props
   chats,
   activeSessionId,
   onSelectChat,
@@ -160,8 +160,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         isLoading={isLoading}
         hasImageLoaded={!!startupImage}
         onNewSession={onNewSession}
-        toggleChatPanel={toggleChatPanel}
-        isChatPanelOpen={isChatPanelOpen}
+        toggleSidePanel={toggleSidePanel}
+        isSidePanelOpen={isSidePanelOpen}
         activeProfile={activeProfile}
         profiles={profiles}
         onSwitchProfile={onSwitchProfile}
@@ -193,11 +193,11 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
 
       <div className={styles.mainContent}>
         <div
-          className={`${styles.chatPanelWrapper} ${
-            !isChatPanelOpen ? styles.hidden : ""
+          className={`${styles.sidePanelWrapper} ${
+            !isSidePanelOpen ? styles.hidden : ""
           } ${enablePanelAnimation ? styles.animated : ""}`}
         >
-          <ChatPanel
+          <SidePanel
             chats={chats}
             activeSessionId={activeSessionId}
             onSelectChat={onSelectChat}
@@ -211,7 +211,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         </div>
 
         <div className={styles.contentArea}>
-          <ChatShell
+          <AppShell
             messages={messages}
             streamingText={streamingText}
             isChatMode={isChatMode}

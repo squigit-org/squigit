@@ -3,15 +3,17 @@
  * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
  */
+
 import React, { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { google, github } from "@/lib/config";
 import { GlowCard } from "@/widgets/glow-card";
-import { TextContextMenu } from "@/widgets/menu";
+import { TextContextMenu } from "@/shell";
+import { useTextContextMenu } from "@/hooks";
 import styles from "./APIKeysSection.module.css";
 import { useTextEditor } from "@/hooks/useTextEditor";
-import { useTextContextMenu } from "@/widgets/menu/hooks/useTextContextMenu";
+
 interface APIKeysSectionProps {
   geminiKey: string;
   imgbbKey: string;

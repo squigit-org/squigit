@@ -17,7 +17,7 @@ import {
   UserPreferences,
 } from "@/lib/storage/app-settings";
 import { DEFAULT_MODEL, DEFAULT_PROMPT } from "@/lib/helpers/constants";
-import { SettingsSection } from "@/features/settings";
+import { SettingsSection } from "@/shell";
 
 export const useSystemSync = () => {
   const { theme, resolvedTheme, setTheme } = useTheme();

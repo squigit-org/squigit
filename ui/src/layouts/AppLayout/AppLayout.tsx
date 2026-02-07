@@ -10,7 +10,8 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "@/lib/api/tauri/commands";
-import { ShellContextMenu, TitleBar, Dialog } from "@/widgets";
+import { Dialog } from "@/widgets";
+import { ShellContextMenu, TitleBar, SidePanel } from "@/shell";
 
 import {
   useSystemSync,
@@ -31,7 +32,6 @@ import {
   useAuth,
   useChatTitle,
   useChat,
-  ChatPanel,
   useChatHistory,
 } from "@/features";
 
@@ -47,9 +47,9 @@ import {
 } from "@/lib/storage/chat";
 
 export const AppLayout: React.FC = () => {
-  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [enablePanelAnimation, setEnablePanelAnimation] = useState(false);
-  const toggleChatPanel = () => setIsChatPanelOpen((prev) => !prev);
+  const toggleSidePanel = () => setIsSidePanelOpen((prev) => !prev);
 
   const [showGeminiAuthDialog, setShowGeminiAuthDialog] = useState(false);
   const [showLoginRequiredDialog, setShowLoginRequiredDialog] = useState(false);
@@ -180,7 +180,7 @@ export const AppLayout: React.FC = () => {
 
   useEffect(() => {
     if (!isLoadingState && !system.startupImage) {
-      setIsChatPanelOpen(true);
+      setIsSidePanelOpen(true);
       setTimeout(() => setEnablePanelAnimation(true), 100);
     } else if (!isLoadingState) {
       setEnablePanelAnimation(true);
@@ -522,8 +522,8 @@ export const AppLayout: React.FC = () => {
           imgbbKey={system.imgbbKey}
           onSetAPIKey={system.handleSetAPIKey}
           hasImageLoaded={false}
-          toggleChatPanel={toggleChatPanel}
-          isChatPanelOpen={isChatPanelOpen}
+          toggleSidePanel={toggleSidePanel}
+          isSidePanelOpen={isSidePanelOpen}
           activeProfile={system.activeProfile}
           profiles={system.profiles}
           onSwitchProfile={system.switchProfile}
@@ -534,9 +534,9 @@ export const AppLayout: React.FC = () => {
         />
         <div className={styles.mainContent}>
           <div
-            className={`${styles.chatPanelWrapper} ${!isChatPanelOpen ? styles.hidden : ""} ${enablePanelAnimation ? styles.animated : ""}`}
+            className={`${styles.sidePanelWrapper} ${!isSidePanelOpen ? styles.hidden : ""} ${enablePanelAnimation ? styles.animated : ""}`}
           >
-            <ChatPanel
+            <SidePanel
               chats={chatHistory.chats}
               activeSessionId={chatHistory.activeSessionId}
               onSelectChat={handleSelectChat}
@@ -691,8 +691,8 @@ export const AppLayout: React.FC = () => {
         onDeleteProfile={system.deleteProfile}
         isRotating={isRotating}
         onNewSession={handleNewSession}
-        toggleChatPanel={toggleChatPanel}
-        isChatPanelOpen={isChatPanelOpen}
+        toggleSidePanel={toggleSidePanel}
+        isSidePanelOpen={isSidePanelOpen}
         enablePanelAnimation={enablePanelAnimation}
         onLogout={performLogout}
         updatePreferences={system.updatePreferences}
@@ -707,7 +707,7 @@ export const AppLayout: React.FC = () => {
         imgbbKey={system.imgbbKey}
         onSetAPIKey={system.handleSetAPIKey}
         onOcrModelChange={system.setSessionOcrLanguage}
-        // ChatPanel props
+        // SidePanel props
         chats={chatHistory.chats}
         activeSessionId={chatHistory.activeSessionId}
         onSelectChat={handleSelectChat}

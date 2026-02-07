@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./title-bar";
 export * from "./dialog";
 export * from "./menu";
 export * from "./code-block";

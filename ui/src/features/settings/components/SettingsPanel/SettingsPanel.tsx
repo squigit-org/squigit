@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
 import styles from "./SettingsPanel.module.css";
-import { SettingsSection } from "../SettingsShell/SettingsShell";
+import { SettingsSection } from "@/shell";
 
 interface SettingsPanelProps {
   onOpenSettings: (section: SettingsSection) => void;

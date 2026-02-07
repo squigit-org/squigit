@@ -1,0 +1,75 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import "../../styles/animations.css";
+
+.container {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  background-color: transparent;
+  color: var(--neutral-100);
+  position: relative;
+}
+
+.container::selection {
+  background-color: var(--black-500-30);
+  color: var(--neutral-100);
+}
+
+.headerContainer {
+  z-index: 10;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  flex-shrink: 0;
+  background-color: var(--neutral-950);
+  mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - 12px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - 12px),
+    transparent 100%
+  );
+}
+
+.chatShell {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-right: 0.5rem;
+  transform: translateZ(0);
+}
+
+/* Scrollbar styles from ChatShell */
+.chatShell::-webkit-scrollbar {
+  width: 10px;
+}
+
+.chatShell::-webkit-scrollbar-track {
+  background: transparent;
+  margin-top: 50px;
+  border-left: 1px solid transparent;
+}
+
+.chatShell::-webkit-scrollbar-track-piece:start {
+  background: transparent;
+  margin-top: 50px;
+}
+
+.chatShell::-webkit-scrollbar-thumb {
+  background-color: #444;
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.chatShell::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}

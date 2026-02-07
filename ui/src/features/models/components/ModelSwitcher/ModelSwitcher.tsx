@@ -8,7 +8,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { ChevronDown, Check, ChevronLeft, PackagePlus } from "lucide-react";
 import { MODELS } from "@/lib/config/models";
 import styles from "./ModelSwitcher.module.css";
-import { SettingsSection } from "@/features";
+import { SettingsSection } from "@/shell";
 
 interface ModelSwitcherProps {
   currentModel: string;

@@ -21,18 +21,20 @@
   position: relative;
 }
 
-.chatPanelWrapper {
+.sidePanelWrapper {
   width: 280px;
   flex-shrink: 0;
   background: var(--neutral-950);
   overflow: hidden;
 }
 
-.chatPanelWrapper.animated {
-  transition: width 0.25s ease, margin-left 0.25s ease;
+.sidePanelWrapper.animated {
+  transition:
+    width 0.25s ease,
+    margin-left 0.25s ease;
 }
 
-.chatPanelWrapper.hidden {
+.sidePanelWrapper.hidden {
   width: 0;
   margin-left: 0;
   border-right: none;
@@ -45,4 +47,3 @@
   min-width: 0;
   overflow: hidden;
 }
-
