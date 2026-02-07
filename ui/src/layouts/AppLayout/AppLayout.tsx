@@ -4,450 +4,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-
-import { exit } from "@tauri-apps/plugin-process";
-import { listen } from "@tauri-apps/api/event";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { commands } from "@/lib/api/tauri/commands";
+import React from "react";
 import { Dialog } from "@/widgets";
 import { ShellContextMenu, TitleBar, SidePanel } from "@/shell";
-
-import {
-  useSystemSync,
-  useWindowManager,
-  useUpdateCheck,
-  getPendingUpdate,
-} from "@/hooks";
+import { useShell } from "@/shell";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
 
 import { ChatLayout } from "..";
 
-import {
-  Welcome,
-  Agreement,
-  UpdateNotes,
-  useAuth,
-  useChatTitle,
-  useChat,
-  useChatHistory,
-} from "@/features";
-
-import {
-  loadChat,
-  getImagePath,
-  createChat,
-  updateChatMetadata,
-  appendChatMessage,
-  saveOcrData,
-  saveImgbbUrl,
-  overwriteChatMessages,
-} from "@/lib/storage/chat";
+import { Welcome, Agreement, UpdateNotes } from "@/features";
 
 export const AppLayout: React.FC = () => {
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-  const [enablePanelAnimation, setEnablePanelAnimation] = useState(false);
-  const toggleSidePanel = () => setIsSidePanelOpen((prev) => !prev);
+  const shell = useShell();
 
-  const [showGeminiAuthDialog, setShowGeminiAuthDialog] = useState(false);
-  const [showLoginRequiredDialog, setShowLoginRequiredDialog] = useState(false);
-
-  const system = useSystemSync();
-  const activeProfileRef = useRef<any>(null);
-
-  useEffect(() => {
-    activeProfileRef.current = system.activeProfile;
-  }, [system.activeProfile]);
-
-  const auth = useAuth();
-  const chatHistory = useChatHistory(system.activeProfile?.id || null);
-  const performLogout = async () => {
-    await system.handleLogout();
-    auth.logout();
-  };
-  useUpdateCheck();
-
-  const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
-
-  const handleUpdateLensUrl = useCallback(
-    (url: string | null) => {
-      setSessionLensUrl(url);
-      const activeId = chatHistory.activeSessionId;
-      if (activeId && url) {
-        saveImgbbUrl(activeId, url).catch((e) =>
-          console.error("Failed to save ImgBB URL", e),
-        );
-      }
-    },
-    [chatHistory.activeSessionId],
-  );
-
-  const [ocrData, setOcrData] = useState<{ text: string; box: number[][] }[]>(
-    [],
-  );
-
-  const handleUpdateOCRData = useCallback(
-    (data: { text: string; box: number[][] }[]) => {
-      setOcrData(data);
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const activeId = chatHistory.activeSessionId;
-    if (activeId && ocrData.length > 0) {
-      const ocrRegions = ocrData.map((d) => ({ text: d.text, bbox: d.box }));
-      saveOcrData(activeId, ocrRegions).catch((e) =>
-        console.error("Failed to save OCR", e),
-      );
-    }
-  }, [ocrData, chatHistory.activeSessionId]);
-
-  const handleMessageAdded = useCallback(
-    (msg: any, targetChatId?: string) => {
-      const activeId = targetChatId || chatHistory.activeSessionId;
-      if (activeId) {
-        const role = msg.role === "user" ? "user" : "assistant";
-        appendChatMessage(activeId, role, msg.text).catch(console.error);
-      }
-    },
-    [chatHistory.activeSessionId],
-  );
-
-  const [isCheckingImage, setIsCheckingImage] = useState(true);
-
-  useEffect(() => {
-    const initStartupImage = async () => {
-      try {
-        const initialImage = await commands.getInitialImage();
-        if (initialImage) {
-          console.log("Found CLI image in state, loading...");
-          handleImageReady({
-            imageId: initialImage.hash,
-            path: initialImage.path,
-          });
-        }
-      } catch (e) {
-        console.error("Failed to check initial image:", e);
-      } finally {
-        setIsCheckingImage(false);
-      }
-    };
-
-    initStartupImage();
-
-    const unlisten = listen<string>("image-path", async (event) => {
-      const imagePath = event.payload;
-      if (imagePath) {
-        // Guest Mode Check
-        if (!activeProfileRef.current) {
-          console.log(
-            "CLI/External image drop attempted in guest mode - requiring login",
-          );
-          setShowLoginRequiredDialog(true);
-          return;
-        }
-
-        try {
-          console.log("Event received for image:", imagePath);
-          const result = await commands.processImagePath(imagePath);
-          handleImageReady({
-            imageId: result.hash,
-            path: result.path,
-          });
-        } catch (error) {
-          console.error("Failed to process CLI image event:", error);
-        }
-      }
-    });
-
-    return () => {
-      unlisten.then((f) => f());
-    };
-  }, []);
-
-  const isAgreementPending = system.hasAgreed === false;
-  const isLoadingState =
-    system.hasAgreed === null ||
-    auth.authStage === "LOADING" ||
-    isCheckingImage;
-  const isImageMissing = !system.startupImage;
-  const isAuthPending = auth.authStage === "LOGIN";
-  const isChatActive =
-    !isLoadingState && !isAgreementPending && !isImageMissing && !isAuthPending;
-
-  useEffect(() => {
-    if (!isLoadingState && !system.startupImage) {
-      setIsSidePanelOpen(true);
-      setTimeout(() => setEnablePanelAnimation(true), 100);
-    } else if (!isLoadingState) {
-      setEnablePanelAnimation(true);
-    }
-  }, [isLoadingState, system.startupImage]);
-
-  const chat = useChat({
-    apiKey: system.apiKey,
-    currentModel: system.sessionModel,
-    startupImage: system.startupImage,
-    prompt: system.prompt,
-    setCurrentModel: system.setSessionModel,
-    enabled: isChatActive,
-    onMessage: handleMessageAdded,
-    chatId: chatHistory.activeSessionId,
-    onMissingApiKey: () => {
-      setShowGeminiAuthDialog(true);
-      setIsRotating(false);
-    },
-  });
-
-  const { chatTitle } = useChatTitle({
-    startupImage: system.startupImage,
-    apiKey: system.apiKey,
-    sessionChatTitle: system.sessionChatTitle,
-    setSessionChatTitle: system.setSessionChatTitle,
-  });
-
-  useEffect(() => {
-    const activeId = chatHistory.activeSessionId;
-    if (activeId && chatTitle && chatTitle !== "New Chat") {
-      const currentChat = chatHistory.chats.find((c: any) => c.id === activeId);
-      if (currentChat && currentChat.title !== chatTitle) {
-        updateChatMetadata({
-          ...currentChat,
-          title: chatTitle,
-          updated_at: new Date().toISOString(),
-        }).then(() => {
-          chatHistory.handleRenameChat(activeId, chatTitle);
-        });
-      }
-    }
-  }, [chatTitle, chatHistory.activeSessionId]);
-
-  const handleSelectChat = async (id: string) => {
-    try {
-      setOcrData([]);
-      const chatData = await loadChat(id);
-      const imagePath = await getImagePath(chatData.metadata.image_hash);
-      const imageUrl = convertFileSrc(imagePath);
-
-      system.setStartupImage({
-        base64: imageUrl,
-        mimeType: "image/png",
-        isFilePath: true,
-        imageId: chatData.metadata.image_hash,
-        fromHistory: true,
-      } as any);
-
-      system.setSessionChatTitle(chatData.metadata.title);
-
-      const messages = chatData.messages.map((m, idx) => ({
-        id: idx.toString(), // or generate UUID
-        role: m.role as "user" | "model",
-        text: m.content,
-        timestamp: new Date(m.timestamp).getTime(),
-      }));
-
-      chat.restoreState(
-        {
-          messages,
-          streamingText: "",
-          firstResponseId: null,
-          isChatMode: true,
-        },
-        {
-          base64: imageUrl,
-          mimeType: "image/png",
-        },
-      );
-
-      if (chatData.ocr_data && chatData.ocr_data.length > 0) {
-        setOcrData(
-          chatData.ocr_data.map((o) => ({
-            text: o.text,
-            box: o.bbox,
-          })),
-        );
-      }
-
-      setSessionLensUrl(chatData.imgbb_url || null);
-
-      chatHistory.setActiveSessionId(id);
-    } catch (e) {
-      console.error("Failed to load chat:", e);
-    }
-  };
-
-  const handleNewSession = () => {
-    system.resetSession();
-    chatHistory.setActiveSessionId(null);
-    setOcrData([]);
-    setSessionLensUrl(null);
-  };
-
-  const handleAddAccount = () => {
-    system.addAccount();
-  };
-
-  const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
-  const [imageDrafts, setImageDrafts] = useState<Record<string, string>>({});
-
-  const activeDraftId = chatHistory.activeSessionId || "new_session";
-
-  const input = chatDrafts[activeDraftId] || "";
-  const setInput = (val: string) => {
-    setChatDrafts((prev) => ({ ...prev, [activeDraftId]: val }));
-  };
-
-  const imageInput = imageDrafts[activeDraftId] || "";
-  const setImageInput = (val: string) => {
-    setImageDrafts((prev) => ({ ...prev, [activeDraftId]: val }));
-  };
-
-  const [pendingUpdate] = useState(() => getPendingUpdate());
-  const [showUpdate, setShowUpdate] = useState(() => {
-    const wasDismissed = sessionStorage.getItem("update_dismissed");
-    return !!pendingUpdate && !wasDismissed;
-  });
-
-  useWindowManager(
-    isChatActive,
-    isAuthPending,
-    isAgreementPending,
-    showUpdate,
-    isLoadingState,
-    isImageMissing,
-  );
-
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    selectedText: string;
-  } | null>(null);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const [isRotating, setIsRotating] = useState(false);
-  useEffect(() => {
-    if (!chat.isLoading) {
-      setIsRotating(false);
-    }
-  }, [chat.isLoading]);
-
-  useEffect(() => {
-    const unlisten = listen<any>("auth-success", (event) => {
-      // Check if re-authenticating the same active profile
-      if (
-        activeProfileRef.current &&
-        event.payload &&
-        activeProfileRef.current.id === event.payload.id
-      ) {
-        return;
-      }
-
-      // 1. Reset Session UI (Chat History, OCR, etc.)
-      handleNewSession();
-      // 2. Switch to Main View (if not already)
-      auth.login();
-      // Note: useSystemSync hook handles locking, key clearing, and user data update
-    });
-    return () => {
-      unlisten.then((f) => f());
-    };
-  }, []);
-
-  const handleImageReady = async (imageData: {
-    imageId: string;
-    path: string;
-  }) => {
-    // Guest Mode Check: Require login for image upload/OCR features
-    if (!system.activeProfile) {
-      console.log("Image upload attempted in guest mode - requiring login");
-      setShowLoginRequiredDialog(true);
-      return;
-    }
-
-    console.log("Raw image path:", imageData.path);
-    const assetUrl = convertFileSrc(imageData.path);
-    console.log("Converted asset URL:", assetUrl);
-
-    chatHistory.setActiveSessionId(null);
-    setOcrData([]);
-    setSessionLensUrl(null);
-
-    system.setStartupImage({
-      base64: assetUrl,
-      mimeType: "image/png",
-      isFilePath: true,
-      imageId: imageData.imageId,
-    });
-
-    try {
-      const newChat = await createChat("New Chat", imageData.imageId);
-      chatHistory.setActiveSessionId(newChat.id);
-      chatHistory.refreshChats();
-      console.log("Created new chat:", newChat.id);
-    } catch (e) {
-      console.error("Failed to create chat:", e);
-    }
-  };
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const isInput =
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement;
-
-    // Allow native menu on editable inputs
-    if (
-      isInput &&
-      !(target as HTMLInputElement | HTMLTextAreaElement).readOnly
-    ) {
-      return;
-    }
-
-    e.preventDefault();
-
-    let selectedText = "";
-    if (isInput) {
-      const input = target as HTMLInputElement | HTMLTextAreaElement;
-      selectedText = input.value.substring(
-        input.selectionStart || 0,
-        input.selectionEnd || 0,
-      );
-    } else {
-      selectedText = window.getSelection()?.toString() || "";
-    }
-
-    if (selectedText) {
-      setContextMenu({ x: e.clientX, y: e.clientY, selectedText });
-    }
-  };
-
-  const handleCloseContextMenu = () => setContextMenu(null);
-  const handleCopy = () => {
-    if (contextMenu?.selectedText) {
-      navigator.clipboard.writeText(contextMenu.selectedText);
-    }
-  };
-
-  useEffect(() => {
-    const handleClick = () => {
-      if (contextMenu) handleCloseContextMenu();
-    };
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, [contextMenu]);
-
-  if (showUpdate && pendingUpdate) {
+  if (shell.showUpdate && shell.pendingUpdate) {
     return (
       <div className="h-screen w-screen bg-neutral-950 text-neutral-100">
         <UpdateNotes
-          version={pendingUpdate.version}
-          notes={pendingUpdate.notes}
+          version={shell.pendingUpdate.version}
+          notes={shell.pendingUpdate.notes}
           onClose={() => {
-            setShowUpdate(false);
+            shell.setShowUpdate(false);
             sessionStorage.setItem("update_dismissed", "true");
           }}
         />
@@ -455,11 +34,7 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  if (
-    system.hasAgreed === null ||
-    auth.authStage === "LOADING" ||
-    isCheckingImage
-  ) {
+  if (shell.isLoadingState) {
     return (
       <div className="h-screen w-screen bg-neutral-950 flex items-center justify-center text-neutral-400">
         Loading...
@@ -467,7 +42,7 @@ export const AppLayout: React.FC = () => {
     );
   }
 
-  if (system.hasAgreed === false) {
+  if (shell.isAgreementPending) {
     const getOSType = () => {
       const userAgent = window.navigator.userAgent.toLowerCase();
       if (userAgent.includes("win")) return "windows";
@@ -480,282 +55,251 @@ export const AppLayout: React.FC = () => {
         <Agreement
           osType={getOSType()}
           onNext={() => {
-            system.setHasAgreed(true);
-            system.updatePreferences({});
+            shell.system.setHasAgreed(true);
+            shell.system.updatePreferences({});
           }}
-          onCancel={() => exit(0)}
+          onCancel={shell.handleExit}
         />
       </div>
     );
   }
 
-  if (!system.startupImage) {
+  if (shell.isImageMissing) {
     return (
-      <div className={styles.appContainer} onContextMenu={handleContextMenu}>
+      <div
+        className={styles.appContainer}
+        onContextMenu={shell.handleContextMenu}
+      >
         <TitleBar
           chatTitle={"SnapLLM"}
           onReload={() => {}}
-          onNewSession={handleNewSession}
+          onNewSession={shell.handleNewSession}
           isRotating={false}
-          currentPrompt={system.prompt}
-          currentModel={system.sessionModel}
-          defaultModel={system.startupModel}
-          onModelChange={system.setSessionModel}
-          onOcrModelChange={system.setSessionOcrLanguage}
+          currentPrompt={shell.system.prompt}
+          currentModel={shell.system.sessionModel}
+          defaultModel={shell.system.startupModel}
+          onModelChange={shell.system.setSessionModel}
+          onOcrModelChange={shell.system.setSessionOcrLanguage}
           isLoading={false}
-          onLogout={performLogout}
-          isSettingsOpen={system.isSettingsOpen}
-          onCloseSettings={() => system.setSettingsOpen(false)}
-          settingsSection={system.settingsSection}
-          onSectionChange={system.setSettingsSection}
-          openSettings={system.openSettings}
-          updatePreferences={system.updatePreferences}
-          themePreference={system.themePreference}
-          onSetTheme={system.onSetTheme}
-          autoExpandOCR={system.autoExpandOCR}
-          ocrEnabled={system.ocrEnabled}
-          ocrLanguage={system.sessionOcrLanguage}
-          defaultOcrLanguage={system.startupOcrLanguage}
-          downloadedOcrLanguages={system.downloadedOcrLanguages}
-          captureType={system.captureType}
-          geminiKey={system.apiKey}
-          imgbbKey={system.imgbbKey}
-          onSetAPIKey={system.handleSetAPIKey}
+          onLogout={shell.performLogout}
+          isSettingsOpen={shell.system.isSettingsOpen}
+          onCloseSettings={() => shell.system.setSettingsOpen(false)}
+          settingsSection={shell.system.settingsSection}
+          onSectionChange={shell.system.setSettingsSection}
+          openSettings={shell.system.openSettings}
+          updatePreferences={shell.system.updatePreferences}
+          themePreference={shell.system.themePreference}
+          onSetTheme={shell.system.onSetTheme}
+          autoExpandOCR={shell.system.autoExpandOCR}
+          ocrEnabled={shell.system.ocrEnabled}
+          ocrLanguage={shell.system.sessionOcrLanguage}
+          defaultOcrLanguage={shell.system.startupOcrLanguage}
+          downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
+          captureType={shell.system.captureType}
+          geminiKey={shell.system.apiKey}
+          imgbbKey={shell.system.imgbbKey}
+          onSetAPIKey={shell.system.handleSetAPIKey}
           hasImageLoaded={false}
-          toggleSidePanel={toggleSidePanel}
-          isSidePanelOpen={isSidePanelOpen}
-          activeProfile={system.activeProfile}
-          profiles={system.profiles}
-          onSwitchProfile={system.switchProfile}
-          onAddAccount={handleAddAccount}
-          onCancelAuth={system.cancelAuth}
-          onDeleteProfile={system.deleteProfile}
-          switchingProfileId={system.switchingProfileId}
+          toggleSidePanel={shell.toggleSidePanel}
+          isSidePanelOpen={shell.isSidePanelOpen}
+          activeProfile={shell.system.activeProfile}
+          profiles={shell.system.profiles}
+          onSwitchProfile={shell.system.switchProfile}
+          onAddAccount={shell.handleAddAccount}
+          onCancelAuth={shell.system.cancelAuth}
+          onDeleteProfile={shell.system.deleteProfile}
+          switchingProfileId={shell.system.switchingProfileId}
         />
         <div className={styles.mainContent}>
           <div
-            className={`${styles.sidePanelWrapper} ${!isSidePanelOpen ? styles.hidden : ""} ${enablePanelAnimation ? styles.animated : ""}`}
+            className={`${styles.sidePanelWrapper} ${!shell.isSidePanelOpen ? styles.hidden : ""} ${shell.enablePanelAnimation ? styles.animated : ""}`}
           >
             <SidePanel
-              chats={chatHistory.chats}
-              activeSessionId={chatHistory.activeSessionId}
-              onSelectChat={handleSelectChat}
-              onNewChat={handleNewSession}
-              onDeleteChat={chatHistory.handleDeleteChat}
-              onDeleteChats={chatHistory.handleDeleteChats}
-              onRenameChat={chatHistory.handleRenameChat}
-              onTogglePinChat={chatHistory.handleTogglePinChat}
-              onToggleStarChat={chatHistory.handleToggleStarChat}
+              chats={shell.chatHistory.chats}
+              activeSessionId={shell.chatHistory.activeSessionId}
+              onSelectChat={shell.handleSelectChat}
+              onNewChat={shell.handleNewSession}
+              onDeleteChat={shell.chatHistory.handleDeleteChat}
+              onDeleteChats={shell.chatHistory.handleDeleteChats}
+              onRenameChat={shell.chatHistory.handleRenameChat}
+              onTogglePinChat={shell.chatHistory.handleTogglePinChat}
+              onToggleStarChat={shell.chatHistory.handleToggleStarChat}
             />
           </div>
           <div className={styles.contentArea}>
             <Welcome
-              onImageReady={handleImageReady}
-              isGuest={!system.activeProfile}
-              onLoginRequired={() => setShowLoginRequiredDialog(true)}
+              onImageReady={shell.handleImageReady}
+              isGuest={!shell.system.activeProfile}
+              onLoginRequired={() => shell.setShowLoginRequiredDialog(true)}
             />
           </div>
         </div>
-        {contextMenu && (
+        {shell.contextMenu && (
           <ShellContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            onClose={handleCloseContextMenu}
-            onCopy={handleCopy}
-            selectedText={contextMenu.selectedText}
+            x={shell.contextMenu.x}
+            y={shell.contextMenu.y}
+            onClose={shell.handleCloseContextMenu}
+            onCopy={shell.handleCopy}
+            selectedText={shell.contextMenu.selectedText}
             hasSelection={true}
           />
         )}
 
         <Dialog
-          isOpen={showGeminiAuthDialog}
+          isOpen={shell.showGeminiAuthDialog}
           type="GEMINI_AUTH"
           onAction={(key) => {
             if (key === "confirm") {
-              system.openSettings("apikeys");
+              shell.system.openSettings("apikeys");
             }
-            setShowGeminiAuthDialog(false);
+            shell.setShowGeminiAuthDialog(false);
           }}
         />
 
         <Dialog
-          isOpen={system.showExistingProfileDialog}
+          isOpen={shell.system.showExistingProfileDialog}
           type="EXISTING_PROFILE"
-          onAction={() => system.setShowExistingProfileDialog(false)}
+          onAction={() => shell.system.setShowExistingProfileDialog(false)}
         />
 
         <Dialog
-          isOpen={showLoginRequiredDialog}
+          isOpen={shell.showLoginRequiredDialog}
           type="LOGIN_REQUIRED"
           onAction={(key) => {
             if (key === "confirm") {
-              system.addAccount();
+              shell.system.addAccount();
             }
-            setShowLoginRequiredDialog(false);
+            shell.setShowLoginRequiredDialog(false);
           }}
         />
       </div>
     );
   }
 
-  const handleDeleteChatWrapper = async (id: string) => {
-    const isActive = chatHistory.activeSessionId === id;
-    await chatHistory.handleDeleteChat(id);
-    if (isActive) {
-      handleNewSession();
-    }
-  };
-
-  const handleDeleteChatsWrapper = async (ids: string[]) => {
-    const isActiveIncluded =
-      chatHistory.activeSessionId && ids.includes(chatHistory.activeSessionId);
-    await chatHistory.handleDeleteChats(ids);
-    if (isActiveIncluded) {
-      handleNewSession();
-    }
-  };
-
-  const handleToggleStarChatWrapper = async (id: string) => {
-    await chatHistory.handleToggleStarChat(id);
-  };
-
   return (
     <div
-      ref={containerRef}
-      onContextMenu={handleContextMenu}
+      ref={shell.containerRef}
+      onContextMenu={shell.handleContextMenu}
       className={styles.appContainer}
     >
       <ChatLayout
-        currentPrompt={system.prompt}
-        messages={chat.messages}
-        streamingText={chat.streamingText}
-        isChatMode={chat.isChatMode}
-        isLoading={chat.isLoading}
-        isStreaming={chat.isStreaming}
-        error={chat.error || system.systemError}
-        lastSentMessage={chat.lastSentMessage}
-        input={input}
-        onInputChange={setInput}
-        onOpenSettings={system.openSettings}
-        currentModel={system.sessionModel}
-        startupImage={system.startupImage}
-        chatTitle={chatTitle}
-        chatId={chatHistory.activeSessionId}
+        currentPrompt={shell.system.prompt}
+        messages={shell.chat.messages}
+        streamingText={shell.chat.streamingText}
+        isChatMode={shell.chat.isChatMode}
+        isLoading={shell.chat.isLoading}
+        isStreaming={shell.chat.isStreaming}
+        error={shell.chat.error || shell.system.systemError}
+        lastSentMessage={shell.chat.lastSentMessage}
+        input={shell.input}
+        onInputChange={shell.setInput}
+        onOpenSettings={shell.system.openSettings}
+        currentModel={shell.system.sessionModel}
+        startupImage={shell.system.startupImage}
+        chatTitle={shell.chatTitle}
+        chatId={shell.chatHistory.activeSessionId}
         onSend={() => {
-          chat.handleSend(input);
-          setInput("");
+          shell.chat.handleSend(shell.input);
+          shell.setInput("");
         }}
-        onModelChange={system.setSessionModel}
+        onModelChange={shell.system.setSessionModel}
         onRetry={() => {
-          if (chat.messages.length === 0) {
-            chat.handleReload();
+          if (shell.chat.messages.length === 0) {
+            shell.chat.handleReload();
           } else {
-            chat.handleRetrySend();
+            shell.chat.handleRetrySend();
           }
         }}
-        onReload={() => {
-          setIsRotating(true);
-          const activeId = chatHistory.activeSessionId;
-          if (activeId) {
-            overwriteChatMessages(activeId, []).then(() => {
-              chat.handleReload();
-            });
-          } else {
-            chat.handleReload();
-          }
-        }}
+        onReload={shell.handleChatReload}
         onDescribeEdits={async (description) => {
-          chat.handleDescribeEdits(description);
+          shell.chat.handleDescribeEdits(description);
         }}
-        sessionLensUrl={sessionLensUrl}
-        setSessionLensUrl={handleUpdateLensUrl}
-        ocrData={ocrData}
-        onUpdateOCRData={handleUpdateOCRData}
-        imageInputValue={imageInput}
-        onImageInputChange={setImageInput}
-        onCloseSettings={() => system.setSettingsOpen(false)}
-        isSettingsOpen={system.isSettingsOpen}
-        settingsSection={system.settingsSection}
-        onSectionChange={system.setSettingsSection}
-        autoExpandOCR={system.autoExpandOCR}
-        ocrEnabled={system.ocrEnabled}
+        sessionLensUrl={shell.sessionLensUrl}
+        setSessionLensUrl={shell.handleUpdateLensUrl}
+        ocrData={shell.ocrData}
+        onUpdateOCRData={shell.handleUpdateOCRData}
+        imageInputValue={shell.imageInput}
+        onImageInputChange={shell.setImageInput}
+        onCloseSettings={() => shell.system.setSettingsOpen(false)}
+        isSettingsOpen={shell.system.isSettingsOpen}
+        settingsSection={shell.system.settingsSection}
+        onSectionChange={shell.system.setSettingsSection}
+        autoExpandOCR={shell.system.autoExpandOCR}
+        ocrEnabled={shell.system.ocrEnabled}
         // TitleBar props
-        activeProfile={system.activeProfile}
-        profiles={system.profiles}
-        onSwitchProfile={async (profileId) => {
-          handleNewSession();
-          await system.switchProfile(profileId);
-        }}
-        onAddAccount={handleAddAccount}
-        onCancelAuth={system.cancelAuth}
-        onDeleteProfile={system.deleteProfile}
-        isRotating={isRotating}
-        onNewSession={handleNewSession}
-        toggleSidePanel={toggleSidePanel}
-        isSidePanelOpen={isSidePanelOpen}
-        enablePanelAnimation={enablePanelAnimation}
-        onLogout={performLogout}
-        updatePreferences={system.updatePreferences}
-        themePreference={system.themePreference}
-        onSetTheme={system.onSetTheme}
-        ocrLanguage={system.sessionOcrLanguage}
-        defaultOcrLanguage={system.startupOcrLanguage}
-        defaultModel={system.startupModel}
-        downloadedOcrLanguages={system.downloadedOcrLanguages}
-        captureType={system.captureType}
-        geminiKey={system.apiKey}
-        imgbbKey={system.imgbbKey}
-        onSetAPIKey={system.handleSetAPIKey}
-        onOcrModelChange={system.setSessionOcrLanguage}
+        activeProfile={shell.system.activeProfile}
+        profiles={shell.system.profiles}
+        onSwitchProfile={shell.handleSwitchProfile}
+        onAddAccount={shell.handleAddAccount}
+        onCancelAuth={shell.system.cancelAuth}
+        onDeleteProfile={shell.system.deleteProfile}
+        isRotating={shell.isRotating}
+        onNewSession={shell.handleNewSession}
+        toggleSidePanel={shell.toggleSidePanel}
+        isSidePanelOpen={shell.isSidePanelOpen}
+        enablePanelAnimation={shell.enablePanelAnimation}
+        onLogout={shell.performLogout}
+        updatePreferences={shell.system.updatePreferences}
+        themePreference={shell.system.themePreference}
+        onSetTheme={shell.system.onSetTheme}
+        ocrLanguage={shell.system.sessionOcrLanguage}
+        defaultOcrLanguage={shell.system.startupOcrLanguage}
+        defaultModel={shell.system.startupModel}
+        downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
+        captureType={shell.system.captureType}
+        geminiKey={shell.system.apiKey}
+        imgbbKey={shell.system.imgbbKey}
+        onSetAPIKey={shell.system.handleSetAPIKey}
+        onOcrModelChange={shell.system.setSessionOcrLanguage}
         // SidePanel props
-        chats={chatHistory.chats}
-        activeSessionId={chatHistory.activeSessionId}
-        onSelectChat={handleSelectChat}
-        onDeleteChat={handleDeleteChatWrapper}
-        onDeleteChats={handleDeleteChatsWrapper}
-        onRenameChat={chatHistory.handleRenameChat}
-        onTogglePinChat={chatHistory.handleTogglePinChat}
-        onToggleStarChat={handleToggleStarChatWrapper}
-        activeProfileId={system.activeProfile?.id || null}
-        switchingProfileId={system.switchingProfileId}
+        chats={shell.chatHistory.chats}
+        activeSessionId={shell.chatHistory.activeSessionId}
+        onSelectChat={shell.handleSelectChat}
+        onDeleteChat={shell.handleDeleteChatWrapper}
+        onDeleteChats={shell.handleDeleteChatsWrapper}
+        onRenameChat={shell.chatHistory.handleRenameChat}
+        onTogglePinChat={shell.chatHistory.handleTogglePinChat}
+        onToggleStarChat={shell.handleToggleStarChat}
+        activeProfileId={shell.system.activeProfile?.id || null}
+        switchingProfileId={shell.system.switchingProfileId}
       />
 
-      {contextMenu && (
+      {shell.contextMenu && (
         <ShellContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={handleCloseContextMenu}
-          onCopy={handleCopy}
-          selectedText={contextMenu.selectedText}
+          x={shell.contextMenu.x}
+          y={shell.contextMenu.y}
+          onClose={shell.handleCloseContextMenu}
+          onCopy={shell.handleCopy}
+          selectedText={shell.contextMenu.selectedText}
           hasSelection={true}
         />
       )}
 
       <Dialog
-        isOpen={showGeminiAuthDialog}
+        isOpen={shell.showGeminiAuthDialog}
         type="GEMINI_AUTH"
         onAction={(key) => {
           if (key === "confirm") {
-            system.openSettings("apikeys");
+            shell.system.openSettings("apikeys");
           }
-          setShowGeminiAuthDialog(false);
+          shell.setShowGeminiAuthDialog(false);
         }}
       />
 
       <Dialog
-        isOpen={system.showExistingProfileDialog}
+        isOpen={shell.system.showExistingProfileDialog}
         type="EXISTING_PROFILE"
-        onAction={() => system.setShowExistingProfileDialog(false)}
+        onAction={() => shell.system.setShowExistingProfileDialog(false)}
       />
 
       <Dialog
-        isOpen={showLoginRequiredDialog}
+        isOpen={shell.showLoginRequiredDialog}
         type="LOGIN_REQUIRED"
         onAction={(key) => {
           if (key === "confirm") {
-            system.addAccount();
+            shell.system.addAccount();
           }
-          setShowLoginRequiredDialog(false);
+          shell.setShowLoginRequiredDialog(false);
         }}
       />
     </div>
