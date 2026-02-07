@@ -10,9 +10,9 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Check, Copy } from "lucide-react";
-import { CodeBlock } from "@/widgets";
+import { CodeBlock } from "@/primitives";
 import { Message } from "@/features/chat";
-import { remarkDisableIndentedCode } from "./markdownPlugins";
+import { remarkDisableIndentedCode } from "@/features/chat/utils";
 import styles from "./ChatBubble.module.css";
 import "katex/dist/katex.min.css";
 

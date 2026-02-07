@@ -4,4 +4,4 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export { OCRMenu, type OCRMenuHandle } from "./OCRMenu";
+export * from "./InlineMenu";

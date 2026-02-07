@@ -5,7 +5,7 @@
  */
 
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
-import { CodeBlock } from "@/widgets";
+import { CodeBlock } from "@/primitives";
 import { TextContextMenu } from "@/shell";
 import { useTextContextMenu } from "@/hooks";
 import { Send } from "lucide-react";

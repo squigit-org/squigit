@@ -23,7 +23,7 @@ import {
 } from "@/features/image";
 import { OCRMenu, OCRMenuHandle } from "@/features";
 import styles from "./ImageShell.module.css";
-import { Dialog } from "@/widgets";
+import { Dialog } from "@/primitives";
 import { SettingsSection } from "@/shell/overlays";
 
 interface OCRBox {

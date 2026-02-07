@@ -1,13 +1,3 @@
-/**
- * ui/src/widgets/title-bar/parts/sections/general/Section.module.css
- *
- * Redesign notes:
- * - Quiet, modern, formal aesthetic (muted neutrals, gentle radii, restrained spacing)
- * - Two-column row layout for clarity (left: label+description, right: control)
- * - Capture preview placed in a compact, subtle panel aligned under the controls
- * - No new items added. No glows or saturated blue/pink accents.
- */
-
 .container {
   width: 100%;
   display: flex;

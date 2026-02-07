@@ -5,7 +5,11 @@
  */
 
 import React from "react";
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@/widgets";
+import {
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/primitives";
 import { Pencil, Pin, PinOff, CheckSquare, Trash2 } from "lucide-react";
 
 interface PanelContextMenuProps {

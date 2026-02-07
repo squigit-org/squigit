@@ -11,7 +11,8 @@ import {
   ChatBubble,
   StreamingResponse,
 } from "@/features/chat";
-import { InlineMenu, useInlineMenu, TextShimmer, Dialog } from "@/widgets";
+import { InlineMenu, TextShimmer, Dialog } from "@/primitives";
+import { useInlineMenu } from "@/hooks";
 import { SettingsSection } from "@/shell/overlays";
 import { invoke } from "@tauri-apps/api/core";
 import { parseGeminiError } from "@/lib/helpers/errorParser";

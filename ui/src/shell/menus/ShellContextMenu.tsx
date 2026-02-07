@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { ContextMenu, ContextMenuItem } from "@/widgets";
+import { ContextMenu, ContextMenuItem } from "@/primitives";
 
 interface ShellContextMenuProps {
   x: number;

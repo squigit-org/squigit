@@ -104,9 +104,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => {
         e.preventDefault();
-        // Optionally close on right click outside?
-        // Standard behavior is often to let the new context menu handle it,
-        // but for this specific component, let's keep it simple.
       }}
       data-is-context-menu="true"
     >

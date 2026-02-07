@@ -17,7 +17,7 @@ interface ImageToolbarProps {
   isExpanded: boolean;
 }
 
-import { Tooltip } from "@/widgets";
+import { Tooltip } from "@/primitives";
 
 const EDGE_PADDING = 8;
 

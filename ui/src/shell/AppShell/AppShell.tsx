@@ -6,84 +6,18 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Message } from "@/features/chat";
-import { Dialog } from "@/widgets";
-import { ImageShell, ChatShell, SettingsSection } from "@/shell";
+import { Dialog } from "@/primitives";
+import { ImageShell, ChatShell } from "@/shell";
 import { parseGeminiError } from "@/lib/helpers/errorParser";
+import { useShellContext } from "@/shell/context";
 import styles from "./AppShell.module.css";
 
-export interface AppShellProps {
-  messages: Message[];
-  streamingText: string;
-  isChatMode: boolean;
-  isLoading: boolean;
-  isStreaming: boolean;
-  error: string | null;
-  lastSentMessage: Message | null;
-
-  input: string;
-  currentModel: string;
-
-  startupImage: {
-    base64: string;
-    mimeType: string;
-    isFilePath?: boolean;
-    fromHistory?: boolean;
-  } | null;
-
-  chatTitle: string;
-  chatId: string | null;
-
-  sessionLensUrl: string | null;
-  setSessionLensUrl: (url: string | null) => void;
-  onDescribeEdits: (description: string) => Promise<void>;
-  ocrData: { text: string; box: number[][] }[];
-  onUpdateOCRData: (data: { text: string; box: number[][] }[]) => void;
-
-  onSend: () => void;
-  onModelChange: (model: string) => void;
-  onRetry: () => void;
-  onInputChange: (value: string) => void;
-  onReload?: () => void;
-  onOpenSettings: (section: SettingsSection) => void;
-
-  imageInputValue: string;
-  onImageInputChange: (value: string) => void;
-
-  ocrEnabled?: boolean;
-  autoExpandOCR?: boolean;
-  onStreamComplete?: () => void;
-  activeProfileId: string | null;
-}
-
-const AppShellComponent: React.FC<AppShellProps> = ({
-  messages,
-  streamingText,
-  isChatMode,
-  isLoading,
-  error,
-  input,
-  startupImage,
-  onSend,
-  onRetry,
-  onInputChange,
-  sessionLensUrl,
-  setSessionLensUrl,
-  onDescribeEdits,
-  onOpenSettings,
-  ocrData,
-  onUpdateOCRData,
-  chatTitle,
-  chatId,
-  imageInputValue,
-  onImageInputChange,
-  ocrEnabled = true,
-  autoExpandOCR = true,
-  onStreamComplete,
-  activeProfileId,
-}) => {
+const AppShellComponent: React.FC = () => {
+  const shell = useShellContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isErrorDismissed, setIsErrorDismissed] = useState(false);
+
+  const error = shell.chat.error || shell.system.systemError;
 
   useEffect(() => {
     setIsErrorDismissed(false);
@@ -93,7 +27,7 @@ const AppShellComponent: React.FC<AppShellProps> = ({
 
   useEffect(() => {
     setIsImageExpanded(false);
-  }, [chatId]);
+  }, [shell.chatHistory.activeSessionId]);
 
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -134,7 +68,13 @@ const AppShellComponent: React.FC<AppShellProps> = ({
       if (parsedError.actionType !== "DISMISS_ONLY") {
         actions.push({
           label: "Retry",
-          onClick: onRetry,
+          onClick: () => {
+            if (shell.chat.messages.length === 0) {
+              shell.chat.handleReload();
+            } else {
+              shell.chat.handleRetrySend();
+            }
+          },
           variant: "danger",
         });
       } else {
@@ -149,7 +89,7 @@ const AppShellComponent: React.FC<AppShellProps> = ({
         actions.push({
           label: "Change API Key",
           onClick: () => {
-            onOpenSettings("apikeys");
+            shell.system.openSettings("apikeys");
             setIsErrorDismissed(true);
           },
           variant: "secondary",
@@ -190,44 +130,52 @@ const AppShellComponent: React.FC<AppShellProps> = ({
     <div className={styles.container}>
       <div ref={headerRef} className={styles.headerContainer}>
         <ImageShell
-          startupImage={startupImage}
-          sessionLensUrl={sessionLensUrl}
-          setSessionLensUrl={setSessionLensUrl}
-          chatTitle={chatTitle}
-          onDescribeEdits={onDescribeEdits}
-          ocrData={ocrData}
-          onUpdateOCRData={onUpdateOCRData}
-          onOpenSettings={onOpenSettings}
+          startupImage={shell.system.startupImage}
+          sessionLensUrl={shell.sessionLensUrl}
+          setSessionLensUrl={shell.handleUpdateLensUrl}
+          chatTitle={shell.chatTitle}
+          onDescribeEdits={async (desc) => shell.chat.handleDescribeEdits(desc)}
+          ocrData={shell.ocrData}
+          onUpdateOCRData={shell.handleUpdateOCRData}
+          onOpenSettings={shell.system.openSettings}
           isVisible={true}
           scrollContainerRef={scrollContainerRef}
-          chatId={chatId}
-          inputValue={imageInputValue}
-          onInputChange={onImageInputChange}
+          chatId={shell.chatHistory.activeSessionId}
+          inputValue={shell.imageInput}
+          onInputChange={shell.setImageInput}
           isExpanded={isImageExpanded}
           onToggleExpand={() => setIsImageExpanded(!isImageExpanded)}
-          ocrEnabled={ocrEnabled}
-          autoExpandOCR={autoExpandOCR}
-          activeProfileId={activeProfileId}
+          ocrEnabled={shell.system.ocrEnabled}
+          autoExpandOCR={shell.system.autoExpandOCR}
+          activeProfileId={shell.system.activeProfile?.id || null}
         />
       </div>
 
       {renderError()}
 
       <ChatShell
-        messages={messages}
-        streamingText={streamingText}
-        isChatMode={isChatMode}
-        isLoading={isLoading}
-        isStreaming={false}
+        messages={shell.chat.messages}
+        streamingText={shell.chat.streamingText}
+        isChatMode={shell.chat.isChatMode}
+        isLoading={shell.chat.isLoading}
+        isStreaming={shell.chat.isStreaming}
         error={error}
-        input={input}
-        startupImage={startupImage}
-        chatId={chatId}
-        onSend={onSend}
-        onRetry={onRetry}
-        onInputChange={onInputChange}
-        onOpenSettings={onOpenSettings}
-        onStreamComplete={onStreamComplete}
+        input={shell.input}
+        startupImage={shell.system.startupImage}
+        chatId={shell.chatHistory.activeSessionId}
+        onSend={() => {
+          shell.chat.handleSend(shell.input);
+          shell.setInput("");
+        }}
+        onRetry={() => {
+          if (shell.chat.messages.length === 0) {
+            shell.chat.handleReload();
+          } else {
+            shell.chat.handleRetrySend();
+          }
+        }}
+        onInputChange={shell.setInput}
+        onOpenSettings={shell.system.openSettings}
         scrollContainerRef={scrollContainerRef}
       />
     </div>

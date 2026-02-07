@@ -90,31 +90,6 @@
   flex-shrink: 0;
 }
 
-.downloadSection {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  margin-top: 0.5rem;
-}
-
-.downloadHeader {
-  margin-bottom: 0.75rem;
-  flex-shrink: 0;
-}
-
-.downloadTitle {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--neutral-100);
-  margin-bottom: 4px;
-}
-
-.downloadDesc {
-  font-size: 0.78rem;
-  color: var(--neutral-400);
-}
-
 .list {
   display: flex;
   flex-direction: column;
@@ -125,102 +100,6 @@
 
 .ocr {
   padding-right: 8px;
-}
-
-.modelList {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-  padding-right: 4px;
-  flex: 1;
-}
-
-.modelList::-webkit-scrollbar {
-  width: 4px;
-}
-
-.modelList::-webkit-scrollbar-thumb {
-  background: rgba(63, 63, 70, 0.5);
-  border-radius: 4px;
-}
-
-.modelRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-  transition: background-color 0.15s ease;
-}
-
-.modelRow:hover {
-  background-color: rgba(255, 255, 255, 0.04);
-}
-
-.modelRowInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.modelName {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #ededed;
-}
-
-.modelSize {
-  font-size: 0.75rem;
-  color: #a1a1aa;
-}
-
-.downloadButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #d4d4d8;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.downloadButton:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.downloadButton:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.downloadButton:disabled {
-  opacity: 0.8;
-  cursor: default;
-}
-
-.downloading {
-  border-color: transparent;
-  background-color: transparent;
-}
-
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @media (max-width: 520px) {

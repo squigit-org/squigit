@@ -5,4 +5,3 @@
  */
 
 export * from "./ChatBubble";
-export * from "./TokenStream";

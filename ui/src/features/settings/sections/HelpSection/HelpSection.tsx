@@ -13,7 +13,7 @@ import {
   prepareMailReport,
 } from "@/lib/helpers/reporting";
 import { MarkGithubIcon, MailIcon, BugIcon } from "@primer/octicons-react";
-import { CodeBlock } from "@/widgets";
+import { CodeBlock } from "@/primitives";
 import styles from "./HelpSection.module.css";
 
 export const HelpSection: React.FC = () => {

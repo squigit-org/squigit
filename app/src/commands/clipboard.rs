@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-use tauri::{AppHandle, Emitter, State};
+use tauri::State;
 
 use ops_chat_storage::{ChatStorage, StoredImage};
 use ops_profile_store::ProfileStore;

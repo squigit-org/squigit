@@ -9,5 +9,7 @@ export * from "./useTheme";
 export * from "./useUpdateCheck";
 export * from "./useWindowManager";
 export * from "./useCopyToClipboard";
-export * from "./useTextContextMenu";
 export * from "./useTextEditor";
+export * from "./useTextSelection";
+export * from "./useTextContextMenu";
+export * from "./useCodeHighlighter";

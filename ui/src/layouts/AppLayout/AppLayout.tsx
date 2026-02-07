@@ -5,9 +5,9 @@
  */
 
 import React from "react";
-import { Dialog } from "@/widgets";
+import { Dialog } from "@/primitives";
 import { ShellContextMenu, TitleBar, SidePanel } from "@/shell";
-import { useShell } from "@/shell";
+import { ShellProvider, useShellContext } from "@/shell/context";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
@@ -16,8 +16,8 @@ import { ChatLayout } from "..";
 
 import { Welcome, Agreement, UpdateNotes } from "@/features";
 
-export const AppLayout: React.FC = () => {
-  const shell = useShell();
+const AppLayoutContent: React.FC = () => {
+  const shell = useShellContext();
 
   if (shell.showUpdate && shell.pendingUpdate) {
     return (
@@ -70,61 +70,12 @@ export const AppLayout: React.FC = () => {
         className={styles.appContainer}
         onContextMenu={shell.handleContextMenu}
       >
-        <TitleBar
-          chatTitle={"SnapLLM"}
-          onReload={() => {}}
-          onNewSession={shell.handleNewSession}
-          isRotating={false}
-          currentPrompt={shell.system.prompt}
-          currentModel={shell.system.sessionModel}
-          defaultModel={shell.system.startupModel}
-          onModelChange={shell.system.setSessionModel}
-          onOcrModelChange={shell.system.setSessionOcrLanguage}
-          isLoading={false}
-          onLogout={shell.performLogout}
-          isSettingsOpen={shell.system.isSettingsOpen}
-          onCloseSettings={() => shell.system.setSettingsOpen(false)}
-          settingsSection={shell.system.settingsSection}
-          onSectionChange={shell.system.setSettingsSection}
-          openSettings={shell.system.openSettings}
-          updatePreferences={shell.system.updatePreferences}
-          themePreference={shell.system.themePreference}
-          onSetTheme={shell.system.onSetTheme}
-          autoExpandOCR={shell.system.autoExpandOCR}
-          ocrEnabled={shell.system.ocrEnabled}
-          ocrLanguage={shell.system.sessionOcrLanguage}
-          defaultOcrLanguage={shell.system.startupOcrLanguage}
-          downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
-          captureType={shell.system.captureType}
-          geminiKey={shell.system.apiKey}
-          imgbbKey={shell.system.imgbbKey}
-          onSetAPIKey={shell.system.handleSetAPIKey}
-          hasImageLoaded={false}
-          toggleSidePanel={shell.toggleSidePanel}
-          isSidePanelOpen={shell.isSidePanelOpen}
-          activeProfile={shell.system.activeProfile}
-          profiles={shell.system.profiles}
-          onSwitchProfile={shell.system.switchProfile}
-          onAddAccount={shell.handleAddAccount}
-          onCancelAuth={shell.system.cancelAuth}
-          onDeleteProfile={shell.system.deleteProfile}
-          switchingProfileId={shell.system.switchingProfileId}
-        />
+        <TitleBar />
         <div className={styles.mainContent}>
           <div
             className={`${styles.sidePanelWrapper} ${!shell.isSidePanelOpen ? styles.hidden : ""} ${shell.enablePanelAnimation ? styles.animated : ""}`}
           >
-            <SidePanel
-              chats={shell.chatHistory.chats}
-              activeSessionId={shell.chatHistory.activeSessionId}
-              onSelectChat={shell.handleSelectChat}
-              onNewChat={shell.handleNewSession}
-              onDeleteChat={shell.chatHistory.handleDeleteChat}
-              onDeleteChats={shell.chatHistory.handleDeleteChats}
-              onRenameChat={shell.chatHistory.handleRenameChat}
-              onTogglePinChat={shell.chatHistory.handleTogglePinChat}
-              onToggleStarChat={shell.chatHistory.handleToggleStarChat}
-            />
+            <SidePanel />
           </div>
           <div className={styles.contentArea}>
             <Welcome
@@ -182,87 +133,7 @@ export const AppLayout: React.FC = () => {
       onContextMenu={shell.handleContextMenu}
       className={styles.appContainer}
     >
-      <ChatLayout
-        currentPrompt={shell.system.prompt}
-        messages={shell.chat.messages}
-        streamingText={shell.chat.streamingText}
-        isChatMode={shell.chat.isChatMode}
-        isLoading={shell.chat.isLoading}
-        isStreaming={shell.chat.isStreaming}
-        error={shell.chat.error || shell.system.systemError}
-        lastSentMessage={shell.chat.lastSentMessage}
-        input={shell.input}
-        onInputChange={shell.setInput}
-        onOpenSettings={shell.system.openSettings}
-        currentModel={shell.system.sessionModel}
-        startupImage={shell.system.startupImage}
-        chatTitle={shell.chatTitle}
-        chatId={shell.chatHistory.activeSessionId}
-        onSend={() => {
-          shell.chat.handleSend(shell.input);
-          shell.setInput("");
-        }}
-        onModelChange={shell.system.setSessionModel}
-        onRetry={() => {
-          if (shell.chat.messages.length === 0) {
-            shell.chat.handleReload();
-          } else {
-            shell.chat.handleRetrySend();
-          }
-        }}
-        onReload={shell.handleChatReload}
-        onDescribeEdits={async (description) => {
-          shell.chat.handleDescribeEdits(description);
-        }}
-        sessionLensUrl={shell.sessionLensUrl}
-        setSessionLensUrl={shell.handleUpdateLensUrl}
-        ocrData={shell.ocrData}
-        onUpdateOCRData={shell.handleUpdateOCRData}
-        imageInputValue={shell.imageInput}
-        onImageInputChange={shell.setImageInput}
-        onCloseSettings={() => shell.system.setSettingsOpen(false)}
-        isSettingsOpen={shell.system.isSettingsOpen}
-        settingsSection={shell.system.settingsSection}
-        onSectionChange={shell.system.setSettingsSection}
-        autoExpandOCR={shell.system.autoExpandOCR}
-        ocrEnabled={shell.system.ocrEnabled}
-        // TitleBar props
-        activeProfile={shell.system.activeProfile}
-        profiles={shell.system.profiles}
-        onSwitchProfile={shell.handleSwitchProfile}
-        onAddAccount={shell.handleAddAccount}
-        onCancelAuth={shell.system.cancelAuth}
-        onDeleteProfile={shell.system.deleteProfile}
-        isRotating={shell.isRotating}
-        onNewSession={shell.handleNewSession}
-        toggleSidePanel={shell.toggleSidePanel}
-        isSidePanelOpen={shell.isSidePanelOpen}
-        enablePanelAnimation={shell.enablePanelAnimation}
-        onLogout={shell.performLogout}
-        updatePreferences={shell.system.updatePreferences}
-        themePreference={shell.system.themePreference}
-        onSetTheme={shell.system.onSetTheme}
-        ocrLanguage={shell.system.sessionOcrLanguage}
-        defaultOcrLanguage={shell.system.startupOcrLanguage}
-        defaultModel={shell.system.startupModel}
-        downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
-        captureType={shell.system.captureType}
-        geminiKey={shell.system.apiKey}
-        imgbbKey={shell.system.imgbbKey}
-        onSetAPIKey={shell.system.handleSetAPIKey}
-        onOcrModelChange={shell.system.setSessionOcrLanguage}
-        // SidePanel props
-        chats={shell.chatHistory.chats}
-        activeSessionId={shell.chatHistory.activeSessionId}
-        onSelectChat={shell.handleSelectChat}
-        onDeleteChat={shell.handleDeleteChatWrapper}
-        onDeleteChats={shell.handleDeleteChatsWrapper}
-        onRenameChat={shell.chatHistory.handleRenameChat}
-        onTogglePinChat={shell.chatHistory.handleTogglePinChat}
-        onToggleStarChat={shell.handleToggleStarChat}
-        activeProfileId={shell.system.activeProfile?.id || null}
-        switchingProfileId={shell.system.switchingProfileId}
-      />
+      <ChatLayout />
 
       {shell.contextMenu && (
         <ShellContextMenu
@@ -303,5 +174,13 @@ export const AppLayout: React.FC = () => {
         }}
       />
     </div>
+  );
+};
+
+export const AppLayout: React.FC = () => {
+  return (
+    <ShellProvider>
+      <AppLayoutContent />
+    </ShellProvider>
   );
 };

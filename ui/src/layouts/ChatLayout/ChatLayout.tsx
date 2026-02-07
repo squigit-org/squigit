@@ -4,244 +4,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { ForwardedRef } from "react";
-import {
-  TitleBar,
-  SidePanel,
-  AppShell,
-  AppShellProps,
-  SettingsSection,
-} from "@/shell";
-
-import { Profile } from "@/lib/api/tauri/commands";
+import React from "react";
+import { TitleBar, SidePanel, AppShell } from "@/shell";
+import { useShellContext } from "@/shell/context";
 import styles from "./ChatLayout.module.css";
 
-import { UserPreferences } from "@/lib/storage/app-settings";
+export const ChatLayout: React.FC = () => {
+  const shell = useShellContext();
 
-export interface ChatLayoutProps extends AppShellProps {
-  currentPrompt: string;
-  // TitleBar props
-  chatTitle: string;
-  onReload: () => void;
-  isRotating: boolean;
-  isLoading: boolean;
-  onNewSession: () => void;
-  toggleSidePanel: () => void;
-  isSidePanelOpen: boolean;
-  enablePanelAnimation?: boolean;
-  onLogout: () => void;
-  updatePreferences: (updates: Partial<UserPreferences>) => void;
-  themePreference: "dark" | "light" | "system";
-  onSetTheme: (theme: "dark" | "light" | "system") => void;
-  autoExpandOCR: boolean;
-  ocrEnabled: boolean;
-
-  ocrLanguage: string;
-  defaultOcrLanguage: string;
-  defaultModel: string;
-  downloadedOcrLanguages: string[];
-  captureType: "rectangular" | "squiggle";
-  geminiKey: string;
-  imgbbKey: string;
-  onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
-    key: string,
-  ) => Promise<boolean>;
-  onOcrModelChange: (model: string) => void;
-  onCloseSettings: () => void;
-  isSettingsOpen: boolean;
-  settingsSection: SettingsSection;
-  onSectionChange: (section: SettingsSection) => void;
-
-  // Profile props
-  activeProfile: Profile | null;
-  profiles: Profile[];
-  onSwitchProfile: (profileId: string) => void;
-  onAddAccount: () => void;
-  onCancelAuth: () => void;
-  onDeleteProfile: (profileId: string) => void;
-  activeProfileId: string | null;
-  switchingProfileId?: string | null;
-
-  // SidePanel props
-  chats: any[];
-  activeSessionId: string | null;
-  onSelectChat: (id: string) => void;
-  onDeleteChat: (id: string) => void;
-  onDeleteChats: (ids: string[]) => void;
-  onRenameChat: (id: string, title: string) => void;
-  onTogglePinChat: (id: string) => void;
-  onToggleStarChat: (id: string) => void;
-}
-
-export const ChatLayout: React.FC<ChatLayoutProps> = ({
-  currentPrompt,
-  // Chat props
-  messages,
-  streamingText,
-  isChatMode,
-  isLoading,
-  isStreaming,
-  error,
-  lastSentMessage,
-  input,
-  currentModel,
-  startupImage,
-  chatTitle,
-  chatId,
-  sessionLensUrl,
-  setSessionLensUrl,
-  onDescribeEdits,
-  ocrData,
-  onUpdateOCRData,
-  onSend,
-  onModelChange,
-  onRetry,
-  onInputChange,
-  onReload,
-  imageInputValue,
-  onImageInputChange,
-  onStreamComplete,
-  onOpenSettings,
-  onCloseSettings,
-  isSettingsOpen,
-  settingsSection,
-  onSectionChange,
-  autoExpandOCR,
-  ocrEnabled,
-
-  // TitleBar props
-  isRotating,
-  onNewSession,
-  toggleSidePanel,
-  isSidePanelOpen,
-  enablePanelAnimation = false,
-  onLogout,
-  updatePreferences,
-  themePreference,
-  onSetTheme,
-  ocrLanguage,
-  defaultOcrLanguage,
-  defaultModel,
-  downloadedOcrLanguages,
-  captureType,
-  geminiKey,
-  imgbbKey,
-  onSetAPIKey,
-  onOcrModelChange,
-
-  // SidePanel props
-  chats,
-  activeSessionId,
-  onSelectChat,
-  onDeleteChat,
-  onDeleteChats,
-  onRenameChat,
-  onTogglePinChat,
-  onToggleStarChat,
-  activeProfile,
-  profiles,
-  onSwitchProfile,
-  onAddAccount,
-  onCancelAuth,
-  onDeleteProfile,
-  activeProfileId,
-  switchingProfileId,
-}) => {
   return (
     <div className={styles.appContainer}>
-      <TitleBar
-        chatTitle={chatTitle}
-        onReload={onReload}
-        isRotating={isRotating}
-        currentPrompt={currentPrompt}
-        currentModel={currentModel}
-        onModelChange={onModelChange}
-        isLoading={isLoading}
-        hasImageLoaded={!!startupImage}
-        onNewSession={onNewSession}
-        toggleSidePanel={toggleSidePanel}
-        isSidePanelOpen={isSidePanelOpen}
-        activeProfile={activeProfile}
-        profiles={profiles}
-        onSwitchProfile={onSwitchProfile}
-        onAddAccount={onAddAccount}
-        onCancelAuth={onCancelAuth}
-        onDeleteProfile={onDeleteProfile}
-        onLogout={onLogout}
-        updatePreferences={updatePreferences}
-        themePreference={themePreference}
-        onSetTheme={onSetTheme}
-        autoExpandOCR={autoExpandOCR}
-        ocrEnabled={ocrEnabled}
-        ocrLanguage={ocrLanguage}
-        defaultOcrLanguage={defaultOcrLanguage}
-        defaultModel={defaultModel}
-        downloadedOcrLanguages={downloadedOcrLanguages}
-        captureType={captureType}
-        geminiKey={geminiKey}
-        imgbbKey={imgbbKey}
-        onSetAPIKey={onSetAPIKey}
-        onOcrModelChange={onOcrModelChange}
-        isSettingsOpen={isSettingsOpen}
-        onCloseSettings={onCloseSettings}
-        settingsSection={settingsSection}
-        onSectionChange={onSectionChange}
-        openSettings={onOpenSettings}
-        switchingProfileId={switchingProfileId}
-      />
+      <TitleBar />
 
       <div className={styles.mainContent}>
         <div
           className={`${styles.sidePanelWrapper} ${
-            !isSidePanelOpen ? styles.hidden : ""
-          } ${enablePanelAnimation ? styles.animated : ""}`}
+            !shell.isSidePanelOpen ? styles.hidden : ""
+          } ${shell.enablePanelAnimation ? styles.animated : ""}`}
         >
-          <SidePanel
-            chats={chats}
-            activeSessionId={activeSessionId}
-            onSelectChat={onSelectChat}
-            onNewChat={onNewSession}
-            onDeleteChat={onDeleteChat}
-            onDeleteChats={onDeleteChats}
-            onRenameChat={onRenameChat}
-            onTogglePinChat={onTogglePinChat}
-            onToggleStarChat={onToggleStarChat}
-          />
+          <SidePanel />
         </div>
 
         <div className={styles.contentArea}>
-          <AppShell
-            messages={messages}
-            streamingText={streamingText}
-            isChatMode={isChatMode}
-            isLoading={isLoading}
-            isStreaming={isStreaming}
-            error={error}
-            lastSentMessage={lastSentMessage}
-            input={input}
-            currentModel={currentModel}
-            startupImage={startupImage}
-            chatTitle={chatTitle}
-            chatId={chatId}
-            sessionLensUrl={sessionLensUrl}
-            setSessionLensUrl={setSessionLensUrl}
-            onDescribeEdits={onDescribeEdits}
-            ocrData={ocrData}
-            onUpdateOCRData={onUpdateOCRData}
-            onSend={onSend}
-            onModelChange={onModelChange}
-            onRetry={onRetry}
-            onOpenSettings={onOpenSettings}
-            onInputChange={onInputChange}
-            onReload={onReload}
-            autoExpandOCR={autoExpandOCR}
-            ocrEnabled={ocrEnabled}
-            imageInputValue={imageInputValue}
-            onImageInputChange={onImageInputChange}
-            onStreamComplete={onStreamComplete}
-            activeProfileId={activeProfileId}
-          />
+          <AppShell />
         </div>
       </div>
     </div>

@@ -6,3 +6,5 @@
 
 export * from "./ChatBubble";
 export * from "./ChatInput";
+export * from "./StreamRenderer";
+export * from "./StreamingResponse";

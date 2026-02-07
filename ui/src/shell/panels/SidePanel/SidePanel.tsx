@@ -18,9 +18,10 @@ import {
 
 import { ChatMetadata, groupChatsByDate } from "@/lib/storage/chat";
 import styles from "./SidePanel.module.css";
-import { Dialog } from "@/widgets";
+import { Dialog } from "@/primitives";
 import { PanelContextMenu } from "@/shell/menus";
 import { getDeleteMultipleChatsDialog } from "@/lib/helpers/dialogs";
+import { useShellContext } from "@/shell/context";
 
 // --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
@@ -303,29 +304,11 @@ const ChatGroup: React.FC<ChatGroupProps> = ({
 
 // --- Main SidePanel Component ---
 
-interface SidePanelProps {
-  chats: ChatMetadata[];
-  activeSessionId: string | null;
-  onSelectChat: (id: string) => void;
-  onNewChat: () => void;
-  onDeleteChat: (id: string) => void;
-  onDeleteChats: (ids: string[]) => void;
-  onRenameChat: (id: string, title: string) => void;
-  onTogglePinChat: (id: string) => void;
-  onToggleStarChat: (id: string) => void;
-}
+export const SidePanel: React.FC = () => {
+  const shell = useShellContext();
+  const chats = shell.chatHistory.chats;
+  const activeSessionId = shell.chatHistory.activeSessionId;
 
-export const SidePanel: React.FC<SidePanelProps> = ({
-  chats,
-  activeSessionId,
-  onSelectChat,
-  onNewChat,
-  onDeleteChat,
-  onDeleteChats,
-  onRenameChat,
-  onTogglePinChat,
-  onToggleStarChat,
-}) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeContextMenu, setActiveContextMenu] = useState<{
@@ -377,13 +360,13 @@ export const SidePanel: React.FC<SidePanelProps> = ({
 
   const handleDeleteChat = () => {
     if (deleteId) {
-      onDeleteChat(deleteId);
+      shell.handleDeleteChatWrapper(deleteId);
       setDeleteId(null);
     }
   };
 
   const handleBulkDelete = () => {
-    onDeleteChats(selectedIds);
+    shell.handleDeleteChatsWrapper(selectedIds);
     setSelectedIds([]);
     setIsSelectionMode(false);
     setShowBulkDelete(false);
@@ -402,12 +385,12 @@ export const SidePanel: React.FC<SidePanelProps> = ({
       activeSessionId={activeSessionId}
       isSelectionMode={isSelectionMode}
       selectedIds={selectedIds}
-      onSelectChat={onSelectChat}
+      onSelectChat={shell.handleSelectChat}
       onToggleChatSelection={toggleChatSelection}
       onDeleteChat={setDeleteId}
-      onRenameChat={onRenameChat}
-      onTogglePinChat={onTogglePinChat}
-      onToggleStarChat={onToggleStarChat}
+      onRenameChat={shell.chatHistory.handleRenameChat}
+      onTogglePinChat={shell.chatHistory.handleTogglePinChat}
+      onToggleStarChat={shell.handleToggleStarChat}
       defaultExpanded={expanded}
       activeContextMenu={activeContextMenu}
       onOpenContextMenu={handleOpenContextMenu}
@@ -454,7 +437,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({
           <div className={styles.utilityBar}>
             <button
               className={`${styles.newChatBtn} ${isHoverDisabled ? styles.noHover : ""}`}
-              onClick={onNewChat}
+              onClick={shell.handleNewSession}
               onMouseLeave={() => setIsHoverDisabled(false)}
               style={{ flex: 1 }}
             >

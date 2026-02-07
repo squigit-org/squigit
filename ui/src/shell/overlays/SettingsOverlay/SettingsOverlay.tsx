@@ -18,7 +18,7 @@ import {
 import { UserPreferences } from "@/lib/storage/app-settings";
 import { invoke } from "@tauri-apps/api/core";
 import { github } from "@/lib/config/services";
-import { Tooltip } from "@/widgets";
+import { Tooltip } from "@/primitives";
 
 import {
   GeneralSection,

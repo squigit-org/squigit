@@ -7,4 +7,4 @@
 export * from "./ImageToolbar";
 export * from "./SearchInput";
 export * from "./OCRLayer";
-export * from "./OCRMenu";
+export * from "./ImageTextMenu";

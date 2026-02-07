@@ -5,8 +5,8 @@
  */
 
 import React from "react";
-import { StreamRenderer } from "./StreamRenderer";
-import styles from "./ChatBubble.module.css";
+import { StreamRenderer } from "../StreamRenderer";
+import styles from "./StreamingResponse.module.css";
 
 interface StreamingResponseProps {
   text: string;
@@ -25,7 +25,7 @@ export const StreamingResponse: React.FC<StreamingResponseProps> = ({
 
   return (
     <div className={styles.streamingContainer} data-component="chat-bubble">
-      <div className={`${styles.bubble} ${styles.botBubble}`}>
+      <div className={styles.bubble}>
         <StreamRenderer fullText={text} onComplete={onComplete} />
       </div>
     </div>

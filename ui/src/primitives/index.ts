@@ -5,7 +5,8 @@
  */
 
 export * from "./dialog";
-export * from "./menu";
+export * from "./context-menu";
+export * from "./inline-menu";
 export * from "./code-block";
 export * from "./glow-card";
 export * from "./tooltip";

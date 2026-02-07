@@ -9,61 +9,16 @@ import { RotateCw } from "lucide-react";
 import { TrafficLights } from "../TrafficLights";
 import { WindowControls } from "../WindowControls";
 import styles from "./TitleBar.module.css";
-import { Profile } from "@/lib/api/tauri/commands";
 import {
   AccountSwitcher,
   ModelSwitcher,
   SettingsPanel,
   AuthButton,
 } from "@/features";
-import { SettingsOverlay, SettingsSection } from "@/shell/overlays";
-import { UserPreferences } from "@/lib/storage/app-settings";
+import { SettingsOverlay } from "@/shell/overlays";
+import { useShellContext } from "@/shell/context";
 
 type Platform = "macos" | "linux" | "windows";
-
-export interface TitleBarProps {
-  chatTitle: string;
-  onReload: () => void;
-  isRotating: boolean;
-  currentPrompt: string;
-  currentModel: string;
-  onModelChange: (model: string) => void;
-  isLoading: boolean;
-  onLogout: () => void;
-  isSettingsOpen: boolean;
-  onCloseSettings: () => void;
-  settingsSection: SettingsSection;
-  onSectionChange: (section: SettingsSection) => void;
-  openSettings: (section: SettingsSection) => void;
-  hasImageLoaded: boolean;
-  toggleSidePanel: () => void;
-  isSidePanelOpen: boolean;
-  activeProfile: Profile | null;
-  profiles: Profile[];
-  onSwitchProfile: (profileId: string) => void;
-  onNewSession: () => void;
-  onAddAccount: () => void;
-  onCancelAuth: () => void;
-  onDeleteProfile: (profileId: string) => void;
-  updatePreferences: (updates: Partial<UserPreferences>) => void;
-  themePreference: "dark" | "light" | "system";
-  onSetTheme: (theme: "dark" | "light" | "system") => void;
-  autoExpandOCR: boolean;
-  ocrEnabled: boolean;
-  ocrLanguage: string;
-  defaultOcrLanguage: string;
-  defaultModel: string;
-  downloadedOcrLanguages: string[];
-  captureType: "rectangular" | "squiggle";
-  geminiKey: string;
-  imgbbKey: string;
-  onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
-    key: string,
-  ) => Promise<boolean>;
-  onOcrModelChange: (model: string) => void;
-  switchingProfileId?: string | null;
-}
 
 const detectPlatform = (): Platform => {
   const userAgent = window.navigator.userAgent.toLowerCase();
@@ -72,62 +27,25 @@ const detectPlatform = (): Platform => {
   return "linux";
 };
 
-export const TitleBar: React.FC<TitleBarProps> = ({
-  chatTitle,
-  onReload,
-  onNewSession,
-  isRotating,
-  currentPrompt,
-  currentModel,
-  onModelChange,
-  isLoading,
-  onLogout,
-  isSettingsOpen,
-  onCloseSettings,
-  settingsSection,
-  onSectionChange,
-  openSettings,
-  hasImageLoaded,
-  toggleSidePanel,
-  isSidePanelOpen,
-  activeProfile,
-  profiles,
-  onSwitchProfile,
-  onAddAccount,
-  onCancelAuth,
-  onDeleteProfile,
-  updatePreferences,
-  themePreference,
-  onSetTheme,
-  autoExpandOCR,
-  ocrEnabled,
-  ocrLanguage,
-  defaultOcrLanguage,
-  defaultModel,
-  downloadedOcrLanguages,
-  captureType,
-  geminiKey,
-  imgbbKey,
-  onSetAPIKey,
-  onOcrModelChange,
-  switchingProfileId,
-}) => {
+export const TitleBar: React.FC = () => {
+  const shell = useShellContext();
   const [platform] = useState<Platform>(() => detectPlatform());
 
   const isUnix = platform === "macos" || platform === "linux";
+  const hasImageLoaded = !!shell.system.startupImage;
 
   return (
     <header className={styles.header} data-tauri-drag-region>
-      <h1 className={styles.chatTitle}>{chatTitle}</h1>
+      <h1 className={styles.chatTitle}>{shell.chatTitle}</h1>
 
       <div className={styles.leftSection}>
         {isUnix && <TrafficLights />}
 
         <div className={styles.controlsWrapper}>
           <button
-            onClick={toggleSidePanel}
+            onClick={shell.toggleSidePanel}
             className={`${styles.iconButton} ${
-              isSidePanelOpen ? styles.active : ""
+              shell.isSidePanelOpen ? styles.active : ""
             }`}
             title="Recent Chats"
           >
@@ -144,8 +62,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <path
                 d="M9 3V21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9Z"
-                fill={isSidePanelOpen ? "currentColor" : "none"}
-                stroke={isSidePanelOpen ? "none" : "currentColor"}
+                fill={shell.isSidePanelOpen ? "currentColor" : "none"}
+                stroke={shell.isSidePanelOpen ? "none" : "currentColor"}
               />
               <line x1="9" y1="3" x2="9" y2="21" />
             </svg>
@@ -154,70 +72,73 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       <div className={styles.rightSection}>
-        {activeProfile ? (
+        {shell.system.activeProfile ? (
           <>
             <ModelSwitcher
-              currentModel={currentModel}
-              onModelChange={onModelChange}
-              isLoading={isLoading}
-              onOpenSettings={openSettings}
-              ocrEnabled={ocrEnabled}
-              downloadedOcrLanguages={downloadedOcrLanguages}
-              currentOcrModel={ocrLanguage}
-              onOcrModelChange={onOcrModelChange}
+              currentModel={shell.system.sessionModel}
+              onModelChange={shell.system.setSessionModel}
+              isLoading={shell.isLoadingState}
+              onOpenSettings={shell.system.openSettings}
+              ocrEnabled={shell.system.ocrEnabled}
+              downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
+              currentOcrModel={shell.system.sessionOcrLanguage}
+              onOcrModelChange={shell.system.setSessionOcrLanguage}
             />
 
             <AccountSwitcher
-              activeProfile={activeProfile}
-              onNewSession={onNewSession}
-              profiles={profiles}
-              onSwitchProfile={onSwitchProfile}
-              onAddAccount={onAddAccount}
-              onLogout={onLogout}
-              onDeleteProfile={onDeleteProfile}
-              switchingProfileId={switchingProfileId}
+              activeProfile={shell.system.activeProfile}
+              onNewSession={shell.handleNewSession}
+              profiles={shell.system.profiles}
+              onSwitchProfile={shell.handleSwitchProfile}
+              onAddAccount={shell.handleAddAccount}
+              onLogout={shell.performLogout}
+              onDeleteProfile={shell.system.deleteProfile}
+              switchingProfileId={shell.system.switchingProfileId}
             />
           </>
         ) : (
           <AuthButton
-            onLogin={onAddAccount}
-            onCancel={onCancelAuth}
-            isLoading={switchingProfileId === "creating_account"}
+            onLogin={shell.handleAddAccount}
+            onCancel={shell.system.cancelAuth}
+            isLoading={shell.system.switchingProfileId === "creating_account"}
           />
         )}
 
         {hasImageLoaded && (
           <button
-            onClick={onReload}
+            onClick={shell.handleChatReload}
             className={styles.iconButton}
             title="Reload chat"
-            disabled={isRotating || isLoading}
+            disabled={shell.isRotating || shell.isLoadingState}
           >
-            <RotateCw size={20} className={isRotating ? styles.rotating : ""} />
+            <RotateCw
+              size={20}
+              className={shell.isRotating ? styles.rotating : ""}
+            />
           </button>
         )}
 
-        <SettingsPanel onOpenSettings={openSettings} />
+        <SettingsPanel onOpenSettings={shell.system.openSettings} />
 
         <SettingsOverlay
-          isOpen={isSettingsOpen}
-          onClose={onCloseSettings}
-          activeSection={settingsSection}
-          onSectionChange={onSectionChange}
-          currentPrompt={currentPrompt}
-          defaultModel={defaultModel}
-          defaultOcrLanguage={defaultOcrLanguage}
-          updatePreferences={updatePreferences}
-          themePreference={themePreference}
-          onSetTheme={onSetTheme}
-          autoExpandOCR={autoExpandOCR}
-          ocrEnabled={ocrEnabled}
-          downloadedOcrLanguages={downloadedOcrLanguages}
-          captureType={captureType}
-          geminiKey={geminiKey}
-          imgbbKey={imgbbKey}
-          onSetAPIKey={onSetAPIKey}
-          isGuest={!activeProfile}
+          isOpen={shell.system.isSettingsOpen}
+          onClose={() => shell.system.setSettingsOpen(false)}
+          activeSection={shell.system.settingsSection}
+          onSectionChange={shell.system.setSettingsSection}
+          currentPrompt={shell.system.prompt}
+          defaultModel={shell.system.startupModel}
+          defaultOcrLanguage={shell.system.startupOcrLanguage}
+          updatePreferences={shell.system.updatePreferences}
+          themePreference={shell.system.themePreference}
+          onSetTheme={shell.system.onSetTheme}
+          autoExpandOCR={shell.system.autoExpandOCR}
+          ocrEnabled={shell.system.ocrEnabled}
+          downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
+          captureType={shell.system.captureType}
+          geminiKey={shell.system.apiKey}
+          imgbbKey={shell.system.imgbbKey}
+          onSetAPIKey={shell.system.handleSetAPIKey}
+          isGuest={!shell.system.activeProfile}
         />
 
         {platform === "windows" && <WindowControls />}

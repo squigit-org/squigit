@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Window};
-use std::io::BufRead;
+
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GeminiPart {
@@ -34,7 +34,7 @@ struct GeminiRequest {
 struct GeminiResponseCandidate {
     content: Option<GeminiResponseContent>,
     #[serde(rename = "finishReason")]
-    finish_reason: Option<String>,
+    _finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

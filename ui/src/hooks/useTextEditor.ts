@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useHistoryState } from "./useHistoryState";
-import { useClipboard } from "@/widgets";
+import { useClipboard } from "./useClipboard";
 
 interface UseTextEditorProps {
   value: string;

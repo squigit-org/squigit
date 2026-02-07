@@ -7,7 +7,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Profile } from "@/lib/api/tauri/commands";
-import { Dialog } from "@/widgets";
+import { Dialog } from "@/primitives";
 import {
   ChevronDown,
   UserPlus,

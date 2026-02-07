@@ -11,7 +11,7 @@ import { generateSearchUrl, generateTranslateUrl } from "@/features/image";
 const MENU_HEIGHT = 48;
 const NOTCH_OFFSET = 12;
 
-interface UseInlineMenuOptions {
+interface UseTextSelectionOptions {
   containerRef: React.RefObject<HTMLElement | null>;
   onSelectAll?: () => void;
   onMenuShow?: () => void;
@@ -19,13 +19,13 @@ interface UseInlineMenuOptions {
   positioningStrategy?: "visual" | "simple";
 }
 
-export const useInlineMenu = ({
+export const useTextSelection = ({
   containerRef,
   onSelectAll,
   onMenuShow,
   onMenuHide,
   positioningStrategy = "visual",
-}: UseInlineMenuOptions) => {
+}: UseTextSelectionOptions) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
   const page1Ref = useRef<HTMLDivElement>(null);
@@ -428,3 +428,6 @@ export const useInlineMenu = ({
     positionMenu,
   };
 };
+
+// Alias for backward compatibility
+export const useInlineMenu = useTextSelection;

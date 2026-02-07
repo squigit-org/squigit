@@ -5,7 +5,11 @@
  */
 
 import React from "react";
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@/widgets";
+import {
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/primitives";
 
 interface TextContextMenuProps {
   x: number;

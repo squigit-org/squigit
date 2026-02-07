@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { DialogVariant } from "@/widgets/dialog/Dialog";
+import { DialogVariant } from "@/primitives/dialog/Dialog";
 
 export interface DialogContent {
   title?: string;

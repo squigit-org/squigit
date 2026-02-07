@@ -1,14 +1,6 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use aes_gcm::{
-    aead::{Aead, KeyInit},
-    Aes256Gcm, Key, Nonce,
-};
-use base64::{engine::general_purpose, Engine as _};
-use rand::{rngs::OsRng, RngCore};
-use std::fs::{self, File};
-use std::io::Write;
 use tauri::{AppHandle, Manager};
 
 use crate::services::security;

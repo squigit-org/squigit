@@ -17,7 +17,7 @@ import {
   type StreamSegment,
   type StreamToken,
 } from "@/lib/markdown";
-import { CodeBlock } from "@/widgets";
+import { CodeBlock } from "@/primitives";
 import styles from "./StreamRenderer.module.css";
 
 interface StreamRendererProps {
