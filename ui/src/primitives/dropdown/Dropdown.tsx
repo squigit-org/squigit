@@ -20,7 +20,7 @@ export const DropdownItem: React.FC<DropdownItemProps> = ({
   isActive,
 }) => (
   <button
-    className={`${styles.item} ${isActive ? styles.active : ""}`}
+    className={`${styles.item} ${isActive ? styles.itemActive : ""}`}
     onClick={onClick}
   >
     <span>{label}</span>
@@ -36,6 +36,23 @@ export const DropdownSectionTitle: React.FC<{ children: ReactNode }> = ({
   children,
 }) => <div className={styles.sectionTitle}>{children}</div>;
 
+interface DropdownActionProps {
+  icon?: ReactNode;
+  children: ReactNode;
+  onClick: () => void;
+}
+
+export const DropdownAction: React.FC<DropdownActionProps> = ({
+  icon,
+  children,
+  onClick,
+}) => (
+  <button className={styles.actionButton} onClick={onClick}>
+    {icon}
+    <span>{children}</span>
+  </button>
+);
+
 interface DropdownProps {
   label: ReactNode;
   children: ReactNode;
@@ -43,6 +60,7 @@ interface DropdownProps {
   width?: number | string;
   isOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
+  hideChevron?: boolean;
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -52,6 +70,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   width = 200,
   isOpen: controlledOpen,
   onOpenChange,
+  hideChevron = false,
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -91,14 +110,16 @@ export const Dropdown: React.FC<DropdownProps> = ({
         onClick={() => handleOpenChange(!isOpen)}
       >
         <span>{label}</span>
-        <ChevronDown
-          size={18}
-          className={`${styles.chevron} ${isOpen ? styles.rotate : ""}`}
-        />
+        {!hideChevron && (
+          <ChevronDown
+            size={18}
+            className={`${styles.chevron} ${isOpen ? styles.chevronRotate : ""}`}
+          />
+        )}
       </button>
 
       <div
-        className={`${styles.dropdown} ${isOpen ? styles.open : ""}`}
+        className={`${styles.dropdown} ${isOpen ? styles.dropdownOpen : ""}`}
         style={{ minWidth: width }}
       >
         {children}

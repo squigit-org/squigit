@@ -4,33 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/variables.css";
+/**
+ * AccountSwitcher-specific styles.
+ * Base dropdown styles imported from shared.
+ */
 
+/* Import shared dropdown styles */
+@import "@/primitives/dropdown/Dropdown.shared.module.css";
+
+/* AccountSwitcher container */
 .accountSwitcher {
   position: relative;
   pointer-events: auto;
 }
 
-.trigger {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.trigger:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.trigger.active {
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
+/* Avatar in trigger */
 .avatar {
   width: 22px;
   height: 22px;
@@ -54,71 +42,7 @@
   color: #fff;
 }
 
-.chevron {
-  color: var(--text-muted, #71717a);
-  transition: transform 0.2s ease;
-}
-
-.chevron.rotate {
-  transform: rotate(180deg);
-}
-
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  min-width: 240px;
-  max-width: 280px;
-  background-color: rgba(24, 24, 27, 0.98);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(63, 63, 70, 0.5);
-  border-radius: 12px;
-  padding: 8px;
-  z-index: 1000;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.4),
-    0 8px 10px -6px rgba(0, 0, 0, 0.3);
-
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateY(-4px);
-  transition:
-    opacity 0.15s ease,
-    visibility 0.15s ease,
-    transform 0.15s ease;
-}
-
-.dropdown.open {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-.sectionTitle {
-  padding: 8px 10px 6px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted, #71717a);
-}
-
+/* Account list with specific styling */
 .accountList {
   display: flex;
   flex-direction: column;
@@ -136,29 +60,16 @@
   border-radius: 4px;
 }
 
+/* Account item (similar to .item but with custom name) */
 .accountItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  width: 100%;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-  transition: background-color 0.15s ease;
-  font-family: "Inter", sans-serif;
+  composes: item;
 }
 
-.accountItem:hover {
-  background-color: rgba(255, 255, 255, 0.06);
+.activeAccount {
+  composes: itemActive;
 }
 
-.accountItem.activeAccount {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
+/* Item avatar (larger than trigger avatar) */
 .itemAvatar {
   width: 32px;
   height: 32px;
@@ -182,6 +93,7 @@
   color: #fff;
 }
 
+/* Account info (2-line layout) */
 .accountInfo {
   flex: 1;
   display: flex;
@@ -206,11 +118,7 @@
   text-overflow: ellipsis;
 }
 
-.checkIcon {
-  color: #ffffff;
-  flex-shrink: 0;
-}
-
+/* Delete button that appears on hover */
 .deleteButton {
   background: transparent;
   border: none;
@@ -241,39 +149,6 @@
 .deleteButton:hover {
   background-color: rgba(239, 68, 68, 0.1);
   color: #ef4444;
-}
-
-.divider {
-  height: 1px;
-  background-color: rgba(63, 63, 70, 0.5);
-  margin: 6px 0;
-}
-
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.actionButton {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  width: 100%;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: #a1a1aa;
-  transition: all 0.15s ease;
-  font-family: "Inter", sans-serif;
-}
-
-.actionButton:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #ededed;
 }
 
 /* Avatar Component Styles */

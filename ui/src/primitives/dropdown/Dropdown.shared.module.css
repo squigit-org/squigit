@@ -1,0 +1,202 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * Shared dropdown styles for reuse across components.
+ * Import with: @import "@/primitives/dropdown/Dropdown.shared.module.css";
+ */
+
+@import "@/styles/variables.css";
+
+/* Container base */
+.container {
+  position: relative;
+  pointer-events: auto;
+}
+
+/* Trigger button base */
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.trigger:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.trigger.active {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Chevron icon */
+.chevron {
+  color: var(--text-muted, #71717a);
+  transition: transform 0.2s ease;
+}
+
+.chevronRotate,
+.rotate {
+  transform: rotate(180deg);
+}
+
+/* Dropdown panel */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background-color: rgba(24, 24, 27, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(63, 63, 70, 0.5);
+  border-radius: 12px;
+  padding: 8px;
+  z-index: 1000;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.4),
+    0 8px 10px -6px rgba(0, 0, 0, 0.3);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.15s ease,
+    visibility 0.15s ease,
+    transform 0.15s ease;
+
+  /* Fix for child animation flickering */
+  isolation: isolate;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.dropdownOpen,
+.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* Section title */
+.sectionTitle {
+  padding: 8px 10px 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #71717a);
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background-color: rgba(63, 63, 70, 0.5);
+  margin: 6px 0;
+}
+
+/* List container */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: rgba(63, 63, 70, 0.5);
+  border-radius: 4px;
+}
+
+/* Item base */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+  font-family: "Inter", sans-serif;
+  color: #ededed;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.itemActive {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Check icon */
+.checkIcon {
+  color: #ffffff;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Actions container */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Action button */
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #dbdbe7;
+  transition: all 0.15s ease;
+  font-family: "Inter", sans-serif;
+}
+
+.actionButton:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #ededed;
+}
+
+/* Spinner animation */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

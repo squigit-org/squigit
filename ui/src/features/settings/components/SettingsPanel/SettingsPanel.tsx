@@ -11,7 +11,13 @@ import {
   Sparkles,
   HelpCircle,
 } from "lucide-react";
-import React, { useRef, useEffect, useState } from "react";
+import React, { useState } from "react";
+import {
+  Dropdown,
+  DropdownSectionTitle,
+  DropdownAction,
+  DropdownDivider,
+} from "@/primitives";
 import styles from "./SettingsPanel.module.css";
 import { SettingsSection } from "@/shell";
 
@@ -23,26 +29,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onOpenSettings,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // Close small dropdown
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
 
   const handleOpenSettings = (section: SettingsSection) => {
     setIsOpen(false);
@@ -50,63 +36,56 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   };
 
   return (
-    <>
-      <div className={styles.settingsPanel} ref={containerRef}>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`${styles.trigger} ${isOpen ? styles.active : ""}`}
-        >
-          <Settings
-            size={22}
-            className={`${styles.triggerIcon} ${isOpen ? styles.active : ""}`}
-          />
-        </button>
+    <Dropdown
+      className={styles.settingsPanel}
+      label={
+        <Settings
+          size={22}
+          className={`${styles.triggerIcon} ${isOpen ? styles.iconActive : ""}`}
+        />
+      }
+      width={200}
+      isOpen={isOpen}
+      onOpenChange={setIsOpen}
+      hideChevron
+    >
+      <DropdownSectionTitle>Settings</DropdownSectionTitle>
+      <DropdownAction
+        icon={<Settings size={18} />}
+        onClick={() => handleOpenSettings("general")}
+      >
+        General
+      </DropdownAction>
 
-        <div className={`${styles.dropdown} ${isOpen ? styles.open : ""}`}>
-          <div className={styles.sectionTitle}>Settings</div>
-          <div className={styles.actions}>
-            <button
-              className={styles.actionButton}
-              onClick={() => handleOpenSettings("general")}
-            >
-              <Settings size={18} />
-              <span>General</span>
-            </button>
+      <DropdownAction
+        icon={<Package size={18} />}
+        onClick={() => handleOpenSettings("models")}
+      >
+        Models
+      </DropdownAction>
 
-            <button
-              className={styles.actionButton}
-              onClick={() => handleOpenSettings("models")}
-            >
-              <Package size={18} />
-              <span>Models</span>
-            </button>
-            <button
-              className={styles.actionButton}
-              onClick={() => handleOpenSettings("apikeys")}
-            >
-              <Fingerprint size={18} />
-              <span>API keys</span>
-            </button>
+      <DropdownAction
+        icon={<Fingerprint size={18} />}
+        onClick={() => handleOpenSettings("apikeys")}
+      >
+        API keys
+      </DropdownAction>
 
-            <div className={styles.divider} />
+      <DropdownDivider />
 
-            <button
-              className={styles.actionButton}
-              onClick={() => handleOpenSettings("personalization")}
-            >
-              <Sparkles size={18} />
-              <span>Personalization</span>
-            </button>
-            <button
-              className={styles.actionButton}
-              onClick={() => handleOpenSettings("help")}
-            >
-              <HelpCircle size={18} />
-              <span>Help & support</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
+      <DropdownAction
+        icon={<Sparkles size={18} />}
+        onClick={() => handleOpenSettings("personalization")}
+      >
+        Personalization
+      </DropdownAction>
+
+      <DropdownAction
+        icon={<HelpCircle size={18} />}
+        onClick={() => handleOpenSettings("help")}
+      >
+        Help & support
+      </DropdownAction>
+    </Dropdown>
   );
 };
