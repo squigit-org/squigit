@@ -20,4 +20,5 @@ export interface Profile {
   name: string;
   email: string;
   avatar: string | null;
+  original_avatar?: string | null;
 }

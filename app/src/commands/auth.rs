@@ -111,7 +111,11 @@ pub async fn get_api_key(
 /// Cache an avatar image from a remote URL to local CAS storage.
 /// Returns the local file path on success.
 #[tauri::command]
-pub async fn cache_avatar(_app: AppHandle, url: String) -> Result<String, String> {
+pub async fn cache_avatar(
+    _app: AppHandle,
+    url: String,
+    profile_id: Option<String>,
+) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         // Download image
         let client = reqwest::blocking::Client::new();
@@ -119,40 +123,49 @@ pub async fn cache_avatar(_app: AppHandle, url: String) -> Result<String, String
             .get(&url)
             .send()
             .map_err(|e| format!("Failed to download avatar: {}", e))?;
-        
+
         if !response.status().is_success() {
-            return Err(format!("Failed to download avatar: HTTP {}", response.status()));
+            return Err(format!(
+                "Failed to download avatar: HTTP {}",
+                response.status()
+            ));
         }
-        
+
         let bytes = response
             .bytes()
             .map_err(|e| format!("Failed to read avatar bytes: {}", e))?;
-        
-        // Save to CAS using active profile's storage
+
+        // Initialize profile store
         let profile_store = ops_profile_store::ProfileStore::new()
             .map_err(|e| format!("Failed to initialize profile store: {}", e))?;
-        
-        let active_id = profile_store
-            .get_active_profile_id()
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "No active profile. Please log in first.".to_string())?;
-        
-        let chats_dir = profile_store.get_chats_dir(&active_id);
+
+        // Determine target profile ID: explicit > active > error
+        let target_id = match profile_id {
+            Some(id) => id,
+            None => profile_store
+                .get_active_profile_id()
+                .map_err(|e| e.to_string())?
+                .ok_or_else(|| "No active profile and no profile ID provided.".to_string())?,
+        };
+
+        // Get storage directory for the target profile
+        let chats_dir = profile_store.get_chats_dir(&target_id);
         let storage = ops_chat_storage::ChatStorage::with_base_dir(chats_dir)
             .map_err(|e| format!("Failed to initialize storage: {}", e))?;
-        
+
+        // Store image
         let stored_image = storage
             .store_image(&bytes)
             .map_err(|e| format!("Failed to store avatar: {}", e))?;
-        
+
         let local_path = stored_image.path.clone();
-        
+
         // Update profile with new avatar path
-        if let Some(mut profile) = profile_store.get_profile(&active_id).ok().flatten() {
+        if let Some(mut profile) = profile_store.get_profile(&target_id).ok().flatten() {
             profile.avatar = Some(local_path.clone());
             let _ = profile_store.upsert_profile(&profile);
         }
-        
+
         Ok(local_path)
     })
     .await

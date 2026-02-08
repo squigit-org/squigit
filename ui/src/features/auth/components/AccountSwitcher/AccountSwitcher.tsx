@@ -5,9 +5,9 @@
  */
 
 import React, { useRef, useEffect, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { Profile } from "@/lib/api/tauri/commands";
 import { Dialog } from "@/primitives";
+import { Avatar } from "./Avatar";
 import {
   ChevronDown,
   UserPlus,
@@ -83,22 +83,6 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
     }
   };
 
-  const getInitials = (name: string) => {
-    const names = name.trim().split(" ");
-    if (names.length === 0) return "";
-    if (names.length === 1) return names[0].charAt(0).toUpperCase();
-    return (names[0].charAt(0) + names[1].charAt(0)).toUpperCase();
-  };
-
-  const getAvatarSrc = (avatar: string | null) => {
-    if (!avatar) return null;
-    if (avatar.startsWith("http://") || avatar.startsWith("https://")) {
-      return avatar;
-    }
-    return convertFileSrc(avatar);
-  };
-
-  const activeAvatarSrc = getAvatarSrc(activeProfile?.avatar ?? null);
   const isSwitching = !!switchingProfileId;
 
   return (
@@ -109,10 +93,12 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
         disabled={isSwitching}
       >
         <div className={styles.avatar}>
-          <img
-            src={activeAvatarSrc || ""}
-            alt={activeProfile?.name ?? "User"}
-            className={styles.avatarImage}
+          <Avatar
+            src={activeProfile?.avatar}
+            fallbackSrc={activeProfile?.original_avatar}
+            name={activeProfile?.name ?? "User"}
+            size="100%"
+            profileId={activeProfile?.id}
           />
         </div>
         {isSwitching ? (
@@ -130,7 +116,6 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
         <div className={styles.sectionTitle}>Switch Account</div>
         <div className={styles.accountList}>
           {profiles.map((profile) => {
-            const profileAvatarSrc = getAvatarSrc(profile.avatar);
             const isActive = activeProfile?.id === profile.id;
             const isDeleting = deletingProfileId === profile.id;
             const isConfirming = profileToDelete === profile.id;
@@ -154,17 +139,13 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
                 }}
               >
                 <div className={styles.itemAvatar}>
-                  {profileAvatarSrc ? (
-                    <img
-                      src={profileAvatarSrc}
-                      alt={profile.name}
-                      className={styles.itemAvatarImage}
-                    />
-                  ) : (
-                    <span className={styles.itemAvatarInitials}>
-                      {getInitials(profile.name)}
-                    </span>
-                  )}
+                  <Avatar
+                    src={profile.avatar}
+                    fallbackSrc={profile.original_avatar}
+                    name={profile.name}
+                    size="100%"
+                    profileId={profile.id}
+                  />
                 </div>
                 <div className={styles.accountInfo}>
                   <span className={styles.accountName}>{profile.name}</span>
