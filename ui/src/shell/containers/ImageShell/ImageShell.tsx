@@ -18,8 +18,8 @@ import {
   useTextSelection,
   generateTranslateUrl,
   ImageToolbar,
-  SearchInput,
-  OCRLayer,
+  ImageSearchInput,
+  ImageTextCanvas,
 } from "@/features/image";
 import { OCRMenu, OCRMenuHandle } from "@/features";
 import styles from "./ImageShell.module.css";
@@ -441,7 +441,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           </div>
 
           <div className={styles.inputContainer}>
-            <SearchInput
+            <ImageSearchInput
               value={inputValue}
               onChange={onInputChange}
               onLensClick={(query) => triggerLens(query)}
@@ -475,7 +475,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
                     className={styles.bigImage}
                   />
                   {/* Render OCRLayer here */}
-                  {/* <OCRLayer
+                  {/* <ImageTextCanvas
                     data={ocrData}
                     size={size}
                     svgRef={svgRef}

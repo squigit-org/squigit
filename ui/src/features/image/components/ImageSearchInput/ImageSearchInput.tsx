@@ -8,10 +8,10 @@ import React from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
 import { TextContextMenu } from "@/shell";
 import { useTextContextMenu } from "@/hooks";
-import styles from "./SearchInput.module.css";
+import styles from "./ImageSearchInput.module.css";
 import { useTextEditor } from "@/hooks/useTextEditor";
 
-interface SearchInputProps {
+interface ImageSearchInputProps {
   value: string;
   onChange: (value: string) => void;
   onLensClick: (query: string) => void;
@@ -24,7 +24,7 @@ interface SearchInputProps {
   placeholder?: string;
 }
 
-export const SearchInput: React.FC<SearchInputProps> = ({
+export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
   value,
   onChange,
   onLensClick,
@@ -161,4 +161,4 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   );
 };
 
-export default SearchInput;
+export default ImageSearchInput;

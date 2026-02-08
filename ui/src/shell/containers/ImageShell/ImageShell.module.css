@@ -248,6 +248,9 @@
   height: auto;
   object-fit: contain;
   display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: high-quality;
+  transform: translateZ(0);
 }
 
 .floatingContainer.expanded .bigImage {

@@ -5,6 +5,6 @@
  */
 
 export * from "./ImageToolbar";
-export * from "./SearchInput";
-export * from "./OCRLayer";
+export * from "./ImageSearchInput";
+export * from "./ImageTextCanvas";
 export * from "./ImageTextMenu";

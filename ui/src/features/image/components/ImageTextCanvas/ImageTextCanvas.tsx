@@ -5,21 +5,21 @@
  */
 
 import React from "react";
-import styles from "./OCRLayer.module.css";
+import styles from "./ImageTextCanvas.module.css";
 
 interface OCRBox {
   text: string;
   box: number[][];
 }
 
-interface OCRLayerProps {
+interface ImageTextCanvasProps {
   data: OCRBox[];
   size: { w: number; h: number };
   svgRef: React.RefObject<SVGSVGElement | null>;
   onTextMouseDown: (e: React.MouseEvent, boxIndex: number) => void;
 }
 
-export const OCRLayer: React.FC<OCRLayerProps> = ({
+export const ImageTextCanvas: React.FC<ImageTextCanvasProps> = ({
   data,
   size,
   svgRef,
