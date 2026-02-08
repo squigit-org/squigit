@@ -4,6 +4,7 @@ members = [
     "xtask",
     "crates/*",
     "sidecars/qt-capture",
+    "crates/svc-speech-engine",
 ]
 resolver = "2"
 

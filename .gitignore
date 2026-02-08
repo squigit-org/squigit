@@ -25,6 +25,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 sidecars/paddle-ocr/models/
+sidecars/whisper-stt/models/
 
 # -----------------------------------------------------------------------------
 # Tauri / Application Binaries
