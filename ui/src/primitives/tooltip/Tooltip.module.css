@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.tooltipText {
+.tooltip {
   position: fixed;
   background-color: #18181b;
   color: #e4e4e7;
@@ -17,4 +17,18 @@
   font-weight: 500;
   z-index: 9999;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #18181b; /* Matches tooltip background */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Matches tooltip border */
+  /* We only want borders on bottom and right for the arrow pointing down */
+  border-top: none;
+  border-left: none;
+  transform: translateX(-50%) rotate(45deg);
+  bottom: -5px;
+  left: 50%;
 }

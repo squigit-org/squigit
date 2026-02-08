@@ -6,6 +6,7 @@
 
 import React from "react";
 import styles from "./DevSection.module.css";
+import { AIPromptBox } from "./AIPromptBox";
 
 export const DevSection: React.FC = () => {
   return (
@@ -17,7 +18,7 @@ export const DevSection: React.FC = () => {
       </header>
 
       <div className={styles.content}>
-        <p>Replace me with your web component to view and test.</p>
+        <AIPromptBox />
       </div>
     </section>
   );
