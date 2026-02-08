@@ -13,6 +13,7 @@ import {
   Fingerprint,
   HelpCircle,
   Sparkles,
+  FlaskConical,
 } from "lucide-react";
 
 import { UserPreferences } from "@/lib/storage/app-settings";
@@ -26,6 +27,7 @@ import {
   APIKeysSection,
   PersonalizationSection,
   HelpSection,
+  DevSection,
 } from "@/features/settings";
 
 import styles from "./SettingsOverlay.module.css";
@@ -35,6 +37,7 @@ export type SettingsSection =
   | "models"
   | "apikeys"
   | "personalization"
+  | "dev"
   | "help";
 
 interface SettingsOverlayProps {
@@ -166,6 +169,12 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
               isActive={activeSection === "personalization"}
               onClick={() => onSectionChange("personalization")}
             />
+            <SidebarButtonWithTooltip
+              icon={<FlaskConical size={22} />}
+              label="Dev"
+              isActive={activeSection === "dev"}
+              onClick={() => onSectionChange("dev")}
+            />
           </div>
 
           <div className={styles.spacer} />
@@ -226,6 +235,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
                 updatePreferences={updatePreferences}
               />
             )}
+            {activeSection === "dev" && <DevSection />}
             {activeSection === "help" && <HelpSection />}
           </div>
         </div>
