@@ -48,7 +48,7 @@
 .title {
   font-size: 28px;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--neutral-100);
   margin: 0;
   letter-spacing: -0.5px;
 }

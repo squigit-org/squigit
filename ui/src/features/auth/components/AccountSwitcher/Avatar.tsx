@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 
@@ -65,7 +65,8 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   const [hasError, setHasError] = useState(false);
 
-  const [isDownloading, setIsDownloading] = useState(false);
+  // Use ref instead of state to prevent stale closure issues in async callbacks
+  const isDownloadingRef = useRef(false);
 
   useEffect(() => {
     setHasError(false);
@@ -86,10 +87,10 @@ export const Avatar: React.FC<AvatarProps> = ({
   }, [src, fallbackSrc, profileId]);
 
   const handleCacheRequest = async (url: string) => {
-    if (isDownloading) return;
+    if (isDownloadingRef.current) return;
 
     try {
-      setIsDownloading(true);
+      isDownloadingRef.current = true;
 
       const localPath = await commands.cacheAvatar(url, profileId);
 
@@ -99,7 +100,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     } catch (e) {
       console.error("Failed to cache avatar:", e);
     } finally {
-      setIsDownloading(false);
+      isDownloadingRef.current = false;
     }
   };
 

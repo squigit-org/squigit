@@ -18,7 +18,6 @@ export const WindowControls: React.FC = () => {
       <button
         className={`${styles.windowsButton} ${styles.winMinimize}`}
         onClick={handleMinimize}
-        title="Minimize"
       >
         <svg
           width="12"
@@ -34,7 +33,6 @@ export const WindowControls: React.FC = () => {
       <button
         className={`${styles.windowsButton} ${styles.winMaximize}`}
         onClick={handleMaximize}
-        title="Maximize"
       >
         <svg
           width="12"
@@ -50,7 +48,6 @@ export const WindowControls: React.FC = () => {
       <button
         className={`${styles.windowsButton} ${styles.winClose}`}
         onClick={handleClose}
-        title="Close"
       >
         <svg
           width="12"

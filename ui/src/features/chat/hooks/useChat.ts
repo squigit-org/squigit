@@ -53,6 +53,8 @@ export const useChat = ({
   // This prevents race conditions if the user switches chats during generation
   const sessionChatIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Track if session has been started for current startupImage to prevent re-trigger loops
+  const sessionStartedForImageRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (enabled && !startupImage?.fromHistory) {
@@ -76,6 +78,14 @@ export const useChat = ({
       !startupImage.fromHistory &&
       chatId
     ) {
+      // Guard: don't re-start session if one has already been started for this image
+      // This prevents re-trigger loops when currentModel changes (e.g., fallback on 429)
+      const imageKey = startupImage.base64?.substring(0, 50) ?? chatId;
+      if (sessionStartedForImageRef.current === imageKey) {
+        return;
+      }
+      sessionStartedForImageRef.current = imageKey;
+
       if (apiKey) {
         startSession(apiKey, currentModel, startupImage);
       } else {
@@ -94,12 +104,14 @@ export const useChat = ({
       setFirstResponseId(null);
       setLastSentMessage(null);
       setError(null);
+      sessionStartedForImageRef.current = null;
     }
   }, [chatId]);
 
   const resetInitialUi = () => {
     setStreamingText("");
     setIsChatMode(false);
+    sessionStartedForImageRef.current = null;
   };
 
   const startSession = async (

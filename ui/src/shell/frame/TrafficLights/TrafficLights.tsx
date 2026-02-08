@@ -19,21 +19,18 @@ export const TrafficLights: React.FC = () => {
       <button
         className={`${styles.trafficButton} ${styles.close}`}
         onClick={handleClose}
-        title="Close"
       >
         <X className={styles.icon} />
       </button>
       <button
         className={`${styles.trafficButton} ${styles.minimize}`}
         onClick={handleMinimize}
-        title="Minimize"
       >
         <Minus className={styles.icon} />
       </button>
       <button
         className={`${styles.trafficButton} ${styles.maximize}`}
         onClick={handleMaximize}
-        title="Maximize"
       >
         <Plus className={styles.icon} />
       </button>
