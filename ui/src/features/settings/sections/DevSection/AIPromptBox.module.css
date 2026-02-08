@@ -253,3 +253,22 @@
 .chevronRotate {
   transform: rotate(180deg);
 }
+
+.shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 0;
+  visibility: hidden;
+  overflow: hidden;
+  pointer-events: none;
+  min-height: 0 !important;
+  max-height: none !important;
+  /* Crucial: remove scrollbar to ensure correct measurement */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.shadow::-webkit-scrollbar {
+  display: none;
+}

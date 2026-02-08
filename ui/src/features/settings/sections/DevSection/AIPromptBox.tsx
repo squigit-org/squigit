@@ -4,7 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import {
   Paperclip,
   ArrowUp,
@@ -77,26 +83,58 @@ export const AIPromptBox: React.FC = () => {
   const [showKeepProgressTooltip, setShowKeepProgressTooltip] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const shadowRef = useRef<HTMLTextAreaElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const skillsDropdownRef = useRef<HTMLDivElement>(null);
   const keepProgressInfoRef = useRef<HTMLButtonElement>(null);
 
   const [showExpandButton, setShowExpandButton] = useState(false);
 
-  useEffect(() => {
+  // Resize textarea using shadow ref logic to avoid layout thrashing
+  const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      const lineHeight = 24;
-      const maxLines = isExpanded ? 10 : 3;
-      const maxHeight = lineHeight * maxLines;
-      const scrollHeight = textarea.scrollHeight;
+    const shadow = shadowRef.current;
+    if (!textarea || !shadow) return;
 
-      setShowExpandButton(scrollHeight > lineHeight * 3);
+    const lineHeight = 24;
+    const maxLines = isExpanded ? 10 : 3;
+    const maxHeight = lineHeight * maxLines;
 
-      textarea.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    // Sync shadow width with real textarea (minus scrollbar)
+    shadow.style.width = `${textarea.clientWidth}px`;
+
+    // Reset shadow height to allow shrinking
+    shadow.style.height = "0px";
+    const scrollHeight = shadow.scrollHeight;
+
+    // Set height on real textarea based on shadow measurement
+    const newHeight = Math.min(scrollHeight, maxHeight);
+    textarea.style.height = `${newHeight}px`;
+
+    setShowExpandButton(scrollHeight > lineHeight * 3);
+
+    // Prepare scroll position if needed (but don't force it here to avoid jump)
+    if (document.activeElement === textarea) {
+      // Only scroll if we are near bottom or typing adds lines
+      // For now, let's keep it simple: if height changes, browser handles caret visibility
+      // If we need forced scroll:
+      if (textarea.scrollHeight > textarea.clientHeight) {
+        textarea.scrollTop = textarea.scrollHeight;
+      }
     }
-  }, [prompt, isExpanded]);
+  }, [isExpanded]);
+
+  // useLayoutEffect: runs synchronously after DOM mutations, before browser paint
+  // This prevents ghost carets because height adjustments happen in the "hidden" phase
+  useLayoutEffect(() => {
+    resizeTextarea();
+  }, [prompt, isExpanded, resizeTextarea]);
+
+  // Simple handleChange - no flushSync, no manual resize call
+  // React 18+ batches updates properly, useLayoutEffect handles the rest
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setPrompt(e.target.value);
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -146,13 +184,24 @@ export const AIPromptBox: React.FC = () => {
         )}
       </div>
 
+      {/* Shadow Textarea for measurement */}
+      <textarea
+        ref={shadowRef}
+        className={`${styles.textarea} ${styles.shadow}`}
+        value={prompt}
+        readOnly
+        aria-hidden="true"
+        tabIndex={-1}
+        rows={1}
+      />
+
       {/* Prompt Input */}
       <textarea
         ref={textareaRef}
         className={styles.textarea}
         placeholder="Ask anything"
         value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         rows={1}
       />
