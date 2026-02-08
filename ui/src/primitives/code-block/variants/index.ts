@@ -4,5 +4,5 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./CodeBlock";
-export * from "./variants";
+export * from "./CodeBlockEditable";
+export * from "./CodeBlockViewer";

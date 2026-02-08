@@ -6,7 +6,7 @@
 
 import React, { forwardRef } from "react";
 import { Terminal } from "lucide-react";
-import styles from "./shared.module.css";
+import styles from "./CodeBlock.shared.module.css";
 
 interface CodeBlockEditableProps {
   language: string;
