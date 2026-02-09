@@ -46,7 +46,7 @@ ops-chat-storage = { path = "../crates/ops-chat-storage" }
 ops-profile-store = { path = "../crates/ops-profile-store" }
 tauri-plugin-dialog = "2.6.0"
 clipboard-rs = "0.3.2"
-rodio = "0.21.1"
+
 svc-speech-engine = { path = "../crates/svc-speech-engine" }
 tokio = { version = "1.37", features = ["full"] }
 log = "0.4"

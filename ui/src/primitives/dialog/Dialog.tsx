@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
+
 import { createPortal } from "react-dom";
 import { AlertCircle, AlertTriangle, Info, Sparkles } from "lucide-react";
 import styles from "./Dialog.module.css";
@@ -68,12 +68,6 @@ export const Dialog: React.FC<DialogProps> = ({
       textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
     }
   }, [isOpen, finalMessage]);
-
-  useEffect(() => {
-    if (isOpen) {
-      invoke("play_pop_sound").catch(console.error);
-    }
-  }, [isOpen]);
 
   // Toggle body class for TitleBar interactivity
   useEffect(() => {
