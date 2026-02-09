@@ -33,6 +33,8 @@ let currentModelId = "gemini-2.0-flash";
 let imageDescription: string | null = null;
 let userFirstMsg: string | null = null;
 let conversationHistory: Array<{ role: string; content: string }> = [];
+let storedImageBase64: string | null = null;
+let storedMimeType: string | null = null;
 
 interface GeminiEvent {
   token: string;
@@ -53,6 +55,8 @@ export const resetBrainContext = () => {
   imageDescription = null;
   userFirstMsg = null;
   conversationHistory = [];
+  storedImageBase64 = null;
+  storedMimeType = null;
 };
 
 /**
@@ -98,6 +102,36 @@ const formatHistoryLog = (): string => {
     .join("\n\n");
 };
 
+export const startNewChatSync = async (
+  apiKey: string,
+  modelId: string,
+  imageBase64: string,
+  mimeType: string,
+): Promise<{ title: string; content: string }> => {
+  // Reset brain state for new session
+  resetBrainContext();
+
+  const response = await invoke<{ title: string; content: string }>(
+    "start_chat_sync",
+    {
+      apiKey,
+      model: modelId,
+      imageBase64: cleanBase64(imageBase64),
+      imageMimeType: mimeType,
+    },
+  );
+
+  // Store for subsequent turns
+  storedImageBase64 = cleanBase64(imageBase64);
+  storedMimeType = mimeType;
+
+  // Initialize brain state with the response
+  setImageDescription(response.content);
+  addToHistory("Assistant", response.content);
+
+  return response;
+};
+
 /**
  * Start a new chat with an image (initial turn).
  * Uses brain v2 with soul.yml + scenes.json.
@@ -118,6 +152,8 @@ export const startNewChatStream = async (
 
   // Reset context for new chat
   resetBrainContext();
+  storedImageBase64 = cleanBase64(imageBase64);
+  storedMimeType = mimeType;
 
   const channelId = `gemini-stream-${Date.now()}`;
   let fullResponse = "";
@@ -168,6 +204,7 @@ export const sendMessage = async (
   if (!imageDescription) throw new Error("No active chat session");
 
   // Track user's first message for intent
+  const isFirstTurnWithImage = !userFirstMsg && storedImageBase64;
   setUserFirstMsg(text);
   addToHistory("User", text);
 
@@ -184,8 +221,8 @@ export const sendMessage = async (
       apiKey: storedApiKey,
       model: currentModelId,
       isInitialTurn: false,
-      imageBase64: null,
-      imageMimeType: null,
+      imageBase64: isFirstTurnWithImage ? storedImageBase64 : null,
+      imageMimeType: isFirstTurnWithImage ? storedMimeType : null,
       imageDescription: imageDescription,
       userFirstMsg: userFirstMsg,
       historyLog: formatHistoryLog(),

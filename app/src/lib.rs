@@ -79,6 +79,7 @@ pub fn run() {
             commands::gemini::stream_gemini_chat,
             commands::gemini::stream_gemini_chat_v2,
             commands::gemini::generate_chat_title,
+            commands::gemini::start_chat_sync,
 
             // Window
             open_imgbb_window,
@@ -121,8 +122,7 @@ pub fn run() {
             get_profile_count,
             // Theme
             commands::theme::get_system_theme,
-            // Sound
-            commands::sound::play_pop_sound,
+
             // Speech
             commands::speech::start_stt,
             commands::speech::stop_stt,

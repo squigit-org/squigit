@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { Message, ModelType } from "@/features/chat";
 import {
   startNewChatStream,
+  startNewChatSync,
   sendMessage,
   restoreSession as apiRestoreSession,
   resetBrainContext,
@@ -24,6 +25,7 @@ export const useChat = ({
   onMessage,
   chatId,
   onMissingApiKey,
+  onTitleGenerated,
 }: {
   apiKey: string;
   currentModel: string;
@@ -39,6 +41,7 @@ export const useChat = ({
   onMessage?: (message: Message, chatId: string) => void;
   chatId: string | null;
   onMissingApiKey?: () => void;
+  onTitleGenerated?: (title: string) => void;
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
@@ -85,6 +88,12 @@ export const useChat = ({
       if (sessionStartedForImageRef.current === imageKey) {
         return;
       }
+
+      // Guard: If we already have messages (e.g. from a draft or previous state), don't wipe them on key change
+      if (messages.length > 0) {
+        return;
+      }
+
       sessionStartedForImageRef.current = imageKey;
 
       if (apiKey) {
@@ -94,7 +103,15 @@ export const useChat = ({
         setIsLoading(false);
       }
     }
-  }, [apiKey, prompt, startupImage, currentModel, enabled, chatId]);
+  }, [
+    apiKey,
+    prompt,
+    startupImage,
+    currentModel,
+    enabled,
+    chatId,
+    messages.length,
+  ]);
 
   // Clear state when switching sessions (chatId becomes null)
   useEffect(() => {
@@ -122,6 +139,7 @@ export const useChat = ({
       base64: string;
       mimeType: string;
       isFilePath?: boolean;
+      fromHistory?: boolean;
     } | null,
     isRetry = false,
   ) => {
@@ -188,6 +206,44 @@ export const useChat = ({
 
       if (signal.aborted) {
         setIsLoading(false);
+        return;
+      }
+
+      // Sync Flow for Initial Turn (New Chat with Image)
+      // This allows us to generate title sequentially on backend to avoid quota issues
+      if (!isRetry && imgData && !imgData.fromHistory) {
+        // Use sync command
+        const { title, content } = await startNewChatSync(
+          key,
+          modelId,
+          finalBase64,
+          imgData.mimeType,
+        );
+
+        if (signal.aborted) return;
+
+        // Callback for title
+        if (onTitleGenerated) {
+          onTitleGenerated(title);
+        }
+
+        const botMsg: Message = {
+          id: responseId,
+          role: "model",
+          text: content,
+          timestamp: Date.now(),
+        };
+
+        setMessages([botMsg]);
+
+        // Notify shell
+        const targetChatId = sessionChatIdRef.current;
+        if (onMessage && targetChatId) {
+          onMessage(botMsg, targetChatId);
+        }
+
+        setIsLoading(false);
+        setIsStreaming(false); // No streaming for sync
         return;
       }
 

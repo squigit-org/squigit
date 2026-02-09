@@ -218,8 +218,6 @@ export const ChatShell: React.FC<ChatShellProps> = ({
     );
   };
 
-  const hasMessages = messages.filter((m) => m.role === "user").length > 0;
-
   // New logic for input overlay
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const [inputHeight, setInputHeight] = useState(0);
@@ -250,18 +248,16 @@ export const ChatShell: React.FC<ChatShellProps> = ({
 
   useLayoutEffect(() => {
     const scrollEl = scrollContainerRef.current;
-
-    // If input grew, we do NOT want to auto-scroll. We want the content to be covered
-    // so the user can scroll down manually.
     const isGrowing = inputHeight > previousInputHeightRef.current;
 
     if (!isGrowing && scrollEl && wasAtBottomRef.current) {
-      // If we were at bottom and NOT growing (e.g. shrinking or initial load),
-      // stay at bottom (pull content down)
       scrollEl.scrollTop = scrollEl.scrollHeight;
     }
     previousInputHeightRef.current = inputHeight;
   }, [inputHeight]);
+
+  const isAnalyzing =
+    startupImage && isLoading && !streamingText && messages.length === 0;
 
   return (
     <>
@@ -277,16 +273,10 @@ export const ChatShell: React.FC<ChatShellProps> = ({
         <main style={{ paddingBottom: inputHeight + 10 }}>
           <div
             className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-0 ${
-              hasMessages ? "pt-[10px]" : "pt-12"
+              isAnalyzing ? "-mt-2" : "pt-3"
             }`}
           >
-            {/* Show shimmer if loading and no text yet (initial analysis) */}
-            {startupImage &&
-              isLoading &&
-              !streamingText &&
-              messages.length === 0 && (
-                <TextShimmer text="Analyzing your image" />
-              )}
+            {isAnalyzing && <TextShimmer text="Analyzing your image" />}
 
             {renderError()}
 
@@ -294,10 +284,6 @@ export const ChatShell: React.FC<ChatShellProps> = ({
               {isLoading && messages.length > 0 && (
                 <TextShimmer text="Planning next moves" />
               )}
-
-              {/* Show streaming text as a bubble if it exists and we assume it's the latest response not yet in messages */}
-              {/* Note: In standard flow, streamingText might be empty if messages are updated live. 
-                    This handles the case where streamingText is separate (like the initial image analysis). */}
               {streamingText && (
                 <div className="mb-0">
                   <ChatBubble

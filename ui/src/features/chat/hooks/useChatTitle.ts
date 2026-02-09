@@ -80,7 +80,7 @@ export const useChatTitle = ({
       setSessionChatTitle(title || "New Chat");
     } catch (error) {
       console.error("Failed to generate chat title:", error);
-      setSessionChatTitle("New Chat");
+      // Don't set state to "New Chat" on error, so we can retry if API key changes
     } finally {
       setIsGenerating(false);
     }

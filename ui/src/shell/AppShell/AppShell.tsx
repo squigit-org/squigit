@@ -151,8 +151,6 @@ const AppShellComponent: React.FC = () => {
         />
       </div>
 
-      {renderError()}
-
       <ChatShell
         messages={shell.chat.messages}
         streamingText={shell.chat.streamingText}

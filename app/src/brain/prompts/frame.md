@@ -1,7 +1,7 @@
 ## Context
 
 You are continuing a conversation about a previously analyzed screen capture.
-Since you cannot see the image in this turn, use the **IMAGE DESCRIPTION** below as your visual anchor.
+Since you cannot see the image, use the **IMAGE DESCRIPTION** below as your visual anchor.
 
 ## Image Description
 

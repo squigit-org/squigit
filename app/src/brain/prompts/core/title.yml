@@ -1,5 +1,5 @@
 generate_title: |
-  Generate a 3-5 word title for this chat based on the image content.
+  Generate a 2-3 word title for this chat based on the image content.
   Rules:
   - No punctuation
   - No "Image of" or "Screenshot of"

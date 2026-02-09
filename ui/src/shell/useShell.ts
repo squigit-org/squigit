@@ -15,12 +15,7 @@ import {
   useUpdateCheck,
   getPendingUpdate,
 } from "@/hooks";
-import {
-  useAuth,
-  useChatTitle,
-  useChat,
-  useChatHistory,
-} from "@/features";
+import { useAuth, useChat, useChatHistory } from "@/features";
 import {
   loadChat,
   getImagePath,
@@ -50,12 +45,12 @@ export const useShell = () => {
 
   const auth = useAuth();
   const chatHistory = useChatHistory(system.activeProfile?.id || null);
-  
+
   const performLogout = async () => {
     await system.handleLogout();
     auth.logout();
   };
-  
+
   useUpdateCheck();
 
   const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
@@ -228,6 +223,9 @@ export const useShell = () => {
       setShowGeminiAuthDialog(true);
       setIsRotating(false);
     },
+    onTitleGenerated: (title: string) => {
+      system.setSessionChatTitle(title);
+    },
   });
 
   useEffect(() => {
@@ -236,12 +234,7 @@ export const useShell = () => {
     }
   }, [chat.isLoading]);
 
-  const { chatTitle } = useChatTitle({
-    startupImage: system.startupImage,
-    apiKey: system.apiKey,
-    sessionChatTitle: system.sessionChatTitle,
-    setSessionChatTitle: system.setSessionChatTitle,
-  });
+  const chatTitle = system.sessionChatTitle || "New Chat";
 
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
@@ -513,7 +506,7 @@ export const useShell = () => {
     handleExit: () => exit(0),
     handleChatReload,
     handleSwitchProfile,
-    
+
     // Refs
     containerRef,
   };
