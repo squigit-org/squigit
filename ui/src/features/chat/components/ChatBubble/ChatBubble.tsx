@@ -4,19 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, {
-  useMemo,
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Check, Copy } from "lucide-react";
 import { CodeBlock } from "@/primitives";
+import { TextShimmer } from "@/primitives/text-shimmer";
 import { Message } from "@/features/chat";
 import { remarkDisableIndentedCode } from "@/features/chat/utils";
 import {
@@ -41,7 +36,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const isUser = message.role === "user";
   const [isCopied, setIsCopied] = useState(false);
 
-  // Streaming state
   const [revealedCount, setRevealedCount] = useState(0);
   const [isStreamingComplete, setIsStreamingComplete] = useState(!isStreamed);
   const timeoutRef = useRef<number | null>(null);
@@ -53,17 +47,21 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     });
   };
 
-  // --- Streaming Logic ---
-
-  // Parse and tokenize the full textual content for streaming
   const { segments, tokens } = useMemo(() => {
     if (isUser) return { segments: [], tokens: [] };
-    const segs = parseMarkdownToSegments(message.text);
+
+    const backtickCount = (message.text.match(/```/g) || []).length;
+    const isUnclosedCodeBlock = backtickCount % 2 === 1;
+
+    const textToParse = isUnclosedCodeBlock
+      ? message.text + "\n```"
+      : message.text;
+
+    const segs = parseMarkdownToSegments(textToParse);
     const toks = tokenizeSegments(segs);
     return { segments: segs, tokens: toks };
   }, [message.text, isUser]);
 
-  // Reset streaming if isStreamed prop changes to true
   useEffect(() => {
     if (isStreamed) {
       setRevealedCount(0);
@@ -73,11 +71,9 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     }
   }, [isStreamed]);
 
-  // Animation loop
   useEffect(() => {
     if (isStreamingComplete || !isStreamed) {
       if (isStreamed && !isStreamingComplete) {
-        // Just finished
         setIsStreamingComplete(true);
         onStreamComplete?.();
       }
@@ -110,11 +106,9 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     onStreamComplete,
   ]);
 
-  // Group revealed tokens by segment for rendering
   const revealedSegments = useMemo(() => {
     if (isUser) return new Map();
 
-    // If not streaming (static mode) or complete, show everything
     const count =
       !isStreamed || isStreamingComplete ? tokens.length : revealedCount;
 
@@ -131,16 +125,41 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     return grouped;
   }, [tokens, revealedCount, isStreamingComplete, isStreamed, isUser]);
 
-  // Render a segment with its revealed content
   const renderStreamSegment = (segment: StreamSegment, index: number) => {
     const revealedTexts = revealedSegments.get(index);
-    if (!revealedTexts) return null;
+    if (!revealedTexts && !(!isStreamed || isStreamingComplete)) return null;
 
-    const content = revealedTexts.join("");
-    const isComplete =
-      tokens.filter((t) => t.segmentIndex === index && t.isLast).length > 0 &&
-      revealedTexts.length ===
-        tokens.filter((t) => t.segmentIndex === index).length;
+    if (segment.type === "codeblock") {
+      const isTyping = isStreamed && !isStreamingComplete;
+
+      let isEffectiveLast = true;
+      for (let i = index + 1; i < segments.length; i++) {
+        if (segments[i].content.trim().length > 0) {
+          isEffectiveLast = false;
+          break;
+        }
+      }
+
+      if (isTyping && isEffectiveLast) {
+        return (
+          <div key={index} className="py-4">
+            <TextShimmer text="Writing Code" />
+          </div>
+        );
+      }
+
+      return (
+        <div key={index} className={isStreamed ? styles.popIn : undefined}>
+          <CodeBlock
+            language={segment.meta?.language || ""}
+            value={segment.content}
+            isStreaming={false}
+          />
+        </div>
+      );
+    }
+
+    const content = revealedTexts ? revealedTexts.join("") : segment.content;
 
     switch (segment.type) {
       case "text":
@@ -159,21 +178,8 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
           </code>
         );
 
-      case "codeblock":
-        return (
-          <CodeBlock
-            key={index}
-            language={segment.meta?.language || ""}
-            value={content}
-            isStreaming={!isComplete}
-          />
-        );
-
       case "heading": {
         const level = segment.meta?.level || 1;
-        // Map level to h1-h6 if needed, but for chat usually just bold/larger text
-        // Existing markdown renderer might handle headings specifically,
-        // but for streaming we can just make them block elements with bold.
         return (
           <div
             key={index}
@@ -218,8 +224,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         return <span key={index}>{content}</span>;
     }
   };
-
-  // --- Static Rendering Logic ---
 
   const markdownComponents = useMemo(
     () => ({
@@ -278,7 +282,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
             }`}
           >
             {!isUser ? (
-              // Bot View (Always uses custom renderer)
               <div className="whitespace-pre-wrap">
                 {segments.map((segment, index) =>
                   renderStreamSegment(segment, index),
@@ -288,7 +291,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 )}
               </div>
             ) : (
-              // User View (Markdown)
               <ReactMarkdown
                 remarkPlugins={[
                   remarkGfm,
@@ -344,10 +346,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   );
 };
 
-/**
- * Memoized ChatBubble - only re-renders when message content actually changes.
- * This is critical for performance when toggling settings in heavy chats.
- */
 export const ChatBubble = React.memo(
   ChatBubbleComponent,
   (prevProps, nextProps) => {

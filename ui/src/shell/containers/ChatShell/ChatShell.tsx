@@ -314,11 +314,11 @@ export const ChatShell: React.FC<ChatShellProps> = ({
               {messages
                 .slice()
                 .reverse()
-                .map((msg) => (
+                .map((msg, index) => (
                   <div key={msg.id} className="mb-0">
                     <ChatBubble
                       message={msg}
-                      isStreamed={msg.role === "model"}
+                      isStreamed={msg.role === "model" && index === 0}
                       onStreamComplete={undefined}
                     />
                   </div>
