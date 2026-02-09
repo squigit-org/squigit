@@ -11,7 +11,7 @@ Since you cannot see the image, use the **IMAGE DESCRIPTION** below as your visu
 
 {{USER_FIRST_MSG}}
 
-## Conversation History (Last 3 turns)
+## Conversation History (Last 3 messages)
 
 {{HISTORY_LOG}}
 
