@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { MODELS } from "@/lib/config/models";
 import { Tooltip } from "@/primitives/tooltip/Tooltip";
+import { CodeBlock } from "@/primitives";
+import { VoiceInput } from "@/features/chat/components/VoiceInput/VoiceInput";
 import styles from "./AIPromptBox.module.css";
 
 const ExpandIcon = () => (
@@ -51,8 +53,8 @@ const CollapseIcon = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M10 4v6H4" />
-    <path d="M14 20v-6h6" />
+    <path d="M8 2v6H2" />
+    <path d="M16 22v-6h6" />
   </svg>
 );
 
@@ -82,10 +84,17 @@ export const AIPromptBox: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showKeepProgressTooltip, setShowKeepProgressTooltip] = useState(false);
 
+  // Code block state
+  const [isCodeBlockActive, setIsCodeBlockActive] = useState(false);
+  const [codeLanguage, setCodeLanguage] = useState("");
+  const [originalCodeLanguage, setOriginalCodeLanguage] = useState("");
+  const [codeValue, setCodeValue] = useState("");
+  const [consecutiveEnters, setConsecutiveEnters] = useState(0);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shadowRef = useRef<HTMLTextAreaElement>(null);
+  const codeTaRef = useRef<HTMLTextAreaElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
-  const skillsDropdownRef = useRef<HTMLDivElement>(null);
   const keepProgressInfoRef = useRef<HTMLButtonElement>(null);
 
   const [showExpandButton, setShowExpandButton] = useState(false);
@@ -97,7 +106,7 @@ export const AIPromptBox: React.FC = () => {
     if (!textarea || !shadow) return;
 
     const lineHeight = 24;
-    const maxLines = isExpanded ? 10 : 3;
+    const maxLines = isExpanded ? 15 : 10;
     const maxHeight = lineHeight * maxLines;
 
     // Sync shadow width with real textarea (minus scrollbar)
@@ -111,7 +120,7 @@ export const AIPromptBox: React.FC = () => {
     const newHeight = Math.min(scrollHeight, maxHeight);
     textarea.style.height = `${newHeight}px`;
 
-    setShowExpandButton(scrollHeight > lineHeight * 3);
+    setShowExpandButton(scrollHeight > lineHeight * 10);
 
     // Prepare scroll position if needed (but don't force it here to avoid jump)
     if (document.activeElement === textarea) {
@@ -130,10 +139,77 @@ export const AIPromptBox: React.FC = () => {
     resizeTextarea();
   }, [prompt, isExpanded, resizeTextarea]);
 
-  // Simple handleChange - no flushSync, no manual resize call
-  // React 18+ batches updates properly, useLayoutEffect handles the rest
+  // Focus code block when activated
+  useEffect(() => {
+    if (isCodeBlockActive) {
+      codeTaRef.current?.focus();
+    }
+  }, [isCodeBlockActive]);
+
+  // Handle triple-backtick detection for code block activation
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setPrompt(e.target.value);
+    const newValue = e.target.value;
+    const cursorPos = e.target.selectionStart;
+
+    // Check if text before cursor ends with ```lang\n
+    const textBeforeCursor = newValue.slice(0, cursorPos);
+    const match = textBeforeCursor.match(/(^|\n)```([^\n]*)\n$/);
+
+    if (match && !isCodeBlockActive) {
+      // Count all triple-backticks in the entire text to check if this opens a new block
+      const codeBlockCount = (newValue.match(/```/g) || []).length;
+      if (codeBlockCount % 2 === 1) {
+        setIsCodeBlockActive(true);
+        setOriginalCodeLanguage(match[2]);
+        setCodeLanguage(match[2] || "text");
+        // Remove the ``` from the text (the part before cursor minus the backticks)
+        const beforeBackticks = textBeforeCursor.replace(
+          /(^|\n)```([^\n]*)\n$/,
+          "$1",
+        );
+        const afterCursor = newValue.slice(cursorPos);
+        setPrompt(beforeBackticks + afterCursor);
+      } else {
+        setPrompt(newValue);
+      }
+    } else {
+      setPrompt(newValue);
+    }
+  };
+
+  // Handle code block keyboard events (Escape to cancel, 3 Enters to commit)
+  const handleCodeKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setIsCodeBlockActive(false);
+      setPrompt(`${prompt}\`\`\`${originalCodeLanguage}\n`);
+      setCodeValue("");
+      setCodeLanguage("");
+      setOriginalCodeLanguage("");
+      setConsecutiveEnters(0);
+      setTimeout(() => {
+        const ta = textareaRef.current;
+        if (ta) {
+          ta.focus();
+          const end = ta.value.length;
+          ta.setSelectionRange(end, end);
+        }
+      }, 0);
+    } else if (e.key === "Enter") {
+      setConsecutiveEnters((prev) => prev + 1);
+      if (consecutiveEnters >= 2) {
+        setIsCodeBlockActive(false);
+        const newPrompt = `${prompt}\n\`\`\`${codeLanguage}\n${codeValue.trim()}\n\`\`\`\n`;
+        setPrompt(newPrompt);
+        setCodeValue("");
+        setCodeLanguage("");
+        setOriginalCodeLanguage("");
+        setConsecutiveEnters(0);
+        setTimeout(() => textareaRef.current?.focus(), 0);
+      }
+    } else {
+      setConsecutiveEnters(0);
+    }
   };
 
   useEffect(() => {
@@ -150,12 +226,15 @@ export const AIPromptBox: React.FC = () => {
   }, []);
 
   const handleSubmit = () => {
-    if (prompt.trim()) {
+    if (prompt.trim() || codeValue.trim()) {
       console.log("Submitting:", {
         prompt,
+        codeValue,
         model: selectedModel,
       });
       setPrompt("");
+      setCodeValue("");
+      setIsCodeBlockActive(false);
     }
   };
 
@@ -199,12 +278,26 @@ export const AIPromptBox: React.FC = () => {
       <textarea
         ref={textareaRef}
         className={styles.textarea}
-        placeholder="Ask anything"
+        placeholder={isCodeBlockActive ? "" : "Ask anything"}
         value={prompt}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         rows={1}
+        style={{ display: isCodeBlockActive ? "none" : undefined }}
       />
+
+      {/* Code Block Editor */}
+      {isCodeBlockActive && (
+        <CodeBlock
+          ref={codeTaRef}
+          language={codeLanguage}
+          value={codeValue}
+          isEditable={true}
+          onChange={setCodeValue}
+          onKeyDown={handleCodeKeyDown}
+          placeholder={`Enter ${codeLanguage} code... (3 newlines to exit)`}
+        />
+      )}
 
       {/* Bottom Actions */}
       <div className={styles.actions}>
@@ -270,15 +363,27 @@ export const AIPromptBox: React.FC = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
-        <button
-          className={`${styles.submitButton} ${prompt.trim() ? styles.submitActive : ""}`}
-          onClick={handleSubmit}
-          disabled={!prompt.trim()}
-          aria-label="Submit"
-        >
-          <ArrowUp size={18} />
-        </button>
+        <div className={styles.rightActions}>
+          {/* Voice Input */}
+          <VoiceInput
+            onTranscript={(text, isFinal) => {
+              if (isFinal) {
+                setPrompt((prev) => (prev + " " + text).trim());
+              }
+            }}
+            disabled={false}
+          />
+
+          {/* Submit Button */}
+          <button
+            className={`${styles.submitButton} ${prompt.trim() || codeValue.trim() ? styles.submitActive : ""}`}
+            onClick={handleSubmit}
+            disabled={!(prompt.trim() || codeValue.trim())}
+            aria-label="Submit"
+          >
+            <ArrowUp size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );

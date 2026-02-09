@@ -54,7 +54,6 @@
 .textarea {
   width: 100%;
   min-height: 24px;
-  max-height: 240px;
   padding: 4px 0;
   font-size: 16px;
   color: var(--neutral-200);
@@ -90,6 +89,13 @@
   align-items: center;
   margin-bottom: -10px;
   gap: 15px;
+}
+
+.rightActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: -11px;
 }
 
 .iconButton {
@@ -147,7 +153,6 @@
   border-radius: 50%;
   cursor: not-allowed;
   transition: all 0.15s ease;
-  margin-right: -11px;
 }
 
 .submitActive {
@@ -264,7 +269,6 @@
   pointer-events: none;
   min-height: 0 !important;
   max-height: none !important;
-  /* Crucial: remove scrollbar to ensure correct measurement */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
