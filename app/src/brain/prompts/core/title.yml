@@ -1,0 +1,8 @@
+generate_title: |
+  Generate a 3-5 word title for this chat based on the image content.
+  Rules:
+  - No punctuation
+  - No "Image of" or "Screenshot of"
+  - Capture the specific topic (e.g., "Rust Compiler Error", "Youtube Feed", "React Component Code")
+  - Title case
+  - Return ONLY the title text, nothing else

@@ -29,6 +29,7 @@ export interface ChatShellProps {
   } | null;
 
   chatId: string | null;
+  isChatMode?: boolean;
 
   onSend: () => void;
   onRetry: () => void;
@@ -48,6 +49,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   input,
   startupImage,
   chatId,
+  isChatMode,
   onSend,
   onRetry,
   onInputChange,

@@ -5,10 +5,9 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { GoogleGenAI } from "@google/genai";
-import { titlePrompt } from "@/lib/config/prompts";
+import { invoke } from "@tauri-apps/api/core";
 
-const TITLE_MODEL = "gemini-flash-lite-latest";
+const TITLE_MODEL = "gemini-2.0-flash-lite";
 
 interface UseChatTitleProps {
   startupImage: {
@@ -20,6 +19,10 @@ interface UseChatTitleProps {
   sessionChatTitle: string | null;
   setSessionChatTitle: (title: string) => void;
 }
+
+const cleanBase64 = (data: string) => {
+  return data.replace(/^data:image\/[a-z]+;base64,/, "");
+};
 
 export const useChatTitle = ({
   startupImage,
@@ -37,17 +40,6 @@ export const useChatTitle = ({
     setIsGenerating(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-
-      const promptMatch = titlePrompt.match(/chat-title-prmp: \|\n([\s\S]+)/);
-      const systemPrompt = promptMatch
-        ? promptMatch[1]
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .join(" ")
-        : "Generate a 2-3 word title describing this image.";
-
       let imageBase64: string;
       let imageMimeType = startupImage.mimeType;
 
@@ -62,9 +54,7 @@ export const useChatTitle = ({
           const base64Promise = new Promise<string>((resolve, reject) => {
             reader.onloadend = () => {
               const result = reader.result as string;
-              // Remove data URL prefix to get raw base64
-              const base64 = result.replace(/^data:image\/[a-z]+;base64,/, "");
-              resolve(base64);
+              resolve(cleanBase64(result));
             };
             reader.onerror = reject;
           });
@@ -76,34 +66,18 @@ export const useChatTitle = ({
           return;
         }
       } else {
-        imageBase64 = startupImage.base64.replace(
-          /^data:image\/[a-z]+;base64,/,
-          "",
-        );
+        imageBase64 = cleanBase64(startupImage.base64);
       }
 
-      const response = await ai.models.generateContent({
+      // Call backend title generation command
+      const title = await invoke<string>("generate_chat_title", {
+        apiKey,
         model: TITLE_MODEL,
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  mimeType: imageMimeType,
-                  data: imageBase64,
-                },
-              },
-              {
-                text: systemPrompt,
-              },
-            ],
-          },
-        ],
+        imageBase64,
+        imageMimeType,
       });
 
-      const title = response.text?.trim() || "New Chat";
-      setSessionChatTitle(title);
+      setSessionChatTitle(title || "New Chat");
     } catch (error) {
       console.error("Failed to generate chat title:", error);
       setSessionChatTitle("New Chat");
@@ -120,55 +94,22 @@ export const useChatTitle = ({
     async (
       base64Data: string,
       mimeType: string,
-      existingTitles: string[] = [],
+      _existingTitles: string[] = [],
     ): Promise<string> => {
       if (!apiKey) return "New Chat";
 
       try {
-        const ai = new GoogleGenAI({ apiKey });
+        const cleanedBase64 = cleanBase64(base64Data);
 
-        const promptMatch = titlePrompt.match(/chat-title-prmp: \|\n([\s\S]+)/);
-        const systemPrompt = promptMatch
-          ? promptMatch[1]
-              .split("\n")
-              .map((line) => line.trim())
-              .filter(Boolean)
-              .join(" ")
-          : "Generate a 2-3 word title describing this image.";
-
-        const titlesContext =
-          existingTitles.length > 0
-            ? `\n\nExisting titles (DO NOT USE ANY OF THESE): ${existingTitles.join(
-                ", ",
-              )}`
-            : "";
-
-        const cleanBase64 = base64Data.replace(
-          /^data:image\/[a-z]+;base64,/,
-          "",
-        );
-
-        const response = await ai.models.generateContent({
+        // Call backend title generation command
+        const title = await invoke<string>("generate_chat_title", {
+          apiKey,
           model: TITLE_MODEL,
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  inlineData: {
-                    mimeType: mimeType,
-                    data: cleanBase64,
-                  },
-                },
-                {
-                  text: `${systemPrompt}${titlesContext}`,
-                },
-              ],
-            },
-          ],
+          imageBase64: cleanedBase64,
+          imageMimeType: mimeType,
         });
 
-        return response.text?.trim() || "New Chat";
+        return title || "New Chat";
       } catch (error) {
         console.error("Failed to generate image title:", error);
         return "New Chat";

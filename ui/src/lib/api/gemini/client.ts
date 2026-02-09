@@ -1,8 +1,13 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 let currentAbortController: AbortController | null = null;
-let currentChatHistory: Content[] = [];
 
 // Types matching Backend structs
 interface GeminiPart {
@@ -20,50 +25,87 @@ interface GeminiContent {
 
 export type Content = GeminiContent;
 
+// State
 let storedApiKey: string | null = null;
+let currentModelId = "gemini-2.0-flash";
+
+// Brain context state - persists across turns
+let imageDescription: string | null = null;
+let userFirstMsg: string | null = null;
+let conversationHistory: Array<{ role: string; content: string }> = [];
+
+interface GeminiEvent {
+  token: string;
+}
 
 export const initializeGemini = (apiKey: string) => {
   storedApiKey = apiKey;
-};
-
-// No longer needs direct frontend initialization for Chat object,
-// but we keep history in memory for session continuity if needed.
-
-export const startNewChat = async (
-  modelId: string,
-  imageBase64: string,
-  mimeType: string,
-  systemPrompt: string,
-): Promise<string> => {
-  // Single-shot chat not utilizing stream - can reuse stream logic or implement separate command.
-  // For consistency with user request (everything streamed), we can use the stream function but collect text.
-  // Check if user actually uses this function - seems mostly unused or for single-turn.
-  // We'll implement it via the streaming command for simplicity as backend only has streaming now.
-
-  let fullText = "";
-  await startNewChatStream(
-    modelId,
-    imageBase64,
-    mimeType,
-    systemPrompt,
-    (token) => (fullText += token),
-  );
-  return fullText;
 };
 
 const cleanBase64 = (data: string) => {
   return data.replace(/^data:image\/[a-z]+;base64,/, "");
 };
 
-interface GeminiEvent {
-  token: string;
-}
+/**
+ * Reset brain context for a new chat session.
+ */
+export const resetBrainContext = () => {
+  imageDescription = null;
+  userFirstMsg = null;
+  conversationHistory = [];
+};
 
+/**
+ * Set the image description (AI's first response) for context anchoring.
+ */
+export const setImageDescription = (description: string) => {
+  imageDescription = description;
+};
+
+/**
+ * Get the current image description.
+ */
+export const getImageDescription = () => imageDescription;
+
+/**
+ * Set the user's first message for intent anchoring.
+ */
+export const setUserFirstMsg = (msg: string) => {
+  if (!userFirstMsg && msg) {
+    userFirstMsg = msg;
+  }
+};
+
+/**
+ * Add a message to conversation history.
+ */
+export const addToHistory = (role: "User" | "Assistant", content: string) => {
+  conversationHistory.push({ role, content });
+  // Keep only last 6 messages (3 turns)
+  if (conversationHistory.length > 6) {
+    conversationHistory = conversationHistory.slice(-6);
+  }
+};
+
+/**
+ * Format history for the frame template.
+ */
+const formatHistoryLog = (): string => {
+  if (conversationHistory.length === 0) return "(No previous messages)";
+
+  return conversationHistory
+    .map(({ role, content }) => `**${role}**: ${content}`)
+    .join("\n\n");
+};
+
+/**
+ * Start a new chat with an image (initial turn).
+ * Uses brain v2 with soul.yml + scenes.json.
+ */
 export const startNewChatStream = async (
   modelId: string,
   imageBase64: string,
   mimeType: string,
-  systemPrompt: string,
   onToken: (token: string) => void,
 ): Promise<string> => {
   if (!storedApiKey) throw new Error("Gemini API Key not set");
@@ -72,56 +114,41 @@ export const startNewChatStream = async (
     currentAbortController.abort();
   }
   currentAbortController = new AbortController();
+  currentModelId = modelId;
+
+  // Reset context for new chat
+  resetBrainContext();
 
   const channelId = `gemini-stream-${Date.now()}`;
+  let fullResponse = "";
+
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    fullResponse += event.payload.token;
     onToken(event.payload.token);
   });
 
-  // Construct initial contents
-  // User strategy: Image first + System Prompt + Prompt
-  // But wait! This function signature takes 'systemPrompt' which usually contains the user's initial instructions + context.
-
-  // Note: Gemini API treats 'system_instruction' separately in newer APIs,
-  // but 'streamGenerateContent' REST API takes 'contents' and 'systemInstruction' (optional).
-  // Our backend command currently takes 'contents' vector.
-  // We will pack system prompt into the first user message or as a separate 'system' role if supported?
-  // 'system' role is supported in 'contents' for some models, or via 'systemInstruction' field.
-  // To keep it simple and matching previous logic which combined them:
-  // Previous logic: parts = [{inlineData}, {text: systemPrompt}]
-
-  const contents: GeminiContent[] = [
-    {
-      role: "user",
-      parts: [
-        {
-          inlineData: {
-            mimeType: mimeType,
-            data: cleanBase64(imageBase64),
-          },
-        },
-        {
-          text: systemPrompt, // This contains sys prompt + user prompt combined by useChat
-        },
-      ],
-    },
-  ];
-
-  // Update local history
-  currentChatHistory = [...contents];
-
   try {
-    await invoke("stream_gemini_chat", {
+    await invoke("stream_gemini_chat_v2", {
       apiKey: storedApiKey,
       model: modelId,
-      contents: contents,
+      isInitialTurn: true,
+      imageBase64: cleanBase64(imageBase64),
+      imageMimeType: mimeType,
+      imageDescription: null,
+      userFirstMsg: null,
+      historyLog: null,
+      userMessage: "",
       channelId: channelId,
     });
 
-    // Cleanup
     unlisten();
     currentAbortController = null;
-    return "Stream completed"; // Full text is collected by caller via onToken usually
+
+    // Store AI's first response as image description
+    setImageDescription(fullResponse);
+    addToHistory("Assistant", fullResponse);
+
+    return fullResponse;
   } catch (error) {
     unlisten();
     currentAbortController = null;
@@ -130,43 +157,45 @@ export const startNewChatStream = async (
   }
 };
 
-export const sendMessage = async (text: string): Promise<string> => {
-  // Used for subsequent turns.
-  // We need the history + new prompt.
-  // Since 'startNewChatStream' resets history, we must rely on 'restoreSession' or manual history tracking.
-  // The 'useChat' hook manages 'messages' state, but 'client.ts' also had 'chatSession' state from SDK.
-  // We need to mirror that state here since we lost the SDK object.
-
+/**
+ * Send a subsequent message (uses frame.md context).
+ */
+export const sendMessage = async (
+  text: string,
+  onToken?: (token: string) => void,
+): Promise<string> => {
   if (!storedApiKey) throw new Error("Gemini API Key not set");
+  if (!imageDescription) throw new Error("No active chat session");
 
-  // Append user message to history
-  currentChatHistory.push({
-    role: "user",
-    parts: [{ text: text }],
-  });
+  // Track user's first message for intent
+  setUserFirstMsg(text);
+  addToHistory("User", text);
 
   const channelId = `gemini-stream-${Date.now()}`;
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
     fullResponse += event.payload.token;
+    onToken?.(event.payload.token);
   });
 
   try {
-    await invoke("stream_gemini_chat", {
+    await invoke("stream_gemini_chat_v2", {
       apiKey: storedApiKey,
-      model: currentModelId || "gemini-flash-lite-latest",
-      contents: currentChatHistory,
+      model: currentModelId,
+      isInitialTurn: false,
+      imageBase64: null,
+      imageMimeType: null,
+      imageDescription: imageDescription,
+      userFirstMsg: userFirstMsg,
+      historyLog: formatHistoryLog(),
+      userMessage: text,
       channelId: channelId,
     });
 
     unlisten();
 
-    // Append model response to history
-    currentChatHistory.push({
-      role: "model",
-      parts: [{ text: fullResponse }],
-    });
+    addToHistory("Assistant", fullResponse);
 
     return fullResponse;
   } catch (error) {
@@ -176,19 +205,39 @@ export const sendMessage = async (text: string): Promise<string> => {
   }
 };
 
-let currentModelId = "gemini-flash-lite-latest";
-
+/**
+ * Restore a session from saved state.
+ */
 export const restoreSession = (
   modelId: string,
-  history: Content[], // This comes from useChat logic (optimized or full)
-  systemPrompt: string,
+  savedImageDescription: string,
+  savedUserFirstMsg: string | null,
+  savedHistory: Array<{ role: string; content: string }>,
 ) => {
   currentModelId = modelId;
-  currentChatHistory = history;
-  // We don't need to do anything else, the next 'sendMessage' will use this history.
-  // However, if the intent is to immediately start a chat *with* this history,
-  // usually 'restoreSession' just sets state.
-  // But 'useChat.ts' calls 'apiRestoreSession(..., history, ...)'
-  // and then expects to be ready for 'handleSend' which calls 'sendMessage'.
-  // So setting state is correct.
+  imageDescription = savedImageDescription;
+  userFirstMsg = savedUserFirstMsg;
+  conversationHistory = savedHistory.slice(-6); // Keep last 6
+};
+
+/**
+ * Get current session state for saving.
+ */
+export const getSessionState = () => ({
+  imageDescription,
+  userFirstMsg,
+  conversationHistory: [...conversationHistory],
+});
+
+// Legacy compatibility - startNewChat wraps stream version
+export const startNewChat = async (
+  modelId: string,
+  imageBase64: string,
+  mimeType: string,
+): Promise<string> => {
+  let fullText = "";
+  await startNewChatStream(modelId, imageBase64, mimeType, (token) => {
+    fullText += token;
+  });
+  return fullText;
 };

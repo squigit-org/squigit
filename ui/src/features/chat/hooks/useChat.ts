@@ -6,11 +6,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Message, ModelType } from "@/features/chat";
-import { systemPrompt } from "@/lib/config/prompts";
 import {
   startNewChatStream,
   sendMessage,
   restoreSession as apiRestoreSession,
+  resetBrainContext,
+  getSessionState,
 } from "@/lib/api/gemini/client";
 
 export const useChat = ({
@@ -167,8 +168,7 @@ export const useChat = ({
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
-      const combinedPrompt = `<sys-prmp>\n${systemPrompt}\n</sys-prmp>\nMSS: ${prompt}`;
-
+      // Brain v2: No more sys-prmp wrapping - backend handles prompts
       let finalBase64 = imgData.base64;
       if (imgData.isFilePath) {
         try {
@@ -195,7 +195,6 @@ export const useChat = ({
         modelId,
         finalBase64,
         imgData.mimeType,
-        combinedPrompt,
         (token: string) => {
           if (signal.aborted) return;
           fullResponse += token;
@@ -299,8 +298,7 @@ export const useChat = ({
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
-      const fullPrompt = `<sys-prmp>\n${systemPrompt}\n</sys-prmp>\nMSS: ${combinedPrompt}`;
-
+      // Brain v2: Backend handles prompts
       let finalBase64 = startupImage.base64;
       if (startupImage.isFilePath) {
         try {
@@ -322,7 +320,6 @@ export const useChat = ({
         currentModel,
         finalBase64,
         startupImage.mimeType,
-        fullPrompt,
         (token: string) => {
           fullResponse += token;
           setStreamingText(fullResponse);
@@ -473,103 +470,26 @@ export const useChat = ({
     setIsLoading(false);
     setIsStreaming(false);
 
-    // If image provided, initialize the Gemini session with history
-    if (image) {
-      // OPTIMIZATION: If messages exist, use a lightweight context summary (First + Last message)
-      // This avoids re-sending the heavy image data, saving tokens and bandwidth.
-      if (state.messages.length > 0) {
-        try {
-          const history: any[] = [];
-          const firstMsg = state.messages[0];
-          const lastMsg = state.messages[state.messages.length - 1];
+    // Brain v2: Restore session using new context-based API
+    if (state.messages.length > 0) {
+      try {
+        const firstMsg = state.messages[0];
+        const savedHistory = state.messages.map((m) => ({
+          role: m.role === "model" ? "Assistant" : "User",
+          content: m.text,
+        }));
 
-          const contextPrompt = `[System]: Resuming chat session.
-To save resources, the original image is NOT re-sent.
-Here is the context from the conversation history:
+        // Find user's first message for intent anchoring
+        const firstUserMsg = state.messages.find((m) => m.role === "user");
 
----
-**Initial AI Analysis (First Message):**
-${firstMsg.text}
-
----
-**Most Recent Message:**
-${lastMsg.role === "user" ? "User" : "AI"}: ${lastMsg.text}
-
----
-Please continue the conversation focusing on the User's next prompt, using the above context.`;
-
-          history.push({
-            role: "user",
-            parts: [{ text: contextPrompt }],
-          });
-
-          // Add a placeholder acknowledgment to set the turn
-          history.push({
-            role: "model",
-            parts: [
-              {
-                text: "Understood. I have the context and am ready for the new prompt.",
-              },
-            ],
-          });
-
-          // Initialize session with this lightweight history
-          apiRestoreSession(currentModel, history, systemPrompt);
-        } catch (e) {
-          console.error("Failed to restore Gemini session (optimized):", e);
-        }
-      } else {
-        // FALLBACK: If no messages (empty chat), we must send the image to start the analysis.
-        try {
-          let finalBase64 = image.base64;
-
-          if (
-            image.base64.startsWith("asset://") ||
-            image.base64.startsWith("http")
-          ) {
-            try {
-              const res = await fetch(image.base64);
-              const blob = await res.blob();
-              finalBase64 = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-              });
-            } catch (e) {
-              console.error("Failed to fetch asset for restore", e);
-              return;
-            }
-          }
-
-          const history: any[] = [];
-          const cleanBase64 = finalBase64.replace(
-            /^data:image\/[a-z]+;base64,/,
-            "",
-          );
-
-          history.push({
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  mimeType: image.mimeType,
-                  data: cleanBase64,
-                },
-              },
-              {
-                text: systemPrompt,
-              },
-              {
-                text: prompt || "Analyze this image.",
-              },
-            ],
-          });
-
-          apiRestoreSession(currentModel, history, systemPrompt);
-        } catch (e) {
-          console.error("Failed to restore Gemini session (fallback):", e);
-        }
+        apiRestoreSession(
+          currentModel,
+          firstMsg.text, // Image description = AI's first response
+          firstUserMsg?.text || null,
+          savedHistory,
+        );
+      } catch (e) {
+        console.error("Failed to restore Gemini session:", e);
       }
     }
   };

@@ -8,6 +8,7 @@ pub mod utils;
 
 pub mod commands;
 pub mod services;
+pub mod brain;
 
 use commands::auth::{cache_avatar, get_api_key, get_user_data, logout, start_google_auth, cancel_google_auth};
 use commands::chat::{
@@ -76,6 +77,8 @@ pub fn run() {
             
             // Gemini
             commands::gemini::stream_gemini_chat,
+            commands::gemini::stream_gemini_chat_v2,
+            commands::gemini::generate_chat_title,
 
             // Window
             open_imgbb_window,
