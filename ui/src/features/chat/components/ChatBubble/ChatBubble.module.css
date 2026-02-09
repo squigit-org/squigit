@@ -174,3 +174,16 @@
   max-width: 100%;
   min-width: 0;
 }
+
+.cursor {
+  display: inline-block;
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+  color: var(--neutral-400);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}

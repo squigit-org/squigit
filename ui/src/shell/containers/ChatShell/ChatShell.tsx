@@ -5,12 +5,7 @@
  */
 
 import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
-import {
-  Message,
-  ChatInput,
-  ChatBubble,
-  StreamingResponse,
-} from "@/features/chat";
+import { Message, ChatInput, ChatBubble } from "@/features/chat";
 import { InlineMenu, TextShimmer, Dialog } from "@/primitives";
 import { useInlineMenu } from "@/hooks";
 import { SettingsSection } from "@/shell/overlays";
@@ -21,7 +16,6 @@ import styles from "./ChatShell.module.css";
 export interface ChatShellProps {
   messages: Message[];
   streamingText: string;
-  isChatMode: boolean;
   isLoading: boolean;
   isStreaming: boolean;
   error: string | null;
@@ -49,7 +43,6 @@ export interface ChatShellProps {
 export const ChatShell: React.FC<ChatShellProps> = ({
   messages,
   streamingText,
-  isChatMode,
   isLoading,
   error,
   input,
@@ -285,35 +278,52 @@ export const ChatShell: React.FC<ChatShellProps> = ({
               hasMessages ? "pt-[10px]" : "pt-12"
             }`}
           >
-            {startupImage && !isChatMode && (
-              <div className="min-h-[60vh]">
-                {isLoading && !streamingText ? (
-                  <TextShimmer text="Analyzing your image" />
-                ) : (
-                  <StreamingResponse
-                    text={streamingText}
-                    onComplete={onStreamComplete}
-                  />
-                )}
-              </div>
-            )}
+            {/* Show shimmer if loading and no text yet (initial analysis) */}
+            {startupImage &&
+              isLoading &&
+              !streamingText &&
+              messages.length === 0 && (
+                <TextShimmer text="Analyzing your image" />
+              )}
 
             {renderError()}
 
-            {isChatMode && (
-              <div className="flex flex-col-reverse gap-[10px]">
-                {isLoading && <TextShimmer text="Planning next moves" />}
+            <div className="flex flex-col-reverse gap-[10px]">
+              {isLoading && messages.length > 0 && (
+                <TextShimmer text="Planning next moves" />
+              )}
 
-                {messages
-                  .slice()
-                  .reverse()
-                  .map((msg) => (
-                    <div key={msg.id} className="mb-0">
-                      <ChatBubble message={msg} />
-                    </div>
-                  ))}
-              </div>
-            )}
+              {/* Show streaming text as a bubble if it exists and we assume it's the latest response not yet in messages */}
+              {/* Note: In standard flow, streamingText might be empty if messages are updated live. 
+                    This handles the case where streamingText is separate (like the initial image analysis). */}
+              {streamingText && (
+                <div className="mb-0">
+                  <ChatBubble
+                    message={{
+                      id: "streaming-temp",
+                      role: "model",
+                      text: streamingText,
+                      timestamp: Date.now(),
+                    }}
+                    isStreamed={true}
+                    onStreamComplete={onStreamComplete}
+                  />
+                </div>
+              )}
+
+              {messages
+                .slice()
+                .reverse()
+                .map((msg) => (
+                  <div key={msg.id} className="mb-0">
+                    <ChatBubble
+                      message={msg}
+                      isStreamed={msg.role === "model"}
+                      onStreamComplete={undefined}
+                    />
+                  </div>
+                ))}
+            </div>
           </div>
         </main>
       </div>
