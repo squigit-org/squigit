@@ -41,7 +41,8 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "externalBin": ["binaries/ocr-engine"],
+    "externalBin": ["binaries/ocr-engine", "binaries/whisper-stt"],
+    "resources": ["../sidecars/whisper-stt/models/*"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

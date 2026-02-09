@@ -48,6 +48,15 @@ void start_engine(const std::string& model_path, const std::string& language, in
         return;
     }
 
+    // Emit ready status after model load
+    {
+        json ready;
+        ready["type"] = "status";
+        ready["status"] = "ready";
+        ready["model"] = model_path;
+        send_json(ready);
+    }
+
     // Start Audio
     bool started = audio_capture->start([&](const std::vector<float>& pcm) {
         if (inference_engine) {

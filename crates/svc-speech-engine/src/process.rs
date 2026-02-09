@@ -54,3 +54,10 @@ impl SidecarProcess {
         self.child.kill().await
     }
 }
+
+impl Drop for SidecarProcess {
+    fn drop(&mut self) {
+        // Ensure the sidecar doesn't outlive the Rust orchestrator
+        let _ = self.child.start_kill();
+    }
+}

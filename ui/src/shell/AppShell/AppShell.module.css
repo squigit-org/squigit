@@ -46,30 +46,3 @@
   margin-right: 0.5rem;
   transform: translateZ(0);
 }
-
-/* Scrollbar styles from ChatShell */
-.chatShell::-webkit-scrollbar {
-  width: 10px;
-}
-
-.chatShell::-webkit-scrollbar-track {
-  background: transparent;
-  margin-top: 50px;
-  border-left: 1px solid transparent;
-}
-
-.chatShell::-webkit-scrollbar-track-piece:start {
-  background: transparent;
-  margin-top: 50px;
-}
-
-.chatShell::-webkit-scrollbar-thumb {
-  background-color: #444;
-  border-radius: 5px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-.chatShell::-webkit-scrollbar-thumb:hover {
-  background-color: #555;
-}

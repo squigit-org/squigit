@@ -22,7 +22,7 @@ use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::mpsc;
 
-use ipc::{SttCommand, SttEvent};
+pub use ipc::{SttCommand, SttEvent};
 use process::SidecarProcess;
 
 #[derive(Debug, thiserror::Error)]

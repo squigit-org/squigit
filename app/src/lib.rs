@@ -33,6 +33,7 @@ use commands::window::{
     close_imgbb_window, close_window, maximize_window, minimize_window,
     open_external_url, open_imgbb_window, resize_window, set_background_color,
 };
+use commands::speech::SpeechState;
 use services::image::process_and_store_image;
 use state::AppState;
 
@@ -48,6 +49,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())
+        .manage(SpeechState::default())
         .invoke_handler(tauri::generate_handler![
             // Image processing (legacy)
             process_image_path,
@@ -118,6 +120,9 @@ pub fn run() {
             commands::theme::get_system_theme,
             // Sound
             commands::sound::play_pop_sound,
+            // Speech
+            commands::speech::start_stt,
+            commands::speech::stop_stt,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

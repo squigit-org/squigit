@@ -225,13 +225,64 @@ export const ChatShell: React.FC<ChatShellProps> = ({
 
   const hasMessages = messages.filter((m) => m.role === "user").length > 0;
 
+  // New logic for input overlay
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const [inputHeight, setInputHeight] = useState(0);
+  const previousInputHeightRef = useRef(0);
+  const wasAtBottomRef = useRef(false);
+
+  useEffect(() => {
+    const el = inputContainerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const scrollEl = scrollContainerRef.current;
+      if (scrollEl) {
+        // Check if we are close to bottom (within 20px) before the resize affects layout
+        const distanceFromBottom =
+          scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+        wasAtBottomRef.current = distanceFromBottom < 20;
+      }
+
+      for (const entry of entries) {
+        setInputHeight(entry.contentRect.height);
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [scrollContainerRef]);
+
+  useLayoutEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+
+    // If input grew, we do NOT want to auto-scroll. We want the content to be covered
+    // so the user can scroll down manually.
+    const isGrowing = inputHeight > previousInputHeightRef.current;
+
+    if (!isGrowing && scrollEl && wasAtBottomRef.current) {
+      // If we were at bottom and NOT growing (e.g. shrinking or initial load),
+      // stay at bottom (pull content down)
+      scrollEl.scrollTop = scrollEl.scrollHeight;
+    }
+    previousInputHeightRef.current = inputHeight;
+  }, [inputHeight]);
+
   return (
     <>
-      <div className={styles.chatShell} ref={scrollContainerRef}>
-        <main>
+      <div
+        className={styles.chatShell}
+        ref={scrollContainerRef}
+        style={
+          {
+            "--input-height": `${inputHeight}px`,
+          } as React.CSSProperties
+        }
+      >
+        <main style={{ paddingBottom: inputHeight + 10 }}>
           <div
-            className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-4 ${
-              hasMessages ? "pt-12" : "pt-16"
+            className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-0 ${
+              hasMessages ? "pt-[10px]" : "pt-12"
             }`}
           >
             {startupImage && !isChatMode && (
@@ -250,14 +301,14 @@ export const ChatShell: React.FC<ChatShellProps> = ({
             {renderError()}
 
             {isChatMode && (
-              <div className="space-y-8 flex flex-col-reverse">
+              <div className="flex flex-col-reverse gap-[10px]">
                 {isLoading && <TextShimmer text="Planning next moves" />}
 
                 {messages
                   .slice()
                   .reverse()
                   .map((msg) => (
-                    <div key={msg.id} className="mb-2">
+                    <div key={msg.id} className="mb-0">
                       <ChatBubble message={msg} />
                     </div>
                   ))}
@@ -267,13 +318,21 @@ export const ChatShell: React.FC<ChatShellProps> = ({
         </main>
       </div>
 
-      <ChatInput
-        startupImage={startupImage}
-        input={input}
-        onInputChange={onInputChange}
-        onSend={onSend}
-        isLoading={isLoading}
-      />
+      <div
+        ref={inputContainerRef}
+        className={styles.inputOverlay}
+        style={{ pointerEvents: "none" }}
+      >
+        <div style={{ pointerEvents: "auto", width: "100%" }}>
+          <ChatInput
+            startupImage={startupImage}
+            input={input}
+            onInputChange={onInputChange}
+            onSend={onSend}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
 
       <InlineMenu
         menuRef={menuRef}

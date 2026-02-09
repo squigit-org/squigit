@@ -9,8 +9,7 @@ pub mod image;
 pub mod ocr;
 pub mod profile;
 pub mod security;
+pub mod sound;
+pub mod speech;
 pub mod theme;
 pub mod window;
-pub mod sound;
-
-

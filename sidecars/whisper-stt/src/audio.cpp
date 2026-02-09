@@ -56,8 +56,19 @@ namespace snapllm {
         ctx->deviceConfig.dataCallback = data_callback;
         ctx->deviceConfig.pUserData = this;
 
-        // TODO: Handle specific device index selection if needed
-        // For now, use default
+        // Handle device selection
+        if (device_index >= 0) {
+            ma_device_info* pCaptureInfos = nullptr;
+            ma_uint32 captureCount = 0;
+            if (ma_context_get_devices(&ctx->context, nullptr, nullptr, &pCaptureInfos, &captureCount) == MA_SUCCESS) {
+                if (device_index < (int)captureCount) {
+                    ctx->deviceConfig.capture.pDeviceID = &pCaptureInfos[device_index].id;
+                    std::cerr << "[audio] Using device " << device_index << ": " << pCaptureInfos[device_index].name << std::endl;
+                } else {
+                    std::cerr << "[audio] Invalid device index " << device_index << ", using default" << std::endl;
+                }
+            }
+        }
         
         if (ma_device_init(&ctx->context, &ctx->deviceConfig, &ctx->device) != MA_SUCCESS) {
             std::cerr << "Failed to initialize capture device." << std::endl;

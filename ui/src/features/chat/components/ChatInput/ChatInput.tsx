@@ -12,6 +12,7 @@ import { Send } from "lucide-react";
 import styles from "./ChatInput.module.css";
 import { google } from "@/lib/config";
 import { useTextEditor } from "@/hooks/useTextEditor";
+import { VoiceInput } from "../VoiceInput/VoiceInput";
 
 const ExpandIcon = () => (
   <svg
@@ -273,7 +274,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         className={`${styles.textarea} ${
           variant === "transparent" ? styles.textareaTransparent : ""
         }`}
-        style={{ width: isExpandedLayout ? "calc(100% - 2rem)" : "100%" }}
+        style={{
+          width: isExpandedLayout ? "calc(100% - 2rem)" : "auto",
+          flex: isExpandedLayout ? "none" : "1",
+        }}
       />
 
       {isCodeBlockActive && (
@@ -293,6 +297,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           isExpandedLayout ? styles.expanded : ""
         }`}
       >
+        <VoiceInput
+          onTranscript={(text, isFinal) => {
+            if (isFinal) {
+              onChange((value + " " + text).trim());
+            } else {
+              // Optional: show partials in a tooltip or ghost text
+              // For now, simple append on final
+            }
+          }}
+          disabled={disabled}
+        />
         <button
           type="button"
           onClick={(e) => {

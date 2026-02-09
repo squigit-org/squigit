@@ -26,6 +26,10 @@ pub fn ocr_sidecar_dir() -> PathBuf {
     project_root().join("sidecars").join("paddle-ocr")
 }
 
+pub fn whisper_sidecar_dir() -> PathBuf {
+    project_root().join("sidecars").join("whisper-stt")
+}
+
 pub fn venv_python() -> PathBuf {
     let sidecar = ocr_sidecar_dir();
     if cfg!(windows) {

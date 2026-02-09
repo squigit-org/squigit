@@ -12,6 +12,7 @@ use crate::commands::pkg;
 
 pub fn all() -> Result<()> {
     ocr()?;
+    whisper()?;
     capture()?;
     app()?;
     Ok(())
@@ -157,5 +158,25 @@ pub fn app() -> Result<()> {
     }
     run_cmd_with_node_bin("tauri", &["build"], &app, &node_bin)?;
     println!("\nApp build complete!");
+    Ok(())
+}
+
+pub fn whisper() -> Result<()> {
+    println!("\nBuilding Whisper STT sidecar...");
+    let sidecar = xtask::whisper_sidecar_dir();
+    let build_dir = sidecar.join("build");
+    
+    fs::create_dir_all(&build_dir)?;
+    
+    // Run CMake config
+    println!("\nRunning CMake config...");
+    run_cmd("cmake", &["..", "-DCMAKE_BUILD_TYPE=Release"], &build_dir)?;
+    
+    // Run CMake build
+    println!("\nRunning CMake build...");
+    run_cmd("cmake", &["--build", ".", "--config", "Release"], &build_dir)?;
+    
+    println!("\nSidecar build complete!");
+    crate::commands::pkg::whisper()?;
     Ok(())
 }

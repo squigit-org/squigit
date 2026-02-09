@@ -3,7 +3,10 @@
 
 use anyhow::Result;
 use std::fs;
-use xtask::{copy_dir_all, get_host_target_triple, ocr_sidecar_dir, project_root, qt_native_dir};
+use xtask::{
+    copy_dir_all, get_host_target_triple, ocr_sidecar_dir, project_root, qt_native_dir,
+    whisper_sidecar_dir,
+};
 
 pub fn capture() -> Result<()> {
     println!("\nPackaging Capture Engine artifacts for Tauri...");
@@ -78,6 +81,48 @@ pub fn ocr() -> Result<()> {
 
     println!("  Copying binary to {}", dst_binary_path.display());
     fs::copy(&src_binary_path, &dst_binary_path)?;
+
+    Ok(())
+}
+
+pub fn whisper() -> Result<()> {
+    println!("\nPackaging Whisper STT sidecar artifacts for Tauri...");
+
+    let sidecar = whisper_sidecar_dir();
+    let build_dir = sidecar.join("build");
+    let app_binaries = project_root().join("app").join("binaries");
+
+    fs::create_dir_all(&app_binaries)?;
+
+    let binary_name = if cfg!(windows) { "whisper-stt.exe" } else { "whisper-stt" };
+    // On Windows/Release, CMake might put it in Release/ folder
+    let src_binary_path = if cfg!(windows) {
+        build_dir.join("Release").join(binary_name)
+    } else {
+        build_dir.join(binary_name)
+    };
+
+    if !src_binary_path.exists() {
+        // Fallback check directly in build dir for non-multiconfig generators
+        let fallback = build_dir.join(binary_name);
+        if !fallback.exists() {
+             anyhow::bail!("Whisper binary not found at {}", src_binary_path.display());
+        }
+    }
+
+    // Use the one that exists
+    let final_src = if src_binary_path.exists() { src_binary_path } else { build_dir.join(binary_name) };
+
+    let host_triple = get_host_target_triple()?;
+    let dst_binary_name = format!(
+        "whisper-stt-{}{}",
+        host_triple,
+        if cfg!(windows) { ".exe" } else { "" }
+    );
+    let dst_binary_path = app_binaries.join(&dst_binary_name);
+
+    println!("  Copying binary to {}", dst_binary_path.display());
+    fs::copy(&final_src, &dst_binary_path)?;
 
     Ok(())
 }

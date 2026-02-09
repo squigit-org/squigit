@@ -32,6 +32,9 @@ enum Commands {
     /// Build PaddleOCR sidecar executable
     BuildOcr,
 
+    /// Build Whisper STT sidecar executable
+    BuildWhisper,
+
     /// Build Capture Engine (Qt + Rust + Package)
     BuildCapture,
 
@@ -65,6 +68,7 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Build => build::all()?,
         Commands::BuildOcr => build::ocr()?,
+        Commands::BuildWhisper => build::whisper()?,
         Commands::BuildCapture => build::capture()?,
         Commands::BuildCaptureQt => build::capture_qt_only()?,
         Commands::BuildApp => build::app()?,
