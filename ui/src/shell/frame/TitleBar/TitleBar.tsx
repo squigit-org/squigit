@@ -9,12 +9,7 @@ import { RotateCw } from "lucide-react";
 import { TrafficLights } from "../TrafficLights";
 import { WindowControls } from "../WindowControls";
 import styles from "./TitleBar.module.css";
-import {
-  AccountSwitcher,
-  ModelSwitcher,
-  SettingsPanel,
-  AuthButton,
-} from "@/features";
+import { AccountSwitcher, SettingsPanel, AuthButton } from "@/features";
 import { SettingsOverlay } from "@/shell/overlays";
 import { useShellContext } from "@/shell/context";
 
@@ -74,17 +69,6 @@ export const TitleBar: React.FC = () => {
       <div className={styles.rightSection}>
         {shell.system.activeProfile ? (
           <>
-            <ModelSwitcher
-              currentModel={shell.system.sessionModel}
-              onModelChange={shell.system.setSessionModel}
-              isLoading={shell.isLoadingState}
-              onOpenSettings={shell.system.openSettings}
-              ocrEnabled={shell.system.ocrEnabled}
-              downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
-              currentOcrModel={shell.system.sessionOcrLanguage}
-              onOcrModelChange={shell.system.setSessionOcrLanguage}
-            />
-
             <AccountSwitcher
               activeProfile={shell.system.activeProfile}
               onNewSession={shell.handleNewSession}

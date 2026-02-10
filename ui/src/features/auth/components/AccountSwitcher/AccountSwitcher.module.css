@@ -48,6 +48,7 @@
   flex-direction: column;
   gap: 2px;
   max-height: 200px;
+  max-width: 270px;
   overflow-y: auto;
 }
 

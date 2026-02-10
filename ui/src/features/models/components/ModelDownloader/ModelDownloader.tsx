@@ -27,8 +27,8 @@ export const ModelDownloader: React.FC<ModelDownloaderProps> = ({
   useEffect(() => {
     setDownloadList((prev) =>
       prev.map((model) => {
-        const isDownloaded = downloadedOcrLanguages.some((langName) =>
-          langName.includes(model.name),
+        const isDownloaded = downloadedOcrLanguages.some(
+          (lang) => lang === model.id || lang.includes(model.name),
         );
         if (isDownloaded && model.state !== "downloaded") {
           return { ...model, state: "downloaded" };
@@ -47,7 +47,20 @@ export const ModelDownloader: React.FC<ModelDownloaderProps> = ({
       const model = downloadList.find((m) => m.id === id);
       if (model) {
         // Add to preferences
-        const newLabel = `PP-OCRv4 (${model.name})`;
+        // We use the full ID for tracking downloads now, or just the model name?
+        // User said: "just add the suffix of it (after v4-******) in the model switcher"
+        // But for ModelDownloader checking if downloaded:
+        // const isDownloaded = downloadedOcrLanguages.some((langName) => langName.includes(model.name));
+        // If downloadedOcrLanguages contains "Russian", and model.name is "Russian", it works.
+        // If downloadedOcrLanguages contains "pp-ocr-v4-ru", it MIGHT NOT work if we check includes(name).
+        // Let's assume downloadedOcrLanguages stores the ID or the Name.
+        // Previously it stored `PP-OCRv4 (${model.name})`.
+        // Now let's store the ID `pp-ocr-v4-ru` or just `ru`?
+        // The user said: "the id: "pp-ocr-v4-ru", is the real form in pp server so we can download them"
+        // So we should probably store the full ID in the downloaded list to be safe, or the model name.
+        // The existing check `langName.includes(model.name)` suggests we store something containing the name.
+        // Let's store the full ID for correctness.
+        const newLabel = model.id;
         const newDownloaded = [...downloadedOcrLanguages, newLabel];
         // Remove duplicates just in case
         const uniqueDownloaded = Array.from(new Set(newDownloaded));

@@ -10,6 +10,8 @@ import { TextContextMenu } from "@/shell";
 import { useTextContextMenu } from "@/hooks";
 import styles from "./ImageSearchInput.module.css";
 import { useTextEditor } from "@/hooks/useTextEditor";
+import { OCRModelSwitcher } from "@/features/models/components/ModelSwitcher/ModelSwitcher"; // Import from original path even if renamed in code
+import { SettingsSection } from "@/shell";
 
 interface ImageSearchInputProps {
   value: string;
@@ -22,6 +24,12 @@ interface ImageSearchInputProps {
   isOCRLoading: boolean;
   isExpanded?: boolean;
   placeholder?: string;
+  // OCR props
+  ocrEnabled: boolean;
+  downloadedOcrLanguages: string[];
+  currentOcrModel: string;
+  onOcrModelChange: (model: string) => void;
+  onOpenSettings: (section: SettingsSection) => void;
 }
 
 export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
@@ -35,6 +43,11 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
   isOCRLoading,
   isExpanded = false,
   placeholder = "Add to your search",
+  ocrEnabled,
+  downloadedOcrLanguages,
+  currentOcrModel,
+  onOcrModelChange,
+  onOpenSettings,
 }) => {
   const {
     ref,
@@ -131,6 +144,17 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
                 <path d="M14 18h6" />
               </svg>
             </button>
+
+            <div className="h-4 w-[1px] bg-white/10 mx-1" />
+
+            <OCRModelSwitcher
+              ocrEnabled={ocrEnabled}
+              downloadedOcrLanguages={downloadedOcrLanguages}
+              currentOcrModel={currentOcrModel}
+              onOcrModelChange={onOcrModelChange}
+              onOpenSettings={onOpenSettings}
+              disabled={isOCRLoading}
+            />
           </>
         )}
 

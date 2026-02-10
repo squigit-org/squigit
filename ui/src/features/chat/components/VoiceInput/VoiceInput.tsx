@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { Mic, Square } from "lucide-react";
 import styles from "./VoiceInput.module.css";
+import { Tooltip } from "@/primitives/tooltip";
 
 interface VoiceInputProps {
   onTranscript: (text: string, isFinal: boolean) => void;
@@ -24,9 +25,11 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
-  // Use refs to avoid ensuring useEffect doesn't recreate listeners on every render
   const onTranscriptRef = useRef(onTranscript);
   const unlistenRef = useRef<UnlistenFn | null>(null);
+
+  const micButtonRef = useRef<HTMLButtonElement>(null);
+  const [showMicButtonTooltip, setShowMicButtonTooltip] = useState(false);
 
   useEffect(() => {
     onTranscriptRef.current = onTranscript;
@@ -109,8 +112,10 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
         className={`${styles.micButton} ${isRecording ? styles.recording : ""}`}
         onClick={toggleRecording}
         disabled={disabled}
-        title={isRecording ? "Stop recording" : "Start recording"}
         type="button"
+        ref={micButtonRef}
+        onMouseEnter={() => setShowMicButtonTooltip(true)}
+        onMouseLeave={() => setShowMicButtonTooltip(false)}
       >
         {isRecording ? (
           <Square className={styles.icon} fill="currentColor" />
@@ -118,6 +123,12 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
           <Mic className={styles.icon} />
         )}
       </button>
+      <Tooltip
+        text={isRecording ? "Stop recording" : "Start recording"}
+        parentRef={micButtonRef}
+        show={showMicButtonTooltip}
+        above
+      />
     </div>
   );
 };

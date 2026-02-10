@@ -33,7 +33,6 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
   activeProfile,
   profiles,
   onSwitchProfile,
-  onNewSession,
   onAddAccount,
   onLogout,
   onDeleteProfile,
@@ -48,7 +47,6 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Don't close if dialog is open (profileToDelete is set)
       if (profileToDelete) return;
 
       if (
@@ -72,7 +70,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
       const id = profileToDelete;
       setProfileToDelete(null);
       setDeletingProfileId(id);
-      // Split UI update from IO operation to prevent freezing
+
       setTimeout(async () => {
         try {
           await onDeleteProfile(id);

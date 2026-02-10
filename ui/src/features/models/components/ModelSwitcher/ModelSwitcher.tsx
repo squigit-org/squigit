@@ -4,57 +4,63 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useEffect, useState } from "react";
-import { ChevronDown, Check, ChevronLeft, PackagePlus } from "lucide-react";
-import { MODELS } from "@/lib/config/models";
+import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
+import { ChevronDown, Check, PackagePlus } from "lucide-react";
 import styles from "./ModelSwitcher.module.css";
 import { SettingsSection } from "@/shell";
 
-interface ModelSwitcherProps {
-  currentModel: string;
-  onModelChange: (modelId: string) => void;
-  isLoading: boolean;
-  isHidden?: boolean;
-  onOpenSettings: (section: SettingsSection) => void;
+import { getLanguageCode } from "@/features/models/types/models.types";
+
+interface OCRModelSwitcherProps {
   ocrEnabled: boolean;
   downloadedOcrLanguages: string[];
   currentOcrModel: string;
   onOcrModelChange: (model: string) => void;
+  onOpenSettings: (section: SettingsSection) => void;
+  disabled?: boolean;
 }
 
-export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
-  currentModel,
-  onModelChange,
-  isLoading,
-  isHidden = false,
-  onOpenSettings,
+export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
   ocrEnabled,
   downloadedOcrLanguages,
   currentOcrModel,
   onOcrModelChange,
+  onOpenSettings,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showOcrMenu, setShowOcrMenu] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const ocrMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const orderedModels = [
-    MODELS.find((m) => m.id === "gemini-2.5-pro"),
-    MODELS.find((m) => m.id === "gemini-2.5-flash"),
-    MODELS.find((m) => m.id === "gemini-flash-lite-latest"),
-  ].filter((m): m is (typeof MODELS)[number] => !!m);
-  const selectedModel = MODELS.find((m) => m.id === currentModel);
-
-  const handleOCRModelSelect = (modelId: string) => {
-    onOcrModelChange(modelId);
-    setShowOcrMenu(false);
-  };
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const ocrModels = downloadedOcrLanguages.map((name) => ({
-    id: name, // Using name as ID for now to match TitleBar/Settings behavior
+    id: name,
     name: name,
   }));
+
+  const updatePosition = () => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: `${rect.bottom + 18}px`,
+        right: `${window.innerWidth - rect.right}px`,
+        minWidth: "220px",
+        zIndex: 9999,
+      });
+    }
+  };
+
+  useLayoutEffect(() => {
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -62,7 +68,10 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
+        const target = event.target as Element;
+        if (!target.closest(`.${styles.dropdown}`)) {
+          setIsOpen(false);
+        }
       }
     };
 
@@ -74,136 +83,72 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
     };
   }, [isOpen]);
 
-  const handleModelSelect = (modelId: string) => {
-    onModelChange(modelId);
-    setIsOpen(false);
-  };
+  if (!ocrEnabled) return null;
 
-  const handleOcrMouseEnter = () => {
-    if (ocrMenuTimeoutRef.current) {
-      clearTimeout(ocrMenuTimeoutRef.current);
-      ocrMenuTimeoutRef.current = null;
-    }
-    setShowOcrMenu(true);
-  };
+  const dropdownContent = (
+    <div
+      className={`${styles.dropdown} ${isOpen ? styles.open : ""}`}
+      style={dropdownStyle}
+      onMouseDown={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+    >
+      <div className={styles.sectionTitle}>OCR Model</div>
+      <div className={styles.modelList}>
+        {ocrModels.map((model) => (
+          <button
+            key={model.id}
+            className={`${styles.modelItem} ${
+              model.id === currentOcrModel ? styles.activeModel : ""
+            }`}
+            onClick={() => {
+              onOcrModelChange(model.id);
+              setIsOpen(false);
+            }}
+          >
+            <div className={styles.modelInfo}>
+              <span className={styles.modelName}>{model.name}</span>
+            </div>
+            {model.id === currentOcrModel && (
+              <Check size={14} className={styles.checkIcon} />
+            )}
+          </button>
+        ))}
+      </div>
 
-  const handleOcrMouseLeave = () => {
-    ocrMenuTimeoutRef.current = setTimeout(() => {
-      setShowOcrMenu(false);
-    }, 150);
-  };
+      <div className={styles.divider} />
+
+      <div className={styles.actions}>
+        <button
+          className={styles.actionButton}
+          onClick={() => {
+            onOpenSettings("models");
+            setIsOpen(false);
+          }}
+        >
+          <PackagePlus size={16} />
+          <span>Get more models</span>
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <div
-      className={`${styles.modelSwitcher} ${isHidden ? styles.hidden : ""}`}
-      ref={containerRef}
-    >
+    <div className={styles.modelSwitcher} ref={containerRef}>
       <button
-        ref={buttonRef}
-        disabled={isLoading}
+        disabled={disabled}
         className={`${styles.trigger} ${isOpen ? styles.active : ""}`}
         onClick={() => setIsOpen(!isOpen)}
+        title="Select OCR Model"
       >
-        <span>
-          {selectedModel?.id === "gemini-2.5-pro"
-            ? "2.5 pro"
-            : selectedModel?.id === "gemini-2.5-flash"
-              ? "2.5 flash"
-              : selectedModel?.id === "gemini-flash-lite-latest"
-                ? "2.5 lite"
-                : "Select Model"}
+        <span className={styles.triggerText}>
+          {getLanguageCode(currentOcrModel || "pp-ocr-v4-en")}
         </span>
         <ChevronDown
-          size={18}
+          size={14}
           className={`${styles.chevron} ${isOpen ? styles.rotate : ""}`}
         />
       </button>
 
-      <div className={`${styles.dropdown} ${isOpen ? styles.open : ""}`}>
-        <div className={styles.sectionTitle}>Model</div>
-        <div className={styles.modelList}>
-          {orderedModels.map((model) => (
-            <button
-              key={model.id}
-              className={`${styles.modelItem} ${
-                model.id === currentModel ? styles.activeModel : ""
-              }`}
-              onClick={() => handleModelSelect(model.id)}
-            >
-              <div className={styles.modelInfo}>
-                <span className={styles.modelName}>{model.name}</span>
-              </div>
-              {model.id === currentModel && (
-                <Check size={14} className={styles.checkIcon} />
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.divider} />
-
-        <div className={styles.actions}>
-          {ocrEnabled ? (
-            <div
-              className={styles.ocrWrapper}
-              onMouseEnter={handleOcrMouseEnter}
-              onMouseLeave={handleOcrMouseLeave}
-            >
-              <button
-                className={`${styles.actionButton} ${styles.extraButton}`}
-              >
-                <ChevronLeft size={14} />
-                <span>OCR Model</span>
-              </button>
-              <div
-                className={`${styles.sideDropdown} ${showOcrMenu ? styles.visible : ""}`}
-              >
-                <div className={styles.sectionTitle}>OCR Model</div>
-                <div className={styles.ocrModelList}>
-                  {ocrModels.map((model) => (
-                    <button
-                      key={model.id}
-                      className={`${styles.modelItem} ${
-                        model.id === currentOcrModel ? styles.activeModel : ""
-                      }`}
-                      onClick={() => handleOCRModelSelect(model.id)}
-                    >
-                      <div className={styles.modelInfo}>
-                        <span className={styles.modelName}>{model.name}</span>
-                      </div>
-                      {model.id === currentOcrModel && (
-                        <Check size={14} className={styles.checkIcon} />
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div className={styles.divider} />
-                <div className={styles.actions}>
-                  <button
-                    className={styles.actionButton}
-                    onClick={() => {
-                      onOpenSettings("models");
-                      setIsOpen(false);
-                      setShowOcrMenu(false);
-                    }}
-                  >
-                    <PackagePlus size={18} />
-                    <span>Get more models</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <button
-              className={`${styles.actionButton} ${styles.extraButton} ${styles.disabled}`}
-              disabled
-            >
-              <ChevronLeft size={14} />
-              <span>OCR Model</span>
-            </button>
-          )}
-        </div>
-      </div>
+      {isOpen && createPortal(dropdownContent, document.body)}
     </div>
   );
 };

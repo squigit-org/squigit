@@ -52,10 +52,14 @@ export interface ImageShellProps {
   onInputChange: (value: string) => void;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
-  ocrEnabled?: boolean;
+  onOpenSettings: (section: SettingsSection) => void;
   autoExpandOCR?: boolean;
   activeProfileId: string | null;
-  onOpenSettings: (section: SettingsSection) => void;
+  // OCR props
+  ocrEnabled: boolean;
+  downloadedOcrLanguages: string[];
+  currentOcrModel: string;
+  onOcrModelChange: (model: string) => void;
 }
 
 export const ImageShell: React.FC<ImageShellProps> = ({
@@ -74,6 +78,9 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   ocrEnabled,
   autoExpandOCR,
   activeProfileId,
+  downloadedOcrLanguages,
+  currentOcrModel,
+  onOcrModelChange,
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -452,6 +459,11 @@ export const ImageShell: React.FC<ImageShellProps> = ({
               isOCRLoading={loading}
               isExpanded={isExpanded}
               placeholder="Add to your search"
+              ocrEnabled={ocrEnabled}
+              downloadedOcrLanguages={downloadedOcrLanguages}
+              currentOcrModel={currentOcrModel}
+              onOcrModelChange={onOcrModelChange}
+              onOpenSettings={onOpenSettings}
             />
           </div>
         </div>

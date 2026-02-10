@@ -1,3 +1,5 @@
+@import "@/styles/variables.css";
+
 .container {
   display: flex;
   align-items: center;
@@ -13,7 +15,7 @@
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--neutral-400);
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;
@@ -21,8 +23,7 @@
 }
 
 .micButton:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  color: var(--neutral-200);
 }
 
 .micButton:disabled {

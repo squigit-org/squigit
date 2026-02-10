@@ -97,9 +97,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const [selectedModel, setSelectedModel] = useState(GEMINI_MODELS[1].id);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const [showFileButtonTooltip, setShowFileButtonTooltip] = useState(false);
   const [showKeepProgressTooltip, setShowKeepProgressTooltip] = useState(false);
 
-  // Code block state
   const [isCodeBlockActive, setIsCodeBlockActive] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState("");
   const [originalCodeLanguage, setOriginalCodeLanguage] = useState("");
@@ -109,11 +110,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shadowRef = useRef<HTMLTextAreaElement>(null);
   const codeTaRef = useRef<HTMLTextAreaElement>(null);
+  const fileButtonRef = useRef<HTMLButtonElement>(null);
   const keepProgressInfoRef = useRef<HTMLButtonElement>(null);
 
   const [showExpandButton, setShowExpandButton] = useState(false);
 
-  // Resize textarea using shadow ref logic to avoid layout thrashing
   const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
     const shadow = shadowRef.current;
@@ -123,20 +124,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const maxLines = isExpanded ? 15 : 10;
     const maxHeight = lineHeight * maxLines;
 
-    // Sync shadow width with real textarea (minus scrollbar)
     shadow.style.width = `${textarea.clientWidth}px`;
 
-    // Reset shadow height to allow shrinking
     shadow.style.height = "0px";
     const scrollHeight = shadow.scrollHeight;
 
-    // Set height on real textarea based on shadow measurement
     const newHeight = Math.min(scrollHeight, maxHeight);
     textarea.style.height = `${newHeight}px`;
 
     setShowExpandButton(isCodeBlockActive || scrollHeight > lineHeight * 10);
 
-    // Prepare scroll position if needed
     if (document.activeElement === textarea) {
       if (textarea.scrollHeight > textarea.clientHeight) {
         textarea.scrollTop = textarea.scrollHeight;
@@ -148,19 +145,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     resizeTextarea();
   }, [value, isExpanded, resizeTextarea]);
 
-  // Focus code block when activated
   useEffect(() => {
     if (isCodeBlockActive) {
       codeTaRef.current?.focus();
     }
   }, [isCodeBlockActive]);
 
-  // Handle triple-backtick detection for code block activation
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const cursorPos = e.target.selectionStart;
 
-    // Check if text before cursor ends with ```lang\n
     const textBeforeCursor = newValue.slice(0, cursorPos);
     const match = textBeforeCursor.match(/(^|\n)```([^\n]*)\n$/);
 
@@ -184,7 +178,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  // Handle code block keyboard events (Escape to cancel, 3 Enters to commit)
   const handleCodeKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -219,9 +212,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  useEffect(() => {
-    // No-op for now, retained if other global click handlers are needed
-  }, []);
+  useEffect(() => {}, []);
 
   const handleSubmit = () => {
     if (
@@ -256,7 +247,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         variant === "transparent" ? styles.transparentVariant : ""
       }`}
     >
-      {/* Top Row: Expand */}
       <div className={styles.topRow}>
         {showExpandButton && (
           <button
@@ -268,7 +258,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         )}
       </div>
 
-      {/* Shadow Textarea for measurement */}
       <textarea
         ref={shadowRef}
         className={`${styles.textarea} ${styles.shadow}`}
@@ -279,7 +268,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         rows={1}
       />
 
-      {/* Prompt Input */}
       <textarea
         ref={textareaRef}
         className={styles.textarea}
@@ -292,7 +280,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         style={{ display: isCodeBlockActive ? "none" : undefined }}
       />
 
-      {/* Code Block Editor */}
       {isCodeBlockActive && (
         <CodeBlock
           ref={codeTaRef}
@@ -309,16 +296,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         />
       )}
 
-      {/* Bottom Actions */}
       <div className={styles.actions}>
         <div className={styles.leftActions}>
-          {/* Attach File */}
-          <button className={styles.iconButton} aria-label="Attach file">
+          <button
+            className={styles.iconButton}
+            aria-label="Attach file"
+            ref={fileButtonRef}
+            onMouseEnter={() => setShowFileButtonTooltip(true)}
+            onMouseLeave={() => setShowFileButtonTooltip(false)}
+          >
             <Paperclip size={18} />
           </button>
+          <Tooltip
+            text="Add photos & files"
+            parentRef={fileButtonRef}
+            show={showFileButtonTooltip}
+            above
+          />
 
-          {/* Model Dropdown - Opens Up */}
-          {/* Model Dropdown - Opens Up */}
           <Dropdown label={selectedModelLabel} direction="up" width={180}>
             <DropdownSectionTitle>Model</DropdownSectionTitle>
             {GEMINI_MODELS.map((model) => (
@@ -331,7 +326,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             ))}
           </Dropdown>
 
-          {/* Keep Progress Button + Info Tooltip */}
           <div className={styles.keepProgressGroup}>
             <button
               className={styles.toggleItem}
@@ -353,7 +347,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
 
         <div className={styles.rightActions}>
-          {/* Voice Input */}
           <VoiceInput
             onTranscript={(text, isFinal) => {
               if (isFinal) {
@@ -363,7 +356,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             disabled={disabled}
           />
 
-          {/* Submit Button */}
           <button
             className={`${styles.submitButton} ${isButtonActive ? styles.submitActive : ""}`}
             onClick={handleSubmit}

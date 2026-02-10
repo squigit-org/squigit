@@ -115,7 +115,7 @@
 .leftActions {
   display: flex;
   align-items: center;
-  margin-bottom: -10px;
+  /* margin-bottom: -10px; */
   gap: 15px;
 }
 
@@ -173,8 +173,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   color: var(--neutral-500);
   border-radius: 50%;
   cursor: not-allowed;

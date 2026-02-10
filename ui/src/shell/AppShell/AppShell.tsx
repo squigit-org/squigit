@@ -143,11 +143,13 @@ const AppShellComponent: React.FC = () => {
           chatId={shell.chatHistory.activeSessionId}
           inputValue={shell.imageInput}
           onInputChange={shell.setImageInput}
-          isExpanded={isImageExpanded}
           onToggleExpand={() => setIsImageExpanded(!isImageExpanded)}
           ocrEnabled={shell.system.ocrEnabled}
           autoExpandOCR={shell.system.autoExpandOCR}
           activeProfileId={shell.system.activeProfile?.id || null}
+          downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
+          currentOcrModel={shell.system.sessionOcrLanguage}
+          onOcrModelChange={shell.system.setSessionOcrLanguage}
         />
       </div>
 
