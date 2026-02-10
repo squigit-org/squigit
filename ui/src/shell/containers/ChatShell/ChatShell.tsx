@@ -36,6 +36,9 @@ export interface ChatShellProps {
   onInputChange: (value: string) => void;
   onOpenSettings: (section: SettingsSection) => void;
   onStreamComplete?: () => void;
+  
+  selectedModel: string;
+  onModelChange: (model: string) => void;
 
   /** Ref from parent to control scrolling */
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -55,6 +58,8 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   onInputChange,
   onOpenSettings,
   onStreamComplete,
+  selectedModel,
+  onModelChange,
   scrollContainerRef,
 }) => {
   const prevChatIdRef = useRef<string | null>(null);
@@ -328,6 +333,8 @@ export const ChatShell: React.FC<ChatShellProps> = ({
             onInputChange={onInputChange}
             onSend={onSend}
             isLoading={isLoading}
+            selectedModel={selectedModel}
+            onModelChange={onModelChange}
           />
         </div>
       </div>

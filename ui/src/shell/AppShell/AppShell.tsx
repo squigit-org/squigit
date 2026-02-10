@@ -165,7 +165,7 @@ const AppShellComponent: React.FC = () => {
         startupImage={shell.system.startupImage}
         chatId={shell.chatHistory.activeSessionId}
         onSend={() => {
-          shell.chat.handleSend(shell.input);
+          shell.chat.handleSend(shell.input, shell.inputModel);
           shell.setInput("");
         }}
         onRetry={() => {
@@ -178,6 +178,8 @@ const AppShellComponent: React.FC = () => {
         onInputChange={shell.setInput}
         onOpenSettings={shell.system.openSettings}
         scrollContainerRef={scrollContainerRef}
+        selectedModel={shell.inputModel}
+        onModelChange={shell.setInputModel}
       />
     </div>
   );

@@ -437,7 +437,7 @@ export const useChat = ({
     }
   };
 
-  const handleSend = async (userText: string) => {
+  const handleSend = async (userText: string, modelId?: string) => {
     if (!userText.trim() || isLoading) return;
     const targetChatId = chatId;
 
@@ -483,7 +483,7 @@ export const useChat = ({
     setError(null);
 
     try {
-      const responseText = await sendMessage(userText);
+      const responseText = await sendMessage(userText, modelId);
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "model",

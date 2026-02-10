@@ -31,7 +31,6 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [ocrMenuOpen, setOcrMenuOpen] = useState(false);
 
-  // Re-sync local state when props change
   useEffect(() => {
     setActiveOcrModel(ocrLanguage);
   }, [ocrLanguage]);
@@ -68,8 +67,6 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
     }
   };
 
-  // Combine installed static models with downloaded ones for the dropdown
-  // We treat preferences.json (downloadedOcrLanguages) as the single source of truth.
   const installedModels = downloadedOcrLanguages.map((name) => ({
     id: name,
     name: name,

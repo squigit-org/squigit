@@ -198,10 +198,15 @@ export const startNewChatStream = async (
  */
 export const sendMessage = async (
   text: string,
+  modelId?: string,
   onToken?: (token: string) => void,
 ): Promise<string> => {
   if (!storedApiKey) throw new Error("Gemini API Key not set");
   if (!imageDescription) throw new Error("No active chat session");
+
+  if (modelId) {
+    currentModelId = modelId;
+  }
 
   // Track user's first message for intent
   const isFirstTurnWithImage = !userFirstMsg && storedImageBase64;

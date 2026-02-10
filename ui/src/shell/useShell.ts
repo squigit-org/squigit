@@ -16,6 +16,7 @@ import {
   getPendingUpdate,
 } from "@/hooks";
 import { useAuth, useChat, useChatHistory } from "@/features";
+import { ModelType } from "@/lib/config/models";
 import {
   loadChat,
   getImagePath,
@@ -319,6 +320,7 @@ export const useShell = () => {
 
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
   const [imageDrafts, setImageDrafts] = useState<Record<string, string>>({});
+  const [inputModel, setInputModel] = useState<string>(ModelType.GEMINI_2_5_FLASH);
 
   const activeDraftId = chatHistory.activeSessionId || "new_session";
 
@@ -473,6 +475,8 @@ export const useShell = () => {
     ocrData,
     input,
     imageInput,
+    inputModel,
+    setInputModel,
     pendingUpdate,
     showUpdate,
     contextMenu,

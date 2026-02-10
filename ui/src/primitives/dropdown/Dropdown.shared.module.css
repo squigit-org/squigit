@@ -193,3 +193,13 @@
     transform: rotate(360deg);
   }
 }
+
+.alignRight {
+  right: 0;
+  left: auto;
+}
+
+.alignLeft {
+  left: 0;
+  right: auto;
+}

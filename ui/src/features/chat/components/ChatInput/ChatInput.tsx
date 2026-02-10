@@ -14,7 +14,7 @@ import React, {
 import { Paperclip, ArrowUp, Camera } from "lucide-react";
 import { MODELS } from "@/lib/config/models";
 import { Tooltip } from "@/primitives/tooltip/Tooltip";
-import { useKeyDown, useTextEditor, useTextContextMenu } from "@/hooks";
+import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { TextContextMenu } from "@/shell";
 import { CodeBlock } from "@/primitives";
 import {
@@ -77,6 +77,8 @@ interface ChatInputProps {
   variant?: "default" | "transparent";
   className?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  selectedModel: string;
+  onModelChange: (model: string) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -87,13 +89,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isLoading,
   placeholder: customPlaceholder,
   variant = "default",
+  selectedModel,
+  onModelChange,
 }) => {
   if (!startupImage) return null;
 
   const placeholder = customPlaceholder || "Ask anything";
   const disabled = isLoading;
 
-  const [selectedModel, setSelectedModel] = useState(GEMINI_MODELS[1].id);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const [showFileButtonTooltip, setShowFileButtonTooltip] = useState(false);
@@ -105,6 +108,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [codeValue, setCodeValue] = useState("");
   const [consecutiveEnters, setConsecutiveEnters] = useState(0);
 
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const shadowRef = useRef<HTMLTextAreaElement>(null);
   const codeTaRef = useRef<HTMLTextAreaElement>(null);
@@ -112,6 +117,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const keepProgressInfoRef = useRef<HTMLButtonElement>(null);
 
   const [showExpandButton, setShowExpandButton] = useState(false);
+
+  const handleModelSelect = useCallback(
+    (id: string) => {
+      onModelChange(id);
+      setAiMenuOpen(false);
+    },
+    [onModelChange],
+  );
 
   const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
@@ -371,24 +384,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             above
           />
 
-          <Dropdown label={selectedModelLabel} direction="up" width={180}>
-            <DropdownSectionTitle>Model</DropdownSectionTitle>
-            {GEMINI_MODELS.map((model) => (
-              <div
-                style={{
-                  marginTop: "2px",
-                }}
-              >
-                <DropdownItem
-                  key={model.id}
-                  label={model.label}
-                  isActive={model.id === selectedModel}
-                  onClick={() => setSelectedModel(model.id)}
-                />
-              </div>
-            ))}
-          </Dropdown>
-
           <div className={styles.keepProgressGroup}>
             <button
               className={styles.toggleItem}
@@ -407,6 +402,31 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               above
             />
           </div>
+
+          <Dropdown
+            label={selectedModelLabel}
+            direction="up"
+            isOpen={aiMenuOpen}
+            onOpenChange={setAiMenuOpen}
+            width={180}
+            align="left"
+          >
+            <DropdownSectionTitle>Model</DropdownSectionTitle>
+            {GEMINI_MODELS.map((model) => (
+              <div
+                style={{
+                  marginTop: "2px",
+                }}
+              >
+                <DropdownItem
+                  key={model.id}
+                  label={model.label}
+                  isActive={model.id === selectedModel}
+                  onClick={() => handleModelSelect(model.id)}
+                />
+              </div>
+            ))}
+          </Dropdown>
         </div>
 
         <div className={styles.rightActions}>

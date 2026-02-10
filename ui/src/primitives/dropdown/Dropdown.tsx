@@ -62,6 +62,7 @@ interface DropdownProps {
   onOpenChange?: (isOpen: boolean) => void;
   hideChevron?: boolean;
   direction?: "up" | "down";
+  align?: "left" | "right";
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -73,6 +74,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   onOpenChange,
   hideChevron = false,
   direction = "down",
+  align = "right",
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -105,23 +107,28 @@ export const Dropdown: React.FC<DropdownProps> = ({
     };
   }, [isOpen]);
 
+  const isUp = direction === "up";
+  const isRight = align === "right";
+
+  const chevron = !hideChevron && (
+    <ChevronDown
+      size={18}
+      className={`${isUp ? styles.chevronRotate : ""} ${styles.chevron} ${isOpen ? (direction === "up" ? styles.chevronReturn : styles.chevronRotate) : ""}`}
+    />
+  );
+
   return (
     <div className={`${styles.container} ${className}`} ref={containerRef}>
       <button
         className={`${styles.trigger} ${isOpen ? styles.active : ""}`}
         onClick={() => handleOpenChange(!isOpen)}
       >
-        <span>{label}</span>
-        {!hideChevron && (
-          <ChevronDown
-            size={18}
-            className={`${direction === "up" ? styles.chevronRotate : ""} ${styles.chevron} ${isOpen ? (direction === "up" ? styles.chevronReturn : styles.chevronRotate) : ""}`}
-          />
-        )}
+        {isUp && chevron}
+        {<span>{label}</span>}
+        {!isUp && chevron}
       </button>
-
       <div
-        className={`${styles.dropdown} ${direction === "up" ? styles.dropdownUp : ""} ${isOpen ? styles.dropdownOpen : ""}`}
+        className={`${styles.dropdown} ${isUp ? styles.dropdownUp : ""} ${isOpen ? styles.dropdownOpen : ""} ${align === "left" ? styles.alignLeft : styles.alignRight}`}
         style={{ minWidth: width }}
       >
         {children}
