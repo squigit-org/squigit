@@ -20,8 +20,9 @@
   background: transparent;
   border: none;
   outline: none;
-  color: var(--neutral-100);
+  color: var(--neutral-200);
   font-size: 0.9375rem;
+  font-family: inherit;
   padding: 8px 0;
   caret-color: var(--neutral-400);
   white-space: nowrap;

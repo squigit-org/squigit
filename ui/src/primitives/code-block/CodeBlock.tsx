@@ -19,7 +19,7 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
       onKeyDown,
       placeholder,
       stickyHeader,
-      isStreaming,
+      style,
     },
     ref,
   ) => {
@@ -32,6 +32,7 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
           onChange={onChange}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
+          style={style}
         />
       );
     }
@@ -41,7 +42,6 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
         language={language}
         value={value}
         stickyHeader={stickyHeader}
-        isStreaming={isStreaming}
       />
     );
   },

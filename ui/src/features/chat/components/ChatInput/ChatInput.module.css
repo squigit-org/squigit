@@ -6,56 +6,55 @@
 
 @import "../../../../styles/variables.css";
 
-.inputWrapper {
-  width: 100%;
-  max-width: 43.5rem;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  pointer-events: auto;
-}
-
 .container {
-  position: relative;
   display: flex;
+  position: relative;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 0 auto;
+  background-color: var(--neutral-900);
+  border: 1px solid var(--neutral-800);
+  border-radius: 24px;
+  padding: 6px 20px 10px 16px;
   width: 100%;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background-color: #171717;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
+  min-height: 110px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .disabled {
-  opacity: 0.8;
+  opacity: 0.6;
+  pointer-events: none;
 }
 
-.expandedLayout {
-  flex-direction: column;
+.transparentVariant {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
 }
 
-.standardLayout {
-  flex-direction: row;
-  align-items: flex-end;
-}
-
-.expandButtonWrapper {
+.topRow {
+  top: 6px;
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  align-content: end;
+  align-self: flex-end;
+  margin-right: -15px;
 }
 
 .expandButton {
-  padding: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   color: var(--neutral-500);
-  background-color: transparent;
-  border-radius: 0.25rem;
+  background: transparent;
   border: none;
+  border-radius: 6px;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.15s ease;
 }
 
 .expandButton:hover {
@@ -63,97 +62,149 @@
 }
 
 .textarea {
-  background-color: transparent;
-  font-size: 1rem;
-  color: var(--neutral-100);
+  width: 100%;
+  min-height: 24px;
+  padding: 4px 0;
+  font-size: 16px;
+  color: var(--neutral-200);
+  background: transparent;
+  border: none;
   outline: none;
   resize: none;
-  line-height: 1.5;
-  padding-left: 1rem;
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-  padding-right: 1rem;
-  min-height: 24px;
-  caret-color: var(--neutral-400);
+  font-family: inherit;
+  line-height: 24px;
+  overflow-y: auto;
 }
 
 .textarea::placeholder {
   color: var(--neutral-500);
 }
 
+.textarea::-webkit-scrollbar-track {
+  margin-top: 13px;
+}
+
+.textarea::-webkit-scrollbar-track-piece:start {
+  margin-top: 13px;
+}
+
+.shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 0;
+  visibility: hidden;
+  overflow: hidden;
+  pointer-events: none;
+  min-height: 0 !important;
+  max-height: none !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.shadow::-webkit-scrollbar {
+  display: none;
+}
+
 .actions {
   display: flex;
   align-items: center;
-  padding-bottom: 0.25rem;
-  padding-right: 0.5rem;
+  justify-content: space-between;
 }
 
-.expanded {
-  align-self: flex-end;
-  justify-content: flex-end;
-  width: 100%;
+.leftActions {
+  display: flex;
+  align-items: center;
+  margin-bottom: -10px;
+  gap: 15px;
 }
 
-.sendButton {
-  border-radius: 0.5rem;
-  padding: 0.5rem;
+.rightActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: -11px;
+}
+
+.iconButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-  border: none;
-  background: transparent;
-}
-
-.active {
-  cursor: pointer;
-  color: var(--neutral-200);
-}
-
-.active:hover {
-  background-color: var(--neutral-800);
-}
-
-.inactive {
-  cursor: default;
-  opacity: 0.5;
-  color: var(--neutral-500);
-}
-
-.disclaimer {
-  text-align: center;
-  font-size: 0.75rem;
   color: var(--neutral-400);
-  margin-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-
-.link {
-  text-decoration: underline;
-  background: none;
+  background: transparent;
   border: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
+  border-radius: 8px;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.15s ease;
 }
 
-.link:hover {
+.iconButton:hover {
   color: var(--neutral-200);
 }
 
-.transparentVariant {
-  border: none;
-  background-color: transparent;
-  padding: 0;
-  box-shadow: none !important;
+.keepProgressGroup {
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 
-.textareaTransparent {
-  padding-left: 0;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+.toggleItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--neutral-400);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toggleItem:hover {
+  color: var(--neutral-200);
+}
+
+.toggleActive {
+  color: var(--neutral-100);
+}
+
+.submitButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--neutral-500);
+  border-radius: 50%;
+  cursor: not-allowed;
+  transition: all 0.15s ease;
+}
+
+.submitActive {
+  color: var(--neutral-950);
+  background-color: var(--neutral-200);
+  border-color: var(--neutral-200);
+  cursor: pointer;
+}
+
+.submitActive:hover {
+  background-color: var(--neutral-100);
+}
+
+.footer {
+  padding: 0.5rem 1rem 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.inputWrapper {
+  width: 100%;
+  justify-content: center;
+  max-width: 43.5rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  pointer-events: auto;
 }

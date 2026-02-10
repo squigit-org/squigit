@@ -55,7 +55,7 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 200px;
-  background-color: rgba(24, 24, 27, 0.98);
+  background-color: rgba(26, 26, 26, 0.98);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(63, 63, 70, 0.5);
@@ -79,6 +79,12 @@
   isolation: isolate;
   backface-visibility: hidden;
   perspective: 1000px;
+}
+
+.dropdownUp {
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform: translateY(4px);
 }
 
 .dropdownOpen,

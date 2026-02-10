@@ -4,15 +4,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
+import { Paperclip, ArrowUp, Camera } from "lucide-react";
+import { MODELS } from "@/lib/config/models";
+import { Tooltip } from "@/primitives/tooltip/Tooltip";
 import { CodeBlock } from "@/primitives";
-import { TextContextMenu } from "@/shell";
-import { useTextContextMenu } from "@/hooks";
-import { Send } from "lucide-react";
-import styles from "./ChatInput.module.css";
-import { google } from "@/lib/config";
-import { useTextEditor } from "@/hooks/useTextEditor";
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownSectionTitle,
+} from "@/primitives/dropdown";
 import { VoiceInput } from "../VoiceInput/VoiceInput";
+import styles from "./ChatInput.module.css";
 
 const ExpandIcon = () => (
   <svg
@@ -41,10 +50,20 @@ const CollapseIcon = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M10 4v6H4" />
-    <path d="M14 20v-6h6" />
+    <path d="M8 2v6H2" />
+    <path d="M16 22v-6h6" />
   </svg>
 );
+
+const GEMINI_MODELS = MODELS.map((m) => ({
+  id: m.id,
+  label:
+    m.id === "gemini-2.5-pro"
+      ? "2.5 Pro"
+      : m.id === "gemini-2.5-flash"
+        ? "2.5 Flash"
+        : "2.5 Lite",
+}));
 
 interface ChatInputProps {
   startupImage: {
@@ -73,115 +92,99 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   if (!startupImage) return null;
 
-  const maxRows = 7;
-  const placeholder =
-    customPlaceholder || (isLoading ? "Thinking..." : "Ask anything");
+  const placeholder = customPlaceholder || "Ask anything";
   const disabled = isLoading;
 
-  const codeTaRef = useRef<HTMLTextAreaElement | null>(null);
-  const lineHeightRef = useRef<number>(24);
+  const [selectedModel, setSelectedModel] = useState(GEMINI_MODELS[1].id);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showKeepProgressTooltip, setShowKeepProgressTooltip] = useState(false);
 
-  const [isManualExpanded, setIsManualExpanded] = useState(false);
-  const [showExpandBtn, setShowExpandBtn] = useState(false);
-
+  // Code block state
   const [isCodeBlockActive, setIsCodeBlockActive] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState("");
   const [originalCodeLanguage, setOriginalCodeLanguage] = useState("");
   const [codeValue, setCodeValue] = useState("");
   const [consecutiveEnters, setConsecutiveEnters] = useState(0);
 
-  const {
-    ref: taRef,
-    hasSelection,
-    handleCopy,
-    handleCut,
-    handlePaste,
-    handleSelectAll,
-    handleKeyDown: handleEditorKeyDown,
-  } = useTextEditor({
-    value,
-    onChange,
-    onSubmit: () => {
-      if (!disabled && !isLoading && value.trim().length > 0) onSend();
-    },
-  });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const shadowRef = useRef<HTMLTextAreaElement>(null);
+  const codeTaRef = useRef<HTMLTextAreaElement>(null);
+  const keepProgressInfoRef = useRef<HTMLButtonElement>(null);
 
-  const {
-    data: contextMenu,
-    handleContextMenu,
-    handleClose: handleCloseContextMenu,
-  } = useTextContextMenu({
-    hasSelection,
-  });
+  const [showExpandButton, setShowExpandButton] = useState(false);
 
-  const isExpandedLayout = value.includes("\n") || isCodeBlockActive;
+  // Resize textarea using shadow ref logic to avoid layout thrashing
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    const shadow = shadowRef.current;
+    if (!textarea || !shadow) return;
 
+    const lineHeight = 24;
+    const maxLines = isExpanded ? 15 : 10;
+    const maxHeight = lineHeight * maxLines;
+
+    // Sync shadow width with real textarea (minus scrollbar)
+    shadow.style.width = `${textarea.clientWidth}px`;
+
+    // Reset shadow height to allow shrinking
+    shadow.style.height = "0px";
+    const scrollHeight = shadow.scrollHeight;
+
+    // Set height on real textarea based on shadow measurement
+    const newHeight = Math.min(scrollHeight, maxHeight);
+    textarea.style.height = `${newHeight}px`;
+
+    setShowExpandButton(isCodeBlockActive || scrollHeight > lineHeight * 10);
+
+    // Prepare scroll position if needed
+    if (document.activeElement === textarea) {
+      if (textarea.scrollHeight > textarea.clientHeight) {
+        textarea.scrollTop = textarea.scrollHeight;
+      }
+    }
+  }, [isExpanded, isCodeBlockActive]);
+
+  useLayoutEffect(() => {
+    resizeTextarea();
+  }, [value, isExpanded, resizeTextarea]);
+
+  // Focus code block when activated
   useEffect(() => {
     if (isCodeBlockActive) {
       codeTaRef.current?.focus();
     }
   }, [isCodeBlockActive]);
 
-  const adjustHeight = React.useCallback(() => {
-    const ta = taRef.current as HTMLTextAreaElement;
-    if (!ta) return;
+  // Handle triple-backtick detection for code block activation
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    const cursorPos = e.target.selectionStart;
 
-    const currentSelectionStart = ta.selectionStart;
-    const currentSelectionEnd = ta.selectionEnd;
-    const currentValue = ta.value;
+    // Check if text before cursor ends with ```lang\n
+    const textBeforeCursor = newValue.slice(0, cursorPos);
+    const match = textBeforeCursor.match(/(^|\n)```([^\n]*)\n$/);
 
-    ta.style.height = "auto";
-    const scrollHeight = ta.scrollHeight;
-
-    const standardMaxHeight = lineHeightRef.current * maxRows;
-    const effectiveMaxHeight = isManualExpanded
-      ? standardMaxHeight * 2
-      : standardMaxHeight;
-
-    if (scrollHeight > standardMaxHeight) {
-      setShowExpandBtn(true);
+    if (match && !isCodeBlockActive) {
+      const codeBlockCount = (newValue.match(/```/g) || []).length;
+      if (codeBlockCount % 2 === 1) {
+        setIsCodeBlockActive(true);
+        setOriginalCodeLanguage(match[2]);
+        setCodeLanguage(match[2] || "text");
+        const beforeBackticks = textBeforeCursor.replace(
+          /(^|\n)```([^\n]*)\n$/,
+          "$1",
+        );
+        const afterCursor = newValue.slice(cursorPos);
+        onChange(beforeBackticks + afterCursor);
+      } else {
+        onChange(newValue);
+      }
     } else {
-      setShowExpandBtn(false);
+      onChange(newValue);
     }
+  };
 
-    if (scrollHeight > effectiveMaxHeight) {
-      ta.style.height = `${effectiveMaxHeight}px`;
-      ta.style.overflowY = "auto";
-    } else {
-      ta.style.height = `${scrollHeight}px`;
-      ta.style.overflowY = "hidden";
-    }
-
-    if (isManualExpanded) {
-      ta.scrollTop = 0;
-    }
-
-    if (ta.value === currentValue && document.activeElement === ta) {
-      requestAnimationFrame(() => {
-        if (ta && ta.value === currentValue) {
-          ta.setSelectionRange(currentSelectionStart, currentSelectionEnd);
-        }
-      });
-    }
-  }, [isManualExpanded, maxRows, taRef]);
-
-  useLayoutEffect(() => {
-    adjustHeight();
-  }, [value, maxRows, isManualExpanded, isExpandedLayout, adjustHeight]);
-
-  useEffect(() => {
-    const ta = taRef.current as HTMLTextAreaElement;
-    if (!ta) return;
-
-    const observer = new ResizeObserver(() => {
-      adjustHeight();
-    });
-
-    observer.observe(ta);
-
-    return () => observer.disconnect();
-  }, [adjustHeight, taRef]);
-
+  // Handle code block keyboard events (Escape to cancel, 3 Enters to commit)
   const handleCodeKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -192,7 +195,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setOriginalCodeLanguage("");
       setConsecutiveEnters(0);
       setTimeout(() => {
-        const ta = taRef.current as HTMLTextAreaElement;
+        const ta = textareaRef.current;
         if (ta) {
           ta.focus();
           const end = ta.value.length;
@@ -209,31 +212,38 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         setCodeLanguage("");
         setOriginalCodeLanguage("");
         setConsecutiveEnters(0);
-        setTimeout(() => (taRef.current as HTMLTextAreaElement)?.focus(), 0);
+        setTimeout(() => textareaRef.current?.focus(), 0);
       }
     } else {
       setConsecutiveEnters(0);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    const match = newValue.match(/(^|\n)```([^\n]*)\n$/);
+  useEffect(() => {
+    // No-op for now, retained if other global click handlers are needed
+  }, []);
 
-    if (match && !isCodeBlockActive) {
-      const codeBlockCount = (newValue.match(/```/g) || []).length;
-      if (codeBlockCount % 2 === 1) {
-        setIsCodeBlockActive(true);
-        setOriginalCodeLanguage(match[2]);
-        setCodeLanguage(match[2] || "text");
-        onChange(newValue.replace(/(^|\n)```([^\n]*)\n$/, "$1"));
-      } else {
-        onChange(newValue);
-      }
-    } else {
-      onChange(newValue);
+  const handleSubmit = () => {
+    if (
+      !disabled &&
+      !isLoading &&
+      (value.trim().length > 0 || codeValue.trim().length > 0)
+    ) {
+      onSend();
+      setCodeValue("");
+      setIsCodeBlockActive(false);
     }
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const selectedModelLabel =
+    GEMINI_MODELS.find((m) => m.id === selectedModel)?.label || "Auto";
 
   const isButtonActive =
     !disabled &&
@@ -242,44 +252,47 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const containerContent = (
     <div
-      className={`
-        ${styles.container}
-        ${disabled ? styles.disabled : ""}
-        ${isExpandedLayout ? styles.expandedLayout : styles.standardLayout}
-        ${variant === "transparent" ? styles.transparentVariant : ""} 
-      `}
+      className={`${styles.container} ${disabled ? styles.disabled : ""} ${
+        variant === "transparent" ? styles.transparentVariant : ""
+      }`}
     >
-      {showExpandBtn && isExpandedLayout && !isCodeBlockActive && (
-        <div className={styles.expandButtonWrapper}>
+      {/* Top Row: Expand */}
+      <div className={styles.topRow}>
+        {showExpandButton && (
           <button
-            type="button"
-            onClick={() => setIsManualExpanded(!isManualExpanded)}
             className={styles.expandButton}
-            title={isManualExpanded ? "Collapse" : "Expand"}
+            onClick={() => setIsExpanded(!isExpanded)}
           >
-            {isManualExpanded ? <CollapseIcon /> : <ExpandIcon />}
+            {isExpanded ? <CollapseIcon /> : <ExpandIcon />}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
+      {/* Shadow Textarea for measurement */}
       <textarea
-        ref={taRef as React.RefObject<HTMLTextAreaElement>}
+        ref={shadowRef}
+        className={`${styles.textarea} ${styles.shadow}`}
         value={value}
-        onChange={handleChange}
-        onKeyDown={handleEditorKeyDown as any}
-        onContextMenu={handleContextMenu}
-        placeholder={placeholder}
-        disabled={disabled}
+        readOnly
+        aria-hidden="true"
+        tabIndex={-1}
         rows={1}
-        className={`${styles.textarea} ${
-          variant === "transparent" ? styles.textareaTransparent : ""
-        }`}
-        style={{
-          width: isExpandedLayout ? "calc(100% - 2rem)" : "auto",
-          flex: isExpandedLayout ? "none" : "1",
-        }}
       />
 
+      {/* Prompt Input */}
+      <textarea
+        ref={textareaRef}
+        className={styles.textarea}
+        placeholder={isCodeBlockActive ? "" : placeholder}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        disabled={disabled}
+        rows={1}
+        style={{ display: isCodeBlockActive ? "none" : undefined }}
+      />
+
+      {/* Code Block Editor */}
       {isCodeBlockActive && (
         <CodeBlock
           ref={codeTaRef}
@@ -289,54 +302,78 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onChange={setCodeValue}
           onKeyDown={handleCodeKeyDown}
           placeholder={`Enter ${codeLanguage} code... (3 newlines to exit)`}
+          style={{
+            height: isExpanded ? "360px" : "auto",
+            maxHeight: isExpanded ? "360px" : "240px",
+          }}
         />
       )}
 
-      <div
-        className={`${styles.actions} ${
-          isExpandedLayout ? styles.expanded : ""
-        }`}
-      >
-        <VoiceInput
-          onTranscript={(text, isFinal) => {
-            if (isFinal) {
-              onChange((value + " " + text).trim());
-            } else {
-              // Optional: show partials in a tooltip or ghost text
-              // For now, simple append on final
-            }
-          }}
-          disabled={disabled}
-        />
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isButtonActive) onSend();
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          disabled={!isButtonActive}
-          title={isLoading ? "Thinking..." : "Send"}
-          className={`${styles.sendButton} ${
-            isButtonActive ? styles.active : styles.inactive
-          }`}
-        >
-          <Send size={20} />
-        </button>
+      {/* Bottom Actions */}
+      <div className={styles.actions}>
+        <div className={styles.leftActions}>
+          {/* Attach File */}
+          <button className={styles.iconButton} aria-label="Attach file">
+            <Paperclip size={18} />
+          </button>
+
+          {/* Model Dropdown - Opens Up */}
+          {/* Model Dropdown - Opens Up */}
+          <Dropdown label={selectedModelLabel} direction="up" width={180}>
+            <DropdownSectionTitle>Model</DropdownSectionTitle>
+            {GEMINI_MODELS.map((model) => (
+              <DropdownItem
+                key={model.id}
+                label={model.label}
+                isActive={model.id === selectedModel}
+                onClick={() => setSelectedModel(model.id)}
+              />
+            ))}
+          </Dropdown>
+
+          {/* Keep Progress Button + Info Tooltip */}
+          <div className={styles.keepProgressGroup}>
+            <button
+              className={styles.toggleItem}
+              aria-label="Keep Progress"
+              ref={keepProgressInfoRef}
+              onMouseEnter={() => setShowKeepProgressTooltip(true)}
+              onMouseLeave={() => setShowKeepProgressTooltip(false)}
+            >
+              <Camera size={16} />
+              <span>Keep Progress</span>
+            </button>
+            <Tooltip
+              text="Bring your screen directly to the chat"
+              parentRef={keepProgressInfoRef}
+              show={showKeepProgressTooltip}
+              above
+            />
+          </div>
+        </div>
+
+        <div className={styles.rightActions}>
+          {/* Voice Input */}
+          <VoiceInput
+            onTranscript={(text, isFinal) => {
+              if (isFinal) {
+                onChange((value + " " + text).trim());
+              }
+            }}
+            disabled={disabled}
+          />
+
+          {/* Submit Button */}
+          <button
+            className={`${styles.submitButton} ${isButtonActive ? styles.submitActive : ""}`}
+            onClick={handleSubmit}
+            disabled={!isButtonActive}
+            aria-label="Submit"
+          >
+            <ArrowUp size={18} />
+          </button>
+        </div>
       </div>
-
-      {contextMenu.isOpen && (
-        <TextContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={handleCloseContextMenu}
-          onCopy={handleCopy}
-          onCut={handleCut}
-          onPaste={handlePaste}
-          onSelectAll={handleSelectAll}
-          hasSelection={hasSelection}
-        />
-      )}
     </div>
   );
 
@@ -347,18 +384,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <footer className={styles.footer}>
       <div className={styles.inputWrapper}>{containerContent}</div>
-
-      <div className={styles.disclaimer}>
-        <span>AI responses may include mistakes. </span>
-        <a
-          href={`${google.support}/websearch?p=ai_overviews`}
-          className={styles.link}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn more
-        </a>
-      </div>
     </footer>
   );
 };

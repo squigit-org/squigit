@@ -9,9 +9,11 @@ import React, {
   useRef,
   useCallback,
   useImperativeHandle,
+  useLayoutEffect,
 } from "react";
 import { Terminal } from "lucide-react";
-import { useCodeHighlighter } from "@/hooks";
+import { useCodeHighlighter, useTextContextMenu } from "@/hooks";
+import { TextContextMenu } from "@/shell";
 import styles from "./CodeBlock.shared.module.css";
 
 interface CodeBlockEditableProps {
@@ -20,14 +22,20 @@ interface CodeBlockEditableProps {
   onChange?: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
+  style?: React.CSSProperties;
 }
 
 export const CodeBlockEditable = forwardRef<
   HTMLTextAreaElement,
   CodeBlockEditableProps
->(({ language, value, onChange, onKeyDown, placeholder }, ref) => {
+>(({ language, value, onChange, onKeyDown, placeholder, style }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+  const {
+    data: contextMenuData,
+    handleContextMenu,
+    handleClose: handleCloseContextMenu,
+  } = useTextContextMenu();
 
   // Expose the textarea ref to parent
   useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement);
@@ -47,8 +55,69 @@ export const CodeBlockEditable = forwardRef<
     }
   }, []);
 
+  // Force sync on render updates (e.g. when highlighting loads or content changes)
+  useLayoutEffect(() => {
+    handleScroll();
+  });
+
   // Ensure trailing newline so cursor position matches
   const displayValue = value.endsWith("\n") ? value + " " : value;
+
+  const handleCopy = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    if (textarea.selectionStart !== textarea.selectionEnd) {
+      const selectedText = textarea.value.substring(
+        textarea.selectionStart,
+        textarea.selectionEnd,
+      );
+      navigator.clipboard.writeText(selectedText);
+    }
+  }, []);
+
+  const handleCut = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !onChange) return;
+
+    if (textarea.selectionStart !== textarea.selectionEnd) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = textarea.value.substring(start, end);
+      navigator.clipboard.writeText(selectedText);
+
+      const newValue =
+        textarea.value.substring(0, start) + textarea.value.substring(end);
+      onChange(newValue);
+
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start;
+      }, 0);
+    }
+  }, [onChange, value]);
+
+  const handlePaste = useCallback(async () => {
+    const textarea = textareaRef.current;
+    if (!textarea || !onChange) return;
+
+    try {
+      const text = await navigator.clipboard.readText();
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newValue = value.substring(0, start) + text + value.substring(end);
+      onChange(newValue);
+
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + text.length;
+      }, 0);
+    } catch (err) {
+      console.error("Failed to read clipboard:", err);
+    }
+  }, [onChange, value]);
+
+  const handleSelectAll = useCallback(() => {
+    textareaRef.current?.select();
+  }, []);
 
   return (
     <div
@@ -62,7 +131,12 @@ export const CodeBlockEditable = forwardRef<
           <span className={styles.langName}>{language || "text"}</span>
         </div>
       </div>
-      <div className={styles.editableContainer}>
+      <div className={styles.editableContainer} style={style}>
+        {/* Sizer to drive auto-height since other layers are absolute */}
+        <div className={styles.sizer} aria-hidden="true">
+          {displayValue || placeholder}
+        </div>
+
         {/* Highlighted code layer (behind) */}
         {shouldHighlight && highlightedHtml ? (
           <div
@@ -91,7 +165,25 @@ export const CodeBlockEditable = forwardRef<
           placeholder={placeholder}
           spellCheck={false}
           aria-label="code editor"
+          onContextMenu={handleContextMenu}
         />
+        {contextMenuData.isOpen && (
+          <TextContextMenu
+            x={contextMenuData.x}
+            y={contextMenuData.y}
+            onClose={handleCloseContextMenu}
+            onCopy={handleCopy}
+            onCut={handleCut}
+            onPaste={handlePaste}
+            onSelectAll={handleSelectAll}
+            hasSelection={
+              textareaRef.current
+                ? textareaRef.current.selectionStart !==
+                  textareaRef.current.selectionEnd
+                : false
+            }
+          />
+        )}
       </div>
     </div>
   );

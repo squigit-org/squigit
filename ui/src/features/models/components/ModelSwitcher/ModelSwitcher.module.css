@@ -4,21 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * ModelSwitcher-specific styles.
- * Base dropdown styles imported from shared.
- */
-
-/* Import shared dropdown styles */
 @import "@/primitives/dropdown/Dropdown.shared.module.css";
 
-/* ModelSwitcher container */
 .modelSwitcher {
   position: relative;
   pointer-events: auto;
 }
 
-/* Trigger text styling */
 .trigger {
   font-size: 0.875rem;
   font-weight: 500;
@@ -26,18 +18,15 @@
   font-family: "Inter", sans-serif;
 }
 
-/* Hidden state for parent toggle */
 .hidden {
   display: none;
 }
 
-/* Model list specific max-height */
 .modelList {
   max-height: 200px;
   gap: 2px;
 }
 
-/* OCR Model list with styled scrollbar */
 .ocrModelList {
   display: flex;
   flex-direction: column;
@@ -71,7 +60,6 @@
   border-width: 0px;
 }
 
-/* Model item info layout */
 .modelInfo {
   flex: 1;
   display: flex;
@@ -103,20 +91,17 @@
   cursor: default;
 }
 
-/* Disabled state */
 .disabled {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-/* OCR wrapper for submenu positioning */
 .ocrWrapper {
   position: relative;
   width: 100%;
 }
 
-/* Side dropdown (OCR submenu) */
 .sideDropdown {
   position: absolute;
   top: -8px;

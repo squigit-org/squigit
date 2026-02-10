@@ -9,4 +9,3 @@ export * from "./ModelsSection";
 export * from "./APIKeysSection";
 export * from "./PersonalizationSection";
 export * from "./HelpSection";
-export * from "./DevSection";

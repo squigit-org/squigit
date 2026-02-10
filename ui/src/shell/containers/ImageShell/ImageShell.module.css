@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import "../../../styles/variables.css";
 @import "../../../styles/animations.css";
 
 /* Placeholder stays in flow to prevent layout shifts */
@@ -19,6 +20,9 @@
 
 /* Container participates in flex layout */
 .floatingContainer {
+  background-color: var(--neutral-900);
+  border: 1px solid var(--neutral-800);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   position: relative;
   width: 95%;
   max-width: 41.5rem;
@@ -26,8 +30,6 @@
   margin: 10px auto 1rem auto;
   border-radius: 12px;
   overflow: hidden;
-  background-color: #171717;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -50,15 +52,18 @@
   cursor: pointer;
   z-index: 2;
   position: relative;
-  background-color: #171717;
+  background-color: var(--neutral-900);
 }
 
 .thumbnailWrapper {
   display: flex;
   align-items: center;
+
+  border: 1px solid var(--neutral-800);
+  border-radius: 6px;
   gap: 12px;
   margin-right: 12px;
-  margin-top: 4px;
+  margin-top: 2px;
   cursor: pointer;
   transition: filter 0.2s ease;
   position: relative;

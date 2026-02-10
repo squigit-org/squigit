@@ -61,6 +61,7 @@ interface DropdownProps {
   isOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
   hideChevron?: boolean;
+  direction?: "up" | "down";
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -71,6 +72,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   isOpen: controlledOpen,
   onOpenChange,
   hideChevron = false,
+  direction = "down",
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -119,7 +121,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
       </button>
 
       <div
-        className={`${styles.dropdown} ${isOpen ? styles.dropdownOpen : ""}`}
+        className={`${styles.dropdown} ${direction === "up" ? styles.dropdownUp : ""} ${isOpen ? styles.dropdownOpen : ""}`}
         style={{ minWidth: width }}
       >
         {children}
