@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useHistoryState } from "./useHistoryState";
 import { useClipboard } from "./useClipboard";
+import { useKeyDown } from "./useKeyDown";
 
 interface UseTextEditorProps {
   value: string;
@@ -112,31 +113,21 @@ export function useTextEditor({
     }
   }, [onChange, readText]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLElement>) => {
-      if (e.ctrlKey || e.metaKey) {
-        const key = e.key.toLowerCase();
-        switch (key) {
-          case "z":
-            e.preventDefault();
-            if (e.shiftKey) {
-              redo();
-            } else {
-              undo();
-            }
-            return;
-          case "y":
-            e.preventDefault();
-            redo();
-            return;
-          case "a":
-            e.preventDefault();
-            handleSelectAll();
-            return;
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const handleKeyDown = useKeyDown(
+    {
+      "Mod+z": (e) => {
+        if (e.shiftKey) {
+          // This case is actually handled by Mod+Shift+z usually, but let's keep it safe
+          redo();
+        } else {
+          undo();
         }
-      }
-
-      if (e.key === "Enter") {
+      },
+      "Mod+Shift+z": () => redo(),
+      "Mod+y": () => redo(),
+      "Mod+a": () => handleSelectAll(),
+      Enter: (e) => {
         if (preventNewLine) {
           e.preventDefault();
           if (onSubmit) onSubmit();
@@ -144,9 +135,9 @@ export function useTextEditor({
           e.preventDefault();
           if (value.trim().length > 0) onSubmit();
         }
-      }
+      },
     },
-    [redo, undo, handleSelectAll, onSubmit, preventNewLine, value],
+    { preventDefault: true },
   );
 
   return {

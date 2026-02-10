@@ -13,3 +13,5 @@ export * from "./useTextEditor";
 export * from "./useTextSelection";
 export * from "./useTextContextMenu";
 export * from "./useCodeHighlighter";
+export * from "./usePlatform";
+export * from "./useKeyDown";

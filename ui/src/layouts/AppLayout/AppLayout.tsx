@@ -8,6 +8,7 @@ import React from "react";
 import { Dialog } from "@/primitives";
 import { ShellContextMenu, TitleBar, SidePanel } from "@/shell";
 import { ShellProvider, useShellContext } from "@/shell/context";
+import { usePlatform } from "@/hooks";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
@@ -42,18 +43,13 @@ const AppLayoutContent: React.FC = () => {
     );
   }
 
-  if (shell.isAgreementPending) {
-    const getOSType = () => {
-      const userAgent = window.navigator.userAgent.toLowerCase();
-      if (userAgent.includes("win")) return "windows";
-      if (userAgent.includes("mac")) return "macos";
-      return "linux";
-    };
+  const { os } = usePlatform();
 
+  if (shell.isAgreementPending) {
     return (
       <div className="h-screen w-screen bg-neutral-950 text-neutral-100">
         <Agreement
-          osType={getOSType()}
+          osType={os}
           onNext={() => {
             shell.system.setHasAgreed(true);
             shell.system.updatePreferences({});

@@ -6,4 +6,3 @@
 
 export * from "./types/models.types";
 export * from "./components/ModelSwitcher/ModelSwitcher";
-console.log("Model types exported");

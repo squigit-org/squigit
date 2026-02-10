@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { usePlatform } from "@/hooks";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
@@ -32,28 +33,30 @@ export const Welcome: React.FC<WelcomeProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const { isMac, isWin, modSymbol, shiftSymbol, enterSymbol } = usePlatform();
+
   const platformInfo = React.useMemo(() => {
-    const ua = navigator.userAgent.toLowerCase();
-    if (ua.includes("mac")) {
+    if (isMac) {
       return {
         screenshotKeys: (
           <>
-            <span className={styles.key}>⌘</span>
+            <span className={styles.key}>{modSymbol}</span>
             <span className={styles.keySep}>+</span>
-            <span className={styles.key}>⇧</span>
+            <span className={styles.key}>{shiftSymbol}</span>
             <span className={styles.keySep}>+</span>
             <span className={styles.key}>A</span>
           </>
         ),
         pasteKeys: (
           <>
-            <span className={styles.key}>⌘</span>
+            <span className={styles.key}>{modSymbol}</span>
             <span className={styles.keySep}>+</span>
             <span className={styles.key}>V</span>
           </>
         ),
       };
-    } else if (ua.includes("win")) {
+    } else if (isWin) {
       return {
         screenshotKeys: (
           <>
@@ -92,7 +95,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
         ),
       };
     }
-  }, []);
+  }, [isMac, isWin, modSymbol, shiftSymbol]);
 
   // Handle Ctrl+V paste - Rust handles decoding and stores in CAS
   useEffect(() => {

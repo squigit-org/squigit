@@ -22,6 +22,7 @@ import { Dialog } from "@/primitives";
 import { PanelContextMenu } from "@/shell/menus";
 import { getDeleteMultipleChatsDialog } from "@/lib/helpers/dialogs";
 import { useShellContext } from "@/shell/context";
+import { useKeyDown } from "@/hooks";
 
 // --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
@@ -110,13 +111,13 @@ const ChatItem: React.FC<ChatItemProps> = ({
     setIsRenaming(false);
   };
 
-  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleRenameSubmit();
-    else if (e.key === "Escape") {
+  const handleRenameKeyDown = useKeyDown({
+    Enter: handleRenameSubmit,
+    Escape: () => {
       setRenameValue(chat.title);
       setIsRenaming(false);
-    }
-  };
+    },
+  });
 
   return (
     <>

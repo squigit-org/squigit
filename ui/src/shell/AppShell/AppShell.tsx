@@ -150,6 +150,7 @@ const AppShellComponent: React.FC = () => {
           downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
           currentOcrModel={shell.system.sessionOcrLanguage}
           onOcrModelChange={shell.system.setSessionOcrLanguage}
+          isExpanded={isImageExpanded}
         />
       </div>
 

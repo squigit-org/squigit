@@ -6,6 +6,7 @@
 
 import React from "react";
 import { ContextMenu, ContextMenuItem } from "@/primitives";
+import { usePlatform } from "@/hooks";
 
 interface ShellContextMenuProps {
   x: number;
@@ -26,8 +27,8 @@ export const ShellContextMenu: React.FC<ShellContextMenuProps> = ({
 }) => {
   const hasText = hasSelection || selectedText.length > 0;
 
-  const isMac = navigator.userAgent.toLowerCase().includes("mac");
-  const mod = isMac ? "⌘" : "Ctrl+";
+  const { isMac, modSymbol } = usePlatform();
+  const mod = isMac ? modSymbol : `${modSymbol}+`;
 
   return (
     <ContextMenu x={x} y={y} onClose={onClose} width={200}>

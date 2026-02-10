@@ -12,7 +12,7 @@ import React, {
   useLayoutEffect,
 } from "react";
 import { Terminal } from "lucide-react";
-import { useCodeHighlighter, useTextContextMenu } from "@/hooks";
+import { useCodeHighlighter, useTextContextMenu, useKeyDown } from "@/hooks";
 import { TextContextMenu } from "@/shell";
 import styles from "./CodeBlock.shared.module.css";
 
@@ -20,7 +20,7 @@ interface CodeBlockEditableProps {
   language: string;
   value: string;
   onChange?: (value: string) => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
   placeholder?: string;
   style?: React.CSSProperties;
 }
@@ -119,6 +119,32 @@ export const CodeBlockEditable = forwardRef<
     textareaRef.current?.select();
   }, []);
 
+  const handleInternalKeyDown = useKeyDown(
+    {
+      Tab: (e) => {
+        e.preventDefault();
+        const textarea = textareaRef.current;
+        if (!textarea || !onChange) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        // Insert 2 spaces
+        const spaces = "  ";
+
+        const newValue =
+          value.substring(0, start) + spaces + value.substring(end);
+        onChange(newValue);
+
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd =
+            start + spaces.length;
+        }, 0);
+      },
+    },
+    { preventDefault: false },
+  );
+
   return (
     <div
       className={styles.wrapper}
@@ -160,7 +186,10 @@ export const CodeBlockEditable = forwardRef<
           className={styles.textareaOverlay}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          onKeyDown={onKeyDown}
+          onKeyDown={(e) => {
+            handleInternalKeyDown(e);
+            onKeyDown?.(e);
+          }}
           onScroll={handleScroll}
           placeholder={placeholder}
           spellCheck={false}

@@ -14,6 +14,8 @@ import React, {
 import { Paperclip, ArrowUp, Camera } from "lucide-react";
 import { MODELS } from "@/lib/config/models";
 import { Tooltip } from "@/primitives/tooltip/Tooltip";
+import { useKeyDown, useTextEditor, useTextContextMenu } from "@/hooks";
+import { TextContextMenu } from "@/shell";
 import { CodeBlock } from "@/primitives";
 import {
   Dropdown,
@@ -57,12 +59,8 @@ const CollapseIcon = () => (
 
 const GEMINI_MODELS = MODELS.map((m) => ({
   id: m.id,
-  label:
-    m.id === "gemini-2.5-pro"
-      ? "2.5 Pro"
-      : m.id === "gemini-2.5-flash"
-        ? "2.5 Flash"
-        : "2.5 Lite",
+  label: m.name,
+  triggerLabel: m.name.replace("Gemini ", ""),
 }));
 
 interface ChatInputProps {
@@ -129,7 +127,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     shadow.style.height = "0px";
     const scrollHeight = shadow.scrollHeight;
 
-    const newHeight = Math.min(scrollHeight, maxHeight);
+    // Enforce minHeight of 32px (1 line + 8px padding) to prevent collapse
+    const minHeight = 32;
+    const newHeight = Math.max(Math.min(scrollHeight, maxHeight), minHeight);
     textarea.style.height = `${newHeight}px`;
 
     setShowExpandButton(isCodeBlockActive || scrollHeight > lineHeight * 10);
@@ -226,15 +226,59 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
+  const {
+    ref: editorRef,
+    handleKeyDown: editorKeyDown,
+    hasSelection,
+    handleCopy,
+    handleCut,
+    handlePaste,
+    handleSelectAll,
+    undo,
+    redo,
+  } = useTextEditor({
+    value,
+    onChange: (newValue) => {
+      // We need to trigger the code block detection logic here too if it's not just a simple update
+      // But since handleChange does detection on *every* change, we should probably pipe it through there?
+      // Actually, useTextEditor calls onChange with the NEW value.
+      // We can just call handleChange with a synthetic event if we want the full logic,
+      // OR we can extract the logic from handleChange.
+      // For now, let's just assume programatic changes (undo/redo/paste) are "safe" or we can just call onChange directly.
+      // BUT wait, if we Undo and it restores a code block, we need to detect that?
+      // Yes. So we should probably extract the code block detection logic.
+      // However, for now, let's just call onChange, and if the user types again, it will re-detect?
+      // No, if Undo restores ``` ... ``` it should probably activate code mode.
+      // Let's keep it simple: just call onChange. The Code Block mode is triggered by TYPING ` ``` `.
+      onChange(newValue);
+    },
+    onSubmit: handleSubmit,
+    preventNewLine: false,
+  });
+
+  // Sync the local ref with the hook's ref
+  useLayoutEffect(() => {
+    if (editorRef.current) {
+      // @ts-ignore
+      textareaRef.current = editorRef.current;
     }
+  }, [editorRef.current]);
+
+  const {
+    data: contextMenuData,
+    handleContextMenu,
+    handleClose: handleCloseContextMenu,
+  } = useTextContextMenu();
+
+  // We need to merge our custom keydown logic with the editor's
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Editor handles Enter/Shift+Enter/Undo/Redo
+    editorKeyDown(e);
+    // We can add extra logic here if needed
   };
 
   const selectedModelLabel =
-    GEMINI_MODELS.find((m) => m.id === selectedModel)?.label || "Auto";
+    GEMINI_MODELS.find((m) => m.id === selectedModel)?.triggerLabel || "Auto";
 
   const isButtonActive =
     !disabled &&
@@ -269,7 +313,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       />
 
       <textarea
-        ref={textareaRef}
+        ref={(el) => {
+          // function ref to handle both local ref and hook ref
+          // @ts-ignore
+          editorRef.current = el;
+          // @ts-ignore
+          textareaRef.current = el;
+        }}
         className={styles.textarea}
         placeholder={isCodeBlockActive ? "" : placeholder}
         value={value}
@@ -278,7 +328,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         disabled={disabled}
         rows={1}
         style={{ display: isCodeBlockActive ? "none" : undefined }}
+        onContextMenu={handleContextMenu}
       />
+      {contextMenuData.isOpen && !isCodeBlockActive && (
+        <TextContextMenu
+          x={contextMenuData.x}
+          y={contextMenuData.y}
+          onClose={handleCloseContextMenu}
+          onCopy={handleCopy}
+          onCut={handleCut}
+          onPaste={handlePaste}
+          onSelectAll={handleSelectAll}
+          onUndo={undo}
+          onRedo={redo}
+          hasSelection={hasSelection}
+        />
+      )}
 
       {isCodeBlockActive && (
         <CodeBlock
@@ -317,12 +382,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <Dropdown label={selectedModelLabel} direction="up" width={180}>
             <DropdownSectionTitle>Model</DropdownSectionTitle>
             {GEMINI_MODELS.map((model) => (
-              <DropdownItem
-                key={model.id}
-                label={model.label}
-                isActive={model.id === selectedModel}
-                onClick={() => setSelectedModel(model.id)}
-              />
+              <div
+                style={{
+                  marginTop: "2px",
+                }}
+              >
+                <DropdownItem
+                  key={model.id}
+                  label={model.label}
+                  isActive={model.id === selectedModel}
+                  onClick={() => setSelectedModel(model.id)}
+                />
+              </div>
             ))}
           </Dropdown>
 

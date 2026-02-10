@@ -13,18 +13,11 @@ import { AccountSwitcher, SettingsPanel, AuthButton } from "@/features";
 import { SettingsOverlay } from "@/shell/overlays";
 import { useShellContext } from "@/shell/context";
 
-type Platform = "macos" | "linux" | "windows";
-
-const detectPlatform = (): Platform => {
-  const userAgent = window.navigator.userAgent.toLowerCase();
-  if (userAgent.includes("mac os")) return "macos";
-  if (userAgent.includes("windows")) return "windows";
-  return "linux";
-};
+import { usePlatform } from "@/hooks";
 
 export const TitleBar: React.FC = () => {
   const shell = useShellContext();
-  const [platform] = useState<Platform>(() => detectPlatform());
+  const { os: platform } = usePlatform();
 
   const isUnix = platform === "macos" || platform === "linux";
   const hasImageLoaded = !!shell.system.startupImage;

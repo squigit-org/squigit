@@ -115,7 +115,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         {!hideChevron && (
           <ChevronDown
             size={18}
-            className={`${styles.chevron} ${isOpen ? styles.chevronRotate : ""}`}
+            className={`${direction === "up" ? styles.chevronRotate : ""} ${styles.chevron} ${isOpen ? (direction === "up" ? styles.chevronReturn : styles.chevronRotate) : ""}`}
           />
         )}
       </button>
