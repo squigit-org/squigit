@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "../../../styles/variables.css";
+@import "@/styles/variables.css";
 
 :root {
   --solid-17: #171717;

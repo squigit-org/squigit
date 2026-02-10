@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "../../../../styles/variables.css";
+@import "@/styles/variables.css";
 
 .container {
   display: flex;
@@ -63,7 +63,7 @@
 
 .textarea {
   width: 100%;
-  min-height: 24px;
+  min-height: 32px;
   padding: 4px 0;
   font-size: 16px;
   color: var(--neutral-200);

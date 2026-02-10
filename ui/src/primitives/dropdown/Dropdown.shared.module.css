@@ -4,20 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * Shared dropdown styles for reuse across components.
- * Import with: @import "@/primitives/dropdown/Dropdown.shared.module.css";
- */
-
 @import "@/styles/variables.css";
 
-/* Container base */
 .container {
   position: relative;
   pointer-events: auto;
 }
 
-/* Trigger button base */
 .trigger {
   display: flex;
   align-items: center;
@@ -38,7 +31,6 @@
   background-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Chevron icon */
 .chevron {
   color: var(--text-muted, #71717a);
   transition: transform 0.2s ease;
@@ -49,7 +41,11 @@
   transform: rotate(180deg);
 }
 
-/* Dropdown panel */
+.chevronReturn,
+.return {
+  transform: rotate(0deg);
+}
+
 .dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -75,7 +71,6 @@
     visibility 0.15s ease,
     transform 0.15s ease;
 
-  /* Fix for child animation flickering */
   isolation: isolate;
   backface-visibility: hidden;
   perspective: 1000px;
@@ -95,7 +90,6 @@
   transform: translateY(0);
 }
 
-/* Section title */
 .sectionTitle {
   padding: 8px 10px 6px;
   font-size: 0.65rem;
@@ -105,14 +99,12 @@
   color: var(--text-muted, #71717a);
 }
 
-/* Divider */
 .divider {
   height: 1px;
   background-color: rgba(63, 63, 70, 0.5);
   margin: 6px 0;
 }
 
-/* List container */
 .list {
   display: flex;
   flex-direction: column;
@@ -130,7 +122,6 @@
   border-radius: 4px;
 }
 
-/* Item base */
 .item {
   display: flex;
   align-items: center;
@@ -157,21 +148,18 @@
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Check icon */
 .checkIcon {
   color: #ffffff;
   margin-left: auto;
   flex-shrink: 0;
 }
 
-/* Actions container */
 .actions {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-/* Action button */
 .actionButton {
   display: flex;
   align-items: center;
@@ -193,7 +181,6 @@
   color: #ededed;
 }
 
-/* Spinner animation */
 .spin {
   animation: spin 1s linear infinite;
 }

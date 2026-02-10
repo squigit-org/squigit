@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "../../styles/animations.css";
+@import "@/styles/animations.css";
 
 .container {
   display: flex;
