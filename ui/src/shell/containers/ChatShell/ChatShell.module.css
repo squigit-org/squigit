@@ -8,6 +8,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-y: overlay;
   padding-top: 80px;
   margin-left: 0.75rem;
   margin-right: 0.5rem;

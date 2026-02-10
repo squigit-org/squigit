@@ -118,16 +118,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const shadow = shadowRef.current;
     if (!textarea || !shadow) return;
 
+    shadow.value = value;
+
     const lineHeight = 24;
     const maxLines = isExpanded ? 15 : 10;
     const maxHeight = lineHeight * maxLines;
 
-    shadow.style.width = `${textarea.clientWidth}px`;
+    const width =
+      textarea.getBoundingClientRect().width || textarea.clientWidth;
+    shadow.style.width = `${width}px`;
 
     shadow.style.height = "0px";
     const scrollHeight = shadow.scrollHeight;
 
-    // Enforce minHeight of 32px (1 line + 8px padding) to prevent collapse
     const minHeight = 32;
     const newHeight = Math.max(Math.min(scrollHeight, maxHeight), minHeight);
     textarea.style.height = `${newHeight}px`;
@@ -139,10 +142,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         textarea.scrollTop = textarea.scrollHeight;
       }
     }
-  }, [isExpanded, isCodeBlockActive]);
+  }, [value, isExpanded, isCodeBlockActive]);
 
   useLayoutEffect(() => {
-    resizeTextarea();
+    const raf = requestAnimationFrame(() => resizeTextarea());
+    return () => cancelAnimationFrame(raf);
   }, [value, isExpanded, resizeTextarea]);
 
   useEffect(() => {
@@ -239,24 +243,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   } = useTextEditor({
     value,
     onChange: (newValue) => {
-      // We need to trigger the code block detection logic here too if it's not just a simple update
-      // But since handleChange does detection on *every* change, we should probably pipe it through there?
-      // Actually, useTextEditor calls onChange with the NEW value.
-      // We can just call handleChange with a synthetic event if we want the full logic,
-      // OR we can extract the logic from handleChange.
-      // For now, let's just assume programatic changes (undo/redo/paste) are "safe" or we can just call onChange directly.
-      // BUT wait, if we Undo and it restores a code block, we need to detect that?
-      // Yes. So we should probably extract the code block detection logic.
-      // However, for now, let's just call onChange, and if the user types again, it will re-detect?
-      // No, if Undo restores ``` ... ``` it should probably activate code mode.
-      // Let's keep it simple: just call onChange. The Code Block mode is triggered by TYPING ` ``` `.
       onChange(newValue);
     },
     onSubmit: handleSubmit,
     preventNewLine: false,
   });
 
-  // Sync the local ref with the hook's ref
   useLayoutEffect(() => {
     if (editorRef.current) {
       // @ts-ignore
@@ -270,11 +262,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     handleClose: handleCloseContextMenu,
   } = useTextContextMenu();
 
-  // We need to merge our custom keydown logic with the editor's
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Editor handles Enter/Shift+Enter/Undo/Redo
     editorKeyDown(e);
-    // We can add extra logic here if needed
   };
 
   const selectedModelLabel =
@@ -302,34 +291,37 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         )}
       </div>
 
-      <textarea
-        ref={shadowRef}
-        className={`${styles.textarea} ${styles.shadow}`}
-        value={value}
-        readOnly
-        aria-hidden="true"
-        tabIndex={-1}
-        rows={1}
-      />
+      <div className={styles.inputArea}>
+        {!isCodeBlockActive && value.length === 0 && (
+          <div className={styles.customPlaceholder}>{placeholder}</div>
+        )}
+        <textarea
+          ref={shadowRef}
+          className={`${styles.textarea} ${styles.shadow}`}
+          value={value}
+          readOnly
+          aria-hidden="true"
+          tabIndex={-1}
+          rows={1}
+        />
 
-      <textarea
-        ref={(el) => {
-          // function ref to handle both local ref and hook ref
-          // @ts-ignore
-          editorRef.current = el;
-          // @ts-ignore
-          textareaRef.current = el;
-        }}
-        className={styles.textarea}
-        placeholder={isCodeBlockActive ? "" : placeholder}
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-        rows={1}
-        style={{ display: isCodeBlockActive ? "none" : undefined }}
-        onContextMenu={handleContextMenu}
-      />
+        <textarea
+          ref={(el) => {
+            // @ts-ignore
+            editorRef.current = el;
+            // @ts-ignore
+            textareaRef.current = el;
+          }}
+          className={styles.textarea}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+          rows={1}
+          style={{ display: isCodeBlockActive ? "none" : undefined }}
+          onContextMenu={handleContextMenu}
+        />
+      </div>
       {contextMenuData.isOpen && !isCodeBlockActive && (
         <TextContextMenu
           x={contextMenuData.x}
