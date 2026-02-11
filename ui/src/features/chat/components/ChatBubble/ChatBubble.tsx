@@ -9,7 +9,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, RotateCcw, Pencil } from "lucide-react";
 import { CodeBlock } from "@/primitives";
 import { TextShimmer } from "@/primitives/text-shimmer";
 import { Message } from "@/features/chat";
@@ -22,6 +22,7 @@ import {
 } from "@/lib/markdown";
 import styles from "./ChatBubble.module.css";
 import "katex/dist/katex.min.css";
+import { MessageEditor } from "./MessageEditor";
 
 interface ChatBubbleProps {
   message: Message;
@@ -30,6 +31,9 @@ interface ChatBubbleProps {
   onTypingChange?: (isTyping: boolean) => void;
   stopRequested?: boolean;
   onStopGeneration?: (truncatedText: string) => void;
+  onRetry?: () => void;
+  isRetrying?: boolean;
+  onEdit?: (newText: string) => void;
 }
 
 const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
@@ -39,9 +43,27 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   onTypingChange,
   stopRequested,
   onStopGeneration,
+  onRetry,
+  isRetrying,
+  onEdit,
 }) => {
   const isUser = message.role === "user";
   const [isCopied, setIsCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editorValue, setEditorValue] = useState(message.text);
+  const [bubbleWidth, setBubbleWidth] = useState<number | undefined>(undefined);
+  const [bubbleHeight, setBubbleHeight] = useState<number | undefined>(
+    undefined,
+  );
+
+  const bubbleRef = useRef<HTMLDivElement>(null);
+
+  const handleEditSubmit = () => {
+    if (editorValue.trim() !== message.text) {
+      onEdit?.(editorValue);
+    }
+    setIsEditing(false);
+  };
 
   const [revealedCount, setRevealedCount] = useState(0);
   const [isStreamingComplete, setIsStreamingComplete] = useState(!isStreamed);
@@ -52,6 +74,21 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     });
+  };
+
+  const handleEditStart = () => {
+    if (bubbleRef.current) {
+      const rect = bubbleRef.current.getBoundingClientRect();
+      setBubbleWidth(Math.max(300, rect.width));
+      setBubbleHeight(rect.height);
+    }
+    setEditorValue(message.text);
+    setIsEditing(true);
+  };
+
+  const handleEditCancel = () => {
+    setIsEditing(false);
+    setEditorValue(message.text);
   };
 
   const { segments, tokens } = useMemo(() => {
@@ -113,7 +150,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     onStreamComplete,
   ]);
 
-  // Report typing state changes
   const isTyping = isStreamed && !isStreamingComplete;
   const prevIsTypingRef = useRef(false);
 
@@ -124,20 +160,53 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     }
   }, [isTyping, onTypingChange]);
 
-  // Handle stop requested
+  useEffect(() => {
+    if (isEditing && bubbleRef.current) {
+      let parent = bubbleRef.current.parentElement;
+      while (parent) {
+        const style = window.getComputedStyle(parent);
+        if (
+          style.overflowY === "auto" ||
+          style.overflowY === "scroll" ||
+          parent.getAttribute("data-scroll-container") === "true" // Add this attribute to ChatShell if needed, but style check usually works
+        ) {
+          // Found the scroll container.
+          // Calculate relative position manually to avoid unwanted ancestor scrolling.
+          const parentRect = parent.getBoundingClientRect();
+          const bubbleRect = bubbleRef.current.getBoundingClientRect();
+
+          // Current scroll position
+          const currentScrollTop = parent.scrollTop;
+
+          // Distance from top of visible area of parent
+          const relativeTop = bubbleRect.top - parentRect.top;
+
+          // We want relativeTop to be 90px (the gap)
+          // So we need to adjustments:
+          // newScrollTop = currentScrollTop + (relativeTop - 90)
+
+          parent.scrollTo({
+            top: currentScrollTop + relativeTop - 90,
+            behavior: "instant",
+          });
+          break;
+        }
+        parent = parent.parentElement;
+      }
+    }
+  }, [isEditing]);
+
   const stoppedRef = useRef(false);
 
   useEffect(() => {
     if (!stopRequested || !isTyping || stoppedRef.current) return;
     stoppedRef.current = true;
 
-    // Stop the animation timer
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
 
-    // Compute truncated text from revealed segments
     const revealed = tokens.slice(0, revealedCount);
     const grouped = new Map<number, string[]>();
     revealed.forEach((token) => {
@@ -147,7 +216,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       grouped.get(token.segmentIndex)!.push(token.text);
     });
 
-    // Build truncated text, skip code blocks that are still in shimmer
     let truncated = "";
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
@@ -172,8 +240,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       }
     }
 
-    // Call parent with truncated text — parent will update message.text
-    // which triggers a re-render with new (shorter) tokens
     onStopGeneration?.(truncated.trimEnd());
   }, [stopRequested]);
 
@@ -276,13 +342,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
       case "link":
         return (
-          <a
-            key={index}
-            href={segment.meta?.href}
-            className={styles.link}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a key={index} href={segment.meta?.href}>
             {content}
           </a>
         );
@@ -329,90 +389,129 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   );
 
   return (
-    <div
-      className={`${styles.wrapper} ${
-        isUser ? styles.userAlign : styles.botAlign
-      }`}
-    >
+    <>
       <div
-        className={`${styles.container} ${
-          isUser ? styles.userContainer : styles.botContainer
+        className={`${styles.wrapper} ${
+          isUser ? styles.userAlign : styles.botAlign
         }`}
       >
         <div
-          className={`${styles.contentColumn} ${
-            isUser ? styles.userContent : styles.botContent
+          className={`${styles.container} ${
+            isUser ? styles.userContainer : styles.botContainer
           }`}
         >
           <div
-            dir="auto"
-            data-component="chat-bubble"
-            className={`${styles.bubble} ${
-              isUser ? styles.userBubble : styles.botBubble
+            className={`${styles.contentColumn} ${
+              isUser ? styles.userContent : styles.botContent
             }`}
           >
-            {!isUser ? (
-              <div className="whitespace-pre-wrap">
-                {segments.map((segment, index) =>
-                  renderStreamSegment(segment, index),
-                )}
-                {!isStreamingComplete && isStreamed && (
-                  <span className={styles.cursor}>▋</span>
-                )}
-              </div>
-            ) : (
-              <ReactMarkdown
-                remarkPlugins={[
-                  remarkGfm,
-                  remarkMath,
-                  remarkDisableIndentedCode,
-                ]}
-                rehypePlugins={[rehypeKatex]}
-                components={markdownComponents}
-              >
-                {preprocessMarkdown(message.text, { doubleNewlines: isUser })}
-              </ReactMarkdown>
-            )}
-          </div>
-
-          {message.image && (
-            <div className={styles.imageWrapper}>
-              <img
-                src={
-                  message.image.startsWith("data:")
-                    ? message.image
-                    : `data:image/jpeg;base64,${message.image}`
-                }
-                alt="Analyzed content"
-                className={styles.image}
-              />
-              <div className={styles.imageCaption}>Analyzed image</div>
+            <div
+              dir="auto"
+              data-component="chat-bubble"
+              className={`${styles.bubble} ${
+                isUser ? styles.userBubble : styles.botBubble
+              } ${isEditing ? styles.editing : ""}`}
+              ref={bubbleRef}
+              style={
+                isEditing && bubbleWidth
+                  ? {
+                      width: `${bubbleWidth}px`,
+                      maxWidth: "none",
+                      minHeight: bubbleHeight ? `${bubbleHeight}px` : undefined,
+                    }
+                  : undefined
+              }
+            >
+              {isEditing ? (
+                <MessageEditor
+                  value={editorValue}
+                  onChange={setEditorValue}
+                  onConfirm={handleEditSubmit}
+                  onCancel={handleEditCancel}
+                  width={bubbleWidth}
+                />
+              ) : isRetrying ? (
+                <TextShimmer text="Regenerating response..." />
+              ) : !isUser ? (
+                <div className="whitespace-pre-wrap">
+                  {segments.map((segment, index) =>
+                    renderStreamSegment(segment, index),
+                  )}
+                  {!isStreamingComplete && isStreamed && (
+                    <span className={styles.cursor}>▋</span>
+                  )}
+                </div>
+              ) : (
+                <ReactMarkdown
+                  remarkPlugins={[
+                    remarkGfm,
+                    remarkMath,
+                    remarkDisableIndentedCode,
+                  ]}
+                  rehypePlugins={[rehypeKatex]}
+                  components={markdownComponents}
+                >
+                  {preprocessMarkdown(message.text, { doubleNewlines: isUser })}
+                </ReactMarkdown>
+              )}
             </div>
-          )}
 
-          <div
-            className={`${styles.footer} ${
-              isUser ? styles.userFooter : styles.botFooter
-            }`}
-          >
-            {isUser && (
-              <span className={styles.timestamp}>
-                {new Date(message.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
+            {message.image && (
+              <div className={styles.imageWrapper}>
+                <img
+                  src={
+                    message.image.startsWith("data:")
+                      ? message.image
+                      : `data:image/jpeg;base64,${message.image}`
+                  }
+                  alt="Analyzed content"
+                  className={styles.image}
+                />
+                <div className={styles.imageCaption}>Analyzed image</div>
+              </div>
             )}
 
-            {!isStreamingComplete && isStreamed ? null : (
-              <button onClick={handleCopy} title="Copy" aria-label="Copy">
-                {isCopied ? <Check size={14} /> : <Copy size={14} />}
-              </button>
-            )}
+            <div
+              className={`${styles.footer} ${
+                isUser ? styles.userFooter : styles.botFooter
+              }`}
+            >
+              {isUser && !isEditing && (
+                <span className={styles.timestamp}>
+                  {new Date(message.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
+
+              {!isStreamingComplete && isStreamed ? null : isRetrying ||
+                isEditing ? null : (
+                <>
+                  {!isUser && onRetry && (
+                    <button onClick={onRetry} title="Retry" aria-label="Retry">
+                      <RotateCcw size={14} />
+                    </button>
+                  )}
+                  <button onClick={handleCopy} title="Copy" aria-label="Copy">
+                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+                  {isUser && onEdit && (
+                    <button
+                      onClick={handleEditStart}
+                      title="Edit"
+                      aria-label="Edit"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -423,7 +522,10 @@ export const ChatBubble = React.memo(
       prevProps.message.id === nextProps.message.id &&
       prevProps.message.text === nextProps.message.text &&
       prevProps.isStreamed === nextProps.isStreamed &&
-      prevProps.stopRequested === nextProps.stopRequested
+      prevProps.stopRequested === nextProps.stopRequested &&
+      prevProps.onRetry === nextProps.onRetry &&
+      prevProps.isRetrying === nextProps.isRetrying &&
+      prevProps.onEdit === nextProps.onEdit
     );
   },
 );

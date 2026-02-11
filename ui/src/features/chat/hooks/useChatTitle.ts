@@ -43,7 +43,6 @@ export const useChatTitle = ({
       let imageBase64: string;
       let imageMimeType = startupImage.mimeType;
 
-      // If this is a file path (asset URL), fetch the actual image data
       if (startupImage.isFilePath) {
         try {
           const response = await fetch(startupImage.base64);
@@ -69,7 +68,6 @@ export const useChatTitle = ({
         imageBase64 = cleanBase64(startupImage.base64);
       }
 
-      // Call backend title generation command
       const title = await invoke<string>("generate_chat_title", {
         apiKey,
         model: TITLE_MODEL,
@@ -80,7 +78,6 @@ export const useChatTitle = ({
       setSessionChatTitle(title || "New Chat");
     } catch (error) {
       console.error("Failed to generate chat title:", error);
-      // Don't set state to "New Chat" on error, so we can retry if API key changes
     } finally {
       setIsGenerating(false);
     }
@@ -101,7 +98,6 @@ export const useChatTitle = ({
       try {
         const cleanedBase64 = cleanBase64(base64Data);
 
-        // Call backend title generation command
         const title = await invoke<string>("generate_chat_title", {
           apiKey,
           model: TITLE_MODEL,

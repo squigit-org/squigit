@@ -124,7 +124,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         onClick={() => handleOpenChange(!isOpen)}
       >
         {isUp && chevron}
-        {<span>{label}</span>}
+        {<span className={styles.label}>{label}</span>}
         {!isUp && chevron}
       </button>
       <div

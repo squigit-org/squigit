@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Message } from "@/features/chat";
 import { ModelType } from "@/lib/config";
 import {
@@ -12,6 +13,8 @@ import {
   startNewChatSync,
   sendMessage,
   restoreSession as apiRestoreSession,
+  retryFromMessage,
+  editUserMessage,
 } from "@/lib/api/gemini/client";
 
 export const useChat = ({
@@ -50,6 +53,9 @@ export const useChat = ({
   const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [retryingMessageId, setRetryingMessageId] = useState<string | null>(
+    null,
+  );
   const [firstResponseId, setFirstResponseId] = useState<string | null>(null);
   const [lastSentMessage, setLastSentMessage] = useState<Message | null>(null);
   const clearError = () => setError(null);
@@ -478,7 +484,7 @@ export const useChat = ({
       streamingText: string;
       firstResponseId: string | null;
     },
-    image?: { base64: string; mimeType: string },
+    image?: { base64: string; mimeType: string; isFilePath?: boolean },
   ) => {
     setMessages(state.messages);
     setStreamingText(state.streamingText);
@@ -496,11 +502,33 @@ export const useChat = ({
 
         const firstUserMsg = state.messages.find((m) => m.role === "user");
 
+        let imageBase64 = null;
+        let imageMimeType = null;
+
+        if (image) {
+          if (image.isFilePath) {
+            try {
+              const raw = (await invoke("read_file_base64", {
+                path: image.base64,
+              })) as string;
+              imageBase64 = raw;
+              imageMimeType = image.mimeType;
+            } catch (e) {
+              console.error("Failed to read image file for restore:", e);
+            }
+          } else {
+            imageBase64 = image.base64;
+            imageMimeType = image.mimeType;
+          }
+        }
+
         apiRestoreSession(
           currentModel,
           firstMsg.text,
           firstUserMsg?.text || null,
           savedHistory,
+          imageBase64,
+          imageMimeType,
         );
       } catch (e) {
         console.error("Failed to restore Gemini session:", e);
@@ -558,6 +586,209 @@ export const useChat = ({
     setIsAiTyping(false);
   };
 
+  const handleRetryMessage = async (messageId: string, modelId?: string) => {
+    const msgIndex = messages.findIndex((m) => m.id === messageId);
+    if (msgIndex === -1) return;
+
+    const truncatedMessages = messages.slice(0, msgIndex);
+    const retryModelId = modelId || currentModel;
+
+    setRetryingMessageId(messageId);
+    setError(null);
+
+    let hasStartedStreaming = false;
+
+    const newResponseId = Date.now().toString();
+
+    let fallbackImage: { base64: string; mimeType: string } | undefined;
+    if (startupImage) {
+      try {
+        let base64Data = startupImage.base64;
+        if (startupImage.isFilePath) {
+          const res = await fetch(startupImage.base64);
+          const blob = await res.blob();
+          base64Data = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+        fallbackImage = {
+          base64: base64Data,
+          mimeType: startupImage.mimeType,
+        };
+      } catch (e) {
+        console.error("Failed to load fallback image for retry:", e);
+      }
+    }
+
+    try {
+      const responseText = await retryFromMessage(
+        msgIndex,
+        messages,
+        retryModelId,
+        (token) => {
+          if (!hasStartedStreaming) {
+            hasStartedStreaming = true;
+
+            setRetryingMessageId(null);
+            setMessages(truncatedMessages);
+            setIsStreaming(true);
+            setIsAiTyping(true);
+            setFirstResponseId(newResponseId);
+            setStreamingText(token);
+          } else {
+            setStreamingText((prev) => prev + token);
+          }
+        },
+        fallbackImage,
+      );
+
+      const botMsg: Message = {
+        id: newResponseId,
+        role: "model",
+        text: responseText,
+        timestamp: Date.now(),
+      };
+
+      if (!hasStartedStreaming) {
+        setMessages(truncatedMessages);
+        setRetryingMessageId(null);
+      }
+
+      const newMessages = [...truncatedMessages, botMsg];
+      setMessages(newMessages);
+      setIsAiTyping(false);
+      setStreamingText("");
+      setFirstResponseId(null);
+      setRetryingMessageId(null);
+
+      onOverwriteMessages?.(newMessages);
+    } catch (apiError: any) {
+      console.error("Retry failed:", apiError);
+      setError("Failed to regenerate response. " + (apiError.message || ""));
+
+      setRetryingMessageId(null);
+    } finally {
+      setIsLoading(false);
+      setIsStreaming(false);
+      setRetryingMessageId(null);
+    }
+  };
+
+  const handleEditMessage = async (
+    messageId: string,
+    newText: string,
+    modelId?: string,
+  ) => {
+    const msgIndex = messages.findIndex((m) => m.id === messageId);
+    if (msgIndex === -1) return;
+
+    const truncatedMessages = messages.slice(0, msgIndex);
+    const retryModelId = modelId || currentModel;
+
+    const optimisticMessages = [...messages];
+    optimisticMessages[msgIndex] = {
+      ...optimisticMessages[msgIndex],
+      text: newText,
+    };
+    setMessages(optimisticMessages);
+
+    const nextMsg = messages[msgIndex + 1];
+    if (nextMsg && nextMsg.role === "model") {
+      setRetryingMessageId(nextMsg.id);
+    } else {
+      setIsLoading(true);
+    }
+
+    setError(null);
+    let hasStartedStreaming = false;
+    const newResponseId = Date.now().toString();
+
+    let fallbackImage: { base64: string; mimeType: string } | undefined;
+    if (startupImage) {
+      try {
+        let base64Data = startupImage.base64;
+        if (startupImage.isFilePath) {
+          const res = await fetch(startupImage.base64);
+          const blob = await res.blob();
+          base64Data = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+        fallbackImage = {
+          base64: base64Data,
+          mimeType: startupImage.mimeType,
+        };
+      } catch (e) {
+        console.error("Failed to load fallback image for edit:", e);
+      }
+    }
+
+    try {
+      const userMsg: Message = {
+        id: messageId,
+        role: "user",
+        text: newText,
+        timestamp: Date.now(),
+      };
+
+      const responseText = await editUserMessage(
+        msgIndex,
+        newText,
+        messages,
+        retryModelId,
+        (token) => {
+          if (!hasStartedStreaming) {
+            hasStartedStreaming = true;
+
+            setRetryingMessageId(null);
+            setMessages([...truncatedMessages, userMsg]);
+            setIsStreaming(true);
+            setIsAiTyping(true);
+            setFirstResponseId(newResponseId);
+            setStreamingText(token);
+          } else {
+            setStreamingText((prev) => prev + token);
+          }
+        },
+        fallbackImage,
+      );
+
+      const botMsg: Message = {
+        id: newResponseId,
+        role: "model",
+        text: responseText,
+        timestamp: Date.now(),
+      };
+
+      if (!hasStartedStreaming) {
+        setRetryingMessageId(null);
+        setMessages([...truncatedMessages, userMsg]);
+      }
+
+      setMessages([...truncatedMessages, userMsg, botMsg]);
+      setIsAiTyping(false);
+      setStreamingText("");
+      setFirstResponseId(null);
+      setRetryingMessageId(null);
+
+      onOverwriteMessages?.([...truncatedMessages, userMsg, botMsg]);
+    } catch (apiError: any) {
+      console.error("Edit failed:", apiError);
+      setError("Failed to edit message. " + (apiError.message || ""));
+      setRetryingMessageId(null);
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false);
+      setIsStreaming(false);
+    }
+  };
+
   return {
     messages,
     isLoading,
@@ -566,10 +797,13 @@ export const useChat = ({
     isStreaming,
     isAiTyping,
     setIsAiTyping,
+    retryingMessageId,
     streamingText,
     lastSentMessage,
     handleSend,
     handleRetrySend,
+    handleRetryMessage,
+    handleEditMessage,
     handleDescribeEdits,
     handleStreamComplete,
     handleStopGeneration,

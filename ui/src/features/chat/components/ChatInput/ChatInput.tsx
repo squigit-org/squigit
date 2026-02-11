@@ -109,6 +109,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [isCodeBlockActive, setIsCodeBlockActive] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState("");
   const [originalCodeLanguage, setOriginalCodeLanguage] = useState("");
+  const [codeBlockDelimiter, setCodeBlockDelimiter] = useState("```");
   const [codeValue, setCodeValue] = useState("");
   const [consecutiveEnters, setConsecutiveEnters] = useState(0);
 
@@ -180,16 +181,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const cursorPos = e.target.selectionStart;
 
     const textBeforeCursor = newValue.slice(0, cursorPos);
-    const match = textBeforeCursor.match(/(^|\n)```([^\n]*)\n$/);
+
+    const match = textBeforeCursor.match(/(^|\n)(`{3,})([^\n]*)\n$/);
 
     if (match && !isCodeBlockActive) {
-      const codeBlockCount = (newValue.match(/```/g) || []).length;
+      const delimiter = match[2];
+
+      const codeBlockCount = newValue.split(delimiter).length - 1;
+
       if (codeBlockCount % 2 === 1) {
         setIsCodeBlockActive(true);
-        setOriginalCodeLanguage(match[2]);
-        setCodeLanguage(match[2] || "text");
+        const lang = match[3];
+        setOriginalCodeLanguage(lang);
+        setCodeLanguage(lang || "text");
+        setCodeBlockDelimiter(delimiter);
+
         const beforeBackticks = textBeforeCursor.replace(
-          /(^|\n)```([^\n]*)\n$/,
+          /(^|\n)(`{3,})([^\n]*)\n$/,
           "$1",
         );
         const afterCursor = newValue.slice(cursorPos);
@@ -206,10 +214,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (e.key === "Escape") {
       e.preventDefault();
       setIsCodeBlockActive(false);
-      onChange(`${value}\`\`\`${originalCodeLanguage}\n`);
+
+      onChange(`${value}${codeBlockDelimiter}${originalCodeLanguage}\n`);
       setCodeValue("");
       setCodeLanguage("");
       setOriginalCodeLanguage("");
+      setCodeBlockDelimiter("```");
       setConsecutiveEnters(0);
       setTimeout(() => {
         const ta = textareaRef.current;
@@ -223,11 +233,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setConsecutiveEnters((prev) => prev + 1);
       if (consecutiveEnters >= 2) {
         setIsCodeBlockActive(false);
-        const newPrompt = `${value}\n\`\`\`${codeLanguage}\n${codeValue.trim()}\n\`\`\`\n`;
+
+        const newPrompt = `${value}\n${codeBlockDelimiter}${codeLanguage}\n${codeValue.trim()}\n${codeBlockDelimiter}\n`;
         onChange(newPrompt);
         setCodeValue("");
         setCodeLanguage("");
         setOriginalCodeLanguage("");
+        setCodeBlockDelimiter("```");
         setConsecutiveEnters(0);
         setTimeout(() => textareaRef.current?.focus(), 0);
       }
@@ -327,9 +339,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         <textarea
           ref={(el) => {
-            // @ts-ignore
             editorRef.current = el;
-            // @ts-ignore
             textareaRef.current = el;
           }}
           className={styles.textarea}

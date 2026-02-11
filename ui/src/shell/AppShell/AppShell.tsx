@@ -101,6 +101,9 @@ const AppShellComponent: React.FC = () => {
         onStreamComplete={shell.chat.handleStreamComplete}
         onTypingChange={shell.chat.setIsAiTyping}
         onStopGeneration={shell.chat.handleStopGeneration}
+        onRetryMessage={shell.chat.handleRetryMessage}
+        onEditMessage={shell.chat.handleEditMessage}
+        retryingMessageId={shell.chat.retryingMessageId}
         scrollContainerRef={scrollContainerRef}
         selectedModel={shell.inputModel}
         onModelChange={shell.setInputModel}

@@ -35,7 +35,6 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
     onTranscriptRef.current = onTranscript;
   }, [onTranscript]);
 
-  // Setup event listener once
   useEffect(() => {
     let unlistenFn: UnlistenFn | undefined;
     let isMounted = true;
@@ -46,7 +45,6 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
           const payload = event.payload;
 
           if (payload.type === "transcription" && payload.text) {
-            // Always use the latest callback
             onTranscriptRef.current(payload.text, payload.is_final || false);
           } else if (payload.type === "status") {
             console.log("[STT] Status:", payload.status);
@@ -61,7 +59,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
           unlistenRef.current = unlisten;
           unlistenFn = unlisten;
         } else {
-          unlisten(); // Cleanup immediately if unmounted during await
+          unlisten();
         }
       } catch (err) {
         console.error("Failed to setup STT listener:", err);
@@ -77,13 +75,12 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
         unlistenRef.current = null;
       }
     };
-  }, []); // Run once
+  }, []);
 
   const toggleRecording = useCallback(async () => {
     if (disabled) return;
 
     if (isRecording) {
-      // Stop
       try {
         await invoke("stop_stt");
       } catch (err) {
@@ -92,7 +89,6 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
         setIsRecording(false);
       }
     } else {
-      // Start
       try {
         setIsRecording(true);
         await invoke("start_stt", {

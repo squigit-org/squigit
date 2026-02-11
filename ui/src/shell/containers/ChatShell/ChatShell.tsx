@@ -37,6 +37,13 @@ export interface ChatShellProps {
   onStreamComplete?: () => void;
   onTypingChange?: (isTyping: boolean) => void;
   onStopGeneration?: (truncatedText: string) => void;
+  onRetryMessage?: (messageId: string, modelId?: string) => void;
+  onEditMessage?: (
+    messageId: string,
+    newText: string,
+    modelId?: string,
+  ) => void;
+  retryingMessageId?: string | null;
 
   selectedModel: string;
   onModelChange: (model: string) => void;
@@ -59,6 +66,9 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   onStreamComplete,
   onTypingChange,
   onStopGeneration,
+  onRetryMessage,
+  onEditMessage,
+  retryingMessageId,
   selectedModel,
   onModelChange,
   scrollContainerRef,
@@ -255,6 +265,13 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   const isAnalyzing =
     startupImage && isLoading && !streamingText && messages.length === 0;
 
+  const retryIndex = retryingMessageId
+    ? messages.findIndex((m) => m.id === retryingMessageId)
+    : -1;
+
+  const displayMessages =
+    retryIndex !== -1 ? messages.slice(0, retryIndex + 1) : messages;
+
   return (
     <>
       <div
@@ -301,7 +318,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
                 </div>
               )}
 
-              {messages
+              {displayMessages
                 .slice()
                 .reverse()
                 .map((msg, index) => {
@@ -326,6 +343,18 @@ export const ChatShell: React.FC<ChatShellProps> = ({
                                 setStopRequested(false);
                                 onStopGeneration?.(truncatedText);
                               }
+                            : undefined
+                        }
+                        onRetry={
+                          msg.role !== "user" && onRetryMessage
+                            ? () => onRetryMessage(msg.id, selectedModel)
+                            : undefined
+                        }
+                        isRetrying={msg.id === retryingMessageId}
+                        onEdit={
+                          msg.role === "user" && onEditMessage
+                            ? (newText) =>
+                                onEditMessage(msg.id, newText, selectedModel)
                             : undefined
                         }
                       />

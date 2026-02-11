@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 @import "@/styles/variables.css";
 
 .container {
@@ -32,33 +38,9 @@
 }
 
 .recording {
-  background: #ef4444 !important; /* Red-500 */
+  background: #ef4444 !important;
   color: white !important;
   animation: pulse 1.5s infinite;
-}
-
-.paused {
-  background: #f59e0b !important; /* Amber-500 */
-  animation: none;
-}
-
-.pauseButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-}
-
-.pauseButton:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
 }
 
 .icon {

@@ -248,6 +248,244 @@ export const sendMessage = async (
 };
 
 /**
+ * Retry (regenerate) an assistant message at a given index.
+ * Rebuilds brain context from messages before that index and regenerates.
+ *
+ * @param messageIndex 0-based index of the assistant message to retry
+ * @param allMessages  all messages up to (but not including) the target
+ * @param onToken      streaming token callback
+ * @returns the full regenerated response text
+ */
+export const retryFromMessage = async (
+  messageIndex: number,
+  allMessages: Array<{ role: string; text: string }>,
+  modelId: string,
+  onToken?: (token: string) => void,
+  fallbackImage?: { base64: string; mimeType: string },
+): Promise<string> => {
+  if (!storedApiKey) throw new Error("Gemini API Key not set");
+
+  currentModelId = modelId;
+
+  // Restore image from fallback if context was lost
+  if ((!storedImageBase64 || !storedMimeType) && fallbackImage) {
+    storedImageBase64 = cleanBase64(fallbackImage.base64);
+    storedMimeType = fallbackImage.mimeType;
+  }
+
+  // Special case: retrying the very first assistant message (image description)
+  if (messageIndex === 0) {
+    if (!storedImageBase64 || !storedMimeType) {
+      throw new Error("Image not found");
+    }
+
+    // Reset brain context for fresh initial turn
+    imageDescription = null;
+    userFirstMsg = null;
+    conversationHistory = [];
+
+    const channelId = `gemini-stream-${Date.now()}`;
+    let fullResponse = "";
+
+    const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+      fullResponse += event.payload.token;
+      onToken?.(event.payload.token);
+    });
+
+    try {
+      await invoke("stream_gemini_chat_v2", {
+        apiKey: storedApiKey,
+        model: currentModelId,
+        isInitialTurn: true,
+        imageBase64: storedImageBase64,
+        imageMimeType: storedMimeType,
+        imageDescription: null,
+        userFirstMsg: null,
+        historyLog: null,
+        userMessage: "",
+        channelId,
+      });
+
+      unlisten();
+
+      // Update brain state with new response
+      setImageDescription(fullResponse);
+      conversationHistory = [{ role: "Assistant", content: fullResponse }];
+
+      return fullResponse;
+    } catch (error) {
+      unlisten();
+      throw error;
+    }
+  }
+
+  // General case: retrying a subsequent assistant message
+  // The image description is always allMessages[0] (the first assistant response)
+  const imgDesc = allMessages[0]?.text || imageDescription || "";
+  imageDescription = imgDesc;
+
+  // Find the first user message in messages before the target
+  const messagesBefore = allMessages.slice(0, messageIndex);
+  const firstUser = messagesBefore.find((m) => m.role === "user");
+  userFirstMsg = firstUser?.text || null;
+
+  // Rebuild conversation history from messages before the target
+  conversationHistory = messagesBefore.map((m) => ({
+    role: m.role === "user" ? "User" : "Assistant",
+    content: m.text,
+  }));
+  // Keep only last 6 entries
+  if (conversationHistory.length > 6) {
+    conversationHistory = conversationHistory.slice(-6);
+  }
+
+  // The last user message before the target assistant message
+  const lastUserMsg = [...messagesBefore]
+    .reverse()
+    .find((m) => m.role === "user");
+  if (!lastUserMsg) {
+    throw new Error("No user message found before the retried message");
+  }
+
+  // Check if this is the first user turn (should re-send image)
+  const isFirstTurnWithImage = !firstUser && storedImageBase64;
+
+  const channelId = `gemini-stream-${Date.now()}`;
+  let fullResponse = "";
+
+  const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    fullResponse += event.payload.token;
+    onToken?.(event.payload.token);
+  });
+
+  try {
+    await invoke("stream_gemini_chat_v2", {
+      apiKey: storedApiKey,
+      model: currentModelId,
+      isInitialTurn: false,
+      imageBase64: isFirstTurnWithImage ? storedImageBase64 : null,
+      imageMimeType: isFirstTurnWithImage ? storedMimeType : null,
+      imageDescription: imgDesc,
+      userFirstMsg: userFirstMsg,
+      historyLog: formatHistoryLog(),
+      userMessage: lastUserMsg.text,
+      channelId,
+    });
+
+    unlisten();
+
+    // Update history with the new response
+    addToHistory("Assistant", fullResponse);
+
+    return fullResponse;
+  } catch (error) {
+    unlisten();
+    throw error;
+  }
+};
+
+/**
+ * Edit a user message and regenerate response from that point.
+ * Truncates history after the edited message.
+ */
+export const editUserMessage = async (
+  messageIndex: number,
+  newText: string,
+  allMessages: Array<{ role: string; text: string }>,
+  modelId: string,
+  onToken?: (token: string) => void,
+  fallbackImage?: { base64: string; mimeType: string },
+): Promise<string> => {
+  if (!storedApiKey) throw new Error("Gemini API Key not set");
+
+  currentModelId = modelId;
+
+  // Restore image from fallback if context was lost
+  if ((!storedImageBase64 || !storedMimeType) && fallbackImage) {
+    storedImageBase64 = cleanBase64(fallbackImage.base64);
+    storedMimeType = fallbackImage.mimeType;
+  }
+
+  // Find the messages BEFORE the one being edited
+  const messagesBefore = allMessages.slice(0, messageIndex);
+
+  // The first message is always the image description in our data model
+  // (unless it's text-only chat, but currently we focus on image mainly)
+  // `allMessages` here is UI messages. UI[0] is typically Model (Image Description).
+  // So if messageIndex > 0, we have some history.
+
+  // Rebuild brain state
+  const imgDesc =
+    messagesBefore.find((m) => m.role === "model")?.text ||
+    imageDescription ||
+    "";
+  imageDescription = imgDesc;
+
+  // Find the *first* user message in the history *before* this edit.
+  // If we are editing the very first user message, `messagesBefore` will NOT contain a user message yet.
+  const previousUserMsg = messagesBefore.find((m) => m.role === "user");
+
+  if (!previousUserMsg) {
+    // We are editing the FIRST user message
+    userFirstMsg = newText;
+  } else {
+    // We are editing a subsequent message.
+    // The first user message remains what it was in history.
+    userFirstMsg = messagesBefore.find((m) => m.role === "user")?.text || null;
+  }
+
+  // Rebuild conversation history
+  conversationHistory = messagesBefore.map((m) => ({
+    role: m.role === "user" ? "User" : "Assistant",
+    content: m.text,
+  }));
+  // Keep only last 6 entries (3 turns)
+  if (conversationHistory.length > 6) {
+    conversationHistory = conversationHistory.slice(-6);
+  }
+
+  // Check if this is the first turn with image
+  // It is first turn if:
+  // 1. We have an image (storedImageBase64)
+  // 2. There were NO user messages before this one (meaning we are acting as the first user message)
+  const isFirstTurnWithImage = !previousUserMsg && storedImageBase64;
+
+  const channelId = `gemini-stream-${Date.now()}`;
+  let fullResponse = "";
+
+  const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    fullResponse += event.payload.token;
+    onToken?.(event.payload.token);
+  });
+
+  try {
+    await invoke("stream_gemini_chat_v2", {
+      apiKey: storedApiKey,
+      model: currentModelId,
+      isInitialTurn: false,
+      imageBase64: isFirstTurnWithImage ? storedImageBase64 : null,
+      imageMimeType: isFirstTurnWithImage ? storedMimeType : null,
+      imageDescription: imgDesc,
+      userFirstMsg: userFirstMsg,
+      historyLog: formatHistoryLog(),
+      userMessage: newText, // The NEW text
+      channelId,
+    });
+
+    unlisten();
+
+    // Update history with the user message AND the new response
+    addToHistory("User", newText);
+    addToHistory("Assistant", fullResponse);
+
+    return fullResponse;
+  } catch (error) {
+    unlisten();
+    throw error;
+  }
+};
+
+/**
  * Restore a session from saved state.
  */
 export const restoreSession = (
@@ -255,11 +493,15 @@ export const restoreSession = (
   savedImageDescription: string,
   savedUserFirstMsg: string | null,
   savedHistory: Array<{ role: string; content: string }>,
+  savedImageBase64: string | null,
+  savedMimeType: string | null,
 ) => {
   currentModelId = modelId;
   imageDescription = savedImageDescription;
   userFirstMsg = savedUserFirstMsg;
   conversationHistory = savedHistory.slice(-6); // Keep last 6
+  storedImageBase64 = savedImageBase64;
+  storedMimeType = savedMimeType;
 };
 
 /**

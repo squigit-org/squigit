@@ -4,15 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * Dropdown component styles.
- * Imports shared base classes from Dropdown.shared.module.css
- */
-
-/* Import all shared classes */
 @import "@/primitives/dropdown/Dropdown.shared.module.css";
 
-/* Dropdown-specific: trigger text styling */
 .trigger {
   font-size: 0.875rem;
   font-weight: 500;
@@ -20,7 +13,6 @@
   font-family: "Inter", sans-serif;
 }
 
-/* Specific to Capture Preview integration */
 .previewContainer {
   padding: 4px 8px 8px 8px;
 }

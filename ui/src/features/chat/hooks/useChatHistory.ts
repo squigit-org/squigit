@@ -38,7 +38,6 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     refreshChats();
   }, [refreshChats]);
 
-  // Reset active session when profile changes
   useEffect(() => {
     setActiveSessionId(null);
   }, [activeProfileId]);
@@ -114,7 +113,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     const updated = {
       ...chat,
       is_starred: newStarredState,
-      // When moving between categories (Starred <-> Recents), always unpin.
+
       is_pinned: false,
       pinned_at: null,
       ...overrides,

@@ -32,3 +32,16 @@ pub fn copy_image_to_path(source_path: String, target_path: String) -> Result<()
     std::fs::copy(&source_path, &target_path).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[tauri::command]
+pub fn read_file_base64(path: String) -> Result<String, String> {
+    use std::fs::File;
+    use std::io::Read;
+    use base64::{engine::general_purpose, Engine as _};
+
+    let mut file = File::open(&path).map_err(|e| e.to_string())?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
+
+    Ok(general_purpose::STANDARD.encode(&buffer))
+}

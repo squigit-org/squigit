@@ -301,6 +301,15 @@ export const useTextSelection = ({
   const handleSelection = useCallback(() => {
     if (isSelectAllMode) return;
 
+    // Ignore selection if user is editing in a textarea or input
+    const activeEl = document.activeElement;
+    if (
+      activeEl &&
+      (activeEl.tagName === "TEXTAREA" || activeEl.tagName === "INPUT")
+    ) {
+      return;
+    }
+
     const selection = window.getSelection();
     const text = selection?.toString().trim();
 

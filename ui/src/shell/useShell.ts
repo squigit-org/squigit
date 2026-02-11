@@ -291,6 +291,7 @@ export const useShell = () => {
         {
           base64: imageUrl,
           mimeType: "image/png",
+          isFilePath: true,
         },
       );
 

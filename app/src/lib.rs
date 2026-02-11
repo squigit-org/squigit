@@ -22,7 +22,7 @@ use commands::clipboard::{
     copy_image_from_path_to_clipboard,
 };
 use commands::image::{
-    get_initial_image, process_image_bytes, process_image_path, read_image_file, copy_image_to_path,
+    get_initial_image, process_image_bytes, process_image_path, read_image_file, copy_image_to_path, read_file_base64,
 };
 use commands::ocr::ocr_image;
 use commands::profile::{
@@ -56,6 +56,7 @@ pub fn run() {
             process_image_path,
             process_image_bytes,
             read_image_file,
+            read_file_base64,
             get_initial_image,
             // Clipboard
             // Clipboard
