@@ -101,6 +101,23 @@ export const useShell = () => {
     [chatHistory.activeSessionId],
   );
 
+  const handleOverwriteMessages = useCallback(
+    (msgs: any[]) => {
+      const activeId = chatHistory.activeSessionId;
+      if (activeId) {
+        const formatted = msgs.map((m: any) => ({
+          role: (m.role === "user" ? "user" : "assistant") as
+            | "user"
+            | "assistant",
+          content: m.text,
+          timestamp: new Date(m.timestamp).toISOString(),
+        }));
+        overwriteChatMessages(activeId, formatted).catch(console.error);
+      }
+    },
+    [chatHistory.activeSessionId],
+  );
+
   const [isCheckingImage, setIsCheckingImage] = useState(true);
 
   const handleImageReady = async (imageData: {
@@ -216,6 +233,7 @@ export const useShell = () => {
     setCurrentModel: system.setSessionModel,
     enabled: isChatActive,
     onMessage: handleMessageAdded,
+    onOverwriteMessages: handleOverwriteMessages,
     chatId: chatHistory.activeSessionId,
     onMissingApiKey: () => {
       setShowGeminiAuthDialog(true);

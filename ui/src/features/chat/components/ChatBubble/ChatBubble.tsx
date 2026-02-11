@@ -17,6 +17,7 @@ import { remarkDisableIndentedCode } from "@/features/chat/utils";
 import {
   parseMarkdownToSegments,
   tokenizeSegments,
+  preprocessMarkdown,
   type StreamSegment,
 } from "@/lib/markdown";
 import styles from "./ChatBubble.module.css";
@@ -26,12 +27,18 @@ interface ChatBubbleProps {
   message: Message;
   isStreamed?: boolean;
   onStreamComplete?: () => void;
+  onTypingChange?: (isTyping: boolean) => void;
+  stopRequested?: boolean;
+  onStopGeneration?: (truncatedText: string) => void;
 }
 
 const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   message,
   isStreamed = false,
   onStreamComplete,
+  onTypingChange,
+  stopRequested,
+  onStopGeneration,
 }) => {
   const isUser = message.role === "user";
   const [isCopied, setIsCopied] = useState(false);
@@ -106,6 +113,70 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     onStreamComplete,
   ]);
 
+  // Report typing state changes
+  const isTyping = isStreamed && !isStreamingComplete;
+  const prevIsTypingRef = useRef(false);
+
+  useEffect(() => {
+    if (prevIsTypingRef.current !== isTyping) {
+      prevIsTypingRef.current = isTyping;
+      onTypingChange?.(isTyping);
+    }
+  }, [isTyping, onTypingChange]);
+
+  // Handle stop requested
+  const stoppedRef = useRef(false);
+
+  useEffect(() => {
+    if (!stopRequested || !isTyping || stoppedRef.current) return;
+    stoppedRef.current = true;
+
+    // Stop the animation timer
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    // Compute truncated text from revealed segments
+    const revealed = tokens.slice(0, revealedCount);
+    const grouped = new Map<number, string[]>();
+    revealed.forEach((token) => {
+      if (!grouped.has(token.segmentIndex)) {
+        grouped.set(token.segmentIndex, []);
+      }
+      grouped.get(token.segmentIndex)!.push(token.text);
+    });
+
+    // Build truncated text, skip code blocks that are still in shimmer
+    let truncated = "";
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      const texts = grouped.get(i);
+      if (!texts) break;
+
+      if (seg.type === "codeblock") {
+        let isEffectiveLast = true;
+        for (let j = i + 1; j < segments.length; j++) {
+          if (grouped.has(j)) {
+            isEffectiveLast = false;
+            break;
+          }
+        }
+        if (isEffectiveLast) {
+          break;
+        }
+        const lang = seg.meta?.language || "";
+        truncated += "```" + lang + "\n" + seg.content + "\n```\n";
+      } else {
+        truncated += texts.join("");
+      }
+    }
+
+    // Call parent with truncated text — parent will update message.text
+    // which triggers a re-render with new (shorter) tokens
+    onStopGeneration?.(truncated.trimEnd());
+  }, [stopRequested]);
+
   const revealedSegments = useMemo(() => {
     if (isUser) return new Map();
 
@@ -153,7 +224,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
           <CodeBlock
             language={segment.meta?.language || ""}
             value={segment.content}
-            isStreaming={false}
           />
         </div>
       );
@@ -300,7 +370,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 rehypePlugins={[rehypeKatex]}
                 components={markdownComponents}
               >
-                {message.text}
+                {preprocessMarkdown(message.text, { doubleNewlines: isUser })}
               </ReactMarkdown>
             )}
           </div>
@@ -352,7 +422,8 @@ export const ChatBubble = React.memo(
     return (
       prevProps.message.id === nextProps.message.id &&
       prevProps.message.text === nextProps.message.text &&
-      prevProps.isStreamed === nextProps.isStreamed
+      prevProps.isStreamed === nextProps.isStreamed &&
+      prevProps.stopRequested === nextProps.stopRequested
     );
   },
 );

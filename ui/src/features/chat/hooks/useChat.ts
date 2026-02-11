@@ -5,14 +5,13 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Message, ModelType } from "@/features/chat";
+import { Message } from "@/features/chat";
+import { ModelType } from "@/lib/config";
 import {
   startNewChatStream,
   startNewChatSync,
   sendMessage,
   restoreSession as apiRestoreSession,
-  resetBrainContext,
-  getSessionState,
 } from "@/lib/api/gemini/client";
 
 export const useChat = ({
@@ -23,6 +22,7 @@ export const useChat = ({
   setCurrentModel,
   enabled,
   onMessage,
+  onOverwriteMessages,
   chatId,
   onMissingApiKey,
   onTitleGenerated,
@@ -39,6 +39,7 @@ export const useChat = ({
   setCurrentModel: (model: string) => void;
   enabled: boolean;
   onMessage?: (message: Message, chatId: string) => void;
+  onOverwriteMessages?: (messages: Message[]) => void;
   chatId: string | null;
   onMissingApiKey?: () => void;
   onTitleGenerated?: (title: string) => void;
@@ -48,6 +49,7 @@ export const useChat = ({
   const [error, setError] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isAiTyping, setIsAiTyping] = useState(false);
   const [firstResponseId, setFirstResponseId] = useState<string | null>(null);
   const [lastSentMessage, setLastSentMessage] = useState<Message | null>(null);
   const clearError = () => setError(null);
@@ -168,6 +170,7 @@ export const useChat = ({
     }
 
     setIsStreaming(true);
+    setIsAiTyping(true);
 
     try {
       let fullResponse = "";
@@ -328,6 +331,7 @@ export const useChat = ({
     setLastSentMessage(null);
 
     setIsStreaming(true);
+    setIsAiTyping(true);
 
     try {
       let fullResponse = "";
@@ -399,6 +403,7 @@ export const useChat = ({
 
     try {
       const responseText = await sendMessage(lastSentMessage.text);
+      setIsAiTyping(true);
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "model",
@@ -457,6 +462,7 @@ export const useChat = ({
 
     try {
       const responseText = await sendMessage(userText, modelId);
+      setIsAiTyping(true);
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "model",
@@ -528,6 +534,45 @@ export const useChat = ({
       setStreamingText("");
       setFirstResponseId(null);
     }
+    setIsAiTyping(false);
+  };
+
+  const handleStopGeneration = (truncatedText: string) => {
+    // Flow 1: streaming temp bubble (startSession / handleDescribeEdits)
+    if (streamingText && firstResponseId) {
+      const botMsg: Message = {
+        id: firstResponseId,
+        role: "model",
+        text: truncatedText,
+        timestamp: Date.now(),
+      };
+      setMessages([botMsg]);
+      setStreamingText("");
+      setFirstResponseId(null);
+      setIsAiTyping(false);
+
+      const targetChatId = sessionChatIdRef.current;
+      if (onMessage && targetChatId) {
+        onMessage(botMsg, targetChatId);
+      }
+      return;
+    }
+
+    // Flow 2: normal chat (handleSend / handleRetrySend)
+    // The full message is already in messages[] — truncate the last model message
+    setMessages((prev) => {
+      const updated = [...prev];
+      for (let i = updated.length - 1; i >= 0; i--) {
+        if (updated[i].role === "model") {
+          updated[i] = { ...updated[i], text: truncatedText };
+          break;
+        }
+      }
+      // Persist truncated messages to storage
+      onOverwriteMessages?.(updated);
+      return updated;
+    });
+    setIsAiTyping(false);
   };
 
   return {
@@ -536,6 +581,8 @@ export const useChat = ({
     error,
     clearError,
     isStreaming,
+    isAiTyping,
+    setIsAiTyping,
     streamingText,
     lastSentMessage,
     handleSend,
@@ -543,6 +590,7 @@ export const useChat = ({
     handleReload,
     handleDescribeEdits,
     handleStreamComplete,
+    handleStopGeneration,
     startSession,
     getCurrentState,
     restoreState,

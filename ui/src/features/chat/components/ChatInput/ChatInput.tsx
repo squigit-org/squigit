@@ -11,7 +11,7 @@ import React, {
   useLayoutEffect,
   useCallback,
 } from "react";
-import { Paperclip, ArrowUp, Camera } from "lucide-react";
+import { Paperclip, ArrowUp, Square, Camera } from "lucide-react";
 import { MODELS } from "@/lib/config/models";
 import { Tooltip } from "@/primitives/tooltip/Tooltip";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
@@ -73,6 +73,8 @@ interface ChatInputProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   isLoading: boolean;
+  isAiTyping?: boolean;
+  onStopGeneration?: () => void;
   placeholder?: string;
   variant?: "default" | "transparent";
   className?: string;
@@ -87,6 +89,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onInputChange: onChange,
   onSend,
   isLoading,
+  isAiTyping = false,
+  onStopGeneration,
   placeholder: customPlaceholder,
   variant = "default",
   selectedModel,
@@ -95,7 +99,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   if (!startupImage) return null;
 
   const placeholder = customPlaceholder || "Ask anything";
-  const disabled = isLoading;
+  const disabled = isLoading && !isAiTyping;
 
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -150,7 +154,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
     setShowExpandButton(isCodeBlockActive || scrollHeight > lineHeight * 10);
 
-    if (document.activeElement === textarea) {
+    if (
+      document.activeElement === textarea &&
+      textarea.selectionStart >= textarea.value.length
+    ) {
       if (textarea.scrollHeight > textarea.clientHeight) {
         textarea.scrollTop = textarea.scrollHeight;
       }
@@ -355,7 +362,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           ref={codeTaRef}
           language={codeLanguage}
           value={codeValue}
-          isEditable={true}
+          isEditor={true}
           onChange={setCodeValue}
           onKeyDown={handleCodeKeyDown}
           placeholder={`Enter ${codeLanguage} code... (3 newlines to exit)`}
@@ -439,14 +446,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             disabled={disabled}
           />
 
-          <button
-            className={`${styles.submitButton} ${isButtonActive ? styles.submitActive : ""}`}
-            onClick={handleSubmit}
-            disabled={!isButtonActive}
-            aria-label="Submit"
-          >
-            <ArrowUp size={18} />
-          </button>
+          {isAiTyping ? (
+            <button
+              className={styles.stopButton}
+              onClick={onStopGeneration}
+              aria-label="Stop generating"
+            >
+              <Square size={14} fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              className={`${styles.submitButton} ${isButtonActive ? styles.submitActive : ""}`}
+              onClick={handleSubmit}
+              disabled={!isButtonActive}
+              aria-label="Submit"
+            >
+              <ArrowUp size={18} />
+            </button>
+          )}
         </div>
       </div>
     </div>

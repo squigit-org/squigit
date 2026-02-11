@@ -12,12 +12,6 @@ export interface Message {
   timestamp: number;
 }
 
-export enum ModelType {
-  GEMINI_2_5_FLASH = "gemini-2.5-flash",
-  GEMINI_FLASH_LITE = "gemini-flash-lite-latest",
-  GEMINI_2_5_PRO = "gemini-2.5-pro",
-}
-
 export interface AppConfig {
   google_gemini: {
     api_key: string;

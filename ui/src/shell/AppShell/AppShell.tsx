@@ -159,6 +159,7 @@ const AppShellComponent: React.FC = () => {
         streamingText={shell.chat.streamingText}
         isLoading={shell.chat.isLoading}
         isStreaming={shell.chat.isStreaming}
+        isAiTyping={shell.chat.isAiTyping}
         error={error}
         input={shell.input}
         startupImage={shell.system.startupImage}
@@ -176,6 +177,9 @@ const AppShellComponent: React.FC = () => {
         }}
         onInputChange={shell.setInput}
         onOpenSettings={shell.system.openSettings}
+        onStreamComplete={shell.chat.handleStreamComplete}
+        onTypingChange={shell.chat.setIsAiTyping}
+        onStopGeneration={shell.chat.handleStopGeneration}
         scrollContainerRef={scrollContainerRef}
         selectedModel={shell.inputModel}
         onModelChange={shell.setInputModel}

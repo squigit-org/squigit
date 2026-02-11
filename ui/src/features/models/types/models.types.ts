@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// TODO: Implement model types
-export type ModelType = "ocr";
-
 export interface OcrModelDownloable {
   id: string;
   name: string;
@@ -40,20 +37,16 @@ export const LANGUAGE_CODE_MAP: Record<string, string> = {
 export const getLanguageCode = (name: string) => {
   if (!name) return "??";
 
-  // Handle pp-ocr-v4- prefix (case insensitive) and legacy "PP-OCRv4 (Name)" format
   let cleanName = name;
   if (cleanName.toLowerCase().startsWith("pp-ocr-v4-")) {
-    cleanName = cleanName.slice(10); // remove pp-ocr-v4-
+    cleanName = cleanName.slice(10);
   } else if (cleanName.startsWith("PP-OCRv4 (")) {
-    // "PP-OCRv4 (English)" -> "English"
     cleanName = cleanName.replace("PP-OCRv4 (", "").replace(")", "");
   }
 
-  // If it matches a key in map (e.g. "English"), return code
   if (LANGUAGE_CODE_MAP[cleanName]) {
     return LANGUAGE_CODE_MAP[cleanName].toUpperCase();
   }
 
-  // Otherwise limit to 2 chars (e.g. "ru", "en")
   return cleanName.slice(0, 2).toUpperCase();
 };

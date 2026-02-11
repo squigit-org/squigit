@@ -4,5 +4,5 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./types/models.types";
-export * from "./components/ModelSwitcher/ModelSwitcher";
+export * from "./types";
+export * from "./components";

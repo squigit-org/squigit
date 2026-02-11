@@ -4,5 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export { parseMarkdownToSegments, type StreamSegment } from "./parser";
+export {
+  parseMarkdownToSegments,
+  preprocessMarkdown,
+  type StreamSegment,
+} from "./parser";
 export { tokenizeSegments, type StreamToken } from "./tokenizer";

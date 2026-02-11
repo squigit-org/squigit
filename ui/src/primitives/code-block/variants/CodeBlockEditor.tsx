@@ -16,18 +16,18 @@ import { useCodeHighlighter, useTextContextMenu, useKeyDown } from "@/hooks";
 import { TextContextMenu } from "@/shell";
 import styles from "./CodeBlock.shared.module.css";
 
-interface CodeBlockEditableProps {
+export interface CodeBlockEditorProps {
   language: string;
   value: string;
   onChange?: (value: string) => void;
-  onKeyDown?: (e: React.KeyboardEvent) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
   style?: React.CSSProperties;
 }
 
-export const CodeBlockEditable = forwardRef<
+export const CodeBlockEditor = forwardRef<
   HTMLTextAreaElement,
-  CodeBlockEditableProps
+  CodeBlockEditorProps
 >(({ language, value, onChange, onKeyDown, placeholder, style }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -149,7 +149,7 @@ export const CodeBlockEditable = forwardRef<
     <div
       className={styles.wrapper}
       role="region"
-      aria-label="editable code block"
+      aria-label="Editor code block"
     >
       <div className={styles.header}>
         <div className={styles.langLabel}>
@@ -157,7 +157,7 @@ export const CodeBlockEditable = forwardRef<
           <span className={styles.langName}>{language || "text"}</span>
         </div>
       </div>
-      <div className={styles.editableContainer} style={style}>
+      <div className={styles.EditorContainer} style={style}>
         {/* Sizer to drive auto-height since other layers are absolute */}
         <div className={styles.sizer} aria-hidden="true">
           {displayValue || placeholder}
@@ -218,4 +218,4 @@ export const CodeBlockEditable = forwardRef<
   );
 });
 
-CodeBlockEditable.displayName = "CodeBlockEditable";
+CodeBlockEditor.displayName = "CodeBlockEditor";

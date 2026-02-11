@@ -36,9 +36,119 @@ export interface StreamSegment {
 
 /**
  * Parses markdown text into an array of styled segments.
- * Uses remark to generate an AST, then flattens it for streaming.
+ * Uses a hybrid approach:
+ * 1. Custom line-based parsing for Code Blocks (to handle nested blocks robustly by counting depth).
+ * 2. Remark for parsing the remaining markdown text.
  */
 export function parseMarkdownToSegments(markdown: string): StreamSegment[] {
+  const segments: StreamSegment[] = [];
+  const lines = markdown.split("\n");
+
+  let inCodeBlock = false;
+  let codeBlockDepth = 0;
+  let codeBlockFence = "";
+  let codeBlockLang = "";
+  let codeBlockContent: string[] = [];
+  let textBuffer: string[] = [];
+
+  const flushTextBuffer = () => {
+    if (textBuffer.length > 0) {
+      const text = textBuffer.join("\n") + "\n"; // Re-add newline lost by split
+      const textSegments = parseMarkdownText(text);
+      segments.push(...textSegments);
+      textBuffer = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Check for code fence - allow leading whitespace
+    const fenceMatch = line.match(/^(\s*)(`{3,})(.*)$/);
+
+    if (fenceMatch) {
+      const indent = fenceMatch[1];
+      const fence = fenceMatch[2];
+      const lang = fenceMatch[3].trim();
+
+      if (!inCodeBlock) {
+        // Start of new main block
+        flushTextBuffer();
+        inCodeBlock = true;
+        codeBlockDepth = 1;
+        codeBlockFence = fence;
+        codeBlockLang = lang;
+        codeBlockContent = [];
+      } else {
+        // Inside block - check for nested structure
+        // Logic:
+        // If it has a language tag -> IT IS A NESTED START (Depth++)
+        // If it has NO language tag -> IT IS A CLOSE (Depth--)
+
+        if (lang !== "") {
+          // Inner start fence (has language)
+          codeBlockDepth++;
+          codeBlockContent.push(line);
+        } else {
+          // Inner end fence (no language)
+          if (fence.length >= codeBlockFence.length) {
+            codeBlockDepth--;
+          } else {
+            // shorter fence is content
+            codeBlockContent.push(line);
+            continue;
+          }
+
+          if (codeBlockDepth === 0) {
+            // Main block closed
+            segments.push({
+              type: "codeblock",
+              content: codeBlockContent.join("\n"),
+              meta: { language: codeBlockLang },
+            });
+            inCodeBlock = false;
+            codeBlockFence = "";
+            codeBlockLang = "";
+            codeBlockDepth = 0;
+            codeBlockContent = [];
+          } else {
+            // Nested block end -> treat as content
+            codeBlockContent.push(line);
+          }
+        }
+      }
+    } else {
+      if (inCodeBlock) {
+        codeBlockContent.push(line);
+      } else {
+        textBuffer.push(line);
+      }
+    }
+  }
+
+  // Handle unfinished state (EOF)
+  if (inCodeBlock) {
+    // If still in code block at EOF, treat as code block
+    segments.push({
+      type: "codeblock",
+      content: codeBlockContent.join("\n"),
+      meta: { language: codeBlockLang },
+    });
+  } else {
+    // Flush remaining text
+    if (textBuffer.length > 0) {
+      const text = textBuffer.join("\n");
+      const textSegments = parseMarkdownText(text);
+      segments.push(...textSegments);
+    }
+  }
+
+  return segments;
+}
+
+/**
+ * Uses remark to parse plain markdown text into segments.
+ */
+function parseMarkdownText(markdown: string): StreamSegment[] {
   const processor = unified().use(remarkParse).use(remarkGfm);
   const tree = processor.parse(markdown) as Root;
   const segments: StreamSegment[] = [];
@@ -152,7 +262,7 @@ function processNode(
       // For other node types, try to extract text
       if ("children" in node && Array.isArray(node.children)) {
         for (const child of node.children) {
-          processNode(child as RootContent, segments);
+          processNode(child as RootContent | PhrasingContent, segments);
         }
       } else if ("value" in node && typeof node.value === "string") {
         segments.push({ type: "text", content: node.value });
@@ -163,6 +273,167 @@ function processNode(
 /**
  * Recursively extracts plain text from a node.
  */
+/**
+ * Pre-processes markdown string to fix common issues before rendering.
+ * 1. Ensures code block fences are long enough to contain any nested fences (fixes breakage).
+ * 2. Optionally doubles newlines in text (for user messages to preserve line breaks).
+ */
+export function preprocessMarkdown(
+  markdown: string,
+  options: { doubleNewlines?: boolean } = {},
+): string {
+  const lines = markdown.split("\n");
+  const resultLines: string[] = [];
+
+  let codeBlockDepth = 0;
+  let inCodeBlock = false;
+  let codeBlockFence = "";
+  let codeBlockLang = "";
+  let codeBlockContent: string[] = [];
+  let textBuffer: string[] = [];
+
+  const flushTextBuffer = () => {
+    if (textBuffer.length > 0) {
+      let text = textBuffer.join("\n");
+      if (options.doubleNewlines) {
+        // Replace single newlines with double newlines, but preserve existing doubles
+        // Actually, easiest is to just replace all \n with \n\n?
+        // But if user typed \n\n, it becomes \n\n\n\n. ReactMarkdown collapses >2 into 1 paragraph break.
+        // So simple replacement works fine for paragraphs.
+        text = text.replace(/\n/g, "\n\n");
+      }
+      resultLines.push(text);
+      textBuffer = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Check for code fence - allow leading whitespace
+    const fenceMatch = line.match(/^(\s*)(`{3,})(.*)$/);
+
+    if (fenceMatch) {
+      const indent = fenceMatch[1];
+      const fence = fenceMatch[2];
+      const lang = fenceMatch[3].trim();
+
+      if (!inCodeBlock) {
+        // Start of new main block
+        flushTextBuffer();
+        inCodeBlock = true;
+        codeBlockDepth = 1;
+        codeBlockFence = fence;
+        codeBlockLang = lang;
+        codeBlockContent = [];
+      } else {
+        // Inside block - check for nested structure
+        if (lang !== "") {
+          codeBlockDepth++;
+          codeBlockContent.push(line);
+        } else {
+          if (fence.length >= codeBlockFence.length) {
+            codeBlockDepth--;
+          } else {
+            codeBlockContent.push(line);
+            continue;
+          }
+
+          if (codeBlockDepth === 0) {
+            // Main block closed
+            const content = codeBlockContent.join("\n");
+
+            // Fix nested fences: Find max fence length inside content
+            // Regex to find ANY fence inside content
+            // Global match for fences with at least 3 backticks
+            const innerFences = content.match(/`{3,}/g);
+            let maxFenceLength = 0;
+            if (innerFences) {
+              maxFenceLength = Math.max(...innerFences.map((f) => f.length));
+            }
+
+            // Ensure our outer fence is longer than any inner fence
+            let outerFence = codeBlockFence;
+            if (maxFenceLength >= outerFence.length) {
+              outerFence = "`".repeat(maxFenceLength + 1);
+            }
+
+            // Reconstruct block with potentially longer fences
+            // Note: We use original indent and lang
+            resultLines.push(`${indent}${outerFence}${codeBlockLang}`);
+            resultLines.push(content);
+            resultLines.push(`${indent}${outerFence}`); // Closing fence matches opening
+
+            inCodeBlock = false;
+            codeBlockFence = "";
+            codeBlockLang = "";
+            codeBlockDepth = 0;
+            codeBlockContent = [];
+          } else {
+            codeBlockContent.push(line);
+          }
+        }
+      }
+    } else {
+      if (inCodeBlock) {
+        codeBlockContent.push(line);
+      } else {
+        textBuffer.push(line);
+      }
+    }
+  }
+
+  // Handle unfinished state (EOF)
+  if (inCodeBlock) {
+    // If still in code block at EOF, treat as code block
+    // We can't fix inner fences easily without closing?
+    // Just output original parts?
+    // Or close it implicitly?
+    // Standard markdown: unclosed code block runs to end.
+    // We should probably just output content wrapped in fence?
+    // Or output raw content?
+    // If we wrap, we fix rendering.
+
+    const content = codeBlockContent.join("\n");
+    const innerFences = content.match(/`{3,}/g);
+    let maxFenceLength = 0;
+    if (innerFences) {
+      maxFenceLength = Math.max(...innerFences.map((f) => f.length));
+    }
+    let outerFence = codeBlockFence;
+    if (maxFenceLength >= outerFence.length) {
+      outerFence = "`".repeat(maxFenceLength + 1);
+    }
+
+    // We don't have indent stored? Ah, indent is local to loop.
+    // We missed storing start indent.
+    // But usually start indent is 0 or consistent.
+    // Let's assume 0 or just not use indent for reconstruction. or extract form codeBlockFence?
+    // codeBlockFence only stores backticks.
+
+    // Simplification: Just append fence + content + close.
+    // But we need the start line.
+    // Actually, `resultLines` is array of strings. We push to it.
+
+    // Re-implementation: Store full start line parts?
+    // Or just be simple.
+
+    // For now, simple fallback:
+    resultLines.push(`${outerFence}${codeBlockLang}`);
+    resultLines.push(content);
+    resultLines.push(`${outerFence}`);
+  } else {
+    if (textBuffer.length > 0) {
+      let text = textBuffer.join("\n");
+      if (options.doubleNewlines) {
+        text = text.replace(/\n/g, "\n\n");
+      }
+      resultLines.push(text);
+    }
+  }
+
+  return resultLines.join("\n");
+}
+
 function extractText(node: any): string {
   if (node.type === "text") {
     return node.value;

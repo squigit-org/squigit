@@ -5,7 +5,7 @@
  */
 
 import React, { memo, forwardRef } from "react";
-import { CodeBlockEditable } from "./variants/CodeBlockEditable";
+import { CodeBlockEditor } from "./variants/CodeBlockEditor";
 import { CodeBlockViewer } from "./variants/CodeBlockViewer";
 import type { CodeBlockProps } from "./types/code-block.types";
 
@@ -14,7 +14,7 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
     {
       language,
       value,
-      isEditable = false,
+      isEditor = false,
       onChange,
       onKeyDown,
       placeholder,
@@ -23,9 +23,9 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
     },
     ref,
   ) => {
-    if (isEditable) {
+    if (isEditor) {
       return (
-        <CodeBlockEditable
+        <CodeBlockEditor
           ref={ref}
           language={language}
           value={value}

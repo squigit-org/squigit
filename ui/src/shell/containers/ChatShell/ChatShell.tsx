@@ -18,6 +18,7 @@ export interface ChatShellProps {
   streamingText: string;
   isLoading: boolean;
   isStreaming: boolean;
+  isAiTyping: boolean;
   error: string | null;
 
   input: string;
@@ -35,6 +36,8 @@ export interface ChatShellProps {
   onInputChange: (value: string) => void;
   onOpenSettings: (section: SettingsSection) => void;
   onStreamComplete?: () => void;
+  onTypingChange?: (isTyping: boolean) => void;
+  onStopGeneration?: (truncatedText: string) => void;
 
   selectedModel: string;
   onModelChange: (model: string) => void;
@@ -46,6 +49,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   messages,
   streamingText,
   isLoading,
+  isAiTyping,
   error,
   input,
   startupImage,
@@ -55,10 +59,13 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   onInputChange,
   onOpenSettings,
   onStreamComplete,
+  onTypingChange,
+  onStopGeneration,
   selectedModel,
   onModelChange,
   scrollContainerRef,
 }) => {
+  const [stopRequested, setStopRequested] = useState(false);
   const prevChatIdRef = useRef<string | null>(null);
   const prevMessageCountRef = useRef(messages.length);
   const [isErrorDismissed, setIsErrorDismissed] = useState(false);
@@ -295,6 +302,12 @@ export const ChatShell: React.FC<ChatShellProps> = ({
                     }}
                     isStreamed={true}
                     onStreamComplete={onStreamComplete}
+                    onTypingChange={onTypingChange}
+                    stopRequested={stopRequested}
+                    onStopGeneration={(truncatedText) => {
+                      setStopRequested(false);
+                      onStopGeneration?.(truncatedText);
+                    }}
                   />
                 </div>
               )}
@@ -302,15 +315,34 @@ export const ChatShell: React.FC<ChatShellProps> = ({
               {messages
                 .slice()
                 .reverse()
-                .map((msg, index) => (
-                  <div key={msg.id} className="mb-0">
-                    <ChatBubble
-                      message={msg}
-                      isStreamed={msg.role === "model" && index === 0}
-                      onStreamComplete={undefined}
-                    />
-                  </div>
-                ))}
+                .map((msg, index) => {
+                  const isLatestModel = msg.role === "model" && index === 0;
+                  return (
+                    <div key={msg.id} className="mb-0">
+                      <ChatBubble
+                        message={msg}
+                        isStreamed={isLatestModel}
+                        onStreamComplete={
+                          isLatestModel ? onStreamComplete : undefined
+                        }
+                        onTypingChange={
+                          isLatestModel ? onTypingChange : undefined
+                        }
+                        stopRequested={
+                          isLatestModel ? stopRequested : undefined
+                        }
+                        onStopGeneration={
+                          isLatestModel
+                            ? (truncatedText) => {
+                                setStopRequested(false);
+                                onStopGeneration?.(truncatedText);
+                              }
+                            : undefined
+                        }
+                      />
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </main>
@@ -328,6 +360,8 @@ export const ChatShell: React.FC<ChatShellProps> = ({
             onInputChange={onInputChange}
             onSend={onSend}
             isLoading={isLoading}
+            isAiTyping={isAiTyping}
+            onStopGeneration={() => setStopRequested(true)}
             selectedModel={selectedModel}
             onModelChange={onModelChange}
           />
