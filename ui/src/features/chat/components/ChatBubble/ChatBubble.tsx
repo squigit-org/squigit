@@ -168,23 +168,12 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         if (
           style.overflowY === "auto" ||
           style.overflowY === "scroll" ||
-          parent.getAttribute("data-scroll-container") === "true" // Add this attribute to ChatShell if needed, but style check usually works
+          parent.getAttribute("data-scroll-container") === "true"
         ) {
-          // Found the scroll container.
-          // Calculate relative position manually to avoid unwanted ancestor scrolling.
           const parentRect = parent.getBoundingClientRect();
           const bubbleRect = bubbleRef.current.getBoundingClientRect();
-
-          // Current scroll position
           const currentScrollTop = parent.scrollTop;
-
-          // Distance from top of visible area of parent
           const relativeTop = bubbleRect.top - parentRect.top;
-
-          // We want relativeTop to be 90px (the gap)
-          // So we need to adjustments:
-          // newScrollTop = currentScrollTop + (relativeTop - 90)
-
           parent.scrollTo({
             top: currentScrollTop + relativeTop - 90,
             behavior: "instant",
