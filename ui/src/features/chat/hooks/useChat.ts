@@ -46,18 +46,15 @@ export const useChat = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
-  const [isChatMode, setIsChatMode] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [firstResponseId, setFirstResponseId] = useState<string | null>(null);
   const [lastSentMessage, setLastSentMessage] = useState<Message | null>(null);
   const clearError = () => setError(null);
 
-  // Capture the chatId when the session starts to use it in callbacks
-  // This prevents race conditions if the user switches chats during generation
   const sessionChatIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  // Track if session has been started for current startupImage to prevent re-trigger loops
+
   const sessionStartedForImageRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -74,7 +71,6 @@ export const useChat = ({
   }, [enabled, startupImage?.fromHistory]);
 
   useEffect(() => {
-    // Only start if we have a valid chatId to attach the session to
     if (
       enabled &&
       startupImage &&
@@ -82,14 +78,11 @@ export const useChat = ({
       !startupImage.fromHistory &&
       chatId
     ) {
-      // Guard: don't re-start session if one has already been started for this image
-      // This prevents re-trigger loops when currentModel changes (e.g., fallback on 429)
       const imageKey = startupImage.base64?.substring(0, 50) ?? chatId;
       if (sessionStartedForImageRef.current === imageKey) {
         return;
       }
 
-      // Guard: If we already have messages (e.g. from a draft or previous state), don't wipe them on key change
       if (messages.length > 0) {
         return;
       }
@@ -113,12 +106,10 @@ export const useChat = ({
     messages.length,
   ]);
 
-  // Clear state when switching sessions (chatId becomes null)
   useEffect(() => {
     if (chatId === null) {
       setMessages([]);
       setStreamingText("");
-      setIsChatMode(false);
       setFirstResponseId(null);
       setLastSentMessage(null);
       setError(null);
@@ -128,7 +119,6 @@ export const useChat = ({
 
   const resetInitialUi = () => {
     setStreamingText("");
-    setIsChatMode(false);
     sessionStartedForImageRef.current = null;
   };
 
@@ -143,14 +133,12 @@ export const useChat = ({
     } | null,
     isRetry = false,
   ) => {
-    // Cancel any previous session
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
-    // Capture the current chat ID at start of session
     sessionChatIdRef.current = chatId;
 
     setIsLoading(true);
@@ -186,7 +174,6 @@ export const useChat = ({
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
-      // Brain v2: No more sys-prmp wrapping - backend handles prompts
       let finalBase64 = imgData.base64;
       if (imgData.isFilePath) {
         try {
@@ -209,10 +196,7 @@ export const useChat = ({
         return;
       }
 
-      // Sync Flow for Initial Turn (New Chat with Image)
-      // This allows us to generate title sequentially on backend to avoid quota issues
       if (!isRetry && imgData && !imgData.fromHistory) {
-        // Use sync command
         const { title, content } = await startNewChatSync(
           key,
           modelId,
@@ -222,7 +206,6 @@ export const useChat = ({
 
         if (signal.aborted) return;
 
-        // Callback for title
         if (onTitleGenerated) {
           onTitleGenerated(title);
         }
@@ -236,14 +219,13 @@ export const useChat = ({
 
         setMessages([botMsg]);
 
-        // Notify shell
         const targetChatId = sessionChatIdRef.current;
         if (onMessage && targetChatId) {
           onMessage(botMsg, targetChatId);
         }
 
         setIsLoading(false);
-        setIsStreaming(false); // No streaming for sync
+        setIsStreaming(false);
         return;
       }
 
@@ -263,7 +245,6 @@ export const useChat = ({
         return;
       }
 
-      // Use the captured chatId, not the current state one
       const targetChatId = sessionChatIdRef.current;
 
       if (onMessage && targetChatId) {
@@ -337,7 +318,6 @@ export const useChat = ({
     }
     const targetChatId = chatId;
 
-    // Combine prompt with edit description
     const combinedPrompt = `${prompt}\n\n[User Edit Request]: ${editDescription}`;
 
     setIsLoading(true);
@@ -354,7 +334,6 @@ export const useChat = ({
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
-      // Brain v2: Backend handles prompts
       let finalBase64 = startupImage.base64;
       if (startupImage.isFilePath) {
         try {
@@ -441,32 +420,26 @@ export const useChat = ({
     if (!userText.trim() || isLoading) return;
     const targetChatId = chatId;
 
-    if (!isChatMode) {
-      setIsChatMode(true);
-      if (streamingText && firstResponseId) {
-        // Abort the background stream effectively "claiming" the response as is
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
-          abortControllerRef.current = null;
-        }
-
-        const botMsg: Message = {
-          id: firstResponseId,
-          role: "model",
-          text: streamingText,
-          timestamp: Date.now(),
-        };
-        setMessages([botMsg]);
-
-        // Persist the initial message immediately ONLY if we are interrupting the stream.
-        // If streaming finished naturally (!isStreaming), it was already saved by startSession.
-        if (isStreaming && onMessage && targetChatId) {
-          onMessage(botMsg, targetChatId);
-        }
-
-        setStreamingText("");
-        setFirstResponseId(null);
+    if (streamingText && firstResponseId) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
+
+      const botMsg: Message = {
+        id: firstResponseId,
+        role: "model",
+        text: streamingText,
+        timestamp: Date.now(),
+      };
+      setMessages([botMsg]);
+
+      if (isStreaming && onMessage && targetChatId) {
+        onMessage(botMsg, targetChatId);
+      }
+
+      setStreamingText("");
+      setFirstResponseId(null);
     }
 
     const userMsg: Message = {
@@ -501,32 +474,26 @@ export const useChat = ({
     }
   };
 
-  // Get current state for saving to session
   const getCurrentState = () => ({
     messages,
     streamingText,
     firstResponseId,
-    isChatMode,
   });
 
-  // Restore state from a session
   const restoreState = async (
     state: {
       messages: Message[];
       streamingText: string;
       firstResponseId: string | null;
-      isChatMode: boolean;
     },
     image?: { base64: string; mimeType: string },
   ) => {
     setMessages(state.messages);
     setStreamingText(state.streamingText);
     setFirstResponseId(state.firstResponseId);
-    setIsChatMode(state.isChatMode);
     setIsLoading(false);
     setIsStreaming(false);
 
-    // Brain v2: Restore session using new context-based API
     if (state.messages.length > 0) {
       try {
         const firstMsg = state.messages[0];
@@ -535,12 +502,11 @@ export const useChat = ({
           content: m.text,
         }));
 
-        // Find user's first message for intent anchoring
         const firstUserMsg = state.messages.find((m) => m.role === "user");
 
         apiRestoreSession(
           currentModel,
-          firstMsg.text, // Image description = AI's first response
+          firstMsg.text,
           firstUserMsg?.text || null,
           savedHistory,
         );
@@ -550,9 +516,8 @@ export const useChat = ({
     }
   };
 
-  // Handle stream animation completion - auto-transition to chat mode
   const handleStreamComplete = () => {
-    if (streamingText && firstResponseId && !isChatMode) {
+    if (streamingText && firstResponseId) {
       const botMsg: Message = {
         id: firstResponseId,
         role: "model",
@@ -562,7 +527,6 @@ export const useChat = ({
       setMessages([botMsg]);
       setStreamingText("");
       setFirstResponseId(null);
-      setIsChatMode(true);
     }
   };
 
@@ -571,7 +535,6 @@ export const useChat = ({
     isLoading,
     error,
     clearError,
-    isChatMode,
     isStreaming,
     streamingText,
     lastSentMessage,

@@ -225,6 +225,25 @@
   background-color: var(--neutral-100);
 }
 
+.stopButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--neutral-950);
+  background-color: var(--neutral-200);
+  border: 1px solid var(--neutral-200);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 10;
+}
+
+.stopButton:hover {
+  background-color: var(--neutral-100);
+}
+
 .footer {
   padding: 0.5rem 1rem 1rem;
   display: flex;

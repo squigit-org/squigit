@@ -157,7 +157,6 @@ const AppShellComponent: React.FC = () => {
       <ChatShell
         messages={shell.chat.messages}
         streamingText={shell.chat.streamingText}
-        isChatMode={shell.chat.isChatMode}
         isLoading={shell.chat.isLoading}
         isStreaming={shell.chat.isStreaming}
         error={error}

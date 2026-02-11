@@ -29,18 +29,16 @@ export interface ChatShellProps {
   } | null;
 
   chatId: string | null;
-  isChatMode?: boolean;
 
   onSend: () => void;
   onRetry: () => void;
   onInputChange: (value: string) => void;
   onOpenSettings: (section: SettingsSection) => void;
   onStreamComplete?: () => void;
-  
+
   selectedModel: string;
   onModelChange: (model: string) => void;
 
-  /** Ref from parent to control scrolling */
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -52,7 +50,6 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   input,
   startupImage,
   chatId,
-  isChatMode,
   onSend,
   onRetry,
   onInputChange,
@@ -223,7 +220,6 @@ export const ChatShell: React.FC<ChatShellProps> = ({
     );
   };
 
-  // New logic for input overlay
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const [inputHeight, setInputHeight] = useState(0);
   const previousInputHeightRef = useRef(0);
@@ -236,7 +232,6 @@ export const ChatShell: React.FC<ChatShellProps> = ({
     const observer = new ResizeObserver((entries) => {
       const scrollEl = scrollContainerRef.current;
       if (scrollEl) {
-        // Check if we are close to bottom (within 20px) before the resize affects layout
         const distanceFromBottom =
           scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
         wasAtBottomRef.current = distanceFromBottom < 20;

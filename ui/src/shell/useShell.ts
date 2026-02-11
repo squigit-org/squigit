@@ -103,12 +103,10 @@ export const useShell = () => {
 
   const [isCheckingImage, setIsCheckingImage] = useState(true);
 
-  // Image handling
   const handleImageReady = async (imageData: {
     imageId: string;
     path: string;
   }) => {
-    // Guest Mode Check
     if (!system.activeProfile) {
       console.log("Image upload attempted in guest mode - requiring login");
       setShowLoginRequiredDialog(true);
@@ -163,7 +161,6 @@ export const useShell = () => {
     const unlisten = listen<string>("image-path", async (event) => {
       const imagePath = event.payload;
       if (imagePath) {
-        // Guest Mode Check
         if (!activeProfileRef.current) {
           console.log(
             "CLI/External image drop attempted in guest mode - requiring login",
@@ -271,7 +268,7 @@ export const useShell = () => {
       system.setSessionChatTitle(chatData.metadata.title);
 
       const messages = chatData.messages.map((m, idx) => ({
-        id: idx.toString(), // or generate UUID
+        id: idx.toString(),
         role: m.role as "user" | "model",
         text: m.content,
         timestamp: new Date(m.timestamp).getTime(),
@@ -282,7 +279,6 @@ export const useShell = () => {
           messages,
           streamingText: "",
           firstResponseId: null,
-          isChatMode: true,
         },
         {
           base64: imageUrl,
@@ -320,7 +316,9 @@ export const useShell = () => {
 
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
   const [imageDrafts, setImageDrafts] = useState<Record<string, string>>({});
-  const [inputModel, setInputModel] = useState<string>(ModelType.GEMINI_2_5_FLASH);
+  const [inputModel, setInputModel] = useState<string>(
+    ModelType.GEMINI_2_5_FLASH,
+  );
 
   const activeDraftId = chatHistory.activeSessionId || "new_session";
 
@@ -359,7 +357,6 @@ export const useShell = () => {
 
   useEffect(() => {
     const unlisten = listen<any>("auth-success", (event) => {
-      // Check if re-authenticating the same active profile
       if (
         activeProfileRef.current &&
         event.payload &&
@@ -368,11 +365,9 @@ export const useShell = () => {
         return;
       }
 
-      // 1. Reset Session UI (Chat History, OCR, etc.)
       handleNewSession();
-      // 2. Switch to Main View (if not already)
+
       auth.login();
-      // Note: useSystemSync hook handles locking, key clearing, and user data update
     });
     return () => {
       unlisten.then((f) => f());
@@ -385,7 +380,6 @@ export const useShell = () => {
       target instanceof HTMLInputElement ||
       target instanceof HTMLTextAreaElement;
 
-    // Allow native menu on editable inputs
     if (
       isInput &&
       !(target as HTMLInputElement | HTMLTextAreaElement).readOnly
@@ -426,7 +420,6 @@ export const useShell = () => {
     return () => document.removeEventListener("click", handleClick);
   }, [contextMenu]);
 
-  // Derived state for wrappers
   const handleDeleteChatWrapper = async (id: string) => {
     const isActive = chatHistory.activeSessionId === id;
     await chatHistory.handleDeleteChat(id);
@@ -462,7 +455,6 @@ export const useShell = () => {
   };
 
   return {
-    // State
     system,
     auth,
     chat,
@@ -486,7 +478,6 @@ export const useShell = () => {
     isImageMissing,
     chatTitle,
 
-    // Actions
     toggleSidePanel,
     setShowGeminiAuthDialog,
     setShowLoginRequiredDialog,
@@ -511,7 +502,6 @@ export const useShell = () => {
     handleChatReload,
     handleSwitchProfile,
 
-    // Refs
     containerRef,
   };
 };
