@@ -4,16 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
-import { RotateCw } from "lucide-react";
+import React from "react";
+import { usePlatform } from "@/hooks";
 import { TrafficLights } from "../TrafficLights";
 import { WindowControls } from "../WindowControls";
-import styles from "./TitleBar.module.css";
-import { AccountSwitcher, SettingsPanel, AuthButton } from "@/features";
 import { SettingsOverlay } from "@/shell/overlays";
 import { useShellContext } from "@/shell/context";
-
-import { usePlatform } from "@/hooks";
+import { AccountSwitcher, SettingsPanel, AuthButton } from "@/features";
+import styles from "./TitleBar.module.css";
 
 export const TitleBar: React.FC = () => {
   const shell = useShellContext();
@@ -60,43 +58,7 @@ export const TitleBar: React.FC = () => {
       </div>
 
       <div className={styles.rightSection}>
-        {shell.system.activeProfile ? (
-          <>
-            <AccountSwitcher
-              activeProfile={shell.system.activeProfile}
-              onNewSession={shell.handleNewSession}
-              profiles={shell.system.profiles}
-              onSwitchProfile={shell.handleSwitchProfile}
-              onAddAccount={shell.handleAddAccount}
-              onLogout={shell.performLogout}
-              onDeleteProfile={shell.system.deleteProfile}
-              switchingProfileId={shell.system.switchingProfileId}
-            />
-          </>
-        ) : (
-          <AuthButton
-            onLogin={shell.handleAddAccount}
-            onCancel={shell.system.cancelAuth}
-            isLoading={shell.system.switchingProfileId === "creating_account"}
-          />
-        )}
-
-        {hasImageLoaded && (
-          <button
-            onClick={shell.handleChatReload}
-            className={styles.iconButton}
-            title="Reload chat"
-            disabled={shell.isRotating || shell.isLoadingState}
-          >
-            <RotateCw
-              size={20}
-              className={shell.isRotating ? styles.rotating : ""}
-            />
-          </button>
-        )}
-
         <SettingsPanel onOpenSettings={shell.system.openSettings} />
-
         <SettingsOverlay
           isOpen={shell.system.isSettingsOpen}
           onClose={() => shell.system.setSettingsOpen(false)}
@@ -117,6 +79,27 @@ export const TitleBar: React.FC = () => {
           onSetAPIKey={shell.system.handleSetAPIKey}
           isGuest={!shell.system.activeProfile}
         />
+
+        {shell.system.activeProfile ? (
+          <>
+            <AccountSwitcher
+              activeProfile={shell.system.activeProfile}
+              onNewSession={shell.handleNewSession}
+              profiles={shell.system.profiles}
+              onSwitchProfile={shell.handleSwitchProfile}
+              onAddAccount={shell.handleAddAccount}
+              onLogout={shell.performLogout}
+              onDeleteProfile={shell.system.deleteProfile}
+              switchingProfileId={shell.system.switchingProfileId}
+            />
+          </>
+        ) : (
+          <AuthButton
+            onLogin={shell.handleAddAccount}
+            onCancel={shell.system.cancelAuth}
+            isLoading={shell.system.switchingProfileId === "creating_account"}
+          />
+        )}
 
         {platform === "windows" && <WindowControls />}
       </div>

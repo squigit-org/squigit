@@ -89,7 +89,7 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
     <div
       className={`${styles.dropdown} ${isOpen ? styles.open : ""}`}
       style={dropdownStyle}
-      onMouseDown={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <div className={styles.sectionTitle}>OCR Model</div>
       <div className={styles.modelList}>
@@ -148,7 +148,7 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
         />
       </button>
 
-      {isOpen && createPortal(dropdownContent, document.body)}
+      {createPortal(dropdownContent, document.body)}
     </div>
   );
 };

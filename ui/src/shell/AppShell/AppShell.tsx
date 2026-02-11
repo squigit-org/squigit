@@ -5,10 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { Dialog } from "@/primitives";
 import { ImageShell, ChatShell } from "@/shell";
-import { parseGeminiError } from "@/lib/helpers/errorParser";
 import { useShellContext } from "@/shell/context";
 import styles from "./AppShell.module.css";
 
@@ -57,75 +54,6 @@ const AppShellComponent: React.FC = () => {
     };
   }, [isImageExpanded]);
 
-  const renderError = () => {
-    if (!error) return null;
-
-    const parsedError = parseGeminiError(error);
-
-    const getActions = () => {
-      const actions: any[] = [];
-
-      if (parsedError.actionType !== "DISMISS_ONLY") {
-        actions.push({
-          label: "Retry",
-          onClick: () => {
-            if (shell.chat.messages.length === 0) {
-              shell.chat.handleReload();
-            } else {
-              shell.chat.handleRetrySend();
-            }
-          },
-          variant: "danger",
-        });
-      } else {
-        actions.push({
-          label: "Dismiss",
-          onClick: () => setIsErrorDismissed(true),
-          variant: "secondary",
-        });
-      }
-
-      if (parsedError.actionType === "RETRY_OR_SETTINGS") {
-        actions.push({
-          label: "Change API Key",
-          onClick: () => {
-            shell.system.openSettings("apikeys");
-            setIsErrorDismissed(true);
-          },
-          variant: "secondary",
-        });
-      }
-
-      if (
-        parsedError.actionType === "RETRY_OR_LINK" &&
-        parsedError.meta?.link
-      ) {
-        actions.push({
-          label: parsedError.meta.linkLabel || "Open Link",
-          onClick: () => {
-            invoke("open_external_url", {
-              url: parsedError.meta?.link,
-            });
-            setIsErrorDismissed(true);
-          },
-          variant: "secondary",
-        });
-      }
-
-      return actions;
-    };
-
-    return (
-      <Dialog
-        isOpen={!!error && !isErrorDismissed}
-        variant="error"
-        title={parsedError.title}
-        message={parsedError.message}
-        actions={getActions()}
-      />
-    );
-  };
-
   return (
     <div className={styles.container}>
       <div ref={headerRef} className={styles.headerContainer}>
@@ -167,13 +95,6 @@ const AppShellComponent: React.FC = () => {
         onSend={() => {
           shell.chat.handleSend(shell.input, shell.inputModel);
           shell.setInput("");
-        }}
-        onRetry={() => {
-          if (shell.chat.messages.length === 0) {
-            shell.chat.handleReload();
-          } else {
-            shell.chat.handleRetrySend();
-          }
         }}
         onInputChange={shell.setInput}
         onOpenSettings={shell.system.openSettings}

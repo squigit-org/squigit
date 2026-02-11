@@ -22,7 +22,6 @@ export interface ParsedError {
 }
 
 export const parseGeminiError = (error: any): ParsedError => {
-  // Normalize error input
   const errString = typeof error === "string" ? error : JSON.stringify(error);
   const errObj = typeof error === "object" && error !== null ? error : {};
   const message =
@@ -30,10 +29,8 @@ export const parseGeminiError = (error: any): ParsedError => {
     errObj.statusText ||
     (typeof error === "string" ? error : "An unknown error occurred.");
 
-  // Combine message and error string for broader search
   const searchStr = (errString + " " + message).toLowerCase();
 
-  // Check for 503 / Overloaded
   if (
     searchStr.includes("503") ||
     searchStr.includes("overloaded") ||
@@ -48,7 +45,6 @@ export const parseGeminiError = (error: any): ParsedError => {
     };
   }
 
-  // Check for 429 / Quota / Exhausted
   if (
     searchStr.includes("429") ||
     searchStr.includes("quota") ||
@@ -64,7 +60,6 @@ export const parseGeminiError = (error: any): ParsedError => {
     };
   }
 
-  // Check for Account Suspended / Permission Denied
   if (
     searchStr.includes("suspended") ||
     searchStr.includes("permission denied") ||
@@ -83,7 +78,6 @@ export const parseGeminiError = (error: any): ParsedError => {
     };
   }
 
-  // Check for Network / Internet issues
   if (
     searchStr.includes("network") ||
     searchStr.includes("internet") ||
@@ -99,7 +93,6 @@ export const parseGeminiError = (error: any): ParsedError => {
     };
   }
 
-  // Check for Invalid API Key
   if (
     searchStr.includes("api key") ||
     searchStr.includes("unauthenticated") ||
@@ -113,7 +106,6 @@ export const parseGeminiError = (error: any): ParsedError => {
     };
   }
 
-  // Default / Unknown Error
   return {
     title: "Error",
     message: message,

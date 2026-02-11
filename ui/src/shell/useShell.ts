@@ -27,7 +27,6 @@ import {
   saveImgbbUrl,
   overwriteChatMessages,
 } from "@/lib/storage/chat";
-import { SettingsSection } from "./overlays";
 
 export const useShell = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
@@ -223,8 +222,6 @@ export const useShell = () => {
     }
   }, [isLoadingState, system.startupImage]);
 
-  const [isRotating, setIsRotating] = useState(false);
-
   const chat = useChat({
     apiKey: system.apiKey,
     currentModel: system.sessionModel,
@@ -237,18 +234,11 @@ export const useShell = () => {
     chatId: chatHistory.activeSessionId,
     onMissingApiKey: () => {
       setShowGeminiAuthDialog(true);
-      setIsRotating(false);
     },
     onTitleGenerated: (title: string) => {
       system.setSessionChatTitle(title);
     },
   });
-
-  useEffect(() => {
-    if (!chat.isLoading) {
-      setIsRotating(false);
-    }
-  }, [chat.isLoading]);
 
   const chatTitle = system.sessionChatTitle || "New Chat";
 
@@ -455,18 +445,6 @@ export const useShell = () => {
     }
   };
 
-  const handleChatReload = useCallback(() => {
-    setIsRotating(true);
-    const activeId = chatHistory.activeSessionId;
-    if (activeId) {
-      overwriteChatMessages(activeId, []).then(() => {
-        chat.handleReload();
-      });
-    } else {
-      chat.handleReload();
-    }
-  }, [chatHistory.activeSessionId, chat]);
-
   const handleSwitchProfile = async (profileId: string) => {
     handleNewSession();
     await system.switchProfile(profileId);
@@ -490,7 +468,6 @@ export const useShell = () => {
     pendingUpdate,
     showUpdate,
     contextMenu,
-    isRotating,
     isLoadingState,
     isAgreementPending,
     isImageMissing,
@@ -515,9 +492,7 @@ export const useShell = () => {
     handleDeleteChatWrapper,
     handleDeleteChatsWrapper,
     handleToggleStarChat: chatHistory.handleToggleStarChat,
-    setIsRotating,
     handleExit: () => exit(0),
-    handleChatReload,
     handleSwitchProfile,
 
     containerRef,

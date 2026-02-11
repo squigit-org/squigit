@@ -32,7 +32,6 @@ export interface ChatShellProps {
   chatId: string | null;
 
   onSend: () => void;
-  onRetry: () => void;
   onInputChange: (value: string) => void;
   onOpenSettings: (section: SettingsSection) => void;
   onStreamComplete?: () => void;
@@ -55,7 +54,6 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   startupImage,
   chatId,
   onSend,
-  onRetry,
   onInputChange,
   onOpenSettings,
   onStreamComplete,
@@ -171,20 +169,11 @@ export const ChatShell: React.FC<ChatShellProps> = ({
 
     const getActions = () => {
       const actions: any[] = [];
-
-      if (parsedError.actionType !== "DISMISS_ONLY") {
-        actions.push({
-          label: "Retry",
-          onClick: onRetry,
-          variant: "danger",
-        });
-      } else {
-        actions.push({
-          label: "Dismiss",
-          onClick: () => setIsErrorDismissed(true),
-          variant: "secondary",
-        });
-      }
+      actions.push({
+        label: "Dismiss",
+        onClick: () => setIsErrorDismissed(true),
+        variant: "secondary",
+      });
 
       if (parsedError.actionType === "RETRY_OR_SETTINGS") {
         actions.push({

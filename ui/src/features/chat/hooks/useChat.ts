@@ -296,20 +296,6 @@ export const useChat = ({
     }
   };
 
-  const handleReload = () => {
-    if (apiKey && startupImage && prompt) {
-      startSession(apiKey, currentModel, startupImage, false);
-    } else if (!apiKey) {
-      if (onMissingApiKey) {
-        onMissingApiKey();
-        setIsLoading(false);
-      } else {
-        setError("API Key missing. Please reset in settings.");
-        setIsLoading(false);
-      }
-    }
-  };
-
   const handleDescribeEdits = async (editDescription: string) => {
     if (!apiKey || !startupImage || !prompt) {
       if (!apiKey && onMissingApiKey) {
@@ -538,7 +524,6 @@ export const useChat = ({
   };
 
   const handleStopGeneration = (truncatedText: string) => {
-    // Flow 1: streaming temp bubble (startSession / handleDescribeEdits)
     if (streamingText && firstResponseId) {
       const botMsg: Message = {
         id: firstResponseId,
@@ -558,8 +543,6 @@ export const useChat = ({
       return;
     }
 
-    // Flow 2: normal chat (handleSend / handleRetrySend)
-    // The full message is already in messages[] — truncate the last model message
     setMessages((prev) => {
       const updated = [...prev];
       for (let i = updated.length - 1; i >= 0; i--) {
@@ -568,7 +551,7 @@ export const useChat = ({
           break;
         }
       }
-      // Persist truncated messages to storage
+
       onOverwriteMessages?.(updated);
       return updated;
     });
@@ -587,7 +570,6 @@ export const useChat = ({
     lastSentMessage,
     handleSend,
     handleRetrySend,
-    handleReload,
     handleDescribeEdits,
     handleStreamComplete,
     handleStopGeneration,

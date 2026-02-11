@@ -47,7 +47,6 @@
   text-overflow: ellipsis;
 }
 
-/* Alias for active model item */
 .modelItem {
   composes: item;
   flex-shrink: 0;
@@ -59,4 +58,28 @@
 
 .extraButton {
   cursor: default;
+}
+
+.dropdown {
+  composes: dropdown from "@/primitives/dropdown/Dropdown.shared.module.css";
+}
+
+.open {
+  composes: open from "@/primitives/dropdown/Dropdown.shared.module.css";
+}
+
+.sectionTitle {
+  composes: sectionTitle from "@/primitives/dropdown/Dropdown.shared.module.css";
+}
+
+.divider {
+  composes: divider from "@/primitives/dropdown/Dropdown.shared.module.css";
+}
+
+.actions {
+  composes: actions from "@/primitives/dropdown/Dropdown.shared.module.css";
+}
+
+.actionButton {
+  composes: actionButton from "@/primitives/dropdown/Dropdown.shared.module.css";
 }
