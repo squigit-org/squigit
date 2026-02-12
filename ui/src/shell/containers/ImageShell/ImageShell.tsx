@@ -55,7 +55,7 @@ export interface ImageShellProps {
   onOpenSettings: (section: SettingsSection) => void;
   autoExpandOCR?: boolean;
   activeProfileId: string | null;
-  // OCR props
+
   ocrEnabled: boolean;
   downloadedOcrLanguages: string[];
   currentOcrModel: string;
@@ -92,7 +92,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   const viewerRef = useRef<HTMLDivElement>(null);
   const imgWrapRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  // Removed local imagePrompt state
+
   const toolbarRef = useRef<HTMLDivElement>(null);
   const expandedContentRef = useRef<HTMLDivElement>(null);
   const OCRMenuRef = useRef<OCRMenuHandle>(null);
@@ -118,7 +118,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   const hasAutoExpandedRef = useRef(false);
   const prevImageBase64Ref = useRef<string | null>(null);
 
-  // Reset refs when image changes
   if (startupImage?.base64 !== prevImageBase64Ref.current) {
     hasScannedRef.current = false;
     hasAutoExpandedRef.current = false;
@@ -138,7 +137,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       setError("");
 
       try {
-        // Dummy 3-second delay to simulate OCR processing
         await new Promise((resolve) => setTimeout(resolve, 3000));
 
         console.log("Dummy OCR complete");
@@ -146,7 +144,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         if (currentChatId === chatId) {
           setLoading(false);
 
-          // Auto-expand if setting is enabled - Only once per image
           if (
             autoExpandOCR &&
             onToggleExpand &&
@@ -178,7 +175,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     isExpanded,
   ]);
 
-  // Auto-scan if no data present
   useEffect(() => {
     if (
       startupImage &&
@@ -206,11 +202,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       });
     }
   };
-
-  // Reset expansion state when switching chats - Handled by parent now
-  // useEffect(() => {
-  //   setIsExpanded(false);
-  // }, [chatId]);
 
   const handleCopyImage = useCallback(async (): Promise<boolean> => {
     if (!startupImage?.base64) return false;
@@ -243,7 +234,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         sourcePath = decodeURIComponent(sourcePath);
       }
     } else {
-      // Fallback for base64 content if needed, though strictly we prefer file path copy
       const img = imgRef.current;
       if (!img) return false;
 
@@ -290,13 +280,10 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           urlObj.protocol === "asset:"
         ) {
           sourcePath = decodeURIComponent(urlObj.pathname);
-          // Remove leading slash if windows? No, this is linux specific for now mostly but we should be careful.
-          // On linux pathname from /home/user is /home/user.
-          // On windows it might be /C:/Users...
         }
       } catch (e) {
         console.error("Failed to parse URL for save:", e);
-        // Fallback cleanup if URL extraction fails
+
         const patterns = [
           "asset://localhost",
           "http://asset.localhost",
@@ -312,21 +299,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         sourcePath = decodeURIComponent(sourcePath);
       }
     } else {
-      // If it's pure base64, we can't easily "save" using a simple copy command on backend without saving it to a temp file first.
-      // But the requirements say "copy from chat folder".
-      // If it is NOT a file path (isFilePath=false), it might be raw base64.
-      // Most usage in this app seems to be file-backed.
-      // If it is base64, we might need a different command or just ignore for now as per "copy from chat folder" instruction.
-      // However, looking at `scan` logic:
-      // if (startupImage.isFilePath) { ... } else { imageData = startupImage.base64; isBase64 = true; }
-      // If it IS base64, we probably want to support saving it too?
-      // The user said: "the bts will be copy from chat folder and paste to user chosen location because the image already saved in disk by CAS model"
-      // This implies we should have a path even if we passed base64 to frontend, OR we should rely on the fact that we have it in CAS.
-      // But `startupImage` here comes from props.
-      // If `isFilePath` is false, it's a raw base64 string?
-      // If so, we can't use `fs::copy`.
-      // Let's assume for now we only handle the `isFilePath` case or `asset` url case as that's what "saved in chat folder" implies.
-      // If it's pure base64, we can't easily "save" using a simple copy command on backend without saving it to a temp file first.
     }
 
     try {
@@ -362,15 +334,13 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     }
   }, [ocrData]);
 
-  // Removed handleWheel as logic moved to parent
-
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     setIsAnimating(true);
     const timer = setTimeout(() => {
       setIsAnimating(false);
-    }, 300); // Match CSS transition duration
+    }, 300);
     return () => clearTimeout(timer);
   }, [isExpanded]);
 
@@ -399,29 +369,20 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   isExpandedRef.current = isExpanded;
 
   useEffect(() => {
-    // Attach listener to the bigImageBox to ONLY catch scrolls inside the image area
     const imageBox = scrollWrapperRef.current;
     if (!imageBox) return;
 
     const handleWheel = (e: WheelEvent) => {
-      // If we are collapsed, we want the scroll to bubble up so the parent (ChatLayout)
-      // can handle the "Expand on scroll up" gesture.
       if (!isExpandedRef.current) return;
 
-      // Use Math.ceil to handle fractional pixels potentially
-      // Recalculate overflow on the fly
       const isScrollable =
         Math.ceil(imageBox.scrollHeight) > Math.ceil(imageBox.clientHeight);
 
       if (isScrollable) {
-        // If the image area has a scrollbar, we want to consume the scroll event
-        // to prevent the parent layout from triggering the collapse gesture.
         e.stopPropagation();
       }
-      // If image is NOT scrollable, we let the event bubble.
     };
 
-    // Use passive: false to ensure we can control event propagation reliably
     imageBox.addEventListener("wheel", handleWheel, { passive: false });
     return () => imageBox.removeEventListener("wheel", handleWheel);
   }, []);
@@ -487,19 +448,19 @@ export const ImageShell: React.FC<ImageShellProps> = ({
                     className={styles.bigImage}
                   />
                   {/* Render OCRLayer here */}
-                  {/* <ImageTextCanvas
+                  <ImageTextCanvas
                     data={ocrData}
                     size={size}
                     svgRef={svgRef}
                     onTextMouseDown={handleTextMouseDown}
-                  /> */}
+                  />
                 </div>
               </div>
             </div>
           </div>
 
           <ImageToolbar
-            key={chatId} // Reset position on chat switch
+            key={chatId}
             toolbarRef={toolbarRef}
             isLensLoading={isLensLoading}
             onLensClick={triggerLens}

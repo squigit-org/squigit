@@ -495,7 +495,6 @@ export const useShell = () => {
     handleToggleStarChat: chatHistory.handleToggleStarChat,
     handleExit: () => exit(0),
     handleSwitchProfile,
-
     containerRef,
   };
 };

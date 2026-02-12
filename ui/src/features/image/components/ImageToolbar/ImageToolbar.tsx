@@ -19,8 +19,6 @@ interface ImageToolbarProps {
 
 import { Tooltip } from "@/primitives";
 
-const EDGE_PADDING = 8;
-
 const ToolbarButton: React.FC<{
   icon: React.ReactNode;
   tooltip: string;
@@ -75,15 +73,11 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   );
 
   useEffect(() => {
-    // If not expanded, we don't need to calculate position or observe
-    // This also helps performance
     if (!isExpanded) return;
 
     const toolbar = toolbarRef.current;
     const constraint = constraintRef.current;
     if (!toolbar || !constraint) return;
-
-    // Helper to clamp and position the toolbar
 
     const updatePosition = () => {
       const offsetParent = toolbar.offsetParent as HTMLElement;
@@ -96,8 +90,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       const minLeft = constraintRect.left - parentRect.left;
       const minTop = constraintRect.top - parentRect.top;
 
-      // Ensure we have valid dimensions before calculating max
-      // If constraint is hidden (e.g. 0 height), max might be invalid but logic handles it
       const maxLeft = Math.max(
         minLeft,
         minLeft + constraintRect.width - toolbarRect.width,
@@ -107,8 +99,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         minTop + constraintRect.height - toolbarRect.height,
       );
 
-      // Determine current intended position
-      // If styles are unset, default to top-left + padding
       let currentLeft: number;
       let currentTop: number;
 
@@ -116,8 +106,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         currentLeft = minLeft + 8;
         currentTop = minTop + 8;
       } else {
-        // Calculate where it visually is right now relative to parent
-        // This handles the case where parent moved but toolbar didn't update yet
         currentLeft = toolbarRect.left - parentRect.left;
         currentTop = toolbarRect.top - parentRect.top;
       }
@@ -129,12 +117,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       toolbar.style.top = `${newTop}px`;
     };
 
-    // Initial position
     updatePosition();
 
-    // Watch for size changes in the constraint (BigImageBox) or parent
     const resizeObserver = new ResizeObserver(() => {
-      // Use requestAnimationFrame to avoid "ResizeObserver loop limit exceeded"
       requestAnimationFrame(updatePosition);
     });
 
@@ -143,7 +128,6 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       resizeObserver.observe(toolbar.offsetParent);
     }
 
-    // Also watch window resize for good measure
     window.addEventListener("resize", updatePosition);
 
     return () => {

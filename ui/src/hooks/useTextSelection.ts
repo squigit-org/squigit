@@ -301,7 +301,6 @@ export const useTextSelection = ({
   const handleSelection = useCallback(() => {
     if (isSelectAllMode) return;
 
-    // Ignore selection if user is editing in a textarea or input
     const activeEl = document.activeElement;
     if (
       activeEl &&
@@ -438,5 +437,4 @@ export const useTextSelection = ({
   };
 };
 
-// Alias for backward compatibility
 export const useInlineMenu = useTextSelection;

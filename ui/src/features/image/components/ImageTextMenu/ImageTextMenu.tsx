@@ -420,6 +420,5 @@ export const ImageTextMenu = forwardRef<
 
 ImageTextMenu.displayName = "ImageTextMenu";
 
-// Backward compatibility aliases
 export const OCRMenu = ImageTextMenu;
 export type OCRMenuHandle = ImageTextMenuHandle;
