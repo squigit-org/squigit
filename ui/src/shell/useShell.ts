@@ -265,14 +265,6 @@ export const useShell = () => {
       const imagePath = await getImagePath(chatData.metadata.image_hash);
       const imageUrl = convertFileSrc(imagePath);
 
-      system.setStartupImage({
-        base64: imageUrl,
-        mimeType: "image/png",
-        isFilePath: true,
-        imageId: chatData.metadata.image_hash,
-        fromHistory: true,
-      } as any);
-
       system.setSessionChatTitle(chatData.metadata.title);
 
       const messages = chatData.messages.map((m, idx) => ({
@@ -305,6 +297,14 @@ export const useShell = () => {
       }
 
       setSessionLensUrl(chatData.imgbb_url || null);
+
+      system.setStartupImage({
+        base64: imageUrl,
+        mimeType: "image/png",
+        isFilePath: true,
+        imageId: chatData.metadata.image_hash,
+        fromHistory: true,
+      } as any);
 
       chatHistory.setActiveSessionId(id);
     } catch (e) {

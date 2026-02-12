@@ -196,13 +196,14 @@
   visibility: visible;
 }
 
-.floatingContainer :global(.textLayer) {
+.floatingContainer [data-text-layer] {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
-.floatingContainer.expanded :global(.textLayer) {
+.floatingContainer.expanded [data-text-layer] {
   opacity: 1;
+  transition-delay: 0.3s;
 }
 
 .bigImageBox {

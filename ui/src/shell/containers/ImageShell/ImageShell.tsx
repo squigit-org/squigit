@@ -122,6 +122,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     hasScannedRef.current = false;
     hasAutoExpandedRef.current = false;
     prevImageBase64Ref.current = startupImage?.base64 || null;
+    setLoading(false);
   }
 
   const scan = useCallback(async () => {
