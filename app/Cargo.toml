@@ -54,6 +54,7 @@ log = "0.4"
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = "0.9.7"
 zbus = "4.0.1"
+libc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.52"

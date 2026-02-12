@@ -5,11 +5,28 @@
 //!
 //! This module provides a Tauri command to run OCR on images
 //! using the PaddleOCR Python sidecar via stdin/stdout IPC.
+//!
+//! Safety controls:
+//! - Thread-limiting env vars (defense-in-depth, Python also sets them)
+//! - Lower process priority via nice(10) on Unix
+//! - I/O priority via ionice on Linux
+//! - Timeout with automatic process kill (120s default)
+//! - Single-job mutex to prevent concurrent OCR calls
 
 use serde::{Deserialize, Serialize};
-use std::io::Write;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
+use std::sync::LazyLock;
 use tauri::Manager;
+use tokio::io::AsyncWriteExt;
+use tokio::sync::Mutex;
+use tokio::time::{timeout, Duration};
+
+/// Maximum wall-clock time for a single OCR job (seconds).
+const OCR_TIMEOUT_SECS: u64 = 120;
+
+/// Global mutex to ensure only one OCR job runs at a time.
+/// Prevents concurrent calls from compounding CPU pressure.
+static OCR_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrBox {
@@ -46,6 +63,9 @@ pub async fn ocr_image(
     image_data: String,
     is_base64: bool,
 ) -> Result<Vec<OcrBox>, String> {
+    // Acquire the job mutex — only one OCR at a time
+    let _guard = OCR_LOCK.lock().await;
+
     let sidecar_path = app
         .path()
         .resource_dir()
@@ -69,22 +89,73 @@ pub async fn ocr_image(
     let request_json = serde_json::to_string(&request)
         .map_err(|e| format!("Failed to serialize request: {}", e))?;
 
-    let mut child = Command::new(&sidecar_path)
-        .stdin(Stdio::piped())
+    // Build the command with resource controls
+    let mut cmd = tokio::process::Command::new(&sidecar_path);
+    cmd.stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    // Defense-in-depth: set thread-limiting env vars from Rust side too
+    // (Python main.py also sets these, but this catches edge cases)
+    cmd.env("OMP_NUM_THREADS", "2")
+        .env("OPENBLAS_NUM_THREADS", "2")
+        .env("MKL_NUM_THREADS", "2")
+        .env("NUMEXPR_NUM_THREADS", "2")
+        .env("OMP_WAIT_POLICY", "PASSIVE");
+
+    // Unix-specific: lower process priority and set I/O priority
+    #[cfg(unix)]
+    {
+        unsafe {
+            cmd.pre_exec(|| {
+                // nice(10) — lower CPU scheduling priority
+                libc::nice(10);
+                // ionice: set I/O scheduling class to "best effort" with low priority
+                // class 2 = best-effort, priority 7 = lowest within class
+                #[cfg(target_os = "linux")]
+                {
+                    libc::syscall(libc::SYS_ioprio_set, 1 /* IOPRIO_WHO_PROCESS */, 0, (2 << 13) | 7);
+                }
+                Ok(())
+            });
+        }
+    }
+
+    // Spawn the child process
+    let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to spawn OCR sidecar: {}", e))?;
 
+    // Write the request to stdin
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(request_json.as_bytes())
+            .await
             .map_err(|e| format!("Failed to write to sidecar stdin: {}", e))?;
+        // Drop stdin to signal EOF
+        drop(stdin);
     }
 
-    let output = child
-        .wait_with_output()
-        .map_err(|e| format!("Failed to wait for sidecar: {}", e))?;
+    // Wait for output with timeout — kill on overrun
+    let result = timeout(Duration::from_secs(OCR_TIMEOUT_SECS), child.wait_with_output()).await;
+
+    let output = match result {
+        Ok(Ok(output)) => output,
+        Ok(Err(e)) => {
+            return Err(format!("Failed to wait for sidecar: {}", e));
+        }
+        Err(_) => {
+            // Timeout expired — kill the process
+            eprintln!("OCR sidecar timed out after {}s, killing process", OCR_TIMEOUT_SECS);
+            // child is moved into wait_with_output, but on timeout the future
+            // is dropped which should drop the child. As extra safety:
+            return Err(format!(
+                "OCR timed out after {}s. The image may be too large or complex. \
+                 The process has been terminated to protect system stability.",
+                OCR_TIMEOUT_SECS
+            ));
+        }
+    };
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

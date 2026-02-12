@@ -16,6 +16,7 @@ dependencies = [
  "hex",
  "hmac",
  "image",
+ "libc",
  "log",
  "mime_guess",
  "objc",

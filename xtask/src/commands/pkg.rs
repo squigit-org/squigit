@@ -82,6 +82,13 @@ pub fn ocr() -> Result<()> {
     println!("  Copying binary to {}", dst_binary_path.display());
     fs::copy(&src_binary_path, &dst_binary_path)?;
 
+    // Also copy to target/debug/binaries for dev
+    let debug_binaries = project_root().join("target").join("debug").join("binaries");
+    fs::create_dir_all(&debug_binaries)?;
+    let debug_dst_path = debug_binaries.join(&dst_binary_name);
+    println!("  Copying binary to {}", debug_dst_path.display());
+    fs::copy(&src_binary_path, &debug_dst_path)?;
+
     Ok(())
 }
 

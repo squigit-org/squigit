@@ -26,29 +26,16 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Build everything (OCR sidecar + Capture Engine)
-    Build,
-
-    /// Build PaddleOCR sidecar executable
-    BuildOcr,
-
-    /// Build Whisper STT sidecar executable
-    BuildWhisper,
-
-    /// Build Capture Engine (Qt + Rust + Package)
-    BuildCapture,
-
-    /// Build Qt native only (CMake only, no Bundle)
-    BuildCaptureQt,
-
-    /// Build Tauri application for release
-    BuildApp,
+    /// Build everything or specific components
+    Build {
+        #[command(subcommand)]
+        command: Option<BuildCommands>,
+    },
 
     /// Clean all build artifacts
     Clean,
 
     /// Tauri commands (dev, build, etc.) + Extra arguments
-    
     Run {
         #[arg(default_value = "dev")]
         cmd: String,
@@ -62,16 +49,32 @@ enum Commands {
     },
 }
 
+#[derive(Subcommand)]
+enum BuildCommands {
+    /// Build PaddleOCR sidecar executable
+    Ocr,
+    /// Build Whisper STT sidecar executable
+    Whisper,
+    /// Build Capture Engine (Qt + Rust + Package)
+    Capture,
+    /// Build Qt native only (CMake only, no Bundle)
+    CaptureQt,
+    /// Build Tauri application for release
+    App,
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Build => build::all()?,
-        Commands::BuildOcr => build::ocr()?,
-        Commands::BuildWhisper => build::whisper()?,
-        Commands::BuildCapture => build::capture()?,
-        Commands::BuildCaptureQt => build::capture_qt_only()?,
-        Commands::BuildApp => build::app()?,
+        Commands::Build { command } => match command {
+            None => build::all()?,
+            Some(BuildCommands::Ocr) => build::ocr()?,
+            Some(BuildCommands::Whisper) => build::whisper()?,
+            Some(BuildCommands::Capture) => build::capture()?,
+            Some(BuildCommands::CaptureQt) => build::capture_qt_only()?,
+            Some(BuildCommands::App) => build::app()?,
+        },
         Commands::Clean => clean::all()?,
         Commands::Run { cmd, args } => dev::run(&cmd, &args)?,
         Commands::Dev { args } => dev::run("dev", &args)?,

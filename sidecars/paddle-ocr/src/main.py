@@ -2,6 +2,17 @@
 # Copyright 2026 a7mddra
 # SPDX-License-Identifier: Apache-2.0
 
+# ── Thread limiting (MUST be before any numerical library import) ──
+# BLAS/OpenMP/MKL libraries read these at load time. Setting them after
+# import has no effect. Without these, PaddlePaddle + OpenCV + NumPy
+# spawn 20-40 threads that saturate all CPU cores and freeze the system.
+import os
+os.environ["OMP_NUM_THREADS"] = "2"
+os.environ["OPENBLAS_NUM_THREADS"] = "2"
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["NUMEXPR_NUM_THREADS"] = "2"
+os.environ["OMP_WAIT_POLICY"] = "PASSIVE"
+
 """
 OCR Engine - Command-line and IPC interface for text extraction.
 
@@ -11,7 +22,7 @@ It supports two modes:
 2. IPC mode: reads JSON from stdin (for Tauri integration)
 
 @author a7mddra
-@version 2.0.0
+@version 2.1.0
 
 @usage
     # CLI mode
@@ -26,7 +37,6 @@ import sys
 import json
 import base64
 import tempfile
-import os
 from pathlib import Path
 
 if __name__ == "__main__":
