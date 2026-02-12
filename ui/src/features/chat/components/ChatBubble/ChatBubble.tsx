@@ -318,7 +318,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         );
       }
 
-      // Code blocks with math-like languages → render with katex
       if (isMathLang) {
         try {
           const html = renderKatex(segment.content, true);
@@ -344,7 +343,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       );
     }
 
-    // --- Display math block ($$...$$) ---
     if (segment.type === "mathblock") {
       const isTyping = isStreamed && !isStreamingComplete;
 
@@ -378,7 +376,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       }
     }
 
-    // --- Inline math ($...$) ---
     if (segment.type === "math") {
       try {
         const html = renderKatex(
@@ -623,7 +620,6 @@ export const ChatBubble = React.memo(
       prevProps.message.text === nextProps.message.text &&
       prevProps.isStreamed === nextProps.isStreamed &&
       prevProps.stopRequested === nextProps.stopRequested &&
-      // Compare existence, not reference — parent creates inline closures
       !!prevProps.onRetry === !!nextProps.onRetry &&
       prevProps.isRetrying === nextProps.isRetrying &&
       !!prevProps.onEdit === !!nextProps.onEdit

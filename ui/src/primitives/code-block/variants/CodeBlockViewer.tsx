@@ -20,10 +20,19 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
   value,
   stickyHeader = true,
 }) => {
+  const PLAIN_LANGUAGES = ["text", "txt", "plain", "plaintext", "prompt"];
+  const isPlain = !language || PLAIN_LANGUAGES.includes(language.toLowerCase());
+
   const { isCopied, copy } = useCopyToClipboard(1000);
-  const { highlightedHtml, isLoading } = useCodeHighlighter(value, language);
+
+  const { highlightedHtml, isLoading } = useCodeHighlighter(
+    value,
+    language,
+    !isPlain,
+  );
   const handleCopy = () => copy(value);
-  const shouldShowPlain = isLoading || language === "text";
+
+  const shouldShowPlain = isPlain || isLoading;
 
   return (
     <div className={styles.wrapper} role="region" aria-label="code block">
