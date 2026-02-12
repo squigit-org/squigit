@@ -85,3 +85,10 @@ export const getDeleteMultipleChatsDialog = (count: number): DialogContent => ({
     { label: "Delete All", variant: "danger", actionKey: "confirm" },
   ],
 });
+
+export const getErrorDialog = (message: string): DialogContent => ({
+  title: "Error",
+  message,
+  variant: "error",
+  actions: [{ label: "Close", variant: "primary", actionKey: "close" }],
+});

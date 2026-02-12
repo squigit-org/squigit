@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { commands } from "@/lib/api/tauri/commands";
+import { commands } from "@/lib/api/tauri";
 import {
   useSystemSync,
   useWindowManager,
@@ -16,7 +16,7 @@ import {
   getPendingUpdate,
 } from "@/hooks";
 import { useAuth, useChat, useChatHistory } from "@/features";
-import { ModelType } from "@/lib/config/models";
+import { ModelType } from "@/lib/config";
 import {
   loadChat,
   getImagePath,
@@ -26,7 +26,7 @@ import {
   saveOcrData,
   saveImgbbUrl,
   overwriteChatMessages,
-} from "@/lib/storage/chat";
+} from "@/lib/storage";
 
 export const useShell = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);

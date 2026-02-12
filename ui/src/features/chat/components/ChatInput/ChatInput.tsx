@@ -12,7 +12,7 @@ import React, {
   useCallback,
 } from "react";
 import { Paperclip, ArrowUp, Square, Camera } from "lucide-react";
-import { MODELS } from "@/lib/config/models";
+import { MODELS } from "@/lib/config";
 import { Tooltip } from "@/primitives/tooltip/Tooltip";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { TextContextMenu } from "@/shell";

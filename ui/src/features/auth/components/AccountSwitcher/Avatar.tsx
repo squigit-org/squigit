@@ -8,7 +8,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 
-import { commands } from "@/lib/api/tauri/commands";
+import { commands } from "@/lib/api/tauri";
 
 import styles from "./AccountSwitcher.module.css";
 

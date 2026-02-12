@@ -15,7 +15,7 @@ import {
   restoreSession as apiRestoreSession,
   retryFromMessage,
   editUserMessage,
-} from "@/lib/api/gemini/client";
+} from "@/lib/api/gemini";
 
 export const useChat = ({
   apiKey,

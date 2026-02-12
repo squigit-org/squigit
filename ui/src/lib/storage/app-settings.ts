@@ -21,7 +21,7 @@ import {
   DEFAULT_OCR_LANGUAGE,
   DEFAULT_DOWNLOADED_OCR_LANGUAGES,
   DEFAULT_ACTIVE_ACCOUNT,
-} from "@/lib/helpers/constants";
+} from "@/lib/helpers";
 
 export interface UserPreferences {
   model: string;

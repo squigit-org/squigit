@@ -3,11 +3,7 @@ import { usePlatform } from "@/hooks";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
-import {
-  ImageResult,
-  createChat,
-  storeImageFromPath,
-} from "@/lib/storage/chat";
+import { ImageResult, createChat, storeImageFromPath } from "@/lib/storage";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];

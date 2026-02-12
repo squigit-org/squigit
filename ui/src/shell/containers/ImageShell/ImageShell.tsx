@@ -25,6 +25,7 @@ import { OCRMenu, OCRMenuHandle } from "@/features";
 import styles from "./ImageShell.module.css";
 import { Dialog } from "@/primitives";
 import { SettingsSection } from "@/shell/overlays";
+import { DialogContent, getErrorDialog } from "@/lib/helpers";
 
 interface OCRBox {
   text: string;
@@ -84,8 +85,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
 
-  const [showOverlay, setShowOverlay] = useState(false);
-  const [error, setError] = useState("");
+  const [errorDialog, setErrorDialog] = useState<DialogContent | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [showScrollbar, setShowScrollbar] = useState(false);
 
@@ -134,16 +134,68 @@ export const ImageShell: React.FC<ImageShellProps> = ({
 
     if (!hasAutoExpandedRef.current) {
       setLoading(true);
-      setError("");
+      setErrorDialog(null);
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        let imageData: string;
+        let isBase64: boolean;
 
-        console.log("Dummy OCR complete");
+        if (startupImage.isFilePath) {
+          const urlStr = startupImage.base64;
+          console.log("ImageArea: processing URL:", urlStr);
+
+          try {
+            const urlObj = new URL(urlStr);
+
+            if (
+              urlObj.hostname === "asset.localhost" ||
+              urlObj.protocol === "asset:"
+            ) {
+              imageData = decodeURIComponent(urlObj.pathname);
+            } else {
+              imageData = urlStr;
+            }
+          } catch (e) {
+            console.log(
+              "ImageArea: URL parsing failed, falling back to manual strip",
+              e,
+            );
+
+            let url = urlStr;
+            const patterns = [
+              "asset://localhost",
+              "http://asset.localhost",
+              "https://asset.localhost",
+              "asset:",
+            ];
+            for (const pattern of patterns) {
+              if (url.startsWith(pattern)) {
+                url = url.replace(pattern, "");
+                break;
+              }
+            }
+            imageData = decodeURIComponent(url);
+          }
+
+          console.log("ImageArea: extracted path:", imageData);
+          isBase64 = false;
+        } else {
+          imageData = startupImage.base64;
+          isBase64 = true;
+        }
+
+        const results = await invoke<OCRBox[]>("ocr_image", {
+          imageData,
+          isBase64,
+        });
+
+        const converted = results.map((r) => ({
+          text: r.text,
+          box: r.box_coords,
+        }));
 
         if (currentChatId === chatId) {
-          setLoading(false);
-
+          onUpdateOCRData(converted);
           if (
             autoExpandOCR &&
             onToggleExpand &&
@@ -157,8 +209,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       } catch (e) {
         if (currentChatId === chatId) {
           const errorMsg = e instanceof Error ? e.message : String(e);
-          setError(errorMsg);
-          setShowOverlay(false);
+          setErrorDialog(getErrorDialog(errorMsg));
         }
       } finally {
         if (currentChatId === chatId) {
@@ -173,6 +224,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     autoExpandOCR,
     onToggleExpand,
     isExpanded,
+    onUpdateOCRData,
   ]);
 
   useEffect(() => {
@@ -180,14 +232,14 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       startupImage &&
       ocrData.length === 0 &&
       !loading &&
-      !error &&
+      !errorDialog &&
       !startupImage.fromHistory &&
       !hasScannedRef.current
     ) {
       hasScannedRef.current = true;
       scan();
     }
-  }, [startupImage, ocrData.length, loading, error, scan]);
+  }, [startupImage, ocrData.length, loading, errorDialog, scan]);
 
   const isScrollBlockedRef = useRef(false);
   const wheelEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -218,7 +270,12 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           sourcePath = decodeURIComponent(urlObj.pathname);
         }
       } catch (e) {
-        console.error("Failed to parse URL for copy:", e);
+        // console.error("Failed to parse URL for copy:", e);
+        setErrorDialog(
+          getErrorDialog(
+            `Failed to parse URL for copy: ${e instanceof Error ? e.message : String(e)}`,
+          ),
+        );
         const patterns = [
           "asset://localhost",
           "http://asset.localhost",
@@ -253,7 +310,12 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         await invoke("copy_image_to_clipboard", { image_base64: base64 });
         return true;
       } catch (err) {
-        console.error("Failed to copy base64 image:", err);
+        // console.error("Failed to copy base64 image:", err);
+        setErrorDialog(
+          getErrorDialog(
+            `Failed to copy base64 image: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
         return false;
       }
     }
@@ -262,7 +324,12 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       await invoke("copy_image_from_path_to_clipboard", { path: sourcePath });
       return true;
     } catch (err) {
-      console.error("Failed to copy image from path:", err);
+      // console.error("Failed to copy image from path:", err);
+      setErrorDialog(
+        getErrorDialog(
+          `Failed to copy image from path: ${err instanceof Error ? err.message : String(err)}`,
+        ),
+      );
       return false;
     }
   }, [startupImage]);
@@ -282,7 +349,12 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           sourcePath = decodeURIComponent(urlObj.pathname);
         }
       } catch (e) {
-        console.error("Failed to parse URL for save:", e);
+        // console.error("Failed to parse URL for save:", e);
+        setErrorDialog(
+          getErrorDialog(
+            `Failed to parse URL for save: ${e instanceof Error ? e.message : String(e)}`,
+          ),
+        );
 
         const patterns = [
           "asset://localhost",
@@ -316,7 +388,12 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         });
       }
     } catch (error) {
-      console.error("Failed to save image:", error);
+      // console.error("Failed to save image:", error);
+      setErrorDialog(
+        getErrorDialog(
+          `Failed to save image: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
     }
   }, [startupImage]);
 
@@ -443,7 +520,9 @@ export const ImageShell: React.FC<ImageShellProps> = ({
                     src={imageSrc}
                     alt=""
                     onLoad={onLoad}
-                    onError={() => setError("Failed to load image")}
+                    onError={() =>
+                      setErrorDialog(getErrorDialog("Failed to load image"))
+                    }
                     draggable={false}
                     className={styles.bigImage}
                   />
@@ -492,7 +571,13 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         }}
       />
 
-      {error && <div className={styles.ocrError}>{error}</div>}
+      {errorDialog && (
+        <Dialog
+          isOpen={!!errorDialog}
+          type={errorDialog}
+          onAction={() => setErrorDialog(null)}
+        />
+      )}
     </>
   );
 };

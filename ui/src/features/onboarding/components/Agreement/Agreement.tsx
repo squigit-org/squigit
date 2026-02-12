@@ -5,10 +5,7 @@
  */
 
 import React, { useEffect, useState } from "react";
-import {
-  savePreferences,
-  defaultPreferences,
-} from "@/lib/storage/app-settings";
+import { savePreferences, defaultPreferences } from "@/lib/storage";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";

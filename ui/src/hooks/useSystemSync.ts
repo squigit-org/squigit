@@ -7,16 +7,16 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { initializeGemini } from "@/lib/api/gemini/client";
-import { commands, Profile } from "@/lib/api/tauri/commands";
+import { initializeGemini } from "@/lib/api/gemini";
+import { commands, Profile } from "@/lib/api/tauri";
 import { useTheme } from "./useTheme";
 import {
   loadPreferences,
   savePreferences,
   hasPreferencesFile,
   UserPreferences,
-} from "@/lib/storage/app-settings";
-import { DEFAULT_MODEL, DEFAULT_PROMPT } from "@/lib/helpers/constants";
+} from "@/lib/storage";
+import { DEFAULT_MODEL, DEFAULT_PROMPT } from "@/lib/helpers";
 import { SettingsSection } from "@/shell";
 
 export const useSystemSync = () => {

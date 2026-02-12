@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { ThemeContext } from "@/hooks/useTheme";
-import { loadPreferences, savePreferences } from "@/lib/storage/app-settings";
+import { loadPreferences, savePreferences } from "@/lib/storage";
 import { invoke } from "@tauri-apps/api/core";
 
 const THEME_STORAGE_KEY = "theme";

@@ -8,7 +8,7 @@ import styles from "./PersonalizationSection.module.css";
 
 import { TextContextMenu } from "@/shell";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
-import { UserPreferences } from "@/lib/storage/app-settings";
+import { UserPreferences } from "@/lib/storage";
 
 interface PersonalizationSectionProps {
   localPrompt: string;

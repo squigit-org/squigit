@@ -10,7 +10,7 @@ import { InlineMenu, TextShimmer, Dialog } from "@/primitives";
 import { useInlineMenu } from "@/hooks";
 import { SettingsSection } from "@/shell/overlays";
 import { invoke } from "@tauri-apps/api/core";
-import { parseGeminiError } from "@/lib/helpers/errorParser";
+import { parseGeminiError } from "@/lib/helpers";
 import styles from "./ChatShell.module.css";
 
 export interface ChatShellProps {

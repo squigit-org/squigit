@@ -16,11 +16,11 @@ import {
   StarOff,
 } from "lucide-react";
 
-import { ChatMetadata, groupChatsByDate } from "@/lib/storage/chat";
+import { ChatMetadata, groupChatsByDate } from "@/lib/storage";
 import styles from "./SidePanel.module.css";
 import { Dialog } from "@/primitives";
 import { PanelContextMenu } from "@/shell/menus";
-import { getDeleteMultipleChatsDialog } from "@/lib/helpers/dialogs";
+import { getDeleteMultipleChatsDialog } from "@/lib/helpers";
 import { useShellContext } from "@/shell/context";
 import { useKeyDown } from "@/hooks";
 

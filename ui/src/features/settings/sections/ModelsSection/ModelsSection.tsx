@@ -7,7 +7,7 @@
 import React, { useCallback, useState, useEffect } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/primitives";
-import { UserPreferences } from "@/lib/storage/app-settings";
+import { UserPreferences } from "@/lib/storage";
 import { ModelDownloader } from "@/features/models/components/ModelDownloader";
 
 interface ModelsSectionProps {
