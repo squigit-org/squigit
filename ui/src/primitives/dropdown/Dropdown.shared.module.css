@@ -11,16 +11,20 @@
   pointer-events: auto;
 }
 
-.trigger {
+.triggerGlobal {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 6px;
   background: transparent;
   border: none;
   border-radius: 6px;
   cursor: pointer;
+  color: var(--neutral-400);
   transition: background-color 0.15s ease;
+}
+
+.trigger {
+  padding: 4px 6px;
 }
 
 .trigger:hover {
@@ -33,23 +37,16 @@
 
 .triggerUp {
   font-size: 14px;
-
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: var(--neutral-400);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  padding: 0;
 }
 
 .triggerUp:hover {
+  background-color: transparent;
   color: var(--neutral-200);
 }
 
 .triggerUp.active {
+  background-color: transparent;
   color: var(--neutral-100);
 }
 
@@ -70,7 +67,7 @@
 }
 
 .chevronClr {
-  color: var(--text-muted, #71717a);
+  color: var(--neutral-400);
 }
 
 .chevronRotate,
@@ -133,7 +130,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #71717a);
+  color: #71717a;
 }
 
 .divider {

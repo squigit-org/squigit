@@ -86,7 +86,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
   return (
     <div className={styles.accountSwitcher} ref={containerRef}>
       <button
-        className={`${styles.trigger} ${isOpen ? styles.active : ""}`}
+        className={`${styles.trigger} ${styles.triggerGlobal} ${isOpen ? styles.active : ""}`}
         onClick={() => !isSwitching && setIsOpen(!isOpen)}
         disabled={isSwitching}
       >
@@ -100,16 +100,18 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
           />
         </div>
         {isSwitching ? (
-          <Loader2 size={18} className={`${styles.chevron} ${styles.spin}`} />
+          <Loader2
+            size={18}
+            className={`${styles.chevron} ${styles.chevronClr} ${styles.spin}`}
+          />
         ) : (
           <ChevronDown
             size={18}
-            className={`${styles.chevron} ${isOpen ? styles.rotate : ""}`}
+            className={`${styles.chevron} ${styles.chevronClr} ${isOpen ? styles.rotate : ""}`}
           />
         )}
       </button>
 
-      {/* Dropdown - always mounted */}
       <div className={`${styles.dropdown} ${isOpen ? styles.open : ""}`}>
         <div className={styles.sectionTitle}>Switch Account</div>
         <div className={styles.accountList}>

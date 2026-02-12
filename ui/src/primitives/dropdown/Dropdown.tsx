@@ -112,14 +112,14 @@ export const Dropdown: React.FC<DropdownProps> = ({
   const chevron = !hideChevron && (
     <ChevronDown
       size={18}
-      className={`${isUp ? styles.chevronRotate : styles.chevronClr} ${styles.chevron} ${isOpen ? (isUp ? styles.chevronReturn : styles.chevronRotate) : ""}`}
+      className={`${isUp ? styles.chevronRotate : "styles.chevronClr"} ${styles.chevron} ${isOpen ? (isUp ? styles.chevronReturn : styles.chevronRotate) : ""}`}
     />
   );
 
   return (
     <div className={`${styles.container} ${className}`} ref={containerRef}>
       <button
-        className={`${isUp ? styles.triggerUp : styles.trigger} ${isOpen ? styles.active : ""}`}
+        className={`${styles.triggerGlobal} ${isUp ? styles.triggerUp : styles.trigger} ${isOpen ? styles.active : ""}`}
         onClick={() => handleOpenChange(!isOpen)}
       >
         {isUp && chevron}

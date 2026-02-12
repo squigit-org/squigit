@@ -135,7 +135,7 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
     <div className={styles.modelSwitcher} ref={containerRef}>
       <button
         disabled={disabled}
-        className={`${styles.trigger} ${isOpen ? styles.active : ""}`}
+        className={`${styles.trigger} ${styles.triggerGlobal} ${isOpen ? styles.active : ""}`}
         onClick={() => setIsOpen(!isOpen)}
         title="Select OCR Model"
       >
@@ -144,7 +144,7 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
         </span>
         <ChevronDown
           size={14}
-          className={`${styles.chevron} ${isOpen ? styles.rotate : ""}`}
+          className={`${styles.chevron} ${styles.chevronClr} ${isOpen ? styles.rotate : ""}`}
         />
       </button>
 
