@@ -142,6 +142,7 @@
 .actions {
   display: flex;
   align-items: center;
+  margin-bottom: -2px;
   justify-content: space-between;
 }
 
@@ -155,7 +156,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-right: -11px;
+  margin-right: -12px;
 }
 
 .iconButton {
@@ -178,6 +179,15 @@
   display: flex;
   align-items: center;
   position: relative;
+  margin-right: -5px;
+}
+
+.modelDropdown {
+  padding-left: 0;
+}
+
+.modelDropdown:hover {
+  background-color: transparent;
 }
 
 .toggleItem {

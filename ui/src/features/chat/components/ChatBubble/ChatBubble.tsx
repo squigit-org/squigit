@@ -10,8 +10,26 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Check, Copy, RotateCcw, Pencil } from "lucide-react";
+import katex from "katex";
 import { CodeBlock } from "@/primitives";
 import { TextShimmer } from "@/primitives/text-shimmer";
+
+/**
+ * Module-level KaTeX render cache.
+ * Prevents re-running katex.renderToString() on every React re-render.
+ */
+const katexCache = new Map<string, string>();
+function renderKatex(latex: string, displayMode: boolean): string {
+  const key = `${displayMode ? "D" : "I"}:${latex}`;
+  const cached = katexCache.get(key);
+  if (cached !== undefined) return cached;
+  const html = katex.renderToString(latex, {
+    displayMode,
+    throwOnError: false,
+  });
+  katexCache.set(key, html);
+  return html;
+}
 import { Message } from "@/features/chat";
 import { remarkDisableIndentedCode } from "@/features/chat/utils";
 import {
@@ -224,6 +242,20 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         }
         const lang = seg.meta?.language || "";
         truncated += "```" + lang + "\n" + seg.content + "\n```\n";
+      } else if (seg.type === "mathblock") {
+        let isEffectiveLast = true;
+        for (let j = i + 1; j < segments.length; j++) {
+          if (grouped.has(j)) {
+            isEffectiveLast = false;
+            break;
+          }
+        }
+        if (isEffectiveLast) {
+          break;
+        }
+        truncated += "$$\n" + seg.content + "\n$$\n";
+      } else if (seg.type === "math") {
+        truncated += "$" + texts.join("") + "$";
       } else {
         truncated += texts.join("");
       }
@@ -256,6 +288,16 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     if (!revealedTexts && !(!isStreamed || isStreamingComplete)) return null;
 
     if (segment.type === "codeblock") {
+      const lang = (segment.meta?.language || "").toLowerCase();
+      const isMathLang = [
+        "latex",
+        "tex",
+        "math",
+        "katex",
+        "markdown",
+        "md",
+      ].includes(lang);
+
       const isTyping = isStreamed && !isStreamingComplete;
 
       let isEffectiveLast = true;
@@ -269,9 +311,27 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       if (isTyping && isEffectiveLast) {
         return (
           <div key={index} className="py-4">
-            <TextShimmer text="Writing Code" />
+            <TextShimmer
+              text={isMathLang ? "Rendering Math" : "Writing Code"}
+            />
           </div>
         );
+      }
+
+      // Code blocks with math-like languages → render with katex
+      if (isMathLang) {
+        try {
+          const html = renderKatex(segment.content, true);
+          return (
+            <div
+              key={index}
+              className={`${styles.mathBlock} ${isStreamed ? styles.popIn : ""}`}
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          );
+        } catch {
+          return <pre key={index}>{segment.content}</pre>;
+        }
       }
 
       return (
@@ -282,6 +342,57 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
           />
         </div>
       );
+    }
+
+    // --- Display math block ($$...$$) ---
+    if (segment.type === "mathblock") {
+      const isTyping = isStreamed && !isStreamingComplete;
+
+      let isEffectiveLast = true;
+      for (let i = index + 1; i < segments.length; i++) {
+        if (segments[i].content.trim().length > 0) {
+          isEffectiveLast = false;
+          break;
+        }
+      }
+
+      if (isTyping && isEffectiveLast) {
+        return (
+          <div key={index} className="py-4">
+            <TextShimmer text="Rendering Math" />
+          </div>
+        );
+      }
+
+      try {
+        const html = renderKatex(segment.content, true);
+        return (
+          <div
+            key={index}
+            className={`${styles.mathBlock} ${isStreamed ? styles.popIn : ""}`}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      } catch {
+        return <pre key={index}>{segment.content}</pre>;
+      }
+    }
+
+    // --- Inline math ($...$) ---
+    if (segment.type === "math") {
+      try {
+        const html = renderKatex(
+          revealedTexts ? revealedTexts.join("") : segment.content,
+          false,
+        );
+        return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />;
+      } catch {
+        return (
+          <code key={index} className={styles.inlineCode}>
+            {segment.content}
+          </code>
+        );
+      }
     }
 
     const content = revealedTexts ? revealedTexts.join("") : segment.content;
@@ -512,9 +623,10 @@ export const ChatBubble = React.memo(
       prevProps.message.text === nextProps.message.text &&
       prevProps.isStreamed === nextProps.isStreamed &&
       prevProps.stopRequested === nextProps.stopRequested &&
-      prevProps.onRetry === nextProps.onRetry &&
+      // Compare existence, not reference — parent creates inline closures
+      !!prevProps.onRetry === !!nextProps.onRetry &&
       prevProps.isRetrying === nextProps.isRetrying &&
-      prevProps.onEdit === nextProps.onEdit
+      !!prevProps.onEdit === !!nextProps.onEdit
     );
   },
 );

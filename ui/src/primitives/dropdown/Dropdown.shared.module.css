@@ -31,6 +31,28 @@
   background-color: rgba(255, 255, 255, 0.12);
 }
 
+.triggerUp {
+  font-size: 14px;
+
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--neutral-400);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.triggerUp:hover {
+  color: var(--neutral-200);
+}
+
+.triggerUp.active {
+  color: var(--neutral-100);
+}
+
 .label {
   display: inline-flex;
   align-items: center;
@@ -44,8 +66,11 @@
 }
 
 .chevron {
-  color: var(--text-muted, #71717a);
   transition: transform 0.2s ease;
+}
+
+.chevronClr {
+  color: var(--text-muted, #71717a);
 }
 
 .chevronRotate,

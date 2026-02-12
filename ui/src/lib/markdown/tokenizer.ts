@@ -31,6 +31,8 @@ const DELAYS = {
   blockquote: 25,
   code: 15, // Inline code
   codeblock: 3, // Code block lines are faster
+  math: 0, // Inline math — atomic, no streaming
+  mathblock: 0, // Display math — atomic, no streaming
   paragraph: 0,
   break: 0,
 } as const;
@@ -38,12 +40,27 @@ const DELAYS = {
 /**
  * Converts parsed segments into streamable tokens.
  * Text is split by words, code blocks by lines.
+ * Math segments are treated as atomic single tokens.
  */
 export function tokenizeSegments(segments: StreamSegment[]): StreamToken[] {
   const tokens: StreamToken[] = [];
 
   segments.forEach((segment, segmentIndex) => {
     const baseDelay = DELAYS[segment.type] ?? 25;
+
+    // Math segments are atomic — entire content is one token
+    if (segment.type === "math" || segment.type === "mathblock") {
+      if (segment.content.trim()) {
+        tokens.push({
+          segmentIndex,
+          text: segment.content,
+          isFirst: true,
+          isLast: true,
+          delay: 0,
+        });
+      }
+      return;
+    }
 
     if (segment.type === "codeblock") {
       // Split code blocks by line for faster streaming

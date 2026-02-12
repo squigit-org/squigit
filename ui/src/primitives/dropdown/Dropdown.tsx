@@ -108,23 +108,22 @@ export const Dropdown: React.FC<DropdownProps> = ({
   }, [isOpen]);
 
   const isUp = direction === "up";
-  const isRight = align === "right";
 
   const chevron = !hideChevron && (
     <ChevronDown
       size={18}
-      className={`${isUp ? styles.chevronRotate : ""} ${styles.chevron} ${isOpen ? (direction === "up" ? styles.chevronReturn : styles.chevronRotate) : ""}`}
+      className={`${isUp ? styles.chevronRotate : styles.chevronClr} ${styles.chevron} ${isOpen ? (isUp ? styles.chevronReturn : styles.chevronRotate) : ""}`}
     />
   );
 
   return (
     <div className={`${styles.container} ${className}`} ref={containerRef}>
       <button
-        className={`${styles.trigger} ${isOpen ? styles.active : ""}`}
+        className={`${isUp ? styles.triggerUp : styles.trigger} ${isOpen ? styles.active : ""}`}
         onClick={() => handleOpenChange(!isOpen)}
       >
         {isUp && chevron}
-        {<span className={styles.label}>{label}</span>}
+        {<span className={`${isUp ? "" : styles.label}`}>{label}</span>}
         {!isUp && chevron}
       </button>
       <div

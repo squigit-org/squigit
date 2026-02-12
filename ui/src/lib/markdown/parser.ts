@@ -7,6 +7,7 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import type { Root, RootContent, PhrasingContent } from "mdast";
 
 /**
@@ -19,6 +20,8 @@ export interface StreamSegment {
     | "italic"
     | "code"
     | "codeblock"
+    | "math"
+    | "mathblock"
     | "heading"
     | "listItem"
     | "link"
@@ -49,6 +52,10 @@ export function parseMarkdownToSegments(markdown: string): StreamSegment[] {
   let codeBlockFence = "";
   let codeBlockLang = "";
   let codeBlockContent: string[] = [];
+
+  let inMathBlock = false;
+  let mathBlockContent: string[] = [];
+
   let textBuffer: string[] = [];
 
   const flushTextBuffer = () => {
@@ -62,6 +69,48 @@ export function parseMarkdownToSegments(markdown: string): StreamSegment[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+
+    // --- Display math block detection ($$) ---
+    // Must check before code fence to avoid conflicts
+    if (!inCodeBlock) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("$$")) {
+        if (!inMathBlock) {
+          // Opening $$
+          flushTextBuffer();
+          const rest = trimmed.slice(2);
+          if (rest.endsWith("$$") && rest.length > 0) {
+            // Single-line: $$...$$
+            segments.push({
+              type: "mathblock",
+              content: rest.slice(0, -2),
+            });
+          } else {
+            inMathBlock = true;
+            mathBlockContent = [];
+            if (rest.trim()) mathBlockContent.push(rest);
+          }
+          continue;
+        } else {
+          // Closing $$
+          const contentBefore = trimmed.slice(2).trim();
+          if (contentBefore) mathBlockContent.push(contentBefore);
+          segments.push({
+            type: "mathblock",
+            content: mathBlockContent.join("\n"),
+          });
+          inMathBlock = false;
+          mathBlockContent = [];
+          continue;
+        }
+      }
+
+      if (inMathBlock) {
+        mathBlockContent.push(line);
+        continue;
+      }
+    }
+
     // Check for code fence - allow leading whitespace
     const fenceMatch = line.match(/^(\s*)(`{3,})(.*)$/);
 
@@ -126,7 +175,13 @@ export function parseMarkdownToSegments(markdown: string): StreamSegment[] {
   }
 
   // Handle unfinished state (EOF)
-  if (inCodeBlock) {
+  if (inMathBlock) {
+    // Unclosed math block at EOF — render what we have
+    segments.push({
+      type: "mathblock",
+      content: mathBlockContent.join("\n"),
+    });
+  } else if (inCodeBlock) {
     // If still in code block at EOF, treat as code block
     segments.push({
       type: "codeblock",
@@ -149,7 +204,7 @@ export function parseMarkdownToSegments(markdown: string): StreamSegment[] {
  * Uses remark to parse plain markdown text into segments.
  */
 function parseMarkdownText(markdown: string): StreamSegment[] {
-  const processor = unified().use(remarkParse).use(remarkGfm);
+  const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
   const tree = processor.parse(markdown) as Root;
   const segments: StreamSegment[] = [];
 
@@ -256,6 +311,22 @@ function processNode(
     case "break":
     case "thematicBreak":
       segments.push({ type: "break", content: "" });
+      break;
+
+    // Math nodes from remark-math
+    case "math":
+      // Display math ($$...$$) detected inside text — should be rare since
+      // we catch $$ at the line level, but handles edge cases
+      if ("value" in node && typeof node.value === "string") {
+        segments.push({ type: "mathblock", content: node.value });
+        segments.push({ type: "text", content: "\n\n" });
+      }
+      break;
+
+    case "inlineMath":
+      if ("value" in node && typeof node.value === "string") {
+        segments.push({ type: "math", content: node.value });
+      }
       break;
 
     default:
