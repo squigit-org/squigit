@@ -11,17 +11,22 @@ interface AuthButtonProps {
   onLogin: () => void;
   onCancel?: () => void;
   isLoading?: boolean;
+  disabled?: boolean;
+  disabledTitle?: string;
 }
 
 export const AuthButton: React.FC<AuthButtonProps> = ({
   onLogin,
   onCancel,
   isLoading = false,
+  disabled = false,
+  disabledTitle,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [hasLeftSinceLoading, setHasLeftSinceLoading] = useState(false);
 
   const handleClick = () => {
+    if (disabled) return;
     if (isLoading && onCancel && hasLeftSinceLoading && isHovered) {
       onCancel();
     } else if (!isLoading) {
@@ -55,7 +60,9 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`${styles.loginBtn} ${isLoading ? styles.loading : ""}`}
+      className={`${styles.loginBtn} ${isLoading ? styles.loading : ""} ${disabled ? styles.disabled : ""}`}
+      aria-disabled={disabled}
+      title={disabled ? disabledTitle : undefined}
     >
       {isLoading &&
         (showCancel ? (

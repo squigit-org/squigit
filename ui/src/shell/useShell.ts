@@ -4,14 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { exit } from "@tauri-apps/plugin-process";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { exit, relaunch } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { check } from "@tauri-apps/plugin-updater";
 import { commands } from "@/lib/api/tauri";
-import { useSystemSync, useUpdateCheck, getPendingUpdate } from "@/hooks";
+import {
+  useSystemSync,
+  usePlatform,
+  useUpdateCheck,
+  getPendingUpdate,
+} from "@/hooks";
 import { useAuth, useChat, useChatHistory, useChatTitle } from "@/features";
-import { ModelType } from "@/lib/config";
+import { ModelType, github } from "@/lib/config";
+import packageJson from "../../package.json";
 import {
   loadChat,
   getImagePath,
@@ -22,7 +29,12 @@ import {
   saveImgbbUrl,
   overwriteChatMessages,
 } from "@/lib/storage";
-import { getHardcodedChat, isHardcodedChatId } from "@/lib/hardcodedChats";
+import {
+  getSystemChat,
+  isSystemChatId,
+  loadWelcomeContent,
+  type SystemChatContext,
+} from "@/lib/systemChats";
 
 export const useShell = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
@@ -33,6 +45,7 @@ export const useShell = () => {
   const [showLoginRequiredDialog, setShowLoginRequiredDialog] = useState(false);
 
   const system = useSystemSync();
+  const { os } = usePlatform();
   const activeProfileRef = useRef<any>(null);
 
   useEffect(() => {
@@ -40,7 +53,24 @@ export const useShell = () => {
   }, [system.activeProfile]);
 
   const auth = useAuth();
-  const chatHistory = useChatHistory(system.activeProfile?.id || null);
+
+  // Build the context that determines which system chats are visible
+  const [pendingUpdate] = useState(() => getPendingUpdate());
+  const systemChatCtx = useMemo<SystemChatContext>(
+    () => ({
+      isGuest: !system.activeProfile,
+      hasNotAgreed: system.hasAgreed === false,
+      currentVersion: packageJson.version,
+      pendingUpdate,
+      osType: os,
+    }),
+    [system.activeProfile, system.hasAgreed, pendingUpdate, os],
+  );
+
+  const chatHistory = useChatHistory(
+    system.activeProfile?.id || null,
+    systemChatCtx,
+  );
 
   const performLogout = async () => {
     await system.handleLogout();
@@ -204,13 +234,12 @@ export const useShell = () => {
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
     isCheckingImage;
-  const hasHardcodedChat = chatHistory.activeSessionId
-    ? isHardcodedChatId(chatHistory.activeSessionId)
+  const hasActiveSystemChat = chatHistory.activeSessionId
+    ? isSystemChatId(chatHistory.activeSessionId)
     : false;
-  const isImageMissing = !system.startupImage && !hasHardcodedChat;
+  const isImageMissing = !system.startupImage && !hasActiveSystemChat;
   const isAuthPending = auth.authStage === "LOGIN";
-  const isChatActive =
-    !isLoadingState && !isAgreementPending && !isImageMissing && !isAuthPending;
+  const isChatActive = !isLoadingState && !isImageMissing && !isAuthPending;
 
   useEffect(() => {
     if (!isLoadingState && !system.startupImage) {
@@ -266,20 +295,39 @@ export const useShell = () => {
     }
   }, [chatTitle, chatHistory.activeSessionId]);
 
+  // Load welcome content when a welcome system chat is selected
+  const [welcomeContent, setWelcomeContent] = useState<string | null>(null);
+  useEffect(() => {
+    if (chatHistory.activeSessionId === "__system_welcome") {
+      loadWelcomeContent(os).then(setWelcomeContent);
+    }
+  }, [chatHistory.activeSessionId, os]);
+
   const handleSelectChat = async (id: string) => {
-    // Intercept hardcoded system chats — no backend needed
-    const hc = getHardcodedChat(id);
-    if (hc) {
-      setOcrData([]);
-      setSessionLensUrl(null);
-      system.setSessionChatTitle(hc.metadata.title);
-      chat.restoreState({
-        messages: hc.messages,
-        streamingText: "",
-        firstResponseId: null,
-      });
-      chatHistory.setActiveSessionId(id);
-      return;
+    // Intercept system chats — no backend needed
+    if (isSystemChatId(id)) {
+      const sc = getSystemChat(id, systemChatCtx);
+      if (sc) {
+        setOcrData([]);
+        setSessionLensUrl(null);
+        system.setSessionChatTitle(sc.metadata.title);
+
+        // For welcome chat, inject the loaded markdown content
+        let messages = sc.messages;
+        if (id === "__system_welcome" && welcomeContent) {
+          messages = messages.map((m) =>
+            m.id === "welcome-intro" ? { ...m, text: welcomeContent } : m,
+          );
+        }
+
+        chat.restoreState({
+          messages,
+          streamingText: "",
+          firstResponseId: null,
+        });
+        chatHistory.setActiveSessionId(id);
+        return;
+      }
     }
 
     try {
@@ -364,11 +412,51 @@ export const useShell = () => {
     setImageDrafts((prev) => ({ ...prev, [activeDraftId]: val }));
   };
 
-  const [pendingUpdate] = useState(() => getPendingUpdate());
   const [showUpdate, setShowUpdate] = useState(() => {
     const wasDismissed = sessionStorage.getItem("update_dismissed");
     return !!pendingUpdate && !wasDismissed;
   });
+
+  // Tracks whether the user selected "I agree" radio (separate from hasAgreed which persists)
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // Action handler for system chat interactions
+  const handleSystemAction = useCallback(
+    async (actionId: string, _value?: string) => {
+      switch (actionId) {
+        // Agreement actions
+        case "agree":
+          // Only enable the auth button — don't save preferences yet
+          setAgreedToTerms(true);
+          break;
+        case "disagree":
+          setAgreedToTerms(false);
+          break;
+
+        // Update actions
+        case "update_now":
+          try {
+            const update = await check();
+            if (update && update.available) {
+              await update.downloadAndInstall();
+              await relaunch();
+            } else {
+              invoke("open_external_url", { url: github.latestRelease });
+            }
+          } catch {
+            invoke("open_external_url", { url: github.latestRelease });
+          }
+          break;
+        case "update_later":
+          setShowUpdate(false);
+          sessionStorage.setItem("update_dismissed", "true");
+          // Deselect the update chat
+          handleNewSession();
+          break;
+      }
+    },
+    [system, handleNewSession],
+  );
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -386,6 +474,12 @@ export const useShell = () => {
         activeProfileRef.current.id === event.payload.id
       ) {
         return;
+      }
+
+      // If first-time auth after agreement, persist the agreement
+      if (system.hasAgreed === false) {
+        system.setHasAgreed(true);
+        system.updatePreferences({});
       }
 
       handleNewSession();
@@ -487,6 +581,7 @@ export const useShell = () => {
     isAgreementPending,
     isImageMissing,
     chatTitle,
+    agreedToTerms,
 
     toggleSidePanel,
     setShowGeminiAuthDialog,
@@ -509,6 +604,7 @@ export const useShell = () => {
     handleToggleStarChat: chatHistory.handleToggleStarChat,
     handleExit: () => exit(0),
     handleSwitchProfile,
+    handleSystemAction,
     containerRef,
   };
 };

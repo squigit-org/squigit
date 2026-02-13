@@ -118,7 +118,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   const hasAutoExpandedRef = useRef(false);
   const prevImageBase64Ref = useRef<string | null>(null);
 
-  const currentBase64 = startupImage?.base64 || null;
+  const currentBase64 = startupImage?.base64 ?? null;
   if (currentBase64 !== prevImageBase64Ref.current) {
     hasScannedRef.current = false;
     hasAutoExpandedRef.current = false;

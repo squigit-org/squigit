@@ -47,6 +47,8 @@ export interface ChatShellProps {
 
   selectedModel: string;
   onModelChange: (model: string) => void;
+  /** Handler for interactive actions in system chat bubbles */
+  onSystemAction?: (actionId: string, value?: string) => void;
 
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -71,6 +73,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   retryingMessageId,
   selectedModel,
   onModelChange,
+  onSystemAction,
   scrollContainerRef,
 }) => {
   const [stopRequested, setStopRequested] = useState(false);
@@ -90,10 +93,14 @@ export const ChatShell: React.FC<ChatShellProps> = ({
     const messageCountChanged = messages.length !== prevMessageCountRef.current;
 
     if (chatChanged) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
-      setTimeout(() => {
+      if (startupImage) {
         el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
-      }, 50);
+        setTimeout(() => {
+          el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+        }, 50);
+      } else {
+        el.scrollTo({ top: 0, behavior: "instant" });
+      }
       prevChatIdRef.current = chatId;
     } else if (messageCountChanged) {
       if (prevMessageCountRef.current === 0 && messages.length > 0) {
@@ -275,7 +282,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   return (
     <>
       <div
-        className={styles.chatShell}
+        className={`${styles.chatShell} ${!startupImage ? styles.noImage : ""}`}
         ref={scrollContainerRef}
         style={
           {
@@ -356,6 +363,9 @@ export const ChatShell: React.FC<ChatShellProps> = ({
                             ? (newText) =>
                                 onEditMessage(msg.id, newText, selectedModel)
                             : undefined
+                        }
+                        onAction={
+                          msg.role === "system" ? onSystemAction : undefined
                         }
                       />
                     </div>

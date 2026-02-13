@@ -102,6 +102,7 @@ const AppShellComponent: React.FC = () => {
         scrollContainerRef={scrollContainerRef}
         selectedModel={shell.inputModel}
         onModelChange={shell.setInputModel}
+        onSystemAction={shell.handleSystemAction}
       />
     </div>
   );

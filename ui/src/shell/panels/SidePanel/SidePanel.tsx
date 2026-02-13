@@ -14,6 +14,7 @@ import {
   Check,
   X,
   StarOff,
+  Circle,
 } from "lucide-react";
 
 import { ChatMetadata, groupChatsByDate } from "@/lib/storage";
@@ -161,14 +162,32 @@ const ChatItem: React.FC<ChatItemProps> = ({
         {!isSelectionMode && (
           <div className={styles.chatActions}>
             <div className={styles.statusRow}>
-              {chat.is_pinned && (
+              {chat.id === "__system_welcome" ? (
                 <div className={styles.pinIcon}>
-                  <Pin
-                    size={14}
-                    style={{ transform: "rotate(45deg)" }}
-                    fill="currentColor"
+                  <Circle
+                    size={10}
+                    fill="#3b82f6" // blue-500
+                    stroke="none"
                   />
                 </div>
+              ) : chat.id.startsWith("__system_update_") ? (
+                <div className={styles.pinIcon}>
+                  <Circle
+                    size={10}
+                    fill="#ef4444" // red-500
+                    stroke="none"
+                  />
+                </div>
+              ) : (
+                chat.is_pinned && (
+                  <div className={styles.pinIcon}>
+                    <Pin
+                      size={14}
+                      style={{ transform: "rotate(45deg)" }}
+                      fill="currentColor"
+                    />
+                  </div>
+                )
               )}
 
               <button

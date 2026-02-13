@@ -43,6 +43,19 @@
   background-color: #555;
 }
 
+/* When no image is present (system chats), remove the top gap */
+.chatShell.noImage {
+  padding-top: 0;
+}
+
+.chatShell.noImage::-webkit-scrollbar-track {
+  margin-top: 0;
+}
+
+.chatShell.noImage::-webkit-scrollbar-track-piece:start {
+  margin-top: 0;
+}
+
 .inputOverlay {
   position: absolute;
   bottom: 0;

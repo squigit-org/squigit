@@ -97,6 +97,8 @@ export const TitleBar: React.FC = () => {
             onLogin={shell.handleAddAccount}
             onCancel={shell.system.cancelAuth}
             isLoading={shell.system.switchingProfileId === "creating_account"}
+            disabled={shell.isAgreementPending && !shell.agreedToTerms}
+            disabledTitle="Please read and agree to the instructions first"
           />
         )}
 

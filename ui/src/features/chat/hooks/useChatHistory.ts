@@ -11,24 +11,36 @@ import {
   deleteChat,
   updateChatMetadata as updateChatMeta,
 } from "@/lib/storage";
-import { getHardcodedChats, isHardcodedChatId } from "@/lib/hardcodedChats";
+import {
+  getSystemChats,
+  isSystemChatId,
+  type SystemChatContext,
+} from "@/lib/systemChats";
 
-export const useChatHistory = (activeProfileId: string | null = null) => {
+export const useChatHistory = (
+  activeProfileId: string | null = null,
+  systemCtx?: SystemChatContext,
+) => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const refreshChats = useCallback(async () => {
-    const systemChats = getHardcodedChats({ isGuest: !activeProfileId });
-    const systemMeta = systemChats.map((c) => c.metadata);
+    // Build the system chats list for the current context
+    const systemMeta = systemCtx
+      ? getSystemChats(systemCtx).map((c) => c.metadata)
+      : [];
 
     if (!activeProfileId) {
+      // Guest mode — only show system chats
       setChats(systemMeta);
       return;
     }
+
     setIsLoading(true);
     try {
       const chatList = await listChats();
+      // Prepend system chats before normal chats
       setChats([...systemMeta, ...chatList]);
     } catch (e) {
       console.error("Failed to load chats:", e);
@@ -36,7 +48,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeProfileId]);
+  }, [activeProfileId, systemCtx]);
 
   useEffect(() => {
     refreshChats();
@@ -47,7 +59,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   }, [activeProfileId]);
 
   const handleDeleteChat = async (id: string) => {
-    if (isHardcodedChatId(id)) return;
+    if (isSystemChatId(id)) return; // System chats can't be deleted
     try {
       await deleteChat(id);
       setChats((prev) => prev.filter((c) => c.id !== id));
@@ -60,7 +72,8 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   };
 
   const handleDeleteChats = async (ids: string[]) => {
-    const realIds = ids.filter((id) => !isHardcodedChatId(id));
+    const realIds = ids.filter((id) => !isSystemChatId(id));
+    if (realIds.length === 0) return;
     try {
       await Promise.all(realIds.map((id) => deleteChat(id)));
       setChats((prev) => prev.filter((c) => !realIds.includes(c.id)));
@@ -73,7 +86,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   };
 
   const handleRenameChat = async (id: string, newTitle: string) => {
-    if (isHardcodedChatId(id)) return;
+    if (isSystemChatId(id)) return; // System chats can't be renamed
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
@@ -91,7 +104,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   };
 
   const handleTogglePinChat = async (id: string) => {
-    if (isHardcodedChatId(id)) return;
+    if (isSystemChatId(id)) return; // System chats are always pinned
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
@@ -114,7 +127,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     id: string,
     overrides?: Partial<ChatMetadata>,
   ) => {
-    if (isHardcodedChatId(id)) return;
+    if (isSystemChatId(id)) return; // System chats can't be starred
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 

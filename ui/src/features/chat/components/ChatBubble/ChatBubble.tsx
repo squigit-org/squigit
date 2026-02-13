@@ -13,6 +13,7 @@ import { Check, Copy, RotateCcw, Pencil } from "lucide-react";
 import katex from "katex";
 import { CodeBlock } from "@/primitives";
 import { TextShimmer } from "@/primitives/text-shimmer";
+import { invoke } from "@tauri-apps/api/core";
 
 /**
  * Module-level KaTeX render cache.
@@ -52,6 +53,8 @@ interface ChatBubbleProps {
   onRetry?: () => void;
   isRetrying?: boolean;
   onEdit?: (newText: string) => void;
+  /** Callback when user interacts with a MessageAction */
+  onAction?: (actionId: string, value?: string) => void;
 }
 
 const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
@@ -64,9 +67,23 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   onRetry,
   isRetrying,
   onEdit,
+  onAction,
 }) => {
   const isUser = message.role === "user";
   const [isCopied, setIsCopied] = useState(false);
+  const [selectedRadio, setSelectedRadio] = useState<Record<string, string>>(
+    () => {
+      const defaults: Record<string, string> = {};
+      if (message.actions) {
+        message.actions.forEach((action) => {
+          if (action.type === "radio" && action.group && action.selected) {
+            defaults[action.group] = action.id;
+          }
+        });
+      }
+      return defaults;
+    },
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editorValue, setEditorValue] = useState(message.text);
   const [bubbleWidth, setBubbleWidth] = useState<number | undefined>(undefined);
@@ -551,6 +568,73 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                   {preprocessMarkdown(message.text, { doubleNewlines: isUser })}
                 </ReactMarkdown>
               )}
+
+              {/* Interactive actions */}
+              {message.actions && message.actions.length > 0 && (
+                <div className={styles.actionsContainer}>
+                  {message.actions.map((action) => {
+                    if (action.type === "radio" && action.group) {
+                      const isSelected =
+                        selectedRadio[action.group] === action.id;
+                      return (
+                        <label
+                          key={action.id}
+                          className={`${styles.radioAction} ${isSelected ? styles.radioSelected : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name={action.group}
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedRadio((prev) => ({
+                                ...prev,
+                                [action.group!]: action.id,
+                              }));
+                              onAction?.(action.id, action.id);
+                            }}
+                            className={styles.radioInput}
+                          />
+                          <span>{action.label}</span>
+                        </label>
+                      );
+                    }
+
+                    if (action.type === "button") {
+                      return (
+                        <button
+                          key={action.id}
+                          className={`${styles.actionButton} ${
+                            action.variant === "primary"
+                              ? styles.actionPrimary
+                              : styles.actionSecondary
+                          }`}
+                          disabled={action.disabled}
+                          onClick={() => onAction?.(action.id)}
+                        >
+                          {action.label}
+                        </button>
+                      );
+                    }
+
+                    if (action.type === "link" && action.href) {
+                      return (
+                        <button
+                          key={action.id}
+                          className={`${styles.actionButton} ${styles.actionSecondary}`}
+                          onClick={() => {
+                            invoke("open_external_url", { url: action.href });
+                            onAction?.(action.id);
+                          }}
+                        >
+                          {action.label}
+                        </button>
+                      );
+                    }
+
+                    return null;
+                  })}
+                </div>
+              )}
             </div>
 
             {message.image && (
@@ -583,7 +667,8 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
               )}
 
               {!isStreamingComplete && isStreamed ? null : isRetrying ||
-                isEditing ? null : (
+                isEditing ||
+                message.role === "system" ? null : (
                 <>
                   {!isUser && onRetry && (
                     <button onClick={onRetry} title="Retry" aria-label="Retry">
@@ -622,7 +707,9 @@ export const ChatBubble = React.memo(
       prevProps.stopRequested === nextProps.stopRequested &&
       !!prevProps.onRetry === !!nextProps.onRetry &&
       prevProps.isRetrying === nextProps.isRetrying &&
-      !!prevProps.onEdit === !!nextProps.onEdit
+      !!prevProps.onEdit === !!nextProps.onEdit &&
+      prevProps.message.actions === nextProps.message.actions &&
+      !!prevProps.onAction === !!nextProps.onAction
     );
   },
 );
