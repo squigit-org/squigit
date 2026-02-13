@@ -9,12 +9,7 @@ import { exit } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { commands } from "@/lib/api/tauri";
-import {
-  useSystemSync,
-  useWindowManager,
-  useUpdateCheck,
-  getPendingUpdate,
-} from "@/hooks";
+import { useSystemSync, useUpdateCheck, getPendingUpdate } from "@/hooks";
 import { useAuth, useChat, useChatHistory, useChatTitle } from "@/features";
 import { ModelType } from "@/lib/config";
 import {
@@ -27,6 +22,7 @@ import {
   saveImgbbUrl,
   overwriteChatMessages,
 } from "@/lib/storage";
+import { getHardcodedChat, isHardcodedChatId } from "@/lib/hardcodedChats";
 
 export const useShell = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
@@ -208,7 +204,10 @@ export const useShell = () => {
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
     isCheckingImage;
-  const isImageMissing = !system.startupImage;
+  const hasHardcodedChat = chatHistory.activeSessionId
+    ? isHardcodedChatId(chatHistory.activeSessionId)
+    : false;
+  const isImageMissing = !system.startupImage && !hasHardcodedChat;
   const isAuthPending = auth.authStage === "LOGIN";
   const isChatActive =
     !isLoadingState && !isAgreementPending && !isImageMissing && !isAuthPending;
@@ -268,6 +267,21 @@ export const useShell = () => {
   }, [chatTitle, chatHistory.activeSessionId]);
 
   const handleSelectChat = async (id: string) => {
+    // Intercept hardcoded system chats — no backend needed
+    const hc = getHardcodedChat(id);
+    if (hc) {
+      setOcrData([]);
+      setSessionLensUrl(null);
+      system.setSessionChatTitle(hc.metadata.title);
+      chat.restoreState({
+        messages: hc.messages,
+        streamingText: "",
+        firstResponseId: null,
+      });
+      chatHistory.setActiveSessionId(id);
+      return;
+    }
+
     try {
       setOcrData([]);
       const chatData = await loadChat(id);
@@ -355,15 +369,6 @@ export const useShell = () => {
     const wasDismissed = sessionStorage.getItem("update_dismissed");
     return !!pendingUpdate && !wasDismissed;
   });
-
-  useWindowManager(
-    isChatActive,
-    isAuthPending,
-    isAgreementPending,
-    showUpdate,
-    isLoadingState,
-    isImageMissing,
-  );
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;

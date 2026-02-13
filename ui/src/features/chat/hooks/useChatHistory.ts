@@ -11,6 +11,7 @@ import {
   deleteChat,
   updateChatMetadata as updateChatMeta,
 } from "@/lib/storage";
+import { getHardcodedChats, isHardcodedChatId } from "@/lib/hardcodedChats";
 
 export const useChatHistory = (activeProfileId: string | null = null) => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
@@ -18,17 +19,20 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const refreshChats = useCallback(async () => {
+    const systemChats = getHardcodedChats({ isGuest: !activeProfileId });
+    const systemMeta = systemChats.map((c) => c.metadata);
+
     if (!activeProfileId) {
-      setChats([]);
+      setChats(systemMeta);
       return;
     }
     setIsLoading(true);
     try {
       const chatList = await listChats();
-      setChats(chatList);
+      setChats([...systemMeta, ...chatList]);
     } catch (e) {
       console.error("Failed to load chats:", e);
-      setChats([]);
+      setChats(systemMeta);
     } finally {
       setIsLoading(false);
     }
@@ -43,6 +47,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   }, [activeProfileId]);
 
   const handleDeleteChat = async (id: string) => {
+    if (isHardcodedChatId(id)) return;
     try {
       await deleteChat(id);
       setChats((prev) => prev.filter((c) => c.id !== id));
@@ -55,10 +60,11 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   };
 
   const handleDeleteChats = async (ids: string[]) => {
+    const realIds = ids.filter((id) => !isHardcodedChatId(id));
     try {
-      await Promise.all(ids.map((id) => deleteChat(id)));
-      setChats((prev) => prev.filter((c) => !ids.includes(c.id)));
-      if (activeSessionId && ids.includes(activeSessionId)) {
+      await Promise.all(realIds.map((id) => deleteChat(id)));
+      setChats((prev) => prev.filter((c) => !realIds.includes(c.id)));
+      if (activeSessionId && realIds.includes(activeSessionId)) {
         setActiveSessionId(null);
       }
     } catch (e) {
@@ -67,6 +73,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   };
 
   const handleRenameChat = async (id: string, newTitle: string) => {
+    if (isHardcodedChatId(id)) return;
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
@@ -84,6 +91,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   };
 
   const handleTogglePinChat = async (id: string) => {
+    if (isHardcodedChatId(id)) return;
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
@@ -106,6 +114,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     id: string,
     overrides?: Partial<ChatMetadata>,
   ) => {
+    if (isHardcodedChatId(id)) return;
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 

@@ -7,7 +7,7 @@
 export * from "./useSystemSync";
 export * from "./useTheme";
 export * from "./useUpdateCheck";
-export * from "./useWindowManager";
+
 export * from "./useCopyToClipboard";
 export * from "./useTextEditor";
 export * from "./useTextSelection";

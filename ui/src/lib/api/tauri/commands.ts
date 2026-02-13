@@ -48,10 +48,7 @@ export const commands = {
   getProfileCount: () => invoke<number>("get_profile_count"),
 
   // Window Mgmt
-  openImgbbWindow: () => invoke("open_imgbb_window"),
-  closeImgbbWindow: () => invoke("close_imgbb_window"),
-  resizeWindow: (width: number, height: number, show: boolean = true) =>
-    invoke("resize_window", { width, height, show }),
+
   setBackgroundColor: (color: string) =>
     invoke("set_background_color", { color }),
 

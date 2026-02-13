@@ -31,8 +31,8 @@ use commands::profile::{
 };
 use commands::security::{check_file_exists, encrypt_and_save};
 use commands::window::{
-    close_imgbb_window, close_window, maximize_window, minimize_window,
-    open_external_url, open_imgbb_window, resize_window, set_background_color,
+    close_window, maximize_window, minimize_window,
+    open_external_url, set_background_color,
 };
 use commands::speech::SpeechState;
 use services::image::process_and_store_image;
@@ -83,10 +83,7 @@ pub fn run() {
             commands::gemini::start_chat_sync,
 
             // Window
-            open_imgbb_window,
-            close_imgbb_window,
             open_external_url,
-            resize_window,
             set_background_color,
             minimize_window,
             maximize_window,
@@ -140,18 +137,15 @@ pub fn run() {
                 let _ = process_and_store_image(path.clone(), &state);
             }
 
-            let (base_w, base_h) = if has_cli_image.is_some() {
-                (1030.0, 690.0)
-            } else {
-                (690.0, 1030.0)
-            };
+            // Use fixed developer dimensions for dynamic scaling
+            let (base_w, base_h) = (1030.0, 690.0);
 
             services::window::spawn_app_window(
                 &handle,
                 "main",
                 "index.html",
-                base_h,
                 base_w,
+                base_h,
                 "",
             )
             .expect("Failed to spawn main window");
