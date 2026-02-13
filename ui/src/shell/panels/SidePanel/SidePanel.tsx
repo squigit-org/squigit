@@ -14,16 +14,18 @@ import {
   Check,
   X,
   StarOff,
-  Circle,
 } from "lucide-react";
 
 import { ChatMetadata, groupChatsByDate } from "@/lib/storage";
 import styles from "./SidePanel.module.css";
+import updateIcon from "@/assets/emoji_u1f4e6.png";
+import welcomeIcon from "@/assets/emoji_u1f6e0.png";
 import { Dialog } from "@/primitives";
 import { PanelContextMenu } from "@/shell/menus";
 import { getDeleteMultipleChatsDialog } from "@/lib/helpers";
 import { useShellContext } from "@/shell/context";
 import { useKeyDown } from "@/hooks";
+import { isSystemChatId } from "@/lib/systemChats";
 
 // --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
@@ -162,32 +164,14 @@ const ChatItem: React.FC<ChatItemProps> = ({
         {!isSelectionMode && (
           <div className={styles.chatActions}>
             <div className={styles.statusRow}>
-              {chat.id === "__system_welcome" ? (
+              {chat.is_pinned && (
                 <div className={styles.pinIcon}>
-                  <Circle
-                    size={10}
-                    fill="#3b82f6" // blue-500
-                    stroke="none"
+                  <Pin
+                    size={14}
+                    style={{ transform: "rotate(45deg)" }}
+                    fill="currentColor"
                   />
                 </div>
-              ) : chat.id.startsWith("__system_update_") ? (
-                <div className={styles.pinIcon}>
-                  <Circle
-                    size={10}
-                    fill="#ef4444" // red-500
-                    stroke="none"
-                  />
-                </div>
-              ) : (
-                chat.is_pinned && (
-                  <div className={styles.pinIcon}>
-                    <Pin
-                      size={14}
-                      style={{ transform: "rotate(45deg)" }}
-                      fill="currentColor"
-                    />
-                  </div>
-                )
               )}
 
               <button
@@ -343,7 +327,9 @@ export const SidePanel: React.FC = () => {
   const [isHoverDisabled, setIsHoverDisabled] = useState(false);
 
   // Group chats (now only Starred and Recents)
-  const groupedChats = groupChatsByDate(chats);
+  const systemChats = chats.filter((c) => isSystemChatId(c.id));
+  const userChats = chats.filter((c) => !isSystemChatId(c.id));
+  const groupedChats = groupChatsByDate(userChats);
 
   // Close context menu on global click
   useEffect(() => {
@@ -464,6 +450,32 @@ export const SidePanel: React.FC = () => {
               <span>New chat</span>
             </button>
           </div>
+
+          {/* System Chats (Pinned below New Chat) */}
+          {systemChats.length > 0 && (
+            <div className={styles.groupContent}>
+              {systemChats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`${styles.chatRow} ${activeSessionId === chat.id ? styles.active : ""}`}
+                  onClick={() => shell.handleSelectChat(chat.id)}
+                >
+                  <div className={styles.chatIconMain}>
+                    <img
+                      src={
+                        chat.id === "__system_welcome"
+                          ? welcomeIcon
+                          : updateIcon
+                      }
+                      alt="System Icon"
+                      className="w-5 h-5 object-contain"
+                    />
+                  </div>
+                  <span className={styles.chatTitle}>{chat.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

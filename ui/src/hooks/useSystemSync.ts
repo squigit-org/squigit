@@ -88,10 +88,16 @@ export const useSystemSync = () => {
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   const [hasAgreed, setHasAgreed] = useState<boolean | null>(null);
+
+  const checkAgreement = async () => {
+    const agreed = await hasPreferencesFile();
+    setHasAgreed(agreed);
+    return agreed;
+  };
+
   useEffect(() => {
     const init = async () => {
-      const agreed = await hasPreferencesFile();
-      setHasAgreed(agreed);
+      const agreed = await checkAgreement();
 
       if (agreed) {
         const prefs = await loadPreferences();
@@ -282,7 +288,8 @@ export const useSystemSync = () => {
       setSwitchingProfileId(null);
 
       if (data && data.id) {
-        updatePreferences({ activeAccount: data.id });
+        await updatePreferences({ activeAccount: data.id });
+        await checkAgreement();
       }
     });
     authListen.then((unlisten) => unlisteners.push(unlisten));
@@ -325,6 +332,7 @@ export const useSystemSync = () => {
     try {
       const currentPrefs = await loadPreferences();
       await savePreferences({ ...currentPrefs, ...updates });
+      setHasAgreed(true);
     } catch (e) {
       console.error("Failed to save preferences:", e);
     }
@@ -391,6 +399,7 @@ export const useSystemSync = () => {
 
       await loadProfileData();
       await updatePreferences({ activeAccount: profileId });
+      await checkAgreement();
     } catch (e) {
       console.error("Failed to switch profile:", e);
     } finally {

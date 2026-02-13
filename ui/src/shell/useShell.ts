@@ -32,7 +32,6 @@ import {
 import {
   getSystemChat,
   isSystemChatId,
-  loadWelcomeContent,
   type SystemChatContext,
 } from "@/lib/systemChats";
 
@@ -63,6 +62,7 @@ export const useShell = () => {
       currentVersion: packageJson.version,
       pendingUpdate,
       osType: os,
+      activeProfile: system.activeProfile,
     }),
     [system.activeProfile, system.hasAgreed, pendingUpdate, os],
   );
@@ -295,14 +295,6 @@ export const useShell = () => {
     }
   }, [chatTitle, chatHistory.activeSessionId]);
 
-  // Load welcome content when a welcome system chat is selected
-  const [welcomeContent, setWelcomeContent] = useState<string | null>(null);
-  useEffect(() => {
-    if (chatHistory.activeSessionId === "__system_welcome") {
-      loadWelcomeContent(os).then(setWelcomeContent);
-    }
-  }, [chatHistory.activeSessionId, os]);
-
   const handleSelectChat = async (id: string) => {
     // Intercept system chats — no backend needed
     if (isSystemChatId(id)) {
@@ -312,13 +304,8 @@ export const useShell = () => {
         setSessionLensUrl(null);
         system.setSessionChatTitle(sc.metadata.title);
 
-        // For welcome chat, inject the loaded markdown content
-        let messages = sc.messages;
-        if (id === "__system_welcome" && welcomeContent) {
-          messages = messages.map((m) =>
-            m.id === "welcome-intro" ? { ...m, text: welcomeContent } : m,
-          );
-        }
+        // For welcome chat, the content is already bundled
+        const messages = sc.messages;
 
         chat.restoreState({
           messages,

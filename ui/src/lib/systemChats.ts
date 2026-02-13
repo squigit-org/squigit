@@ -27,6 +27,8 @@ export interface SystemChatContext {
   pendingUpdate: { version: string; notes: string } | null;
   /** Current OS type for platform-specific instructions */
   osType: string;
+  /** Active user profile, if any */
+  activeProfile: any;
 }
 
 // ── ID Prefix ──
@@ -37,13 +39,26 @@ export function isSystemChatId(id: string): boolean {
   return id.startsWith(SYSTEM_PREFIX);
 }
 
+// ── Assets ──
+import linux from "@/assets/instructions/linux.md?raw";
+import macos from "@/assets/instructions/macos.md?raw";
+import windows from "@/assets/instructions/windows.md?raw";
+
+const INSTRUCTIONS: Record<string, string> = {
+  linux,
+  macos,
+  windows,
+};
+
 // ── Welcome / Agreement Chat ──
 
-function buildWelcomeChat(_osType: string): SystemChat {
+function buildWelcomeChat(osType: string): SystemChat {
+  const content = INSTRUCTIONS[osType] || INSTRUCTIONS.linux;
+
   return {
     metadata: {
       id: `${SYSTEM_PREFIX}welcome`,
-      title: "Welcome to SnapLLM",
+      title: "Welcome to SnapLLM!",
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
       image_hash: "",
@@ -55,7 +70,7 @@ function buildWelcomeChat(_osType: string): SystemChat {
       {
         id: "welcome-intro",
         role: "system",
-        text: "", // Will be filled with markdown content fetched from /data/instructions/{os}.md
+        text: content,
         timestamp: Date.now(),
         actions: [
           {
@@ -74,7 +89,7 @@ function buildWelcomeChat(_osType: string): SystemChat {
         ],
       },
     ],
-    shouldShow: (ctx) => ctx.hasNotAgreed,
+    shouldShow: (ctx) => ctx.hasNotAgreed && ctx.isGuest,
   };
 }
 
@@ -155,19 +170,4 @@ export function getSystemChat(
 ): SystemChat | null {
   const all = getSystemChats(ctx);
   return all.find((c) => c.metadata.id === id) || null;
-}
-
-/**
- * Fetch the welcome instruction markdown for the given OS.
- * Returns the raw markdown string.
- */
-export async function loadWelcomeContent(osType: string): Promise<string> {
-  try {
-    const res = await fetch(`/content/instructions/${osType}.md`);
-    if (!res.ok) throw new Error("Instruction file not found");
-    return await res.text();
-  } catch (err) {
-    console.error("Failed to load instructions:", err);
-    return "# Error\nCould not load installation instructions.";
-  }
 }
