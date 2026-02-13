@@ -15,7 +15,7 @@ import {
   useUpdateCheck,
   getPendingUpdate,
 } from "@/hooks";
-import { useAuth, useChat, useChatHistory } from "@/features";
+import { useAuth, useChat, useChatHistory, useChatTitle } from "@/features";
 import { ModelType } from "@/lib/config";
 import {
   loadChat,
@@ -240,7 +240,16 @@ export const useShell = () => {
     },
   });
 
-  const chatTitle = system.sessionChatTitle || "New Chat";
+  const { isGeneratingTitle } = useChatTitle({
+    startupImage: system.startupImage,
+    apiKey: system.apiKey,
+    sessionChatTitle: system.sessionChatTitle,
+    setSessionChatTitle: system.setSessionChatTitle,
+  });
+
+  const chatTitle = isGeneratingTitle
+    ? "New Chat"
+    : system.sessionChatTitle || "SnapLLM";
 
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;

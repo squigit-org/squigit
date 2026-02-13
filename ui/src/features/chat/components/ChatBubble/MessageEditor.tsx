@@ -5,7 +5,6 @@
  */
 
 import React, {
-  useState,
   useEffect,
   useRef,
   useLayoutEffect,
@@ -63,8 +62,6 @@ export const MessageEditor: React.FC<MessageEditorProps> = ({
   onCancel,
   width,
 }) => {
-  const [textAreaValue, setTextAreaValue] = useState(value);
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && e.shiftKey) {
       e.stopPropagation();

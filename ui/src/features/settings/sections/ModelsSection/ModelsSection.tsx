@@ -44,7 +44,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
     [setLocalModel, updatePreferences],
   );
 
-  const handleOcrSelect = (id: string, name: string) => {
+  const handleOcrSelect = (_id: string, name: string) => {
     setActiveOcrModel(name);
     updatePreferences({ ocrLanguage: name }); // Store the Name as per existing convention
     setOcrMenuOpen(false);

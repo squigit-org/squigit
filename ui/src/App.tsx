@@ -10,7 +10,7 @@ import { AppProvider } from "@/providers/AppProvider";
 import { AppRouter } from "@/router/AppRouter";
 
 function App() {
-  const [mode] = useState<"app" | "imgbb">(() => {
+  useState<"app" | "imgbb">(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       return params.get("mode") === "imgbb" ? "imgbb" : "app";

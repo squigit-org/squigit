@@ -23,7 +23,6 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   disabled,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [isReady, setIsReady] = useState(false);
 
   const onTranscriptRef = useRef(onTranscript);
   const unlistenRef = useRef<UnlistenFn | null>(null);
@@ -36,7 +35,6 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   }, [onTranscript]);
 
   useEffect(() => {
-    let unlistenFn: UnlistenFn | undefined;
     let isMounted = true;
 
     const setupListener = async () => {
@@ -48,7 +46,9 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
             onTranscriptRef.current(payload.text, payload.is_final || false);
           } else if (payload.type === "status") {
             console.log("[STT] Status:", payload.status);
-            if (payload.status === "ready") setIsReady(true);
+            if (payload.status === "ready") {
+              // ready
+            }
           } else if (payload.type === "error") {
             console.error("[STT] Error:", payload.message);
             setIsRecording(false);
@@ -57,7 +57,6 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
 
         if (isMounted) {
           unlistenRef.current = unlisten;
-          unlistenFn = unlisten;
         } else {
           unlisten();
         }

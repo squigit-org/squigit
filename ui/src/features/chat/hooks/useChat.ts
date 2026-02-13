@@ -302,7 +302,7 @@ export const useChat = ({
     }
   };
 
-  const handleDescribeEdits = async (editDescription: string) => {
+  const handleDescribeEdits = async (_editDescription: string) => {
     if (!apiKey || !startupImage || !prompt) {
       if (!apiKey && onMissingApiKey) {
         onMissingApiKey();
@@ -312,8 +312,6 @@ export const useChat = ({
       return;
     }
     const targetChatId = chatId;
-
-    const combinedPrompt = `${prompt}\n\n[User Edit Request]: ${editDescription}`;
 
     setIsLoading(true);
     setError(null);

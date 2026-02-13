@@ -18,7 +18,6 @@ export const TitleBar: React.FC = () => {
   const { os: platform } = usePlatform();
 
   const isUnix = platform === "macos" || platform === "linux";
-  const hasImageLoaded = !!shell.system.startupImage;
 
   return (
     <header className={styles.header} data-tauri-drag-region>

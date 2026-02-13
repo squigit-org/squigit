@@ -26,7 +26,7 @@ export const HelpSection: React.FC = () => {
   useEffect(() => {
     const loadSystemData = async () => {
       try {
-        const [appName, appVer, tauriVer] = await Promise.all([
+        const [appVer, tauriVer] = await Promise.all([
           getName(),
           getVersion(),
           getTauriVersion(),

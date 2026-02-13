@@ -242,8 +242,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     }
   }, [startupImage, ocrData.length, loading, errorDialog, scan]);
 
-  const isScrollBlockedRef = useRef(false);
-  const wheelEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
 

@@ -108,7 +108,7 @@ export const useTextSelection = ({
   const positionMenu = useCallback(
     (
       selectionRectViewport: { left: number; width: number; top: number },
-      showNotch: boolean = true,
+      _showNotch: boolean = true,
     ) => {
       const menu = menuRef.current;
       if (!menu) return;
@@ -366,15 +366,6 @@ export const useTextSelection = ({
               window.getSelection()?.removeAllRanges();
             }
           }
-        }
-      }
-    };
-
-    const onGlobalMouseDown = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (menuActive && menuRef.current && !menuRef.current.contains(target)) {
-        if (!containerElement.contains(target)) {
-          hideMenu();
         }
       }
     };

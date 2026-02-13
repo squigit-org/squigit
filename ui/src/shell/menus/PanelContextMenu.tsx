@@ -33,7 +33,7 @@ export const PanelContextMenu: React.FC<PanelContextMenuProps> = ({
   onToggleSelection,
   onDelete,
   isPinned,
-  isSelected,
+  isSelected: _isSelected,
 }) => {
   return (
     <ContextMenu x={x} y={y} onClose={onClose} width={180}>

@@ -100,7 +100,6 @@ export function parseMarkdownToSegments(markdown: string): StreamSegment[] {
     const fenceMatch = line.match(/^(\s*)(`{3,})(.*)$/);
 
     if (fenceMatch) {
-      const indent = fenceMatch[1];
       const fence = fenceMatch[2];
       const lang = fenceMatch[3].trim();
 

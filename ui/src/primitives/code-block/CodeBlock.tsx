@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { memo, forwardRef } from "react";
+import { memo, forwardRef } from "react";
 import { CodeBlockEditor } from "./variants/CodeBlockEditor";
 import { CodeBlockViewer } from "./variants/CodeBlockViewer";
 import type { CodeBlockProps } from "./types/code-block.types";

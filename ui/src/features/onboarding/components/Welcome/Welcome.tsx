@@ -3,7 +3,7 @@ import { usePlatform } from "@/hooks";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
-import { ImageResult, createChat, storeImageFromPath } from "@/lib/storage";
+import { ImageResult, storeImageFromPath } from "@/lib/storage";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
@@ -30,7 +30,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* eslint-disable react-hooks/exhaustive-deps */
-  const { isMac, isWin, modSymbol, shiftSymbol, enterSymbol } = usePlatform();
+  const { isMac, isWin, modSymbol, shiftSymbol } = usePlatform();
 
   const platformInfo = React.useMemo(() => {
     if (isMac) {

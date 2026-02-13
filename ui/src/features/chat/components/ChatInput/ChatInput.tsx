@@ -248,8 +248,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  useEffect(() => {}, []);
-
   const handleSubmit = () => {
     if (
       !disabled &&

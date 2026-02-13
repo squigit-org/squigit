@@ -48,7 +48,6 @@ export const UpdateNotes: React.FC<UpdateNotesProps> = ({
               break;
 
             case "Progress":
-              let percent = 0;
               if (totalSize.current > 0) {
                 setStatus(`Downloading...`);
               } else {

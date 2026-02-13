@@ -12,13 +12,8 @@ import styles from "./AppShell.module.css";
 const AppShellComponent: React.FC = () => {
   const shell = useShellContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isErrorDismissed, setIsErrorDismissed] = useState(false);
 
   const error = shell.chat.error || shell.system.systemError;
-
-  useEffect(() => {
-    setIsErrorDismissed(false);
-  }, [error]);
 
   const [isImageExpanded, setIsImageExpanded] = useState(false);
 

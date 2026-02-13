@@ -69,7 +69,7 @@ export const ImageTextMenu = forwardRef<
         width: number;
         top: number;
       },
-      isFlatMode: boolean,
+      _isFlatMode: boolean,
     ) => {
       const menu = menuRef.current;
       if (!menu) return;
@@ -248,8 +248,6 @@ export const ImageTextMenu = forwardRef<
 
       menu.style.width = `${newWidth}px`;
       menu.style.left = `${clampedLeft}px`;
-
-      const moveDelta = clampedLeft - currentLeft;
 
       renderPage(targetIndex, true);
     },

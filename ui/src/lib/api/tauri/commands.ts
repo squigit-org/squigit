@@ -5,7 +5,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
-import { Profile, UserData, ImageResponse } from "./types";
+import { Profile, UserData } from "./types";
 export * from "./types";
 
 export const commands = {
