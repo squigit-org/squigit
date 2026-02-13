@@ -275,25 +275,40 @@ const ChatGroup: React.FC<ChatGroupProps> = ({
       <div
         className={`${styles.groupContent} ${!isExpanded ? styles.collapsed : ""}`}
       >
-        {chats.map((chat) => (
-          <ChatItem
-            key={chat.id}
-            chat={chat}
-            isActive={chat.id === activeSessionId}
-            isSelectionMode={isSelectionMode}
-            isSelected={selectedIds.includes(chat.id)}
-            onSelect={() => onSelectChat(chat.id)}
-            onToggleSelection={() => onToggleChatSelection(chat.id)}
-            onDelete={() => onDeleteChat(chat.id)}
-            onRename={(newTitle) => onRenameChat(chat.id, newTitle)}
-            onTogglePin={() => onTogglePinChat(chat.id)}
-            onToggleStar={() => onToggleStarChat(chat.id)}
-            activeContextMenu={activeContextMenu}
-            onOpenContextMenu={onOpenContextMenu}
-            onCloseContextMenu={onCloseContextMenu}
-            onEnableSelectionMode={onEnableSelectionMode}
-          />
-        ))}
+        <div className={styles.groupInner}>
+          {chats.length > 0 ? (
+            chats.map((chat) => (
+              <ChatItem
+                key={chat.id}
+                chat={chat}
+                isActive={chat.id === activeSessionId}
+                isSelectionMode={isSelectionMode}
+                isSelected={selectedIds.includes(chat.id)}
+                onSelect={() => onSelectChat(chat.id)}
+                onToggleSelection={() => onToggleChatSelection(chat.id)}
+                onDelete={() => onDeleteChat(chat.id)}
+                onRename={(newTitle) => onRenameChat(chat.id, newTitle)}
+                onTogglePin={() => onTogglePinChat(chat.id)}
+                onToggleStar={() => onToggleStarChat(chat.id)}
+                activeContextMenu={activeContextMenu}
+                onOpenContextMenu={onOpenContextMenu}
+                onCloseContextMenu={onCloseContextMenu}
+                onEnableSelectionMode={onEnableSelectionMode}
+              />
+            ))
+          ) : (
+            <div
+              style={{
+                padding: "20px 20px",
+                textAlign: "center",
+                color: "var(--text-muted)",
+                fontSize: "0.9rem",
+              }}
+            >
+              No chats found
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -394,7 +409,6 @@ export const SidePanel: React.FC = () => {
 
   return (
     <div className={styles.panel}>
-      {/* Header */}
       {isSelectionMode ? (
         <div className={styles.selectionHeader}>
           <div className={styles.selectionLeft}>
@@ -438,44 +452,49 @@ export const SidePanel: React.FC = () => {
             </button>
           </div>
 
-          {/* System Chats (Explicitly Rendered) */}
           {(showWelcome || update) && (
             <div className={styles.groupContent}>
-              {showWelcome && (
-                <div
-                  className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
-                  onClick={() => shell.handleSelectChat("__system_welcome")}
-                >
-                  <div className={styles.chatIconMain}>
-                    <img
-                      src={welcomeIcon}
-                      alt="Welcome"
-                      className="w-5 h-5 object-contain"
-                    />
+              <div className={styles.groupInner}>
+                {showWelcome && (
+                  <div
+                    className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
+                    onClick={() => shell.handleSelectChat("__system_welcome")}
+                  >
+                    <div className={styles.chatIconMain}>
+                      <img
+                        src={welcomeIcon}
+                        alt="Welcome"
+                        className="w-5 h-5 object-contain"
+                      />
+                    </div>
+                    <span className={styles.chatTitle}>
+                      Welcome to SnapLLM!
+                    </span>
                   </div>
-                  <span className={styles.chatTitle}>Welcome to SnapLLM!</span>
-                </div>
-              )}
+                )}
 
-              {update && (
-                <div
-                  className={`${styles.chatRow} ${activeSessionId && activeSessionId.startsWith("__system_update") ? styles.active : ""}`}
-                  onClick={() =>
-                    shell.handleSelectChat(`__system_update_${update.version}`)
-                  }
-                >
-                  <div className={styles.chatIconMain}>
-                    <img
-                      src={updateIcon}
-                      alt="Update"
-                      className="w-5 h-5 object-contain"
-                    />
+                {update && (
+                  <div
+                    className={`${styles.chatRow} ${activeSessionId && activeSessionId.startsWith("__system_update") ? styles.active : ""}`}
+                    onClick={() =>
+                      shell.handleSelectChat(
+                        `__system_update_${update.version}`,
+                      )
+                    }
+                  >
+                    <div className={styles.chatIconMain}>
+                      <img
+                        src={updateIcon}
+                        alt="Update"
+                        className="w-5 h-5 object-contain"
+                      />
+                    </div>
+                    <span className={styles.chatTitle}>
+                      Update Available: {update.version}
+                    </span>
                   </div>
-                  <span className={styles.chatTitle}>
-                    Update Available: {update.version}
-                  </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -486,23 +505,7 @@ export const SidePanel: React.FC = () => {
           groupedChats.get("Starred")!.length > 0 &&
           renderGroup("Starred", groupedChats.get("Starred")!)}
 
-        {groupedChats.get("Recents") &&
-          groupedChats.get("Recents")!.length > 0 &&
-          renderGroup("Recents", groupedChats.get("Recents")!)}
-
-        {chats.length === 0 && (
-          <div
-            style={{
-              padding: "40px 20px",
-              textAlign: "center",
-              color: "var(--text-muted)",
-            }}
-          >
-            <p style={{ fontSize: "0.9rem", marginBottom: 8 }}>
-              No chats found
-            </p>
-          </div>
-        )}
+        {renderGroup("Recents", groupedChats.get("Recents") || [])}
       </div>
 
       <Dialog
