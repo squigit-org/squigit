@@ -1,9 +1,16 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState, useRef, useEffect } from "react";
 import { usePlatform } from "@/hooks";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
 import { ImageResult, storeImageFromPath } from "@/lib/storage";
+import { OnboardingShell } from "@/shell/containers";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
@@ -28,8 +35,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  /* eslint-disable react-hooks/exhaustive-deps */
   const { isMac, isWin, modSymbol, shiftSymbol } = usePlatform();
 
   const platformInfo = React.useMemo(() => {
@@ -93,7 +98,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
     }
   }, [isMac, isWin, modSymbol, shiftSymbol]);
 
-  // Handle Ctrl+V paste - Rust handles decoding and stores in CAS
   useEffect(() => {
     if (!isActive) return;
 
@@ -104,7 +108,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
           return;
         }
         try {
-          // Rust now returns { hash, path } instead of base64
           const result = await invoke<ImageResult>("read_clipboard_image");
           if (result) {
             onImageReady({
@@ -125,11 +128,9 @@ export const Welcome: React.FC<WelcomeProps> = ({
     };
   }, [onImageReady, isActive]);
 
-  // Handle Tauri v2 native drag-drop events
   useEffect(() => {
     if (!isActive) return;
 
-    // Listen for drag hover events
     const unlistenHover = listen<{ paths: string[] }>(
       "tauri://drag-over",
       () => {
@@ -137,12 +138,10 @@ export const Welcome: React.FC<WelcomeProps> = ({
       },
     );
 
-    // Listen for drag leave events
     const unlistenLeave = listen("tauri://drag-leave", () => {
       setIsDragging(false);
     });
 
-    // Listen for drop events - Tauri v2 provides file paths directly
     const unlistenDrop = listen<{ paths: string[] }>(
       "tauri://drag-drop",
       async (event) => {
@@ -151,7 +150,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
 
         if (paths && paths.length > 0) {
           const filePath = paths[0];
-          // Check if file has allowed extension
+
           const lowerPath = filePath.toLowerCase();
           const isAllowed = ALLOWED_EXTENSIONS.some((ext) =>
             lowerPath.endsWith(ext),
@@ -189,7 +188,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
     };
   }, [onImageReady, isActive]);
 
-  // Process file - Rust handles storage in CAS
   const handleFileProcess = async (file: File) => {
     if (isGuest) {
       onLoginRequired?.();
@@ -230,8 +228,8 @@ export const Welcome: React.FC<WelcomeProps> = ({
   };
 
   return (
-    <div
-      className={`${styles.container} ${isDragging ? styles.dragging : ""}`}
+    <OnboardingShell
+      className={`${isDragging ? styles.dragging : ""}`}
       tabIndex={-1}
     >
       <input
@@ -295,6 +293,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
           <span>Drop your image here</span>
         </div>
       )}
-    </div>
+    </OnboardingShell>
   );
 };

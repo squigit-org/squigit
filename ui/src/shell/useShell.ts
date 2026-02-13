@@ -4,21 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { exit, relaunch } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { check } from "@tauri-apps/plugin-updater";
 import { commands } from "@/lib/api/tauri";
-import {
-  useSystemSync,
-  usePlatform,
-  useUpdateCheck,
-  getPendingUpdate,
-} from "@/hooks";
+import { useSystemSync, useUpdateCheck, getPendingUpdate } from "@/hooks";
 import { useAuth, useChat, useChatHistory, useChatTitle } from "@/features";
 import { ModelType, github } from "@/lib/config";
-import packageJson from "../../package.json";
 import {
   loadChat,
   getImagePath,
@@ -29,11 +23,8 @@ import {
   saveImgbbUrl,
   overwriteChatMessages,
 } from "@/lib/storage";
-import {
-  getSystemChat,
-  isSystemChatId,
-  type SystemChatContext,
-} from "@/lib/systemChats";
+
+const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 export const useShell = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
@@ -44,7 +35,6 @@ export const useShell = () => {
   const [showLoginRequiredDialog, setShowLoginRequiredDialog] = useState(false);
 
   const system = useSystemSync();
-  const { os } = usePlatform();
   const activeProfileRef = useRef<any>(null);
 
   useEffect(() => {
@@ -53,24 +43,9 @@ export const useShell = () => {
 
   const auth = useAuth();
 
-  // Build the context that determines which system chats are visible
   const [pendingUpdate] = useState(() => getPendingUpdate());
-  const systemChatCtx = useMemo<SystemChatContext>(
-    () => ({
-      isGuest: !system.activeProfile,
-      hasNotAgreed: system.hasAgreed === false,
-      currentVersion: packageJson.version,
-      pendingUpdate,
-      osType: os,
-      activeProfile: system.activeProfile,
-    }),
-    [system.activeProfile, system.hasAgreed, pendingUpdate, os],
-  );
 
-  const chatHistory = useChatHistory(
-    system.activeProfile?.id || null,
-    systemChatCtx,
-  );
+  const chatHistory = useChatHistory(system.activeProfile?.id || null);
 
   const performLogout = async () => {
     await system.handleLogout();
@@ -234,10 +209,10 @@ export const useShell = () => {
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
     isCheckingImage;
-  const hasActiveSystemChat = chatHistory.activeSessionId
-    ? isSystemChatId(chatHistory.activeSessionId)
+  const hasActiveOnboarding = chatHistory.activeSessionId
+    ? isOnboardingId(chatHistory.activeSessionId)
     : false;
-  const isImageMissing = !system.startupImage && !hasActiveSystemChat;
+  const isImageMissing = !system.startupImage && !hasActiveOnboarding;
   const isAuthPending = auth.authStage === "LOGIN";
   const isChatActive = !isLoadingState && !isImageMissing && !isAuthPending;
 
@@ -296,25 +271,16 @@ export const useShell = () => {
   }, [chatTitle, chatHistory.activeSessionId]);
 
   const handleSelectChat = async (id: string) => {
-    // Intercept system chats — no backend needed
-    if (isSystemChatId(id)) {
-      const sc = getSystemChat(id, systemChatCtx);
-      if (sc) {
-        setOcrData([]);
-        setSessionLensUrl(null);
-        system.setSessionChatTitle(sc.metadata.title);
-
-        // For welcome chat, the content is already bundled
-        const messages = sc.messages;
-
-        chat.restoreState({
-          messages,
-          streamingText: "",
-          firstResponseId: null,
-        });
-        chatHistory.setActiveSessionId(id);
-        return;
+    if (isOnboardingId(id)) {
+      setOcrData([]);
+      setSessionLensUrl(null);
+      if (id === "__system_welcome") {
+        system.setSessionChatTitle("Welcome to SnapLLM!");
+      } else if (id.startsWith("__system_update")) {
+        system.setSessionChatTitle("Update Available");
       }
+      chatHistory.setActiveSessionId(id);
+      return;
     }
 
     try {
@@ -404,23 +370,18 @@ export const useShell = () => {
     return !!pendingUpdate && !wasDismissed;
   });
 
-  // Tracks whether the user selected "I agree" radio (separate from hasAgreed which persists)
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  // Action handler for system chat interactions
   const handleSystemAction = useCallback(
     async (actionId: string, _value?: string) => {
       switch (actionId) {
-        // Agreement actions
         case "agree":
-          // Only enable the auth button — don't save preferences yet
           setAgreedToTerms(true);
           break;
         case "disagree":
           setAgreedToTerms(false);
           break;
 
-        // Update actions
         case "update_now":
           try {
             const update = await check();
@@ -437,7 +398,7 @@ export const useShell = () => {
         case "update_later":
           setShowUpdate(false);
           sessionStorage.setItem("update_dismissed", "true");
-          // Deselect the update chat
+
           handleNewSession();
           break;
       }
@@ -463,7 +424,6 @@ export const useShell = () => {
         return;
       }
 
-      // If first-time auth after agreement, persist the agreement
       if (system.hasAgreed === false) {
         system.setHasAgreed(true);
         system.updatePreferences({});

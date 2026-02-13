@@ -6,15 +6,14 @@
 
 import React from "react";
 import { Dialog } from "@/primitives";
-import { ShellContextMenu, TitleBar, SidePanel } from "@/shell";
 import { ShellProvider, useShellContext } from "@/shell/context";
+import { Welcome, Agreement, UpdateNotes } from "@/features";
+import { ShellContextMenu, TitleBar, SidePanel, AppShell } from "@/shell";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
 
-import { AppShell } from "@/shell";
-
-import { Welcome } from "@/features";
+const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 const AppLayoutContent: React.FC = () => {
   const shell = useShellContext();
@@ -26,6 +25,31 @@ const AppLayoutContent: React.FC = () => {
       </div>
     );
   }
+
+  const renderContent = () => {
+    const activeId = shell.chatHistory.activeSessionId;
+
+    if (activeId && isOnboardingId(activeId)) {
+      if (activeId === "__system_welcome") {
+        return <Agreement />;
+      }
+      if (activeId.startsWith("__system_update")) {
+        return <UpdateNotes />;
+      }
+    }
+
+    if (shell.isImageMissing) {
+      return (
+        <Welcome
+          onImageReady={shell.handleImageReady}
+          isGuest={!shell.system.activeProfile}
+          onLoginRequired={() => shell.setShowLoginRequiredDialog(true)}
+        />
+      );
+    }
+
+    return <AppShell />;
+  };
 
   if (shell.isImageMissing) {
     return (
@@ -40,13 +64,7 @@ const AppLayoutContent: React.FC = () => {
           >
             <SidePanel />
           </div>
-          <div className={styles.contentArea}>
-            <Welcome
-              onImageReady={shell.handleImageReady}
-              isGuest={!shell.system.activeProfile}
-              onLoginRequired={() => shell.setShowLoginRequiredDialog(true)}
-            />
-          </div>
+          <div className={styles.contentArea}>{renderContent()}</div>
         </div>
         {shell.contextMenu && (
           <ShellContextMenu
@@ -105,17 +123,7 @@ const AppLayoutContent: React.FC = () => {
         >
           <SidePanel />
         </div>
-        <div className={styles.contentArea}>
-          {shell.isImageMissing ? (
-            <Welcome
-              onImageReady={shell.handleImageReady}
-              isGuest={!shell.system.activeProfile}
-              onLoginRequired={() => shell.setShowLoginRequiredDialog(true)}
-            />
-          ) : (
-            <AppShell />
-          )}
-        </div>
+        <div className={styles.contentArea}>{renderContent()}</div>
       </div>
 
       {shell.contextMenu && (

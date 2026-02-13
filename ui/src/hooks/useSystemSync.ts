@@ -143,12 +143,9 @@ export const useSystemSync = () => {
             await commands.setActiveProfile(activeAccountId);
           } catch (e) {
             console.error(
-              "[useSystemSync] Failed to restore active account:",
+              "[useSystemSync] Failed to restore active account (preserving preference):",
               e,
             );
-
-            await invoke("logout");
-            updatePreferences({ activeAccount: "Guest" });
           }
         } else {
           try {

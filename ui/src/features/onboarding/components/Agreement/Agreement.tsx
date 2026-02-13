@@ -4,155 +4,62 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from "react";
-import { savePreferences, defaultPreferences } from "@/lib/storage";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import { OnboardingLayout, styles } from "@/layouts";
-import "katex/dist/katex.min.css";
+import React, { useMemo } from "react";
+import { OnboardingShell } from "@/shell/containers";
+import { ChatBubble } from "@/features/chat";
+import { usePlatform } from "@/hooks";
+import { Message } from "@/features/chat/types";
+import { useShellContext } from "@/shell/context";
 
-interface AgreementProps {
-  osType: string;
-  onNext: () => void;
-  onCancel: () => void;
-}
+import styles from "./Agreement.module.css";
 
-export const Agreement: React.FC<AgreementProps> = ({
-  osType,
-  onNext,
-  onCancel,
-}) => {
-  const [markdownContent, setMarkdownContent] = useState<string>("");
-  const [isAgreed, setIsAgreed] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+import linux from "@/assets/instructions/linux.md?raw";
+import macos from "@/assets/instructions/macos.md?raw";
+import windows from "@/assets/instructions/windows.md?raw";
 
-  useEffect(() => {
-    fetch(`/data/instructions/${osType}.md`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Instruction file not found");
-        return res.text();
-      })
-      .then((text) => setMarkdownContent(text))
-      .catch((err) => {
-        console.error("Failed to load instructions:", err);
-        setMarkdownContent(
-          "# Error\nCould not load installation instructions.",
-        );
-      });
-  }, [osType]);
+const INSTRUCTIONS: Record<string, string> = {
+  linux,
+  macos,
+  windows,
+};
 
-  const handleNext = async () => {
-    setIsSaving(true);
-    try {
-      await savePreferences(defaultPreferences);
-      onNext();
-    } catch (e) {
-      console.error("Failed to save agreement preferences:", e);
-      onNext();
-    } finally {
-      setIsSaving(false);
-    }
+export const Agreement: React.FC = () => {
+  const { isMac, isWin } = usePlatform();
+  const shell = useShellContext();
+
+  const content = useMemo(() => {
+    if (isMac) return INSTRUCTIONS.macos;
+    if (isWin) return INSTRUCTIONS.windows;
+    return INSTRUCTIONS.linux;
+  }, [isMac, isWin]);
+
+  const message: Message = {
+    id: "welcome-intro",
+    role: "system",
+    text: content,
+    timestamp: Date.now(),
+    actions: [
+      {
+        type: "radio",
+        id: "agree",
+        label: "I have read and understand the instructions",
+        group: "agreement",
+      },
+      {
+        type: "radio",
+        id: "disagree",
+        label: "I do not understand",
+        group: "agreement",
+        selected: true,
+      },
+    ],
   };
 
   return (
-    <OnboardingLayout
-      title="Setup Guide"
-      description="Please review the following instructions carefully."
-      icon={
-        <img
-          src="/assets/emoji_u1f6e0.png"
-          className={styles.iconImage}
-          alt="Guide"
-        />
-      }
-      onPrimaryAction={handleNext}
-      disablePrimary={!isAgreed || isSaving}
-      primaryLabel={isSaving ? "Initializing..." : "Next"}
-      onSecondaryAction={onCancel}
-      secondaryLabel="Cancel"
-    >
-      <div
-        className="flex flex-col h-full space-y-3"
-        style={{
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.75rem",
-        }}
-      >
-        <div className="text-sm text-gray-700 shrink-0">
-          This guide contains critical information about permissions and
-          troubleshooting.
-        </div>
-
-        <div className={styles.markdownScroll}>
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex]}
-            components={{
-              h1: ({ node, ...props }) => (
-                <h1
-                  style={{
-                    fontSize: "1.5em",
-                    fontWeight: "bold",
-                    margin: "0.5em 0",
-                  }}
-                  {...props}
-                />
-              ),
-              h2: ({ node, ...props }) => (
-                <h2
-                  style={{
-                    fontSize: "1.25em",
-                    fontWeight: "bold",
-                    margin: "0.5em 0",
-                  }}
-                  {...props}
-                />
-              ),
-              ul: ({ node, ...props }) => (
-                <ul
-                  style={{ listStyleType: "disc", paddingLeft: "1.5em" }}
-                  {...props}
-                />
-              ),
-              li: ({ node, ...props }) => (
-                <li style={{ marginBottom: "0.25em" }} {...props} />
-              ),
-              p: ({ node, ...props }) => (
-                <p style={{ marginBottom: "1em" }} {...props} />
-              ),
-            }}
-          >
-            {markdownContent}
-          </ReactMarkdown>
-        </div>
-
-        <div className={styles.radioGroup}>
-          <label className={styles.radioOption}>
-            <input
-              type="radio"
-              name="agreement"
-              className={styles.radioInput}
-              checked={isAgreed}
-              onChange={() => setIsAgreed(true)}
-            />
-            <span>I have read and understand the instructions</span>
-          </label>
-          <label className={styles.radioOption}>
-            <input
-              type="radio"
-              name="agreement"
-              className={styles.radioInput}
-              checked={!isAgreed}
-              onChange={() => setIsAgreed(false)}
-            />
-            <span>I do not understand</span>
-          </label>
-        </div>
+    <OnboardingShell allowScroll contentClassName={styles.content}>
+      <div className={styles.inner}>
+        <ChatBubble message={message} onAction={shell.handleSystemAction} />
       </div>
-    </OnboardingLayout>
+    </OnboardingShell>
   );
 };

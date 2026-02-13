@@ -80,24 +80,20 @@
   gap: 4px;
 }
 
-/* The Key Box */
 .key {
-  /* Minimal dark grey background */
   background-color: rgba(255, 255, 255, 0.08);
-  /* Subtle border for definition */
+
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
-  /* 3D Mechanical Effect */
+
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
 
-  /* Typography */
-  color: #a1a1aa; /* Muted grey text */
+  color: #a1a1aa;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
   font-weight: 500;
   line-height: 1;
 
-  /* Spacing */
   padding: 4px 8px;
   min-width: 24px;
   text-align: center;
@@ -111,7 +107,6 @@
     transform 0.1s ease-out,
     box-shadow 0.1s ease-out;
 
-  /* Prevent flickering */
   backface-visibility: hidden;
   transform: translate3d(0, 0, 0);
   will-change: transform;
@@ -122,7 +117,6 @@
   box-shadow: none;
 }
 
-/* The '+' separator */
 .keySep {
   color: #52525b;
   font-size: 14px;

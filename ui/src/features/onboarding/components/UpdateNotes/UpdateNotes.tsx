@@ -4,178 +4,52 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import { OnboardingLayout, styles } from "@/layouts";
-import { check } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
-import { invoke } from "@tauri-apps/api/core";
-import { github } from "@/lib/config";
-import "katex/dist/katex.min.css";
+import React, { useMemo } from "react";
+import { OnboardingShell } from "@/shell/containers";
+import { ChatBubble } from "@/features/chat";
+import { useShellContext } from "@/shell/context";
+import { getPendingUpdate } from "@/hooks/useUpdateCheck";
+import { Message } from "@/features/chat/types";
+import styles from "./UpdateNotes.module.css";
 
-interface UpdateNotesProps {
-  onClose: () => void;
-  notes: string;
-  version: string;
-}
+export const UpdateNotes: React.FC = () => {
+  const shell = useShellContext();
+  const update = useMemo(() => getPendingUpdate(), []);
 
-export const UpdateNotes: React.FC<UpdateNotesProps> = ({
-  onClose,
-  notes,
-  version,
-}) => {
-  const [updating, setUpdating] = useState(false);
-  const [status, setStatus] = useState("");
-  const totalSize = useRef<number>(0);
+  if (!update) {
+    return (
+      <OnboardingShell>
+        <div style={{ color: "#71717a" }}>You are up to date</div>
+      </OnboardingShell>
+    );
+  }
 
-  const handleUpdate = async () => {
-    setUpdating(true);
-    setStatus("Checking for updates...");
-
-    try {
-      const update = await check();
-      if (update && update.available) {
-        setStatus(`Downloading update ${update.version}...`);
-
-        await update.downloadAndInstall((event) => {
-          switch (event.event) {
-            case "Started":
-              totalSize.current = event.data.contentLength || 0;
-              setStatus(`Downloading update...`);
-              break;
-
-            case "Progress":
-              if (totalSize.current > 0) {
-                setStatus(`Downloading...`);
-              } else {
-                setStatus(`Downloading...`);
-              }
-              break;
-
-            case "Finished":
-              setStatus("Install complete. Restarting...");
-              break;
-          }
-        });
-
-        await relaunch();
-      } else {
-        setStatus("Opening download page...");
-        setTimeout(() => {
-          invoke("open_external_url", {
-            url: github.latestRelease,
-          });
-          onClose();
-        }, 1500);
-      }
-    } catch (error) {
-      console.error(error);
-      setStatus("Error. Opening browser...");
-      setTimeout(() => {
-        invoke("open_external_url", {
-          url: github.latestRelease,
-        });
-        onClose();
-      }, 1500);
-    }
+  const message: Message = {
+    id: `update-notes-${update.version}`,
+    role: "system",
+    text: `## What's New in ${update.version}\n\n${update.notes}`,
+    timestamp: Date.now(),
+    actions: [
+      {
+        type: "button",
+        id: "update_now",
+        label: "Update Now",
+        variant: "primary",
+      },
+      {
+        type: "button",
+        id: "update_later",
+        label: "Maybe Later",
+        variant: "secondary",
+      },
+    ],
   };
 
   return (
-    <OnboardingLayout
-      title={`New Update Available: ${version}`}
-      description="Check out the latest features and improvements."
-      icon={
-        <img
-          src="/assets/emoji_u1f4e6.png"
-          className={styles.iconImage}
-          alt="Update"
-        />
-      }
-      onPrimaryAction={handleUpdate}
-      primaryLabel={updating ? status : "Install Now"}
-      disablePrimary={updating}
-      onSecondaryAction={onClose}
-      secondaryLabel="Maybe later"
-      hideButtons={false}
-    >
-      <div
-        className="flex flex-col h-full space-y-3"
-        style={{ height: "100%", display: "flex", flexDirection: "column" }}
-      >
-        <h3
-          style={{
-            fontSize: "1.1em",
-            fontWeight: "bold",
-            margin: "0.5em 0",
-            color: "black",
-          }}
-        >
-          What's Changed
-        </h3>
-        <div className={styles.markdownScroll} style={{ marginTop: 0 }}>
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex]}
-            components={{
-              h1: ({ node, ...props }) => (
-                <h1
-                  style={{
-                    fontSize: "1.5em",
-                    fontWeight: "bold",
-                    margin: "0.5em 0",
-                  }}
-                  {...props}
-                />
-              ),
-              h2: ({ node, ...props }) => (
-                <h2
-                  style={{
-                    fontSize: "1.25em",
-                    fontWeight: "bold",
-                    margin: "0.5em 0",
-                  }}
-                  {...props}
-                />
-              ),
-              h3: ({ node, ...props }) => (
-                <h3
-                  style={{
-                    fontSize: "1.1em",
-                    fontWeight: "bold",
-                    margin: "0.5em 0",
-                  }}
-                  {...props}
-                />
-              ),
-              ul: ({ node, ...props }) => (
-                <ul
-                  style={{ listStyleType: "disc", paddingLeft: "1.5em" }}
-                  {...props}
-                />
-              ),
-              li: ({ node, ...props }) => (
-                <li style={{ marginBottom: "0.25em" }} {...props} />
-              ),
-              p: ({ node, ...props }) => (
-                <p style={{ marginBottom: "1em" }} {...props} />
-              ),
-              a: ({ node, ...props }) => (
-                <a
-                  style={{ color: "#2563eb", textDecoration: "underline" }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  {...props}
-                />
-              ),
-            }}
-          >
-            {notes}
-          </ReactMarkdown>
-        </div>
+    <OnboardingShell allowScroll contentClassName={styles.content}>
+      <div className={styles.inner}>
+        <ChatBubble message={message} onAction={shell.handleSystemAction} />
       </div>
-    </OnboardingLayout>
+    </OnboardingShell>
   );
 };

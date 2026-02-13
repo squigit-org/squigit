@@ -24,10 +24,8 @@ import { Dialog } from "@/primitives";
 import { PanelContextMenu } from "@/shell/menus";
 import { getDeleteMultipleChatsDialog } from "@/lib/helpers";
 import { useShellContext } from "@/shell/context";
-import { useKeyDown } from "@/hooks";
-import { isSystemChatId } from "@/lib/systemChats";
+import { useKeyDown, getPendingUpdate } from "@/hooks";
 
-// --- Checkbox ---
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
   checked,
   onChange,
@@ -44,8 +42,6 @@ const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
     )}
   </div>
 );
-
-// --- ChatItem Component ---
 
 interface ChatItemProps {
   chat: ChatMetadata;
@@ -160,7 +156,6 @@ const ChatItem: React.FC<ChatItemProps> = ({
           </span>
         )}
 
-        {/* Actions Group (Hover or Persistent) */}
         {!isSelectionMode && (
           <div className={styles.chatActions}>
             <div className={styles.statusRow}>
@@ -226,8 +221,6 @@ const ChatItem: React.FC<ChatItemProps> = ({
     </>
   );
 };
-
-// --- ChatGroup Component ---
 
 interface ChatGroupProps {
   title: string;
@@ -306,8 +299,6 @@ const ChatGroup: React.FC<ChatGroupProps> = ({
   );
 };
 
-// --- Main SidePanel Component ---
-
 export const SidePanel: React.FC = () => {
   const shell = useShellContext();
   const chats = shell.chatHistory.chats;
@@ -321,17 +312,17 @@ export const SidePanel: React.FC = () => {
     y: number;
   } | null>(null);
 
-  // -- Modal States --
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [isHoverDisabled, setIsHoverDisabled] = useState(false);
 
-  // Group chats (now only Starred and Recents)
-  const systemChats = chats.filter((c) => isSystemChatId(c.id));
-  const userChats = chats.filter((c) => !isSystemChatId(c.id));
+  const userChats = chats.filter((c) => !c.id.startsWith("__system_"));
   const groupedChats = groupChatsByDate(userChats);
 
-  // Close context menu on global click
+  const update = getPendingUpdate();
+  const showWelcome =
+    !shell.system.activeProfile && shell.system.hasAgreed === false;
+
   useEffect(() => {
     const handleClick = () => setActiveContextMenu(null);
     document.addEventListener("click", handleClick);
@@ -343,7 +334,6 @@ export const SidePanel: React.FC = () => {
     setActiveContextMenu({ id, x: xPos, y });
   };
 
-  // -- Selection Logic --
   const toggleSelectionMode = () => {
     setIsHoverDisabled(true);
     setIsSelectionMode(!isSelectionMode);
@@ -362,8 +352,6 @@ export const SidePanel: React.FC = () => {
     );
   };
 
-  // -- Action Handlers --
-
   const handleDeleteChat = () => {
     if (deleteId) {
       shell.handleDeleteChatWrapper(deleteId);
@@ -378,7 +366,6 @@ export const SidePanel: React.FC = () => {
     setShowBulkDelete(false);
   };
 
-  // Helper to render a generic group
   const renderGroup = (
     title: string,
     groupChats: ChatMetadata[],
@@ -451,47 +438,58 @@ export const SidePanel: React.FC = () => {
             </button>
           </div>
 
-          {/* System Chats (Pinned below New Chat) */}
-          {systemChats.length > 0 && (
+          {/* System Chats (Explicitly Rendered) */}
+          {(showWelcome || update) && (
             <div className={styles.groupContent}>
-              {systemChats.map((chat) => (
+              {showWelcome && (
                 <div
-                  key={chat.id}
-                  className={`${styles.chatRow} ${activeSessionId === chat.id ? styles.active : ""}`}
-                  onClick={() => shell.handleSelectChat(chat.id)}
+                  className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
+                  onClick={() => shell.handleSelectChat("__system_welcome")}
                 >
                   <div className={styles.chatIconMain}>
                     <img
-                      src={
-                        chat.id === "__system_welcome"
-                          ? welcomeIcon
-                          : updateIcon
-                      }
-                      alt="System Icon"
+                      src={welcomeIcon}
+                      alt="Welcome"
                       className="w-5 h-5 object-contain"
                     />
                   </div>
-                  <span className={styles.chatTitle}>{chat.title}</span>
+                  <span className={styles.chatTitle}>Welcome to SnapLLM!</span>
                 </div>
-              ))}
+              )}
+
+              {update && (
+                <div
+                  className={`${styles.chatRow} ${activeSessionId && activeSessionId.startsWith("__system_update") ? styles.active : ""}`}
+                  onClick={() =>
+                    shell.handleSelectChat(`__system_update_${update.version}`)
+                  }
+                >
+                  <div className={styles.chatIconMain}>
+                    <img
+                      src={updateIcon}
+                      alt="Update"
+                      className="w-5 h-5 object-contain"
+                    />
+                  </div>
+                  <span className={styles.chatTitle}>
+                    Update Available: {update.version}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* List */}
       <div className={styles.scrollArea}>
-        {/* 1. Starred Group */}
         {groupedChats.get("Starred") &&
           groupedChats.get("Starred")!.length > 0 &&
           renderGroup("Starred", groupedChats.get("Starred")!)}
 
-        {/* 2. Recents Group */}
         {groupedChats.get("Recents") &&
           groupedChats.get("Recents")!.length > 0 &&
           renderGroup("Recents", groupedChats.get("Recents")!)}
 
-        {/* Empty State if absolutely nothing exists */}
         {chats.length === 0 && (
           <div
             style={{
@@ -507,7 +505,6 @@ export const SidePanel: React.FC = () => {
         )}
       </div>
 
-      {/* --- CONFIRMATION DIALOGS --- */}
       <Dialog
         isOpen={!!deleteId}
         type="DELETE_CHAT"

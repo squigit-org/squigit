@@ -11,44 +11,32 @@ import {
   deleteChat,
   updateChatMetadata as updateChatMeta,
 } from "@/lib/storage";
-import {
-  getSystemChats,
-  isSystemChatId,
-  type SystemChatContext,
-} from "@/lib/systemChats";
+const SYSTEM_PREFIX = "__system_";
+const isOnboardingId = (id: string) => id.startsWith(SYSTEM_PREFIX);
 
-export const useChatHistory = (
-  activeProfileId: string | null = null,
-  systemCtx?: SystemChatContext,
-) => {
+export const useChatHistory = (activeProfileId: string | null = null) => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const refreshChats = useCallback(async () => {
-    // Build the system chats list for the current context
-    const systemMeta = systemCtx
-      ? getSystemChats(systemCtx).map((c) => c.metadata)
-      : [];
-
     if (!activeProfileId) {
-      // Guest mode — only show system chats
-      setChats(systemMeta);
+      setChats([]);
       return;
     }
 
     setIsLoading(true);
     try {
       const chatList = await listChats();
-      // Prepend system chats before normal chats
-      setChats([...systemMeta, ...chatList]);
+
+      setChats(chatList.filter((c) => !isOnboardingId(c.id)));
     } catch (e) {
       console.error("Failed to load chats:", e);
-      setChats(systemMeta);
+      setChats([]);
     } finally {
       setIsLoading(false);
     }
-  }, [activeProfileId, systemCtx]);
+  }, [activeProfileId]);
 
   useEffect(() => {
     refreshChats();
@@ -59,7 +47,7 @@ export const useChatHistory = (
   }, [activeProfileId]);
 
   const handleDeleteChat = async (id: string) => {
-    if (isSystemChatId(id)) return; // System chats can't be deleted
+    if (isOnboardingId(id)) return;
     try {
       await deleteChat(id);
       setChats((prev) => prev.filter((c) => c.id !== id));
@@ -72,7 +60,7 @@ export const useChatHistory = (
   };
 
   const handleDeleteChats = async (ids: string[]) => {
-    const realIds = ids.filter((id) => !isSystemChatId(id));
+    const realIds = ids.filter((id) => !isOnboardingId(id));
     if (realIds.length === 0) return;
     try {
       await Promise.all(realIds.map((id) => deleteChat(id)));
@@ -86,7 +74,7 @@ export const useChatHistory = (
   };
 
   const handleRenameChat = async (id: string, newTitle: string) => {
-    if (isSystemChatId(id)) return; // System chats can't be renamed
+    if (isOnboardingId(id)) return;
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
@@ -104,7 +92,7 @@ export const useChatHistory = (
   };
 
   const handleTogglePinChat = async (id: string) => {
-    if (isSystemChatId(id)) return; // System chats are always pinned
+    if (isOnboardingId(id)) return;
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
@@ -127,7 +115,7 @@ export const useChatHistory = (
     id: string,
     overrides?: Partial<ChatMetadata>,
   ) => {
-    if (isSystemChatId(id)) return; // System chats can't be starred
+    if (isOnboardingId(id)) return;
     const chat = chats.find((c) => c.id === id);
     if (!chat) return;
 
