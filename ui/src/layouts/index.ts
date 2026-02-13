@@ -5,5 +5,5 @@
  */
 
 export * from "./AppLayout";
-export * from "./ChatLayout";
+
 export * from "./OnboardingLayout";

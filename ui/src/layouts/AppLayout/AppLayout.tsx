@@ -13,7 +13,7 @@ import { usePlatform } from "@/hooks";
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
 
-import { ChatLayout } from "..";
+import { AppShell } from "@/shell";
 
 import { Welcome, Agreement, UpdateNotes } from "@/features";
 
@@ -60,76 +60,33 @@ const AppLayoutContent: React.FC = () => {
     );
   }
 
-  if (shell.isImageMissing) {
-    return (
-      <div
-        className={styles.appContainer}
-        onContextMenu={shell.handleContextMenu}
-      >
-        <TitleBar />
-        <div className={styles.mainContent}>
-          <div
-            className={`${styles.sidePanelWrapper} ${!shell.isSidePanelOpen ? styles.hidden : ""} ${shell.enablePanelAnimation ? styles.animated : ""}`}
-          >
-            <SidePanel />
-          </div>
-          <div className={styles.contentArea}>
-            <Welcome
-              onImageReady={shell.handleImageReady}
-              isGuest={!shell.system.activeProfile}
-              onLoginRequired={() => shell.setShowLoginRequiredDialog(true)}
-            />
-          </div>
-        </div>
-        {shell.contextMenu && (
-          <ShellContextMenu
-            x={shell.contextMenu.x}
-            y={shell.contextMenu.y}
-            onClose={shell.handleCloseContextMenu}
-            onCopy={shell.handleCopy}
-            selectedText={shell.contextMenu.selectedText}
-            hasSelection={true}
-          />
-        )}
-
-        <Dialog
-          isOpen={shell.showGeminiAuthDialog}
-          type="GEMINI_AUTH"
-          onAction={(key) => {
-            if (key === "confirm") {
-              shell.system.openSettings("apikeys");
-            }
-            shell.setShowGeminiAuthDialog(false);
-          }}
-        />
-
-        <Dialog
-          isOpen={shell.system.showExistingProfileDialog}
-          type="EXISTING_PROFILE"
-          onAction={() => shell.system.setShowExistingProfileDialog(false)}
-        />
-
-        <Dialog
-          isOpen={shell.showLoginRequiredDialog}
-          type="LOGIN_REQUIRED"
-          onAction={(key) => {
-            if (key === "confirm") {
-              shell.system.addAccount();
-            }
-            shell.setShowLoginRequiredDialog(false);
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div
       ref={shell.containerRef}
       onContextMenu={shell.handleContextMenu}
       className={styles.appContainer}
     >
-      <ChatLayout />
+      <TitleBar />
+      <div className={styles.mainContent}>
+        <div
+          className={`${styles.sidePanelWrapper} ${
+            !shell.isSidePanelOpen ? styles.hidden : ""
+          } ${shell.enablePanelAnimation ? styles.animated : ""}`}
+        >
+          <SidePanel />
+        </div>
+        <div className={styles.contentArea}>
+          {shell.isImageMissing ? (
+            <Welcome
+              onImageReady={shell.handleImageReady}
+              isGuest={!shell.system.activeProfile}
+              onLoginRequired={() => shell.setShowLoginRequiredDialog(true)}
+            />
+          ) : (
+            <AppShell />
+          )}
+        </div>
+      </div>
 
       {shell.contextMenu && (
         <ShellContextMenu
