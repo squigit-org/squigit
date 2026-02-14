@@ -26,6 +26,7 @@ const INSTRUCTIONS: Record<string, string> = {
 export const Agreement: React.FC = () => {
   const { isMac, isWin } = usePlatform();
   const shell = useShellContext();
+  const [selected, setSelected] = React.useState("disagree");
 
   const content = useMemo(() => {
     if (isMac) return INSTRUCTIONS.macos;
@@ -38,27 +39,47 @@ export const Agreement: React.FC = () => {
     role: "system",
     text: content,
     timestamp: Date.now(),
-    actions: [
-      {
-        type: "radio",
-        id: "agree",
-        label: "I have read and understand the instructions",
-        group: "agreement",
-      },
-      {
-        type: "radio",
-        id: "disagree",
-        label: "I do not understand",
-        group: "agreement",
-        selected: true,
-      },
-    ],
+  };
+
+  const handleSelection = (value: string) => {
+    setSelected(value);
+    shell.handleSystemAction(value, value);
   };
 
   return (
     <OnboardingShell allowScroll contentClassName={styles.content}>
       <div className={styles.inner}>
-        <ChatBubble message={message} onAction={shell.handleSystemAction} />
+        <ChatBubble message={message} />
+        <div className={styles.actions}>
+          <label
+            className={`${styles.radioAction} ${
+              selected === "agree" ? styles.radioSelected : ""
+            }`}
+          >
+            <input
+              type="radio"
+              name="agreement"
+              checked={selected === "agree"}
+              onChange={() => handleSelection("agree")}
+              className={styles.radioInput}
+            />
+            <span>I have read and understand the instructions</span>
+          </label>
+          <label
+            className={`${styles.radioAction} ${
+              selected === "disagree" ? styles.radioSelected : ""
+            }`}
+          >
+            <input
+              type="radio"
+              name="agreement"
+              checked={selected === "disagree"}
+              onChange={() => handleSelection("disagree")}
+              className={styles.radioInput}
+            />
+            <span>I do not understand</span>
+          </label>
+        </div>
       </div>
     </OnboardingShell>
   );

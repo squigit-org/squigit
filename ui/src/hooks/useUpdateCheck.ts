@@ -5,8 +5,16 @@
  */
 
 import { useEffect } from "react";
-import { fetchReleaseNotes } from "@/features/onboarding";
 import packageJson from "../../package.json";
+import { github } from "@/lib/config";
+
+const RELEASE_NOTES_URL = github.rawChangelog;
+
+export interface ReleaseInfo {
+  version: string;
+  notes: string;
+  hasUpdate: boolean;
+}
 
 const STORAGE_KEYS = {
   VERSION: "pending_update_version",
@@ -26,6 +34,60 @@ function compareVersions(v1: string, v2: string): number {
   }
   return 0;
 }
+
+export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
+  try {
+    const response = await fetch(RELEASE_NOTES_URL);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch release notes: ${response.statusText}`);
+    }
+    const text = await response.text();
+
+    // REGEX EXPLANATION:
+    // ^##       -> Starts with "##" at the beginning of a line
+    // \s+       -> One or more spaces
+    // \[?       -> Optional opening bracket '['
+    // (\d...)   -> Capture Group 1: The SemVer version (X.Y.Z)
+    // \]?       -> Optional closing bracket ']'
+    // .*$       -> Match the rest of the line (e.g. comments/dates) so we can skip it
+    // flags: gm -> Global (find all), Multiline (^ matches start of lines)
+    const headerRegex = /^##\s+\[?(\d+\.\d+\.\d+)\]?.*$/gm;
+
+    const matches = Array.from(text.matchAll(headerRegex));
+
+    if (matches.length === 0) {
+      return { version: packageJson.version, notes: "", hasUpdate: false };
+    }
+
+    const latestMatch = matches[0];
+    const latestVersion = latestMatch[1];
+
+    if (compareVersions(latestVersion, packageJson.version) <= 0) {
+      return { version: latestVersion, notes: "", hasUpdate: false };
+    }
+
+    const startIdx = latestMatch.index! + latestMatch[0].length;
+
+    const endIdx = matches.length > 1 ? matches[1].index! : text.length;
+
+    const rawBody = text.slice(startIdx, endIdx);
+
+    const notes = rawBody
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("-") || line.startsWith("*"))
+      .join("\n");
+
+    return {
+      version: latestVersion,
+      notes: notes.trim(),
+      hasUpdate: true,
+    };
+  } catch (error) {
+    console.error("Error fetching release notes:", error);
+    return { version: packageJson.version, notes: "", hasUpdate: false };
+  }
+};
 
 export function useUpdateCheck() {
   useEffect(() => {

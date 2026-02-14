@@ -27,28 +27,23 @@ export const UpdateNotes: React.FC = () => {
   const message: Message = {
     id: `update-notes-${update.version}`,
     role: "system",
-    text: `## What's New in ${update.version}\n\n${update.notes}`,
+    text: update.notes,
     timestamp: Date.now(),
-    actions: [
-      {
-        type: "button",
-        id: "update_now",
-        label: "Update Now",
-        variant: "primary",
-      },
-      {
-        type: "button",
-        id: "update_later",
-        label: "Maybe Later",
-        variant: "secondary",
-      },
-    ],
   };
 
   return (
     <OnboardingShell allowScroll contentClassName={styles.content}>
+      <div>{`What's New in ${update.version}\n\n`}</div>
       <div className={styles.inner}>
-        <ChatBubble message={message} onAction={shell.handleSystemAction} />
+        <ChatBubble message={message} />
+        <div className={styles.actions}>
+          <button
+            className={styles.primaryButton}
+            onClick={() => shell.handleSystemAction("update_now")}
+          >
+            Update Now
+          </button>
+        </div>
       </div>
     </OnboardingShell>
   );
