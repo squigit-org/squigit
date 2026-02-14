@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useHistoryState } from "./useHistoryState";
 import { useClipboard } from "./useClipboard";

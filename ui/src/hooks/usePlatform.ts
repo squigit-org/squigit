@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { useMemo } from "react";
 
 export type Platform = "macos" | "windows" | "linux";
@@ -34,7 +40,7 @@ export function usePlatform(): PlatformInfo {
       isWin,
       isLinux,
       modKey: isMac ? "Meta" : "Control",
-      modSymbol: isMac ? "⌘" : isWin ? "Ctrl" : "Super",
+      modSymbol: isMac ? "⌘" : "Ctrl",
       altSymbol: isMac ? "⌥" : "Alt",
       shiftSymbol: "⇧",
       enterSymbol: "↵",
