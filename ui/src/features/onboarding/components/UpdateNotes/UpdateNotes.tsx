@@ -130,7 +130,9 @@ export const UpdateNotes: React.FC = () => {
 
       <div className={styles.footer}>
         <div className={styles.status}>
-          <span className={styles.size}>Size: ~14.5MB</span>
+          <span className={styles.size}>
+            {update.size ? `Size: ${update.size}` : "Size: Unknown"}
+          </span>
           <span className={styles.downloading}>Ready to Install</span>
         </div>
         <button

@@ -15,12 +15,14 @@ export interface ReleaseInfo {
   notes: string;
   hasUpdate: boolean;
   sections?: Record<string, string[]>;
+  size?: string;
 }
 
 const STORAGE_KEYS = {
   VERSION: "pending_update_version",
   NOTES: "pending_update_notes",
   SECTIONS: "pending_update_sections",
+  SIZE: "pending_update_size",
   AVAILABLE: "pending_update_available",
 };
 
@@ -63,6 +65,10 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
     const endIdx = matches.length > 1 ? matches[1].index! : text.length;
     const rawBody = text.slice(startIdx, endIdx);
 
+    // Parse size
+    const sizeMatch = rawBody.match(/\*\*Size\*\*:\s*(.+)/i);
+    const size = sizeMatch ? sizeMatch[1].trim() : undefined;
+
     const sections: Record<string, string[]> = {
       "New Features": [],
       "Bug Fixes": [],
@@ -102,6 +108,7 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
       notes: notes,
       hasUpdate: true,
       sections,
+      size,
     };
   } catch (error) {
     console.error("Error fetching release notes:", error);
@@ -113,7 +120,7 @@ export function useUpdateCheck() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const { hasUpdate, version, notes, sections } =
+        const { hasUpdate, version, notes, sections, size } =
           await fetchReleaseNotes();
 
         if (hasUpdate) {
@@ -125,6 +132,9 @@ export function useUpdateCheck() {
               STORAGE_KEYS.SECTIONS,
               JSON.stringify(sections),
             );
+          }
+          if (size) {
+            localStorage.setItem(STORAGE_KEYS.SIZE, size);
           }
         } else {
           clearPendingUpdate();
@@ -165,6 +175,7 @@ export function getPendingUpdate() {
     version: storedVersion,
     notes: localStorage.getItem(STORAGE_KEYS.NOTES) || "",
     sections,
+    size: localStorage.getItem(STORAGE_KEYS.SIZE) || undefined,
   };
 }
 
@@ -173,4 +184,5 @@ export function clearPendingUpdate() {
   localStorage.removeItem(STORAGE_KEYS.VERSION);
   localStorage.removeItem(STORAGE_KEYS.NOTES);
   localStorage.removeItem(STORAGE_KEYS.SECTIONS);
+  localStorage.removeItem(STORAGE_KEYS.SIZE);
 }
