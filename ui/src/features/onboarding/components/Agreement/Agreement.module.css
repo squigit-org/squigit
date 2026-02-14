@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import "@/styles/variables.css";
+
 .content {
   min-height: 100%;
   padding: 40px 20px;
@@ -51,7 +53,6 @@
 .radioSelected {
   border-color: var(--neutral-500);
   color: var(--neutral-100);
-  background-color: var(--neutral-800);
 }
 
 .radioInput {

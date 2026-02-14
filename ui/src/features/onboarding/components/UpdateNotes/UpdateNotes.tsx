@@ -33,7 +33,12 @@ const UpdateSection: React.FC<UpdateSectionProps> = ({
         />
         <span className={styles.sectionTitle}>{title}</span>
       </div>
-      {isOpen && (
+      <div
+        className={clsx(
+          styles.gridWrapper,
+          isOpen ? styles.gridOpen : styles.gridClosed,
+        )}
+      >
         <div className={styles.sectionContent}>
           <ul className={styles.sectionList}>
             {items.map((item, idx) => (
@@ -41,7 +46,7 @@ const UpdateSection: React.FC<UpdateSectionProps> = ({
             ))}
           </ul>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -61,14 +66,14 @@ export const UpdateNotes: React.FC = () => {
 
   return (
     <OnboardingShell
-      allowScroll={false}
       contentClassName={`${styles.container} ${styles.shellOverride}`}
     >
-      <div className={styles.scrollableContent}>
-        <div className={styles.header}>
-          <div className={styles.title}>SnapLLM v{update.version} is Here!</div>
-        </div>
+      <div className={styles.header}>
+        <div className={styles.title}>SnapLLM</div>
+        <div className={styles.subtitle}>v{update.version} is Here!</div>
+      </div>
 
+      <div className={styles.scrollableContent}>
         {hasSections ? (
           <>
             {SECTION_ORDER.map((sectionTitle) => (
@@ -116,7 +121,9 @@ export const UpdateNotes: React.FC = () => {
             <DownloadCloud size={22} className={styles.downloadIcon} />
             <div className={styles.versionInfo}>
               <span className={styles.sizeLabel}>
-                {update.size ? update.size : "Unknown Size"} will be downloaded.
+                {update.size
+                  ? update.size + " will be downloaded"
+                  : "Unknown Size"}
               </span>
             </div>
           </div>
