@@ -33,6 +33,7 @@ use commands::security::{check_file_exists, encrypt_and_save};
 use commands::window::{
     close_window, maximize_window, minimize_window,
     open_external_url, set_background_color,
+    set_always_on_top, get_always_on_top,
 };
 use commands::speech::SpeechState;
 use services::image::process_and_store_image;
@@ -88,6 +89,8 @@ pub fn run() {
             minimize_window,
             maximize_window,
             close_window,
+            set_always_on_top,
+            get_always_on_top,
             // OCR
             ocr_image,
             // CAS Image Storage

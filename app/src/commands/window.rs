@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager};
 use tauri::window::Color;
 
 
@@ -47,8 +47,21 @@ pub fn maximize_window(app: AppHandle) -> Result<(), String> {
     }
 }
 
+
 #[tauri::command]
 pub fn close_window(app: AppHandle) -> Result<(), String> {
     let window = app.get_webview_window("main").ok_or("Main window not found")?;
     window.close().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_always_on_top(app: AppHandle, state: bool) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or("Main window not found")?;
+    window.set_always_on_top(state).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_always_on_top(app: AppHandle) -> Result<bool, String> {
+    let _window = app.get_webview_window("main").ok_or("Main window not found")?;
+    Ok(false) 
 }

@@ -4,23 +4,51 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
+import React, { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { usePlatform } from "@/hooks";
 import { TrafficLights } from "../TrafficLights";
 import { WindowControls } from "../WindowControls";
 import { SettingsOverlay } from "@/shell/overlays";
 import { useShellContext } from "@/shell/context";
 import { AccountSwitcher, SettingsPanel, AuthButton } from "@/features";
+import { TitleBarContextMenu } from "@/shell/menus";
 import styles from "./TitleBar.module.css";
 
 export const TitleBar: React.FC = () => {
   const shell = useShellContext();
   const { os: platform } = usePlatform();
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const isUnix = platform === "macos" || platform === "linux";
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleToggleAlwaysOnTop = async () => {
+    const newState = !isAlwaysOnTop;
+    setIsAlwaysOnTop(newState);
+    try {
+      await invoke("set_always_on_top", { state: newState });
+    } catch (error) {
+      console.error("Failed to toggle always on top:", error);
+      // Revert on failure
+      setIsAlwaysOnTop(!newState);
+    }
+  };
+
   return (
-    <header className={styles.header} data-tauri-drag-region>
+    <header
+      className={styles.header}
+      data-tauri-drag-region
+      onContextMenu={handleContextMenu}
+    >
       <h1 className={styles.chatTitle}>{shell.chatTitle}</h1>
 
       <div className={styles.leftSection}>
@@ -104,6 +132,18 @@ export const TitleBar: React.FC = () => {
 
         {platform === "windows" && <WindowControls />}
       </div>
+
+      {contextMenu && (
+        <TitleBarContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onNewChat={shell.handleNewSession}
+          onOpenSettings={() => shell.system.openSettings("general")}
+          isAlwaysOnTop={isAlwaysOnTop}
+          onToggleAlwaysOnTop={handleToggleAlwaysOnTop}
+        />
+      )}
     </header>
   );
 };

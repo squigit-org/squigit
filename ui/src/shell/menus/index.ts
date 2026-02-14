@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export * from "./PanelContextMenu";
 export * from "./ShellContextMenu";
 export * from "./TextContextMenu";
-export * from "./PanelContextMenu";
+export * from "./TitleBarContextMenu";

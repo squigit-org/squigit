@@ -116,7 +116,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 interface ContextMenuItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
   variant?: "default" | "danger";
-  shortcut?: string;
+  shortcut?: ReactNode;
 }
 
 export const ContextMenuItem: React.FC<ContextMenuItemProps> = ({
