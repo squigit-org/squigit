@@ -3,12 +3,12 @@
  * Copyright 2026 a7mddra
  * SPDX-License-Identifier: Apache-2.0
  */
-import React from "react";
-import styles from "./PersonalizationSection.module.css";
 
+import React from "react";
 import { TextContextMenu } from "@/shell";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { UserPreferences } from "@/lib/storage";
+import styles from "./PersonalizationSection.module.css";
 
 interface PersonalizationSectionProps {
   localPrompt: string;
@@ -23,7 +23,6 @@ export const PersonalizationSection: React.FC<PersonalizationSectionProps> = ({
   updatePreferences,
 }) => {
   React.useEffect(() => {
-    // Avoid saving if values are identical (e.g. on mount or after save)
     if (localPrompt === currentPrompt) return;
     const handler = setTimeout(() => {
       updatePreferences({ prompt: localPrompt });

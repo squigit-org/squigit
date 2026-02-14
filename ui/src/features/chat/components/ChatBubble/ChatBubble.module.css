@@ -303,13 +303,10 @@
   margin: 0.5rem 0;
 }
 
-/* Inline math: treat as a solid non-breaking unit */
 .bubble :global(.katex) {
   display: inline-block;
   white-space: nowrap;
 }
-
-/* ── Interactive Actions ── */
 
 .actionsContainer {
   display: flex;

@@ -7,7 +7,6 @@
 import React, { createContext, useContext, ReactNode } from "react";
 import { useShell } from "./useShell";
 
-// Infer the return type of the hook automatically
 type ShellState = ReturnType<typeof useShell>;
 
 const ShellContext = createContext<ShellState | null>(null);

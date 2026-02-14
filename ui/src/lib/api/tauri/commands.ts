@@ -29,7 +29,7 @@ export const commands = {
   ) =>
     invoke("encrypt_and_save", {
       provider,
-      plaintext: key, // "plaintext"
+      plaintext: key,
       profileId,
     }),
   startGoogleAuth: () => invoke("start_google_auth"),
@@ -48,7 +48,6 @@ export const commands = {
   getProfileCount: () => invoke<number>("get_profile_count"),
 
   // Window Mgmt
-
   setBackgroundColor: (color: string) =>
     invoke("set_background_color", { color }),
 

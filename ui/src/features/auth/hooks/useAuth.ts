@@ -19,12 +19,8 @@ export const useAuth = () => {
         if (activeProfile) {
           setAuthStage("AUTHENTICATED");
         } else {
-          // Check if any profiles exist
           const hasProfiles = await invoke<boolean>("has_profiles");
           if (hasProfiles) {
-            // We have profiles but none active? This shouldn't happen usually,
-            // but we can default to LOGIN or try to set one active.
-            // For now, let's force login screen (which lists profiles).
             setAuthStage("LOGIN");
           } else {
             setAuthStage("LOGIN");

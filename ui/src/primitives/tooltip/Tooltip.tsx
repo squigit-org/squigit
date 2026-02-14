@@ -46,24 +46,18 @@ export const Tooltip: React.FC<TooltipProps> = ({
       let top: number;
 
       if (above) {
-        // Position above, centered horizontally
         left = parentRect.left + parentRect.width / 2 - tooltipRect.width / 2;
         top = parentRect.top - tooltipRect.height - offset;
       } else {
-        // Position to the right (default behavior)
         const windowWidth = window.innerWidth;
         left = parentRect.right + offset;
         top = parentRect.top + parentRect.height / 2 - tooltipRect.height / 2;
 
-        // Handle clipping
         if (left + tooltipRect.width > windowWidth - EDGE_PADDING) {
-          // Try left side
           const leftCandidate = parentRect.left - offset - tooltipRect.width;
           if (leftCandidate > EDGE_PADDING) {
             left = leftCandidate;
           } else {
-            // If neither works well, default to right but clamp?
-            // For now, mirroring simpler logic from ImageToolbar:
             left = parentRect.left - offset - tooltipRect.width;
           }
         }

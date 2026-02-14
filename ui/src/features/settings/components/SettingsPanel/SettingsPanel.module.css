@@ -4,16 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * SettingsPanel-specific styles only.
- * Base dropdown styles are inherited from @/primitives/dropdown
- */
-
 .settingsPanel {
   pointer-events: auto;
 }
 
-/* Settings icon rotation animation */
 .triggerIcon {
   transform: translateZ(0);
   transition: transform 0.15s linear;

@@ -7,7 +7,6 @@
 @import "@/styles/variables.css";
 @import "@/styles/animations.css";
 
-/* Placeholder stays in flow to prevent layout shifts */
 .placeholder {
   width: 95%;
   max-width: 40rem;
@@ -18,7 +17,6 @@
   flex-shrink: 0;
 }
 
-/* Container participates in flex layout */
 .floatingContainer {
   background-color: var(--neutral-900);
   border: 1px solid var(--neutral-800);

@@ -4,21 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * AccountSwitcher-specific styles.
- * Base dropdown styles imported from shared.
- */
-
-/* Import shared dropdown styles */
 @import "@/primitives/dropdown/Dropdown.shared.module.css";
 
-/* AccountSwitcher container */
 .accountSwitcher {
   position: relative;
   pointer-events: auto;
 }
 
-/* Avatar in trigger */
 .avatar {
   width: 22px;
   height: 22px;
@@ -42,7 +34,6 @@
   color: #fff;
 }
 
-/* Account list with specific styling */
 .accountList {
   display: flex;
   flex-direction: column;
@@ -61,7 +52,6 @@
   border-radius: 4px;
 }
 
-/* Account item (similar to .item but with custom name) */
 .accountItem {
   composes: item;
 }
@@ -70,7 +60,6 @@
   composes: itemActive;
 }
 
-/* Item avatar (larger than trigger avatar) */
 .itemAvatar {
   width: 32px;
   height: 32px;
@@ -94,7 +83,6 @@
   color: #fff;
 }
 
-/* Account info (2-line layout) */
 .accountInfo {
   flex: 1;
   display: flex;
@@ -119,7 +107,6 @@
   text-overflow: ellipsis;
 }
 
-/* Delete button that appears on hover */
 .deleteButton {
   background: transparent;
   border: none;
@@ -152,7 +139,6 @@
   color: #ef4444;
 }
 
-/* Avatar Component Styles */
 .avatarContainer {
   position: relative;
   overflow: hidden;

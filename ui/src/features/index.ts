@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export * from "./auth";
 export * from "./chat";
 export * from "./image";
+export * from "./models";
 export * from "./onboarding";
 export * from "./settings";
-export * from "./models";
-export * from "./auth";
+export * from "./syntax";

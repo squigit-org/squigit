@@ -270,7 +270,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           sourcePath = decodeURIComponent(urlObj.pathname);
         }
       } catch (e) {
-        // console.error("Failed to parse URL for copy:", e);
         setErrorDialog(
           getErrorDialog(
             `Failed to parse URL for copy: ${e instanceof Error ? e.message : String(e)}`,
@@ -310,7 +309,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         await invoke("copy_image_to_clipboard", { image_base64: base64 });
         return true;
       } catch (err) {
-        // console.error("Failed to copy base64 image:", err);
         setErrorDialog(
           getErrorDialog(
             `Failed to copy base64 image: ${err instanceof Error ? err.message : String(err)}`,
@@ -324,7 +322,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       await invoke("copy_image_from_path_to_clipboard", { path: sourcePath });
       return true;
     } catch (err) {
-      // console.error("Failed to copy image from path:", err);
       setErrorDialog(
         getErrorDialog(
           `Failed to copy image from path: ${err instanceof Error ? err.message : String(err)}`,
@@ -349,7 +346,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           sourcePath = decodeURIComponent(urlObj.pathname);
         }
       } catch (e) {
-        // console.error("Failed to parse URL for save:", e);
         setErrorDialog(
           getErrorDialog(
             `Failed to parse URL for save: ${e instanceof Error ? e.message : String(e)}`,
@@ -388,7 +384,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         });
       }
     } catch (error) {
-      // console.error("Failed to save image:", error);
       setErrorDialog(
         getErrorDialog(
           `Failed to save image: ${error instanceof Error ? error.message : String(error)}`,
@@ -526,7 +521,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
                     draggable={false}
                     className={styles.bigImage}
                   />
-                  {/* Render OCRLayer here */}
                   <ImageTextCanvas
                     data={ocrData}
                     size={size}

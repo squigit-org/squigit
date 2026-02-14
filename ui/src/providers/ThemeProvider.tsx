@@ -63,7 +63,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const setupTheme = async () => {
       if (theme === "system") {
-        // 1. Initial Fetch from Rust (Nuclear/Robust method)
         try {
           const sysTheme = await invoke<string>("get_system_theme");
           if (abortController.signal.aborted) return;
@@ -75,13 +74,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
             "Failed to get system theme from Rust, using fallback",
             e,
           );
-          // Fallback is already set by initial state, but we can re-check
+
           const fallback = getSystemThemeFallback();
           setResolvedTheme(fallback);
           applyDomTheme(fallback);
         }
       } else {
-        // Manual override
         setResolvedTheme(theme);
         applyDomTheme(theme);
       }
@@ -94,7 +92,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [theme, applyDomTheme, getSystemThemeFallback]);
 
-  // Load preferences from file on mount
   useEffect(() => {
     let mounted = true;
     loadPreferences().then((prefs) => {

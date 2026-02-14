@@ -183,7 +183,6 @@ export function groupChatsByDate(
     groups.get(targetGroup)?.push(chat);
   }
 
-  // Sort each group: Pinned first (sorted by pinned_at desc), then by Created Date (descending)
   groups.forEach((groupChats) => {
     groupChats.sort((a, b) => {
       // 1. Pinned check

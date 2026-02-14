@@ -24,7 +24,6 @@ export function useHistoryState<T>({
     const currentHistory = historyRef.current;
     const currentIndex = historyIndexRef.current;
 
-    // Only push if value is different from current history head
     if (value !== currentHistory[currentIndex]) {
       const newHistory = currentHistory.slice(0, currentIndex + 1);
       newHistory.push(value);
@@ -63,7 +62,6 @@ export function useHistoryState<T>({
   const canUndo = historyIndexRef.current > 0;
   const canRedo = historyIndexRef.current < historyRef.current.length - 1;
 
-  // Manual push for scenarios where we want to forcefully add a state (e.g., before complex operations)
   const push = useCallback(
     (newValue: T) => {
       const currentHistory = historyRef.current;

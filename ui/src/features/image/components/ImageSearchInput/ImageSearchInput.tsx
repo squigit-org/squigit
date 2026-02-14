@@ -24,7 +24,6 @@ interface ImageSearchInputProps {
   isOCRLoading: boolean;
   isExpanded?: boolean;
   placeholder?: string;
-  // OCR props
   ocrEnabled: boolean;
   downloadedOcrLanguages: string[];
   currentOcrModel: string;

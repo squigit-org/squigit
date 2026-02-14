@@ -17,7 +17,7 @@ interface PlatformInfo {
 export function usePlatform(): PlatformInfo {
   return useMemo(() => {
     const ua = navigator.userAgent.toLowerCase();
-    let os: Platform = "linux"; // Default fallback
+    let os: Platform = "linux";
     if (ua.includes("mac")) {
       os = "macos";
     } else if (ua.includes("win")) {
@@ -36,7 +36,7 @@ export function usePlatform(): PlatformInfo {
       modKey: isMac ? "Meta" : "Control",
       modSymbol: isMac ? "⌘" : isWin ? "Ctrl" : "Super",
       altSymbol: isMac ? "⌥" : "Alt",
-      shiftSymbol: "⇧", // Common symbol, or could be "Shift"
+      shiftSymbol: "⇧",
       enterSymbol: "↵",
     };
   }, []);

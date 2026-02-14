@@ -13,7 +13,7 @@ export interface DialogContent {
   actions: {
     label: string;
     variant?: "primary" | "secondary" | "danger";
-    actionKey: string; // Used to map back to callback functions
+    actionKey: string;
     disabled?: boolean;
   }[];
 }

@@ -45,14 +45,12 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
     }
   };
 
-  // Reset state when loading ends
   React.useEffect(() => {
     if (!isLoading) {
       setHasLeftSinceLoading(false);
     }
   }, [isLoading]);
 
-  // Show cancel only if user has left and returned while loading
   const showCancel = isLoading && isHovered && hasLeftSinceLoading;
 
   return (

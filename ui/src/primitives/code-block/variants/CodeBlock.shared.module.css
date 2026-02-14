@@ -232,7 +232,6 @@
   background-color: transparent !important;
   overflow: hidden !important;
   pointer-events: none;
-  /* Nuclear fix: Extra padding ensures highlight layer is taller than textarea (which loses height to scrollbar), allowing full vertical sync */
   padding-bottom: 3rem !important;
 }
 
@@ -282,15 +281,12 @@
   background: transparent;
 }
 
-/* Sizer element to drive the container height since other layers are absolute */
 .sizer {
   position: relative;
   visibility: hidden;
   height: auto;
   width: 100%;
   overflow: hidden;
-
-  /* Match typography and spacing of the editor layers */
   padding: 1rem;
   margin: 0;
   font-family: inherit;

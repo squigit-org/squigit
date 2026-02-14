@@ -76,7 +76,7 @@ export const TextContextMenu: React.FC<TextContextMenuProps> = ({
           e.stopPropagation();
           onCut?.();
           onClose();
-        }} // Cut requires selection
+        }}
         disabled={!onCut || !hasText}
         shortcut={`${mod}X`}
       >
@@ -87,7 +87,7 @@ export const TextContextMenu: React.FC<TextContextMenuProps> = ({
           e.stopPropagation();
           onCopy?.();
           onClose();
-        }} // Copy requires selection
+        }}
         disabled={!onCopy || !hasText}
         shortcut={`${mod}C`}
       >

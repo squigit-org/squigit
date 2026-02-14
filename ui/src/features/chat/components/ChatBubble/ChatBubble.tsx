@@ -15,10 +15,6 @@ import { CodeBlock } from "@/primitives";
 import { TextShimmer } from "@/primitives/text-shimmer";
 import { invoke } from "@tauri-apps/api/core";
 
-/**
- * Module-level KaTeX render cache.
- * Prevents re-running katex.renderToString() on every React re-render.
- */
 const katexCache = new Map<string, string>();
 function renderKatex(latex: string, displayMode: boolean): string {
   const key = `${displayMode ? "D" : "I"}:${latex}`;
@@ -53,7 +49,6 @@ interface ChatBubbleProps {
   onRetry?: () => void;
   isRetrying?: boolean;
   onEdit?: (newText: string) => void;
-  /** Callback when user interacts with a MessageAction */
   onAction?: (actionId: string, value?: string) => void;
 }
 

@@ -43,7 +43,6 @@
   background-color: #555;
 }
 
-/* When no image is present (system chats), remove the top gap */
 .chatShell.noImage {
   padding-top: 0;
 }

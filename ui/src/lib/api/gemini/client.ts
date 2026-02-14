@@ -9,7 +9,6 @@ import { listen } from "@tauri-apps/api/event";
 
 let currentAbortController: AbortController | null = null;
 
-// Types matching Backend structs
 interface GeminiPart {
   text?: string;
   inlineData?: {
@@ -25,11 +24,9 @@ interface GeminiContent {
 
 export type Content = GeminiContent;
 
-// State
 let storedApiKey: string | null = null;
 let currentModelId = "gemini-2.0-flash";
 
-// Brain context state - persists across turns
 let imageDescription: string | null = null;
 let userFirstMsg: string | null = null;
 let conversationHistory: Array<{ role: string; content: string }> = [];
@@ -48,9 +45,6 @@ const cleanBase64 = (data: string) => {
   return data.replace(/^data:image\/[a-z]+;base64,/, "");
 };
 
-/**
- * Reset brain context for a new chat session.
- */
 export const resetBrainContext = () => {
   imageDescription = null;
   userFirstMsg = null;
@@ -59,41 +53,26 @@ export const resetBrainContext = () => {
   storedMimeType = null;
 };
 
-/**
- * Set the image description (AI's first response) for context anchoring.
- */
 export const setImageDescription = (description: string) => {
   imageDescription = description;
 };
 
-/**
- * Get the current image description.
- */
 export const getImageDescription = () => imageDescription;
 
-/**
- * Set the user's first message for intent anchoring.
- */
 export const setUserFirstMsg = (msg: string) => {
   if (!userFirstMsg && msg) {
     userFirstMsg = msg;
   }
 };
 
-/**
- * Add a message to conversation history.
- */
 export const addToHistory = (role: "User" | "Assistant", content: string) => {
   conversationHistory.push({ role, content });
-  // Keep only last 6 messages (3 turns)
+
   if (conversationHistory.length > 6) {
     conversationHistory = conversationHistory.slice(-6);
   }
 };
 
-/**
- * Format history for the frame template.
- */
 const formatHistoryLog = (): string => {
   if (conversationHistory.length === 0) return "(No previous messages)";
 
@@ -108,7 +87,6 @@ export const startNewChatSync = async (
   imageBase64: string,
   mimeType: string,
 ): Promise<{ title: string; content: string }> => {
-  // Reset brain state for new session
   resetBrainContext();
 
   const response = await invoke<{ title: string; content: string }>(
@@ -121,21 +99,15 @@ export const startNewChatSync = async (
     },
   );
 
-  // Store for subsequent turns
   storedImageBase64 = cleanBase64(imageBase64);
   storedMimeType = mimeType;
 
-  // Initialize brain state with the response
   setImageDescription(response.content);
   addToHistory("Assistant", response.content);
 
   return response;
 };
 
-/**
- * Start a new chat with an image (initial turn).
- * Uses brain v2 with soul.yml + scenes.json.
- */
 export const startNewChatStream = async (
   modelId: string,
   imageBase64: string,
@@ -150,7 +122,6 @@ export const startNewChatStream = async (
   currentAbortController = new AbortController();
   currentModelId = modelId;
 
-  // Reset context for new chat
   resetBrainContext();
   storedImageBase64 = cleanBase64(imageBase64);
   storedMimeType = mimeType;
@@ -180,7 +151,6 @@ export const startNewChatStream = async (
     unlisten();
     currentAbortController = null;
 
-    // Store AI's first response as image description
     setImageDescription(fullResponse);
     addToHistory("Assistant", fullResponse);
 
@@ -193,9 +163,6 @@ export const startNewChatStream = async (
   }
 };
 
-/**
- * Send a subsequent message (uses frame.md context).
- */
 export const sendMessage = async (
   text: string,
   modelId?: string,
@@ -208,7 +175,6 @@ export const sendMessage = async (
     currentModelId = modelId;
   }
 
-  // Track user's first message for intent
   const isFirstTurnWithImage = !userFirstMsg && storedImageBase64;
   setUserFirstMsg(text);
   addToHistory("User", text);
@@ -247,15 +213,6 @@ export const sendMessage = async (
   }
 };
 
-/**
- * Retry (regenerate) an assistant message at a given index.
- * Rebuilds brain context from messages before that index and regenerates.
- *
- * @param messageIndex 0-based index of the assistant message to retry
- * @param allMessages  all messages up to (but not including) the target
- * @param onToken      streaming token callback
- * @returns the full regenerated response text
- */
 export const retryFromMessage = async (
   messageIndex: number,
   allMessages: Array<{ role: string; text: string }>,
@@ -267,19 +224,16 @@ export const retryFromMessage = async (
 
   currentModelId = modelId;
 
-  // Restore image from fallback if context was lost
   if ((!storedImageBase64 || !storedMimeType) && fallbackImage) {
     storedImageBase64 = cleanBase64(fallbackImage.base64);
     storedMimeType = fallbackImage.mimeType;
   }
 
-  // Special case: retrying the very first assistant message (image description)
   if (messageIndex === 0) {
     if (!storedImageBase64 || !storedMimeType) {
       throw new Error("Image not found");
     }
 
-    // Reset brain context for fresh initial turn
     imageDescription = null;
     userFirstMsg = null;
     conversationHistory = [];
@@ -308,7 +262,6 @@ export const retryFromMessage = async (
 
       unlisten();
 
-      // Update brain state with new response
       setImageDescription(fullResponse);
       conversationHistory = [{ role: "Assistant", content: fullResponse }];
 
@@ -319,27 +272,22 @@ export const retryFromMessage = async (
     }
   }
 
-  // General case: retrying a subsequent assistant message
-  // The image description is always allMessages[0] (the first assistant response)
   const imgDesc = allMessages[0]?.text || imageDescription || "";
   imageDescription = imgDesc;
 
-  // Find the first user message in messages before the target
   const messagesBefore = allMessages.slice(0, messageIndex);
   const firstUser = messagesBefore.find((m) => m.role === "user");
   userFirstMsg = firstUser?.text || null;
 
-  // Rebuild conversation history from messages before the target
   conversationHistory = messagesBefore.map((m) => ({
     role: m.role === "user" ? "User" : "Assistant",
     content: m.text,
   }));
-  // Keep only last 6 entries
+
   if (conversationHistory.length > 6) {
     conversationHistory = conversationHistory.slice(-6);
   }
 
-  // The last user message before the target assistant message
   const lastUserMsg = [...messagesBefore]
     .reverse()
     .find((m) => m.role === "user");
@@ -347,7 +295,6 @@ export const retryFromMessage = async (
     throw new Error("No user message found before the retried message");
   }
 
-  // Check if this is the first user turn (should re-send image)
   const isFirstTurnWithImage = !firstUser && storedImageBase64;
 
   const channelId = `gemini-stream-${Date.now()}`;
@@ -374,7 +321,6 @@ export const retryFromMessage = async (
 
     unlisten();
 
-    // Update history with the new response
     addToHistory("Assistant", fullResponse);
 
     return fullResponse;
@@ -384,10 +330,6 @@ export const retryFromMessage = async (
   }
 };
 
-/**
- * Edit a user message and regenerate response from that point.
- * Truncates history after the edited message.
- */
 export const editUserMessage = async (
   messageIndex: number,
   newText: string,
@@ -400,54 +342,36 @@ export const editUserMessage = async (
 
   currentModelId = modelId;
 
-  // Restore image from fallback if context was lost
   if ((!storedImageBase64 || !storedMimeType) && fallbackImage) {
     storedImageBase64 = cleanBase64(fallbackImage.base64);
     storedMimeType = fallbackImage.mimeType;
   }
 
-  // Find the messages BEFORE the one being edited
   const messagesBefore = allMessages.slice(0, messageIndex);
 
-  // The first message is always the image description in our data model
-  // (unless it's text-only chat, but currently we focus on image mainly)
-  // `allMessages` here is UI messages. UI[0] is typically Model (Image Description).
-  // So if messageIndex > 0, we have some history.
-
-  // Rebuild brain state
   const imgDesc =
     messagesBefore.find((m) => m.role === "model")?.text ||
     imageDescription ||
     "";
   imageDescription = imgDesc;
 
-  // Find the *first* user message in the history *before* this edit.
-  // If we are editing the very first user message, `messagesBefore` will NOT contain a user message yet.
   const previousUserMsg = messagesBefore.find((m) => m.role === "user");
 
   if (!previousUserMsg) {
-    // We are editing the FIRST user message
     userFirstMsg = newText;
   } else {
-    // We are editing a subsequent message.
-    // The first user message remains what it was in history.
     userFirstMsg = messagesBefore.find((m) => m.role === "user")?.text || null;
   }
 
-  // Rebuild conversation history
   conversationHistory = messagesBefore.map((m) => ({
     role: m.role === "user" ? "User" : "Assistant",
     content: m.text,
   }));
-  // Keep only last 6 entries (3 turns)
+
   if (conversationHistory.length > 6) {
     conversationHistory = conversationHistory.slice(-6);
   }
 
-  // Check if this is the first turn with image
-  // It is first turn if:
-  // 1. We have an image (storedImageBase64)
-  // 2. There were NO user messages before this one (meaning we are acting as the first user message)
   const isFirstTurnWithImage = !previousUserMsg && storedImageBase64;
 
   const channelId = `gemini-stream-${Date.now()}`;
@@ -468,13 +392,12 @@ export const editUserMessage = async (
       imageDescription: imgDesc,
       userFirstMsg: userFirstMsg,
       historyLog: formatHistoryLog(),
-      userMessage: newText, // The NEW text
+      userMessage: newText,
       channelId,
     });
 
     unlisten();
 
-    // Update history with the user message AND the new response
     addToHistory("User", newText);
     addToHistory("Assistant", fullResponse);
 
@@ -485,9 +408,6 @@ export const editUserMessage = async (
   }
 };
 
-/**
- * Restore a session from saved state.
- */
 export const restoreSession = (
   modelId: string,
   savedImageDescription: string,
@@ -499,21 +419,17 @@ export const restoreSession = (
   currentModelId = modelId;
   imageDescription = savedImageDescription;
   userFirstMsg = savedUserFirstMsg;
-  conversationHistory = savedHistory.slice(-6); // Keep last 6
+  conversationHistory = savedHistory.slice(-6);
   storedImageBase64 = savedImageBase64;
   storedMimeType = savedMimeType;
 };
 
-/**
- * Get current session state for saving.
- */
 export const getSessionState = () => ({
   imageDescription,
   userFirstMsg,
   conversationHistory: [...conversationHistory],
 });
 
-// Legacy compatibility - startNewChat wraps stream version
 export const startNewChat = async (
   modelId: string,
   imageBase64: string,

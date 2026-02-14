@@ -44,32 +44,30 @@ const ProviderRow = ({
   const [showKey, setShowKey] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Sync input with external currentKey (e.g., on mount or prop change)
+
   useEffect(() => {
     setInputValue(currentKey);
     setIsValid(true);
   }, [currentKey]);
-  // Validation Logic
+
   const validate = (key: string): boolean => {
-    if (!key) return true; // Empty is valid (clearing key)
+    if (!key) return true;
     if (providerKeyName === "Google AI Studio") {
-      // Gemini: Starts with "AIzaS", length 39
       return key.startsWith("AIzaS") && key.length === 39;
     }
     if (providerKeyName === "ImgBB") {
-      // ImgBB: Length 32
       return key.length === 32;
     }
     return true;
   };
-  // Handle input change with debounced validation and save
+
   const handleInputChange = (newValue: string) => {
     setInputValue(newValue);
-    // Clear any existing timer
+
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-    // Start a new 1s timer
+
     timerRef.current = setTimeout(() => {
       const trimmed = newValue.trim();
       const valid = validate(trimmed);
@@ -79,11 +77,11 @@ const ProviderRow = ({
           setTimeout(() => setIsValid(true), 1000);
           return;
         }
-        // Only save if valid AND different from current
+
         onSave(trimmed).then((success) => {
           if (!success) {
             setIsValid(false);
-            // Temporary feedback for debugging/user info
+
             alert(
               "Failed to save API key. Please ensure you are logged in to a profile.",
             );
@@ -96,9 +94,8 @@ const ProviderRow = ({
       }
     }, 1000);
   };
-  // On blur: if invalid, reset to last saved key
+
   const handleBlur = () => {
-    // Clear pending timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -106,7 +103,6 @@ const ProviderRow = ({
     const trimmed = inputValue.trim();
     const valid = validate(trimmed);
     if (!valid) {
-      // Reset to last saved key
       setInputValue(currentKey);
       setIsValid(true);
     } else if (trimmed !== currentKey) {
@@ -115,7 +111,7 @@ const ProviderRow = ({
         setTimeout(() => setIsValid(true), 1000);
         return;
       }
-      // Save if valid and changed
+
       onSave(trimmed).then((success) => {
         if (!success) {
           setIsValid(false);
@@ -126,7 +122,7 @@ const ProviderRow = ({
       });
     }
   };
-  // Cleanup timer on unmount
+
   useEffect(() => {
     return () => {
       if (timerRef.current) {

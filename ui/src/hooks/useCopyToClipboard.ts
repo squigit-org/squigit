@@ -6,12 +6,6 @@
 
 import { useState, useCallback } from "react";
 
-/**
- * Hook for copying text to clipboard with visual feedback.
- *
- * @param resetDelay - Time in ms before resetting copied state (default: 2500)
- * @returns Object with copy handler and copied state
- */
 export const useCopyToClipboard = (resetDelay = 2500) => {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -22,7 +16,7 @@ export const useCopyToClipboard = (resetDelay = 2500) => {
         setTimeout(() => setIsCopied(false), resetDelay);
       });
     },
-    [resetDelay]
+    [resetDelay],
   );
 
   return { isCopied, copy };

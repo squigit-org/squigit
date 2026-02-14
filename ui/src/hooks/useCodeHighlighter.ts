@@ -7,15 +7,6 @@
 import { useState, useEffect } from "react";
 import { highlightCode } from "@/features/syntax";
 
-/**
- * Hook for syntax highlighting code using Shiki.
- * Handles async loading and provides loading state.
- *
- * @param code - The source code to highlight
- * @param language - The programming language identifier
- * @param enabled - Whether highlighting should be performed
- * @returns Object with highlighted HTML and loading state
- */
 export const useCodeHighlighter = (
   code: string,
   language: string,

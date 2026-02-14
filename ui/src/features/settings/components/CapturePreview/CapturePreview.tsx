@@ -7,7 +7,6 @@
 import React from "react";
 import styles from "./CapturePreview.module.css";
 
-// Standard UI Cursor SVG
 const CursorSvg = () => (
   <svg
     viewBox="0 0 255 362"
@@ -52,10 +51,8 @@ export const CapturePreview: React.FC<CapturePreviewProps> = ({ type }) => {
       <div className={styles.wrapper}>
         {type === "rectangular" ? (
           <>
-            {/* Selection Box */}
             <div className={styles.selectionBox} />
 
-            {/* Rectangular Cursor Group */}
             <div className={styles.cursorRectWrapper}>
               <div className={styles.cursorRectInner}>
                 <CursorSvg />
@@ -64,15 +61,12 @@ export const CapturePreview: React.FC<CapturePreviewProps> = ({ type }) => {
           </>
         ) : (
           <>
-            {/* Free-form Path */}
             <svg viewBox="0 0 180 180" className={styles.squiggleSvg}>
               <path
                 d="M 133,33 C 100,25 67,30 50,50 C 25,75 33,117 58,142 C 83,158 133,150 150,125 C 167,100 158,50 133,33 Z"
                 className={styles.squigglePath}
               />
             </svg>
-
-            {/* Free-form Cursor */}
             <div className={styles.cursorSquiggle}>
               <CursorSvg />
             </div>

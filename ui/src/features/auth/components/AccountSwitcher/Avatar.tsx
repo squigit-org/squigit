@@ -5,67 +5,43 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-
 import { convertFileSrc } from "@tauri-apps/api/core";
-
 import { commands } from "@/lib/api/tauri";
-
 import styles from "./AccountSwitcher.module.css";
 
 interface AvatarProps {
   src?: string | null;
-
   fallbackSrc?: string | null;
-
   name: string;
-
   size?: number | string;
-
   className?: string;
-
   onClick?: () => void;
-
   profileId?: string;
 }
 
 const getInitials = (name: string) => {
   const trimmed = name.trim();
-
   if (trimmed.length === 0) return "";
-
   const parts = trimmed.split(/\s+/);
-
   if (parts.length === 1) {
     return parts[0].charAt(0).toUpperCase();
   }
-
   const first = parts[0].charAt(0);
-
   const last = parts[parts.length - 1].charAt(0);
-
   return (first + last).toUpperCase();
 };
 
 export const Avatar: React.FC<AvatarProps> = ({
   src,
-
   fallbackSrc,
-
   name,
-
   size,
-
   className = "",
-
   onClick,
-
   profileId,
 }) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-
   const [hasError, setHasError] = useState(false);
-
-  // Use ref instead of state to prevent stale closure issues in async callbacks
   const isDownloadingRef = useRef(false);
 
   useEffect(() => {
