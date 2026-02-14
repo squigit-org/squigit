@@ -2,9 +2,9 @@ import React, { useMemo, useState } from "react";
 import { OnboardingShell } from "@/shell/containers";
 import { useShellContext } from "@/shell/context";
 import { getPendingUpdate } from "@/hooks/useUpdateCheck";
+import { ChevronRight, DownloadCloud } from "lucide-react";
+import { clsx } from "clsx";
 import styles from "./UpdateNotes.module.css";
-import { ChevronRight } from "lucide-react";
-import clsx from "clsx";
 
 interface UpdateSectionProps {
   title: string;
@@ -20,7 +20,6 @@ const UpdateSection: React.FC<UpdateSectionProps> = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   if (!items || items.length === 0) return null;
-
   return (
     <div className={styles.section}>
       <div
@@ -51,37 +50,23 @@ export const UpdateNotes: React.FC = () => {
   const shell = useShellContext();
   const update = useMemo(() => getPendingUpdate(), []);
 
-  // Sort order for sections
   const SECTION_ORDER = ["New Features", "Bug Fixes", "UI Improvements"];
 
   if (!update) {
-    return (
-      <OnboardingShell>
-        <div className={styles.container}>
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--muted-foreground)",
-            }}
-          >
-            You are up to date
-          </div>
-        </div>
-      </OnboardingShell>
-    );
+    return null;
   }
 
   const sections = update.sections || {};
   const hasSections = Object.keys(sections).length > 0;
 
   return (
-    <OnboardingShell allowScroll={false} contentClassName={styles.container}>
+    <OnboardingShell
+      allowScroll={false}
+      contentClassName={`${styles.container} ${styles.shellOverride}`}
+    >
       <div className={styles.scrollableContent}>
         <div className={styles.header}>
-          <div className={styles.title}>SnapLLM v{update.version} is Here</div>
+          <div className={styles.title}>SnapLLM v{update.version} is Here!</div>
         </div>
 
         {hasSections ? (
@@ -94,7 +79,7 @@ export const UpdateNotes: React.FC = () => {
                 defaultOpen={sectionTitle === "New Features"}
               />
             ))}
-            {/* Render any other sections that might exist in the future */}
+
             {Object.keys(sections)
               .filter((k) => !SECTION_ORDER.includes(k))
               .map((sectionTitle) => (
@@ -126,18 +111,24 @@ export const UpdateNotes: React.FC = () => {
       </div>
 
       <div className={styles.footer}>
-        <div className={styles.status}>
-          <span className={styles.size}>
-            {update.size ? `Size: ${update.size}` : "Size: Unknown"}
-          </span>
-          <span className={styles.downloading}>Ready to Install</span>
+        <div className={styles.footerLeft}>
+          <div className={styles.versionBadge}>
+            <DownloadCloud size={22} className={styles.downloadIcon} />
+            <div className={styles.versionInfo}>
+              <span className={styles.sizeLabel}>
+                {update.size ? update.size : "Unknown Size"} will be downloaded.
+              </span>
+            </div>
+          </div>
         </div>
-        <button
-          className={styles.updateButton}
-          onClick={() => shell.handleSystemAction("update_now")}
-        >
-          Update Now
-        </button>
+        <div className={styles.footerRight}>
+          <button
+            className={styles.updateButton}
+            onClick={() => shell.handleSystemAction("update_now")}
+          >
+            Update Now
+          </button>
+        </div>
       </div>
     </OnboardingShell>
   );

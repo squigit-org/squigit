@@ -65,7 +65,6 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
     const endIdx = matches.length > 1 ? matches[1].index! : text.length;
     const rawBody = text.slice(startIdx, endIdx);
 
-    // Parse Version Info section specifically for metadata like Size
     const versionInfoMatch = rawBody.match(
       /###\s+Version Info\n([\s\S]*?)(?=\n###\s+|$)/,
     );
@@ -87,7 +86,7 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
 
     while ((sectionMatch = sectionRegex.exec(rawBody)) !== null) {
       const title = sectionMatch[1].trim();
-      // Skip Version Info section from the displayable sections list
+
       if (title === "Version Info") continue;
 
       const content = sectionMatch[2].trim();
@@ -96,14 +95,22 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
         .split("\n")
         .map((line) => line.trim())
         .filter((line) => line.startsWith("-") || line.startsWith("*"))
-        .map((line) => line.replace(/^[-*]\s+/, ""));
+        .map((line) => line.replace(/^[-*]\s+/, ""))
+        .map((line) =>
+          line
+            .replace(/\*\*(.*?)\*\*/g, "$1")
+            .replace(/__(.*?)__/g, "$1")
+            .replace(/\*(.*?)\*/g, "$1")
+            .replace(/_(.*?)_/g, "$1")
+            .replace(/`([^`]+)`/g, "$1")
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"),
+        );
 
       if (sections[title]) {
         sections[title] = items;
       }
     }
 
-    // Fallback if no sections found (legacy format support)
     let notes = rawBody.trim();
     if (Object.values(sections).every((arr) => arr.length === 0)) {
       notes = rawBody
