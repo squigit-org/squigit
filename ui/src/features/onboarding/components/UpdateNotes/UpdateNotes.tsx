@@ -82,9 +82,6 @@ export const UpdateNotes: React.FC = () => {
       <div className={styles.scrollableContent}>
         <div className={styles.header}>
           <div className={styles.title}>SnapLLM v{update.version} is Here</div>
-          <div className={styles.subtitle}>
-            Explore what's new in this release
-          </div>
         </div>
 
         {hasSections ? (

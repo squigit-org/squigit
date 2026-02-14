@@ -65,9 +65,16 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
     const endIdx = matches.length > 1 ? matches[1].index! : text.length;
     const rawBody = text.slice(startIdx, endIdx);
 
-    // Parse size
-    const sizeMatch = rawBody.match(/\*\*Size\*\*:\s*(.+)/i);
-    const size = sizeMatch ? sizeMatch[1].trim() : undefined;
+    // Parse Version Info section specifically for metadata like Size
+    const versionInfoMatch = rawBody.match(
+      /###\s+Version Info\n([\s\S]*?)(?=\n###\s+|$)/,
+    );
+    let size = undefined;
+    if (versionInfoMatch) {
+      const versionInfoContent = versionInfoMatch[1].trim();
+      const sizeMatch = versionInfoContent.match(/\*\*Size\*\*:\s*(.+)/i);
+      size = sizeMatch ? sizeMatch[1].trim() : undefined;
+    }
 
     const sections: Record<string, string[]> = {
       "New Features": [],
@@ -80,6 +87,9 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
 
     while ((sectionMatch = sectionRegex.exec(rawBody)) !== null) {
       const title = sectionMatch[1].trim();
+      // Skip Version Info section from the displayable sections list
+      if (title === "Version Info") continue;
+
       const content = sectionMatch[2].trim();
 
       const items = content

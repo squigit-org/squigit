@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **System Chats**: Interactive chat bubbles for onboarding and updates.
 - **Update Notification**: Pinned chat for new updates.
 
-**Size**: 14.5MB
+### Version Info
+
+- **Size**: 14.5MB
 
 ### Bug Fixes
 
