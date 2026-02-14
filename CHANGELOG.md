@@ -7,15 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.1] - 2026-02-13
 
-### Added
+### New Features
 
 - **System Chats**: Interactive chat bubbles for onboarding and updates.
 - **Update Notification**: Pinned chat for new updates.
 
-### Fixed
+### Bug Fixes
 
 - Fixed infinite re-render loop in image shell.
-- Improved sidebar UI with colored status indicators.
+- Resolved memory leak in background process.
+
+### UI Improvements
+
+- **Sidebar**: Improved sidebar UI with colored status indicators.
+- **Typography**: Enhanced font readability across the app.
 
 ## [1.0.0] - 2025-10-02
 
