@@ -48,7 +48,7 @@ pub fn spawn_app_window(
     let (x, y, w, h) =
         calculate_dynamic_window(app, base_w, base_h).unwrap_or((100.0, 100.0, base_w, base_h));
 
-    let visible = true;
+    let visible = false;
 
     let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App(url.into()))
         .title(title)

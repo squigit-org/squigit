@@ -11,16 +11,6 @@ import { AppRouter } from "@/router/AppRouter";
 
 function App() {
   useEffect(() => {
-    const showWindow = async () => {
-      // invoke("show_window"); // If backend has it, but standard way is:
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      const win = getCurrentWindow();
-      await win.show();
-      await win.setFocus();
-    };
-
-    showWindow();
-
     const handleAnchorClick = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest("a");
       if (target && target.href && target.href.startsWith("http")) {

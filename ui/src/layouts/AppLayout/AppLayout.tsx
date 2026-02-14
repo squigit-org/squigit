@@ -5,6 +5,7 @@
  */
 
 import React from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Dialog } from "@/primitives";
 import { ShellProvider, useShellContext } from "@/shell/context";
 import { Welcome, Agreement, UpdateNotes } from "@/features";
@@ -17,6 +18,12 @@ const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 const AppLayoutContent: React.FC = () => {
   const shell = useShellContext();
+
+  React.useEffect(() => {
+    if (!shell.isLoadingState) {
+      invoke("show_window");
+    }
+  }, [shell.isLoadingState]);
 
   if (shell.isLoadingState) {
     return (
