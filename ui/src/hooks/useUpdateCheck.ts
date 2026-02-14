@@ -14,11 +14,13 @@ export interface ReleaseInfo {
   version: string;
   notes: string;
   hasUpdate: boolean;
+  sections?: Record<string, string[]>;
 }
 
 const STORAGE_KEYS = {
   VERSION: "pending_update_version",
   NOTES: "pending_update_notes",
+  SECTIONS: "pending_update_sections",
   AVAILABLE: "pending_update_available",
 };
 
@@ -43,16 +45,7 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
     }
     const text = await response.text();
 
-    // REGEX EXPLANATION:
-    // ^##       -> Starts with "##" at the beginning of a line
-    // \s+       -> One or more spaces
-    // \[?       -> Optional opening bracket '['
-    // (\d...)   -> Capture Group 1: The SemVer version (X.Y.Z)
-    // \]?       -> Optional closing bracket ']'
-    // .*$       -> Match the rest of the line (e.g. comments/dates) so we can skip it
-    // flags: gm -> Global (find all), Multiline (^ matches start of lines)
     const headerRegex = /^##\s+\[?(\d+\.\d+\.\d+)\]?.*$/gm;
-
     const matches = Array.from(text.matchAll(headerRegex));
 
     if (matches.length === 0) {
@@ -67,21 +60,48 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
     }
 
     const startIdx = latestMatch.index! + latestMatch[0].length;
-
     const endIdx = matches.length > 1 ? matches[1].index! : text.length;
-
     const rawBody = text.slice(startIdx, endIdx);
 
-    const notes = rawBody
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.startsWith("-") || line.startsWith("*"))
-      .join("\n");
+    const sections: Record<string, string[]> = {
+      "New Features": [],
+      "Bug Fixes": [],
+      "UI Improvements": [],
+    };
+
+    const sectionRegex = /###\s+(.*?)\n([\s\S]*?)(?=\n###\s+|$)/g;
+    let sectionMatch;
+
+    while ((sectionMatch = sectionRegex.exec(rawBody)) !== null) {
+      const title = sectionMatch[1].trim();
+      const content = sectionMatch[2].trim();
+
+      const items = content
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith("-") || line.startsWith("*"))
+        .map((line) => line.replace(/^[-*]\s+/, ""));
+
+      if (sections[title]) {
+        sections[title] = items;
+      }
+    }
+
+    // Fallback if no sections found (legacy format support)
+    let notes = rawBody.trim();
+    if (Object.values(sections).every((arr) => arr.length === 0)) {
+      notes = rawBody
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith("-") || line.startsWith("*"))
+        .join("\n");
+    }
 
     return {
       version: latestVersion,
-      notes: notes.trim(),
+      notes: notes,
       hasUpdate: true,
+      sections,
     };
   } catch (error) {
     console.error("Error fetching release notes:", error);
@@ -93,12 +113,19 @@ export function useUpdateCheck() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const { hasUpdate, version, notes } = await fetchReleaseNotes();
+        const { hasUpdate, version, notes, sections } =
+          await fetchReleaseNotes();
 
         if (hasUpdate) {
           localStorage.setItem(STORAGE_KEYS.AVAILABLE, "true");
           localStorage.setItem(STORAGE_KEYS.VERSION, version);
           localStorage.setItem(STORAGE_KEYS.NOTES, notes);
+          if (sections) {
+            localStorage.setItem(
+              STORAGE_KEYS.SECTIONS,
+              JSON.stringify(sections),
+            );
+          }
         } else {
           clearPendingUpdate();
         }
@@ -126,9 +153,18 @@ export function getPendingUpdate() {
     return null;
   }
 
+  const sectionsStr = localStorage.getItem(STORAGE_KEYS.SECTIONS);
+  let sections;
+  try {
+    sections = sectionsStr ? JSON.parse(sectionsStr) : undefined;
+  } catch (e) {
+    console.warn("Failed to parse update sections", e);
+  }
+
   return {
     version: storedVersion,
     notes: localStorage.getItem(STORAGE_KEYS.NOTES) || "",
+    sections,
   };
 }
 
@@ -136,4 +172,5 @@ export function clearPendingUpdate() {
   localStorage.removeItem(STORAGE_KEYS.AVAILABLE);
   localStorage.removeItem(STORAGE_KEYS.VERSION);
   localStorage.removeItem(STORAGE_KEYS.NOTES);
+  localStorage.removeItem(STORAGE_KEYS.SECTIONS);
 }
