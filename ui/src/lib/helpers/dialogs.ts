@@ -86,9 +86,15 @@ export const getDeleteMultipleChatsDialog = (count: number): DialogContent => ({
   ],
 });
 
-export const getErrorDialog = (message: string): DialogContent => ({
-  title: "Error",
-  message,
-  variant: "error",
-  actions: [{ label: "Close", variant: "primary", actionKey: "close" }],
-});
+import { parseGeminiError } from "./error-parser";
+
+export const getErrorDialog = (error: any): DialogContent => {
+  const parsed = parseGeminiError(error);
+
+  return {
+    title: parsed.title,
+    message: parsed.message,
+    variant: "error",
+    actions: [{ label: "Close", variant: "primary", actionKey: "close" }],
+  };
+};

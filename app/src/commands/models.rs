@@ -12,12 +12,16 @@ pub struct ModelStatus {
 }
 
 #[tauri::command]
-pub async fn download_ocr_model(url: String, filename: String) -> Result<String, String> {
+pub async fn download_ocr_model(
+    state: tauri::State<'_, ModelManager>,
+    window: tauri::Window,
+    url: String,
+    filename: String,
+) -> Result<String, String> {
     println!("Downloading OCR model: {} -> {}", url, filename);
 
-    let manager = ModelManager::new().map_err(|e| e.to_string())?;
-    let path = manager
-        .download_and_extract(&url, &filename)
+    let path = state
+        .download_and_extract(&url, &filename, &window)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -25,9 +29,18 @@ pub async fn download_ocr_model(url: String, filename: String) -> Result<String,
 }
 
 #[tauri::command]
-pub fn list_downloaded_models() -> Result<Vec<String>, String> {
-    let manager = ModelManager::new().map_err(|e| e.to_string())?;
-    let dir = manager.get_model_dir("");
+pub async fn cancel_download_ocr_model(
+    state: tauri::State<'_, ModelManager>,
+    model_id: String,
+) -> Result<(), String> {
+    println!("Cancelling download for model: {}", model_id);
+    state.cancel_download(&model_id);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn list_downloaded_models(state: tauri::State<'_, ModelManager>) -> Result<Vec<String>, String> {
+    let dir = state.get_model_dir("");
 
     let mut models = Vec::new();
 
@@ -49,9 +62,11 @@ pub fn list_downloaded_models() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-pub fn get_model_path(model_id: String) -> Result<String, String> {
-    let manager = ModelManager::new().map_err(|e| e.to_string())?;
-    let path = manager.get_model_dir(&model_id);
+pub fn get_model_path(
+    state: tauri::State<'_, ModelManager>,
+    model_id: String,
+) -> Result<String, String> {
+    let path = state.get_model_dir(&model_id);
     if path.exists() {
         Ok(path.to_string_lossy().to_string())
     } else {

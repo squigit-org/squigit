@@ -51,6 +51,10 @@ export const commands = {
   setBackgroundColor: (color: string) =>
     invoke("set_background_color", { color }),
 
+  // OCR Model Management
+  cancelDownloadOcrModel: (modelId: string) =>
+    invoke("cancel_download_ocr_model", { modelId }),
+
   // Utils
   openExternalUrl: (url: string) => invoke("open_external_url", { url }),
 };

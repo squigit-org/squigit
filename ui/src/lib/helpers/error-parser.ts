@@ -106,6 +106,23 @@ export const parseGeminiError = (error: any): ParsedError => {
     };
   }
 
+  if (searchStr.includes("numeric field did not have utf-8 text")) {
+    return {
+      title: "Download Corrupted",
+      message:
+        "The downloaded model file appears to be corrupted. Please try downloading again.",
+      actionType: "RETRY_ONLY",
+    };
+  }
+
+  if (searchStr.includes("cancelled")) {
+    return {
+      title: "Download Cancelled",
+      message: "The download was cancelled.",
+      actionType: "DISMISS_ONLY",
+    };
+  }
+
   return {
     title: "Error",
     message: message,

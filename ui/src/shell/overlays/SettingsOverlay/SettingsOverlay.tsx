@@ -101,12 +101,16 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       const isContextMenu = target.closest('[data-is-context-menu="true"]');
+      const isDialog = target.closest('[data-dialog-container="true"]');
+      const isTitleBar = target.closest('[data-tauri-drag-region]');
 
       if (
         isOpen &&
         shellRef.current &&
         !shellRef.current.contains(target as Node) &&
-        !isContextMenu
+        !isContextMenu &&
+        !isDialog &&
+        !isTitleBar
       ) {
         onClose();
       }

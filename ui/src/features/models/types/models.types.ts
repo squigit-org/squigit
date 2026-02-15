@@ -13,7 +13,14 @@ export interface OcrModel {
 }
 
 export interface OcrModelStatus extends OcrModel {
-  state: "idle" | "downloading" | "downloaded";
+  state:
+    | "idle"
+    | "checking"
+    | "downloading"
+    | "paused"
+    | "downloaded"
+    | "extracting";
+  progress?: number;
 }
 
 export const AVAILABLE_MODELS: OcrModel[] = [

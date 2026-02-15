@@ -97,6 +97,7 @@ pub fn run() {
             ocr_image,
             // Model Management
             download_ocr_model,
+            commands::models::cancel_download_ocr_model,
             list_downloaded_models,
             get_model_path,
             // CAS Image Storage
@@ -134,8 +135,13 @@ pub fn run() {
             commands::speech::start_stt,
             commands::speech::stop_stt,
         ])
+        .manage(services::models::ModelManager::new().expect("Failed to init ModelManager"))
         .setup(|app| {
             let handle = app.handle().clone();
+            
+            // Start Network Monitor inside runtime context
+            let model_manager = app.state::<services::models::ModelManager>();
+            model_manager.start_monitor();
 
             let args: Vec<String> = std::env::args().collect();
             let has_cli_image = args.iter().skip(1).find(|arg| !arg.starts_with("-"));

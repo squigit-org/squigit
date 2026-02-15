@@ -4,22 +4,82 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
+import React, { useState } from "react";
 import styles from "./ModelDownloader.module.css";
-import { Download, Check, Loader2 } from "lucide-react";
+import { Download, Check, Loader2, X, Play } from "lucide-react";
 import { useModelsStore } from "../../store";
+import { Dialog } from "@/primitives/dialog/Dialog";
+import { getErrorDialog } from "@/lib/helpers/dialogs";
+
+const CircularProgress: React.FC<{ progress: number }> = ({ progress }) => (
+  <div className={styles.circularProgress}>
+    <svg viewBox="0 0 36 36" className={styles.circularChart}>
+      <path
+        className={styles.circleBg}
+        d="M18 2.0845
+           a 15.9155 15.9155 0 0 1 0 31.831
+           a 15.9155 15.9155 0 0 1 0 -31.831"
+      />
+      <path
+        className={styles.circle}
+        strokeDasharray={`${progress}, 100`}
+        d="M18 2.0845
+           a 15.9155 15.9155 0 0 1 0 31.831
+           a 15.9155 15.9155 0 0 1 0 -31.831"
+      />
+    </svg>
+  </div>
+);
+
+const CircularSpinner: React.FC = () => (
+  <div className={`${styles.circularProgress} ${styles.spin}`}>
+    <svg viewBox="0 0 36 36" className={styles.circularChart}>
+      <path
+        className={styles.circleBg}
+        d="M18 2.0845
+           a 15.9155 15.9155 0 0 1 0 31.831
+           a 15.9155 15.9155 0 0 1 0 -31.831"
+      />
+      <path
+        className={styles.circle}
+        strokeDasharray="25, 100"
+        d="M18 2.0845
+           a 15.9155 15.9155 0 0 1 0 31.831
+           a 15.9155 15.9155 0 0 1 0 -31.831"
+      />
+    </svg>
+  </div>
+);
 
 export const ModelDownloader: React.FC = () => {
   const models = useModelsStore((s) => s.models);
   const startDownload = useModelsStore((s) => s.startDownload);
+  const cancelDownload = useModelsStore((s) => s.cancelDownload);
   const isLoading = useModelsStore((s) => s.isLoading);
+  const [error, setError] = useState<string | null>(null);
+  const [hoveredModelId, setHoveredModelId] = useState<string | null>(null);
+  const [justStartedDownload, setJustStartedDownload] = useState<string | null>(
+    null,
+  );
 
   const handleDownload = async (id: string) => {
     try {
+      setJustStartedDownload(id);
       await startDownload(id);
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error.message || error.toString();
+      if (msg.toLowerCase().includes("cancelled")) {
+        console.log("Download cancelled by user (silent)");
+        return;
+      }
       console.error("Download failed from component", error);
+      setError(msg || "Failed to download model");
     }
+  };
+
+  const handleCancel = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    await cancelDownload(id);
   };
 
   const downloadableModels = models.filter((m) => m.id !== "pp-ocr-v4-en");
@@ -44,25 +104,86 @@ export const ModelDownloader: React.FC = () => {
               </div>
               <button
                 className={`${styles.downloadButton} ${
-                  model.state === "downloading" ? styles.downloading : ""
+                  ["downloading", "checking", "paused"].includes(model.state)
+                    ? styles.downloading
+                    : ""
                 }`}
-                onClick={() => handleDownload(model.id)}
-                disabled={model.state !== "idle"}
+                onClick={(e) => {
+                  if (
+                    ["downloading", "checking", "paused"].includes(model.state)
+                  ) {
+                    handleCancel(e, model.id);
+                  } else {
+                    handleDownload(model.id);
+                  }
+                }}
+                disabled={model.state === "extracting"}
+                onMouseEnter={() => setHoveredModelId(model.id)}
+                onMouseLeave={() => {
+                  setHoveredModelId(null);
+                  if (justStartedDownload === model.id) {
+                    setJustStartedDownload(null);
+                  }
+                }}
                 title={
                   model.state === "downloaded"
                     ? "Installed"
-                    : `Download ${model.name}`
+                    : ["downloading", "checking", "paused"].includes(
+                          model.state,
+                        )
+                      ? "Cancel Download"
+                      : `Download ${model.name}`
                 }
               >
+                {/* IDLE */}
                 {model.state === "idle" && <Download size={16} />}
-                {model.state === "downloading" && (
+
+                {/* CHECKING */}
+                {model.state === "checking" &&
+                  (hoveredModelId === model.id &&
+                  justStartedDownload !== model.id ? (
+                    <X size={16} />
+                  ) : (
+                    <CircularSpinner />
+                  ))}
+
+                {/* DOWNLOADING */}
+                {model.state === "downloading" &&
+                  (hoveredModelId === model.id &&
+                  justStartedDownload !== model.id ? (
+                    <X size={16} />
+                  ) : (model.progress || 0) <= 0 ? (
+                    <CircularSpinner />
+                  ) : (
+                    <CircularProgress progress={model.progress || 0} />
+                  ))}
+
+                {/* PAUSED */}
+                {model.state === "paused" &&
+                  (hoveredModelId === model.id &&
+                  justStartedDownload !== model.id ? (
+                    <X size={16} />
+                  ) : (
+                    <CircularSpinner />
+                  ))}
+
+                {/* EXTRACTING */}
+                {model.state === "extracting" && (
                   <Loader2 size={16} className={styles.spin} />
                 )}
+
+                {/* DOWNLOADED */}
                 {model.state === "downloaded" && <Check size={16} />}
               </button>
             </div>
           ))}
       </div>
+
+      <Dialog
+        isOpen={!!error}
+        type={getErrorDialog(error || "")}
+        onAction={() => setError(null)}
+      />
     </div>
   );
 };

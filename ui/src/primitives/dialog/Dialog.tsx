@@ -115,7 +115,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
   return createPortal(
     <div className={styles.dialogOverlay}>
-      <div className={styles.dialogContainer}>
+      <div className={styles.dialogContainer} data-dialog-container="true">
         <div className={styles.header}>
           <div className={styles.iconWrapper}>{getIcon()}</div>
           <div className={styles.contentWrapper}>
