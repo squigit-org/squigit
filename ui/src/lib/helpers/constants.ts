@@ -14,6 +14,6 @@ export const DEFAULT_PROMPT =
 export const PREFERENCES_FILE_NAME = "preferences.json";
 
 export const DEFAULT_CAPTURE_TYPE = "rectangular";
-export const DEFAULT_OCR_LANGUAGE = "PP-OCRv4 (English)";
-export const DEFAULT_DOWNLOADED_OCR_LANGUAGES = ["PP-OCRv4 (English)"];
+export const DEFAULT_OCR_LANGUAGE = "pp-ocr-v4-en";
+
 export const DEFAULT_ACTIVE_ACCOUNT = "Guest";

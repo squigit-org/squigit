@@ -14,18 +14,19 @@ import React, {
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import {
-  useGoogleLens,
-  useTextSelection,
-  generateTranslateUrl,
   ImageToolbar,
   ImageSearchInput,
   ImageTextCanvas,
+  useGoogleLens,
+  useTextSelection,
+  generateTranslateUrl,
+  OCRMenu,
+  type OCRMenuHandle,
 } from "@/features/image";
-import { OCRMenu, OCRMenuHandle } from "@/features";
 import styles from "./ImageShell.module.css";
 import { Dialog } from "@/primitives";
-import { SettingsSection } from "@/shell/overlays";
-import { DialogContent, getErrorDialog } from "@/lib/helpers";
+import { type SettingsSection } from "@/shell/overlays";
+import { type DialogContent, getErrorDialog } from "@/lib/helpers";
 
 interface OCRBox {
   text: string;
@@ -58,7 +59,6 @@ export interface ImageShellProps {
   activeProfileId: string | null;
 
   ocrEnabled: boolean;
-  downloadedOcrLanguages: string[];
   currentOcrModel: string;
   onOcrModelChange: (model: string) => void;
 }
@@ -79,7 +79,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   ocrEnabled,
   autoExpandOCR,
   activeProfileId,
-  downloadedOcrLanguages,
   currentOcrModel,
   onOcrModelChange,
 }) => {
@@ -109,32 +108,29 @@ export const ImageShell: React.FC<ImageShellProps> = ({
 
   const { svgRef, handleTextMouseDown } = useTextSelection({
     data: ocrData,
-    onSelectionComplete: (selection) => {
+    onSelectionComplete: (selection: Selection) => {
       OCRMenuRef.current?.showStandardMenu(selection);
     },
   });
 
   const hasScannedRef = useRef(false);
-  const hasAutoExpandedRef = useRef(false);
   const prevImageBase64Ref = useRef<string | null>(null);
 
   const currentBase64 = startupImage?.base64 ?? null;
   if (currentBase64 !== prevImageBase64Ref.current) {
     hasScannedRef.current = false;
-    hasAutoExpandedRef.current = false;
     prevImageBase64Ref.current = currentBase64;
     setLoading(false);
   }
 
-  const scan = useCallback(async () => {
-    if (!startupImage?.base64) return;
-    if (!ocrEnabled) {
-      console.log("OCR disabled, skipping scan");
-      return;
-    }
-    const currentChatId = chatId;
+  const scan = useCallback(
+    async (modelId?: string) => {
+      if (!startupImage?.base64 || !ocrEnabled) return;
 
-    if (!hasAutoExpandedRef.current) {
+      const currentChatId = chatId;
+      const modelToUse = modelId || currentOcrModel;
+
+      console.log(`Scanning with model: ${modelToUse}`);
       setLoading(true);
       setErrorDialog(null);
 
@@ -144,25 +140,14 @@ export const ImageShell: React.FC<ImageShellProps> = ({
 
         if (startupImage.isFilePath) {
           const urlStr = startupImage.base64;
-          console.log("ImageArea: processing URL:", urlStr);
-
           try {
             const urlObj = new URL(urlStr);
-
-            if (
+            imageData =
               urlObj.hostname === "asset.localhost" ||
               urlObj.protocol === "asset:"
-            ) {
-              imageData = decodeURIComponent(urlObj.pathname);
-            } else {
-              imageData = urlStr;
-            }
+                ? decodeURIComponent(urlObj.pathname)
+                : urlStr;
           } catch (e) {
-            console.log(
-              "ImageArea: URL parsing failed, falling back to manual strip",
-              e,
-            );
-
             let url = urlStr;
             const patterns = [
               "asset://localhost",
@@ -178,8 +163,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
             }
             imageData = decodeURIComponent(url);
           }
-
-          console.log("ImageArea: extracted path:", imageData);
           isBase64 = false;
         } else {
           imageData = startupImage.base64;
@@ -189,59 +172,82 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         const results = await invoke<OCRBox[]>("ocr_image", {
           imageData,
           isBase64,
+          modelName: modelToUse,
         });
 
-        const converted = results.map((r) => ({
-          text: r.text,
-          box: r.box_coords,
-        }));
-
         if (currentChatId === chatId) {
+          const converted = results.map((r) => ({
+            text: r.text,
+            box: r.box_coords,
+          }));
           onUpdateOCRData(converted);
+
           if (
             autoExpandOCR &&
             onToggleExpand &&
-            !hasAutoExpandedRef.current &&
+            !hasScannedRef.current &&
             !isExpanded
           ) {
-            hasAutoExpandedRef.current = true;
             onToggleExpand();
           }
+          hasScannedRef.current = true;
         }
-      } catch (e) {
+      } catch (e: any) {
         if (currentChatId === chatId) {
-          const errorMsg = e instanceof Error ? e.message : String(e);
-          setErrorDialog(getErrorDialog(errorMsg));
+          setErrorDialog(getErrorDialog(e.toString()));
         }
       } finally {
         if (currentChatId === chatId) {
           setLoading(false);
         }
       }
-    }
-  }, [
-    startupImage,
-    chatId,
-    ocrEnabled,
-    autoExpandOCR,
-    onToggleExpand,
-    isExpanded,
-    onUpdateOCRData,
-  ]);
+    },
+    [
+      startupImage,
+      chatId,
+      ocrEnabled,
+      autoExpandOCR,
+      onToggleExpand,
+      isExpanded,
+      onUpdateOCRData,
+      currentOcrModel,
+    ],
+  );
 
   useEffect(() => {
     if (
       startupImage &&
+      !startupImage.fromHistory &&
       ocrData.length === 0 &&
       !loading &&
       !errorDialog &&
-      !startupImage.fromHistory &&
       !hasScannedRef.current
     ) {
-      hasScannedRef.current = true;
-      scan();
+      scan(currentOcrModel);
     }
-  }, [startupImage, ocrData.length, loading, errorDialog, scan]);
+  }, [
+    startupImage,
+    ocrData.length,
+    loading,
+    errorDialog,
+    scan,
+    currentOcrModel,
+  ]);
+
+  const prevModelRef = useRef(currentOcrModel);
+
+  useEffect(() => {
+    if (startupImage && currentOcrModel !== prevModelRef.current) {
+      console.log(`Model changed to ${currentOcrModel}, re-scanning...`);
+      prevModelRef.current = currentOcrModel;
+
+      onUpdateOCRData([]);
+
+      setTimeout(() => scan(currentOcrModel), 50);
+    } else {
+      prevModelRef.current = currentOcrModel;
+    }
+  }, [currentOcrModel, startupImage, scan, onUpdateOCRData]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
@@ -493,7 +499,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
               isExpanded={isExpanded}
               placeholder="Add to your search"
               ocrEnabled={ocrEnabled}
-              downloadedOcrLanguages={downloadedOcrLanguages}
               currentOcrModel={currentOcrModel}
               onOcrModelChange={onOcrModelChange}
               onOpenSettings={onOpenSettings}
@@ -557,7 +562,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       <Dialog
         isOpen={showAuthDialog}
         type="IMGBB_AUTH"
-        onAction={(key) => {
+        onAction={(key: string) => {
           if (key === "confirm") {
             onOpenSettings("apikeys");
           }

@@ -5,4 +5,3 @@
  */
 
 export * from "./useModels";
-export * from "./useModelDownload";

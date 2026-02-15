@@ -99,7 +99,6 @@ export const TitleBar: React.FC = () => {
           onSetTheme={shell.system.onSetTheme}
           autoExpandOCR={shell.system.autoExpandOCR}
           ocrEnabled={shell.system.ocrEnabled}
-          downloadedOcrLanguages={shell.system.downloadedOcrLanguages}
           captureType={shell.system.captureType}
           geminiKey={shell.system.apiKey}
           imgbbKey={shell.system.imgbbKey}

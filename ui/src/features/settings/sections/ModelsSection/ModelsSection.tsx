@@ -4,36 +4,34 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/primitives";
 import { UserPreferences } from "@/lib/storage";
 import { ModelDownloader } from "@/features/models/components/ModelDownloader";
+import { useModelsStore } from "@/features/models/store";
+import { getModelById } from "@/features/models/services";
 
 interface ModelsSectionProps {
   localModel: string;
-  setLocalModel: (model: string) => void;
   ocrLanguage: string;
-  downloadedOcrLanguages: string[];
   updatePreferences: (updates: Partial<UserPreferences>) => void;
 }
 
 export const ModelsSection: React.FC<ModelsSectionProps> = ({
   localModel,
-  setLocalModel,
   ocrLanguage,
-  downloadedOcrLanguages,
   updatePreferences,
 }) => {
+  const models = useModelsStore((s) => s.models);
+  const installedModels = models.filter((m) => m.state === "downloaded");
   const [activeModel, setActiveModel] = useState(localModel);
-  const [activeOcrModel, setActiveOcrModel] = useState(ocrLanguage);
-
-  const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [ocrMenuOpen, setOcrMenuOpen] = useState(false);
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
 
-  useEffect(() => {
-    setActiveOcrModel(ocrLanguage);
-  }, [ocrLanguage]);
+  const activeOcrModel =
+    installedModels.find((m) => m.id === ocrLanguage) ??
+    getModelById("pp-ocr-v4-en");
 
   const handleModelSelect = useCallback(
     (id: string) => {
@@ -41,17 +39,12 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
       updatePreferences({ model: id });
       setAiMenuOpen(false);
     },
-    [setLocalModel, updatePreferences],
+    [updatePreferences],
   );
 
-  const handleOcrSelect = (_id: string, name: string) => {
-    setActiveOcrModel(name);
-    updatePreferences({ ocrLanguage: name });
+  const handleOcrSelect = (id: string) => {
+    updatePreferences({ ocrLanguage: id });
     setOcrMenuOpen(false);
-  };
-
-  const handleDownloadComplete = (newDownloadedList: string[]) => {
-    updatePreferences({ downloadedOcrLanguages: newDownloadedList });
   };
 
   const getModelLabel = (id: string) => {
@@ -66,11 +59,6 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
         return id;
     }
   };
-
-  const installedModels = downloadedOcrLanguages.map((name) => ({
-    id: name,
-    name: name,
-  }));
 
   return (
     <section className={styles.container} aria-labelledby="models-heading">
@@ -123,12 +111,12 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
           <div className={styles.rowMeta}>
             <span className={styles.label}>OCR language</span>
             <span className={styles.description}>
-              Choose your preferred language for future chats
+              Set the default language for text recognition
             </span>
           </div>
           <div className={styles.rowControl}>
             <Dropdown
-              label={activeOcrModel}
+              label={activeOcrModel?.name || "Select Model"}
               width={230}
               isOpen={ocrMenuOpen}
               onOpenChange={setOcrMenuOpen}
@@ -139,8 +127,8 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
                   <DropdownItem
                     key={m.id}
                     label={m.name}
-                    isActive={activeOcrModel === m.name}
-                    onClick={() => handleOcrSelect(m.id, m.name)}
+                    isActive={activeOcrModel?.id === m.id}
+                    onClick={() => handleOcrSelect(m.id)}
                   />
                 ))}
               </div>
@@ -151,10 +139,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
 
       <div className={styles.divider} />
 
-      <ModelDownloader
-        downloadedOcrLanguages={downloadedOcrLanguages}
-        onDownloadComplete={handleDownloadComplete}
-      />
+      <ModelDownloader />
     </section>
   );
 };

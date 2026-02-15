@@ -2,10 +2,6 @@
 # Copyright 2026 a7mddra
 # SPDX-License-Identifier: Apache-2.0
 
-# ── Thread limiting (MUST be before any numerical library import) ──
-# BLAS/OpenMP/MKL libraries read these at load time. Setting them after
-# import has no effect. Without these, PaddlePaddle + OpenCV + NumPy
-# spawn 20-40 threads that saturate all CPU cores and freeze the system.
 import os
 os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["OPENBLAS_NUM_THREADS"] = "2"
@@ -42,14 +38,34 @@ from pathlib import Path
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src import OCREngine, NumpyEncoder
+from src import OCREngine, NumpyEncoder, EngineConfig
 
 
-def process_path(image_path: str) -> int:
+def _create_config(config_dict: dict) -> EngineConfig:
+    """
+    Create EngineConfig from dictionary.
+    
+    @param config_dict Dictionary with config values.
+    @return Configured EngineConfig object.
+    """
+    if not config_dict:
+        return None
+        
+    return EngineConfig(
+        lang=config_dict.get('lang', 'en'),
+        use_angle_cls=config_dict.get('use_angle_cls', True),
+        det_model_path=config_dict.get('det_model_dir'),
+        rec_model_path=config_dict.get('rec_model_dir'),
+        cls_model_path=config_dict.get('cls_model_dir'),
+    )
+
+
+def process_path(image_path: str, config_dict: dict = None) -> int:
     """
     Process an image file by path.
     
     @param image_path Path to the image file.
+    @param config_dict Optional configuration dictionary.
     @return Exit code (0 for success, 1 for error).
     """
     if not Path(image_path).exists():
@@ -58,7 +74,8 @@ def process_path(image_path: str) -> int:
         return 1
     
     try:
-        engine = OCREngine()
+        config = _create_config(config_dict)
+        engine = OCREngine(config)
         results = engine.process(image_path)
         output = [result.to_dict() for result in results]
         print(json.dumps(output, cls=NumpyEncoder))
@@ -69,11 +86,12 @@ def process_path(image_path: str) -> int:
         return 1
 
 
-def process_base64(base64_data: str) -> int:
+def process_base64(base64_data: str, config_dict: dict = None) -> int:
     """
     Process a base64-encoded image.
     
-    @param base64_data Base64-encoded image data (with or without data URL prefix).
+    @param base64_data Base64-encoded image data.
+    @param config_dict Optional configuration dictionary.
     @return Exit code (0 for success, 1 for error).
     """
     try:
@@ -87,7 +105,8 @@ def process_base64(base64_data: str) -> int:
             tmp_path = tmp.name
         
         try:
-            engine = OCREngine()
+            config = _create_config(config_dict)
+            engine = OCREngine(config)
             results = engine.process(tmp_path)
             output = [result.to_dict() for result in results]
             print(json.dumps(output, cls=NumpyEncoder))
@@ -107,8 +126,10 @@ def process_stdin() -> int:
     Process IPC request from stdin.
     
     Reads JSON request with format:
-    - {"type": "path", "data": "/path/to/image.png"}
-    - {"type": "base64", "data": "iVBORw0KGgo..."}
+    - {"type": "path", "data": "/path/to/image.png", "config": {...}}
+    - {"type": "base64", "data": "iVBORw0KGgo...", "config": {...}}
+    
+    Config object is optional and maps to EngineConfig fields.
     
     @return Exit code (0 for success, 1 for error).
     """
@@ -123,6 +144,7 @@ def process_stdin() -> int:
         
         req_type = request.get("type", "")
         data = request.get("data", "")
+        config = request.get("config", None)
         
         if not data:
             error = {"error": "Missing 'data' field in request"}
@@ -130,9 +152,9 @@ def process_stdin() -> int:
             return 1
         
         if req_type == "path":
-            return process_path(data)
+            return process_path(data, config)
         elif req_type == "base64":
-            return process_base64(data)
+            return process_base64(data, config)
         else:
             error = {"error": f"Unknown request type: {req_type}"}
             print(json.dumps(error))

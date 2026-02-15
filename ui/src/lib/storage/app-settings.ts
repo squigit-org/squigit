@@ -19,7 +19,6 @@ import {
   PREFERENCES_FILE_NAME,
   DEFAULT_CAPTURE_TYPE,
   DEFAULT_OCR_LANGUAGE,
-  DEFAULT_DOWNLOADED_OCR_LANGUAGES,
   DEFAULT_ACTIVE_ACCOUNT,
 } from "@/lib/helpers";
 
@@ -31,7 +30,6 @@ export interface UserPreferences {
   autoExpandOCR: boolean;
   captureType: "rectangular" | "squiggle";
   ocrLanguage: string;
-  downloadedOcrLanguages: string[];
   activeAccount: string;
 }
 
@@ -43,7 +41,6 @@ export const defaultPreferences: UserPreferences = {
   autoExpandOCR: true,
   captureType: DEFAULT_CAPTURE_TYPE,
   ocrLanguage: DEFAULT_OCR_LANGUAGE,
-  downloadedOcrLanguages: DEFAULT_DOWNLOADED_OCR_LANGUAGES,
   activeAccount: DEFAULT_ACTIVE_ACCOUNT,
 };
 

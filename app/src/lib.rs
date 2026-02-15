@@ -24,6 +24,7 @@ use commands::clipboard::{
 use commands::image::{
     get_initial_image, process_image_bytes, process_image_path, read_image_file, copy_image_to_path, read_file_base64,
 };
+use commands::models::{download_ocr_model, list_downloaded_models, get_model_path};
 use commands::ocr::ocr_image;
 use commands::profile::{
     get_active_profile, get_active_profile_id, set_active_profile,
@@ -94,6 +95,10 @@ pub fn run() {
             show_window,
             // OCR
             ocr_image,
+            // Model Management
+            download_ocr_model,
+            list_downloaded_models,
+            get_model_path,
             // CAS Image Storage
             store_image_bytes,
             store_image_from_path,
@@ -141,7 +146,6 @@ pub fn run() {
                 let _ = process_and_store_image(path.clone(), &state);
             }
 
-            // Use fixed developer dimensions for dynamic scaling
             let (base_w, base_h) = (1030.0, 690.0);
 
             services::window::spawn_app_window(

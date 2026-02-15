@@ -47,12 +47,10 @@ export const useSystemSync = () => {
     "rectangular",
   );
   const [startupOcrLanguage, setStartupOcrLanguage] =
-    useState<string>("PP-OCRv4 (English)");
+    useState<string>("pp-ocr-v4-en");
   const [sessionOcrLanguage, setSessionOcrLanguage] =
-    useState<string>("PP-OCRv4 (English)");
-  const [downloadedOcrLanguages, setDownloadedOcrLanguages] = useState<
-    string[]
-  >(["PP-OCRv4 (English)"]);
+    useState<string>("pp-ocr-v4-en");
+
 
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -123,9 +121,6 @@ export const useSystemSync = () => {
         if (prefs.ocrLanguage) {
           setStartupOcrLanguage(prefs.ocrLanguage);
           setSessionOcrLanguage(prefs.ocrLanguage);
-        }
-        if (prefs.downloadedOcrLanguages) {
-          setDownloadedOcrLanguages(prefs.downloadedOcrLanguages);
         }
 
         if (prefs.theme) {
@@ -318,9 +313,6 @@ export const useSystemSync = () => {
     if (updates.ocrLanguage !== undefined) {
       setStartupOcrLanguage(updates.ocrLanguage);
       setSessionOcrLanguage(updates.ocrLanguage);
-    }
-    if (updates.downloadedOcrLanguages !== undefined) {
-      setDownloadedOcrLanguages(updates.downloadedOcrLanguages);
     }
     if (updates.theme !== undefined) {
       setTheme(updates.theme);
@@ -526,7 +518,6 @@ export const useSystemSync = () => {
     startupOcrLanguage,
     sessionOcrLanguage,
     setSessionOcrLanguage,
-    downloadedOcrLanguages,
     imgbbKey,
     setImgbbKey,
     handleSetAPIKey,

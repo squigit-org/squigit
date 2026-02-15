@@ -24,10 +24,6 @@ from paddleocr import PaddleOCR
 from .models import OCRResult, BoundingBox
 from .config import EngineConfig
 
-# Maximum side length for detection input. Images larger than this are
-# downscaled proportionally before detection, and bounding boxes are
-# mapped back to original coordinates. This prevents the detection model
-# from doing unnecessary work on 4K/ultrawide screenshots.
 MAX_DET_SIDE = 2048
 
 
@@ -65,8 +61,6 @@ class OCREngine:
         os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"
         os.environ["PADDLEOCR_BASE_PATH"] = str(self.config.model_dir)
         
-        # Limit OpenCV's internal thread pool (used for image decoding,
-        # resizing, etc.). Without this, OpenCV spawns threads per core.
         cv2.setNumThreads(1)
         
         logging.getLogger("ppocr").setLevel(logging.ERROR)
@@ -104,7 +98,6 @@ class OCREngine:
         """
         img = cv2.imread(image_path)
         if img is None:
-            # Let PaddleOCR handle the error downstream
             return image_path, 1.0, None
         
         h, w = img.shape[:2]
@@ -140,7 +133,6 @@ class OCREngine:
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: {image_path}")
         
-        # Downscale large images to prevent CPU overload during detection
         det_path, scale, tmp_path = self._preprocess_image(image_path)
         
         ocr = self._get_ocr()
@@ -150,7 +142,6 @@ class OCREngine:
         except Exception as e:
             raise RuntimeError(f"OCR processing failed: {e}") from e
         finally:
-            # Clean up temp file if we created one
             if tmp_path and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
         
@@ -179,7 +170,6 @@ class OCREngine:
                 text = line[1][0]
                 confidence = line[1][1] if len(line[1]) > 1 else 1.0
                 
-                # Map coordinates back to original image resolution
                 if inv_scale != 1.0:
                     box_coords = [
                         [c[0] * inv_scale, c[1] * inv_scale]

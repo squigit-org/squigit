@@ -21,6 +21,8 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio::time::{timeout, Duration};
 
+use crate::services::models::ModelManager;
+
 /// Maximum wall-clock time for a single OCR job (seconds).
 const OCR_TIMEOUT_SECS: u64 = 120;
 
@@ -36,11 +38,25 @@ pub struct OcrBox {
     pub confidence: f64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OcrModelConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    lang: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    det_model_dir: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rec_model_dir: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cls_model_dir: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 struct OcrRequest {
     #[serde(rename = "type")]
     request_type: String,
     data: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    config: Option<OcrModelConfig>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,8 +78,8 @@ pub async fn ocr_image(
     app: tauri::AppHandle,
     image_data: String,
     is_base64: bool,
+    model_name: Option<String>,
 ) -> Result<Vec<OcrBox>, String> {
-    // Acquire the job mutex — only one OCR at a time
     let _guard = OCR_LOCK.lock().await;
 
     let sidecar_path = app
@@ -77,6 +93,25 @@ pub async fn ocr_image(
         return Err(format!("OCR sidecar not found at: {:?}", sidecar_path));
     }
 
+    let mut model_config: Option<OcrModelConfig> = None;
+
+    if let Some(name) = model_name {
+        let manager = ModelManager::new().map_err(|e| e.to_string())?;
+
+        let model_dir = manager.get_model_dir(&name);
+        if manager.is_model_installed(&name) {
+            let lang_code = name.split('-').last().unwrap_or("en").to_string();
+
+            model_config = Some(OcrModelConfig {
+                lang: Some(lang_code),
+                det_model_dir: None,
+                rec_model_dir: Some(model_dir.to_string_lossy().to_string()),
+                cls_model_dir: None,
+            });
+        } else {
+        }
+    }
+
     let request = OcrRequest {
         request_type: if is_base64 {
             "base64".to_string()
@@ -84,60 +119,61 @@ pub async fn ocr_image(
             "path".to_string()
         },
         data: image_data,
+        config: model_config,
     };
 
     let request_json = serde_json::to_string(&request)
         .map_err(|e| format!("Failed to serialize request: {}", e))?;
 
-    // Build the command with resource controls
     let mut cmd = tokio::process::Command::new(&sidecar_path);
     cmd.stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    // Defense-in-depth: set thread-limiting env vars from Rust side too
-    // (Python main.py also sets these, but this catches edge cases)
     cmd.env("OMP_NUM_THREADS", "2")
         .env("OPENBLAS_NUM_THREADS", "2")
         .env("MKL_NUM_THREADS", "2")
         .env("NUMEXPR_NUM_THREADS", "2")
         .env("OMP_WAIT_POLICY", "PASSIVE");
 
-    // Unix-specific: lower process priority and set I/O priority
     #[cfg(unix)]
     {
         unsafe {
             cmd.pre_exec(|| {
-                // nice(10) — lower CPU scheduling priority
                 libc::nice(10);
-                // ionice: set I/O scheduling class to "best effort" with low priority
-                // class 2 = best-effort, priority 7 = lowest within class
+
                 #[cfg(target_os = "linux")]
                 {
-                    libc::syscall(libc::SYS_ioprio_set, 1 /* IOPRIO_WHO_PROCESS */, 0, (2 << 13) | 7);
+                    libc::syscall(
+                        libc::SYS_ioprio_set,
+                        1, /* IOPRIO_WHO_PROCESS */
+                        0,
+                        (2 << 13) | 7,
+                    );
                 }
                 Ok(())
             });
         }
     }
 
-    // Spawn the child process
     let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to spawn OCR sidecar: {}", e))?;
 
-    // Write the request to stdin
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(request_json.as_bytes())
             .await
             .map_err(|e| format!("Failed to write to sidecar stdin: {}", e))?;
-        // Drop stdin to signal EOF
+
         drop(stdin);
     }
 
-    // Wait for output with timeout — kill on overrun
-    let result = timeout(Duration::from_secs(OCR_TIMEOUT_SECS), child.wait_with_output()).await;
+    let result = timeout(
+        Duration::from_secs(OCR_TIMEOUT_SECS),
+        child.wait_with_output(),
+    )
+    .await;
 
     let output = match result {
         Ok(Ok(output)) => output,
@@ -145,10 +181,11 @@ pub async fn ocr_image(
             return Err(format!("Failed to wait for sidecar: {}", e));
         }
         Err(_) => {
-            // Timeout expired — kill the process
-            eprintln!("OCR sidecar timed out after {}s, killing process", OCR_TIMEOUT_SECS);
-            // child is moved into wait_with_output, but on timeout the future
-            // is dropped which should drop the child. As extra safety:
+            eprintln!(
+                "OCR sidecar timed out after {}s, killing process",
+                OCR_TIMEOUT_SECS
+            );
+
             return Err(format!(
                 "OCR timed out after {}s. The image may be too large or complex. \
                  The process has been terminated to protect system stability.",

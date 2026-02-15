@@ -10,11 +10,11 @@ import { ChevronDown, Check, PackagePlus } from "lucide-react";
 import styles from "./ModelSwitcher.module.css";
 import { SettingsSection } from "@/shell";
 
+import { useModelsStore } from "../../store";
 import { getLanguageCode } from "@/features/models/types/models.types";
 
 interface OCRModelSwitcherProps {
   ocrEnabled: boolean;
-  downloadedOcrLanguages: string[];
   currentOcrModel: string;
   onOcrModelChange: (model: string) => void;
   onOpenSettings: (section: SettingsSection) => void;
@@ -23,7 +23,6 @@ interface OCRModelSwitcherProps {
 
 export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
   ocrEnabled,
-  downloadedOcrLanguages,
   currentOcrModel,
   onOcrModelChange,
   onOpenSettings,
@@ -32,11 +31,8 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-
-  const ocrModels = downloadedOcrLanguages.map((name) => ({
-    id: name,
-    name: name,
-  }));
+  const models = useModelsStore((s) => s.models);
+  const installedModels = models.filter((m) => m.state === "downloaded");
 
   const updatePosition = () => {
     if (isOpen && containerRef.current) {
@@ -93,7 +89,7 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
     >
       <div className={styles.sectionTitle}>OCR Model</div>
       <div className={styles.modelList}>
-        {ocrModels.map((model) => (
+        {installedModels.map((model) => (
           <button
             key={model.id}
             className={`${styles.modelItem} ${

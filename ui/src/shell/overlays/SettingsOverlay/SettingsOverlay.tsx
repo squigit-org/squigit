@@ -50,7 +50,6 @@ interface SettingsOverlayProps {
   onSetTheme: (theme: "dark" | "light" | "system") => void;
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
-  downloadedOcrLanguages: string[];
   captureType: "rectangular" | "squiggle";
   geminiKey: string;
   imgbbKey: string;
@@ -74,7 +73,6 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   onSetTheme,
   autoExpandOCR,
   ocrEnabled,
-  downloadedOcrLanguages,
   captureType,
   geminiKey,
   imgbbKey,
@@ -85,7 +83,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   const shellRef = useRef<HTMLDivElement>(null);
 
   const [localPrompt, setLocalPrompt] = useState(currentPrompt);
-  const [localModel, setLocalModel] = useState(defaultModel);
+  const [localModel] = useState(defaultModel);
 
   const handleToggleAutoExpand = (checked: boolean) => {
     updatePreferences({ autoExpandOCR: checked });
@@ -204,9 +202,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
             {activeSection === "models" && (
               <ModelsSection
                 localModel={localModel}
-                setLocalModel={setLocalModel}
                 ocrLanguage={defaultOcrLanguage}
-                downloadedOcrLanguages={downloadedOcrLanguages}
                 updatePreferences={updatePreferences}
               />
             )}

@@ -51,6 +51,11 @@ class EngineConfig:
     use_angle_cls: bool = True
     
     base_dir: Optional[Path] = None
+
+    # Custom model paths (optional overrides)
+    det_model_path: Optional[str] = None
+    rec_model_path: Optional[str] = None
+    cls_model_path: Optional[str] = None
     
     def __post_init__(self):
         """Initialize computed paths after dataclass init."""
@@ -67,28 +72,31 @@ class EngineConfig:
         return self.base_dir / "models"
     
     @property
-    def det_model_dir(self) -> Path:
+    def det_model_dir(self) -> str:
         """
         Get the detection model directory path.
-        
-        @return Path to detection model.
+        Returns custom path if set, otherwise default bundled path.
         """
-        return self.model_dir / "en_PP-OCRv3_det"
+        if self.det_model_path:
+            return self.det_model_path
+        return str(self.model_dir / "en_PP-OCRv3_det")
     
     @property
-    def rec_model_dir(self) -> Path:
+    def rec_model_dir(self) -> str:
         """
         Get the recognition model directory path.
-        
-        @return Path to recognition model.
+        Returns custom path if set, otherwise default bundled path.
         """
-        return self.model_dir / "en_PP-OCRv4_rec"
+        if self.rec_model_path:
+            return self.rec_model_path
+        return str(self.model_dir / "en_PP-OCRv4_rec")
     
     @property
-    def cls_model_dir(self) -> Path:
+    def cls_model_dir(self) -> str:
         """
         Get the classification model directory path.
-        
-        @return Path to classification model.
+        Returns custom path if set, otherwise default bundled path.
         """
-        return self.model_dir / "ch_ppocr_mobile_v2.0_cls"
+        if self.cls_model_path:
+            return self.cls_model_path
+        return str(self.model_dir / "ch_ppocr_mobile_v2.0_cls")

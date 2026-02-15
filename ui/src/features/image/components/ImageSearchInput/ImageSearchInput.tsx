@@ -25,7 +25,6 @@ interface ImageSearchInputProps {
   isExpanded?: boolean;
   placeholder?: string;
   ocrEnabled: boolean;
-  downloadedOcrLanguages: string[];
   currentOcrModel: string;
   onOcrModelChange: (model: string) => void;
   onOpenSettings: (section: SettingsSection) => void;
@@ -43,7 +42,6 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
   isExpanded = false,
   placeholder = "Add to your search",
   ocrEnabled,
-  downloadedOcrLanguages,
   currentOcrModel,
   onOcrModelChange,
   onOpenSettings,
@@ -148,7 +146,6 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
 
             <OCRModelSwitcher
               ocrEnabled={ocrEnabled}
-              downloadedOcrLanguages={downloadedOcrLanguages}
               currentOcrModel={currentOcrModel}
               onOcrModelChange={onOcrModelChange}
               onOpenSettings={onOpenSettings}

@@ -3,6 +3,7 @@
 
 pub mod auth;
 pub mod image;
+pub mod models;
 pub mod security;
 pub mod theme;
 pub mod window;

@@ -429,12 +429,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <DropdownSectionTitle>Model</DropdownSectionTitle>
             {GEMINI_MODELS.map((model) => (
               <div
+                key={model.id}
                 style={{
                   marginTop: "2px",
                 }}
               >
                 <DropdownItem
-                  key={model.id}
                   label={model.label}
                   isActive={model.id === selectedModel}
                   onClick={() => handleModelSelect(model.id)}
