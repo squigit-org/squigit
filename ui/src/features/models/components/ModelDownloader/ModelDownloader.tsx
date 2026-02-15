@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import styles from "./ModelDownloader.module.css";
-import { Download, Check, Loader2, X, Play } from "lucide-react";
+import { Download, Check, Loader2, X } from "lucide-react";
 import { useModelsStore } from "../../store";
 import { Dialog } from "@/primitives/dialog/Dialog";
 import { getErrorDialog } from "@/lib/helpers/dialogs";
@@ -135,10 +135,8 @@ export const ModelDownloader: React.FC = () => {
                       : `Download ${model.name}`
                 }
               >
-                {/* IDLE */}
                 {model.state === "idle" && <Download size={16} />}
 
-                {/* CHECKING */}
                 {model.state === "checking" &&
                   (hoveredModelId === model.id &&
                   justStartedDownload !== model.id ? (
@@ -147,7 +145,6 @@ export const ModelDownloader: React.FC = () => {
                     <CircularSpinner />
                   ))}
 
-                {/* DOWNLOADING */}
                 {model.state === "downloading" &&
                   (hoveredModelId === model.id &&
                   justStartedDownload !== model.id ? (
@@ -158,7 +155,6 @@ export const ModelDownloader: React.FC = () => {
                     <CircularProgress progress={model.progress || 0} />
                   ))}
 
-                {/* PAUSED */}
                 {model.state === "paused" &&
                   (hoveredModelId === model.id &&
                   justStartedDownload !== model.id ? (
@@ -167,12 +163,10 @@ export const ModelDownloader: React.FC = () => {
                     <CircularSpinner />
                   ))}
 
-                {/* EXTRACTING */}
                 {model.state === "extracting" && (
                   <Loader2 size={16} className={styles.spin} />
                 )}
 
-                {/* DOWNLOADED */}
                 {model.state === "downloaded" && <Check size={16} />}
               </button>
             </div>

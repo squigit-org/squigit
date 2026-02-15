@@ -53,7 +53,6 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
             return { ...model, state: "downloaded" };
           }
 
-          // Preserve checking/downloading/extracting/paused states if not installed
           const activeStates = [
             "checking",
             "downloading",
@@ -116,10 +115,8 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
   },
 }));
 
-// Initialize the store by refreshing models on load
 useModelsStore.getState().refresh();
 
-// Listen for download progress
 listen<DownloadProgressPayload>("download-progress", (event) => {
   const { id, progress, status } = event.payload;
   useModelsStore.setState((state) => ({
@@ -127,7 +124,7 @@ listen<DownloadProgressPayload>("download-progress", (event) => {
       if (m.id !== id) return m;
 
       let newState = m.state;
-      // Map backend status to frontend state
+
       if (status === "checking") newState = "checking";
       else if (status === "downloading") newState = "downloading";
       else if (status === "extracting") newState = "extracting";
