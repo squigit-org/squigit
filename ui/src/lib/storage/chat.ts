@@ -20,6 +20,7 @@ export interface ChatMetadata {
   is_pinned: boolean;
   is_starred: boolean;
   pinned_at: string | null;
+  ocr_lang?: string;
 }
 
 /** A single chat message (matches Rust ChatMessage). */

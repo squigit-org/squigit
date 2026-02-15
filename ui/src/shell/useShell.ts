@@ -137,6 +137,7 @@ export const useShell = () => {
     chatHistory.setActiveSessionId(null);
     setOcrData([]);
     setSessionLensUrl(null);
+    system.setSessionOcrLanguage(system.startupOcrLanguage);
 
     system.setStartupImage({
       base64: assetUrl,
@@ -270,6 +271,23 @@ export const useShell = () => {
     }
   }, [chatTitle, chatHistory.activeSessionId]);
 
+  useEffect(() => {
+    const activeId = chatHistory.activeSessionId;
+    if (activeId && system.sessionOcrLanguage && !isOnboardingId(activeId)) {
+      const currentChat = chatHistory.chats.find((c: any) => c.id === activeId);
+      if (currentChat && currentChat.ocr_lang !== system.sessionOcrLanguage) {
+        updateChatMetadata({
+          ...currentChat,
+          ocr_lang: system.sessionOcrLanguage,
+          updated_at: new Date().toISOString(),
+        }).then(() => {
+          chatHistory.refreshChats();
+        });
+      }
+    }
+  }, [system.sessionOcrLanguage, chatHistory.activeSessionId]);
+
+
   const handleSelectChat = async (id: string) => {
     if (isOnboardingId(id)) {
       setOcrData([]);
@@ -290,6 +308,12 @@ export const useShell = () => {
       const imageUrl = convertFileSrc(imagePath);
 
       system.setSessionChatTitle(chatData.metadata.title);
+
+      if (chatData.metadata.ocr_lang) {
+        system.setSessionOcrLanguage(chatData.metadata.ocr_lang);
+      } else {
+        system.setSessionOcrLanguage(system.startupOcrLanguage);
+      }
 
       const messages = chatData.messages.map((m, idx) => ({
         id: idx.toString(),

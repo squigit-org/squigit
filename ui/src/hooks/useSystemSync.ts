@@ -475,6 +475,7 @@ export const useSystemSync = () => {
   const resetSession = () => {
     setStartupImage(null);
     setSessionChatTitle(null);
+    setSessionOcrLanguage(startupOcrLanguage);
   };
 
   return {

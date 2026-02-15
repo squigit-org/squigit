@@ -40,6 +40,7 @@ export interface ImageShellProps {
     mimeType: string;
     isFilePath?: boolean;
     fromHistory?: boolean;
+    imageId?: string;
   } | null;
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string) => void;
@@ -235,17 +236,24 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   ]);
 
   const prevModelRef = useRef(currentOcrModel);
+  const prevImageIdRef = useRef(startupImage?.imageId);
 
   useEffect(() => {
-    if (startupImage && currentOcrModel !== prevModelRef.current) {
-      console.log(`Model changed to ${currentOcrModel}, re-scanning...`);
-      prevModelRef.current = currentOcrModel;
+    const modelChanged = currentOcrModel !== prevModelRef.current;
+    const imageChanged = startupImage?.imageId !== prevImageIdRef.current;
 
+    prevModelRef.current = currentOcrModel;
+    prevImageIdRef.current = startupImage?.imageId;
+
+    if (imageChanged) {
+      return;
+    }
+
+    if (startupImage && modelChanged) {
+      console.log(`Model changed to ${currentOcrModel}, re-scanning...`);
       onUpdateOCRData([]);
 
       setTimeout(() => scan(currentOcrModel), 50);
-    } else {
-      prevModelRef.current = currentOcrModel;
     }
   }, [currentOcrModel, startupImage, scan, onUpdateOCRData]);
 

@@ -53,7 +53,7 @@ pub fn get_image_path(hash: String) -> Result<String, String> {
 #[tauri::command]
 pub fn create_chat(title: String, image_hash: String) -> Result<ChatMetadata, String> {
     let storage = get_active_storage()?;
-    let metadata = ChatMetadata::new(title, image_hash);
+    let metadata = ChatMetadata::new(title, image_hash, None);
     let chat = ChatData::new(metadata.clone());
     storage.save_chat(&chat).map_err(|e| e.to_string())?;
     Ok(metadata)

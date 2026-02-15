@@ -29,11 +29,14 @@ pub struct ChatMetadata {
     /// When the chat was pinned.
     #[serde(default)]
     pub pinned_at: Option<DateTime<Utc>>,
+    /// Last used OCR language.
+    #[serde(default)]
+    pub ocr_lang: Option<String>,
 }
 
 impl ChatMetadata {
     /// Create new chat metadata with a generated ID.
-    pub fn new(title: String, image_hash: String) -> Self {
+    pub fn new(title: String, image_hash: String, ocr_lang: Option<String>) -> Self {
         let now = Utc::now();
         // Generate ID: YYYYMMDD-HHMMSS-<UUID_SUFFIX>
         // Use first 8 chars of a UUID for randomness
@@ -50,6 +53,7 @@ impl ChatMetadata {
             is_pinned: false,
             is_starred: false,
             pinned_at: None,
+            ocr_lang,
         }
     }
 }

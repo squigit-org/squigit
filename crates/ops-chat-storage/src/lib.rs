@@ -21,7 +21,7 @@
 //! println!("Image path: {}", stored.path);
 //!
 //! // Create a chat
-//! let metadata = ChatMetadata::new("My Analysis".to_string(), stored.hash);
+//! let metadata = ChatMetadata::new("My Analysis".to_string(), stored.hash, None);
 //! let chat = ChatData::new(metadata);
 //! storage.save_chat(&chat).unwrap();
 //! ```
