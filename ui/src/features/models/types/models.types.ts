@@ -26,7 +26,7 @@ export interface OcrModelStatus extends OcrModel {
 export const AVAILABLE_MODELS: OcrModel[] = [
   {
     id: "pp-ocr-v4-en",
-    name: "English",
+    name: "PP-OCR-V4 English",
     lang: "en",
     size: "11 MB",
     downloadUrl:
@@ -34,7 +34,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
   },
   {
     id: "pp-ocr-v4-ru",
-    name: "Russian",
+    name: "PP-OCR-V4 Russian",
     lang: "ru",
     size: "12 MB",
     downloadUrl:
@@ -42,7 +42,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
   },
   {
     id: "pp-ocr-v4-ko",
-    name: "Korean",
+    name: "PP-OCR-V4 Korean",
     lang: "ko",
     size: "15 MB",
     downloadUrl:
@@ -50,7 +50,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
   },
   {
     id: "pp-ocr-v4-ja",
-    name: "Japanese",
+    name: "PP-OCR-V4 Japanese",
     lang: "ja",
     size: "14 MB",
     downloadUrl:
@@ -58,7 +58,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
   },
   {
     id: "pp-ocr-v4-zh",
-    name: "Chinese (Simp.)",
+    name: "PP-OCR-V4 Chinese",
     lang: "ch",
     size: "16 MB",
     downloadUrl:
@@ -66,7 +66,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
   },
   {
     id: "pp-ocr-v4-es",
-    name: "Spanish",
+    name: "PP-OCR-V4 Spanish",
     lang: "es",
     size: "11 MB",
     downloadUrl:
@@ -74,7 +74,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
   },
   {
     id: "pp-ocr-v4-it",
-    name: "Italian",
+    name: "PP-OCR-V4 Italian",
     lang: "it",
     size: "11 MB",
     downloadUrl:
@@ -82,7 +82,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
   },
   {
     id: "pp-ocr-v4-pt",
-    name: "Portuguese",
+    name: "PP-OCR-V4 Portuguese",
     lang: "pt",
     size: "11 MB",
     downloadUrl:
@@ -90,7 +90,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
   },
   {
     id: "pp-ocr-v4-hi",
-    name: "Hindi",
+    name: "PP-OCR-V4 Hindi",
     lang: "hi",
     size: "18 MB",
     downloadUrl:
@@ -99,7 +99,7 @@ export const AVAILABLE_MODELS: OcrModel[] = [
 ];
 
 export const getLanguageCode = (modelId: string) => {
-  if (!modelId) return "??";
+  if (!modelId) return "EN";
   const model = AVAILABLE_MODELS.find((m) => m.id === modelId);
-  return model ? model.lang.toUpperCase() : "??";
+  return model ? model.lang.toUpperCase() : "EN";
 };
