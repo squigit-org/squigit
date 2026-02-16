@@ -72,6 +72,8 @@ const AppShellComponent: React.FC = () => {
           activeProfileId={shell.system.activeProfile?.id || null}
           currentOcrModel={shell.system.sessionOcrLanguage}
           onOcrModelChange={shell.system.setSessionOcrLanguage}
+          isOcrScanning={shell.isOcrScanning}
+          onOcrScanningChange={shell.setIsOcrScanning}
           isExpanded={isImageExpanded}
         />
       </div>
@@ -82,6 +84,8 @@ const AppShellComponent: React.FC = () => {
         isLoading={shell.chat.isLoading}
         isStreaming={shell.chat.isStreaming}
         isAiTyping={shell.chat.isAiTyping}
+        isAnalyzing={shell.chat.isAnalyzing}
+        isGenerating={shell.chat.isGenerating}
         error={error}
         input={shell.input}
         startupImage={shell.system.startupImage}

@@ -22,7 +22,11 @@ import updateIcon from "@/assets/emoji_u1f4e6.png";
 import welcomeIcon from "@/assets/emoji_u1f6e0.png";
 import { Dialog } from "@/primitives";
 import { PanelContextMenu } from "@/shell/menus";
-import { getDeleteMultipleChatsDialog } from "@/lib/helpers";
+import {
+  getDeleteMultipleChatsDialog,
+  getAppBusyDialog,
+  type DialogContent,
+} from "@/lib/helpers";
 import { useShellContext } from "@/shell/context";
 import { useKeyDown, getPendingUpdate } from "@/hooks";
 
@@ -338,6 +342,31 @@ export const SidePanel: React.FC = () => {
   const showWelcome =
     !shell.system.activeProfile && shell.system.hasAgreed === false;
 
+  const [busyDialog, setBusyDialog] = useState<DialogContent | null>(null);
+
+  const handleAction = (action: () => void) => {
+    const activeStates: string[] = [];
+
+    if (shell.chat.isAnalyzing) activeStates.push("analyzing an image");
+    if (shell.chat.isGenerating) activeStates.push("generating a response");
+    if (shell.chat.isAiTyping) activeStates.push("typing a response");
+    if (shell.isOcrScanning) activeStates.push("scanning an image");
+
+    if (activeStates.length > 0) {
+      let reason = "";
+      if (activeStates.length === 1) {
+        reason = activeStates[0];
+      } else {
+        const last = activeStates.pop();
+        reason = `${activeStates.join(", ")} and ${last}`;
+      }
+      setBusyDialog(getAppBusyDialog(reason));
+      return;
+    }
+
+    action();
+  };
+
   useEffect(() => {
     const handleClick = () => setActiveContextMenu(null);
     document.addEventListener("click", handleClick);
@@ -393,7 +422,7 @@ export const SidePanel: React.FC = () => {
       activeSessionId={activeSessionId}
       isSelectionMode={isSelectionMode}
       selectedIds={selectedIds}
-      onSelectChat={shell.handleSelectChat}
+      onSelectChat={(id) => handleAction(() => shell.handleSelectChat(id))}
       onToggleChatSelection={toggleChatSelection}
       onDeleteChat={setDeleteId}
       onRenameChat={shell.chatHistory.handleRenameChat}
@@ -444,7 +473,7 @@ export const SidePanel: React.FC = () => {
           <div className={styles.utilityBar}>
             <button
               className={`${styles.newChatBtn} ${isHoverDisabled ? styles.noHover : ""}`}
-              onClick={shell.handleNewSession}
+              onClick={() => handleAction(shell.handleNewSession)}
               onMouseLeave={() => setIsHoverDisabled(false)}
               style={{ flex: 1 }}
             >
@@ -458,7 +487,11 @@ export const SidePanel: React.FC = () => {
                 {showWelcome && (
                   <div
                     className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
-                    onClick={() => shell.handleSelectChat("__system_welcome")}
+                    onClick={() =>
+                      handleAction(() =>
+                        shell.handleSelectChat("__system_welcome"),
+                      )
+                    }
                   >
                     <div className={styles.chatIconMain}>
                       <img
@@ -477,8 +510,10 @@ export const SidePanel: React.FC = () => {
                   <div
                     className={`${styles.chatRow} ${activeSessionId && activeSessionId.startsWith("__system_update") ? styles.active : ""}`}
                     onClick={() =>
-                      shell.handleSelectChat(
-                        `__system_update_${update.version}`,
+                      handleAction(() =>
+                        shell.handleSelectChat(
+                          `__system_update_${update.version}`,
+                        ),
                       )
                     }
                   >
@@ -524,6 +559,12 @@ export const SidePanel: React.FC = () => {
           if (key === "confirm") handleBulkDelete();
           else setShowBulkDelete(false);
         }}
+      />
+
+      <Dialog
+        isOpen={!!busyDialog}
+        type={busyDialog || undefined}
+        onAction={() => setBusyDialog(null)}
       />
     </div>
   );

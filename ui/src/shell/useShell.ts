@@ -119,6 +119,7 @@ export const useShell = () => {
   );
 
   const [isCheckingImage, setIsCheckingImage] = useState(true);
+  const [isOcrScanning, setIsOcrScanning] = useState(false);
 
   const handleImageReady = async (imageData: {
     imageId: string;
@@ -138,6 +139,7 @@ export const useShell = () => {
     setOcrData([]);
     setSessionLensUrl(null);
     system.setSessionOcrLanguage(system.startupOcrLanguage);
+    setIsOcrScanning(false);
 
     system.setStartupImage({
       base64: assetUrl,
@@ -286,7 +288,6 @@ export const useShell = () => {
       }
     }
   }, [system.sessionOcrLanguage, chatHistory.activeSessionId]);
-
 
   const handleSelectChat = async (id: string) => {
     if (isOnboardingId(id)) {
@@ -577,5 +578,7 @@ export const useShell = () => {
     handleSwitchProfile,
     handleSystemAction,
     containerRef,
+    isOcrScanning,
+    setIsOcrScanning,
   };
 };

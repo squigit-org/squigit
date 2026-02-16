@@ -19,6 +19,8 @@ export interface ChatShellProps {
   isLoading: boolean;
   isStreaming: boolean;
   isAiTyping: boolean;
+  isAnalyzing: boolean;
+  isGenerating: boolean;
   error: string | null;
 
   input: string;
@@ -47,7 +49,6 @@ export interface ChatShellProps {
 
   selectedModel: string;
   onModelChange: (model: string) => void;
-  /** Handler for interactive actions in system chat bubbles */
   onSystemAction?: (actionId: string, value?: string) => void;
 
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -58,6 +59,8 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   streamingText,
   isLoading,
   isAiTyping,
+  isAnalyzing,
+  isGenerating,
   error,
   input,
   startupImage,
@@ -269,9 +272,6 @@ export const ChatShell: React.FC<ChatShellProps> = ({
     previousInputHeightRef.current = inputHeight;
   }, [inputHeight]);
 
-  const isAnalyzing =
-    startupImage && isLoading && !streamingText && messages.length === 0;
-
   const retryIndex = retryingMessageId
     ? messages.findIndex((m) => m.id === retryingMessageId)
     : -1;
@@ -301,7 +301,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
             {renderError()}
 
             <div className="flex flex-col-reverse gap-[10px]">
-              {isLoading && messages.length > 0 && (
+              {isGenerating && !retryingMessageId && (
                 <TextShimmer text="Planning next moves" />
               )}
               {streamingText && (
@@ -330,6 +330,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
                 .reverse()
                 .map((msg, index) => {
                   const isLatestModel = msg.role === "model" && index === 0;
+                  if (isAnalyzing && msg.id === retryingMessageId) return null;
                   return (
                     <div key={msg.id} className="mb-0">
                       <ChatBubble

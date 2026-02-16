@@ -62,6 +62,9 @@ export interface ImageShellProps {
   ocrEnabled: boolean;
   currentOcrModel: string;
   onOcrModelChange: (model: string) => void;
+
+  isOcrScanning?: boolean;
+  onOcrScanningChange?: (scanning: boolean) => void;
 }
 
 export const ImageShell: React.FC<ImageShellProps> = ({
@@ -82,8 +85,12 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   activeProfileId,
   currentOcrModel,
   onOcrModelChange,
+  isOcrScanning,
+  onOcrScanningChange,
 }) => {
-  const [loading, setLoading] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
+  const loading = isOcrScanning ?? localLoading;
+  const setLoading = onOcrScanningChange ?? setLocalLoading;
 
   const [errorDialog, setErrorDialog] = useState<DialogContent | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });

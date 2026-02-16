@@ -798,6 +798,15 @@ export const useChat = ({
     retryingMessageId,
     streamingText,
     lastSentMessage,
+    isAnalyzing:
+      (!!startupImage &&
+        isLoading &&
+        !streamingText &&
+        messages.length === 0) ||
+      (!!startupImage &&
+        !!retryingMessageId &&
+        messages.findIndex((m) => m.id === retryingMessageId) === 0),
+    isGenerating: (isLoading || !!retryingMessageId) && messages.length > 0,
     handleSend,
     handleRetrySend,
     handleRetryMessage,

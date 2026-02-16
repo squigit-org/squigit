@@ -86,6 +86,13 @@ export const getDeleteMultipleChatsDialog = (count: number): DialogContent => ({
   ],
 });
 
+export const getAppBusyDialog = (reason: string): DialogContent => ({
+  title: "Application Busy",
+  message: `The application is currently ${reason}. Please wait until it finishes.`,
+  variant: "info",
+  actions: [{ label: "Close", variant: "primary", actionKey: "close" }],
+});
+
 import { parseGeminiError } from "./error-parser";
 
 export const getErrorDialog = (error: any): DialogContent => {
