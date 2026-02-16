@@ -38,7 +38,7 @@ export interface ChatShellProps {
   onOpenSettings: (section: SettingsSection) => void;
   onStreamComplete?: () => void;
   onTypingChange?: (isTyping: boolean) => void;
-  onStopGeneration?: (truncatedText: string) => void;
+  onStopGeneration?: (truncatedText?: string) => void;
   onRetryMessage?: (messageId: string, modelId?: string) => void;
   onEditMessage?: (
     messageId: string,
@@ -390,7 +390,14 @@ export const ChatShell: React.FC<ChatShellProps> = ({
             onSend={onSend}
             isLoading={isLoading}
             isAiTyping={isAiTyping}
-            onStopGeneration={() => setStopRequested(true)}
+            isStoppable={isAnalyzing || isGenerating}
+            onStopGeneration={() => {
+              if (isAiTyping) {
+                setStopRequested(true);
+              } else {
+                onStopGeneration?.();
+              }
+            }}
             selectedModel={selectedModel}
             onModelChange={onModelChange}
           />

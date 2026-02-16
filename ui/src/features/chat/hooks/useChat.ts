@@ -15,6 +15,7 @@ import {
   restoreSession as apiRestoreSession,
   retryFromMessage,
   editUserMessage,
+  cancelCurrentRequest,
 } from "@/lib/api/gemini";
 
 export const useChat = ({
@@ -62,6 +63,7 @@ export const useChat = ({
 
   const sessionChatIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const preRetryMessagesRef = useRef<Message[]>([]);
 
   const sessionStartedForImageRef = useRef<string | null>(null);
 
@@ -271,7 +273,7 @@ export const useChat = ({
       setIsStreaming(false);
       setIsLoading(false);
     } catch (apiError: any) {
-      if (signal.aborted) {
+      if (signal.aborted || apiError?.message === "CANCELLED") {
         setIsLoading(false);
         return;
       }
@@ -370,6 +372,7 @@ export const useChat = ({
       setIsStreaming(false);
       setIsLoading(false);
     } catch (apiError: any) {
+      if (apiError?.message === "CANCELLED") return;
       console.error(apiError);
       let errorMsg = "Failed to connect to Gemini.";
       if (apiError.message?.includes("429"))
@@ -404,6 +407,7 @@ export const useChat = ({
       if (onMessage && targetChatId) onMessage(botMsg, targetChatId);
       setLastSentMessage(null);
     } catch (apiError: any) {
+      if (apiError?.message === "CANCELLED") return;
       setError("Failed to send message. " + (apiError.message || ""));
       setMessages((prev) => prev.slice(0, -1));
     } finally {
@@ -463,6 +467,7 @@ export const useChat = ({
       if (onMessage && targetChatId) onMessage(botMsg, targetChatId);
       setLastSentMessage(null);
     } catch (apiError: any) {
+      if (apiError?.message === "CANCELLED") return;
       setError("Failed to send message. " + (apiError.message || ""));
       setMessages((prev) => prev.slice(0, -1));
     } finally {
@@ -549,39 +554,85 @@ export const useChat = ({
     setIsAiTyping(false);
   };
 
-  const handleStopGeneration = (truncatedText: string) => {
-    if (streamingText && firstResponseId) {
-      const botMsg: Message = {
-        id: firstResponseId,
-        role: "model",
-        text: truncatedText,
-        timestamp: Date.now(),
-      };
-      setMessages([botMsg]);
-      setStreamingText("");
-      setFirstResponseId(null);
-      setIsAiTyping(false);
+  const handleStopGeneration = (truncatedText?: string) => {
+    if (truncatedText !== undefined) {
+      if (streamingText && firstResponseId) {
+        const botMsg: Message = {
+          id: firstResponseId,
+          role: "model",
+          text: truncatedText,
+          timestamp: Date.now(),
+        };
+        setMessages([botMsg]);
+        setStreamingText("");
+        setFirstResponseId(null);
+        setIsAiTyping(false);
 
-      const targetChatId = sessionChatIdRef.current;
-      if (onMessage && targetChatId) {
-        onMessage(botMsg, targetChatId);
+        const targetChatId = sessionChatIdRef.current;
+        if (onMessage && targetChatId) {
+          onMessage(botMsg, targetChatId);
+        }
+        return;
       }
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        for (let i = updated.length - 1; i >= 0; i--) {
+          if (updated[i].role === "model") {
+            updated[i] = { ...updated[i], text: truncatedText };
+            break;
+          }
+        }
+
+        onOverwriteMessages?.(updated);
+        return updated;
+      });
+      setIsAiTyping(false);
       return;
     }
 
-    setMessages((prev) => {
-      const updated = [...prev];
-      for (let i = updated.length - 1; i >= 0; i--) {
-        if (updated[i].role === "model") {
-          updated[i] = { ...updated[i], text: truncatedText };
-          break;
-        }
+    if (retryingMessageId) {
+      cancelCurrentRequest();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
+      const oldMessages = preRetryMessagesRef.current;
+      setMessages(oldMessages);
+      onOverwriteMessages?.(oldMessages);
+      setRetryingMessageId(null);
+      setIsLoading(false);
+      setIsStreaming(false);
+      setIsAiTyping(false);
+      setStreamingText("");
+      setFirstResponseId(null);
+      return;
+    }
 
-      onOverwriteMessages?.(updated);
-      return updated;
-    });
+    cancelCurrentRequest();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    const stoppedMsg: Message = {
+      id: Date.now().toString(),
+      role: "model",
+      text: "You stopped this response.",
+      timestamp: Date.now(),
+      stopped: true,
+    };
+    setMessages((prev) => [...prev, stoppedMsg]);
+    const targetChatId = sessionChatIdRef.current;
+    if (onMessage && targetChatId) {
+      onMessage(stoppedMsg, targetChatId);
+    }
+
+    setIsLoading(false);
+    setIsStreaming(false);
     setIsAiTyping(false);
+    setStreamingText("");
+    setFirstResponseId(null);
   };
 
   const handleRetryMessage = async (messageId: string, modelId?: string) => {
@@ -591,6 +642,7 @@ export const useChat = ({
     const truncatedMessages = messages.slice(0, msgIndex);
     const retryModelId = modelId || currentModel;
 
+    preRetryMessagesRef.current = [...messages];
     setRetryingMessageId(messageId);
     setError(null);
 
@@ -664,6 +716,7 @@ export const useChat = ({
 
       onOverwriteMessages?.(newMessages);
     } catch (apiError: any) {
+      if (apiError?.message === "CANCELLED") return;
       console.error("Retry failed:", apiError);
       setError("Failed to regenerate response. " + (apiError.message || ""));
 
@@ -691,6 +744,7 @@ export const useChat = ({
       ...optimisticMessages[msgIndex],
       text: newText,
     };
+    preRetryMessagesRef.current = [...messages];
     setMessages(optimisticMessages);
 
     const nextMsg = messages[msgIndex + 1];
@@ -777,6 +831,7 @@ export const useChat = ({
 
       onOverwriteMessages?.([...truncatedMessages, userMsg, botMsg]);
     } catch (apiError: any) {
+      if (apiError?.message === "CANCELLED") return;
       console.error("Edit failed:", apiError);
       setError("Failed to edit message. " + (apiError.message || ""));
       setRetryingMessageId(null);

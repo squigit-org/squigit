@@ -125,12 +125,16 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
   useEffect(() => {
     if (isStreamed) {
+      if (message.stopped) {
+        setIsStreamingComplete(true);
+        return;
+      }
       setRevealedCount(0);
       setIsStreamingComplete(false);
     } else {
       setIsStreamingComplete(true);
     }
-  }, [isStreamed]);
+  }, [isStreamed, message.stopped]);
 
   useEffect(() => {
     if (isStreamingComplete || !isStreamed) {
@@ -167,7 +171,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     onStreamComplete,
   ]);
 
-  const isTyping = isStreamed && !isStreamingComplete;
+  const isTyping = isStreamed && !isStreamingComplete && !message.stopped;
   const prevIsTypingRef = useRef(false);
 
   useEffect(() => {

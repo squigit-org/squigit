@@ -74,6 +74,7 @@ interface ChatInputProps {
   onSend: () => void;
   isLoading: boolean;
   isAiTyping?: boolean;
+  isStoppable?: boolean;
   onStopGeneration?: () => void;
   placeholder?: string;
   variant?: "default" | "transparent";
@@ -90,6 +91,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onSend,
   isLoading,
   isAiTyping = false,
+  isStoppable = false,
   onStopGeneration,
   placeholder: customPlaceholder,
   variant = "default",
@@ -306,7 +308,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const containerContent = (
     <div
-      className={`${styles.container} ${disabled ? styles.disabled : ""} ${
+      className={`${styles.container} ${disabled && !isStoppable ? styles.disabled : ""} ${
         variant === "transparent" ? styles.transparentVariant : ""
       }`}
     >
@@ -454,7 +456,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             disabled={disabled}
           />
 
-          {isAiTyping ? (
+          {isAiTyping || isStoppable ? (
             <button
               className={styles.stopButton}
               onClick={onStopGeneration}

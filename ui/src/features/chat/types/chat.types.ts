@@ -21,6 +21,7 @@ export interface Message {
   text: string;
   image?: string;
   timestamp: number;
+  stopped?: boolean;
   actions?: MessageAction[];
 }
 

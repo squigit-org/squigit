@@ -8,6 +8,20 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 let currentAbortController: AbortController | null = null;
+let currentUnlisten: (() => void) | null = null;
+let generationId = 0;
+
+export const cancelCurrentRequest = () => {
+  generationId++;
+  if (currentAbortController) {
+    currentAbortController.abort();
+    currentAbortController = null;
+  }
+  if (currentUnlisten) {
+    currentUnlisten();
+    currentUnlisten = null;
+  }
+};
 
 interface GeminiPart {
   text?: string;
@@ -116,11 +130,10 @@ export const startNewChatStream = async (
 ): Promise<string> => {
   if (!storedApiKey) throw new Error("Gemini API Key not set");
 
-  if (currentAbortController) {
-    currentAbortController.abort();
-  }
+  cancelCurrentRequest();
   currentAbortController = new AbortController();
   currentModelId = modelId;
+  const myGenId = generationId;
 
   resetBrainContext();
   storedImageBase64 = cleanBase64(imageBase64);
@@ -130,9 +143,11 @@ export const startNewChatStream = async (
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    if (generationId !== myGenId) return;
     fullResponse += event.payload.token;
     onToken(event.payload.token);
   });
+  currentUnlisten = unlisten;
 
   try {
     await invoke("stream_gemini_chat_v2", {
@@ -149,7 +164,10 @@ export const startNewChatStream = async (
     });
 
     unlisten();
+    if (currentUnlisten === unlisten) currentUnlisten = null;
     currentAbortController = null;
+
+    if (generationId !== myGenId) throw new Error("CANCELLED");
 
     setImageDescription(fullResponse);
     addToHistory("Assistant", fullResponse);
@@ -157,7 +175,9 @@ export const startNewChatStream = async (
     return fullResponse;
   } catch (error) {
     unlisten();
+    if (currentUnlisten === unlisten) currentUnlisten = null;
     currentAbortController = null;
+    if (error instanceof Error && error.message === "CANCELLED") throw error;
     console.error("Backend stream error:", error);
     throw error;
   }
@@ -175,6 +195,7 @@ export const sendMessage = async (
     currentModelId = modelId;
   }
 
+  const myGenId = generationId;
   const isFirstTurnWithImage = !userFirstMsg && storedImageBase64;
   setUserFirstMsg(text);
   addToHistory("User", text);
@@ -183,9 +204,11 @@ export const sendMessage = async (
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    if (generationId !== myGenId) return;
     fullResponse += event.payload.token;
     onToken?.(event.payload.token);
   });
+  currentUnlisten = unlisten;
 
   try {
     await invoke("stream_gemini_chat_v2", {
@@ -202,12 +225,17 @@ export const sendMessage = async (
     });
 
     unlisten();
+    if (currentUnlisten === unlisten) currentUnlisten = null;
+
+    if (generationId !== myGenId) throw new Error("CANCELLED");
 
     addToHistory("Assistant", fullResponse);
 
     return fullResponse;
   } catch (error) {
     unlisten();
+    if (currentUnlisten === unlisten) currentUnlisten = null;
+    if (error instanceof Error && error.message === "CANCELLED") throw error;
     console.error("SendMessage error:", error);
     throw error;
   }
@@ -223,6 +251,7 @@ export const retryFromMessage = async (
   if (!storedApiKey) throw new Error("Gemini API Key not set");
 
   currentModelId = modelId;
+  const myGenId = generationId;
 
   if ((!storedImageBase64 || !storedMimeType) && fallbackImage) {
     storedImageBase64 = cleanBase64(fallbackImage.base64);
@@ -242,9 +271,11 @@ export const retryFromMessage = async (
     let fullResponse = "";
 
     const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+      if (generationId !== myGenId) return;
       fullResponse += event.payload.token;
       onToken?.(event.payload.token);
     });
+    currentUnlisten = unlisten;
 
     try {
       await invoke("stream_gemini_chat_v2", {
@@ -261,6 +292,9 @@ export const retryFromMessage = async (
       });
 
       unlisten();
+      if (currentUnlisten === unlisten) currentUnlisten = null;
+
+      if (generationId !== myGenId) throw new Error("CANCELLED");
 
       setImageDescription(fullResponse);
       conversationHistory = [{ role: "Assistant", content: fullResponse }];
@@ -268,6 +302,7 @@ export const retryFromMessage = async (
       return fullResponse;
     } catch (error) {
       unlisten();
+      if (currentUnlisten === unlisten) currentUnlisten = null;
       throw error;
     }
   }
@@ -301,9 +336,11 @@ export const retryFromMessage = async (
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    if (generationId !== myGenId) return;
     fullResponse += event.payload.token;
     onToken?.(event.payload.token);
   });
+  currentUnlisten = unlisten;
 
   try {
     await invoke("stream_gemini_chat_v2", {
@@ -320,12 +357,16 @@ export const retryFromMessage = async (
     });
 
     unlisten();
+    if (currentUnlisten === unlisten) currentUnlisten = null;
+
+    if (generationId !== myGenId) throw new Error("CANCELLED");
 
     addToHistory("Assistant", fullResponse);
 
     return fullResponse;
   } catch (error) {
     unlisten();
+    if (currentUnlisten === unlisten) currentUnlisten = null;
     throw error;
   }
 };
@@ -341,6 +382,7 @@ export const editUserMessage = async (
   if (!storedApiKey) throw new Error("Gemini API Key not set");
 
   currentModelId = modelId;
+  const myGenId = generationId;
 
   if ((!storedImageBase64 || !storedMimeType) && fallbackImage) {
     storedImageBase64 = cleanBase64(fallbackImage.base64);
@@ -378,9 +420,11 @@ export const editUserMessage = async (
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    if (generationId !== myGenId) return;
     fullResponse += event.payload.token;
     onToken?.(event.payload.token);
   });
+  currentUnlisten = unlisten;
 
   try {
     await invoke("stream_gemini_chat_v2", {
@@ -397,6 +441,9 @@ export const editUserMessage = async (
     });
 
     unlisten();
+    if (currentUnlisten === unlisten) currentUnlisten = null;
+
+    if (generationId !== myGenId) throw new Error("CANCELLED");
 
     addToHistory("User", newText);
     addToHistory("Assistant", fullResponse);
@@ -404,6 +451,7 @@ export const editUserMessage = async (
     return fullResponse;
   } catch (error) {
     unlisten();
+    if (currentUnlisten === unlisten) currentUnlisten = null;
     throw error;
   }
 };
