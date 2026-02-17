@@ -136,6 +136,12 @@ pub async fn ocr_image(
         .env("NUMEXPR_NUM_THREADS", "2")
         .env("OMP_WAIT_POLICY", "PASSIVE");
 
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x00004000);
+    }
+
     #[cfg(unix)]
     {
         unsafe {
