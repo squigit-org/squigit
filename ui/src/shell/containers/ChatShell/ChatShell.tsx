@@ -111,7 +111,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
 
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
-    if (!el || showSpinner) return;
+    if (!el || showSpinner || isNavigating) return;
 
     const chatChanged = prevChatIdRef.current !== chatId;
     const messageCountChanged = messages.length !== prevMessageCountRef.current;
@@ -121,8 +121,6 @@ export const ChatShell: React.FC<ChatShellProps> = ({
     };
 
     if (chatChanged) {
-      // Force scroll to bottom on new chat mount/switch
-      // We do this aggressively to ensure we are at the bottom
       scrollToBottom();
       requestAnimationFrame(scrollToBottom);
       setTimeout(scrollToBottom, 50);
@@ -143,7 +141,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
       }
     }
     prevMessageCountRef.current = messages.length;
-  }, [messages, chatId, scrollContainerRef, showSpinner]);
+  }, [messages, chatId, scrollContainerRef, showSpinner, isNavigating]);
 
   const showFlatMenuRef = useRef<
     ((rect: { left: number; width: number; top: number }) => void) | null
@@ -291,33 +289,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
 
     if (showSpinner) return;
 
-    // When spinner hides, ensure we are scrolled to bottom if needed.
-    // We check if inputHeight is stable or if we just mounted.
-    // For simplicity, if we just came from spinner, force bottom.
-    // We can interpret `showSpinner` becoming false as a "fresh mount" of content.
-
-    // Check if we are "ready" in terms of scrolling.
-    // Since we removed isReady, we rely on standard behavior.
-
-    // If inputHeight is > 0, we can ensure scroll.
     if (inputHeight > 0) {
-      // Just came from spinner, force scroll.
-      // We can't easily detect "just came from spinner" without another ref,
-      // but we can check if we are already at bottom?
-      // Actually, easiest is to just force scroll if we are not at bottom and we are in a "stable" state?
-      // Let's rely on the previousInputHeight check below for resizing.
-      // BUT, the initial mount needs force scroll.
-      // The `chatChanged` logic in the other effect handles chat switches.
-      // But that effect runs on `chatId` change.
-      // If `chatId` changed while `showSpinner` was true, that effect delayed doing anything?
-      // No, `useEffect` runs.
-      // If `showSpinner` is true, the `useLayoutEffect` above skips scrolling.
-      // When `showSpinner` becomes false, `useLayoutEffect` runs again (dependency `showSpinner`).
-      // At this point `chatChanged` is false (prev ref updated? No, wait).
-      // Wait, `prevChatIdRef` is updated in the effect IF `!showSpinner`.
-      // So if chat changed while spinning, `prevChatIdRef` is OLD.
-      // So `chatChanged` will be TRUE when spinner finishes!
-      // So the logic `if (chatChanged && !showSpinner)` works perfectly.
     }
 
     const isGrowing = inputHeight > previousInputHeightRef.current;

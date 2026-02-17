@@ -4,6 +4,4 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./ChatShell";
-export * from "./ImageShell";
 export * from "./OnboardingShell";
