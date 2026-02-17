@@ -109,9 +109,11 @@ export const ChatShell: React.FC<ChatShellProps> = ({
     setIsErrorDismissed(false);
   }, [error]);
 
+  const isSpinnerVisible = isNavigating || showSpinner;
+
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
-    if (!el || showSpinner || isNavigating) return;
+    if (!el || isSpinnerVisible) return;
 
     const chatChanged = prevChatIdRef.current !== chatId;
     const messageCountChanged = messages.length !== prevMessageCountRef.current;
@@ -141,7 +143,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
       }
     }
     prevMessageCountRef.current = messages.length;
-  }, [messages, chatId, scrollContainerRef, showSpinner, isNavigating]);
+  }, [messages, chatId, scrollContainerRef, isSpinnerVisible]);
 
   const showFlatMenuRef = useRef<
     ((rect: { left: number; width: number; top: number }) => void) | null
@@ -287,7 +289,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
     const scrollEl = scrollContainerRef.current;
     if (!scrollEl) return;
 
-    if (showSpinner) return;
+    if (isSpinnerVisible) return;
 
     if (inputHeight > 0) {
     }
@@ -298,7 +300,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
       scrollEl.scrollTop = scrollEl.scrollHeight;
     }
     previousInputHeightRef.current = inputHeight;
-  }, [inputHeight, showSpinner]);
+  }, [inputHeight, isSpinnerVisible]);
 
   const retryIndex = retryingMessageId
     ? messages.findIndex((m) => m.id === retryingMessageId)
@@ -321,14 +323,14 @@ export const ChatShell: React.FC<ChatShellProps> = ({
         <main style={{ paddingBottom: inputHeight + 10 }}>
           <div
             className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-0 ${
-              showSpinner || isAnalyzing ? "-mt-2" : "pt-3"
+              isSpinnerVisible || isAnalyzing ? "-mt-2" : "pt-3"
             }`}
           >
             {isAnalyzing && <TextShimmer text="Analyzing your image" />}
 
             {renderError()}
 
-            {showSpinner ? (
+            {isSpinnerVisible ? (
               <div className="flex justify-center pt-3">
                 <LoadingSpinner />
               </div>

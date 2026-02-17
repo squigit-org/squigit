@@ -766,20 +766,13 @@ export const useChat = ({
     const truncatedMessages = messages.slice(0, msgIndex);
     const retryModelId = modelId || currentModel;
 
-    const optimisticMessages = [...messages];
-    optimisticMessages[msgIndex] = {
-      ...optimisticMessages[msgIndex],
+    preRetryMessagesRef.current = [...messages];
+    const editedUserMsg: Message = {
+      ...messages[msgIndex],
       text: newText,
     };
-    preRetryMessagesRef.current = [...messages];
-    setMessages(optimisticMessages);
-
-    const nextMsg = messages[msgIndex + 1];
-    if (nextMsg && nextMsg.role === "model") {
-      setRetryingMessageId(nextMsg.id);
-    } else {
-      setIsLoading(true);
-    }
+    setMessages([...truncatedMessages, editedUserMsg]);
+    setIsLoading(true);
 
     setError(null);
     let hasStartedStreaming = false;
@@ -809,13 +802,6 @@ export const useChat = ({
     }
 
     try {
-      const userMsg: Message = {
-        id: messageId,
-        role: "user",
-        text: newText,
-        timestamp: Date.now(),
-      };
-
       const responseText = await editUserMessage(
         msgIndex,
         newText,
@@ -824,9 +810,6 @@ export const useChat = ({
         (token) => {
           if (!hasStartedStreaming) {
             hasStartedStreaming = true;
-
-            setRetryingMessageId(null);
-            setMessages([...truncatedMessages, userMsg]);
             setIsStreaming(true);
             setIsAiTyping(true);
             setFirstResponseId(newResponseId);
@@ -845,18 +828,12 @@ export const useChat = ({
         timestamp: Date.now(),
       };
 
-      if (!hasStartedStreaming) {
-        setRetryingMessageId(null);
-        setMessages([...truncatedMessages, userMsg]);
-      }
-
-      setMessages([...truncatedMessages, userMsg, botMsg]);
+      setMessages([...truncatedMessages, editedUserMsg, botMsg]);
       setIsAiTyping(false);
       setStreamingText("");
       setFirstResponseId(null);
-      setRetryingMessageId(null);
 
-      onOverwriteMessages?.([...truncatedMessages, userMsg, botMsg]);
+      onOverwriteMessages?.([...truncatedMessages, editedUserMsg, botMsg]);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED") {
         setIsAiTyping(false);
