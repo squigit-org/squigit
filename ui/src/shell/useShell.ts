@@ -253,9 +253,11 @@ export const useShell = () => {
     setSessionChatTitle: system.setSessionChatTitle,
   });
 
-  const chatTitle = isGeneratingTitle
-    ? "New Chat"
-    : system.sessionChatTitle || "SnapLLM";
+  const chatTitle = isImageMissing
+    ? "SnapLLM"
+    : isGeneratingTitle
+      ? "New Chat"
+      : system.sessionChatTitle || "New Chat";
 
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;

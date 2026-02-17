@@ -275,6 +275,7 @@ export const useChat = ({
     } catch (apiError: any) {
       if (signal.aborted || apiError?.message === "CANCELLED") {
         setIsLoading(false);
+        setIsAiTyping(false);
         return;
       }
 
@@ -283,9 +284,18 @@ export const useChat = ({
         !isRetry &&
         (apiError.message?.includes("429") || apiError.message?.includes("503"))
       ) {
-        console.log("Model failed, trying lite version...");
-        setCurrentModel(ModelType.GEMINI_FLASH_LITE);
-        return;
+        if (currentModel !== ModelType.GEMINI_FLASH_LITE) {
+          console.log("Model failed, trying lite version...");
+          setCurrentModel(ModelType.GEMINI_FLASH_LITE);
+          return;
+        }
+      }
+
+      setIsAiTyping(false);
+      cancelCurrentRequest();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
       let errorMsg = "Failed to connect to Gemini.";
       if (apiError.message?.includes("429"))
@@ -372,7 +382,10 @@ export const useChat = ({
       setIsStreaming(false);
       setIsLoading(false);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") return;
+      if (apiError?.message === "CANCELLED") {
+        setIsAiTyping(false);
+        return;
+      }
       console.error(apiError);
       let errorMsg = "Failed to connect to Gemini.";
       if (apiError.message?.includes("429"))
@@ -383,6 +396,7 @@ export const useChat = ({
 
       setError(errorMsg);
       setIsStreaming(false);
+      setIsAiTyping(false);
       setIsLoading(false);
     }
   };
@@ -407,9 +421,13 @@ export const useChat = ({
       if (onMessage && targetChatId) onMessage(botMsg, targetChatId);
       setLastSentMessage(null);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") return;
+      if (apiError?.message === "CANCELLED") {
+        setIsAiTyping(false);
+        return;
+      }
       setError("Failed to send message. " + (apiError.message || ""));
       setMessages((prev) => prev.slice(0, -1));
+      setIsAiTyping(false);
     } finally {
       setIsLoading(false);
     }
@@ -467,9 +485,13 @@ export const useChat = ({
       if (onMessage && targetChatId) onMessage(botMsg, targetChatId);
       setLastSentMessage(null);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") return;
+      if (apiError?.message === "CANCELLED") {
+        setIsAiTyping(false);
+        return;
+      }
       setError("Failed to send message. " + (apiError.message || ""));
       setMessages((prev) => prev.slice(0, -1));
+      setIsAiTyping(false);
     } finally {
       setIsLoading(false);
     }
@@ -716,10 +738,15 @@ export const useChat = ({
 
       onOverwriteMessages?.(newMessages);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") return;
+      if (apiError?.message === "CANCELLED") {
+        setIsAiTyping(false);
+        return;
+      }
       console.error("Retry failed:", apiError);
       setError("Failed to regenerate response. " + (apiError.message || ""));
 
+      setRetryingMessageId(null);
+      setIsAiTyping(false);
       setRetryingMessageId(null);
     } finally {
       setIsLoading(false);
@@ -831,11 +858,15 @@ export const useChat = ({
 
       onOverwriteMessages?.([...truncatedMessages, userMsg, botMsg]);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") return;
+      if (apiError?.message === "CANCELLED") {
+        setIsAiTyping(false);
+        return;
+      }
       console.error("Edit failed:", apiError);
       setError("Failed to edit message. " + (apiError.message || ""));
       setRetryingMessageId(null);
       setIsLoading(false);
+      setIsAiTyping(false);
     } finally {
       setIsLoading(false);
       setIsStreaming(false);

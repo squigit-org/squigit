@@ -27,6 +27,7 @@ import {
   PersonalizationSection,
   HelpSection,
 } from "@/features/settings";
+import { ShellContextMenu } from "@/shell/menus";
 
 import styles from "./SettingsOverlay.module.css";
 
@@ -85,6 +86,34 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   const [localPrompt, setLocalPrompt] = useState(currentPrompt);
   const [localModel] = useState(defaultModel);
 
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    hasSelection: boolean;
+  } | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const selection = window.getSelection();
+    const hasSelection = !!selection && selection.toString().length > 0;
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      hasSelection,
+    });
+  };
+
+  const handleCopy = () => {
+    const selection = window.getSelection();
+    if (selection) {
+      navigator.clipboard.writeText(selection.toString());
+    }
+    setContextMenu(null);
+  };
+
   const handleToggleAutoExpand = (checked: boolean) => {
     updatePreferences({ autoExpandOCR: checked });
   };
@@ -102,7 +131,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
       const target = event.target as Element;
       const isContextMenu = target.closest('[data-is-context-menu="true"]');
       const isDialog = target.closest('[data-dialog-container="true"]');
-      const isTitleBar = target.closest('[data-tauri-drag-region]');
+      const isTitleBar = target.closest("[data-tauri-drag-region]");
 
       if (
         isOpen &&
@@ -128,6 +157,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
     <div
       className={`${styles.settingsOverlay} ${isOpen ? styles.open : ""}`}
       ref={containerRef}
+      onContextMenu={handleContextMenu}
     >
       <div
         ref={shellRef}
@@ -230,6 +260,15 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
           </div>
         </div>
       </div>
+      {contextMenu && (
+        <ShellContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onCopy={handleCopy}
+          hasSelection={contextMenu.hasSelection}
+        />
+      )}
     </div>
   );
 };

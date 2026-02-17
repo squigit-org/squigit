@@ -78,6 +78,7 @@ export const useChatTitle = ({
       setSessionChatTitle(title || "New Chat");
     } catch (error) {
       console.error("Failed to generate chat title:", error);
+      setSessionChatTitle("New Chat");
     } finally {
       setIsGenerating(false);
     }
