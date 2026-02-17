@@ -480,6 +480,16 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     return () => imageBox.removeEventListener("wheel", handleWheel);
   }, []);
 
+  const cancelOCR = useCallback(async () => {
+    if (!loading) return;
+    try {
+      await invoke("cancel_ocr");
+      setLoading(false);
+    } catch (e) {
+      console.error("Failed to cancel OCR:", e);
+    }
+  }, [loading]);
+
   if (!startupImage) {
     return null;
   }
@@ -495,10 +505,36 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         <div className={styles.barHeader}>
           <div
             className={`${styles.thumbnailWrapper} ${loading ? styles.thumbnailLoading : ""} ${isExpanded ? styles.thumbnailExpanded : ""}`}
-            onClick={loading || isExpanded ? undefined : toggleExpand}
-            title={loading ? "Processing..." : undefined}
+            onClick={
+              loading
+                ? (e) => {
+                    e.stopPropagation();
+                    cancelOCR();
+                  }
+                : isExpanded
+                  ? undefined
+                  : toggleExpand
+            }
+            title={loading ? "Cancel OCR" : undefined}
           >
             <img src={imageSrc} alt="Thumbnail" className={styles.miniThumb} />
+            {loading && (
+              <div className={styles.cancelOverlay}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={styles.cancelIcon}
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </div>
+            )}
           </div>
 
           <div className={styles.inputContainer}>
