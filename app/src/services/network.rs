@@ -18,7 +18,7 @@ pub struct NetworkState {
 impl Default for NetworkState {
     fn default() -> Self {
         Self {
-            status: NetworkStatus::Online, // Assume online initially
+            status: NetworkStatus::Online,
             latency_ms: 0,
         }
     }
