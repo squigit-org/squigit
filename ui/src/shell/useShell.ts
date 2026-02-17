@@ -291,7 +291,10 @@ export const useShell = () => {
     }
   }, [system.sessionOcrLanguage, chatHistory.activeSessionId]);
 
+  const [isNavigating, setIsNavigating] = useState(false);
+
   const handleSelectChat = async (id: string) => {
+    setIsNavigating(true);
     if (isOnboardingId(id)) {
       setOcrData([]);
       setSessionLensUrl(null);
@@ -301,6 +304,7 @@ export const useShell = () => {
         system.setSessionChatTitle("Update Available");
       }
       chatHistory.setActiveSessionId(id);
+      setTimeout(() => setIsNavigating(false), 300);
       return;
     }
 
@@ -360,14 +364,18 @@ export const useShell = () => {
       chatHistory.setActiveSessionId(id);
     } catch (e) {
       console.error("Failed to load chat:", e);
+    } finally {
+      setTimeout(() => setIsNavigating(false), 300);
     }
   };
 
   const handleNewSession = () => {
+    setIsNavigating(true);
     system.resetSession();
     chatHistory.setActiveSessionId(null);
     setOcrData([]);
     setSessionLensUrl(null);
+    setTimeout(() => setIsNavigating(false), 300);
   };
 
   const handleAddAccount = () => {
@@ -558,6 +566,7 @@ export const useShell = () => {
     agreedToTerms,
 
     toggleSidePanel,
+    isNavigating,
     setShowGeminiAuthDialog,
     setShowLoginRequiredDialog,
     performLogout,

@@ -1,0 +1,33 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.spinner {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  animation: spin 0.9s linear infinite;
+}
+
+.arm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.blade {
+  width: 13%;
+  height: 25%;
+  margin-top: 5.5555551%;
+  background: #e5e5e5;
+  border-radius: 999px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

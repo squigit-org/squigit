@@ -78,35 +78,38 @@ const AppShellComponent: React.FC = () => {
         />
       </div>
 
-      <ChatShell
-        messages={shell.chat.messages}
-        streamingText={shell.chat.streamingText}
-        isLoading={shell.chat.isLoading}
-        isStreaming={shell.chat.isStreaming}
-        isAiTyping={shell.chat.isAiTyping}
-        isAnalyzing={shell.chat.isAnalyzing}
-        isGenerating={shell.chat.isGenerating}
-        error={error}
-        input={shell.input}
-        startupImage={shell.system.startupImage}
-        chatId={shell.chatHistory.activeSessionId}
-        onSend={() => {
-          shell.chat.handleSend(shell.input, shell.inputModel);
-          shell.setInput("");
-        }}
-        onInputChange={shell.setInput}
-        onOpenSettings={shell.system.openSettings}
-        onStreamComplete={shell.chat.handleStreamComplete}
-        onTypingChange={shell.chat.setIsAiTyping}
-        onStopGeneration={shell.chat.handleStopGeneration}
-        onRetryMessage={shell.chat.handleRetryMessage}
-        onEditMessage={shell.chat.handleEditMessage}
-        retryingMessageId={shell.chat.retryingMessageId}
-        scrollContainerRef={scrollContainerRef}
-        selectedModel={shell.inputModel}
-        onModelChange={shell.setInputModel}
-        onSystemAction={shell.handleSystemAction}
-      />
+      <div className="flex-1 min-h-0 relative flex flex-col">
+        <ChatShell
+          messages={shell.chat.messages}
+          streamingText={shell.chat.streamingText}
+          isLoading={shell.chat.isLoading}
+          isStreaming={shell.chat.isStreaming}
+          isAiTyping={shell.chat.isAiTyping}
+          isAnalyzing={shell.chat.isAnalyzing}
+          isGenerating={shell.chat.isGenerating}
+          error={error}
+          input={shell.input}
+          startupImage={shell.system.startupImage}
+          chatId={shell.chatHistory.activeSessionId}
+          onSend={() => {
+            shell.chat.handleSend(shell.input, shell.inputModel);
+            shell.setInput("");
+          }}
+          onInputChange={shell.setInput}
+          onOpenSettings={shell.system.openSettings}
+          onStreamComplete={shell.chat.handleStreamComplete}
+          onTypingChange={shell.chat.setIsAiTyping}
+          onStopGeneration={shell.chat.handleStopGeneration}
+          onRetryMessage={shell.chat.handleRetryMessage}
+          onEditMessage={shell.chat.handleEditMessage}
+          retryingMessageId={shell.chat.retryingMessageId}
+          scrollContainerRef={scrollContainerRef}
+          selectedModel={shell.inputModel}
+          onModelChange={shell.setInputModel}
+          onSystemAction={shell.handleSystemAction}
+          isNavigating={shell.isNavigating}
+        />
+      </div>
     </div>
   );
 };

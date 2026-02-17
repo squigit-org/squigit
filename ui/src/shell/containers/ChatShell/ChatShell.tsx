@@ -6,7 +6,7 @@
 
 import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
 import { Message, ChatInput, ChatBubble } from "@/features/chat";
-import { InlineMenu, TextShimmer, Dialog } from "@/primitives";
+import { InlineMenu, TextShimmer, Dialog, LoadingSpinner } from "@/primitives";
 import { useInlineMenu } from "@/hooks";
 import { SettingsSection } from "@/shell/overlays";
 import { invoke } from "@tauri-apps/api/core";
@@ -51,6 +51,8 @@ export interface ChatShellProps {
   onModelChange: (model: string) => void;
   onSystemAction?: (actionId: string, value?: string) => void;
 
+  isNavigating?: boolean;
+
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -78,10 +80,29 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   onModelChange,
   onSystemAction,
   scrollContainerRef,
+  isNavigating,
 }) => {
   const [stopRequested, setStopRequested] = useState(false);
+  const [showSpinner, setShowSpinner] = useState(false);
+  const navigationStartTimeRef = useRef<number>(0);
+  const MIN_SPINNER_DURATION = 400;
   const prevChatIdRef = useRef<string | null>(null);
   const prevMessageCountRef = useRef(messages.length);
+
+  useEffect(() => {
+    if (isNavigating) {
+      setShowSpinner(true);
+      navigationStartTimeRef.current = Date.now();
+    } else {
+      const elapsed = Date.now() - navigationStartTimeRef.current;
+      const remaining = Math.max(0, MIN_SPINNER_DURATION - elapsed);
+      const t = setTimeout(() => {
+        setShowSpinner(false);
+      }, remaining);
+      return () => clearTimeout(t);
+    }
+  }, [isNavigating]);
+
   const [isErrorDismissed, setIsErrorDismissed] = useState(false);
 
   useEffect(() => {
@@ -90,27 +111,29 @@ export const ChatShell: React.FC<ChatShellProps> = ({
 
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
-    if (!el) return;
+    if (!el || showSpinner) return;
 
     const chatChanged = prevChatIdRef.current !== chatId;
     const messageCountChanged = messages.length !== prevMessageCountRef.current;
 
+    const scrollToBottom = () => {
+      el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+    };
+
     if (chatChanged) {
-      if (startupImage) {
-        el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
-        setTimeout(() => {
-          el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
-        }, 50);
-      } else {
-        el.scrollTo({ top: 0, behavior: "instant" });
-      }
+      // Force scroll to bottom on new chat mount/switch
+      // We do this aggressively to ensure we are at the bottom
+      scrollToBottom();
+      requestAnimationFrame(scrollToBottom);
+      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 150);
       prevChatIdRef.current = chatId;
     } else if (messageCountChanged) {
       if (prevMessageCountRef.current === 0 && messages.length > 0) {
         const isStreamCompletion =
           messages.length === 1 && messages[0]?.role === "model";
         if (!isStreamCompletion) {
-          el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+          scrollToBottom();
         }
       } else {
         const lastMessage = messages[messages.length - 1];
@@ -120,7 +143,7 @@ export const ChatShell: React.FC<ChatShellProps> = ({
       }
     }
     prevMessageCountRef.current = messages.length;
-  }, [messages, chatId, scrollContainerRef]);
+  }, [messages, chatId, scrollContainerRef, showSpinner]);
 
   const showFlatMenuRef = useRef<
     ((rect: { left: number; width: number; top: number }) => void) | null
@@ -264,13 +287,46 @@ export const ChatShell: React.FC<ChatShellProps> = ({
 
   useLayoutEffect(() => {
     const scrollEl = scrollContainerRef.current;
+    if (!scrollEl) return;
+
+    if (showSpinner) return;
+
+    // When spinner hides, ensure we are scrolled to bottom if needed.
+    // We check if inputHeight is stable or if we just mounted.
+    // For simplicity, if we just came from spinner, force bottom.
+    // We can interpret `showSpinner` becoming false as a "fresh mount" of content.
+
+    // Check if we are "ready" in terms of scrolling.
+    // Since we removed isReady, we rely on standard behavior.
+
+    // If inputHeight is > 0, we can ensure scroll.
+    if (inputHeight > 0) {
+      // Just came from spinner, force scroll.
+      // We can't easily detect "just came from spinner" without another ref,
+      // but we can check if we are already at bottom?
+      // Actually, easiest is to just force scroll if we are not at bottom and we are in a "stable" state?
+      // Let's rely on the previousInputHeight check below for resizing.
+      // BUT, the initial mount needs force scroll.
+      // The `chatChanged` logic in the other effect handles chat switches.
+      // But that effect runs on `chatId` change.
+      // If `chatId` changed while `showSpinner` was true, that effect delayed doing anything?
+      // No, `useEffect` runs.
+      // If `showSpinner` is true, the `useLayoutEffect` above skips scrolling.
+      // When `showSpinner` becomes false, `useLayoutEffect` runs again (dependency `showSpinner`).
+      // At this point `chatChanged` is false (prev ref updated? No, wait).
+      // Wait, `prevChatIdRef` is updated in the effect IF `!showSpinner`.
+      // So if chat changed while spinning, `prevChatIdRef` is OLD.
+      // So `chatChanged` will be TRUE when spinner finishes!
+      // So the logic `if (chatChanged && !showSpinner)` works perfectly.
+    }
+
     const isGrowing = inputHeight > previousInputHeightRef.current;
 
-    if (!isGrowing && scrollEl && wasAtBottomRef.current) {
+    if (!isGrowing && wasAtBottomRef.current) {
       scrollEl.scrollTop = scrollEl.scrollHeight;
     }
     previousInputHeightRef.current = inputHeight;
-  }, [inputHeight]);
+  }, [inputHeight, showSpinner]);
 
   const retryIndex = retryingMessageId
     ? messages.findIndex((m) => m.id === retryingMessageId)
@@ -293,86 +349,93 @@ export const ChatShell: React.FC<ChatShellProps> = ({
         <main style={{ paddingBottom: inputHeight + 10 }}>
           <div
             className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-0 ${
-              isAnalyzing ? "-mt-2" : "pt-3"
+              showSpinner || isAnalyzing ? "-mt-2" : "pt-3"
             }`}
           >
             {isAnalyzing && <TextShimmer text="Analyzing your image" />}
 
             {renderError()}
 
-            <div className="flex flex-col-reverse gap-[10px]">
-              {isGenerating && !retryingMessageId && (
-                <TextShimmer text="Planning next moves" />
-              )}
-              {streamingText && (
-                <div className="mb-0">
-                  <ChatBubble
-                    message={{
-                      id: "streaming-temp",
-                      role: "model",
-                      text: streamingText,
-                      timestamp: Date.now(),
-                    }}
-                    isStreamed={true}
-                    onStreamComplete={onStreamComplete}
-                    onTypingChange={onTypingChange}
-                    stopRequested={stopRequested}
-                    onStopGeneration={(truncatedText) => {
-                      setStopRequested(false);
-                      onStopGeneration?.(truncatedText);
-                    }}
-                  />
-                </div>
-              )}
+            {showSpinner ? (
+              <div className="flex justify-center pt-3">
+                <LoadingSpinner />
+              </div>
+            ) : (
+              <div className="flex flex-col-reverse gap-[10px]">
+                {isGenerating && !retryingMessageId && (
+                  <TextShimmer text="Planning next moves" />
+                )}
+                {streamingText && (
+                  <div className="mb-0">
+                    <ChatBubble
+                      message={{
+                        id: "streaming-temp",
+                        role: "model",
+                        text: streamingText,
+                        timestamp: Date.now(),
+                      }}
+                      isStreamed={true}
+                      onStreamComplete={onStreamComplete}
+                      onTypingChange={onTypingChange}
+                      stopRequested={stopRequested}
+                      onStopGeneration={(truncatedText) => {
+                        setStopRequested(false);
+                        onStopGeneration?.(truncatedText);
+                      }}
+                    />
+                  </div>
+                )}
 
-              {displayMessages
-                .slice()
-                .reverse()
-                .map((msg, index) => {
-                  const isLatestModel = msg.role === "model" && index === 0;
-                  if (isAnalyzing && msg.id === retryingMessageId) return null;
-                  return (
-                    <div key={msg.id} className="mb-0">
-                      <ChatBubble
-                        message={msg}
-                        isStreamed={isLatestModel}
-                        onStreamComplete={
-                          isLatestModel ? onStreamComplete : undefined
-                        }
-                        onTypingChange={
-                          isLatestModel ? onTypingChange : undefined
-                        }
-                        stopRequested={
-                          isLatestModel ? stopRequested : undefined
-                        }
-                        onStopGeneration={
-                          isLatestModel
-                            ? (truncatedText) => {
-                                setStopRequested(false);
-                                onStopGeneration?.(truncatedText);
-                              }
-                            : undefined
-                        }
-                        onRetry={
-                          msg.role !== "user" && onRetryMessage
-                            ? () => onRetryMessage(msg.id, selectedModel)
-                            : undefined
-                        }
-                        isRetrying={msg.id === retryingMessageId}
-                        onEdit={
-                          msg.role === "user" && onEditMessage
-                            ? (newText) =>
-                                onEditMessage(msg.id, newText, selectedModel)
-                            : undefined
-                        }
-                        onAction={
-                          msg.role === "system" ? onSystemAction : undefined
-                        }
-                      />
-                    </div>
-                  );
-                })}
-            </div>
+                {displayMessages
+                  .slice()
+                  .reverse()
+                  .map((msg, index) => {
+                    const isLatestModel = msg.role === "model" && index === 0;
+                    if (isAnalyzing && msg.id === retryingMessageId)
+                      return null;
+                    return (
+                      <div key={msg.id} className="mb-0">
+                        <ChatBubble
+                          message={msg}
+                          isStreamed={isLatestModel}
+                          onStreamComplete={
+                            isLatestModel ? onStreamComplete : undefined
+                          }
+                          onTypingChange={
+                            isLatestModel ? onTypingChange : undefined
+                          }
+                          stopRequested={
+                            isLatestModel ? stopRequested : undefined
+                          }
+                          onStopGeneration={
+                            isLatestModel
+                              ? (truncatedText) => {
+                                  setStopRequested(false);
+                                  onStopGeneration?.(truncatedText);
+                                }
+                              : undefined
+                          }
+                          onRetry={
+                            msg.role !== "user" && onRetryMessage
+                              ? () => onRetryMessage(msg.id, selectedModel)
+                              : undefined
+                          }
+                          isRetrying={msg.id === retryingMessageId}
+                          onEdit={
+                            msg.role === "user" && onEditMessage
+                              ? (newText) =>
+                                  onEditMessage(msg.id, newText, selectedModel)
+                              : undefined
+                          }
+                          onAction={
+                            msg.role === "system" ? onSystemAction : undefined
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </div>
         </main>
       </div>

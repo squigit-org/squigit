@@ -12,3 +12,4 @@ export * from "./glow-card";
 export * from "./tooltip";
 export * from "./dropdown";
 export * from "./text-shimmer";
+export * from "./loading-spinner";
