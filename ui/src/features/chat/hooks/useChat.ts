@@ -63,6 +63,7 @@ export const useChat = ({
 
   const sessionChatIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isRequestCancelledRef = useRef(false);
   const preRetryMessagesRef = useRef<Message[]>([]);
 
   const sessionStartedForImageRef = useRef<string | null>(null);
@@ -132,6 +133,30 @@ export const useChat = ({
     sessionStartedForImageRef.current = null;
   };
 
+  const appendErrorMessage = (errorMsg: string) => {
+    const errorBubble: Message = {
+      id: Date.now().toString(),
+      role: "model",
+      text: errorMsg,
+      timestamp: Date.now(),
+      stopped: true,
+    };
+
+    setMessages((prev) => [...prev, errorBubble]);
+
+    const targetChatId = sessionChatIdRef.current || chatId;
+    if (onMessage && targetChatId) {
+      onMessage(errorBubble, targetChatId);
+    }
+
+    setIsLoading(false);
+    setIsStreaming(false);
+    setIsAiTyping(false);
+    setStreamingText("");
+    setFirstResponseId(null);
+    setRetryingMessageId(null);
+  };
+
   const startSession = async (
     key: string,
     modelId: string,
@@ -150,6 +175,7 @@ export const useChat = ({
     const signal = abortControllerRef.current.signal;
 
     sessionChatIdRef.current = chatId;
+    isRequestCancelledRef.current = false;
 
     setIsLoading(true);
     setError(null);
@@ -273,7 +299,11 @@ export const useChat = ({
       setIsStreaming(false);
       setIsLoading(false);
     } catch (apiError: any) {
-      if (signal.aborted || apiError?.message === "CANCELLED") {
+      if (
+        signal.aborted ||
+        apiError?.message === "CANCELLED" ||
+        isRequestCancelledRef.current
+      ) {
         setIsLoading(false);
         setIsAiTyping(false);
         return;
@@ -297,16 +327,14 @@ export const useChat = ({
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
-      let errorMsg = "Failed to connect to Gemini.";
+      let errorMsg = "An error occurred while connecting to Gemini.";
       if (apiError.message?.includes("429"))
         errorMsg = "Quota limit reached or server busy.";
       else if (apiError.message?.includes("503"))
         errorMsg = "Service temporarily unavailable.";
       else if (apiError.message) errorMsg = apiError.message;
 
-      setError(errorMsg);
-      setIsStreaming(false);
-      setIsLoading(false);
+      appendErrorMessage(errorMsg);
     } finally {
       if (abortControllerRef.current?.signal === signal) {
         abortControllerRef.current = null;
@@ -324,6 +352,7 @@ export const useChat = ({
       return;
     }
     const targetChatId = chatId;
+    isRequestCancelledRef.current = false;
 
     setIsLoading(true);
     setError(null);
@@ -382,22 +411,19 @@ export const useChat = ({
       setIsStreaming(false);
       setIsLoading(false);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") {
+      if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
         setIsAiTyping(false);
         return;
       }
       console.error(apiError);
-      let errorMsg = "Failed to connect to Gemini.";
+      let errorMsg = "An error occurred while connecting to Gemini.";
       if (apiError.message?.includes("429"))
         errorMsg = "Quota limit reached or server busy.";
       else if (apiError.message?.includes("503"))
         errorMsg = "Service temporarily unavailable.";
       else if (apiError.message) errorMsg = apiError.message;
 
-      setError(errorMsg);
-      setIsStreaming(false);
-      setIsAiTyping(false);
-      setIsLoading(false);
+      appendErrorMessage(errorMsg);
     }
   };
 
@@ -405,6 +431,7 @@ export const useChat = ({
     if (!lastSentMessage) return;
     setError(null);
     setIsLoading(true);
+    isRequestCancelledRef.current = false;
     setMessages((prev) => [...prev, lastSentMessage]);
     const targetChatId = chatId;
 
@@ -421,13 +448,14 @@ export const useChat = ({
       if (onMessage && targetChatId) onMessage(botMsg, targetChatId);
       setLastSentMessage(null);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") {
+      if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
         setIsAiTyping(false);
         return;
       }
-      setError("Failed to send message. " + (apiError.message || ""));
-      setMessages((prev) => prev.slice(0, -1));
-      setIsAiTyping(false);
+      appendErrorMessage(
+        "An error occurred while sending the message. " +
+          (apiError.message || ""),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -470,6 +498,7 @@ export const useChat = ({
     setMessages((prev) => [...prev, userMsg]);
     if (onMessage && targetChatId) onMessage(userMsg, targetChatId);
     setIsLoading(true);
+    isRequestCancelledRef.current = false;
     setError(null);
 
     try {
@@ -485,13 +514,14 @@ export const useChat = ({
       if (onMessage && targetChatId) onMessage(botMsg, targetChatId);
       setLastSentMessage(null);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") {
+      if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
         setIsAiTyping(false);
         return;
       }
-      setError("Failed to send message. " + (apiError.message || ""));
-      setMessages((prev) => prev.slice(0, -1));
-      setIsAiTyping(false);
+      appendErrorMessage(
+        "An error occurred while sending the message. " +
+          (apiError.message || ""),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -577,6 +607,7 @@ export const useChat = ({
   };
 
   const handleStopGeneration = (truncatedText?: string) => {
+    isRequestCancelledRef.current = true;
     if (truncatedText !== undefined) {
       if (streamingText && firstResponseId) {
         const botMsg: Message = {
@@ -666,6 +697,7 @@ export const useChat = ({
 
     preRetryMessagesRef.current = [...messages];
     setRetryingMessageId(messageId);
+    isRequestCancelledRef.current = false;
     setError(null);
 
     let hasStartedStreaming = false;
@@ -738,19 +770,36 @@ export const useChat = ({
 
       onOverwriteMessages?.(newMessages);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") {
+      if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
         setIsAiTyping(false);
         return;
       }
       console.error("Retry failed:", apiError);
-      setError("Failed to regenerate response. " + (apiError.message || ""));
 
-      setRetryingMessageId(null);
-      setIsAiTyping(false);
-      setRetryingMessageId(null);
-    } finally {
+      const errorMsg =
+        "An error occurred while regenerating the response. " +
+        (apiError.message || "");
+
+      const errorBubble: Message = {
+        id: Date.now().toString(),
+        role: "model",
+        text: errorMsg,
+        timestamp: Date.now(),
+        stopped: true,
+      };
+
+      const newMessages = [...truncatedMessages, errorBubble];
+      setMessages(newMessages);
+
+      if (onOverwriteMessages) {
+        onOverwriteMessages(newMessages);
+      }
+
       setIsLoading(false);
       setIsStreaming(false);
+      setIsAiTyping(false);
+      setStreamingText("");
+      setFirstResponseId(null);
       setRetryingMessageId(null);
     }
   };
@@ -773,6 +822,7 @@ export const useChat = ({
     };
     setMessages([...truncatedMessages, editedUserMsg]);
     setIsLoading(true);
+    isRequestCancelledRef.current = false;
 
     setError(null);
     let hasStartedStreaming = false;
@@ -835,18 +885,36 @@ export const useChat = ({
 
       onOverwriteMessages?.([...truncatedMessages, editedUserMsg, botMsg]);
     } catch (apiError: any) {
-      if (apiError?.message === "CANCELLED") {
+      if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
         setIsAiTyping(false);
         return;
       }
       console.error("Edit failed:", apiError);
-      setError("Failed to edit message. " + (apiError.message || ""));
-      setRetryingMessageId(null);
-      setIsLoading(false);
-      setIsAiTyping(false);
-    } finally {
+
+      const errorMsg =
+        "An error occurred while generating the response. " +
+        (apiError.message || "");
+
+      const errorBubble: Message = {
+        id: Date.now().toString(),
+        role: "model",
+        text: errorMsg,
+        timestamp: Date.now(),
+        stopped: true,
+      };
+
+      const newMessages = [...truncatedMessages, editedUserMsg, errorBubble];
+      setMessages(newMessages);
+
+      if (onOverwriteMessages) {
+        onOverwriteMessages(newMessages);
+      }
+
       setIsLoading(false);
       setIsStreaming(false);
+      setIsAiTyping(false);
+      setStreamingText("");
+      setFirstResponseId(null);
     }
   };
 
