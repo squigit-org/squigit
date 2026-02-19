@@ -12,7 +12,7 @@ import React, {
 } from "react";
 import styles from "./ChatBubble.module.css";
 
-interface MessageEditorProps {
+interface BubbleEditorProps {
   value: string;
   onChange: (value: string) => void;
   onConfirm: () => void;
@@ -55,7 +55,7 @@ const AutoResizeTextarea = React.forwardRef<
 
 AutoResizeTextarea.displayName = "AutoResizeTextarea";
 
-export const MessageEditor: React.FC<MessageEditorProps> = ({
+export const BubbleEditor: React.FC<BubbleEditorProps> = ({
   value,
   onChange,
   onConfirm,

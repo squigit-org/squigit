@@ -8,10 +8,10 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { Mic, Square } from "lucide-react";
-import styles from "./VoiceInput.module.css";
+import styles from "./ChatInput.module.css";
 import { Tooltip } from "@/primitives/tooltip";
 
-interface VoiceInputProps {
+interface VoiceButtonProps {
   onTranscript: (text: string, isFinal: boolean) => void;
   disabled?: boolean;
 }
@@ -24,7 +24,7 @@ interface SttEvent {
   message?: string;
 }
 
-export const VoiceInput: React.FC<VoiceInputProps> = ({
+export const VoiceButton: React.FC<VoiceButtonProps> = ({
   onTranscript,
   disabled,
 }) => {
