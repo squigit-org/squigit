@@ -51,7 +51,6 @@ export const useSystemSync = () => {
   const [sessionOcrLanguage, setSessionOcrLanguage] =
     useState<string>("pp-ocr-v4-en");
 
-
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [avatarSrc, setAvatarSrc] = useState("");
@@ -312,7 +311,6 @@ export const useSystemSync = () => {
     }
     if (updates.ocrLanguage !== undefined) {
       setStartupOcrLanguage(updates.ocrLanguage);
-      setSessionOcrLanguage(updates.ocrLanguage);
     }
     if (updates.theme !== undefined) {
       setTheme(updates.theme);
