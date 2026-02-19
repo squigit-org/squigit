@@ -70,7 +70,7 @@ const AppShellComponent: React.FC = () => {
           ocrEnabled={shell.system.ocrEnabled}
           autoExpandOCR={shell.system.autoExpandOCR}
           activeProfileId={shell.system.activeProfile?.id || null}
-          currentOcrModel={shell.system.sessionOcrLanguage || "pp-ocr-v4-en"}
+          currentOcrModel={shell.system.sessionOcrLanguage}
           onOcrModelChange={shell.system.setSessionOcrLanguage}
           isOcrScanning={shell.isOcrScanning}
           onOcrScanningChange={shell.setIsOcrScanning}

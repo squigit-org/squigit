@@ -299,12 +299,14 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     scanRequestRef.current += 1;
     setLoading(false);
     cancelOcrJob();
+    onOcrModelChange("");
   };
 
   useEffect(() => {
     if (
       startupImage &&
       !startupImage.fromHistory &&
+      currentOcrModel &&
       !ocrData[currentOcrModel] &&
       !loading &&
       !errorDialog &&
@@ -342,6 +344,8 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       cancelOcrJob();
       setLoading(false);
       cancelledRef.current = false;
+
+      if (!currentOcrModel) return;
 
       setTimeout(() => {
         // Ensure we only scan if the request ID hasn't changed AGAIN

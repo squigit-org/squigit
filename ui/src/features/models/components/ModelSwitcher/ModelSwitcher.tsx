@@ -84,7 +84,12 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
   const isCurrentModelValid = installedModels.some(
     (m) => m.id === currentOcrModel,
   );
-  const effectiveModel = isCurrentModelValid ? currentOcrModel : "pp-ocr-v4-en";
+  const effectiveModel =
+    currentOcrModel === ""
+      ? ""
+      : isCurrentModelValid
+        ? currentOcrModel
+        : "pp-ocr-v4-en";
 
   const dropdownContent = (
     <div
@@ -141,7 +146,7 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
         title="Select OCR Model"
       >
         <span className={styles.triggerText}>
-          {getLanguageCode(effectiveModel)}
+          {effectiveModel ? getLanguageCode(effectiveModel) : "Select Model"}
         </span>
         <ChevronDown
           size={14}
