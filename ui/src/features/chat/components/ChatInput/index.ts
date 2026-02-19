@@ -5,3 +5,4 @@
  */
 
 export * from "./ChatInput";
+export type { ChatInputProps, ChatSubmitHandler, ChatModelSelectHandler } from "./types";

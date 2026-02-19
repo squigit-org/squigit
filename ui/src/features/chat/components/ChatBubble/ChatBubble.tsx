@@ -36,7 +36,7 @@ import {
 } from "@/lib/markdown";
 import styles from "./ChatBubble.module.css";
 import "katex/dist/katex.min.css";
-import { MessageEditor } from "./MessageEditor";
+import { BubbleEditor } from "./BubbleEditor";
 
 interface ChatBubbleProps {
   message: Message;
@@ -523,7 +523,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
               }
             >
               {isEditing ? (
-                <MessageEditor
+                <BubbleEditor
                   value={editorValue}
                   onChange={setEditorValue}
                   onConfirm={handleEditSubmit}
