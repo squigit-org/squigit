@@ -36,11 +36,14 @@ export interface OcrRegion {
   bbox: number[][];
 }
 
+/** OCR frame: keyed by model_id, each value is cached results or null (not scanned). */
+export type OcrFrame = Record<string, OcrRegion[] | null>;
+
 /** Complete chat data (matches Rust ChatData). */
 export interface ChatData {
   metadata: ChatMetadata;
   messages: ChatMessage[];
-  ocr_data: OcrRegion[];
+  ocr_data: OcrFrame;
   imgbb_url: string | null;
 }
 
@@ -130,17 +133,39 @@ export async function overwriteChatMessages(
 // OCR Commands
 // =============================================================================
 
-/** Save OCR data for a chat. */
+/** Save OCR data for a specific model. */
 export async function saveOcrData(
   chatId: string,
+  modelId: string,
   ocrData: OcrRegion[],
 ): Promise<void> {
-  return invoke("save_ocr_data", { chatId, ocrData });
+  return invoke("save_ocr_data", { chatId, modelId, ocrData });
 }
 
-/** Get OCR data for a chat. */
-export async function getOcrData(chatId: string): Promise<OcrRegion[]> {
-  return invoke("get_ocr_data", { chatId });
+/** Get OCR data for a specific model. */
+export async function getOcrData(
+  chatId: string,
+  modelId: string,
+): Promise<OcrRegion[] | null> {
+  return invoke("get_ocr_data", { chatId, modelId });
+}
+
+/** Get the entire OCR frame for a chat. */
+export async function getOcrFrame(chatId: string): Promise<OcrFrame> {
+  return invoke("get_ocr_frame", { chatId });
+}
+
+/** Initialize OCR frame with null values for given model IDs. */
+export async function initOcrFrame(
+  chatId: string,
+  modelIds: string[],
+): Promise<void> {
+  return invoke("init_ocr_frame", { chatId, modelIds });
+}
+
+/** Cancel the currently running OCR job. Fire-and-forget. */
+export function cancelOcrJob(): void {
+  invoke("cancel_ocr_job").catch(() => {});
 }
 
 // =============================================================================

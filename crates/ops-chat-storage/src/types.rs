@@ -5,6 +5,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Metadata for a chat session.
@@ -98,6 +99,11 @@ pub struct OcrRegion {
     pub bbox: Vec<Vec<i32>>,
 }
 
+/// OCR frame: a map of model_id → cached OCR results.
+/// `None` means the model hasn't scanned this image yet.
+/// `Some(vec)` means cached results (may be empty if no text found).
+pub type OcrFrame = HashMap<String, Option<Vec<OcrRegion>>>;
+
 /// Complete chat data including messages and OCR.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatData {
@@ -106,9 +112,9 @@ pub struct ChatData {
     /// Chat messages.
     #[serde(default)]
     pub messages: Vec<ChatMessage>,
-    /// OCR data from the image.
+    /// OCR frame: keyed by model_id, each value is cached results or null.
     #[serde(default)]
-    pub ocr_data: Vec<OcrRegion>,
+    pub ocr_data: OcrFrame,
     /// Optional imgbb upload URL.
     #[serde(default)]
     pub imgbb_url: Option<String>,
@@ -120,7 +126,7 @@ impl ChatData {
         Self {
             metadata,
             messages: Vec::new(),
-            ocr_data: Vec::new(),
+            ocr_data: HashMap::new(),
             imgbb_url: None,
         }
     }

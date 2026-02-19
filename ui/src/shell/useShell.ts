@@ -22,6 +22,8 @@ import {
   saveOcrData,
   saveImgbbUrl,
   overwriteChatMessages,
+  OcrFrame,
+  cancelOcrJob,
 } from "@/lib/storage";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
@@ -69,26 +71,43 @@ export const useShell = () => {
     [chatHistory.activeSessionId],
   );
 
-  const [ocrData, setOcrData] = useState<{ text: string; box: number[][] }[]>(
-    [],
-  );
+  const [ocrData, setOcrData] = useState<OcrFrame>({});
+  const [isOcrScanning, setIsOcrScanning] = useState(false);
 
   const handleUpdateOCRData = useCallback(
-    (data: { text: string; box: number[][] }[]) => {
-      setOcrData(data);
+    (modelId: string, data: { text: string; box: number[][] }[]) => {
+      const regions = data.map((d) => ({
+        text: d.text,
+        bbox: d.box,
+      }));
+      console.log(`[useShell] Updating OCR data for model: ${modelId}`);
+      setOcrData((prev) => {
+        const newState = {
+          ...prev,
+          [modelId]: regions,
+        };
+        console.log(
+          `[useShell] New OCR Data keys: ${Object.keys(newState).join(", ")}`,
+        );
+        return newState;
+      });
     },
     [],
   );
 
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
-    if (activeId && ocrData.length > 0) {
-      const ocrRegions = ocrData.map((d) => ({ text: d.text, bbox: d.box }));
-      saveOcrData(activeId, ocrRegions).catch((e) =>
+    const currentModelId = system.sessionOcrLanguage || "pp-ocr-v4-en"; // Fallback to default
+
+    // Only save if we have data for the CURRENT model
+    const currentData = ocrData[currentModelId];
+
+    if (activeId && currentData && currentData.length > 0) {
+      saveOcrData(activeId, currentModelId, currentData).catch((e) =>
         console.error("Failed to save OCR", e),
       );
     }
-  }, [ocrData, chatHistory.activeSessionId]);
+  }, [ocrData, chatHistory.activeSessionId, system.sessionOcrLanguage]);
 
   const handleMessageAdded = useCallback(
     (msg: any, targetChatId?: string) => {
@@ -119,7 +138,6 @@ export const useShell = () => {
   );
 
   const [isCheckingImage, setIsCheckingImage] = useState(true);
-  const [isOcrScanning, setIsOcrScanning] = useState(false);
 
   const handleImageReady = async (imageData: {
     imageId: string;
@@ -136,10 +154,12 @@ export const useShell = () => {
     console.log("Converted asset URL:", assetUrl);
 
     chatHistory.setActiveSessionId(null);
-    setOcrData([]);
+    chatHistory.setActiveSessionId(null);
+    setOcrData({});
     setSessionLensUrl(null);
     system.setSessionOcrLanguage(system.startupOcrLanguage);
     setIsOcrScanning(false);
+    cancelOcrJob(); // Ensure no background job from previous state
 
     system.setStartupImage({
       base64: assetUrl,
@@ -296,7 +316,7 @@ export const useShell = () => {
   const handleSelectChat = async (id: string) => {
     setIsNavigating(true);
     if (isOnboardingId(id)) {
-      setOcrData([]);
+      setOcrData({});
       setSessionLensUrl(null);
       if (id === "__system_welcome") {
         system.setSessionChatTitle("Welcome to SnapLLM!");
@@ -309,7 +329,8 @@ export const useShell = () => {
     }
 
     try {
-      setOcrData([]);
+      setOcrData({});
+      cancelOcrJob(); // Cancel any running OCR before switching
       const chatData = await loadChat(id);
       const imagePath = await getImagePath(chatData.metadata.image_hash);
       const imageUrl = convertFileSrc(imagePath);
@@ -342,13 +363,8 @@ export const useShell = () => {
         },
       );
 
-      if (chatData.ocr_data && chatData.ocr_data.length > 0) {
-        setOcrData(
-          chatData.ocr_data.map((o) => ({
-            text: o.text,
-            box: o.bbox,
-          })),
-        );
+      if (chatData.ocr_data && Object.keys(chatData.ocr_data).length > 0) {
+        setOcrData(chatData.ocr_data);
       }
 
       setSessionLensUrl(chatData.imgbb_url || null);
@@ -373,7 +389,8 @@ export const useShell = () => {
     setIsNavigating(true);
     system.resetSession();
     chatHistory.setActiveSessionId(null);
-    setOcrData([]);
+    chatHistory.setActiveSessionId(null);
+    setOcrData({});
     setSessionLensUrl(null);
     setTimeout(() => setIsNavigating(false), 300);
   };
@@ -384,6 +401,7 @@ export const useShell = () => {
 
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
   const [imageDrafts, setImageDrafts] = useState<Record<string, string>>({});
+
   const [inputModel, setInputModel] = useState<string>(
     ModelType.GEMINI_2_5_FLASH,
   );

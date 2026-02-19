@@ -13,7 +13,8 @@ pub mod brain;
 use commands::auth::{cache_avatar, get_api_key, get_user_data, logout, start_google_auth, cancel_google_auth};
 use commands::chat::{
     append_chat_message, create_chat, delete_chat,
-    get_image_path, get_imgbb_url, get_ocr_data, list_chats, load_chat,
+    get_image_path, get_imgbb_url, get_ocr_data, get_ocr_frame, init_ocr_frame,
+    list_chats, load_chat,
     overwrite_chat_messages, save_imgbb_url, save_ocr_data, store_image_bytes,
     store_image_from_path, update_chat_metadata,
 };
@@ -25,7 +26,7 @@ use commands::image::{
     get_initial_image, process_image_bytes, process_image_path, read_image_file, copy_image_to_path, read_file_base64,
 };
 use commands::models::{download_ocr_model, list_downloaded_models, get_model_path};
-use commands::ocr::ocr_image;
+use commands::ocr::{ocr_image, cancel_ocr_job};
 use commands::profile::{
     get_active_profile, get_active_profile_id, set_active_profile,
     list_profiles, delete_profile, has_profiles, get_profile_count,
@@ -95,6 +96,7 @@ pub fn run() {
             show_window,
             // OCR
             ocr_image,
+            cancel_ocr_job,
             // Model Management
             download_ocr_model,
             commands::models::cancel_download_ocr_model,
@@ -115,6 +117,8 @@ pub fn run() {
             // OCR Storage
             save_ocr_data,
             get_ocr_data,
+            get_ocr_frame,
+            init_ocr_frame,
             // ImgBB Storage
             save_imgbb_url,
             get_imgbb_url,

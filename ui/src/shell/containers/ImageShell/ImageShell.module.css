@@ -87,11 +87,53 @@
 
 .thumbnailWrapper.thumbnailLoading {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 .thumbnailWrapper.thumbnailLoading::after {
   display: none;
+}
+
+/* Cancel Button Overlay */
+.cancelButton {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  background-color: var(--neutral-700);
+  border: 1px solid var(--neutral-600);
+  color: var(--neutral-300);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    background-color 0.2s;
+  pointer-events: auto; /* Ensure it catches clicks even if parent is disabled */
+}
+
+/* Show cancel button on hover over the wrapper */
+.thumbnailWrapper:hover .cancelButton {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.cancelButton:hover {
+  background-color: var(--neutral-600);
+  color: white;
+  border-color: var(--neutral-500);
+}
+
+.cancelIcon {
+  width: 12px;
+  height: 12px;
 }
 
 .thumbnailWrapper.thumbnailExpanded {
@@ -244,6 +286,7 @@
   position: relative;
   max-width: 100%;
   display: flex;
+  flex-direction: column;
 }
 
 .bigImage {

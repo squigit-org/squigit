@@ -27,6 +27,7 @@ import styles from "./ImageShell.module.css";
 import { Dialog } from "@/primitives";
 import { type SettingsSection } from "@/shell/overlays";
 import { type DialogContent, getErrorDialog } from "@/lib/helpers";
+import { OcrFrame, cancelOcrJob } from "@/lib/storage";
 
 interface OCRBox {
   text: string;
@@ -48,8 +49,12 @@ export interface ImageShellProps {
   onDescribeEdits: (description: string) => void;
   isVisible: boolean;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
-  ocrData: { text: string; box: number[][] }[];
-  onUpdateOCRData: (data: { text: string; box: number[][] }[]) => void;
+  // Updated for frame support
+  ocrData: OcrFrame;
+  onUpdateOCRData: (
+    modelId: string,
+    data: { text: string; box: number[][] }[],
+  ) => void;
   chatId: string | null;
   inputValue: string;
   onInputChange: (value: string) => void;
@@ -96,6 +101,12 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [showScrollbar, setShowScrollbar] = useState(false);
 
+  // Request ID to handle race conditions (Bug 3 fix)
+  const scanRequestRef = useRef(0);
+
+  // Cancellation ref to prevent state updates after cancel
+  const cancelledRef = useRef(false);
+
   const viewerRef = useRef<HTMLDivElement>(null);
   const imgWrapRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -114,8 +125,17 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       activeProfileId,
     );
 
+  // Get current model data
+  const currentModelData = ocrData[currentOcrModel] || [];
+
+  // Map OcrRegion[] to format expected by ImageTextCanvas
+  const displayData = currentModelData.map((d) => ({
+    text: d.text,
+    box: d.bbox,
+  }));
+
   const { svgRef, handleTextMouseDown } = useTextSelection({
-    data: ocrData,
+    data: displayData,
     onSelectionComplete: (selection: Selection) => {
       OCRMenuRef.current?.showStandardMenu(selection);
     },
@@ -129,18 +149,33 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     hasScannedRef.current = false;
     prevImageBase64Ref.current = currentBase64;
     setLoading(false);
+    cancelledRef.current = false;
   }
 
   const scan = useCallback(
-    async (modelId?: string) => {
+    async (modelId?: string, requestId?: number) => {
       if (!startupImage?.base64 || !ocrEnabled) return;
 
       const currentChatId = chatId;
       const modelToUse = modelId || currentOcrModel;
 
-      console.log(`Scanning with model: ${modelToUse}`);
+      // Check if we already have data in the frame
+      if (ocrData[modelToUse]) {
+        console.log(
+          `[ImageShell] Data already exists for model: ${modelToUse}`,
+        );
+        return; // Already scanned/cached
+      }
+
+      console.log(
+        `[ImageShell] Scanning with model: ${modelToUse} (Request ID: ${requestId})`,
+      );
       setLoading(true);
       setErrorDialog(null);
+
+      // We don't use cancelledRef anymore for logic, using requestId
+      // kept for manual cancel button
+      cancelledRef.current = false;
 
       try {
         let imageData: string;
@@ -183,12 +218,29 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           modelName: modelToUse,
         });
 
+        // Check if this request is still the active one
+        if (requestId !== undefined && requestId !== scanRequestRef.current) {
+          console.log(
+            `[ImageShell] Ignoring result from old request ID: ${requestId} (Current: ${scanRequestRef.current})`,
+          );
+          return;
+        }
+
+        // Check manual cancellation
+        if (cancelledRef.current) {
+          console.log(
+            "[ImageShell] Scan result ignored due to manual cancellation",
+          );
+          return;
+        }
+
         if (currentChatId === chatId) {
           const converted = results.map((r) => ({
             text: r.text,
             box: r.box_coords,
           }));
-          onUpdateOCRData(converted);
+          console.log(`[ImageShell] Updating OCR data for ${modelToUse}`);
+          onUpdateOCRData(modelToUse, converted);
 
           if (
             autoExpandOCR &&
@@ -201,12 +253,28 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           hasScannedRef.current = true;
         }
       } catch (e: any) {
+        // Ignore if replaced by new request
+        if (requestId !== undefined && requestId !== scanRequestRef.current) {
+          return;
+        }
+
+        if (
+          cancelledRef.current ||
+          e.toString().includes("cancelled") ||
+          e.toString().includes("Download Cancelled")
+        ) {
+          return;
+        }
+
         if (currentChatId === chatId) {
           setErrorDialog(getErrorDialog(e.toString()));
         }
       } finally {
-        if (currentChatId === chatId) {
-          setLoading(false);
+        // Only stop loading if THIS was the active request and wasn't manually cancelled
+        if (currentChatId === chatId && !cancelledRef.current) {
+          if (requestId === undefined || requestId === scanRequestRef.current) {
+            setLoading(false);
+          }
         }
       }
     },
@@ -219,28 +287,34 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       isExpanded,
       onUpdateOCRData,
       currentOcrModel,
+      ocrData,
     ],
   );
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log("Cancelling OCR job...");
+    cancelledRef.current = true;
+    // Increment request ID so any pending finish won't touch UI
+    scanRequestRef.current += 1;
+    setLoading(false);
+    cancelOcrJob();
+  };
 
   useEffect(() => {
     if (
       startupImage &&
       !startupImage.fromHistory &&
-      ocrData.length === 0 &&
+      !ocrData[currentOcrModel] &&
       !loading &&
       !errorDialog &&
-      !hasScannedRef.current
+      !hasScannedRef.current &&
+      !cancelledRef.current
     ) {
-      scan(currentOcrModel);
+      // Startup scan - use current requestId
+      scan(currentOcrModel, scanRequestRef.current);
     }
-  }, [
-    startupImage,
-    ocrData.length,
-    loading,
-    errorDialog,
-    scan,
-    currentOcrModel,
-  ]);
+  }, [startupImage, ocrData, loading, errorDialog, scan, currentOcrModel]);
 
   const prevModelRef = useRef(currentOcrModel);
   const prevImageIdRef = useRef(startupImage?.imageId);
@@ -253,16 +327,30 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     prevImageIdRef.current = startupImage?.imageId;
 
     if (imageChanged) {
+      cancelledRef.current = false;
+      scanRequestRef.current += 1; // New image = new request sequence
       return;
     }
 
     if (startupImage && modelChanged) {
-      console.log(`Model changed to ${currentOcrModel}, re-scanning...`);
-      onUpdateOCRData([]);
+      console.log(`Model changed to ${currentOcrModel}`);
 
-      setTimeout(() => scan(currentOcrModel), 50);
+      // Start new request generation
+      scanRequestRef.current += 1;
+      const newRequestId = scanRequestRef.current;
+
+      cancelOcrJob();
+      setLoading(false);
+      cancelledRef.current = false;
+
+      setTimeout(() => {
+        // Ensure we only scan if the request ID hasn't changed AGAIN
+        if (newRequestId === scanRequestRef.current) {
+          scan(currentOcrModel, newRequestId);
+        }
+      }, 50);
     }
-  }, [currentOcrModel, startupImage, scan, onUpdateOCRData]);
+  }, [currentOcrModel, startupImage, scan]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
@@ -420,12 +508,12 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   };
 
   const handleTranslateAll = useCallback(() => {
-    if (ocrData.length === 0) return;
-    const allText = ocrData.map((item) => item.text).join(" ");
+    if (displayData.length === 0) return;
+    const allText = displayData.map((item) => item.text).join(" ");
     if (allText.trim()) {
       invoke("open_external_url", { url: generateTranslateUrl(allText) });
     }
-  }, [ocrData]);
+  }, [displayData]);
 
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -499,6 +587,26 @@ export const ImageShell: React.FC<ImageShellProps> = ({
             title={loading ? "Processing..." : undefined}
           >
             <img src={imageSrc} alt="Thumbnail" className={styles.miniThumb} />
+            {loading && (
+              <div
+                className={styles.cancelButton}
+                onClick={handleCancel}
+                title="Cancel OCR"
+              >
+                <svg
+                  className={styles.cancelIcon}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </div>
+            )}
           </div>
 
           <div className={styles.inputContainer}>
@@ -509,7 +617,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
               onTranslateClick={handleTranslateAll}
               onCollapse={toggleExpand}
               isLensLoading={isLensLoading}
-              isTranslateDisabled={ocrData.length === 0}
+              isTranslateDisabled={displayData.length === 0}
               isOCRLoading={loading}
               isExpanded={isExpanded}
               placeholder="Add to your search"
@@ -542,7 +650,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
                     className={styles.bigImage}
                   />
                   <ImageTextCanvas
-                    data={ocrData}
+                    data={displayData}
                     size={size}
                     svgRef={svgRef}
                     onTextMouseDown={handleTextMouseDown}
@@ -567,7 +675,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
 
       <OCRMenu
         ref={OCRMenuRef}
-        data={ocrData}
+        data={displayData}
         size={size}
         imgRef={imgRef}
         imgWrapRef={imgWrapRef}

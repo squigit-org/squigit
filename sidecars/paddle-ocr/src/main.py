@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-os.environ["OMP_NUM_THREADS"] = "2"
-os.environ["OPENBLAS_NUM_THREADS"] = "2"
-os.environ["MKL_NUM_THREADS"] = "2"
-os.environ["NUMEXPR_NUM_THREADS"] = "2"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_WAIT_POLICY"] = "PASSIVE"
 
 """
@@ -123,22 +123,68 @@ def process_base64(base64_data: str, config_dict: dict = None) -> int:
 
 def process_stdin() -> int:
     """
-    Process IPC request from stdin.
+    Process IPC request from stdin using length-prefixed protocol.
     
-    Reads JSON request with format:
+    Protocol:
+    1. Read first line: payload length in bytes
+    2. Read exactly that many bytes: JSON payload
+    3. Stdin stays open — a daemon thread monitors it for CANCEL signal
+    
+    JSON format:
     - {"type": "path", "data": "/path/to/image.png", "config": {...}}
     - {"type": "base64", "data": "iVBORw0KGgo...", "config": {...}}
     
-    Config object is optional and maps to EngineConfig fields.
-    
-    @return Exit code (0 for success, 1 for error).
+    @return Exit code (0 for success, 1 for error, 2 for cancelled).
     """
+    import threading
+    
+    def _cancel_listener():
+        """
+        Daemon thread: reads stdin lines after the payload.
+        If 'CANCEL' is received, immediately terminates the process.
+        os._exit(2) works even when the main thread is deep in C extensions
+        (OpenCV/PaddlePaddle), making it cross-platform safe.
+        """
+        try:
+            for line in sys.stdin:
+                if line.strip().upper() == "CANCEL":
+                    os._exit(2)
+        except Exception:
+            pass  # stdin closed or broken pipe — main thread handles exit
+    
     try:
-        raw_input = sys.stdin.read().strip()
-        if not raw_input:
-            error = {"error": "Empty stdin input"}
-            print(json.dumps(error))
-            return 1
+        # Read length-prefixed payload
+        length_line = sys.stdin.readline().strip()
+        if not length_line:
+            # Fallback: try to read all remaining stdin (legacy compat)
+            raw_input = sys.stdin.read().strip()
+            if not raw_input:
+                error = {"error": "Empty stdin input"}
+                print(json.dumps(error))
+                return 1
+        else:
+            try:
+                payload_len = int(length_line)
+            except ValueError:
+                # Not a number — treat the line itself as the start of raw JSON
+                # (legacy mode: entire JSON sent without length prefix)
+                remaining = sys.stdin.read()
+                raw_input = (length_line + remaining).strip()
+                if not raw_input:
+                    error = {"error": "Empty stdin input"}
+                    print(json.dumps(error))
+                    return 1
+            else:
+                raw_input = sys.stdin.read(payload_len)
+                if not raw_input:
+                    error = {"error": "Empty payload after length prefix"}
+                    print(json.dumps(error))
+                    return 1
+        
+        # Start cancel listener AFTER reading the payload
+        # (stdin is now free for cancel signals)
+        cancel_thread = threading.Thread(target=_cancel_listener, daemon=True)
+        cancel_thread.start()
         
         request = json.loads(raw_input)
         
@@ -176,9 +222,9 @@ def main() -> int:
     
     Determines mode based on command-line arguments:
     - With args: CLI mode (process file path)
-    - Without args: IPC mode (read from stdin)
+    - Without args: IPC mode (read from stdin with cancel support)
     
-    @return Exit code (0 for success, 1 for error).
+    @return Exit code (0 for success, 1 for error, 2 for cancelled).
     """
     if len(sys.argv) >= 2:
         return process_path(sys.argv[1])
@@ -188,3 +234,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

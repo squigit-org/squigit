@@ -4,7 +4,7 @@
 //! Chat storage Tauri commands.
 
 use ops_chat_storage::{
-    ChatData, ChatMessage, ChatMetadata, ChatStorage, OcrRegion, StoredImage,
+    ChatData, ChatMessage, ChatMetadata, ChatStorage, OcrFrame, OcrRegion, StoredImage,
 };
 use ops_profile_store::ProfileStore;
 
@@ -115,18 +115,32 @@ pub fn overwrite_chat_messages(chat_id: String, messages: Vec<ChatMessage>) -> R
 // OCR Commands
 // =============================================================================
 
-/// Save OCR data for a chat.
+/// Save OCR data for a specific model.
 #[tauri::command]
-pub fn save_ocr_data(chat_id: String, ocr_data: Vec<OcrRegion>) -> Result<(), String> {
+pub fn save_ocr_data(chat_id: String, model_id: String, ocr_data: Vec<OcrRegion>) -> Result<(), String> {
     let storage = get_active_storage()?;
-    storage.save_ocr_data(&chat_id, &ocr_data).map_err(|e| e.to_string())
+    storage.save_ocr_data(&chat_id, &model_id, &ocr_data).map_err(|e| e.to_string())
 }
 
-/// Get OCR data for a chat.
+/// Get OCR data for a specific model.
 #[tauri::command]
-pub fn get_ocr_data(chat_id: String) -> Result<Vec<OcrRegion>, String> {
+pub fn get_ocr_data(chat_id: String, model_id: String) -> Result<Option<Vec<OcrRegion>>, String> {
     let storage = get_active_storage()?;
-    storage.get_ocr_data(&chat_id).map_err(|e| e.to_string())
+    storage.get_ocr_data(&chat_id, &model_id).map_err(|e| e.to_string())
+}
+
+/// Get the entire OCR frame for a chat.
+#[tauri::command]
+pub fn get_ocr_frame(chat_id: String) -> Result<OcrFrame, String> {
+    let storage = get_active_storage()?;
+    storage.get_ocr_frame(&chat_id).map_err(|e| e.to_string())
+}
+
+/// Initialize OCR frame with null values for given model IDs.
+#[tauri::command]
+pub fn init_ocr_frame(chat_id: String, model_ids: Vec<String>) -> Result<(), String> {
+    let storage = get_active_storage()?;
+    storage.init_ocr_frame(&chat_id, &model_ids).map_err(|e| e.to_string())
 }
 
 // =============================================================================

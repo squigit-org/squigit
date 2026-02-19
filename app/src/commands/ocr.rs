@@ -3,7 +3,7 @@
 
 //! OCR command module for Tauri-Python IPC.
 //!
-//! This module provides a Tauri command to run OCR on images
+//! This module provides Tauri commands to run and cancel OCR on images
 //! using the PaddleOCR Python sidecar via stdin/stdout IPC.
 //!
 //! Safety controls:
@@ -12,6 +12,7 @@
 //! - I/O priority via ionice on Linux
 //! - Timeout with automatic process kill (120s default)
 //! - Single-job mutex to prevent concurrent OCR calls
+//! - Cancellation via stdin CANCEL signal + fallback kill
 
 use serde::{Deserialize, Serialize};
 use std::process::Stdio;
@@ -22,6 +23,7 @@ use tokio::sync::Mutex;
 use tokio::time::{timeout, Duration};
 
 use crate::services::models::ModelManager;
+use crate::state::{AppState, OcrJobHandle};
 
 /// Maximum wall-clock time for a single OCR job (seconds).
 const OCR_TIMEOUT_SECS: u64 = 120;
@@ -73,6 +75,24 @@ struct OcrError {
     error: String,
 }
 
+/// Send CANCEL to sidecar stdin and wait for graceful shutdown,
+/// with fallback to kill if the process doesn't exit in time.
+async fn cancel_job_handle(mut handle: OcrJobHandle) {
+    // Send CANCEL via stdin
+    let _ = handle.stdin.write_all(b"CANCEL\n").await;
+    let _ = handle.stdin.flush().await;
+
+    // Wait 500ms for graceful exit (Python os._exit(2))
+    match timeout(Duration::from_millis(500), handle.child.wait()).await {
+        Ok(_) => {} // Process exited
+        Err(_) => {
+            // Fallback: force kill
+            let _ = handle.child.kill().await;
+            let _ = handle.child.wait().await;
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn ocr_image(
     app: tauri::AppHandle,
@@ -81,6 +101,16 @@ pub async fn ocr_image(
     model_name: Option<String>,
 ) -> Result<Vec<OcrBox>, String> {
     let _guard = OCR_LOCK.lock().await;
+
+    let state = app.state::<AppState>();
+
+    // Cancel any lingering previous job (defensive)
+    {
+        let mut job_lock = state.ocr_job.lock().await;
+        if let Some(old_handle) = job_lock.take() {
+            cancel_job_handle(old_handle).await;
+        }
+    }
 
     let sidecar_path = app
         .path()
@@ -108,7 +138,6 @@ pub async fn ocr_image(
                 rec_model_dir: Some(model_dir.to_string_lossy().to_string()),
                 cls_model_dir: None,
             });
-        } else {
         }
     }
 
@@ -130,10 +159,10 @@ pub async fn ocr_image(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    cmd.env("OMP_NUM_THREADS", "2")
-        .env("OPENBLAS_NUM_THREADS", "2")
-        .env("MKL_NUM_THREADS", "2")
-        .env("NUMEXPR_NUM_THREADS", "2")
+    cmd.env("OMP_NUM_THREADS", "1")
+        .env("OPENBLAS_NUM_THREADS", "1")
+        .env("MKL_NUM_THREADS", "1")
+        .env("NUMEXPR_NUM_THREADS", "1")
         .env("OMP_WAIT_POLICY", "PASSIVE");
 
     #[cfg(windows)]
@@ -166,53 +195,120 @@ pub async fn ocr_image(
         .spawn()
         .map_err(|e| format!("Failed to spawn OCR sidecar: {}", e))?;
 
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(request_json.as_bytes())
-            .await
-            .map_err(|e| format!("Failed to write to sidecar stdin: {}", e))?;
+    // Write length-prefixed payload, then keep stdin open for cancel signals
+    let mut stdin = child.stdin.take()
+        .ok_or_else(|| "Failed to get sidecar stdin".to_string())?;
 
-        drop(stdin);
+    let payload_bytes = request_json.as_bytes();
+    let length_header = format!("{}\n", payload_bytes.len());
+
+    stdin.write_all(length_header.as_bytes()).await
+        .map_err(|e| format!("Failed to write length header: {}", e))?;
+    stdin.write_all(payload_bytes).await
+        .map_err(|e| format!("Failed to write payload: {}", e))?;
+    stdin.flush().await
+        .map_err(|e| format!("Failed to flush stdin: {}", e))?;
+
+    // Store the job handle for external cancellation.
+    // We need stdout/stderr before storing, so take them first.
+    let stdout_pipe = child.stdout.take();
+    let stderr_pipe = child.stderr.take();
+
+    {
+        let mut job_lock = state.ocr_job.lock().await;
+        *job_lock = Some(OcrJobHandle { stdin, child });
     }
 
-    let result = timeout(
-        Duration::from_secs(OCR_TIMEOUT_SECS),
-        child.wait_with_output(),
-    )
-    .await;
+    // Wait for the child to exit by polling through the stored handle
+    let exit_status = {
+        let wait_result = timeout(Duration::from_secs(OCR_TIMEOUT_SECS), async {
+            loop {
+                let mut job_lock = state.ocr_job.lock().await;
+                if let Some(ref mut handle) = *job_lock {
+                    match handle.child.try_wait() {
+                        Ok(Some(status)) => return Ok(status),
+                        Ok(None) => {
+                            drop(job_lock);
+                            tokio::time::sleep(Duration::from_millis(50)).await;
+                        }
+                        Err(e) => return Err(format!("Failed to wait for sidecar: {}", e)),
+                    }
+                } else {
+                    // Job was cancelled externally
+                    return Err("OCR job was cancelled".to_string());
+                }
+            }
+        })
+        .await;
 
-    let output = match result {
-        Ok(Ok(output)) => output,
-        Ok(Err(e)) => {
-            return Err(format!("Failed to wait for sidecar: {}", e));
+        // Clean up job handle
+        {
+            let mut job_lock = state.ocr_job.lock().await;
+            *job_lock = None;
         }
-        Err(_) => {
-            eprintln!(
-                "OCR sidecar timed out after {}s, killing process",
-                OCR_TIMEOUT_SECS
-            );
 
-            return Err(format!(
-                "OCR timed out after {}s. The image may be too large or complex. \
-                 The process has been terminated to protect system stability.",
-                OCR_TIMEOUT_SECS
-            ));
+        match wait_result {
+            Ok(Ok(status)) => status,
+            Ok(Err(e)) => return Err(e),
+            Err(_) => {
+                // Timeout
+                eprintln!(
+                    "OCR sidecar timed out after {}s, killing process",
+                    OCR_TIMEOUT_SECS
+                );
+
+                {
+                    let mut job_lock = state.ocr_job.lock().await;
+                    if let Some(handle) = job_lock.take() {
+                        cancel_job_handle(handle).await;
+                    }
+                }
+
+                return Err(format!(
+                    "OCR timed out after {}s. The image may be too large or complex. \
+                     The process has been terminated to protect system stability.",
+                    OCR_TIMEOUT_SECS
+                ));
+            }
         }
     };
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("OCR sidecar failed: {}", stderr));
+    // Exit code 2 = cancelled by our stdin CANCEL signal
+    if let Some(code) = exit_status.code() {
+        if code == 2 {
+            return Err("OCR job was cancelled".to_string());
+        }
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !exit_status.success() {
+        // Read stderr for error details
+        let stderr_text = if let Some(mut pipe) = stderr_pipe {
+            let mut buf = Vec::new();
+            let _ = tokio::io::AsyncReadExt::read_to_end(&mut pipe, &mut buf).await;
+            String::from_utf8_lossy(&buf).to_string()
+        } else {
+            String::new()
+        };
+        return Err(format!("OCR sidecar failed: {}", stderr_text));
+    }
 
-    if let Ok(err) = serde_json::from_str::<OcrError>(&stdout) {
+    // Read stdout for results
+    let stdout_text = if let Some(mut pipe) = stdout_pipe {
+        let mut buf = Vec::new();
+        tokio::io::AsyncReadExt::read_to_end(&mut pipe, &mut buf)
+            .await
+            .map_err(|e| format!("Failed to read sidecar stdout: {}", e))?;
+        String::from_utf8_lossy(&buf).to_string()
+    } else {
+        return Err("No stdout from sidecar".to_string());
+    };
+
+    if let Ok(err) = serde_json::from_str::<OcrError>(&stdout_text) {
         return Err(err.error);
     }
 
-    let raw_results: Vec<RawOcrResult> = serde_json::from_str(&stdout)
-        .map_err(|e| format!("Failed to parse OCR output: {} - {}", e, stdout))?;
+    let raw_results: Vec<RawOcrResult> = serde_json::from_str(&stdout_text)
+        .map_err(|e| format!("Failed to parse OCR output: {} - {}", e, stdout_text))?;
 
     let results: Vec<OcrBox> = raw_results
         .into_iter()
@@ -224,6 +320,23 @@ pub async fn ocr_image(
         .collect();
 
     Ok(results)
+}
+
+/// Cancel the currently running OCR job.
+/// Sends CANCEL to the sidecar's stdin, waits briefly, then force-kills.
+/// This is fire-and-forget from the frontend's perspective.
+#[tauri::command]
+pub async fn cancel_ocr_job(app: tauri::AppHandle) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    let mut job_lock = state.ocr_job.lock().await;
+
+    if let Some(handle) = job_lock.take() {
+        tokio::spawn(async move {
+            cancel_job_handle(handle).await;
+        });
+    }
+
+    Ok(())
 }
 
 fn get_sidecar_name() -> String {
