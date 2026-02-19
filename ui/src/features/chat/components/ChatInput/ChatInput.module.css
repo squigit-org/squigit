@@ -272,7 +272,7 @@
 
 /* ─── VoiceButton (migrated from VoiceInput/VoiceInput.module.css) ─── */
 
-.container {
+.voiceContainer {
   display: flex;
   align-items: center;
   gap: 4px;

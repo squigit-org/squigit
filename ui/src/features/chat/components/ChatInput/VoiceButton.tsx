@@ -108,7 +108,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
   }, [disabled, isRecording]);
 
   return (
-    <div className={styles.container}>
+    <div className={styles.voiceContainer}>
       <button
         className={`${styles.micButton} ${isRecording ? styles.recording : ""}`}
         onClick={toggleRecording}
