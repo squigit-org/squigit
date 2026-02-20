@@ -222,8 +222,17 @@ export const useShell = () => {
       }
     });
 
+    const unlistenLoadChat = listen<string>("load-chat", async (event) => {
+      const chatId = event.payload;
+      if (chatId) {
+        console.log("Triggering frontend transition to new capture:", chatId);
+        await handleSelectChat(chatId);
+      }
+    });
+
     return () => {
       unlisten.then((f) => f());
+      unlistenLoadChat.then((f) => f());
     };
   }, []);
 

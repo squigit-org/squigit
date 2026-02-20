@@ -51,6 +51,20 @@ pub fn capture() -> Result<()> {
     println!("  Copying binary to {}", dst_binary_path.display());
     fs::copy(&src_binary_path, &dst_binary_path)?;
 
+    // Also copy to target/debug/binaries for dev
+    let debug_binaries = project_root().join("target").join("debug").join("binaries");
+    fs::create_dir_all(&debug_binaries)?;
+    let debug_dst_path = debug_binaries.join(&dst_binary_name);
+    println!("  Copying binary to {}", debug_dst_path.display());
+    fs::copy(&src_binary_path, &debug_dst_path)?;
+
+    // Copy qt-runtime to target/debug/binaries for dev too
+    let debug_qt_runtime_dst = debug_binaries.join("qt-runtime");
+    if debug_qt_runtime_dst.exists() {
+        fs::remove_dir_all(&debug_qt_runtime_dst)?;
+    }
+    copy_dir_all(&qt_runtime_dst, &debug_qt_runtime_dst)?;
+
     Ok(())
 }
 

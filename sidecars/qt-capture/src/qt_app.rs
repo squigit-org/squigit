@@ -9,6 +9,9 @@ use sys_display_hotplug::DisplayWatcher;
 use sys_shutter_suppressor::AudioGuard;
 use sys_single_instance::InstanceLock;
 
+use ops_chat_storage::{ChatData, ChatMetadata, ChatStorage};
+use ops_profile_store::ProfileStore;
+
 use crate::paths::QtPaths;
 
 pub struct QtApp {
@@ -79,23 +82,48 @@ impl QtApp {
                             }
                             _ => {
                                 if trimmed.starts_with('/') && capture_success {
-                                    // Store in CAS
-                                    match ops_chat_storage::ChatStorage::new() {
-                                        Ok(storage) => {
-                                            match storage.store_image_from_path(trimmed) {
-                                                Ok(stored) => {
-                                                    capture_path = Some(stored.path);
-                                                    // Try to delete original temp file
-                                                    let _ = std::fs::remove_file(trimmed);
+                                    // Store in active profile's CAS
+                                    match ProfileStore::new() {
+                                        Ok(profile_store) => {
+                                            if let Ok(Some(active_id)) = profile_store.get_active_profile_id() {
+                                                let chats_dir = profile_store.get_chats_dir(&active_id);
+                                                match ChatStorage::with_base_dir(chats_dir) {
+                                                    Ok(storage) => {
+                                                        match storage.store_image_from_path(trimmed) {
+                                                            Ok(stored) => {
+                                                                // Create a new chat for the captured image
+                                                                let metadata = ChatMetadata::new(
+                                                                    "New Chat".to_string(), 
+                                                                    stored.hash.clone(), 
+                                                                    None
+                                                                );
+                                                                let chat = ChatData::new(metadata.clone());
+                                                                if let Err(e) = storage.save_chat(&chat) {
+                                                                    eprintln!("[QtWrapper] Failed to save chat: {}", e);
+                                                                }
+                                                                
+                                                                capture_path = Some(metadata.id.clone()); // We return chat ID, not file path
+                                                                // Try to delete original temp file
+                                                                let _ = std::fs::remove_file(trimmed);
+                                                            }
+                                                            Err(e) => {
+                                                                eprintln!("[QtWrapper] Failed to store image: {}", e);
+                                                                capture_path = Some(trimmed.to_string());
+                                                            }
+                                                        }
+                                                    }
+                                                    Err(e) => {
+                                                        eprintln!("[QtWrapper] Failed to init storage: {}", e);
+                                                        capture_path = Some(trimmed.to_string());
+                                                    }
                                                 }
-                                                Err(e) => {
-                                                    eprintln!("[QtWrapper] Failed to store image: {}", e);
-                                                    capture_path = Some(trimmed.to_string());
-                                                }
+                                            } else {
+                                                eprintln!("[QtWrapper] No active profile found. Guest mode doesn't support direct capture to storage yet.");
+                                                capture_path = Some(trimmed.to_string());
                                             }
                                         }
                                         Err(e) => {
-                                            eprintln!("[QtWrapper] Failed to init storage: {}", e);
+                                            eprintln!("[QtWrapper] Failed to init profile store: {}", e);
                                             capture_path = Some(trimmed.to_string());
                                         }
                                     }
@@ -112,8 +140,8 @@ impl QtApp {
                 }
             }
 
-            if let Some(path) = capture_path {
-                println!("{}", path);
+            if let Some(res) = capture_path {
+                println!("CHAT_ID:{}", res);
                 ExitCode::from(0)
             } else {
                 ExitCode::from(1)

@@ -41,8 +41,12 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "externalBin": ["binaries/ocr-engine", "binaries/whisper-stt"],
-    "resources": ["../sidecars/whisper-stt/models/*"],
+    "externalBin": [
+      "binaries/ocr-engine",
+      "binaries/whisper-stt",
+      "binaries/capture-engine"
+    ],
+    "resources": ["../sidecars/whisper-stt/models/*", "binaries/qt-runtime/*"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
