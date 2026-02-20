@@ -35,22 +35,38 @@ impl LinuxHandle {
         let callback = Arc::new(callback);
 
         let thread = if is_wayland {
-            eprintln!("[sys-global-shortcut] Wayland session detected, using XDG Portal");
+            eprintln!("[sys-global-shortcut] Wayland session detected, trying XDG Portal...");
             let cb = callback.clone();
             std::thread::Builder::new()
-                .name("global-shortcut-wayland".into())
+                .name("global-shortcut-linux".into())
                 .spawn(move || {
+                    // Try portal first
                     let rt = tokio::runtime::Builder::new_current_thread()
                         .enable_all()
                         .build()
                         .expect("Failed to create tokio runtime");
 
-                    rt.block_on(async move {
-                        match wayland::run_portal(config, cb, shutdown_clone).await {
-                            Ok(()) => eprintln!("[sys-global-shortcut] Portal listener exited"),
-                            Err(e) => eprintln!("[sys-global-shortcut] Portal failed: {}", e),
+                    let portal_failed = rt.block_on(async {
+                        match wayland::run_portal(config.linux_trigger.clone(), config.linux_description.clone(), cb.clone(), shutdown_clone.clone()).await {
+                            Ok(()) => {
+                                eprintln!("[sys-global-shortcut] Portal listener exited");
+                                false
+                            }
+                            Err(e) => {
+                                eprintln!("[sys-global-shortcut] Portal unavailable: {}", e);
+                                true
+                            }
                         }
                     });
+
+                    // Fallback to X11 via XWayland (app uses GDK_BACKEND=x11)
+                    if portal_failed && !shutdown_clone.load(Ordering::SeqCst) {
+                        eprintln!("[sys-global-shortcut] Falling back to XGrabKey (XWayland)...");
+                        match x11::run_xgrab(config, cb, shutdown_clone) {
+                            Ok(()) => eprintln!("[sys-global-shortcut] X11 listener exited"),
+                            Err(e) => eprintln!("[sys-global-shortcut] X11 fallback also failed: {}", e),
+                        }
+                    }
                 })
                 .map_err(|e| format!("Thread spawn failed: {}", e))?
         } else {
@@ -336,7 +352,8 @@ mod wayland {
     }
 
     pub(super) async fn run_portal(
-        config: ShortcutConfig,
+        linux_trigger: String,
+        linux_description: String,
         callback: Arc<dyn Fn() + Send + Sync>,
         shutdown: Arc<AtomicBool>,
     ) -> Result<(), String> {
@@ -394,11 +411,11 @@ mod wayland {
         let mut shortcut_props: HashMap<&str, Value<'_>> = HashMap::new();
         shortcut_props.insert(
             "description",
-            Value::from(config.linux_description.as_str()),
+            Value::from(linux_description.as_str()),
         );
         shortcut_props.insert(
             "preferred_trigger",
-            Value::from(config.linux_trigger.as_str()),
+            Value::from(linux_trigger.as_str()),
         );
 
         let shortcuts: Vec<(&str, HashMap<&str, Value<'_>>)> =
