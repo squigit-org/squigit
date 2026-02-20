@@ -9,17 +9,17 @@ import { OcrModelStatus, AVAILABLE_MODELS } from "../types";
 import { getInstalledModelIds } from "../services";
 import { downloadModel } from "../services/modelDownloader";
 
-export const useModels = () => {
-  const [models, setModels] = useState<OcrModelStatus[]>(() =>
+export const useOCRModels = () => {
+  const [ocrModels, setOCRModels] = useState<OcrModelStatus[]>(() =>
     AVAILABLE_MODELS.map((m) => ({ ...m, state: "idle" })),
   );
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshModels = useCallback(async () => {
+  const refreshOCRModels = useCallback(async () => {
     setIsLoading(true);
     try {
       const installedIds = await getInstalledModelIds();
-      setModels((prevModels) =>
+      setOCRModels((prevModels) =>
         prevModels.map((model) => {
           const isInstalled = installedIds.includes(model.id);
           if (isInstalled) {
@@ -38,20 +38,20 @@ export const useModels = () => {
   }, []);
 
   useEffect(() => {
-    setModels((prev) =>
+    setOCRModels((prev) =>
       prev.map((m) =>
         m.id === "pp-ocr-v4-en" ? { ...m, state: "downloaded" } : m,
       ),
     );
-    refreshModels();
-  }, [refreshModels]);
+    refreshOCRModels();
+  }, [refreshOCRModels]);
 
   const startDownload = useCallback(
     async (modelId: string) => {
-      const modelToDownload = models.find((m) => m.id === modelId);
+      const modelToDownload = ocrModels.find((m) => m.id === modelId);
       if (!modelToDownload || modelToDownload.state !== "idle") return;
 
-      setModels((prev) =>
+      setOCRModels((prev) =>
         prev.map((m) =>
           m.id === modelId ? { ...m, state: "downloading" } : m,
         ),
@@ -59,21 +59,21 @@ export const useModels = () => {
 
       try {
         await downloadModel(modelToDownload);
-        setModels((prev) =>
+        setOCRModels((prev) =>
           prev.map((m) =>
             m.id === modelId ? { ...m, state: "downloaded" } : m,
           ),
         );
       } catch (error) {
         console.error(`Download failed for ${modelId}:`, error);
-        setModels((prev) =>
+        setOCRModels((prev) =>
           prev.map((m) => (m.id === modelId ? { ...m, state: "idle" } : m)),
         );
         throw error;
       }
     },
-    [models],
+    [ocrModels],
   );
 
-  return { models, isLoading, refreshModels, startDownload };
+  return { ocrModels, isLoading, refreshOCRModels, startDownload };
 };

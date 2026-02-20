@@ -16,13 +16,12 @@ import { save } from "@tauri-apps/plugin-dialog";
 import {
   ImageToolbar,
   ImageSearchInput,
-  ImageTextCanvas,
   useGoogleLens,
-  useTextSelection,
   generateTranslateUrl,
   OCRMenu,
   type OCRMenuHandle,
 } from "@/features/image";
+import { OCRTextCanvas, useTextSelection } from "@/features/ocr";
 import styles from "./ImageShell.module.css";
 import { Dialog } from "@/primitives";
 import { type SettingsSection } from "@/shell/overlays";
@@ -49,7 +48,7 @@ export interface ImageShellProps {
   onDescribeEdits: (description: string) => void;
   isVisible: boolean;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
-  // Updated for frame support
+
   ocrData: OcrFrame;
   onUpdateOCRData: (
     modelId: string,
@@ -101,10 +100,8 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [showScrollbar, setShowScrollbar] = useState(false);
 
-  // Request ID to handle race conditions (Bug 3 fix)
   const scanRequestRef = useRef(0);
 
-  // Cancellation ref to prevent state updates after cancel
   const cancelledRef = useRef(false);
 
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -125,10 +122,8 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       activeProfileId,
     );
 
-  // Get current model data
   const currentModelData = ocrData[currentOcrModel] || [];
 
-  // Map OcrRegion[] to format expected by ImageTextCanvas
   const displayData = currentModelData.map((d) => ({
     text: d.text,
     box: d.bbox,
@@ -159,12 +154,11 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       const currentChatId = chatId;
       const modelToUse = modelId || currentOcrModel;
 
-      // Check if we already have data in the frame
       if (ocrData[modelToUse]) {
         console.log(
           `[ImageShell] Data already exists for model: ${modelToUse}`,
         );
-        return; // Already scanned/cached
+        return;
       }
 
       console.log(
@@ -173,8 +167,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       setLoading(true);
       setErrorDialog(null);
 
-      // We don't use cancelledRef anymore for logic, using requestId
-      // kept for manual cancel button
       cancelledRef.current = false;
 
       try {
@@ -218,7 +210,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           modelName: modelToUse,
         });
 
-        // Check if this request is still the active one
         if (requestId !== undefined && requestId !== scanRequestRef.current) {
           console.log(
             `[ImageShell] Ignoring result from old request ID: ${requestId} (Current: ${scanRequestRef.current})`,
@@ -226,7 +217,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           return;
         }
 
-        // Check manual cancellation
         if (cancelledRef.current) {
           console.log(
             "[ImageShell] Scan result ignored due to manual cancellation",
@@ -253,7 +243,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           hasScannedRef.current = true;
         }
       } catch (e: any) {
-        // Ignore if replaced by new request
         if (requestId !== undefined && requestId !== scanRequestRef.current) {
           return;
         }
@@ -270,7 +259,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           setErrorDialog(getErrorDialog(e.toString()));
         }
       } finally {
-        // Only stop loading if THIS was the active request and wasn't manually cancelled
         if (currentChatId === chatId && !cancelledRef.current) {
           if (requestId === undefined || requestId === scanRequestRef.current) {
             setLoading(false);
@@ -295,7 +283,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
     e.stopPropagation();
     console.log("Cancelling OCR job...");
     cancelledRef.current = true;
-    // Increment request ID so any pending finish won't touch UI
+
     scanRequestRef.current += 1;
     setLoading(false);
     cancelOcrJob();
@@ -313,7 +301,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       !hasScannedRef.current &&
       !cancelledRef.current
     ) {
-      // Startup scan - use current requestId
       scan(currentOcrModel, scanRequestRef.current);
     }
   }, [startupImage, ocrData, loading, errorDialog, scan, currentOcrModel]);
@@ -330,14 +317,13 @@ export const ImageShell: React.FC<ImageShellProps> = ({
 
     if (imageChanged) {
       cancelledRef.current = false;
-      scanRequestRef.current += 1; // New image = new request sequence
+      scanRequestRef.current += 1;
       return;
     }
 
     if (startupImage && modelChanged) {
       console.log(`Model changed to ${currentOcrModel}`);
 
-      // Start new request generation
       scanRequestRef.current += 1;
       const newRequestId = scanRequestRef.current;
 
@@ -348,7 +334,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       if (!currentOcrModel) return;
 
       setTimeout(() => {
-        // Ensure we only scan if the request ID hasn't changed AGAIN
         if (newRequestId === scanRequestRef.current) {
           scan(currentOcrModel, newRequestId);
         }
@@ -653,7 +638,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
                     draggable={false}
                     className={styles.bigImage}
                   />
-                  <ImageTextCanvas
+                  <OCRTextCanvas
                     data={displayData}
                     size={size}
                     svgRef={svgRef}

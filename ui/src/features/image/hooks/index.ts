@@ -5,4 +5,3 @@
  */
 
 export * from "./useGoogleLens";
-export * from "./useTextSelection";

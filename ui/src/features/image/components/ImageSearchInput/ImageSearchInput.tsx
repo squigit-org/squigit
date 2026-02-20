@@ -8,10 +8,10 @@ import React from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
 import { TextContextMenu } from "@/shell";
 import { useTextContextMenu } from "@/hooks";
-import styles from "./ImageSearchInput.module.css";
 import { useTextEditor } from "@/hooks/useTextEditor";
-import { OCRModelSwitcher } from "@/features/models/components/ModelSwitcher/ModelSwitcher"; // Import from original path even if renamed in code
+import { OCRModelSwitcher } from "@/features/ocr";
 import { SettingsSection } from "@/shell";
+import styles from "./ImageSearchInput.module.css";
 
 interface ImageSearchInputProps {
   value: string;

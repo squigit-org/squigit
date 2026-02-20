@@ -8,9 +8,11 @@ import React, { useCallback, useState } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/primitives";
 import { UserPreferences } from "@/lib/storage";
-import { ModelDownloader } from "@/features/models/components/ModelDownloader";
-import { useModelsStore } from "@/features/models/store";
-import { getModelById } from "@/features/models/services";
+import {
+  OCRModelDownloader,
+  useModelsStore,
+  getModelById,
+} from "@/features/ocr";
 
 interface ModelsSectionProps {
   localModel: string;
@@ -139,7 +141,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
 
       <div className={styles.divider} />
 
-      <ModelDownloader />
+      <OCRModelDownloader />
     </section>
   );
 };

@@ -6,5 +6,4 @@
 
 export * from "./ImageToolbar";
 export * from "./ImageSearchInput";
-export * from "./ImageTextCanvas";
 export * from "./ImageTextMenu";

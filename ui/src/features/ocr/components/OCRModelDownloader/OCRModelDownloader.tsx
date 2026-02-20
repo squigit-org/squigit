@@ -5,11 +5,11 @@
  */
 
 import React, { useState } from "react";
-import styles from "./ModelDownloader.module.css";
 import { Download, Check, Loader2, X } from "lucide-react";
 import { useModelsStore } from "../../store";
 import { Dialog } from "@/primitives/dialog/Dialog";
 import { getErrorDialog } from "@/lib/helpers/dialogs";
+import styles from "./OCRModelDownloader.module.css";
 
 const CircularProgress: React.FC<{ progress: number }> = ({ progress }) => (
   <div className={styles.circularProgress}>
@@ -51,7 +51,7 @@ const CircularSpinner: React.FC = () => (
   </div>
 );
 
-export const ModelDownloader: React.FC = () => {
+export const OCRModelDownloader: React.FC = () => {
   const models = useModelsStore((s) => s.models);
   const startDownload = useModelsStore((s) => s.startDownload);
   const cancelDownload = useModelsStore((s) => s.cancelDownload);

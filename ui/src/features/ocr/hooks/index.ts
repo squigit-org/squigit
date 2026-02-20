@@ -4,4 +4,5 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./ModelSwitcher";
+export * from "./useTextSelection";
+export * from "./useOCRModels";
