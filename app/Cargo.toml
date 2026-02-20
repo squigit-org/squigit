@@ -43,6 +43,7 @@ mime_guess = "2.0"
 opener = "0.8.3"
 tauri-plugin-updater = "2.9.0"
 tauri-plugin-process = "2.3.1"
+tauri-plugin-os = "2.0.0"
 webbrowser = "1.0.6"
 ops-chat-storage = { path = "../crates/ops-chat-storage" }
 ops-profile-store = { path = "../crates/ops-profile-store" }

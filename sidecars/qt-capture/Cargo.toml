@@ -13,3 +13,4 @@ sys-display-hotplug = { path = "../../crates/sys-display-hotplug" }
 sys-single-instance = { path = "../../crates/sys-single-instance" }
 sys-shutter-suppressor = { path = "../../crates/sys-shutter-suppressor" }
 ops-chat-storage = { path = "../../crates/ops-chat-storage" }
+ops-profile-store = { path = "../../crates/ops-profile-store" }

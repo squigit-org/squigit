@@ -439,6 +439,14 @@ export const useShell = () => {
       switch (actionId) {
         case "agree":
           setAgreedToTerms(true);
+          try {
+            const { type } = await import("@tauri-apps/plugin-os");
+            if (type() === "linux") {
+              await invoke("install_os_shortcut");
+            }
+          } catch (e) {
+            console.error("Failed to install OS shortcut", e);
+          }
           break;
         case "disagree":
           setAgreedToTerms(false);

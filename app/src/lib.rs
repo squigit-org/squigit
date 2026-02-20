@@ -43,18 +43,21 @@ use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+
     #[cfg(target_os = "linux")]
     std::env::set_var("GDK_BACKEND", "x11");
 
     Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())
         .manage(SpeechState::default())
         .invoke_handler(tauri::generate_handler![
+            commands::window::install_os_shortcut,
             // Image processing (legacy)
             process_image_path,
             process_image_bytes,
