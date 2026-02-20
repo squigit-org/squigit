@@ -7,4 +7,5 @@ pub mod models;
 pub mod network;
 pub mod security;
 pub mod theme;
+pub mod tray;
 pub mod window;

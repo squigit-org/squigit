@@ -158,6 +158,9 @@ pub fn run() {
 
             let (base_w, base_h) = (1030.0, 690.0);
 
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
             services::window::spawn_app_window(
                 &handle,
                 "main",
@@ -168,7 +171,23 @@ pub fn run() {
             )
             .expect("Failed to spawn main window");
 
+            // Set up system tray icon
+            services::tray::setup_tray(&handle)
+                .expect("Failed to setup tray icon");
+
+            // Intercept window close → hide instead of quit (keeps app in tray)
+            if let Some(window) = handle.get_webview_window("main") {
+                let win = window.clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        let _ = win.hide();
+                        api.prevent_close();
+                    }
+                });
+            }
+
             Ok(())
+
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
