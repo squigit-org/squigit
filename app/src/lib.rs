@@ -175,6 +175,25 @@ pub fn run() {
             services::tray::setup_tray(&handle)
                 .expect("Failed to setup tray icon");
 
+            // Register global shortcut: Super+Shift+A → toggle window
+            let shortcut_handle = handle.clone();
+            let _shortcut = sys_global_shortcut::ShortcutHandle::register(
+                sys_global_shortcut::ShortcutConfig {
+                    linux_trigger: "SUPER+SHIFT+a".into(),
+                    linux_description: "Toggle SnapLLM UI".into(),
+                    windows_modifiers: 0x0008 | 0x0004, // MOD_WIN | MOD_SHIFT
+                    windows_vk: 0x41,                    // VK_A
+                    macos_modifiers: 0x0100 | 0x0200,    // cmdKey | shiftKey
+                    macos_keycode: 0x00,                 // kVK_ANSI_A
+                },
+                move || services::tray::toggle_window(&shortcut_handle),
+            );
+
+            match &_shortcut {
+                Ok(_) => log::info!("Global shortcut registered successfully"),
+                Err(e) => log::warn!("Global shortcut registration failed (non-fatal): {}", e),
+            }
+
             // Intercept window close → hide instead of quit (keeps app in tray)
             if let Some(window) = handle.get_webview_window("main") {
                 let win = window.clone();

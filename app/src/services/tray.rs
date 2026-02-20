@@ -4,7 +4,7 @@
 use tauri::{AppHandle, Manager};
 
 /// Toggle the main window: show+focus if hidden, hide if visible.
-fn toggle_window(app: &AppHandle) {
+pub fn toggle_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
             let _ = window.hide();

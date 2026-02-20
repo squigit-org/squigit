@@ -56,6 +56,7 @@ log = "0.4"
 flate2 = "1.1.9"
 tar = "0.4.44"
 thiserror = "2.0.18"
+sys-global-shortcut = { path = "../crates/sys-global-shortcut" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = "0.9.7"
