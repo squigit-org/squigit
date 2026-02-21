@@ -90,6 +90,10 @@ const AppLayoutContent: React.FC = () => {
           onAction={(key) => {
             if (key === "confirm") {
               shell.system.openSettings("apikeys");
+            } else {
+              shell.chat.appendErrorMessage(
+                "Please configure your Gemini API key to continue.",
+              );
             }
             shell.setShowGeminiAuthDialog(false);
           }}
@@ -150,6 +154,10 @@ const AppLayoutContent: React.FC = () => {
         onAction={(key) => {
           if (key === "confirm") {
             shell.system.openSettings("apikeys");
+          } else {
+            shell.chat.appendErrorMessage(
+              "Please configure your Gemini API key to continue.",
+            );
           }
           shell.setShowGeminiAuthDialog(false);
         }}

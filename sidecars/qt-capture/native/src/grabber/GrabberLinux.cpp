@@ -19,6 +19,7 @@
 #include <QUrl>
 #include <QFile>
 #include <QTimer>
+#include <QWindow>
 #endif
 #include <cmath>
 #if defined(Q_OS_LINUX)
@@ -111,6 +112,14 @@ private:
     {
         std::vector<CapturedFrame> frames;
 
+        // Create a dummy window to get a valid X11 handle.
+        // Since we force xcb in main.cpp, this provides a handle the portal can verify.
+        QWindow dummyWindow;
+        dummyWindow.setFlags(Qt::FramelessWindowHint | Qt::WindowTransparentForInput);
+        dummyWindow.resize(1, 1);
+        dummyWindow.create();
+        QString parentWindow = QString("x11:%1").arg((quintptr)dummyWindow.winId(), 0, 16);
+        
         QDBusInterface portal(
             "org.freedesktop.portal.Desktop",
             "/org/freedesktop/portal/desktop",
@@ -145,14 +154,15 @@ private:
             &helper, SLOT(handleResponse(uint, QVariantMap)));
         QObject::connect(&helper, &PortalHelper::finished, &loop, &QEventLoop::quit);
 
-        QDBusReply<QDBusObjectPath> reply = portal.call("Screenshot", "", options);
+        QDBusReply<QDBusObjectPath> reply = portal.call("Screenshot", parentWindow, options);
         if (!reply.isValid())
         {
             qCritical() << "Portal call failed:" << reply.error().message();
             return frames;
         }
 
-        QTimer::singleShot(5000, &loop, &QEventLoop::quit);
+        // Increase timeout to 60s to allow user to read/click permission dialog
+        QTimer::singleShot(60000, &loop, &QEventLoop::quit);
 
         loop.exec();
 

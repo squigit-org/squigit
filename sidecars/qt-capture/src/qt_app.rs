@@ -53,7 +53,7 @@ impl QtApp {
 
         cmd.args(&self.args)
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit());
+            .stderr(Stdio::null());
 
         for (key, val) in paths.env_vars {
             cmd.env(key, val);

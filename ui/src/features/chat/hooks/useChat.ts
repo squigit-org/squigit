@@ -948,5 +948,6 @@ export const useChat = ({
     startSession,
     getCurrentState,
     restoreState,
+    appendErrorMessage,
   };
 };

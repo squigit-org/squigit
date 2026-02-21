@@ -110,6 +110,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     app.setApplicationName(APP_NAME);
+    app.setDesktopFileName("com.snapllm.capture");
     app.setOrganizationName(ORG_NAME);
     app.setApplicationVersion(APP_VERSION);
     app.setQuitOnLastWindowClosed(true);
