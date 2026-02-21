@@ -57,6 +57,10 @@ public:
     std::vector<CapturedFrame> captureAll() override
     {
 #if defined(Q_OS_LINUX)
+        // Check XDG_SESSION_TYPE — on Wayland we MUST use the portal because
+        // XWayland root grab returns a black screen.
+        // Note: main.cpp forces QT_QPA_PLATFORM=xcb for window overlays,
+        // but the portal is a pure D-Bus call and works regardless.
         QString sessionType = qgetenv("XDG_SESSION_TYPE").toLower();
         if (sessionType == "wayland")
         {
@@ -123,20 +127,30 @@ private:
         options["handle_token"] = token;
         options["interactive"] = false;
 
+        // Subscribe to the response signal BEFORE making the call to avoid
+        // a race condition where the portal responds before we connect.
+        // Predict the response path from our D-Bus sender name + token.
+        PortalHelper helper;
+        QEventLoop loop;
+
+        QString sender = QDBusConnection::sessionBus().baseService();
+        sender = sender.mid(1).replace('.', '_');
+        QString expectedPath = QString("/org/freedesktop/portal/desktop/request/%1/%2")
+                                   .arg(sender)
+                                   .arg(token);
+
+        QDBusConnection::sessionBus().connect(
+            "org.freedesktop.portal.Desktop", expectedPath,
+            "org.freedesktop.portal.Request", "Response",
+            &helper, SLOT(handleResponse(uint, QVariantMap)));
+        QObject::connect(&helper, &PortalHelper::finished, &loop, &QEventLoop::quit);
+
         QDBusReply<QDBusObjectPath> reply = portal.call("Screenshot", "", options);
         if (!reply.isValid())
         {
             qCritical() << "Portal call failed:" << reply.error().message();
             return frames;
         }
-
-        PortalHelper helper;
-        QEventLoop loop;
-        QDBusConnection::sessionBus().connect(
-            "org.freedesktop.portal.Desktop", reply.value().path(),
-            "org.freedesktop.portal.Request", "Response",
-            &helper, SLOT(handleResponse(uint, QVariantMap)));
-        QObject::connect(&helper, &PortalHelper::finished, &loop, &QEventLoop::quit);
 
         QTimer::singleShot(5000, &loop, &QEventLoop::quit);
 

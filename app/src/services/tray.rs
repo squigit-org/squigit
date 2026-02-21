@@ -15,6 +15,11 @@ pub fn toggle_window(app: &AppHandle) {
     }
 }
 
+/// Launch the screen capture sidecar.
+pub fn capture_screen(app: &AppHandle) {
+    super::capture::spawn_capture(app);
+}
+
 // ──────────────────────────────────────────────────────────────
 //  macOS / Windows — Tauri native TrayIconBuilder
 // ──────────────────────────────────────────────────────────────
@@ -23,10 +28,11 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
+    let capture_i = MenuItem::with_id(app, "capture", "Capture", true, None::<&str>)?;
     let show_i = MenuItem::with_id(app, "show_ui", "Show UI", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let exit_i = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show_i, &sep, &exit_i])?;
+    let menu = Menu::with_items(app, &[&capture_i, &show_i, &sep, &exit_i])?;
 
     let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
@@ -34,6 +40,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .menu(&menu)
         .menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
+            "capture" => capture_screen(app),
             "show_ui" => toggle_window(app),
             "exit" => app.exit(0),
             _ => {}
@@ -120,10 +127,13 @@ mod sni {
             use zbus::zvariant::{OwnedValue, Value};
             use std::collections::HashMap;
 
-            // Build child items
             let mut show_props: HashMap<String, OwnedValue> = HashMap::new();
-            show_props.insert("label".into(), Value::from("Show UI").try_into().unwrap());
+            show_props.insert("label".into(), Value::from("Capture").try_into().unwrap());
             show_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
+
+            let mut show_ui_props: HashMap<String, OwnedValue> = HashMap::new();
+            show_ui_props.insert("label".into(), Value::from("Show UI").try_into().unwrap());
+            show_ui_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
 
             let mut sep_props: HashMap<String, OwnedValue> = HashMap::new();
             sep_props.insert("type".into(), Value::from("separator").try_into().unwrap());
@@ -134,13 +144,16 @@ mod sni {
 
             let show_item: (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>) =
                 (1, show_props, vec![]);
+            let show_ui_item: (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>) =
+                (2, show_ui_props, vec![]);
             let sep_item: (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>) =
-                (2, sep_props, vec![]);
+                (3, sep_props, vec![]);
             let exit_item: (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>) =
-                (3, exit_props, vec![]);
+                (4, exit_props, vec![]);
 
             let children: Vec<OwnedValue> = vec![
                 Value::from(show_item).try_into().unwrap(),
+                Value::from(show_ui_item).try_into().unwrap(),
                 Value::from(sep_item).try_into().unwrap(),
                 Value::from(exit_item).try_into().unwrap(),
             ];
@@ -172,8 +185,9 @@ mod sni {
         ) -> zbus::fdo::Result<()> {
             if event_id == "clicked" {
                 match id {
-                    1 => super::toggle_window(&self.app_handle), // Show UI
-                    3 => self.app_handle.exit(0),                // Exit
+                    1 => super::capture_screen(&self.app_handle), // Capture
+                    2 => super::toggle_window(&self.app_handle),  // Show UI
+                    4 => self.app_handle.exit(0),                 // Exit
                     _ => {}
                 }
             }

@@ -30,7 +30,7 @@ pub fn install_linux_shortcut(_bin_path: &str, trigger: &str, name: &str) -> Res
         trigger.split('+').last().unwrap_or("A").to_uppercase()
     );
 
-    let command = "dbus-send --session --type=method_call --dest=com.snapllm.app /com/snapllm/app com.snapllm.app.Toggle";
+    let command = "dbus-send --session --type=method_call --dest=com.snapllm.app /com/snapllm/app com.snapllm.app.Capture";
 
     if de.contains("gnome")
         || de.contains("ubuntu")
@@ -162,7 +162,7 @@ struct SnapllmDbus {
 
 #[interface(name = "com.snapllm.app")]
 impl SnapllmDbus {
-    async fn toggle(&self) {
+    async fn capture(&self) {
         (self.callback)();
     }
 }

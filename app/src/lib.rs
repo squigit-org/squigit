@@ -178,18 +178,18 @@ pub fn run() {
             services::tray::setup_tray(&handle)
                 .expect("Failed to setup tray icon");
 
-            // Register global shortcut: Super+Shift+A → toggle window
+            // Register global shortcut: Super+Shift+A → capture screen
             let shortcut_handle = handle.clone();
             let _shortcut = sys_global_shortcut::ShortcutHandle::register(
                 sys_global_shortcut::ShortcutConfig {
                     linux_trigger: "SUPER+SHIFT+a".into(),
-                    linux_description: "Toggle SnapLLM UI".into(),
+                    linux_description: "SnapLLM Capture".into(),
                     windows_modifiers: 0x0008 | 0x0004, // MOD_WIN | MOD_SHIFT
                     windows_vk: 0x41,                    // VK_A
                     macos_modifiers: 0x0100 | 0x0200,    // cmdKey | shiftKey
                     macos_keycode: 0x00,                 // kVK_ANSI_A
                 },
-                move || services::tray::toggle_window(&shortcut_handle),
+                move || services::tray::capture_screen(&shortcut_handle),
             );
 
             match &_shortcut {

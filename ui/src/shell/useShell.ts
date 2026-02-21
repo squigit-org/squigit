@@ -48,6 +48,10 @@ export const useShell = () => {
   const [pendingUpdate] = useState(() => getPendingUpdate());
 
   const chatHistory = useChatHistory(system.activeProfile?.id || null);
+  const chatHistoryRef = useRef(chatHistory);
+  useEffect(() => {
+    chatHistoryRef.current = chatHistory;
+  }, [chatHistory]);
 
   const performLogout = async () => {
     await system.handleLogout();
@@ -230,9 +234,50 @@ export const useShell = () => {
       }
     });
 
+    const unlistenCapture = listen<{ chatId: string; imageHash: string }>(
+      "capture-complete",
+      async (event) => {
+        const { chatId, imageHash } = event.payload;
+        console.log(
+          "[capture-complete] chatId:",
+          chatId,
+          "imageHash:",
+          imageHash,
+        );
+
+        try {
+          const imagePath = await getImagePath(imageHash);
+          const assetUrl = convertFileSrc(imagePath);
+
+          // Reset state — mirrors handleImageReady exactly
+          chatHistory.setActiveSessionId(null);
+          setOcrData({});
+          setSessionLensUrl(null);
+          system.setSessionOcrLanguage(system.startupOcrLanguage);
+          setIsOcrScanning(false);
+          cancelOcrJob();
+
+          // Set image WITHOUT fromHistory → triggers useChat startSession
+          system.setStartupImage({
+            base64: assetUrl,
+            mimeType: "image/png",
+            isFilePath: true,
+            imageId: imageHash,
+          });
+
+          // Activate the already-created chat (qt-capture created it)
+          chatHistoryRef.current.setActiveSessionId(chatId);
+          chatHistoryRef.current.refreshChats();
+        } catch (error) {
+          console.error("[capture-complete] Failed:", error);
+        }
+      },
+    );
+
     return () => {
       unlisten.then((f) => f());
       unlistenLoadChat.then((f) => f());
+      unlistenCapture.then((f) => f());
     };
   }, []);
 

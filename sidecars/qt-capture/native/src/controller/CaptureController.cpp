@@ -161,9 +161,14 @@ void CaptureController::cropAndSave(const QRectF &logicalRect)
 void CaptureController::emitSuccess(const QString &path)
 {
     std::cout << "CAPTURE_SUCCESS" << std::endl;
+    std::cout << "DISPLAY_GEO:"
+              << m_displayGeometry.x() << ","
+              << m_displayGeometry.y() << ","
+              << m_displayGeometry.width() << ","
+              << m_displayGeometry.height() << std::endl;
     std::cout << path.toStdString() << std::endl;
     std::cout.flush();
-    
+
     emit captureCompleted(path);
     QGuiApplication::exit(0);
 }

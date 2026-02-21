@@ -13,6 +13,7 @@
 #include <QImage>
 #include <QPointF>
 #include <QRectF>
+#include <QRect>
 #include <QVariantList>
 #include <QUrl>
 #include <QtQml/qqml.h>
@@ -38,6 +39,7 @@ public:
     ~CaptureController() override = default;
     
     void setBackgroundImage(const QImage &image, qreal devicePixelRatio);
+    void setDisplayGeometry(const QRect &geometry) { m_displayGeometry = geometry; }
     
     QUrl backgroundSource() const { return m_backgroundSource; }
     QString captureMode() const { return m_captureMode; }
@@ -66,6 +68,7 @@ private:
     qreal m_devicePixelRatio = 1.0;
     QString m_captureMode = "freeshape";
     int m_displayIndex = 0;
+    QRect m_displayGeometry;
 };
 
 #endif // CAPTURECONTROLLER_H

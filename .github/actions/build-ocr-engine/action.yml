@@ -11,4 +11,4 @@ runs:
     - name: Build OCR Engine
       shell: bash
       run: |
-        cargo xtask build-ocr
+        cargo xtask build ocr

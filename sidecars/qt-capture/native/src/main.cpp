@@ -202,6 +202,7 @@ int main(int argc, char *argv[])
         controller->setDisplayIndex(frame.index);
         controller->setCaptureMode(captureMode);
         controller->setBackgroundImage(frame.image, frame.devicePixelRatio);
+        controller->setDisplayGeometry(frame.geometry);
         controllers.push_back(controller);
 
         QQmlComponent component(&qmlEngine, QUrl("qrc:/CaptureQml/qml/CaptureWindow.qml"));

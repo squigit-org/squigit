@@ -15,7 +15,7 @@ runs:
       shell: bash
       run: |
         docker build -t snapllm-builder -f sidecars/qt-capture/Dockerfile .
-        docker run --rm -v $PWD:/build -w /build snapllm-builder bash -c "cargo xtask build-capture"
+        docker run --rm -v $PWD:/build -w /build snapllm-builder bash -c "cargo xtask build capture"
 
     - name: Install Qt (macOS)
       if: runner.os == 'macOS'
@@ -41,9 +41,9 @@ runs:
     - name: Build Capture Engine (Unix - No Docker)
       if: runner.os == 'macOS'
       shell: bash
-      run: cargo xtask build-capture
+      run: cargo xtask build capture
 
     - name: Build Capture Engine (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
-      run: cargo xtask build-capture
+      run: cargo xtask build capture

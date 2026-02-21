@@ -67,11 +67,17 @@ impl QtApp {
             let reader = BufReader::new(stdout);
             let mut capture_success = false;
             let mut capture_path: Option<String> = None;
+            let mut image_hash: Option<String> = None;
+            let mut display_geo: Option<String> = None;
 
             for line in reader.lines() {
                 match line {
                     Ok(msg) => {
                         let trimmed = msg.trim();
+                        if let Some(geo) = trimmed.strip_prefix("DISPLAY_GEO:") {
+                            display_geo = Some(geo.to_string());
+                            continue;
+                        }
                         match trimmed {
                             "REQ_MUTE" => {}
                             "CAPTURE_SUCCESS" => {
@@ -91,6 +97,7 @@ impl QtApp {
                                                     Ok(storage) => {
                                                         match storage.store_image_from_path(trimmed) {
                                                             Ok(stored) => {
+                                                                image_hash = Some(stored.hash.clone());
                                                                 // Create a new chat for the captured image
                                                                 let metadata = ChatMetadata::new(
                                                                     "New Chat".to_string(), 
@@ -102,7 +109,7 @@ impl QtApp {
                                                                     eprintln!("[QtWrapper] Failed to save chat: {}", e);
                                                                 }
                                                                 
-                                                                capture_path = Some(metadata.id.clone()); // We return chat ID, not file path
+                                                                capture_path = Some(metadata.id.clone());
                                                                 // Try to delete original temp file
                                                                 let _ = std::fs::remove_file(trimmed);
                                                             }
@@ -142,6 +149,12 @@ impl QtApp {
 
             if let Some(res) = capture_path {
                 println!("CHAT_ID:{}", res);
+                if let Some(hash) = image_hash {
+                    println!("IMAGE_HASH:{}", hash);
+                }
+                if let Some(geo) = display_geo {
+                    println!("DISPLAY_GEO:{}", geo);
+                }
                 ExitCode::from(0)
             } else {
                 ExitCode::from(1)

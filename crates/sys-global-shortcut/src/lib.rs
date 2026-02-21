@@ -18,7 +18,7 @@
 //! let handle = ShortcutHandle::register(
 //!     ShortcutConfig {
 //!         linux_trigger: "SUPER+SHIFT+a".into(),
-//!         linux_description: "Toggle my app".into(),
+//!         linux_description: "SnapLLM Capture".into(),
 //!         windows_modifiers: 0x0008 | 0x0004, // MOD_WIN | MOD_SHIFT
 //!         windows_vk: 0x41,                    // VK_A
 //!         macos_modifiers: 0x0100 | 0x0200,    // cmdKey | shiftKey
