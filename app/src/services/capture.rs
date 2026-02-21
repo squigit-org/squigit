@@ -69,8 +69,6 @@ fn run_capture(app: &AppHandle) -> Result<CaptureResult, String> {
     let sidecar_path = resolve_sidecar_path(app)?;
 
     let mut child = Command::new(&sidecar_path)
-        .env("XDG_SESSION_TYPE", "x11")
-        .env_remove("WAYLAND_DISPLAY")
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
