@@ -1,9 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Emitter, WindowEvent};
-
-
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 pub fn calculate_dynamic_window(
     app: &AppHandle,
@@ -33,6 +31,28 @@ pub fn calculate_dynamic_window(
     Ok((x, y, win_w, win_h))
 }
 
+pub fn center_on_cursor_monitor(app: &AppHandle, base_w: f64, base_h: f64) -> (f64, f64, f64, f64) {
+    if let Ok(cursor) = app.cursor_position() {
+        if let Ok(monitors) = app.available_monitors() {
+            for monitor in monitors {
+                let pos = monitor.position();
+                let size = monitor.size();
+                let (mx, my) = (pos.x as f64, pos.y as f64);
+                let (mw, mh) = (size.width as f64, size.height as f64);
+
+                if cursor.x >= mx && cursor.x < mx + mw && cursor.y >= my && cursor.y < my + mh {
+                    let win_w = ((base_w / 1366.0) * mw).floor();
+                    let win_h = ((base_h / 768.0) * mh).floor();
+                    let x = mx + (mw - win_w) / 2.0;
+                    let y = my + (mh - win_h) / 2.0;
+                    return (x, y, win_w, win_h);
+                }
+            }
+        }
+    }
+    calculate_dynamic_window(app, base_w, base_h).unwrap_or((100.0, 100.0, base_w, base_h))
+}
+
 pub fn spawn_app_window(
     app: &AppHandle,
     label: &str,
@@ -40,15 +60,13 @@ pub fn spawn_app_window(
     base_w: f64,
     base_h: f64,
     title: &str,
+    visible: bool,
 ) -> Result<(), String> {
     if app.get_webview_window(label).is_some() {
         return Ok(());
     }
 
-    let (x, y, w, h) =
-        calculate_dynamic_window(app, base_w, base_h).unwrap_or((100.0, 100.0, base_w, base_h));
-
-    let visible = false;
+    let (x, y, w, h) = center_on_cursor_monitor(app, base_w, base_h);
 
     let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App(url.into()))
         .title(title)
@@ -70,7 +88,9 @@ pub fn spawn_app_window(
 
                 match crate::services::image::process_and_store_image(path_str.clone(), &state) {
                     Ok(stored) => {
-                        let mime = mime_guess::from_path(&stored.path).first_or_octet_stream().to_string();
+                        let mime = mime_guess::from_path(&stored.path)
+                            .first_or_octet_stream()
+                            .to_string();
                         let payload = serde_json::json!({
                             "imageId": stored.hash,
                             "path": stored.path,

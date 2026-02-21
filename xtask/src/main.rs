@@ -44,6 +44,9 @@ enum Commands {
     },
 
     Dev {
+        /// Launch mode: "tray" for background/tray-only
+        #[arg(default_value = None)]
+        mode: Option<String>,
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -76,8 +79,8 @@ fn main() -> Result<()> {
             Some(BuildCommands::App) => build::app()?,
         },
         Commands::Clean => clean::all()?,
-        Commands::Run { cmd, args } => dev::run(&cmd, &args)?,
-        Commands::Dev { args } => dev::run("dev", &args)?,
+        Commands::Run { cmd, args } => dev::run(&cmd, false, &args)?,
+        Commands::Dev { mode, args } => dev::run("dev", mode.as_deref() == Some("tray"), &args)?,
     }
 
     Ok(())

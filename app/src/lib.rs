@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use tauri::{Builder, Manager};
+use tauri_plugin_autostart::MacosLauncher;
 
 pub mod state;
 pub mod utils;
@@ -46,8 +47,19 @@ pub fn run() {
 
     #[cfg(target_os = "linux")]
     std::env::set_var("GDK_BACKEND", "x11");
+    let is_background = std::env::args().any(|a| a == "--background" || a == "-b");
 
     Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            let wants_background = args.iter().any(|a| a == "--background" || a == "-b");
+            if !wants_background {
+                services::tray::show_window(app);
+            }
+        }))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--background"]),
+        ))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init())
@@ -58,15 +70,13 @@ pub fn run() {
         .manage(SpeechState::default())
         .invoke_handler(tauri::generate_handler![
             commands::window::install_os_shortcut,
-            // Image processing (legacy)
+            // Image processing
             process_image_path,
             process_image_bytes,
             read_image_file,
             read_file_base64,
             get_initial_image,
             // Clipboard
-            // Clipboard
-
             read_clipboard_image,
             read_clipboard_text,
             copy_image_to_clipboard,
@@ -81,13 +91,11 @@ pub fn run() {
             logout,
             get_user_data,
             cache_avatar,
-            
             // Gemini
             commands::gemini::stream_gemini_chat,
             commands::gemini::stream_gemini_chat_v2,
             commands::gemini::generate_chat_title,
             commands::gemini::start_chat_sync,
-
             // Window
             open_external_url,
             set_background_color,
@@ -137,16 +145,13 @@ pub fn run() {
             get_profile_count,
             // Theme
             commands::theme::get_system_theme,
-
             // Speech
             commands::speech::start_stt,
             commands::speech::stop_stt,
         ])
         .manage(services::models::ModelManager::new().expect("Failed to init ModelManager"))
-        .setup(|app| {
+        .setup(move |app| {
             let handle = app.handle().clone();
-            
-            // Start Network Monitor inside runtime context
             let model_manager = app.state::<services::models::ModelManager>();
             model_manager.start_monitor();
 
@@ -171,20 +176,19 @@ pub fn run() {
                 base_w,
                 base_h,
                 "",
+                !is_background,
             )
             .expect("Failed to spawn main window");
 
-            // Set up system tray icon
             services::tray::setup_tray(&handle)
                 .expect("Failed to setup tray icon");
 
-            // Register global shortcut: Super+Shift+A → capture screen
             let shortcut_handle = handle.clone();
             let _shortcut = sys_global_shortcut::ShortcutHandle::register(
                 sys_global_shortcut::ShortcutConfig {
                     linux_trigger: "SUPER+SHIFT+a".into(),
                     linux_description: "SnapLLM Capture".into(),
-                    windows_modifiers: 0x0008 | 0x0004, // MOD_WIN | MOD_SHIFT
+                    windows_modifiers: 0x0008 | 0x0004,  // MOD_WIN | MOD_SHIFT
                     windows_vk: 0x41,                    // VK_A
                     macos_modifiers: 0x0100 | 0x0200,    // cmdKey | shiftKey
                     macos_keycode: 0x00,                 // kVK_ANSI_A
@@ -197,7 +201,6 @@ pub fn run() {
                 Err(e) => log::warn!("Global shortcut registration failed (non-fatal): {}", e),
             }
 
-            // Intercept window close → hide instead of quit (keeps app in tray)
             if let Some(window) = handle.get_webview_window("main") {
                 let win = window.clone();
                 window.on_window_event(move |event| {

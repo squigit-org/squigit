@@ -3,19 +3,38 @@
 
 use tauri::{AppHandle, Manager};
 
-/// Toggle the main window: show+focus if hidden, hide if visible.
+pub fn show_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        if !window.is_visible().unwrap_or(true) || window.is_minimized().unwrap_or(false) {
+            let (x, y, _, _) = super::window::center_on_cursor_monitor(app, 1030.0, 690.0);
+            let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+                x: x as i32,
+                y: y as i32,
+            }));
+            let _ = window.unminimize();
+            let _ = window.show();
+        }
+        let _ = window.set_focus();
+    }
+}
+
 pub fn toggle_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
-        if window.is_visible().unwrap_or(false) {
+        if window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(false) {
             let _ = window.hide();
         } else {
+            let (x, y, _, _) = super::window::center_on_cursor_monitor(app, 1030.0, 690.0);
+            let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+                x: x as i32,
+                y: y as i32,
+            }));
+            let _ = window.unminimize();
             let _ = window.show();
             let _ = window.set_focus();
         }
     }
 }
 
-/// Launch the screen capture sidecar.
 pub fn capture_screen(app: &AppHandle) {
     super::capture::spawn_capture(app);
 }
@@ -29,7 +48,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
     let capture_i = MenuItem::with_id(app, "capture", "Capture", true, None::<&str>)?;
-    let show_i = MenuItem::with_id(app, "show_ui", "Show UI", true, None::<&str>)?;
+    let show_i = MenuItem::with_id(app, "show_ui", "SnapLLM", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let exit_i = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&capture_i, &show_i, &sep, &exit_i])?;
@@ -41,7 +60,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "capture" => capture_screen(app),
-            "show_ui" => toggle_window(app),
+            "show_ui" => show_window(app),
             "exit" => app.exit(0),
             _ => {}
         })
@@ -66,11 +85,10 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 // ──────────────────────────────────────────────────────────────
 #[cfg(target_os = "linux")]
 mod sni {
-    use tauri::AppHandle;
     use image::GenericImageView;
+    use tauri::AppHandle;
     use zbus::object_server::SignalEmitter;
 
-    /// Load 32x32 icon at compile time, convert RGBA → ARGB for SNI pixmap.
     fn load_icon_argb() -> (i32, i32, Vec<u8>) {
         let img = image::load_from_memory_with_format(
             include_bytes!("../../icons/32x32.png"),
@@ -80,16 +98,12 @@ mod sni {
 
         let (w, h) = img.dimensions();
         let mut data = img.into_rgba8().into_vec();
-        // SNI expects ARGB32 in network byte order (big-endian).
-        // PNG decodes as RGBA. Swap [R,G,B,A] → [A,R,G,B].
         for pixel in data.chunks_exact_mut(4) {
             pixel.rotate_right(1);
         }
         (w as i32, h as i32, data)
     }
 
-    /// DBus menu interface (com.canonical.dbusmenu)
-    /// Provides "Show UI" and "Exit" items.
     pub struct DbusMenu {
         pub app_handle: AppHandle,
     }
@@ -124,15 +138,15 @@ mod sni {
                 Vec<zbus::zvariant::OwnedValue>,
             ),
         )> {
-            use zbus::zvariant::{OwnedValue, Value};
             use std::collections::HashMap;
+            use zbus::zvariant::{OwnedValue, Value};
 
             let mut show_props: HashMap<String, OwnedValue> = HashMap::new();
             show_props.insert("label".into(), Value::from("Capture").try_into().unwrap());
             show_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
 
             let mut show_ui_props: HashMap<String, OwnedValue> = HashMap::new();
-            show_ui_props.insert("label".into(), Value::from("Show UI").try_into().unwrap());
+            show_ui_props.insert("label".into(), Value::from("SnapLLM").try_into().unwrap());
             show_ui_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
 
             let mut sep_props: HashMap<String, OwnedValue> = HashMap::new();
@@ -171,8 +185,12 @@ mod sni {
             &self,
             _ids: Vec<i32>,
             _property_names: Vec<String>,
-        ) -> zbus::fdo::Result<Vec<(i32, std::collections::HashMap<String, zbus::zvariant::OwnedValue>)>>
-        {
+        ) -> zbus::fdo::Result<
+            Vec<(
+                i32,
+                std::collections::HashMap<String, zbus::zvariant::OwnedValue>,
+            )>,
+        > {
             Ok(vec![])
         }
 
@@ -185,8 +203,8 @@ mod sni {
         ) -> zbus::fdo::Result<()> {
             if event_id == "clicked" {
                 match id {
-                    1 => super::capture_screen(&self.app_handle), // Capture
-                    2 => super::toggle_window(&self.app_handle),  // Show UI
+                    1 => super::show_window(&self.app_handle),    // SnapLLM
+                    2 => super::capture_screen(&self.app_handle), // Capture
                     4 => self.app_handle.exit(0),                 // Exit
                     _ => {}
                 }
@@ -199,7 +217,6 @@ mod sni {
         }
     }
 
-    /// StatusNotifierItem DBus interface
     pub struct StatusNotifierItem {
         pub app_handle: AppHandle,
         icon_pixmap: Vec<(i32, i32, Vec<u8>)>,
@@ -217,8 +234,6 @@ mod sni {
 
     #[zbus::interface(name = "org.kde.StatusNotifierItem")]
     impl StatusNotifierItem {
-        // ── Properties ──
-
         #[zbus(property)]
         fn category(&self) -> &str {
             "ApplicationStatus"
@@ -239,7 +254,6 @@ mod sni {
             "Active"
         }
 
-        /// SNI pixmap icon: Vec<(width, height, ARGB_data)>
         #[zbus(property)]
         fn icon_pixmap(&self) -> &Vec<(i32, i32, Vec<u8>)> {
             &self.icon_pixmap
@@ -265,9 +279,6 @@ mod sni {
             0
         }
 
-        // ── Methods ──
-
-        /// Left-click action (Activate in SNI spec)
         fn activate(&self, _x: i32, _y: i32) -> zbus::fdo::Result<()> {
             super::toggle_window(&self.app_handle);
             Ok(())
@@ -281,8 +292,6 @@ mod sni {
             Ok(())
         }
 
-        // ── Signals ──
-
         #[zbus(signal)]
         async fn new_icon(signal_emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
 
@@ -293,7 +302,6 @@ mod sni {
         async fn new_status(signal_emitter: &SignalEmitter<'_>, status: &str) -> zbus::Result<()>;
     }
 
-    /// Register the SNI item with the StatusNotifierWatcher
     pub async fn register_with_watcher(
         connection: &zbus::Connection,
         service_name: &str,
@@ -317,7 +325,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     tauri::async_runtime::spawn(async move {
         match setup_sni_tray(handle).await {
-            Ok(()) => {} // Runs until connection drops
+            Ok(()) => {}
             Err(e) => eprintln!("SNI tray setup failed: {}", e),
         }
     });
@@ -343,10 +351,7 @@ async fn setup_sni_tray(app: AppHandle) -> Result<(), Box<dyn std::error::Error 
         .build()
         .await?;
 
-    // Register with the StatusNotifierWatcher so panels pick up the icon
     sni::register_with_watcher(&connection, &service_name).await?;
-
-    // Keep alive — drop means the tray disappears
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(3600)).await;
     }

@@ -34,6 +34,11 @@
           "index": 1,
           "takesValue": true,
           "description": "Path to an image to load on startup."
+        },
+        {
+          "name": "background",
+          "short": "b",
+          "description": "Start in background/tray-only mode (used by OS autostart)."
         }
       ]
     }
