@@ -11,42 +11,34 @@ use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 
 use tauri::{AppHandle, Emitter, Manager};
-
-/// Spawn the capture sidecar asynchronously.
-/// On success, emits `capture-complete` and positions the window.
 pub fn spawn_capture(app: &AppHandle) {
     let handle = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        match run_capture(&handle) {
-            Ok(result) => {
-                // Position window on the captured display
-                if let (Some(window), Some(geo)) = (
-                    handle.get_webview_window("main"),
-                    result.display_geo,
-                ) {
-                    let win_size = window.outer_size().unwrap_or(tauri::PhysicalSize {
-                        width: 1030,
-                        height: 690,
-                    });
-
-                    let center_x = geo.x + (geo.w as i32 - win_size.width as i32) / 2;
-                    let center_y = geo.y + (geo.h as i32 - win_size.height as i32) / 2;
-
-                    let _ = window.set_position(tauri::PhysicalPosition::new(center_x, center_y));
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
-
-                // Emit event for the frontend
-                let payload = serde_json::json!({
-                    "chatId": result.chat_id,
-                    "imageHash": result.image_hash,
+    tauri::async_runtime::spawn_blocking(move || match run_capture(&handle) {
+        Ok(result) => {
+            if let (Some(window), Some(geo)) =
+                (handle.get_webview_window("main"), result.display_geo)
+            {
+                let win_size = window.outer_size().unwrap_or(tauri::PhysicalSize {
+                    width: 1030,
+                    height: 690,
                 });
-                let _ = handle.emit("capture-complete", payload);
+
+                let center_x = geo.x + (geo.w as i32 - win_size.width as i32) / 2;
+                let center_y = geo.y + (geo.h as i32 - win_size.height as i32) / 2;
+
+                let _ = window.set_position(tauri::PhysicalPosition::new(center_x, center_y));
+                let _ = window.show();
+                let _ = window.set_focus();
             }
-            Err(e) => {
-                eprintln!("[capture] Failed: {}", e);
-            }
+
+            let payload = serde_json::json!({
+                "chatId": result.chat_id,
+                "imageHash": result.image_hash,
+            });
+            let _ = handle.emit("capture-complete", payload);
+        }
+        Err(e) => {
+            eprintln!("[capture] Failed: {}", e);
         }
     });
 }
@@ -68,7 +60,30 @@ struct DisplayGeo {
 fn run_capture(app: &AppHandle) -> Result<CaptureResult, String> {
     let sidecar_path = resolve_sidecar_path(app)?;
 
+    let mut args = Vec::new();
+    let mut is_freeshape = false;
+
+    if let Ok(config_dir) = app.path().app_config_dir() {
+        let prefs_path = config_dir.join("preferences.json");
+        if let Ok(contents) = std::fs::read_to_string(&prefs_path) {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents) {
+                if let Some(capture_type) = json.get("captureType").and_then(|v| v.as_str()) {
+                    if capture_type == "squiggle" {
+                        is_freeshape = true;
+                    }
+                }
+            }
+        }
+    }
+
+    if is_freeshape {
+        args.push("-f".to_string());
+    } else {
+        args.push("-r".to_string());
+    }
+
     let mut child = Command::new(&sidecar_path)
+        .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
@@ -129,7 +144,6 @@ fn parse_display_geo(s: &str) -> Option<DisplayGeo> {
 }
 
 fn resolve_sidecar_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
-    // Production: resource_dir/binaries/capture-engine-{triple}
     if let Ok(resource_dir) = app.path().resource_dir() {
         let prod_path = resource_dir.join("binaries").join(get_sidecar_name());
         if prod_path.exists() {
@@ -137,9 +151,12 @@ fn resolve_sidecar_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
         }
     }
 
-    // Development: workspace root / sidecars/qt-capture/target/release/capture-engine
     if let Ok(exe) = std::env::current_exe() {
-        if let Some(root) = exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()) {
+        if let Some(root) = exe
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+        {
             let dev_path = root
                 .join("sidecars")
                 .join("qt-capture")
@@ -150,7 +167,6 @@ fn resolve_sidecar_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
                 return Ok(dev_path);
             }
 
-            // Also check debug build
             let debug_path = root
                 .join("sidecars")
                 .join("qt-capture")

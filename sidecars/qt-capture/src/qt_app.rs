@@ -88,57 +88,14 @@ impl QtApp {
                             }
                             _ => {
                                 if trimmed.starts_with('/') && capture_success {
-                                    // Store in active profile's CAS
-                                    match ProfileStore::new() {
-                                        Ok(profile_store) => {
-                                            if let Ok(Some(active_id)) = profile_store.get_active_profile_id() {
-                                                let chats_dir = profile_store.get_chats_dir(&active_id);
-                                                match ChatStorage::with_base_dir(chats_dir) {
-                                                    Ok(storage) => {
-                                                        match storage.store_image_from_path(trimmed) {
-                                                            Ok(stored) => {
-                                                                image_hash = Some(stored.hash.clone());
-                                                                // Create a new chat for the captured image
-                                                                let metadata = ChatMetadata::new(
-                                                                    "New Chat".to_string(), 
-                                                                    stored.hash.clone(), 
-                                                                    None
-                                                                );
-                                                                let chat = ChatData::new(metadata.clone());
-                                                                if let Err(e) = storage.save_chat(&chat) {
-                                                                    eprintln!("[QtWrapper] Failed to save chat: {}", e);
-                                                                }
-                                                                
-                                                                capture_path = Some(metadata.id.clone());
-                                                                // Try to delete original temp file
-                                                                let _ = std::fs::remove_file(trimmed);
-                                                            }
-                                                            Err(e) => {
-                                                                eprintln!("[QtWrapper] Failed to store image: {}", e);
-                                                                capture_path = Some(trimmed.to_string());
-                                                            }
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        eprintln!("[QtWrapper] Failed to init storage: {}", e);
-                                                        capture_path = Some(trimmed.to_string());
-                                                    }
-                                                }
-                                            } else {
-                                                eprintln!("[QtWrapper] No active profile found. Guest mode doesn't support direct capture to storage yet.");
-                                                capture_path = Some(trimmed.to_string());
-                                            }
-                                        }
-                                        Err(e) => {
-                                            eprintln!("[QtWrapper] Failed to init profile store: {}", e);
-                                            capture_path = Some(trimmed.to_string());
-                                        }
+                                    let (path, hash) = self.process_capture(trimmed);
+                                    if let Some(p) = path {
+                                        capture_path = Some(p);
+                                        image_hash = hash;
                                     }
                                     break;
-                                } else {
-                                    if !trimmed.is_empty() {
-                                        eprintln!("[Qt] {}", trimmed);
-                                    }
+                                } else if !trimmed.is_empty() {
+                                    eprintln!("[Qt] {}", trimmed);
                                 }
                             }
                         }
@@ -162,6 +119,62 @@ impl QtApp {
         } else {
             ExitCode::from(1)
         }
+    }
+
+    fn process_capture(&self, path: &str) -> (Option<String>, Option<String>) {
+        ProfileStore::new()
+            .map_err(|e| {
+                eprintln!("[QtWrapper] Failed to init profile store: {}", e);
+                e
+            })
+            .ok()
+            .and_then(|profile_store| {
+                profile_store
+                    .get_active_profile_id()
+                    .map_err(|e| {
+                        eprintln!("[QtWrapper] Error getting active profile: {}", e);
+                        e
+                    })
+                    .ok()
+                    .flatten()
+                    .map(|active_id| (profile_store, active_id))
+            })
+            .and_then(|(profile_store, active_id)| {
+                let chats_dir = profile_store.get_chats_dir(&active_id);
+                ChatStorage::with_base_dir(chats_dir)
+                    .map_err(|e| {
+                        eprintln!("[QtWrapper] Failed to init storage: {}", e);
+                        e
+                    })
+                    .ok()
+            })
+            .and_then(|storage| {
+                storage
+                    .store_image_from_path(path)
+                    .map_err(|e| {
+                        eprintln!("[QtWrapper] Failed to store image: {}", e);
+                        e
+                    })
+                    .ok()
+                    .map(|stored| (storage, stored))
+            })
+            .map(|(storage, stored)| {
+                let metadata = ChatMetadata::new(
+                    "New Chat".to_string(),
+                    stored.hash.clone(),
+                    None,
+                );
+                let chat = ChatData::new(metadata.clone());
+                if let Err(e) = storage.save_chat(&chat) {
+                    eprintln!("[QtWrapper] Failed to save chat: {}", e);
+                }
+                let _ = std::fs::remove_file(path);
+                (Some(metadata.id), Some(stored.hash))
+            })
+            .unwrap_or_else(|| {
+                eprintln!("[QtWrapper] No active profile found. Guest mode doesn't support direct capture to storage yet.");
+                (Some(path.to_string()), None)
+            })
     }
 
     fn kill_process(pid: u32) {
