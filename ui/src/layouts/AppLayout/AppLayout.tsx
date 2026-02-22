@@ -6,6 +6,7 @@
 
 import React from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getDialogs } from "@/lib/helpers";
 import { Dialog } from "@/primitives";
 import { ShellProvider, useShellContext } from "@/shell/context";
 import { Welcome, Agreement, UpdateNotes } from "@/features";
@@ -18,6 +19,16 @@ const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 const AppLayoutContent: React.FC = () => {
   const shell = useShellContext();
+
+  const isAgreed = shell.system.hasAgreed || shell.agreedToTerms;
+  const baseLoginDialog = getDialogs(shell.system.appName).LOGIN_REQUIRED;
+  const loginRequiredDialog = {
+    ...baseLoginDialog,
+    actions: baseLoginDialog.actions.map((action) => ({
+      ...action,
+      disabled: action.actionKey === "confirm" ? !isAgreed : action.disabled,
+    })),
+  };
 
   React.useEffect(() => {
     if (!shell.isLoadingState) {
@@ -107,7 +118,7 @@ const AppLayoutContent: React.FC = () => {
 
         <Dialog
           isOpen={shell.showLoginRequiredDialog}
-          type="LOGIN_REQUIRED"
+          type={loginRequiredDialog}
           onAction={(key) => {
             if (key === "confirm") {
               shell.system.addAccount();
@@ -177,7 +188,7 @@ const AppLayoutContent: React.FC = () => {
 
       <Dialog
         isOpen={shell.showLoginRequiredDialog}
-        type="LOGIN_REQUIRED"
+        type={loginRequiredDialog}
         onAction={(key) => {
           if (key === "confirm") {
             shell.system.addAccount();
