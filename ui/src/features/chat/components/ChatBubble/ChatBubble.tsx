@@ -5,38 +5,26 @@
  */
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { Check, Copy, RotateCcw, Pencil } from "lucide-react";
+import { CodeBlock, TextShimmer } from "@/primitives";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { Check, Copy, RotateCcw, Pencil } from "lucide-react";
-import katex from "katex";
-import { CodeBlock } from "@/primitives";
-import { TextShimmer } from "@/primitives/text-shimmer";
-
-const katexCache = new Map<string, string>();
-function renderKatex(latex: string, displayMode: boolean): string {
-  const key = `${displayMode ? "D" : "I"}:${latex}`;
-  const cached = katexCache.get(key);
-  if (cached !== undefined) return cached;
-  const html = katex.renderToString(latex, {
-    displayMode,
-    throwOnError: false,
-  });
-  katexCache.set(key, html);
-  return html;
-}
-import { Message } from "@/features/chat";
-import { remarkDisableIndentedCode } from "@/features/chat/utils";
 import {
   parseMarkdownToSegments,
   tokenizeSegments,
   preprocessMarkdown,
   type StreamSegment,
 } from "@/lib/markdown";
-import styles from "./ChatBubble.module.css";
+import {
+  Message,
+  remarkDisableIndentedCode,
+  BubbleEditor,
+} from "@/features/chat";
+import katex from "katex";
 import "katex/dist/katex.min.css";
-import { BubbleEditor } from "./BubbleEditor";
+import styles from "./ChatBubble.module.css";
 
 interface ChatBubbleProps {
   message: Message;
@@ -51,6 +39,19 @@ interface ChatBubbleProps {
   onAction?: (actionId: string, value?: string) => void;
 }
 
+const katexCache = new Map<string, string>();
+function renderKatex(latex: string, displayMode: boolean): string {
+  const key = `${displayMode ? "D" : "I"}:${latex}`;
+  const cached = katexCache.get(key);
+  if (cached !== undefined) return cached;
+  const html = katex.renderToString(latex, {
+    displayMode,
+    throwOnError: false,
+  });
+  katexCache.set(key, html);
+  return html;
+}
+
 const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   message,
   isStreamed = false,
@@ -61,7 +62,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   onRetry,
   isRetrying,
   onEdit,
-  // onAction, // Kept in interface for compatibility but unused
 }) => {
   const isUser = message.role === "user";
   const [isCopied, setIsCopied] = useState(false);
@@ -398,8 +398,15 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     const content = revealedTexts ? revealedTexts.join("") : segment.content;
 
     switch (segment.type) {
-      case "text":
+      case "text": {
+        if (!content.trim()) {
+          if (content.includes("\n\n")) {
+            return <div key={index} className={styles.paragraphGap} />;
+          }
+          return null;
+        }
         return <span key={index}>{content}</span>;
+      }
 
       case "bold":
         return <strong key={index}>{content}</strong>;
@@ -416,33 +423,57 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
       case "heading": {
         const level = segment.meta?.level || 1;
+        const Tag =
+          `h${Math.min(level, 6)}` as keyof React.JSX.IntrinsicElements;
+        const sizes = [1.5, 1.3, 1.15, 1.05, 1, 0.95];
+        const topMargins = [
+          "1.25em",
+          "1em",
+          "0.875em",
+          "0.75em",
+          "0.625em",
+          "0.5em",
+        ];
+        const bottomMargins = [
+          "0.5em",
+          "0.4em",
+          "0.375em",
+          "0.3em",
+          "0.25em",
+          "0.25em",
+        ];
         return (
-          <div
+          <Tag
             key={index}
-            className="font-bold my-2"
-            style={{ fontSize: `${1.5 - level * 0.1}em` }}
+            className={styles.heading}
+            style={{
+              fontSize: `${sizes[level - 1]}em`,
+              marginTop: topMargins[level - 1],
+              marginBottom: bottomMargins[level - 1],
+            }}
           >
             {content}
-          </div>
+          </Tag>
         );
       }
 
       case "listItem":
-        return <li key={index}>{content}</li>;
+        return (
+          <div key={index} className={styles.listItem}>
+            {content}
+          </div>
+        );
 
       case "blockquote":
         return (
-          <blockquote
-            key={index}
-            className="border-l-4 border-gray-300 pl-4 my-2 italic"
-          >
+          <blockquote key={index} className={styles.blockquote}>
             {content}
           </blockquote>
         );
 
       case "link":
         return (
-          <a key={index} href={segment.meta?.href}>
+          <a key={index} href={segment.meta?.href} className={styles.link}>
             {content}
           </a>
         );
@@ -533,7 +564,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
               ) : isRetrying ? (
                 <TextShimmer text="Regenerating response..." />
               ) : !isUser ? (
-                <div className="whitespace-pre-wrap">
+                <div className={styles.streamingContainer}>
                   {segments.map((segment, index) =>
                     renderStreamSegment(segment, index),
                   )}

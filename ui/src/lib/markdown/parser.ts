@@ -204,7 +204,6 @@ function processNode(
         content: extractText(node),
         meta: { level: node.depth },
       });
-      segments.push({ type: "text", content: "\n\n" });
       break;
 
     case "text":
