@@ -1,16 +1,10 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Screen capture service.
-//!
-//! Spawns the `capture-engine` sidecar, reads its IPC protocol
-//! (CHAT_ID + DISPLAY_GEO), then shows the main window centered
-//! on the monitor where the capture took place.
-
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
-
 use tauri::{AppHandle, Emitter, Manager};
+
 pub fn spawn_capture(app: &AppHandle) {
     let handle = app.clone();
     tauri::async_runtime::spawn_blocking(move || match run_capture(&handle) {
@@ -42,7 +36,7 @@ pub fn spawn_capture(app: &AppHandle) {
             let _ = handle.emit("capture-complete", payload);
         }
         Err(e) => {
-            eprintln!("[capture] Failed: {}", e);
+            let _ = handle.emit("capture-failed", serde_json::json!({ "reason": e }));
         }
     });
 }
@@ -88,6 +82,8 @@ fn run_capture(app: &AppHandle) -> Result<CaptureResult, String> {
 
     let mut child = Command::new(&sidecar_path)
         .args(&args)
+        .env("GIO_LAUNCHED_DESKTOP_APP_ID", "snapllm")
+        .env("G_APPLICATION_ID", "snapllm")
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
@@ -113,8 +109,8 @@ fn run_capture(app: &AppHandle) -> Result<CaptureResult, String> {
                     image_hash = Some(hash.to_string());
                 } else if let Some(geo_str) = trimmed.strip_prefix("DISPLAY_GEO:") {
                     display_geo = parse_display_geo(geo_str);
-                } else if !trimmed.is_empty() {
-                    eprintln!("[capture] {}", trimmed);
+                } else if trimmed == "CAPTURE_DENIED" {
+                    return Err("User denied screen capture permission.".to_string());
                 }
             }
             Err(_) => break,

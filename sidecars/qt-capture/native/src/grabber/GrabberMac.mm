@@ -8,9 +8,7 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QPixmap>
-#include <QDebug>
 #include <QOperatingSystemVersion>
-
 
 #import <CoreGraphics/CoreGraphics.h>
 #import <AppKit/AppKit.h>
@@ -41,37 +39,18 @@ public:
                 }
 
                 return frames;
-
-                return frames;
             }
         }
 
-        // --------------------------------------------------------------------
-        // Implementation Strategy Adapted from Flameshot
-        // --------------------------------------------------------------------
-        // The following logic (delegating to Qt's grabWindow) is based on the 
-        // implementation found in the Flameshot project.
-        //
-        // Source: src/utils/screengrabber.cpp
-        // Link:   https://github.com/flameshot-org/flameshot/blob/master/src/utils/screengrabber.cpp
-        //
-        // Flameshot License: GPLv3
-        // Copyright (C) 2017-2019 Alejandro Sirgo Rica & Contributors
-        // --------------------------------------------------------------------
-        
         const auto screens = QGuiApplication::screens();
         int index = 0;
         
         for (QScreen* screen : screens) {
             if (!screen) continue;
 
-            // grabWindow(0) captures the root window (the entire screen).
-            // This abstraction allows Qt to handle the underlying OS calls 
-            // (legacy CGWindowList or modern ScreenCaptureKit) automatically.
             QPixmap pixmap = screen->grabWindow(0);
 
             if (pixmap.isNull()) {
-                qWarning() << "Failed to capture screen:" << screen->name();
                 continue;
             }
 

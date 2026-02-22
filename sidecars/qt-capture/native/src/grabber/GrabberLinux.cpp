@@ -8,11 +8,12 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QPixmap>
-#include <QDebug>
+#include <iostream>
 #if defined(Q_OS_LINUX)
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDBusConnection>
+#include <QDBusMessage>
 #include <QDBusObjectPath>
 #include <QEventLoop>
 #include <QUuid>
@@ -22,6 +23,7 @@
 #include <QWindow>
 #endif
 #include <cmath>
+
 #if defined(Q_OS_LINUX)
 class PortalHelper : public QObject
 {
@@ -38,9 +40,22 @@ public slots:
             savedUri = results.value("uri").toString();
             success = !savedUri.isEmpty();
         }
+        else if (response == 2)
+        {
+            QDBusMessage dropPerm = QDBusMessage::createMethodCall(
+                "org.freedesktop.impl.portal.PermissionStore",
+                "/org/freedesktop/impl/portal/PermissionStore",
+                "org.freedesktop.impl.portal.PermissionStore",
+                "DeletePermission");
+            dropPerm << "screenshot" << "screenshot" << "snapllm";
+            QDBusConnection::sessionBus().call(dropPerm);
+
+            std::cout << "CAPTURE_DENIED" << std::endl;
+            std::cout.flush();
+            success = false;
+        }
         else
         {
-            qWarning() << "Portal request failed (Response Code:" << response << ")";
             success = false;
         }
         emit finished();
@@ -50,6 +65,7 @@ signals:
     void finished();
 };
 #endif
+
 class ScreenGrabberUnix : public ScreenGrabber
 {
 public:
@@ -58,23 +74,16 @@ public:
     std::vector<CapturedFrame> captureAll() override
     {
 #if defined(Q_OS_LINUX)
-        // Check XDG_SESSION_TYPE — on Wayland we MUST use the portal because
-        // XWayland root grab returns a black screen.
-        // Note: main.cpp forces QT_QPA_PLATFORM=xcb for window overlays,
-        // but the portal is a pure D-Bus call and works regardless.
         QString sessionType = qgetenv("XDG_SESSION_TYPE").toLower();
         if (sessionType == "wayland")
         {
-            qDebug() << "Wayland session detected, using Portal capture.";
             return captureWayland();
         }
         else
         {
-            qDebug() << "X11 session detected, using standard capture.";
             return captureStandard();
         }
 #else
-        qDebug() << "Non-Linux Unix OS, using standard capture.";
         return captureStandard();
 #endif
     }
@@ -112,8 +121,6 @@ private:
     {
         std::vector<CapturedFrame> frames;
 
-        // Create a dummy window to get a valid X11 handle.
-        // Since we force xcb in main.cpp, this provides a handle the portal can verify.
         QWindow dummyWindow;
         dummyWindow.setFlags(Qt::FramelessWindowHint | Qt::WindowTransparentForInput);
         dummyWindow.resize(1, 1);
@@ -127,7 +134,6 @@ private:
 
         if (!portal.isValid())
         {
-            qCritical() << "Portal interface not found.";
             return frames;
         }
 
@@ -136,9 +142,6 @@ private:
         options["handle_token"] = token;
         options["interactive"] = false;
 
-        // Subscribe to the response signal BEFORE making the call to avoid
-        // a race condition where the portal responds before we connect.
-        // Predict the response path from our D-Bus sender name + token.
         PortalHelper helper;
         QEventLoop loop;
 
@@ -157,32 +160,25 @@ private:
         QDBusReply<QDBusObjectPath> reply = portal.call("Screenshot", parentWindow, options);
         if (!reply.isValid())
         {
-            qCritical() << "Portal call failed:" << reply.error().message();
             return frames;
         }
 
-        // Increase timeout to 60s to allow user to read/click permission dialog
-        QTimer::singleShot(60000, &loop, &QEventLoop::quit);
+        QTimer::singleShot(60000000, &loop, &QEventLoop::quit);
 
         loop.exec();
 
         if (!helper.success)
         {
-            qWarning() << "Portal request failed or timed out.";
             return frames;
         }
 
         QString localPath = QUrl(helper.savedUri).toLocalFile();
         QImage fullDesktop(localPath);
 
-        if (!QFile::remove(localPath))
-        {
-            qWarning() << "Failed to remove temporary portal file:" << localPath;
-        }
+        QFile::remove(localPath);
 
         if (fullDesktop.isNull())
         {
-            qCritical() << "Downloaded image is null.";
             return frames;
         }
 
@@ -197,10 +193,6 @@ private:
         {
             scaleFactor = (double)fullDesktop.width() / (double)logicalBounds.width();
         }
-
-        qDebug() << "Capture Info: Image" << fullDesktop.size()
-                 << "Logical" << logicalBounds
-                 << "Scale" << scaleFactor;
 
         int index = 0;
         for (QScreen *screen : QGuiApplication::screens())

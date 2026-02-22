@@ -34,7 +34,6 @@ impl QtApp {
         let child_pid = child.id();
 
         let watcher = DisplayWatcher::start(move || {
-            eprintln!("[qt-capture] Display topology changed! Killing Qt...");
             Self::kill_process(child_pid);
         });
 
@@ -52,6 +51,8 @@ impl QtApp {
         let mut cmd = Command::new(&paths.bin);
 
         cmd.args(&self.args)
+            .env("GIO_LAUNCHED_DESKTOP_APP_ID", "snapllm")
+            .env("G_APPLICATION_ID", "snapllm")
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
 
@@ -86,6 +87,19 @@ impl QtApp {
                             "CAPTURE_FAIL" => {
                                 break;
                             }
+                            "CAPTURE_DENIED" => {
+                                println!("CAPTURE_DENIED");
+                                eprintln!("\n============================================================");
+                                eprintln!("Screen Recording Permission Denied");
+                                eprintln!("============================================================");
+                                eprintln!("Your Wayland compositor or Desktop Portal rejected the request.");
+                                eprintln!("If this happened automatically without a prompt, check your");
+                                eprintln!("screen capture portal configurations (e.g. xdg-desktop-portal-hyprland/wlr).");
+                                eprintln!("\nFor help, please report an issue at:");
+                                eprintln!("-> https://github.com/a7mddra/snapllm/issues/new");
+                                eprintln!("============================================================\n");
+                                break;
+                            }
                             _ => {
                                 if trimmed.starts_with('/') && capture_success {
                                     let (path, hash) = self.process_capture(trimmed);
@@ -94,8 +108,6 @@ impl QtApp {
                                         image_hash = hash;
                                     }
                                     break;
-                                } else if !trimmed.is_empty() {
-                                    eprintln!("[Qt] {}", trimmed);
                                 }
                             }
                         }
@@ -123,38 +135,21 @@ impl QtApp {
 
     fn process_capture(&self, path: &str) -> (Option<String>, Option<String>) {
         ProfileStore::new()
-            .map_err(|e| {
-                eprintln!("[QtWrapper] Failed to init profile store: {}", e);
-                e
-            })
             .ok()
             .and_then(|profile_store| {
                 profile_store
                     .get_active_profile_id()
-                    .map_err(|e| {
-                        eprintln!("[QtWrapper] Error getting active profile: {}", e);
-                        e
-                    })
                     .ok()
                     .flatten()
                     .map(|active_id| (profile_store, active_id))
             })
             .and_then(|(profile_store, active_id)| {
                 let chats_dir = profile_store.get_chats_dir(&active_id);
-                ChatStorage::with_base_dir(chats_dir)
-                    .map_err(|e| {
-                        eprintln!("[QtWrapper] Failed to init storage: {}", e);
-                        e
-                    })
-                    .ok()
+                ChatStorage::with_base_dir(chats_dir).ok()
             })
             .and_then(|storage| {
                 storage
                     .store_image_from_path(path)
-                    .map_err(|e| {
-                        eprintln!("[QtWrapper] Failed to store image: {}", e);
-                        e
-                    })
                     .ok()
                     .map(|stored| (storage, stored))
             })
@@ -165,16 +160,11 @@ impl QtApp {
                     None,
                 );
                 let chat = ChatData::new(metadata.clone());
-                if let Err(e) = storage.save_chat(&chat) {
-                    eprintln!("[QtWrapper] Failed to save chat: {}", e);
-                }
+                let _ = storage.save_chat(&chat);
                 let _ = std::fs::remove_file(path);
                 (Some(metadata.id), Some(stored.hash))
             })
-            .unwrap_or_else(|| {
-                eprintln!("[QtWrapper] No active profile found. Guest mode doesn't support direct capture to storage yet.");
-                (Some(path.to_string()), None)
-            })
+            .unwrap_or_else(|| (Some(path.to_string()), None))
     }
 
     fn kill_process(pid: u32) {

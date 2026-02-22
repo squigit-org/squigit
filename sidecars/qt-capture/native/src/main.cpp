@@ -10,7 +10,6 @@
 #include <QQmlComponent>
 #include <QQuickWindow>
 #include <QCommandLineParser>
-#include <QDebug>
 #include <QScreen>
 #include <vector>
 
@@ -110,7 +109,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     app.setApplicationName(APP_NAME);
-    app.setDesktopFileName("com.snapllm.capture");
+    app.setDesktopFileName("snapllm"); 
     app.setOrganizationName(ORG_NAME);
     app.setApplicationVersion(APP_VERSION);
     app.setQuitOnLastWindowClosed(true);
@@ -136,11 +135,6 @@ int main(int argc, char *argv[])
     if (parser.isSet(rectangleOption))
     {
         captureMode = "rectangle";
-        qDebug() << "Capture mode: Rectangle";
-    }
-    else
-    {
-        qDebug() << "Capture mode: Freeshape";
     }
 
     ScreenGrabber *engine = nullptr;
@@ -152,7 +146,6 @@ int main(int argc, char *argv[])
 
     if (!engine)
     {
-        qCritical() << "FATAL: Failed to initialize Capture Engine.";
         return 1;
     }
 
@@ -160,24 +153,16 @@ int main(int argc, char *argv[])
 
     if (frames.empty())
     {
-        qCritical() << "FATAL: No screens captured.";
         return 1;
     }
 
     QList<QScreen *> qtScreens = app.screens();
-
     QQmlApplicationEngine qmlEngine;
-
     std::vector<CaptureController *> controllers;
     std::vector<QQuickWindow *> windows;
 
     for (const auto &frame : frames)
     {
-        qDebug() << "Display" << frame.index
-                 << "|" << frame.name
-                 << "|" << frame.geometry
-                 << "| DPR:" << frame.devicePixelRatio;
-
         QScreen *targetScreen = nullptr;
         for (QScreen *s : qtScreens)
         {
@@ -210,7 +195,6 @@ int main(int argc, char *argv[])
         
         if (component.isError())
         {
-            qCritical() << "QML load error:" << component.errors();
             return 1;
         }
 
@@ -222,7 +206,6 @@ int main(int argc, char *argv[])
 
         if (!window)
         {
-            qCritical() << "Failed to create QML window for display" << frame.index;
             return 1;
         }
 
@@ -239,7 +222,6 @@ int main(int argc, char *argv[])
         }
 
         applyPlatformWindowHacks(window);
-
         window->showFullScreen();
     }
 

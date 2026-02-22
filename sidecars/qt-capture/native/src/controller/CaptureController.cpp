@@ -8,7 +8,6 @@
 #include <QGuiApplication>
 #include <QDir>
 #include <QTemporaryFile>
-#include <QDebug>
 #include <iostream>
 #include <cmath>
 #include <QDateTime>
@@ -31,11 +30,6 @@ void CaptureController::setBackgroundImage(const QImage &image, qreal devicePixe
     {
         m_backgroundSource = QUrl::fromLocalFile(tempPath);
         emit backgroundSourceChanged();
-        qDebug() << "[CaptureController] Background saved to:" << tempPath;
-    }
-    else
-    {
-        qWarning() << "[CaptureController] Failed to save background image";
     }
 }
 
@@ -59,7 +53,6 @@ void CaptureController::setDisplayIndex(int index)
 
 void CaptureController::cancel()
 {
-    qDebug() << "[CaptureController] Capture cancelled";
     emitFailure();
 }
 
@@ -67,7 +60,6 @@ void CaptureController::finishSquiggleCapture(const QVariantList &points)
 {
     if (points.isEmpty())
     {
-        qWarning() << "[CaptureController] No points provided for squiggle capture";
         emitFailure();
         return;
     }
@@ -107,7 +99,6 @@ void CaptureController::finishRectCapture(QPointF start, QPointF end)
     
     if (selectionRect.width() < 1 || selectionRect.height() < 1)
     {
-        qWarning() << "[CaptureController] Selection too small";
         emitFailure();
         return;
     }
@@ -135,7 +126,6 @@ void CaptureController::cropAndSave(const QRectF &logicalRect)
     
     if (physW <= 0 || physH <= 0)
     {
-        qWarning() << "[CaptureController] Invalid crop dimensions";
         emitFailure();
         return;
     }
@@ -148,12 +138,10 @@ void CaptureController::cropAndSave(const QRectF &logicalRect)
     
     if (cropped.save(finalPath, "PNG", -1))
     {
-        qDebug() << "[CaptureController] Saved capture to:" << finalPath;
         emitSuccess(finalPath);
     }
     else
     {
-        qWarning() << "[CaptureController] Failed to save cropped image";
         emitFailure();
     }
 }

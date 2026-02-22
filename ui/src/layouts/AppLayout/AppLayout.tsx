@@ -115,6 +115,12 @@ const AppLayoutContent: React.FC = () => {
             shell.setShowLoginRequiredDialog(false);
           }}
         />
+
+        <Dialog
+          isOpen={shell.showCaptureDeniedDialog}
+          type="CAPTURE_PERMISSION_DENIED"
+          onAction={() => shell.setShowCaptureDeniedDialog(false)}
+        />
       </div>
     );
   }
@@ -178,6 +184,12 @@ const AppLayoutContent: React.FC = () => {
           }
           shell.setShowLoginRequiredDialog(false);
         }}
+      />
+
+      <Dialog
+        isOpen={shell.showCaptureDeniedDialog}
+        type="CAPTURE_PERMISSION_DENIED"
+        onAction={() => shell.setShowCaptureDeniedDialog(false)}
       />
     </div>
   );

@@ -5,7 +5,6 @@
  */
 
 #include "ScreenGrabber.h"
-#include <QDebug>
 #include <QGuiApplication>
 #include <QScreen>
 
@@ -120,10 +119,6 @@ private:
             data->frames.push_back(frame);
 
             gdiBitmap->UnlockBits(&bitmapData);
-        }
-        else
-        {
-            qWarning() << "Failed to lock bits for monitor" << data->indexCounter;
         }
 
         delete gdiBitmap;

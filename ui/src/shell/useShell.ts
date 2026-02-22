@@ -35,6 +35,7 @@ export const useShell = () => {
 
   const [showGeminiAuthDialog, setShowGeminiAuthDialog] = useState(false);
   const [showLoginRequiredDialog, setShowLoginRequiredDialog] = useState(false);
+  const [showCaptureDeniedDialog, setShowCaptureDeniedDialog] = useState(false);
 
   const system = useSystemSync();
   const activeProfileRef = useRef<any>(null);
@@ -274,10 +275,23 @@ export const useShell = () => {
       },
     );
 
+    const unlistenCaptureFailed = listen<{ reason: string }>(
+      "capture-failed",
+      (event) => {
+        const { reason } = event.payload;
+        if (reason === "User denied screen capture permission.") {
+          setShowCaptureDeniedDialog(true);
+        } else {
+          console.error("[capture-failed]", reason);
+        }
+      },
+    );
+
     return () => {
       unlisten.then((f) => f());
       unlistenLoadChat.then((f) => f());
       unlistenCapture.then((f) => f());
+      unlistenCaptureFailed.then((f) => f());
     };
   }, []);
 
@@ -630,6 +644,7 @@ export const useShell = () => {
     enablePanelAnimation,
     showGeminiAuthDialog,
     showLoginRequiredDialog,
+    showCaptureDeniedDialog,
     sessionLensUrl,
     ocrData,
     input,
@@ -649,6 +664,7 @@ export const useShell = () => {
     isNavigating,
     setShowGeminiAuthDialog,
     setShowLoginRequiredDialog,
+    setShowCaptureDeniedDialog,
     performLogout,
     handleUpdateLensUrl,
     handleUpdateOCRData,

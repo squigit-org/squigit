@@ -19,6 +19,13 @@ export interface DialogContent {
 }
 
 export const DIALOGS: Record<string, DialogContent> = {
+  CAPTURE_PERMISSION_DENIED: {
+    title: "Screen Capture Denied",
+    message:
+      "SnapLLM needs permission to record your screen.\n\nPlease enable Screen Recording for SnapLLM (or your terminal) in your OS Privacy/Security Settings, then try again.",
+    variant: "warning",
+    actions: [{ label: "Understood", variant: "primary", actionKey: "close" }],
+  },
   GEMINI_AUTH: {
     title: "Gemini API Key Required",
     message: "To begin using the chat, please configure your Gemini API key.",
