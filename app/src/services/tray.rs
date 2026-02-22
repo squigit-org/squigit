@@ -44,6 +44,7 @@ pub fn capture_screen(app: &AppHandle) {
 // ──────────────────────────────────────────────────────────────
 #[cfg(not(target_os = "linux"))]
 pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    use image::GenericImageView;
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
@@ -51,10 +52,16 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_i = MenuItem::with_id(app, "show_ui", crate::constants::APP_NAME, true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let exit_i = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&capture_i, &show_i, &sep, &exit_i])?;
+    let menu = Menu::with_items(app, &[&show_i, &capture_i, &sep, &exit_i])?;
+
+    let img = image::load_from_memory(include_bytes!("../../icons/tray-icon.png"))?;
+    let rgba = img.into_rgba8();
+    let (width, height) = rgba.dimensions();
+    let rgba_bytes = rgba.into_vec();
+    let icon = tauri::image::Image::new(&rgba_bytes, width, height);
 
     let _tray = TrayIconBuilder::new()
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(icon)
         .tooltip(crate::constants::APP_NAME)
         .menu(&menu)
         .menu_on_left_click(false)
@@ -91,7 +98,7 @@ mod sni {
 
     fn load_icon_argb() -> (i32, i32, Vec<u8>) {
         let img = image::load_from_memory_with_format(
-            include_bytes!("../../icons/32x32.png"),
+            include_bytes!("../../icons/tray-icon.png"),
             image::ImageFormat::Png,
         )
         .expect("embedded tray icon must be valid PNG");
@@ -166,8 +173,8 @@ mod sni {
                 (4, exit_props, vec![]);
 
             let children: Vec<OwnedValue> = vec![
-                Value::from(show_item).try_into().unwrap(),
                 Value::from(show_ui_item).try_into().unwrap(),
+                Value::from(show_item).try_into().unwrap(),
                 Value::from(sep_item).try_into().unwrap(),
                 Value::from(exit_item).try_into().unwrap(),
             ];
@@ -203,8 +210,8 @@ mod sni {
         ) -> zbus::fdo::Result<()> {
             if event_id == "clicked" {
                 match id {
-                    1 => super::show_window(&self.app_handle),    // SnapLLM
-                    2 => super::capture_screen(&self.app_handle), // Capture
+                    2 => super::show_window(&self.app_handle),    // SnapLLM
+                    1 => super::capture_screen(&self.app_handle), // Capture
                     4 => self.app_handle.exit(0),                 // Exit
                     _ => {}
                 }
