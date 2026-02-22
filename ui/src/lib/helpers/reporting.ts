@@ -42,15 +42,18 @@ export type ReportAction = {
   message?: string;
 };
 
-export function prepareMailReport({
-  email = "a7mddra@gmail.com",
-  subject = "This is a bug report from SnapLLM",
-  diagnostics = "",
-}: {
-  email?: string;
-  subject?: string;
-  diagnostics?: string;
-}): ReportAction {
+export function prepareMailReport(
+  appName: string,
+  {
+    email = "a7mddra@gmail.com",
+    subject = `This is a bug report from ${appName}`,
+    diagnostics = "",
+  }: {
+    email?: string;
+    subject?: string;
+    diagnostics?: string;
+  },
+): ReportAction {
   const body = [
     "Please describe the bug below and provide the system diagnostics. Thank you!",
     "",
@@ -80,18 +83,21 @@ export function prepareMailReport({
   }
 }
 
-export function prepareGitHubIssueReport({
-  title = "[BUG] ",
-  diagnostics = "",
-  template = "bug_report.md",
-}: {
-  title?: string;
-  diagnostics?: string;
-  template?: string;
-}): ReportAction {
+export function prepareGitHubIssueReport(
+  appName: string,
+  {
+    title = "[BUG] ",
+    diagnostics = "",
+    template = "bug_report.md",
+  }: {
+    title?: string;
+    diagnostics?: string;
+    template?: string;
+  },
+): ReportAction {
   const body = [
     "**Describe the bug**",
-    "A clear and concise description of what the bug is.",
+    "A clear and concise description of what happened in " + appName + ".",
     "",
     "**System diagnostics (auto-paste below)**",
     "```json\n" + diagnostics + "\n```",

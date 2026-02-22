@@ -18,11 +18,10 @@ export interface DialogContent {
   }[];
 }
 
-export const DIALOGS: Record<string, DialogContent> = {
+export const getDialogs = (appName: string): Record<string, DialogContent> => ({
   CAPTURE_PERMISSION_DENIED: {
     title: "Screen Capture Denied",
-    message:
-      "SnapLLM needs permission to record your screen.\n\nPlease enable Screen Recording for SnapLLM (or your terminal) in your OS Privacy/Security Settings, then try again.",
+    message: `${appName} needs permission to record your screen.\n\nPlease enable Screen Recording for ${appName} (or your terminal) in your OS Privacy/Security Settings, then try again.`,
     variant: "warning",
     actions: [{ label: "Understood", variant: "primary", actionKey: "close" }],
   },
@@ -73,14 +72,14 @@ export const DIALOGS: Record<string, DialogContent> = {
   },
   LOGIN_REQUIRED: {
     title: "Login Required",
-    message: "You need to sign in first to use SnapLLM.",
+    message: `You need to sign in first to use ${appName}.`,
     variant: "info",
     actions: [
       { label: "Cancel", variant: "secondary", actionKey: "cancel" },
       { label: "Sign In", variant: "primary", actionKey: "confirm" },
     ],
   },
-};
+});
 
 // Helper for dynamic messages
 export const getDeleteMultipleChatsDialog = (count: number): DialogContent => ({

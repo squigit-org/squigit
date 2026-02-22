@@ -10,6 +10,7 @@ pub mod utils;
 pub mod commands;
 pub mod services;
 pub mod brain;
+pub mod constants;
 
 use commands::auth::{cache_avatar, get_api_key, get_user_data, logout, start_google_auth, cancel_google_auth};
 use commands::chat::{
@@ -32,12 +33,13 @@ use commands::profile::{
     get_active_profile, get_active_profile_id, set_active_profile,
     list_profiles, delete_profile, has_profiles, get_profile_count,
 };
-use commands::security::{check_file_exists, encrypt_and_save};
+use commands::security::{check_file_exists, encrypt_and_save, set_agreed_flag};
 use commands::window::{
     close_window, maximize_window, minimize_window,
     open_external_url, set_background_color,
     set_always_on_top, get_always_on_top, show_window,
 };
+use commands::constants::get_app_constants;
 use commands::speech::SpeechState;
 use services::image::process_and_store_image;
 use state::AppState;
@@ -47,7 +49,6 @@ pub fn run() {
 
     #[cfg(target_os = "linux")]
     std::env::set_var("GDK_BACKEND", "x11");
-    let is_background = std::env::args().any(|a| a == "--background" || a == "-b");
 
     Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
@@ -83,6 +84,7 @@ pub fn run() {
             // Security
             encrypt_and_save,
             check_file_exists,
+            set_agreed_flag,
             // Auth
             get_api_key,
             start_google_auth,
@@ -104,6 +106,8 @@ pub fn run() {
             set_always_on_top,
             get_always_on_top,
             show_window,
+            // Constants
+            get_app_constants,
             // OCR
             ocr_image,
             cancel_ocr_job,
@@ -172,7 +176,7 @@ pub fn run() {
                     log::info!("First run on Linux detected: attempting to install global shortcut");
                     if let Ok(exe) = std::env::current_exe() {
                         let bin = exe.to_string_lossy();
-                        match sys_global_shortcut::install_linux_shortcut(&bin, "SUPER+SHIFT+a", "SnapLLM") {
+                        match sys_global_shortcut::install_linux_shortcut(&bin, "SUPER+SHIFT+a", crate::constants::APP_NAME) {
                             Ok(_) => {
                                 log::info!("Successfully installed Linux global shortcut");
                                 if let Err(e) = std::fs::write(&marker_file, "") {
@@ -192,6 +196,28 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
+            let config_dir = crate::utils::get_app_config_dir(&handle);
+            let prefs_file = config_dir.join("preferences.json");
+            if !prefs_file.exists() {
+                log::info!("First run detected: creating default preferences.json");
+                let default_prefs = serde_json::json!({
+                    "model": crate::constants::DEFAULT_MODEL,
+                    "theme": crate::constants::DEFAULT_THEME,
+                    "prompt": crate::constants::DEFAULT_PROMPT,
+                    "ocrEnabled": true,
+                    "autoExpandOCR": true,
+                    "captureType": crate::constants::DEFAULT_CAPTURE_TYPE,
+                    "ocrLanguage": crate::constants::DEFAULT_OCR_LANGUAGE,
+                    "activeAccount": crate::constants::DEFAULT_ACTIVE_ACCOUNT
+                });
+                
+                if let Err(e) = std::fs::create_dir_all(&config_dir) {
+                    log::error!("Failed to create config dir: {}", e);
+                } else if let Err(e) = std::fs::write(&prefs_file, serde_json::to_string_pretty(&default_prefs).unwrap()) {
+                    log::error!("Failed to create default preferences.json: {}", e);
+                }
+            }
+
             services::window::spawn_app_window(
                 &handle,
                 "main",
@@ -210,7 +236,7 @@ pub fn run() {
             let _shortcut = sys_global_shortcut::ShortcutHandle::register(
                 sys_global_shortcut::ShortcutConfig {
                     linux_trigger: "SUPER+SHIFT+a".into(),
-                    linux_description: "SnapLLM Capture".into(),
+                    linux_description: format!("{} Capture", crate::constants::APP_NAME).into(),
                     windows_modifiers: 0x0008 | 0x0004,  // MOD_WIN | MOD_SHIFT
                     windows_vk: 0x41,                    // VK_A
                     macos_modifiers: 0x0100 | 0x0200,    // cmdKey | shiftKey

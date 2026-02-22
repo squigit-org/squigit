@@ -69,7 +69,7 @@ export const UpdateNotes: React.FC = () => {
       contentClassName={`${styles.container} ${styles.shellOverride}`}
     >
       <div className={styles.header}>
-        <div className={styles.title}>SnapLLM</div>
+        <div className={styles.title}>{shell.system.appName}</div>
         <div className={styles.subtitle}>v{update.version} is Here!</div>
       </div>
 

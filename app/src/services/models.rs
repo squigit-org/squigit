@@ -1,18 +1,6 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Model management service.
-//!
-//! Downloads and manages OCR models in the user's local storage.
-//!
-//! Path structure:
-//! ~/.config/snapllm/Local Storage/models/
-//!   ├── pp-ocr-v4-en/
-//!   │   ├── inference.pdmodel
-//!   │   └── inference.pdiparams
-//!   ├── pp-ocr-v4-zh/
-//!   └── ...
-
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use reqwest::header::{CONTENT_LENGTH, RANGE};
@@ -53,7 +41,7 @@ struct DownloadProgressPayload {
     progress: u8,
     loaded: u64,
     total: u64,
-    status: String, // "checking", "downloading", "extracting"
+    status: String,
 }
 
 pub struct ModelManager {
@@ -66,14 +54,14 @@ impl ModelManager {
     pub fn new() -> Result<Self> {
         let config_dir = dirs::config_dir().ok_or(ModelError::NoConfigDir)?;
         let models_dir = config_dir
-            .join("snapllm")
+            .join(crate::constants::APP_NAME.to_lowercase())
             .join("Local Storage")
             .join("models");
 
         fs::create_dir_all(&models_dir)?;
 
         let network_monitor = Arc::new(crate::services::network::PeerNetworkMonitor::new());
-        // Do not start monitor here to avoid "no reactor" panic
+        
         
         Ok(Self {
             models_dir,
@@ -121,7 +109,7 @@ impl ModelManager {
             return Ok(target_dir);
         }
 
-        // Cancel any existing download for this model
+        
         self.cancel_download(model_id);
 
         let cancel_token = CancellationToken::new();
@@ -133,20 +121,20 @@ impl ModelManager {
         let client = reqwest::Client::new();
         
         loop {
-            // Check cancellation
+            
             if cancel_token.is_cancelled() {
                 if let Ok(mut tokens) = self.cancellation_tokens.lock() {
                     tokens.remove(model_id);
                 }
-                // Cleanup temp file on cancel
+                
                 let _ = fs::remove_file(&temp_file_path);
                 return Err(ModelError::Cancelled);
             }
 
-            // Check Network Status
+            
             let net_state = self.network_monitor.get_state();
             if net_state.status == crate::services::network::NetworkStatus::Offline {
-                // Emit paused state
+                
                 let _ = window.emit(
                     "download-progress",
                     DownloadProgressPayload {
@@ -157,12 +145,12 @@ impl ModelManager {
                         status: "paused".to_string(),
                     },
                 );
-                // Wait for network to come back
+                
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 continue;
             }
 
-            // Emit checking/downloading state based on progress
+            
             let metadata = fs::metadata(&temp_file_path).ok();
             let current_bytes = metadata.map(|m| m.len()).unwrap_or(0);
             
@@ -171,27 +159,27 @@ impl ModelManager {
                 "download-progress",
                 DownloadProgressPayload {
                     id: model_id.to_string(),
-                    progress: 0, // Calculated later
+                    progress: 0, 
                     loaded: current_bytes,
-                    total: 0, // Unknown yet
+                    total: 0, 
                     status: status_str.to_string(),
                 },
             );
 
-            // Attempt Download
+            
             match self.download_chunk_loop(&client, url, model_id, &temp_file_path, window, &cancel_token).await {
-                Ok(_) => break, // Download complete
+                Ok(_) => break, 
                 Err(ModelError::Cancelled) => {
                      if let Ok(mut tokens) = self.cancellation_tokens.lock() {
                         tokens.remove(model_id);
                     }
-                    // Cleanup temp file on cancel
+                    
                     let _ = fs::remove_file(&temp_file_path);
                     return Err(ModelError::Cancelled);
                 },
                 Err(e) => {
                     println!("Download chunk failed: {}. Retrying...", e);
-                    // Emit paused/retry state
+                    
                      let _ = window.emit(
                         "download-progress",
                         DownloadProgressPayload {
@@ -203,19 +191,19 @@ impl ModelManager {
                         },
                     );
                     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-                    continue; // Auto-resume loop
+                    continue; 
                 }
             }
         }
         
-        // Remove token as download is done
+        
         if let Ok(mut tokens) = self.cancellation_tokens.lock() {
              tokens.remove(model_id);
         }
         
-        // Extract... (rest of the function)
+        
         println!("Extracting model {}...", model_id);
-        // ... (extract logic same as before)
+        
         return self.perform_extraction(url, model_id, &temp_file_path, &target_dir, window).await;
     }
 
@@ -228,7 +216,7 @@ impl ModelManager {
         window: &Window,
         cancel_token: &CancellationToken,
     ) -> Result<()> {
-         // Check file for resume
+         
         let mut downloaded_bytes = 0u64;
         let mut file;
 
@@ -240,9 +228,9 @@ impl ModelManager {
             file = File::create(temp_file_path).await?;
         }
 
-        // HEAD for total size (optional, but good for UI)
-        // We do this every retry to be safe, but could optimize.
-        // If HEAD fails, we propagate error to trigger retry loop.
+        
+        
+        
         let head_resp = client.head(url).send().await?;
         if !head_resp.status().is_success() {
              return Err(ModelError::Network(head_resp.error_for_status().unwrap_err()));
@@ -253,11 +241,11 @@ impl ModelManager {
             .and_then(|ct| ct.parse::<u64>().ok())
             .unwrap_or(0);
 
-        // Sanity check
+        
         if total_size > 0 && downloaded_bytes >= total_size {
-             // Already done? or corrupted?
-             // If completely matches, maybe we are done. 
-             // But to be safe if it's strictly equal, return Ok.
+             
+             
+             
              return Ok(());
         }
 
@@ -270,7 +258,7 @@ impl ModelManager {
 
         if !response.status().is_success() {
              if response.status() == reqwest::StatusCode::RANGE_NOT_SATISFIABLE {
-                  // Corrupted or server changed? Reset.
+                  
                   return Err(ModelError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, "Range not satisfiable")));
              }
              return Err(ModelError::Network(response.error_for_status().unwrap_err()));
@@ -343,9 +331,9 @@ impl ModelManager {
         }
         fs::create_dir_all(&target_dir)?;
         
-         // ... reuse existing extraction logic ...
-        // For brevity in this tool call, implementing the core extraction call
-        // Using File for seek is needed.
+         
+        
+        
         
         let tar_file = fs::File::open(temp_file_path)?;
         let mut archive = Archive::new(tar_file);
@@ -358,7 +346,7 @@ impl ModelManager {
              let mut archive = Archive::new(tar);
              self.extract_archive(&mut archive, target_dir)?;
         } else {
-             // Try tar first
+             
              if let Err(_) = self.extract_archive(&mut archive, target_dir) {
                  if target_dir.exists() {
                      fs::remove_dir_all(target_dir)?;

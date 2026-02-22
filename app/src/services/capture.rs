@@ -82,8 +82,8 @@ fn run_capture(app: &AppHandle) -> Result<CaptureResult, String> {
 
     let mut child = Command::new(&sidecar_path)
         .args(&args)
-        .env("GIO_LAUNCHED_DESKTOP_APP_ID", "snapllm")
-        .env("G_APPLICATION_ID", "snapllm")
+        .env("GIO_LAUNCHED_DESKTOP_APP_ID", crate::constants::APP_NAME.to_lowercase())
+        .env("G_APPLICATION_ID", crate::constants::APP_NAME.to_lowercase())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()

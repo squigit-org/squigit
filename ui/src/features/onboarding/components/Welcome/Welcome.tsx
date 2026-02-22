@@ -11,6 +11,7 @@ import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
 import { ImageResult, storeImageFromPath } from "@/lib/storage";
 import { OnboardingShell } from "@/shell/containers";
+import { useShellContext } from "@/shell/context";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
@@ -33,6 +34,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
   isGuest = false,
   onLoginRequired,
 }) => {
+  const shell = useShellContext();
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isMac, isWin, modSymbol, shiftSymbol } = usePlatform();
@@ -258,7 +260,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
             fill="var(--neutral-100)"
           />
         </svg>
-        <h1 className={styles.title}>SnapLLM</h1>
+        <h1 className={styles.title}>{shell.system.appName}</h1>
 
         <div className={styles.actions}>
           <div className={styles.actionRow}>

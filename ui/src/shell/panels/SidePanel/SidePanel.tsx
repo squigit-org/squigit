@@ -25,7 +25,7 @@ import { PanelContextMenu } from "@/shell/menus";
 import {
   getDeleteMultipleChatsDialog,
   getAppBusyDialog,
-  type DialogContent,
+  DialogContent,
 } from "@/lib/helpers";
 import { useShellContext } from "@/shell/context";
 import { useKeyDown, getPendingUpdate } from "@/hooks";
@@ -501,7 +501,7 @@ export const SidePanel: React.FC = () => {
                       />
                     </div>
                     <span className={styles.chatTitle}>
-                      Welcome to SnapLLM!
+                      Welcome to {shell.system.appName}!
                     </span>
                   </div>
                 )}
@@ -546,6 +546,7 @@ export const SidePanel: React.FC = () => {
       <Dialog
         isOpen={!!deleteId}
         type="DELETE_CHAT"
+        appName={shell.system.appName}
         onAction={(key) => {
           if (key === "confirm") handleDeleteChat();
           else setDeleteId(null);
@@ -555,6 +556,7 @@ export const SidePanel: React.FC = () => {
       <Dialog
         isOpen={showBulkDelete}
         type={getDeleteMultipleChatsDialog(selectedIds.length)}
+        appName={shell.system.appName}
         onAction={(key) => {
           if (key === "confirm") handleBulkDelete();
           else setShowBulkDelete(false);
@@ -564,6 +566,7 @@ export const SidePanel: React.FC = () => {
       <Dialog
         isOpen={!!busyDialog}
         type={busyDialog || undefined}
+        appName={shell.system.appName}
         onAction={() => setBusyDialog(null)}
       />
     </div>

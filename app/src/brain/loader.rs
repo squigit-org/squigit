@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_load_soul() {
         let soul = load_soul().expect("Failed to load soul");
-        assert_eq!(soul.identity.name, "SnapLLM");
+        assert_eq!(soul.identity.name, crate::constants::APP_NAME);
     }
 
     #[test]
@@ -119,9 +119,9 @@ mod tests {
         let template = "Hello {{NAME}}, welcome to {{PLACE}}!";
         let mut vars = HashMap::new();
         vars.insert("NAME".to_string(), "User".to_string());
-        vars.insert("PLACE".to_string(), "SnapLLM".to_string());
+        vars.insert("PLACE".to_string(), crate::constants::APP_NAME.to_string());
         
         let result = interpolate(template, &vars);
-        assert_eq!(result, "Hello User, welcome to SnapLLM!");
+        assert_eq!(result, format!("Hello User, welcome to {}!", crate::constants::APP_NAME));
     }
 }

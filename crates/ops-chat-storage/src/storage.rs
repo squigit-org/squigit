@@ -62,7 +62,7 @@ impl ChatStorage {
     pub fn new() -> Result<Self> {
         let base_dir = dirs::config_dir()
             .ok_or(StorageError::NoDataDir)?
-            .join("snapllm")
+            .join("SnapLLM".to_lowercase())
             .join("chats");
 
         Self::with_base_dir(base_dir)

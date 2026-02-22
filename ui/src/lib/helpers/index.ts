@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./constants";
 export * from "./dialogs";
 export * from "./error-parser.ts";
 export * from "./files.ts";

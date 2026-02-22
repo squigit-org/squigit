@@ -48,14 +48,14 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
     let capture_i = MenuItem::with_id(app, "capture", "Capture", true, None::<&str>)?;
-    let show_i = MenuItem::with_id(app, "show_ui", "SnapLLM", true, None::<&str>)?;
+    let show_i = MenuItem::with_id(app, "show_ui", crate::constants::APP_NAME, true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let exit_i = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&capture_i, &show_i, &sep, &exit_i])?;
 
     let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
-        .tooltip("SnapLLM")
+        .tooltip(crate::constants::APP_NAME)
         .menu(&menu)
         .menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -146,7 +146,7 @@ mod sni {
             show_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
 
             let mut show_ui_props: HashMap<String, OwnedValue> = HashMap::new();
-            show_ui_props.insert("label".into(), Value::from("SnapLLM").try_into().unwrap());
+            show_ui_props.insert("label".into(), Value::from(crate::constants::APP_NAME).try_into().unwrap());
             show_ui_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
 
             let mut sep_props: HashMap<String, OwnedValue> = HashMap::new();
@@ -240,13 +240,13 @@ mod sni {
         }
 
         #[zbus(property)]
-        fn id(&self) -> &str {
-            "snapllm"
+        fn id(&self) -> String {
+            crate::constants::APP_NAME.to_lowercase()
         }
 
         #[zbus(property)]
         fn title(&self) -> &str {
-            "SnapLLM"
+            crate::constants::APP_NAME
         }
 
         #[zbus(property)]

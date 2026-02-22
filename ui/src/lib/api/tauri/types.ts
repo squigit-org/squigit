@@ -22,3 +22,14 @@ export interface Profile {
   avatar: string | null;
   original_avatar?: string | null;
 }
+
+export interface AppConstants {
+  appName: string;
+  defaultModel: string;
+  defaultTheme: string;
+  defaultPrompt: string;
+  preferencesFileName: string;
+  defaultCaptureType: string;
+  defaultOcrLanguage: string;
+  defaultActiveAccount: string;
+}

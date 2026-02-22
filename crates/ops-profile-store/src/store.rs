@@ -40,7 +40,7 @@ impl ProfileStore {
     pub fn new() -> Result<Self> {
         let base_dir = dirs::config_dir()
             .ok_or(ProfileError::NoConfigDir)?
-            .join("snapllm")
+            .join("SnapLLM".to_lowercase())
             .join(STORAGE_DIR);
 
         let index_path = base_dir.join(INDEX_FILE);
@@ -240,7 +240,7 @@ mod tests {
     use std::env;
 
     fn temp_store() -> ProfileStore {
-        let temp_dir = env::temp_dir().join(format!("snapllm_test_{}", std::process::id()));
+        let temp_dir = env::temp_dir().join(format!("test_{}", std::process::id()));
         let base_dir = temp_dir.join(STORAGE_DIR);
         fs::create_dir_all(&base_dir).unwrap();
 

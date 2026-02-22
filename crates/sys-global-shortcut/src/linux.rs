@@ -30,15 +30,17 @@ pub fn install_linux_shortcut(_bin_path: &str, trigger: &str, name: &str) -> Res
         trigger.split('+').last().unwrap_or("A").to_uppercase()
     );
 
-    let command = "dbus-send --session --type=method_call --dest=com.snapllm.app /com/snapllm/app com.snapllm.app.Capture";
+    let app_lower = "SnapLLM".to_lowercase();
+    let command_str = format!("dbus-send --session --type=method_call --dest=com.{0}.app /com/{0}/app com.{0}.app.Capture", app_lower);
+    let command = command_str.as_str();
 
     if de.contains("gnome")
         || de.contains("ubuntu")
         || de.contains("unity")
         || de.contains("budgie")
     {
-        let binding_path =
-            "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/snapllm-binding/";
+        let binding_path_str = format!("/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{}-binding/", app_lower);
+        let binding_path = binding_path_str.as_str();
         let schema = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding";
 
         let get_bindings = Command::new("gsettings")
@@ -92,7 +94,7 @@ pub fn install_linux_shortcut(_bin_path: &str, trigger: &str, name: &str) -> Res
         return Err("Failed to setup GNOME bindings via gsettings".into());
     } else if de.contains("kde") || de.contains("plasma") {
         let uuid_str = format!("12345678-1234-5678-1234-{:012x}", std::process::id());
-        let import_file = format!("/tmp/snapllm-binding.khotkeys");
+        let import_file = format!("/tmp/{}-binding.khotkeys", app_lower);
         let content = format!(
             "[Data]
 DataCount=1
@@ -156,12 +158,12 @@ Uuid={{{uuid_str}}}"
     .into())
 }
 
-struct SnapllmDbus {
+struct AppDbus {
     callback: Arc<dyn Fn() + Send + Sync + 'static>,
 }
 
 #[interface(name = "com.snapllm.app")]
-impl SnapllmDbus {
+impl AppDbus {
     async fn capture(&self) {
         (self.callback)();
     }
@@ -188,13 +190,14 @@ impl LinuxHandle {
                 };
 
                 rt.block_on(async {
-                    let dbus_service = SnapllmDbus { callback: cb };
+                    let dbus_service = AppDbus { callback: cb };
+                    let app_lower = "SnapLLM".to_lowercase();
 
                     let _conn = match zbus::connection::Builder::session() {
                         Ok(builder) => match builder
-                            .name("com.snapllm.app")
+                            .name(format!("com.{}.app", app_lower))
                             .expect("Invalid D-Bus name")
-                            .serve_at("/com/snapllm/app", dbus_service)
+                            .serve_at(format!("/com/{}/app", app_lower), dbus_service)
                             .expect("Failed to serve dbus interface")
                             .build()
                             .await

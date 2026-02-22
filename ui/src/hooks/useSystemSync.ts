@@ -13,10 +13,10 @@ import { useTheme } from "./useTheme";
 import {
   loadPreferences,
   savePreferences,
-  hasPreferencesFile,
+  hasAgreedFlag,
+  setAgreedFlag,
   UserPreferences,
 } from "@/lib/storage";
-import { DEFAULT_MODEL, DEFAULT_PROMPT } from "@/lib/helpers";
 import { SettingsSection } from "@/shell";
 
 export const useSystemSync = () => {
@@ -34,22 +34,21 @@ export const useSystemSync = () => {
     updateNativeBg();
   }, [resolvedTheme]);
 
+  const [appName, setAppName] = useState<string>("SnapLLM");
   const [apiKey, setApiKey] = useState<string>("");
   const [imgbbKey, setImgbbKey] = useState<string>("");
-  const [activePrompt, setActivePrompt] = useState<string>(DEFAULT_PROMPT);
-  const [editingPrompt, setEditingPrompt] = useState<string>(DEFAULT_PROMPT);
-  const [startupModel, setStartupModel] = useState<string>(DEFAULT_MODEL);
-  const [editingModel, setEditingModel] = useState<string>(DEFAULT_MODEL);
-  const [sessionModel, setSessionModel] = useState<string>(DEFAULT_MODEL);
+  const [activePrompt, setActivePrompt] = useState<string>("");
+  const [editingPrompt, setEditingPrompt] = useState<string>("");
+  const [startupModel, setStartupModel] = useState<string>("");
+  const [editingModel, setEditingModel] = useState<string>("");
+  const [sessionModel, setSessionModel] = useState<string>("");
   const [autoExpandOCR, setAutoExpandOCR] = useState<boolean>(true);
   const [ocrEnabled, setOcrEnabled] = useState<boolean>(true);
   const [captureType, setCaptureType] = useState<"rectangular" | "squiggle">(
     "rectangular",
   );
-  const [startupOcrLanguage, setStartupOcrLanguage] =
-    useState<string>("pp-ocr-v4-en");
-  const [sessionOcrLanguage, setSessionOcrLanguage] =
-    useState<string>("pp-ocr-v4-en");
+  const [startupOcrLanguage, setStartupOcrLanguage] = useState<string>("");
+  const [sessionOcrLanguage, setSessionOcrLanguage] = useState<string>("");
 
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -87,23 +86,30 @@ export const useSystemSync = () => {
   const [hasAgreed, setHasAgreed] = useState<boolean | null>(null);
 
   const checkAgreement = async () => {
-    const agreed = await hasPreferencesFile();
+    const agreed = await hasAgreedFlag();
     setHasAgreed(agreed);
     return agreed;
   };
 
+  const setAgreementCompleted = async () => {
+    await setAgreedFlag();
+    setHasAgreed(true);
+  };
+
   useEffect(() => {
     const init = async () => {
+      const appConstants = await commands.getAppConstants();
       const agreed = await checkAgreement();
+      setAppName(appConstants.appName || "SnapLLM");
 
       if (agreed) {
         const prefs = await loadPreferences();
 
-        const loadedPrompt = prefs.prompt || DEFAULT_PROMPT;
+        const loadedPrompt = prefs.prompt || appConstants.defaultPrompt;
         setActivePrompt(loadedPrompt);
         setEditingPrompt(loadedPrompt);
 
-        const loadedModel = prefs.model || DEFAULT_MODEL;
+        const loadedModel = prefs.model || appConstants.defaultModel;
         setStartupModel(loadedModel);
         setEditingModel(loadedModel);
         setSessionModel(loadedModel);
@@ -150,6 +156,16 @@ export const useSystemSync = () => {
         }
       } else {
         setTheme("system");
+
+        // Still load default preferences even on first run
+        const prefs = await loadPreferences();
+        const loadedPrompt = prefs.prompt || appConstants.defaultPrompt;
+        setActivePrompt(loadedPrompt);
+        setEditingPrompt(loadedPrompt);
+        const loadedModel = prefs.model || appConstants.defaultModel;
+        setStartupModel(loadedModel);
+        setEditingModel(loadedModel);
+        setSessionModel(loadedModel);
 
         try {
           await invoke("logout");
@@ -319,7 +335,6 @@ export const useSystemSync = () => {
     try {
       const currentPrefs = await loadPreferences();
       await savePreferences({ ...currentPrefs, ...updates });
-      setHasAgreed(true);
     } catch (e) {
       console.error("Failed to save preferences:", e);
     }
@@ -477,6 +492,7 @@ export const useSystemSync = () => {
   };
 
   return {
+    appName,
     switchingProfileId,
     apiKey,
     prompt: activePrompt,
@@ -507,6 +523,7 @@ export const useSystemSync = () => {
     handleLogout,
     hasAgreed,
     setHasAgreed,
+    setAgreementCompleted,
     updateUserData,
     sessionChatTitle,
     setSessionChatTitle,

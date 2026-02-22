@@ -24,6 +24,7 @@ import {
   overwriteChatMessages,
   OcrFrame,
   cancelOcrJob,
+  hasAgreedFlag,
 } from "@/lib/storage";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
@@ -247,6 +248,14 @@ export const useShell = () => {
         );
 
         try {
+          if (!activeProfileRef.current) {
+            console.log(
+              "Capture upload attempted in guest mode - requiring login",
+            );
+            setShowLoginRequiredDialog(true);
+            return;
+          }
+
           const imagePath = await getImagePath(imageHash);
           const assetUrl = convertFileSrc(imagePath);
 
@@ -373,7 +382,7 @@ export const useShell = () => {
   });
 
   const chatTitle = isImageMissing
-    ? "SnapLLM"
+    ? system.appName
     : isGeneratingTitle
       ? "New Chat"
       : system.sessionChatTitle || "New Chat";
@@ -418,7 +427,7 @@ export const useShell = () => {
       setOcrData({});
       setSessionLensUrl(null);
       if (id === "__system_welcome") {
-        system.setSessionChatTitle("Welcome to SnapLLM!");
+        system.setSessionChatTitle(`Welcome to ${system.appName}!`);
       } else if (id.startsWith("__system_update")) {
         system.setSessionChatTitle("Update Available");
       }
@@ -523,15 +532,18 @@ export const useShell = () => {
   });
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const agreedToTermsRef = useRef(false);
+
+  useEffect(() => {
+    agreedToTermsRef.current = agreedToTerms;
+  }, [agreedToTerms]);
 
   const handleSystemAction = useCallback(
     async (actionId: string, _value?: string) => {
       switch (actionId) {
         case "agree":
           setAgreedToTerms(true);
-          system.setHasAgreed(true);
-          await system.updatePreferences({});
-          handleNewSession();
+          // Wait for auth SUCCESS to actually set hasAgreed
           break;
         case "disagree":
           setAgreedToTerms(false);
@@ -570,7 +582,7 @@ export const useShell = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unlisten = listen<any>("auth-success", (event) => {
+    const unlisten = listen<any>("auth-success", async (event) => {
       if (
         activeProfileRef.current &&
         event.payload &&
@@ -579,9 +591,13 @@ export const useShell = () => {
         return;
       }
 
-      if (system.hasAgreed === false) {
-        system.setHasAgreed(true);
-        system.updatePreferences({});
+      const alreadyAgreed = await hasAgreedFlag();
+      if (!alreadyAgreed) {
+        // Now it's safe to mark agreement completed and navigate forward
+        if (agreedToTermsRef.current) {
+          system.setAgreementCompleted();
+        }
+        // Force refresh state for transition
       }
 
       handleNewSession();

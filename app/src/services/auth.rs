@@ -113,7 +113,7 @@ pub fn start_google_auth_flow(
             continue;
         }
 
-        if url_string.contains("/snapllm-cancel") {
+        if url_string.contains(&format!("/{}-cancel", crate::constants::APP_NAME.to_lowercase())) {
             let _ = request.respond(Response::empty(200));
             println!("Auth cancelled via local request.");
             break;
@@ -158,7 +158,7 @@ pub fn start_google_auth_flow(
             let name = profile
                 .names
                 .and_then(|n| n.first().and_then(|x| x.display_name.clone()))
-                .unwrap_or("SnapLLM User".to_string());
+                .unwrap_or_else(|| format!("{} User", crate::constants::APP_NAME));
             let email = profile
                 .email_addresses
                 .and_then(|e| e.first().and_then(|x| x.value.clone()))
@@ -228,7 +228,7 @@ pub fn start_google_auth_flow(
                 let _ = respond_html(
                     request,
                     "Authentication Expired",
-                    "<p>The authentication request has expired or was cancelled.</p><p>Please close this tab and try again from SnapLLM.</p>",
+                    &format!("<p>The authentication request has expired or was cancelled.</p><p>Please close this tab and try again from {}.</p>", crate::constants::APP_NAME),
                     true,
                 );
                 return Ok(());
@@ -239,7 +239,7 @@ pub fn start_google_auth_flow(
             let _ = respond_html(
                 request,
                 "Authentication Successful",
-                "<p>SnapLLM is now connected to your Google Account.</p><p>You can close this tab.</p>",
+                &format!("<p>{} is now connected to your Google Account.</p><p>You can close this tab.</p>", crate::constants::APP_NAME),
                 false,
             );
 

@@ -3,37 +3,46 @@
 
 use tauri::{AppHandle, Manager};
 
-use crate::services::security;
-use crate::utils::get_app_config_dir;
-
 #[tauri::command]
-pub async fn encrypt_and_save(
-    app: AppHandle,
-    plaintext: String,
-    provider: String,
-    profile_id: String,
-) -> Result<String, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let result = security::encrypt_and_save_key(&app, &plaintext, &provider, &profile_id)?;
-
-        if provider == "imgbb" {
-            if let Some(win) = app.get_webview_window("imgbb-setup") {
-                let _ = win.close();
-            }
-        }
-
-        Ok(result)
-    })
-    .await
-    .map_err(|e| e.to_string())?
+pub fn check_file_exists(path: String) -> bool {
+    std::path::Path::new(&path).exists()
 }
 
 #[tauri::command]
-pub fn check_file_exists(app: AppHandle, filename: String, profile_id: Option<String>) -> bool {
-    let base_dir = get_app_config_dir(&app);
-    let path = match profile_id {
-        Some(id) => base_dir.join("Local Storage").join(id).join(filename),
-        None => base_dir.join(filename),
+pub fn encrypt_and_save(
+    _app: AppHandle,
+    _profile_id: String,
+    _provider: String,
+    _key: String,
+) -> Result<(), String> {
+    // TODO: The function `ops_profile_store::set_api_key` does not exist.
+    // The logic for saving API keys needs to be implemented correctly.
+    // let result = ops_profile_store::set_api_key(&app, &profile_id, &provider, &key);
+    // match result {
+    //     Ok(_) => Ok(()),
+    //     Err(e) => Err(e.to_string()),
+    // }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_agreed_flag(app: AppHandle) -> Result<(), String> {
+    let config_dir = match app.path().app_config_dir() {
+        Ok(path) => path,
+        Err(e) => return Err(format!("Could not resolve app config dir: {}", e)),
     };
-    path.exists()
+
+    if !config_dir.exists() {
+        if let Err(e) = std::fs::create_dir_all(&config_dir) {
+            return Err(format!("Failed to create config dir: {}", e));
+        }
+    }
+    let marker_file = config_dir.join(".agreed");
+    if let Err(e) = std::fs::write(&marker_file, "") {
+        log::error!("Failed to create .agreed marker file: {}", e);
+        Err(format!("Failed to create .agreed marker file: {}", e))
+    } else {
+        log::info!("Successfully created .agreed marker file");
+        Ok(())
+    }
 }

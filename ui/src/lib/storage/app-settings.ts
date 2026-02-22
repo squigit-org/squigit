@@ -11,16 +11,8 @@ import {
   writeTextFile,
   mkdir,
 } from "@tauri-apps/plugin-fs";
-
-import {
-  DEFAULT_MODEL,
-  DEFAULT_PROMPT,
-  DEFAULT_THEME,
-  PREFERENCES_FILE_NAME,
-  DEFAULT_CAPTURE_TYPE,
-  DEFAULT_OCR_LANGUAGE,
-  DEFAULT_ACTIVE_ACCOUNT,
-} from "@/lib/helpers";
+import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/lib/api/tauri";
 
 export interface UserPreferences {
   model: string;
@@ -33,24 +25,47 @@ export interface UserPreferences {
   activeAccount: string;
 }
 
-export const defaultPreferences: UserPreferences = {
-  model: DEFAULT_MODEL,
-  theme: DEFAULT_THEME,
-  prompt: DEFAULT_PROMPT,
-  ocrEnabled: true,
-  autoExpandOCR: true,
-  captureType: DEFAULT_CAPTURE_TYPE,
-  ocrLanguage: DEFAULT_OCR_LANGUAGE,
-  activeAccount: DEFAULT_ACTIVE_ACCOUNT,
-};
+export async function getDefaultPreferences(): Promise<UserPreferences> {
+  const constants = await commands.getAppConstants();
+  return {
+    model: constants.defaultModel,
+    theme: constants.defaultTheme as "dark" | "light" | "system",
+    prompt: constants.defaultPrompt,
+    ocrEnabled: true,
+    autoExpandOCR: true,
+    captureType: constants.defaultCaptureType as "rectangular" | "squiggle",
+    ocrLanguage: constants.defaultOcrLanguage,
+    activeAccount: constants.defaultActiveAccount,
+  };
+}
 
-export async function hasPreferencesFile(): Promise<boolean> {
+export async function hasAgreedFlag(): Promise<boolean> {
   try {
-    return await exists(PREFERENCES_FILE_NAME, {
+    return await exists(".agreed", {
       baseDir: BaseDirectory.AppConfig,
     });
   } catch (error) {
-    console.warn("Preferences check failed (fresh install?):", error);
+    console.warn("Agreed flag check failed:", error);
+    return false;
+  }
+}
+
+export async function setAgreedFlag(): Promise<void> {
+  try {
+    await invoke("set_agreed_flag");
+  } catch (error) {
+    console.error("Failed to write agreed flag via native command:", error);
+  }
+}
+
+export async function hasPreferencesFile(): Promise<boolean> {
+  try {
+    const constants = await commands.getAppConstants();
+    return await exists(constants.preferencesFileName, {
+      baseDir: BaseDirectory.AppConfig,
+    });
+  } catch (error) {
+    console.warn("Preferences check failed:", error);
     return false;
   }
 }
@@ -58,28 +73,35 @@ export async function hasPreferencesFile(): Promise<boolean> {
 export async function loadPreferences(): Promise<UserPreferences> {
   try {
     const fileExists = await hasPreferencesFile();
+    const defaultPrefs = await getDefaultPreferences();
     if (!fileExists) {
-      return defaultPreferences;
+      return defaultPrefs;
     }
 
-    const content = await readTextFile(PREFERENCES_FILE_NAME, {
+    const constants = await commands.getAppConstants();
+    const content = await readTextFile(constants.preferencesFileName, {
       baseDir: BaseDirectory.AppConfig,
     });
     const parsed = JSON.parse(content);
 
-    return { ...defaultPreferences, ...parsed };
+    return { ...defaultPrefs, ...parsed };
   } catch (error) {
     console.error("Failed to load preferences:", error);
-    return defaultPreferences;
+    return await getDefaultPreferences();
   }
 }
 
 export async function savePreferences(prefs: UserPreferences): Promise<void> {
   try {
+    const constants = await commands.getAppConstants();
     await mkdir("", { baseDir: BaseDirectory.AppConfig, recursive: true });
-    await writeTextFile(PREFERENCES_FILE_NAME, JSON.stringify(prefs, null, 2), {
-      baseDir: BaseDirectory.AppConfig,
-    });
+    await writeTextFile(
+      constants.preferencesFileName,
+      JSON.stringify(prefs, null, 2),
+      {
+        baseDir: BaseDirectory.AppConfig,
+      },
+    );
   } catch (error) {
     console.error("Failed to save preferences:", error);
     if (typeof error === "object" && error !== null) {

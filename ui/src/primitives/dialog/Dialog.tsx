@@ -19,7 +19,7 @@ export interface DialogAction {
   disabled?: boolean;
 }
 
-import { DIALOGS, DialogContent } from "@/lib/helpers";
+import { getDialogs, DialogContent } from "@/lib/helpers";
 
 interface DialogProps {
   variant?: DialogVariant;
@@ -27,7 +27,8 @@ interface DialogProps {
   message?: string;
   actions?: DialogAction[];
   isOpen: boolean;
-  type?: keyof typeof DIALOGS | DialogContent;
+  type?: string | DialogContent;
+  appName?: string;
   onAction?: (actionKey: string) => void;
 }
 
@@ -39,11 +40,15 @@ export const Dialog: React.FC<DialogProps> = ({
   isOpen,
   type,
   onAction,
+  appName = "SnapLLM",
 }) => {
   let activeContent: Partial<DialogContent> = {};
 
-  if (typeof type === "string" && DIALOGS[type]) {
-    activeContent = DIALOGS[type];
+  if (typeof type === "string") {
+    const dialogs = getDialogs(appName);
+    if (dialogs[type]) {
+      activeContent = dialogs[type];
+    }
   } else if (typeof type === "object") {
     activeContent = type;
   }

@@ -57,4 +57,6 @@ export const commands = {
 
   // Utils
   openExternalUrl: (url: string) => invoke("open_external_url", { url }),
+  getAppConstants: () =>
+    invoke<import("./types").AppConstants>("get_app_constants"),
 };

@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn test_build_initial_prompt() {
         let prompt = build_initial_system_prompt().expect("Failed to build prompt");
-        assert!(prompt.contains("SnapLLM"));
+        assert!(prompt.contains(crate::constants::APP_NAME));
         assert!(prompt.contains("Identity"));
         assert!(prompt.contains("Core Instructions"));
     }

@@ -6,16 +6,18 @@
 
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { getName, getVersion, getTauriVersion } from "@tauri-apps/api/app";
+import { getVersion, getTauriVersion } from "@tauri-apps/api/app";
 import { github } from "@/lib/config";
 import { prepareGitHubIssueReport, prepareMailReport } from "@/lib/helpers";
 import { MarkGithubIcon, MailIcon, BugIcon } from "@primer/octicons-react";
 import { CodeBlock } from "@/primitives";
+import { useShellContext } from "@/shell/context";
 import styles from "./HelpSection.module.css";
 
 export const HelpSection: React.FC = () => {
+  const shell = useShellContext();
   const [sysInfo, setSysInfo] = useState<Record<string, string>>({
-    SnapLLM: "v1.0.0",
+    [shell.system.appName]: "v1.0.0",
     Tauri: "Loading...",
     React: React.version,
     PaddlePaddle: "v2.6.0",
@@ -27,14 +29,13 @@ export const HelpSection: React.FC = () => {
     const loadSystemData = async () => {
       try {
         const [appVer, tauriVer] = await Promise.all([
-          getName(),
           getVersion(),
           getTauriVersion(),
         ]);
 
         setSysInfo((prev) => ({
           ...prev,
-          SnapLLM: `v${appVer}`,
+          [shell.system.appName]: `v${appVer}`,
           Tauri: `v${tauriVer}`,
           Webview: navigator.userAgent,
         }));
@@ -57,7 +58,9 @@ export const HelpSection: React.FC = () => {
 
   const handleContactSupport = async () => {
     const diag = JSON.stringify(sysInfo, null, 2);
-    const action = prepareMailReport({ diagnostics: diag });
+    const action = prepareMailReport(shell.system.appName, {
+      diagnostics: diag,
+    });
 
     if (action.didCopy && action.copyText) {
       await copyToClipboard(action.copyText);
@@ -68,7 +71,9 @@ export const HelpSection: React.FC = () => {
 
   const handleReportBug = async () => {
     const diag = JSON.stringify(sysInfo, null, 2);
-    const action = prepareGitHubIssueReport({ diagnostics: diag });
+    const action = prepareGitHubIssueReport(shell.system.appName, {
+      diagnostics: diag,
+    });
 
     if (action.didCopy && action.copyText) {
       await copyToClipboard(action.copyText);
@@ -119,9 +124,10 @@ export const HelpSection: React.FC = () => {
       <div className={styles.aboutSection}>
         <div className={styles.legalNote}>
           <p className={styles.legalNoteText}>
-            Some system diagnostics information may be sent to SnapLLM when you
-            contact support or report an issue. This information is used to help
-            us troubleshoot problems and bugs, subject to our{" "}
+            Some system diagnostics information may be sent to{" "}
+            {shell.system.appName} when you contact support or report an issue.
+            This information is used to help us troubleshoot problems and bugs,
+            subject to our{" "}
             <button
               className={styles.legalLink}
               onClick={() => handleOpen(github.docs("06-policies/SECURITY.md"))}
@@ -134,7 +140,7 @@ export const HelpSection: React.FC = () => {
         </div>
         <div className={styles.divider} />
         <div className={styles.legalRow}>
-          <span>SnapLLM © 2026</span>
+          <span>{shell.system.appName} © 2026</span>
           <span className={styles.dot}>•</span>
           <span>
             <button
