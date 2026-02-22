@@ -78,6 +78,10 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    console.log("[OCRModelSwitcher] ocrEnabled:", ocrEnabled, "currentOcrModel:", currentOcrModel);
+  }, [ocrEnabled, currentOcrModel]);
+
   if (!ocrEnabled) return null;
 
   const isCurrentModelValid = installedModels.some(

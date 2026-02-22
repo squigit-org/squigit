@@ -92,6 +92,10 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   isOcrScanning,
   onOcrScanningChange,
 }) => {
+  useEffect(() => {
+    console.log("[ImageShell] ocrEnabled:", ocrEnabled);
+  }, [ocrEnabled]);
+
   const [localLoading, setLocalLoading] = useState(false);
   const loading = isOcrScanning ?? localLoading;
   const setLoading = onOcrScanningChange ?? setLocalLoading;

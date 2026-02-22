@@ -41,9 +41,7 @@ export async function getDefaultPreferences(): Promise<UserPreferences> {
 
 export async function hasAgreedFlag(): Promise<boolean> {
   try {
-    return await exists(".agreed", {
-      baseDir: BaseDirectory.AppConfig,
-    });
+    return await invoke<boolean>("has_agreed_flag");
   } catch (error) {
     console.warn("Agreed flag check failed:", error);
     return false;

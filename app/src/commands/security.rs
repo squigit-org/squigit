@@ -10,19 +10,16 @@ pub fn check_file_exists(path: String) -> bool {
 
 #[tauri::command]
 pub fn encrypt_and_save(
-    _app: AppHandle,
-    _profile_id: String,
-    _provider: String,
-    _key: String,
+    app: AppHandle,
+    profile_id: String,
+    provider: String,
+    plaintext: String,
 ) -> Result<(), String> {
-    // TODO: The function `ops_profile_store::set_api_key` does not exist.
-    // The logic for saving API keys needs to be implemented correctly.
-    // let result = ops_profile_store::set_api_key(&app, &profile_id, &provider, &key);
-    // match result {
-    //     Ok(_) => Ok(()),
-    //     Err(e) => Err(e.to_string()),
-    // }
-    Ok(())
+    match crate::services::security::encrypt_and_save_key(&app, &plaintext, &provider, &profile_id)
+    {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
+    }
 }
 
 #[tauri::command]
@@ -45,4 +42,16 @@ pub fn set_agreed_flag(app: AppHandle) -> Result<(), String> {
         log::info!("Successfully created .agreed marker file");
         Ok(())
     }
+}
+
+#[tauri::command]
+pub fn has_agreed_flag(app: AppHandle) -> bool {
+    let config_dir = match app.path().app_config_dir() {
+        Ok(path) => path,
+        Err(e) => {
+            log::error!("Could not resolve app config dir: {}", e);
+            return false;
+        }
+    };
+    config_dir.join(".agreed").exists()
 }

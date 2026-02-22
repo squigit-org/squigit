@@ -44,6 +44,9 @@ export const useSystemSync = () => {
   const [sessionModel, setSessionModel] = useState<string>("");
   const [autoExpandOCR, setAutoExpandOCR] = useState<boolean>(true);
   const [ocrEnabled, setOcrEnabled] = useState<boolean>(true);
+  useEffect(() => {
+    console.log("[useSystemSync] ocrEnabled changed to:", ocrEnabled);
+  }, [ocrEnabled]);
   const [captureType, setCaptureType] = useState<"rectangular" | "squiggle">(
     "rectangular",
   );
@@ -104,6 +107,7 @@ export const useSystemSync = () => {
 
       if (agreed) {
         const prefs = await loadPreferences();
+        console.log("[useSystemSync] Loaded prefs:", prefs);
 
         const loadedPrompt = prefs.prompt || appConstants.defaultPrompt;
         setActivePrompt(loadedPrompt);
@@ -114,18 +118,23 @@ export const useSystemSync = () => {
         setEditingModel(loadedModel);
         setSessionModel(loadedModel);
 
-        if (prefs.autoExpandOCR !== undefined) {
-          setAutoExpandOCR(prefs.autoExpandOCR);
-        }
-        if (prefs.ocrEnabled !== undefined) {
-          setOcrEnabled(prefs.ocrEnabled);
-        }
-        if (prefs.captureType) {
-          setCaptureType(prefs.captureType);
-        }
+        setOcrEnabled(
+          prefs.ocrEnabled !== undefined ? prefs.ocrEnabled : true,
+        );
+        setAutoExpandOCR(
+          prefs.autoExpandOCR !== undefined ? prefs.autoExpandOCR : true,
+        );
+        setCaptureType(
+          prefs.captureType ||
+            (appConstants.defaultCaptureType as "rectangular" | "squiggle"),
+        );
+
         if (prefs.ocrLanguage) {
           setStartupOcrLanguage(prefs.ocrLanguage);
           setSessionOcrLanguage(prefs.ocrLanguage);
+        } else {
+          setStartupOcrLanguage(appConstants.defaultOcrLanguage);
+          setSessionOcrLanguage(appConstants.defaultOcrLanguage);
         }
 
         if (prefs.theme) {
@@ -159,6 +168,8 @@ export const useSystemSync = () => {
 
         // Still load default preferences even on first run
         const prefs = await loadPreferences();
+        console.log("[useSystemSync] Loaded prefs (not agreed):", prefs);
+
         const loadedPrompt = prefs.prompt || appConstants.defaultPrompt;
         setActivePrompt(loadedPrompt);
         setEditingPrompt(loadedPrompt);
@@ -166,6 +177,22 @@ export const useSystemSync = () => {
         setStartupModel(loadedModel);
         setEditingModel(loadedModel);
         setSessionModel(loadedModel);
+
+        setOcrEnabled(
+          prefs.ocrEnabled !== undefined ? prefs.ocrEnabled : true,
+        );
+        setAutoExpandOCR(
+          prefs.autoExpandOCR !== undefined ? prefs.autoExpandOCR : true,
+        );
+        setCaptureType(
+          prefs.captureType ||
+            (appConstants.defaultCaptureType as "rectangular" | "squiggle"),
+        );
+
+        const loadedOcrLanguage =
+          prefs.ocrLanguage || appConstants.defaultOcrLanguage;
+        setStartupOcrLanguage(loadedOcrLanguage);
+        setSessionOcrLanguage(loadedOcrLanguage);
 
         try {
           await invoke("logout");

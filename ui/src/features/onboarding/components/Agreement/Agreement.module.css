@@ -9,7 +9,7 @@
 .content {
   min-height: 100%;
   padding-left: 15px;
-  margin-top: -45px;
+  margin-top: -15px;
   display: flex;
   flex-direction: column;
   align-items: center;

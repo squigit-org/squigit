@@ -33,7 +33,7 @@ use commands::profile::{
     get_active_profile, get_active_profile_id, set_active_profile,
     list_profiles, delete_profile, has_profiles, get_profile_count,
 };
-use commands::security::{check_file_exists, encrypt_and_save, set_agreed_flag};
+use commands::security::{check_file_exists, encrypt_and_save, set_agreed_flag, has_agreed_flag};
 use commands::window::{
     close_window, maximize_window, minimize_window,
     open_external_url, set_background_color,
@@ -85,6 +85,7 @@ pub fn run() {
             encrypt_and_save,
             check_file_exists,
             set_agreed_flag,
+            has_agreed_flag,
             // Auth
             get_api_key,
             start_google_auth,
