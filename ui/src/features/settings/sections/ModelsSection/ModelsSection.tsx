@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/primitives";
 import { UserPreferences } from "@/lib/storage";
@@ -30,6 +30,10 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
   const [activeModel, setActiveModel] = useState(localModel);
   const [ocrMenuOpen, setOcrMenuOpen] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setActiveModel(localModel);
+  }, [localModel]);
 
   const activeOcrModel =
     installedModels.find((m) => m.id === ocrLanguage) ??

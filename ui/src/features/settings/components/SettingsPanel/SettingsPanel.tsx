@@ -23,16 +23,27 @@ import { SettingsSection } from "@/shell";
 
 interface SettingsPanelProps {
   onOpenSettings: (section: SettingsSection) => void;
+  isSettingsOpen: boolean;
+  onCloseSettings: () => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onOpenSettings,
+  isSettingsOpen,
+  onCloseSettings,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleOpenSettings = (section: SettingsSection) => {
     setIsOpen(false);
     onOpenSettings(section);
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (isSettingsOpen) {
+      onCloseSettings();
+    }
+    setIsOpen(newOpen);
   };
 
   return (
@@ -46,7 +57,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       }
       width={200}
       isOpen={isOpen}
-      onOpenChange={setIsOpen}
+      onOpenChange={handleOpenChange}
       hideChevron
     >
       <DropdownSectionTitle>Settings</DropdownSectionTitle>

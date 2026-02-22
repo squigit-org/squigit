@@ -85,7 +85,11 @@ export const TitleBar: React.FC = () => {
       </div>
 
       <div className={styles.rightSection}>
-        <SettingsPanel onOpenSettings={shell.system.openSettings} />
+        <SettingsPanel
+          onOpenSettings={shell.system.openSettings}
+          isSettingsOpen={shell.system.isSettingsOpen}
+          onCloseSettings={() => shell.system.setSettingsOpen(false)}
+        />
         <SettingsOverlay
           isOpen={shell.system.isSettingsOpen}
           onClose={() => shell.system.setSettingsOpen(false)}

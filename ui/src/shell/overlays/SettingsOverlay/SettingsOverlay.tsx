@@ -84,13 +84,16 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   const shellRef = useRef<HTMLDivElement>(null);
 
   const [localPrompt, setLocalPrompt] = useState(currentPrompt);
-  const [localModel] = useState(defaultModel);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     hasSelection: boolean;
   } | null>(null);
+
+  useEffect(() => {
+    setLocalPrompt(currentPrompt);
+  }, [currentPrompt]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -235,7 +238,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
             )}
             {activeSection === "models" && (
               <ModelsSection
-                localModel={localModel}
+                localModel={defaultModel}
                 ocrLanguage={defaultOcrLanguage}
                 updatePreferences={updatePreferences}
               />
