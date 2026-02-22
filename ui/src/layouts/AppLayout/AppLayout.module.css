@@ -26,14 +26,12 @@
   flex-shrink: 0;
   background: var(--neutral-950);
   overflow: hidden;
-  contain: layout paint;
-  will-change: width;
 }
 
 .sidePanelWrapper.animated {
   transition:
-    width 0.25s ease,
-    margin-left 0.25s ease;
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidePanelWrapper.hidden {
@@ -50,6 +48,4 @@
   overflow: visible;
   position: relative;
   z-index: 20;
-  backface-visibility: hidden;
-  isolation: isolate;
 }

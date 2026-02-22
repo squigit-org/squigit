@@ -30,7 +30,7 @@ import {
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 export const useShell = () => {
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
   const [enablePanelAnimation, setEnablePanelAnimation] = useState(false);
   const toggleSidePanel = () => setIsSidePanelOpen((prev) => !prev);
 
@@ -166,6 +166,7 @@ export const useShell = () => {
     system.setSessionOcrLanguage(system.startupOcrLanguage);
     setIsOcrScanning(false);
     cancelOcrJob(); // Ensure no background job from previous state
+    setIsSidePanelOpen(false);
 
     system.setStartupImage({
       base64: assetUrl,
@@ -266,6 +267,7 @@ export const useShell = () => {
           system.setSessionOcrLanguage(system.startupOcrLanguage);
           setIsOcrScanning(false);
           cancelOcrJob();
+          setIsSidePanelOpen(false);
 
           // Set image WITHOUT fromHistory → triggers useChat startSession
           system.setStartupImage({
@@ -348,13 +350,10 @@ export const useShell = () => {
   const isChatActive = !isLoadingState && !isImageMissing && !isAuthPending;
 
   useEffect(() => {
-    if (!isLoadingState && !system.startupImage) {
-      setIsSidePanelOpen(true);
-      setTimeout(() => setEnablePanelAnimation(true), 100);
-    } else if (!isLoadingState) {
-      setEnablePanelAnimation(true);
+    if (!isLoadingState) {
+      setTimeout(() => setEnablePanelAnimation(true), 50);
     }
-  }, [isLoadingState, system.startupImage]);
+  }, [isLoadingState]);
 
   const chat = useChat({
     apiKey: system.apiKey,
