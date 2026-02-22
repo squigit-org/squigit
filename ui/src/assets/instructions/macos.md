@@ -1,4 +1,4 @@
-# 🍎 macOS Configuration & Privacy Policy
+# macOS Configuration & Privacy Policy
 
 SnapLLM requires specific system permissions to capture screen data and process global hotkeys. Please review the following configuration steps and privacy protocols.
 
@@ -36,7 +36,3 @@ To prevent "black screen" captures and ensure hotkey responsiveness, you must gr
 - **Local-First:** Application logic and encryption occur locally on your device.
 - **Direct Connection:** API requests are sent directly to Google (`generativelanguage.googleapis.com`). No intermediate servers are used.
 - **Lens Feature:** This optional feature uses ImgBB as a temporary bridge. Do not use "Lens" mode for sensitive personal data.
-
----
-
-_By installing this software, you agree to the **[Apache 2.0 License](https://github.com/a7mddra/snapllm?tab=Apache-2.0-1-ov-file#readme)**._

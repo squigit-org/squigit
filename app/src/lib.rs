@@ -69,7 +69,6 @@ pub fn run() {
         .manage(AppState::new())
         .manage(SpeechState::default())
         .invoke_handler(tauri::generate_handler![
-            commands::window::install_os_shortcut,
             // Image processing
             process_image_path,
             process_image_bytes,
@@ -164,6 +163,30 @@ pub fn run() {
                 let _ = process_and_store_image(path.clone(), &state);
             }
 
+            #[cfg(target_os = "linux")]
+            {
+                let config_dir = crate::utils::get_app_config_dir(&handle);
+                let marker_file = config_dir.join(".shortcut_installed");
+                
+                if !marker_file.exists() {
+                    log::info!("First run on Linux detected: attempting to install global shortcut");
+                    if let Ok(exe) = std::env::current_exe() {
+                        let bin = exe.to_string_lossy();
+                        match sys_global_shortcut::install_linux_shortcut(&bin, "SUPER+SHIFT+a", "SnapLLM") {
+                            Ok(_) => {
+                                log::info!("Successfully installed Linux global shortcut");
+                                if let Err(e) = std::fs::write(&marker_file, "") {
+                                    log::error!("Failed to create shortcut marker file: {}", e);
+                                }
+                            }
+                            Err(e) => {
+                                log::error!("Failed to install Linux global shortcut: {}", e);
+                            }
+                        }
+                    }
+                }
+            }
+
             let (base_w, base_h) = (1030.0, 690.0);
 
             #[cfg(target_os = "macos")]
@@ -176,7 +199,7 @@ pub fn run() {
                 base_w,
                 base_h,
                 "",
-                !is_background,
+                false,
             )
             .expect("Failed to spawn main window");
 

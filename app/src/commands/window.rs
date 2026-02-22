@@ -72,15 +72,3 @@ pub fn get_always_on_top(app: AppHandle) -> Result<bool, String> {
     let _window = app.get_webview_window("main").ok_or("Main window not found")?;
     Ok(false) 
 }
-
-#[tauri::command]
-pub fn install_os_shortcut() -> Result<(), String> {
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(exe) = std::env::current_exe() {
-            let bin = exe.to_string_lossy();
-            sys_global_shortcut::install_linux_shortcut(&bin, "SUPER+SHIFT+a", "SnapLLM").map_err(|e| e.to_string())?;
-        }
-    }
-    Ok(())
-}

@@ -21,7 +21,3 @@ As an open-source project without a commercial EV certificate, Microsoft Defende
 - **Local-First:** Your Google Gemini API Key is stored encrypted on your local disk. It is never transmitted to us.
 - **Direct Connection:** API requests are sent directly to Google (`generativelanguage.googleapis.com`). No intermediate servers are used.
 - **Lens Feature:** This optional feature uses ImgBB as a temporary bridge. Do not use "Lens" mode for sensitive personal data.
-
----
-
-_By installing this software, you agree to the **[Apache 2.0 License](https://github.com/a7mddra/snapllm?tab=Apache-2.0-1-ov-file#readme)**._

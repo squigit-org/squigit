@@ -295,11 +295,42 @@ export const useShell = () => {
     };
   }, []);
 
+  const [hasAutoSelectedWelcome, setHasAutoSelectedWelcome] = useState(false);
+
+  useEffect(() => {
+    if (
+      system.hasAgreed === false &&
+      auth.authStage !== "LOADING" &&
+      !isCheckingImage &&
+      !system.activeProfile &&
+      !chatHistory.activeSessionId &&
+      !hasAutoSelectedWelcome
+    ) {
+      handleSelectChat("__system_welcome");
+      setHasAutoSelectedWelcome(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    system.hasAgreed,
+    auth.authStage,
+    isCheckingImage,
+    system.activeProfile,
+    chatHistory.activeSessionId,
+    hasAutoSelectedWelcome,
+  ]);
+
   const isAgreementPending = system.hasAgreed === false;
+  const isPendingAutoSelectWelcome =
+    system.hasAgreed === false &&
+    !system.activeProfile &&
+    !chatHistory.activeSessionId &&
+    !hasAutoSelectedWelcome;
+
   const isLoadingState =
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
-    isCheckingImage;
+    isCheckingImage ||
+    isPendingAutoSelectWelcome;
   const hasActiveOnboarding = chatHistory.activeSessionId
     ? isOnboardingId(chatHistory.activeSessionId)
     : false;
@@ -498,14 +529,9 @@ export const useShell = () => {
       switch (actionId) {
         case "agree":
           setAgreedToTerms(true);
-          try {
-            const { type } = await import("@tauri-apps/plugin-os");
-            if (type() === "linux") {
-              await invoke("install_os_shortcut");
-            }
-          } catch (e) {
-            console.error("Failed to install OS shortcut", e);
-          }
+          system.setHasAgreed(true);
+          await system.updatePreferences({});
+          handleNewSession();
           break;
         case "disagree":
           setAgreedToTerms(false);

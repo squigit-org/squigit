@@ -8,7 +8,8 @@
 
 .content {
   min-height: 100%;
-  padding: 40px 20px;
+  padding-left: 15px;
+  margin-top: -45px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -60,4 +61,21 @@
   width: 14px;
   height: 14px;
   cursor: pointer;
+}
+
+.licenseText {
+  margin-top: 2rem;
+  padding-left: 1rem;
+  font-size: 0.8125rem;
+  color: var(--neutral-400);
+}
+
+.licenseText a {
+  color: var(--neutral-100);
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+.licenseText a:hover {
+  color: var(--neutral-50);
 }

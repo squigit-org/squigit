@@ -1,4 +1,4 @@
-# 🐧 Linux Configuration & Privacy Policy
+# Linux Configuration & Privacy Policy
 
 SnapLLM is designed as a self-contained, XDG-compliant application with native Wayland and X11 support.
 
@@ -35,7 +35,3 @@ Unlike traditional X11 tools, this application respects Wayland security protoco
 - **Local Storage:** Chats, API keys, and metadata are strictly stored on your local disk using a CAS (Content-Addressable Storage) model.
 - **Direct Connection:** API requests are sent directly to the AI provider using your Bring Your Own Key (BYOK) setup.
 - **Lens Feature:** This optional feature parses screenshots on third party applications and uses ImgBB as a temporary image host. Do not use "Lens" mode for sensitive personal data.
-
----
-
-_By installing this software, you agree to the **[Apache 2.0 License](https://github.com/a7mddra/snapllm?tab=Apache-2.0-1-ov-file#readme)**._

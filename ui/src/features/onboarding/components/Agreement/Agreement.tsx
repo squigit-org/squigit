@@ -80,6 +80,19 @@ export const Agreement: React.FC = () => {
             <span>I do not understand</span>
           </label>
         </div>
+        <div className={styles.licenseText}>
+          By installing this software, you agree to the{" "}
+          <strong>
+            <a
+              href="https://github.com/a7mddra/snapllm?tab=Apache-2.0-1-ov-file#readme"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Apache 2.0 License
+            </a>
+          </strong>
+          .
+        </div>
       </div>
     </OnboardingShell>
   );
