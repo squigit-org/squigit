@@ -61,6 +61,7 @@ export const useSystemSync = () => {
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
   const activeProfileRef = useRef<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [showExistingProfileDialog, setShowExistingProfileDialog] =
     useState(false);
 
@@ -118,9 +119,7 @@ export const useSystemSync = () => {
         setEditingModel(loadedModel);
         setSessionModel(loadedModel);
 
-        setOcrEnabled(
-          prefs.ocrEnabled !== undefined ? prefs.ocrEnabled : true,
-        );
+        setOcrEnabled(prefs.ocrEnabled !== undefined ? prefs.ocrEnabled : true);
         setAutoExpandOCR(
           prefs.autoExpandOCR !== undefined ? prefs.autoExpandOCR : true,
         );
@@ -166,7 +165,6 @@ export const useSystemSync = () => {
       } else {
         setTheme("system");
 
-        // Still load default preferences even on first run
         const prefs = await loadPreferences();
         console.log("[useSystemSync] Loaded prefs (not agreed):", prefs);
 
@@ -178,9 +176,7 @@ export const useSystemSync = () => {
         setEditingModel(loadedModel);
         setSessionModel(loadedModel);
 
-        setOcrEnabled(
-          prefs.ocrEnabled !== undefined ? prefs.ocrEnabled : true,
-        );
+        setOcrEnabled(prefs.ocrEnabled !== undefined ? prefs.ocrEnabled : true);
         setAutoExpandOCR(
           prefs.autoExpandOCR !== undefined ? prefs.autoExpandOCR : true,
         );
@@ -276,6 +272,8 @@ export const useSystemSync = () => {
     } catch (e) {
       console.error("Config load error", e);
       setSystemError("Failed to load configuration.");
+    } finally {
+      setProfileLoaded(true);
     }
   };
 
@@ -566,6 +564,7 @@ export const useSystemSync = () => {
     handleSetAPIKey,
     setAvatarSrc,
     activeProfile,
+    profileLoaded,
     profiles,
     switchProfile,
     addAccount,

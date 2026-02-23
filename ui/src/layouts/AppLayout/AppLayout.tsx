@@ -69,91 +69,8 @@ const AppLayoutContent: React.FC = () => {
     return <AppShell />;
   };
 
-  if (shell.isImageMissing) {
-    return (
-      <div
-        className={styles.appContainer}
-        onContextMenu={shell.handleContextMenu}
-      >
-        <TitleBar />
-        <div className={styles.mainContent}>
-          <div
-            className={`${styles.sidePanelWrapper} ${!shell.isSidePanelOpen ? styles.hidden : ""} ${shell.enablePanelAnimation ? styles.animated : ""}`}
-          >
-            <SidePanel />
-          </div>
-          <div className={styles.contentArea}>{renderContent()}</div>
-        </div>
-        {shell.contextMenu && (
-          <ShellContextMenu
-            x={shell.contextMenu.x}
-            y={shell.contextMenu.y}
-            onClose={shell.handleCloseContextMenu}
-            onCopy={shell.handleCopy}
-            selectedText={shell.contextMenu.selectedText}
-            hasSelection={true}
-          />
-        )}
-
-        <Dialog
-          isOpen={shell.showGeminiAuthDialog}
-          type="GEMINI_AUTH"
-          onAction={(key) => {
-            if (key === "confirm") {
-              shell.system.openSettings("apikeys");
-            } else {
-              shell.chat.appendErrorMessage(
-                "Please configure your Gemini API key to continue.",
-              );
-            }
-            shell.setShowGeminiAuthDialog(false);
-          }}
-        />
-
-        <Dialog
-          isOpen={shell.system.showExistingProfileDialog}
-          type="EXISTING_PROFILE"
-          onAction={() => shell.system.setShowExistingProfileDialog(false)}
-        />
-
-        <Dialog
-          isOpen={shell.showLoginRequiredDialog}
-          type={loginRequiredDialog}
-          onAction={(key) => {
-            if (key === "confirm") {
-              shell.system.addAccount();
-            }
-            shell.setShowLoginRequiredDialog(false);
-          }}
-        />
-
-        <Dialog
-          isOpen={shell.showCaptureDeniedDialog}
-          type="CAPTURE_PERMISSION_DENIED"
-          onAction={() => shell.setShowCaptureDeniedDialog(false)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={shell.containerRef}
-      onContextMenu={shell.handleContextMenu}
-      className={styles.appContainer}
-    >
-      <TitleBar />
-      <div className={styles.mainContent}>
-        <div
-          className={`${styles.sidePanelWrapper} ${
-            !shell.isSidePanelOpen ? styles.hidden : ""
-          } ${shell.enablePanelAnimation ? styles.animated : ""}`}
-        >
-          <SidePanel />
-        </div>
-        <div className={styles.contentArea}>{renderContent()}</div>
-      </div>
-
+  const appDialogs = (
+    <>
       {shell.contextMenu && (
         <ShellContextMenu
           x={shell.contextMenu.x}
@@ -169,13 +86,13 @@ const AppLayoutContent: React.FC = () => {
         isOpen={shell.showGeminiAuthDialog}
         type="GEMINI_AUTH"
         onAction={(key) => {
+          let msg = "";
           if (key === "confirm") {
             shell.system.openSettings("apikeys");
           } else {
-            shell.chat.appendErrorMessage(
-              "Please configure your Gemini API key to continue.",
-            );
+            msg = "Please configure your Gemini API key to continue.";
           }
+          shell.chat.appendErrorMessage(msg);
           shell.setShowGeminiAuthDialog(false);
         }}
       />
@@ -202,6 +119,48 @@ const AppLayoutContent: React.FC = () => {
         type="CAPTURE_PERMISSION_DENIED"
         onAction={() => shell.setShowCaptureDeniedDialog(false)}
       />
+    </>
+  );
+
+  if (shell.isImageMissing) {
+    return (
+      <div
+        className={styles.appContainer}
+        onContextMenu={shell.handleContextMenu}
+      >
+        <TitleBar />
+        <div className={styles.mainContent}>
+          <div
+            className={`${styles.sidePanelWrapper} ${!shell.isSidePanelOpen ? styles.hidden : ""} ${shell.enablePanelAnimation ? styles.animated : ""}`}
+          >
+            <SidePanel />
+          </div>
+          <div className={styles.contentArea}>{renderContent()}</div>
+        </div>
+        {appDialogs}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={shell.containerRef}
+      onContextMenu={shell.handleContextMenu}
+      className={styles.appContainer}
+    >
+      <TitleBar />
+      <div className={styles.mainContent}>
+        <div
+          className={`${styles.sidePanelWrapper} ${
+            !shell.isSidePanelOpen ? styles.hidden : ""
+          } ${shell.enablePanelAnimation ? styles.animated : ""}`}
+        >
+          <SidePanel />
+        </div>
+        <div className={styles.contentArea}>{renderContent()}</div>
+      </div>
+
+      {appDialogs}
     </div>
   );
 };

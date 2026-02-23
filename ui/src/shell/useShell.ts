@@ -103,9 +103,8 @@ export const useShell = () => {
 
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
-    const currentModelId = system.sessionOcrLanguage || "pp-ocr-v4-en"; // Fallback to default
+    const currentModelId = system.sessionOcrLanguage || "pp-ocr-v4-en";
 
-    // Only save if we have data for the CURRENT model
     const currentData = ocrData[currentModelId];
 
     if (activeId && currentData && currentData.length > 0) {
@@ -149,7 +148,7 @@ export const useShell = () => {
     imageId: string;
     path: string;
   }) => {
-    if (!system.activeProfile) {
+    if (!activeProfileRef.current) {
       console.log("Image upload attempted in guest mode - requiring login");
       setShowLoginRequiredDialog(true);
       return;
@@ -165,8 +164,7 @@ export const useShell = () => {
     setSessionLensUrl(null);
     system.setSessionOcrLanguage(system.startupOcrLanguage);
     setIsOcrScanning(false);
-    cancelOcrJob(); // Ensure no background job from previous state
-    setIsSidePanelOpen(false);
+    cancelOcrJob();
 
     system.setStartupImage({
       base64: assetUrl,
@@ -185,7 +183,11 @@ export const useShell = () => {
     }
   };
 
+  const [hasCheckedStartupImage, setHasCheckedStartupImage] = useState(false);
+
   useEffect(() => {
+    if (!system.profileLoaded || hasCheckedStartupImage) return;
+
     const initStartupImage = async () => {
       try {
         const initialImage = await commands.getInitialImage();
@@ -200,11 +202,14 @@ export const useShell = () => {
         console.error("Failed to check initial image:", e);
       } finally {
         setIsCheckingImage(false);
+        setHasCheckedStartupImage(true);
       }
     };
 
     initStartupImage();
+  }, [system.profileLoaded, hasCheckedStartupImage]);
 
+  useEffect(() => {
     const unlisten = listen<string>("image-path", async (event) => {
       const imagePath = event.payload;
       if (imagePath) {
@@ -260,16 +265,13 @@ export const useShell = () => {
           const imagePath = await getImagePath(imageHash);
           const assetUrl = convertFileSrc(imagePath);
 
-          // Reset state — mirrors handleImageReady exactly
           chatHistory.setActiveSessionId(null);
           setOcrData({});
           setSessionLensUrl(null);
           system.setSessionOcrLanguage(system.startupOcrLanguage);
           setIsOcrScanning(false);
           cancelOcrJob();
-          setIsSidePanelOpen(false);
 
-          // Set image WITHOUT fromHistory → triggers useChat startSession
           system.setStartupImage({
             base64: assetUrl,
             mimeType: "image/png",
@@ -277,7 +279,6 @@ export const useShell = () => {
             imageId: imageHash,
           });
 
-          // Activate the already-created chat (qt-capture created it)
           chatHistoryRef.current.setActiveSessionId(chatId);
           chatHistoryRef.current.refreshChats();
         } catch (error) {
@@ -320,7 +321,6 @@ export const useShell = () => {
       handleSelectChat("__system_welcome");
       setHasAutoSelectedWelcome(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     system.hasAgreed,
     auth.authStage,
@@ -338,6 +338,7 @@ export const useShell = () => {
     !hasAutoSelectedWelcome;
 
   const isLoadingState =
+    !system.profileLoaded ||
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
     isCheckingImage ||
@@ -437,7 +438,7 @@ export const useShell = () => {
 
     try {
       setOcrData({});
-      cancelOcrJob(); // Cancel any running OCR before switching
+      cancelOcrJob();
       const chatData = await loadChat(id);
       const imagePath = await getImagePath(chatData.metadata.image_hash);
       const imageUrl = convertFileSrc(imagePath);
@@ -542,7 +543,7 @@ export const useShell = () => {
       switch (actionId) {
         case "agree":
           setAgreedToTerms(true);
-          // Wait for auth SUCCESS to actually set hasAgreed
+
           break;
         case "disagree":
           setAgreedToTerms(false);
@@ -592,11 +593,9 @@ export const useShell = () => {
 
       const alreadyAgreed = await hasAgreedFlag();
       if (!alreadyAgreed) {
-        // Now it's safe to mark agreement completed and navigate forward
         if (agreedToTermsRef.current) {
           system.setAgreementCompleted();
         }
-        // Force refresh state for transition
       }
 
       handleNewSession();
