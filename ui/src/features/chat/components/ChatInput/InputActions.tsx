@@ -115,7 +115,12 @@ export const InputActions: React.FC<InputActionsProps> = ({
             ref={keepProgressInfoRef}
             onMouseEnter={() => setShowKeepProgressTooltip(true)}
             onMouseLeave={() => setShowKeepProgressTooltip(false)}
-            onClick={onCaptureToInput}
+            onClick={async () => {
+              setShowKeepProgressTooltip(false);
+              // Wait for the next macro task so React flushes the DOM updates and the tooltip disappears
+              await new Promise((r) => setTimeout(r, 0));
+              onCaptureToInput?.();
+            }}
           >
             <Camera size={16} />
             <span>Keep Progress</span>

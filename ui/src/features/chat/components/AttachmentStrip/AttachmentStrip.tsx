@@ -267,7 +267,9 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
 
     const { scrollWidth, clientWidth, scrollLeft } = el;
     if (scrollWidth <= clientWidth) {
-      setScrollState(INITIAL_SCROLL_STATE);
+      setScrollState((prev) =>
+        prev.canScroll === false ? prev : INITIAL_SCROLL_STATE,
+      );
       return;
     }
 
@@ -276,7 +278,16 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
       clientWidth,
       scrollLeft,
     );
-    setScrollState({ canScroll: true, thumbWidth, thumbLeft });
+    setScrollState((prev) => {
+      if (
+        prev.canScroll === true &&
+        prev.thumbWidth === thumbWidth &&
+        prev.thumbLeft === thumbLeft
+      ) {
+        return prev;
+      }
+      return { canScroll: true, thumbWidth, thumbLeft };
+    });
   }, []);
 
   // Measure synchronously after DOM mutations so the thumb is visible on first render.
@@ -311,7 +322,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
       window.removeEventListener("resize", updateScroll);
       el.removeEventListener("wheel", handleWheel);
     };
-  }, [updateScroll, attachments]);
+  }, [updateScroll]);
 
   const handleClick = useCallback(
     async (attachment: Attachment) => {

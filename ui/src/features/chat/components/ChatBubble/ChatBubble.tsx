@@ -76,10 +76,9 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const [editorValue, setEditorValue] = useState(message.text);
 
   const attachments = useMemo(() => {
-    const textToScan = isEditing ? editorValue : message.text;
-    const paths = parseAttachmentPaths(textToScan);
+    const paths = parseAttachmentPaths(message.text);
     return paths.map((p) => attachmentFromPath(p));
-  }, [isEditing, editorValue, message.text]);
+  }, [message.text]);
 
   const displayText = useMemo(() => {
     return stripAttachmentMentions(message.text);
@@ -92,8 +91,15 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const bubbleRef = useRef<HTMLDivElement>(null);
 
   const handleEditSubmit = () => {
-    if (editorValue.trim() !== message.text) {
-      onEdit?.(editorValue);
+    // Re-append the paths that were stripped out so backend keeps them
+    const originalPaths =
+      message.text.match(/\[Attachment:.*?\]\(.*?\)/g) || [];
+    const restoredText = `${editorValue.trim()}${
+      originalPaths.length > 0 ? `\n\n${originalPaths.join("\n")}` : ""
+    }`;
+
+    if (restoredText !== message.text) {
+      onEdit?.(restoredText);
     }
     setIsEditing(false);
   };
@@ -115,13 +121,13 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       setBubbleWidth(Math.max(300, rect.width));
       setBubbleHeight(rect.height);
     }
-    setEditorValue(message.text);
+    setEditorValue(stripAttachmentMentions(message.text));
     setIsEditing(true);
   };
 
   const handleEditCancel = () => {
     setIsEditing(false);
-    setEditorValue(message.text);
+    setEditorValue(stripAttachmentMentions(message.text));
   };
 
   const { segments, tokens } = useMemo(() => {
@@ -572,6 +578,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
               {attachments.length > 0 && (
                 <div
                   style={{
+                    padding: isEditing ? "1rem" : "0",
                     marginBottom:
                       isEditing || displayText.length > 0 ? "8px" : "0",
                   }}
