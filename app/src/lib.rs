@@ -24,6 +24,7 @@ use commands::clipboard::{
     copy_image_to_clipboard, read_clipboard_image, read_clipboard_text,
     copy_image_from_path_to_clipboard,
 };
+use commands::capture::spawn_capture_to_input;
 use commands::image::{
     get_initial_image, process_image_bytes, process_image_path, read_image_file, copy_image_to_path, read_file_base64,
 };
@@ -152,6 +153,8 @@ pub fn run() {
             // Speech
             commands::speech::start_stt,
             commands::speech::stop_stt,
+            // Capture
+            spawn_capture_to_input,
         ])
         .manage(services::models::ModelManager::new().expect("Failed to init ModelManager"))
         .setup(move |app| {

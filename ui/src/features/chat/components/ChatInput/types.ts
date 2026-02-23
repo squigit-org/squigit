@@ -5,6 +5,7 @@
  */
 
 import type { KeyboardEvent } from "react";
+import type { Attachment } from "../AttachmentStrip";
 
 export type ChatSubmitHandler = () => void;
 
@@ -29,4 +30,7 @@ export interface ChatInputProps {
   onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   selectedModel: string;
   onModelChange: ChatModelSelectHandler;
+  attachments: Attachment[];
+  onAttachmentsChange: (attachments: Attachment[]) => void;
+  onCaptureToInput?: () => void;
 }

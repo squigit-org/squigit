@@ -7,11 +7,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ImageShell, ChatShell } from "@/shell";
 import { useShellContext } from "@/shell/context";
+import {
+  useAttachments,
+  buildAttachmentMention,
+} from "@/features/chat/components/AttachmentStrip";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import styles from "./AppShell.module.css";
 
 const AppShellComponent: React.FC = () => {
   const shell = useShellContext();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const { attachments, setAttachments, addFromPath, clearAttachments } =
+    useAttachments();
 
   const error = shell.chat.error || shell.system.systemError;
 
@@ -48,6 +57,20 @@ const AppShellComponent: React.FC = () => {
       header.removeEventListener("wheel", handleWheel);
     };
   }, [isImageExpanded]);
+
+  useEffect(() => {
+    const unlistenPromise = listen<{ tempPath: string }>(
+      "capture-to-input",
+      (event) => {
+        if (event.payload && event.payload.tempPath) {
+          addFromPath(event.payload.tempPath);
+        }
+      },
+    );
+    return () => {
+      unlistenPromise.then((fn) => fn());
+    };
+  }, [addFromPath]);
 
   return (
     <div className={styles.container}>
@@ -92,8 +115,16 @@ const AppShellComponent: React.FC = () => {
           startupImage={shell.system.startupImage}
           chatId={shell.chatHistory.activeSessionId}
           onSend={() => {
-            shell.chat.handleSend(shell.input, shell.inputModel);
+            let finalInput = shell.input;
+            if (attachments.length > 0) {
+              const mentions = attachments
+                .map((a) => buildAttachmentMention(a.path))
+                .join("\n");
+              finalInput = `${shell.input}\n\n${mentions}`.trim();
+            }
+            shell.chat.handleSend(finalInput, shell.inputModel);
             shell.setInput("");
+            clearAttachments();
           }}
           onInputChange={shell.setInput}
           onOpenSettings={shell.system.openSettings}
@@ -108,6 +139,15 @@ const AppShellComponent: React.FC = () => {
           onModelChange={shell.setInputModel}
           onSystemAction={shell.handleSystemAction}
           isNavigating={shell.isNavigating}
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
+          onCaptureToInput={async () => {
+            try {
+              await invoke("spawn_capture_to_input");
+            } catch (err) {
+              console.error("Failed to spawn capture to input:", err);
+            }
+          }}
         />
       </div>
     </div>

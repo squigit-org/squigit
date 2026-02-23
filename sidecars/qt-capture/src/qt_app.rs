@@ -16,12 +16,15 @@ use crate::paths::QtPaths;
 
 pub struct QtApp {
     args: Vec<String>,
+    input_only: bool,
 }
 
 impl QtApp {
     pub fn new() -> Self {
-        let args: Vec<String> = env::args().skip(1).collect();
-        Self { args }
+        let mut args: Vec<String> = env::args().skip(1).collect();
+        let input_only = args.contains(&"--input-only".to_string());
+        args.retain(|a| a != "--input-only");
+        Self { args, input_only }
     }
 
     pub fn run(&mut self) -> Result<ExitCode> {
@@ -102,10 +105,18 @@ impl QtApp {
                             }
                             _ => {
                                 if trimmed.starts_with('/') && capture_success {
-                                    let (path, hash) = self.process_capture(trimmed);
-                                    if let Some(p) = path {
-                                        capture_path = Some(p);
-                                        image_hash = hash;
+                                    if self.input_only {
+                                        let (path, hash) = self.process_capture_input_only(trimmed);
+                                        if let Some(p) = path {
+                                            capture_path = Some(p);
+                                            image_hash = hash;
+                                        }
+                                    } else {
+                                        let (path, hash) = self.process_capture(trimmed);
+                                        if let Some(p) = path {
+                                            capture_path = Some(p);
+                                            image_hash = hash;
+                                        }
                                     }
                                     break;
                                 }
@@ -117,9 +128,13 @@ impl QtApp {
             }
 
             if let Some(res) = capture_path {
-                println!("CHAT_ID:{}", res);
-                if let Some(hash) = image_hash {
-                    println!("IMAGE_HASH:{}", hash);
+                if self.input_only {
+                    println!("CAS_PATH:{}", res);
+                } else {
+                    println!("CHAT_ID:{}", res);
+                    if let Some(hash) = image_hash {
+                        println!("IMAGE_HASH:{}", hash);
+                    }
                 }
                 if let Some(geo) = display_geo {
                     println!("DISPLAY_GEO:{}", geo);
@@ -163,6 +178,30 @@ impl QtApp {
                 let _ = storage.save_chat(&chat);
                 let _ = std::fs::remove_file(path);
                 (Some(metadata.id), Some(stored.hash))
+            })
+            .unwrap_or_else(|| (Some(path.to_string()), None))
+    }
+
+    fn process_capture_input_only(&self, path: &str) -> (Option<String>, Option<String>) {
+        ProfileStore::new()
+            .ok()
+            .and_then(|profile_store| {
+                profile_store
+                    .get_active_profile_id()
+                    .ok()
+                    .flatten()
+                    .map(|active_id| (profile_store, active_id))
+            })
+            .and_then(|(profile_store, active_id)| {
+                let chats_dir = profile_store.get_chats_dir(&active_id);
+                ChatStorage::with_base_dir(chats_dir).ok()
+            })
+            .and_then(|storage| {
+                storage.store_image_from_path(path).ok()
+            })
+            .map(|stored| {
+                let _ = std::fs::remove_file(path);
+                (Some(stored.path), Some(stored.hash))
             })
             .unwrap_or_else(|| (Some(path.to_string()), None))
     }

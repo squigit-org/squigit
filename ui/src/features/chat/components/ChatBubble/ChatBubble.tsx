@@ -22,6 +22,12 @@ import {
   remarkDisableIndentedCode,
   BubbleEditor,
 } from "@/features/chat";
+import {
+  parseAttachmentPaths,
+  stripAttachmentMentions,
+  attachmentFromPath,
+  AttachmentStrip,
+} from "../AttachmentStrip";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import styles from "./ChatBubble.module.css";
@@ -68,6 +74,16 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
   const [isEditing, setIsEditing] = useState(false);
   const [editorValue, setEditorValue] = useState(message.text);
+
+  const attachments = useMemo(() => {
+    const textToScan = isEditing ? editorValue : message.text;
+    const paths = parseAttachmentPaths(textToScan);
+    return paths.map((p) => attachmentFromPath(p));
+  }, [isEditing, editorValue, message.text]);
+
+  const displayText = useMemo(() => {
+    return stripAttachmentMentions(message.text);
+  }, [message.text]);
   const [bubbleWidth, setBubbleWidth] = useState<number | undefined>(undefined);
   const [bubbleHeight, setBubbleHeight] = useState<number | undefined>(
     undefined,
@@ -87,7 +103,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const timeoutRef = useRef<number | null>(null);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(message.text).then(() => {
+    navigator.clipboard.writeText(displayText).then(() => {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     });
@@ -111,17 +127,17 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const { segments, tokens } = useMemo(() => {
     if (isUser) return { segments: [], tokens: [] };
 
-    const backtickCount = (message.text.match(/```/g) || []).length;
+    const backtickCount = (displayText.match(/```/g) || []).length;
     const isUnclosedCodeBlock = backtickCount % 2 === 1;
 
     const textToParse = isUnclosedCodeBlock
-      ? message.text + "\n```"
-      : message.text;
+      ? displayText + "\n```"
+      : displayText;
 
     const segs = parseMarkdownToSegments(textToParse);
     const toks = tokenizeSegments(segs);
     return { segments: segs, tokens: toks };
-  }, [message.text, isUser]);
+  }, [displayText, isUser]);
 
   useEffect(() => {
     if (isStreamed) {
@@ -553,6 +569,16 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                   : undefined
               }
             >
+              {attachments.length > 0 && (
+                <div
+                  style={{
+                    marginBottom:
+                      isEditing || displayText.length > 0 ? "8px" : "0",
+                  }}
+                >
+                  <AttachmentStrip attachments={attachments} readOnly />
+                </div>
+              )}
               {isEditing ? (
                 <BubbleEditor
                   value={editorValue}
@@ -582,7 +608,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                   rehypePlugins={[rehypeKatex]}
                   components={markdownComponents}
                 >
-                  {preprocessMarkdown(message.text, { doubleNewlines: isUser })}
+                  {preprocessMarkdown(displayText, { doubleNewlines: isUser })}
                 </ReactMarkdown>
               )}
             </div>

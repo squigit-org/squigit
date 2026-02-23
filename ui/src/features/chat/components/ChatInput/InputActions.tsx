@@ -22,6 +22,8 @@ const GEMINI_MODELS = MODELS.map((m) => ({
   triggerLabel: m.name.replace("Gemini ", ""),
 }));
 
+import { ACCEPTED_EXTENSIONS } from "../AttachmentStrip";
+
 interface InputActionsProps {
   onSubmit: () => void;
   onStop?: () => void;
@@ -32,6 +34,8 @@ interface InputActionsProps {
   selectedModel: string;
   onModelChange: (model: string) => void;
   onTranscript: (text: string, isFinal: boolean) => void;
+  onCaptureToInput?: () => void;
+  onFileSelect?: (file: File) => void;
 }
 
 export const InputActions: React.FC<InputActionsProps> = ({
@@ -44,6 +48,8 @@ export const InputActions: React.FC<InputActionsProps> = ({
   selectedModel,
   onModelChange,
   onTranscript,
+  onCaptureToInput,
+  onFileSelect,
 }) => {
   const [showFileButtonTooltip, setShowFileButtonTooltip] = useState(false);
   const [showKeepProgressTooltip, setShowKeepProgressTooltip] = useState(false);
@@ -51,6 +57,18 @@ export const InputActions: React.FC<InputActionsProps> = ({
 
   const fileButtonRef = useRef<HTMLButtonElement>(null);
   const keepProgressInfoRef = useRef<HTMLButtonElement>(null);
+  const hiddenFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePaperclipClick = () => {
+    hiddenFileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onFileSelect?.(e.target.files[0]);
+    }
+    e.target.value = "";
+  };
 
   const handleModelSelect = useCallback(
     (id: string) => {
@@ -65,6 +83,13 @@ export const InputActions: React.FC<InputActionsProps> = ({
 
   return (
     <div className={styles.actions}>
+      <input
+        type="file"
+        ref={hiddenFileInputRef}
+        style={{ display: "none" }}
+        accept={ACCEPTED_EXTENSIONS.map((ext) => `.${ext}`).join(",")}
+        onChange={handleFileChange}
+      />
       <div className={styles.leftActions}>
         <button
           className={styles.iconButton}
@@ -72,6 +97,7 @@ export const InputActions: React.FC<InputActionsProps> = ({
           ref={fileButtonRef}
           onMouseEnter={() => setShowFileButtonTooltip(true)}
           onMouseLeave={() => setShowFileButtonTooltip(false)}
+          onClick={handlePaperclipClick}
         >
           <Paperclip size={18} />
         </button>
@@ -89,6 +115,7 @@ export const InputActions: React.FC<InputActionsProps> = ({
             ref={keepProgressInfoRef}
             onMouseEnter={() => setShowKeepProgressTooltip(true)}
             onMouseLeave={() => setShowKeepProgressTooltip(false)}
+            onClick={onCaptureToInput}
           >
             <Camera size={16} />
             <span>Keep Progress</span>

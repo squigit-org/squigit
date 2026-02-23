@@ -14,4 +14,5 @@ pub mod security;
 pub mod speech;
 pub mod theme;
 pub mod window;
+pub mod capture;
 pub mod constants;

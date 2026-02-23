@@ -7,6 +7,14 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { TextContextMenu } from "@/shell";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  AttachmentStrip,
+  isImageExtension,
+  getExtension,
+  attachmentFromPath,
+  ACCEPTED_EXTENSIONS,
+} from "../AttachmentStrip";
 import { InputTextarea } from "./InputTextarea";
 import { InputCodeEditor, useCodeEditor } from "./InputCodeEditor";
 import { InputActions } from "./InputActions";
@@ -26,6 +34,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   variant = "default",
   selectedModel,
   onModelChange,
+  attachments,
+  onAttachmentsChange,
+  onCaptureToInput,
 }) => {
   if (!startupImage) return null;
 
@@ -56,7 +67,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (
       !disabled &&
       !isLoading &&
-      (value.trim().length > 0 || codeValue.trim().length > 0)
+      (value.trim().length > 0 ||
+        codeValue.trim().length > 0 ||
+        attachments.length > 0)
     ) {
       onSend();
       resetCodeEditor();
@@ -95,21 +108,84 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     handleClose: handleCloseContextMenu,
   } = useTextContextMenu();
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Intercept Ctrl+V for images
+    if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+      try {
+        const result = await invoke<{ hash: string; path: string }>(
+          "read_clipboard_image",
+        );
+        if (result && result.path) {
+          onAttachmentsChange([
+            ...attachments,
+            attachmentFromPath(result.path),
+          ]);
+        }
+      } catch (err) {
+        // Not an image or clipboard error, allow default paste behavior
+      }
+    }
     editorKeyDown(e);
   };
 
   const isButtonActive =
     !disabled &&
     !isLoading &&
-    (value.trim().length > 0 || codeValue.trim().length > 0);
+    (value.trim().length > 0 ||
+      codeValue.trim().length > 0 ||
+      attachments.length > 0);
 
   const containerContent = (
     <div
       className={`${styles.container} ${disabled && !isStoppable ? styles.disabled : ""} ${
         variant === "transparent" ? styles.transparentVariant : ""
       }`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+      }}
+      onDrop={async (e) => {
+        e.preventDefault();
+        const files = Array.from(e.dataTransfer.files);
+        let newAttachments = [...attachments];
+
+        for (const file of files) {
+          try {
+            // @ts-expect-error Tauri attaches .path to dropped files
+            const path = file.path;
+            if (path) {
+              const ext = getExtension(path);
+              const isAllowed = ACCEPTED_EXTENSIONS.includes(ext);
+
+              if (isAllowed) {
+                if (isImageExtension(ext)) {
+                  const result = await invoke<{ hash: string; path: string }>(
+                    "store_image_from_path",
+                    { path },
+                  );
+                  newAttachments.push(attachmentFromPath(result.path));
+                } else {
+                  newAttachments.push(attachmentFromPath(path));
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Failed to process dropped file:", err);
+          }
+        }
+
+        if (newAttachments.length !== attachments.length) {
+          onAttachmentsChange(newAttachments);
+        }
+      }}
     >
+      <AttachmentStrip
+        attachments={attachments}
+        onRemove={(id) =>
+          onAttachmentsChange(attachments.filter((a) => a.id !== id))
+        }
+      />
+
       <InputTextarea
         value={value}
         onChange={handleChange}
@@ -161,6 +237,30 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onTranscript={(text, isFinal) => {
           if (isFinal) {
             onChange((value + " " + text).trim());
+          }
+        }}
+        onCaptureToInput={onCaptureToInput}
+        onFileSelect={async (file: File) => {
+          // @ts-expect-error Tauri paths
+          const path = file.path;
+          if (path) {
+            const ext = getExtension(path);
+            if (isImageExtension(ext)) {
+              try {
+                const result = await invoke<{ hash: string; path: string }>(
+                  "store_image_from_path",
+                  { path },
+                );
+                onAttachmentsChange([
+                  ...attachments,
+                  attachmentFromPath(result.path),
+                ]);
+              } catch (err) {
+                console.error("Failed to store image:", err);
+              }
+            } else {
+              onAttachmentsChange([...attachments, attachmentFromPath(path)]);
+            }
           }
         }}
       />

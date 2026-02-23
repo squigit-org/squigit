@@ -5,7 +5,7 @@
  */
 
 import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
-import { Message, ChatInput, ChatBubble } from "@/features/chat";
+import { Message, ChatInput, ChatBubble, Attachment } from "@/features/chat";
 import { InlineMenu, TextShimmer, Dialog, LoadingSpinner } from "@/primitives";
 import { useInlineMenu } from "@/hooks";
 import { SettingsSection } from "@/shell/overlays";
@@ -54,6 +54,10 @@ export interface ChatShellProps {
   isNavigating?: boolean;
 
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+
+  attachments: Attachment[];
+  onAttachmentsChange: (attachments: Attachment[]) => void;
+  onCaptureToInput?: () => void;
 }
 
 export const ChatShell: React.FC<ChatShellProps> = ({
@@ -81,6 +85,9 @@ export const ChatShell: React.FC<ChatShellProps> = ({
   onSystemAction,
   scrollContainerRef,
   isNavigating,
+  attachments,
+  onAttachmentsChange,
+  onCaptureToInput,
 }) => {
   const [stopRequested, setStopRequested] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
@@ -437,6 +444,9 @@ export const ChatShell: React.FC<ChatShellProps> = ({
             }}
             selectedModel={selectedModel}
             onModelChange={onModelChange}
+            attachments={attachments}
+            onAttachmentsChange={onAttachmentsChange}
+            onCaptureToInput={onCaptureToInput}
           />
         </div>
       </div>

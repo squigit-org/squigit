@@ -1,0 +1,203 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import "@/styles/variables.css";
+
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+
+.wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  padding-bottom: 64px;
+  padding-top: 14px;
+  padding-left: 4px;
+  margin-bottom: -46px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  animation: stripExpand 0.18s ease-out both;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes stripExpand {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Custom scrollbar ───────────────────────────────────────────────────── */
+
+.scrollbarTrack {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 4px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.wrapper:hover .scrollbarTrack {
+  opacity: 1;
+}
+
+.scrollbarThumb {
+  height: 6px;
+  background-color: var(--neutral-500);
+  border-radius: 3px;
+  cursor: grab;
+  touch-action: none;
+  transition: background-color 0.15s ease;
+  will-change: transform;
+}
+
+.scrollbarThumb:hover {
+  background-color: var(--neutral-400);
+}
+
+.scrollbarThumb:active {
+  cursor: grabbing;
+  background-color: var(--neutral-300);
+}
+
+/* ─── Thumbnail wrapper ──────────────────────────────────────────────────── */
+
+.thumbWrapper {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--neutral-800);
+
+  overflow: visible;
+}
+
+.thumbWrapper:focus-visible {
+  outline: 2px solid var(--neutral-400);
+  outline-offset: 2px;
+}
+
+/* ─── Image thumbnail ────────────────────────────────────────────────────── */
+
+.imageThumb {
+  width: 60px;
+  height: 60px;
+}
+
+.imageThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 9px;
+  pointer-events: none;
+}
+
+/* ─── File thumbnail ─────────────────────────────────────────────────────── */
+
+.fileThumb {
+  display: flex;
+  align-items: stretch;
+  width: 140px;
+  height: 60px;
+  background-color: var(--neutral-900);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.fileExtBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  flex-shrink: 0;
+  font-family: "SF Mono", "Consolas", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px 0 0 9px;
+}
+
+.fileInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.fileName {
+  font-size: 11px;
+  color: var(--neutral-300);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+/* ─── Remove button ──────────────────────────────────────────────────────── */
+
+.removeBtn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--neutral-700);
+  border: 1px solid var(--neutral-600);
+  border-radius: 50%;
+  color: var(--neutral-300);
+  cursor: pointer;
+  z-index: 99990;
+  opacity: 0;
+  transform: scale(0.7);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.thumbWrapper:hover .removeBtn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.removeBtn:hover {
+  color: #fff;
+}
+
+.cancelIcon {
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
