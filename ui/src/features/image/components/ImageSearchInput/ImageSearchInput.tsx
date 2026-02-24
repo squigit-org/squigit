@@ -142,15 +142,17 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
               </svg>
             </button>
 
-            <div className="h-4 w-[1px] bg-white/10 mx-1" />
-
-            <OCRModelSwitcher
-              ocrEnabled={ocrEnabled}
-              currentOcrModel={currentOcrModel}
-              onOcrModelChange={onOcrModelChange}
-              onOpenSettings={onOpenSettings}
-              disabled={isOCRLoading}
-            />
+            {ocrEnabled && (
+              <>
+                <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                <OCRModelSwitcher
+                  currentOcrModel={currentOcrModel}
+                  onOcrModelChange={onOcrModelChange}
+                  onOpenSettings={onOpenSettings}
+                  disabled={isOCRLoading}
+                />
+              </>
+            )}
           </>
         )}
 

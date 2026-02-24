@@ -13,7 +13,6 @@ import { getLanguageCode } from "@/features/ocr";
 import styles from "./OCRModelSwitcher.module.css";
 
 interface OCRModelSwitcherProps {
-  ocrEnabled: boolean;
   currentOcrModel: string;
   onOcrModelChange: (model: string) => void;
   onOpenSettings: (section: SettingsSection) => void;
@@ -21,7 +20,6 @@ interface OCRModelSwitcherProps {
 }
 
 export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
-  ocrEnabled,
   currentOcrModel,
   onOcrModelChange,
   onOpenSettings,
@@ -77,17 +75,6 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
-
-  useEffect(() => {
-    console.log(
-      "[OCRModelSwitcher] ocrEnabled:",
-      ocrEnabled,
-      "currentOcrModel:",
-      currentOcrModel,
-    );
-  }, [ocrEnabled, currentOcrModel]);
-
-  if (!ocrEnabled) return null;
 
   const isCurrentModelValid = installedModels.some(
     (m) => m.id === currentOcrModel,

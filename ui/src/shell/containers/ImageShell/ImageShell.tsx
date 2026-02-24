@@ -97,7 +97,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   }, [ocrEnabled]);
 
   const [localLoading, setLocalLoading] = useState(false);
-  const loading = isOcrScanning ?? localLoading;
+  const loading = ocrEnabled && (isOcrScanning ?? localLoading);
   const setLoading = onOcrScanningChange ?? setLocalLoading;
 
   const [errorDialog, setErrorDialog] = useState<DialogContent | null>(null);
@@ -528,12 +528,14 @@ export const ImageShell: React.FC<ImageShellProps> = ({
                     draggable={false}
                     className={styles.bigImage}
                   />
-                  <OCRTextCanvas
-                    data={displayData}
-                    size={size}
-                    svgRef={svgRef}
-                    onTextMouseDown={handleTextMouseDown}
-                  />
+                  {ocrEnabled && (
+                    <OCRTextCanvas
+                      data={displayData}
+                      size={size}
+                      svgRef={svgRef}
+                      onTextMouseDown={handleTextMouseDown}
+                    />
+                  )}
                 </div>
               </div>
             </div>
