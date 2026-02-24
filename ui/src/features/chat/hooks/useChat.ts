@@ -10,7 +10,6 @@ import { Message } from "@/features/chat";
 import { ModelType } from "@/lib/config";
 import {
   startNewChatStream,
-  startNewChatSync,
   sendMessage,
   restoreSession as apiRestoreSession,
   retryFromMessage,
@@ -30,6 +29,7 @@ export const useChat = ({
   chatId,
   onMissingApiKey,
   onTitleGenerated,
+  generateTitle,
 }: {
   apiKey: string;
   currentModel: string;
@@ -47,6 +47,7 @@ export const useChat = ({
   chatId: string | null;
   onMissingApiKey?: () => void;
   onTitleGenerated?: (title: string) => void;
+  generateTitle?: (text: string) => Promise<string>;
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
@@ -99,6 +100,13 @@ export const useChat = ({
       }
 
       sessionStartedForImageRef.current = imageKey;
+
+      console.log(
+        "[useChat] startSession triggered for imageKey:",
+        imageKey,
+        "chatId:",
+        chatId,
+      );
 
       if (apiKey) {
         startSession(apiKey, currentModel, startupImage);
@@ -216,43 +224,46 @@ export const useChat = ({
         return;
       }
 
-      if (!isRetry && imgData && !imgData.fromHistory) {
-        const { title, content } = await startNewChatSync(
-          key,
-          modelId,
-          imgData.path,
-        );
+      let hasTriggeredTitle = false;
 
-        if (signal.aborted) return;
-
-        if (onTitleGenerated) {
-          onTitleGenerated(title);
-        }
-
-        const botMsg: Message = {
-          id: responseId,
-          role: "model",
-          text: content,
-          timestamp: Date.now(),
-        };
-
-        setMessages([botMsg]);
-
-        const targetChatId = sessionChatIdRef.current;
-        if (onMessage && targetChatId) {
-          onMessage(botMsg, targetChatId);
-        }
-
-        setIsLoading(false);
-        setIsStreaming(false);
-        return;
-      }
-
+      console.log("[useChat] Calling startNewChatStream with model:", modelId);
       await startNewChatStream(modelId, imgData.path, (token: string) => {
         if (signal.aborted) return;
         fullResponse += token;
         setStreamingText(fullResponse);
+
+        if (
+          !isRetry &&
+          !imgData.fromHistory &&
+          !hasTriggeredTitle &&
+          fullResponse.length > 50
+        ) {
+          console.log(
+            "[useChat] Triggering title generation due to stream length > 50",
+          );
+          hasTriggeredTitle = true;
+          if (generateTitle && onTitleGenerated) {
+            generateTitle(fullResponse)
+              .then((title) => {
+                console.log("[useChat] Title generated:", title);
+                if (!signal.aborted) onTitleGenerated(title);
+              })
+              .catch(console.error);
+          }
+        }
       });
+      console.log("[useChat] startNewChatStream finished!");
+
+      if (!isRetry && !imgData.fromHistory && !hasTriggeredTitle) {
+        hasTriggeredTitle = true;
+        if (generateTitle && onTitleGenerated && fullResponse.length > 0) {
+          generateTitle(fullResponse)
+            .then((title) => {
+              if (!signal.aborted) onTitleGenerated(title);
+            })
+            .catch(console.error);
+        }
+      }
 
       if (signal.aborted) {
         setIsLoading(false);
@@ -436,7 +447,15 @@ export const useChat = ({
         text: streamingText,
         timestamp: Date.now(),
       };
-      setMessages([botMsg]);
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === botMsg.id);
+        if (idx !== -1) {
+          const newMsgs = [...prev];
+          newMsgs[idx] = botMsg;
+          return newMsgs;
+        }
+        return [...prev, botMsg];
+      });
 
       if (isStreaming && onMessage && targetChatId) {
         onMessage(botMsg, targetChatId);
@@ -542,8 +561,17 @@ export const useChat = ({
         role: "model",
         text: streamingText,
         timestamp: Date.now(),
+        alreadyStreamed: true,
       };
-      setMessages([botMsg]);
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === botMsg.id);
+        if (idx !== -1) {
+          const newMsgs = [...prev];
+          newMsgs[idx] = botMsg;
+          return newMsgs;
+        }
+        return [...prev, botMsg];
+      });
       setStreamingText("");
       setFirstResponseId(null);
     }
@@ -560,7 +588,15 @@ export const useChat = ({
           text: truncatedText,
           timestamp: Date.now(),
         };
-        setMessages([botMsg]);
+        setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.id === botMsg.id);
+          if (idx !== -1) {
+            const newMsgs = [...prev];
+            newMsgs[idx] = botMsg;
+            return newMsgs;
+          }
+          return [...prev, botMsg];
+        });
         setStreamingText("");
         setFirstResponseId(null);
         setIsAiTyping(false);
@@ -654,6 +690,8 @@ export const useChat = ({
     }
 
     try {
+      let hasTriggeredTitle = false;
+
       const responseText = await retryFromMessage(
         msgIndex,
         messages,
@@ -670,6 +708,25 @@ export const useChat = ({
             setStreamingText(token);
           } else {
             setStreamingText((prev) => prev + token);
+          }
+
+          if (
+            msgIndex === 0 &&
+            !hasTriggeredTitle &&
+            (streamingText + token).length > 50
+          ) {
+            console.log(
+              "[useChat] Triggering title generation on retry due to stream length > 50",
+            );
+            hasTriggeredTitle = true;
+            if (generateTitle && onTitleGenerated) {
+              generateTitle(streamingText + token)
+                .then((title) => {
+                  console.log("[useChat] Title generated on retry:", title);
+                  onTitleGenerated(title);
+                })
+                .catch(console.error);
+            }
           }
         },
         fallbackImagePath,

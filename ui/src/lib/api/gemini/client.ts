@@ -89,32 +89,6 @@ const formatHistoryLog = (): string => {
     .join("\n\n");
 };
 
-export const startNewChatSync = async (
-  apiKey: string,
-  modelId: string,
-  imagePath: string,
-): Promise<{ title: string; content: string }> => {
-  resetBrainContext();
-
-  const response = await invoke<{ title: string; content: string }>(
-    "start_chat_sync",
-    {
-      apiKey,
-      model: modelId,
-      imageBase64: "",
-      imageMimeType: "",
-      imagePath,
-    },
-  );
-
-  storedImagePath = imagePath;
-
-  setImageDescription(response.content);
-  addToHistory("Assistant", response.content);
-
-  return response;
-};
-
 export const startNewChatStream = async (
   modelId: string,
   imagePath: string,

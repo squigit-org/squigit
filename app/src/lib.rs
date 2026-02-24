@@ -95,7 +95,6 @@ pub fn run() {
             // Gemini
             commands::gemini::stream_gemini_chat_v2,
             commands::gemini::generate_chat_title,
-            commands::gemini::start_chat_sync,
             // Window
             open_external_url,
             set_background_color,

@@ -4,92 +4,68 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 const TITLE_MODEL = "gemini-2.5-flash";
 
 interface UseChatTitleProps {
-  startupImage: {
-    path: string;
-    mimeType: string;
-    imageId: string;
-  } | null;
   apiKey: string;
-  sessionChatTitle: string | null;
-  setSessionChatTitle: (title: string) => void;
 }
 
 export const useChatTitle = ({
-  startupImage,
   apiKey,
-  sessionChatTitle,
-  setSessionChatTitle,
 }: UseChatTitleProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generateTitle = useCallback(async () => {
-    if (!startupImage?.path || !apiKey || sessionChatTitle) {
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      const title = await invoke<string>("generate_chat_title", {
-        apiKey,
-        model: TITLE_MODEL,
-        imagePath: startupImage.path,
-      });
-
-      console.log(`[ChatTitleTracker] Selected Model: ${TITLE_MODEL}`);
-      console.log(
-        `[ChatTitleTracker] Generated Chat Title: "${title || "New Chat"}"`,
-      );
-      setSessionChatTitle(title || "New Chat");
-    } catch (error) {
-      console.error("Failed to generate chat title:", error);
-      setSessionChatTitle("New Chat");
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [startupImage, apiKey, sessionChatTitle, setSessionChatTitle]);
-
-  useEffect(() => {
-    generateTitle();
-  }, [generateTitle]);
-
-  const generateTitleForImage = useCallback(
+  const generateTitleForText = useCallback(
     async (
-      imagePath: string,
-      _mimeType: string,
-      _existingTitles: string[] = [],
+      text: string,
     ): Promise<string> => {
-      if (!apiKey) return "New Chat";
+      if (!apiKey || !text) return "New Chat";
+      
+      setIsGenerating(true);
 
       try {
         const title = await invoke<string>("generate_chat_title", {
           apiKey,
-          model: TITLE_MODEL,
-          imagePath,
+          model: "gemini-2.5-flash-lite",
+          promptContext: text,
         });
 
-        console.log(`[ChatTitleTracker] Selected Model: ${TITLE_MODEL}`);
+        console.log(`[ChatTitleTracker] Selected Model: gemini-2.5-flash-lite`);
         console.log(
           `[ChatTitleTracker] Generated Chat Title: "${title || "New Chat"}"`,
         );
         return title || "New Chat";
-      } catch (error) {
-        console.error("Failed to generate image title:", error);
-        return "New Chat";
+      } catch (liteError) {
+        console.warn("Failed to generate text title with lite model, falling back to flash:", liteError);
+        
+        try {
+          const fallbackTitle = await invoke<string>("generate_chat_title", {
+            apiKey,
+            model: TITLE_MODEL,
+            promptContext: text,
+          });
+
+          console.log(`[ChatTitleTracker] Selected Model: ${TITLE_MODEL} (Fallback)`);
+          console.log(
+            `[ChatTitleTracker] Generated Chat Title: "${fallbackTitle || "New Chat"}"`,
+          );
+          return fallbackTitle || "New Chat";
+        } catch (flashError) {
+          console.error("Failed to generate text title with fallback model:", flashError);
+          return "New Chat";
+        }
+      } finally {
+        setIsGenerating(false);
       }
     },
     [apiKey],
   );
 
   return {
-    chatTitle: sessionChatTitle || "New Chat",
     isGeneratingTitle: isGenerating,
-    generateImageTitle: generateTitleForImage,
+    generateTitleForText,
   };
 };

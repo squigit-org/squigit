@@ -286,14 +286,13 @@ pub async fn stream_gemini_chat_v2(
     Ok(())
 }
 
-/// Generate a chat title for an image using the brain's title prompt.
+/// Generate a chat title for the chat using the brain's title prompt and the text context.
 /// Returns the generated title text directly.
 #[tauri::command]
 pub async fn generate_chat_title(
-    state: tauri::State<'_, crate::state::AppState>,
     api_key: String,
     model: String,
-    image_path: Option<String>,
+    prompt_context: String,
 ) -> Result<String, String> {
     use crate::brain::processor::get_title_prompt;
     println!("Generating Title using model: {}", model);
@@ -304,25 +303,16 @@ pub async fn generate_chat_title(
         model, api_key
     );
 
-    let title_prompt = get_title_prompt()?;
+    let title_context: String = prompt_context.lines().take(3).collect::<Vec<&str>>().join("\n");
+    let title_prompt_base = get_title_prompt().map_err(|e| e.to_string())?;
+    let title_prompt = format!("{}\n\nContext:\n{}", title_prompt_base, title_context);
     
-    let mut parts = vec![];
-
-    if let Some(path) = image_path {
-        let file_ref = crate::commands::gemini_files::ensure_file_uploaded(&api_key, &path, &state.gemini_file_cache).await?;
-        parts.push(GeminiPart {
-            file_data: Some(GeminiFileData {
-                mime_type: file_ref.mime_type.clone(),
-                file_uri: file_ref.file_uri.clone(),
-            }),
+    let parts = vec![
+        GeminiPart {
+            text: Some(title_prompt),
             ..Default::default()
-        });
-    }
-
-    parts.push(GeminiPart {
-        text: Some(title_prompt),
-        ..Default::default()
-    });
+        }
+    ];
 
     let contents = vec![GeminiContent {
         role: "user".to_string(),
@@ -347,7 +337,7 @@ pub async fn generate_chat_title(
     let body = response.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
     println!("Title Gen Success Body: {}", body); 
     
-    // Parse single response (not streaming array)
+    // Parse single response
     let chunk: GeminiResponseChunk = serde_json::from_str(&body)
         .map_err(|e| format!("Failed to parse Gemini response: {} - Body: {}", e, &body[..body.len().min(500)]))?;
     
@@ -371,128 +361,4 @@ pub async fn generate_chat_title(
     Ok("New Chat".to_string())
 }
 
-#[derive(Debug, Serialize)]
-pub struct ChatStartResponse {
-    title: String,
-    content: String,
-}
 
-#[tauri::command]
-pub async fn start_chat_sync(
-    _app: AppHandle,
-    state: tauri::State<'_, crate::state::AppState>,
-    api_key: String,
-    model: String,
-    image_path: Option<String>,
-) -> Result<ChatStartResponse, String> {
-    use crate::brain::processor::{build_initial_system_prompt, get_title_prompt};
-    
-    println!("Starting Sync Chat (Response + Title) using model: {}", model);
-    let client = reqwest::Client::new();
-    let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        model, api_key
-    );
-
-    // --- Step 1: Generate Content ---
-    let system_prompt = build_initial_system_prompt().map_err(|e| e.to_string())?;
-    
-    let mut parts = vec![];
-
-    if let Some(path) = image_path {
-        let file_ref = crate::commands::gemini_files::ensure_file_uploaded(&api_key, &path, &state.gemini_file_cache).await?;
-        parts.push(GeminiPart {
-            file_data: Some(GeminiFileData {
-                mime_type: file_ref.mime_type.clone(),
-                file_uri: file_ref.file_uri.clone(),
-            }),
-            ..Default::default()
-        });
-    }
-
-    parts.push(GeminiPart {
-        text: Some(system_prompt),
-        ..Default::default()
-    });
-
-    let contents = vec![GeminiContent {
-        role: "user".to_string(),
-        parts,
-    }];
-
-    let request_body = GeminiRequest { contents };
-
-    let response = client
-        .post(&url)
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Gemini: {}", e))?;
-    
-    if !response.status().is_success() {
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(format!("Gemini API Error (Content): {}", error_text));
-    }
-
-    let body = response.text().await.map_err(|e| format!("Failed to read content response: {}", e))?;
-    let chunk: GeminiResponseChunk = serde_json::from_str(&body)
-        .map_err(|e| format!("Failed to parse content response: {}", e))?;
-    
-    let full_content = chunk.candidates
-        .and_then(|c| c.into_iter().next())
-        .and_then(|c| c.content)
-        .and_then(|c| c.parts)
-        .and_then(|p| p.into_iter().next())
-        .and_then(|p| p.text)
-        .ok_or("Empty response from AI")?;
-
-    // --- Step 2: Generate Title (from content) ---
-    // Take first 3 lines or first 200 chars
-    let title_context: String = full_content.lines().take(3).collect::<Vec<&str>>().join("\n");
-    let title_prompt_base = get_title_prompt().map_err(|e| e.to_string())?;
-    let title_prompt = format!("{}\n\nContext:\n{}", title_prompt_base, title_context);
-
-    let title_contents = vec![GeminiContent {
-        role: "user".to_string(),
-        parts: vec![
-            GeminiPart {
-                text: Some(title_prompt),
-                ..Default::default()
-            },
-        ],
-    }];
-
-    let title_request = GeminiRequest { contents: title_contents };
-
-    let title_response = client
-        .post(&url)
-        .json(&title_request)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Gemini (Title): {}", e))?;
-    
-    if !title_response.status().is_success() {
-        let error_text = title_response.text().await.unwrap_or_default();
-        // If title fails (e.g. quota), we fail the whole chat as requested
-        return Err(format!("Gemini API Error (Title): {}", error_text));
-    }
-
-    let title_body = title_response.text().await.map_err(|e| format!("Failed to read title response: {}", e))?;
-    let title_chunk: GeminiResponseChunk = serde_json::from_str(&title_body)
-        .map_err(|e| format!("Failed to parse title response: {}", e))?;
-
-    let title = title_chunk.candidates
-        .and_then(|c| c.into_iter().next())
-        .and_then(|c| c.content)
-        .and_then(|c| c.parts)
-        .and_then(|p| p.into_iter().next())
-        .and_then(|p| p.text)
-        .unwrap_or_else(|| "New Chat".to_string())
-        .trim()
-        .to_string();
-
-    Ok(ChatStartResponse {
-        title,
-        content: full_content,
-    })
-}

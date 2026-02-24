@@ -371,7 +371,10 @@ export const ChatShell: React.FC<ChatShellProps> = ({
                   .slice()
                   .reverse()
                   .map((msg, index) => {
-                    const isLatestModel = msg.role === "model" && index === 0;
+                    const isLatestModel =
+                      msg.role === "model" &&
+                      index === 0 &&
+                      !msg.alreadyStreamed;
                     if (isAnalyzing && msg.id === retryingMessageId)
                       return null;
                     return (

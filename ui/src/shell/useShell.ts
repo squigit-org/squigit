@@ -374,6 +374,10 @@ export const useShell = () => {
     }
   }, [isLoadingState]);
 
+  const { isGeneratingTitle, generateTitleForText } = useChatTitle({
+    apiKey: system.apiKey,
+  });
+
   const chat = useChat({
     apiKey: system.apiKey,
     currentModel: system.sessionModel,
@@ -390,13 +394,7 @@ export const useShell = () => {
     onTitleGenerated: (title: string) => {
       system.setSessionChatTitle(title);
     },
-  });
-
-  const { isGeneratingTitle } = useChatTitle({
-    startupImage: system.startupImage,
-    apiKey: system.apiKey,
-    sessionChatTitle: system.sessionChatTitle,
-    setSessionChatTitle: system.setSessionChatTitle,
+    generateTitle: generateTitleForText,
   });
 
   const chatTitle = isImageMissing

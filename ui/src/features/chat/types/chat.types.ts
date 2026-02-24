@@ -23,6 +23,7 @@ export interface Message {
   timestamp: number;
   stopped?: boolean;
   actions?: MessageAction[];
+  alreadyStreamed?: boolean;
 }
 
 export interface AppConfig {
