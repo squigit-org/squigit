@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 /* ─── Layout ─────────────────────────────────────────────────────────────── */
 
 .wrapper {
@@ -26,22 +25,12 @@
   overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  animation: stripExpand 0.18s ease-out both;
+  opacity: 1;
+  transform: translateZ(0);
 }
 
 .strip::-webkit-scrollbar {
   display: none;
-}
-
-@keyframes stripExpand {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* ─── Custom scrollbar ───────────────────────────────────────────────────── */
@@ -55,12 +44,7 @@
   display: flex;
   align-items: center;
   border-radius: 3px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.wrapper:hover .scrollbarTrack {
-  opacity: 1;
+  pointer-events: none;
 }
 
 .scrollbarThumb {
@@ -69,8 +53,14 @@
   border-radius: 3px;
   cursor: grab;
   touch-action: none;
-  transition: background-color 0.15s ease;
-  will-change: transform;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.15s ease;
+}
+
+.wrapper:hover .scrollbarThumb {
+  opacity: 1;
 }
 
 .scrollbarThumb:hover {
@@ -89,14 +79,14 @@
   flex-shrink: 0;
   border-radius: 10px;
   cursor: pointer;
-  border: 1px solid var(--neutral-800);
-
+  border: none;
+  box-shadow: 0 0 0 1px var(--neutral-800);
   overflow: visible;
+  transform: translateZ(0);
 }
 
 .thumbWrapper:focus-visible {
-  outline: 2px solid var(--neutral-400);
-  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--neutral-400);
 }
 
 /* ─── Image thumbnail ────────────────────────────────────────────────────── */
@@ -164,8 +154,8 @@
 
 .removeBtn {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: 4px;
+  right: 4px;
   width: 18px;
   height: 18px;
   padding: 0;
@@ -179,16 +169,13 @@
   cursor: pointer;
   z-index: 99990;
   opacity: 0;
-  transform: scale(0.7);
   transition:
     opacity 0.15s ease,
-    transform 0.15s ease,
     background-color 0.15s ease;
 }
 
 .thumbWrapper:hover .removeBtn {
   opacity: 1;
-  transform: scale(1);
 }
 
 .removeBtn:hover {

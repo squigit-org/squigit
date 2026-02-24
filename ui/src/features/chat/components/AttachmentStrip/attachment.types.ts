@@ -69,10 +69,9 @@ export function isImageExtension(ext: string): boolean {
   return IMAGE_EXTENSIONS.includes(ext.toLowerCase());
 }
 
-/** Extract extension from a filename (without leading dot, lowercase) */
 export function getExtension(name: string): string {
   const lastDot = name.lastIndexOf(".");
-  if (lastDot === -1) return "";
+  if (lastDot <= 0) return "file";
   return name.slice(lastDot + 1).toLowerCase();
 }
 
@@ -93,9 +92,14 @@ export function buildAttachmentMention(path: string): string {
 }
 
 /** Build an Attachment object from a file system path */
-export function attachmentFromPath(path: string, id?: string): Attachment {
+export function attachmentFromPath(
+  path: string,
+  id?: string,
+  originalName?: string,
+): Attachment {
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  const name = lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
+  const name =
+    originalName || (lastSlash >= 0 ? path.slice(lastSlash + 1) : path);
   const ext = getExtension(name);
   const type = isImageExtension(ext) ? "image" : "file";
   return {

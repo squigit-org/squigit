@@ -9,6 +9,7 @@ import { listen } from "@tauri-apps/api/event";
 
 let currentAbortController: AbortController | null = null;
 let currentUnlisten: (() => void) | null = null;
+let currentChannelId: string | null = null;
 let generationId = 0;
 
 export const cancelCurrentRequest = () => {
@@ -20,6 +21,12 @@ export const cancelCurrentRequest = () => {
   if (currentUnlisten) {
     currentUnlisten();
     currentUnlisten = null;
+  }
+  if (currentChannelId) {
+    invoke("cancel_gemini_request", { channelId: currentChannelId }).catch(
+      console.error,
+    );
+    currentChannelId = null;
   }
 };
 
@@ -105,6 +112,7 @@ export const startNewChatStream = async (
   storedImagePath = imagePath;
 
   const channelId = `gemini-stream-${Date.now()}`;
+  currentChannelId = channelId;
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
@@ -173,6 +181,7 @@ export const sendMessage = async (
   addToHistory("User", text);
 
   const channelId = `gemini-stream-${Date.now()}`;
+  currentChannelId = channelId;
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
@@ -250,6 +259,7 @@ export const retryFromMessage = async (
     conversationHistory = [];
 
     const channelId = `gemini-stream-${Date.now()}`;
+    currentChannelId = channelId;
     let fullResponse = "";
 
     const unlisten = await listen<GeminiEvent>(channelId, (event) => {
@@ -316,6 +326,7 @@ export const retryFromMessage = async (
   const isFirstTurnWithImage = !firstUser && storedImagePath;
 
   const channelId = `gemini-stream-${Date.now()}`;
+  currentChannelId = channelId;
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {
@@ -400,6 +411,7 @@ export const editUserMessage = async (
   const isFirstTurnWithImage = !previousUserMsg && storedImagePath;
 
   const channelId = `gemini-stream-${Date.now()}`;
+  currentChannelId = channelId;
   let fullResponse = "";
 
   const unlisten = await listen<GeminiEvent>(channelId, (event) => {

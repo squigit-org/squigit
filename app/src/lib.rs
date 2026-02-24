@@ -95,6 +95,7 @@ pub fn run() {
             // Gemini
             commands::gemini::stream_gemini_chat_v2,
             commands::gemini::generate_chat_title,
+            commands::gemini::cancel_gemini_request,
             // Window
             open_external_url,
             set_background_color,
@@ -127,6 +128,7 @@ pub fn run() {
             update_chat_metadata,
             append_chat_message,
             overwrite_chat_messages,
+            commands::chat::validate_text_file,
             // OCR Storage
             save_ocr_data,
             get_ocr_data,

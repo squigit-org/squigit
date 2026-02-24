@@ -45,6 +45,34 @@ pub fn store_file_from_path(path: String) -> Result<StoredImage, String> {
     storage.store_file_from_path(&path).map_err(|e| e.to_string())
 }
 
+/// Validate if a file is safe text (valid UTF-8 and no null bytes).
+#[tauri::command]
+pub fn validate_text_file(path: String) -> Result<bool, String> {
+    use std::fs::File;
+    use std::io::Read;
+
+    let mut file = File::open(&path).map_err(|e| e.to_string())?;
+    let mut buffer = vec![0u8; 8192];  // Read up to 8KB
+    let bytes_read = file.read(&mut buffer).map_err(|e| e.to_string())?;
+    buffer.truncate(bytes_read);
+
+    // Empty files are valid text files
+    if bytes_read == 0 {
+        return Ok(true);
+    }
+
+    // Check for null bytes (quick binary check)
+    if buffer.contains(&0) {
+        return Ok(false);
+    }
+
+    // Check strict UTF-8 validity
+    match std::str::from_utf8(&buffer) {
+        Ok(_) => Ok(true),
+        Err(_) => Ok(false),
+    }
+}
+
 /// Get the path to a stored image by its hash.
 #[tauri::command]
 pub fn get_image_path(hash: String) -> Result<String, String> {

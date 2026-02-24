@@ -6,6 +6,20 @@ use tauri::{AppHandle, Emitter};
 use regex::Regex;
 use futures_util::future::join_all;
 
+lazy_static::lazy_static! {
+    pub static ref ACTIVE_REQUESTS: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>> = std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()));
+}
+
+#[tauri::command]
+pub async fn cancel_gemini_request(channel_id: String) -> Result<(), String> {
+    log::info!("Cancelling request for channel: {}", channel_id);
+    let mut map = ACTIVE_REQUESTS.lock().await;
+    if let Some(token) = map.remove(&channel_id) {
+        token.cancel();
+    }
+    Ok(())
+}
+
 async fn build_interleaved_parts(
     text: &str,
     api_key: &str,
@@ -250,12 +264,29 @@ pub async fn stream_gemini_chat_v2(
 
     let request_body = GeminiRequest { contents };
 
-    let response = client
-        .post(&url)
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
+    let cancel_token = tokio_util::sync::CancellationToken::new();
+    {
+        let mut map = ACTIVE_REQUESTS.lock().await;
+        map.insert(channel_id.clone(), cancel_token.clone());
+    }
+
+    let req_future = client.post(&url).json(&request_body).send();
+
+    let response_result = tokio::select! {
+        res = req_future => res,
+        _ = cancel_token.cancelled() => {
+            let mut map = ACTIVE_REQUESTS.lock().await;
+            map.remove(&channel_id);
+            return Err("CANCELLED".to_string());
+        }
+    };
+    
+    {
+        let mut map = ACTIVE_REQUESTS.lock().await;
+        map.remove(&channel_id);
+    }
+
+    let response = response_result.map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
     
     if !response.status().is_success() {
         let error_text = response.text().await.unwrap_or_default();

@@ -142,14 +142,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const unlistenDrop = listen<{ paths: string[] }>(
       "tauri://drag-drop",
       async (event) => {
-        const paths = event.payload.paths;
-        if (!paths || paths.length === 0) return;
+        const paths = Array.from(event.payload.paths || []);
+        if (paths.length === 0) return;
 
         const newAttachments = [...attachments];
         for (const filePath of paths) {
+          const originalName = filePath.split(/[/\\]/).pop() || filePath;
           const ext = getExtension(filePath);
           const isAllowed = ACCEPTED_EXTENSIONS.includes(ext);
-          if (!isAllowed) continue;
 
           if (isImageExtension(ext)) {
             try {
@@ -157,19 +157,46 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 "store_image_from_path",
                 { path: filePath },
               );
-              newAttachments.push(attachmentFromPath(result.path));
+              newAttachments.push(
+                attachmentFromPath(result.path, undefined, originalName),
+              );
             } catch (err) {
               console.error("Failed to store dropped image:", err);
             }
-          } else {
+          } else if (isAllowed) {
             try {
               const result = await invoke<{ hash: string; path: string }>(
                 "store_file_from_path",
                 { path: filePath },
               );
-              newAttachments.push(attachmentFromPath(result.path));
+              newAttachments.push(
+                attachmentFromPath(result.path, undefined, originalName),
+              );
             } catch (err) {
               console.error("Failed to store dropped file:", err);
+            }
+          } else {
+            // Check if it's a valid text file
+            try {
+              const isText = await invoke<boolean>("validate_text_file", {
+                path: filePath,
+              });
+              if (isText) {
+                const result = await invoke<{ hash: string; path: string }>(
+                  "store_file_from_path",
+                  { path: filePath },
+                );
+                newAttachments.push(
+                  attachmentFromPath(result.path, undefined, originalName),
+                );
+              } else {
+                console.warn(
+                  "Dropped file is binary and not supported:",
+                  filePath,
+                );
+              }
+            } catch (err) {
+              console.error("Failed to validate dropped text file:", err);
             }
           }
         }
@@ -255,7 +282,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       <InputActions
         onSubmit={handleSubmit}
-        onStop={onStopGeneration}
+        onStop={() => onStopGeneration?.()}
         isButtonActive={isButtonActive}
         isAiTyping={isAiTyping}
         isStoppable={isStoppable}
@@ -271,26 +298,56 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onFilePaths={async (paths: string[]) => {
           const newAttachments = [...attachments];
           for (const filePath of paths) {
+            const originalName = filePath.split(/[/\\]/).pop() || filePath;
             const ext = getExtension(filePath);
+            const isAllowed = ACCEPTED_EXTENSIONS.includes(ext);
+
             if (isImageExtension(ext)) {
               try {
                 const result = await invoke<{ hash: string; path: string }>(
                   "store_image_from_path",
                   { path: filePath },
                 );
-                newAttachments.push(attachmentFromPath(result.path));
+                newAttachments.push(
+                  attachmentFromPath(result.path, undefined, originalName),
+                );
               } catch (err) {
                 console.error("Failed to store image:", err);
               }
-            } else {
+            } else if (isAllowed) {
               try {
                 const result = await invoke<{ hash: string; path: string }>(
                   "store_file_from_path",
                   { path: filePath },
                 );
-                newAttachments.push(attachmentFromPath(result.path));
+                newAttachments.push(
+                  attachmentFromPath(result.path, undefined, originalName),
+                );
               } catch (err) {
                 console.error("Failed to store file:", err);
+              }
+            } else {
+              // Validated unknown extensions from 'All files'
+              try {
+                const isText = await invoke<boolean>("validate_text_file", {
+                  path: filePath,
+                });
+                if (isText) {
+                  const result = await invoke<{ hash: string; path: string }>(
+                    "store_file_from_path",
+                    { path: filePath },
+                  );
+                  newAttachments.push(
+                    attachmentFromPath(result.path, undefined, originalName),
+                  );
+                } else {
+                  console.warn(
+                    "Selected file is binary and not supported:",
+                    filePath,
+                  );
+                }
+              } catch (err) {
+                console.error("Failed to validate selected text file:", err);
               }
             }
           }

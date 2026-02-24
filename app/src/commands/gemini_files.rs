@@ -33,7 +33,7 @@ pub fn mime_from_extension(ext: &str) -> &str {
         "mp3" => "audio/mpeg",
         "wav" => "audio/wav",
         "mp4" => "video/mp4",
-        _ => "application/octet-stream",
+        _ => "text/plain",
     }
 }
 

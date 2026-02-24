@@ -19,6 +19,7 @@ dependencies = [
  "hex",
  "hmac",
  "image",
+ "lazy_static",
  "libc",
  "log",
  "mime_guess",

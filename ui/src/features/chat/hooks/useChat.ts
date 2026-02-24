@@ -580,7 +580,7 @@ export const useChat = ({
 
   const handleStopGeneration = (truncatedText?: string) => {
     isRequestCancelledRef.current = true;
-    if (truncatedText !== undefined) {
+    if (typeof truncatedText === "string") {
       if (streamingText && firstResponseId) {
         const botMsg: Message = {
           id: firstResponseId,

@@ -68,6 +68,10 @@ export const InputActions: React.FC<InputActionsProps> = ({
             name: "Supported Files",
             extensions: ACCEPTED_EXTENSIONS,
           },
+          {
+            name: "All Files",
+            extensions: ["*"],
+          },
         ],
       });
       if (result) {

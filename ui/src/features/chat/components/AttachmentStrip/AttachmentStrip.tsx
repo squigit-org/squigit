@@ -300,7 +300,13 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
     const el = stripRef.current;
     if (!el) return;
 
-    const observer = new ResizeObserver(updateScroll);
+    let rAF = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(rAF);
+      rAF = requestAnimationFrame(() => {
+        updateScroll();
+      });
+    });
     observer.observe(el);
 
     const handleWheel = (e: WheelEvent) => {
