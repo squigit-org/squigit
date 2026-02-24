@@ -91,11 +91,9 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const bubbleRef = useRef<HTMLDivElement>(null);
 
   const handleEditSubmit = () => {
-    // Re-append the paths that were stripped out so backend keeps them
-    const originalPaths =
-      message.text.match(/\[Attachment:.*?\]\(.*?\)/g) || [];
+    const originalPaths = message.text.match(/\{\{[^}]+\}\}/g) || [];
     const restoredText = `${editorValue.trim()}${
-      originalPaths.length > 0 ? `\n\n${originalPaths.join("\n")}` : ""
+      originalPaths.length > 0 ? ` ${originalPaths.join(" ")}` : ""
     }`;
 
     if (restoredText !== message.text) {

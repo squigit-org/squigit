@@ -18,7 +18,7 @@ use commands::chat::{
     get_image_path, get_imgbb_url, get_ocr_data, get_ocr_frame, init_ocr_frame,
     list_chats, load_chat,
     overwrite_chat_messages, save_imgbb_url, save_ocr_data, store_image_bytes,
-    store_image_from_path, update_chat_metadata,
+    store_image_from_path, store_file_from_path, update_chat_metadata,
 };
 use commands::clipboard::{
     copy_image_to_clipboard, read_clipboard_image, read_clipboard_text,
@@ -121,6 +121,7 @@ pub fn run() {
             // CAS Image Storage
             store_image_bytes,
             store_image_from_path,
+            store_file_from_path,
             get_image_path,
             // Chat Storage
             create_chat,

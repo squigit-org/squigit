@@ -6,6 +6,7 @@
 
 import React, { useState, useRef, useCallback } from "react";
 import { Paperclip, ArrowUp, Square, Camera } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { MODELS } from "@/lib/config";
 import { Tooltip } from "@/primitives/tooltip/Tooltip";
 import {
@@ -35,7 +36,7 @@ interface InputActionsProps {
   onModelChange: (model: string) => void;
   onTranscript: (text: string, isFinal: boolean) => void;
   onCaptureToInput?: () => void;
-  onFileSelect?: (file: File) => void;
+  onFilePaths?: (paths: string[]) => void;
 }
 
 export const InputActions: React.FC<InputActionsProps> = ({
@@ -49,7 +50,7 @@ export const InputActions: React.FC<InputActionsProps> = ({
   onModelChange,
   onTranscript,
   onCaptureToInput,
-  onFileSelect,
+  onFilePaths,
 }) => {
   const [showFileButtonTooltip, setShowFileButtonTooltip] = useState(false);
   const [showKeepProgressTooltip, setShowKeepProgressTooltip] = useState(false);
@@ -57,17 +58,25 @@ export const InputActions: React.FC<InputActionsProps> = ({
 
   const fileButtonRef = useRef<HTMLButtonElement>(null);
   const keepProgressInfoRef = useRef<HTMLButtonElement>(null);
-  const hiddenFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePaperclipClick = () => {
-    hiddenFileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      onFileSelect?.(e.target.files[0]);
+  const handlePaperclipClick = async () => {
+    try {
+      const result = await open({
+        multiple: true,
+        filters: [
+          {
+            name: "Supported Files",
+            extensions: ACCEPTED_EXTENSIONS,
+          },
+        ],
+      });
+      if (result) {
+        const paths = Array.isArray(result) ? result : [result];
+        onFilePaths?.(paths);
+      }
+    } catch (err) {
+      console.error("Failed to open file dialog:", err);
     }
-    e.target.value = "";
   };
 
   const handleModelSelect = useCallback(
@@ -83,13 +92,6 @@ export const InputActions: React.FC<InputActionsProps> = ({
 
   return (
     <div className={styles.actions}>
-      <input
-        type="file"
-        ref={hiddenFileInputRef}
-        style={{ display: "none" }}
-        accept={ACCEPTED_EXTENSIONS.map((ext) => `.${ext}`).join(",")}
-        onChange={handleFileChange}
-      />
       <div className={styles.leftActions}>
         <button
           className={styles.iconButton}

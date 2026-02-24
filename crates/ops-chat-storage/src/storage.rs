@@ -123,6 +123,50 @@ impl ChatStorage {
         self.store_image(&buffer)
     }
 
+    /// Store a generic file using content-addressable storage, preserving the original extension.
+    ///
+    /// Returns the hash and path to the stored file.
+    /// If the file already exists (same hash + extension), returns the existing path.
+    pub fn store_file(&self, bytes: &[u8], extension: &str) -> Result<StoredImage> {
+        if bytes.is_empty() {
+            return Err(StorageError::EmptyImage);
+        }
+
+        let hash = blake3::hash(bytes).to_hex().to_string();
+
+        let prefix = &hash[..2];
+        let subdir = self.objects_dir.join(prefix);
+        fs::create_dir_all(&subdir)?;
+
+        let ext = if extension.is_empty() { "bin" } else { extension };
+        let file_path = subdir.join(format!("{}.{}", hash, ext));
+
+        if !file_path.exists() {
+            let mut file = File::create(&file_path)?;
+            file.write_all(bytes)?;
+        }
+
+        Ok(StoredImage {
+            hash,
+            path: file_path.to_string_lossy().to_string(),
+        })
+    }
+
+    /// Store a file from a filesystem path, preserving the original extension.
+    pub fn store_file_from_path(&self, path: &str) -> Result<StoredImage> {
+        let source = std::path::Path::new(path);
+        let extension = source
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        let mut file = File::open(path)?;
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+        self.store_file(&buffer, &extension)
+    }
+
     /// Get the path to a stored image by its hash.
     pub fn get_image_path(&self, hash: &str) -> Result<String> {
         let prefix = hash.get(..2).ok_or(StorageError::InvalidHash)?;

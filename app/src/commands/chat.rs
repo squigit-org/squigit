@@ -38,6 +38,13 @@ pub fn store_image_from_path(path: String) -> Result<StoredImage, String> {
     storage.store_image_from_path(&path).map_err(|e| e.to_string())
 }
 
+/// Store any file from path (preserving extension) and return hash + CAS path.
+#[tauri::command]
+pub fn store_file_from_path(path: String) -> Result<StoredImage, String> {
+    let storage = get_active_storage()?;
+    storage.store_file_from_path(&path).map_err(|e| e.to_string())
+}
+
 /// Get the path to a stored image by its hash.
 #[tauri::command]
 pub fn get_image_path(hash: String) -> Result<String, String> {

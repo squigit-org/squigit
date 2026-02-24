@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlatform } from "@/hooks";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -13,7 +13,6 @@ import { ImageResult, storeImageFromPath } from "@/lib/storage";
 import { OnboardingShell } from "@/shell/containers";
 import { useShellContext } from "@/shell/context";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 export interface CASImageData {
@@ -36,7 +35,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
 }) => {
   const shell = useShellContext();
   const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { isMac, isWin, modSymbol, shiftSymbol } = usePlatform();
 
   const platformInfo = React.useMemo(() => {
@@ -190,58 +188,11 @@ export const Welcome: React.FC<WelcomeProps> = ({
     };
   }, [onImageReady, isActive]);
 
-  const handleFileProcess = async (file: File) => {
-    if (isGuest) {
-      onLoginRequired?.();
-      return;
-    }
-    try {
-      // @ts-expect-error Tauri provides file.path for dropped files
-      if (file.path) {
-        // @ts-expect-error Tauri provides file.path for dropped files
-        const result = await storeImageFromPath(file.path);
-        onImageReady({
-          imageId: result.hash,
-          path: result.path,
-        });
-      } else {
-        const buffer = await file.arrayBuffer();
-        const bytes = Array.from(new Uint8Array(buffer));
-        const result = await invoke<{ hash: string; path: string }>(
-          "store_image_bytes",
-          { bytes },
-        );
-        onImageReady({
-          imageId: result.hash,
-          path: result.path,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to process file:", error);
-    }
-  };
-
-  const handleFileInputChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    if (e.target.files && e.target.files.length > 0) {
-      await handleFileProcess(e.target.files[0]);
-    }
-  };
-
   return (
     <OnboardingShell
       className={`${isDragging ? styles.dragging : ""}`}
       tabIndex={-1}
     >
-      <input
-        ref={fileInputRef}
-        className={styles.fileInput}
-        type="file"
-        accept={ALLOWED_TYPES.join(",")}
-        onChange={handleFileInputChange}
-      />
-
       <div className={styles.content}>
         <svg
           className={styles.logo}

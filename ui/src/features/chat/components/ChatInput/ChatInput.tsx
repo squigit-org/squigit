@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { TextContextMenu } from "@/shell";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   AttachmentStrip,
   isImageExtension,
@@ -135,49 +136,60 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       codeValue.trim().length > 0 ||
       attachments.length > 0);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unlistenDrop = listen<{ paths: string[] }>(
+      "tauri://drag-drop",
+      async (event) => {
+        const paths = event.payload.paths;
+        if (!paths || paths.length === 0) return;
+
+        const newAttachments = [...attachments];
+        for (const filePath of paths) {
+          const ext = getExtension(filePath);
+          const isAllowed = ACCEPTED_EXTENSIONS.includes(ext);
+          if (!isAllowed) continue;
+
+          if (isImageExtension(ext)) {
+            try {
+              const result = await invoke<{ hash: string; path: string }>(
+                "store_image_from_path",
+                { path: filePath },
+              );
+              newAttachments.push(attachmentFromPath(result.path));
+            } catch (err) {
+              console.error("Failed to store dropped image:", err);
+            }
+          } else {
+            try {
+              const result = await invoke<{ hash: string; path: string }>(
+                "store_file_from_path",
+                { path: filePath },
+              );
+              newAttachments.push(attachmentFromPath(result.path));
+            } catch (err) {
+              console.error("Failed to store dropped file:", err);
+            }
+          }
+        }
+        if (newAttachments.length > attachments.length) {
+          onAttachmentsChange(newAttachments);
+        }
+      },
+    );
+
+    return () => {
+      unlistenDrop.then((fn) => fn());
+    };
+  }, [attachments, onAttachmentsChange]);
+
   const containerContent = (
     <div
       className={`${styles.container} ${disabled && !isStoppable ? styles.disabled : ""} ${
         variant === "transparent" ? styles.transparentVariant : ""
       }`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-      }}
-      onDrop={async (e) => {
-        e.preventDefault();
-        const files = Array.from(e.dataTransfer.files);
-        let newAttachments = [...attachments];
-
-        for (const file of files) {
-          try {
-            // @ts-expect-error Tauri attaches .path to dropped files
-            const path = file.path;
-            if (path) {
-              const ext = getExtension(path);
-              const isAllowed = ACCEPTED_EXTENSIONS.includes(ext);
-
-              if (isAllowed) {
-                if (isImageExtension(ext)) {
-                  const result = await invoke<{ hash: string; path: string }>(
-                    "store_image_from_path",
-                    { path },
-                  );
-                  newAttachments.push(attachmentFromPath(result.path));
-                } else {
-                  newAttachments.push(attachmentFromPath(path));
-                }
-              }
-            }
-          } catch (err) {
-            console.error("Failed to process dropped file:", err);
-          }
-        }
-
-        if (newAttachments.length !== attachments.length) {
-          onAttachmentsChange(newAttachments);
-        }
-      }}
+      ref={containerRef}
     >
       <AttachmentStrip
         attachments={attachments}
@@ -240,27 +252,34 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           }
         }}
         onCaptureToInput={onCaptureToInput}
-        onFileSelect={async (file: File) => {
-          // @ts-expect-error Tauri paths
-          const path = file.path;
-          if (path) {
-            const ext = getExtension(path);
+        onFilePaths={async (paths: string[]) => {
+          const newAttachments = [...attachments];
+          for (const filePath of paths) {
+            const ext = getExtension(filePath);
             if (isImageExtension(ext)) {
               try {
                 const result = await invoke<{ hash: string; path: string }>(
                   "store_image_from_path",
-                  { path },
+                  { path: filePath },
                 );
-                onAttachmentsChange([
-                  ...attachments,
-                  attachmentFromPath(result.path),
-                ]);
+                newAttachments.push(attachmentFromPath(result.path));
               } catch (err) {
                 console.error("Failed to store image:", err);
               }
             } else {
-              onAttachmentsChange([...attachments, attachmentFromPath(path)]);
+              try {
+                const result = await invoke<{ hash: string; path: string }>(
+                  "store_file_from_path",
+                  { path: filePath },
+                );
+                newAttachments.push(attachmentFromPath(result.path));
+              } catch (err) {
+                console.error("Failed to store file:", err);
+              }
             }
+          }
+          if (newAttachments.length > attachments.length) {
+            onAttachmentsChange(newAttachments);
           }
         }}
       />
