@@ -141,6 +141,9 @@ export const startNewChatStream = async (
   currentUnlisten = unlisten;
 
   try {
+    console.log(`[GeminiClient] Starting New Stream`);
+    console.log(`[GeminiClient] Target Model: ${modelId}`);
+
     await invoke("stream_gemini_chat_v2", {
       apiKey: storedApiKey,
       model: modelId,
@@ -164,6 +167,9 @@ export const startNewChatStream = async (
     setImageDescription(fullResponse);
     addToHistory("Assistant", fullResponse);
 
+    console.log(
+      `[GeminiClient] Stream Completed successfully. Length: ${fullResponse.length} chars.`,
+    );
     return fullResponse;
   } catch (error) {
     unlisten();
@@ -203,6 +209,13 @@ export const sendMessage = async (
   currentUnlisten = unlisten;
 
   try {
+    console.log(`[GeminiClient] Sending Message`);
+    console.log(`[GeminiClient] Target Model: ${currentModelId}`);
+    console.log(`[GeminiClient] Prompt: "${text}"`);
+    console.log(
+      `[GeminiClient] Has Initial Image Active: ${Boolean(isFirstTurnWithImage)}`,
+    );
+
     await invoke("stream_gemini_chat_v2", {
       apiKey: storedApiKey,
       model: currentModelId,
@@ -224,6 +237,9 @@ export const sendMessage = async (
 
     addToHistory("Assistant", fullResponse);
 
+    console.log(
+      `[GeminiClient] Stream Completed. Final Response: "${fullResponse}"`,
+    );
     return fullResponse;
   } catch (error) {
     unlisten();

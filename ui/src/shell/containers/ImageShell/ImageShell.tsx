@@ -69,6 +69,8 @@ export interface ImageShellProps {
   onOcrScanningChange?: (scanning: boolean) => void;
 }
 
+const globalScanLock = new Set<string>();
+
 export const ImageShell: React.FC<ImageShellProps> = ({
   startupImage,
   sessionLensUrl,
@@ -141,13 +143,15 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   const hasScannedRef = useRef(false);
   const prevImageBase64Ref = useRef<string | null>(null);
 
-  const currentBase64 = startupImage?.path ?? null;
-  if (currentBase64 !== prevImageBase64Ref.current) {
-    hasScannedRef.current = false;
-    prevImageBase64Ref.current = currentBase64;
-    setLoading(false);
-    cancelledRef.current = false;
-  }
+  const currentPath = startupImage?.path ?? null;
+  useEffect(() => {
+    if (currentPath !== prevImageBase64Ref.current) {
+      hasScannedRef.current = false;
+      prevImageBase64Ref.current = currentPath;
+      setLoading(false);
+      cancelledRef.current = false;
+    }
+  }, [currentPath, setLoading]);
 
   const scan = useCallback(
     async (modelId?: string, requestId?: number) => {
@@ -162,6 +166,14 @@ export const ImageShell: React.FC<ImageShellProps> = ({
         );
         return;
       }
+
+      const lockKey = `${startupImage.imageId}-${modelToUse}`;
+      if (globalScanLock.has(lockKey)) {
+        console.log(`[ImageShell] Scan already in progress for: ${lockKey}`);
+        return;
+      }
+
+      globalScanLock.add(lockKey);
 
       console.log(
         `[ImageShell] Scanning with model: ${modelToUse} (Request ID: ${requestId})`,
@@ -229,6 +241,8 @@ export const ImageShell: React.FC<ImageShellProps> = ({
           setErrorDialog(getErrorDialog(e.toString()));
         }
       } finally {
+        globalScanLock.delete(`${startupImage.imageId}-${modelToUse}`);
+
         if (currentChatId === chatId && !cancelledRef.current) {
           if (requestId === undefined || requestId === scanRequestRef.current) {
             setLoading(false);

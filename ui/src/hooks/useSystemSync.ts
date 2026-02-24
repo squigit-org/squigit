@@ -149,10 +149,10 @@ export const useSystemSync = () => {
           try {
             await commands.setActiveProfile(activeAccountId);
           } catch (e) {
-            console.error(
-              "[useSystemSync] Failed to restore active account (preserving preference):",
-              e,
+            console.warn(
+              `[useSystemSync] Profile ${activeAccountId} corrupted or missing on disk (Original Error: ${e}). Healing state back to Guest.`,
             );
+            await savePreferences({ ...prefs, activeAccount: "Guest" });
           }
         } else {
           try {

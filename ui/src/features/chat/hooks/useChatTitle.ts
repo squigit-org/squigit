@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-const TITLE_MODEL = "gemini-2.0-flash-lite";
+const TITLE_MODEL = "gemini-2.5-flash";
 
 interface UseChatTitleProps {
   startupImage: {
@@ -42,6 +42,10 @@ export const useChatTitle = ({
         imagePath: startupImage.path,
       });
 
+      console.log(`[ChatTitleTracker] Selected Model: ${TITLE_MODEL}`);
+      console.log(
+        `[ChatTitleTracker] Generated Chat Title: "${title || "New Chat"}"`,
+      );
       setSessionChatTitle(title || "New Chat");
     } catch (error) {
       console.error("Failed to generate chat title:", error);
@@ -70,6 +74,10 @@ export const useChatTitle = ({
           imagePath,
         });
 
+        console.log(`[ChatTitleTracker] Selected Model: ${TITLE_MODEL}`);
+        console.log(
+          `[ChatTitleTracker] Generated Chat Title: "${title || "New Chat"}"`,
+        );
         return title || "New Chat";
       } catch (error) {
         console.error("Failed to generate image title:", error);
