@@ -257,9 +257,26 @@ No cleanup needed. Google deletes it. If the user resumes a chat after 48h, you 
 
 ## 6. The Migration: Step by Step
 
-### Phase 1: New Rust Module — `gemini_files.rs`
+> **IMPORTANT**: This migration uses a **phased rollout** strategy. Each phase is independently deployable and testable. Do NOT skip ahead. Complete and verify each phase before starting the next.
 
-Create `app/src/commands/gemini_files.rs` with:
+---
+
+### Phase A: Backend Infrastructure (Zero UI Changes)
+
+**Goal**: Make the Rust backend File-API-capable while keeping full backward compatibility. The UI continues to send base64 — nothing breaks.
+
+#### A.1: Create `app/src/commands/gemini_files.rs`
+
+```rust
+pub struct GeminiFileRef {
+    pub file_uri: String,
+    pub mime_type: String,
+    pub display_name: String,
+    pub uploaded_at: chrono::DateTime<chrono::Utc>,
+}
+```
+
+Functions to implement:
 
 1. **`upload_file_to_gemini(api_key, file_path, mime_type, display_name) → GeminiFileRef`**
    - Reads file from disk (CAS path)
@@ -268,25 +285,22 @@ Create `app/src/commands/gemini_files.rs` with:
 
 2. **`poll_file_status(api_key, file_name) → FileState`**
    - Checks if uploaded file is `ACTIVE`
-   - Used for large files that need processing time
+   - Only needed for video/audio files (images and code are instant)
 
-3. **`GeminiFileRef` struct** stored in `AppState`:
+3. **`ensure_file_uploaded(api_key, cas_path, cache) → GeminiFileRef`**
+   - Checks the `gemini_file_cache` for an existing non-expired `fileUri`
+   - If cached and fresh (<47h): return cached ref
+   - If expired or missing: upload → cache → return
+   - This is the main entry point other commands will call
 
-   ```rust
-   pub struct GeminiFileRef {
-       pub file_uri: String,
-       pub mime_type: String,
-       pub display_name: String,
-   }
-   ```
+#### A.2: Add `gemini_file_cache` to `AppState` (`state.rs`)
 
-4. **File URI cache** in `AppState`:
-   ```rust
-   // Map CAS hash → Gemini fileUri (avoids re-uploading same file)
-   pub gemini_file_cache: Mutex<HashMap<String, GeminiFileRef>>
-   ```
+```rust
+// Map CAS hash → Gemini fileUri (avoids re-uploading same file)
+pub gemini_file_cache: Mutex<HashMap<String, GeminiFileRef>>
+```
 
-### Phase 2: Update `gemini.rs` Structs
+#### A.3: Update `gemini.rs` structs
 
 Add `fileData` support to the existing `GeminiPart`:
 
@@ -310,27 +324,52 @@ pub struct GeminiFileData {
 }
 ```
 
-### Phase 3: Refactor Gemini Commands to Accept Paths
+#### A.4: Make Gemini commands accept BOTH base64 AND path
 
-Change all 4 Gemini commands to accept a **file path** instead of base64:
+Do NOT remove `image_base64` yet. Add `image_path` as an **additional** optional parameter:
 
-| Command                 | Current params                                                    | New params                                      |
-| ----------------------- | ----------------------------------------------------------------- | ----------------------------------------------- |
-| `stream_gemini_chat_v2` | `image_base64: Option<String>`, `image_mime_type: Option<String>` | `image_path: Option<String>` (CAS path on disk) |
-| `start_chat_sync`       | `image_base64: String`, `image_mime_type: String`                 | `image_path: String`                            |
-| `generate_chat_title`   | `image_base64: String`, `image_mime_type: String`                 | `image_path: String`                            |
-| `stream_gemini_chat`    | `contents: Vec<GeminiContent>` (pre-built with inlineData)        | Keep as-is or migrate                           |
+| Command                 | Keep (for now)                                                    | Add                          |
+| ----------------------- | ----------------------------------------------------------------- | ---------------------------- |
+| `stream_gemini_chat_v2` | `image_base64: Option<String>`, `image_mime_type: Option<String>` | `image_path: Option<String>` |
+| `start_chat_sync`       | `image_base64: String`, `image_mime_type: String`                 | `image_path: Option<String>` |
+| `generate_chat_title`   | `image_base64: String`, `image_mime_type: String`                 | `image_path: Option<String>` |
 
-Inside each command, Rust will:
+Inside each command, the logic:
 
-1. Check `gemini_file_cache` for an existing `fileUri` for this CAS hash
-2. If not cached: upload file → get `fileUri` → cache it
-3. Build `GeminiPart` with `file_data` instead of `inline_data`
-4. Send request
+```rust
+if let Some(path) = image_path {
+    // NEW: Upload via File API → use fileData
+    let file_ref = ensure_file_uploaded(&api_key, &path, &cache).await?;
+    parts.push(GeminiPart {
+        file_data: Some(GeminiFileData {
+            mime_type: file_ref.mime_type,
+            file_uri: file_ref.file_uri,
+        }),
+        ..Default::default()
+    });
+} else if let Some(b64) = image_base64 {
+    // OLD: Fallback to inlineData (still works while UI migrates)
+    parts.push(GeminiPart {
+        inline_data: Some(GeminiInlineData {
+            mime_type: image_mime_type.unwrap_or_default(),
+            data: b64,
+        }),
+        ..Default::default()
+    });
+}
+```
 
-### Phase 4: Refactor the UI Gemini Client
+#### A.5: Verify Phase A
 
-**`ui/src/lib/api/gemini/client.ts`** — This is a 492-line file that manages the Gemini session state. Major changes:
+The UI is unchanged. Everything still works exactly as before because the UI is still passing `imageBase64`. But now if you manually invoke the command with `imagePath`, it uses the File API. Test both paths.
+
+---
+
+### Phase B: Switch UI to Pass Paths (Remove Base64 from UI)
+
+**Goal**: The UI stops converting images to base64 entirely and sends CAS paths to the backend.
+
+#### B.1: Refactor `client.ts`
 
 1. **Remove** `storedImageBase64` and `storedMimeType` module variables
 2. **Add** `storedImagePath: string | null` — just the CAS path
@@ -348,7 +387,7 @@ Functions to change:
 | `editUserMessage()`    | Accepts `fallbackImage.base64`              | Accept `fallbackImagePath` |
 | `restoreSession()`     | Accepts `savedImageBase64`, `savedMimeType` | Accept `savedImagePath`    |
 
-### Phase 5: Refactor `useChat.ts`
+#### B.2: Refactor `useChat.ts`
 
 This 954-line hook is where the worst base64 patterns live. Changes:
 
@@ -379,33 +418,136 @@ startupImage: {
 
 > **WARNING**: Changing the `startupImage` type is a **deep refactor**. It flows through `useShell.ts` → `useChat.ts` → `ImageShell.tsx` → `useSystemSync.ts`. Touch carefully.
 
-### Phase 6: Handle Chat Attachments via File API
+#### B.3: Verify Phase B
 
-When a user sends a chat message with `{{/path/to/file}}` attachments:
+- All startup flows work (capture, D&D, paste, CLI)
+- Chat works (initial analysis, follow-up messages, retry, edit)
+- `grep -r "FileReader\|readAsDataURL" ui/src/features/chat/` returns zero results
+- `grep -r "storedImageBase64" ui/src/` returns zero results
 
-1. UI sends the message text (with `{{path}}` tokens) to Rust
-2. Rust extracts the paths from `{{...}}` tokens
-3. For each path: upload to Gemini File API → get `fileUri`
-4. Build `GeminiContent` with mixed `text` + `fileData` parts
-5. Send to Gemini
+---
 
-This means the `sendMessage` / `stream_gemini_chat_v2` command needs to:
+### Phase C: Chat Attachment File API Migration
 
-- Accept the raw message text containing `{{path}}` tokens
-- Parse out the paths
-- Upload each file
-- Build the multi-part request
+**Goal**: When a user sends a chat message with `{{/path/to/file}}` attachments, each file is uploaded to the Gemini File API.
 
-### Phase 7: Cleanup Dead Code
+#### C.1: Interleaved attachment parsing
 
-After migration, remove:
+> **CRITICAL**: Do NOT strip `{{path}}` tokens and append `fileData` parts at the end. Gemini understands **interleaved** multimodal content. Preserve the user's ordering.
 
-- `read_file_base64` command from `image.rs` and `lib.rs`
-- `process_image_bytes` command (if no longer used)
-- `store_image_bytes` command (if no longer called from UI)
-- `cleanBase64()` from `client.ts`
-- All `fetch() → blob → FileReader` patterns from `useChat.ts`
-- The `isFilePath` flag from `startupImage` type (everything is a path now)
+If the user types: _"Compare `{{/path/img1.png}}` on the left with `{{/path/img2.png}}` on the right"_
+
+The request must be:
+
+```json
+[
+  { "text": "Compare " },
+  { "fileData": { "mimeType": "image/png", "fileUri": "..." } },
+  { "text": " on the left with " },
+  { "fileData": { "mimeType": "image/png", "fileUri": "..." } },
+  { "text": " on the right" }
+]
+```
+
+Rust implementation:
+
+```rust
+/// Parse message text with {{path}} tokens into interleaved GeminiParts.
+/// Splits by regex, alternating between text chunks and file references.
+async fn build_interleaved_parts(
+    text: &str,
+    api_key: &str,
+    cache: &Mutex<HashMap<String, GeminiFileRef>>,
+) -> Result<Vec<GeminiPart>, String> {
+    let re = Regex::new(r"\{\{([^}]+)\}\}").unwrap();
+    let mut parts = Vec::new();
+    let mut last_end = 0;
+
+    for cap in re.captures_iter(text) {
+        let full_match = cap.get(0).unwrap();
+        let path = &cap[1];
+
+        // Text before this token
+        let before = &text[last_end..full_match.start()];
+        if !before.trim().is_empty() {
+            parts.push(GeminiPart { text: Some(before.to_string()), ..Default::default() });
+        }
+
+        // Upload file and add fileData part
+        let file_ref = ensure_file_uploaded(api_key, path, cache).await?;
+        parts.push(GeminiPart {
+            file_data: Some(GeminiFileData {
+                mime_type: file_ref.mime_type,
+                file_uri: file_ref.file_uri,
+            }),
+            ..Default::default()
+        });
+
+        last_end = full_match.end();
+    }
+
+    // Remaining text after last token
+    let remaining = &text[last_end..];
+    if !remaining.trim().is_empty() {
+        parts.push(GeminiPart { text: Some(remaining.to_string()), ..Default::default() });
+    }
+
+    Ok(parts)
+}
+```
+
+#### C.2: Concurrent file uploads
+
+If a message references multiple files, upload them **concurrently** using `tokio::join!` or `FuturesUnordered`.
+
+Do NOT upload sequentially — that would be `N × upload_latency` instead of `max(upload_latency)`.
+
+```rust
+use futures::future::join_all;
+
+// Collect all paths first, then upload concurrently
+let paths: Vec<String> = extract_paths_from_message(&text);
+let upload_futures = paths.iter().map(|p| {
+    ensure_file_uploaded(&api_key, p, &cache)
+});
+let results = join_all(upload_futures).await;
+```
+
+Then build the interleaved parts with the resolved `fileUri` values.
+
+#### C.3: Verify Phase C
+
+- User attaches image via paperclip → AI sees it
+- User attaches PDF via paperclip → AI reads it
+- User attaches .py file → AI sees code
+- User drags file into chat → AI sees it
+- Multiple attachments in one message work
+- Attachment ordering is preserved in AI understanding
+
+---
+
+### Phase D: Delete Dead Code
+
+**Goal**: Remove all base64 remnants. Only do this AFTER Phases A–C are proven stable.
+
+1. **Remove** `inlineData` fallback from Gemini commands (the `else if let Some(b64)` branch)
+2. **Remove** `image_base64` and `image_mime_type` parameters from all Gemini commands
+3. **Remove** `read_file_base64` command from `image.rs` and `lib.rs`
+4. **Remove** `process_image_bytes` command if no longer used
+5. **Remove** `store_image_bytes` command if no longer called from UI
+6. **Remove** `cleanBase64()` from `client.ts` (if not already removed in Phase B)
+7. **Remove** the `isFilePath` flag from `startupImage` type
+8. **Remove** `GeminiInlineData` struct from `gemini.rs` if fully unused
+
+#### D.1: Verify Phase D
+
+```bash
+# All of these should return zero results:
+grep -r "base64" ui/src/lib/api/gemini/
+grep -r "inlineData\|inline_data" app/src/commands/gemini.rs
+grep -r "FileReader\|readAsDataURL" ui/src/features/chat/
+grep -r "storedImageBase64" ui/src/
+```
 
 ---
 
@@ -457,23 +599,47 @@ After migration, remove:
 Gemini File API files expire after 48 hours. If a user resumes a chat after 2 days:
 
 - The cached `fileUri` is stale
-- **Solution**: When a Gemini request fails with a stale URI error, re-upload from CAS (file is still on disk) and retry
+- **Solution — two layers of defense**:
 
-Implementation:
+**Layer 1: Local clock check (optimization)**
 
 ```rust
-// In gemini_file_cache, store upload timestamp
 pub struct GeminiFileRef {
     pub file_uri: String,
     pub mime_type: String,
     pub uploaded_at: chrono::DateTime<chrono::Utc>,
 }
 
-// Before using a cached URI, check if it's older than 47 hours
-fn is_uri_expired(ref: &GeminiFileRef) -> bool {
-    chrono::Utc::now() - ref.uploaded_at > chrono::Duration::hours(47)
+fn is_uri_expired(file_ref: &GeminiFileRef) -> bool {
+    chrono::Utc::now() - file_ref.uploaded_at > chrono::Duration::hours(47)
 }
 ```
+
+If >47h old, proactively re-upload before even trying the request.
+
+**Layer 2: Error-based retry (safety net)**
+
+Google can also invalidate files early (quota, key revocation, internal cleanup). The local clock is NOT sufficient alone. You MUST also catch request failures:
+
+```rust
+// Pseudocode for the retry wrapper
+async fn send_with_retry(request, api_key, cache, cas_path) -> Result<Response> {
+    match send_to_gemini(request).await {
+        Ok(response) => Ok(response),
+        Err(e) if is_stale_file_error(&e) => {
+            // Invalidate cache, re-upload from CAS, rebuild request, retry ONCE
+            cache.remove(&cas_hash);
+            let new_ref = upload_file_to_gemini(&api_key, &cas_path).await?;
+            cache.insert(cas_hash, new_ref);
+            let new_request = rebuild_request_with_new_uri(...);
+            send_to_gemini(new_request).await  // if this also fails, bubble error
+        }
+        Err(e) => Err(e),  // non-file error, don't retry
+    }
+}
+```
+
+The retry is **idempotent** — re-uploading the same CAS file always produces a valid new URI.
 
 ### Challenge 2: MIME Type Detection
 
@@ -536,26 +702,18 @@ When user pastes from clipboard (Ctrl+V), the image only exists as pixel data in
 
 **Already solved**: The `read_clipboard_image` Rust command reads clipboard pixels → encodes as PNG → stores in CAS → returns `{ hash, path }`. So by the time the UI receives it, it's already a CAS path. This works unchanged with the File API — Rust just uploads from that CAS path.
 
-### Challenge 5: Chat Attachment Paths in Messages
+### Challenge 5: Chat Attachment Paths in Messages (Interleaved Multimodal)
 
 Chat messages contain inline attachment references as `{{/path/to/cas/file}}`. When sending to Gemini:
 
-1. Rust must **parse** the message text to extract `{{...}}` paths
-2. **Upload** each referenced file to Gemini File API
-3. **Build** a multi-part request: the text (with `{{...}}` stripped) + `fileData` parts
-4. **Send** to Gemini
+> **CRITICAL**: Do NOT strip all `{{path}}` tokens and append files at the end. Gemini is a multimodal model that understands **interleaved** text and media. If the user writes _"Compare `{{img1}}` with `{{img2}}`"_, the text and files must stay in the user's original order.
 
-```rust
-// Pseudocode for parsing attachments from message text
-fn extract_attachments(text: &str) -> (String, Vec<String>) {
-    let re = Regex::new(r"\{\{([^}]+)\}\}").unwrap();
-    let paths: Vec<String> = re.captures_iter(text)
-        .map(|c| c[1].to_string())
-        .collect();
-    let clean_text = re.replace_all(text, "").to_string();
-    (clean_text.trim().to_string(), paths)
-}
-```
+1. Rust must **split** the message text by `{{...}}` boundaries
+2. For each segment: create a `text` part or upload + create a `fileData` part
+3. **Preserve ordering** — the output `Vec<GeminiPart>` alternates text and fileData in the same sequence the user wrote them
+4. **Upload concurrently** — if multiple files exist, use `tokio::join!` / `join_all` to upload them in parallel, not sequentially
+
+See Phase C.1 and C.2 in Section 6 for the full implementation.
 
 ---
 
