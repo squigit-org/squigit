@@ -5,6 +5,7 @@ pub mod auth;
 pub mod chat;
 pub mod clipboard;
 pub mod gemini;
+pub mod gemini_files;
 pub mod image;
 pub mod models;
 pub mod ocr;

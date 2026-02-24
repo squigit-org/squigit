@@ -17,10 +17,6 @@ pub fn process_image_path(path: String, state: State<AppState>) -> Result<Stored
     image::process_and_store_image(path, &state)
 }
 
-#[tauri::command]
-pub fn process_image_bytes(bytes: Vec<u8>, state: State<AppState>) -> Result<StoredImage, String> {
-    image::process_bytes_internal(bytes, &state)
-}
 
 #[tauri::command]
 pub fn read_image_file(path: String, state: State<AppState>) -> Result<StoredImage, String> {
@@ -33,15 +29,3 @@ pub fn copy_image_to_path(source_path: String, target_path: String) -> Result<()
     Ok(())
 }
 
-#[tauri::command]
-pub fn read_file_base64(path: String) -> Result<String, String> {
-    use std::fs::File;
-    use std::io::Read;
-    use base64::{engine::general_purpose, Engine as _};
-
-    let mut file = File::open(&path).map_err(|e| e.to_string())?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
-
-    Ok(general_purpose::STANDARD.encode(&buffer))
-}

@@ -79,7 +79,12 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    console.log("[OCRModelSwitcher] ocrEnabled:", ocrEnabled, "currentOcrModel:", currentOcrModel);
+    console.log(
+      "[OCRModelSwitcher] ocrEnabled:",
+      ocrEnabled,
+      "currentOcrModel:",
+      currentOcrModel,
+    );
   }, [ocrEnabled, currentOcrModel]);
 
   if (!ocrEnabled) return null;
@@ -87,12 +92,11 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
   const isCurrentModelValid = installedModels.some(
     (m) => m.id === currentOcrModel,
   );
-  const effectiveModel =
-    currentOcrModel === ""
-      ? ""
-      : isCurrentModelValid
-        ? currentOcrModel
-        : "pp-ocr-v4-en";
+  const effectiveModel = !currentOcrModel
+    ? "pp-ocr-v4-en"
+    : isCurrentModelValid
+      ? currentOcrModel
+      : "pp-ocr-v4-en";
 
   const dropdownContent = (
     <div

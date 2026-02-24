@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { exit, relaunch } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { check } from "@tauri-apps/plugin-updater";
 import { commands } from "@/lib/api/tauri";
 import { useSystemSync, useUpdateCheck, getPendingUpdate } from "@/hooks";
@@ -40,10 +40,14 @@ export const useShell = () => {
 
   const system = useSystemSync();
   const activeProfileRef = useRef<any>(null);
+  const systemRef = useRef(system);
+  const handleImageReadyRef = useRef<any>(null);
+  const handleSelectChatRef = useRef<any>(null);
 
   useEffect(() => {
     activeProfileRef.current = system.activeProfile;
-  }, [system.activeProfile]);
+    systemRef.current = system;
+  }, [system]);
 
   const auth = useAuth();
 
@@ -155,21 +159,25 @@ export const useShell = () => {
     }
 
     console.log("Raw image path:", imageData.path);
-    const assetUrl = convertFileSrc(imageData.path);
-    console.log("Converted asset URL:", assetUrl);
 
     chatHistory.setActiveSessionId(null);
     chatHistory.setActiveSessionId(null);
     setOcrData({});
     setSessionLensUrl(null);
-    system.setSessionOcrLanguage(system.startupOcrLanguage);
+    console.log(
+      "[handleImageReady Trigger]:",
+      "systemRef.current.startupOcrLanguage =",
+      systemRef.current.startupOcrLanguage,
+    );
+    systemRef.current.setSessionOcrLanguage(
+      systemRef.current.startupOcrLanguage,
+    );
     setIsOcrScanning(false);
     cancelOcrJob();
 
     system.setStartupImage({
-      base64: assetUrl,
+      path: imageData.path,
       mimeType: "image/png",
-      isFilePath: true,
       imageId: imageData.imageId,
     });
 
@@ -186,7 +194,8 @@ export const useShell = () => {
   const [hasCheckedStartupImage, setHasCheckedStartupImage] = useState(false);
 
   useEffect(() => {
-    if (!system.profileLoaded || hasCheckedStartupImage) return;
+    if (!system.profileLoaded || !system.prefsLoaded || hasCheckedStartupImage)
+      return;
 
     const initStartupImage = async () => {
       try {
@@ -207,7 +216,7 @@ export const useShell = () => {
     };
 
     initStartupImage();
-  }, [system.profileLoaded, hasCheckedStartupImage]);
+  }, [system.profileLoaded, system.prefsLoaded, hasCheckedStartupImage]);
 
   useEffect(() => {
     const unlisten = listen<string>("image-path", async (event) => {
@@ -224,10 +233,12 @@ export const useShell = () => {
         try {
           console.log("Event received for image:", imagePath);
           const result = await commands.processImagePath(imagePath);
-          handleImageReady({
-            imageId: result.hash,
-            path: result.path,
-          });
+          if (handleImageReadyRef.current) {
+            handleImageReadyRef.current({
+              imageId: result.hash,
+              path: result.path,
+            });
+          }
         } catch (error) {
           console.error("Failed to process CLI image event:", error);
         }
@@ -238,7 +249,9 @@ export const useShell = () => {
       const chatId = event.payload;
       if (chatId) {
         console.log("Triggering frontend transition to new capture:", chatId);
-        await handleSelectChat(chatId);
+        if (handleSelectChatRef.current) {
+          await handleSelectChatRef.current(chatId);
+        }
       }
     });
 
@@ -263,19 +276,23 @@ export const useShell = () => {
           }
 
           const imagePath = await getImagePath(imageHash);
-          const assetUrl = convertFileSrc(imagePath);
 
-          chatHistory.setActiveSessionId(null);
+          chatHistoryRef.current.setActiveSessionId(null);
           setOcrData({});
           setSessionLensUrl(null);
-          system.setSessionOcrLanguage(system.startupOcrLanguage);
+          console.log(
+            "[capture-complete]: systemRef.current.startupOcrLanguage =",
+            systemRef.current.startupOcrLanguage,
+          );
+          systemRef.current.setSessionOcrLanguage(
+            systemRef.current.startupOcrLanguage,
+          );
           setIsOcrScanning(false);
           cancelOcrJob();
 
-          system.setStartupImage({
-            base64: assetUrl,
+          systemRef.current.setStartupImage({
+            path: imagePath,
             mimeType: "image/png",
-            isFilePath: true,
             imageId: imageHash,
           });
 
@@ -339,6 +356,7 @@ export const useShell = () => {
 
   const isLoadingState =
     !system.profileLoaded ||
+    !system.prefsLoaded ||
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
     isCheckingImage ||
@@ -413,7 +431,10 @@ export const useShell = () => {
           ocr_lang: system.sessionOcrLanguage,
           updated_at: new Date().toISOString(),
         }).then(() => {
-          chatHistory.refreshChats();
+          console.log(
+            "Automatically saved new OCR language to chat metadata:",
+            system.sessionOcrLanguage,
+          );
         });
       }
     }
@@ -441,7 +462,6 @@ export const useShell = () => {
       cancelOcrJob();
       const chatData = await loadChat(id);
       const imagePath = await getImagePath(chatData.metadata.image_hash);
-      const imageUrl = convertFileSrc(imagePath);
 
       system.setSessionChatTitle(chatData.metadata.title);
 
@@ -465,9 +485,9 @@ export const useShell = () => {
           firstResponseId: null,
         },
         {
-          base64: imageUrl,
+          path: imagePath,
           mimeType: "image/png",
-          isFilePath: true,
+          imageId: chatData.metadata.image_hash,
         },
       );
 
@@ -478,12 +498,11 @@ export const useShell = () => {
       setSessionLensUrl(chatData.imgbb_url || null);
 
       system.setStartupImage({
-        base64: imageUrl,
+        path: imagePath,
         mimeType: "image/png",
-        isFilePath: true,
         imageId: chatData.metadata.image_hash,
         fromHistory: true,
-      } as any);
+      });
 
       chatHistory.setActiveSessionId(id);
     } catch (e) {
@@ -674,6 +693,11 @@ export const useShell = () => {
     handleNewSession();
     await system.switchProfile(profileId);
   };
+
+  useEffect(() => {
+    handleImageReadyRef.current = handleImageReady;
+    handleSelectChatRef.current = handleSelectChat;
+  });
 
   return {
     system,

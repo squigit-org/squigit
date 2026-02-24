@@ -25,9 +25,9 @@ export interface ChatShellProps {
 
   input: string;
   startupImage: {
-    base64: string;
+    path: string;
     mimeType: string;
-    isFilePath?: boolean;
+    imageId: string;
     fromHistory?: boolean;
   } | null;
 

@@ -13,9 +13,9 @@ export type ChatModelSelectHandler = (model: string) => void;
 
 export interface ChatInputProps {
   startupImage: {
-    base64: string;
+    path: string;
     mimeType: string;
-    isFilePath?: boolean;
+    imageId: string;
   } | null;
   input: string;
   onInputChange: (value: string) => void;

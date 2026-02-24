@@ -11,18 +11,14 @@ const TITLE_MODEL = "gemini-2.0-flash-lite";
 
 interface UseChatTitleProps {
   startupImage: {
-    base64: string;
+    path: string;
     mimeType: string;
-    isFilePath?: boolean;
+    imageId: string;
   } | null;
   apiKey: string;
   sessionChatTitle: string | null;
   setSessionChatTitle: (title: string) => void;
 }
-
-const cleanBase64 = (data: string) => {
-  return data.replace(/^data:image\/[a-z]+;base64,/, "");
-};
 
 export const useChatTitle = ({
   startupImage,
@@ -33,46 +29,17 @@ export const useChatTitle = ({
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateTitle = useCallback(async () => {
-    if (!startupImage?.base64 || !apiKey || sessionChatTitle) {
+    if (!startupImage?.path || !apiKey || sessionChatTitle) {
       return;
     }
 
     setIsGenerating(true);
 
     try {
-      let imageBase64: string;
-      let imageMimeType = startupImage.mimeType;
-
-      if (startupImage.isFilePath) {
-        try {
-          const response = await fetch(startupImage.base64);
-          const blob = await response.blob();
-          imageMimeType = blob.type || "image/png";
-
-          const reader = new FileReader();
-          const base64Promise = new Promise<string>((resolve, reject) => {
-            reader.onloadend = () => {
-              const result = reader.result as string;
-              resolve(cleanBase64(result));
-            };
-            reader.onerror = reject;
-          });
-          reader.readAsDataURL(blob);
-          imageBase64 = await base64Promise;
-        } catch (e) {
-          console.error("Failed to fetch image for title generation:", e);
-          setSessionChatTitle("New Chat");
-          return;
-        }
-      } else {
-        imageBase64 = cleanBase64(startupImage.base64);
-      }
-
       const title = await invoke<string>("generate_chat_title", {
         apiKey,
         model: TITLE_MODEL,
-        imageBase64,
-        imageMimeType,
+        imagePath: startupImage.path,
       });
 
       setSessionChatTitle(title || "New Chat");
@@ -90,20 +57,17 @@ export const useChatTitle = ({
 
   const generateTitleForImage = useCallback(
     async (
-      base64Data: string,
-      mimeType: string,
+      imagePath: string,
+      _mimeType: string,
       _existingTitles: string[] = [],
     ): Promise<string> => {
       if (!apiKey) return "New Chat";
 
       try {
-        const cleanedBase64 = cleanBase64(base64Data);
-
         const title = await invoke<string>("generate_chat_title", {
           apiKey,
           model: TITLE_MODEL,
-          imageBase64: cleanedBase64,
-          imageMimeType: mimeType,
+          imagePath,
         });
 
         return title || "New Chat";

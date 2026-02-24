@@ -26,7 +26,7 @@ use commands::clipboard::{
 };
 use commands::capture::spawn_capture_to_input;
 use commands::image::{
-    get_initial_image, process_image_bytes, process_image_path, read_image_file, copy_image_to_path, read_file_base64,
+    get_initial_image, process_image_path, read_image_file, copy_image_to_path,
 };
 use commands::models::{download_ocr_model, list_downloaded_models, get_model_path};
 use commands::ocr::{ocr_image, cancel_ocr_job};
@@ -73,9 +73,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // Image processing
             process_image_path,
-            process_image_bytes,
             read_image_file,
-            read_file_base64,
             get_initial_image,
             // Clipboard
             read_clipboard_image,
@@ -95,7 +93,6 @@ pub fn run() {
             get_user_data,
             cache_avatar,
             // Gemini
-            commands::gemini::stream_gemini_chat,
             commands::gemini::stream_gemini_chat_v2,
             commands::gemini::generate_chat_title,
             commands::gemini::start_chat_sync,

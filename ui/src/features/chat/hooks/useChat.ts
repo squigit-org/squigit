@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
+
 import { Message } from "@/features/chat";
 import { ModelType } from "@/lib/config";
 import {
@@ -34,9 +34,9 @@ export const useChat = ({
   apiKey: string;
   currentModel: string;
   startupImage: {
-    base64: string;
+    path: string;
     mimeType: string;
-    isFilePath?: boolean;
+    imageId: string;
     fromHistory?: boolean;
   } | null;
   prompt: string;
@@ -89,7 +89,7 @@ export const useChat = ({
       !startupImage.fromHistory &&
       chatId
     ) {
-      const imageKey = startupImage.base64?.substring(0, 50) ?? chatId;
+      const imageKey = startupImage.path?.substring(0, 50) ?? chatId;
       if (sessionStartedForImageRef.current === imageKey) {
         return;
       }
@@ -161,9 +161,9 @@ export const useChat = ({
     key: string,
     modelId: string,
     imgData: {
-      base64: string;
+      path: string;
       mimeType: string;
-      isFilePath?: boolean;
+      imageId: string;
       fromHistory?: boolean;
     } | null,
     isRetry = false,
@@ -211,23 +211,6 @@ export const useChat = ({
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
-      let finalBase64 = imgData.base64;
-      if (imgData.isFilePath) {
-        try {
-          const res = await fetch(imgData.base64);
-          const blob = await res.blob();
-          finalBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        } catch (e) {
-          console.error("Failed to fetch asset for Gemini", e);
-          throw new Error("Failed to load image file.");
-        }
-      }
-
       if (signal.aborted) {
         setIsLoading(false);
         return;
@@ -237,8 +220,7 @@ export const useChat = ({
         const { title, content } = await startNewChatSync(
           key,
           modelId,
-          finalBase64,
-          imgData.mimeType,
+          imgData.path,
         );
 
         if (signal.aborted) return;
@@ -266,16 +248,11 @@ export const useChat = ({
         return;
       }
 
-      await startNewChatStream(
-        modelId,
-        finalBase64,
-        imgData.mimeType,
-        (token: string) => {
-          if (signal.aborted) return;
-          fullResponse += token;
-          setStreamingText(fullResponse);
-        },
-      );
+      await startNewChatStream(modelId, imgData.path, (token: string) => {
+        if (signal.aborted) return;
+        fullResponse += token;
+        setStreamingText(fullResponse);
+      });
 
       if (signal.aborted) {
         setIsLoading(false);
@@ -369,27 +346,9 @@ export const useChat = ({
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
-      let finalBase64 = startupImage.base64;
-      if (startupImage.isFilePath) {
-        try {
-          const res = await fetch(startupImage.base64);
-          const blob = await res.blob();
-          finalBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        } catch (e) {
-          console.error("Failed to fetch asset for Gemini", e);
-          throw new Error("Failed to load image file.");
-        }
-      }
-
       await startNewChatStream(
         currentModel,
-        finalBase64,
-        startupImage.mimeType,
+        startupImage.path,
         (token: string) => {
           fullResponse += token;
           setStreamingText(fullResponse);
@@ -539,7 +498,7 @@ export const useChat = ({
       streamingText: string;
       firstResponseId: string | null;
     },
-    image?: { base64: string; mimeType: string; isFilePath?: boolean },
+    image?: { path: string; mimeType: string; imageId: string },
   ) => {
     setMessages(state.messages);
     setStreamingText(state.streamingText);
@@ -557,24 +516,10 @@ export const useChat = ({
 
         const firstUserMsg = state.messages.find((m) => m.role === "user");
 
-        let imageBase64 = null;
-        let imageMimeType = null;
+        let imagePath = null;
 
         if (image) {
-          if (image.isFilePath) {
-            try {
-              const raw = (await invoke("read_file_base64", {
-                path: image.base64,
-              })) as string;
-              imageBase64 = raw;
-              imageMimeType = image.mimeType;
-            } catch (e) {
-              console.error("Failed to read image file for restore:", e);
-            }
-          } else {
-            imageBase64 = image.base64;
-            imageMimeType = image.mimeType;
-          }
+          imagePath = image.path;
         }
 
         apiRestoreSession(
@@ -582,8 +527,7 @@ export const useChat = ({
           firstMsg.text,
           firstUserMsg?.text || null,
           savedHistory,
-          imageBase64,
-          imageMimeType,
+          imagePath,
         );
       } catch (e) {
         console.error("Failed to restore Gemini session:", e);
@@ -704,27 +648,9 @@ export const useChat = ({
 
     const newResponseId = Date.now().toString();
 
-    let fallbackImage: { base64: string; mimeType: string } | undefined;
+    let fallbackImagePath: string | undefined;
     if (startupImage) {
-      try {
-        let base64Data = startupImage.base64;
-        if (startupImage.isFilePath) {
-          const res = await fetch(startupImage.base64);
-          const blob = await res.blob();
-          base64Data = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        }
-        fallbackImage = {
-          base64: base64Data,
-          mimeType: startupImage.mimeType,
-        };
-      } catch (e) {
-        console.error("Failed to load fallback image for retry:", e);
-      }
+      fallbackImagePath = startupImage.path;
     }
 
     try {
@@ -746,7 +672,7 @@ export const useChat = ({
             setStreamingText((prev) => prev + token);
           }
         },
-        fallbackImage,
+        fallbackImagePath,
       );
 
       const botMsg: Message = {
@@ -828,27 +754,9 @@ export const useChat = ({
     let hasStartedStreaming = false;
     const newResponseId = Date.now().toString();
 
-    let fallbackImage: { base64: string; mimeType: string } | undefined;
+    let fallbackImagePath: string | undefined;
     if (startupImage) {
-      try {
-        let base64Data = startupImage.base64;
-        if (startupImage.isFilePath) {
-          const res = await fetch(startupImage.base64);
-          const blob = await res.blob();
-          base64Data = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        }
-        fallbackImage = {
-          base64: base64Data,
-          mimeType: startupImage.mimeType,
-        };
-      } catch (e) {
-        console.error("Failed to load fallback image for edit:", e);
-      }
+      fallbackImagePath = startupImage.path;
     }
 
     try {
@@ -868,7 +776,7 @@ export const useChat = ({
             setStreamingText((prev) => prev + token);
           }
         },
-        fallbackImage,
+        fallbackImagePath,
       );
 
       const botMsg: Message = {

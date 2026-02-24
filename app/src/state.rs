@@ -21,6 +21,7 @@ pub struct AppState {
     pub auth_cancelled: Arc<AtomicBool>,
     /// Active OCR job handle for cancellation support.
     pub ocr_job: Arc<tokio::sync::Mutex<Option<OcrJobHandle>>>,
+    pub gemini_file_cache: Arc<tokio::sync::Mutex<std::collections::HashMap<String, crate::commands::gemini_files::GeminiFileRef>>>,
 }
 
 impl AppState {
@@ -30,6 +31,7 @@ impl AppState {
             auth_running: Arc::new(AtomicBool::new(false)),
             auth_cancelled: Arc::new(AtomicBool::new(false)),
             ocr_job: Arc::new(tokio::sync::Mutex::new(None)),
+            gemini_file_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         }
     }
 }

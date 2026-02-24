@@ -2,21 +2,106 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Window};
+use tauri::{AppHandle, Emitter};
+use regex::Regex;
+use futures_util::future::join_all;
+
+async fn build_interleaved_parts(
+    text: &str,
+    api_key: &str,
+    cache: &std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, crate::commands::gemini_files::GeminiFileRef>>>,
+) -> Result<Vec<GeminiPart>, String> {
+    let re = Regex::new(r"\{\{([^}]+)\}\}").map_err(|e| format!("Regex Error: {}", e))?;
+    
+    let mut text_chunks = Vec::new();
+    let mut last_end = 0;
+    let mut paths_to_upload = Vec::new();
+
+    for cap in re.captures_iter(text) {
+        let full_match = cap.get(0).unwrap();
+        let path = cap.get(1).unwrap().as_str().to_string();
+        
+        let before = &text[last_end..full_match.start()];
+        if !before.trim().is_empty() {
+            text_chunks.push((false, before.to_string()));
+        }
+
+        paths_to_upload.push(path.clone());
+        text_chunks.push((true, path));
+
+        last_end = full_match.end();
+    }
+
+    let remaining = &text[last_end..];
+    if !remaining.trim().is_empty() {
+        text_chunks.push((false, remaining.to_string()));
+    }
+
+    if paths_to_upload.is_empty() {
+        return Ok(vec![GeminiPart {
+            text: Some(text.to_string()),
+            ..Default::default()
+        }]);
+    }
+
+    let mut unique_paths = paths_to_upload.clone();
+    unique_paths.sort();
+    unique_paths.dedup();
+
+    let upload_futures = unique_paths.iter().map(|p| {
+        crate::commands::gemini_files::ensure_file_uploaded(api_key, p, cache)
+    });
+
+    let results = join_all(upload_futures).await;
+    let mut file_refs = std::collections::HashMap::new();
+
+    for (path, result) in unique_paths.into_iter().zip(results.into_iter()) {
+        match result {
+            Ok(file_ref) => {
+                file_refs.insert(path, file_ref);
+            }
+            Err(e) => return Err(e),
+        }
+    }
+
+    let mut parts = Vec::new();
+    for (is_file, content) in text_chunks {
+        if is_file {
+            if let Some(file_ref) = file_refs.get(&content) {
+                parts.push(GeminiPart {
+                    file_data: Some(GeminiFileData {
+                        mime_type: file_ref.mime_type.clone(),
+                        file_uri: file_ref.file_uri.clone(),
+                    }),
+                    ..Default::default()
+                });
+            }
+        } else {
+            parts.push(GeminiPart {
+                text: Some(content),
+                ..Default::default()
+            });
+        }
+    }
+
+    Ok(parts)
+}
 
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct GeminiPart {
-    text: Option<String>,
-    #[serde(rename = "inlineData")]
-    inline_data: Option<GeminiInlineData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(rename = "fileData", skip_serializing_if = "Option::is_none")]
+    pub file_data: Option<GeminiFileData>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GeminiInlineData {
+pub struct GeminiFileData {
     #[serde(rename = "mimeType")]
-    mime_type: String,
-    data: String,
+    pub mime_type: String,
+    #[serde(rename = "fileUri")]
+    pub file_uri: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -57,60 +142,6 @@ struct GeminiEvent {
     token: String,
 }
 
-#[tauri::command]
-pub async fn stream_gemini_chat(
-    app: AppHandle,
-    _window: Window,
-    api_key: String,
-    model: String,
-    contents: Vec<GeminiContent>,
-    channel_id: String,
-) -> Result<(), String> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?key={}",
-        model, api_key
-    );
-
-    let request_body = GeminiRequest { contents };
-
-    let response = client
-        .post(&url)
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
-    
-    if !response.status().is_success() {
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(format!("Gemini API Error: {}", error_text));
-    }
-
-    // Read entire response body
-    let body = response.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
-    
-    // Parse as JSON array of response chunks
-    let chunks: Vec<GeminiResponseChunk> = serde_json::from_str(&body)
-        .map_err(|e| format!("Failed to parse Gemini response: {} - Body: {}", e, &body[..body.len().min(500)]))?;
-    
-    for chunk in chunks {
-        if let Some(candidates) = chunk.candidates {
-            if let Some(first) = candidates.first() {
-                if let Some(content) = &first.content {
-                    if let Some(parts) = &content.parts {
-                        for part in parts {
-                            if let Some(text) = &part.text {
-                                let _ = app.emit(&channel_id, GeminiEvent { token: text.clone() });
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    Ok(())
-}
 
 /// Brain-aware chat command (v2)
 /// 
@@ -124,12 +155,12 @@ pub async fn stream_gemini_chat(
 #[tauri::command]
 pub async fn stream_gemini_chat_v2(
     app: AppHandle,
+    state: tauri::State<'_, crate::state::AppState>,
     api_key: String,
     model: String,
     is_initial_turn: bool,
     // Initial turn params
-    image_base64: Option<String>,
-    image_mime_type: Option<String>,
+    image_path: Option<String>,
     // Subsequent turn params
     image_description: Option<String>,
     user_first_msg: Option<String>,
@@ -151,29 +182,30 @@ pub async fn stream_gemini_chat_v2(
         // Initial turn: soul + scenes + image
         let system_prompt = build_initial_system_prompt()?;
         
-        let image_b64 = image_base64.ok_or("image_base64 required for initial turn")?;
-        let mime = image_mime_type.ok_or("image_mime_type required for initial turn")?;
-        
-        let mut parts = vec![
-            GeminiPart {
-                text: None,
-                inline_data: Some(GeminiInlineData {
-                    mime_type: mime,
-                    data: image_b64,
+        let mut parts = vec![];
+
+        if let Some(path) = image_path.clone() {
+            let file_ref = crate::commands::gemini_files::ensure_file_uploaded(&api_key, &path, &state.gemini_file_cache).await?;
+            parts.push(GeminiPart {
+                file_data: Some(GeminiFileData {
+                    mime_type: file_ref.mime_type.clone(),
+                    file_uri: file_ref.file_uri.clone(),
                 }),
-            },
-            GeminiPart {
-                text: Some(system_prompt),
-                inline_data: None,
-            },
-        ];
+                ..Default::default()
+            });
+        } else {
+            return Err("image_path required for initial turn".to_string());
+        }
+
+        parts.push(GeminiPart {
+            text: Some(system_prompt),
+            ..Default::default()
+        });
         
         // Add user message if provided
         if !user_message.is_empty() {
-            parts.push(GeminiPart {
-                text: Some(user_message),
-                inline_data: None,
-            });
+            let interleaved_parts = build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache).await?;
+            parts.extend(interleaved_parts);
         }
         
         vec![GeminiContent {
@@ -191,25 +223,24 @@ pub async fn stream_gemini_chat_v2(
         let mut parts = vec![
             GeminiPart {
                 text: Some(context_prompt),
-                inline_data: None,
+                ..Default::default()
             }
         ];
 
         // Re-send image if provided (e.g. for first user intent message)
-        if let (Some(img_b64), Some(mime)) = (image_base64, image_mime_type) {
+        if let Some(path) = image_path {
+            let file_ref = crate::commands::gemini_files::ensure_file_uploaded(&api_key, &path, &state.gemini_file_cache).await?;
             parts.push(GeminiPart {
-                text: None,
-                inline_data: Some(GeminiInlineData {
-                    mime_type: mime,
-                    data: img_b64,
+                file_data: Some(GeminiFileData {
+                    mime_type: file_ref.mime_type.clone(),
+                    file_uri: file_ref.file_uri.clone(),
                 }),
+                ..Default::default()
             });
         }
 
-        parts.push(GeminiPart {
-            text: Some(user_message),
-            inline_data: None,
-        });
+        let interleaved_parts = build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache).await?;
+        parts.extend(interleaved_parts);
         
         vec![GeminiContent {
             role: "user".to_string(),
@@ -259,10 +290,10 @@ pub async fn stream_gemini_chat_v2(
 /// Returns the generated title text directly.
 #[tauri::command]
 pub async fn generate_chat_title(
+    state: tauri::State<'_, crate::state::AppState>,
     api_key: String,
     model: String,
-    image_base64: String,
-    image_mime_type: String,
+    image_path: Option<String>,
 ) -> Result<String, String> {
     use crate::brain::processor::get_title_prompt;
     println!("Generating Title using model: {}", model);
@@ -275,21 +306,27 @@ pub async fn generate_chat_title(
 
     let title_prompt = get_title_prompt()?;
     
+    let mut parts = vec![];
+
+    if let Some(path) = image_path {
+        let file_ref = crate::commands::gemini_files::ensure_file_uploaded(&api_key, &path, &state.gemini_file_cache).await?;
+        parts.push(GeminiPart {
+            file_data: Some(GeminiFileData {
+                mime_type: file_ref.mime_type.clone(),
+                file_uri: file_ref.file_uri.clone(),
+            }),
+            ..Default::default()
+        });
+    }
+
+    parts.push(GeminiPart {
+        text: Some(title_prompt),
+        ..Default::default()
+    });
+
     let contents = vec![GeminiContent {
         role: "user".to_string(),
-        parts: vec![
-            GeminiPart {
-                text: None,
-                inline_data: Some(GeminiInlineData {
-                    mime_type: image_mime_type,
-                    data: image_base64,
-                }),
-            },
-            GeminiPart {
-                text: Some(title_prompt),
-                inline_data: None,
-            },
-        ],
+        parts,
     }];
 
     let request_body = GeminiRequest { contents };
@@ -343,10 +380,10 @@ pub struct ChatStartResponse {
 #[tauri::command]
 pub async fn start_chat_sync(
     _app: AppHandle,
+    state: tauri::State<'_, crate::state::AppState>,
     api_key: String,
     model: String,
-    image_base64: String,
-    image_mime_type: String,
+    image_path: Option<String>,
 ) -> Result<ChatStartResponse, String> {
     use crate::brain::processor::{build_initial_system_prompt, get_title_prompt};
     
@@ -360,21 +397,27 @@ pub async fn start_chat_sync(
     // --- Step 1: Generate Content ---
     let system_prompt = build_initial_system_prompt().map_err(|e| e.to_string())?;
     
+    let mut parts = vec![];
+
+    if let Some(path) = image_path {
+        let file_ref = crate::commands::gemini_files::ensure_file_uploaded(&api_key, &path, &state.gemini_file_cache).await?;
+        parts.push(GeminiPart {
+            file_data: Some(GeminiFileData {
+                mime_type: file_ref.mime_type.clone(),
+                file_uri: file_ref.file_uri.clone(),
+            }),
+            ..Default::default()
+        });
+    }
+
+    parts.push(GeminiPart {
+        text: Some(system_prompt),
+        ..Default::default()
+    });
+
     let contents = vec![GeminiContent {
         role: "user".to_string(),
-        parts: vec![
-            GeminiPart {
-                text: None,
-                inline_data: Some(GeminiInlineData {
-                    mime_type: image_mime_type,
-                    data: image_base64,
-                }),
-            },
-            GeminiPart {
-                text: Some(system_prompt),
-                inline_data: None,
-            },
-        ],
+        parts,
     }];
 
     let request_body = GeminiRequest { contents };
@@ -414,7 +457,7 @@ pub async fn start_chat_sync(
         parts: vec![
             GeminiPart {
                 text: Some(title_prompt),
-                inline_data: None,
+                ..Default::default()
             },
         ],
     }];

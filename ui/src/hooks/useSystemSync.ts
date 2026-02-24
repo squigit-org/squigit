@@ -70,10 +70,9 @@ export const useSystemSync = () => {
   }, [activeProfile]);
 
   const [startupImage, setStartupImage] = useState<{
-    base64: string;
+    path: string;
     mimeType: string;
-    isFilePath?: boolean;
-    imageId?: string;
+    imageId: string;
     fromHistory?: boolean;
   } | null>(null);
 
@@ -572,5 +571,6 @@ export const useSystemSync = () => {
     deleteProfile,
     showExistingProfileDialog,
     setShowExistingProfileDialog,
+    prefsLoaded,
   };
 };

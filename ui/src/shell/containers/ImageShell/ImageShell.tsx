@@ -11,7 +11,7 @@ import React, {
   useCallback,
   RefObject,
 } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import {
   ImageToolbar,
@@ -36,11 +36,9 @@ interface OCRBox {
 
 export interface ImageShellProps {
   startupImage: {
-    base64: string;
+    path: string;
     mimeType: string;
-    isFilePath?: boolean;
-    fromHistory?: boolean;
-    imageId?: string;
+    imageId: string;
   } | null;
   sessionLensUrl: string | null;
   setSessionLensUrl: (url: string) => void;
@@ -116,7 +114,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   const expandedContentRef = useRef<HTMLDivElement>(null);
   const OCRMenuRef = useRef<OCRMenuHandle>(null);
 
-  const imageSrc = startupImage?.base64 || "";
+  const imageSrc = startupImage?.path ? convertFileSrc(startupImage.path) : "";
 
   const { isLensLoading, triggerLens, showAuthDialog, setShowAuthDialog } =
     useGoogleLens(
@@ -143,7 +141,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   const hasScannedRef = useRef(false);
   const prevImageBase64Ref = useRef<string | null>(null);
 
-  const currentBase64 = startupImage?.base64 ?? null;
+  const currentBase64 = startupImage?.path ?? null;
   if (currentBase64 !== prevImageBase64Ref.current) {
     hasScannedRef.current = false;
     prevImageBase64Ref.current = currentBase64;
@@ -153,7 +151,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
 
   const scan = useCallback(
     async (modelId?: string, requestId?: number) => {
-      if (!startupImage?.base64 || !ocrEnabled) return;
+      if (!startupImage?.path || !ocrEnabled) return;
 
       const currentChatId = chatId;
       const modelToUse = modelId || currentOcrModel;
@@ -174,42 +172,10 @@ export const ImageShell: React.FC<ImageShellProps> = ({
       cancelledRef.current = false;
 
       try {
-        let imageData: string;
-        let isBase64: boolean;
-
-        if (startupImage.isFilePath) {
-          const urlStr = startupImage.base64;
-          try {
-            const urlObj = new URL(urlStr);
-            imageData =
-              urlObj.hostname === "asset.localhost" ||
-              urlObj.protocol === "asset:"
-                ? decodeURIComponent(urlObj.pathname)
-                : urlStr;
-          } catch (e) {
-            let url = urlStr;
-            const patterns = [
-              "asset://localhost",
-              "http://asset.localhost",
-              "https://asset.localhost",
-              "asset:",
-            ];
-            for (const pattern of patterns) {
-              if (url.startsWith(pattern)) {
-                url = url.replace(pattern, "");
-                break;
-              }
-            }
-            imageData = decodeURIComponent(url);
-          }
-          isBase64 = false;
-        } else {
-          imageData = startupImage.base64;
-          isBase64 = true;
-        }
+        let isBase64 = false;
 
         const results = await invoke<OCRBox[]>("ocr_image", {
-          imageData,
+          imageData: startupImage.path,
           isBase64,
           modelName: modelToUse,
         });
@@ -297,7 +263,6 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   useEffect(() => {
     if (
       startupImage &&
-      !startupImage.fromHistory &&
       currentOcrModel &&
       !ocrData[currentOcrModel] &&
       !loading &&
@@ -358,75 +323,17 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   };
 
   const handleCopyImage = useCallback(async (): Promise<boolean> => {
-    if (!startupImage?.base64) return false;
-
-    let sourcePath = startupImage.base64;
-
-    if (startupImage.isFilePath) {
-      try {
-        const urlObj = new URL(sourcePath);
-        if (
-          urlObj.hostname === "asset.localhost" ||
-          urlObj.protocol === "asset:"
-        ) {
-          sourcePath = decodeURIComponent(urlObj.pathname);
-        }
-      } catch (e) {
-        setErrorDialog(
-          getErrorDialog(
-            `Failed to parse URL for copy: ${e instanceof Error ? e.message : String(e)}`,
-          ),
-        );
-        const patterns = [
-          "asset://localhost",
-          "http://asset.localhost",
-          "https://asset.localhost",
-          "asset:",
-        ];
-        for (const pattern of patterns) {
-          if (sourcePath.startsWith(pattern)) {
-            sourcePath = sourcePath.replace(pattern, "");
-            break;
-          }
-        }
-        sourcePath = decodeURIComponent(sourcePath);
-      }
-    } else {
-      const img = imgRef.current;
-      if (!img) return false;
-
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Could not get canvas context");
-
-        ctx.drawImage(img, 0, 0);
-
-        const dataUrl = canvas.toDataURL("image/png");
-        const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
-
-        await invoke("copy_image_to_clipboard", { image_base64: base64 });
-        return true;
-      } catch (err) {
-        setErrorDialog(
-          getErrorDialog(
-            `Failed to copy base64 image: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-        return false;
-      }
-    }
+    if (!startupImage?.path) return false;
 
     try {
-      await invoke("copy_image_from_path_to_clipboard", { path: sourcePath });
+      await invoke("copy_image_from_path_to_clipboard", {
+        path: startupImage.path,
+      });
       return true;
     } catch (err) {
       setErrorDialog(
         getErrorDialog(
-          `Failed to copy image from path: ${err instanceof Error ? err.message : String(err)}`,
+          `Failed to copy image to clipboard: ${err instanceof Error ? err.message : String(err)}`,
         ),
       );
       return false;
@@ -434,42 +341,7 @@ export const ImageShell: React.FC<ImageShellProps> = ({
   }, [startupImage]);
 
   const handleExpandSave = useCallback(async () => {
-    if (!startupImage?.base64) return;
-
-    let sourcePath = startupImage.base64;
-
-    if (startupImage.isFilePath) {
-      try {
-        const urlObj = new URL(sourcePath);
-        if (
-          urlObj.hostname === "asset.localhost" ||
-          urlObj.protocol === "asset:"
-        ) {
-          sourcePath = decodeURIComponent(urlObj.pathname);
-        }
-      } catch (e) {
-        setErrorDialog(
-          getErrorDialog(
-            `Failed to parse URL for save: ${e instanceof Error ? e.message : String(e)}`,
-          ),
-        );
-
-        const patterns = [
-          "asset://localhost",
-          "http://asset.localhost",
-          "https://asset.localhost",
-          "asset:",
-        ];
-        for (const pattern of patterns) {
-          if (sourcePath.startsWith(pattern)) {
-            sourcePath = sourcePath.replace(pattern, "");
-            break;
-          }
-        }
-        sourcePath = decodeURIComponent(sourcePath);
-      }
-    } else {
-    }
+    if (!startupImage?.path) return;
 
     try {
       const filePath = await save({
@@ -481,14 +353,14 @@ export const ImageShell: React.FC<ImageShellProps> = ({
 
       if (filePath) {
         await invoke("copy_image_to_path", {
-          sourcePath,
+          sourcePath: startupImage.path,
           targetPath: filePath,
         });
       }
-    } catch (error) {
+    } catch (err) {
       setErrorDialog(
         getErrorDialog(
-          `Failed to save image: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to save image: ${err instanceof Error ? err.message : String(err)}`,
         ),
       );
     }

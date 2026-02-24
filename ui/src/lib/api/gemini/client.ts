@@ -44,8 +44,7 @@ let currentModelId = "gemini-2.0-flash";
 let imageDescription: string | null = null;
 let userFirstMsg: string | null = null;
 let conversationHistory: Array<{ role: string; content: string }> = [];
-let storedImageBase64: string | null = null;
-let storedMimeType: string | null = null;
+let storedImagePath: string | null = null;
 
 interface GeminiEvent {
   token: string;
@@ -55,16 +54,11 @@ export const initializeGemini = (apiKey: string) => {
   storedApiKey = apiKey;
 };
 
-const cleanBase64 = (data: string) => {
-  return data.replace(/^data:image\/[a-z]+;base64,/, "");
-};
-
 export const resetBrainContext = () => {
   imageDescription = null;
   userFirstMsg = null;
   conversationHistory = [];
-  storedImageBase64 = null;
-  storedMimeType = null;
+  storedImagePath = null;
 };
 
 export const setImageDescription = (description: string) => {
@@ -98,8 +92,7 @@ const formatHistoryLog = (): string => {
 export const startNewChatSync = async (
   apiKey: string,
   modelId: string,
-  imageBase64: string,
-  mimeType: string,
+  imagePath: string,
 ): Promise<{ title: string; content: string }> => {
   resetBrainContext();
 
@@ -108,13 +101,13 @@ export const startNewChatSync = async (
     {
       apiKey,
       model: modelId,
-      imageBase64: cleanBase64(imageBase64),
-      imageMimeType: mimeType,
+      imageBase64: "",
+      imageMimeType: "",
+      imagePath,
     },
   );
 
-  storedImageBase64 = cleanBase64(imageBase64);
-  storedMimeType = mimeType;
+  storedImagePath = imagePath;
 
   setImageDescription(response.content);
   addToHistory("Assistant", response.content);
@@ -124,8 +117,7 @@ export const startNewChatSync = async (
 
 export const startNewChatStream = async (
   modelId: string,
-  imageBase64: string,
-  mimeType: string,
+  imagePath: string,
   onToken: (token: string) => void,
 ): Promise<string> => {
   if (!storedApiKey) throw new Error("Gemini API Key not set");
@@ -136,8 +128,7 @@ export const startNewChatStream = async (
   const myGenId = generationId;
 
   resetBrainContext();
-  storedImageBase64 = cleanBase64(imageBase64);
-  storedMimeType = mimeType;
+  storedImagePath = imagePath;
 
   const channelId = `gemini-stream-${Date.now()}`;
   let fullResponse = "";
@@ -154,8 +145,9 @@ export const startNewChatStream = async (
       apiKey: storedApiKey,
       model: modelId,
       isInitialTurn: true,
-      imageBase64: cleanBase64(imageBase64),
-      imageMimeType: mimeType,
+      imageBase64: null,
+      imageMimeType: null,
+      imagePath,
       imageDescription: null,
       userFirstMsg: null,
       historyLog: null,
@@ -196,7 +188,7 @@ export const sendMessage = async (
   }
 
   const myGenId = generationId;
-  const isFirstTurnWithImage = !userFirstMsg && storedImageBase64;
+  const isFirstTurnWithImage = !userFirstMsg && storedImagePath;
   setUserFirstMsg(text);
   addToHistory("User", text);
 
@@ -215,8 +207,9 @@ export const sendMessage = async (
       apiKey: storedApiKey,
       model: currentModelId,
       isInitialTurn: false,
-      imageBase64: isFirstTurnWithImage ? storedImageBase64 : null,
-      imageMimeType: isFirstTurnWithImage ? storedMimeType : null,
+      imageBase64: null,
+      imageMimeType: null,
+      imagePath: isFirstTurnWithImage ? storedImagePath : null,
       imageDescription: imageDescription,
       userFirstMsg: userFirstMsg,
       historyLog: formatHistoryLog(),
@@ -246,20 +239,19 @@ export const retryFromMessage = async (
   allMessages: Array<{ role: string; text: string }>,
   modelId: string,
   onToken?: (token: string) => void,
-  fallbackImage?: { base64: string; mimeType: string },
+  fallbackImagePath?: string,
 ): Promise<string> => {
   if (!storedApiKey) throw new Error("Gemini API Key not set");
 
   currentModelId = modelId;
   const myGenId = generationId;
 
-  if ((!storedImageBase64 || !storedMimeType) && fallbackImage) {
-    storedImageBase64 = cleanBase64(fallbackImage.base64);
-    storedMimeType = fallbackImage.mimeType;
+  if (!storedImagePath && fallbackImagePath) {
+    storedImagePath = fallbackImagePath;
   }
 
   if (messageIndex === 0) {
-    if (!storedImageBase64 || !storedMimeType) {
+    if (!storedImagePath) {
       throw new Error("Image not found");
     }
 
@@ -282,8 +274,9 @@ export const retryFromMessage = async (
         apiKey: storedApiKey,
         model: currentModelId,
         isInitialTurn: true,
-        imageBase64: storedImageBase64,
-        imageMimeType: storedMimeType,
+        imageBase64: null,
+        imageMimeType: null,
+        imagePath: storedImagePath,
         imageDescription: null,
         userFirstMsg: null,
         historyLog: null,
@@ -330,7 +323,7 @@ export const retryFromMessage = async (
     throw new Error("No user message found before the retried message");
   }
 
-  const isFirstTurnWithImage = !firstUser && storedImageBase64;
+  const isFirstTurnWithImage = !firstUser && storedImagePath;
 
   const channelId = `gemini-stream-${Date.now()}`;
   let fullResponse = "";
@@ -347,8 +340,9 @@ export const retryFromMessage = async (
       apiKey: storedApiKey,
       model: currentModelId,
       isInitialTurn: false,
-      imageBase64: isFirstTurnWithImage ? storedImageBase64 : null,
-      imageMimeType: isFirstTurnWithImage ? storedMimeType : null,
+      imageBase64: null,
+      imageMimeType: null,
+      imagePath: isFirstTurnWithImage ? storedImagePath : null,
       imageDescription: imgDesc,
       userFirstMsg: userFirstMsg,
       historyLog: formatHistoryLog(),
@@ -377,16 +371,15 @@ export const editUserMessage = async (
   allMessages: Array<{ role: string; text: string }>,
   modelId: string,
   onToken?: (token: string) => void,
-  fallbackImage?: { base64: string; mimeType: string },
+  fallbackImagePath?: string,
 ): Promise<string> => {
   if (!storedApiKey) throw new Error("Gemini API Key not set");
 
   currentModelId = modelId;
   const myGenId = generationId;
 
-  if ((!storedImageBase64 || !storedMimeType) && fallbackImage) {
-    storedImageBase64 = cleanBase64(fallbackImage.base64);
-    storedMimeType = fallbackImage.mimeType;
+  if (!storedImagePath && fallbackImagePath) {
+    storedImagePath = fallbackImagePath;
   }
 
   const messagesBefore = allMessages.slice(0, messageIndex);
@@ -414,7 +407,7 @@ export const editUserMessage = async (
     conversationHistory = conversationHistory.slice(-6);
   }
 
-  const isFirstTurnWithImage = !previousUserMsg && storedImageBase64;
+  const isFirstTurnWithImage = !previousUserMsg && storedImagePath;
 
   const channelId = `gemini-stream-${Date.now()}`;
   let fullResponse = "";
@@ -431,8 +424,9 @@ export const editUserMessage = async (
       apiKey: storedApiKey,
       model: currentModelId,
       isInitialTurn: false,
-      imageBase64: isFirstTurnWithImage ? storedImageBase64 : null,
-      imageMimeType: isFirstTurnWithImage ? storedMimeType : null,
+      imageBase64: null,
+      imageMimeType: null,
+      imagePath: isFirstTurnWithImage ? storedImagePath : null,
       imageDescription: imgDesc,
       userFirstMsg: userFirstMsg,
       historyLog: formatHistoryLog(),
@@ -461,15 +455,13 @@ export const restoreSession = (
   savedImageDescription: string,
   savedUserFirstMsg: string | null,
   savedHistory: Array<{ role: string; content: string }>,
-  savedImageBase64: string | null,
-  savedMimeType: string | null,
+  savedImagePath: string | null,
 ) => {
   currentModelId = modelId;
   imageDescription = savedImageDescription;
   userFirstMsg = savedUserFirstMsg;
   conversationHistory = savedHistory.slice(-6);
-  storedImageBase64 = savedImageBase64;
-  storedMimeType = savedMimeType;
+  storedImagePath = savedImagePath;
 };
 
 export const getSessionState = () => ({
@@ -480,11 +472,10 @@ export const getSessionState = () => ({
 
 export const startNewChat = async (
   modelId: string,
-  imageBase64: string,
-  mimeType: string,
+  imagePath: string,
 ): Promise<string> => {
   let fullText = "";
-  await startNewChatStream(modelId, imageBase64, mimeType, (token) => {
+  await startNewChatStream(modelId, imagePath, (token) => {
     fullText += token;
   });
   return fullText;

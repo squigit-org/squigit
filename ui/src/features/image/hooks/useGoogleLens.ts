@@ -6,14 +6,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { uploadToImgBB, generateLensUrl } from "@/features/image";
 
 export const useGoogleLens = (
   startupImage: {
-    base64: string;
+    path: string;
     mimeType: string;
-    isFilePath?: boolean;
+    imageId: string;
   } | null,
   cachedUrl: string | null,
   setCachedUrl: (url: string) => void,
@@ -28,26 +29,23 @@ export const useGoogleLens = (
     imageRef.current = startupImage;
   }, [startupImage]);
 
-  const getRealBase64 = async (img: {
-    base64: string;
-    isFilePath?: boolean;
-  }) => {
-    if (img.isFilePath) {
-      try {
-        const response = await fetch(img.base64);
-        const blob = await response.blob();
-        return await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      } catch (e) {
-        console.error("Failed to fetch local asset:", e);
-        throw e;
-      }
+  const getRealBase64 = async (img: NonNullable<typeof startupImage>) => {
+    try {
+      const response = await fetch(convertFileSrc(img.path));
+      const blob = await response.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          resolve(result.replace(/^data:image\/[a-z]+;base64,/, ""));
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error("Failed to fetch local asset:", e);
+      throw e;
     }
-    return img.base64;
   };
 
   const runLensSearch = async (imgData: string, key: string) => {
@@ -116,8 +114,11 @@ export const useGoogleLens = (
 
     try {
       setIsLensLoading(true);
-      console.log("[useGoogleLens] triggerLens called with activeProfileId:", activeProfileId);
-      
+      console.log(
+        "[useGoogleLens] triggerLens called with activeProfileId:",
+        activeProfileId,
+      );
+
       if (!activeProfileId) {
         console.error("[useGoogleLens] No active profile ID!");
         setShowAuthDialog(true);
@@ -130,7 +131,10 @@ export const useGoogleLens = (
         profileId: activeProfileId,
       });
 
-      console.log("[useGoogleLens] Retrieved API key for imgbb:", apiKey ? "FOUND" : "EMPTY");
+      console.log(
+        "[useGoogleLens] Retrieved API key for imgbb:",
+        apiKey ? "FOUND" : "EMPTY",
+      );
 
       if (apiKey) {
         const realBase64 = await getRealBase64(startupImage);
