@@ -119,12 +119,10 @@ export function useTextEditor({
     }
   }, [onChange, readText]);
 
-  /* eslint-disable react-hooks/exhaustive-deps */
   const handleKeyDown = useKeyDown(
     {
       "Mod+z": (e) => {
         if (e.shiftKey) {
-          // This case is actually handled by Mod+Shift+z usually, but let's keep it safe
           redo();
         } else {
           undo();

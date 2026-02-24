@@ -104,14 +104,26 @@ pub async fn copy_image_to_clipboard(image_base64: String) -> Result<(), String>
 
 #[tauri::command]
 pub async fn copy_image_from_path_to_clipboard(path: String) -> Result<(), String> {
-    use clipboard_rs::{Clipboard, ClipboardContext};
+    use arboard::{Clipboard, ImageData};
 
-    let ctx = ClipboardContext::new()
-        .map_err(|e| format!("Failed to create clipboard context: {}", e))?;
+    let img = image::open(&path)
+        .map_err(|e| format!("Failed to open image at {}: {}", path, e))?;
 
-    let files = vec![path];
-    ctx.set_files(files)
-        .map_err(|e| format!("Failed to copy files: {}", e))?;
+    let rgba = img.to_rgba8();
+    let (width, height) = rgba.dimensions();
+
+    let img_data = ImageData {
+        width: width as usize,
+        height: height as usize,
+        bytes: std::borrow::Cow::Owned(rgba.into_raw()),
+    };
+
+    let mut clipboard =
+        Clipboard::new().map_err(|e| format!("Failed to access clipboard: {}", e))?;
+
+    clipboard
+        .set_image(img_data)
+        .map_err(|e| format!("Failed to copy image: {}", e))?;
 
     Ok(())
 }

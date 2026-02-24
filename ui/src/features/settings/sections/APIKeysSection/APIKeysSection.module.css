@@ -124,6 +124,12 @@
   align-items: center;
 }
 
+.inputGroup.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}
+
 .inputWrapper {
   position: relative;
   flex: 1;

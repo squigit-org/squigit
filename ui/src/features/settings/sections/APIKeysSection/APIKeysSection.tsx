@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { google, github } from "@/lib/config";
@@ -43,11 +43,15 @@ const ProviderRow = ({
   const [inputValue, setInputValue] = useState(currentKey);
   const [showKey, setShowKey] = useState(false);
   const [isValid, setIsValid] = useState(true);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFocusedRef = useRef(false);
+
+  const saveIdRef = useRef(0);
 
   useEffect(() => {
-    setInputValue(currentKey);
-    setIsValid(true);
+    if (!isFocusedRef.current) {
+      setInputValue(currentKey);
+      setIsValid(true);
+    }
   }, [currentKey]);
 
   const validate = (key: string): boolean => {
@@ -63,73 +67,40 @@ const ProviderRow = ({
 
   const handleInputChange = (newValue: string) => {
     setInputValue(newValue);
-
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    timerRef.current = setTimeout(() => {
-      const trimmed = newValue.trim();
-      const valid = validate(trimmed);
-      if (valid && trimmed !== currentKey) {
-        if (isGuest) {
-          setIsValid(false);
-          setTimeout(() => setIsValid(true), 1000);
-          return;
-        }
-
-        onSave(trimmed).then((success) => {
-          if (!success) {
-            setIsValid(false);
-
-            alert(
-              "Failed to save API key. Please ensure you are logged in to a profile.",
-            );
-          } else {
-            setIsValid(true);
-          }
-        });
-      } else {
-        setIsValid(valid);
-      }
-    }, 1000);
+    const trimmed = newValue.trim();
+    setIsValid(validate(trimmed));
   };
 
   const handleBlur = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
+    isFocusedRef.current = false;
     const trimmed = inputValue.trim();
     const valid = validate(trimmed);
+
     if (!valid) {
       setInputValue(currentKey);
       setIsValid(true);
-    } else if (trimmed !== currentKey) {
-      if (isGuest) {
-        setIsValid(false);
-        setTimeout(() => setIsValid(true), 1000);
-        return;
-      }
-
-      onSave(trimmed).then((success) => {
-        if (!success) {
-          setIsValid(false);
-          alert(
-            "Failed to save API key. Please ensure you are logged in to a profile.",
-          );
-        }
-      });
+      return;
     }
-  };
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+    if (trimmed === currentKey) return;
+
+    if (isGuest) {
+      setIsValid(false);
+      setTimeout(() => setIsValid(true), 1000);
+      return;
+    }
+
+    const id = ++saveIdRef.current;
+    onSave(trimmed).then((success) => {
+      if (saveIdRef.current !== id) return;
+      if (!success) {
+        setIsValid(false);
+        alert(
+          "Failed to save API key. Please ensure you are logged in to a profile.",
+        );
       }
-    };
-  }, []);
+    });
+  };
   const {
     ref,
     hasSelection,
@@ -137,12 +108,31 @@ const ProviderRow = ({
     handleCut,
     handlePaste,
     handleSelectAll,
-    handleKeyDown,
+    handleKeyDown: editorKeyDown,
   } = useTextEditor({
     value: inputValue,
     onChange: handleInputChange,
     preventNewLine: true,
   });
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && e.key === "c") {
+        e.preventDefault();
+        handleCopy();
+        return;
+      }
+      if (isMod && e.key === "x") {
+        e.preventDefault();
+        handleCut();
+        return;
+      }
+      editorKeyDown(e as any);
+    },
+    [editorKeyDown, handleCopy, handleCut],
+  );
+
   const {
     data: contextMenu,
     handleContextMenu,
@@ -181,7 +171,9 @@ const ProviderRow = ({
               ? "to get a free public image link."
               : `to use ${title} models at cost.`}
           </p>
-          <div className={styles.inputGroup}>
+          <div
+            className={`${styles.inputGroup} ${isGuest ? styles.disabled : ""}`}
+          >
             <div
               className={`${styles.inputWrapper} ${!isValid ? styles.error : ""}`}
             >
@@ -191,15 +183,20 @@ const ProviderRow = ({
                 className={styles.modernInput}
                 placeholder={`Enter your ${providerKeyName} API Key`}
                 value={inputValue}
+                disabled={isGuest}
                 onChange={(e) => handleInputChange(e.target.value)}
+                onFocus={() => {
+                  isFocusedRef.current = true;
+                }}
                 onBlur={handleBlur}
                 onClick={(e) => e.stopPropagation()}
                 onContextMenu={handleContextMenu}
-                onKeyDown={handleKeyDown as any}
+                onKeyDown={handleKeyDown}
                 autoComplete="off"
               />
               <button
                 className={styles.iconBtn}
+                disabled={isGuest}
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowKey(!showKey);

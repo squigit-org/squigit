@@ -219,7 +219,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onClose={handleCloseContextMenu}
           onCopy={handleCopy}
           onCut={handleCut}
-          onPaste={handlePaste}
+          onPaste={async () => {
+            try {
+              const result = await invoke<{ hash: string; path: string }>(
+                "read_clipboard_image",
+              );
+              if (result && result.path) {
+                onAttachmentsChange([
+                  ...attachments,
+                  attachmentFromPath(result.path),
+                ]);
+                return;
+              }
+            } catch (err) {
+              // Not an image, fall through to text paste
+            }
+            handlePaste();
+          }}
           onSelectAll={handleSelectAll}
           onUndo={undo}
           onRedo={redo}
