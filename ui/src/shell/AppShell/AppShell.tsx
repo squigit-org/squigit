@@ -5,8 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { ImageShell, ChatShell } from "@/shell";
-import { useShellContext } from "@/shell/context";
+import { ImageShell, ChatShell, useShellContext } from "@/shell";
 import {
   useAttachments,
   buildAttachmentMention,

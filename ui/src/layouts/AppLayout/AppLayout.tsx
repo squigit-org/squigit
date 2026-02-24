@@ -8,12 +8,19 @@ import React from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getDialogs } from "@/lib/helpers";
 import { Dialog } from "@/primitives";
-import { ShellProvider, useShellContext } from "@/shell/context";
 import { Welcome, Agreement, UpdateNotes } from "@/features";
-import { ShellContextMenu, TitleBar, SidePanel, AppShell } from "@/shell";
+import {
+  ShellContextMenu,
+  TitleBar,
+  SidePanel,
+  AppShell,
+  ShellProvider,
+  useShellContext,
+} from "@/shell";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppLayout.module.css";
+import { AppLogo } from "@/assets";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
@@ -36,14 +43,6 @@ const AppLayoutContent: React.FC = () => {
     }
   }, [shell.isLoadingState]);
 
-  if (shell.isLoadingState) {
-    return (
-      <div className="h-screen w-screen bg-neutral-950 flex items-center justify-center text-neutral-400">
-        Loading...
-      </div>
-    );
-  }
-
   const renderContent = () => {
     const activeId = shell.chatHistory.activeSessionId;
 
@@ -54,6 +53,10 @@ const AppLayoutContent: React.FC = () => {
       if (activeId.startsWith("__system_update")) {
         return <UpdateNotes />;
       }
+    }
+
+    if (shell.isLoadingState) {
+      return <AppLogo size={40} />;
     }
 
     if (shell.isImageMissing) {
@@ -68,6 +71,33 @@ const AppLayoutContent: React.FC = () => {
 
     return <AppShell />;
   };
+
+  const titleBar = (
+    <>
+      <TitleBar />
+      <div className={styles.mainContent}>
+        {!shell.isLoadingState && (
+          <div
+            className={`
+            ${styles.sidePanelWrapper}
+            ${!shell.isSidePanelOpen ? styles.hidden : ""}
+            ${shell.enablePanelAnimation ? styles.animated : ""}`}
+          >
+            <SidePanel />
+          </div>
+        )}
+        <div
+          className={
+            shell.isLoadingState
+              ? "h-screen w-screen bg-neutral-950 flex items-center justify-center"
+              : styles.contentArea
+          }
+        >
+          {renderContent()}
+        </div>
+      </div>
+    </>
+  );
 
   const appDialogs = (
     <>
@@ -122,21 +152,24 @@ const AppLayoutContent: React.FC = () => {
     </>
   );
 
+  if (shell.isLoadingState) {
+    return (
+      <div
+        className={styles.appContainer}
+        onContextMenu={shell.handleContextMenu}
+      >
+        {titleBar}
+      </div>
+    );
+  }
+
   if (shell.isImageMissing) {
     return (
       <div
         className={styles.appContainer}
         onContextMenu={shell.handleContextMenu}
       >
-        <TitleBar />
-        <div className={styles.mainContent}>
-          <div
-            className={`${styles.sidePanelWrapper} ${!shell.isSidePanelOpen ? styles.hidden : ""} ${shell.enablePanelAnimation ? styles.animated : ""}`}
-          >
-            <SidePanel />
-          </div>
-          <div className={styles.contentArea}>{renderContent()}</div>
-        </div>
+        {titleBar}
         {appDialogs}
       </div>
     );
@@ -148,18 +181,7 @@ const AppLayoutContent: React.FC = () => {
       onContextMenu={shell.handleContextMenu}
       className={styles.appContainer}
     >
-      <TitleBar />
-      <div className={styles.mainContent}>
-        <div
-          className={`${styles.sidePanelWrapper} ${
-            !shell.isSidePanelOpen ? styles.hidden : ""
-          } ${shell.enablePanelAnimation ? styles.animated : ""}`}
-        >
-          <SidePanel />
-        </div>
-        <div className={styles.contentArea}>{renderContent()}</div>
-      </div>
-
+      {titleBar}
       {appDialogs}
     </div>
   );

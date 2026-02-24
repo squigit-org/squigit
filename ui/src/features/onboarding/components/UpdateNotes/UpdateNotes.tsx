@@ -1,7 +1,12 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useMemo, useState } from "react";
-import { OnboardingShell } from "@/shell/containers";
-import { useShellContext } from "@/shell/context";
-import { getPendingUpdate } from "@/hooks/useUpdateCheck";
+import { OnboardingShell, useShellContext } from "@/shell";
+import { getPendingUpdate } from "@/hooks";
 import { ChevronRight, DownloadCloud } from "lucide-react";
 import { clsx } from "clsx";
 import styles from "./UpdateNotes.module.css";

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 .container {
   --muted: #71717a;
   --accent: #fafafa;
@@ -36,12 +35,6 @@
   align-items: center;
   gap: 24px;
   user-select: none;
-}
-
-.logo {
-  width: 80px;
-  height: 80px;
-  opacity: 0.9;
 }
 
 .title {

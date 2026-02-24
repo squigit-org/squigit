@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useContext, ReactNode } from "react";
-import { useShell } from "./useShell";
+import { useShell } from "../hooks/useShell";
 
 type ShellState = ReturnType<typeof useShell>;
 

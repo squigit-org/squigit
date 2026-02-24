@@ -17,18 +17,16 @@ import {
 } from "lucide-react";
 
 import { ChatMetadata, groupChatsByDate } from "@/lib/storage";
-import styles from "./SidePanel.module.css";
-import updateIcon from "@/assets/emoji_u1f4e6.png";
-import welcomeIcon from "@/assets/emoji_u1f6e0.png";
+import { updateIcon, welcomeIcon } from "@/assets";
 import { Dialog } from "@/primitives";
-import { PanelContextMenu } from "@/shell/menus";
 import {
   getDeleteMultipleChatsDialog,
   getAppBusyDialog,
   DialogContent,
 } from "@/lib/helpers";
-import { useShellContext } from "@/shell/context";
+import { useShellContext, PanelContextMenu } from "@/shell";
 import { useKeyDown, getPendingUpdate } from "@/hooks";
+import styles from "./SidePanel.module.css";
 
 const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
   checked,

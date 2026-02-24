@@ -5,17 +5,17 @@
  */
 
 import React, { useMemo } from "react";
-import { OnboardingShell } from "@/shell/containers";
-import { ChatBubble } from "@/features/chat";
 import { usePlatform } from "@/hooks";
-import { Message } from "@/features/chat/types";
-import { useShellContext } from "@/shell/context";
+import { ChatBubble, Message } from "@/features";
+import { OnboardingShell, useShellContext } from "@/shell";
 
 import styles from "./Agreement.module.css";
 
-import linux from "@/assets/instructions/linux.md?raw";
-import macos from "@/assets/instructions/macos.md?raw";
-import windows from "@/assets/instructions/windows.md?raw";
+import {
+  linuxInstruction as linux,
+  macosInstruction as macos,
+  windowsInstruction as windows,
+} from "@/assets";
 
 const INSTRUCTIONS: Record<string, string> = {
   linux,
