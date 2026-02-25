@@ -4,8 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./types";
-export * from "./hooks";
-export * from "./store";
-export * from "./services";
-export * from "./components";
+export * from "./components/OCRModelDownloader";
+export * from "./components/OCRModelSwitcher";
+export * from "./components/OCRTextCanvas";
+
+export * from "./hooks/useOCRModels";
+export * from "./hooks/useTextSelection";
+
+export * from "./services/modelDownloader";
+export * from "./services/modelRegistry";
+
+export * from "./ocr-models.types";
+export * from "./ocr-models.store";

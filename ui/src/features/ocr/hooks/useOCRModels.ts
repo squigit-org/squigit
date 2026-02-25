@@ -5,9 +5,12 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { OcrModelStatus, AVAILABLE_MODELS } from "../types";
-import { getInstalledModelIds } from "../services";
-import { downloadModel } from "../services/modelDownloader";
+import {
+  OcrModelStatus,
+  AVAILABLE_MODELS,
+  getInstalledModelIds,
+  downloadModel,
+} from "@/features/ocr";
 
 export const useOCRModels = () => {
   const [ocrModels, setOCRModels] = useState<OcrModelStatus[]>(() =>

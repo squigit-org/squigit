@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 
-- Fixed infinite re-render loop in image shell.
+- Fixed infinite re-render loop in image app.
 - Resolved memory leak in background process.
 
 ### UI Improvements

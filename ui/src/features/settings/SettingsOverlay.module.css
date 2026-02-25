@@ -1,0 +1,123 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.settingsOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  -webkit-app-region: no-drag;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
+}
+
+.settingsOverlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.app.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.sidebar {
+  width: 50px;
+  background-color: #121212;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.sidebarSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.sidebarSection.footer {
+  gap: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.sidebarButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--neutral-400);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebarButton:hover {
+  color: #ffffff;
+}
+
+.sidebarButton.active {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ededed;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0;
+}
+
+.closeButton {
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  color: var(--neutral-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.closeButton:hover {
+  color: #fff;
+}
+
+.sectionContent {
+  flex: 1;
+  display: flex;
+  color: #ededed;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 20px;
+  text-align: left;
+  overflow-y: auto;
+  background-color: #171717;
+}

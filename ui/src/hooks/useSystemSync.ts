@@ -18,7 +18,7 @@ import {
   setAgreedFlag,
   UserPreferences,
 } from "@/lib";
-import { SettingsSection } from "@/layout";
+import { SettingsSection } from "@/features/settings";
 
 export const useSystemSync = () => {
   const { theme, resolvedTheme, setTheme } = useTheme();

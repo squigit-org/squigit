@@ -22,7 +22,7 @@ import {
 import { OCRTextCanvas, useTextSelection } from "@/features/ocr";
 import styles from "./ImageArtifact.module.css";
 import { Dialog } from "@/components";
-import { type SettingsSection } from "@/layout/overlays";
+import { type SettingsSection } from "@/features/settings";
 import {
   type DialogContent,
   getErrorDialog,

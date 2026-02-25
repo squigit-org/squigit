@@ -9,8 +9,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { getDialogs } from "@/lib";
 import { Dialog } from "@/components";
 import { Welcome, Agreement, UpdateNotes } from "@/features";
-import { ShellProvider, useShellContext } from "@/providers/ShellProvider";
-import { ShellContextMenu, TitleBar, SidePanel } from "@/layout";
+import { AppProvider, useAppContext } from "@/providers/AppProvider";
+import { AppContextMenu, TitleBar, SidePanel } from "@/layout";
 import { Chat } from "@/features/chat";
 
 import "katex/dist/katex.min.css";
@@ -20,10 +20,10 @@ import { AppLogo } from "@/assets";
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 const AppRouterContent: React.FC = () => {
-  const shell = useShellContext();
+  const app = useAppContext();
 
-  const isAgreed = shell.system.hasAgreed || shell.agreedToTerms;
-  const baseLoginDialog = getDialogs(shell.system.appName).LOGIN_REQUIRED;
+  const isAgreed = app.system.hasAgreed || app.agreedToTerms;
+  const baseLoginDialog = getDialogs(app.system.appName).LOGIN_REQUIRED;
   const loginRequiredDialog = {
     ...baseLoginDialog,
     actions: baseLoginDialog.actions.map((action) => ({
@@ -33,13 +33,13 @@ const AppRouterContent: React.FC = () => {
   };
 
   React.useEffect(() => {
-    if (!shell.isLoadingState) {
+    if (!app.isLoadingState) {
       invoke("show_window");
     }
-  }, [shell.isLoadingState]);
+  }, [app.isLoadingState]);
 
   const renderContent = () => {
-    const activeId = shell.chatHistory.activeSessionId;
+    const activeId = app.chatHistory.activeSessionId;
 
     if (activeId && isOnboardingId(activeId)) {
       if (activeId === "__system_welcome") {
@@ -50,16 +50,16 @@ const AppRouterContent: React.FC = () => {
       }
     }
 
-    if (shell.isLoadingState) {
+    if (app.isLoadingState) {
       return <AppLogo size={40} />;
     }
 
-    if (shell.isImageMissing) {
+    if (app.isImageMissing) {
       return (
         <Welcome
-          onImageReady={shell.handleImageReady}
-          isGuest={!shell.system.activeProfile}
-          onLoginRequired={() => shell.setShowLoginRequiredDialog(true)}
+          onImageReady={app.handleImageReady}
+          isGuest={!app.system.activeProfile}
+          onLoginRequired={() => app.setShowLoginRequiredDialog(true)}
         />
       );
     }
@@ -71,19 +71,19 @@ const AppRouterContent: React.FC = () => {
     <>
       <TitleBar />
       <div className={styles.mainContent}>
-        {!shell.isLoadingState && (
+        {!app.isLoadingState && (
           <div
             className={`
             ${styles.sidePanelWrapper}
-            ${!shell.isSidePanelOpen ? styles.hidden : ""}
-            ${shell.enablePanelAnimation ? styles.animated : ""}`}
+            ${!app.isSidePanelOpen ? styles.hidden : ""}
+            ${app.enablePanelAnimation ? styles.animated : ""}`}
           >
             <SidePanel />
           </div>
         )}
         <div
           className={
-            shell.isLoadingState
+            app.isLoadingState
               ? "h-screen w-screen bg-neutral-950 flex items-center justify-center"
               : styles.contentArea
           }
@@ -96,73 +96,73 @@ const AppRouterContent: React.FC = () => {
 
   const appDialogs = (
     <>
-      {shell.contextMenu && (
-        <ShellContextMenu
-          x={shell.contextMenu.x}
-          y={shell.contextMenu.y}
-          onClose={shell.handleCloseContextMenu}
-          onCopy={shell.handleCopy}
-          selectedText={shell.contextMenu.selectedText}
+      {app.contextMenu && (
+        <AppContextMenu
+          x={app.contextMenu.x}
+          y={app.contextMenu.y}
+          onClose={app.handleCloseContextMenu}
+          onCopy={app.handleCopy}
+          selectedText={app.contextMenu.selectedText}
           hasSelection={true}
         />
       )}
 
       <Dialog
-        isOpen={shell.showGeminiAuthDialog}
+        isOpen={app.showGeminiAuthDialog}
         type="GEMINI_AUTH"
         onAction={(key) => {
           let msg = "";
           if (key === "confirm") {
-            shell.system.openSettings("apikeys");
+            app.system.openSettings("apikeys");
           } else {
             msg = "Please configure your Gemini API key to continue.";
           }
-          shell.chat.appendErrorMessage(msg);
-          shell.setShowGeminiAuthDialog(false);
+          app.chat.appendErrorMessage(msg);
+          app.setShowGeminiAuthDialog(false);
         }}
       />
 
       <Dialog
-        isOpen={shell.system.showExistingProfileDialog}
+        isOpen={app.system.showExistingProfileDialog}
         type="EXISTING_PROFILE"
-        onAction={() => shell.system.setShowExistingProfileDialog(false)}
+        onAction={() => app.system.setShowExistingProfileDialog(false)}
       />
 
       <Dialog
-        isOpen={shell.showLoginRequiredDialog}
+        isOpen={app.showLoginRequiredDialog}
         type={loginRequiredDialog}
         onAction={(key) => {
           if (key === "confirm") {
-            shell.system.addAccount();
+            app.system.addAccount();
           }
-          shell.setShowLoginRequiredDialog(false);
+          app.setShowLoginRequiredDialog(false);
         }}
       />
 
       <Dialog
-        isOpen={shell.showCaptureDeniedDialog}
+        isOpen={app.showCaptureDeniedDialog}
         type="CAPTURE_PERMISSION_DENIED"
-        onAction={() => shell.setShowCaptureDeniedDialog(false)}
+        onAction={() => app.setShowCaptureDeniedDialog(false)}
       />
     </>
   );
 
-  if (shell.isLoadingState) {
+  if (app.isLoadingState) {
     return (
       <div
         className={styles.appContainer}
-        onContextMenu={shell.handleContextMenu}
+        onContextMenu={app.handleContextMenu}
       >
         {titleBar}
       </div>
     );
   }
 
-  if (shell.isImageMissing) {
+  if (app.isImageMissing) {
     return (
       <div
         className={styles.appContainer}
-        onContextMenu={shell.handleContextMenu}
+        onContextMenu={app.handleContextMenu}
       >
         {titleBar}
         {appDialogs}
@@ -172,8 +172,8 @@ const AppRouterContent: React.FC = () => {
 
   return (
     <div
-      ref={shell.containerRef}
-      onContextMenu={shell.handleContextMenu}
+      ref={app.containerRef}
+      onContextMenu={app.handleContextMenu}
       className={styles.appContainer}
     >
       {titleBar}
@@ -184,8 +184,8 @@ const AppRouterContent: React.FC = () => {
 
 export const AppRouter: React.FC = () => {
   return (
-    <ShellProvider>
+    <AppProvider>
       <AppRouterContent />
-    </ShellProvider>
+    </AppProvider>
   );
 };

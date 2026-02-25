@@ -4,5 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./components";
-export * from "./OnboardingShell";
+export * from "./OnboardingLayout";
+
+export * from "./screens/Welcome";
+export * from "./screens/Agreement";
+export * from "./screens/UpdateNotes";

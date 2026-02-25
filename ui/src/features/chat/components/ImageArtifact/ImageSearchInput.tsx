@@ -10,7 +10,7 @@ import { TextContextMenu } from "@/layout";
 import { useTextContextMenu } from "@/hooks";
 import { useTextEditor } from "@/hooks/useTextEditor";
 import { OCRModelSwitcher } from "@/features/ocr";
-import { SettingsSection } from "@/layout";
+import { SettingsSection } from "@/features/settings";
 import styles from "./ImageArtifact.module.css";
 
 interface ImageSearchInputProps {
