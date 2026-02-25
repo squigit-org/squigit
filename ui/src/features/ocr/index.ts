@@ -9,7 +9,7 @@ export * from "./components/OCRModelSwitcher";
 export * from "./components/OCRTextCanvas";
 
 export * from "./hooks/useOCRModels";
-export * from "./hooks/useTextSelection";
+export * from "./hooks/useOCRText";
 
 export * from "./services/modelDownloader";
 export * from "./services/modelRegistry";

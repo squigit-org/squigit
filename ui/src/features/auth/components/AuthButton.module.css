@@ -51,13 +51,7 @@
   border: 2px solid ffffffdf;
   border-left-color: #ffffffdf;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: rotate 1s linear infinite;
 }
 
 .dot {
@@ -70,16 +64,4 @@
 
 .dot:nth-child(3) {
   animation-delay: 0.4s;
-}
-
-@keyframes blink {
-  0% {
-    opacity: 0.2;
-  }
-  20% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.2;
-  }
 }

@@ -19,7 +19,7 @@ import {
   OCRMenu,
   type OCRMenuHandle,
 } from "@/features/chat";
-import { OCRTextCanvas, useTextSelection } from "@/features/ocr";
+import { OCRTextCanvas, useOCRText } from "@/features/ocr";
 import styles from "./ImageArtifact.module.css";
 import { Dialog } from "@/components";
 import { type SettingsSection } from "@/features/settings";
@@ -137,7 +137,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     box: d.bbox,
   }));
 
-  const { svgRef, handleTextMouseDown } = useTextSelection({
+  const { svgRef, handleTextMouseDown } = useOCRText({
     data: displayData,
     onSelectionComplete: (selection: Selection) => {
       OCRMenuRef.current?.showStandardMenu(selection);
