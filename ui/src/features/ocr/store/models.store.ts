@@ -9,7 +9,7 @@ import { OcrModelStatus, AVAILABLE_MODELS } from "../types";
 import { getInstalledModelIds } from "../services";
 import { downloadModel } from "../services/modelDownloader";
 
-import { commands } from "@/lib/api/tauri";
+import { commands } from "@/lib";
 
 interface DownloadProgressPayload {
   id: string;

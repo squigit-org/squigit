@@ -5,8 +5,8 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
-import { Profile, UserData } from "./types";
-export * from "./types";
+import { Profile, UserData } from "./tauri.types";
+export * from "./tauri.types";
 
 export const commands = {
   // Image Processing
@@ -56,5 +56,5 @@ export const commands = {
   // Utils
   openExternalUrl: (url: string) => invoke("open_external_url", { url }),
   getAppConstants: () =>
-    invoke<import("./types").AppConstants>("get_app_constants"),
+    invoke<import("./tauri.types").AppConstants>("get_app_constants"),
 };

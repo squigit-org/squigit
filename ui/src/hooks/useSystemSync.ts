@@ -7,17 +7,18 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { initializeGemini } from "@/lib/api/gemini";
-import { commands, Profile } from "@/lib/api/tauri";
 import { useTheme } from "./useTheme";
 import {
   loadPreferences,
+  initializeGemini,
+  commands,
+  Profile,
   savePreferences,
   hasAgreedFlag,
   setAgreedFlag,
   UserPreferences,
-} from "@/lib/storage";
-import { SettingsSection } from "@/shell";
+} from "@/lib";
+import { SettingsSection } from "@/layout";
 
 export const useSystemSync = () => {
   const { theme, resolvedTheme, setTheme } = useTheme();

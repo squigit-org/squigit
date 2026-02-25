@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { AppProvider } from "@/providers/AppProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AppRouter } from "@/router/AppRouter";
 
 function App() {
@@ -24,9 +24,9 @@ function App() {
   }, []);
 
   return (
-    <AppProvider>
+    <ThemeProvider>
       <AppRouter />
-    </AppProvider>
+    </ThemeProvider>
   );
 }
 

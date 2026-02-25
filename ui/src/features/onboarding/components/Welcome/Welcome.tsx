@@ -9,8 +9,9 @@ import { usePlatform } from "@/hooks";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
-import { ImageResult, storeImageFromPath } from "@/lib/storage";
-import { OnboardingShell, useShellContext } from "@/shell";
+import { ImageResult, storeImageFromPath } from "@/lib";
+import { useShellContext } from "@/providers/ShellProvider";
+import { OnboardingShell } from "@/features/onboarding";
 import { AppLogo } from "@/assets";
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];

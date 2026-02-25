@@ -6,7 +6,7 @@
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Check, Copy, RotateCcw, Pencil } from "lucide-react";
-import { CodeBlock, TextShimmer } from "@/primitives";
+import { CodeBlock, TextShimmer } from "@/components";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -15,19 +15,17 @@ import {
   parseMarkdownToSegments,
   tokenizeSegments,
   preprocessMarkdown,
-  type StreamSegment,
-} from "@/lib/markdown";
-import {
-  Message,
   remarkDisableIndentedCode,
-  BubbleEditor,
-} from "@/features/chat";
+  type StreamSegment,
+} from "@/lib";
+import { Message } from "@/features/chat";
+import { BubbleEditor } from "./BubbleEditor";
 import {
   parseAttachmentPaths,
   stripAttachmentMentions,
   attachmentFromPath,
   AttachmentStrip,
-} from "../AttachmentStrip";
+} from "@/features/chat";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import styles from "./ChatBubble.module.css";
@@ -688,8 +686,7 @@ export const ChatBubble = React.memo(
       prevProps.stopRequested === nextProps.stopRequested &&
       !!prevProps.onRetry === !!nextProps.onRetry &&
       prevProps.isRetrying === nextProps.isRetrying &&
-      !!prevProps.onEdit === !!nextProps.onEdit &&
-      prevProps.message.actions === nextProps.message.actions
+      !!prevProps.onEdit === !!nextProps.onEdit
     );
   },
 );

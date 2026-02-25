@@ -19,7 +19,6 @@ export function useAttachments() {
   const removeAttachment = useCallback((id: string) => {
     setAttachments((prev) => {
       const target = prev.find((a) => a.id === id);
-      // Fire-and-forget: delete /tmp files on remove
       if (target?.isTemp) {
         invoke("delete_temp_file", { path: target.path }).catch(() => {});
       }
@@ -29,7 +28,6 @@ export function useAttachments() {
 
   const clearAttachments = useCallback(() => {
     setAttachments((prev) => {
-      // Delete all temp files
       prev
         .filter((a) => a.isTemp)
         .forEach((a) => {
@@ -39,7 +37,6 @@ export function useAttachments() {
     });
   }, []);
 
-  /** Add a CAS-stored attachment directly from its path */
   const addFromPath = useCallback(
     (path: string, id?: string) => {
       addAttachments([attachmentFromPath(path, id)]);

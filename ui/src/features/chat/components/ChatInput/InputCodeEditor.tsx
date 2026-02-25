@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { CodeBlock } from "@/primitives";
+import { CodeBlock } from "@/components";
 
 interface UseCodeEditorProps {
   value: string;

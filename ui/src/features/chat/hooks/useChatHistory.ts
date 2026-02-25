@@ -10,7 +10,7 @@ import {
   listChats,
   deleteChat,
   updateChatMetadata as updateChatMeta,
-} from "@/lib/storage";
+} from "@/lib";
 const SYSTEM_PREFIX = "__system_";
 const isOnboardingId = (id: string) => id.startsWith(SYSTEM_PREFIX);
 

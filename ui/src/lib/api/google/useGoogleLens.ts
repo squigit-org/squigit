@@ -1,0 +1,169 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { uploadToImgBB, generateLensUrl } from "./lens.google";
+
+export const useGoogleLens = (
+  startupImage: {
+    path: string;
+    mimeType: string;
+    imageId: string;
+  } | null,
+  cachedUrl: string | null,
+  setCachedUrl: (url: string) => void,
+  activeProfileId: string | null,
+) => {
+  const [isLensLoading, setIsLensLoading] = useState(false);
+  const [waitingForKey, setWaitingForKey] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+
+  const imageRef = useRef(startupImage);
+  useEffect(() => {
+    imageRef.current = startupImage;
+  }, [startupImage]);
+
+  const getRealBase64 = async (img: NonNullable<typeof startupImage>) => {
+    try {
+      const response = await fetch(convertFileSrc(img.path));
+      const blob = await response.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          resolve(result.replace(/^data:image\/[a-z]+;base64,/, ""));
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error("Failed to fetch local asset:", e);
+      throw e;
+    }
+  };
+
+  const runLensSearch = async (imgData: string, key: string) => {
+    try {
+      setIsLensLoading(true);
+      if (cachedUrl) {
+        await invoke("open_external_url", { url: cachedUrl });
+        setIsLensLoading(false);
+        return;
+      }
+
+      const publicUrl = await uploadToImgBB(imgData, key);
+      const lensUrl = generateLensUrl(publicUrl);
+
+      setCachedUrl(lensUrl);
+      await invoke("open_external_url", { url: lensUrl });
+    } finally {
+      setIsLensLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!waitingForKey) return;
+
+    const unlistenKeyPromise = listen<{ provider: string; key: string }>(
+      "clipboard-text",
+      async (event) => {
+        const { provider, key } = event.payload;
+        if (provider === "imgbb") {
+          setWaitingForKey(false);
+          invoke("close_imgbb_window");
+          if (imageRef.current) {
+            const realBase64 = await getRealBase64(imageRef.current);
+            await runLensSearch(realBase64, key);
+          }
+        }
+      },
+    );
+
+    const unlistenClosePromise = listen<void>("imgbb-popup-closed", () => {
+      console.log("Setup window closed without key");
+      setWaitingForKey(false);
+    });
+
+    return () => {
+      unlistenKeyPromise.then((f) => f());
+      unlistenClosePromise.then((f) => f());
+    };
+  }, [waitingForKey]);
+
+  const triggerLens = async (searchQuery?: string) => {
+    if (!startupImage) return;
+    if (isLensLoading || waitingForKey) return;
+
+    const appendQuery = (url: string, query?: string) => {
+      if (!query || !query.trim()) return url;
+      const encodedQuery = encodeURIComponent(query.trim());
+      return `${url}&q=${encodedQuery}`;
+    };
+
+    if (cachedUrl) {
+      const finalUrl = appendQuery(cachedUrl, searchQuery);
+      await invoke("open_external_url", { url: finalUrl });
+      return;
+    }
+
+    try {
+      setIsLensLoading(true);
+      console.log(
+        "[useGoogleLens] triggerLens called with activeProfileId:",
+        activeProfileId,
+      );
+
+      if (!activeProfileId) {
+        console.error("[useGoogleLens] No active profile ID!");
+        setShowAuthDialog(true);
+        setIsLensLoading(false);
+        return;
+      }
+
+      const apiKey = await invoke<string>("get_api_key", {
+        provider: "imgbb",
+        profileId: activeProfileId,
+      });
+
+      console.log(
+        "[useGoogleLens] Retrieved API key for imgbb:",
+        apiKey ? "FOUND" : "EMPTY",
+      );
+
+      if (apiKey) {
+        const realBase64 = await getRealBase64(startupImage);
+        setIsLensLoading(true);
+
+        const publicUrl = await uploadToImgBB(realBase64, apiKey);
+        const lensUrl = generateLensUrl(publicUrl);
+
+        setCachedUrl(lensUrl);
+        const finalUrl = appendQuery(lensUrl, searchQuery);
+        await invoke("open_external_url", { url: finalUrl });
+        setIsLensLoading(false);
+        setIsLensLoading(false);
+      } else {
+        setShowAuthDialog(true);
+        setIsLensLoading(false);
+      }
+    } catch (error) {
+      console.error("Lens Trigger Error:", error);
+      setShowAuthDialog(true);
+      setIsLensLoading(false);
+      setWaitingForKey(false);
+    }
+  };
+
+  return {
+    isLensLoading: isLensLoading || waitingForKey,
+    triggerLens,
+    showAuthDialog,
+    setShowAuthDialog,
+  };
+};

@@ -5,7 +5,8 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { OnboardingShell, useShellContext } from "@/shell";
+import { OnboardingShell } from "@/features/onboarding";
+import { useShellContext } from "@/providers/ShellProvider";
 import { getPendingUpdate } from "@/hooks";
 import { ChevronRight, DownloadCloud } from "lucide-react";
 import { clsx } from "clsx";

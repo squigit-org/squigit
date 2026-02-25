@@ -6,8 +6,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import styles from "./ModelsSection.module.css";
-import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/primitives";
-import { UserPreferences } from "@/lib/storage";
+import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components";
+import { UserPreferences } from "@/lib";
 import {
   OCRModelDownloader,
   useModelsStore,

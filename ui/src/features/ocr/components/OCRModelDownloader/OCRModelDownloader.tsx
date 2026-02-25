@@ -7,8 +7,8 @@
 import React, { useState } from "react";
 import { Download, Check, Loader2, X } from "lucide-react";
 import { useModelsStore } from "../../store";
-import { Dialog } from "@/primitives/dialog/Dialog";
-import { getErrorDialog } from "@/lib/helpers/dialogs";
+import { Dialog } from "@/components/dialog/Dialog";
+import { getErrorDialog } from "@/lib";
 import styles from "./OCRModelDownloader.module.css";
 
 const CircularProgress: React.FC<{ progress: number }> = ({ progress }) => (

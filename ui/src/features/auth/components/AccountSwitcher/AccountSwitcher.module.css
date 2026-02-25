@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/primitives/dropdown/Dropdown.shared.module.css";
+@import "@/components/dropdown/Dropdown.shared.module.css";
 
 .accountSwitcher {
   position: relative;

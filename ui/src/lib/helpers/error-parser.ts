@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { google } from "@/lib/config";
+import { google } from "@/lib";
 
 export interface ParsedError {
   title: string;

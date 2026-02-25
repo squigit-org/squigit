@@ -5,8 +5,8 @@
  */
 
 import React, { useRef, useEffect, useState } from "react";
-import { Profile } from "@/lib/api/tauri";
-import { Dialog } from "@/primitives";
+import { Profile } from "@/lib";
+import { Dialog } from "@/components";
 import { Avatar } from "./Avatar";
 import {
   ChevronDown,

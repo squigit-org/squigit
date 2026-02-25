@@ -6,7 +6,7 @@
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
-import { TextContextMenu } from "@/shell";
+import { TextContextMenu } from "@/layout";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -15,11 +15,11 @@ import {
   getExtension,
   attachmentFromPath,
   ACCEPTED_EXTENSIONS,
-} from "../AttachmentStrip";
+} from "@/features/chat";
 import { InputTextarea } from "./InputTextarea";
 import { InputCodeEditor, useCodeEditor } from "./InputCodeEditor";
 import { InputActions } from "./InputActions";
-import type { ChatInputProps } from "./types";
+import type { ChatInputProps } from "./chat-input.types";
 import styles from "./ChatInput.module.css";
 
 export const ChatInput: React.FC<ChatInputProps> = ({

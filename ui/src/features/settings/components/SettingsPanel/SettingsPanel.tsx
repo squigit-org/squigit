@@ -17,9 +17,9 @@ import {
   DropdownSectionTitle,
   DropdownAction,
   DropdownDivider,
-} from "@/primitives";
+} from "@/components";
 import styles from "./SettingsPanel.module.css";
-import { SettingsSection } from "@/shell";
+import { SettingsSection } from "@/layout";
 
 interface SettingsPanelProps {
   onOpenSettings: (section: SettingsSection) => void;

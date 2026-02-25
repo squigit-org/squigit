@@ -6,7 +6,6 @@
 
 export * from "./auth";
 export * from "./chat";
-export * from "./image";
 export * from "./ocr";
 export * from "./onboarding";
 export * from "./settings";

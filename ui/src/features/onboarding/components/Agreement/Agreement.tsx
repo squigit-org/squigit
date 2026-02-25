@@ -7,7 +7,8 @@
 import React, { useMemo } from "react";
 import { usePlatform } from "@/hooks";
 import { ChatBubble, Message } from "@/features";
-import { OnboardingShell, useShellContext } from "@/shell";
+import { useShellContext } from "@/providers/ShellProvider";
+import { OnboardingShell } from "@/features/onboarding";
 
 import styles from "./Agreement.module.css";
 

@@ -7,11 +7,11 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion, getTauriVersion } from "@tauri-apps/api/app";
-import { github } from "@/lib/config";
-import { prepareGitHubIssueReport, prepareMailReport } from "@/lib/helpers";
+import { github } from "@/lib";
+import { prepareGitHubIssueReport, prepareMailReport } from "@/lib";
 import { MarkGithubIcon, MailIcon, BugIcon } from "@primer/octicons-react";
-import { CodeBlock } from "@/primitives";
-import { useShellContext } from "@/shell";
+import { CodeBlock } from "@/components";
+import { useShellContext } from "@/providers/ShellProvider";
 import styles from "./HelpSection.module.css";
 
 export const HelpSection: React.FC = () => {

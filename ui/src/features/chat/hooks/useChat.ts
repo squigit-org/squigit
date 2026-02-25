@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from "react";
 
 import { Message } from "@/features/chat";
-import { ModelType } from "@/lib/config";
+
 import {
   startNewChatStream,
   sendMessage,
@@ -15,7 +15,8 @@ import {
   retryFromMessage,
   editUserMessage,
   cancelCurrentRequest,
-} from "@/lib/api/gemini";
+  ModelType,
+} from "@/lib";
 
 export const useChat = ({
   apiKey,
