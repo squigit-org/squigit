@@ -10,7 +10,8 @@ import { getDialogs } from "@/lib";
 import { Dialog } from "@/components";
 import { Welcome, Agreement, UpdateNotes } from "@/features";
 import { ShellProvider, useShellContext } from "@/providers/ShellProvider";
-import { ShellContextMenu, TitleBar, SidePanel, AppShell } from "@/layout";
+import { ShellContextMenu, TitleBar, SidePanel } from "@/layout";
+import { Chat } from "@/features/chat";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppRouter.module.css";
@@ -63,7 +64,7 @@ const AppRouterContent: React.FC = () => {
       );
     }
 
-    return <AppShell />;
+    return <Chat />;
   };
 
   const titleBar = (

@@ -4,200 +4,75 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
-import {
-  Message,
-  ChatInput,
-  ChatBubble,
-  Attachment,
-  ImageArtifact,
-} from "@/features/chat";
-import { InlineMenu, TextShimmer, Dialog, LoadingSpinner } from "@/components";
+import React, { useRef, useState, useEffect } from "react";
+import { useShellContext } from "@/providers/ShellProvider";
+import { useAttachments } from "./components/AttachmentStrip/useAttachments";
+import { buildAttachmentMention } from "./components/AttachmentStrip/attachment.types";
+import { ChatInput } from "./components/ChatInput/ChatInput";
+import { ImageArtifact } from "./components/ImageArtifact/ImageArtifact";
+import { InlineMenu, LoadingSpinner, TextShimmer, Dialog } from "@/components";
 import { useInlineMenu } from "@/hooks";
-import { SettingsSection } from "@/layout/overlays";
 import { invoke } from "@tauri-apps/api/core";
-import { parseGeminiError, type OcrFrame } from "@/lib";
+import { listen } from "@tauri-apps/api/event";
+import { useChatScroll } from "./hooks/useChatScroll";
+import { useInputHeight } from "./hooks/useInputHeight";
+import { useChatWheel } from "./hooks/useChatWheel";
+import { useChatError } from "./hooks/useChatError";
+import { MessageList } from "./components/ChatBubble/MessageList";
 import styles from "./Chat.module.css";
 
-export interface ChatProps {
-  messages: Message[];
-  streamingText: string;
-  isLoading: boolean;
-  isStreaming: boolean;
-  isAiTyping: boolean;
-  isAnalyzing: boolean;
-  isGenerating: boolean;
-  error: string | null;
-
-  input: string;
-  startupImage: {
-    path: string;
-    mimeType: string;
-    imageId: string;
-    fromHistory?: boolean;
-  } | null;
-
-  chatId: string | null;
-
-  onSend: () => void;
-  onInputChange: (value: string) => void;
-  onOpenSettings: (section: SettingsSection) => void;
-  onStreamComplete?: () => void;
-  onTypingChange?: (isTyping: boolean) => void;
-  onStopGeneration?: (truncatedText?: string) => void;
-  onRetryMessage?: (messageId: string, modelId?: string) => void;
-  onEditMessage?: (
-    messageId: string,
-    newText: string,
-    modelId?: string,
-  ) => void;
-  retryingMessageId?: string | null;
-
-  selectedModel: string;
-  onModelChange: (model: string) => void;
-  onSystemAction?: (actionId: string, value?: string) => void;
-
-  isNavigating?: boolean;
-
-  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
-
-  attachments: Attachment[];
-  onAttachmentsChange: (attachments: Attachment[]) => void;
-  onCaptureToInput?: () => void;
-
-  headerRef?: React.RefObject<HTMLDivElement | null>;
-  sessionLensUrl: string | null;
-  setSessionLensUrl: (url: string) => void;
-  chatTitle: string;
-  onDescribeEdits: (description: string) => void;
-  ocrData: OcrFrame;
-  onUpdateOCRData: (
-    modelId: string,
-    data: { text: string; box: number[][] }[],
-  ) => void;
-  imageInputValue: string;
-  onImageInputChange: (value: string) => void;
-  isImageExpanded?: boolean;
-  onToggleImageExpand?: () => void;
-  ocrEnabled: boolean;
-  autoExpandOCR?: boolean;
-  activeProfileId: string | null;
-  currentOcrModel: string;
-  onOcrModelChange: (model: string) => void;
-  isOcrScanning?: boolean;
-  onOcrScanningChange?: (scanning: boolean) => void;
-}
-
-export const Chat: React.FC<ChatProps> = ({
-  messages,
-  streamingText,
-  isLoading,
-  isAiTyping,
-  isAnalyzing,
-  isGenerating,
-  error,
-  input,
-  startupImage,
-  chatId,
-  onSend,
-  onInputChange,
-  onOpenSettings,
-  onStreamComplete,
-  onTypingChange,
-  onStopGeneration,
-  onRetryMessage,
-  onEditMessage,
-  retryingMessageId,
-  selectedModel,
-  onModelChange,
-  onSystemAction,
-  scrollContainerRef,
-  isNavigating,
-  attachments,
-  onAttachmentsChange,
-  onCaptureToInput,
-  headerRef,
-  sessionLensUrl,
-  setSessionLensUrl,
-  chatTitle,
-  onDescribeEdits,
-  ocrData,
-  onUpdateOCRData,
-  imageInputValue,
-  onImageInputChange,
-  isImageExpanded = false,
-  onToggleImageExpand,
-  ocrEnabled,
-  autoExpandOCR,
-  activeProfileId,
-  currentOcrModel,
-  onOcrModelChange,
-  isOcrScanning,
-  onOcrScanningChange,
-}) => {
+export const Chat: React.FC = () => {
+  const shell = useShellContext();
+  const { attachments, setAttachments, addFromPath, clearAttachments } =
+    useAttachments();
   const [stopRequested, setStopRequested] = useState(false);
-  const [showSpinner, setShowSpinner] = useState(false);
-  const navigationStartTimeRef = useRef<number>(0);
-  const MIN_SPINNER_DURATION = 400;
-  const prevChatIdRef = useRef<string | null>(null);
-  const prevMessageCountRef = useRef(messages.length);
 
+  // Refs
+  const headerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const wasAtBottomRef = useRef(false);
+
+  // Hooks
+  const error = shell.chat.error || shell.system.systemError;
+  const { isErrorOpen, parsedError, errorActions } = useChatError(
+    error,
+    shell.system.openSettings,
+  );
+  const { isImageExpanded, setIsImageExpanded } = useChatWheel(
+    headerRef,
+    shell.chatHistory.activeSessionId,
+  );
+
+  const { inputContainerRef, inputHeight } = useInputHeight({
+    scrollContainerRef,
+    wasAtBottomRef,
+  });
+
+  const { isSpinnerVisible } = useChatScroll({
+    messages: shell.chat.messages,
+    chatId: shell.chatHistory.activeSessionId,
+    isNavigating: shell.isNavigating,
+    inputHeight,
+    scrollContainerRef,
+    wasAtBottomRef,
+  });
+
+  // Capture listen
   useEffect(() => {
-    if (isNavigating) {
-      setShowSpinner(true);
-      navigationStartTimeRef.current = Date.now();
-    } else {
-      const elapsed = Date.now() - navigationStartTimeRef.current;
-      const remaining = Math.max(0, MIN_SPINNER_DURATION - elapsed);
-      const t = setTimeout(() => {
-        setShowSpinner(false);
-      }, remaining);
-      return () => clearTimeout(t);
-    }
-  }, [isNavigating]);
-
-  const [isErrorDismissed, setIsErrorDismissed] = useState(false);
-
-  useEffect(() => {
-    setIsErrorDismissed(false);
-  }, [error]);
-
-  const isSpinnerVisible = isNavigating || showSpinner;
-
-  useLayoutEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el || isSpinnerVisible) return;
-
-    const chatChanged = prevChatIdRef.current !== chatId;
-    const messageCountChanged = messages.length !== prevMessageCountRef.current;
-
-    const scrollToBottom = () => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+    const unlistenPromise = listen<{ tempPath: string }>(
+      "capture-to-input",
+      (event) => {
+        if (event.payload && event.payload.tempPath) {
+          addFromPath(event.payload.tempPath);
+        }
+      },
+    );
+    return () => {
+      unlistenPromise.then((fn) => fn());
     };
+  }, [addFromPath]);
 
-    if (chatChanged) {
-      scrollToBottom();
-      requestAnimationFrame(scrollToBottom);
-      setTimeout(scrollToBottom, 50);
-      setTimeout(scrollToBottom, 150);
-      prevChatIdRef.current = chatId;
-    } else if (messageCountChanged) {
-      if (prevMessageCountRef.current === 0 && messages.length > 0) {
-        const isStreamCompletion =
-          messages.length === 1 && messages[0]?.role === "model";
-        if (!isStreamCompletion) {
-          scrollToBottom();
-        }
-      } else {
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage?.role === "user") {
-          el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-        }
-      }
-    }
-    prevMessageCountRef.current = messages.length;
-  }, [messages, chatId, scrollContainerRef, isSpinnerVisible]);
-
+  // Menu Hooks
   const showFlatMenuRef = useRef<
     ((rect: { left: number; width: number; top: number }) => void) | null
   >(null);
@@ -209,7 +84,6 @@ export const Chat: React.FC<ChatProps> = ({
     const anchorNode = selection.anchorNode;
     const element =
       anchorNode instanceof Element ? anchorNode : anchorNode.parentElement;
-
     const bubble = element?.closest('[data-component="chat-bubble"]');
 
     if (bubble) {
@@ -225,17 +99,14 @@ export const Chat: React.FC<ChatProps> = ({
         10,
         Math.min(centerX - menuWidth / 2, window.innerWidth - menuWidth - 10),
       );
-
       const targetTop = Math.max(10, rect.top + 2);
 
-      const targetRect = {
-        left: targetLeft,
-        top: targetTop,
-        width: menuWidth,
-      };
-
       if (showFlatMenuRef.current) {
-        showFlatMenuRef.current(targetRect);
+        showFlatMenuRef.current({
+          left: targetLeft,
+          top: targetTop,
+          width: menuWidth,
+        });
       }
     }
   };
@@ -258,242 +129,105 @@ export const Chat: React.FC<ChatProps> = ({
     showFlatMenuRef.current = showFlatMenu;
   }, [showFlatMenu]);
 
-  const renderError = () => {
-    if (!error) return null;
-
-    const parsedError = parseGeminiError(error);
-
-    const getActions = () => {
-      const actions: any[] = [];
-      actions.push({
-        label: "Dismiss",
-        onClick: () => setIsErrorDismissed(true),
-        variant: "secondary",
-      });
-
-      if (parsedError.actionType === "RETRY_OR_SETTINGS") {
-        actions.push({
-          label: "Change API Key",
-          onClick: () => {
-            onOpenSettings("apikeys");
-            setIsErrorDismissed(true);
-          },
-          variant: "secondary",
-        });
-      }
-
-      if (
-        parsedError.actionType === "RETRY_OR_LINK" &&
-        parsedError.meta?.link
-      ) {
-        actions.push({
-          label: parsedError.meta.linkLabel || "Open Link",
-          onClick: () => {
-            invoke("open_external_url", {
-              url: parsedError.meta?.link,
-            });
-            setIsErrorDismissed(true);
-          },
-          variant: "secondary",
-        });
-      }
-
-      return actions;
-    };
-
-    return (
-      <Dialog
-        isOpen={!!error && !isErrorDismissed}
-        variant="error"
-        title={parsedError.title}
-        message={parsedError.message}
-        actions={getActions()}
-      />
-    );
+  // Handlers
+  const handleSend = () => {
+    let finalInput = shell.input;
+    if (attachments.length > 0) {
+      const mentions = attachments
+        .map((a) => buildAttachmentMention(a.path))
+        .join("\n");
+      finalInput = `${shell.input}\n\n${mentions}`.trim();
+    }
+    shell.chat.handleSend(finalInput, shell.inputModel);
+    shell.setInput("");
+    clearAttachments();
   };
 
-  const inputContainerRef = useRef<HTMLDivElement>(null);
-  const [inputHeight, setInputHeight] = useState(0);
-  const previousInputHeightRef = useRef(0);
-  const wasAtBottomRef = useRef(false);
-
-  useEffect(() => {
-    const el = inputContainerRef.current;
-    if (!el) return;
-
-    const observer = new ResizeObserver((entries) => {
-      const scrollEl = scrollContainerRef.current;
-      if (scrollEl) {
-        const distanceFromBottom =
-          scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
-        wasAtBottomRef.current = distanceFromBottom < 20;
-      }
-
-      for (const entry of entries) {
-        setInputHeight(entry.contentRect.height);
-      }
-    });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [scrollContainerRef]);
-
-  useLayoutEffect(() => {
-    const scrollEl = scrollContainerRef.current;
-    if (!scrollEl) return;
-
-    if (isSpinnerVisible) return;
-
-    if (inputHeight > 0) {
+  const handleCaptureToInput = async () => {
+    try {
+      await invoke("spawn_capture_to_input");
+    } catch (err) {
+      console.error("Failed to spawn capture to input:", err);
     }
-
-    const isGrowing = inputHeight > previousInputHeightRef.current;
-
-    if (!isGrowing && wasAtBottomRef.current) {
-      scrollEl.scrollTop = scrollEl.scrollHeight;
-    }
-    previousInputHeightRef.current = inputHeight;
-  }, [inputHeight, isSpinnerVisible]);
-
-  const retryIndex = retryingMessageId
-    ? messages.findIndex((m) => m.id === retryingMessageId)
-    : -1;
-
-  const displayMessages =
-    retryIndex !== -1 ? messages.slice(0, retryIndex + 1) : messages;
+  };
 
   return (
-    <>
+    <div className={styles.appContainer}>
       <div ref={headerRef} className={styles.headerContainer}>
         <ImageArtifact
-          startupImage={startupImage}
-          sessionLensUrl={sessionLensUrl}
-          setSessionLensUrl={setSessionLensUrl}
-          chatTitle={chatTitle}
-          onDescribeEdits={onDescribeEdits}
-          ocrData={ocrData}
-          onUpdateOCRData={onUpdateOCRData}
-          onOpenSettings={onOpenSettings}
+          startupImage={shell.system.startupImage}
+          sessionLensUrl={shell.sessionLensUrl}
+          setSessionLensUrl={shell.handleUpdateLensUrl}
+          chatTitle={shell.chatTitle}
+          onDescribeEdits={async (desc) => shell.chat.handleDescribeEdits(desc)}
+          ocrData={shell.ocrData}
+          onUpdateOCRData={shell.handleUpdateOCRData}
+          onOpenSettings={shell.system.openSettings}
           isVisible={true}
           scrollContainerRef={scrollContainerRef}
-          chatId={chatId}
-          inputValue={imageInputValue}
-          onInputChange={onImageInputChange}
-          onToggleExpand={onToggleImageExpand}
-          ocrEnabled={ocrEnabled}
-          autoExpandOCR={autoExpandOCR}
-          activeProfileId={activeProfileId}
-          currentOcrModel={currentOcrModel}
-          onOcrModelChange={onOcrModelChange}
-          isOcrScanning={isOcrScanning}
-          onOcrScanningChange={onOcrScanningChange}
+          chatId={shell.chatHistory.activeSessionId}
+          inputValue={shell.imageInput}
+          onInputChange={shell.setImageInput}
+          onToggleExpand={() => setIsImageExpanded(!isImageExpanded)}
+          ocrEnabled={shell.system.ocrEnabled}
+          autoExpandOCR={shell.system.autoExpandOCR}
+          activeProfileId={shell.system.activeProfile?.id || null}
+          currentOcrModel={shell.system.sessionOcrLanguage}
+          onOcrModelChange={shell.system.setSessionOcrLanguage}
+          isOcrScanning={shell.isOcrScanning}
+          onOcrScanningChange={shell.setIsOcrScanning}
           isExpanded={isImageExpanded}
         />
       </div>
       <div className="flex-1 min-h-0 relative flex flex-col">
         <div
-          className={`${styles.container} ${!startupImage ? styles.noImage : ""}`}
+          className={`${styles.container} ${!shell.system.startupImage ? styles.noImage : ""}`}
           ref={scrollContainerRef}
           style={
-            {
-              "--input-height": `${inputHeight}px`,
-            } as React.CSSProperties
+            { "--input-height": `${inputHeight}px` } as React.CSSProperties
           }
         >
           <main style={{ paddingBottom: inputHeight + 10 }}>
             <div
-              className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-0 ${isSpinnerVisible || isAnalyzing ? "-mt-2" : "pt-3"}`}
+              className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-0 ${isSpinnerVisible || shell.chat.isAnalyzing ? "-mt-2" : "pt-3"}`}
             >
-              {isAnalyzing && <TextShimmer text="Analyzing your image" />}
+              {shell.chat.isAnalyzing && (
+                <TextShimmer text="Analyzing your image" />
+              )}
 
-              {renderError()}
+              {parsedError && (
+                <Dialog
+                  isOpen={isErrorOpen}
+                  variant="error"
+                  title={parsedError.title}
+                  message={parsedError.message}
+                  actions={errorActions}
+                />
+              )}
 
               {isSpinnerVisible ? (
                 <div className="flex justify-center pt-3">
                   <LoadingSpinner />
                 </div>
               ) : (
-                <div className="flex flex-col-reverse gap-[10px]">
-                  {isGenerating && !retryingMessageId && (
-                    <TextShimmer text="Planning next moves" />
-                  )}
-                  {streamingText && (
-                    <div className="mb-0">
-                      <ChatBubble
-                        message={{
-                          id: "streaming-temp",
-                          role: "model",
-                          text: streamingText,
-                          timestamp: Date.now(),
-                        }}
-                        isStreamed={true}
-                        onStreamComplete={onStreamComplete}
-                        onTypingChange={onTypingChange}
-                        stopRequested={stopRequested}
-                        onStopGeneration={(truncatedText) => {
-                          setStopRequested(false);
-                          onStopGeneration?.(truncatedText);
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {displayMessages
-                    .slice()
-                    .reverse()
-                    .map((msg, index) => {
-                      const isLatestModel =
-                        msg.role === "model" &&
-                        index === 0 &&
-                        !msg.alreadyStreamed;
-                      if (isAnalyzing && msg.id === retryingMessageId)
-                        return null;
-                      return (
-                        <div key={msg.id} className="mb-0">
-                          <ChatBubble
-                            message={msg}
-                            isStreamed={isLatestModel}
-                            onStreamComplete={
-                              isLatestModel ? onStreamComplete : undefined
-                            }
-                            onTypingChange={
-                              isLatestModel ? onTypingChange : undefined
-                            }
-                            stopRequested={
-                              isLatestModel ? stopRequested : undefined
-                            }
-                            onStopGeneration={
-                              isLatestModel
-                                ? (truncatedText) => {
-                                    setStopRequested(false);
-                                    onStopGeneration?.(truncatedText);
-                                  }
-                                : undefined
-                            }
-                            onRetry={
-                              msg.role !== "user" && onRetryMessage
-                                ? () => onRetryMessage(msg.id, selectedModel)
-                                : undefined
-                            }
-                            isRetrying={msg.id === retryingMessageId}
-                            onEdit={
-                              msg.role === "user" && onEditMessage
-                                ? (newText) =>
-                                    onEditMessage(
-                                      msg.id,
-                                      newText,
-                                      selectedModel,
-                                    )
-                                : undefined
-                            }
-                            onAction={
-                              msg.role === "system" ? onSystemAction : undefined
-                            }
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
+                <MessageList
+                  messages={shell.chat.messages}
+                  streamingText={shell.chat.streamingText}
+                  isGenerating={shell.chat.isGenerating}
+                  retryingMessageId={shell.chat.retryingMessageId}
+                  stopRequested={stopRequested}
+                  selectedModel={shell.inputModel}
+                  isAnalyzing={shell.chat.isAnalyzing}
+                  onStreamComplete={shell.chat.handleStreamComplete}
+                  onTypingChange={shell.chat.setIsAiTyping}
+                  onStopGeneration={(truncatedText) =>
+                    shell.chat.handleStopGeneration(truncatedText)
+                  }
+                  onStopRequestedChange={setStopRequested}
+                  onRetryMessage={shell.chat.handleRetryMessage}
+                  onEditMessage={shell.chat.handleEditMessage}
+                  onSystemAction={shell.handleSystemAction}
+                />
               )}
             </div>
           </main>
@@ -506,25 +240,25 @@ export const Chat: React.FC<ChatProps> = ({
         >
           <div style={{ pointerEvents: "auto", width: "100%" }}>
             <ChatInput
-              startupImage={startupImage}
-              input={input}
-              onInputChange={onInputChange}
-              onSend={onSend}
-              isLoading={isLoading}
-              isAiTyping={isAiTyping}
-              isStoppable={isAnalyzing || isGenerating}
+              startupImage={shell.system.startupImage}
+              input={shell.input}
+              onInputChange={shell.setInput}
+              onSend={handleSend}
+              isLoading={shell.chat.isLoading}
+              isAiTyping={shell.chat.isAiTyping}
+              isStoppable={shell.chat.isAnalyzing || shell.chat.isGenerating}
               onStopGeneration={() => {
-                if (isAiTyping) {
+                if (shell.chat.isAiTyping) {
                   setStopRequested(true);
                 } else {
-                  onStopGeneration?.();
+                  shell.chat.handleStopGeneration();
                 }
               }}
-              selectedModel={selectedModel}
-              onModelChange={onModelChange}
+              selectedModel={shell.inputModel}
+              onModelChange={shell.setInputModel}
               attachments={attachments}
-              onAttachmentsChange={onAttachmentsChange}
-              onCaptureToInput={onCaptureToInput}
+              onAttachmentsChange={setAttachments}
+              onCaptureToInput={handleCaptureToInput}
             />
           </div>
         </div>
@@ -539,6 +273,6 @@ export const Chat: React.FC<ChatProps> = ({
           onSwitchPage={switchPage}
         />
       </div>
-    </>
+    </div>
   );
 };

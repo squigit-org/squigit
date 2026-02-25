@@ -91,3 +91,17 @@
     linear-gradient(to bottom, black calc(100% - 12px), transparent 100%);
   -webkit-mask-composite: source-in;
 }
+
+.appContainer {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  background-color: transparent;
+  color: var(--neutral-100);
+  position: relative;
+}
+
+.appContainer::selection {
+  background-color: var(--black-500-30);
+  color: var(--neutral-100);
+}
