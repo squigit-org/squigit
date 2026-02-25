@@ -334,7 +334,7 @@ export const SidePanel: React.FC = () => {
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [isHoverDisabled, setIsHoverDisabled] = useState(false);
 
-  const userChats = chats.filter((c) => !c.id.startsWith("__system_"));
+  const userChats = chats.filter((c: any) => !c.id.startsWith("__system_"));
   const groupedChats = groupChatsByDate(userChats);
 
   const update = getPendingUpdate();
@@ -391,7 +391,7 @@ export const SidePanel: React.FC = () => {
 
   const selectAll = () => {
     setSelectedIds(
-      selectedIds.length === chats.length ? [] : chats.map((c) => c.id),
+      selectedIds.length === chats.length ? [] : chats.map((c: any) => c.id),
     );
   };
 

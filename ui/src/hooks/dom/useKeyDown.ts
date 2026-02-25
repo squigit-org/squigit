@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { usePlatform } from "./usePlatform";
+import { usePlatform } from "@/hooks";
 
 type KeyHandler = (e: React.KeyboardEvent) => void;
 type KeyMap = Record<string, KeyHandler>;

@@ -5,8 +5,8 @@
  */
 
 import { useEffect } from "react";
-import packageJson from "../../package.json";
 import { github } from "@/lib";
+import packageJson from "../../../package.json";
 
 const RELEASE_NOTES_URL = github.rawChangelog;
 

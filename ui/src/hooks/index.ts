@@ -4,15 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./useClipboard";
-export * from "./useCodeHighlighter";
-export * from "./useCopyToClipboard";
-export * from "./useHistoryState";
-export * from "./useKeyDown";
-export * from "./usePlatform";
-export * from "./useSystemSync";
-export * from "./useTextContextMenu";
-export * from "./useTextEditor";
-export * from "./useTextSelection";
-export * from "./useTheme";
-export * from "./useUpdateCheck";
+export * from "./app/useApp";
+
+export * from "./system/useSystemSync";
+export * from "./system/useUpdateCheck";
+
+export * from "./dom/useClipboard";
+export * from "./dom/useCopyToClipboard";
+export * from "./dom/useKeyDown";
+
+export * from "./editor/useCodeHighlighter";
+export * from "./editor/useHistoryState";
+export * from "./editor/useTextContextMenu";
+export * from "./editor/useTextEditor";
+export * from "./editor/useTextSelection";
+export * from "./core/useTheme";
+export * from "./core/usePlatform";

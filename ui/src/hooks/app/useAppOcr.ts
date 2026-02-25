@@ -1,0 +1,72 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useCallback, useEffect } from "react";
+import { OcrFrame, saveImgbbUrl, saveOcrData } from "@/lib";
+
+export const useAppOcr = (
+  activeSessionId: string | null,
+  sessionOcrLanguage: string | null,
+) => {
+  const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
+  const [ocrData, setOcrData] = useState<OcrFrame>({});
+  const [isOcrScanning, setIsOcrScanning] = useState(false);
+
+  const handleUpdateLensUrl = useCallback(
+    (url: string | null) => {
+      setSessionLensUrl(url);
+      if (activeSessionId && url) {
+        saveImgbbUrl(activeSessionId, url).catch((e) =>
+          console.error("Failed to save ImgBB URL", e),
+        );
+      }
+    },
+    [activeSessionId],
+  );
+
+  const handleUpdateOCRData = useCallback(
+    (modelId: string, data: { text: string; box: number[][] }[]) => {
+      const regions = data.map((d) => ({
+        text: d.text,
+        bbox: d.box,
+      }));
+      console.log(`[useApp] Updating OCR data for model: ${modelId}`);
+      setOcrData((prev) => {
+        const newState = {
+          ...prev,
+          [modelId]: regions,
+        };
+        console.log(
+          `[useApp] New OCR Data keys: ${Object.keys(newState).join(", ")}`,
+        );
+        return newState;
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const currentModelId = sessionOcrLanguage || "pp-ocr-v4-en";
+    const currentData = ocrData[currentModelId];
+
+    if (activeSessionId && currentData && currentData.length > 0) {
+      saveOcrData(activeSessionId, currentModelId, currentData).catch((e) =>
+        console.error("Failed to save OCR", e),
+      );
+    }
+  }, [ocrData, activeSessionId, sessionOcrLanguage]);
+
+  return {
+    sessionLensUrl,
+    setSessionLensUrl,
+    handleUpdateLensUrl,
+    ocrData,
+    setOcrData,
+    handleUpdateOCRData,
+    isOcrScanning,
+    setIsOcrScanning,
+  };
+};

@@ -5,9 +5,9 @@
  */
 
 import React, { createContext, useContext, ReactNode } from "react";
-import { useShell } from "../hooks/useShell";
+import { useApp } from "@/hooks";
 
-type AppState = ReturnType<typeof useShell>;
+type AppState = ReturnType<typeof useApp>;
 
 const AppContext = createContext<AppState | null>(null);
 
@@ -22,7 +22,7 @@ export const useAppContext = () => {
 export const AppProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const app = useShell();
+  const app = useApp();
 
   return <AppContext.Provider value={app}>{children}</AppContext.Provider>;
 };

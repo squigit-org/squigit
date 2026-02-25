@@ -6,8 +6,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useHistoryState } from "./useHistoryState";
-import { useClipboard } from "./useClipboard";
-import { useKeyDown } from "./useKeyDown";
+import { useClipboard, useKeyDown } from "@/hooks";
 
 interface UseTextEditorProps {
   value: string;
