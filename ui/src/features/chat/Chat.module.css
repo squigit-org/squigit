@@ -90,7 +90,7 @@
   -webkit-mask-composite: source-in;
 }
 
-.appContainer {
+.chatContainer {
   display: flex;
   height: 100%;
   flex-direction: column;
@@ -99,7 +99,7 @@
   position: relative;
 }
 
-.appContainer::selection {
+.chatContainer::selection {
   background-color: var(--black-500-30);
   color: var(--neutral-100);
 }

@@ -163,7 +163,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
     >
       <div
         ref={appRef}
-        className={`${styles.app} ${isOpen ? styles.open : ""}`}
+        className={`${styles.container} ${isOpen ? styles.open : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.sidebar}>

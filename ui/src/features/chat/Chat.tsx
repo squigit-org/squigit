@@ -152,7 +152,7 @@ export const Chat: React.FC = () => {
   };
 
   return (
-    <div className={styles.appContainer}>
+    <div className={styles.chatContainer}>
       <div ref={headerRef} className={styles.headerContainer}>
         <ImageArtifact
           startupImage={app.system.startupImage}

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-.appContainer {
+.chatContainer {
   display: flex;
   flex-direction: column;
   height: 100vh;
