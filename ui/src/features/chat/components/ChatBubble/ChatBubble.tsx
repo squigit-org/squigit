@@ -18,14 +18,14 @@ import {
   remarkDisableIndentedCode,
   type StreamSegment,
 } from "@/lib";
-import { Message } from "@/features/chat";
 import { BubbleEditor } from "./BubbleEditor";
 import {
   parseAttachmentPaths,
   stripAttachmentMentions,
   attachmentFromPath,
   AttachmentStrip,
-} from "@/features/chat";
+  Message,
+} from "@/features";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import styles from "./ChatBubble.module.css";

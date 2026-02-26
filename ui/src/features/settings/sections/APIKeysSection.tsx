@@ -8,10 +8,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { google, github } from "@/lib";
-import { GlowCard } from "@/components/glow-card";
+import { GlowCard } from "@/components";
 import { TextContextMenu } from "@/layout";
-import { useTextContextMenu, useTextEditor } from "@/hooks";
+import { useTextContextMenu } from "@/hooks";
 import styles from "./APIKeysSection.module.css";
+import { useTextEditor } from "@/hooks/useTextEditor";
 
 interface APIKeysSectionProps {
   geminiKey: string;

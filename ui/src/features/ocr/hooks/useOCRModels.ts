@@ -10,7 +10,7 @@ import {
   AVAILABLE_MODELS,
   getInstalledModelIds,
   downloadModel,
-} from "@/features/ocr";
+} from "@/features";
 
 export const useOCRModels = () => {
   const [ocrModels, setOCRModels] = useState<OcrModelStatus[]>(() =>

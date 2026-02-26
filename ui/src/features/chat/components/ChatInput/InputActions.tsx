@@ -8,12 +8,12 @@ import React, { useState, useRef, useCallback } from "react";
 import { Paperclip, ArrowUp, Square, Camera } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { MODELS } from "@/lib";
-import { Tooltip } from "@/components/tooltip/Tooltip";
 import {
   Dropdown,
   DropdownItem,
   DropdownSectionTitle,
-} from "@/components/dropdown";
+  Tooltip,
+} from "@/components";
 import { VoiceButton } from "./VoiceButton";
 import styles from "./ChatInput.module.css";
 
@@ -23,7 +23,7 @@ const GEMINI_MODELS = MODELS.map((m) => ({
   triggerLabel: m.name.replace("Gemini ", ""),
 }));
 
-import { ACCEPTED_EXTENSIONS } from "@/features/chat";
+import { ACCEPTED_EXTENSIONS } from "@/features";
 
 interface InputActionsProps {
   onSubmit: () => void;

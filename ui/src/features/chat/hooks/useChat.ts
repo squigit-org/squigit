@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef } from "react";
 
-import { Message } from "@/features/chat";
+import { Message } from "@/features";
 
 import {
   startNewChatStream,

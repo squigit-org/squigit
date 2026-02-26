@@ -7,9 +7,9 @@
 import React from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
 import { TextContextMenu } from "@/layout";
-import { useTextContextMenu, useTextEditor } from "@/hooks";
-import { OCRModelSwitcher } from "@/features/ocr";
-import { SettingsSection } from "@/features/settings";
+import { useTextContextMenu } from "@/hooks";
+import { useTextEditor } from "@/hooks/useTextEditor";
+import { OCRModelSwitcher, SettingsSection } from "@/features";
 import styles from "./ImageArtifact.module.css";
 
 interface ImageSearchInputProps {

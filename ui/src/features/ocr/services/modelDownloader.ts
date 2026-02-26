@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { invoke } from "@tauri-apps/api/core";
-import { OcrModel } from "@/features/ocr";
+import { OcrModel } from "@/features";
 
 /**
  * Triggers the backend to download and extract an OCR model.

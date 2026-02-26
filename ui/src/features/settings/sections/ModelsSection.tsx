@@ -8,11 +8,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components";
 import { UserPreferences } from "@/lib";
-import {
-  OCRModelDownloader,
-  useModelsStore,
-  getModelById,
-} from "@/features/ocr";
+import { OCRModelDownloader, useModelsStore, getModelById } from "@/features";
 
 interface ModelsSectionProps {
   localModel: string;

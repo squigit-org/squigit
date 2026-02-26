@@ -4,9 +4,56 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./auth";
-export * from "./chat";
-export * from "./ocr";
-export * from "./onboarding";
-export * from "./settings";
-export * from "./syntax";
+export * from "./auth/components/AuthButton";
+export * from "./auth/components/AccountSwitcher";
+export * from "./auth/hooks/useAuth";
+
+export * from "./chat/components/ChatBubble/ChatBubble";
+export * from "./chat/components/ChatInput/ChatInput";
+export { ImageArtifact } from "./chat/components/ImageArtifact/ImageArtifact";
+export { AttachmentStrip } from "./chat/components/AttachmentStrip/AttachmentStrip";
+export type { AttachmentStripProps } from "./chat/components/AttachmentStrip/AttachmentStrip";
+export { useAttachments } from "./chat/components/AttachmentStrip/useAttachments";
+export type { Attachment } from "./chat/components/AttachmentStrip/attachment.types";
+export {
+  IMAGE_EXTENSIONS,
+  ACCEPTED_EXTENSIONS,
+  isImageExtension,
+  getExtension,
+  parseAttachmentPaths,
+  stripAttachmentMentions,
+  buildAttachmentMention,
+  attachmentFromPath,
+} from "./chat/components/AttachmentStrip/attachment.types";
+export * from "./chat/components/ImageArtifact/ImageSearchInput";
+export * from "./chat/components/ImageArtifact/ImageTextMenu";
+export * from "./chat/components/ImageArtifact/ImageToolbar";
+export * from "./chat/hooks/useChat";
+export * from "./chat/hooks/useChatTitle";
+export * from "./chat/hooks/useChatHistory";
+export * from "./chat/chat.types";
+export * from "./chat/Chat";
+
+export * from "./ocr/components/OCRModelDownloader";
+export * from "./ocr/components/OCRModelSwitcher";
+export * from "./ocr/components/OCRTextCanvas";
+export * from "./ocr/hooks/useOCRModels";
+export * from "./ocr/hooks/useTextSelection";
+export * from "./ocr/services/modelDownloader";
+export * from "./ocr/services/modelRegistry";
+export * from "./ocr/ocr-models.types";
+export * from "./ocr/ocr-models.store";
+
+export * from "./onboarding/OnboardingLayout";
+export * from "./onboarding/screens/Welcome";
+export * from "./onboarding/screens/Agreement";
+export * from "./onboarding/screens/UpdateNotes";
+
+export * from "./settings/components/CapturePreview";
+export * from "./settings/components/SettingsPanel";
+export * from "./settings/sections/APIKeysSection";
+export * from "./settings/sections/GeneralSection";
+export * from "./settings/sections/HelpSection";
+export * from "./settings/sections/ModelsSection";
+export * from "./settings/sections/PersonalizationSection";
+export * from "./settings/SettingsOverlay";

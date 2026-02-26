@@ -25,7 +25,7 @@ import {
   APIKeysSection,
   PersonalizationSection,
   HelpSection,
-} from "@/features/settings";
+} from "@/features";
 import { AppContextMenu } from "@/layout";
 
 import styles from "./SettingsOverlay.module.css";

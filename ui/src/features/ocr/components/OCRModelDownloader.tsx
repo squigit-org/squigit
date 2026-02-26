@@ -6,8 +6,8 @@
 
 import React, { useState } from "react";
 import { Download, Check, Loader2, X } from "lucide-react";
-import { useModelsStore } from "@/features/ocr";
-import { Dialog } from "@/components/dialog/Dialog";
+import { useModelsStore } from "@/features";
+import { Dialog } from "@/components";
 import { getErrorDialog } from "@/lib";
 import styles from "./OCRModelDownloader.module.css";
 

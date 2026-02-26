@@ -29,6 +29,7 @@ export * from "./helpers/reporting.ts";
 export * from "./markdown/parser";
 export * from "./markdown/plugins";
 export * from "./markdown/tokenizer";
+export * from "./markdown/code-highlighter";
 
 // storage
 export * from "./storage/chat";

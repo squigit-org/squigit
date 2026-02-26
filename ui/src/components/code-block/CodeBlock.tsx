@@ -7,7 +7,7 @@
 import { memo, forwardRef } from "react";
 import { CodeBlockEditor } from "./variants/CodeBlockEditor";
 import { CodeBlockViewer } from "./variants/CodeBlockViewer";
-import type { CodeBlockProps } from "./types/code-block.types";
+import type { CodeBlockProps } from "./code-block.types";
 
 const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
   (

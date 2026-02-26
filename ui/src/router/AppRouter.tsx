@@ -8,10 +8,9 @@ import React from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getDialogs } from "@/lib";
 import { Dialog } from "@/components";
-import { Welcome, Agreement, UpdateNotes } from "@/features";
+import { Welcome, Agreement, UpdateNotes, Chat } from "@/features";
 import { AppProvider, useAppContext } from "@/providers/AppProvider";
 import { AppContextMenu, TitleBar, SidePanel } from "@/layout";
-import { Chat } from "@/features/chat";
 
 import "katex/dist/katex.min.css";
 import styles from "./AppRouter.module.css";
@@ -150,7 +149,7 @@ const AppRouterContent: React.FC = () => {
   if (app.isLoadingState) {
     return (
       <div
-        className={styles.chatContainer}
+        className={styles.appContainer}
         onContextMenu={app.handleContextMenu}
       >
         {titleBar}
@@ -161,7 +160,7 @@ const AppRouterContent: React.FC = () => {
   if (app.isImageMissing) {
     return (
       <div
-        className={styles.chatContainer}
+        className={styles.appContainer}
         onContextMenu={app.handleContextMenu}
       >
         {titleBar}
@@ -174,7 +173,7 @@ const AppRouterContent: React.FC = () => {
     <div
       ref={app.containerRef}
       onContextMenu={app.handleContextMenu}
-      className={styles.chatContainer}
+      className={styles.appContainer}
     >
       {titleBar}
       {appDialogs}

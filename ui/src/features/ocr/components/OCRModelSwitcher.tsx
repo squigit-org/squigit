@@ -7,8 +7,7 @@
 import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check, PackagePlus } from "lucide-react";
-import { SettingsSection } from "@/features/settings";
-import { useModelsStore, getLanguageCode } from "@/features/ocr";
+import { SettingsSection, useModelsStore, getLanguageCode } from "@/features";
 import styles from "./OCRModelSwitcher.module.css";
 
 interface OCRModelSwitcherProps {

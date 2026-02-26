@@ -15,7 +15,7 @@ import {
   getExtension,
   attachmentFromPath,
   ACCEPTED_EXTENSIONS,
-} from "@/features/chat";
+} from "@/features";
 import { InputTextarea } from "./InputTextarea";
 import { InputCodeEditor, useCodeEditor } from "./InputCodeEditor";
 import { InputActions } from "./InputActions";

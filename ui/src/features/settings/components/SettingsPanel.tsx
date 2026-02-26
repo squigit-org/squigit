@@ -19,7 +19,7 @@ import {
   DropdownDivider,
 } from "@/components";
 import styles from "./SettingsPanel.module.css";
-import { SettingsSection } from "@/features/settings";
+import { SettingsSection } from "@/features";
 
 interface SettingsPanelProps {
   onOpenSettings: (section: SettingsSection) => void;
