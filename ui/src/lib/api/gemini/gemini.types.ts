@@ -10,3 +10,22 @@ export interface AppConfig {
     api_endpoint: string;
   };
 }
+
+export interface GeminiPart {
+  text?: string;
+  inlineData?: {
+    mimeType: string;
+    data: string;
+  };
+}
+
+export interface GeminiContent {
+  role: string;
+  parts: GeminiPart[];
+}
+
+export type Content = GeminiContent;
+
+export interface GeminiEvent {
+  token: string;
+}

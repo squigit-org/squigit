@@ -10,6 +10,7 @@ export * from "./auth/useAuth";
 
 export * from "./system/useSystemSync";
 export * from "./system/useUpdateCheck";
+export * from "./system/useChatLifecycle";
 
 export * from "./dom/useClipboard";
 export * from "./dom/useCopyToClipboard";
@@ -20,5 +21,7 @@ export * from "./editor/useHistoryState";
 export * from "./editor/useTextContextMenu";
 export * from "./editor/useTextEditor";
 export * from "./editor/useTextSelection";
+
 export * from "./core/useTheme";
 export * from "./core/usePlatform";
+export * from "./core/useGeminiEngine";
