@@ -234,7 +234,7 @@ export const useGeminiEngine = (config: {
     }
   };
 
-  const handleDescribeEdits = async () => {
+  const handleDescribeEdits = async (_editDescription: string) => {
     if (!config.apiKey || !config.startupImage) {
       if (!config.apiKey && config.onMissingApiKey) {
         config.onMissingApiKey();
