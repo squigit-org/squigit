@@ -5,20 +5,22 @@
  */
 
 import React, { useRef, useState, useEffect } from "react";
-import { useAppContext } from "@/providers/AppProvider";
-import { useAttachments } from "./components/AttachmentStrip/useAttachments";
-import { buildAttachmentMention } from "./components/AttachmentStrip/attachment.types";
-import { ChatInput } from "./components/ChatInput/ChatInput";
-import { ImageArtifact } from "./components/ImageArtifact/ImageArtifact";
-import { InlineMenu, LoadingSpinner, TextShimmer, Dialog } from "@/components";
-import { useInlineMenu } from "@/hooks";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useChatScroll } from "./hooks/useChatScroll";
-import { useInputHeight } from "./hooks/useInputHeight";
-import { useChatWheel } from "./hooks/useChatWheel";
-import { useChatError } from "./hooks/useChatError";
-import { MessageList } from "./components/ChatBubble/MessageList";
+import { useAppContext } from "@/providers/AppProvider";
+import { useInlineMenu } from "@/hooks";
+import { InlineMenu, LoadingSpinner, TextShimmer, Dialog } from "@/components";
+import {
+  useAttachments,
+  buildAttachmentMention,
+  ChatInput,
+  ImageArtifact,
+  useChatScroll,
+  useInputHeight,
+  useChatWheel,
+  useChatError,
+  MessageList,
+} from "@/features";
 import styles from "./Chat.module.css";
 
 export const Chat: React.FC = () => {

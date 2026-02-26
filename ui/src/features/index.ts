@@ -9,6 +9,7 @@ export * from "./auth/components/AccountSwitcher";
 export * from "./auth/hooks/useAuth";
 
 export * from "./chat/components/ChatBubble/ChatBubble";
+export * from "./chat/components/ChatBubble/MessageList";
 export * from "./chat/components/ChatInput/ChatInput";
 export { ImageArtifact } from "./chat/components/ImageArtifact/ImageArtifact";
 export { AttachmentStrip } from "./chat/components/AttachmentStrip/AttachmentStrip";
@@ -29,6 +30,10 @@ export * from "./chat/components/ImageArtifact/ImageSearchInput";
 export * from "./chat/components/ImageArtifact/ImageTextMenu";
 export * from "./chat/components/ImageArtifact/ImageToolbar";
 export * from "./chat/hooks/useChat";
+export * from "./chat/hooks/useChatScroll";
+export * from "./chat/hooks/useInputHeight";
+export * from "./chat/hooks/useChatWheel";
+export * from "./chat/hooks/useChatError";
 export * from "./chat/hooks/useChatTitle";
 export * from "./chat/hooks/useChatHistory";
 export * from "./chat/chat.types";
