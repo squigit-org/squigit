@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { SettingsSection } from "@/features/settings";
+import { SettingsSection } from "@/features";
 
 export const useSystemState = () => {
   const [appName, setAppName] = useState<string>("SnapLLM");

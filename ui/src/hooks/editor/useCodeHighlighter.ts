@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { highlightCode } from "@/features/syntax";
+import { highlightCode } from "@/lib";
 
 export const useCodeHighlighter = (
   code: string,
