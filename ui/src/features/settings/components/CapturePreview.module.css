@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import "@/styles/animations.css";
+
 .container {
   width: 100%;
   height: 100%;

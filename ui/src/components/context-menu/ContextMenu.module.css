@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import "@/styles/animations.css";
+
 .contextMenu {
   background: #171717;
   border: 1px solid var(--border-color);

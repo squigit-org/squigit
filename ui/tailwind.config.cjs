@@ -54,9 +54,6 @@ module.exports = {
           "border-c3": "var(--lens-border-c3)",
         },
       },
-      animation: {
-        shimmer: "shimmer 3s infinite",
-      },
     },
   },
   plugins: [],

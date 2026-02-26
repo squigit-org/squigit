@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import "@/styles/animations.css";
+
 .dialogOverlay {
   position: fixed;
   inset: 0;
@@ -27,7 +29,6 @@
   width: 100%;
   max-width: 28rem;
 
-  /* Animation */
   animation: dialogAppear 50ms ease-out forwards;
 }
 
@@ -71,7 +72,6 @@
   scrollbar-width: thin;
 }
 
-/* Scrollbar styling for Webkit */
 .messageArea::-webkit-scrollbar {
   width: 6px;
 }
@@ -104,7 +104,6 @@
   gap: 0.5rem;
 }
 
-/* Icons */
 .iconError {
   color: var(--red-200);
 }
@@ -118,7 +117,6 @@
   color: #d8b4fe;
 }
 
-/* Buttons */
 .btnBase {
   border-radius: 9999px;
   border: 1px solid transparent;
@@ -167,7 +165,6 @@
   border-color: #737373;
 }
 
-/* Light mode overrides */
 :global(body.light-mode) .iconInfo {
   color: #1e3a8a;
 }
