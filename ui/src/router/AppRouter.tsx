@@ -149,7 +149,7 @@ const AppRouterContent: React.FC = () => {
   if (app.isLoadingState) {
     return (
       <div
-        className={styles.appContainer}
+        className={styles.chatContainer}
         onContextMenu={app.handleContextMenu}
       >
         {titleBar}
@@ -160,7 +160,7 @@ const AppRouterContent: React.FC = () => {
   if (app.isImageMissing) {
     return (
       <div
-        className={styles.appContainer}
+        className={styles.chatContainer}
         onContextMenu={app.handleContextMenu}
       >
         {titleBar}
@@ -173,7 +173,7 @@ const AppRouterContent: React.FC = () => {
     <div
       ref={app.containerRef}
       onContextMenu={app.handleContextMenu}
-      className={styles.appContainer}
+      className={styles.chatContainer}
     >
       {titleBar}
       {appDialogs}
