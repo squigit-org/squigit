@@ -6,17 +6,14 @@
 
 import React, { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAppContext } from "@/providers/AppProvider";
 import { usePlatform } from "@/hooks";
+import { SettingsPanel, SettingsOverlay } from "@/features";
 import { TrafficLights } from "./TrafficLights";
 import { WindowControls } from "./WindowControls";
+import { AccountSwitcher } from "./AccountSwitcher";
+import { AuthButton } from "./AuthButton";
 import { TitleBarContextMenu } from "@/layout";
-import { useAppContext } from "@/providers/AppProvider";
-import {
-  AccountSwitcher,
-  SettingsPanel,
-  SettingsOverlay,
-  AuthButton,
-} from "@/features";
 import styles from "./TitleBar.module.css";
 
 export const TitleBar: React.FC = () => {

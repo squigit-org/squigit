@@ -21,8 +21,13 @@ import {
   commands,
   github,
 } from "@/lib";
-import { useSystemSync, useUpdateCheck, getPendingUpdate } from "@/hooks";
-import { useAuth, useChat, useChatHistory, useChatTitle } from "@/features";
+import {
+  useSystemSync,
+  useUpdateCheck,
+  getPendingUpdate,
+  useAuth,
+} from "@/hooks";
+import { useChat, useChatHistory, useChatTitle } from "@/features";
 
 import { useAppDialogs } from "./useAppDialogs";
 import { useAppDrafts } from "./useAppDrafts";

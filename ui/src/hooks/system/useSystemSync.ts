@@ -17,7 +17,7 @@ import {
 import { useSystemPreferences } from "./useSystemPreferences";
 import { useSystemProfile } from "./useSystemProfile";
 import { useSystemState } from "./useSystemState";
-import { useSystemAuth } from "./useSystemAuth";
+import { useSystemAuth } from "../auth/useSystemAuth";
 import { useSystemApiKeys } from "./useSystemApiKeys";
 
 export const useSystemSync = () => {

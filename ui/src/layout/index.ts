@@ -5,8 +5,6 @@
  */
 
 export * from "./frame/TitleBar";
-export * from "./frame/TrafficLights";
-export * from "./frame/WindowControls";
 
 export * from "./menus/TitleBarContextMenu";
 export * from "./menus/PanelContextMenu";

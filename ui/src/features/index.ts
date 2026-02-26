@@ -4,10 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./auth/components/AuthButton";
-export * from "./auth/components/AccountSwitcher";
-export * from "./auth/hooks/useAuth";
-
 export * from "./chat/components/ChatBubble/ChatBubble";
 export * from "./chat/components/ChatBubble/MessageList";
 export * from "./chat/components/ChatInput/ChatInput";

@@ -6,6 +6,8 @@
 
 export * from "./app/useApp";
 
+export * from "./auth/useAuth";
+
 export * from "./system/useSystemSync";
 export * from "./system/useUpdateCheck";
 
