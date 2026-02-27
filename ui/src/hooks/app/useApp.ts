@@ -75,7 +75,6 @@ export const useApp = () => {
   const [isCheckingImage, setIsCheckingImage] = useState(true);
   const [hasCheckedStartupImage, setHasCheckedStartupImage] = useState(false);
 
-  // Auto Select Welcome Logic
   const [hasAutoSelectedWelcome, setHasAutoSelectedWelcome] = useState(false);
   const isPendingAutoSelectWelcome =
     system.hasAgreed === false &&
@@ -170,7 +169,6 @@ export const useApp = () => {
       ? "New Chat"
       : system.sessionChatTitle || "New Chat";
 
-  // Active Session listeners
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
     if (activeId && chatTitle && chatTitle !== "New Chat") {
@@ -388,13 +386,11 @@ export const useApp = () => {
     [system, handleNewSession],
   );
 
-  // Sync refs that are needed inside async closures / Tauri listeners
   useEffect(() => {
     handleImageReadyRef.current = handleImageReady;
     handleSelectChatRef.current = handleSelectChat;
   });
 
-  // Startup Image check
   useEffect(() => {
     if (!system.profileLoaded || !system.prefsLoaded || hasCheckedStartupImage)
       return;
@@ -420,7 +416,6 @@ export const useApp = () => {
     initStartupImage();
   }, [system.profileLoaded, system.prefsLoaded, hasCheckedStartupImage]);
 
-  // Welcome Auto-Select effect
   useEffect(() => {
     if (
       system.hasAgreed === false &&
@@ -442,7 +437,6 @@ export const useApp = () => {
     hasAutoSelectedWelcome,
   ]);
 
-  // IPC Event Listeners
   useEffect(() => {
     const unlisten = listen<string>("image-path", async (event) => {
       const imagePath = event.payload;
@@ -502,13 +496,12 @@ export const useApp = () => {
 
           const imagePath = await getImagePath(imageHash);
 
-          chatHistoryRef.current.setActiveSessionId(null);
-          ocr.setOcrData({});
-          ocr.setSessionLensUrl(null);
-
+          systemRef.current.setSessionChatTitle(null);
           systemRef.current.setSessionOcrLanguage(
             systemRef.current.startupOcrLanguage,
           );
+          ocr.setOcrData({});
+          ocr.setSessionLensUrl(null);
           ocr.setIsOcrScanning(false);
           cancelOcrJob();
 
@@ -517,6 +510,10 @@ export const useApp = () => {
             mimeType: "image/png",
             imageId: imageHash,
           });
+
+          chatHistoryRef.current.setActiveSessionId(null);
+
+          await new Promise((resolve) => setTimeout(resolve, 10));
 
           chatHistoryRef.current.setActiveSessionId(chatId);
           chatHistoryRef.current.refreshChats();
