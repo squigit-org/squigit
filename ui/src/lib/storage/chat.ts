@@ -39,6 +39,12 @@ export interface OcrRegion {
 /** OCR frame: keyed by model_id, each value is cached results or null (not scanned). */
 export type OcrFrame = Record<string, OcrRegion[] | null>;
 
+/**
+ * Special OCR frame key used to persist "do not auto-run OCR for this chat".
+ * Manual OCR model selection still works.
+ */
+export const AUTO_OCR_DISABLED_MODEL_ID = "__meta_auto_ocr_disabled__";
+
 /** Complete chat data (matches Rust ChatData). */
 export interface ChatData {
   metadata: ChatMetadata;

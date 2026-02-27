@@ -10,6 +10,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { check } from "@tauri-apps/plugin-updater";
 import {
+  AUTO_OCR_DISABLED_MODEL_ID,
   loadChat,
   getImagePath,
   createChat,
@@ -17,6 +18,7 @@ import {
   appendChatMessage,
   overwriteChatMessages,
   cancelOcrJob,
+  saveOcrData,
   hasAgreedFlag,
   commands,
   github,
@@ -237,6 +239,9 @@ export const useApp = () => {
 
     try {
       const newChat = await createChat("New Chat", imageData.imageId);
+      if (!systemRef.current.ocrEnabled) {
+        await saveOcrData(newChat.id, AUTO_OCR_DISABLED_MODEL_ID, []);
+      }
       chatHistory.setActiveSessionId(newChat.id);
       chatHistory.refreshChats();
       console.log("Created new chat:", newChat.id);
@@ -268,7 +273,18 @@ export const useApp = () => {
 
       system.setSessionChatTitle(chatData.metadata.title);
 
-      if (chatData.metadata.ocr_lang) {
+      const loadedOcrData = chatData.ocr_data || {};
+      const hasAutoOcrDisabledMarker = Array.isArray(
+        loadedOcrData[AUTO_OCR_DISABLED_MODEL_ID],
+      );
+      const hasScannedOcrData = Object.entries(loadedOcrData).some(
+        ([modelId, regions]) =>
+          modelId !== AUTO_OCR_DISABLED_MODEL_ID && Array.isArray(regions),
+      );
+
+      if (hasAutoOcrDisabledMarker && !hasScannedOcrData) {
+        system.setSessionOcrLanguage("");
+      } else if (chatData.metadata.ocr_lang) {
         system.setSessionOcrLanguage(chatData.metadata.ocr_lang);
       } else {
         system.setSessionOcrLanguage(system.startupOcrLanguage);
@@ -516,6 +532,9 @@ export const useApp = () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
 
           chatHistoryRef.current.setActiveSessionId(chatId);
+          if (!systemRef.current.ocrEnabled) {
+            await saveOcrData(chatId, AUTO_OCR_DISABLED_MODEL_ID, []);
+          }
           chatHistoryRef.current.refreshChats();
         } catch (error) {
           console.error("[capture-complete] Failed:", error);

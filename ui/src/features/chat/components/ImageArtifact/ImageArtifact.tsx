@@ -26,9 +26,11 @@ import styles from "./ImageArtifact.module.css";
 import { Dialog } from "@/components";
 import {
   type DialogContent,
+  AUTO_OCR_DISABLED_MODEL_ID,
   getErrorDialog,
   OcrFrame,
   cancelOcrJob,
+  saveOcrData,
   useGoogleLens,
   generateTranslateUrl,
 } from "@/lib";
@@ -137,6 +139,9 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     text: d.text,
     box: d.bbox,
   }));
+  const autoOcrDisabledForChat = Array.isArray(
+    ocrData[AUTO_OCR_DISABLED_MODEL_ID],
+  );
 
   const { svgRef, handleTextMouseDown } = useTextSelection({
     data: displayData,
@@ -268,6 +273,43 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     ],
   );
 
+  const restartScanForModel = useCallback(
+    (modelId: string) => {
+      scanRequestRef.current += 1;
+      const newRequestId = scanRequestRef.current;
+
+      cancelOcrJob();
+      setLoading(false);
+      cancelledRef.current = false;
+
+      if (!modelId) return;
+
+      setTimeout(() => {
+        if (newRequestId === scanRequestRef.current) {
+          scan(modelId, newRequestId);
+        }
+      }, 50);
+    },
+    [scan, setLoading],
+  );
+
+  const handleUserOcrModelChange = useCallback(
+    (model: string) => {
+      if (!model) {
+        onOcrModelChange("");
+        return;
+      }
+
+      if (model === currentOcrModel) {
+        restartScanForModel(model);
+        return;
+      }
+
+      onOcrModelChange(model);
+    },
+    [currentOcrModel, onOcrModelChange, restartScanForModel],
+  );
+
   const handleCancel = (e: React.MouseEvent) => {
     e.stopPropagation();
     console.log("Cancelling OCR job...");
@@ -276,6 +318,11 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     scanRequestRef.current += 1;
     setLoading(false);
     cancelOcrJob();
+    if (chatId) {
+      saveOcrData(chatId, AUTO_OCR_DISABLED_MODEL_ID, []).catch((err) =>
+        console.error("Failed to persist OCR auto-run opt-out:", err),
+      );
+    }
     onOcrModelChange("");
   };
 
@@ -284,6 +331,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
       startupImage &&
       currentOcrModel &&
       !ocrData[currentOcrModel] &&
+      !autoOcrDisabledForChat &&
       !loading &&
       !errorDialog &&
       !hasScannedRef.current &&
@@ -291,7 +339,15 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     ) {
       scan(currentOcrModel, scanRequestRef.current);
     }
-  }, [startupImage, ocrData, loading, errorDialog, scan, currentOcrModel]);
+  }, [
+    startupImage,
+    ocrData,
+    autoOcrDisabledForChat,
+    loading,
+    errorDialog,
+    scan,
+    currentOcrModel,
+  ]);
 
   const prevModelRef = useRef(currentOcrModel);
   const prevImageIdRef = useRef(startupImage?.imageId);
@@ -327,7 +383,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
         }
       }, 50);
     }
-  }, [currentOcrModel, startupImage, scan]);
+  }, [currentOcrModel, startupImage, scan, setLoading]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
@@ -507,7 +563,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
               placeholder="Add to your search"
               ocrEnabled={ocrEnabled}
               currentOcrModel={currentOcrModel}
-              onOcrModelChange={onOcrModelChange}
+              onOcrModelChange={handleUserOcrModelChange}
               onOpenSettings={onOpenSettings}
             />
           </div>
