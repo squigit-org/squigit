@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import {
   MoreHorizontal,
   Pin,
@@ -343,7 +345,7 @@ export const SidePanel: React.FC = () => {
 
   const [busyDialog, setBusyDialog] = useState<DialogContent | null>(null);
 
-  const handleAction = (action: () => void) => {
+  const getBusyReason = useCallback((): string | null => {
     const activeStates: string[] = [];
 
     if (app.chat.isAnalyzing) activeStates.push("analyzing an image");
@@ -351,20 +353,47 @@ export const SidePanel: React.FC = () => {
     if (app.chat.isAiTyping) activeStates.push("typing a response");
     if (app.isOcrScanning) activeStates.push("scanning an image");
 
-    if (activeStates.length > 0) {
-      let reason = "";
-      if (activeStates.length === 1) {
-        reason = activeStates[0];
-      } else {
-        const last = activeStates.pop();
-        reason = `${activeStates.join(", ")} and ${last}`;
-      }
-      setBusyDialog(getAppBusyDialog(reason));
-      return;
+    if (activeStates.length === 0) return null;
+
+    if (activeStates.length === 1) {
+      return activeStates[0];
     }
 
-    action();
-  };
+    const last = activeStates.pop();
+    return `${activeStates.join(", ")} and ${last}`;
+  }, [
+    app.chat.isAnalyzing,
+    app.chat.isGenerating,
+    app.chat.isAiTyping,
+    app.isOcrScanning,
+  ]);
+
+  const handleAction = useCallback(
+    (action: () => void) => {
+      const reason = getBusyReason();
+      if (reason) {
+        setBusyDialog(getAppBusyDialog(reason));
+        return;
+      }
+
+      action();
+    },
+    [getBusyReason],
+  );
+
+  useEffect(() => {
+    const unlistenCaptureRequested = listen("capture-requested", () => {
+      handleAction(() => {
+        invoke("spawn_capture").catch((error) => {
+          console.error("[capture-requested] Failed to spawn capture:", error);
+        });
+      });
+    });
+
+    return () => {
+      unlistenCaptureRequested.then((fn) => fn());
+    };
+  }, [handleAction]);
 
   useEffect(() => {
     const handleClick = () => setActiveContextMenu(null);

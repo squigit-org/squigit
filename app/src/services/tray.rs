@@ -1,7 +1,8 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use tauri::{AppHandle, Manager};
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager};
 
 pub fn show_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -36,7 +37,16 @@ pub fn toggle_window(app: &AppHandle) {
 }
 
 pub fn capture_screen(app: &AppHandle) {
-    super::capture::spawn_capture(app);
+    capture_screen_with_source(app, "tray");
+}
+
+pub fn capture_screen_with_source(app: &AppHandle, source: &str) {
+    let app_handle = app.clone();
+    let source_tag = source.to_string();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        let _ = app_handle.emit("capture-requested", source_tag);
+    });
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -66,7 +76,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .menu(&menu)
         .menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
-            "capture" => capture_screen(app),
+            "capture" => capture_screen_with_source(app, "tray"),
             "show_ui" => show_window(app),
             "exit" => app.exit(0),
             _ => {}
@@ -211,7 +221,7 @@ mod sni {
             if event_id == "clicked" {
                 match id {
                     2 => super::show_window(&self.app_handle),    // SnapLLM
-                    1 => super::capture_screen(&self.app_handle), // Capture
+                    1 => super::capture_screen_with_source(&self.app_handle, "tray"), // Capture
                     4 => self.app_handle.exit(0),                 // Exit
                     _ => {}
                 }

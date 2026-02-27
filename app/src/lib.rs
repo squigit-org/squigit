@@ -24,7 +24,7 @@ use commands::clipboard::{
     copy_image_to_clipboard, read_clipboard_image, read_clipboard_text,
     copy_image_from_path_to_clipboard,
 };
-use commands::capture::spawn_capture_to_input;
+use commands::capture::{spawn_capture, spawn_capture_to_input};
 use commands::image::{
     get_initial_image, process_image_path, read_image_file, copy_image_to_path,
 };
@@ -154,6 +154,7 @@ pub fn run() {
             commands::speech::start_stt,
             commands::speech::stop_stt,
             // Capture
+            spawn_capture,
             spawn_capture_to_input,
         ])
         .manage(services::models::ModelManager::new().expect("Failed to init ModelManager"))
@@ -246,7 +247,7 @@ pub fn run() {
                     macos_modifiers: 0x0100 | 0x0200,    // cmdKey | shiftKey
                     macos_keycode: 0x00,                 // kVK_ANSI_A
                 },
-                move || services::tray::capture_screen(&shortcut_handle),
+                move || services::tray::capture_screen_with_source(&shortcut_handle, "hotkey"),
             );
 
             match &_shortcut {
