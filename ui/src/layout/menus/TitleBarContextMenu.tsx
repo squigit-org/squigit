@@ -60,6 +60,15 @@ export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
     onClose();
   };
 
+  const handleReload = async () => {
+    onClose();
+    try {
+      await invoke("reload_window");
+    } catch {
+      window.location.reload();
+    }
+  };
+
   return (
     <ContextMenu x={x} y={y} onClose={onClose} width={220}>
       <ContextMenuItem onClick={handleMinimize}>Minimize</ContextMenuItem>
@@ -78,6 +87,8 @@ export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
       <ContextMenuItem onClick={handleSettings}>Settings</ContextMenuItem>
 
       <ContextMenuSeparator />
+
+      <ContextMenuItem onClick={handleReload}>Reload</ContextMenuItem>
 
       <ContextMenuItem
         onClick={handleCloseWindow}

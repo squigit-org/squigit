@@ -38,7 +38,7 @@ use commands::security::{check_file_exists, encrypt_and_save, set_agreed_flag, h
 use commands::window::{
     close_window, maximize_window, minimize_window,
     open_external_url, set_background_color,
-    set_always_on_top, get_always_on_top, show_window,
+    set_always_on_top, get_always_on_top, show_window, reload_window,
 };
 use commands::constants::get_app_constants;
 use commands::speech::SpeechState;
@@ -102,6 +102,7 @@ pub fn run() {
             minimize_window,
             maximize_window,
             close_window,
+            reload_window,
             set_always_on_top,
             get_always_on_top,
             show_window,

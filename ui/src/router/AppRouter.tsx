@@ -10,11 +10,10 @@ import { getDialogs } from "@/lib";
 import { Dialog } from "@/components";
 import { Welcome, Agreement, UpdateNotes, Chat } from "@/features";
 import { AppProvider, useAppContext } from "@/providers/AppProvider";
-import { AppContextMenu, TitleBar, SidePanel } from "@/layout";
+import { AppContextMenu } from "@/layout";
+import { MainScreen, SplashScreen } from "@/screens";
 
 import "katex/dist/katex.min.css";
-import styles from "./AppRouter.module.css";
-import { AppLogo } from "@/assets";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
@@ -37,7 +36,7 @@ const AppRouterContent: React.FC = () => {
     }
   }, [app.isLoadingState]);
 
-  const renderContent = () => {
+  const renderMainContent = () => {
     const activeId = app.chatHistory.activeSessionId;
 
     if (activeId && isOnboardingId(activeId)) {
@@ -47,10 +46,6 @@ const AppRouterContent: React.FC = () => {
       if (activeId.startsWith("__system_update")) {
         return <UpdateNotes />;
       }
-    }
-
-    if (app.isLoadingState) {
-      return <AppLogo size={40} />;
     }
 
     if (app.isImageMissing) {
@@ -65,33 +60,6 @@ const AppRouterContent: React.FC = () => {
 
     return <Chat />;
   };
-
-  const titleBar = (
-    <>
-      <TitleBar />
-      <div className={styles.mainContent}>
-        {!app.isLoadingState && (
-          <div
-            className={`
-            ${styles.sidePanelWrapper}
-            ${!app.isSidePanelOpen ? styles.hidden : ""}
-            ${app.enablePanelAnimation ? styles.animated : ""}`}
-          >
-            <SidePanel />
-          </div>
-        )}
-        <div
-          className={
-            app.isLoadingState
-              ? "h-screen w-screen bg-neutral-950 flex items-center justify-center"
-              : styles.contentArea
-          }
-        >
-          {renderContent()}
-        </div>
-      </div>
-    </>
-  );
 
   const appDialogs = (
     <>
@@ -147,37 +115,18 @@ const AppRouterContent: React.FC = () => {
   );
 
   if (app.isLoadingState) {
-    return (
-      <div
-        className={styles.chatContainer}
-        onContextMenu={app.handleContextMenu}
-      >
-        {titleBar}
-      </div>
-    );
-  }
-
-  if (app.isImageMissing) {
-    return (
-      <div
-        className={styles.chatContainer}
-        onContextMenu={app.handleContextMenu}
-      >
-        {titleBar}
-        {appDialogs}
-      </div>
-    );
+    return <SplashScreen onContextMenu={app.handleContextMenu} />;
   }
 
   return (
-    <div
-      ref={app.containerRef}
+    <MainScreen
       onContextMenu={app.handleContextMenu}
-      className={styles.chatContainer}
-    >
-      {titleBar}
-      {appDialogs}
-    </div>
+      containerRef={app.isImageMissing ? undefined : app.containerRef}
+      isSidePanelOpen={app.isSidePanelOpen}
+      enablePanelAnimation={app.enablePanelAnimation}
+      content={renderMainContent()}
+      dialogs={appDialogs}
+    />
   );
 };
 
