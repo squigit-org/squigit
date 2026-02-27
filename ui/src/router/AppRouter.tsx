@@ -111,6 +111,13 @@ const AppRouterContent: React.FC = () => {
         type="CAPTURE_PERMISSION_DENIED"
         onAction={() => app.setShowCaptureDeniedDialog(false)}
       />
+
+      <Dialog
+        isOpen={!!app.busyDialog}
+        type={app.busyDialog || undefined}
+        appName={app.system.appName}
+        onAction={app.handleBusyDialogAction}
+      />
     </>
   );
 

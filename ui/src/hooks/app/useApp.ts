@@ -11,6 +11,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { check } from "@tauri-apps/plugin-updater";
 import {
   AUTO_OCR_DISABLED_MODEL_ID,
+  DialogContent,
   OcrFrame,
   loadChat,
   getImagePath,
@@ -22,6 +23,7 @@ import {
   saveOcrData,
   hasAgreedFlag,
   commands,
+  getAppBusyDialog,
   github,
 } from "@/lib";
 import {
@@ -65,6 +67,8 @@ const withNavigationOcrGuard = (frame: OcrFrame): OcrFrame => ({
   ...frame,
   [AUTO_OCR_DISABLED_MODEL_ID]: [],
 });
+
+type GuardedAction = () => void | Promise<void>;
 
 export const useApp = () => {
   const system = useSystemSync();
@@ -234,6 +238,87 @@ export const useApp = () => {
   }, [system.sessionOcrLanguage, chatHistory.activeSessionId]);
 
   const [isNavigating, setIsNavigating] = useState(false);
+  const [busyDialog, setBusyDialog] = useState<DialogContent | null>(null);
+  const pendingBusyActionRef = useRef<GuardedAction | null>(null);
+  const runWithBusyGuardRef = useRef<(action: GuardedAction) => void>(
+    () => {},
+  );
+
+  const runAction = useCallback((action: GuardedAction) => {
+    Promise.resolve(action()).catch((error) => {
+      console.error("[busy-gate] Action failed:", error);
+    });
+  }, []);
+
+  const getBusyReason = useCallback((): string | null => {
+    const activeStates: string[] = [];
+
+    if (chat.isAnalyzing) activeStates.push("analyzing an image");
+    if (chat.isGenerating) activeStates.push("generating a response");
+    if (chat.isAiTyping) activeStates.push("typing a response");
+    if (ocr.isOcrScanning) activeStates.push("scanning an image");
+
+    if (activeStates.length === 0) return null;
+    if (activeStates.length === 1) return activeStates[0];
+
+    const last = activeStates.pop();
+    return `${activeStates.join(", ")} and ${last}`;
+  }, [chat.isAnalyzing, chat.isGenerating, chat.isAiTyping, ocr.isOcrScanning]);
+
+  const runWithBusyGuard = useCallback(
+    (action: GuardedAction) => {
+      const reason = getBusyReason();
+      if (reason) {
+        pendingBusyActionRef.current = action;
+        setBusyDialog(getAppBusyDialog(reason));
+        return;
+      }
+
+      runAction(action);
+    },
+    [getBusyReason, runAction],
+  );
+
+  const killActiveJobs = useCallback(() => {
+    cancelOcrJob();
+    ocr.setIsOcrScanning(false);
+
+    if (chat.isAnalyzing || chat.isGenerating || chat.isAiTyping) {
+      chat.handleStopGeneration();
+    }
+  }, [
+    chat.isAnalyzing,
+    chat.isGenerating,
+    chat.isAiTyping,
+    chat.handleStopGeneration,
+    ocr,
+  ]);
+
+  const handleBusyDialogAction = useCallback(
+    (actionKey: string) => {
+      if (actionKey !== "confirm") {
+        pendingBusyActionRef.current = null;
+        setBusyDialog(null);
+        return;
+      }
+
+      const pendingAction = pendingBusyActionRef.current;
+      pendingBusyActionRef.current = null;
+      setBusyDialog(null);
+      killActiveJobs();
+
+      if (pendingAction) {
+        setTimeout(() => {
+          runAction(pendingAction);
+        }, 0);
+      }
+    },
+    [killActiveJobs, runAction],
+  );
+
+  useEffect(() => {
+    runWithBusyGuardRef.current = runWithBusyGuard;
+  }, [runWithBusyGuard]);
 
   const handleImageReady = async (imageData: {
     imageId: string;
@@ -277,81 +362,84 @@ export const useApp = () => {
     }
   };
 
-  const handleSelectChat = async (id: string) => {
-    setIsNavigating(true);
+  const performSelectChat = useCallback(
+    async (id: string) => {
+      setIsNavigating(true);
 
-    // Hard-kill OCR auto-runs during navigation. OCR can only start
-    // on fresh chat creation (when enabled) or manual model selection.
-    cancelOcrJob();
-    ocr.setIsOcrScanning(false);
-    ocr.setOcrData(withNavigationOcrGuard({}));
+      // Hard-kill OCR auto-runs during navigation. OCR can only start
+      // on fresh chat creation (when enabled) or manual model selection.
+      cancelOcrJob();
+      ocr.setIsOcrScanning(false);
+      ocr.setOcrData(withNavigationOcrGuard({}));
 
-    if (isOnboardingId(id)) {
-      ocr.setSessionLensUrl(null);
-      if (id === "__system_welcome") {
-        system.setSessionChatTitle(`Welcome to ${system.appName}!`);
-      } else if (id.startsWith("__system_update")) {
-        system.setSessionChatTitle("Update Available");
+      if (isOnboardingId(id)) {
+        ocr.setSessionLensUrl(null);
+        if (id === "__system_welcome") {
+          system.setSessionChatTitle(`Welcome to ${system.appName}!`);
+        } else if (id.startsWith("__system_update")) {
+          system.setSessionChatTitle("Update Available");
+        }
+        chatHistory.setActiveSessionId(id);
+        setTimeout(() => setIsNavigating(false), 300);
+        return;
       }
-      chatHistory.setActiveSessionId(id);
-      setTimeout(() => setIsNavigating(false), 300);
-      return;
-    }
 
-    try {
-      const chatData = await loadChat(id);
-      const imagePath = await getImagePath(chatData.metadata.image_hash);
+      try {
+        const chatData = await loadChat(id);
+        const imagePath = await getImagePath(chatData.metadata.image_hash);
 
-      system.setSessionChatTitle(chatData.metadata.title);
+        system.setSessionChatTitle(chatData.metadata.title);
 
-      const loadedOcrData = chatData.ocr_data || {};
-      const navigationSafeOcrData = withNavigationOcrGuard(loadedOcrData);
-      const chatOcrModel = getChatOcrModel(
-        loadedOcrData,
-        chatData.metadata.ocr_lang,
-      );
-      system.setSessionOcrLanguage(chatOcrModel);
+        const loadedOcrData = chatData.ocr_data || {};
+        const navigationSafeOcrData = withNavigationOcrGuard(loadedOcrData);
+        const chatOcrModel = getChatOcrModel(
+          loadedOcrData,
+          chatData.metadata.ocr_lang,
+        );
+        system.setSessionOcrLanguage(chatOcrModel);
 
-      const messages = chatData.messages.map((m, idx) => ({
-        id: idx.toString(),
-        role: m.role as "user" | "model",
-        text: m.content,
-        timestamp: new Date(m.timestamp).getTime(),
-      }));
+        const messages = chatData.messages.map((m, idx) => ({
+          id: idx.toString(),
+          role: m.role as "user" | "model",
+          text: m.content,
+          timestamp: new Date(m.timestamp).getTime(),
+        }));
 
-      chat.restoreState(
-        {
-          messages,
-          streamingText: "",
-          firstResponseId: null,
-        },
-        {
+        chat.restoreState(
+          {
+            messages,
+            streamingText: "",
+            firstResponseId: null,
+          },
+          {
+            path: imagePath,
+            mimeType: "image/png",
+            imageId: chatData.metadata.image_hash,
+          },
+        );
+
+        ocr.setOcrData(navigationSafeOcrData);
+
+        ocr.setSessionLensUrl(chatData.imgbb_url || null);
+
+        system.setStartupImage({
           path: imagePath,
           mimeType: "image/png",
           imageId: chatData.metadata.image_hash,
-        },
-      );
+          fromHistory: true,
+        });
 
-      ocr.setOcrData(navigationSafeOcrData);
+        chatHistory.setActiveSessionId(id);
+      } catch (e) {
+        console.error("Failed to load chat:", e);
+      } finally {
+        setTimeout(() => setIsNavigating(false), 300);
+      }
+    },
+    [chat, chatHistory, ocr, system],
+  );
 
-      ocr.setSessionLensUrl(chatData.imgbb_url || null);
-
-      system.setStartupImage({
-        path: imagePath,
-        mimeType: "image/png",
-        imageId: chatData.metadata.image_hash,
-        fromHistory: true,
-      });
-
-      chatHistory.setActiveSessionId(id);
-    } catch (e) {
-      console.error("Failed to load chat:", e);
-    } finally {
-      setTimeout(() => setIsNavigating(false), 300);
-    }
-  };
-
-  const handleNewSession = () => {
+  const performNewSession = useCallback(() => {
     setIsNavigating(true);
     system.resetSession();
     chatHistory.setActiveSessionId(null);
@@ -359,13 +447,24 @@ export const useApp = () => {
     ocr.setOcrData({});
     ocr.setSessionLensUrl(null);
     setTimeout(() => setIsNavigating(false), 300);
-  };
+  }, [chatHistory, ocr, system]);
+
+  const handleSelectChat = useCallback(
+    (id: string) => {
+      runWithBusyGuard(() => performSelectChat(id));
+    },
+    [performSelectChat, runWithBusyGuard],
+  );
+
+  const handleNewSession = useCallback(() => {
+    runWithBusyGuard(performNewSession);
+  }, [performNewSession, runWithBusyGuard]);
 
   const handleDeleteChatWrapper = async (id: string) => {
     const isActive = chatHistory.activeSessionId === id;
     await chatHistory.handleDeleteChat(id);
     if (isActive) {
-      handleNewSession();
+      performNewSession();
     }
   };
 
@@ -374,12 +473,12 @@ export const useApp = () => {
       chatHistory.activeSessionId && ids.includes(chatHistory.activeSessionId);
     await chatHistory.handleDeleteChats(ids);
     if (isActiveIncluded) {
-      handleNewSession();
+      performNewSession();
     }
   };
 
   const handleSwitchProfile = async (profileId: string) => {
-    handleNewSession();
+    performNewSession();
     await system.switchProfile(profileId);
   };
 
@@ -415,16 +514,16 @@ export const useApp = () => {
           setShowUpdate(false);
           sessionStorage.setItem("update_dismissed", "true");
 
-          handleNewSession();
+          performNewSession();
           break;
       }
     },
-    [system, handleNewSession],
+    [performNewSession],
   );
 
   useEffect(() => {
     handleImageReadyRef.current = handleImageReady;
-    handleSelectChatRef.current = handleSelectChat;
+    handleSelectChatRef.current = performSelectChat;
   });
 
   useEffect(() => {
@@ -461,7 +560,7 @@ export const useApp = () => {
       !chatHistory.activeSessionId &&
       !hasAutoSelectedWelcome
     ) {
-      handleSelectChat("__system_welcome");
+      performSelectChat("__system_welcome");
       setHasAutoSelectedWelcome(true);
     }
   }, [
@@ -508,6 +607,10 @@ export const useApp = () => {
           await handleSelectChatRef.current(chatId);
         }
       }
+    });
+
+    const unlistenCaptureRequested = listen("capture-requested", () => {
+      runWithBusyGuardRef.current(() => invoke("spawn_capture"));
     });
 
     const unlistenCapture = listen<{ chatId: string; imageHash: string }>(
@@ -592,13 +695,14 @@ export const useApp = () => {
         }
       }
 
-      handleNewSession();
+      performNewSession();
       auth.login();
     });
 
     return () => {
       unlisten.then((f) => f());
       unlistenLoadChat.then((f) => f());
+      unlistenCaptureRequested.then((f) => f());
       unlistenCapture.then((f) => f());
       unlistenCaptureFailed.then((f) => f());
       unlistenAuthSuccess.then((f) => f());
@@ -631,6 +735,7 @@ export const useApp = () => {
     isImageMissing,
     chatTitle,
     agreedToTerms,
+    busyDialog,
 
     toggleSidePanel: panel.toggleSidePanel,
     isNavigating,
@@ -656,6 +761,7 @@ export const useApp = () => {
     handleExit: () => exit(0),
     handleSwitchProfile,
     handleSystemAction,
+    handleBusyDialogAction,
     containerRef,
     isOcrScanning: ocr.isOcrScanning,
     setIsOcrScanning: ocr.setIsOcrScanning,

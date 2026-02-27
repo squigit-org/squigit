@@ -4,9 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
+import React, { useEffect, useRef, useState } from "react";
 import {
   MoreHorizontal,
   Pin,
@@ -21,11 +19,7 @@ import {
 import { ChatMetadata, groupChatsByDate } from "@/lib";
 import { updateIcon, welcomeIcon } from "@/assets";
 import { Dialog } from "@/components";
-import {
-  getDeleteMultipleChatsDialog,
-  getAppBusyDialog,
-  DialogContent,
-} from "@/lib";
+import { getDeleteMultipleChatsDialog } from "@/lib";
 import { PanelContextMenu } from "@/layout";
 import { useAppContext } from "@/providers/AppProvider";
 import { useKeyDown, getPendingUpdate } from "@/hooks";
@@ -343,58 +337,6 @@ export const SidePanel: React.FC = () => {
   const showWelcome =
     !app.system.activeProfile && app.system.hasAgreed === false;
 
-  const [busyDialog, setBusyDialog] = useState<DialogContent | null>(null);
-
-  const getBusyReason = useCallback((): string | null => {
-    const activeStates: string[] = [];
-
-    if (app.chat.isAnalyzing) activeStates.push("analyzing an image");
-    if (app.chat.isGenerating) activeStates.push("generating a response");
-    if (app.chat.isAiTyping) activeStates.push("typing a response");
-    if (app.isOcrScanning) activeStates.push("scanning an image");
-
-    if (activeStates.length === 0) return null;
-
-    if (activeStates.length === 1) {
-      return activeStates[0];
-    }
-
-    const last = activeStates.pop();
-    return `${activeStates.join(", ")} and ${last}`;
-  }, [
-    app.chat.isAnalyzing,
-    app.chat.isGenerating,
-    app.chat.isAiTyping,
-    app.isOcrScanning,
-  ]);
-
-  const handleAction = useCallback(
-    (action: () => void) => {
-      const reason = getBusyReason();
-      if (reason) {
-        setBusyDialog(getAppBusyDialog(reason));
-        return;
-      }
-
-      action();
-    },
-    [getBusyReason],
-  );
-
-  useEffect(() => {
-    const unlistenCaptureRequested = listen("capture-requested", () => {
-      handleAction(() => {
-        invoke("spawn_capture").catch((error) => {
-          console.error("[capture-requested] Failed to spawn capture:", error);
-        });
-      });
-    });
-
-    return () => {
-      unlistenCaptureRequested.then((fn) => fn());
-    };
-  }, [handleAction]);
-
   useEffect(() => {
     const handleClick = () => setActiveContextMenu(null);
     document.addEventListener("click", handleClick);
@@ -450,7 +392,7 @@ export const SidePanel: React.FC = () => {
       activeSessionId={activeSessionId}
       isSelectionMode={isSelectionMode}
       selectedIds={selectedIds}
-      onSelectChat={(id) => handleAction(() => app.handleSelectChat(id))}
+      onSelectChat={(id) => app.handleSelectChat(id)}
       onToggleChatSelection={toggleChatSelection}
       onDeleteChat={setDeleteId}
       onRenameChat={app.chatHistory.handleRenameChat}
@@ -501,7 +443,7 @@ export const SidePanel: React.FC = () => {
           <div className={styles.utilityBar}>
             <button
               className={`${styles.newChatBtn} ${isHoverDisabled ? styles.noHover : ""}`}
-              onClick={() => handleAction(app.handleNewSession)}
+              onClick={app.handleNewSession}
               onMouseLeave={() => setIsHoverDisabled(false)}
               style={{ flex: 1 }}
             >
@@ -515,11 +457,7 @@ export const SidePanel: React.FC = () => {
                 {showWelcome && (
                   <div
                     className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
-                    onClick={() =>
-                      handleAction(() =>
-                        app.handleSelectChat("__system_welcome"),
-                      )
-                    }
+                    onClick={() => app.handleSelectChat("__system_welcome")}
                   >
                     <div className={styles.chatIconMain}>
                       <img
@@ -538,11 +476,7 @@ export const SidePanel: React.FC = () => {
                   <div
                     className={`${styles.chatRow} ${activeSessionId && activeSessionId.startsWith("__system_update") ? styles.active : ""}`}
                     onClick={() =>
-                      handleAction(() =>
-                        app.handleSelectChat(
-                          `__system_update_${update.version}`,
-                        ),
-                      )
+                      app.handleSelectChat(`__system_update_${update.version}`)
                     }
                   >
                     <div className={styles.chatIconMain}>
@@ -589,13 +523,6 @@ export const SidePanel: React.FC = () => {
           if (key === "confirm") handleBulkDelete();
           else setShowBulkDelete(false);
         }}
-      />
-
-      <Dialog
-        isOpen={!!busyDialog}
-        type={busyDialog || undefined}
-        appName={app.system.appName}
-        onAction={() => setBusyDialog(null)}
       />
     </div>
   );
