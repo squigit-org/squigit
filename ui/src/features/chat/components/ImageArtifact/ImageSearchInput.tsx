@@ -22,7 +22,6 @@ interface ImageSearchInputProps {
   isOCRLoading: boolean;
   isExpanded?: boolean;
   placeholder?: string;
-  ocrEnabled: boolean;
   currentOcrModel: string;
   onOcrModelChange: (model: string) => void;
   onOpenSettings: (section: SettingsSection) => void;
@@ -39,7 +38,6 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
   isOCRLoading,
   isExpanded = false,
   placeholder = "Add to your search",
-  ocrEnabled,
   currentOcrModel,
   onOcrModelChange,
   onOpenSettings,
@@ -140,17 +138,13 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
               </svg>
             </button>
 
-            {ocrEnabled && (
-              <>
-                <div className="h-4 w-[1px] bg-white/10 mx-1" />
-                <OCRModelSwitcher
-                  currentOcrModel={currentOcrModel}
-                  onOcrModelChange={onOcrModelChange}
-                  onOpenSettings={onOpenSettings}
-                  disabled={isOCRLoading}
-                />
-              </>
-            )}
+            <div className="h-4 w-[1px] bg-white/10 mx-1" />
+            <OCRModelSwitcher
+              currentOcrModel={currentOcrModel}
+              onOcrModelChange={onOcrModelChange}
+              onOpenSettings={onOpenSettings}
+              disabled={isOCRLoading}
+            />
           </>
         )}
 

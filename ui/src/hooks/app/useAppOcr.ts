@@ -49,12 +49,15 @@ export const useAppOcr = (
   );
 
   useEffect(() => {
-    const currentModelId = sessionOcrLanguage || "pp-ocr-v4-en";
-    const currentData = ocrData[currentModelId];
+    if (!activeSessionId || !sessionOcrLanguage) {
+      return;
+    }
 
-    if (activeSessionId && currentData && currentData.length > 0) {
-      saveOcrData(activeSessionId, currentModelId, currentData).catch((e) =>
-        console.error("Failed to save OCR", e),
+    const currentData = ocrData[sessionOcrLanguage];
+
+    if (Array.isArray(currentData)) {
+      saveOcrData(activeSessionId, sessionOcrLanguage, currentData).catch(
+        (e) => console.error("Failed to save OCR", e),
       );
     }
   }, [ocrData, activeSessionId, sessionOcrLanguage]);

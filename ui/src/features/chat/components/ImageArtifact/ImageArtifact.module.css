@@ -193,6 +193,9 @@
   cursor: pointer;
   transition: filter 0.2s ease;
   position: relative;
+  overflow: visible;
+  z-index: 3;
+  isolation: isolate;
 }
 
 .thumbnailWrapper::after {
@@ -222,7 +225,6 @@
   display: none;
 }
 
-/* Cancel Button Overlay */
 .cancelButton {
   position: absolute;
   top: -6px;
@@ -239,24 +241,19 @@
   cursor: pointer;
   z-index: 20;
   opacity: 0;
-  transform: scale(0.8);
   transition:
     opacity 0.2s ease,
     transform 0.2s ease,
     background-color 0.2s;
-  pointer-events: auto; /* Ensure it catches clicks even if parent is disabled */
+  pointer-events: auto;
 }
 
-/* Show cancel button on hover over the wrapper */
 .thumbnailWrapper:hover .cancelButton {
   opacity: 1;
-  transform: scale(1);
 }
 
 .cancelButton:hover {
-  background-color: var(--neutral-600);
   color: white;
-  border-color: var(--neutral-500);
 }
 
 .cancelIcon {

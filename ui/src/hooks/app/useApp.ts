@@ -11,6 +11,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { check } from "@tauri-apps/plugin-updater";
 import {
   AUTO_OCR_DISABLED_MODEL_ID,
+  OcrFrame,
   loadChat,
   getImagePath,
   createChat,
@@ -38,6 +39,32 @@ import { useAppOcr } from "./useAppOcr";
 import { useAppPanel } from "./useAppPanel";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
+
+const getChatOcrModel = (
+  frame: OcrFrame,
+  metadataOcrLanguage?: string,
+): string => {
+  const hasModelData = (modelId?: string) =>
+    !!modelId &&
+    modelId !== AUTO_OCR_DISABLED_MODEL_ID &&
+    Array.isArray(frame[modelId]);
+
+  if (hasModelData(metadataOcrLanguage)) {
+    return metadataOcrLanguage!;
+  }
+
+  const firstScannedModel = Object.entries(frame).find(
+    ([modelId, regions]) =>
+      modelId !== AUTO_OCR_DISABLED_MODEL_ID && Array.isArray(regions),
+  );
+
+  return firstScannedModel?.[0] || "";
+};
+
+const withNavigationOcrGuard = (frame: OcrFrame): OcrFrame => ({
+  ...frame,
+  [AUTO_OCR_DISABLED_MODEL_ID]: [],
+});
 
 export const useApp = () => {
   const system = useSystemSync();
@@ -226,7 +253,7 @@ export const useApp = () => {
     ocr.setSessionLensUrl(null);
 
     systemRef.current.setSessionOcrLanguage(
-      systemRef.current.startupOcrLanguage,
+      systemRef.current.ocrEnabled ? systemRef.current.startupOcrLanguage : "",
     );
     ocr.setIsOcrScanning(false);
     cancelOcrJob();
@@ -252,8 +279,14 @@ export const useApp = () => {
 
   const handleSelectChat = async (id: string) => {
     setIsNavigating(true);
+
+    // Hard-kill OCR auto-runs during navigation. OCR can only start
+    // on fresh chat creation (when enabled) or manual model selection.
+    cancelOcrJob();
+    ocr.setIsOcrScanning(false);
+    ocr.setOcrData(withNavigationOcrGuard({}));
+
     if (isOnboardingId(id)) {
-      ocr.setOcrData({});
       ocr.setSessionLensUrl(null);
       if (id === "__system_welcome") {
         system.setSessionChatTitle(`Welcome to ${system.appName}!`);
@@ -266,29 +299,18 @@ export const useApp = () => {
     }
 
     try {
-      ocr.setOcrData({});
-      cancelOcrJob();
       const chatData = await loadChat(id);
       const imagePath = await getImagePath(chatData.metadata.image_hash);
 
       system.setSessionChatTitle(chatData.metadata.title);
 
       const loadedOcrData = chatData.ocr_data || {};
-      const hasAutoOcrDisabledMarker = Array.isArray(
-        loadedOcrData[AUTO_OCR_DISABLED_MODEL_ID],
+      const navigationSafeOcrData = withNavigationOcrGuard(loadedOcrData);
+      const chatOcrModel = getChatOcrModel(
+        loadedOcrData,
+        chatData.metadata.ocr_lang,
       );
-      const hasScannedOcrData = Object.entries(loadedOcrData).some(
-        ([modelId, regions]) =>
-          modelId !== AUTO_OCR_DISABLED_MODEL_ID && Array.isArray(regions),
-      );
-
-      if (hasAutoOcrDisabledMarker && !hasScannedOcrData) {
-        system.setSessionOcrLanguage("");
-      } else if (chatData.metadata.ocr_lang) {
-        system.setSessionOcrLanguage(chatData.metadata.ocr_lang);
-      } else {
-        system.setSessionOcrLanguage(system.startupOcrLanguage);
-      }
+      system.setSessionOcrLanguage(chatOcrModel);
 
       const messages = chatData.messages.map((m, idx) => ({
         id: idx.toString(),
@@ -310,9 +332,7 @@ export const useApp = () => {
         },
       );
 
-      if (chatData.ocr_data && Object.keys(chatData.ocr_data).length > 0) {
-        ocr.setOcrData(chatData.ocr_data);
-      }
+      ocr.setOcrData(navigationSafeOcrData);
 
       ocr.setSessionLensUrl(chatData.imgbb_url || null);
 
@@ -514,7 +534,9 @@ export const useApp = () => {
 
           systemRef.current.setSessionChatTitle(null);
           systemRef.current.setSessionOcrLanguage(
-            systemRef.current.startupOcrLanguage,
+            systemRef.current.ocrEnabled
+              ? systemRef.current.startupOcrLanguage
+              : "",
           );
           ocr.setOcrData({});
           ocr.setSessionLensUrl(null);

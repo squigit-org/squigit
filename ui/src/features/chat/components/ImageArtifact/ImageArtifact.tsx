@@ -74,6 +74,7 @@ export interface ImageArtifactProps {
 
   isOcrScanning?: boolean;
   onOcrScanningChange?: (scanning: boolean) => void;
+  isNavigating?: boolean;
 }
 
 const globalScanLock = new Set<string>();
@@ -98,13 +99,10 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
   onOcrModelChange,
   isOcrScanning,
   onOcrScanningChange,
+  isNavigating = false,
 }) => {
-  useEffect(() => {
-    console.log("[ImageArtifact] ocrEnabled:", ocrEnabled);
-  }, [ocrEnabled]);
-
   const [localLoading, setLocalLoading] = useState(false);
-  const loading = ocrEnabled && (isOcrScanning ?? localLoading);
+  const loading = isOcrScanning ?? localLoading;
   const setLoading = onOcrScanningChange ?? setLocalLoading;
 
   const [errorDialog, setErrorDialog] = useState<DialogContent | null>(null);
@@ -139,6 +137,16 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     text: d.text,
     box: d.bbox,
   }));
+  const lastTranslateDisabledRef = useRef(displayData.length === 0);
+  useEffect(() => {
+    if (!isNavigating) {
+      lastTranslateDisabledRef.current = displayData.length === 0;
+    }
+  }, [displayData.length, isNavigating]);
+  const isTranslateDisabled = isNavigating
+    ? lastTranslateDisabledRef.current
+    : displayData.length === 0;
+
   const autoOcrDisabledForChat = Array.isArray(
     ocrData[AUTO_OCR_DISABLED_MODEL_ID],
   );
@@ -156,6 +164,8 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
   const currentPath = startupImage?.path ?? null;
   useEffect(() => {
     if (currentPath !== prevImageBase64Ref.current) {
+      scanRequestRef.current += 1;
+      cancelOcrJob();
       hasScannedRef.current = false;
       prevImageBase64Ref.current = currentPath;
       setLoading(false);
@@ -164,11 +174,20 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
   }, [currentPath, setLoading]);
 
   const scan = useCallback(
-    async (modelId?: string, requestId?: number) => {
-      if (!startupImage?.path || !ocrEnabled) return;
+    async (
+      modelId?: string,
+      requestId?: number,
+      options?: { manual?: boolean },
+    ) => {
+      if (!startupImage?.path) return;
 
       const currentChatId = chatId;
       const modelToUse = modelId || currentOcrModel;
+      if (!modelToUse) return;
+
+      if (!options?.manual && !ocrEnabled) {
+        return;
+      }
 
       if (ocrData[modelToUse]) {
         console.log(
@@ -194,11 +213,9 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
       cancelledRef.current = false;
 
       try {
-        let isBase64 = false;
-
         const results = await invoke<OCRBox[]>("ocr_image", {
           imageData: startupImage.path,
-          isBase64,
+          isBase64: false,
           modelName: modelToUse,
         });
 
@@ -286,7 +303,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
 
       setTimeout(() => {
         if (newRequestId === scanRequestRef.current) {
-          scan(modelId, newRequestId);
+          scan(modelId, newRequestId, { manual: true });
         }
       }, 50);
     },
@@ -300,14 +317,10 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
         return;
       }
 
-      if (model === currentOcrModel) {
-        restartScanForModel(model);
-        return;
-      }
-
       onOcrModelChange(model);
+      restartScanForModel(model);
     },
-    [currentOcrModel, onOcrModelChange, restartScanForModel],
+    [onOcrModelChange, restartScanForModel],
   );
 
   const handleCancel = (e: React.MouseEvent) => {
@@ -329,6 +342,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
   useEffect(() => {
     if (
       startupImage &&
+      ocrEnabled &&
       currentOcrModel &&
       !ocrData[currentOcrModel] &&
       !autoOcrDisabledForChat &&
@@ -347,43 +361,8 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     errorDialog,
     scan,
     currentOcrModel,
+    ocrEnabled,
   ]);
-
-  const prevModelRef = useRef(currentOcrModel);
-  const prevImageIdRef = useRef(startupImage?.imageId);
-
-  useEffect(() => {
-    const modelChanged = currentOcrModel !== prevModelRef.current;
-    const imageChanged = startupImage?.imageId !== prevImageIdRef.current;
-
-    prevModelRef.current = currentOcrModel;
-    prevImageIdRef.current = startupImage?.imageId;
-
-    if (imageChanged) {
-      cancelledRef.current = false;
-      scanRequestRef.current += 1;
-      return;
-    }
-
-    if (startupImage && modelChanged) {
-      console.log(`Model changed to ${currentOcrModel}`);
-
-      scanRequestRef.current += 1;
-      const newRequestId = scanRequestRef.current;
-
-      cancelOcrJob();
-      setLoading(false);
-      cancelledRef.current = false;
-
-      if (!currentOcrModel) return;
-
-      setTimeout(() => {
-        if (newRequestId === scanRequestRef.current) {
-          scan(currentOcrModel, newRequestId);
-        }
-      }, 50);
-    }
-  }, [currentOcrModel, startupImage, scan, setLoading]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
@@ -557,11 +536,10 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
               onTranslateClick={handleTranslateAll}
               onCollapse={toggleExpand}
               isLensLoading={isLensLoading}
-              isTranslateDisabled={displayData.length === 0}
+              isTranslateDisabled={isTranslateDisabled}
               isOCRLoading={loading}
               isExpanded={isExpanded}
               placeholder="Add to your search"
-              ocrEnabled={ocrEnabled}
               currentOcrModel={currentOcrModel}
               onOcrModelChange={handleUserOcrModelChange}
               onOpenSettings={onOpenSettings}
@@ -589,7 +567,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
                     draggable={false}
                     className={styles.bigImage}
                   />
-                  {ocrEnabled && (
+                  {displayData.length > 0 && (
                     <OCRTextCanvas
                       data={displayData}
                       size={size}

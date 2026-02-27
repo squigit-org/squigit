@@ -179,6 +179,7 @@ export const Chat: React.FC = () => {
           isOcrScanning={app.isOcrScanning}
           onOcrScanningChange={app.setIsOcrScanning}
           isExpanded={isImageExpanded}
+          isNavigating={app.isNavigating}
         />
       </div>
       <div className="flex-1 min-h-0 relative flex flex-col">
