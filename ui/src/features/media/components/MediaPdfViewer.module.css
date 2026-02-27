@@ -1,0 +1,59 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.pdfViewer {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(63, 63, 70, 0.5);
+  background: #111;
+}
+
+.pdfPages {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+.pdfPage {
+  flex: 0 0 auto;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.pdfCanvas {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto !important;
+}
+
+.loadingText,
+.errorText,
+.metaText {
+  font-size: 0.8rem;
+  padding: 8px 12px 0;
+}
+
+.loadingText,
+.metaText {
+  color: var(--neutral-400);
+}
+
+.errorText {
+  color: #f87171;
+}

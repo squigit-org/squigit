@@ -7,7 +7,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getDocument } from "pdfjs-dist";
-import styles from "../MediaOverlay.module.css";
+import styles from "./MediaPdfViewer.module.css";
 
 interface MediaPdfViewerProps {
   filePath: string;
@@ -47,7 +47,10 @@ export const MediaPdfViewer: React.FC<MediaPdfViewerProps> = ({
         const pdf = await loadingTask.promise;
         if (cancelled) return;
 
-        const targetWidth = Math.max(containerRef.current!.clientWidth - 40, 320);
+        const targetWidth = Math.max(
+          containerRef.current!.clientWidth - 40,
+          320,
+        );
         setPageCount(pdf.numPages);
 
         for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex += 1) {
@@ -77,6 +80,7 @@ export const MediaPdfViewer: React.FC<MediaPdfViewerProps> = ({
           pagesEl.appendChild(pageWrap);
 
           await page.render({
+            canvas,
             canvasContext: ctx,
             viewport,
             transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],

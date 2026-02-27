@@ -7,7 +7,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import styles from "../MediaOverlay.module.css";
+import styles from "./MediaImageViewer.module.css";
 
 interface MediaImageViewerProps {
   filePath: string;
@@ -49,8 +49,17 @@ export const MediaImageViewer: React.FC<MediaImageViewerProps> = ({
     setZoom(clampZoom(next));
   };
 
+  const clearSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      selection.removeAllRanges();
+    }
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!scrollRef.current) return;
+    e.preventDefault();
+    clearSelection();
     dragRef.current = {
       active: true,
       x: e.clientX,
@@ -75,7 +84,9 @@ export const MediaImageViewer: React.FC<MediaImageViewerProps> = ({
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     dragRef.current.active = false;
     setIsDragging(false);
-    e.currentTarget.releasePointerCapture(e.pointerId);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -83,6 +94,17 @@ export const MediaImageViewer: React.FC<MediaImageViewerProps> = ({
     e.preventDefault();
     const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
     updateZoom(zoom + delta);
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      clearSelection();
+    }
   };
 
   return (
@@ -123,13 +145,21 @@ export const MediaImageViewer: React.FC<MediaImageViewerProps> = ({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onWheel={handleWheel}
+        onDragStart={handleDragStart}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
         <div
           className={styles.imageTransformLayer}
           style={{ transform: `scale(${zoom})` }}
         >
-          <img src={src} alt={name} className={styles.previewImage} />
+          <img
+            src={src}
+            alt={name}
+            className={styles.previewImage}
+            draggable={false}
+          />
         </div>
       </div>
     </div>

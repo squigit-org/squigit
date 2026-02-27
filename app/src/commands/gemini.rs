@@ -25,11 +25,16 @@ async fn build_interleaved_parts(
     api_key: &str,
     cache: &std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, crate::commands::gemini_files::GeminiFileRef>>>,
 ) -> Result<Vec<GeminiPart>, String> {
+    enum PreparedAttachment {
+        Uploaded(crate::commands::gemini_files::GeminiFileRef),
+        InlineText(String),
+    }
+
     let re = Regex::new(r"\{\{([^}]+)\}\}").map_err(|e| format!("Regex Error: {}", e))?;
     
     let mut text_chunks = Vec::new();
     let mut last_end = 0;
-    let mut paths_to_upload = Vec::new();
+    let mut file_paths = Vec::new();
 
     for cap in re.captures_iter(text) {
         let full_match = cap.get(0).unwrap();
@@ -40,7 +45,7 @@ async fn build_interleaved_parts(
             text_chunks.push((false, before.to_string()));
         }
 
-        paths_to_upload.push(path.clone());
+        file_paths.push(path.clone());
         text_chunks.push((true, path));
 
         last_end = full_match.end();
@@ -51,28 +56,34 @@ async fn build_interleaved_parts(
         text_chunks.push((false, remaining.to_string()));
     }
 
-    if paths_to_upload.is_empty() {
+    if file_paths.is_empty() {
         return Ok(vec![GeminiPart {
             text: Some(text.to_string()),
             ..Default::default()
         }]);
     }
 
-    let mut unique_paths = paths_to_upload.clone();
+    let mut unique_paths = file_paths.clone();
     unique_paths.sort();
     unique_paths.dedup();
 
-    let upload_futures = unique_paths.iter().map(|p| {
-        crate::commands::gemini_files::ensure_file_uploaded(api_key, p, cache)
+    let prepare_futures = unique_paths.iter().map(|p| async {
+        if crate::commands::gemini_files::is_docx_path(p) {
+            let extracted_text = crate::commands::gemini_files::extract_docx_text_for_prompt(p).await?;
+            Ok::<PreparedAttachment, String>(PreparedAttachment::InlineText(extracted_text))
+        } else {
+            let file_ref = crate::commands::gemini_files::ensure_file_uploaded(api_key, p, cache).await?;
+            Ok::<PreparedAttachment, String>(PreparedAttachment::Uploaded(file_ref))
+        }
     });
 
-    let results = join_all(upload_futures).await;
-    let mut file_refs = std::collections::HashMap::new();
+    let results = join_all(prepare_futures).await;
+    let mut prepared_attachments = std::collections::HashMap::new();
 
     for (path, result) in unique_paths.into_iter().zip(results.into_iter()) {
         match result {
-            Ok(file_ref) => {
-                file_refs.insert(path, file_ref);
+            Ok(prepared) => {
+                prepared_attachments.insert(path, prepared);
             }
             Err(e) => return Err(e),
         }
@@ -81,14 +92,32 @@ async fn build_interleaved_parts(
     let mut parts = Vec::new();
     for (is_file, content) in text_chunks {
         if is_file {
-            if let Some(file_ref) = file_refs.get(&content) {
-                parts.push(GeminiPart {
-                    file_data: Some(GeminiFileData {
-                        mime_type: file_ref.mime_type.clone(),
-                        file_uri: file_ref.file_uri.clone(),
-                    }),
-                    ..Default::default()
-                });
+            if let Some(prepared) = prepared_attachments.get(&content) {
+                match prepared {
+                    PreparedAttachment::Uploaded(file_ref) => {
+                        parts.push(GeminiPart {
+                            file_data: Some(GeminiFileData {
+                                mime_type: file_ref.mime_type.clone(),
+                                file_uri: file_ref.file_uri.clone(),
+                            }),
+                            ..Default::default()
+                        });
+                    }
+                    PreparedAttachment::InlineText(extracted_text) => {
+                        let file_name = std::path::Path::new(&content)
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("attachment.docx");
+                        let docx_block = format!(
+                            "[Attachment: {} | format: docx | content: extracted text]\n{}\n[End attachment]",
+                            file_name, extracted_text
+                        );
+                        parts.push(GeminiPart {
+                            text: Some(docx_block),
+                            ..Default::default()
+                        });
+                    }
+                }
             }
         } else {
             parts.push(GeminiPart {
@@ -391,5 +420,4 @@ pub async fn generate_chat_title(
     println!("Title Gen Failed to extract text from candidates");
     Ok("New Chat".to_string())
 }
-
 

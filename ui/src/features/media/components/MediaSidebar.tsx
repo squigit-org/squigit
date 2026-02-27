@@ -7,7 +7,7 @@
 import React, { useRef, useState } from "react";
 import { X, FolderOpen, Copy } from "lucide-react";
 import { Tooltip } from "@/components";
-import styles from "../MediaOverlay.module.css";
+import styles from "./MediaSidebar.module.css";
 
 interface MediaSidebarProps {
   onClose: () => void;

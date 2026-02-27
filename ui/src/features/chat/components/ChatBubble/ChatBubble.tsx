@@ -57,6 +57,11 @@ function renderKatex(latex: string, displayMode: boolean): string {
   return html;
 }
 
+function getBaseName(path: string): string {
+  const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
+}
+
 const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   message,
   isStreamed = false,
@@ -77,14 +82,12 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
   const attachments = useMemo(() => {
     const paths = parseAttachmentPaths(message.text);
-    return paths.map((p) =>
-      attachmentFromPath(
-        p,
-        undefined,
-        undefined,
-        app.getAttachmentSourcePath(p) || undefined,
-      ),
-    );
+    return paths.map((p) => {
+      const sourcePath = app.getAttachmentSourcePath(p) || undefined;
+      const originalName = sourcePath ? getBaseName(sourcePath) : undefined;
+
+      return attachmentFromPath(p, undefined, originalName, sourcePath);
+    });
   }, [app.getAttachmentSourcePath, message.text]);
 
   const displayText = useMemo(() => {
