@@ -11,7 +11,6 @@ import { useAppContext } from "@/providers/AppProvider";
 import { useInlineMenu } from "@/hooks";
 import { InlineMenu, LoadingSpinner, TextShimmer, Dialog } from "@/components";
 import {
-  useAttachments,
   buildAttachmentMention,
   ChatInput,
   ImageArtifact,
@@ -25,8 +24,6 @@ import styles from "./Chat.module.css";
 
 export const Chat: React.FC = () => {
   const app = useAppContext();
-  const { attachments, setAttachments, addFromPath, clearAttachments } =
-    useAttachments();
   const [stopRequested, setStopRequested] = useState(false);
 
   // Refs
@@ -65,14 +62,14 @@ export const Chat: React.FC = () => {
       "capture-to-input",
       (event) => {
         if (event.payload && event.payload.tempPath) {
-          addFromPath(event.payload.tempPath);
+          app.addAttachmentFromPath(event.payload.tempPath);
         }
       },
     );
     return () => {
       unlistenPromise.then((fn) => fn());
     };
-  }, [addFromPath]);
+  }, [app.addAttachmentFromPath]);
 
   // Menu Hooks
   const showFlatMenuRef = useRef<
@@ -134,15 +131,15 @@ export const Chat: React.FC = () => {
   // Handlers
   const handleSend = () => {
     let finalInput = app.input;
-    if (attachments.length > 0) {
-      const mentions = attachments
+    if (app.attachments.length > 0) {
+      const mentions = app.attachments
         .map((a) => buildAttachmentMention(a.path))
         .join("\n");
       finalInput = `${app.input}\n\n${mentions}`.trim();
     }
     app.chat.handleSend(finalInput, app.inputModel);
     app.setInput("");
-    clearAttachments();
+    app.clearAttachments();
   };
 
   const handleCaptureToInput = async () => {
@@ -259,8 +256,8 @@ export const Chat: React.FC = () => {
               }}
               selectedModel={app.inputModel}
               onModelChange={app.setInputModel}
-              attachments={attachments}
-              onAttachmentsChange={setAttachments}
+              attachments={app.attachments}
+              onAttachmentsChange={app.setAttachments}
               onCaptureToInput={handleCaptureToInput}
             />
           </div>

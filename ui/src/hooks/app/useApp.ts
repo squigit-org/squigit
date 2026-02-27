@@ -32,7 +32,12 @@ import {
   getPendingUpdate,
   useAuth,
 } from "@/hooks";
-import { useChat, useChatHistory, useChatTitle } from "@/features";
+import {
+  useAttachments,
+  useChat,
+  useChatHistory,
+  useChatTitle,
+} from "@/features";
 
 import { useAppDialogs } from "./useAppDialogs";
 import { useAppDrafts } from "./useAppDrafts";
@@ -101,7 +106,8 @@ export const useApp = () => {
   };
 
   const dialogs = useAppDialogs();
-  const drafts = useAppDrafts(chatHistory.activeSessionId);
+  const drafts = useAppDrafts();
+  const attachments = useAttachments();
   const contextMenuState = useAppContextMenu();
   const ocr = useAppOcr(chatHistory.activeSessionId, system.sessionOcrLanguage);
 
@@ -726,6 +732,7 @@ export const useApp = () => {
     input: drafts.input,
     imageInput: drafts.imageInput,
     inputModel: drafts.inputModel,
+    attachments: attachments.attachments,
     setInputModel: drafts.setInputModel,
     pendingUpdate,
     showUpdate,
@@ -751,6 +758,9 @@ export const useApp = () => {
     handleAddAccount,
     setInput: drafts.setInput,
     setImageInput: drafts.setImageInput,
+    setAttachments: attachments.setAttachments,
+    addAttachmentFromPath: attachments.addFromPath,
+    clearAttachments: attachments.clearAttachments,
     setShowUpdate,
     handleContextMenu: contextMenuState.handleContextMenu,
     handleCloseContextMenu: contextMenuState.handleCloseContextMenu,

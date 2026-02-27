@@ -7,24 +7,12 @@
 import { useState } from "react";
 import { ModelType } from "@/lib";
 
-export const useAppDrafts = (activeSessionId: string | null) => {
-  const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
-  const [imageDrafts, setImageDrafts] = useState<Record<string, string>>({});
+export const useAppDrafts = () => {
+  const [input, setInput] = useState("");
+  const [imageInput, setImageInput] = useState("");
   const [inputModel, setInputModel] = useState<string>(
     ModelType.GEMINI_2_5_FLASH,
   );
-
-  const activeDraftId = activeSessionId || "new_session";
-
-  const input = chatDrafts[activeDraftId] || "";
-  const setInput = (val: string) => {
-    setChatDrafts((prev) => ({ ...prev, [activeDraftId]: val }));
-  };
-
-  const imageInput = imageDrafts[activeDraftId] || "";
-  const setImageInput = (val: string) => {
-    setImageDrafts((prev) => ({ ...prev, [activeDraftId]: val }));
-  };
 
   return {
     input,
