@@ -4,8 +4,10 @@
 use crate::state::AppState;
 use ops_chat_storage::{ChatStorage, StoredImage};
 use ops_profile_store::ProfileStore;
+use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 use tauri::State;
 
 pub fn process_and_store_image(
@@ -45,3 +47,85 @@ pub fn process_bytes_internal(
     Ok(stored)
 }
 
+#[derive(Debug, Deserialize)]
+struct ImgBbUploadResponse {
+    success: bool,
+    data: Option<ImgBbUploadData>,
+    error: Option<ImgBbUploadError>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ImgBbUploadData {
+    url: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ImgBbUploadError {
+    message: Option<String>,
+}
+
+pub async fn upload_image_to_imgbb(image_path: &str, api_key: &str) -> Result<String, String> {
+    if api_key.trim().is_empty() {
+        return Err("ImgBB API key is required".to_string());
+    }
+
+    let path = Path::new(image_path);
+    if !path.exists() {
+        return Err(format!("Image file not found: {}", image_path));
+    }
+    if !path.is_file() {
+        return Err(format!("Path is not a file: {}", image_path));
+    }
+
+    let bytes = tokio::fs::read(path)
+        .await
+        .map_err(|e| format!("Failed to read image file: {}", e))?;
+    if bytes.is_empty() {
+        return Err("Image file is empty".to_string());
+    }
+
+    let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("image");
+    let mime = mime_guess::from_path(path).first_or_octet_stream();
+
+    let image_part = reqwest::multipart::Part::bytes(bytes)
+        .file_name(file_name.to_string())
+        .mime_str(mime.essence_str())
+        .map_err(|e| format!("Failed to set MIME type for upload: {}", e))?;
+
+    let form = reqwest::multipart::Form::new().part("image", image_part);
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.imgbb.com/1/upload")
+        .query(&[("key", api_key)])
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| format!("ImgBB upload request failed: {}", e))?;
+
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read ImgBB response: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("ImgBB upload failed ({}): {}", status, body));
+    }
+
+    let parsed: ImgBbUploadResponse = serde_json::from_str(&body)
+        .map_err(|e| format!("Failed to parse ImgBB response: {}", e))?;
+
+    if !parsed.success {
+        let message = parsed
+            .error
+            .and_then(|e| e.message)
+            .unwrap_or_else(|| "ImgBB upload was not successful".to_string());
+        return Err(message);
+    }
+
+    parsed
+        .data
+        .and_then(|d| d.url)
+        .ok_or_else(|| "ImgBB response missing uploaded image URL".to_string())
+}

@@ -59,7 +59,13 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
     let capture_i = MenuItem::with_id(app, "capture", "Capture", true, None::<&str>)?;
-    let show_i = MenuItem::with_id(app, "show_ui", crate::constants::APP_NAME, true, None::<&str>)?;
+    let show_i = MenuItem::with_id(
+        app,
+        "show_ui",
+        crate::constants::APP_NAME,
+        true,
+        None::<&str>,
+    )?;
     let sep = PredefinedMenuItem::separator(app)?;
     let exit_i = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show_i, &capture_i, &sep, &exit_i])?;
@@ -163,7 +169,10 @@ mod sni {
             show_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
 
             let mut show_ui_props: HashMap<String, OwnedValue> = HashMap::new();
-            show_ui_props.insert("label".into(), Value::from(crate::constants::APP_NAME).try_into().unwrap());
+            show_ui_props.insert(
+                "label".into(),
+                Value::from(crate::constants::APP_NAME).try_into().unwrap(),
+            );
             show_ui_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
 
             let mut sep_props: HashMap<String, OwnedValue> = HashMap::new();
@@ -220,9 +229,9 @@ mod sni {
         ) -> zbus::fdo::Result<()> {
             if event_id == "clicked" {
                 match id {
-                    2 => super::show_window(&self.app_handle),    // SnapLLM
+                    2 => super::show_window(&self.app_handle), // SnapLLM
                     1 => super::capture_screen_with_source(&self.app_handle, "tray"), // Capture
-                    4 => self.app_handle.exit(0),                 // Exit
+                    4 => self.app_handle.exit(0),              // Exit
                     _ => {}
                 }
             }

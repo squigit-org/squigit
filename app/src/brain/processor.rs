@@ -3,50 +3,62 @@
 
 //! Processor module - Builds API payloads for initial and subsequent turns.
 
+use crate::brain::loader::{interpolate, load_frame, load_scenes, load_soul, load_title_prompt};
 use std::collections::HashMap;
-use crate::brain::loader::{load_soul, load_scenes, load_frame, load_title_prompt, interpolate};
 
 /// Build the system prompt for the initial turn (with image).
 /// This includes the full soul identity and scenes knowledge base.
 pub fn build_initial_system_prompt() -> Result<String, String> {
     let soul = load_soul()?;
     let scenes = load_scenes()?;
-    
+
     // Serialize scenes to JSON for embedding
     let scenes_json = serde_json::to_string_pretty(&scenes)
         .map_err(|e| format!("Failed to serialize scenes: {}", e))?;
-    
+
     // Build the system prompt
     let mut prompt = String::new();
-    
+
     // Identity section
     prompt.push_str(&format!(
         "# Identity\n\
         You are **{}**, {}.\n\
         {}\n\n",
-        soul.identity.name,
-        soul.identity.role,
-        soul.identity.description
+        soul.identity.name, soul.identity.role, soul.identity.description
     ));
-    
+
     // Core instructions
     prompt.push_str("# Core Instructions\n");
-    prompt.push_str(&format!("- **Be Helpful**: {}\n", soul.core_instructions.be_helpful));
-    prompt.push_str(&format!("- **No Fluff**: {}\n", soul.core_instructions.no_fluff));
-    prompt.push_str(&format!("- **Emojis**: {}\n", soul.core_instructions.balanced_emojis));
-    prompt.push_str(&format!("- **Markdown**: {}\n", soul.core_instructions.markdown));
-    prompt.push_str(&format!("- **Conversational**: {}\n\n", soul.core_instructions.conversational));
-    
+    prompt.push_str(&format!(
+        "- **Be Helpful**: {}\n",
+        soul.core_instructions.be_helpful
+    ));
+    prompt.push_str(&format!(
+        "- **No Fluff**: {}\n",
+        soul.core_instructions.no_fluff
+    ));
+    prompt.push_str(&format!(
+        "- **Emojis**: {}\n",
+        soul.core_instructions.balanced_emojis
+    ));
+    prompt.push_str(&format!(
+        "- **Markdown**: {}\n",
+        soul.core_instructions.markdown
+    ));
+    prompt.push_str(&format!(
+        "- **Conversational**: {}\n\n",
+        soul.core_instructions.conversational
+    ));
+
     // Skill matrix
     prompt.push_str(&format!(
         "# Skill Matrix\n\
         {}\n\n\
         ## Known Scenes\n\
         ```json\n{}\n```\n\n",
-        soul.skill_matrix.description,
-        scenes_json
+        soul.skill_matrix.description, scenes_json
     ));
-    
+
     // Unknown scenes protocol
     prompt.push_str("# Unknown Scenes Protocol\n");
     prompt.push_str("If the screenshot doesn't match any known scene:\n");
@@ -55,7 +67,7 @@ pub fn build_initial_system_prompt() -> Result<String, String> {
             prompt.push_str(&format!("- **{}**: {}\n", key, value));
         }
     }
-    
+
     Ok(prompt)
 }
 
@@ -67,12 +79,15 @@ pub fn build_turn_context(
     history_log: &str,
 ) -> String {
     let frame_template = load_frame();
-    
+
     let mut vars = HashMap::new();
-    vars.insert("IMAGE_DESCRIPTION".to_string(), image_description.to_string());
+    vars.insert(
+        "IMAGE_DESCRIPTION".to_string(),
+        image_description.to_string(),
+    );
     vars.insert("USER_FIRST_MSG".to_string(), user_first_msg.to_string());
     vars.insert("HISTORY_LOG".to_string(), history_log.to_string());
-    
+
     interpolate(&frame_template, &vars)
 }
 
@@ -86,7 +101,7 @@ pub fn get_title_prompt() -> Result<String, String> {
 pub fn format_history_log(messages: &[(String, String)], max_turns: usize) -> String {
     let start = messages.len().saturating_sub(max_turns);
     let recent = &messages[start..];
-    
+
     let mut log = String::new();
     for (i, (role, content)) in recent.iter().enumerate() {
         if i > 0 {
@@ -94,11 +109,11 @@ pub fn format_history_log(messages: &[(String, String)], max_turns: usize) -> St
         }
         log.push_str(&format!("**{}**: {}", role, content));
     }
-    
+
     if log.is_empty() {
         log.push_str("(No previous messages)");
     }
-    
+
     log
 }
 

@@ -4,47 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { google, imgbb } from "@/lib";
-
-interface ImgBBResponse {
-  success: boolean;
-  data: {
-    url: string;
-    delete_url: string;
-  };
-  error?: {
-    message: string;
-  };
-}
+import { google } from "@/lib";
+import { invoke } from "@tauri-apps/api/core";
 
 /**
- * Uploads a base64 encoded image to ImgBB and returns the hosted URL.
- * @param base64Image - The base64 string of the image
+ * Uploads an image file path to ImgBB and returns the hosted URL.
+ * Uses the native Tauri command for multipart file upload (no base64 conversion).
+ * @param imagePath - Absolute local image path
  * @param apiKey - The ImgBB API key
  * @returns The public URL of the uploaded image
  */
 export async function uploadToImgBB(
-  base64Image: string,
+  imagePath: string,
   apiKey: string,
 ): Promise<string> {
-  const cleanBase64 = base64Image.replace(/^data:image\/[a-z]+;base64,/, "");
-
-  const formData = new FormData();
-  formData.append("key", apiKey);
-  formData.append("image", cleanBase64);
-
-  const response = await fetch(imgbb.upload, {
-    method: "POST",
-    body: formData,
-  });
-
-  const result: ImgBBResponse = await response.json();
-
-  if (!result.success || !result.data.url) {
-    throw new Error(result.error?.message || "Failed to upload image to ImgBB");
-  }
-
-  return result.data.url;
+  return invoke<string>("upload_image_to_imgbb", { imagePath, apiKey });
 }
 
 /**

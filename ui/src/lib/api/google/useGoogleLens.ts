@@ -6,7 +6,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { uploadToImgBB, generateLensUrl } from "./lens.google";
 
@@ -29,39 +28,31 @@ export const useGoogleLens = (
     imageRef.current = startupImage;
   }, [startupImage]);
 
-  const getRealBase64 = async (img: NonNullable<typeof startupImage>) => {
-    try {
-      const response = await fetch(convertFileSrc(img.path));
-      const blob = await response.blob();
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          resolve(result.replace(/^data:image\/[a-z]+;base64,/, ""));
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (e) {
-      console.error("Failed to fetch local asset:", e);
-      throw e;
-    }
+  const appendQuery = (url: string, query?: string) => {
+    if (!query || !query.trim()) return url;
+    const encodedQuery = encodeURIComponent(query.trim());
+    return `${url}&q=${encodedQuery}`;
   };
 
-  const runLensSearch = async (imgData: string, key: string) => {
+  const runLensSearch = async (
+    imagePath: string,
+    key: string,
+    searchQuery?: string,
+  ) => {
     try {
       setIsLensLoading(true);
       if (cachedUrl) {
-        await invoke("open_external_url", { url: cachedUrl });
-        setIsLensLoading(false);
+        const finalUrl = appendQuery(cachedUrl, searchQuery);
+        await invoke("open_external_url", { url: finalUrl });
         return;
       }
 
-      const publicUrl = await uploadToImgBB(imgData, key);
+      const publicUrl = await uploadToImgBB(imagePath, key);
       const lensUrl = generateLensUrl(publicUrl);
+      const finalUrl = appendQuery(lensUrl, searchQuery);
 
       setCachedUrl(lensUrl);
-      await invoke("open_external_url", { url: lensUrl });
+      await invoke("open_external_url", { url: finalUrl });
     } finally {
       setIsLensLoading(false);
     }
@@ -78,8 +69,7 @@ export const useGoogleLens = (
           setWaitingForKey(false);
           invoke("close_imgbb_window");
           if (imageRef.current) {
-            const realBase64 = await getRealBase64(imageRef.current);
-            await runLensSearch(realBase64, key);
+            await runLensSearch(imageRef.current.path, key);
           }
         }
       },
@@ -99,12 +89,6 @@ export const useGoogleLens = (
   const triggerLens = async (searchQuery?: string) => {
     if (!startupImage) return;
     if (isLensLoading || waitingForKey) return;
-
-    const appendQuery = (url: string, query?: string) => {
-      if (!query || !query.trim()) return url;
-      const encodedQuery = encodeURIComponent(query.trim());
-      return `${url}&q=${encodedQuery}`;
-    };
 
     if (cachedUrl) {
       const finalUrl = appendQuery(cachedUrl, searchQuery);
@@ -137,17 +121,7 @@ export const useGoogleLens = (
       );
 
       if (apiKey) {
-        const realBase64 = await getRealBase64(startupImage);
-        setIsLensLoading(true);
-
-        const publicUrl = await uploadToImgBB(realBase64, apiKey);
-        const lensUrl = generateLensUrl(publicUrl);
-
-        setCachedUrl(lensUrl);
-        const finalUrl = appendQuery(lensUrl, searchQuery);
-        await invoke("open_external_url", { url: finalUrl });
-        setIsLensLoading(false);
-        setIsLensLoading(false);
+        await runLensSearch(startupImage.path, apiKey, searchQuery);
       } else {
         setShowAuthDialog(true);
         setIsLensLoading(false);

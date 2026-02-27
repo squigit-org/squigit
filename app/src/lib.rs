@@ -7,47 +7,48 @@ use tauri_plugin_autostart::MacosLauncher;
 pub mod state;
 pub mod utils;
 
-pub mod commands;
-pub mod services;
 pub mod brain;
+pub mod commands;
 pub mod constants;
+pub mod services;
 
-use commands::auth::{cache_avatar, get_api_key, get_user_data, logout, start_google_auth, cancel_google_auth};
-use commands::chat::{
-    append_chat_message, create_chat, delete_chat,
-    get_image_path, get_imgbb_url, get_ocr_data, get_ocr_frame, init_ocr_frame,
-    list_chats, load_chat, read_attachment_text, resolve_attachment_path, reveal_in_file_manager,
-    overwrite_chat_messages, save_imgbb_url, save_ocr_data, store_image_bytes,
-    store_image_from_path, store_file_from_path, update_chat_metadata,
-};
-use commands::clipboard::{
-    copy_image_to_clipboard, read_clipboard_image, read_clipboard_text,
-    copy_image_from_path_to_clipboard,
+use commands::auth::{
+    cache_avatar, cancel_google_auth, get_api_key, get_user_data, logout, start_google_auth,
 };
 use commands::capture::{spawn_capture, spawn_capture_to_input};
-use commands::image::{
-    get_initial_image, process_image_path, read_image_file, copy_image_to_path,
+use commands::chat::{
+    append_chat_message, create_chat, delete_chat, get_image_path, get_imgbb_url, get_ocr_data,
+    get_ocr_frame, init_ocr_frame, list_chats, load_chat, overwrite_chat_messages,
+    read_attachment_text, resolve_attachment_path, reveal_in_file_manager, save_imgbb_url,
+    save_ocr_data, store_file_from_path, store_image_bytes, store_image_from_path,
+    update_chat_metadata,
 };
-use commands::models::{download_ocr_model, list_downloaded_models, get_model_path};
-use commands::ocr::{ocr_image, cancel_ocr_job};
-use commands::profile::{
-    get_active_profile, get_active_profile_id, set_active_profile,
-    list_profiles, delete_profile, has_profiles, get_profile_count,
-};
-use commands::security::{check_file_exists, encrypt_and_save, set_agreed_flag, has_agreed_flag};
-use commands::window::{
-    close_window, maximize_window, minimize_window,
-    open_external_url, set_background_color,
-    set_always_on_top, get_always_on_top, show_window, reload_window,
+use commands::clipboard::{
+    copy_image_from_path_to_clipboard, copy_image_to_clipboard, read_clipboard_image,
+    read_clipboard_text,
 };
 use commands::constants::get_app_constants;
+use commands::image::{
+    copy_image_to_path, get_initial_image, process_image_path, read_image_file,
+    upload_image_to_imgbb,
+};
+use commands::models::{download_ocr_model, get_model_path, list_downloaded_models};
+use commands::ocr::{cancel_ocr_job, ocr_image};
+use commands::profile::{
+    delete_profile, get_active_profile, get_active_profile_id, get_profile_count, has_profiles,
+    list_profiles, set_active_profile,
+};
+use commands::security::{check_file_exists, encrypt_and_save, has_agreed_flag, set_agreed_flag};
 use commands::speech::SpeechState;
+use commands::window::{
+    close_window, get_always_on_top, maximize_window, minimize_window, open_external_url,
+    reload_window, set_always_on_top, set_background_color, show_window,
+};
 use services::image::process_and_store_image;
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-
     #[cfg(target_os = "linux")]
     std::env::set_var("GDK_BACKEND", "x11");
 
@@ -75,6 +76,7 @@ pub fn run() {
             process_image_path,
             read_image_file,
             get_initial_image,
+            upload_image_to_imgbb,
             // Clipboard
             read_clipboard_image,
             read_clipboard_text,
@@ -179,12 +181,18 @@ pub fn run() {
             {
                 let config_dir = crate::utils::get_app_config_dir(&handle);
                 let marker_file = config_dir.join(".shortcut_installed");
-                
+
                 if !marker_file.exists() {
-                    log::info!("First run on Linux detected: attempting to install global shortcut");
+                    log::info!(
+                        "First run on Linux detected: attempting to install global shortcut"
+                    );
                     if let Ok(exe) = std::env::current_exe() {
                         let bin = exe.to_string_lossy();
-                        match sys_global_shortcut::install_linux_shortcut(&bin, "SUPER+SHIFT+a", crate::constants::APP_NAME) {
+                        match sys_global_shortcut::install_linux_shortcut(
+                            &bin,
+                            "SUPER+SHIFT+a",
+                            crate::constants::APP_NAME,
+                        ) {
                             Ok(_) => {
                                 log::info!("Successfully installed Linux global shortcut");
                                 if let Err(e) = std::fs::write(&marker_file, "") {
@@ -218,10 +226,13 @@ pub fn run() {
                     "ocrLanguage": crate::constants::DEFAULT_OCR_LANGUAGE,
                     "activeAccount": crate::constants::DEFAULT_ACTIVE_ACCOUNT
                 });
-                
+
                 if let Err(e) = std::fs::create_dir_all(&config_dir) {
                     log::error!("Failed to create config dir: {}", e);
-                } else if let Err(e) = std::fs::write(&prefs_file, serde_json::to_string_pretty(&default_prefs).unwrap()) {
+                } else if let Err(e) = std::fs::write(
+                    &prefs_file,
+                    serde_json::to_string_pretty(&default_prefs).unwrap(),
+                ) {
                     log::error!("Failed to create default preferences.json: {}", e);
                 }
             }
@@ -237,18 +248,17 @@ pub fn run() {
             )
             .expect("Failed to spawn main window");
 
-            services::tray::setup_tray(&handle)
-                .expect("Failed to setup tray icon");
+            services::tray::setup_tray(&handle).expect("Failed to setup tray icon");
 
             let shortcut_handle = handle.clone();
             let _shortcut = sys_global_shortcut::ShortcutHandle::register(
                 sys_global_shortcut::ShortcutConfig {
                     linux_trigger: "SUPER+SHIFT+a".into(),
                     linux_description: format!("{} Capture", crate::constants::APP_NAME).into(),
-                    windows_modifiers: 0x0008 | 0x0004,  // MOD_WIN | MOD_SHIFT
-                    windows_vk: 0x41,                    // VK_A
-                    macos_modifiers: 0x0100 | 0x0200,    // cmdKey | shiftKey
-                    macos_keycode: 0x00,                 // kVK_ANSI_A
+                    windows_modifiers: 0x0008 | 0x0004, // MOD_WIN | MOD_SHIFT
+                    windows_vk: 0x41,                   // VK_A
+                    macos_modifiers: 0x0100 | 0x0200,   // cmdKey | shiftKey
+                    macos_keycode: 0x00,                // kVK_ANSI_A
                 },
                 move || services::tray::capture_screen_with_source(&shortcut_handle, "hotkey"),
             );
@@ -269,7 +279,6 @@ pub fn run() {
             }
 
             Ok(())
-
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

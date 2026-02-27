@@ -597,6 +597,8 @@ export const useGeminiEngine = (config: {
       };
 
       setMessages([...truncatedMessages, editedUserMsg, botMsg]);
+      setIsLoading(false);
+      setIsStreaming(false);
       setIsAiTyping(false);
       setStreamingText("");
       setFirstResponseId(null);
@@ -608,7 +610,11 @@ export const useGeminiEngine = (config: {
       ]);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
+        setIsLoading(false);
+        setIsStreaming(false);
         setIsAiTyping(false);
+        setStreamingText("");
+        setFirstResponseId(null);
         return;
       }
       console.error("Edit failed:", apiError);

@@ -1,12 +1,11 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-
 use tauri::State;
 
+use crate::state::AppState;
 use ops_chat_storage::{ChatStorage, StoredImage};
 use ops_profile_store::ProfileStore;
-use crate::state::AppState;
 
 /// Read image from clipboard and store in CAS.
 /// Returns StoredImage { hash, path }.
@@ -47,7 +46,7 @@ pub async fn read_clipboard_image(_state: State<'_, AppState>) -> Result<StoredI
         .get_active_profile_id()
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "No active profile. Please log in first.".to_string())?;
-    
+
     let chats_dir = profile_store.get_chats_dir(&active_id);
     let storage = ChatStorage::with_base_dir(chats_dir).map_err(|e| e.to_string())?;
     let stored = storage.store_image(&buffer).map_err(|e| e.to_string())?;
@@ -68,8 +67,6 @@ pub async fn read_clipboard_text() -> Result<String, String> {
         .map_err(|e| format!("Failed to get text from clipboard: {}", e))
 }
 
-
-
 #[tauri::command]
 pub async fn copy_image_to_clipboard(image_base64: String) -> Result<(), String> {
     use arboard::{Clipboard, ImageData};
@@ -80,8 +77,8 @@ pub async fn copy_image_to_clipboard(image_base64: String) -> Result<(), String>
         .decode(image_base64)
         .map_err(|e| format!("Failed to decode base64: {}", e))?;
 
-    let img = image::load_from_memory(&bytes)
-        .map_err(|e| format!("Failed to decode image: {}", e))?;
+    let img =
+        image::load_from_memory(&bytes).map_err(|e| format!("Failed to decode image: {}", e))?;
 
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();
@@ -106,8 +103,7 @@ pub async fn copy_image_to_clipboard(image_base64: String) -> Result<(), String>
 pub async fn copy_image_from_path_to_clipboard(path: String) -> Result<(), String> {
     use arboard::{Clipboard, ImageData};
 
-    let img = image::open(&path)
-        .map_err(|e| format!("Failed to open image at {}: {}", path, e))?;
+    let img = image::open(&path).map_err(|e| format!("Failed to open image at {}: {}", path, e))?;
 
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();

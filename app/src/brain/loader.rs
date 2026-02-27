@@ -63,8 +63,7 @@ pub struct Scene {
 /// Load the soul configuration from embedded YAML
 pub fn load_soul() -> Result<SoulConfig, String> {
     let yaml_content = include_str!("prompts/core/soul.yml");
-    serde_yaml::from_str(yaml_content)
-        .map_err(|e| format!("Failed to parse soul.yml: {}", e))
+    serde_yaml::from_str(yaml_content).map_err(|e| format!("Failed to parse soul.yml: {}", e))
 }
 
 /// Load the title prompt from embedded YAML
@@ -78,8 +77,7 @@ pub fn load_title_prompt() -> Result<String, String> {
 /// Load scenes from embedded JSON
 pub fn load_scenes() -> Result<Vec<Scene>, String> {
     let json_content = include_str!("knowledge/scenes.json");
-    serde_json::from_str(json_content)
-        .map_err(|e| format!("Failed to parse scenes.json: {}", e))
+    serde_json::from_str(json_content).map_err(|e| format!("Failed to parse scenes.json: {}", e))
 }
 
 /// Load the context frame template from embedded MD
@@ -120,8 +118,11 @@ mod tests {
         let mut vars = HashMap::new();
         vars.insert("NAME".to_string(), "User".to_string());
         vars.insert("PLACE".to_string(), crate::constants::APP_NAME.to_string());
-        
+
         let result = interpolate(template, &vars);
-        assert_eq!(result, format!("Hello User, welcome to {}!", crate::constants::APP_NAME));
+        assert_eq!(
+            result,
+            format!("Hello User, welcome to {}!", crate::constants::APP_NAME)
+        );
     }
 }

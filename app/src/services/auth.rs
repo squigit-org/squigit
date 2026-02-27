@@ -4,7 +4,10 @@
 use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
-use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tauri::{AppHandle, Emitter};
 use tiny_http::{Header, Response, Server};
 use url::Url;
@@ -113,7 +116,10 @@ pub fn start_google_auth_flow(
             continue;
         }
 
-        if url_string.contains(&format!("/{}-cancel", crate::constants::APP_NAME.to_lowercase())) {
+        if url_string.contains(&format!(
+            "/{}-cancel",
+            crate::constants::APP_NAME.to_lowercase()
+        )) {
             let _ = request.respond(Response::empty(200));
             println!("Auth cancelled via local request.");
             break;
@@ -168,13 +174,13 @@ pub fn start_google_auth_flow(
                 .photos
                 .and_then(|p| p.first().and_then(|x| x.url.clone()))
                 .unwrap_or_default();
-            
+
             let original_picture = if !avatar.is_empty() {
                 Some(avatar.clone())
             } else {
                 None
             };
-            
+
             // Generate profile ID from email
             let profile_id = Profile::id_from_email(&email);
 
@@ -185,7 +191,7 @@ pub fn start_google_auth_flow(
                 if avatar.starts_with("http://") {
                     avatar = avatar.replace("http://", "https://");
                 }
-                
+
                 // Get profile store and create profile's chats dir for CAS
                 if let Ok(profile_store) = ProfileStore::new() {
                     let chats_dir = profile_store.get_chats_dir(&profile_id);
@@ -206,13 +212,21 @@ pub fn start_google_auth_flow(
             let profile = Profile::new(
                 &email,
                 &name,
-                if local_avatar.is_empty() { None } else { Some(local_avatar.clone()) },
+                if local_avatar.is_empty() {
+                    None
+                } else {
+                    Some(local_avatar.clone())
+                },
                 original_picture.clone(),
             );
 
             let profile_store = ProfileStore::new().map_err(|e| e.to_string())?;
-            profile_store.upsert_profile(&profile).map_err(|e| e.to_string())?;
-            profile_store.set_active_profile_id(&profile.id).map_err(|e| e.to_string())?;
+            profile_store
+                .upsert_profile(&profile)
+                .map_err(|e| e.to_string())?;
+            profile_store
+                .set_active_profile_id(&profile.id)
+                .map_err(|e| e.to_string())?;
 
             // Build response data for frontend
             let user_data = SavedProfile {

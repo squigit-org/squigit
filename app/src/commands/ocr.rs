@@ -196,17 +196,25 @@ pub async fn ocr_image(
         .map_err(|e| format!("Failed to spawn OCR sidecar: {}", e))?;
 
     // Write length-prefixed payload, then keep stdin open for cancel signals
-    let mut stdin = child.stdin.take()
+    let mut stdin = child
+        .stdin
+        .take()
         .ok_or_else(|| "Failed to get sidecar stdin".to_string())?;
 
     let payload_bytes = request_json.as_bytes();
     let length_header = format!("{}\n", payload_bytes.len());
 
-    stdin.write_all(length_header.as_bytes()).await
+    stdin
+        .write_all(length_header.as_bytes())
+        .await
         .map_err(|e| format!("Failed to write length header: {}", e))?;
-    stdin.write_all(payload_bytes).await
+    stdin
+        .write_all(payload_bytes)
+        .await
         .map_err(|e| format!("Failed to write payload: {}", e))?;
-    stdin.flush().await
+    stdin
+        .flush()
+        .await
         .map_err(|e| format!("Failed to flush stdin: {}", e))?;
 
     // Store the job handle for external cancellation.

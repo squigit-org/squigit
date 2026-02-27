@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod auth;
+pub mod capture;
 pub mod image;
 pub mod models;
 pub mod network;
@@ -9,4 +10,3 @@ pub mod security;
 pub mod theme;
 pub mod tray;
 pub mod window;
-pub mod capture;

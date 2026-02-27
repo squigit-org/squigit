@@ -1,5 +1,5 @@
-use tauri::{AppHandle, State};
 use crate::state::AppState;
+use tauri::{AppHandle, State};
 
 #[tauri::command]
 pub fn spawn_capture(app: AppHandle, _state: State<'_, AppState>) -> Result<(), String> {

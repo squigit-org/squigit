@@ -10,8 +10,8 @@ pub fn spawn_capture(app: &AppHandle) {
     tauri::async_runtime::spawn_blocking(move || match run_capture(&handle, false) {
         Ok(result) => {
             if let Some(window) = handle.get_webview_window("main") {
-                let was_hidden = !window.is_visible().unwrap_or(true)
-                    || window.is_minimized().unwrap_or(false);
+                let was_hidden =
+                    !window.is_visible().unwrap_or(true) || window.is_minimized().unwrap_or(false);
 
                 if was_hidden {
                     if let Some(geo) = result.display_geo {
@@ -21,7 +21,8 @@ pub fn spawn_capture(app: &AppHandle) {
                         });
                         let center_x = geo.x + (geo.w as i32 - win_size.width as i32) / 2;
                         let center_y = geo.y + (geo.h as i32 - win_size.height as i32) / 2;
-                        let _ = window.set_position(tauri::PhysicalPosition::new(center_x, center_y));
+                        let _ =
+                            window.set_position(tauri::PhysicalPosition::new(center_x, center_y));
                     }
                     let _ = window.unminimize();
                     let _ = window.show();
@@ -46,8 +47,8 @@ pub fn spawn_capture_to_input(app: &AppHandle) {
     tauri::async_runtime::spawn_blocking(move || match run_capture(&handle, true) {
         Ok(result) => {
             if let Some(window) = handle.get_webview_window("main") {
-                let was_hidden = !window.is_visible().unwrap_or(true)
-                    || window.is_minimized().unwrap_or(false);
+                let was_hidden =
+                    !window.is_visible().unwrap_or(true) || window.is_minimized().unwrap_or(false);
 
                 if was_hidden {
                     if let Some(geo) = result.display_geo {
@@ -57,7 +58,8 @@ pub fn spawn_capture_to_input(app: &AppHandle) {
                         });
                         let center_x = geo.x + (geo.w as i32 - win_size.width as i32) / 2;
                         let center_y = geo.y + (geo.h as i32 - win_size.height as i32) / 2;
-                        let _ = window.set_position(tauri::PhysicalPosition::new(center_x, center_y));
+                        let _ =
+                            window.set_position(tauri::PhysicalPosition::new(center_x, center_y));
                     }
                     let _ = window.unminimize();
                     let _ = window.show();
@@ -66,7 +68,10 @@ pub fn spawn_capture_to_input(app: &AppHandle) {
             }
 
             if let Some(temp_path) = result.temp_path {
-                let _ = handle.emit("capture-to-input", serde_json::json!({ "tempPath": temp_path }));
+                let _ = handle.emit(
+                    "capture-to-input",
+                    serde_json::json!({ "tempPath": temp_path }),
+                );
             }
         }
         Err(e) => {
@@ -120,8 +125,14 @@ fn run_capture(app: &AppHandle, input_only: bool) -> Result<CaptureResult, Strin
 
     let mut child = Command::new(&sidecar_path)
         .args(&args)
-        .env("GIO_LAUNCHED_DESKTOP_APP_ID", crate::constants::APP_NAME.to_lowercase())
-        .env("G_APPLICATION_ID", crate::constants::APP_NAME.to_lowercase())
+        .env(
+            "GIO_LAUNCHED_DESKTOP_APP_ID",
+            crate::constants::APP_NAME.to_lowercase(),
+        )
+        .env(
+            "G_APPLICATION_ID",
+            crate::constants::APP_NAME.to_lowercase(),
+        )
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
@@ -161,7 +172,8 @@ fn run_capture(app: &AppHandle, input_only: bool) -> Result<CaptureResult, Strin
     let _ = child.wait();
 
     if input_only {
-        let path = temp_path.ok_or_else(|| "Capture sidecar did not return CAS_PATH".to_string())?;
+        let path =
+            temp_path.ok_or_else(|| "Capture sidecar did not return CAS_PATH".to_string())?;
         Ok(CaptureResult {
             chat_id: String::new(),
             image_hash: String::new(),
@@ -169,7 +181,8 @@ fn run_capture(app: &AppHandle, input_only: bool) -> Result<CaptureResult, Strin
             display_geo,
         })
     } else {
-        let chat_id = chat_id.ok_or_else(|| "Capture sidecar did not return CHAT_ID".to_string())?;
+        let chat_id =
+            chat_id.ok_or_else(|| "Capture sidecar did not return CHAT_ID".to_string())?;
         let image_hash = image_hash.unwrap_or_default();
 
         Ok(CaptureResult {

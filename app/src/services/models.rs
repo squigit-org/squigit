@@ -61,8 +61,7 @@ impl ModelManager {
         fs::create_dir_all(&models_dir)?;
 
         let network_monitor = Arc::new(crate::services::network::PeerNetworkMonitor::new());
-        
-        
+
         Ok(Self {
             models_dir,
             cancellation_tokens: Arc::new(Mutex::new(HashMap::new())),
@@ -109,7 +108,6 @@ impl ModelManager {
             return Ok(target_dir);
         }
 
-        
         self.cancel_download(model_id);
 
         let cancel_token = CancellationToken::new();
@@ -119,68 +117,77 @@ impl ModelManager {
 
         let temp_file_path = self.get_temp_file_path(model_id);
         let client = reqwest::Client::new();
-        
+
         loop {
-            
             if cancel_token.is_cancelled() {
                 if let Ok(mut tokens) = self.cancellation_tokens.lock() {
                     tokens.remove(model_id);
                 }
-                
+
                 let _ = fs::remove_file(&temp_file_path);
                 return Err(ModelError::Cancelled);
             }
 
-            
             let net_state = self.network_monitor.get_state();
             if net_state.status == crate::services::network::NetworkStatus::Offline {
-                
                 let _ = window.emit(
                     "download-progress",
                     DownloadProgressPayload {
                         id: model_id.to_string(),
-                        progress: 0, 
-                        loaded: 0, 
+                        progress: 0,
+                        loaded: 0,
                         total: 0,
                         status: "paused".to_string(),
                     },
                 );
-                
+
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 continue;
             }
 
-            
             let metadata = fs::metadata(&temp_file_path).ok();
             let current_bytes = metadata.map(|m| m.len()).unwrap_or(0);
-            
-            let status_str = if current_bytes == 0 { "checking" } else { "downloading" };
-             let _ = window.emit(
+
+            let status_str = if current_bytes == 0 {
+                "checking"
+            } else {
+                "downloading"
+            };
+            let _ = window.emit(
                 "download-progress",
                 DownloadProgressPayload {
                     id: model_id.to_string(),
-                    progress: 0, 
+                    progress: 0,
                     loaded: current_bytes,
-                    total: 0, 
+                    total: 0,
                     status: status_str.to_string(),
                 },
             );
 
-            
-            match self.download_chunk_loop(&client, url, model_id, &temp_file_path, window, &cancel_token).await {
-                Ok(_) => break, 
+            match self
+                .download_chunk_loop(
+                    &client,
+                    url,
+                    model_id,
+                    &temp_file_path,
+                    window,
+                    &cancel_token,
+                )
+                .await
+            {
+                Ok(_) => break,
                 Err(ModelError::Cancelled) => {
-                     if let Ok(mut tokens) = self.cancellation_tokens.lock() {
+                    if let Ok(mut tokens) = self.cancellation_tokens.lock() {
                         tokens.remove(model_id);
                     }
-                    
+
                     let _ = fs::remove_file(&temp_file_path);
                     return Err(ModelError::Cancelled);
-                },
+                }
                 Err(e) => {
                     println!("Download chunk failed: {}. Retrying...", e);
-                    
-                     let _ = window.emit(
+
+                    let _ = window.emit(
                         "download-progress",
                         DownloadProgressPayload {
                             id: model_id.to_string(),
@@ -191,20 +198,20 @@ impl ModelManager {
                         },
                     );
                     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-                    continue; 
+                    continue;
                 }
             }
         }
-        
-        
+
         if let Ok(mut tokens) = self.cancellation_tokens.lock() {
-             tokens.remove(model_id);
+            tokens.remove(model_id);
         }
-        
-        
+
         println!("Extracting model {}...", model_id);
-        
-        return self.perform_extraction(url, model_id, &temp_file_path, &target_dir, window).await;
+
+        return self
+            .perform_extraction(url, model_id, &temp_file_path, &target_dir, window)
+            .await;
     }
 
     async fn download_chunk_loop(
@@ -216,52 +223,54 @@ impl ModelManager {
         window: &Window,
         cancel_token: &CancellationToken,
     ) -> Result<()> {
-         
         let mut downloaded_bytes = 0u64;
         let mut file;
 
         if temp_file_path.exists() {
-             let metadata = fs::metadata(temp_file_path)?;
-             downloaded_bytes = metadata.len();
-             file = File::options().append(true).open(temp_file_path).await?;
+            let metadata = fs::metadata(temp_file_path)?;
+            downloaded_bytes = metadata.len();
+            file = File::options().append(true).open(temp_file_path).await?;
         } else {
             file = File::create(temp_file_path).await?;
         }
 
-        
-        
-        
         let head_resp = client.head(url).send().await?;
         if !head_resp.status().is_success() {
-             return Err(ModelError::Network(head_resp.error_for_status().unwrap_err()));
+            return Err(ModelError::Network(
+                head_resp.error_for_status().unwrap_err(),
+            ));
         }
-        let total_size = head_resp.headers()
+        let total_size = head_resp
+            .headers()
             .get(CONTENT_LENGTH)
             .and_then(|ct| ct.to_str().ok())
             .and_then(|ct| ct.parse::<u64>().ok())
             .unwrap_or(0);
 
-        
         if total_size > 0 && downloaded_bytes >= total_size {
-             
-             
-             
-             return Ok(());
+            return Ok(());
         }
 
         let request_builder = client.get(url);
         let response = if downloaded_bytes > 0 {
-             request_builder.header(RANGE, format!("bytes={}-", downloaded_bytes)).send().await?
+            request_builder
+                .header(RANGE, format!("bytes={}-", downloaded_bytes))
+                .send()
+                .await?
         } else {
-             request_builder.send().await?
+            request_builder.send().await?
         };
 
         if !response.status().is_success() {
-             if response.status() == reqwest::StatusCode::RANGE_NOT_SATISFIABLE {
-                  
-                  return Err(ModelError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, "Range not satisfiable")));
-             }
-             return Err(ModelError::Network(response.error_for_status().unwrap_err()));
+            if response.status() == reqwest::StatusCode::RANGE_NOT_SATISFIABLE {
+                return Err(ModelError::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Range not satisfiable",
+                )));
+            }
+            return Err(ModelError::Network(
+                response.error_for_status().unwrap_err(),
+            ));
         }
 
         let mut stream = response.bytes_stream();
@@ -277,7 +286,7 @@ impl ModelManager {
                             let chunk = chunk_result?;
                             file.write_all(&chunk).await?;
                             downloaded_bytes += chunk.len() as u64;
-                            
+
                             if total_size > 0 {
                                 let progress = ((downloaded_bytes as f64 / total_size as f64) * 100.0) as u8;
                                 let _ = window.emit(
@@ -302,7 +311,7 @@ impl ModelManager {
                 }
             }
         }
-        
+
         file.flush().await?;
         Ok(())
     }
@@ -315,7 +324,7 @@ impl ModelManager {
         target_dir: &Path,
         window: &Window,
     ) -> Result<PathBuf> {
-         let _ = window.emit(
+        let _ = window.emit(
             "download-progress",
             DownloadProgressPayload {
                 id: model_id.to_string(),
@@ -325,44 +334,41 @@ impl ModelManager {
                 status: "extracting".to_string(),
             },
         );
-        
+
         if target_dir.exists() {
             fs::remove_dir_all(&target_dir)?;
         }
         fs::create_dir_all(&target_dir)?;
-        
-         
-        
-        
-        
+
         let tar_file = fs::File::open(temp_file_path)?;
         let mut archive = Archive::new(tar_file);
-        
+
         if url.ends_with(".tar") {
-             self.extract_archive(&mut archive, target_dir)?;
+            self.extract_archive(&mut archive, target_dir)?;
         } else if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
-             let tar_file = fs::File::open(temp_file_path)?;
-             let tar = GzDecoder::new(tar_file);
-             let mut archive = Archive::new(tar);
-             self.extract_archive(&mut archive, target_dir)?;
+            let tar_file = fs::File::open(temp_file_path)?;
+            let tar = GzDecoder::new(tar_file);
+            let mut archive = Archive::new(tar);
+            self.extract_archive(&mut archive, target_dir)?;
         } else {
-             
-             if let Err(_) = self.extract_archive(&mut archive, target_dir) {
-                 if target_dir.exists() {
-                     fs::remove_dir_all(target_dir)?;
-                     fs::create_dir_all(target_dir)?;
-                 }
-                 let tar_file = fs::File::open(temp_file_path)?;
-                 let tar_gz = GzDecoder::new(tar_file);
-                 let mut archive_gz = Archive::new(tar_gz);
-                 self.extract_archive(&mut archive_gz, target_dir).map_err(|e| {
-                     ModelError::Extraction(format!("Failed to extract: {:?}", e))
-                 })?;
-             }
+            if let Err(_) = self.extract_archive(&mut archive, target_dir) {
+                if target_dir.exists() {
+                    fs::remove_dir_all(target_dir)?;
+                    fs::create_dir_all(target_dir)?;
+                }
+                let tar_file = fs::File::open(temp_file_path)?;
+                let tar_gz = GzDecoder::new(tar_file);
+                let mut archive_gz = Archive::new(tar_gz);
+                self.extract_archive(&mut archive_gz, target_dir)
+                    .map_err(|e| ModelError::Extraction(format!("Failed to extract: {:?}", e)))?;
+            }
         }
-        
+
         fs::remove_file(temp_file_path)?;
-        println!("Model {} installed successfully at {:?}", model_id, target_dir);
+        println!(
+            "Model {} installed successfully at {:?}",
+            model_id, target_dir
+        );
         Ok(target_dir.to_path_buf())
     }
 

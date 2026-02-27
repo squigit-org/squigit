@@ -49,9 +49,7 @@ fn resolve_sidecar_path(app: &AppHandle) -> Result<PathBuf, String> {
     // Fallback to dev path (looking for CMake build artifact)
     // resource_dir is typically target/debug
     // target/debug -> target -> root
-    let root_path = resource_dir
-        .parent()
-        .and_then(|p| p.parent());
+    let root_path = resource_dir.parent().and_then(|p| p.parent());
 
     if let Some(root) = root_path {
         // Option A: sidecars/whisper-stt/build/whisper-stt (CMake output)
@@ -65,20 +63,23 @@ fn resolve_sidecar_path(app: &AppHandle) -> Result<PathBuf, String> {
         if bin_path.exists() {
             return Ok(bin_path);
         }
-        
+
         // Option C: check for any file starting with binary_name in app/binaries (for triple)
         if let Ok(entries) = std::fs::read_dir(root.join("app/binaries")) {
-             for entry in entries.flatten() {
+            for entry in entries.flatten() {
                 if let Ok(name) = entry.file_name().into_string() {
                     if name.starts_with(binary_name) {
-                         return Ok(entry.path());
+                        return Ok(entry.path());
                     }
                 }
-             }
+            }
         }
     }
 
-    Err(format!("Sidecar not found. Searched: {:?} and dev locations", prod_path))
+    Err(format!(
+        "Sidecar not found. Searched: {:?} and dev locations",
+        prod_path
+    ))
 }
 
 /// Resolve model path
@@ -96,10 +97,10 @@ fn resolve_model_path(app: &AppHandle, model_name: &str) -> Result<PathBuf, Stri
 
     // Try sidecar models dir (dev)
     if let Some(root) = resource_dir.parent().and_then(|p| p.parent()) {
-         let dev_path = root.join("sidecars/whisper-stt/models").join(model_name);
-         if dev_path.exists() {
-             return Ok(dev_path);
-         }
+        let dev_path = root.join("sidecars/whisper-stt/models").join(model_name);
+        if dev_path.exists() {
+            return Ok(dev_path);
+        }
     }
 
     Err(format!("Model not found: {}", model_name))

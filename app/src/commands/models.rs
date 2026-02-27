@@ -39,7 +39,9 @@ pub async fn cancel_download_ocr_model(
 }
 
 #[tauri::command]
-pub fn list_downloaded_models(state: tauri::State<'_, ModelManager>) -> Result<Vec<String>, String> {
+pub fn list_downloaded_models(
+    state: tauri::State<'_, ModelManager>,
+) -> Result<Vec<String>, String> {
     let dir = state.get_model_dir("");
 
     let mut models = Vec::new();

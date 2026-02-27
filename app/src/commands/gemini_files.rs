@@ -1,9 +1,9 @@
+use regex::Regex;
+use reqwest::{header, Client};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
 use std::time::SystemTime;
-use regex::Regex;
-use reqwest::{Client, header};
-use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,7 +42,9 @@ pub fn mime_from_extension(ext: &str) -> &str {
         "ppt" => "application/vnd.ms-powerpoint",
         "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "rtf" => "application/rtf",
-        "rs" | "py" | "js" | "jsx" | "ts" | "tsx" | "css" | "html" | "md" | "txt" | "csv" | "json" | "xml" | "yml" | "yaml" | "toml" | "sh" | "bash" | "c" | "cpp" | "h" | "hpp" | "java" | "go" | "php" | "rb" | "swift" | "kt" | "sql" => "text/plain",
+        "rs" | "py" | "js" | "jsx" | "ts" | "tsx" | "css" | "html" | "md" | "txt" | "csv"
+        | "json" | "xml" | "yml" | "yaml" | "toml" | "sh" | "bash" | "c" | "cpp" | "h" | "hpp"
+        | "java" | "go" | "php" | "rb" | "swift" | "kt" | "sql" => "text/plain",
         "mp3" => "audio/mpeg",
         "wav" => "audio/wav",
         "mp4" => "video/mp4",
@@ -68,10 +70,9 @@ fn decode_basic_xml_entities(input: &str) -> String {
 }
 
 fn extract_text_from_docx_xml(xml: &str) -> String {
-    let token_re = Regex::new(
-        r#"(?s)<w:t[^>]*>(.*?)</w:t>|<w:tab\s*/>|<w:br\s*/>|<w:cr\s*/>|</w:p>|</w:tr>"#,
-    )
-    .expect("DOCX token regex must compile");
+    let token_re =
+        Regex::new(r#"(?s)<w:t[^>]*>(.*?)</w:t>|<w:tab\s*/>|<w:br\s*/>|<w:cr\s*/>|</w:p>|</w:tr>"#)
+            .expect("DOCX token regex must compile");
 
     let mut out = String::new();
     for caps in token_re.captures_iter(xml) {
@@ -108,7 +109,8 @@ fn extract_text_from_docx_xml(xml: &str) -> String {
 
 fn extract_docx_text_from_bytes(bytes: &[u8]) -> Result<String, String> {
     let reader = Cursor::new(bytes);
-    let mut archive = zip::ZipArchive::new(reader).map_err(|e| format!("Invalid DOCX zip: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(reader).map_err(|e| format!("Invalid DOCX zip: {}", e))?;
 
     let mut document_xml = String::new();
     let mut doc_entry = archive
@@ -155,25 +157,43 @@ pub async fn upload_file_to_gemini(
     display_name: &str,
 ) -> Result<GeminiFileRef, String> {
     let client = Client::new();
-    let file_bytes = tokio::fs::read(file_path).await.map_err(|e| format!("Failed to read file: {}", e))?;
+    let file_bytes = tokio::fs::read(file_path)
+        .await
+        .map_err(|e| format!("Failed to read file: {}", e))?;
     let file_size = file_bytes.len();
 
     // Step 1: Start Resumable Upload
-    let start_url = format!("https://generativelanguage.googleapis.com/upload/v1beta/files?key={}", api_key);
-    
+    let start_url = format!(
+        "https://generativelanguage.googleapis.com/upload/v1beta/files?key={}",
+        api_key
+    );
+
     let mut headers = header::HeaderMap::new();
-    headers.insert("X-Goog-Upload-Protocol", header::HeaderValue::from_static("resumable"));
-    headers.insert("X-Goog-Upload-Command", header::HeaderValue::from_static("start"));
-    headers.insert("X-Goog-Upload-Header-Content-Length", file_size.to_string().parse().unwrap());
-    headers.insert("X-Goog-Upload-Header-Content-Type", header::HeaderValue::from_str(mime_type).unwrap());
-    
+    headers.insert(
+        "X-Goog-Upload-Protocol",
+        header::HeaderValue::from_static("resumable"),
+    );
+    headers.insert(
+        "X-Goog-Upload-Command",
+        header::HeaderValue::from_static("start"),
+    );
+    headers.insert(
+        "X-Goog-Upload-Header-Content-Length",
+        file_size.to_string().parse().unwrap(),
+    );
+    headers.insert(
+        "X-Goog-Upload-Header-Content-Type",
+        header::HeaderValue::from_str(mime_type).unwrap(),
+    );
+
     let body = serde_json::json!({
         "file": {
             "display_name": display_name
         }
     });
 
-    let res1 = client.post(&start_url)
+    let res1 = client
+        .post(&start_url)
         .headers(headers)
         .json(&body)
         .send()
@@ -185,18 +205,30 @@ pub async fn upload_file_to_gemini(
         return Err(format!("Gemini API Error (Upload Start): {}", text));
     }
 
-    let upload_url = res1.headers().get("X-Goog-Upload-URL")
+    let upload_url = res1
+        .headers()
+        .get("X-Goog-Upload-URL")
         .and_then(|v| v.to_str().ok())
         .ok_or("Missing X-Goog-Upload-URL header")?
         .to_string();
 
     // Step 2: Upload Bytes
     let mut headers2 = header::HeaderMap::new();
-    headers2.insert("X-Goog-Upload-Offset", header::HeaderValue::from_static("0"));
-    headers2.insert("X-Goog-Upload-Command", header::HeaderValue::from_static("upload, finalize"));
-    headers2.insert(header::CONTENT_LENGTH, file_size.to_string().parse().unwrap());
+    headers2.insert(
+        "X-Goog-Upload-Offset",
+        header::HeaderValue::from_static("0"),
+    );
+    headers2.insert(
+        "X-Goog-Upload-Command",
+        header::HeaderValue::from_static("upload, finalize"),
+    );
+    headers2.insert(
+        header::CONTENT_LENGTH,
+        file_size.to_string().parse().unwrap(),
+    );
 
-    let res2 = client.put(&upload_url)
+    let res2 = client
+        .put(&upload_url)
         .headers(headers2)
         .body(file_bytes)
         .send()
@@ -208,7 +240,9 @@ pub async fn upload_file_to_gemini(
         return Err(format!("Gemini API Error (Upload Finalize): {}", text));
     }
 
-    let final_res: GeminiFileUploadFinalizeResponse = res2.json().await
+    let final_res: GeminiFileUploadFinalizeResponse = res2
+        .json()
+        .await
         .map_err(|e| format!("Failed to parse upload response: {}", e))?;
 
     // Step 3: Poll for ACTIVE state if needed
@@ -228,16 +262,24 @@ pub async fn upload_file_to_gemini(
 
 pub async fn poll_file_status(api_key: &str, file_name: &str) -> Result<(), String> {
     let client = Client::new();
-    let url = format!("https://generativelanguage.googleapis.com/v1beta/{}?key={}", file_name, api_key);
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/{}?key={}",
+        file_name, api_key
+    );
 
     loop {
-        let res = client.get(&url).send().await.map_err(|e| format!("Poll failed: {}", e))?;
+        let res = client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("Poll failed: {}", e))?;
         if !res.status().is_success() {
             let text = res.text().await.unwrap_or_default();
             return Err(format!("Gemini API Error (Poll): {}", text));
         }
 
-        let file_obj: GeminiFileObject = res.json().await.map_err(|e| format!("Poll parse: {}", e))?;
+        let file_obj: GeminiFileObject =
+            res.json().await.map_err(|e| format!("Poll parse: {}", e))?;
         if let Some(state) = file_obj.state {
             if state == "ACTIVE" {
                 break;

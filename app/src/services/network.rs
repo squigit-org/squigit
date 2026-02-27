@@ -41,11 +41,11 @@ impl PeerNetworkMonitor {
 
     pub fn start_monitor(&self) {
         let state = self.state.clone();
-        
+
         tauri::async_runtime::spawn(async move {
             loop {
                 let start = Instant::now();
-                // 8.8.8.8:53 is Google DNS, very reliable. 
+                // 8.8.8.8:53 is Google DNS, very reliable.
                 // Connect timeout of 2s.
                 // This is a "TCP Ping".
                 let status = match tokio::net::TcpStream::connect("8.8.8.8:53").await {
@@ -56,15 +56,19 @@ impl PeerNetworkMonitor {
                         } else {
                             NetworkStatus::Online
                         };
-                        NetworkState { status, latency_ms: latency }
+                        NetworkState {
+                            status,
+                            latency_ms: latency,
+                        }
                     }
-                    Err(_) => {
-                        NetworkState { status: NetworkStatus::Offline, latency_ms: 9999 }
-                    }
+                    Err(_) => NetworkState {
+                        status: NetworkStatus::Offline,
+                        latency_ms: 9999,
+                    },
                 };
 
                 *state.lock().unwrap() = status;
-                
+
                 // Sleep for 2 seconds
                 sleep(Duration::from_secs(2)).await;
             }

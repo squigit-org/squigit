@@ -15,7 +15,7 @@ fn get_active_storage() -> Result<ChatStorage, String> {
         .get_active_profile_id()
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "No active profile. Please log in first.".to_string())?;
-    
+
     let chats_dir = profile_store.get_chats_dir(&active_id);
     ChatStorage::with_base_dir(chats_dir).map_err(|e| e.to_string())
 }
@@ -77,14 +77,18 @@ pub fn store_image_bytes(bytes: Vec<u8>) -> Result<StoredImage, String> {
 #[tauri::command]
 pub fn store_image_from_path(path: String) -> Result<StoredImage, String> {
     let storage = get_active_storage()?;
-    storage.store_image_from_path(&path).map_err(|e| e.to_string())
+    storage
+        .store_image_from_path(&path)
+        .map_err(|e| e.to_string())
 }
 
 /// Store any file from path (preserving extension) and return hash + CAS path.
 #[tauri::command]
 pub fn store_file_from_path(path: String) -> Result<StoredImage, String> {
     let storage = get_active_storage()?;
-    storage.store_file_from_path(&path).map_err(|e| e.to_string())
+    storage
+        .store_file_from_path(&path)
+        .map_err(|e| e.to_string())
 }
 
 /// Validate if a file is safe text (valid UTF-8 and no null bytes).
@@ -94,7 +98,7 @@ pub fn validate_text_file(path: String) -> Result<bool, String> {
     use std::io::Read;
 
     let mut file = File::open(&path).map_err(|e| e.to_string())?;
-    let mut buffer = vec![0u8; 8192];  // Read up to 8KB
+    let mut buffer = vec![0u8; 8192]; // Read up to 8KB
     let bytes_read = file.read(&mut buffer).map_err(|e| e.to_string())?;
     buffer.truncate(bytes_read);
 
@@ -263,7 +267,9 @@ pub fn delete_chat(chat_id: String) -> Result<(), String> {
 #[tauri::command]
 pub fn update_chat_metadata(metadata: ChatMetadata) -> Result<(), String> {
     let storage = get_active_storage()?;
-    storage.update_chat_metadata(&metadata).map_err(|e| e.to_string())
+    storage
+        .update_chat_metadata(&metadata)
+        .map_err(|e| e.to_string())
 }
 
 // =============================================================================
@@ -278,7 +284,9 @@ pub fn append_chat_message(chat_id: String, role: String, content: String) -> Re
     } else {
         ChatMessage::assistant(content)
     };
-    storage.append_message(&chat_id, &message).map_err(|e| e.to_string())
+    storage
+        .append_message(&chat_id, &message)
+        .map_err(|e| e.to_string())
 }
 
 /// Overwrite all messages in a chat.
@@ -296,16 +304,24 @@ pub fn overwrite_chat_messages(chat_id: String, messages: Vec<ChatMessage>) -> R
 
 /// Save OCR data for a specific model.
 #[tauri::command]
-pub fn save_ocr_data(chat_id: String, model_id: String, ocr_data: Vec<OcrRegion>) -> Result<(), String> {
+pub fn save_ocr_data(
+    chat_id: String,
+    model_id: String,
+    ocr_data: Vec<OcrRegion>,
+) -> Result<(), String> {
     let storage = get_active_storage()?;
-    storage.save_ocr_data(&chat_id, &model_id, &ocr_data).map_err(|e| e.to_string())
+    storage
+        .save_ocr_data(&chat_id, &model_id, &ocr_data)
+        .map_err(|e| e.to_string())
 }
 
 /// Get OCR data for a specific model.
 #[tauri::command]
 pub fn get_ocr_data(chat_id: String, model_id: String) -> Result<Option<Vec<OcrRegion>>, String> {
     let storage = get_active_storage()?;
-    storage.get_ocr_data(&chat_id, &model_id).map_err(|e| e.to_string())
+    storage
+        .get_ocr_data(&chat_id, &model_id)
+        .map_err(|e| e.to_string())
 }
 
 /// Get the entire OCR frame for a chat.
@@ -319,7 +335,9 @@ pub fn get_ocr_frame(chat_id: String) -> Result<OcrFrame, String> {
 #[tauri::command]
 pub fn init_ocr_frame(chat_id: String, model_ids: Vec<String>) -> Result<(), String> {
     let storage = get_active_storage()?;
-    storage.init_ocr_frame(&chat_id, &model_ids).map_err(|e| e.to_string())
+    storage
+        .init_ocr_frame(&chat_id, &model_ids)
+        .map_err(|e| e.to_string())
 }
 
 // =============================================================================
@@ -330,7 +348,9 @@ pub fn init_ocr_frame(chat_id: String, model_ids: Vec<String>) -> Result<(), Str
 #[tauri::command]
 pub fn save_imgbb_url(chat_id: String, url: String) -> Result<(), String> {
     let storage = get_active_storage()?;
-    storage.save_imgbb_url(&chat_id, &url).map_err(|e| e.to_string())
+    storage
+        .save_imgbb_url(&chat_id, &url)
+        .map_err(|e| e.to_string())
 }
 
 /// Get imgbb URL for a chat.

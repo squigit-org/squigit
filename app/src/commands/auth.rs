@@ -53,8 +53,15 @@ pub async fn cancel_google_auth(_app: AppHandle, state: State<'_, AppState>) -> 
     tauri::async_runtime::spawn_blocking(|| {
         let client = reqwest::blocking::Client::new();
         // Fire and forget - if it fails, the server might already be down
-        let _ = client.get(format!("http://localhost:3000/{}-cancel", crate::constants::APP_NAME.to_lowercase())).send();
-    }).await.map_err(|e| e.to_string())?;
+        let _ = client
+            .get(format!(
+                "http://localhost:3000/{}-cancel",
+                crate::constants::APP_NAME.to_lowercase()
+            ))
+            .send();
+    })
+    .await
+    .map_err(|e| e.to_string())?;
 
     // We don't manually clear the flag here because the start_google_auth command
     // will clear it when the server loop breaks and the function returns.
