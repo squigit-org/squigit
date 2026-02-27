@@ -12,6 +12,8 @@ import {
   retryFromMessage as apiRetryFromMessage,
   editUserMessage as apiEditUserMessage,
   cancelCurrentRequest,
+  replaceLastAssistantHistory,
+  setImageDescription,
   ModelType,
 } from "@/lib";
 
@@ -641,30 +643,42 @@ export const useGeminiEngine = (config: {
   const handleStopGeneration = (truncatedText?: string) => {
     isRequestCancelledRef.current = true;
     if (typeof truncatedText === "string") {
+      cancelCurrentRequest();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      replaceLastAssistantHistory(truncatedText);
+      if (messages.length === 0) {
+        setImageDescription(truncatedText);
+      }
+
       if (streamingText && firstResponseId) {
         const botMsg: Message = {
           id: firstResponseId,
           role: "model",
           text: truncatedText,
           timestamp: Date.now(),
+          stopped: true,
+          alreadyStreamed: true,
         };
         setMessages((prev: Message[]) => {
           const idx = prev.findIndex((m) => m.id === botMsg.id);
           if (idx !== -1) {
             const newMsgs = [...prev];
             newMsgs[idx] = botMsg;
+            config.onOverwriteMessages?.(newMsgs);
             return newMsgs;
           }
-          return [...prev, botMsg];
+          const newMsgs = [...prev, botMsg];
+          config.onOverwriteMessages?.(newMsgs);
+          return newMsgs;
         });
         setStreamingText("");
         setFirstResponseId(null);
+        setIsLoading(false);
+        setIsStreaming(false);
         setIsAiTyping(false);
-
-        const targetChatId = sessionChatIdRef.current;
-        if (config.onMessage && targetChatId) {
-          config.onMessage(botMsg, targetChatId);
-        }
         return;
       }
 
@@ -672,7 +686,12 @@ export const useGeminiEngine = (config: {
         const updated = [...prev];
         for (let i = updated.length - 1; i >= 0; i--) {
           if (updated[i].role === "model") {
-            updated[i] = { ...updated[i], text: truncatedText };
+            updated[i] = {
+              ...updated[i],
+              text: truncatedText,
+              stopped: true,
+              alreadyStreamed: true,
+            };
             break;
           }
         }
@@ -680,6 +699,8 @@ export const useGeminiEngine = (config: {
         config.onOverwriteMessages?.(updated);
         return updated;
       });
+      setIsLoading(false);
+      setIsStreaming(false);
       setIsAiTyping(false);
       return;
     }

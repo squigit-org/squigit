@@ -37,6 +37,17 @@ export const addToHistory = (role: "User" | "Assistant", content: string) => {
   }
 };
 
+export const replaceLastAssistantHistory = (content: string) => {
+  for (let i = geminiStore.conversationHistory.length - 1; i >= 0; i--) {
+    if (geminiStore.conversationHistory[i].role === "Assistant") {
+      geminiStore.conversationHistory[i] = { role: "Assistant", content };
+      return;
+    }
+  }
+
+  addToHistory("Assistant", content);
+};
+
 export const formatHistoryLog = (): string => {
   if (geminiStore.conversationHistory.length === 0)
     return "(No previous messages)";

@@ -13,6 +13,7 @@ export {
   getImageDescription,
   setUserFirstMsg,
   addToHistory,
+  replaceLastAssistantHistory,
   restoreSession,
   getSessionState,
 } from "./context";
