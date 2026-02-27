@@ -60,6 +60,8 @@ export interface Attachment {
   extension: string;
   /** Absolute path on disk (CAS path or /tmp path) */
   path: string;
+  /** Original source path on disk (if selected/imported by user) */
+  sourcePath?: string;
   /** True for capture-to-input temporary files in /tmp */
   isTemp?: boolean;
 }
@@ -96,6 +98,7 @@ export function attachmentFromPath(
   path: string,
   id?: string,
   originalName?: string,
+  sourcePath?: string,
 ): Attachment {
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   const name =
@@ -108,6 +111,7 @@ export function attachmentFromPath(
     name,
     extension: ext,
     path,
+    sourcePath,
     isTemp: path.startsWith("/tmp/"),
   };
 }

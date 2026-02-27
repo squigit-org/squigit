@@ -8,11 +8,11 @@ import React, {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import { open } from "@tauri-apps/plugin-shell";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Attachment } from "./attachment.types";
 import styles from "./AttachmentStrip.module.css";
 
@@ -60,6 +60,24 @@ function getBadgeColor(ext: string): string {
   return EXT_COLORS[ext.toLowerCase()] ?? "#6b7280";
 }
 
+function shouldUseGeneratedImageName(attachment: Attachment): boolean {
+  if (attachment.type !== "image") return false;
+  if (attachment.sourcePath) return false;
+
+  const name = attachment.name.trim();
+  const ext = attachment.extension.toLowerCase();
+  if (!name.toLowerCase().endsWith(`.${ext}`)) return false;
+
+  const stem = name.slice(0, -(ext.length + 1)).toLowerCase();
+  if (!stem) return true;
+  if (stem.length >= 24 && /^[a-f0-9]+$/.test(stem)) return true;
+  if (/^(image|img|capture|screenshot|clipboard|paste)[-_]?\d*$/.test(stem)) {
+    return true;
+  }
+
+  return false;
+}
+
 function getThumbGeometry(
   scrollWidth: number,
   clientWidth: number,
@@ -76,28 +94,6 @@ function getThumbGeometry(
       ? (scrollLeft / scrollableContent) * scrollableTrack
       : 0;
   return { thumbWidth, thumbLeft, scrollableTrack, scrollableContent };
-}
-
-async function openInDefaultApp(path: string): Promise<void> {
-  try {
-    await open(path);
-  } catch {
-    try {
-      window.open(convertFileSrc(path), "_blank");
-    } catch {
-      console.warn("[AttachmentStrip] Failed to open:", path);
-    }
-  }
-}
-
-async function resolveAbsPath(path: string): Promise<string> {
-  const match = path.match(/^objects\/[^/]+\/([a-zA-Z0-9_-]+)\.[a-zA-Z0-9]+$/);
-  if (!match?.[1]) return path;
-  try {
-    return await invoke<string>("get_image_path", { hash: match[1] });
-  } catch {
-    return path;
-  }
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
@@ -261,6 +257,20 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
   const [scrollState, setScrollState] =
     useState<ScrollState>(INITIAL_SCROLL_STATE);
 
+  const displayAttachments = useMemo(() => {
+    let unnamedImageIndex = 0;
+    return attachments.map((attachment) => {
+      if (!shouldUseGeneratedImageName(attachment)) {
+        return attachment;
+      }
+      unnamedImageIndex += 1;
+      return {
+        ...attachment,
+        name: `image-${unnamedImageIndex}.${attachment.extension}`,
+      };
+    });
+  }, [attachments]);
+
   const updateScroll = useCallback(() => {
     const el = stripRef.current;
     if (!el) return;
@@ -331,15 +341,8 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
   }, [updateScroll]);
 
   const handleClick = useCallback(
-    async (attachment: Attachment) => {
-      if (onClick) {
-        onClick(attachment);
-        return;
-      }
-      const absPath = attachment.path.startsWith("objects/")
-        ? await resolveAbsPath(attachment.path)
-        : attachment.path;
-      openInDefaultApp(absPath);
+    (attachment: Attachment) => {
+      onClick?.(attachment);
     },
     [onClick],
   );
@@ -357,7 +360,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
   return (
     <div className={styles.wrapper}>
       <div className={styles.strip} ref={stripRef} onScroll={updateScroll}>
-        {attachments.map((attachment) => (
+        {displayAttachments.map((attachment) => (
           <div
             key={attachment.id}
             className={styles.thumbWrapper}

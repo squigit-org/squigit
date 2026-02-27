@@ -8,7 +8,7 @@ import React from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getDialogs } from "@/lib";
 import { Dialog } from "@/components";
-import { Welcome, Agreement, UpdateNotes, Chat } from "@/features";
+import { Welcome, Agreement, UpdateNotes, Chat, MediaOverlay } from "@/features";
 import { AppProvider, useAppContext } from "@/providers/AppProvider";
 import { AppContextMenu } from "@/layout";
 import { MainScreen, SplashScreen } from "@/screens";
@@ -117,6 +117,12 @@ const AppRouterContent: React.FC = () => {
         type={app.busyDialog || undefined}
         appName={app.system.appName}
         onAction={app.handleBusyDialogAction}
+      />
+
+      <MediaOverlay
+        isOpen={app.mediaViewer.isOpen}
+        onClose={app.closeMediaViewer}
+        item={app.mediaViewer.item}
       />
     </>
   );

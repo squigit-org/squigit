@@ -58,3 +58,6 @@ export * from "./settings/sections/HelpSection";
 export * from "./settings/sections/ModelsSection";
 export * from "./settings/sections/PersonalizationSection";
 export * from "./settings/SettingsOverlay";
+
+export * from "./media/MediaOverlay";
+export * from "./media/types";

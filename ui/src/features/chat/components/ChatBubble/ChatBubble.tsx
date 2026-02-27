@@ -7,6 +7,7 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Check, Copy, RotateCcw, Pencil } from "lucide-react";
 import { CodeBlock, TextShimmer } from "@/components";
+import { useAppContext } from "@/providers/AppProvider";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -67,6 +68,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   isRetrying,
   onEdit,
 }) => {
+  const app = useAppContext();
   const isUser = message.role === "user";
   const [isCopied, setIsCopied] = useState(false);
 
@@ -75,8 +77,15 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
   const attachments = useMemo(() => {
     const paths = parseAttachmentPaths(message.text);
-    return paths.map((p) => attachmentFromPath(p));
-  }, [message.text]);
+    return paths.map((p) =>
+      attachmentFromPath(
+        p,
+        undefined,
+        undefined,
+        app.getAttachmentSourcePath(p) || undefined,
+      ),
+    );
+  }, [app.getAttachmentSourcePath, message.text]);
 
   const displayText = useMemo(() => {
     return stripAttachmentMentions(message.text);
@@ -579,7 +588,11 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                       isEditing || displayText.length > 0 ? "8px" : "0",
                   }}
                 >
-                  <AttachmentStrip attachments={attachments} readOnly />
+                  <AttachmentStrip
+                    attachments={attachments}
+                    onClick={app.openMediaViewer}
+                    readOnly
+                  />
                 </div>
               )}
               {isEditing ? (

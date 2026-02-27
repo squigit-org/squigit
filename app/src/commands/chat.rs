@@ -20,6 +20,48 @@ fn get_active_storage() -> Result<ChatStorage, String> {
     ChatStorage::with_base_dir(chats_dir).map_err(|e| e.to_string())
 }
 
+fn resolve_attachment_path_internal(path: &str) -> Result<std::path::PathBuf, String> {
+    use std::fs;
+    use std::path::PathBuf;
+
+    let incoming = PathBuf::from(path);
+    if incoming.is_absolute() {
+        if incoming.exists() {
+            return fs::canonicalize(&incoming).map_err(|e| e.to_string());
+        }
+        return Err(format!("Attachment not found: {}", path));
+    }
+
+    let storage = get_active_storage()?;
+
+    let from_base_dir = storage.base_dir().join(&incoming);
+    if from_base_dir.exists() {
+        return fs::canonicalize(&from_base_dir).map_err(|e| e.to_string());
+    }
+
+    // Legacy fallback: resolve objects/<prefix>/<hash>.<ext> by hash, regardless of extension.
+    if let Some(file_name) = incoming.file_name().and_then(|name| name.to_str()) {
+        if let Some((hash, _ext)) = file_name.split_once('.') {
+            if hash.len() >= 2 {
+                let prefix = &hash[..2];
+                let prefix_dir = storage.objects_dir().join(prefix);
+
+                if let Ok(entries) = fs::read_dir(prefix_dir) {
+                    for entry in entries.flatten() {
+                        let candidate = entry.path();
+                        let stem = candidate.file_stem().and_then(|s| s.to_str());
+                        if stem == Some(hash) {
+                            return fs::canonicalize(candidate).map_err(|e| e.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Err(format!("Attachment not found: {}", path))
+}
+
 // =============================================================================
 // Image Storage Commands
 // =============================================================================
@@ -78,6 +120,108 @@ pub fn validate_text_file(path: String) -> Result<bool, String> {
 pub fn get_image_path(hash: String) -> Result<String, String> {
     let storage = get_active_storage()?;
     storage.get_image_path(&hash).map_err(|e| e.to_string())
+}
+
+/// Resolve an attachment path (absolute or legacy relative CAS path) to an absolute path.
+#[tauri::command]
+pub fn resolve_attachment_path(path: String) -> Result<String, String> {
+    let resolved = resolve_attachment_path_internal(&path)?;
+    Ok(resolved.to_string_lossy().to_string())
+}
+
+/// Read UTF-8 text content from an attachment path.
+#[tauri::command]
+pub fn read_attachment_text(path: String) -> Result<String, String> {
+    let resolved = resolve_attachment_path_internal(&path)?;
+    let bytes = std::fs::read(resolved).map_err(|e| e.to_string())?;
+    Ok(String::from_utf8_lossy(&bytes).to_string())
+}
+
+/// Reveal a file in the system file manager, selecting it when possible.
+#[tauri::command]
+pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    let resolved = resolve_attachment_path_internal(&path)?;
+
+    #[cfg(target_os = "windows")]
+    {
+        let target = resolved.to_string_lossy().to_string();
+        Command::new("explorer")
+            .arg(format!(r#"/select,"{}""#, target))
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg("-R")
+            .arg(&resolved)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let target = resolved.to_string_lossy().to_string();
+        let parent = resolved
+            .parent()
+            .ok_or_else(|| "No parent directory".to_string())?
+            .to_string_lossy()
+            .to_string();
+
+        let select_candidates: Vec<(&str, Vec<String>)> = vec![
+            ("nautilus", vec!["--select".into(), target.clone()]),
+            ("nemo", vec!["--select".into(), target.clone()]),
+            ("caja", vec!["--select".into(), target.clone()]),
+            ("dolphin", vec!["--select".into(), target.clone()]),
+            ("konqueror", vec![target.clone()]),
+            ("thunar", vec!["--select".into(), target.clone()]),
+            ("pcmanfm-qt", vec!["--select".into(), target.clone()]),
+            ("pcmanfm", vec!["--select".into(), target.clone()]),
+            ("spacefm", vec!["--select".into(), target.clone()]),
+            ("pantheon-files", vec![target.clone()]),
+            ("doublecmd", vec![target.clone()]),
+            ("krusader", vec![target.clone()]),
+            ("xfe", vec![target.clone()]),
+        ];
+
+        for (bin, args) in select_candidates {
+            if Command::new(bin).args(&args).spawn().is_ok() {
+                return Ok(());
+            }
+        }
+
+        let parent_candidates: Vec<(&str, Vec<String>)> = vec![
+            ("xdg-open", vec![parent.clone()]),
+            ("gio", vec!["open".into(), parent.clone()]),
+            ("exo-open", vec![parent.clone()]),
+            ("kde-open5", vec![parent.clone()]),
+            ("kde-open", vec![parent.clone()]),
+            ("gnome-open", vec![parent.clone()]),
+            ("pcmanfm", vec![parent.clone()]),
+            ("thunar", vec![parent.clone()]),
+            ("nemo", vec![parent.clone()]),
+            ("caja", vec![parent.clone()]),
+            ("dolphin", vec![parent.clone()]),
+            ("nautilus", vec![parent.clone()]),
+            ("pantheon-files", vec![parent.clone()]),
+        ];
+
+        for (bin, args) in parent_candidates {
+            if Command::new(bin).args(&args).spawn().is_ok() {
+                return Ok(());
+            }
+        }
+
+        return Err("Failed to open a file manager on this Linux environment".to_string());
+    }
+
+    #[allow(unreachable_code)]
+    Err("Unsupported platform".to_string())
 }
 
 // =============================================================================
@@ -195,4 +339,3 @@ pub fn get_imgbb_url(chat_id: String) -> Result<Option<String>, String> {
     let storage = get_active_storage()?;
     storage.get_imgbb_url(&chat_id).map_err(|e| e.to_string())
 }
-

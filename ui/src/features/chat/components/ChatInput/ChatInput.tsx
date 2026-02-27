@@ -7,6 +7,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { TextContextMenu } from "@/layout";
+import { useAppContext } from "@/providers/AppProvider";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -39,6 +40,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onAttachmentsChange,
   onCaptureToInput,
 }) => {
+  const app = useAppContext();
   if (!startupImage) return null;
 
   const placeholder = customPlaceholder || "Ask anything";
@@ -158,7 +160,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 { path: filePath },
               );
               newAttachments.push(
-                attachmentFromPath(result.path, undefined, originalName),
+                attachmentFromPath(
+                  result.path,
+                  undefined,
+                  originalName,
+                  filePath,
+                ),
               );
             } catch (err) {
               console.error("Failed to store dropped image:", err);
@@ -170,7 +177,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 { path: filePath },
               );
               newAttachments.push(
-                attachmentFromPath(result.path, undefined, originalName),
+                attachmentFromPath(
+                  result.path,
+                  undefined,
+                  originalName,
+                  filePath,
+                ),
               );
             } catch (err) {
               console.error("Failed to store dropped file:", err);
@@ -187,7 +199,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   { path: filePath },
                 );
                 newAttachments.push(
-                  attachmentFromPath(result.path, undefined, originalName),
+                  attachmentFromPath(
+                    result.path,
+                    undefined,
+                    originalName,
+                    filePath,
+                  ),
                 );
               } else {
                 console.warn(
@@ -220,6 +237,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     >
       <AttachmentStrip
         attachments={attachments}
+        onClick={app.openMediaViewer}
         onRemove={(id) =>
           onAttachmentsChange(attachments.filter((a) => a.id !== id))
         }
@@ -309,7 +327,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   { path: filePath },
                 );
                 newAttachments.push(
-                  attachmentFromPath(result.path, undefined, originalName),
+                  attachmentFromPath(
+                    result.path,
+                    undefined,
+                    originalName,
+                    filePath,
+                  ),
                 );
               } catch (err) {
                 console.error("Failed to store image:", err);
@@ -321,7 +344,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   { path: filePath },
                 );
                 newAttachments.push(
-                  attachmentFromPath(result.path, undefined, originalName),
+                  attachmentFromPath(
+                    result.path,
+                    undefined,
+                    originalName,
+                    filePath,
+                  ),
                 );
               } catch (err) {
                 console.error("Failed to store file:", err);
@@ -338,7 +366,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     { path: filePath },
                   );
                   newAttachments.push(
-                    attachmentFromPath(result.path, undefined, originalName),
+                    attachmentFromPath(
+                      result.path,
+                      undefined,
+                      originalName,
+                      filePath,
+                    ),
                   );
                 } else {
                   console.warn(

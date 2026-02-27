@@ -37,6 +37,9 @@ import {
   useChat,
   useChatHistory,
   useChatTitle,
+  isImageExtension,
+  type Attachment,
+  type MediaViewerItem,
 } from "@/features";
 
 import { useAppDialogs } from "./useAppDialogs";
@@ -75,6 +78,70 @@ const withNavigationOcrGuard = (frame: OcrFrame): OcrFrame => ({
 
 type GuardedAction = () => void | Promise<void>;
 
+const UNSUPPORTED_PREVIEW_EXTENSIONS = new Set([
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "ppt",
+  "pptx",
+  "rtf",
+  "odt",
+  "ods",
+  "odp",
+  "pages",
+  "numbers",
+  "key",
+]);
+
+const ATTACHMENT_SOURCE_MAP_STORAGE_KEY =
+  "snapllm:attachment-source-map:v1";
+const ATTACHMENT_SOURCE_MAP_MAX_ENTRIES = 2048;
+
+function readAttachmentSourceMap(): Map<string, string> {
+  if (typeof window === "undefined") return new Map();
+
+  try {
+    const raw = localStorage.getItem(ATTACHMENT_SOURCE_MAP_STORAGE_KEY);
+    if (!raw) return new Map();
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return new Map();
+    }
+
+    const map = new Map<string, string>();
+    for (const [casPath, sourcePath] of Object.entries(parsed)) {
+      if (typeof sourcePath === "string" && sourcePath.length > 0) {
+        map.set(casPath, sourcePath);
+      }
+    }
+
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+function persistAttachmentSourceMap(map: Map<string, string>) {
+  if (typeof window === "undefined") return;
+
+  try {
+    const entries = Array.from(map.entries());
+    const trimmedEntries =
+      entries.length > ATTACHMENT_SOURCE_MAP_MAX_ENTRIES
+        ? entries.slice(entries.length - ATTACHMENT_SOURCE_MAP_MAX_ENTRIES)
+        : entries;
+
+    localStorage.setItem(
+      ATTACHMENT_SOURCE_MAP_STORAGE_KEY,
+      JSON.stringify(Object.fromEntries(trimmedEntries)),
+    );
+  } catch {
+    // Ignore storage quota / JSON errors and keep in-memory map.
+  }
+}
+
 export const useApp = () => {
   const system = useSystemSync();
   const auth = useAuth();
@@ -110,6 +177,9 @@ export const useApp = () => {
   const attachments = useAttachments();
   const contextMenuState = useAppContextMenu();
   const ocr = useAppOcr(chatHistory.activeSessionId, system.sessionOcrLanguage);
+  const attachmentSourceMapRef = useRef<Map<string, string>>(
+    readAttachmentSourceMap(),
+  );
 
   const [isCheckingImage, setIsCheckingImage] = useState(true);
   const [hasCheckedStartupImage, setHasCheckedStartupImage] = useState(false);
@@ -326,6 +396,146 @@ export const useApp = () => {
     runWithBusyGuardRef.current = runWithBusyGuard;
   }, [runWithBusyGuard]);
 
+  const rememberAttachmentSourcePath = useCallback(
+    (casPath: string, sourcePath: string) => {
+      if (!casPath || !sourcePath) return;
+      attachmentSourceMapRef.current.set(casPath, sourcePath);
+      persistAttachmentSourceMap(attachmentSourceMapRef.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    attachments.attachments.forEach((attachment) => {
+      if (attachment.sourcePath) {
+        rememberAttachmentSourcePath(attachment.path, attachment.sourcePath);
+      }
+    });
+  }, [attachments.attachments, rememberAttachmentSourcePath]);
+
+  const getAttachmentSourcePath = useCallback((path: string) => {
+    const directMatch = attachmentSourceMapRef.current.get(path);
+    if (directMatch) return directMatch;
+
+    const fileName = path.split(/[/\\]/).pop();
+    if (!fileName) return null;
+
+    for (const [casPath, sourcePath] of attachmentSourceMapRef.current) {
+      if (casPath.endsWith(`/${fileName}`) || casPath.endsWith(`\\${fileName}`)) {
+        return sourcePath;
+      }
+    }
+
+    return null;
+  }, []);
+
+  const [mediaViewer, setMediaViewer] = useState<{
+    isOpen: boolean;
+    item: MediaViewerItem | null;
+  }>({
+    isOpen: false,
+    item: null,
+  });
+
+  const closeMediaViewer = useCallback(() => {
+    setMediaViewer((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const revealInFileManager = useCallback(async (path: string) => {
+    try {
+      await invoke("reveal_in_file_manager", { path });
+    } catch (error) {
+      console.error("[media] Failed to reveal in file manager:", error);
+      throw error;
+    }
+  }, []);
+
+  const openMediaViewer = useCallback(
+    async (attachment: Attachment) => {
+      const extension = attachment.extension.toLowerCase();
+      const sourcePath =
+        attachment.sourcePath || getAttachmentSourcePath(attachment.path) || undefined;
+
+      let resolvedPath = attachment.path;
+      try {
+        resolvedPath = await invoke<string>("resolve_attachment_path", {
+          path: attachment.path,
+        });
+      } catch (error) {
+        console.warn("[media] Could not resolve attachment path:", error);
+      }
+
+      const revealPath = sourcePath || resolvedPath;
+
+      if (UNSUPPORTED_PREVIEW_EXTENSIONS.has(extension)) {
+        try {
+          await revealInFileManager(revealPath);
+        } catch {
+          if (revealPath !== resolvedPath) {
+            await revealInFileManager(resolvedPath);
+          }
+        }
+        return;
+      }
+
+      if (attachment.type === "image" || isImageExtension(extension)) {
+        setMediaViewer({
+          isOpen: true,
+          item: {
+            kind: "image",
+            path: resolvedPath,
+            sourcePath,
+            name: attachment.name,
+            extension,
+          },
+        });
+        return;
+      }
+
+      if (extension === "pdf") {
+        setMediaViewer({
+          isOpen: true,
+          item: {
+            kind: "pdf",
+            path: resolvedPath,
+            sourcePath,
+            name: attachment.name,
+            extension,
+          },
+        });
+        return;
+      }
+
+      try {
+        const textContent = await invoke<string>("read_attachment_text", {
+          path: resolvedPath,
+        });
+
+        setMediaViewer({
+          isOpen: true,
+          item: {
+            kind: "text",
+            path: resolvedPath,
+            sourcePath,
+            name: attachment.name,
+            extension,
+            textContent,
+          },
+        });
+      } catch (error) {
+        console.warn("[media] Falling back to file-manager reveal:", error);
+        try {
+          await revealInFileManager(revealPath);
+        } catch {
+          if (revealPath !== resolvedPath) {
+            await revealInFileManager(resolvedPath);
+          }
+        }
+      }
+    },
+    [getAttachmentSourcePath, revealInFileManager],
+  );
+
   const handleImageReady = async (imageData: {
     imageId: string;
     path: string;
@@ -337,6 +547,7 @@ export const useApp = () => {
     }
 
     console.log("Raw image path:", imageData.path);
+    closeMediaViewer();
 
     chatHistory.setActiveSessionId(null);
     chatHistory.setActiveSessionId(null);
@@ -371,6 +582,7 @@ export const useApp = () => {
   const performSelectChat = useCallback(
     async (id: string) => {
       setIsNavigating(true);
+      closeMediaViewer();
 
       // Hard-kill OCR auto-runs during navigation. OCR can only start
       // on fresh chat creation (when enabled) or manual model selection.
@@ -442,18 +654,19 @@ export const useApp = () => {
         setTimeout(() => setIsNavigating(false), 300);
       }
     },
-    [chat, chatHistory, ocr, system],
+    [chat, chatHistory, closeMediaViewer, ocr, system],
   );
 
   const performNewSession = useCallback(() => {
     setIsNavigating(true);
+    closeMediaViewer();
     system.resetSession();
     chatHistory.setActiveSessionId(null);
     chatHistory.setActiveSessionId(null);
     ocr.setOcrData({});
     ocr.setSessionLensUrl(null);
     setTimeout(() => setIsNavigating(false), 300);
-  }, [chatHistory, ocr, system]);
+  }, [chatHistory, closeMediaViewer, ocr, system]);
 
   const handleSelectChat = useCallback(
     (id: string) => {
@@ -743,6 +956,7 @@ export const useApp = () => {
     chatTitle,
     agreedToTerms,
     busyDialog,
+    mediaViewer,
 
     toggleSidePanel: panel.toggleSidePanel,
     isNavigating,
@@ -772,6 +986,9 @@ export const useApp = () => {
     handleSwitchProfile,
     handleSystemAction,
     handleBusyDialogAction,
+    openMediaViewer,
+    closeMediaViewer,
+    getAttachmentSourcePath,
     containerRef,
     isOcrScanning: ocr.isOcrScanning,
     setIsOcrScanning: ocr.setIsOcrScanning,
