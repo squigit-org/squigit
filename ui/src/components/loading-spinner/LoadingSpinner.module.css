@@ -22,6 +22,6 @@
   width: 13%;
   height: 25%;
   margin-top: 5.5555551%;
-  background: #e5e5e5;
+  background: var(--c-raw-124);
   border-radius: 999px;
 }

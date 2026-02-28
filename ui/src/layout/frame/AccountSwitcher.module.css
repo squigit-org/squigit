@@ -31,7 +31,7 @@
 .avatarInitials {
   font-size: 0.65rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--c-raw-036);
 }
 
 .accountList {
@@ -48,7 +48,7 @@
 }
 
 .accountList::-webkit-scrollbar-thumb {
-  background: rgba(63, 63, 70, 0.5);
+  background: var(--c-raw-041);
   border-radius: 4px;
 }
 
@@ -80,7 +80,7 @@
 .itemAvatarInitials {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--c-raw-036);
 }
 
 .accountInfo {
@@ -93,7 +93,7 @@
 .accountName {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #ededed;
+  color: var(--c-raw-039);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -101,7 +101,7 @@
 
 .accountEmail {
   font-size: 0.7rem;
-  color: #a1a1aa;
+  color: var(--c-raw-046);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -110,7 +110,7 @@
 .deleteButton {
   background: transparent;
   border: none;
-  color: #71717a;
+  color: var(--c-raw-050);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -135,8 +135,8 @@
 }
 
 .deleteButton:hover {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background-color: var(--c-raw-138);
+  color: var(--c-raw-059);
 }
 
 .avatarContainer {

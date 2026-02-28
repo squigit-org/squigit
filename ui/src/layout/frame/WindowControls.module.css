@@ -21,7 +21,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--c-raw-036);
   transition:
     background-color 0.1s ease,
     color 0.1s ease;
@@ -31,30 +31,30 @@
 
 .windowsButton.winMinimize:hover,
 .windowsButton.winMaximize:hover {
-  background-color: #3c3c3c;
+  background-color: var(--c-raw-095);
   color: var(--c-raw-000);
 }
 
 .windowsButton.winClose:hover {
-  background-color: #e81123;
-  color: #ffffff;
+  background-color: var(--c-raw-079);
+  color: var(--c-raw-036);
 }
 
 :global(body.light-mode) .windowsButton,
 :global(html.light) .windowsButton {
-  color: #1a1a1a;
+  color: var(--c-raw-065);
 }
 
 :global(body.light-mode) .windowsButton.winMinimize:hover,
 :global(body.light-mode) .windowsButton.winMaximize:hover,
 :global(html.light) .windowsButton.winMinimize:hover,
 :global(html.light) .windowsButton.winMaximize:hover {
-  background-color: #e0e0e0;
-  color: #1a1a1a;
+  background-color: var(--c-raw-121);
+  color: var(--c-raw-065);
 }
 
 :global(body.light-mode) .windowsButton.winClose:hover,
 :global(html.light) .windowsButton.winClose:hover {
-  background-color: #e81123;
-  color: #ffffff;
+  background-color: var(--c-raw-079);
+  color: var(--c-raw-036);
 }

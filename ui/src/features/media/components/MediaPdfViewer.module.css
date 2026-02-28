@@ -11,8 +11,8 @@
   flex-direction: column;
   overflow: hidden;
   border-radius: 10px;
-  border: 1px solid rgba(63, 63, 70, 0.5);
-  background: #111;
+  border: 1px solid var(--c-raw-041);
+  background: var(--c-raw-055);
 }
 
 .pdfPages {
@@ -26,10 +26,10 @@
 
 .pdfPage {
   flex: 0 0 auto;
-  background: #fff;
+  background: var(--c-raw-036);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 18px var(--c-raw-130);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -55,5 +55,5 @@
 }
 
 .errorText {
-  color: #f87171;
+  color: var(--c-raw-126);
 }

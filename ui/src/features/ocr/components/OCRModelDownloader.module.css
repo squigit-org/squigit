@@ -43,7 +43,7 @@
 }
 
 .modelList::-webkit-scrollbar-thumb {
-  background: rgba(63, 63, 70, 0.5);
+  background: var(--c-raw-041);
   border-radius: 4px;
 }
 
@@ -52,14 +52,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background-color: var(--c-raw-053);
+  border: 1px solid var(--c-raw-040);
   border-radius: 8px;
   transition: background-color 0.15s ease;
 }
 
 .modelRow:hover {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: var(--c-raw-043);
 }
 
 .modelRowInfo {
@@ -71,12 +71,12 @@
 .modelName {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #ededed;
+  color: var(--c-raw-039);
 }
 
 .modelSize {
   font-size: 0.75rem;
-  color: #a1a1aa;
+  color: var(--c-raw-046);
 }
 
 .downloadButton {
@@ -86,16 +86,16 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #d4d4d8;
+  border: 1px solid var(--c-raw-037);
+  background-color: var(--c-raw-143);
+  color: var(--c-raw-115);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .downloadButton:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background-color: var(--c-raw-037);
+  color: var(--c-raw-036);
 }
 
 .downloadButton:active:not(:disabled) {
@@ -132,7 +132,7 @@
 
 .circleBg {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.2);
+  stroke: var(--c-raw-028);
   stroke-width: 3;
 }
 
@@ -140,6 +140,6 @@
   fill: none;
   stroke-width: 3;
   stroke-linecap: round;
-  stroke: #fff;
+  stroke: var(--c-raw-036);
   transition: stroke-dasharray 0.3s ease;
 }

@@ -24,7 +24,7 @@
 
 .sectionHeader {
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--c-raw-043);
   margin-bottom: 0.5rem;
 }
 
@@ -70,15 +70,15 @@
   height: 320px;
   flex: 1;
   flex-direction: column;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background-color: var(--c-raw-053);
+  border: 1px solid var(--c-raw-040);
   border-radius: 0.75rem;
   padding: 0.75rem;
   transition: border-color 0.2s;
 }
 
 .textareaWrapper:focus-within {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--c-raw-038);
 }
 
 .textarea {

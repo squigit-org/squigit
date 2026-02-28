@@ -78,11 +78,11 @@
 }
 
 .messageError {
-  color: rgba(254, 202, 202, 0.9);
-  scrollbar-color: rgba(127, 29, 29, 0.5) transparent;
+  color: var(--c-raw-142);
+  scrollbar-color: var(--c-raw-052) transparent;
 }
 .messageError::-webkit-scrollbar-thumb {
-  background-color: rgba(127, 29, 29, 0.5);
+  background-color: var(--c-raw-052);
   border-radius: 3px;
 }
 
@@ -109,10 +109,10 @@
   color: var(--c-raw-027);
 }
 .iconInfo {
-  color: #bfdbfe;
+  color: var(--c-raw-109);
 }
 .iconUpdate {
-  color: #d8b4fe;
+  color: var(--c-raw-116);
 }
 
 .btnBase {
@@ -133,19 +133,19 @@
 }
 
 .btnDanger {
-  border-color: rgba(127, 29, 29, 0.5);
-  background-color: rgba(69, 10, 10, 0.3);
+  border-color: var(--c-raw-052);
+  background-color: var(--c-raw-148);
   color: var(--c-raw-024);
 }
 .btnDanger:hover {
-  background-color: rgba(127, 29, 29, 0.5);
-  border-color: rgba(239, 68, 68, 0.6);
+  background-color: var(--c-raw-052);
+  border-color: var(--c-raw-140);
 }
 
 .btnPrimary {
-  background-color: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
+  background-color: var(--c-raw-036);
+  color: var(--c-raw-042);
+  border-color: var(--c-raw-036);
 }
 .btnPrimary:hover {
   background-color: var(--c-raw-000);
@@ -158,32 +158,32 @@
   color: var(--c-raw-003);
 }
 .btnSecondary:hover {
-  background-color: #404040;
-  color: #f5f5f5;
-  border-color: #737373;
+  background-color: var(--c-raw-096);
+  color: var(--c-raw-080);
+  border-color: var(--c-raw-102);
 }
 
 body.light-mode .iconInfo {
-  color: #1e3a8a;
+  color: var(--c-raw-089);
 }
 body.light-mode .iconUpdate {
-  color: #6b21a8;
+  color: var(--c-raw-100);
 }
 
 body.light-mode .btnSecondary:hover {
-  background-color: #d1d1d1 !important;
-  color: #171717 !important;
-  border-color: #bbbbbb !important;
+  background-color: var(--c-raw-000) !important;
+  color: var(--c-raw-012) !important;
+  border-color: var(--c-raw-108) !important;
 }
 
 body.light-mode .btnPrimary:hover {
-  background-color: #333333 !important;
-  color: #ffffff !important;
-  border-color: #333333 !important;
+  background-color: var(--c-raw-057) !important;
+  color: var(--c-raw-036) !important;
+  border-color: var(--c-raw-057) !important;
 }
 
 body.light-mode .btnDanger:hover {
-  background-color: rgba(220, 38, 38, 0.15) !important;
-  border-color: rgba(220, 38, 38, 0.5) !important;
-  color: #991b1b !important;
+  background-color: var(--c-raw-135) !important;
+  border-color: var(--c-raw-136) !important;
+  color: var(--c-raw-105) !important;
 }

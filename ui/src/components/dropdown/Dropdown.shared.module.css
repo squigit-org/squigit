@@ -26,11 +26,11 @@
 }
 
 .trigger:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--c-raw-038);
 }
 
 .trigger.active {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--c-raw-048);
 }
 
 .triggerUp {
@@ -83,16 +83,16 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 200px;
-  background-color: rgba(26, 26, 26, 0.98);
+  background-color: var(--c-raw-147);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(63, 63, 70, 0.5);
+  border: 1px solid var(--c-raw-041);
   border-radius: 12px;
   padding: 8px;
   z-index: 1000;
   box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.4),
-    0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    0 20px 25px -5px var(--c-raw-045),
+    0 8px 10px -6px var(--c-raw-044);
 
   opacity: 0;
   visibility: hidden;
@@ -128,12 +128,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #71717a;
+  color: var(--c-raw-050);
 }
 
 .divider {
   height: 1px;
-  background-color: rgba(63, 63, 70, 0.5);
+  background-color: var(--c-raw-041);
   margin: 6px 0;
 }
 
@@ -150,7 +150,7 @@
 }
 
 .list::-webkit-scrollbar-thumb {
-  background: rgba(63, 63, 70, 0.5);
+  background: var(--c-raw-041);
   border-radius: 4px;
 }
 
@@ -167,21 +167,21 @@
   text-align: left;
   transition: background-color 0.15s ease;
   font-family: "Inter", sans-serif;
-  color: #ededed;
+  color: var(--c-raw-039);
   font-size: 0.85rem;
   font-weight: 500;
 }
 
 .item:hover {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: var(--c-raw-047);
 }
 
 .itemActive {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--c-raw-038);
 }
 
 .checkIcon {
-  color: #ffffff;
+  color: var(--c-raw-036);
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -203,14 +203,14 @@
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.85rem;
-  color: #dbdbe7;
+  color: var(--c-raw-118);
   transition: all 0.15s ease;
   font-family: "Inter", sans-serif;
 }
 
 .actionButton:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #ededed;
+  background-color: var(--c-raw-047);
+  color: var(--c-raw-039);
 }
 
 .spin {

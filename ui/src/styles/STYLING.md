@@ -1,5 +1,7 @@
 # Styling Contract
 
+_Styling automation updates were applied by Codex tooling; see `.codex/**` for scripts, mappings, and reports._
+
 This project is **CSS Modules first**.
 
 ## Rules

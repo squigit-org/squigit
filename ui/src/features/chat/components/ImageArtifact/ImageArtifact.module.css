@@ -75,14 +75,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: rgba(24, 24, 27, 0.95);
+  background-color: var(--c-raw-141);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 8px;
   padding: 6px 4px;
   gap: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px var(--c-raw-044);
+  border: 1px solid var(--c-raw-037);
   z-index: 100;
   user-select: none;
 }
@@ -90,7 +90,7 @@
 .toolbarDrag {
   cursor: -webkit-grab;
   cursor: grab;
-  color: #71717a;
+  color: var(--c-raw-050);
   padding: 2px;
   display: flex;
   align-items: center;
@@ -105,7 +105,7 @@
 .toolbarSeparator {
   width: 16px;
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--c-raw-037);
 }
 
 .toolBtn {
@@ -114,7 +114,7 @@
   border-radius: 9999px;
   background: transparent;
   border: none;
-  color: #a1a1aa;
+  color: var(--c-raw-046);
   cursor: pointer;
   transition:
     background-color 0.2s,
@@ -125,8 +125,8 @@
 }
 
 .toolBtn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
+  background-color: var(--c-raw-037);
+  color: var(--c-raw-036);
 }
 
 .spinner {
@@ -146,7 +146,7 @@
 .floatingContainer {
   background-color: var(--c-raw-012);
   border: 1px solid var(--c-raw-010);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px var(--c-raw-061);
   position: relative;
   width: 95%;
   max-width: 41.5rem;
@@ -204,7 +204,7 @@
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background-color: white;
+  background-color: var(--c-raw-036);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -251,7 +251,7 @@
 }
 
 .cancelButton:hover {
-  color: white;
+  color: var(--c-raw-036);
 }
 
 .cancelIcon {
@@ -432,8 +432,8 @@
   bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(220, 38, 38, 0.9);
-  color: white;
+  background-color: var(--c-raw-137);
+  color: var(--c-raw-036);
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
   font-size: 0.875rem;

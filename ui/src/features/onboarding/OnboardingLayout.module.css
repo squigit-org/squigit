@@ -10,7 +10,7 @@
   margin: 0;
   box-sizing: border-box;
   background-color: var(--c-raw-013);
-  color: #fafafa;
+  color: var(--c-raw-060);
   display: flex;
   align-items: center;
   justify-content: center;

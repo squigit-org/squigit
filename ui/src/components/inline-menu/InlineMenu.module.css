@@ -6,12 +6,12 @@
 
 .menu {
   position: fixed;
-  background-color: #171717;
+  background-color: var(--c-raw-012);
   border-radius: 12px;
   box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.4),
-    0 10px 10px -5px rgba(0, 0, 0, 0.3);
-  color: #e4e4e7;
+    0 20px 25px -5px var(--c-raw-045),
+    0 10px 10px -5px var(--c-raw-044);
+  color: var(--c-raw-078);
   font-family: "Inter", sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
@@ -73,26 +73,26 @@
 }
 
 .menuItem:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--c-raw-038);
 }
 
 .menuItem:active {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--c-raw-054);
 }
 
 .divider {
   width: 1px;
   height: 16px;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--c-raw-054);
   margin: 0 2px;
 }
 
 .navArrow {
-  color: #a1a1aa;
+  color: var(--c-raw-046);
   padding: 8px 8px;
   min-width: 32px;
 }
 
 .navArrow:hover {
-  color: white;
+  color: var(--c-raw-036);
 }

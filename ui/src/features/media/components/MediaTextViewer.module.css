@@ -25,15 +25,15 @@
 }
 
 .textViewerWrap *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--c-raw-054);
   border-radius: 4px;
 }
 
 .textViewerWrap *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--c-raw-085);
 }
 
 .textViewerWrap * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: var(--c-raw-054) transparent;
 }

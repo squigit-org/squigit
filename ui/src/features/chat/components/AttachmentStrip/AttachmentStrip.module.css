@@ -128,8 +128,8 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #fff;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--c-raw-036);
+  border-right: 1px solid var(--c-raw-037);
   border-radius: 9px 0 0 9px;
 }
 
@@ -179,7 +179,7 @@
 }
 
 .removeBtn:hover {
-  color: #fff;
+  color: var(--c-raw-036);
 }
 
 .cancelIcon {

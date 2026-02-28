@@ -18,6 +18,7 @@ This repository keeps Codex automation assets under `.codex/` (not under `ui/`).
 
 ```bash
 python3 .codex/tools/color_tokenizer.py --report
+python3 .codex/tools/color_tokenizer.py --test
 python3 .codex/tools/color_tokenizer.py --apply
 python3 .codex/tools/color_tokenizer.py --write
 ```
@@ -27,7 +28,12 @@ python3 .codex/tools/color_tokenizer.py --write
 - `.codex/reports/color-map.json`
 - `.codex/reports/color-report.md`
 - `.codex/reports/color-tokenization.patch`
-- `ui/src/styles/variables.generated.css`
+- On `--test`: preview files only
+  - `ui/src/styles/variables.generated.css`
+  - `ui/tailwind.generated.cjs`
+- On `--apply` / `--write`: updates source files in-place, appends new `--c-raw-xxx`
+  tokens to both `:root` and `body.light-mode/html.light` in `ui/src/styles/variables.css`,
+  and appends new raw token mappings to `ui/tailwind.config.cjs`.
 
 ## Replacing Tool
 

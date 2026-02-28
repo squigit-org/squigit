@@ -64,7 +64,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
     >
       {isLoading &&
         (showCancel ? (
-          <span style={{ fontSize: "0.8rem", color: "#666" }}>Cancel ✕</span>
+          <span style={{ fontSize: "0.8rem", color: "var(--c-raw-099)" }}>Cancel ✕</span>
         ) : (
           <>
             Redirecting

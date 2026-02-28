@@ -76,5 +76,5 @@
 }
 
 .licenseText a:hover {
-  color: #fff;
+  color: var(--c-raw-036);
 }

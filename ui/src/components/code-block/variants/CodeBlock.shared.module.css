@@ -6,7 +6,7 @@
 
 
 :root {
-  --solid-17: #171717;
+  --solid-17: var(--c-raw-012);
 }
 
 .wrapper {
@@ -14,7 +14,7 @@
   margin-bottom: 1rem;
   border-radius: 0.75rem;
   background-color: var(--solid-17);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--c-raw-043);
 
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Segoe UI Mono",
@@ -22,8 +22,8 @@
   font-size: 0.875rem;
 
   box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    0 4px 6px -1px var(--c-raw-051),
+    0 2px 4px -1px var(--c-raw-083);
 
   min-width: 0;
   max-width: 100%;
@@ -34,13 +34,13 @@
 }
 
 .content::-webkit-scrollbar-thumb {
-  background-color: #444;
+  background-color: var(--c-raw-058);
   border-radius: 7px;
   border: 3px solid transparent;
   background-clip: padding-box;
 }
 .content::-webkit-scrollbar-thumb:hover {
-  background-color: #555;
+  background-color: var(--c-raw-049);
   border: 3px solid transparent;
   background-clip: padding-box;
 }
@@ -59,7 +59,7 @@
   gap: 0.5rem;
   color: var(--c-raw-003);
   background-color: var(--solid-17);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--c-raw-043);
 
   border-top-left-radius: 0.75rem;
   border-top-right-radius: 0.75rem;
@@ -107,7 +107,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
-  background-color: #171717;
+  background-color: var(--c-raw-012);
   border-radius: 999px;
   padding: 0.35rem 0.65rem;
   cursor: pointer;
@@ -275,7 +275,7 @@
 }
 
 .textareaOverlay::-webkit-scrollbar-thumb {
-  background-color: #444;
+  background-color: var(--c-raw-058);
   border-radius: 5px;
   border: 2px solid var(--solid-17);
 }

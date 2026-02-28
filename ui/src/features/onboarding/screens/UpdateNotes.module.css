@@ -184,8 +184,8 @@
 
 .updateButton {
   padding: 0.625rem 1.25rem;
-  background-color: #ffffff;
-  color: #000000;
+  background-color: var(--c-raw-036);
+  color: var(--c-raw-042);
   border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;

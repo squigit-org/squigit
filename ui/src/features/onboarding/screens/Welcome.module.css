@@ -5,10 +5,10 @@
  */
 
 .container {
-  --muted: #71717a;
-  --accent: #fafafa;
-  --border: #27272a;
-  --key-bg: #18181b;
+  --muted: var(--c-raw-050);
+  --accent: var(--c-raw-060);
+  --border: var(--c-raw-092);
+  --key-bg: var(--c-raw-056);
 
   width: 100%;
   height: 100%;
@@ -26,7 +26,7 @@
 }
 
 .container.dragging {
-  background-color: #111;
+  background-color: var(--c-raw-055);
 }
 
 .content {
@@ -73,14 +73,14 @@
 }
 
 .key {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--c-raw-038);
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--c-raw-037);
   border-radius: 4px;
 
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 0 var(--c-raw-045);
 
-  color: #a1a1aa;
+  color: var(--c-raw-046);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
   font-weight: 500;
@@ -110,7 +110,7 @@
 }
 
 .keySep {
-  color: #52525b;
+  color: var(--c-raw-073);
   font-size: 14px;
   margin: 0 0.5px;
   cursor: default;
@@ -124,7 +124,7 @@
 .dropOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--c-raw-132);
   display: flex;
   align-items: center;
   justify-content: center;

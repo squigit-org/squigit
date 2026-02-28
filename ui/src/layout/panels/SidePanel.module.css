@@ -10,12 +10,12 @@
   --bg-subtle: var(--c-raw-012);
   --bg-hover: var(--c-raw-010);
 
-  --text-main: #f5f5f5;
-  --text-muted: #a3a3a3;
-  --text-faint: #52525b;
+  --text-main: var(--c-raw-080);
+  --text-muted: var(--c-raw-106);
+  --text-faint: var(--c-raw-073);
 
-  --c-raw-014: #fafafa;
-  --c-raw-015: #ef4444;
+  --c-raw-014: var(--c-raw-060);
+  --c-raw-015: var(--c-raw-059);
 
   width: 280px;
   height: 100%;
@@ -51,14 +51,14 @@
 }
 
 .newChatBtn {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--c-raw-038);
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--c-raw-037);
   border-radius: 4px;
 
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 0 var(--c-raw-045);
 
-  color: #a1a1aa;
+  color: var(--c-raw-046);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -88,7 +88,7 @@
 
 .newChatBtn.noHover:hover {
   transform: translate3d(0, 0, 0) !important;
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 3px 0 var(--c-raw-045) !important;
   cursor: default !important;
 }
 
@@ -212,11 +212,11 @@
 }
 
 .chatRow:hover {
-  background: #272727;
+  background: var(--c-raw-067);
 }
 
 .chatRow.active {
-  background: #272727;
+  background: var(--c-raw-067);
   color: var(--text-main);
 }
 

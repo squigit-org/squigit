@@ -24,7 +24,7 @@
 
 .sectionHeader {
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--c-raw-043);
   margin-bottom: 0.5rem;
 }
 
@@ -51,8 +51,8 @@
   flex-direction: column;
   border-radius: 0.85rem;
   overflow: visible;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background-color: var(--c-raw-053);
+  border: 1px solid var(--c-raw-040);
 }
 
 .glowProviderRow {
@@ -105,7 +105,7 @@
   background: none;
   border: none;
   padding: 0;
-  color: #81a1c1;
+  color: var(--c-raw-103);
   font-size: inherit;
   cursor: pointer;
   text-decoration: none;
@@ -115,7 +115,7 @@
 }
 
 .providerLink:hover {
-  color: #8caecf;
+  color: var(--c-raw-104);
 }
 
 .inputGroup {
@@ -139,24 +139,24 @@
 
 .modernInput {
   width: 100%;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--c-raw-040);
   color: var(--c-raw-002);
   padding: 0.5rem 2rem 0.5rem 0.7rem;
   border-radius: 0.4rem;
   font-family: "JetBrains Mono", monospace;
   font-size: 0.8rem;
   transition: border-color 0.2s;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--c-raw-047);
 }
 
 .modernInput:focus {
   outline: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--c-raw-037);
 }
 
 .inputWrapper.error .modernInput {
   animation: "shake" 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  border: 1px solid #e0443e;
+  border: 1px solid var(--c-raw-077);
 }
 
 .iconBtn {
@@ -212,7 +212,7 @@
 .divider {
   width: 100%;
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--c-raw-040);
 }
 
 .legalRow {

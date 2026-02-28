@@ -74,11 +74,11 @@
 }
 
 .iconButton:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--c-raw-038);
 }
 
 .iconButton.active {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--c-raw-048);
 }
 
 body.has-open-dialog .iconButton {

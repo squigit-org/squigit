@@ -57,7 +57,7 @@
   height: 100%;
   padding: 1rem;
   border-radius: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--c-raw-040);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;

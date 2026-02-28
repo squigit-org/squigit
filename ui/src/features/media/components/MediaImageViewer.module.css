@@ -23,8 +23,8 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #1f1f1f;
+  border: 1px solid var(--c-raw-048);
+  background: var(--c-raw-090);
   color: var(--c-raw-002);
   display: inline-flex;
   align-items: center;
@@ -33,8 +33,8 @@
 }
 
 .toolButton:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.24);
+  color: var(--c-raw-036);
+  border-color: var(--c-raw-145);
 }
 
 .zoomLabel {
@@ -49,8 +49,8 @@
   min-height: 0;
   overflow: auto;
   border-radius: 10px;
-  border: 1px solid rgba(63, 63, 70, 0.5);
-  background: #111;
+  border: 1px solid var(--c-raw-041);
+  background: var(--c-raw-055);
   display: flex;
   align-items: center;
   justify-content: center;

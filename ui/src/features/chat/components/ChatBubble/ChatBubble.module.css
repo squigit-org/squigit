@@ -69,8 +69,8 @@
 }
 
 .userBubble {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  background-color: #171717;
+  box-shadow: 0 10px 15px -3px var(--c-raw-051);
+  background-color: var(--c-raw-012);
 }
 
 .botBubble {
@@ -213,8 +213,8 @@
 }
 
 .editing {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  background-color: #171717;
+  box-shadow: 0 10px 15px -3px var(--c-raw-051);
+  background-color: var(--c-raw-012);
   padding: 0;
   overflow: hidden;
 }
@@ -267,7 +267,7 @@
 }
 
 .saveButton:hover {
-  background-color: white;
+  background-color: var(--c-raw-036);
 }
 
 .cancelButton {

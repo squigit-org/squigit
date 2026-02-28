@@ -23,7 +23,7 @@
 
 .sectionHeader {
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--c-raw-043);
   margin-bottom: 0.5rem;
 }
 
@@ -81,7 +81,7 @@
 
 .divider {
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--c-raw-040);
   margin: 2px 0;
 }
 
@@ -112,7 +112,7 @@
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background-color: #434343;
+  background-color: var(--c-raw-097);
   border: none;
   transition:
     background-color 200ms ease,
@@ -130,10 +130,10 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--c-raw-036);
   box-shadow:
-    0 3px 8px rgba(0, 0, 0, 0.15),
-    0 3px 1px rgba(0, 0, 0, 0.06);
+    0 3px 8px var(--c-raw-084),
+    0 3px 1px var(--c-raw-083);
   transition:
     transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1),
     background 200ms;
@@ -141,17 +141,17 @@
 }
 
 .toggleInput:checked + .toggleSlider {
-  background-color: #3fa266;
-  border-color: #3fa266;
+  background-color: var(--c-raw-071);
+  border-color: var(--c-raw-071);
 }
 
 .toggleInput:checked + .toggleSlider::after {
   transform: translateX(17.5px);
-  background: #ffffff;
+  background: var(--c-raw-036);
 }
 
 .toggleInput:focus-visible + .toggleSlider {
-  outline: 3px solid rgba(120, 120, 120, 0.12);
+  outline: 3px solid var(--c-raw-134);
   outline-offset: 2px;
 }
 
@@ -160,8 +160,8 @@
   aspect-ratio: 1 / 1;
   border-radius: 8px;
   overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.24);
-  border: 1px solid rgba(255, 255, 255, 0.02);
+  background-color: var(--c-raw-129);
+  border: 1px solid var(--c-raw-053);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-02-28T09:34:45.401030+00:00",
+    "generated_at": "2026-02-28T10:12:26.645192+00:00",
     "mode": "apply",
     "scope": {
       "root": "ui/src",
@@ -22,697 +22,697 @@
   "mappings": [
     {
       "normalized": "#ffffff",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated",
       "occurrences": 34
     },
     {
       "normalized": "#171717",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing",
       "occurrences": 12
     },
     {
       "normalized": "rgba(255, 255, 255, 0.1)",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated",
       "occurrences": 12
     },
     {
       "normalized": "rgba(255, 255, 255, 0.08)",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated",
       "occurrences": 11
     },
     {
       "normalized": "#ededed",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated",
       "occurrences": 10
     },
     {
       "normalized": "rgba(255, 255, 255, 0.03)",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated",
       "occurrences": 10
     },
     {
       "normalized": "rgba(63, 63, 70, 0.5)",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated",
       "occurrences": 10
     },
     {
       "normalized": "#000000",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated",
       "occurrences": 9
     },
     {
       "normalized": "rgba(255, 255, 255, 0.04)",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated",
       "occurrences": 9
     },
     {
       "normalized": "rgba(0, 0, 0, 0.3)",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated",
       "occurrences": 8
     },
     {
       "normalized": "rgba(0, 0, 0, 0.4)",
-      "token": "--c-raw-009",
+      "token": "--c-raw-045",
       "source": "generated",
       "occurrences": 7
     },
     {
       "normalized": "#a1a1aa",
-      "token": "--c-raw-010",
+      "token": "--c-raw-046",
       "source": "generated",
       "occurrences": 6
     },
     {
       "normalized": "rgba(255, 255, 255, 0.06)",
-      "token": "--c-raw-011",
+      "token": "--c-raw-047",
       "source": "generated",
       "occurrences": 5
     },
     {
       "normalized": "rgba(255, 255, 255, 0.12)",
-      "token": "--c-raw-012",
+      "token": "--c-raw-048",
       "source": "generated",
       "occurrences": 5
     },
     {
       "normalized": "#555555",
-      "token": "--c-raw-013",
+      "token": "--c-raw-049",
       "source": "generated",
       "occurrences": 4
     },
     {
       "normalized": "#71717a",
-      "token": "--c-raw-014",
+      "token": "--c-raw-050",
       "source": "generated",
       "occurrences": 4
     },
     {
       "normalized": "rgba(0, 0, 0, 0.1)",
-      "token": "--c-raw-015",
+      "token": "--c-raw-051",
       "source": "generated",
       "occurrences": 4
     },
     {
       "normalized": "rgba(127, 29, 29, 0.5)",
-      "token": "--c-raw-016",
+      "token": "--c-raw-052",
       "source": "generated",
       "occurrences": 4
     },
     {
       "normalized": "rgba(255, 255, 255, 0.02)",
-      "token": "--c-raw-017",
+      "token": "--c-raw-053",
       "source": "generated",
       "occurrences": 4
     },
     {
       "normalized": "rgba(255, 255, 255, 0.15)",
-      "token": "--c-raw-018",
+      "token": "--c-raw-054",
       "source": "generated",
       "occurrences": 4
     },
     {
       "normalized": "#111111",
-      "token": "--c-raw-019",
+      "token": "--c-raw-055",
       "source": "generated",
       "occurrences": 3
     },
     {
       "normalized": "#18181b",
-      "token": "--c-raw-020",
+      "token": "--c-raw-056",
       "source": "generated",
       "occurrences": 3
     },
     {
       "normalized": "#333333",
-      "token": "--c-raw-021",
+      "token": "--c-raw-057",
       "source": "generated",
       "occurrences": 3
     },
     {
       "normalized": "#444444",
-      "token": "--c-raw-022",
+      "token": "--c-raw-058",
       "source": "generated",
       "occurrences": 3
     },
     {
       "normalized": "#ef4444",
-      "token": "--c-raw-023",
+      "token": "--c-raw-059",
       "source": "generated",
       "occurrences": 3
     },
     {
       "normalized": "#fafafa",
-      "token": "--c-raw-024",
+      "token": "--c-raw-060",
       "source": "generated",
       "occurrences": 3
     },
     {
       "normalized": "rgba(0, 0, 0, 0.2)",
-      "token": "--c-raw-025",
+      "token": "--c-raw-061",
       "source": "generated",
       "occurrences": 3
     },
     {
       "normalized": "#00599c",
-      "token": "--c-raw-026",
+      "token": "--c-raw-062",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#0ea5e9",
-      "token": "--c-raw-027",
+      "token": "--c-raw-063",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#121212",
-      "token": "--c-raw-028",
+      "token": "--c-raw-064",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#1a1a1a",
-      "token": "--c-raw-029",
+      "token": "--c-raw-065",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#1d6f42",
-      "token": "--c-raw-030",
+      "token": "--c-raw-066",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#272727",
-      "token": "--c-raw-031",
+      "token": "--c-raw-067",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#27c93f",
-      "token": "--c-raw-032",
+      "token": "--c-raw-068",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#2b579a",
-      "token": "--c-raw-033",
+      "token": "--c-raw-069",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#343434",
-      "token": "--c-raw-034",
+      "token": "--c-raw-070",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#3fa266",
-      "token": "--c-raw-035",
+      "token": "--c-raw-071",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#4a4a4a",
-      "token": "--c-raw-036",
+      "token": "--c-raw-072",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#52525b",
-      "token": "--c-raw-037",
+      "token": "--c-raw-073",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#61dafb",
-      "token": "--c-raw-038",
+      "token": "--c-raw-074",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#9a9a9a",
-      "token": "--c-raw-039",
+      "token": "--c-raw-075",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#d04423",
-      "token": "--c-raw-040",
+      "token": "--c-raw-076",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#e0443e",
-      "token": "--c-raw-041",
+      "token": "--c-raw-077",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#e4e4e7",
-      "token": "--c-raw-042",
+      "token": "--c-raw-078",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#e81123",
-      "token": "--c-raw-043",
+      "token": "--c-raw-079",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#f5f5f5",
-      "token": "--c-raw-044",
+      "token": "--c-raw-080",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#ff5f56",
-      "token": "--c-raw-045",
+      "token": "--c-raw-081",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#ffbd2e",
-      "token": "--c-raw-046",
+      "token": "--c-raw-082",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "rgba(0, 0, 0, 0.06)",
-      "token": "--c-raw-047",
+      "token": "--c-raw-083",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "rgba(0, 0, 0, 0.15)",
-      "token": "--c-raw-048",
+      "token": "--c-raw-084",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "rgba(255, 255, 255, 0.25)",
-      "token": "--c-raw-049",
+      "token": "--c-raw-085",
       "source": "generated",
       "occurrences": 2
     },
     {
       "normalized": "#00add8",
-      "token": "--c-raw-050",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#065f46",
-      "token": "--c-raw-051",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#1aab29",
-      "token": "--c-raw-052",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#1e3a8a",
-      "token": "--c-raw-053",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#1f1f1f",
-      "token": "--c-raw-054",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#264de4",
-      "token": "--c-raw-055",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#27272a",
-      "token": "--c-raw-056",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#3178c6",
-      "token": "--c-raw-057",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#3776ab",
-      "token": "--c-raw-058",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#3c3c3c",
-      "token": "--c-raw-059",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#404040",
-      "token": "--c-raw-060",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#434343",
-      "token": "--c-raw-061",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#4a5568",
-      "token": "--c-raw-062",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#666666",
-      "token": "--c-raw-063",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#6b21a8",
-      "token": "--c-raw-064",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#6b7280",
-      "token": "--c-raw-065",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#737373",
-      "token": "--c-raw-066",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#81a1c1",
-      "token": "--c-raw-067",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#8caecf",
-      "token": "--c-raw-068",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#991b1b",
-      "token": "--c-raw-069",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#a3a3a3",
-      "token": "--c-raw-070",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#a855f7",
-      "token": "--c-raw-071",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#bbbbbb",
-      "token": "--c-raw-072",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#bfdbfe",
-      "token": "--c-raw-073",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#c0c0c0",
-      "token": "--c-raw-074",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#c2410c",
-      "token": "--c-raw-075",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#c7c7c7c4",
-      "token": "--c-raw-076",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#c9c9c9d8",
-      "token": "--c-raw-077",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#cbd5e1",
-      "token": "--c-raw-078",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#d1d1d1",
-      "token": "--neutral-100",
-      "source": "existing",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#d4d4d8",
-      "token": "--c-raw-079",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#d8b4fe",
-      "token": "--c-raw-080",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#d97706",
-      "token": "--c-raw-081",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#dbdbe7",
-      "token": "--c-raw-082",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#de4f00",
-      "token": "--c-raw-083",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#dea123",
-      "token": "--c-raw-084",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#e0e0e0",
-      "token": "--c-raw-085",
-      "source": "generated",
-      "occurrences": 1
-    },
-    {
-      "normalized": "#e34c26",
       "token": "--c-raw-086",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "#e53e3e",
+      "normalized": "#065f46",
       "token": "--c-raw-087",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "#e5e5e5",
+      "normalized": "#1aab29",
       "token": "--c-raw-088",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "#f7df1e",
+      "normalized": "#1e3a8a",
       "token": "--c-raw-089",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "#f87171",
+      "normalized": "#1f1f1f",
       "token": "--c-raw-090",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "#f89820",
+      "normalized": "#264de4",
       "token": "--c-raw-091",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "#ffffffdf",
+      "normalized": "#27272a",
       "token": "--c-raw-092",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(0, 0, 0, 0.24)",
+      "normalized": "#3178c6",
       "token": "--c-raw-093",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(0, 0, 0, 0.35)",
+      "normalized": "#3776ab",
       "token": "--c-raw-094",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(0, 0, 0, 0.6)",
+      "normalized": "#3c3c3c",
       "token": "--c-raw-095",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(0, 0, 0, 0.85)",
+      "normalized": "#404040",
       "token": "--c-raw-096",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(0, 120, 215, 0.4)",
+      "normalized": "#434343",
       "token": "--c-raw-097",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(120, 120, 120, 0.12)",
+      "normalized": "#4a5568",
       "token": "--c-raw-098",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(220, 38, 38, 0.15)",
+      "normalized": "#666666",
       "token": "--c-raw-099",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(220, 38, 38, 0.5)",
+      "normalized": "#6b21a8",
       "token": "--c-raw-100",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(220, 38, 38, 0.9)",
+      "normalized": "#6b7280",
       "token": "--c-raw-101",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(239, 68, 68, 0.1)",
+      "normalized": "#737373",
       "token": "--c-raw-102",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(239, 68, 68, 0.15)",
+      "normalized": "#81a1c1",
       "token": "--c-raw-103",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(239, 68, 68, 0.6)",
+      "normalized": "#8caecf",
       "token": "--c-raw-104",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(24, 24, 27, 0.95)",
+      "normalized": "#991b1b",
       "token": "--c-raw-105",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(254, 202, 202, 0.9)",
+      "normalized": "#a3a3a3",
       "token": "--c-raw-106",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(255, 255, 255, 0.05)",
+      "normalized": "#a855f7",
       "token": "--c-raw-107",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(255, 255, 255, 0.14)",
+      "normalized": "#bbbbbb",
       "token": "--c-raw-108",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(255, 255, 255, 0.2)",
-      "token": "--chat-input-border",
-      "source": "existing",
-      "occurrences": 1
-    },
-    {
-      "normalized": "rgba(255, 255, 255, 0.24)",
+      "normalized": "#bfdbfe",
       "token": "--c-raw-109",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(255, 255, 255, 0.6)",
+      "normalized": "#c0c0c0",
       "token": "--c-raw-110",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(26, 26, 26, 0.98)",
+      "normalized": "#c2410c",
       "token": "--c-raw-111",
       "source": "generated",
       "occurrences": 1
     },
     {
-      "normalized": "rgba(69, 10, 10, 0.3)",
+      "normalized": "#c7c7c7c4",
       "token": "--c-raw-112",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#c9c9c9d8",
+      "token": "--c-raw-113",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#cbd5e1",
+      "token": "--c-raw-114",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#d1d1d1",
+      "token": "--c-raw-000",
+      "source": "existing",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#d4d4d8",
+      "token": "--c-raw-115",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#d8b4fe",
+      "token": "--c-raw-116",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#d97706",
+      "token": "--c-raw-117",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#dbdbe7",
+      "token": "--c-raw-118",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#de4f00",
+      "token": "--c-raw-119",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#dea123",
+      "token": "--c-raw-120",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#e0e0e0",
+      "token": "--c-raw-121",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#e34c26",
+      "token": "--c-raw-122",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#e53e3e",
+      "token": "--c-raw-123",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#e5e5e5",
+      "token": "--c-raw-124",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#f7df1e",
+      "token": "--c-raw-125",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#f87171",
+      "token": "--c-raw-126",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#f89820",
+      "token": "--c-raw-127",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#ffffffdf",
+      "token": "--c-raw-128",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.24)",
+      "token": "--c-raw-129",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.35)",
+      "token": "--c-raw-130",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.6)",
+      "token": "--c-raw-131",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.85)",
+      "token": "--c-raw-132",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 120, 215, 0.4)",
+      "token": "--c-raw-133",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(120, 120, 120, 0.12)",
+      "token": "--c-raw-134",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(220, 38, 38, 0.15)",
+      "token": "--c-raw-135",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(220, 38, 38, 0.5)",
+      "token": "--c-raw-136",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(220, 38, 38, 0.9)",
+      "token": "--c-raw-137",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(239, 68, 68, 0.1)",
+      "token": "--c-raw-138",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(239, 68, 68, 0.15)",
+      "token": "--c-raw-139",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(239, 68, 68, 0.6)",
+      "token": "--c-raw-140",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(24, 24, 27, 0.95)",
+      "token": "--c-raw-141",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(254, 202, 202, 0.9)",
+      "token": "--c-raw-142",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.05)",
+      "token": "--c-raw-143",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.14)",
+      "token": "--c-raw-144",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.2)",
+      "token": "--c-raw-028",
+      "source": "existing",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.24)",
+      "token": "--c-raw-145",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.6)",
+      "token": "--c-raw-146",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(26, 26, 26, 0.98)",
+      "token": "--c-raw-147",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(69, 10, 10, 0.3)",
+      "token": "--c-raw-148",
       "source": "generated",
       "occurrences": 1
     }
@@ -725,7 +725,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:--solid-17",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -735,7 +735,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:border",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -745,7 +745,7 @@
       "raw": "rgba(0, 0, 0, 0.1)",
       "normalized": "rgba(0, 0, 0, 0.1)",
       "context": "css:box-shadow",
-      "token": "--c-raw-015",
+      "token": "--c-raw-051",
       "source": "generated"
     },
     {
@@ -755,7 +755,7 @@
       "raw": "rgba(0, 0, 0, 0.06)",
       "normalized": "rgba(0, 0, 0, 0.06)",
       "context": "css:box-shadow",
-      "token": "--c-raw-047",
+      "token": "--c-raw-083",
       "source": "generated"
     },
     {
@@ -765,7 +765,7 @@
       "raw": "#444",
       "normalized": "#444444",
       "context": "css:background-color",
-      "token": "--c-raw-022",
+      "token": "--c-raw-058",
       "source": "generated"
     },
     {
@@ -775,7 +775,7 @@
       "raw": "#555",
       "normalized": "#555555",
       "context": "css:background-color",
-      "token": "--c-raw-013",
+      "token": "--c-raw-049",
       "source": "generated"
     },
     {
@@ -785,7 +785,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:border-bottom",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -795,7 +795,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -805,7 +805,7 @@
       "raw": "#444",
       "normalized": "#444444",
       "context": "css:background-color",
-      "token": "--c-raw-022",
+      "token": "--c-raw-058",
       "source": "generated"
     },
     {
@@ -815,7 +815,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -825,7 +825,7 @@
       "raw": "rgba(0, 0, 0, 0.15)",
       "normalized": "rgba(0, 0, 0, 0.15)",
       "context": "css:box-shadow",
-      "token": "--c-raw-048",
+      "token": "--c-raw-084",
       "source": "generated"
     },
     {
@@ -835,7 +835,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:background",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -845,7 +845,7 @@
       "raw": "rgba(239, 68, 68, 0.15)",
       "normalized": "rgba(239, 68, 68, 0.15)",
       "context": "css:background",
-      "token": "--c-raw-103",
+      "token": "--c-raw-139",
       "source": "generated"
     },
     {
@@ -855,7 +855,7 @@
       "raw": "#333",
       "normalized": "#333333",
       "context": "css:background",
-      "token": "--c-raw-021",
+      "token": "--c-raw-057",
       "source": "generated"
     },
     {
@@ -865,7 +865,7 @@
       "raw": "rgba(254, 202, 202, 0.9)",
       "normalized": "rgba(254, 202, 202, 0.9)",
       "context": "css:color",
-      "token": "--c-raw-106",
+      "token": "--c-raw-142",
       "source": "generated"
     },
     {
@@ -875,7 +875,7 @@
       "raw": "rgba(127, 29, 29, 0.5)",
       "normalized": "rgba(127, 29, 29, 0.5)",
       "context": "css:scrollbar-color",
-      "token": "--c-raw-016",
+      "token": "--c-raw-052",
       "source": "generated"
     },
     {
@@ -885,7 +885,7 @@
       "raw": "rgba(127, 29, 29, 0.5)",
       "normalized": "rgba(127, 29, 29, 0.5)",
       "context": "css:background-color",
-      "token": "--c-raw-016",
+      "token": "--c-raw-052",
       "source": "generated"
     },
     {
@@ -895,7 +895,7 @@
       "raw": "#bfdbfe",
       "normalized": "#bfdbfe",
       "context": "css:color",
-      "token": "--c-raw-073",
+      "token": "--c-raw-109",
       "source": "generated"
     },
     {
@@ -905,7 +905,7 @@
       "raw": "#d8b4fe",
       "normalized": "#d8b4fe",
       "context": "css:color",
-      "token": "--c-raw-080",
+      "token": "--c-raw-116",
       "source": "generated"
     },
     {
@@ -915,7 +915,7 @@
       "raw": "rgba(127, 29, 29, 0.5)",
       "normalized": "rgba(127, 29, 29, 0.5)",
       "context": "css:border-color",
-      "token": "--c-raw-016",
+      "token": "--c-raw-052",
       "source": "generated"
     },
     {
@@ -925,7 +925,7 @@
       "raw": "rgba(69, 10, 10, 0.3)",
       "normalized": "rgba(69, 10, 10, 0.3)",
       "context": "css:background-color",
-      "token": "--c-raw-112",
+      "token": "--c-raw-148",
       "source": "generated"
     },
     {
@@ -935,7 +935,7 @@
       "raw": "rgba(127, 29, 29, 0.5)",
       "normalized": "rgba(127, 29, 29, 0.5)",
       "context": "css:background-color",
-      "token": "--c-raw-016",
+      "token": "--c-raw-052",
       "source": "generated"
     },
     {
@@ -945,7 +945,7 @@
       "raw": "rgba(239, 68, 68, 0.6)",
       "normalized": "rgba(239, 68, 68, 0.6)",
       "context": "css:border-color",
-      "token": "--c-raw-104",
+      "token": "--c-raw-140",
       "source": "generated"
     },
     {
@@ -955,7 +955,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:background-color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -965,7 +965,7 @@
       "raw": "#000000",
       "normalized": "#000000",
       "context": "css:color",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -975,7 +975,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:border-color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -985,7 +985,7 @@
       "raw": "#404040",
       "normalized": "#404040",
       "context": "css:background-color",
-      "token": "--c-raw-060",
+      "token": "--c-raw-096",
       "source": "generated"
     },
     {
@@ -995,7 +995,7 @@
       "raw": "#f5f5f5",
       "normalized": "#f5f5f5",
       "context": "css:color",
-      "token": "--c-raw-044",
+      "token": "--c-raw-080",
       "source": "generated"
     },
     {
@@ -1005,7 +1005,7 @@
       "raw": "#737373",
       "normalized": "#737373",
       "context": "css:border-color",
-      "token": "--c-raw-066",
+      "token": "--c-raw-102",
       "source": "generated"
     },
     {
@@ -1015,7 +1015,7 @@
       "raw": "#1e3a8a",
       "normalized": "#1e3a8a",
       "context": "css:color",
-      "token": "--c-raw-053",
+      "token": "--c-raw-089",
       "source": "generated"
     },
     {
@@ -1025,7 +1025,7 @@
       "raw": "#6b21a8",
       "normalized": "#6b21a8",
       "context": "css:color",
-      "token": "--c-raw-064",
+      "token": "--c-raw-100",
       "source": "generated"
     },
     {
@@ -1035,7 +1035,7 @@
       "raw": "#d1d1d1",
       "normalized": "#d1d1d1",
       "context": "css:background-color",
-      "token": "--neutral-100",
+      "token": "--c-raw-000",
       "source": "existing"
     },
     {
@@ -1045,7 +1045,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -1055,7 +1055,7 @@
       "raw": "#bbbbbb",
       "normalized": "#bbbbbb",
       "context": "css:border-color",
-      "token": "--c-raw-072",
+      "token": "--c-raw-108",
       "source": "generated"
     },
     {
@@ -1065,7 +1065,7 @@
       "raw": "#333333",
       "normalized": "#333333",
       "context": "css:background-color",
-      "token": "--c-raw-021",
+      "token": "--c-raw-057",
       "source": "generated"
     },
     {
@@ -1075,7 +1075,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -1085,7 +1085,7 @@
       "raw": "#333333",
       "normalized": "#333333",
       "context": "css:border-color",
-      "token": "--c-raw-021",
+      "token": "--c-raw-057",
       "source": "generated"
     },
     {
@@ -1095,7 +1095,7 @@
       "raw": "rgba(220, 38, 38, 0.15)",
       "normalized": "rgba(220, 38, 38, 0.15)",
       "context": "css:background-color",
-      "token": "--c-raw-099",
+      "token": "--c-raw-135",
       "source": "generated"
     },
     {
@@ -1105,7 +1105,7 @@
       "raw": "rgba(220, 38, 38, 0.5)",
       "normalized": "rgba(220, 38, 38, 0.5)",
       "context": "css:border-color",
-      "token": "--c-raw-100",
+      "token": "--c-raw-136",
       "source": "generated"
     },
     {
@@ -1115,7 +1115,7 @@
       "raw": "#991b1b",
       "normalized": "#991b1b",
       "context": "css:color",
-      "token": "--c-raw-069",
+      "token": "--c-raw-105",
       "source": "generated"
     },
     {
@@ -1125,7 +1125,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:background-color",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -1135,7 +1135,7 @@
       "raw": "rgba(255, 255, 255, 0.12)",
       "normalized": "rgba(255, 255, 255, 0.12)",
       "context": "css:background-color",
-      "token": "--c-raw-012",
+      "token": "--c-raw-048",
       "source": "generated"
     },
     {
@@ -1145,7 +1145,7 @@
       "raw": "rgba(26, 26, 26, 0.98)",
       "normalized": "rgba(26, 26, 26, 0.98)",
       "context": "css:background-color",
-      "token": "--c-raw-111",
+      "token": "--c-raw-147",
       "source": "generated"
     },
     {
@@ -1155,7 +1155,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:border",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -1165,7 +1165,7 @@
       "raw": "rgba(0, 0, 0, 0.4)",
       "normalized": "rgba(0, 0, 0, 0.4)",
       "context": "css:box-shadow",
-      "token": "--c-raw-009",
+      "token": "--c-raw-045",
       "source": "generated"
     },
     {
@@ -1175,7 +1175,7 @@
       "raw": "rgba(0, 0, 0, 0.3)",
       "normalized": "rgba(0, 0, 0, 0.3)",
       "context": "css:box-shadow",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated"
     },
     {
@@ -1185,7 +1185,7 @@
       "raw": "#71717a",
       "normalized": "#71717a",
       "context": "css:color",
-      "token": "--c-raw-014",
+      "token": "--c-raw-050",
       "source": "generated"
     },
     {
@@ -1195,7 +1195,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:background-color",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -1205,7 +1205,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:background",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -1215,7 +1215,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -1225,7 +1225,7 @@
       "raw": "rgba(255, 255, 255, 0.06)",
       "normalized": "rgba(255, 255, 255, 0.06)",
       "context": "css:background-color",
-      "token": "--c-raw-011",
+      "token": "--c-raw-047",
       "source": "generated"
     },
     {
@@ -1235,7 +1235,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:background-color",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -1245,7 +1245,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -1255,7 +1255,7 @@
       "raw": "#dbdbe7",
       "normalized": "#dbdbe7",
       "context": "css:color",
-      "token": "--c-raw-082",
+      "token": "--c-raw-118",
       "source": "generated"
     },
     {
@@ -1265,7 +1265,7 @@
       "raw": "rgba(255, 255, 255, 0.06)",
       "normalized": "rgba(255, 255, 255, 0.06)",
       "context": "css:background-color",
-      "token": "--c-raw-011",
+      "token": "--c-raw-047",
       "source": "generated"
     },
     {
@@ -1275,7 +1275,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -1285,7 +1285,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:background-color",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -1295,7 +1295,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -1305,7 +1305,7 @@
       "raw": "rgba(0, 0, 0, 0.4)",
       "normalized": "rgba(0, 0, 0, 0.4)",
       "context": "css:box-shadow",
-      "token": "--c-raw-009",
+      "token": "--c-raw-045",
       "source": "generated"
     },
     {
@@ -1315,7 +1315,7 @@
       "raw": "rgba(0, 0, 0, 0.3)",
       "normalized": "rgba(0, 0, 0, 0.3)",
       "context": "css:box-shadow",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated"
     },
     {
@@ -1325,7 +1325,7 @@
       "raw": "#e4e4e7",
       "normalized": "#e4e4e7",
       "context": "css:color",
-      "token": "--c-raw-042",
+      "token": "--c-raw-078",
       "source": "generated"
     },
     {
@@ -1335,7 +1335,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:background-color",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -1345,7 +1345,7 @@
       "raw": "rgba(255, 255, 255, 0.15)",
       "normalized": "rgba(255, 255, 255, 0.15)",
       "context": "css:background-color",
-      "token": "--c-raw-018",
+      "token": "--c-raw-054",
       "source": "generated"
     },
     {
@@ -1355,7 +1355,7 @@
       "raw": "rgba(255, 255, 255, 0.15)",
       "normalized": "rgba(255, 255, 255, 0.15)",
       "context": "css:background-color",
-      "token": "--c-raw-018",
+      "token": "--c-raw-054",
       "source": "generated"
     },
     {
@@ -1365,7 +1365,7 @@
       "raw": "#a1a1aa",
       "normalized": "#a1a1aa",
       "context": "css:color",
-      "token": "--c-raw-010",
+      "token": "--c-raw-046",
       "source": "generated"
     },
     {
@@ -1375,7 +1375,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -1385,7 +1385,7 @@
       "raw": "#e5e5e5",
       "normalized": "#e5e5e5",
       "context": "css:background",
-      "token": "--c-raw-088",
+      "token": "--c-raw-124",
       "source": "generated"
     },
     {
@@ -1395,7 +1395,7 @@
       "raw": "#4a4a4a",
       "normalized": "#4a4a4a",
       "context": "css:background-image",
-      "token": "--c-raw-036",
+      "token": "--c-raw-072",
       "source": "generated"
     },
     {
@@ -1405,7 +1405,7 @@
       "raw": "#9a9a9a",
       "normalized": "#9a9a9a",
       "context": "css:background-image",
-      "token": "--c-raw-039",
+      "token": "--c-raw-075",
       "source": "generated"
     },
     {
@@ -1415,7 +1415,7 @@
       "raw": "#c0c0c0",
       "normalized": "#c0c0c0",
       "context": "css:background-image",
-      "token": "--c-raw-074",
+      "token": "--c-raw-110",
       "source": "generated"
     },
     {
@@ -1425,7 +1425,7 @@
       "raw": "#9a9a9a",
       "normalized": "#9a9a9a",
       "context": "css:background-image",
-      "token": "--c-raw-039",
+      "token": "--c-raw-075",
       "source": "generated"
     },
     {
@@ -1435,7 +1435,7 @@
       "raw": "#4a4a4a",
       "normalized": "#4a4a4a",
       "context": "css:background-image",
-      "token": "--c-raw-036",
+      "token": "--c-raw-072",
       "source": "generated"
     },
     {
@@ -1445,7 +1445,7 @@
       "raw": "#343434",
       "normalized": "#343434",
       "context": "css:background-image",
-      "token": "--c-raw-034",
+      "token": "--c-raw-070",
       "source": "generated"
     },
     {
@@ -1455,7 +1455,7 @@
       "raw": "#343434",
       "normalized": "#343434",
       "context": "css:background-image",
-      "token": "--c-raw-034",
+      "token": "--c-raw-070",
       "source": "generated"
     },
     {
@@ -1465,7 +1465,7 @@
       "raw": "#18181b",
       "normalized": "#18181b",
       "context": "css:background-color",
-      "token": "--c-raw-020",
+      "token": "--c-raw-056",
       "source": "generated"
     },
     {
@@ -1475,7 +1475,7 @@
       "raw": "#e4e4e7",
       "normalized": "#e4e4e7",
       "context": "css:color",
-      "token": "--c-raw-042",
+      "token": "--c-raw-078",
       "source": "generated"
     },
     {
@@ -1485,7 +1485,7 @@
       "raw": "rgba(0, 0, 0, 0.3)",
       "normalized": "rgba(0, 0, 0, 0.3)",
       "context": "css:box-shadow",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated"
     },
     {
@@ -1495,7 +1495,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:border",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -1505,7 +1505,7 @@
       "raw": "#18181b",
       "normalized": "#18181b",
       "context": "css:background-color",
-      "token": "--c-raw-020",
+      "token": "--c-raw-056",
       "source": "generated"
     },
     {
@@ -1515,7 +1515,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:border",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -1525,7 +1525,7 @@
       "raw": "#444",
       "normalized": "#444444",
       "context": "css:background-color",
-      "token": "--c-raw-022",
+      "token": "--c-raw-058",
       "source": "generated"
     },
     {
@@ -1535,7 +1535,7 @@
       "raw": "#555",
       "normalized": "#555555",
       "context": "css:background-color",
-      "token": "--c-raw-013",
+      "token": "--c-raw-049",
       "source": "generated"
     },
     {
@@ -1545,7 +1545,7 @@
       "raw": "black",
       "normalized": "#000000",
       "context": "css:mask-image",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -1555,7 +1555,7 @@
       "raw": "black",
       "normalized": "#000000",
       "context": "css:mask-image",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -1565,7 +1565,7 @@
       "raw": "black",
       "normalized": "#000000",
       "context": "css:-webkit-mask-image",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -1575,7 +1575,7 @@
       "raw": "black",
       "normalized": "#000000",
       "context": "css:-webkit-mask-image",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -1585,7 +1585,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -1595,7 +1595,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:border-right",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -1605,7 +1605,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -1615,7 +1615,7 @@
       "raw": "#e53e3e",
       "normalized": "#e53e3e",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-087",
+      "token": "--c-raw-123",
       "source": "generated"
     },
     {
@@ -1625,7 +1625,7 @@
       "raw": "#2b579a",
       "normalized": "#2b579a",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-033",
+      "token": "--c-raw-069",
       "source": "generated"
     },
     {
@@ -1635,7 +1635,7 @@
       "raw": "#2b579a",
       "normalized": "#2b579a",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-033",
+      "token": "--c-raw-069",
       "source": "generated"
     },
     {
@@ -1645,7 +1645,7 @@
       "raw": "#1d6f42",
       "normalized": "#1d6f42",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-030",
+      "token": "--c-raw-066",
       "source": "generated"
     },
     {
@@ -1655,7 +1655,7 @@
       "raw": "#1d6f42",
       "normalized": "#1d6f42",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-030",
+      "token": "--c-raw-066",
       "source": "generated"
     },
     {
@@ -1665,7 +1665,7 @@
       "raw": "#d04423",
       "normalized": "#d04423",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-040",
+      "token": "--c-raw-076",
       "source": "generated"
     },
     {
@@ -1675,7 +1675,7 @@
       "raw": "#d04423",
       "normalized": "#d04423",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-040",
+      "token": "--c-raw-076",
       "source": "generated"
     },
     {
@@ -1685,7 +1685,7 @@
       "raw": "#6b7280",
       "normalized": "#6b7280",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-065",
+      "token": "--c-raw-101",
       "source": "generated"
     },
     {
@@ -1695,7 +1695,7 @@
       "raw": "#d97706",
       "normalized": "#d97706",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-081",
+      "token": "--c-raw-117",
       "source": "generated"
     },
     {
@@ -1705,7 +1705,7 @@
       "raw": "#4a5568",
       "normalized": "#4a5568",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-062",
+      "token": "--c-raw-098",
       "source": "generated"
     },
     {
@@ -1715,7 +1715,7 @@
       "raw": "#065f46",
       "normalized": "#065f46",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-051",
+      "token": "--c-raw-087",
       "source": "generated"
     },
     {
@@ -1725,7 +1725,7 @@
       "raw": "#a855f7",
       "normalized": "#a855f7",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-071",
+      "token": "--c-raw-107",
       "source": "generated"
     },
     {
@@ -1735,7 +1735,7 @@
       "raw": "#c2410c",
       "normalized": "#c2410c",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-075",
+      "token": "--c-raw-111",
       "source": "generated"
     },
     {
@@ -1745,7 +1745,7 @@
       "raw": "#0ea5e9",
       "normalized": "#0ea5e9",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-027",
+      "token": "--c-raw-063",
       "source": "generated"
     },
     {
@@ -1755,7 +1755,7 @@
       "raw": "#0ea5e9",
       "normalized": "#0ea5e9",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-027",
+      "token": "--c-raw-063",
       "source": "generated"
     },
     {
@@ -1765,7 +1765,7 @@
       "raw": "#e34c26",
       "normalized": "#e34c26",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-086",
+      "token": "--c-raw-122",
       "source": "generated"
     },
     {
@@ -1775,7 +1775,7 @@
       "raw": "#264de4",
       "normalized": "#264de4",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-055",
+      "token": "--c-raw-091",
       "source": "generated"
     },
     {
@@ -1785,7 +1785,7 @@
       "raw": "#f7df1e",
       "normalized": "#f7df1e",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-089",
+      "token": "--c-raw-125",
       "source": "generated"
     },
     {
@@ -1795,7 +1795,7 @@
       "raw": "#3178c6",
       "normalized": "#3178c6",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-057",
+      "token": "--c-raw-093",
       "source": "generated"
     },
     {
@@ -1805,7 +1805,7 @@
       "raw": "#61dafb",
       "normalized": "#61dafb",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-038",
+      "token": "--c-raw-074",
       "source": "generated"
     },
     {
@@ -1815,7 +1815,7 @@
       "raw": "#61dafb",
       "normalized": "#61dafb",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-038",
+      "token": "--c-raw-074",
       "source": "generated"
     },
     {
@@ -1825,7 +1825,7 @@
       "raw": "#3776ab",
       "normalized": "#3776ab",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-058",
+      "token": "--c-raw-094",
       "source": "generated"
     },
     {
@@ -1835,7 +1835,7 @@
       "raw": "#de4f00",
       "normalized": "#de4f00",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-083",
+      "token": "--c-raw-119",
       "source": "generated"
     },
     {
@@ -1845,7 +1845,7 @@
       "raw": "#00add8",
       "normalized": "#00add8",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-050",
+      "token": "--c-raw-086",
       "source": "generated"
     },
     {
@@ -1855,7 +1855,7 @@
       "raw": "#f89820",
       "normalized": "#f89820",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-091",
+      "token": "--c-raw-127",
       "source": "generated"
     },
     {
@@ -1865,7 +1865,7 @@
       "raw": "#555555",
       "normalized": "#555555",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-013",
+      "token": "--c-raw-049",
       "source": "generated"
     },
     {
@@ -1875,7 +1875,7 @@
       "raw": "#00599c",
       "normalized": "#00599c",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-026",
+      "token": "--c-raw-062",
       "source": "generated"
     },
     {
@@ -1885,7 +1885,7 @@
       "raw": "#555555",
       "normalized": "#555555",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-013",
+      "token": "--c-raw-049",
       "source": "generated"
     },
     {
@@ -1895,7 +1895,7 @@
       "raw": "#00599c",
       "normalized": "#00599c",
       "context": "tsx-color-dict:EXT_COLORS",
-      "token": "--c-raw-026",
+      "token": "--c-raw-062",
       "source": "generated"
     },
     {
@@ -1905,7 +1905,7 @@
       "raw": "rgba(0, 0, 0, 0.1)",
       "normalized": "rgba(0, 0, 0, 0.1)",
       "context": "css:box-shadow",
-      "token": "--c-raw-015",
+      "token": "--c-raw-051",
       "source": "generated"
     },
     {
@@ -1915,7 +1915,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -1925,7 +1925,7 @@
       "raw": "rgba(0, 0, 0, 0.1)",
       "normalized": "rgba(0, 0, 0, 0.1)",
       "context": "css:box-shadow",
-      "token": "--c-raw-015",
+      "token": "--c-raw-051",
       "source": "generated"
     },
     {
@@ -1935,7 +1935,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -1945,7 +1945,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "css:background-color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -1955,7 +1955,7 @@
       "raw": "rgba(0, 0, 0, 0.2)",
       "normalized": "rgba(0, 0, 0, 0.2)",
       "context": "css:box-shadow",
-      "token": "--c-raw-025",
+      "token": "--c-raw-061",
       "source": "generated"
     },
     {
@@ -1965,7 +1965,7 @@
       "raw": "#ef4444",
       "normalized": "#ef4444",
       "context": "css:background",
-      "token": "--c-raw-023",
+      "token": "--c-raw-059",
       "source": "generated"
     },
     {
@@ -1975,7 +1975,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -1985,7 +1985,7 @@
       "raw": "rgba(24, 24, 27, 0.95)",
       "normalized": "rgba(24, 24, 27, 0.95)",
       "context": "css:background-color",
-      "token": "--c-raw-105",
+      "token": "--c-raw-141",
       "source": "generated"
     },
     {
@@ -1995,7 +1995,7 @@
       "raw": "rgba(0, 0, 0, 0.3)",
       "normalized": "rgba(0, 0, 0, 0.3)",
       "context": "css:box-shadow",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated"
     },
     {
@@ -2005,7 +2005,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:border",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -2015,7 +2015,7 @@
       "raw": "#71717a",
       "normalized": "#71717a",
       "context": "css:color",
-      "token": "--c-raw-014",
+      "token": "--c-raw-050",
       "source": "generated"
     },
     {
@@ -2025,7 +2025,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:background-color",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -2035,7 +2035,7 @@
       "raw": "#a1a1aa",
       "normalized": "#a1a1aa",
       "context": "css:color",
-      "token": "--c-raw-010",
+      "token": "--c-raw-046",
       "source": "generated"
     },
     {
@@ -2045,7 +2045,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:background-color",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -2055,7 +2055,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2065,7 +2065,7 @@
       "raw": "rgba(0, 0, 0, 0.2)",
       "normalized": "rgba(0, 0, 0, 0.2)",
       "context": "css:box-shadow",
-      "token": "--c-raw-025",
+      "token": "--c-raw-061",
       "source": "generated"
     },
     {
@@ -2075,7 +2075,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "css:background-color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2085,7 +2085,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2095,7 +2095,7 @@
       "raw": "rgba(220, 38, 38, 0.9)",
       "normalized": "rgba(220, 38, 38, 0.9)",
       "context": "css:background-color",
-      "token": "--c-raw-101",
+      "token": "--c-raw-137",
       "source": "generated"
     },
     {
@@ -2105,7 +2105,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2115,7 +2115,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -2125,7 +2125,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:border",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -2135,7 +2135,7 @@
       "raw": "rgba(0, 0, 0, 0.4)",
       "normalized": "rgba(0, 0, 0, 0.4)",
       "context": "css:box-shadow",
-      "token": "--c-raw-009",
+      "token": "--c-raw-045",
       "source": "generated"
     },
     {
@@ -2145,7 +2145,7 @@
       "raw": "rgba(0, 0, 0, 0.3)",
       "normalized": "rgba(0, 0, 0, 0.3)",
       "context": "css:box-shadow",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated"
     },
     {
@@ -2155,7 +2155,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -2165,7 +2165,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -2175,7 +2175,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:border-bottom",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -2185,7 +2185,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -2195,7 +2195,7 @@
       "raw": "rgba(255, 255, 255, 0.06)",
       "normalized": "rgba(255, 255, 255, 0.06)",
       "context": "css:background",
-      "token": "--c-raw-011",
+      "token": "--c-raw-047",
       "source": "generated"
     },
     {
@@ -2205,7 +2205,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:border",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -2215,7 +2215,7 @@
       "raw": "rgba(255, 255, 255, 0.12)",
       "normalized": "rgba(255, 255, 255, 0.12)",
       "context": "css:border",
-      "token": "--c-raw-012",
+      "token": "--c-raw-048",
       "source": "generated"
     },
     {
@@ -2225,7 +2225,7 @@
       "raw": "#1f1f1f",
       "normalized": "#1f1f1f",
       "context": "css:background",
-      "token": "--c-raw-054",
+      "token": "--c-raw-090",
       "source": "generated"
     },
     {
@@ -2235,7 +2235,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2245,7 +2245,7 @@
       "raw": "rgba(255, 255, 255, 0.24)",
       "normalized": "rgba(255, 255, 255, 0.24)",
       "context": "css:border-color",
-      "token": "--c-raw-109",
+      "token": "--c-raw-145",
       "source": "generated"
     },
     {
@@ -2255,7 +2255,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:border",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -2265,7 +2265,7 @@
       "raw": "#111",
       "normalized": "#111111",
       "context": "css:background",
-      "token": "--c-raw-019",
+      "token": "--c-raw-055",
       "source": "generated"
     },
     {
@@ -2275,7 +2275,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:border",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -2285,7 +2285,7 @@
       "raw": "#111",
       "normalized": "#111111",
       "context": "css:background",
-      "token": "--c-raw-019",
+      "token": "--c-raw-055",
       "source": "generated"
     },
     {
@@ -2295,7 +2295,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:background",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2305,7 +2305,7 @@
       "raw": "rgba(0, 0, 0, 0.35)",
       "normalized": "rgba(0, 0, 0, 0.35)",
       "context": "css:box-shadow",
-      "token": "--c-raw-094",
+      "token": "--c-raw-130",
       "source": "generated"
     },
     {
@@ -2315,7 +2315,7 @@
       "raw": "#f87171",
       "normalized": "#f87171",
       "context": "css:color",
-      "token": "--c-raw-090",
+      "token": "--c-raw-126",
       "source": "generated"
     },
     {
@@ -2325,7 +2325,7 @@
       "raw": "#121212",
       "normalized": "#121212",
       "context": "css:background-color",
-      "token": "--c-raw-028",
+      "token": "--c-raw-064",
       "source": "generated"
     },
     {
@@ -2335,7 +2335,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2345,7 +2345,7 @@
       "raw": "rgba(255, 255, 255, 0.12)",
       "normalized": "rgba(255, 255, 255, 0.12)",
       "context": "css:background-color",
-      "token": "--c-raw-012",
+      "token": "--c-raw-048",
       "source": "generated"
     },
     {
@@ -2355,7 +2355,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -2365,7 +2365,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2375,7 +2375,7 @@
       "raw": "rgba(255, 255, 255, 0.15)",
       "normalized": "rgba(255, 255, 255, 0.15)",
       "context": "css:background",
-      "token": "--c-raw-018",
+      "token": "--c-raw-054",
       "source": "generated"
     },
     {
@@ -2385,7 +2385,7 @@
       "raw": "rgba(255, 255, 255, 0.25)",
       "normalized": "rgba(255, 255, 255, 0.25)",
       "context": "css:background",
-      "token": "--c-raw-049",
+      "token": "--c-raw-085",
       "source": "generated"
     },
     {
@@ -2395,7 +2395,7 @@
       "raw": "rgba(255, 255, 255, 0.15)",
       "normalized": "rgba(255, 255, 255, 0.15)",
       "context": "css:scrollbar-color",
-      "token": "--c-raw-018",
+      "token": "--c-raw-054",
       "source": "generated"
     },
     {
@@ -2405,7 +2405,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:background",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -2415,7 +2415,7 @@
       "raw": "rgba(255, 255, 255, 0.02)",
       "normalized": "rgba(255, 255, 255, 0.02)",
       "context": "css:background-color",
-      "token": "--c-raw-017",
+      "token": "--c-raw-053",
       "source": "generated"
     },
     {
@@ -2425,7 +2425,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:border",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -2435,7 +2435,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:background-color",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -2445,7 +2445,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -2455,7 +2455,7 @@
       "raw": "#a1a1aa",
       "normalized": "#a1a1aa",
       "context": "css:color",
-      "token": "--c-raw-010",
+      "token": "--c-raw-046",
       "source": "generated"
     },
     {
@@ -2465,7 +2465,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:border",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -2475,7 +2475,7 @@
       "raw": "rgba(255, 255, 255, 0.05)",
       "normalized": "rgba(255, 255, 255, 0.05)",
       "context": "css:background-color",
-      "token": "--c-raw-107",
+      "token": "--c-raw-143",
       "source": "generated"
     },
     {
@@ -2485,7 +2485,7 @@
       "raw": "#d4d4d8",
       "normalized": "#d4d4d8",
       "context": "css:color",
-      "token": "--c-raw-079",
+      "token": "--c-raw-115",
       "source": "generated"
     },
     {
@@ -2495,7 +2495,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:background-color",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -2505,7 +2505,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2515,7 +2515,7 @@
       "raw": "rgba(255, 255, 255, 0.2)",
       "normalized": "rgba(255, 255, 255, 0.2)",
       "context": "css:stroke",
-      "token": "--chat-input-border",
+      "token": "--c-raw-028",
       "source": "existing"
     },
     {
@@ -2525,7 +2525,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:stroke",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2535,7 +2535,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -2545,7 +2545,7 @@
       "raw": "rgba(0, 0, 0, 0.2)",
       "normalized": "rgba(0, 0, 0, 0.2)",
       "context": "css:fill",
-      "token": "--c-raw-025",
+      "token": "--c-raw-061",
       "source": "generated"
     },
     {
@@ -2555,7 +2555,7 @@
       "raw": "rgba(255, 255, 255, 0.25)",
       "normalized": "rgba(255, 255, 255, 0.25)",
       "context": "css:fill",
-      "token": "--c-raw-049",
+      "token": "--c-raw-085",
       "source": "generated"
     },
     {
@@ -2565,7 +2565,7 @@
       "raw": "rgba(0, 120, 215, 0.4)",
       "normalized": "rgba(0, 120, 215, 0.4)",
       "context": "css:background",
-      "token": "--c-raw-097",
+      "token": "--c-raw-133",
       "source": "generated"
     },
     {
@@ -2575,7 +2575,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "tsx-jsx-attr:fill",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2585,7 +2585,7 @@
       "raw": "black",
       "normalized": "#000000",
       "context": "tsx-jsx-attr:fill",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -2595,7 +2595,7 @@
       "raw": "#fafafa",
       "normalized": "#fafafa",
       "context": "css:color",
-      "token": "--c-raw-024",
+      "token": "--c-raw-060",
       "source": "generated"
     },
     {
@@ -2605,7 +2605,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2615,7 +2615,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:background-color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2625,7 +2625,7 @@
       "raw": "#000000",
       "normalized": "#000000",
       "context": "css:color",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -2635,7 +2635,7 @@
       "raw": "#71717a",
       "normalized": "#71717a",
       "context": "css:--muted",
-      "token": "--c-raw-014",
+      "token": "--c-raw-050",
       "source": "generated"
     },
     {
@@ -2645,7 +2645,7 @@
       "raw": "#fafafa",
       "normalized": "#fafafa",
       "context": "css:--accent",
-      "token": "--c-raw-024",
+      "token": "--c-raw-060",
       "source": "generated"
     },
     {
@@ -2655,7 +2655,7 @@
       "raw": "#27272a",
       "normalized": "#27272a",
       "context": "css:--border",
-      "token": "--c-raw-056",
+      "token": "--c-raw-092",
       "source": "generated"
     },
     {
@@ -2665,7 +2665,7 @@
       "raw": "#18181b",
       "normalized": "#18181b",
       "context": "css:--key-bg",
-      "token": "--c-raw-020",
+      "token": "--c-raw-056",
       "source": "generated"
     },
     {
@@ -2675,7 +2675,7 @@
       "raw": "#111",
       "normalized": "#111111",
       "context": "css:background-color",
-      "token": "--c-raw-019",
+      "token": "--c-raw-055",
       "source": "generated"
     },
     {
@@ -2685,7 +2685,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:background-color",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -2695,7 +2695,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:border",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -2705,7 +2705,7 @@
       "raw": "rgba(0, 0, 0, 0.4)",
       "normalized": "rgba(0, 0, 0, 0.4)",
       "context": "css:box-shadow",
-      "token": "--c-raw-009",
+      "token": "--c-raw-045",
       "source": "generated"
     },
     {
@@ -2715,7 +2715,7 @@
       "raw": "#a1a1aa",
       "normalized": "#a1a1aa",
       "context": "css:color",
-      "token": "--c-raw-010",
+      "token": "--c-raw-046",
       "source": "generated"
     },
     {
@@ -2725,7 +2725,7 @@
       "raw": "#52525b",
       "normalized": "#52525b",
       "context": "css:color",
-      "token": "--c-raw-037",
+      "token": "--c-raw-073",
       "source": "generated"
     },
     {
@@ -2735,7 +2735,7 @@
       "raw": "rgba(0, 0, 0, 0.85)",
       "normalized": "rgba(0, 0, 0, 0.85)",
       "context": "css:background",
-      "token": "--c-raw-096",
+      "token": "--c-raw-132",
       "source": "generated"
     },
     {
@@ -2745,7 +2745,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -2755,7 +2755,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:border",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -2765,7 +2765,7 @@
       "raw": "rgba(0, 0, 0, 0.4)",
       "normalized": "rgba(0, 0, 0, 0.4)",
       "context": "css:box-shadow",
-      "token": "--c-raw-009",
+      "token": "--c-raw-045",
       "source": "generated"
     },
     {
@@ -2775,7 +2775,7 @@
       "raw": "rgba(0, 0, 0, 0.3)",
       "normalized": "rgba(0, 0, 0, 0.3)",
       "context": "css:box-shadow",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated"
     },
     {
@@ -2785,7 +2785,7 @@
       "raw": "#121212",
       "normalized": "#121212",
       "context": "css:background-color",
-      "token": "--c-raw-028",
+      "token": "--c-raw-064",
       "source": "generated"
     },
     {
@@ -2795,7 +2795,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2805,7 +2805,7 @@
       "raw": "rgba(255, 255, 255, 0.12)",
       "normalized": "rgba(255, 255, 255, 0.12)",
       "context": "css:background-color",
-      "token": "--c-raw-012",
+      "token": "--c-raw-048",
       "source": "generated"
     },
     {
@@ -2815,7 +2815,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -2825,7 +2825,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2835,7 +2835,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -2845,7 +2845,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -2855,7 +2855,7 @@
       "raw": "#cbd5e1",
       "normalized": "#cbd5e1",
       "context": "css:border",
-      "token": "--c-raw-078",
+      "token": "--c-raw-114",
       "source": "generated"
     },
     {
@@ -2865,7 +2865,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:background-color",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -2875,7 +2875,7 @@
       "raw": "rgba(0, 0, 0, 0.3)",
       "normalized": "rgba(0, 0, 0, 0.3)",
       "context": "css:filter",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated"
     },
     {
@@ -2885,7 +2885,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:stroke",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2895,7 +2895,7 @@
       "raw": "rgba(255, 255, 255, 0.6)",
       "normalized": "rgba(255, 255, 255, 0.6)",
       "context": "css:filter",
-      "token": "--c-raw-110",
+      "token": "--c-raw-146",
       "source": "generated"
     },
     {
@@ -2905,7 +2905,7 @@
       "raw": "rgba(0, 0, 0, 0.3)",
       "normalized": "rgba(0, 0, 0, 0.3)",
       "context": "css:filter",
-      "token": "--c-raw-008",
+      "token": "--c-raw-044",
       "source": "generated"
     },
     {
@@ -2915,7 +2915,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "tsx-jsx-attr:fill",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2925,7 +2925,7 @@
       "raw": "white",
       "normalized": "#ffffff",
       "context": "tsx-jsx-attr:fill",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -2935,7 +2935,7 @@
       "raw": "black",
       "normalized": "#000000",
       "context": "tsx-jsx-attr:fill",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -2945,7 +2945,7 @@
       "raw": "black",
       "normalized": "#000000",
       "context": "tsx-jsx-attr:fill",
-      "token": "--c-raw-006",
+      "token": "--c-raw-042",
       "source": "generated"
     },
     {
@@ -2955,7 +2955,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:border-bottom",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -2965,7 +2965,7 @@
       "raw": "rgba(255, 255, 255, 0.02)",
       "normalized": "rgba(255, 255, 255, 0.02)",
       "context": "css:background-color",
-      "token": "--c-raw-017",
+      "token": "--c-raw-053",
       "source": "generated"
     },
     {
@@ -2975,7 +2975,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:border",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -2985,7 +2985,7 @@
       "raw": "#81a1c1",
       "normalized": "#81a1c1",
       "context": "css:color",
-      "token": "--c-raw-067",
+      "token": "--c-raw-103",
       "source": "generated"
     },
     {
@@ -2995,7 +2995,7 @@
       "raw": "#8caecf",
       "normalized": "#8caecf",
       "context": "css:color",
-      "token": "--c-raw-068",
+      "token": "--c-raw-104",
       "source": "generated"
     },
     {
@@ -3005,7 +3005,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:background-color",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -3015,7 +3015,7 @@
       "raw": "rgba(255, 255, 255, 0.06)",
       "normalized": "rgba(255, 255, 255, 0.06)",
       "context": "css:border",
-      "token": "--c-raw-011",
+      "token": "--c-raw-047",
       "source": "generated"
     },
     {
@@ -3025,7 +3025,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:border",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -3035,7 +3035,7 @@
       "raw": "#e0443e",
       "normalized": "#e0443e",
       "context": "css:border",
-      "token": "--c-raw-041",
+      "token": "--c-raw-077",
       "source": "generated"
     },
     {
@@ -3045,7 +3045,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:background-color",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -3055,7 +3055,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:border-bottom",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -3065,7 +3065,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:background-color",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -3075,7 +3075,7 @@
       "raw": "#434343",
       "normalized": "#434343",
       "context": "css:background-color",
-      "token": "--c-raw-061",
+      "token": "--c-raw-097",
       "source": "generated"
     },
     {
@@ -3085,7 +3085,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:background",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -3095,7 +3095,7 @@
       "raw": "rgba(0, 0, 0, 0.15)",
       "normalized": "rgba(0, 0, 0, 0.15)",
       "context": "css:box-shadow",
-      "token": "--c-raw-048",
+      "token": "--c-raw-084",
       "source": "generated"
     },
     {
@@ -3105,7 +3105,7 @@
       "raw": "rgba(0, 0, 0, 0.06)",
       "normalized": "rgba(0, 0, 0, 0.06)",
       "context": "css:box-shadow",
-      "token": "--c-raw-047",
+      "token": "--c-raw-083",
       "source": "generated"
     },
     {
@@ -3115,7 +3115,7 @@
       "raw": "#3fa266",
       "normalized": "#3fa266",
       "context": "css:background-color",
-      "token": "--c-raw-035",
+      "token": "--c-raw-071",
       "source": "generated"
     },
     {
@@ -3125,7 +3125,7 @@
       "raw": "#3fa266",
       "normalized": "#3fa266",
       "context": "css:border-color",
-      "token": "--c-raw-035",
+      "token": "--c-raw-071",
       "source": "generated"
     },
     {
@@ -3135,7 +3135,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:background",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -3145,7 +3145,7 @@
       "raw": "rgba(120, 120, 120, 0.12)",
       "normalized": "rgba(120, 120, 120, 0.12)",
       "context": "css:outline",
-      "token": "--c-raw-098",
+      "token": "--c-raw-134",
       "source": "generated"
     },
     {
@@ -3155,7 +3155,7 @@
       "raw": "rgba(0, 0, 0, 0.24)",
       "normalized": "rgba(0, 0, 0, 0.24)",
       "context": "css:background-color",
-      "token": "--c-raw-093",
+      "token": "--c-raw-129",
       "source": "generated"
     },
     {
@@ -3165,7 +3165,7 @@
       "raw": "rgba(255, 255, 255, 0.02)",
       "normalized": "rgba(255, 255, 255, 0.02)",
       "context": "css:border",
-      "token": "--c-raw-017",
+      "token": "--c-raw-053",
       "source": "generated"
     },
     {
@@ -3175,7 +3175,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:border-bottom",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -3185,7 +3185,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:background-color",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -3195,7 +3195,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:border",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -3205,7 +3205,7 @@
       "raw": "rgba(255, 255, 255, 0.06)",
       "normalized": "rgba(255, 255, 255, 0.06)",
       "context": "css:background-color",
-      "token": "--c-raw-011",
+      "token": "--c-raw-047",
       "source": "generated"
     },
     {
@@ -3215,7 +3215,7 @@
       "raw": "rgba(255, 255, 255, 0.14)",
       "normalized": "rgba(255, 255, 255, 0.14)",
       "context": "css:border-color",
-      "token": "--c-raw-108",
+      "token": "--c-raw-144",
       "source": "generated"
     },
     {
@@ -3225,7 +3225,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:background-color",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -3235,7 +3235,7 @@
       "raw": "#171717",
       "normalized": "#171717",
       "context": "css:background-color",
-      "token": "--neutral-900",
+      "token": "--c-raw-012",
       "source": "existing"
     },
     {
@@ -3245,7 +3245,7 @@
       "raw": "#c9c9c9d8",
       "normalized": "#c9c9c9d8",
       "context": "css:color",
-      "token": "--c-raw-077",
+      "token": "--c-raw-113",
       "source": "generated"
     },
     {
@@ -3255,7 +3255,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:background-color",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -3265,7 +3265,7 @@
       "raw": "#c7c7c7c4",
       "normalized": "#c7c7c7c4",
       "context": "css:color",
-      "token": "--c-raw-076",
+      "token": "--c-raw-112",
       "source": "generated"
     },
     {
@@ -3275,7 +3275,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:border-bottom",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -3285,7 +3285,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:background-color",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -3295,7 +3295,7 @@
       "raw": "rgba(255, 255, 255, 0.04)",
       "normalized": "rgba(255, 255, 255, 0.04)",
       "context": "css:border-bottom",
-      "token": "--c-raw-007",
+      "token": "--c-raw-043",
       "source": "generated"
     },
     {
@@ -3305,7 +3305,7 @@
       "raw": "rgba(255, 255, 255, 0.02)",
       "normalized": "rgba(255, 255, 255, 0.02)",
       "context": "css:background-color",
-      "token": "--c-raw-017",
+      "token": "--c-raw-053",
       "source": "generated"
     },
     {
@@ -3315,7 +3315,7 @@
       "raw": "rgba(255, 255, 255, 0.03)",
       "normalized": "rgba(255, 255, 255, 0.03)",
       "context": "css:border",
-      "token": "--c-raw-004",
+      "token": "--c-raw-040",
       "source": "generated"
     },
     {
@@ -3325,7 +3325,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:border-color",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -3335,7 +3335,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -3345,7 +3345,7 @@
       "raw": "rgba(63, 63, 70, 0.5)",
       "normalized": "rgba(63, 63, 70, 0.5)",
       "context": "css:background",
-      "token": "--c-raw-005",
+      "token": "--c-raw-041",
       "source": "generated"
     },
     {
@@ -3355,7 +3355,7 @@
       "raw": "#fff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -3365,7 +3365,7 @@
       "raw": "#ededed",
       "normalized": "#ededed",
       "context": "css:color",
-      "token": "--c-raw-003",
+      "token": "--c-raw-039",
       "source": "generated"
     },
     {
@@ -3375,7 +3375,7 @@
       "raw": "#a1a1aa",
       "normalized": "#a1a1aa",
       "context": "css:color",
-      "token": "--c-raw-010",
+      "token": "--c-raw-046",
       "source": "generated"
     },
     {
@@ -3385,7 +3385,7 @@
       "raw": "#71717a",
       "normalized": "#71717a",
       "context": "css:color",
-      "token": "--c-raw-014",
+      "token": "--c-raw-050",
       "source": "generated"
     },
     {
@@ -3395,7 +3395,7 @@
       "raw": "rgba(239, 68, 68, 0.1)",
       "normalized": "rgba(239, 68, 68, 0.1)",
       "context": "css:background-color",
-      "token": "--c-raw-102",
+      "token": "--c-raw-138",
       "source": "generated"
     },
     {
@@ -3405,7 +3405,7 @@
       "raw": "#ef4444",
       "normalized": "#ef4444",
       "context": "css:color",
-      "token": "--c-raw-023",
+      "token": "--c-raw-059",
       "source": "generated"
     },
     {
@@ -3415,7 +3415,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:background-color",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -3425,7 +3425,7 @@
       "raw": "#ffffffdf",
       "normalized": "#ffffffdf",
       "context": "css:border-left-color",
-      "token": "--c-raw-092",
+      "token": "--c-raw-128",
       "source": "generated"
     },
     {
@@ -3435,7 +3435,7 @@
       "raw": "#666",
       "normalized": "#666666",
       "context": "tsx-style-prop:color",
-      "token": "--c-raw-063",
+      "token": "--c-raw-099",
       "source": "generated"
     },
     {
@@ -3445,7 +3445,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:background-color",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -3455,7 +3455,7 @@
       "raw": "rgba(255, 255, 255, 0.12)",
       "normalized": "rgba(255, 255, 255, 0.12)",
       "context": "css:background-color",
-      "token": "--c-raw-012",
+      "token": "--c-raw-048",
       "source": "generated"
     },
     {
@@ -3465,7 +3465,7 @@
       "raw": "rgba(0, 0, 0, 0.1)",
       "normalized": "rgba(0, 0, 0, 0.1)",
       "context": "css:box-shadow",
-      "token": "--c-raw-015",
+      "token": "--c-raw-051",
       "source": "generated"
     },
     {
@@ -3475,7 +3475,7 @@
       "raw": "rgba(0, 0, 0, 0.6)",
       "normalized": "rgba(0, 0, 0, 0.6)",
       "context": "css:color",
-      "token": "--c-raw-095",
+      "token": "--c-raw-131",
       "source": "generated"
     },
     {
@@ -3485,7 +3485,7 @@
       "raw": "#ff5f56",
       "normalized": "#ff5f56",
       "context": "css:background-color",
-      "token": "--c-raw-045",
+      "token": "--c-raw-081",
       "source": "generated"
     },
     {
@@ -3495,7 +3495,7 @@
       "raw": "#e0443e",
       "normalized": "#e0443e",
       "context": "css:border",
-      "token": "--c-raw-041",
+      "token": "--c-raw-077",
       "source": "generated"
     },
     {
@@ -3505,7 +3505,7 @@
       "raw": "#ffbd2e",
       "normalized": "#ffbd2e",
       "context": "css:background-color",
-      "token": "--c-raw-046",
+      "token": "--c-raw-082",
       "source": "generated"
     },
     {
@@ -3515,7 +3515,7 @@
       "raw": "#dea123",
       "normalized": "#dea123",
       "context": "css:border",
-      "token": "--c-raw-084",
+      "token": "--c-raw-120",
       "source": "generated"
     },
     {
@@ -3525,7 +3525,7 @@
       "raw": "#27c93f",
       "normalized": "#27c93f",
       "context": "css:background-color",
-      "token": "--c-raw-032",
+      "token": "--c-raw-068",
       "source": "generated"
     },
     {
@@ -3535,7 +3535,7 @@
       "raw": "#1aab29",
       "normalized": "#1aab29",
       "context": "css:border",
-      "token": "--c-raw-052",
+      "token": "--c-raw-088",
       "source": "generated"
     },
     {
@@ -3545,7 +3545,7 @@
       "raw": "#ff5f56",
       "normalized": "#ff5f56",
       "context": "css:background-color",
-      "token": "--c-raw-045",
+      "token": "--c-raw-081",
       "source": "generated"
     },
     {
@@ -3555,7 +3555,7 @@
       "raw": "#ffbd2e",
       "normalized": "#ffbd2e",
       "context": "css:background-color",
-      "token": "--c-raw-046",
+      "token": "--c-raw-082",
       "source": "generated"
     },
     {
@@ -3565,7 +3565,7 @@
       "raw": "#27c93f",
       "normalized": "#27c93f",
       "context": "css:background-color",
-      "token": "--c-raw-032",
+      "token": "--c-raw-068",
       "source": "generated"
     },
     {
@@ -3575,7 +3575,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -3585,7 +3585,7 @@
       "raw": "#3c3c3c",
       "normalized": "#3c3c3c",
       "context": "css:background-color",
-      "token": "--c-raw-059",
+      "token": "--c-raw-095",
       "source": "generated"
     },
     {
@@ -3595,7 +3595,7 @@
       "raw": "#e81123",
       "normalized": "#e81123",
       "context": "css:background-color",
-      "token": "--c-raw-043",
+      "token": "--c-raw-079",
       "source": "generated"
     },
     {
@@ -3605,7 +3605,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -3615,7 +3615,7 @@
       "raw": "#1a1a1a",
       "normalized": "#1a1a1a",
       "context": "css:color",
-      "token": "--c-raw-029",
+      "token": "--c-raw-065",
       "source": "generated"
     },
     {
@@ -3625,7 +3625,7 @@
       "raw": "#e0e0e0",
       "normalized": "#e0e0e0",
       "context": "css:background-color",
-      "token": "--c-raw-085",
+      "token": "--c-raw-121",
       "source": "generated"
     },
     {
@@ -3635,7 +3635,7 @@
       "raw": "#1a1a1a",
       "normalized": "#1a1a1a",
       "context": "css:color",
-      "token": "--c-raw-029",
+      "token": "--c-raw-065",
       "source": "generated"
     },
     {
@@ -3645,7 +3645,7 @@
       "raw": "#e81123",
       "normalized": "#e81123",
       "context": "css:background-color",
-      "token": "--c-raw-043",
+      "token": "--c-raw-079",
       "source": "generated"
     },
     {
@@ -3655,7 +3655,7 @@
       "raw": "#ffffff",
       "normalized": "#ffffff",
       "context": "css:color",
-      "token": "--c-raw-000",
+      "token": "--c-raw-036",
       "source": "generated"
     },
     {
@@ -3665,7 +3665,7 @@
       "raw": "#f5f5f5",
       "normalized": "#f5f5f5",
       "context": "css:--text-main",
-      "token": "--c-raw-044",
+      "token": "--c-raw-080",
       "source": "generated"
     },
     {
@@ -3675,7 +3675,7 @@
       "raw": "#a3a3a3",
       "normalized": "#a3a3a3",
       "context": "css:--text-muted",
-      "token": "--c-raw-070",
+      "token": "--c-raw-106",
       "source": "generated"
     },
     {
@@ -3685,27 +3685,27 @@
       "raw": "#52525b",
       "normalized": "#52525b",
       "context": "css:--text-faint",
-      "token": "--c-raw-037",
+      "token": "--c-raw-073",
       "source": "generated"
     },
     {
       "file": "ui/src/layout/panels/SidePanel.module.css",
       "line": 17,
-      "column": 14,
+      "column": 16,
       "raw": "#fafafa",
       "normalized": "#fafafa",
-      "context": "css:--primary",
-      "token": "--c-raw-024",
+      "context": "css:--c-raw-014",
+      "token": "--c-raw-060",
       "source": "generated"
     },
     {
       "file": "ui/src/layout/panels/SidePanel.module.css",
       "line": 18,
-      "column": 13,
+      "column": 16,
       "raw": "#ef4444",
       "normalized": "#ef4444",
-      "context": "css:--danger",
-      "token": "--c-raw-023",
+      "context": "css:--c-raw-015",
+      "token": "--c-raw-059",
       "source": "generated"
     },
     {
@@ -3715,7 +3715,7 @@
       "raw": "rgba(255, 255, 255, 0.08)",
       "normalized": "rgba(255, 255, 255, 0.08)",
       "context": "css:background-color",
-      "token": "--c-raw-002",
+      "token": "--c-raw-038",
       "source": "generated"
     },
     {
@@ -3725,7 +3725,7 @@
       "raw": "rgba(255, 255, 255, 0.1)",
       "normalized": "rgba(255, 255, 255, 0.1)",
       "context": "css:border",
-      "token": "--c-raw-001",
+      "token": "--c-raw-037",
       "source": "generated"
     },
     {
@@ -3735,7 +3735,7 @@
       "raw": "rgba(0, 0, 0, 0.4)",
       "normalized": "rgba(0, 0, 0, 0.4)",
       "context": "css:box-shadow",
-      "token": "--c-raw-009",
+      "token": "--c-raw-045",
       "source": "generated"
     },
     {
@@ -3745,7 +3745,7 @@
       "raw": "#a1a1aa",
       "normalized": "#a1a1aa",
       "context": "css:color",
-      "token": "--c-raw-010",
+      "token": "--c-raw-046",
       "source": "generated"
     },
     {
@@ -3755,7 +3755,7 @@
       "raw": "rgba(0, 0, 0, 0.4)",
       "normalized": "rgba(0, 0, 0, 0.4)",
       "context": "css:box-shadow",
-      "token": "--c-raw-009",
+      "token": "--c-raw-045",
       "source": "generated"
     },
     {
@@ -3765,7 +3765,7 @@
       "raw": "#272727",
       "normalized": "#272727",
       "context": "css:background",
-      "token": "--c-raw-031",
+      "token": "--c-raw-067",
       "source": "generated"
     },
     {
@@ -3775,7 +3775,7 @@
       "raw": "#272727",
       "normalized": "#272727",
       "context": "css:background",
-      "token": "--c-raw-031",
+      "token": "--c-raw-067",
       "source": "generated"
     }
   ]

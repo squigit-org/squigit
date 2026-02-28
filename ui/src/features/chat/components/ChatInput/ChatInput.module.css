@@ -17,7 +17,7 @@
   padding: 6px 20px 10px 16px;
   width: 100%;
   min-height: 100px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px var(--c-raw-061);
 }
 
 .disabled {
@@ -300,8 +300,8 @@
 }
 
 .recording {
-  background: #ef4444 !important;
-  color: white !important;
+  background: var(--c-raw-059) !important;
+  color: var(--c-raw-036) !important;
   animation: "pulse" 1.5s infinite;
 }
 

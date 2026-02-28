@@ -24,15 +24,15 @@
       50deg,
       transparent 0%,
       transparent 20%,
-      #4a4a4a 30%,
-      #9a9a9a 45%,
-      #c0c0c0 50%,
-      #9a9a9a 55%,
-      #4a4a4a 70%,
+      var(--c-raw-072) 30%,
+      var(--c-raw-075) 45%,
+      var(--c-raw-110) 50%,
+      var(--c-raw-075) 55%,
+      var(--c-raw-072) 70%,
       transparent 80%,
       transparent 100%
     ),
-    linear-gradient(#343434, #343434);
+    linear-gradient(var(--c-raw-070), var(--c-raw-070));
 
   background-size:
     170% 100%,

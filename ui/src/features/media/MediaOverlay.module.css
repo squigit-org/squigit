@@ -35,15 +35,15 @@
   right: 0;
   height: 550px;
   width: 700px;
-  background-color: #171717;
-  border: 1px solid rgba(63, 63, 70, 0.5);
+  background-color: var(--c-raw-012);
+  border: 1px solid var(--c-raw-041);
   border-radius: 12px;
   z-index: 1000;
   display: flex;
   overflow: hidden;
   box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.4),
-    0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    0 20px 25px -5px var(--c-raw-045),
+    0 8px 10px -6px var(--c-raw-044);
 
   opacity: 0;
   visibility: hidden;
@@ -75,13 +75,13 @@
   flex: 1;
   display: flex;
   min-height: 0;
-  color: #ededed;
+  color: var(--c-raw-039);
   font-size: 0.95rem;
   font-weight: 500;
   padding: 20px;
   text-align: left;
   overflow: hidden;
-  background-color: #171717;
+  background-color: var(--c-raw-012);
 }
 
 .viewerRoot {
@@ -97,14 +97,14 @@
   align-items: center;
   gap: 8px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(63, 63, 70, 0.5);
+  border-bottom: 1px solid var(--c-raw-041);
   margin-bottom: 14px;
 }
 
 .viewerTitle {
   margin: 0;
   font-size: 0.95rem;
-  color: #ededed;
+  color: var(--c-raw-039);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -114,8 +114,8 @@
 .viewerMeta {
   font-size: 0.75rem;
   color: var(--c-raw-004);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--c-raw-047);
+  border: 1px solid var(--c-raw-038);
   border-radius: 999px;
   padding: 2px 8px;
 }

@@ -39,8 +39,8 @@
   height: 0;
   z-index: 10;
   border-radius: 19px 19px 19px 0px;
-  border: 0px solid #cbd5e1;
-  background-color: rgba(255, 255, 255, 0.1);
+  border: 0px solid var(--c-raw-114);
+  background-color: var(--c-raw-037);
   opacity: 0;
   will-change: width, height, border-width;
   animation:
@@ -67,7 +67,7 @@
   top: 0;
   width: 23px;
   height: 33px;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 2px 3px var(--c-raw-044));
   will-change: transform;
   animation: "cursorYRect" 3s infinite;
 }
@@ -86,12 +86,12 @@
 
 .squigglePath {
   fill: none;
-  stroke: #ffffff;
+  stroke: var(--c-raw-036);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-dasharray: 500;
   stroke-dashoffset: 500;
-  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.6));
+  filter: drop-shadow(0 0 2px var(--c-raw-146));
   animation: "drawStroke" 3s linear infinite;
 }
 
@@ -112,7 +112,7 @@
   will-change: offset-distance;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 2px 3px var(--c-raw-044));
 
   animation: "moveCursorFree" 3s infinite;
 }
