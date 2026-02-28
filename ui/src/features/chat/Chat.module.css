@@ -47,6 +47,7 @@
 }
 
 .container.noImage::-webkit-scrollbar-track {
+  background-color: transparent;
   margin-top: 0;
 }
 
@@ -72,21 +73,17 @@
   width: 100%;
   flex-shrink: 0;
   background-color: var(--c-raw-013);
-  mask-image:
-    linear-gradient(
-      to right,
-      var(--c-raw-042) calc(100% - 20px),
-      transparent calc(100% - 20px)
-    ),
-    linear-gradient(to bottom, var(--c-raw-042) calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(
+    to bottom,
+    var(--c-raw-042) calc(100% - 12px),
+    transparent 100%
+  );
   mask-composite: intersect;
-  -webkit-mask-image:
-    linear-gradient(
-      to right,
-      var(--c-raw-042) calc(100% - 20px),
-      transparent calc(100% - 20px)
-    ),
-    linear-gradient(to bottom, var(--c-raw-042) calc(100% - 12px), transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    var(--c-raw-042) calc(100% - 12px),
+    transparent 100%
+  );
   -webkit-mask-composite: source-in;
 }
 
