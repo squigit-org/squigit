@@ -179,7 +179,7 @@ export const Chat: React.FC = () => {
           isNavigating={app.isNavigating}
         />
       </div>
-      <div className="flex-1 min-h-0 relative flex flex-col">
+      <div className={styles.contentColumn}>
         <div
           className={`${styles.container} ${!app.system.startupImage ? styles.noImage : ""}`}
           ref={scrollContainerRef}
@@ -189,7 +189,11 @@ export const Chat: React.FC = () => {
         >
           <main style={{ paddingBottom: inputHeight + 10 }}>
             <div
-              className={`mx-auto w-full max-w-[45rem] px-4 md:px-8 pb-0 ${isSpinnerVisible || app.chat.isAnalyzing ? "-mt-2" : "pt-3"}`}
+              className={`${styles.contentInner} ${
+                isSpinnerVisible || app.chat.isAnalyzing
+                  ? styles.contentOffsetUp
+                  : styles.contentOffsetDown
+              }`}
             >
               {app.chat.isAnalyzing && (
                 <TextShimmer text="Analyzing your image" />
@@ -206,7 +210,7 @@ export const Chat: React.FC = () => {
               )}
 
               {isSpinnerVisible ? (
-                <div className="flex justify-center pt-3">
+                <div className={styles.spinnerContainer}>
                   <LoadingSpinner />
                 </div>
               ) : (

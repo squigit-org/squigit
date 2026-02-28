@@ -8,6 +8,7 @@ import React from "react";
 import { Message } from "../../chat.types";
 import { ChatBubble } from "./ChatBubble";
 import { TextShimmer } from "@/components";
+import styles from "./MessageList.module.css";
 
 interface MessageListProps {
   messages: Message[];
@@ -54,12 +55,12 @@ export const MessageList: React.FC<MessageListProps> = ({
     retryIndex !== -1 ? messages.slice(0, retryIndex + 1) : messages;
 
   return (
-    <div className="flex flex-col-reverse gap-[10px]">
+    <div className={styles.container}>
       {isGenerating && !retryingMessageId && (
         <TextShimmer text="Planning next moves" />
       )}
       {streamingText && (
-        <div className="mb-0">
+        <div className={styles.item}>
           <ChatBubble
             message={{
               id: "streaming-temp",
@@ -89,7 +90,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           if (isAnalyzing && msg.id === retryingMessageId) return null;
 
           return (
-            <div key={msg.id} className="mb-0">
+            <div key={msg.id} className={styles.item}>
               <ChatBubble
                 message={msg}
                 isStreamed={isLatestModel}

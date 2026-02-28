@@ -28,7 +28,6 @@ import {
   Message,
 } from "@/features";
 import katex from "katex";
-import "katex/dist/katex.min.css";
 import styles from "./ChatBubble.module.css";
 
 interface ChatBubbleProps {
@@ -343,7 +342,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
       if (isTyping && isEffectiveLast) {
         return (
-          <div key={index} className="py-4">
+          <div key={index} className={styles.typingShimmer}>
             <TextShimmer
               text={isMathLang ? "Rendering Math" : "Writing Code"}
             />
@@ -389,7 +388,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
       if (isTyping && isEffectiveLast) {
         return (
-          <div key={index} className="py-4">
+          <div key={index} className={styles.typingShimmer}>
             <TextShimmer text="Rendering Math" />
           </div>
         );

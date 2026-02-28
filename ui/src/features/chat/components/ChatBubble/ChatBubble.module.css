@@ -313,6 +313,11 @@
   margin: 0.5rem 0;
 }
 
+.typingShimmer {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
 .bubble .katex {
   display: inline-block;
   white-space: nowrap;
