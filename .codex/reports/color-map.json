@@ -1,0 +1,3782 @@
+{
+  "meta": {
+    "generated_at": "2026-02-28T09:34:45.401030+00:00",
+    "mode": "apply",
+    "scope": {
+      "root": "ui/src",
+      "extensions": [
+        ".module.css",
+        ".tsx"
+      ],
+      "excluded": [
+        "ui/src/styles/animations.css",
+        "ui/src/styles/globals.css"
+      ]
+    },
+    "files_scanned": 108,
+    "matches": 306,
+    "unique_colors": 116,
+    "reused_tokens": 3,
+    "new_tokens": 113
+  },
+  "mappings": [
+    {
+      "normalized": "#ffffff",
+      "token": "--c-raw-000",
+      "source": "generated",
+      "occurrences": 34
+    },
+    {
+      "normalized": "#171717",
+      "token": "--neutral-900",
+      "source": "existing",
+      "occurrences": 12
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "token": "--c-raw-001",
+      "source": "generated",
+      "occurrences": 12
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "token": "--c-raw-002",
+      "source": "generated",
+      "occurrences": 11
+    },
+    {
+      "normalized": "#ededed",
+      "token": "--c-raw-003",
+      "source": "generated",
+      "occurrences": 10
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "token": "--c-raw-004",
+      "source": "generated",
+      "occurrences": 10
+    },
+    {
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "token": "--c-raw-005",
+      "source": "generated",
+      "occurrences": 10
+    },
+    {
+      "normalized": "#000000",
+      "token": "--c-raw-006",
+      "source": "generated",
+      "occurrences": 9
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "token": "--c-raw-007",
+      "source": "generated",
+      "occurrences": 9
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "token": "--c-raw-008",
+      "source": "generated",
+      "occurrences": 8
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.4)",
+      "token": "--c-raw-009",
+      "source": "generated",
+      "occurrences": 7
+    },
+    {
+      "normalized": "#a1a1aa",
+      "token": "--c-raw-010",
+      "source": "generated",
+      "occurrences": 6
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.06)",
+      "token": "--c-raw-011",
+      "source": "generated",
+      "occurrences": 5
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.12)",
+      "token": "--c-raw-012",
+      "source": "generated",
+      "occurrences": 5
+    },
+    {
+      "normalized": "#555555",
+      "token": "--c-raw-013",
+      "source": "generated",
+      "occurrences": 4
+    },
+    {
+      "normalized": "#71717a",
+      "token": "--c-raw-014",
+      "source": "generated",
+      "occurrences": 4
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.1)",
+      "token": "--c-raw-015",
+      "source": "generated",
+      "occurrences": 4
+    },
+    {
+      "normalized": "rgba(127, 29, 29, 0.5)",
+      "token": "--c-raw-016",
+      "source": "generated",
+      "occurrences": 4
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.02)",
+      "token": "--c-raw-017",
+      "source": "generated",
+      "occurrences": 4
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.15)",
+      "token": "--c-raw-018",
+      "source": "generated",
+      "occurrences": 4
+    },
+    {
+      "normalized": "#111111",
+      "token": "--c-raw-019",
+      "source": "generated",
+      "occurrences": 3
+    },
+    {
+      "normalized": "#18181b",
+      "token": "--c-raw-020",
+      "source": "generated",
+      "occurrences": 3
+    },
+    {
+      "normalized": "#333333",
+      "token": "--c-raw-021",
+      "source": "generated",
+      "occurrences": 3
+    },
+    {
+      "normalized": "#444444",
+      "token": "--c-raw-022",
+      "source": "generated",
+      "occurrences": 3
+    },
+    {
+      "normalized": "#ef4444",
+      "token": "--c-raw-023",
+      "source": "generated",
+      "occurrences": 3
+    },
+    {
+      "normalized": "#fafafa",
+      "token": "--c-raw-024",
+      "source": "generated",
+      "occurrences": 3
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.2)",
+      "token": "--c-raw-025",
+      "source": "generated",
+      "occurrences": 3
+    },
+    {
+      "normalized": "#00599c",
+      "token": "--c-raw-026",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#0ea5e9",
+      "token": "--c-raw-027",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#121212",
+      "token": "--c-raw-028",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#1a1a1a",
+      "token": "--c-raw-029",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#1d6f42",
+      "token": "--c-raw-030",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#272727",
+      "token": "--c-raw-031",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#27c93f",
+      "token": "--c-raw-032",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#2b579a",
+      "token": "--c-raw-033",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#343434",
+      "token": "--c-raw-034",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#3fa266",
+      "token": "--c-raw-035",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#4a4a4a",
+      "token": "--c-raw-036",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#52525b",
+      "token": "--c-raw-037",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#61dafb",
+      "token": "--c-raw-038",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#9a9a9a",
+      "token": "--c-raw-039",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#d04423",
+      "token": "--c-raw-040",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#e0443e",
+      "token": "--c-raw-041",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#e4e4e7",
+      "token": "--c-raw-042",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#e81123",
+      "token": "--c-raw-043",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#f5f5f5",
+      "token": "--c-raw-044",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#ff5f56",
+      "token": "--c-raw-045",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#ffbd2e",
+      "token": "--c-raw-046",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.06)",
+      "token": "--c-raw-047",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.15)",
+      "token": "--c-raw-048",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.25)",
+      "token": "--c-raw-049",
+      "source": "generated",
+      "occurrences": 2
+    },
+    {
+      "normalized": "#00add8",
+      "token": "--c-raw-050",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#065f46",
+      "token": "--c-raw-051",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#1aab29",
+      "token": "--c-raw-052",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#1e3a8a",
+      "token": "--c-raw-053",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#1f1f1f",
+      "token": "--c-raw-054",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#264de4",
+      "token": "--c-raw-055",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#27272a",
+      "token": "--c-raw-056",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#3178c6",
+      "token": "--c-raw-057",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#3776ab",
+      "token": "--c-raw-058",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#3c3c3c",
+      "token": "--c-raw-059",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#404040",
+      "token": "--c-raw-060",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#434343",
+      "token": "--c-raw-061",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#4a5568",
+      "token": "--c-raw-062",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#666666",
+      "token": "--c-raw-063",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#6b21a8",
+      "token": "--c-raw-064",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#6b7280",
+      "token": "--c-raw-065",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#737373",
+      "token": "--c-raw-066",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#81a1c1",
+      "token": "--c-raw-067",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#8caecf",
+      "token": "--c-raw-068",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#991b1b",
+      "token": "--c-raw-069",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#a3a3a3",
+      "token": "--c-raw-070",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#a855f7",
+      "token": "--c-raw-071",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#bbbbbb",
+      "token": "--c-raw-072",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#bfdbfe",
+      "token": "--c-raw-073",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#c0c0c0",
+      "token": "--c-raw-074",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#c2410c",
+      "token": "--c-raw-075",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#c7c7c7c4",
+      "token": "--c-raw-076",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#c9c9c9d8",
+      "token": "--c-raw-077",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#cbd5e1",
+      "token": "--c-raw-078",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#d1d1d1",
+      "token": "--neutral-100",
+      "source": "existing",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#d4d4d8",
+      "token": "--c-raw-079",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#d8b4fe",
+      "token": "--c-raw-080",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#d97706",
+      "token": "--c-raw-081",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#dbdbe7",
+      "token": "--c-raw-082",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#de4f00",
+      "token": "--c-raw-083",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#dea123",
+      "token": "--c-raw-084",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#e0e0e0",
+      "token": "--c-raw-085",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#e34c26",
+      "token": "--c-raw-086",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#e53e3e",
+      "token": "--c-raw-087",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#e5e5e5",
+      "token": "--c-raw-088",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#f7df1e",
+      "token": "--c-raw-089",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#f87171",
+      "token": "--c-raw-090",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#f89820",
+      "token": "--c-raw-091",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "#ffffffdf",
+      "token": "--c-raw-092",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.24)",
+      "token": "--c-raw-093",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.35)",
+      "token": "--c-raw-094",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.6)",
+      "token": "--c-raw-095",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 0, 0, 0.85)",
+      "token": "--c-raw-096",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(0, 120, 215, 0.4)",
+      "token": "--c-raw-097",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(120, 120, 120, 0.12)",
+      "token": "--c-raw-098",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(220, 38, 38, 0.15)",
+      "token": "--c-raw-099",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(220, 38, 38, 0.5)",
+      "token": "--c-raw-100",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(220, 38, 38, 0.9)",
+      "token": "--c-raw-101",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(239, 68, 68, 0.1)",
+      "token": "--c-raw-102",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(239, 68, 68, 0.15)",
+      "token": "--c-raw-103",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(239, 68, 68, 0.6)",
+      "token": "--c-raw-104",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(24, 24, 27, 0.95)",
+      "token": "--c-raw-105",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(254, 202, 202, 0.9)",
+      "token": "--c-raw-106",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.05)",
+      "token": "--c-raw-107",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.14)",
+      "token": "--c-raw-108",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.2)",
+      "token": "--chat-input-border",
+      "source": "existing",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.24)",
+      "token": "--c-raw-109",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(255, 255, 255, 0.6)",
+      "token": "--c-raw-110",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(26, 26, 26, 0.98)",
+      "token": "--c-raw-111",
+      "source": "generated",
+      "occurrences": 1
+    },
+    {
+      "normalized": "rgba(69, 10, 10, 0.3)",
+      "token": "--c-raw-112",
+      "source": "generated",
+      "occurrences": 1
+    }
+  ],
+  "occurrences": [
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 9,
+      "column": 15,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:--solid-17",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 17,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:border",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 25,
+      "column": 20,
+      "raw": "rgba(0, 0, 0, 0.1)",
+      "normalized": "rgba(0, 0, 0, 0.1)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-015",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 26,
+      "column": 20,
+      "raw": "rgba(0, 0, 0, 0.06)",
+      "normalized": "rgba(0, 0, 0, 0.06)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-047",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 37,
+      "column": 21,
+      "raw": "#444",
+      "normalized": "#444444",
+      "context": "css:background-color",
+      "token": "--c-raw-022",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 43,
+      "column": 21,
+      "raw": "#555",
+      "normalized": "#555555",
+      "context": "css:background-color",
+      "token": "--c-raw-013",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 62,
+      "column": 28,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:border-bottom",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 110,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/components/code-block/variants/CodeBlock.shared.module.css",
+      "line": 278,
+      "column": 21,
+      "raw": "#444",
+      "normalized": "#444444",
+      "context": "css:background-color",
+      "token": "--c-raw-022",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/context-menu/ContextMenu.module.css",
+      "line": 8,
+      "column": 15,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/components/context-menu/ContextMenu.module.css",
+      "line": 11,
+      "column": 26,
+      "raw": "rgba(0, 0, 0, 0.15)",
+      "normalized": "rgba(0, 0, 0, 0.15)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-048",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/context-menu/ContextMenu.module.css",
+      "line": 37,
+      "column": 15,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:background",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/context-menu/ContextMenu.module.css",
+      "line": 59,
+      "column": 15,
+      "raw": "rgba(239, 68, 68, 0.15)",
+      "normalized": "rgba(239, 68, 68, 0.15)",
+      "context": "css:background",
+      "token": "--c-raw-103",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/context-menu/ContextMenu.module.css",
+      "line": 71,
+      "column": 15,
+      "raw": "#333",
+      "normalized": "#333333",
+      "context": "css:background",
+      "token": "--c-raw-021",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 81,
+      "column": 10,
+      "raw": "rgba(254, 202, 202, 0.9)",
+      "normalized": "rgba(254, 202, 202, 0.9)",
+      "context": "css:color",
+      "token": "--c-raw-106",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 82,
+      "column": 20,
+      "raw": "rgba(127, 29, 29, 0.5)",
+      "normalized": "rgba(127, 29, 29, 0.5)",
+      "context": "css:scrollbar-color",
+      "token": "--c-raw-016",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 85,
+      "column": 21,
+      "raw": "rgba(127, 29, 29, 0.5)",
+      "normalized": "rgba(127, 29, 29, 0.5)",
+      "context": "css:background-color",
+      "token": "--c-raw-016",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 112,
+      "column": 10,
+      "raw": "#bfdbfe",
+      "normalized": "#bfdbfe",
+      "context": "css:color",
+      "token": "--c-raw-073",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 115,
+      "column": 10,
+      "raw": "#d8b4fe",
+      "normalized": "#d8b4fe",
+      "context": "css:color",
+      "token": "--c-raw-080",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 136,
+      "column": 17,
+      "raw": "rgba(127, 29, 29, 0.5)",
+      "normalized": "rgba(127, 29, 29, 0.5)",
+      "context": "css:border-color",
+      "token": "--c-raw-016",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 137,
+      "column": 21,
+      "raw": "rgba(69, 10, 10, 0.3)",
+      "normalized": "rgba(69, 10, 10, 0.3)",
+      "context": "css:background-color",
+      "token": "--c-raw-112",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 141,
+      "column": 21,
+      "raw": "rgba(127, 29, 29, 0.5)",
+      "normalized": "rgba(127, 29, 29, 0.5)",
+      "context": "css:background-color",
+      "token": "--c-raw-016",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 142,
+      "column": 17,
+      "raw": "rgba(239, 68, 68, 0.6)",
+      "normalized": "rgba(239, 68, 68, 0.6)",
+      "context": "css:border-color",
+      "token": "--c-raw-104",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 146,
+      "column": 21,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:background-color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 147,
+      "column": 10,
+      "raw": "#000000",
+      "normalized": "#000000",
+      "context": "css:color",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 148,
+      "column": 17,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:border-color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 161,
+      "column": 21,
+      "raw": "#404040",
+      "normalized": "#404040",
+      "context": "css:background-color",
+      "token": "--c-raw-060",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 162,
+      "column": 10,
+      "raw": "#f5f5f5",
+      "normalized": "#f5f5f5",
+      "context": "css:color",
+      "token": "--c-raw-044",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 163,
+      "column": 17,
+      "raw": "#737373",
+      "normalized": "#737373",
+      "context": "css:border-color",
+      "token": "--c-raw-066",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 167,
+      "column": 10,
+      "raw": "#1e3a8a",
+      "normalized": "#1e3a8a",
+      "context": "css:color",
+      "token": "--c-raw-053",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 170,
+      "column": 10,
+      "raw": "#6b21a8",
+      "normalized": "#6b21a8",
+      "context": "css:color",
+      "token": "--c-raw-064",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 174,
+      "column": 21,
+      "raw": "#d1d1d1",
+      "normalized": "#d1d1d1",
+      "context": "css:background-color",
+      "token": "--neutral-100",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 175,
+      "column": 10,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 176,
+      "column": 17,
+      "raw": "#bbbbbb",
+      "normalized": "#bbbbbb",
+      "context": "css:border-color",
+      "token": "--c-raw-072",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 180,
+      "column": 21,
+      "raw": "#333333",
+      "normalized": "#333333",
+      "context": "css:background-color",
+      "token": "--c-raw-021",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 181,
+      "column": 10,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 182,
+      "column": 17,
+      "raw": "#333333",
+      "normalized": "#333333",
+      "context": "css:border-color",
+      "token": "--c-raw-021",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 186,
+      "column": 21,
+      "raw": "rgba(220, 38, 38, 0.15)",
+      "normalized": "rgba(220, 38, 38, 0.15)",
+      "context": "css:background-color",
+      "token": "--c-raw-099",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 187,
+      "column": 17,
+      "raw": "rgba(220, 38, 38, 0.5)",
+      "normalized": "rgba(220, 38, 38, 0.5)",
+      "context": "css:border-color",
+      "token": "--c-raw-100",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dialog/Dialog.module.css",
+      "line": 188,
+      "column": 10,
+      "raw": "#991b1b",
+      "normalized": "#991b1b",
+      "context": "css:color",
+      "token": "--c-raw-069",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 29,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:background-color",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 33,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.12)",
+      "normalized": "rgba(255, 255, 255, 0.12)",
+      "context": "css:background-color",
+      "token": "--c-raw-012",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 86,
+      "column": 21,
+      "raw": "rgba(26, 26, 26, 0.98)",
+      "normalized": "rgba(26, 26, 26, 0.98)",
+      "context": "css:background-color",
+      "token": "--c-raw-111",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 89,
+      "column": 21,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:border",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 94,
+      "column": 22,
+      "raw": "rgba(0, 0, 0, 0.4)",
+      "normalized": "rgba(0, 0, 0, 0.4)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-009",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 95,
+      "column": 21,
+      "raw": "rgba(0, 0, 0, 0.3)",
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-008",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 131,
+      "column": 10,
+      "raw": "#71717a",
+      "normalized": "#71717a",
+      "context": "css:color",
+      "token": "--c-raw-014",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 136,
+      "column": 21,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:background-color",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 153,
+      "column": 15,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:background",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 170,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 176,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.06)",
+      "normalized": "rgba(255, 255, 255, 0.06)",
+      "context": "css:background-color",
+      "token": "--c-raw-011",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 180,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:background-color",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 184,
+      "column": 10,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 206,
+      "column": 10,
+      "raw": "#dbdbe7",
+      "normalized": "#dbdbe7",
+      "context": "css:color",
+      "token": "--c-raw-082",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 212,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.06)",
+      "normalized": "rgba(255, 255, 255, 0.06)",
+      "context": "css:background-color",
+      "token": "--c-raw-011",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "line": 213,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/glow-card/GlowCard.module.css",
+      "line": 60,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:background-color",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 9,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 12,
+      "column": 22,
+      "raw": "rgba(0, 0, 0, 0.4)",
+      "normalized": "rgba(0, 0, 0, 0.4)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-009",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 13,
+      "column": 22,
+      "raw": "rgba(0, 0, 0, 0.3)",
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-008",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 14,
+      "column": 10,
+      "raw": "#e4e4e7",
+      "normalized": "#e4e4e7",
+      "context": "css:color",
+      "token": "--c-raw-042",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 76,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:background-color",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 80,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.15)",
+      "normalized": "rgba(255, 255, 255, 0.15)",
+      "context": "css:background-color",
+      "token": "--c-raw-018",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 86,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.15)",
+      "normalized": "rgba(255, 255, 255, 0.15)",
+      "context": "css:background-color",
+      "token": "--c-raw-018",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 91,
+      "column": 10,
+      "raw": "#a1a1aa",
+      "normalized": "#a1a1aa",
+      "context": "css:color",
+      "token": "--c-raw-010",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/inline-menu/InlineMenu.module.css",
+      "line": 97,
+      "column": 10,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/loading-spinner/LoadingSpinner.module.css",
+      "line": 25,
+      "column": 15,
+      "raw": "#e5e5e5",
+      "normalized": "#e5e5e5",
+      "context": "css:background",
+      "token": "--c-raw-088",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/text-shimmer/TextShimmer.module.css",
+      "line": 27,
+      "column": 7,
+      "raw": "#4a4a4a",
+      "normalized": "#4a4a4a",
+      "context": "css:background-image",
+      "token": "--c-raw-036",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/text-shimmer/TextShimmer.module.css",
+      "line": 28,
+      "column": 7,
+      "raw": "#9a9a9a",
+      "normalized": "#9a9a9a",
+      "context": "css:background-image",
+      "token": "--c-raw-039",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/text-shimmer/TextShimmer.module.css",
+      "line": 29,
+      "column": 7,
+      "raw": "#c0c0c0",
+      "normalized": "#c0c0c0",
+      "context": "css:background-image",
+      "token": "--c-raw-074",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/text-shimmer/TextShimmer.module.css",
+      "line": 30,
+      "column": 7,
+      "raw": "#9a9a9a",
+      "normalized": "#9a9a9a",
+      "context": "css:background-image",
+      "token": "--c-raw-039",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/text-shimmer/TextShimmer.module.css",
+      "line": 31,
+      "column": 7,
+      "raw": "#4a4a4a",
+      "normalized": "#4a4a4a",
+      "context": "css:background-image",
+      "token": "--c-raw-036",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/text-shimmer/TextShimmer.module.css",
+      "line": 35,
+      "column": 21,
+      "raw": "#343434",
+      "normalized": "#343434",
+      "context": "css:background-image",
+      "token": "--c-raw-034",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/text-shimmer/TextShimmer.module.css",
+      "line": 35,
+      "column": 30,
+      "raw": "#343434",
+      "normalized": "#343434",
+      "context": "css:background-image",
+      "token": "--c-raw-034",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/tooltip/Tooltip.module.css",
+      "line": 9,
+      "column": 21,
+      "raw": "#18181b",
+      "normalized": "#18181b",
+      "context": "css:background-color",
+      "token": "--c-raw-020",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/tooltip/Tooltip.module.css",
+      "line": 10,
+      "column": 10,
+      "raw": "#e4e4e7",
+      "normalized": "#e4e4e7",
+      "context": "css:color",
+      "token": "--c-raw-042",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/tooltip/Tooltip.module.css",
+      "line": 16,
+      "column": 30,
+      "raw": "rgba(0, 0, 0, 0.3)",
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-008",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/tooltip/Tooltip.module.css",
+      "line": 19,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:border",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/tooltip/Tooltip.module.css",
+      "line": 26,
+      "column": 21,
+      "raw": "#18181b",
+      "normalized": "#18181b",
+      "context": "css:background-color",
+      "token": "--c-raw-020",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/components/tooltip/Tooltip.module.css",
+      "line": 27,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:border",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/Chat.module.css",
+      "line": 35,
+      "column": 21,
+      "raw": "#444",
+      "normalized": "#444444",
+      "context": "css:background-color",
+      "token": "--c-raw-022",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/Chat.module.css",
+      "line": 42,
+      "column": 21,
+      "raw": "#555",
+      "normalized": "#555555",
+      "context": "css:background-color",
+      "token": "--c-raw-013",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/Chat.module.css",
+      "line": 78,
+      "column": 7,
+      "raw": "black",
+      "normalized": "#000000",
+      "context": "css:mask-image",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/Chat.module.css",
+      "line": 81,
+      "column": 32,
+      "raw": "black",
+      "normalized": "#000000",
+      "context": "css:mask-image",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/Chat.module.css",
+      "line": 86,
+      "column": 7,
+      "raw": "black",
+      "normalized": "#000000",
+      "context": "css:-webkit-mask-image",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/Chat.module.css",
+      "line": 89,
+      "column": 32,
+      "raw": "black",
+      "normalized": "#000000",
+      "context": "css:-webkit-mask-image",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.module.css",
+      "line": 131,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.module.css",
+      "line": 132,
+      "column": 27,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:border-right",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.module.css",
+      "line": 182,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 25,
+      "column": 9,
+      "raw": "#e53e3e",
+      "normalized": "#e53e3e",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-087",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 26,
+      "column": 9,
+      "raw": "#2b579a",
+      "normalized": "#2b579a",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-033",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 27,
+      "column": 10,
+      "raw": "#2b579a",
+      "normalized": "#2b579a",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-033",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 28,
+      "column": 9,
+      "raw": "#1d6f42",
+      "normalized": "#1d6f42",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-030",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 29,
+      "column": 10,
+      "raw": "#1d6f42",
+      "normalized": "#1d6f42",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-030",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 30,
+      "column": 9,
+      "raw": "#d04423",
+      "normalized": "#d04423",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-040",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 31,
+      "column": 10,
+      "raw": "#d04423",
+      "normalized": "#d04423",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-040",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 32,
+      "column": 9,
+      "raw": "#6b7280",
+      "normalized": "#6b7280",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-065",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 34,
+      "column": 9,
+      "raw": "#d97706",
+      "normalized": "#d97706",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-081",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 35,
+      "column": 8,
+      "raw": "#4a5568",
+      "normalized": "#4a5568",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-062",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 36,
+      "column": 9,
+      "raw": "#065f46",
+      "normalized": "#065f46",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-051",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 37,
+      "column": 10,
+      "raw": "#a855f7",
+      "normalized": "#a855f7",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-071",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 38,
+      "column": 9,
+      "raw": "#c2410c",
+      "normalized": "#c2410c",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-075",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 39,
+      "column": 10,
+      "raw": "#0ea5e9",
+      "normalized": "#0ea5e9",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-027",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 40,
+      "column": 9,
+      "raw": "#0ea5e9",
+      "normalized": "#0ea5e9",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-027",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 41,
+      "column": 10,
+      "raw": "#e34c26",
+      "normalized": "#e34c26",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-086",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 42,
+      "column": 9,
+      "raw": "#264de4",
+      "normalized": "#264de4",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-055",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 43,
+      "column": 8,
+      "raw": "#f7df1e",
+      "normalized": "#f7df1e",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-089",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 44,
+      "column": 8,
+      "raw": "#3178c6",
+      "normalized": "#3178c6",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-057",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 45,
+      "column": 9,
+      "raw": "#61dafb",
+      "normalized": "#61dafb",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-038",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 46,
+      "column": 9,
+      "raw": "#61dafb",
+      "normalized": "#61dafb",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-038",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 47,
+      "column": 8,
+      "raw": "#3776ab",
+      "normalized": "#3776ab",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-058",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 48,
+      "column": 8,
+      "raw": "#de4f00",
+      "normalized": "#de4f00",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-083",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 49,
+      "column": 8,
+      "raw": "#00add8",
+      "normalized": "#00add8",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-050",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 50,
+      "column": 10,
+      "raw": "#f89820",
+      "normalized": "#f89820",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-091",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 51,
+      "column": 7,
+      "raw": "#555555",
+      "normalized": "#555555",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-013",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 52,
+      "column": 9,
+      "raw": "#00599c",
+      "normalized": "#00599c",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-026",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 53,
+      "column": 7,
+      "raw": "#555555",
+      "normalized": "#555555",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-013",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/AttachmentStrip/AttachmentStrip.tsx",
+      "line": 54,
+      "column": 9,
+      "raw": "#00599c",
+      "normalized": "#00599c",
+      "context": "tsx-color-dict:EXT_COLORS",
+      "token": "--c-raw-026",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ChatBubble/ChatBubble.module.css",
+      "line": 72,
+      "column": 32,
+      "raw": "rgba(0, 0, 0, 0.1)",
+      "normalized": "rgba(0, 0, 0, 0.1)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-015",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ChatBubble/ChatBubble.module.css",
+      "line": 73,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/features/chat/components/ChatBubble/ChatBubble.module.css",
+      "line": 216,
+      "column": 32,
+      "raw": "rgba(0, 0, 0, 0.1)",
+      "normalized": "rgba(0, 0, 0, 0.1)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-015",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ChatBubble/ChatBubble.module.css",
+      "line": 217,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/features/chat/components/ChatBubble/ChatBubble.module.css",
+      "line": 270,
+      "column": 21,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "css:background-color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ChatInput/ChatInput.module.css",
+      "line": 20,
+      "column": 26,
+      "raw": "rgba(0, 0, 0, 0.2)",
+      "normalized": "rgba(0, 0, 0, 0.2)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-025",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ChatInput/ChatInput.module.css",
+      "line": 303,
+      "column": 15,
+      "raw": "#ef4444",
+      "normalized": "#ef4444",
+      "context": "css:background",
+      "token": "--c-raw-023",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ChatInput/ChatInput.module.css",
+      "line": 304,
+      "column": 10,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 78,
+      "column": 21,
+      "raw": "rgba(24, 24, 27, 0.95)",
+      "normalized": "rgba(24, 24, 27, 0.95)",
+      "context": "css:background-color",
+      "token": "--c-raw-105",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 84,
+      "column": 26,
+      "raw": "rgba(0, 0, 0, 0.3)",
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-008",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 85,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:border",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 93,
+      "column": 10,
+      "raw": "#71717a",
+      "normalized": "#71717a",
+      "context": "css:color",
+      "token": "--c-raw-014",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 108,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:background-color",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 117,
+      "column": 10,
+      "raw": "#a1a1aa",
+      "normalized": "#a1a1aa",
+      "context": "css:color",
+      "token": "--c-raw-010",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 128,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:background-color",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 129,
+      "column": 10,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 149,
+      "column": 26,
+      "raw": "rgba(0, 0, 0, 0.2)",
+      "normalized": "rgba(0, 0, 0, 0.2)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-025",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 207,
+      "column": 21,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "css:background-color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 254,
+      "column": 10,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 435,
+      "column": 21,
+      "raw": "rgba(220, 38, 38, 0.9)",
+      "normalized": "rgba(220, 38, 38, 0.9)",
+      "context": "css:background-color",
+      "token": "--c-raw-101",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/chat/components/ImageArtifact/ImageArtifact.module.css",
+      "line": 436,
+      "column": 10,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 38,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 39,
+      "column": 21,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:border",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 45,
+      "column": 22,
+      "raw": "rgba(0, 0, 0, 0.4)",
+      "normalized": "rgba(0, 0, 0, 0.4)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-009",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 46,
+      "column": 21,
+      "raw": "rgba(0, 0, 0, 0.3)",
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-008",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 78,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 84,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 100,
+      "column": 28,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:border-bottom",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 107,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 117,
+      "column": 15,
+      "raw": "rgba(255, 255, 255, 0.06)",
+      "normalized": "rgba(255, 255, 255, 0.06)",
+      "context": "css:background",
+      "token": "--c-raw-011",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/MediaOverlay.module.css",
+      "line": 118,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:border",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaImageViewer.module.css",
+      "line": 26,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.12)",
+      "normalized": "rgba(255, 255, 255, 0.12)",
+      "context": "css:border",
+      "token": "--c-raw-012",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaImageViewer.module.css",
+      "line": 27,
+      "column": 15,
+      "raw": "#1f1f1f",
+      "normalized": "#1f1f1f",
+      "context": "css:background",
+      "token": "--c-raw-054",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaImageViewer.module.css",
+      "line": 36,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaImageViewer.module.css",
+      "line": 37,
+      "column": 17,
+      "raw": "rgba(255, 255, 255, 0.24)",
+      "normalized": "rgba(255, 255, 255, 0.24)",
+      "context": "css:border-color",
+      "token": "--c-raw-109",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaImageViewer.module.css",
+      "line": 52,
+      "column": 21,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:border",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaImageViewer.module.css",
+      "line": 53,
+      "column": 15,
+      "raw": "#111",
+      "normalized": "#111111",
+      "context": "css:background",
+      "token": "--c-raw-019",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaPdfViewer.module.css",
+      "line": 14,
+      "column": 21,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:border",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaPdfViewer.module.css",
+      "line": 15,
+      "column": 15,
+      "raw": "#111",
+      "normalized": "#111111",
+      "context": "css:background",
+      "token": "--c-raw-019",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaPdfViewer.module.css",
+      "line": 29,
+      "column": 15,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:background",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaPdfViewer.module.css",
+      "line": 32,
+      "column": 26,
+      "raw": "rgba(0, 0, 0, 0.35)",
+      "normalized": "rgba(0, 0, 0, 0.35)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-094",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaPdfViewer.module.css",
+      "line": 58,
+      "column": 10,
+      "raw": "#f87171",
+      "normalized": "#f87171",
+      "context": "css:color",
+      "token": "--c-raw-090",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaSidebar.module.css",
+      "line": 9,
+      "column": 21,
+      "raw": "#121212",
+      "normalized": "#121212",
+      "context": "css:background-color",
+      "token": "--c-raw-028",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaSidebar.module.css",
+      "line": 50,
+      "column": 10,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaSidebar.module.css",
+      "line": 54,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.12)",
+      "normalized": "rgba(255, 255, 255, 0.12)",
+      "context": "css:background-color",
+      "token": "--c-raw-012",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaSidebar.module.css",
+      "line": 55,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaSidebar.module.css",
+      "line": 72,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaTextViewer.module.css",
+      "line": 28,
+      "column": 15,
+      "raw": "rgba(255, 255, 255, 0.15)",
+      "normalized": "rgba(255, 255, 255, 0.15)",
+      "context": "css:background",
+      "token": "--c-raw-018",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaTextViewer.module.css",
+      "line": 33,
+      "column": 15,
+      "raw": "rgba(255, 255, 255, 0.25)",
+      "normalized": "rgba(255, 255, 255, 0.25)",
+      "context": "css:background",
+      "token": "--c-raw-049",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/media/components/MediaTextViewer.module.css",
+      "line": 38,
+      "column": 20,
+      "raw": "rgba(255, 255, 255, 0.15)",
+      "normalized": "rgba(255, 255, 255, 0.15)",
+      "context": "css:scrollbar-color",
+      "token": "--c-raw-018",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 46,
+      "column": 15,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:background",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 55,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.02)",
+      "normalized": "rgba(255, 255, 255, 0.02)",
+      "context": "css:background-color",
+      "token": "--c-raw-017",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 56,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:border",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 62,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:background-color",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 74,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 79,
+      "column": 10,
+      "raw": "#a1a1aa",
+      "normalized": "#a1a1aa",
+      "context": "css:color",
+      "token": "--c-raw-010",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 89,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:border",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 90,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.05)",
+      "normalized": "rgba(255, 255, 255, 0.05)",
+      "context": "css:background-color",
+      "token": "--c-raw-107",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 91,
+      "column": 10,
+      "raw": "#d4d4d8",
+      "normalized": "#d4d4d8",
+      "context": "css:color",
+      "token": "--c-raw-079",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 97,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:background-color",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 98,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 135,
+      "column": 11,
+      "raw": "rgba(255, 255, 255, 0.2)",
+      "normalized": "rgba(255, 255, 255, 0.2)",
+      "context": "css:stroke",
+      "token": "--chat-input-border",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelDownloader.module.css",
+      "line": 143,
+      "column": 11,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:stroke",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRModelSwitcher.module.css",
+      "line": 44,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRTextCanvas.module.css",
+      "line": 18,
+      "column": 9,
+      "raw": "rgba(0, 0, 0, 0.2)",
+      "normalized": "rgba(0, 0, 0, 0.2)",
+      "context": "css:fill",
+      "token": "--c-raw-025",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRTextCanvas.module.css",
+      "line": 23,
+      "column": 9,
+      "raw": "rgba(255, 255, 255, 0.25)",
+      "normalized": "rgba(255, 255, 255, 0.25)",
+      "context": "css:fill",
+      "token": "--c-raw-049",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRTextCanvas.module.css",
+      "line": 37,
+      "column": 15,
+      "raw": "rgba(0, 120, 215, 0.4)",
+      "normalized": "rgba(0, 120, 215, 0.4)",
+      "context": "css:background",
+      "token": "--c-raw-097",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRTextCanvas.tsx",
+      "line": 40,
+      "column": 66,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "tsx-jsx-attr:fill",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/ocr/components/OCRTextCanvas.tsx",
+      "line": 43,
+      "column": 69,
+      "raw": "black",
+      "normalized": "#000000",
+      "context": "tsx-jsx-attr:fill",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/OnboardingLayout.module.css",
+      "line": 13,
+      "column": 10,
+      "raw": "#fafafa",
+      "normalized": "#fafafa",
+      "context": "css:color",
+      "token": "--c-raw-024",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Agreement.module.css",
+      "line": 79,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/UpdateNotes.module.css",
+      "line": 187,
+      "column": 21,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:background-color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/UpdateNotes.module.css",
+      "line": 188,
+      "column": 10,
+      "raw": "#000000",
+      "normalized": "#000000",
+      "context": "css:color",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 8,
+      "column": 12,
+      "raw": "#71717a",
+      "normalized": "#71717a",
+      "context": "css:--muted",
+      "token": "--c-raw-014",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 9,
+      "column": 13,
+      "raw": "#fafafa",
+      "normalized": "#fafafa",
+      "context": "css:--accent",
+      "token": "--c-raw-024",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 10,
+      "column": 13,
+      "raw": "#27272a",
+      "normalized": "#27272a",
+      "context": "css:--border",
+      "token": "--c-raw-056",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 11,
+      "column": 13,
+      "raw": "#18181b",
+      "normalized": "#18181b",
+      "context": "css:--key-bg",
+      "token": "--c-raw-020",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 29,
+      "column": 21,
+      "raw": "#111",
+      "normalized": "#111111",
+      "context": "css:background-color",
+      "token": "--c-raw-019",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 76,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:background-color",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 78,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:border",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 81,
+      "column": 23,
+      "raw": "rgba(0, 0, 0, 0.4)",
+      "normalized": "rgba(0, 0, 0, 0.4)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-009",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 83,
+      "column": 10,
+      "raw": "#a1a1aa",
+      "normalized": "#a1a1aa",
+      "context": "css:color",
+      "token": "--c-raw-010",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 113,
+      "column": 10,
+      "raw": "#52525b",
+      "normalized": "#52525b",
+      "context": "css:color",
+      "token": "--c-raw-037",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/onboarding/screens/Welcome.module.css",
+      "line": 127,
+      "column": 15,
+      "raw": "rgba(0, 0, 0, 0.85)",
+      "normalized": "rgba(0, 0, 0, 0.85)",
+      "context": "css:background",
+      "token": "--c-raw-096",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 38,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 39,
+      "column": 21,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:border",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 45,
+      "column": 22,
+      "raw": "rgba(0, 0, 0, 0.4)",
+      "normalized": "rgba(0, 0, 0, 0.4)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-009",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 46,
+      "column": 21,
+      "raw": "rgba(0, 0, 0, 0.3)",
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-008",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 68,
+      "column": 21,
+      "raw": "#121212",
+      "normalized": "#121212",
+      "context": "css:background-color",
+      "token": "--c-raw-028",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 109,
+      "column": 10,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 113,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.12)",
+      "normalized": "rgba(255, 255, 255, 0.12)",
+      "context": "css:background-color",
+      "token": "--c-raw-012",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 114,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 139,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 145,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/SettingsOverlay.module.css",
+      "line": 151,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.module.css",
+      "line": 42,
+      "column": 21,
+      "raw": "#cbd5e1",
+      "normalized": "#cbd5e1",
+      "context": "css:border",
+      "token": "--c-raw-078",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.module.css",
+      "line": 43,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:background-color",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.module.css",
+      "line": 70,
+      "column": 33,
+      "raw": "rgba(0, 0, 0, 0.3)",
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "context": "css:filter",
+      "token": "--c-raw-008",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.module.css",
+      "line": 89,
+      "column": 11,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:stroke",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.module.css",
+      "line": 94,
+      "column": 31,
+      "raw": "rgba(255, 255, 255, 0.6)",
+      "normalized": "rgba(255, 255, 255, 0.6)",
+      "context": "css:filter",
+      "token": "--c-raw-110",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.module.css",
+      "line": 115,
+      "column": 33,
+      "raw": "rgba(0, 0, 0, 0.3)",
+      "normalized": "rgba(0, 0, 0, 0.3)",
+      "context": "css:filter",
+      "token": "--c-raw-008",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.tsx",
+      "line": 21,
+      "column": 13,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "tsx-jsx-attr:fill",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.tsx",
+      "line": 27,
+      "column": 13,
+      "raw": "white",
+      "normalized": "#ffffff",
+      "context": "tsx-jsx-attr:fill",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.tsx",
+      "line": 33,
+      "column": 13,
+      "raw": "black",
+      "normalized": "#000000",
+      "context": "tsx-jsx-attr:fill",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/components/CapturePreview.tsx",
+      "line": 39,
+      "column": 13,
+      "raw": "black",
+      "normalized": "#000000",
+      "context": "tsx-jsx-attr:fill",
+      "token": "--c-raw-006",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 27,
+      "column": 28,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:border-bottom",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 54,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.02)",
+      "normalized": "rgba(255, 255, 255, 0.02)",
+      "context": "css:background-color",
+      "token": "--c-raw-017",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 55,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:border",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 108,
+      "column": 10,
+      "raw": "#81a1c1",
+      "normalized": "#81a1c1",
+      "context": "css:color",
+      "token": "--c-raw-067",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 118,
+      "column": 10,
+      "raw": "#8caecf",
+      "normalized": "#8caecf",
+      "context": "css:color",
+      "token": "--c-raw-068",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 142,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:background-color",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 149,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.06)",
+      "normalized": "rgba(255, 255, 255, 0.06)",
+      "context": "css:border",
+      "token": "--c-raw-011",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 154,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:border",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 159,
+      "column": 21,
+      "raw": "#e0443e",
+      "normalized": "#e0443e",
+      "context": "css:border",
+      "token": "--c-raw-041",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/APIKeysSection.module.css",
+      "line": 215,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:background-color",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 26,
+      "column": 28,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:border-bottom",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 84,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:background-color",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 115,
+      "column": 21,
+      "raw": "#434343",
+      "normalized": "#434343",
+      "context": "css:background-color",
+      "token": "--c-raw-061",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 133,
+      "column": 15,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:background",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 135,
+      "column": 15,
+      "raw": "rgba(0, 0, 0, 0.15)",
+      "normalized": "rgba(0, 0, 0, 0.15)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-048",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 136,
+      "column": 15,
+      "raw": "rgba(0, 0, 0, 0.06)",
+      "normalized": "rgba(0, 0, 0, 0.06)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-047",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 144,
+      "column": 21,
+      "raw": "#3fa266",
+      "normalized": "#3fa266",
+      "context": "css:background-color",
+      "token": "--c-raw-035",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 145,
+      "column": 17,
+      "raw": "#3fa266",
+      "normalized": "#3fa266",
+      "context": "css:border-color",
+      "token": "--c-raw-035",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 150,
+      "column": 15,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:background",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 154,
+      "column": 22,
+      "raw": "rgba(120, 120, 120, 0.12)",
+      "normalized": "rgba(120, 120, 120, 0.12)",
+      "context": "css:outline",
+      "token": "--c-raw-098",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 163,
+      "column": 21,
+      "raw": "rgba(0, 0, 0, 0.24)",
+      "normalized": "rgba(0, 0, 0, 0.24)",
+      "context": "css:background-color",
+      "token": "--c-raw-093",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/GeneralSection.module.css",
+      "line": 164,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.02)",
+      "normalized": "rgba(255, 255, 255, 0.02)",
+      "context": "css:border",
+      "token": "--c-raw-017",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 27,
+      "column": 28,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:border-bottom",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 60,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:background-color",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 61,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:border",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 73,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.06)",
+      "normalized": "rgba(255, 255, 255, 0.06)",
+      "context": "css:background-color",
+      "token": "--c-raw-011",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 74,
+      "column": 17,
+      "raw": "rgba(255, 255, 255, 0.14)",
+      "normalized": "rgba(255, 255, 255, 0.14)",
+      "context": "css:border-color",
+      "token": "--c-raw-108",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 81,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:background-color",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 104,
+      "column": 21,
+      "raw": "#171717",
+      "normalized": "#171717",
+      "context": "css:background-color",
+      "token": "--neutral-900",
+      "source": "existing"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 109,
+      "column": 10,
+      "raw": "#c9c9c9d8",
+      "normalized": "#c9c9c9d8",
+      "context": "css:color",
+      "token": "--c-raw-077",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 161,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:background-color",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/HelpSection.module.css",
+      "line": 179,
+      "column": 10,
+      "raw": "#c7c7c7c4",
+      "normalized": "#c7c7c7c4",
+      "context": "css:color",
+      "token": "--c-raw-076",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/ModelsSection.module.css",
+      "line": 29,
+      "column": 28,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:border-bottom",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/ModelsSection.module.css",
+      "line": 88,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:background-color",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/PersonalizationSection.module.css",
+      "line": 27,
+      "column": 28,
+      "raw": "rgba(255, 255, 255, 0.04)",
+      "normalized": "rgba(255, 255, 255, 0.04)",
+      "context": "css:border-bottom",
+      "token": "--c-raw-007",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/PersonalizationSection.module.css",
+      "line": 73,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.02)",
+      "normalized": "rgba(255, 255, 255, 0.02)",
+      "context": "css:background-color",
+      "token": "--c-raw-017",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/PersonalizationSection.module.css",
+      "line": 74,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.03)",
+      "normalized": "rgba(255, 255, 255, 0.03)",
+      "context": "css:border",
+      "token": "--c-raw-004",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/features/settings/sections/PersonalizationSection.module.css",
+      "line": 81,
+      "column": 17,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:border-color",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AccountSwitcher.module.css",
+      "line": 34,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AccountSwitcher.module.css",
+      "line": 51,
+      "column": 15,
+      "raw": "rgba(63, 63, 70, 0.5)",
+      "normalized": "rgba(63, 63, 70, 0.5)",
+      "context": "css:background",
+      "token": "--c-raw-005",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AccountSwitcher.module.css",
+      "line": 83,
+      "column": 10,
+      "raw": "#fff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AccountSwitcher.module.css",
+      "line": 96,
+      "column": 10,
+      "raw": "#ededed",
+      "normalized": "#ededed",
+      "context": "css:color",
+      "token": "--c-raw-003",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AccountSwitcher.module.css",
+      "line": 104,
+      "column": 10,
+      "raw": "#a1a1aa",
+      "normalized": "#a1a1aa",
+      "context": "css:color",
+      "token": "--c-raw-010",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AccountSwitcher.module.css",
+      "line": 113,
+      "column": 10,
+      "raw": "#71717a",
+      "normalized": "#71717a",
+      "context": "css:color",
+      "token": "--c-raw-014",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AccountSwitcher.module.css",
+      "line": 138,
+      "column": 21,
+      "raw": "rgba(239, 68, 68, 0.1)",
+      "normalized": "rgba(239, 68, 68, 0.1)",
+      "context": "css:background-color",
+      "token": "--c-raw-102",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AccountSwitcher.module.css",
+      "line": 139,
+      "column": 10,
+      "raw": "#ef4444",
+      "normalized": "#ef4444",
+      "context": "css:color",
+      "token": "--c-raw-023",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AuthButton.module.css",
+      "line": 35,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:background-color",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AuthButton.module.css",
+      "line": 52,
+      "column": 22,
+      "raw": "#ffffffdf",
+      "normalized": "#ffffffdf",
+      "context": "css:border-left-color",
+      "token": "--c-raw-092",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/AuthButton.tsx",
+      "line": 67,
+      "column": 54,
+      "raw": "#666",
+      "normalized": "#666666",
+      "context": "tsx-style-prop:color",
+      "token": "--c-raw-063",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TitleBar.module.css",
+      "line": 77,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:background-color",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TitleBar.module.css",
+      "line": 81,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.12)",
+      "normalized": "rgba(255, 255, 255, 0.12)",
+      "context": "css:background-color",
+      "token": "--c-raw-012",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 30,
+      "column": 31,
+      "raw": "rgba(0, 0, 0, 0.1)",
+      "normalized": "rgba(0, 0, 0, 0.1)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-015",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 41,
+      "column": 10,
+      "raw": "rgba(0, 0, 0, 0.6)",
+      "normalized": "rgba(0, 0, 0, 0.6)",
+      "context": "css:color",
+      "token": "--c-raw-095",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 51,
+      "column": 21,
+      "raw": "#ff5f56",
+      "normalized": "#ff5f56",
+      "context": "css:background-color",
+      "token": "--c-raw-045",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 52,
+      "column": 21,
+      "raw": "#e0443e",
+      "normalized": "#e0443e",
+      "context": "css:border",
+      "token": "--c-raw-041",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 56,
+      "column": 21,
+      "raw": "#ffbd2e",
+      "normalized": "#ffbd2e",
+      "context": "css:background-color",
+      "token": "--c-raw-046",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 57,
+      "column": 21,
+      "raw": "#dea123",
+      "normalized": "#dea123",
+      "context": "css:border",
+      "token": "--c-raw-084",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 61,
+      "column": 21,
+      "raw": "#27c93f",
+      "normalized": "#27c93f",
+      "context": "css:background-color",
+      "token": "--c-raw-032",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 62,
+      "column": 21,
+      "raw": "#1aab29",
+      "normalized": "#1aab29",
+      "context": "css:border",
+      "token": "--c-raw-052",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 71,
+      "column": 21,
+      "raw": "#ff5f56",
+      "normalized": "#ff5f56",
+      "context": "css:background-color",
+      "token": "--c-raw-045",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 75,
+      "column": 21,
+      "raw": "#ffbd2e",
+      "normalized": "#ffbd2e",
+      "context": "css:background-color",
+      "token": "--c-raw-046",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/TrafficLights.module.css",
+      "line": 79,
+      "column": 21,
+      "raw": "#27c93f",
+      "normalized": "#27c93f",
+      "context": "css:background-color",
+      "token": "--c-raw-032",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 24,
+      "column": 10,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 34,
+      "column": 21,
+      "raw": "#3c3c3c",
+      "normalized": "#3c3c3c",
+      "context": "css:background-color",
+      "token": "--c-raw-059",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 39,
+      "column": 21,
+      "raw": "#e81123",
+      "normalized": "#e81123",
+      "context": "css:background-color",
+      "token": "--c-raw-043",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 40,
+      "column": 10,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 45,
+      "column": 10,
+      "raw": "#1a1a1a",
+      "normalized": "#1a1a1a",
+      "context": "css:color",
+      "token": "--c-raw-029",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 52,
+      "column": 21,
+      "raw": "#e0e0e0",
+      "normalized": "#e0e0e0",
+      "context": "css:background-color",
+      "token": "--c-raw-085",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 53,
+      "column": 10,
+      "raw": "#1a1a1a",
+      "normalized": "#1a1a1a",
+      "context": "css:color",
+      "token": "--c-raw-029",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 58,
+      "column": 21,
+      "raw": "#e81123",
+      "normalized": "#e81123",
+      "context": "css:background-color",
+      "token": "--c-raw-043",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/frame/WindowControls.module.css",
+      "line": 59,
+      "column": 10,
+      "raw": "#ffffff",
+      "normalized": "#ffffff",
+      "context": "css:color",
+      "token": "--c-raw-000",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 13,
+      "column": 16,
+      "raw": "#f5f5f5",
+      "normalized": "#f5f5f5",
+      "context": "css:--text-main",
+      "token": "--c-raw-044",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 14,
+      "column": 17,
+      "raw": "#a3a3a3",
+      "normalized": "#a3a3a3",
+      "context": "css:--text-muted",
+      "token": "--c-raw-070",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 15,
+      "column": 17,
+      "raw": "#52525b",
+      "normalized": "#52525b",
+      "context": "css:--text-faint",
+      "token": "--c-raw-037",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 17,
+      "column": 14,
+      "raw": "#fafafa",
+      "normalized": "#fafafa",
+      "context": "css:--primary",
+      "token": "--c-raw-024",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 18,
+      "column": 13,
+      "raw": "#ef4444",
+      "normalized": "#ef4444",
+      "context": "css:--danger",
+      "token": "--c-raw-023",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 54,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.08)",
+      "normalized": "rgba(255, 255, 255, 0.08)",
+      "context": "css:background-color",
+      "token": "--c-raw-002",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 56,
+      "column": 21,
+      "raw": "rgba(255, 255, 255, 0.1)",
+      "normalized": "rgba(255, 255, 255, 0.1)",
+      "context": "css:border",
+      "token": "--c-raw-001",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 59,
+      "column": 23,
+      "raw": "rgba(0, 0, 0, 0.4)",
+      "normalized": "rgba(0, 0, 0, 0.4)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-009",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 61,
+      "column": 10,
+      "raw": "#a1a1aa",
+      "normalized": "#a1a1aa",
+      "context": "css:color",
+      "token": "--c-raw-010",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 91,
+      "column": 23,
+      "raw": "rgba(0, 0, 0, 0.4)",
+      "normalized": "rgba(0, 0, 0, 0.4)",
+      "context": "css:box-shadow",
+      "token": "--c-raw-009",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 215,
+      "column": 15,
+      "raw": "#272727",
+      "normalized": "#272727",
+      "context": "css:background",
+      "token": "--c-raw-031",
+      "source": "generated"
+    },
+    {
+      "file": "ui/src/layout/panels/SidePanel.module.css",
+      "line": 219,
+      "column": 15,
+      "raw": "#272727",
+      "normalized": "#272727",
+      "context": "css:background",
+      "token": "--c-raw-031",
+      "source": "generated"
+    }
+  ]
+}
