@@ -60,7 +60,7 @@
   left: 0;
   width: 100%;
   z-index: 20;
-  background: linear-gradient(to top, var(--neutral-950) 80%, transparent);
+  background: linear-gradient(to top, var(--c-raw-013) 80%, transparent);
   display: flex;
   justify-content: center;
 }
@@ -71,7 +71,7 @@
   top: 0;
   width: 100%;
   flex-shrink: 0;
-  background-color: var(--neutral-950);
+  background-color: var(--c-raw-013);
   mask-image:
     linear-gradient(
       to right,
@@ -95,13 +95,13 @@
   height: 100%;
   flex-direction: column;
   background-color: transparent;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   position: relative;
 }
 
 .chatContainer::selection {
-  background-color: var(--black-500-30);
-  color: var(--neutral-100);
+  background-color: var(--c-raw-037);
+  color: var(--c-raw-000);
 }
 
 .contentColumn {

@@ -57,7 +57,7 @@
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
   gap: 0.5rem;
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
   background-color: var(--solid-17);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 
@@ -70,7 +70,7 @@
   height: 100%;
   background: transparent;
   padding: 1rem;
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
   font-family: inherit;
   font-size: 0.875rem;
   line-height: 1.6;
@@ -78,7 +78,7 @@
   outline: none;
   border: none;
   display: block;
-  caret-color: var(--neutral-100);
+  caret-color: var(--c-raw-000);
 }
 
 .langLabel {
@@ -91,7 +91,7 @@
   font-size: 0.75rem;
   text-transform: lowercase;
   letter-spacing: 0.02em;
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -111,7 +111,7 @@
   border-radius: 999px;
   padding: 0.35rem 0.65rem;
   cursor: pointer;
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
   transition:
     background-color 120ms ease,
     opacity 120ms ease;
@@ -162,7 +162,7 @@
 }
 
 .pre {
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
   font-family: inherit;
   font-size: 0.875rem;
   line-height: 1.6;
@@ -235,7 +235,7 @@
 
 .highlightLayer {
   z-index: 1;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   background-color: transparent !important;
   overflow: hidden !important;
   pointer-events: none;
@@ -258,7 +258,7 @@
 .textareaOverlay {
   z-index: 2;
   color: transparent !important;
-  caret-color: var(--neutral-100);
+  caret-color: var(--c-raw-000);
   background: transparent !important;
   resize: none;
   outline: none;
@@ -266,7 +266,7 @@
 }
 
 .textareaOverlay::placeholder {
-  color: var(--neutral-500);
+  color: var(--c-raw-005);
 }
 
 .textareaOverlay::-webkit-scrollbar {

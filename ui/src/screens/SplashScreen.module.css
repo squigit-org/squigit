@@ -9,8 +9,8 @@
   flex-direction: column;
   height: 100vh;
   width: 100%;
-  background: var(--neutral-950);
-  color: var(--dark);
+  background: var(--c-raw-013);
+  color: var(--c-raw-018);
   overflow: hidden;
 }
 
@@ -28,7 +28,7 @@
   height: 100%;
   align-items: center;
   justify-content: center;
-  background: var(--neutral-950);
+  background: var(--c-raw-013);
 }
 
 .logoOffset {

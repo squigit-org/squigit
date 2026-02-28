@@ -17,7 +17,7 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   transition: background-color 0.15s ease;
 }
 
@@ -40,19 +40,19 @@
 
 .triggerUp:hover {
   background-color: transparent;
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
 }
 
 .triggerUp.active {
   background-color: transparent;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
 }
 
 .label {
   display: inline-flex;
   align-items: center;
   font-size: 14px;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -65,7 +65,7 @@
 }
 
 .chevronClr {
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
 }
 
 .chevronRotate,

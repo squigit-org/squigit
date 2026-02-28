@@ -48,11 +48,11 @@
 }
 
 .contextMenuItem.danger {
-  color: var(--danger);
+  color: var(--c-raw-015);
 }
 
 .contextMenuItem.danger svg {
-  color: var(--danger);
+  color: var(--c-raw-015);
 }
 
 .contextMenuItem.danger:hover {

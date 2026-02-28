@@ -18,17 +18,17 @@
   background: transparent;
   border: none;
   outline: none;
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
   font-size: 0.9375rem;
   font-family: inherit;
   padding: 8px 0;
-  caret-color: var(--neutral-400);
+  caret-color: var(--c-raw-004);
   white-space: nowrap;
   overflow-x: auto;
 }
 
 .searchInput::placeholder {
-  color: var(--neutral-500);
+  color: var(--c-raw-005);
 }
 
 .searchInput:disabled {
@@ -48,7 +48,7 @@
   border-radius: 6px;
   background: transparent;
   border: none;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -59,8 +59,8 @@
 }
 
 .actionBtn:hover:not(:disabled) {
-  background-color: var(--neutral-800);
-  color: var(--neutral-100);
+  background-color: var(--c-raw-010);
+  color: var(--c-raw-000);
 }
 
 .actionBtn:disabled {
@@ -144,8 +144,8 @@
 }
 
 .floatingContainer {
-  background-color: var(--neutral-900);
-  border: 1px solid var(--neutral-800);
+  background-color: var(--c-raw-012);
+  border: 1px solid var(--c-raw-010);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   position: relative;
   width: 95%;
@@ -176,14 +176,14 @@
   cursor: pointer;
   z-index: 2;
   position: relative;
-  background-color: var(--neutral-900);
+  background-color: var(--c-raw-012);
 }
 
 .thumbnailWrapper {
   display: flex;
   align-items: center;
 
-  border: 1px solid var(--neutral-800);
+  border: 1px solid var(--c-raw-010);
   border-radius: 6px;
   gap: 12px;
   margin-right: 12px;
@@ -229,9 +229,9 @@
   right: -6px;
   width: 18px;
   height: 18px;
-  background-color: var(--neutral-700);
-  border: 1px solid var(--neutral-600);
-  color: var(--neutral-300);
+  background-color: var(--c-raw-008);
+  border: 1px solid var(--c-raw-036);
+  color: var(--c-raw-003);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -298,7 +298,7 @@
   border-radius: 6px;
   background: transparent;
   border: none;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -309,8 +309,8 @@
 }
 
 .barBtn:hover:not(:disabled) {
-  background-color: var(--neutral-800);
-  color: var(--neutral-100);
+  background-color: var(--c-raw-010);
+  color: var(--c-raw-000);
 }
 
 .barBtn:disabled {
@@ -319,7 +319,7 @@
 }
 
 .toggleIcon {
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   width: 32px;
   height: 32px;
   display: flex;
@@ -331,7 +331,7 @@
 }
 
 .toggleIcon:hover {
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
 }
 
 .expandedContent {
@@ -373,7 +373,7 @@
   width: 100%;
   flex: 1;
   min-height: 0;
-  background-color: var(--neutral-850);
+  background-color: var(--c-raw-011);
   border-radius: 8px;
   position: relative;
   display: flex;
@@ -385,7 +385,7 @@
 .bigImageBox.showScrollbar {
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--neutral-700) var(--neutral-900);
+  scrollbar-color: var(--c-raw-008) var(--c-raw-012);
 }
 
 .viewer {

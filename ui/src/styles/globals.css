@@ -13,7 +13,7 @@
 }
 
 body *::selection {
-  background: var(--blue) !important;
+  background: var(--c-raw-021) !important;
 }
 
 body.light-mode .shiki-dual-theme span,
@@ -46,7 +46,7 @@ body {
   width: 100%;
   margin: 0;
   overscroll-behavior: none;
-  background-color: var(--neutral-950);
+  background-color: var(--c-raw-013);
   font-family:
     "Inter",
     "Inter var",
@@ -84,11 +84,11 @@ body.light-mode {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--neutral-650);
+  background: var(--c-raw-007);
   border-radius: 4px;
   transition: background-color 0.3s ease-in-out;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--neutral-700);
+  background: var(--c-raw-008);
 }

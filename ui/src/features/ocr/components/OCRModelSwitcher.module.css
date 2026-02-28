@@ -14,7 +14,7 @@
 .trigger {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
   font-family: "Inter", sans-serif;
 }
 

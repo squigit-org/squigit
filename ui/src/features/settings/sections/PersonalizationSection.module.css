@@ -31,7 +31,7 @@
 .sectionTitle {
   font-size: 1.3rem;
   font-weight: 600;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -53,14 +53,14 @@
 .label {
   display: block;
   font-weight: 600;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   font-size: 0.9rem;
   line-height: 1;
 }
 
 .description {
   font-size: 0.78rem;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   line-height: 1.2;
   margin-top: 2px;
 }
@@ -86,7 +86,7 @@
   flex: 1;
   background: transparent;
   border: none;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   font-family: inherit;
   font-size: 0.85rem;
   line-height: 1.5;
@@ -95,5 +95,5 @@
 }
 
 .textarea::placeholder {
-  color: var(--neutral-500);
+  color: var(--c-raw-005);
 }

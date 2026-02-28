@@ -428,7 +428,7 @@ export const SidePanel: React.FC = () => {
             <button
               className={`${styles.iconBtn} ${styles.danger}`}
               onClick={() => selectedIds.length > 0 && setShowBulkDelete(true)}
-              style={{ color: "var(--danger)" }}
+              style={{ color: "var(--c-raw-015)" }}
               disabled={selectedIds.length === 0}
             >
               <Trash2 size={16} />

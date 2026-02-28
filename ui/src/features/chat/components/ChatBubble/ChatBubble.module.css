@@ -55,7 +55,7 @@
   padding: 0.75rem 1rem;
   font-size: 1rem;
   line-height: 1.625;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
 }
 
 .bubble strong,
@@ -81,15 +81,15 @@
 
 .inlineCode {
   border-radius: 0.25rem;
-  background-color: var(--neutral-800);
+  background-color: var(--c-raw-010);
   padding: 0.125rem 0.375rem;
   font-family: monospace;
   font-size: 0.75rem;
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
 }
 
 .link {
-  color: var(--blue-400);
+  color: var(--c-raw-040);
   text-decoration: none;
 }
 
@@ -103,8 +103,8 @@
   max-width: 220px;
   overflow: hidden;
   border-radius: 1rem;
-  border: 1px solid var(--neutral-800);
-  background-color: var(--neutral-900);
+  border: 1px solid var(--c-raw-010);
+  background-color: var(--c-raw-012);
 }
 
 .image {
@@ -115,12 +115,12 @@
 }
 
 .imageCaption {
-  border-top: 1px solid var(--neutral-800);
-  background-color: var(--neutral-900);
+  border-top: 1px solid var(--c-raw-010);
+  background-color: var(--c-raw-012);
   padding: 0.5rem 0.75rem;
   text-align: center;
   font-size: 0.75rem;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
 }
 
 .footer {
@@ -140,7 +140,7 @@
 
 .timestamp {
   font-size: 0.75rem;
-  color: var(--neutral-500);
+  color: var(--c-raw-005);
 }
 
 .copyButton {
@@ -151,16 +151,16 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--neutral-500);
+  color: var(--c-raw-005);
   transition: color 0.2s;
 }
 
 .copyButton:hover {
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
 }
 
 .streamingContainer {
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
   line-height: 1.75;
   width: 100%;
   max-width: 100%;
@@ -176,7 +176,7 @@
 
 .heading {
   font-weight: 700;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   line-height: 1.3;
 }
 
@@ -192,10 +192,10 @@
 }
 
 .blockquote {
-  border-left: 3px solid var(--neutral-600);
+  border-left: 3px solid var(--c-raw-036);
   padding-left: 1em;
   margin: 0.5em 0;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   font-style: italic;
 }
 
@@ -203,7 +203,7 @@
   display: inline-block;
   margin-left: 2px;
   animation: "dim" 1s step-end infinite;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
 }
 
 .popIn {
@@ -232,7 +232,7 @@
   font-family: inherit;
   font-size: 1rem;
   line-height: 1.625;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   resize: vertical;
   min-height: 80px;
   outline: none;
@@ -247,7 +247,7 @@
   padding: 0.5rem;
   padding-bottom: 0;
   margin-bottom: -0.2rem;
-  background-color: var(--neutral-900);
+  background-color: var(--c-raw-012);
 }
 
 .saveButton,
@@ -261,8 +261,8 @@
 }
 
 .saveButton {
-  background-color: var(--neutral-100);
-  color: var(--neutral-900);
+  background-color: var(--c-raw-000);
+  color: var(--c-raw-012);
   border: none;
 }
 
@@ -272,13 +272,13 @@
 
 .cancelButton {
   background-color: transparent;
-  color: var(--neutral-400);
-  border: 1px solid var(--neutral-700);
+  color: var(--c-raw-004);
+  border: 1px solid var(--c-raw-008);
 }
 
 .cancelButton:hover {
-  background-color: var(--neutral-800);
-  color: var(--neutral-200);
+  background-color: var(--c-raw-010);
+  color: var(--c-raw-002);
 }
 
 .messageEditor {

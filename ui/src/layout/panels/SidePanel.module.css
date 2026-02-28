@@ -6,16 +6,16 @@
 
 
 .panel {
-  --bg-panel: var(--neutral-950);
-  --bg-subtle: var(--neutral-900);
-  --bg-hover: var(--neutral-800);
+  --bg-panel: var(--c-raw-013);
+  --bg-subtle: var(--c-raw-012);
+  --bg-hover: var(--c-raw-010);
 
   --text-main: #f5f5f5;
   --text-muted: #a3a3a3;
   --text-faint: #52525b;
 
-  --primary: #fafafa;
-  --danger: #ef4444;
+  --c-raw-014: #fafafa;
+  --c-raw-015: #ef4444;
 
   width: 280px;
   height: 100%;
@@ -329,7 +329,7 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 6px 18px;
-  background: var(--neutral-950);
+  background: var(--c-raw-013);
   border-bottom: 1px solid var(--border-color);
 }
 

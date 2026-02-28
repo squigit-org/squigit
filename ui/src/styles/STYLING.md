@@ -15,7 +15,7 @@ This project is **CSS Modules first**.
 
 ## Theme Tokens
 
-- Use CSS custom properties (for example `var(--neutral-900)`) in modules.
+- Use CSS custom properties (for example `var(--c-raw-012)`) in modules.
 - Keep token names synchronized with `tailwind.config.cjs` mappings.
 
 ## Imports

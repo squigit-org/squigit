@@ -51,7 +51,7 @@
 
 .loadingText,
 .metaText {
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
 }
 
 .errorText {

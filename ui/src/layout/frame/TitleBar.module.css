@@ -41,7 +41,7 @@
 .chatTitle {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -59,7 +59,7 @@
 .iconButton {
   padding: 0.375rem;
   border-radius: 0.375rem;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   background-color: transparent;
   border: none;
   cursor: pointer;

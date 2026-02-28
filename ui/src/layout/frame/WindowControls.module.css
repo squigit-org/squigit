@@ -32,7 +32,7 @@
 .windowsButton.winMinimize:hover,
 .windowsButton.winMaximize:hover {
   background-color: #3c3c3c;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
 }
 
 .windowsButton.winClose:hover {

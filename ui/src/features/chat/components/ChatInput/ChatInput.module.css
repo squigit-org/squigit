@@ -11,8 +11,8 @@
   justify-content: flex-end;
   gap: 12px;
   margin: 0 auto;
-  background-color: var(--neutral-900);
-  border: 1px solid var(--neutral-800);
+  background-color: var(--c-raw-012);
+  border: 1px solid var(--c-raw-010);
   border-radius: 24px;
   padding: 6px 20px 10px 16px;
   width: 100%;
@@ -47,7 +47,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  color: var(--neutral-500);
+  color: var(--c-raw-005);
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -56,7 +56,7 @@
 }
 
 .expandButton:hover {
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
 }
 
 .inputArea {
@@ -73,7 +73,7 @@
   padding: 4px 0;
   font-size: 16px;
   line-height: 24px;
-  color: var(--neutral-500);
+  color: var(--c-raw-005);
   pointer-events: none;
   white-space: pre-wrap;
   width: 100%;
@@ -87,7 +87,7 @@
   min-height: 32px;
   padding: 4px 0;
   font-size: 16px;
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
   background: transparent;
   border: none;
   outline: none;
@@ -161,7 +161,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -170,7 +170,7 @@
 }
 
 .iconButton:hover {
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
 }
 
 .keepProgressGroup {
@@ -193,7 +193,7 @@
   align-items: center;
   gap: 6px;
   font-size: 14px;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -202,11 +202,11 @@
 }
 
 .toggleItem:hover {
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
 }
 
 .toggleActive {
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
 }
 
 .submitButton {
@@ -215,21 +215,21 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  color: var(--neutral-500);
+  color: var(--c-raw-005);
   border-radius: 50%;
   cursor: not-allowed;
   transition: all 0.15s ease;
 }
 
 .submitActive {
-  color: var(--neutral-950);
-  background-color: var(--neutral-200);
-  border-color: var(--neutral-200);
+  color: var(--c-raw-013);
+  background-color: var(--c-raw-002);
+  border-color: var(--c-raw-002);
   cursor: pointer;
 }
 
 .submitActive:hover {
-  background-color: var(--neutral-100);
+  background-color: var(--c-raw-000);
 }
 
 .stopButton {
@@ -238,9 +238,9 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  color: var(--neutral-950);
-  background-color: var(--neutral-200);
-  border: 1px solid var(--neutral-200);
+  color: var(--c-raw-013);
+  background-color: var(--c-raw-002);
+  border: 1px solid var(--c-raw-002);
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -248,7 +248,7 @@
 }
 
 .stopButton:hover {
-  background-color: var(--neutral-100);
+  background-color: var(--c-raw-000);
 }
 
 .footer {
@@ -283,7 +283,7 @@
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;
@@ -291,7 +291,7 @@
 }
 
 .micButton:hover:not(:disabled) {
-  color: var(--neutral-200);
+  color: var(--c-raw-002);
 }
 
 .micButton:disabled {

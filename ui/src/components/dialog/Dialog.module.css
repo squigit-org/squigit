@@ -10,7 +10,7 @@
   top: var(--titlebar-height);
   width: 100%;
   height: calc(100% - var(--titlebar-height));
-  background-color: var(--overlay);
+  background-color: var(--c-raw-022);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -20,9 +20,9 @@
 .dialogContainer {
   position: relative;
   z-index: 10000;
-  background-color: var(--neutral-950);
+  background-color: var(--c-raw-013);
   border-radius: 12px;
-  border: 1px solid var(--neutral-800);
+  border: 1px solid var(--c-raw-010);
   padding: 1.5rem;
   width: 100%;
   max-width: 28rem;
@@ -49,7 +49,7 @@
 .title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   margin-bottom: 0.5rem;
   margin-top: 0;
 }
@@ -87,11 +87,11 @@
 }
 
 .messageDefault {
-  color: var(--neutral-300);
-  scrollbar-color: var(--neutral-700) transparent;
+  color: var(--c-raw-003);
+  scrollbar-color: var(--c-raw-008) transparent;
 }
 .messageDefault::-webkit-scrollbar-thumb {
-  background-color: var(--neutral-700);
+  background-color: var(--c-raw-008);
   border-radius: 3px;
 }
 
@@ -103,10 +103,10 @@
 }
 
 .iconError {
-  color: var(--red-200);
+  color: var(--c-raw-024);
 }
 .iconWarning {
-  color: var(--dialog-warning-icon-color);
+  color: var(--c-raw-027);
 }
 .iconInfo {
   color: #bfdbfe;
@@ -135,7 +135,7 @@
 .btnDanger {
   border-color: rgba(127, 29, 29, 0.5);
   background-color: rgba(69, 10, 10, 0.3);
-  color: var(--red-200);
+  color: var(--c-raw-024);
 }
 .btnDanger:hover {
   background-color: rgba(127, 29, 29, 0.5);
@@ -148,14 +148,14 @@
   border-color: #ffffff;
 }
 .btnPrimary:hover {
-  background-color: var(--neutral-100);
-  color: var(--neutral-900);
+  background-color: var(--c-raw-000);
+  color: var(--c-raw-012);
 }
 
 .btnSecondary {
-  border-color: var(--neutral-700);
-  background-color: var(--neutral-800);
-  color: var(--neutral-300);
+  border-color: var(--c-raw-008);
+  background-color: var(--c-raw-010);
+  color: var(--c-raw-003);
 }
 .btnSecondary:hover {
   background-color: #404040;

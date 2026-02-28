@@ -20,13 +20,13 @@
 .downloadTitle {
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   margin-bottom: 4px;
 }
 
 .downloadDesc {
   font-size: 0.78rem;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
 }
 
 .modelList {

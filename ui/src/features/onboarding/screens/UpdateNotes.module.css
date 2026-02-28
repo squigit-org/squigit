@@ -196,6 +196,6 @@
 }
 
 .updateButton:hover {
-  background-color: var(--neutral-100);
-  color: var(--neutral-900);
+  background-color: var(--c-raw-000);
+  color: var(--c-raw-012);
 }

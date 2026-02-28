@@ -14,96 +14,96 @@
     "Segoe UI",
     sans-serif;
 
-  --neutral-100: #d1d1d1;
-  --neutral-150: #b1b1b1;
-  --neutral-200: #cccccc;
-  --neutral-300: #b2b2b2;
-  --neutral-400: #999999;
-  --neutral-500: #808080;
-  --neutral-550: #ececec;
-  --neutral-650: #2c2c2c;
-  --neutral-700: #5f5f5f;
-  --neutral-750: #00000034;
-  --neutral-800: #232323;
-  --neutral-850: #101010;
-  --neutral-900: #171717;
-  --neutral-950: #0f0f0f;
+  --c-raw-000: #d1d1d1;
+  --c-raw-001: #b1b1b1;
+  --c-raw-002: #cccccc;
+  --c-raw-003: #b2b2b2;
+  --c-raw-004: #999999;
+  --c-raw-005: #808080;
+  --c-raw-006: #ececec;
+  --c-raw-007: #2c2c2c;
+  --c-raw-008: #5f5f5f;
+  --c-raw-009: #00000034;
+  --c-raw-010: #232323;
+  --c-raw-011: #101010;
+  --c-raw-012: #171717;
+  --c-raw-013: #0f0f0f;
 
-  --primary: #1d1d1d;
-  --danger: #d32f2f;
-  --success: #18221f;
-  --done: #181e22;
-  --dark: #0d1117;
-  --light: #dfe6ec;
-  --gray: #6a737d;
-  --blue: #46658380;
-  --overlay: #00000060;
-  --glow: #ffffff1f;
+  --c-raw-014: #1d1d1d;
+  --c-raw-015: #d32f2f;
+  --c-raw-016: #18221f;
+  --c-raw-017: #181e22;
+  --c-raw-018: #0d1117;
+  --c-raw-019: #dfe6ec;
+  --c-raw-020: #6a737d;
+  --c-raw-021: #46658380;
+  --c-raw-022: #00000060;
+  --c-raw-023: #ffffff1f;
   --border-radius: 12px;
   --shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
   --transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
   --titlebar-height: 44px;
 
-  --red-200: #ffcccc;
-  --red-900-50: #ffc0c08e;
-  --red-500-60: #ff5e5ea1;
+  --c-raw-024: #ffcccc;
+  --c-raw-025: #ffc0c08e;
+  --c-raw-026: #ff5e5ea1;
 
-  --dialog-warning-icon-color: #fde68a;
+  --c-raw-027: #fde68a;
 
-  --chat-input-border: rgba(255, 255, 255, 0.2);
+  --c-raw-028: rgba(255, 255, 255, 0.2);
 
-  --chat-input-focus-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  --c-raw-029: 0 0 15px rgba(255, 255, 255, 0.1);
 
-  --brand-primary: #874dca;
-  --lens-svg-color: #8ab4f8;
-  --lens-hover-bg: rgba(138, 180, 248, 0.2);
-  --lens-border-c1: #4285f4;
-  --lens-border-c2: #9b5de5;
-  --lens-border-c3: #f15bb5;
+  --c-raw-030: #874dca;
+  --c-raw-031: #8ab4f8;
+  --c-raw-032: rgba(138, 180, 248, 0.2);
+  --c-raw-033: #4285f4;
+  --c-raw-034: #9b5de5;
+  --c-raw-035: #f15bb5;
 
   color: #e5e5e5;
-  background-color: var(--neutral-950);
+  background-color: var(--c-raw-013);
 }
 
 body.light-mode,
 html.light {
-  --neutral-100: #463c3c;
-  --neutral-150: #5c5c5c;
-  --neutral-200: #424242;
-  --neutral-300: #5e5e5e;
-  --neutral-400: #252525;
-  --neutral-500: #292929;
-  --neutral-550: #0c0c0c;
-  --neutral-650: #d3d3d3;
-  --neutral-700: #b8b8b8;
-  --neutral-750: #00000013;
-  --neutral-800: #e0e0e0;
-  --neutral-850: #f2f2f2;
-  --neutral-900: #f5f5f5;
-  --neutral-950: #ffffff;
+  --c-raw-000: #463c3c;
+  --c-raw-001: #5c5c5c;
+  --c-raw-002: #424242;
+  --c-raw-003: #5e5e5e;
+  --c-raw-004: #252525;
+  --c-raw-005: #292929;
+  --c-raw-006: #0c0c0c;
+  --c-raw-007: #d3d3d3;
+  --c-raw-008: #b8b8b8;
+  --c-raw-009: #00000013;
+  --c-raw-010: #e0e0e0;
+  --c-raw-011: #f2f2f2;
+  --c-raw-012: #f5f5f5;
+  --c-raw-013: #ffffff;
 
-  --primary: #f0f0f0;
-  --danger: #d32f2f;
-  --success: #aed6b1;
-  --done: #96bdda;
-  --dark: #f5f5f5;
-  --light: #292a2b;
-  --gray: #666666;
-  --blue: #6088b180;
-  --overlay: #00000036;
-  --glow: #00000071;
+  --c-raw-014: #f0f0f0;
+  --c-raw-015: #d32f2f;
+  --c-raw-016: #aed6b1;
+  --c-raw-017: #96bdda;
+  --c-raw-018: #f5f5f5;
+  --c-raw-019: #292a2b;
+  --c-raw-020: #666666;
+  --c-raw-021: #6088b180;
+  --c-raw-022: #00000036;
+  --c-raw-023: #00000071;
 
-  --red-200: #5c0000;
-  --red-900-50: #944c4c8e;
-  --red-500-60: #6e0000a1;
+  --c-raw-024: #5c0000;
+  --c-raw-025: #944c4c8e;
+  --c-raw-026: #6e0000a1;
 
-  --lens-svg-color: #4285f4;
-  --lens-hover-bg: rgba(66, 133, 244, 0.15);
+  --c-raw-031: #4285f4;
+  --c-raw-032: rgba(66, 133, 244, 0.15);
 
-  --dialog-warning-icon-color: #d97706;
-  --chat-input-border: rgba(0, 0, 0, 0.2);
-  --chat-input-focus-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+  --c-raw-027: #d97706;
+  --c-raw-028: rgba(0, 0, 0, 0.2);
+  --c-raw-029: 0 0 15px rgba(0, 0, 0, 0.15);
   color: #333333;
 
-  background-color: var(--neutral-950);
+  background-color: var(--c-raw-013);
 }

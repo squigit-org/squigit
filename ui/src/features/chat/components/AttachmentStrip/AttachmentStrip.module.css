@@ -49,7 +49,7 @@
 
 .scrollbarThumb {
   height: 6px;
-  background-color: var(--neutral-500);
+  background-color: var(--c-raw-005);
   border-radius: 3px;
   cursor: grab;
   touch-action: none;
@@ -64,12 +64,12 @@
 }
 
 .scrollbarThumb:hover {
-  background-color: var(--neutral-400);
+  background-color: var(--c-raw-004);
 }
 
 .scrollbarThumb:active {
   cursor: grabbing;
-  background-color: var(--neutral-300);
+  background-color: var(--c-raw-003);
 }
 
 /* ─── Thumbnail wrapper ──────────────────────────────────────────────────── */
@@ -80,13 +80,13 @@
   border-radius: 10px;
   cursor: pointer;
   border: none;
-  box-shadow: 0 0 0 1px var(--neutral-800);
+  box-shadow: 0 0 0 1px var(--c-raw-010);
   overflow: visible;
   transform: translateZ(0);
 }
 
 .thumbWrapper:focus-visible {
-  box-shadow: 0 0 0 2px var(--neutral-400);
+  box-shadow: 0 0 0 2px var(--c-raw-004);
 }
 
 /* ─── Image thumbnail ────────────────────────────────────────────────────── */
@@ -112,7 +112,7 @@
   align-items: stretch;
   width: 140px;
   height: 60px;
-  background-color: var(--neutral-900);
+  background-color: var(--c-raw-012);
   border-radius: 9px;
   overflow: hidden;
 }
@@ -143,7 +143,7 @@
 
 .fileName {
   font-size: 11px;
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -162,10 +162,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--neutral-700);
-  border: 1px solid var(--neutral-600);
+  background-color: var(--c-raw-008);
+  border: 1px solid var(--c-raw-036);
   border-radius: 50%;
-  color: var(--neutral-300);
+  color: var(--c-raw-003);
   cursor: pointer;
   z-index: 99990;
   opacity: 0;

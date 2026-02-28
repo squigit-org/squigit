@@ -38,25 +38,25 @@
   font-size: 0.8125rem;
   cursor: pointer;
   transition: all 0.15s ease;
-  color: var(--neutral-400);
-  border: 1px solid var(--neutral-800);
+  color: var(--c-raw-004);
+  border: 1px solid var(--c-raw-010);
   user-select: none;
   width: 100%;
   max-width: 400px;
 }
 
 .radioAction:hover {
-  border-color: var(--neutral-600);
-  color: var(--neutral-200);
+  border-color: var(--c-raw-036);
+  color: var(--c-raw-002);
 }
 
 .radioSelected {
-  border-color: var(--neutral-500);
-  color: var(--neutral-100);
+  border-color: var(--c-raw-005);
+  color: var(--c-raw-000);
 }
 
 .radioInput {
-  accent-color: var(--neutral-100);
+  accent-color: var(--c-raw-000);
   width: 14px;
   height: 14px;
   cursor: pointer;
@@ -66,11 +66,11 @@
   margin-top: 2rem;
   padding-left: 1rem;
   font-size: 0.8125rem;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
 }
 
 .licenseText a {
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   font-weight: 500;
   text-underline-offset: 4px;
 }

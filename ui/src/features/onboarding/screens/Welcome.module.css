@@ -14,7 +14,7 @@
   height: 100%;
   margin: 0;
   box-sizing: border-box;
-  background-color: var(--neutral-950);
+  background-color: var(--c-raw-013);
   color: var(--accent);
   display: flex;
   align-items: center;
@@ -40,7 +40,7 @@
 .title {
   font-size: 28px;
   font-weight: 500;
-  color: var(--neutral-100);
+  color: var(--c-raw-000);
   margin: 0;
   letter-spacing: -0.5px;
 }

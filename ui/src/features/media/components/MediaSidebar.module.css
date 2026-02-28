@@ -38,7 +38,7 @@
   border-radius: 8px;
   background: transparent;
   border: none;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
@@ -60,7 +60,7 @@
   height: 30px;
   background: transparent;
   border: none;
-  color: var(--neutral-400);
+  color: var(--c-raw-004);
   cursor: pointer;
   display: flex;
   align-items: center;
