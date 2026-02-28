@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 .content {
   min-height: 100%;
   padding-left: 15px;
@@ -38,7 +37,7 @@
   font-size: 0.8125rem;
   cursor: pointer;
   transition: all 0.15s ease;
-  color: var(--c-raw-004);
+  color: var(--c-raw-050);
   border: 1px solid var(--c-raw-010);
   user-select: none;
   width: 100%;
@@ -47,16 +46,15 @@
 
 .radioAction:hover {
   border-color: var(--c-raw-036);
-  color: var(--c-raw-002);
 }
 
 .radioSelected {
   border-color: var(--c-raw-005);
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
 }
 
 .radioInput {
-  accent-color: var(--c-raw-000);
+  accent-color: var(--c-raw-050);
   width: 14px;
   height: 14px;
   cursor: pointer;
@@ -66,11 +64,11 @@
   margin-top: 2rem;
   padding-left: 1rem;
   font-size: 0.8125rem;
-  color: var(--c-raw-004);
+  color: var(--c-raw-050);
 }
 
 .licenseText a {
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
   font-weight: 500;
   text-underline-offset: 4px;
 }

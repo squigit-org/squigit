@@ -3,6 +3,35 @@
 
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
+/// Returns the initial background color based on the saved theme preference,
+/// falling back to system theme detection.
+fn initial_bg_color(app: &AppHandle) -> tauri::window::Color {
+    let is_light = match resolve_saved_theme(app) {
+        Some(theme) => theme == "light",
+        None => crate::services::theme::get_system_theme() == "light",
+    };
+
+    if is_light {
+        tauri::window::Color(255, 255, 255, 255) // --c-raw-013 light: #ffffff
+    } else {
+        tauri::window::Color(15, 15, 15, 255) // --c-raw-013 dark: #0f0f0f
+    }
+}
+
+/// Reads the saved theme preference from preferences.json.
+/// Returns None if the theme is "system" or if reading fails.
+fn resolve_saved_theme(app: &AppHandle) -> Option<String> {
+    let config_dir = crate::utils::get_app_config_dir(app);
+    let prefs_file = config_dir.join("preferences.json");
+    let content = std::fs::read_to_string(prefs_file).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&content).ok()?;
+    let theme = json.get("theme")?.as_str()?;
+    match theme {
+        "light" | "dark" => Some(theme.to_string()),
+        _ => None, // "system" → fall back to system detection
+    }
+}
+
 pub fn calculate_dynamic_window(
     app: &AppHandle,
     base_w: f64,
@@ -75,7 +104,7 @@ pub fn spawn_app_window(
         .visible(visible)
         .resizable(true)
         .decorations(false)
-        .background_color(tauri::window::Color(10, 10, 10, 255))
+        .background_color(initial_bg_color(app))
         .build()
         .map_err(|e| e.to_string())?;
 

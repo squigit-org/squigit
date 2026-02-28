@@ -10,7 +10,7 @@
   position: absolute;
   inset: 0;
   height: 100%;
-  color: var(--foreground);
+  color: var(--c-raw-050);
   overflow: hidden;
   overflow: hidden;
 }
@@ -64,9 +64,6 @@
   margin-bottom: 0.5rem;
   border-radius: 0.5rem;
   overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--card);
-  flex-shrink: 0;
   flex-shrink: 0;
 }
 
@@ -76,12 +73,7 @@
   padding: 1rem;
   cursor: pointer;
   user-select: none;
-  background: var(--card);
   transition: background-color 0.2s;
-}
-
-.sectionHeader:hover {
-  background: var(--accent);
 }
 
 .chevron {
@@ -89,7 +81,7 @@
   height: 16px;
   margin-right: 0.75rem;
   transition: transform 0.2s ease;
-  color: var(--muted-foreground);
+  color: var(--c-raw-050);
 }
 
 .chevronRotate {
@@ -123,15 +115,13 @@
   margin: 0;
   padding: 0 1rem 1rem 2.75rem;
   font-size: 0.875rem;
-  color: var(--muted-foreground);
+  color: var(--c-raw-050);
   line-height: 1.6;
 }
 
 .footer {
   width: 100%;
   padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border);
-  background: var(--card);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -155,14 +145,13 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: var(--accent);
+  background: transparent;
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
-  border: 1px solid var(--border);
 }
 
 .downloadIcon {
-  color: var(--accent);
+  color: var(--c-raw-050);
 }
 
 .versionInfo {
@@ -173,19 +162,19 @@
 
 .versionLabel {
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--c-raw-050);
   font-size: 0.75rem;
 }
 
 .sizeLabel {
-  color: var(--muted-foreground);
+  color: var(--c-raw-050);
   font-size: 0.75rem;
 }
 
 .updateButton {
   padding: 0.625rem 1.25rem;
-  background-color: var(--c-raw-036);
-  color: var(--c-raw-042);
+  background-color: var(--c-raw-050);
+  color: var(--c-raw-012);
   border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
@@ -193,9 +182,4 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.updateButton:hover {
-  background-color: var(--c-raw-000);
-  color: var(--c-raw-012);
 }

@@ -31,7 +31,7 @@
 .sectionTitle {
   font-size: 1.3rem;
   font-weight: 600;
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -58,7 +58,7 @@
   gap: 0.625rem;
   padding: 0.875rem 1.25rem;
   background-color: var(--c-raw-040);
-  border: 1px solid var(--c-raw-038);
+  border: 1px solid var(--c-raw-043);
   border-radius: 6px;
   color: var(--c-raw-003);
   font-size: 0.875rem;
@@ -72,7 +72,6 @@
 .actionButton:hover {
   background-color: var(--c-raw-047);
   border-color: var(--c-raw-144);
-  color: var(--c-raw-000);
   transform: translateY(-1px) translateZ(0);
 }
 
@@ -106,7 +105,7 @@
   left: 35px;
   top: 92px;
   font-weight: 600;
-  color: var(--c-raw-113);
+  color: var(--c-raw-050);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -178,6 +177,7 @@
   border: none;
   color: var(--c-raw-112);
   font-size: inherit;
+  text-decoration: underline;
   text-decoration-color: var(--c-raw-036);
   cursor: pointer;
   padding: 0;

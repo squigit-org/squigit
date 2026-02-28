@@ -30,13 +30,13 @@ const CursorSvg = () => (
       fillRule="evenodd"
       clipRule="evenodd"
       d="M147.915 305.849L112.725 320.636L53.5669 179.754L88.6993 164.947L147.915 305.849Z"
-      fill="var(--c-raw-042)"
+      fill="var(--c-raw-018)"
     />
     <path
       fillRule="evenodd"
       clipRule="evenodd"
       d="M19.0833 45.9883V259.738L75.7417 204.982L83.9094 202.327H174.899L19.0833 45.9883Z"
-      fill="var(--c-raw-042)"
+      fill="var(--c-raw-018)"
     />
   </svg>
 );

@@ -7,11 +7,10 @@
 .menu {
   position: fixed;
   background-color: var(--c-raw-012);
+  border: 1px solid var(--c-raw-043);
   border-radius: 12px;
-  box-shadow:
-    0 20px 25px -5px var(--c-raw-045),
-    0 10px 10px -5px var(--c-raw-044);
-  color: var(--c-raw-078);
+  box-shadow: 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  color: var(--c-raw-050);
   font-family: "Inter", sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
@@ -83,7 +82,7 @@
 .divider {
   width: 1px;
   height: 16px;
-  background-color: var(--c-raw-054);
+  background-color: var(--c-raw-043);
   margin: 0 2px;
 }
 

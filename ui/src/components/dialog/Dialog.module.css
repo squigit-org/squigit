@@ -49,7 +49,7 @@
 .title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
   margin-bottom: 0.5rem;
   margin-top: 0;
 }
@@ -87,7 +87,7 @@
 }
 
 .messageDefault {
-  color: var(--c-raw-003);
+  color: var(--c-raw-050);
   scrollbar-color: var(--c-raw-008) transparent;
 }
 .messageDefault::-webkit-scrollbar-thumb {
@@ -135,55 +135,17 @@
 .btnDanger {
   border-color: var(--c-raw-052);
   background-color: var(--c-raw-148);
-  color: var(--c-raw-024);
-}
-.btnDanger:hover {
-  background-color: var(--c-raw-052);
-  border-color: var(--c-raw-140);
+  color: var(--c-raw-050);
 }
 
 .btnPrimary {
   background-color: var(--c-raw-036);
-  color: var(--c-raw-042);
+  color: var(--c-raw-064);
   border-color: var(--c-raw-036);
-}
-.btnPrimary:hover {
-  background-color: var(--c-raw-000);
-  color: var(--c-raw-012);
 }
 
 .btnSecondary {
   border-color: var(--c-raw-008);
   background-color: var(--c-raw-010);
-  color: var(--c-raw-003);
-}
-.btnSecondary:hover {
-  background-color: var(--c-raw-096);
-  color: var(--c-raw-080);
-  border-color: var(--c-raw-102);
-}
-
-body.light-mode .iconInfo {
-  color: var(--c-raw-089);
-}
-body.light-mode .iconUpdate {
-  color: var(--c-raw-100);
-}
-
-body.light-mode .btnSecondary:hover {
-  background-color: var(--c-raw-000) !important;
-  color: var(--c-raw-012) !important;
-  border-color: var(--c-raw-108) !important;
-}
-
-body.light-mode .btnPrimary:hover {
-  background-color: var(--c-raw-057) !important;
-  color: var(--c-raw-036) !important;
-  border-color: var(--c-raw-057) !important;
-}
-
-body.light-mode .btnDanger:hover {
-  background-color: var(--c-raw-135) !important;
-  border-color: var(--c-raw-136) !important;
-  color: var(--c-raw-105) !important;
+  color: var(--c-raw-050);
 }

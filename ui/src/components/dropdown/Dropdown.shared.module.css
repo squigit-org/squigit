@@ -29,10 +29,6 @@
   background-color: var(--c-raw-038);
 }
 
-.trigger.active {
-  background-color: var(--c-raw-048);
-}
-
 .triggerUp {
   font-size: 14px;
   padding: 0;
@@ -41,11 +37,6 @@
 .triggerUp:hover {
   background-color: transparent;
   color: var(--c-raw-002);
-}
-
-.triggerUp.active {
-  background-color: transparent;
-  color: var(--c-raw-000);
 }
 
 .label {
@@ -128,7 +119,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--c-raw-050);
+  color: var(--c-raw-057);
 }
 
 .divider {
@@ -167,7 +158,7 @@
   text-align: left;
   transition: background-color 0.15s ease;
   font-family: "Inter", sans-serif;
-  color: var(--c-raw-039);
+  color: var(--c-raw-046);
   font-size: 0.85rem;
   font-weight: 500;
 }
@@ -181,7 +172,7 @@
 }
 
 .checkIcon {
-  color: var(--c-raw-036);
+  color: var(--c-raw-050);
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -203,14 +194,13 @@
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.85rem;
-  color: var(--c-raw-118);
+  color: var(--c-raw-046);
   transition: all 0.15s ease;
   font-family: "Inter", sans-serif;
 }
 
 .actionButton:hover {
   background-color: var(--c-raw-047);
-  color: var(--c-raw-039);
 }
 
 .spin {

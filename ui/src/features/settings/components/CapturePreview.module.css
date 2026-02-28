@@ -11,7 +11,6 @@
   align-items: center;
   justify-content: center;
   background-color: transparent;
-
   transform: translateZ(0);
   backface-visibility: hidden;
   perspective: 1000px;
@@ -40,7 +39,7 @@
   z-index: 10;
   border-radius: 19px 19px 19px 0px;
   border: 0px solid var(--c-raw-114);
-  background-color: var(--c-raw-037);
+  background-color: transparent;
   opacity: 0;
   will-change: width, height, border-width;
   animation:
@@ -102,17 +101,14 @@
   width: 23px;
   height: 33px;
   z-index: 20;
-
   offset-anchor: 0% 0%;
   offset-path: path(
     "M 133,33 C 100,25 67,30 50,50 C 25,75 33,117 58,142 C 83,158 133,150 150,125 C 167,100 158,50 133,33 Z"
   );
   offset-rotate: 0deg;
-
   will-change: offset-distance;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   filter: drop-shadow(0 2px 3px var(--c-raw-044));
-
   animation: "moveCursorFree" 3s infinite;
 }

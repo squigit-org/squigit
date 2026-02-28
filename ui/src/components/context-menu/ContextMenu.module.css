@@ -5,7 +5,7 @@
  */
 
 .contextMenu {
-  background: var(--c-raw-012);
+  background: var(--c-raw-147);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 4px 12px var(--c-raw-084);
@@ -68,6 +68,6 @@
 
 .separator {
   height: 1px;
-  background: var(--c-raw-057);
+  background: var(--c-raw-041);
   margin: 2px 0;
 }

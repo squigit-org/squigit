@@ -5,17 +5,12 @@
  */
 
 .container {
-  --muted: var(--c-raw-050);
-  --accent: var(--c-raw-060);
-  --border: var(--c-raw-092);
-  --key-bg: var(--c-raw-056);
-
   width: 100%;
   height: 100%;
   margin: 0;
   box-sizing: border-box;
   background-color: var(--c-raw-013);
-  color: var(--accent);
+  color: var(--c-raw-060);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -62,7 +57,7 @@
 
 .actionLabel {
   font-size: 14px;
-  color: var(--muted);
+  color: var(--c-raw-050);
   font-weight: 400;
 }
 
@@ -129,8 +124,8 @@
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: var(--accent);
-  border: 2px dashed var(--border);
+  color: var(--c-raw-060);
+  border: 2px dashed var(--c-raw-092);
   margin: 16px;
   border-radius: 12px;
   pointer-events: none;

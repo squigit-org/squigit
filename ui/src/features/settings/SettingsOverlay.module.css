@@ -110,8 +110,7 @@
 }
 
 .sidebarButton.active {
-  background-color: var(--c-raw-048);
-  color: var(--c-raw-039);
+  background-color: var(--c-raw-038);
 }
 
 .content {

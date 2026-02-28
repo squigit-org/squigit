@@ -31,7 +31,7 @@
 .sectionTitle {
   font-size: 1.3rem;
   font-weight: 600;
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -52,7 +52,7 @@
   border-radius: 0.85rem;
   overflow: visible;
   background-color: var(--c-raw-053);
-  border: 1px solid var(--c-raw-040);
+  border: 1px solid var(--c-raw-041);
 }
 
 .glowProviderRow {
@@ -76,7 +76,7 @@
 .providerName {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
 }
 
 .providerMeta {
@@ -85,6 +85,8 @@
 }
 
 .accordionContent {
+  padding: 7px;
+  padding-bottom: 0;
   display: grid;
   grid-template-rows: 1fr;
 }
@@ -147,6 +149,10 @@
   font-size: 0.8rem;
   transition: border-color 0.2s;
   border: 1px solid var(--c-raw-047);
+}
+
+.modernInput::placeholder {
+  color: var(--c-raw-004);
 }
 
 .modernInput:focus {

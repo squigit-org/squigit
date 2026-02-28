@@ -93,7 +93,7 @@
 .accountName {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--c-raw-039);
+  color: var(--c-raw-046);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -8,7 +8,7 @@
   position: relative;
   background: transparent;
   padding: 0;
-  cursor: pointer;
+  cursor: default;
   transition: transform 0.2s ease;
   will-change: transform;
   --mouse-x: 50%;

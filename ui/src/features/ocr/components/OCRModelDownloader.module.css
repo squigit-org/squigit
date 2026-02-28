@@ -20,7 +20,7 @@
 .downloadTitle {
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
   margin-bottom: 4px;
 }
 
@@ -53,13 +53,13 @@
   justify-content: space-between;
   padding: 10px 12px;
   background-color: var(--c-raw-053);
-  border: 1px solid var(--c-raw-040);
+  border: 1px solid var(--c-raw-043);
   border-radius: 8px;
   transition: background-color 0.15s ease;
 }
 
 .modelRow:hover {
-  background-color: var(--c-raw-043);
+  background-color: var(--c-raw-038);
 }
 
 .modelRowInfo {
@@ -71,7 +71,7 @@
 .modelName {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--c-raw-039);
+  color: var(--c-raw-050);
 }
 
 .modelSize {
@@ -95,7 +95,6 @@
 
 .downloadButton:hover:not(:disabled) {
   background-color: var(--c-raw-037);
-  color: var(--c-raw-036);
 }
 
 .downloadButton:active:not(:disabled) {

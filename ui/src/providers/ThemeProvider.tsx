@@ -66,6 +66,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     document.documentElement.classList.toggle("dark", targetTheme === "dark");
     document.documentElement.style.colorScheme = targetTheme;
     document.body.classList.toggle("light-mode", targetTheme === "light");
+
+    // Sync native window background color with CSS --c-raw-013
+    const bgColor = targetTheme === "light" ? "#ffffff" : "#0f0f0f";
+    invoke("set_background_color", { color: bgColor }).catch(() => {});
   }, []);
 
   const setTheme = useCallback((newTheme: "light" | "dark" | "system") => {

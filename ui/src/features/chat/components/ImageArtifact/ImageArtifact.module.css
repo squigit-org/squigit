@@ -48,7 +48,7 @@
   border-radius: 6px;
   background: transparent;
   border: none;
-  color: var(--c-raw-004);
+  color: var(--c-raw-050);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -60,7 +60,6 @@
 
 .actionBtn:hover:not(:disabled) {
   background-color: var(--c-raw-010);
-  color: var(--c-raw-000);
 }
 
 .actionBtn:disabled {
@@ -75,14 +74,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: var(--c-raw-141);
+  background-color: var(--c-raw-012);
+  border: 1px solid var(--c-raw-043);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 8px;
   padding: 6px 4px;
   gap: 6px;
   box-shadow: 0 4px 12px var(--c-raw-044);
-  border: 1px solid var(--c-raw-037);
   z-index: 100;
   user-select: none;
 }
@@ -114,7 +113,7 @@
   border-radius: 9999px;
   background: transparent;
   border: none;
-  color: var(--c-raw-046);
+  color: var(--c-raw-050);
   cursor: pointer;
   transition:
     background-color 0.2s,
@@ -125,7 +124,6 @@
 }
 
 .toolBtn:hover {
-  background-color: var(--c-raw-037);
   color: var(--c-raw-036);
 }
 

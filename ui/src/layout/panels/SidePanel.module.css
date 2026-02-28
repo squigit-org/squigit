@@ -4,29 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 .panel {
-  --bg-panel: var(--c-raw-013);
-  --bg-subtle: var(--c-raw-012);
-  --bg-hover: var(--c-raw-010);
-
-  --text-main: var(--c-raw-080);
-  --text-muted: var(--c-raw-106);
-  --text-faint: var(--c-raw-073);
-
-  --c-raw-014: var(--c-raw-060);
-  --c-raw-015: var(--c-raw-059);
-
   width: 280px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-panel);
+  background: var(--c-raw-013);
   font-family:
     system-ui,
     -apple-system,
     sans-serif;
-  color: var(--text-main);
+  color: var(--c-raw-050);
   user-select: none;
   flex-shrink: 0;
   position: relative;
@@ -40,7 +28,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--bg-panel);
+  background: var(--c-raw-013);
   border-bottom: 1px solid transparent;
 }
 
@@ -101,19 +89,19 @@
   border-radius: 8px;
   background: transparent;
   border: 1px solid transparent;
-  color: var(--text-muted);
+  color: var(--c-raw-106);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .iconBtn:hover {
-  background: var(--bg-hover);
-  color: var(--text-main);
+  background: var(--c-raw-010);
+  color: var(--c-raw-050);
 }
 
 .iconBtn.active {
-  background: var(--bg-hover);
-  color: var(--text-main);
+  background: var(--c-raw-010);
+  color: var(--c-raw-050);
 }
 
 .iconBtn:disabled {
@@ -157,7 +145,7 @@
 .groupTitle {
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--c-raw-106);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0;
@@ -165,7 +153,7 @@
 
 .groupChevron {
   width: 12px;
-  color: var(--text-muted);
+  color: var(--c-raw-106);
   transition: transform 0.2s;
   transform: translateZ(0);
 }
@@ -194,7 +182,7 @@
 .groupEmpty {
   padding: 8px 12px;
   font-size: 0.8rem;
-  color: var(--text-faint);
+  color: var(--c-raw-073);
   font-style: italic;
 }
 
@@ -206,7 +194,7 @@
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
-  color: var(--text-main);
+  color: var(--c-raw-050);
   height: 38px;
   transition: background 0.15s ease;
 }
@@ -217,22 +205,22 @@
 
 .chatRow.active {
   background: var(--c-raw-067);
-  color: var(--text-main);
+  color: var(--c-raw-050);
 }
 
 .chatIconMain {
-  color: var(--text-muted);
+  color: var(--c-raw-106);
   flex-shrink: 0;
 }
 
 .chatRow.active .chatIconMain {
-  color: var(--text-main);
+  color: var(--c-raw-050);
 }
 
 .chatTitleInput {
   flex: 1;
   background: transparent;
-  color: var(--text-main);
+  color: var(--c-raw-050);
   font-size: 0.85rem;
   padding: 2px 4px;
   border-radius: 4px;
@@ -246,13 +234,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--text-muted);
+  color: var(--c-raw-106);
   font-weight: 400;
 }
 
 .chatRow:hover .chatTitle,
 .chatRow.active .chatTitle {
-  color: var(--text-main);
+  color: var(--c-raw-050);
 }
 
 .chatActions {
@@ -280,7 +268,7 @@
   border-radius: 4px;
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: var(--c-raw-106);
   transition: all 0.2s;
 }
 
@@ -303,7 +291,7 @@
 
 .starBtn:hover {
   background: transparent;
-  color: var(--text-main);
+  color: var(--c-raw-050);
 }
 
 .starBtn:hover svg {
@@ -321,7 +309,7 @@
 
 .menuBtn:hover {
   background: transparent;
-  color: var(--text-main);
+  color: var(--c-raw-050);
 }
 
 .selectionHeader {
@@ -352,11 +340,11 @@
 .selectionCount {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--c-raw-050);
 }
 
 .labelAll {
-  color: var(--text-muted);
+  color: var(--c-raw-106);
   font-size: 0.85rem;
   font-weight: 500;
 }
@@ -364,7 +352,7 @@
 .checkbox {
   width: 16px;
   height: 16px;
-  border: 1px solid var(--text-muted);
+  border: 1px solid var(--c-raw-106);
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -374,9 +362,9 @@
   cursor: pointer;
 }
 .checkbox.checked {
-  background: var(--text-main);
-  border-color: var(--text-main);
+  background: var(--c-raw-050);
+  border-color: var(--c-raw-050);
 }
 .checkboxInner {
-  color: var(--bg-panel);
+  color: var(--c-raw-013);
 }

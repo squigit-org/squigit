@@ -31,7 +31,7 @@
 .sectionTitle {
   font-size: 1.3rem;
   font-weight: 600;
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -71,14 +71,10 @@
   flex: 1;
   flex-direction: column;
   background-color: var(--c-raw-053);
-  border: 1px solid var(--c-raw-040);
+  border: 1px solid var(--c-raw-041);
   border-radius: 0.75rem;
   padding: 0.75rem;
   transition: border-color 0.2s;
-}
-
-.textareaWrapper:focus-within {
-  border-color: var(--c-raw-038);
 }
 
 .textarea {
@@ -86,7 +82,7 @@
   flex: 1;
   background: transparent;
   border: none;
-  color: var(--c-raw-000);
+  color: var(--c-raw-050);
   font-family: inherit;
   font-size: 0.85rem;
   line-height: 1.5;

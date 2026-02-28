@@ -24,7 +24,7 @@
   height: 30px;
   border-radius: 8px;
   border: 1px solid var(--c-raw-048);
-  background: var(--c-raw-090);
+  background: var(--c-raw-064);
   color: var(--c-raw-002);
   display: inline-flex;
   align-items: center;
@@ -50,7 +50,7 @@
   overflow: auto;
   border-radius: 10px;
   border: 1px solid var(--c-raw-041);
-  background: var(--c-raw-055);
+  background: var(--c-raw-064);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,6 +58,31 @@
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-raw-058) transparent;
+}
+
+.imageScrollArea::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.imageScrollArea::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px;
+}
+
+.imageScrollArea::-webkit-scrollbar-thumb {
+  background: var(--c-raw-058);
+  border-radius: 3px;
+}
+
+.imageScrollArea::-webkit-scrollbar-thumb:hover {
+  background: var(--c-raw-049);
+}
+
+.imageScrollArea::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .imageScrollArea *,
