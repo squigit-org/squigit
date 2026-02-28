@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .container {
   display: flex;
   align-items: center;
@@ -44,7 +42,7 @@
   -webkit-background-clip: text;
   background-clip: text;
 
-  animation: shimmer 2s infinite linear;
+  animation: "shimmer" 2s infinite linear;
 
   will-change: background-position;
   transform: translateZ(0);

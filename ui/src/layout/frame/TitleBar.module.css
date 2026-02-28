@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .rotating {
-  animation: rotate 1s linear infinite;
+  animation: "rotate" 1s linear infinite;
 }
 
 .header {
@@ -83,7 +81,7 @@
   background-color: rgba(255, 255, 255, 0.12);
 }
 
-:global(body.has-open-dialog) .iconButton {
+body.has-open-dialog .iconButton {
   pointer-events: none;
   cursor: default;
   opacity: 0.7;

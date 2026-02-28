@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .searchContainer {
   display: flex;
   align-items: center;
@@ -132,7 +130,7 @@
 }
 
 .spinner {
-  animation: rotate 1s linear infinite;
+  animation: "rotate" 1s linear infinite;
 }
 
 .placeholder {
@@ -346,7 +344,7 @@
   position: relative;
 }
 
-.floatingContainer :global(.imageToolbar) {
+.floatingContainer .imageToolbar {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
@@ -355,7 +353,7 @@
     visibility 0.3s;
 }
 
-.floatingContainer.expanded :global(.imageToolbar) {
+.floatingContainer.expanded .imageToolbar {
   opacity: 0.94;
   pointer-events: auto;
   visibility: visible;
@@ -443,5 +441,5 @@
 }
 
 .spinning {
-  animation: rotate 1s linear infinite;
+  animation: "rotate" 1s linear infinite;
 }

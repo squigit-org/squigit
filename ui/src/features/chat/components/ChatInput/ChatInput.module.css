@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .container {
   display: flex;
   position: relative;
@@ -304,7 +302,7 @@
 .recording {
   background: #ef4444 !important;
   color: white !important;
-  animation: pulse 1.5s infinite;
+  animation: "pulse" 1.5s infinite;
 }
 
 .icon {

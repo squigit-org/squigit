@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .container {
   width: 100%;
   height: 100%;
@@ -46,10 +44,10 @@
   opacity: 0;
   will-change: width, height, border-width;
   animation:
-    boxWidth 3s infinite,
-    boxHeight 3s infinite,
-    boxFade 3s linear infinite,
-    boxBorder 3s linear infinite;
+    "boxWidth" 3s infinite,
+    "boxHeight" 3s infinite,
+    "boxFade" 3s linear infinite,
+    "boxBorder" 3s linear infinite;
 }
 
 .cursorRectWrapper {
@@ -60,7 +58,7 @@
   height: 0;
   z-index: 20;
   will-change: transform;
-  animation: cursorXRect 3s infinite;
+  animation: "cursorXRect" 3s infinite;
 }
 
 .cursorRectInner {
@@ -71,7 +69,7 @@
   height: 33px;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
   will-change: transform;
-  animation: cursorYRect 3s infinite;
+  animation: "cursorYRect" 3s infinite;
 }
 
 .squiggleSvg {
@@ -94,7 +92,7 @@
   stroke-dasharray: 500;
   stroke-dashoffset: 500;
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.6));
-  animation: drawStroke 3s linear infinite;
+  animation: "drawStroke" 3s linear infinite;
 }
 
 .cursorSquiggle {
@@ -116,5 +114,5 @@
   backface-visibility: hidden;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
 
-  animation: moveCursorFree 3s infinite;
+  animation: "moveCursorFree" 3s infinite;
 }

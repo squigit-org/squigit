@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .wrapper {
   display: flex;
   width: 100%;
@@ -204,12 +202,13 @@
 .cursor {
   display: inline-block;
   margin-left: 2px;
-  animation: dim 1s step-end infinite;
+  animation: "dim" 1s step-end infinite;
   color: var(--neutral-400);
 }
 
 .popIn {
-  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: "popIn" 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)
+    forwards;
   transform-origin: top center;
 }
 
@@ -314,7 +313,7 @@
   margin: 0.5rem 0;
 }
 
-.bubble :global(.katex) {
+.bubble .katex {
   display: inline-block;
   white-space: nowrap;
 }

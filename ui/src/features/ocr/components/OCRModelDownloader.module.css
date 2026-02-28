@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .downloadSection {
   display: flex;
   flex-direction: column;
@@ -115,7 +113,7 @@
 }
 
 .spin {
-  animation: rotate 1s linear infinite;
+  animation: "rotate" 1s linear infinite;
 }
 
 .circularProgress {

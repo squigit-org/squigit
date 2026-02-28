@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .container {
   width: 100%;
   display: flex;
@@ -157,7 +155,7 @@
 }
 
 .inputWrapper.error .modernInput {
-  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  animation: "shake" 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   border: 1px solid #e0443e;
 }
 

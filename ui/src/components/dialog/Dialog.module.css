@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/styles/animations.css";
-
 .dialogOverlay {
   position: fixed;
   inset: 0;
@@ -29,7 +27,7 @@
   width: 100%;
   max-width: 28rem;
 
-  animation: dialogAppear 50ms ease-out forwards;
+  animation: "dialogAppear" 50ms ease-out forwards;
 }
 
 .header {
@@ -165,26 +163,26 @@
   border-color: #737373;
 }
 
-:global(body.light-mode) .iconInfo {
+body.light-mode .iconInfo {
   color: #1e3a8a;
 }
-:global(body.light-mode) .iconUpdate {
+body.light-mode .iconUpdate {
   color: #6b21a8;
 }
 
-:global(body.light-mode) .btnSecondary:hover {
+body.light-mode .btnSecondary:hover {
   background-color: #d1d1d1 !important;
   color: #171717 !important;
   border-color: #bbbbbb !important;
 }
 
-:global(body.light-mode) .btnPrimary:hover {
+body.light-mode .btnPrimary:hover {
   background-color: #333333 !important;
   color: #ffffff !important;
   border-color: #333333 !important;
 }
 
-:global(body.light-mode) .btnDanger:hover {
+body.light-mode .btnDanger:hover {
   background-color: rgba(220, 38, 38, 0.15) !important;
   border-color: rgba(220, 38, 38, 0.5) !important;
   color: #991b1b !important;
