@@ -20,6 +20,22 @@ import { useSystemState } from "./useSystemState";
 import { useSystemAuth } from "../auth/useSystemAuth";
 import { useSystemApiKeys } from "./useSystemApiKeys";
 
+const ACTIVE_PROFILE_SET_RETRIES = 4;
+const ACTIVE_PROFILE_RETRY_DELAY_MS = 50;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isTransientProfileReadError = (error: unknown) => {
+  const message = String(error).toLowerCase();
+  return (
+    message.includes("json error") &&
+    (message.includes("eof while parsing") || message.includes("unexpected end"))
+  );
+};
+
+const isMissingProfileError = (error: unknown) =>
+  String(error).toLowerCase().includes("profile not found");
+
 export const useSystemSync = () => {
   const prefs = useSystemPreferences();
   const profile = useSystemProfile();
@@ -39,13 +55,65 @@ export const useSystemSync = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const setPreferredActiveProfile = async (profileId: string) => {
+      let lastError: unknown = null;
+
+      for (let attempt = 1; attempt <= ACTIVE_PROFILE_SET_RETRIES; attempt++) {
+        if (cancelled) return;
+
+        try {
+          await commands.setActiveProfile(profileId);
+          return;
+        } catch (e) {
+          lastError = e;
+
+          if (
+            !isTransientProfileReadError(e) ||
+            attempt === ACTIVE_PROFILE_SET_RETRIES
+          ) {
+            break;
+          }
+
+          console.warn(
+            `[useSystemSync] Transient profile read error restoring ${profileId}. Retry ${attempt}/${ACTIVE_PROFILE_SET_RETRIES}.`,
+            e,
+          );
+          await wait(ACTIVE_PROFILE_RETRY_DELAY_MS * attempt);
+        }
+      }
+
+      if (cancelled) return;
+
+      if (isMissingProfileError(lastError)) {
+        console.warn(
+          `[useSystemSync] Preferred profile ${profileId} no longer exists. Healing state back to Guest.`,
+        );
+        await prefs.updatePreferences({ activeAccount: "Guest" });
+        return;
+      }
+
+      console.error(
+        `[useSystemSync] Failed to restore preferred profile ${profileId}. Keeping saved preference to avoid unintended sign-out.`,
+        lastError,
+      );
+    };
+
     const init = async () => {
       const appConstants = await commands.getAppConstants();
-      const agreed = await checkAgreement();
+      if (cancelled) return;
+
+      const agreed = await hasAgreedFlag();
+      if (cancelled) return;
+
+      state.setHasAgreed(agreed);
       state.setAppName(appConstants.appName || "SnapLLM");
 
       if (agreed) {
         const loadedPrefs = await loadPreferences();
+        if (cancelled) return;
+
         console.log("[useSystemSync] Loaded prefs:", loadedPrefs);
 
         const loadedPrompt = loadedPrefs.prompt || appConstants.defaultPrompt;
@@ -89,14 +157,7 @@ export const useSystemSync = () => {
         );
 
         if (activeAccountId && activeAccountId !== "Guest") {
-          try {
-            await commands.setActiveProfile(activeAccountId);
-          } catch (e) {
-            console.warn(
-              `[useSystemSync] Profile ${activeAccountId} corrupted or missing on disk (Original Error: ${e}). Healing state back to Guest.`,
-            );
-            await prefs.updatePreferences({ activeAccount: "Guest" });
-          }
+          await setPreferredActiveProfile(activeAccountId);
         } else {
           try {
             await invoke("logout");
@@ -108,6 +169,8 @@ export const useSystemSync = () => {
         prefs.setTheme("system");
 
         const loadedPrefs = await loadPreferences();
+        if (cancelled) return;
+
         console.log("[useSystemSync] Loaded prefs (not agreed):", loadedPrefs);
 
         const loadedPrompt = loadedPrefs.prompt || appConstants.defaultPrompt;
@@ -141,9 +204,15 @@ export const useSystemSync = () => {
         } catch (e) {}
       }
 
-      state.setPrefsLoaded(true);
+      if (!cancelled) {
+        state.setPrefsLoaded(true);
+      }
     };
     init();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loadProfileData = async () => {
@@ -313,6 +382,21 @@ export const useSystemSync = () => {
     }
   };
 
+  const deleteProfile = async (profileId: string) => {
+    try {
+      await profile.deleteProfile(profileId);
+
+      profile.setProfiles((current) =>
+        current.filter((candidate) => candidate.id !== profileId),
+      );
+
+      await loadProfileData();
+    } catch (e) {
+      console.error("Failed to delete profile:", e);
+      throw e;
+    }
+  };
+
   const resetSession = () => {
     state.setStartupImage(null);
     state.setSessionChatTitle(null);
@@ -372,7 +456,7 @@ export const useSystemSync = () => {
     switchProfile,
     addAccount: auth.addAccount,
     cancelAuth: auth.cancelAuth,
-    deleteProfile: profile.deleteProfile,
+    deleteProfile,
     showExistingProfileDialog: profile.showExistingProfileDialog,
     setShowExistingProfileDialog: profile.setShowExistingProfileDialog,
     prefsLoaded: state.prefsLoaded,

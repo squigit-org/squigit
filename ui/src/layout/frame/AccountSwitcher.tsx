@@ -25,7 +25,7 @@ interface AccountSwitcherProps {
   onNewSession: () => void;
   onAddAccount: () => void;
   onLogout: () => void;
-  onDeleteProfile: (profileId: string) => void;
+  onDeleteProfile: (profileId: string) => Promise<void>;
   switchingProfileId?: string | null;
 }
 

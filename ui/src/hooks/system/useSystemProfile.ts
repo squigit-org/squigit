@@ -37,12 +37,7 @@ export const useSystemProfile = () => {
   };
 
   const deleteProfile = async (profileId: string) => {
-    try {
-      await commands.deleteProfile(profileId);
-      // Let the caller handle reloading if necessary, or we could pass loadProfileData as a prop
-    } catch (e) {
-      console.error("Failed to delete profile:", e);
-    }
+    await commands.deleteProfile(profileId);
   };
 
   return {

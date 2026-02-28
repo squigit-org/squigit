@@ -55,12 +55,6 @@ pub async fn set_active_profile(profile_id: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let store = ProfileStore::new().map_err(|e| e.to_string())?;
 
-        // Update last_used_at timestamp
-        if let Some(mut profile) = store.get_profile(&profile_id).map_err(|e| e.to_string())? {
-            profile.touch();
-            store.upsert_profile(&profile).map_err(|e| e.to_string())?;
-        }
-
         store
             .set_active_profile_id(&profile_id)
             .map_err(|e| e.to_string())
