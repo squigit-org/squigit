@@ -13,6 +13,7 @@ import {
 } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { commands } from "@/lib";
+import { migrateOcrModelId } from "@/lib";
 
 export interface UserPreferences {
   model: string;
@@ -80,9 +81,21 @@ export async function loadPreferences(): Promise<UserPreferences> {
     const content = await readTextFile(constants.preferencesFileName, {
       baseDir: BaseDirectory.AppConfig,
     });
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(content) as Partial<UserPreferences>;
 
-    return { ...defaultPrefs, ...parsed };
+    const migratedOcrLanguage = migrateOcrModelId(parsed.ocrLanguage);
+    const merged = {
+      ...defaultPrefs,
+      ...parsed,
+      ...(migratedOcrLanguage ? { ocrLanguage: migratedOcrLanguage } : {}),
+    };
+
+    // One-time on-load rewrite for legacy OCR model IDs.
+    if (parsed.ocrLanguage && parsed.ocrLanguage !== migratedOcrLanguage) {
+      await savePreferences(merged);
+    }
+
+    return merged;
   } catch (error) {
     console.error("Failed to load preferences:", error);
     return await getDefaultPreferences();

@@ -25,76 +25,52 @@ export interface OcrModelStatus extends OcrModel {
 
 export const AVAILABLE_MODELS: OcrModel[] = [
   {
-    id: "pp-ocr-v4-en",
-    name: "PP-OCR-V4 English",
+    id: "pp-ocr-v5-en",
+    name: "PP-OCR-V5 English",
     lang: "en",
-    size: "11 MB",
+    size: "~16 MB",
     downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv4/english/en_PP-OCRv4_rec_infer.tar",
+      "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/en_PP-OCRv5_mobile_rec_infer.tar",
   },
   {
-    id: "pp-ocr-v4-ru",
-    name: "PP-OCR-V4 Russian",
+    id: "pp-ocr-v5-latin",
+    name: "PP-OCR-V5 Latin",
+    lang: "la",
+    size: "~17 MB",
+    downloadUrl:
+      "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/latin_PP-OCRv5_mobile_rec_infer.tar",
+  },
+  {
+    id: "pp-ocr-v5-cyrillic",
+    name: "PP-OCR-V5 Cyrillic",
     lang: "ru",
-    size: "12 MB",
+    size: "~17 MB",
     downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv3/multilingual/cyrillic_PP-OCRv3_rec_infer.tar",
+      "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/cyrillic_PP-OCRv5_mobile_rec_infer.tar",
   },
   {
-    id: "pp-ocr-v4-ko",
-    name: "PP-OCR-V4 Korean",
+    id: "pp-ocr-v5-korean",
+    name: "PP-OCR-V5 Korean",
     lang: "ko",
-    size: "15 MB",
+    size: "~18 MB",
     downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv4/multilingual/korean_PP-OCRv4_rec_infer.tar",
+      "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/korean_PP-OCRv5_mobile_rec_infer.tar",
   },
   {
-    id: "pp-ocr-v4-ja",
-    name: "PP-OCR-V4 Japanese",
-    lang: "ja",
-    size: "14 MB",
-    downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv4/multilingual/japan_PP-OCRv4_rec_infer.tar",
-  },
-  {
-    id: "pp-ocr-v4-zh",
-    name: "PP-OCR-V4 Chinese",
+    id: "pp-ocr-v5-cjk",
+    name: "PP-OCR-V5 CJK",
     lang: "ch",
-    size: "16 MB",
+    size: "~83 MB",
     downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv4/chinese/ch_PP-OCRv4_rec_infer.tar",
+      "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_server_rec_infer.tar",
   },
   {
-    id: "pp-ocr-v4-es",
-    name: "PP-OCR-V4 Spanish",
-    lang: "es",
-    size: "11 MB",
-    downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv4/multilingual/spanish_PP-OCRv4_rec_infer.tar",
-  },
-  {
-    id: "pp-ocr-v4-it",
-    name: "PP-OCR-V4 Italian",
-    lang: "it",
-    size: "11 MB",
-    downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv4/multilingual/it_PP-OCRv4_rec_infer.tar",
-  },
-  {
-    id: "pp-ocr-v4-pt",
-    name: "PP-OCR-V4 Portuguese",
-    lang: "pt",
-    size: "11 MB",
-    downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv4/multilingual/pt_PP-OCRv4_rec_infer.tar",
-  },
-  {
-    id: "pp-ocr-v4-hi",
-    name: "PP-OCR-V4 Hindi",
+    id: "pp-ocr-v5-devanagari",
+    name: "PP-OCR-V5 Devanagari",
     lang: "hi",
-    size: "18 MB",
+    size: "~17 MB",
     downloadUrl:
-      "https://paddleocr.bj.bcebos.com/PP-OCRv4/multilingual/hindi_PP-OCRv4_rec_infer.tar",
+      "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/devanagari_PP-OCRv5_mobile_rec_infer.tar",
   },
 ];
 

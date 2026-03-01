@@ -51,7 +51,9 @@ pub fn list_downloaded_models(
             let entry = entry.map_err(|e| e.to_string())?;
             let path = entry.path();
             if path.is_dir() {
-                if path.join("inference.pdmodel").exists() {
+                let has_graph =
+                    path.join("inference.pdmodel").exists() || path.join("inference.json").exists();
+                if has_graph && path.join("inference.pdiparams").exists() {
                     if let Some(name) = path.file_name() {
                         models.push(name.to_string_lossy().to_string());
                     }

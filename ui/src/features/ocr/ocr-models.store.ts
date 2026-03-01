@@ -9,7 +9,7 @@ import { OcrModelStatus, AVAILABLE_MODELS } from "./ocr-models.types";
 import { getInstalledModelIds } from "./services/modelRegistry";
 import { downloadModel } from "./services/modelDownloader";
 
-import { commands } from "@/lib";
+import { commands, DEFAULT_OCR_MODEL_ID, migrateOcrModelId } from "@/lib";
 
 interface DownloadProgressPayload {
   id: string;
@@ -31,7 +31,7 @@ export interface ModelsState {
 export const useModelsStore = create<ModelsState>((set, get) => ({
   models: AVAILABLE_MODELS.map((m) => ({
     ...m,
-    state: m.id === "pp-ocr-v4-en" ? "downloaded" : "idle",
+    state: m.id === DEFAULT_OCR_MODEL_ID ? "downloaded" : "idle",
   })),
   isLoading: true,
 
@@ -40,10 +40,12 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
   refresh: async () => {
     set({ isLoading: true });
     try {
-      const installedIds = await getInstalledModelIds();
+      const installedIds = (await getInstalledModelIds()).map(
+        (id) => migrateOcrModelId(id) || id,
+      );
 
-      if (!installedIds.includes("pp-ocr-v4-en")) {
-        installedIds.push("pp-ocr-v4-en");
+      if (!installedIds.includes(DEFAULT_OCR_MODEL_ID)) {
+        installedIds.push(DEFAULT_OCR_MODEL_ID);
       }
 
       set((state) => ({

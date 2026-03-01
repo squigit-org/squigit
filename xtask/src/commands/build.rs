@@ -1,11 +1,11 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::fs;
 use xtask::{capture_sidecar_dir, qt_native_dir};
-use xtask::{copy_dir_all, project_root, run_cmd, run_cmd_with_node_bin};
 use xtask::{ocr_sidecar_dir, venv_python};
+use xtask::{project_root, run_cmd, run_cmd_with_node_bin};
 use xtask::{tauri_dir, ui_dir};
 
 use crate::commands::pkg;
@@ -81,7 +81,24 @@ pub fn ocr() -> Result<()> {
     let venv = sidecar.join("venv");
     if !venv.exists() {
         println!("\nCreating virtual environment...");
-        run_cmd("python3", &["-m", "venv", "venv"], &sidecar)?;
+        let mut created = false;
+
+        for (cmd, args) in [
+            ("python3", vec!["-m", "venv", "venv"]),
+            ("python", vec!["-m", "venv", "venv"]),
+            ("py", vec!["-3", "-m", "venv", "venv"]),
+        ] {
+            if run_cmd(cmd, &args, &sidecar).is_ok() {
+                created = true;
+                break;
+            }
+        }
+
+        if !created {
+            anyhow::bail!(
+                "Failed to create OCR venv. Ensure Python 3 is available via `python3`, `python`, or `py -3`."
+            );
+        }
     }
     println!("\nInstalling dependencies...");
     let pip = if cfg!(windows) {
@@ -98,37 +115,10 @@ pub fn ocr() -> Result<()> {
     println!("\nApplying patches...");
     let python = venv_python();
     let py = python.to_str().unwrap();
-    run_cmd(py, &["patches/paddleocr.py"], &sidecar)?;
     run_cmd(py, &["patches/paddle_core.py"], &sidecar)?;
-    run_cmd(py, &["patches/cpp_extension.py"], &sidecar)?;
-    run_cmd(py, &["patches/iaa_augment.py"], &sidecar)?;
 
     println!("\nDownloading models...");
     run_cmd(py, &["download_models.py"], &sidecar)?;
-
-    let home = dirs::home_dir().context("Could not find home directory")?;
-    let cache = home.join(".paddleocr").join("whl");
-    let models_dir = sidecar.join("models");
-    fs::create_dir_all(&models_dir)?;
-    let model_mappings = [
-        ("det/en/en_PP-OCRv3_det_infer", "en_PP-OCRv3_det"),
-        ("rec/en/en_PP-OCRv4_rec_infer", "en_PP-OCRv4_rec"),
-        (
-            "cls/ch_ppocr_mobile_v2.0_cls_infer",
-            "ch_ppocr_mobile_v2.0_cls",
-        ),
-    ];
-    for (src_rel, dst_name) in model_mappings {
-        let src = cache.join(src_rel);
-        let dst = models_dir.join(dst_name);
-        if src.exists() {
-            if dst.exists() {
-                fs::remove_dir_all(&dst)?;
-            }
-            copy_dir_all(&src, &dst)?;
-            println!("  Copied {} -> {}", src_rel, dst_name);
-        }
-    }
 
     println!("\nBuilding executable...");
     let pyinstaller = if cfg!(windows) {
@@ -165,17 +155,21 @@ pub fn whisper() -> Result<()> {
     println!("\nBuilding Whisper STT sidecar...");
     let sidecar = xtask::whisper_sidecar_dir();
     let build_dir = sidecar.join("build");
-    
+
     fs::create_dir_all(&build_dir)?;
-    
+
     // Run CMake config
     println!("\nRunning CMake config...");
     run_cmd("cmake", &["..", "-DCMAKE_BUILD_TYPE=Release"], &build_dir)?;
-    
+
     // Run CMake build
     println!("\nRunning CMake build...");
-    run_cmd("cmake", &["--build", ".", "--config", "Release"], &build_dir)?;
-    
+    run_cmd(
+        "cmake",
+        &["--build", ".", "--config", "Release"],
+        &build_dir,
+    )?;
+
     println!("\nSidecar build complete!");
     crate::commands::pkg::whisper()?;
     Ok(())

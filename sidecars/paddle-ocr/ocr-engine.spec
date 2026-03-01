@@ -2,12 +2,26 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import sys
-import os
+from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 if sys.platform == "win32":
     site_packages = "venv/Lib/site-packages"
 else:
     site_packages = f"venv/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+
+metadata_datas = []
+for dist_name in [
+    "paddlepaddle",
+    "paddleocr",
+    "paddlex",
+    "imagesize",
+    "opencv-contrib-python",
+    "pyclipper",
+    "pypdfium2",
+    "python-bidi",
+    "shapely",
+]:
+    metadata_datas += copy_metadata(dist_name)
 
 a = Analysis(
     ['src/main.py'],
@@ -16,17 +30,16 @@ a = Analysis(
     datas=[
         (f'{site_packages}/paddle/libs', 'paddle/libs'),
         (f'{site_packages}/paddleocr', 'paddleocr'),
+        (f'{site_packages}/paddlex', 'paddlex'),
         ('models', 'models'),
         ('src', 'src'),
-    ],
-    hiddenimports=[
+    ] + metadata_datas,
+    hiddenimports=collect_submodules('paddleocr')
+    + collect_submodules('paddlex')
+    + [
         'requests',
         'PIL.ImageDraw',
         'PIL.ImageFont',
-        'shapely',
-        'pyclipper',
-        'imgaug',
-        'lmdb',
     ],
     hookspath=[],
     hooksconfig={},

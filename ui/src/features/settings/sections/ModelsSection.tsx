@@ -7,7 +7,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components";
-import { UserPreferences } from "@/lib";
+import { UserPreferences, DEFAULT_OCR_MODEL_ID } from "@/lib";
 import { OCRModelDownloader, useModelsStore, getModelById } from "@/features";
 
 interface ModelsSectionProps {
@@ -33,7 +33,7 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
 
   const activeOcrModel =
     installedModels.find((m) => m.id === ocrLanguage) ??
-    getModelById("pp-ocr-v4-en");
+    getModelById(DEFAULT_OCR_MODEL_ID);
 
   const handleModelSelect = useCallback(
     (id: string) => {

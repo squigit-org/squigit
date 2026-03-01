@@ -130,11 +130,12 @@ class OCRResult:
         """
         Convert result to dictionary for JSON serialization.
         
-        @return Dictionary with text and box fields.
+        @return Dictionary with text, box, and confidence fields.
         """
         return {
             "text": self.text,
             "box": self.box.to_list(),
+            "confidence": self.confidence,
         }
     
     def to_json(self) -> str:

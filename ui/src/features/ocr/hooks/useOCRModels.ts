@@ -11,6 +11,7 @@ import {
   getInstalledModelIds,
   downloadModel,
 } from "@/features";
+import { DEFAULT_OCR_MODEL_ID, migrateOcrModelId } from "@/lib";
 
 export const useOCRModels = () => {
   const [ocrModels, setOCRModels] = useState<OcrModelStatus[]>(() =>
@@ -21,7 +22,9 @@ export const useOCRModels = () => {
   const refreshOCRModels = useCallback(async () => {
     setIsLoading(true);
     try {
-      const installedIds = await getInstalledModelIds();
+      const installedIds = (await getInstalledModelIds()).map(
+        (id) => migrateOcrModelId(id) || id,
+      );
       setOCRModels((prevModels) =>
         prevModels.map((model) => {
           const isInstalled = installedIds.includes(model.id);
@@ -43,7 +46,7 @@ export const useOCRModels = () => {
   useEffect(() => {
     setOCRModels((prev) =>
       prev.map((m) =>
-        m.id === "pp-ocr-v4-en" ? { ...m, state: "downloaded" } : m,
+        m.id === DEFAULT_OCR_MODEL_ID ? { ...m, state: "downloaded" } : m,
       ),
     );
     refreshOCRModels();

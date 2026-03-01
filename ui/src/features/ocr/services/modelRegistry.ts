@@ -23,7 +23,7 @@ export const getInstalledModelIds = async (): Promise<string[]> => {
 
 /**
  * Gets the local file system path for a given model ID.
- * @param modelId - The ID of the model (e.g., "pp-ocr-v4-en").
+ * @param modelId - The ID of the model (e.g., "pp-ocr-v5-en").
  * @returns A promise that resolves to the model's path, or null if not found.
  */
 export const getModelPath = async (modelId: string): Promise<string | null> => {

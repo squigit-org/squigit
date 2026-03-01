@@ -79,7 +79,7 @@ class EngineConfig:
         """
         if self.det_model_path:
             return self.det_model_path
-        return str(self.model_dir / "en_PP-OCRv3_det")
+        return str(self.model_dir / "PP-OCRv5_server_det")
     
     @property
     def rec_model_dir(self) -> str:
@@ -89,7 +89,7 @@ class EngineConfig:
         """
         if self.rec_model_path:
             return self.rec_model_path
-        return str(self.model_dir / "en_PP-OCRv4_rec")
+        return str(self.model_dir / "en_PP-OCRv5_mobile_rec")
     
     @property
     def cls_model_dir(self) -> str:
@@ -99,4 +99,4 @@ class EngineConfig:
         """
         if self.cls_model_path:
             return self.cls_model_path
-        return str(self.model_dir / "ch_ppocr_mobile_v2.0_cls")
+        return str(self.model_dir / "PP-LCNet_x1_0_textline_ori")

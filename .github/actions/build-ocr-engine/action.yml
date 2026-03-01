@@ -1,12 +1,17 @@
 name: "Build OCR Engine"
 description: "Builds the Python-based PaddleOCR standalone executable"
+inputs:
+  python-version:
+    description: "Python version used to build the OCR sidecar"
+    required: false
+    default: "3.13"
 runs:
   using: "composite"
   steps:
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.12"
+        python-version: ${{ inputs.python-version }}
 
     - name: Build OCR Engine
       shell: bash

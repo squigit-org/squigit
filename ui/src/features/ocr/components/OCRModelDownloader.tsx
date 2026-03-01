@@ -8,7 +8,7 @@ import React, { useState } from "react";
 import { Download, Check, Loader2, X } from "lucide-react";
 import { useModelsStore } from "@/features";
 import { Dialog } from "@/components";
-import { getErrorDialog } from "@/lib";
+import { getErrorDialog, DEFAULT_OCR_MODEL_ID } from "@/lib";
 import styles from "./OCRModelDownloader.module.css";
 
 const CircularProgress: React.FC<{ progress: number }> = ({ progress }) => (
@@ -82,7 +82,7 @@ export const OCRModelDownloader: React.FC = () => {
     await cancelDownload(id);
   };
 
-  const downloadableModels = models.filter((m) => m.id !== "pp-ocr-v4-en");
+  const downloadableModels = models.filter((m) => m.id !== DEFAULT_OCR_MODEL_ID);
 
   return (
     <div className={styles.downloadSection}>

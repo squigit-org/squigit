@@ -1,0 +1,53 @@
+name: "OCR Build Matrix"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "sidecars/paddle-ocr/**"
+      - "xtask/**"
+      - ".github/actions/build-ocr-engine/**"
+      - ".github/workflows/ocr-build-matrix.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "sidecars/paddle-ocr/**"
+      - "xtask/**"
+      - ".github/actions/build-ocr-engine/**"
+      - ".github/workflows/ocr-build-matrix.yml"
+
+jobs:
+  build-ocr:
+    name: OCR ${{ matrix.os_name }} / py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            os_name: Linux-x64
+            python-version: "3.12"
+          - os: ubuntu-latest
+            os_name: Linux-x64
+            python-version: "3.13"
+          - os: windows-latest
+            os_name: Windows-x64
+            python-version: "3.12"
+          - os: windows-latest
+            os_name: Windows-x64
+            python-version: "3.13"
+          - os: macos-latest
+            os_name: macOS-ARM
+            python-version: "3.12"
+          - os: macos-latest
+            os_name: macOS-ARM
+            python-version: "3.13"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build OCR Engine
+        uses: ./.github/actions/build-ocr-engine
+        with:
+          python-version: ${{ matrix.python-version }}

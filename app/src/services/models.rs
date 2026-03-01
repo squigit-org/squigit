@@ -44,6 +44,41 @@ struct DownloadProgressPayload {
     status: String,
 }
 
+fn canonical_ocr_model_id(model_id: &str) -> &str {
+    match model_id {
+        "pp-ocr-v4-en" => "pp-ocr-v5-en",
+        "pp-ocr-v4-ru" => "pp-ocr-v5-cyrillic",
+        "pp-ocr-v4-ko" => "pp-ocr-v5-korean",
+        "pp-ocr-v4-ja" => "pp-ocr-v5-cjk",
+        "pp-ocr-v4-zh" => "pp-ocr-v5-cjk",
+        "pp-ocr-v4-es" => "pp-ocr-v5-latin",
+        "pp-ocr-v4-it" => "pp-ocr-v5-latin",
+        "pp-ocr-v4-pt" => "pp-ocr-v5-latin",
+        "pp-ocr-v4-hi" => "pp-ocr-v5-devanagari",
+        _ => model_id,
+    }
+}
+
+fn legacy_ocr_model_aliases(canonical_model_id: &str) -> &'static [&'static str] {
+    match canonical_model_id {
+        "pp-ocr-v5-en" => &["pp-ocr-v4-en"],
+        "pp-ocr-v5-cyrillic" => &["pp-ocr-v4-ru"],
+        "pp-ocr-v5-korean" => &["pp-ocr-v4-ko"],
+        "pp-ocr-v5-cjk" => &["pp-ocr-v4-ja", "pp-ocr-v4-zh"],
+        "pp-ocr-v5-latin" => &["pp-ocr-v4-es", "pp-ocr-v4-it", "pp-ocr-v4-pt"],
+        "pp-ocr-v5-devanagari" => &["pp-ocr-v4-hi"],
+        _ => &[],
+    }
+}
+
+fn has_model_graph_file(model_dir: &Path) -> bool {
+    model_dir.join("inference.pdmodel").exists() || model_dir.join("inference.json").exists()
+}
+
+fn is_model_dir_ready(model_dir: &Path) -> bool {
+    has_model_graph_file(model_dir) && model_dir.join("inference.pdiparams").exists()
+}
+
 pub struct ModelManager {
     models_dir: PathBuf,
     cancellation_tokens: Arc<Mutex<HashMap<String, CancellationToken>>>,
@@ -51,6 +86,16 @@ pub struct ModelManager {
 }
 
 impl ModelManager {
+    fn resolve_legacy_model_dir(&self, canonical_model_id: &str) -> Option<PathBuf> {
+        for legacy_id in legacy_ocr_model_aliases(canonical_model_id) {
+            let legacy_dir = self.models_dir.join(legacy_id);
+            if legacy_dir.exists() && is_model_dir_ready(&legacy_dir) {
+                return Some(legacy_dir);
+            }
+        }
+        None
+    }
+
     pub fn new() -> Result<Self> {
         let config_dir = dirs::config_dir().ok_or(ModelError::NoConfigDir)?;
         let models_dir = config_dir
@@ -74,18 +119,28 @@ impl ModelManager {
     }
 
     pub fn get_model_dir(&self, model_id: &str) -> PathBuf {
-        self.models_dir.join(model_id)
+        if model_id.is_empty() {
+            return self.models_dir.clone();
+        }
+
+        let canonical_id = canonical_ocr_model_id(model_id);
+        let canonical_dir = self.models_dir.join(canonical_id);
+        if canonical_dir.exists() {
+            return canonical_dir;
+        }
+
+        self.resolve_legacy_model_dir(canonical_id)
+            .unwrap_or(canonical_dir)
     }
 
     fn get_temp_file_path(&self, model_id: &str) -> PathBuf {
-        self.models_dir.join(format!("temp_{}.tar", model_id))
+        let canonical_id = canonical_ocr_model_id(model_id);
+        self.models_dir.join(format!("temp_{}.tar", canonical_id))
     }
 
     pub fn is_model_installed(&self, model_id: &str) -> bool {
         let dir = self.get_model_dir(model_id);
-        dir.exists()
-            && dir.join("inference.pdmodel").exists()
-            && dir.join("inference.pdiparams").exists()
+        dir.exists() && is_model_dir_ready(&dir)
     }
 
     pub fn cancel_download(&self, model_id: &str) {
@@ -381,22 +436,27 @@ impl ModelManager {
             let mut entry = entry?;
             let path = entry.path()?;
 
-            let file_name = path.file_name();
-            if let Some(name) = file_name {
-                let name_str = name.to_string_lossy();
-                if name_str == "inference.pdmodel"
-                    || name_str == "inference.pdiparams"
-                    || name_str == "inference.pdiparams.info"
-                {
-                    let dest = target_dir.join(name);
-                    entry.unpack(dest)?;
-                }
+            if !entry.header().entry_type().is_file() {
+                continue;
+            }
+
+            if let Some(name) = path.file_name() {
+                // Flatten archive paths into model dir; keeps required metadata files
+                // (e.g. inference.yml / inference.json) from PP3 model bundles.
+                let dest = target_dir.join(name);
+                entry.unpack(dest)?;
             }
         }
 
-        if !target_dir.join("inference.pdmodel").exists() {
+        if !has_model_graph_file(target_dir) {
             return Err(ModelError::Extraction(
-                "Archive did not contain inference.pdmodel".to_string(),
+                "Archive did not contain inference.pdmodel or inference.json".to_string(),
+            ));
+        }
+
+        if !target_dir.join("inference.pdiparams").exists() {
+            return Err(ModelError::Extraction(
+                "Archive did not contain inference.pdiparams".to_string(),
             ));
         }
 

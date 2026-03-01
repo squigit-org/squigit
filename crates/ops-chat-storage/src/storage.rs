@@ -8,7 +8,54 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 
 use crate::error::{Result, StorageError};
-use crate::types::{ChatData, ChatMetadata, ChatMessage, OcrFrame, OcrRegion, StoredImage};
+use crate::types::{ChatData, ChatMessage, ChatMetadata, OcrFrame, OcrRegion, StoredImage};
+
+const DEFAULT_OCR_MODEL_ID: &str = "pp-ocr-v5-en";
+
+fn migrate_ocr_model_id(model_id: &str) -> &str {
+    match model_id {
+        "pp-ocr-v4-en" => "pp-ocr-v5-en",
+        "pp-ocr-v4-ru" => "pp-ocr-v5-cyrillic",
+        "pp-ocr-v4-ko" => "pp-ocr-v5-korean",
+        "pp-ocr-v4-ja" => "pp-ocr-v5-cjk",
+        "pp-ocr-v4-zh" => "pp-ocr-v5-cjk",
+        "pp-ocr-v4-es" => "pp-ocr-v5-latin",
+        "pp-ocr-v4-it" => "pp-ocr-v5-latin",
+        "pp-ocr-v4-pt" => "pp-ocr-v5-latin",
+        "pp-ocr-v4-hi" => "pp-ocr-v5-devanagari",
+        _ => model_id,
+    }
+}
+
+fn migrate_ocr_frame_ids(frame: &mut OcrFrame) -> bool {
+    let keys: Vec<String> = frame.keys().cloned().collect();
+    let mut changed = false;
+
+    for old_key in keys {
+        let new_key = migrate_ocr_model_id(&old_key);
+        if new_key == old_key {
+            continue;
+        }
+
+        let legacy_value = frame.remove(&old_key);
+        changed = true;
+
+        if let Some(legacy_value) = legacy_value {
+            match frame.get_mut(new_key) {
+                Some(existing_value) => {
+                    if existing_value.is_none() && legacy_value.is_some() {
+                        *existing_value = legacy_value;
+                    }
+                }
+                None => {
+                    frame.insert(new_key.to_string(), legacy_value);
+                }
+            }
+        }
+    }
+
+    changed
+}
 
 /// Main storage manager for chats and images.
 pub struct ChatStorage {
@@ -67,7 +114,6 @@ impl ChatStorage {
 
         Self::with_base_dir(base_dir)
     }
-
 
     /// Get the base storage directory path.
     pub fn base_dir(&self) -> &PathBuf {
@@ -138,7 +184,11 @@ impl ChatStorage {
         let subdir = self.objects_dir.join(prefix);
         fs::create_dir_all(&subdir)?;
 
-        let ext = if extension.is_empty() { "bin" } else { extension };
+        let ext = if extension.is_empty() {
+            "bin"
+        } else {
+            extension
+        };
         let file_path = subdir.join(format!("{}.{}", hash, ext));
 
         if !file_path.exists() {
@@ -235,30 +285,50 @@ impl ChatStorage {
         // Load metadata
         let meta_path = chat_dir.join("meta.json");
         let meta_json = fs::read_to_string(&meta_path)?;
-        let metadata: ChatMetadata = serde_json::from_str(&meta_json)?;
+        let mut metadata: ChatMetadata = serde_json::from_str(&meta_json)?;
+        let mut metadata_changed = false;
+        if let Some(lang) = metadata.ocr_lang.clone() {
+            let migrated_lang = migrate_ocr_model_id(&lang).to_string();
+            if migrated_lang != lang {
+                metadata.ocr_lang = Some(migrated_lang);
+                metadata_changed = true;
+            }
+        }
 
         // Load OCR frame (with migration from legacy ocr.json)
         let frame_path = chat_dir.join("ocr_frame.json");
         let legacy_path = chat_dir.join("ocr.json");
-        let ocr_data: OcrFrame = if frame_path.exists() {
+        let mut frame_changed = false;
+        let mut ocr_data: OcrFrame = if frame_path.exists() {
             let json = fs::read_to_string(&frame_path)?;
             serde_json::from_str(&json)?
         } else if legacy_path.exists() {
-            // Migrate: old flat array → frame keyed under "pp-ocr-v4-en"
+            // Migrate old flat array into OCR frame keyed by the new default model.
             let json = fs::read_to_string(&legacy_path)?;
             let legacy: Vec<OcrRegion> = serde_json::from_str(&json).unwrap_or_default();
             let mut frame = OcrFrame::new();
             if !legacy.is_empty() {
-                frame.insert("pp-ocr-v4-en".to_string(), Some(legacy));
+                frame.insert(DEFAULT_OCR_MODEL_ID.to_string(), Some(legacy));
             }
-            // Write new format + remove old file
-            let new_json = serde_json::to_string_pretty(&frame)?;
-            fs::write(&frame_path, new_json)?;
+            frame_changed = true;
             let _ = fs::remove_file(&legacy_path);
             frame
         } else {
             OcrFrame::new()
         };
+
+        if migrate_ocr_frame_ids(&mut ocr_data) {
+            frame_changed = true;
+        }
+        if frame_changed {
+            let new_json = serde_json::to_string_pretty(&ocr_data)?;
+            fs::write(&frame_path, new_json)?;
+        }
+        if metadata_changed {
+            let new_meta = serde_json::to_string_pretty(&metadata)?;
+            fs::write(&meta_path, new_meta)?;
+            self.update_index(&metadata)?;
+        }
 
         // Load messages from markdown
         let messages_path = chat_dir.join("messages.md");
@@ -335,9 +405,15 @@ impl ChatStorage {
 
     /// Save OCR data for a specific model into the chat's OCR frame.
     /// Merges the data into the existing frame (read-modify-write).
-    pub fn save_ocr_data(&self, chat_id: &str, model_id: &str, ocr_data: &[OcrRegion]) -> Result<()> {
+    pub fn save_ocr_data(
+        &self,
+        chat_id: &str,
+        model_id: &str,
+        ocr_data: &[OcrRegion],
+    ) -> Result<()> {
         let chat_dir = self.chat_dir(chat_id);
         fs::create_dir_all(&chat_dir)?;
+        let canonical_model_id = migrate_ocr_model_id(model_id);
 
         let frame_path = chat_dir.join("ocr_frame.json");
         let mut frame: OcrFrame = if frame_path.exists() {
@@ -346,8 +422,9 @@ impl ChatStorage {
         } else {
             OcrFrame::new()
         };
+        migrate_ocr_frame_ids(&mut frame);
 
-        frame.insert(model_id.to_string(), Some(ocr_data.to_vec()));
+        frame.insert(canonical_model_id.to_string(), Some(ocr_data.to_vec()));
 
         let json = serde_json::to_string_pretty(&frame)?;
         fs::write(&frame_path, json)?;
@@ -359,14 +436,19 @@ impl ChatStorage {
     /// Returns None if the model hasn't scanned yet, or empty vec if no frame exists.
     pub fn get_ocr_data(&self, chat_id: &str, model_id: &str) -> Result<Option<Vec<OcrRegion>>> {
         let frame_path = self.chat_dir(chat_id).join("ocr_frame.json");
+        let canonical_model_id = migrate_ocr_model_id(model_id);
 
         if !frame_path.exists() {
             return Ok(None);
         }
 
         let json = fs::read_to_string(&frame_path)?;
-        let frame: OcrFrame = serde_json::from_str(&json)?;
-        Ok(frame.get(model_id).cloned().unwrap_or(None))
+        let mut frame: OcrFrame = serde_json::from_str(&json)?;
+        if migrate_ocr_frame_ids(&mut frame) {
+            let migrated = serde_json::to_string_pretty(&frame)?;
+            fs::write(&frame_path, migrated)?;
+        }
+        Ok(frame.get(canonical_model_id).cloned().unwrap_or(None))
     }
 
     /// Get the entire OCR frame for a chat.
@@ -378,7 +460,11 @@ impl ChatStorage {
         }
 
         let json = fs::read_to_string(&frame_path)?;
-        let frame: OcrFrame = serde_json::from_str(&json)?;
+        let mut frame: OcrFrame = serde_json::from_str(&json)?;
+        if migrate_ocr_frame_ids(&mut frame) {
+            let migrated = serde_json::to_string_pretty(&frame)?;
+            fs::write(&frame_path, migrated)?;
+        }
         Ok(frame)
     }
 
@@ -395,9 +481,11 @@ impl ChatStorage {
         } else {
             OcrFrame::new()
         };
+        migrate_ocr_frame_ids(&mut frame);
 
         for model_id in model_ids {
-            frame.entry(model_id.clone()).or_insert(None);
+            let canonical_model_id = migrate_ocr_model_id(model_id);
+            frame.entry(canonical_model_id.to_string()).or_insert(None);
         }
 
         let json = serde_json::to_string_pretty(&frame)?;
