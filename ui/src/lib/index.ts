@@ -23,7 +23,6 @@ export * from "./config/models";
 export * from "./helpers/dialogs";
 export * from "./helpers/error-parser.ts";
 export * from "./helpers/files.ts";
-export * from "./helpers/ocr-model-id";
 export * from "./helpers/reporting.ts";
 
 // markdown
