@@ -70,14 +70,30 @@ pub fn run_cmd_with_node_bin(
     println!("  $ {} {}", cmd, args.join(" "));
 
     let path_var = env::var("PATH").unwrap_or_default();
+    #[cfg(windows)]
+    let new_path = format!("{};{}", node_bin_dir.display(), path_var);
+    #[cfg(not(windows))]
     let new_path = format!("{}:{}", node_bin_dir.display(), path_var);
 
-    let status = Command::new(cmd)
+    let path_env_key = if cfg!(windows) { "Path" } else { "PATH" };
+
+    let command_path = if cfg!(windows) {
+        let candidate = node_bin_dir.join(format!("{}.cmd", cmd));
+        if !candidate.exists() {
+            PathBuf::from(cmd)
+        } else {
+            candidate
+        }
+    } else {
+        PathBuf::from(cmd)
+    };
+
+    let status = Command::new(&command_path)
         .args(args)
         .current_dir(cwd)
-        .env("PATH", new_path)
+        .env(path_env_key, new_path)
         .status()
-        .with_context(|| format!("Failed to run: {} {:?}", cmd, args))?;
+        .with_context(|| format!("Failed to run: {} {:?}", command_path.display(), args))?;
 
     if !status.success() {
         anyhow::bail!("Command failed with exit code: {:?}", status.code());
