@@ -56,14 +56,18 @@ impl SpeechEngine {
 
     /// Start the engine and return a receiver for events.
     /// This launches the sidecar and sends the Start command.
-    pub async fn start(&mut self, model_path: String, language: String) -> Result<mpsc::Receiver<SttEvent>> {
+    pub async fn start(
+        &mut self,
+        model_path: String,
+        language: String,
+    ) -> Result<mpsc::Receiver<SttEvent>> {
         if self.process.is_some() {
             return Err(EngineError::AlreadyRunning);
         }
 
         // 1. Spawn Process
         let (mut process, stdout) = SidecarProcess::spawn(&self.binary_path)?;
-        
+
         // 2. Send Start Command
         let cmd = SttCommand::Start {
             model: model_path,
@@ -72,21 +76,28 @@ impl SpeechEngine {
         };
         let json = serde_json::to_string(&cmd)?;
         process.stdin.write_all(json.as_bytes()).await?;
-        process.stdin.write_all(b"
-").await?;
+        process
+            .stdin
+            .write_all(
+                b"
+",
+            )
+            .await?;
         process.stdin.flush().await?;
 
         self.process = Some(process);
 
         // 3. Setup Reading Loop
         let (tx, rx) = mpsc::channel(100);
-        
+
         tokio::spawn(async move {
             let reader = BufReader::new(stdout);
             let mut lines = reader.lines();
 
             while let Ok(Some(line)) = lines.next_line().await {
-                if line.trim().is_empty() { continue; }
+                if line.trim().is_empty() {
+                    continue;
+                }
 
                 match serde_json::from_str::<SttEvent>(&line) {
                     Ok(event) => {
@@ -111,8 +122,13 @@ impl SpeechEngine {
             let cmd = SttCommand::Quit;
             let json = serde_json::to_string(&cmd)?;
             let _ = process.stdin.write_all(json.as_bytes()).await;
-            let _ = process.stdin.write_all(b"
-").await;
+            let _ = process
+                .stdin
+                .write_all(
+                    b"
+",
+                )
+                .await;
             let _ = process.stdin.flush().await;
 
             // Wait a bit or kill
@@ -121,7 +137,7 @@ impl SpeechEngine {
             // Let's ensure it's dead.
             let _ = process.kill().await;
             let _ = process.child.wait().await;
-            
+
             Ok(())
         } else {
             Err(EngineError::NotRunning)

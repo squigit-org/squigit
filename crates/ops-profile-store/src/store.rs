@@ -264,7 +264,10 @@ mod tests {
         assert_eq!(loaded.name, "Test User");
 
         // Should be active (first profile)
-        assert_eq!(store.get_active_profile_id().unwrap(), Some(profile.id.clone()));
+        assert_eq!(
+            store.get_active_profile_id().unwrap(),
+            Some(profile.id.clone())
+        );
 
         // Cleanup
         fs::remove_dir_all(store.base_dir.parent().unwrap()).ok();

@@ -44,7 +44,7 @@ impl ChatMetadata {
         let date_part = now.format("%Y%m%d-%H%M%S").to_string();
         let uuid_part = Uuid::new_v4().to_string();
         let id = format!("{}-{}", date_part, &uuid_part[..8]);
-        
+
         Self {
             id,
             title,

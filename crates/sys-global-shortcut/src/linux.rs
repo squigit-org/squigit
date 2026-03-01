@@ -39,7 +39,10 @@ pub fn install_linux_shortcut(_bin_path: &str, trigger: &str, name: &str) -> Res
         || de.contains("unity")
         || de.contains("budgie")
     {
-        let binding_path_str = format!("/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{}-binding/", app_lower);
+        let binding_path_str = format!(
+            "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{}-binding/",
+            app_lower
+        );
         let binding_path = binding_path_str.as_str();
         let schema = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding";
 

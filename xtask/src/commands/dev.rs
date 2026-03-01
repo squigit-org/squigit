@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use xtask::{run_cmd, run_cmd_with_node_bin, ui_dir, tauri_dir};
 use std::fs;
+use xtask::{run_cmd, run_cmd_with_node_bin, tauri_dir, ui_dir};
 
 pub fn run(cmd: &str, tray_mode: bool, extra_args: &[String]) -> Result<()> {
     let ui = ui_dir();
@@ -11,9 +11,7 @@ pub fn run(cmd: &str, tray_mode: bool, extra_args: &[String]) -> Result<()> {
     let node_bin = ui.join("node_modules").join(".bin");
 
     let binaries_dir = app.join("binaries");
-    if !binaries_dir.exists()
-        || fs::read_dir(&binaries_dir)?.next().is_none()
-    {
+    if !binaries_dir.exists() || fs::read_dir(&binaries_dir)?.next().is_none() {
         anyhow::bail!(
             "no sidecar binaries found in {}.\n    Run `cargo xtask build` (or build the
 appropriate sidecars) before running `cargo xtask dev`",

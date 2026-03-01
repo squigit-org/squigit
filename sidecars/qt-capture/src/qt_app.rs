@@ -94,9 +94,13 @@ impl QtApp {
                                 println!("CAPTURE_DENIED");
                                 eprintln!("\n============================================================");
                                 eprintln!("Screen Recording Permission Denied");
-                                eprintln!("============================================================");
+                                eprintln!(
+                                    "============================================================"
+                                );
                                 eprintln!("Your Wayland compositor or Desktop Portal rejected the request.");
-                                eprintln!("If this happened automatically without a prompt, check your");
+                                eprintln!(
+                                    "If this happened automatically without a prompt, check your"
+                                );
                                 eprintln!("screen capture portal configurations (e.g. xdg-desktop-portal-hyprland/wlr).");
                                 eprintln!("\nFor help, please report an issue at:");
                                 eprintln!("-> https://github.com/a7mddra/snapllm/issues/new");
@@ -169,11 +173,7 @@ impl QtApp {
                     .map(|stored| (storage, stored))
             })
             .map(|(storage, stored)| {
-                let metadata = ChatMetadata::new(
-                    "New Chat".to_string(),
-                    stored.hash.clone(),
-                    None,
-                );
+                let metadata = ChatMetadata::new("New Chat".to_string(), stored.hash.clone(), None);
                 let chat = ChatData::new(metadata.clone());
                 let _ = storage.save_chat(&chat);
                 let _ = std::fs::remove_file(path);
@@ -196,9 +196,7 @@ impl QtApp {
                 let chats_dir = profile_store.get_chats_dir(&active_id);
                 ChatStorage::with_base_dir(chats_dir).ok()
             })
-            .and_then(|storage| {
-                storage.store_image_from_path(path).ok()
-            })
+            .and_then(|storage| storage.store_image_from_path(path).ok())
             .map(|stored| {
                 let _ = std::fs::remove_file(path);
                 (Some(stored.path), Some(stored.hash))

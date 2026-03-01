@@ -115,7 +115,11 @@ pub fn whisper() -> Result<()> {
 
     fs::create_dir_all(&app_binaries)?;
 
-    let binary_name = if cfg!(windows) { "whisper-stt.exe" } else { "whisper-stt" };
+    let binary_name = if cfg!(windows) {
+        "whisper-stt.exe"
+    } else {
+        "whisper-stt"
+    };
     // On Windows/Release, CMake might put it in Release/ folder
     let src_binary_path = if cfg!(windows) {
         build_dir.join("Release").join(binary_name)
@@ -127,12 +131,16 @@ pub fn whisper() -> Result<()> {
         // Fallback check directly in build dir for non-multiconfig generators
         let fallback = build_dir.join(binary_name);
         if !fallback.exists() {
-             anyhow::bail!("Whisper binary not found at {}", src_binary_path.display());
+            anyhow::bail!("Whisper binary not found at {}", src_binary_path.display());
         }
     }
 
     // Use the one that exists
-    let final_src = if src_binary_path.exists() { src_binary_path } else { build_dir.join(binary_name) };
+    let final_src = if src_binary_path.exists() {
+        src_binary_path
+    } else {
+        build_dir.join(binary_name)
+    };
 
     let host_triple = get_host_target_triple()?;
     let dst_binary_name = format!(

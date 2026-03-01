@@ -40,14 +40,11 @@ impl SidecarProcess {
         }
 
         let mut child = cmd.spawn().map_err(ProcessError::SpawnError)?;
-        
+
         let stdin = child.stdin.take().ok_or(ProcessError::StdinError)?;
         let stdout = child.stdout.take().ok_or(ProcessError::StdoutError)?;
 
-        Ok((
-            Self { child, stdin },
-            stdout
-        ))
+        Ok((Self { child, stdin }, stdout))
     }
 
     pub async fn kill(&mut self) -> std::io::Result<()> {

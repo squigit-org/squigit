@@ -22,14 +22,7 @@ pub enum SttCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SttEvent {
-    Status {
-        status: String,
-    },
-    Transcription {
-        text: String,
-        is_final: bool,
-    },
-    Error {
-        message: String,
-    },
+    Status { status: String },
+    Transcription { text: String, is_final: bool },
+    Error { message: String },
 }
