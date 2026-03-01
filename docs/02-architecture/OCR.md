@@ -788,6 +788,17 @@ These can appear while build/runtime still succeeds.
    - mitigated by `enable_mkldnn=False` in `engine.py`.
 4. Sidecar found but app build fails:
    - usually another required sidecar binary (e.g., whisper) missing in `app/binaries`.
+5. `Unable to find .../site-packages/paddlex` during PyInstaller `datas` collection:
+   - common after moving/renaming the repo path with an existing `sidecars/paddle-ocr/venv`
+   - old `venv/bin/pip` or `venv/bin/pyinstaller` wrappers may still point to the previous absolute path
+   - fixed in current `xtask` by invoking `python -m pip` and `python -m PyInstaller` from the venv python
+   - if needed, force a clean local reset with `cargo xtask clean` then `cargo xtask build ocr`
+6. `Failed to initialize PaddleOCR: /tmp/_MEI.../Cython/Utility/CppSupport.cpp` from frozen sidecar:
+   - frozen bundle is missing `Cython/Utility/*` resources required by `paddle.utils.cpp_extension`
+   - fixed by bundling `collect_data_files("Cython")` in `ocr-engine.spec`
+7. `libmklml_intel.so: cannot open shared object file` in frozen sidecar:
+   - dynamic loader cannot resolve Paddle CPU runtime libs from bundled path
+   - fixed by including `paddle/libs/*` as top-level `binaries` in `ocr-engine.spec` (in addition to packaged data)
 
 ### 17.3 Model file compatibility
 

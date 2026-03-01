@@ -101,34 +101,66 @@ pub fn ocr() -> Result<()> {
         }
     }
     println!("\nInstalling dependencies...");
-    let pip = if cfg!(windows) {
-        venv.join("Scripts").join("pip.exe")
-    } else {
-        venv.join("bin").join("pip")
-    };
+    let python = venv_python();
+    let py = python.to_str().unwrap();
     run_cmd(
-        pip.to_str().unwrap(),
-        &["install", "-r", "requirements.txt"],
+        py,
+        &["-m", "pip", "install", "-r", "requirements.txt"],
+        &sidecar,
+    )?;
+    run_cmd(
+        py,
+        &[
+            "-c",
+            r###"import importlib, pathlib, sys
+req = {}
+for line in pathlib.Path("requirements.txt").read_text().splitlines():
+    line = line.strip()
+    if not line or line.startswith("#") or "==" not in line:
+        continue
+    name, version = [v.strip() for v in line.split("==", 1)]
+    req[name.lower()] = version
+
+module_map = {
+    "paddlepaddle": "paddle",
+    "paddleocr": "paddleocr",
+    "paddlex": "paddlex",
+    "pyinstaller": "PyInstaller",
+}
+
+errors = []
+for package, expected in req.items():
+    module_name = module_map.get(package, package)
+    try:
+        mod = importlib.import_module(module_name)
+    except Exception as exc:
+        errors.append(f"{package}: import failed: {exc}")
+        continue
+
+    actual = getattr(mod, "__version__", None)
+    if actual != expected:
+        errors.append(f"{package}: expected {expected}, got {actual}")
+
+if errors:
+    print("OCR dependency verification failed:")
+    print("\n".join(errors))
+    sys.exit(1)
+
+print("OCR dependency verification passed.")"###,
+        ],
         &sidecar,
     )?;
 
     println!("\nApplying patches...");
-    let python = venv_python();
-    let py = python.to_str().unwrap();
     run_cmd(py, &["patches/paddle_core.py"], &sidecar)?;
 
     println!("\nDownloading models...");
     run_cmd(py, &["download_models.py"], &sidecar)?;
 
     println!("\nBuilding executable...");
-    let pyinstaller = if cfg!(windows) {
-        venv.join("Scripts").join("pyinstaller.exe")
-    } else {
-        venv.join("bin").join("pyinstaller")
-    };
     run_cmd(
-        pyinstaller.to_str().unwrap(),
-        &["--clean", "ocr-engine.spec"],
+        py,
+        &["-m", "PyInstaller", "--clean", "ocr-engine.spec"],
         &sidecar,
     )?;
 

@@ -16,6 +16,10 @@ import os
 import tempfile
 from typing import Any, Iterable, List, Optional, Tuple
 
+# Must be set before importing paddleocr/paddlex to avoid online source probing in offline mode.
+os.environ.setdefault("DISABLE_MODEL_SOURCE_CHECK", "True")
+os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
 import cv2
 from paddleocr import PaddleOCR
 
@@ -39,8 +43,6 @@ class OCREngine:
         self._ocr: Optional[PaddleOCR] = None
 
     def _setup_environment(self) -> None:
-        os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"
-        os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
         os.environ["PADDLEOCR_BASE_PATH"] = str(self.config.model_dir)
         cv2.setNumThreads(1)
         logging.getLogger("ppocr").setLevel(logging.ERROR)
@@ -54,7 +56,6 @@ class OCREngine:
             try:
                 # PP3-native parameter names; 2.x still works via fallback in process().
                 self._ocr = PaddleOCR(
-                    lang=self.config.lang,
                     use_doc_orientation_classify=False,
                     use_doc_unwarping=False,
                     use_textline_orientation=self.config.use_angle_cls,

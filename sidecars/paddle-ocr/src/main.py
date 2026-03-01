@@ -3,11 +3,54 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import sys
+import warnings
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_WAIT_POLICY"] = "PASSIVE"
+
+# Keep sidecar stderr focused on actionable OCR failures.
+warnings.filterwarnings(
+    "ignore",
+    message=r".*urllib3 .* doesn't match a supported version!.*",
+)
+
+
+def _prepend_env_path(key: str, value: str, sep: str = os.pathsep) -> None:
+    current = os.environ.get(key, "")
+    parts = [p for p in current.split(sep) if p]
+    if value in parts:
+        return
+    if current:
+        os.environ[key] = f"{value}{sep}{current}"
+    else:
+        os.environ[key] = value
+
+
+def _configure_frozen_lib_paths() -> None:
+    """
+    Ensure Paddle bundled shared libs are discoverable in frozen onefile mode.
+    """
+    if not getattr(sys, "frozen", False) or not hasattr(sys, "_MEIPASS"):
+        return
+
+    paddle_lib_dir = os.path.join(sys._MEIPASS, "paddle", "libs")
+    if not os.path.isdir(paddle_lib_dir):
+        return
+
+    if os.name == "nt":
+        _prepend_env_path("PATH", paddle_lib_dir, ";")
+    elif sys.platform == "darwin":
+        _prepend_env_path("DYLD_LIBRARY_PATH", paddle_lib_dir, ":")
+        _prepend_env_path("PATH", paddle_lib_dir, ":")
+    else:
+        _prepend_env_path("LD_LIBRARY_PATH", paddle_lib_dir, ":")
+        _prepend_env_path("PATH", paddle_lib_dir, ":")
+
+
+_configure_frozen_lib_paths()
 
 """
 OCR Engine - Command-line and IPC interface for text extraction.
@@ -29,16 +72,27 @@ It supports two modes:
     echo '{"type":"base64","data":"iVBORw0KGgo..."}' | ocr-engine
 """
 
-import sys
 import json
 import base64
 import tempfile
+import traceback
 from pathlib import Path
 
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src import OCREngine, NumpyEncoder, EngineConfig
+
+
+def _format_exception(exc: Exception) -> str:
+    if os.environ.get("OCR_DEBUG_TRACEBACK", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return f"{exc}\n{traceback.format_exc()}"
+    return str(exc)
 
 
 def _create_config(config_dict: dict) -> EngineConfig:
@@ -81,7 +135,7 @@ def process_path(image_path: str, config_dict: dict = None) -> int:
         print(json.dumps(output, cls=NumpyEncoder))
         return 0
     except Exception as e:
-        error = {"error": str(e)}
+        error = {"error": _format_exception(e)}
         print(json.dumps(error))
         return 1
 
@@ -116,7 +170,7 @@ def process_base64(base64_data: str, config_dict: dict = None) -> int:
                 os.unlink(tmp_path)
                 
     except Exception as e:
-        error = {"error": str(e)}
+        error = {"error": _format_exception(e)}
         print(json.dumps(error))
         return 1
 
@@ -211,7 +265,7 @@ def process_stdin() -> int:
         print(json.dumps(error))
         return 1
     except Exception as e:
-        error = {"error": str(e)}
+        error = {"error": _format_exception(e)}
         print(json.dumps(error))
         return 1
 
@@ -234,4 +288,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::process::Stdio;
 use std::sync::LazyLock;
 use tauri::Manager;
+use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio::time::{timeout, Duration};
@@ -90,6 +91,26 @@ async fn cancel_job_handle(mut handle: OcrJobHandle) {
             let _ = handle.child.kill().await;
             let _ = handle.child.wait().await;
         }
+    }
+}
+
+async fn read_pipe_to_string(pipe: Option<tokio::process::ChildStdout>) -> String {
+    if let Some(mut pipe) = pipe {
+        let mut buf = Vec::new();
+        let _ = pipe.read_to_end(&mut buf).await;
+        String::from_utf8_lossy(&buf).to_string()
+    } else {
+        String::new()
+    }
+}
+
+async fn read_stderr_to_string(pipe: Option<tokio::process::ChildStderr>) -> String {
+    if let Some(mut pipe) = pipe {
+        let mut buf = Vec::new();
+        let _ = pipe.read_to_end(&mut buf).await;
+        String::from_utf8_lossy(&buf).to_string()
+    } else {
+        String::new()
     }
 }
 
@@ -288,28 +309,36 @@ pub async fn ocr_image(
         }
     }
 
+    // Always collect both streams so error reporting can include stdout JSON payloads.
+    let stdout_text = read_pipe_to_string(stdout_pipe).await;
+    let stderr_text = read_stderr_to_string(stderr_pipe).await;
+
     if !exit_status.success() {
-        // Read stderr for error details
-        let stderr_text = if let Some(mut pipe) = stderr_pipe {
-            let mut buf = Vec::new();
-            let _ = tokio::io::AsyncReadExt::read_to_end(&mut pipe, &mut buf).await;
-            String::from_utf8_lossy(&buf).to_string()
-        } else {
-            String::new()
-        };
-        return Err(format!("OCR sidecar failed: {}", stderr_text));
+        if let Ok(err) = serde_json::from_str::<OcrError>(&stdout_text) {
+            return Err(format!("OCR sidecar failed: {}", err.error));
+        }
+
+        let stderr_trimmed = stderr_text.trim();
+        let stdout_trimmed = stdout_text.trim();
+
+        if !stderr_trimmed.is_empty() && !stdout_trimmed.is_empty() {
+            return Err(format!(
+                "OCR sidecar failed: {}\n{}",
+                stderr_trimmed, stdout_trimmed
+            ));
+        }
+        if !stderr_trimmed.is_empty() {
+            return Err(format!("OCR sidecar failed: {}", stderr_trimmed));
+        }
+        if !stdout_trimmed.is_empty() {
+            return Err(format!("OCR sidecar failed: {}", stdout_trimmed));
+        }
+        return Err("OCR sidecar failed with no error output".to_string());
     }
 
-    // Read stdout for results
-    let stdout_text = if let Some(mut pipe) = stdout_pipe {
-        let mut buf = Vec::new();
-        tokio::io::AsyncReadExt::read_to_end(&mut pipe, &mut buf)
-            .await
-            .map_err(|e| format!("Failed to read sidecar stdout: {}", e))?;
-        String::from_utf8_lossy(&buf).to_string()
-    } else {
+    if stdout_text.is_empty() {
         return Err("No stdout from sidecar".to_string());
-    };
+    }
 
     if let Ok(err) = serde_json::from_str::<OcrError>(&stdout_text) {
         return Err(err.error);

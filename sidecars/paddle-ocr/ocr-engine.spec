@@ -2,12 +2,22 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import sys
-from PyInstaller.utils.hooks import collect_submodules, copy_metadata
+from pathlib import Path
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 if sys.platform == "win32":
     site_packages = "venv/Lib/site-packages"
 else:
     site_packages = f"venv/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+
+paddle_lib_dir = Path(site_packages) / "paddle" / "libs"
+paddle_root_binaries = []
+if paddle_lib_dir.exists():
+    paddle_root_binaries = [
+        (str(lib_path), ".")
+        for lib_path in paddle_lib_dir.iterdir()
+        if lib_path.is_file()
+    ]
 
 metadata_datas = []
 for dist_name in [
@@ -23,17 +33,19 @@ for dist_name in [
 ]:
     metadata_datas += copy_metadata(dist_name)
 
+cython_datas = collect_data_files("Cython")
+
 a = Analysis(
     ['src/main.py'],
     pathex=[],
-    binaries=[],
+    binaries=paddle_root_binaries,
     datas=[
         (f'{site_packages}/paddle/libs', 'paddle/libs'),
         (f'{site_packages}/paddleocr', 'paddleocr'),
         (f'{site_packages}/paddlex', 'paddlex'),
         ('models', 'models'),
         ('src', 'src'),
-    ] + metadata_datas,
+    ] + metadata_datas + cython_datas,
     hiddenimports=collect_submodules('paddleocr')
     + collect_submodules('paddlex')
     + [
