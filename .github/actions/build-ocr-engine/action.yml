@@ -5,6 +5,10 @@ inputs:
     description: "Python version used to build the OCR sidecar"
     required: false
     default: "3.13"
+  pyi-mode:
+    description: "PyInstaller mode: onedir (default) or onefile (baseline measurement)"
+    required: false
+    default: "onedir"
 runs:
   using: "composite"
   steps:
@@ -15,5 +19,7 @@ runs:
 
     - name: Build OCR Engine
       shell: bash
+      env:
+        SNAPLLM_OCR_PYI_MODE: ${{ inputs.pyi-mode }}
       run: |
         cargo xtask build ocr

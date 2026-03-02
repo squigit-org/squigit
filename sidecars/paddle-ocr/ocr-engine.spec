@@ -1,23 +1,28 @@
 # Copyright 2026 a7mddra
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import sys
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
+
+BUILD_MODE = os.environ.get("SNAPLLM_OCR_PYI_MODE", "onedir").strip().lower()
+if BUILD_MODE not in {"onedir", "onefile"}:
+    raise ValueError(
+        f"Unsupported SNAPLLM_OCR_PYI_MODE={BUILD_MODE!r}; expected 'onedir' or 'onefile'"
+    )
 
 if sys.platform == "win32":
     site_packages = "venv/Lib/site-packages"
 else:
     site_packages = f"venv/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
 
-paddle_lib_dir = Path(site_packages) / "paddle" / "libs"
-paddle_root_binaries = []
-if paddle_lib_dir.exists():
-    paddle_root_binaries = [
-        (str(lib_path), ".")
-        for lib_path in paddle_lib_dir.iterdir()
-        if lib_path.is_file()
-    ]
+def safe_copy_metadata(dist_name):
+    try:
+        return copy_metadata(dist_name)
+    except Exception as exc:
+        print(f"[warn] metadata not found for {dist_name}: {exc}")
+        return []
 
 metadata_datas = []
 for dist_name in [
@@ -25,20 +30,23 @@ for dist_name in [
     "paddleocr",
     "paddlex",
     "imagesize",
-    "opencv-contrib-python",
+    "opencv-python-headless",
     "pyclipper",
-    "pypdfium2",
     "python-bidi",
     "shapely",
+    "requests",
+    "PyYAML",
+    "pydantic",
+    "ujson",
 ]:
-    metadata_datas += copy_metadata(dist_name)
+    metadata_datas += safe_copy_metadata(dist_name)
 
 cython_datas = collect_data_files("Cython")
 
 a = Analysis(
     ['src/main.py'],
     pathex=[],
-    binaries=paddle_root_binaries,
+    binaries=[],
     datas=[
         (f'{site_packages}/paddle/libs', 'paddle/libs'),
         (f'{site_packages}/paddleocr', 'paddleocr'),
@@ -47,7 +55,6 @@ a = Analysis(
         ('src', 'src'),
     ] + metadata_datas + cython_datas,
     hiddenimports=collect_submodules('paddleocr')
-    + collect_submodules('paddlex')
     + [
         'requests',
         'PIL.ImageDraw',
@@ -56,30 +63,76 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['torch', 'tensorflow', 'cv2.gapi', 'matplotlib', 'sklearn'],
+    excludes=[
+        'torch',
+        'tensorflow',
+        'cv2.gapi',
+        'matplotlib',
+        'sklearn',
+        'modelscope',
+        'huggingface_hub',
+        'hf_xet',
+        'pypdfium2',
+        'pypdfium2_raw',
+        'rich',
+        'typer',
+        'markdown_it',
+        'mdurl',
+    ],
     noarchive=False,
     optimize=0,
 )
 
 pyz = PYZ(a.pure)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.datas,
-    [],
-    name='ocr-engine',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=True,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
+if BUILD_MODE == "onefile":
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.datas,
+        [],
+        name='ocr-engine',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        upx_exclude=[],
+        runtime_tmpdir=None,
+        console=True,
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+    )
+else:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        [],
+        exclude_binaries=True,
+        name='ocr-engine',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        upx_exclude=[],
+        console=True,
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+    )
+
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        strip=False,
+        upx=True,
+        upx_exclude=[],
+        name='ocr-engine',
+    )

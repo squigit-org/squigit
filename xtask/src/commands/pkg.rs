@@ -79,31 +79,76 @@ pub fn ocr() -> Result<()> {
 
     let src_binary_name = format!("ocr-engine{}", if cfg!(windows) { ".exe" } else { "" });
     let src_binary_path = dist_dir.join(&src_binary_name);
-
-    if !src_binary_path.exists() {
-        anyhow::bail!("OCR binary not found: {}", src_binary_path.display());
-    }
+    let src_runtime_dir = dist_dir.join("ocr-engine");
 
     let host_triple = get_host_target_triple()?;
-
-    let dst_binary_name = format!(
+    let legacy_dst_binary_name = format!(
         "ocr-engine-{}{}",
         host_triple,
         if cfg!(windows) { ".exe" } else { "" }
     );
-    let dst_binary_path = app_binaries.join(&dst_binary_name);
-
-    println!("  Copying binary to {}", dst_binary_path.display());
-    fs::copy(&src_binary_path, &dst_binary_path)?;
+    let legacy_dst_binary_path = app_binaries.join(&legacy_dst_binary_name);
+    let runtime_dst_dir = app_binaries.join(format!("ocr-runtime-{}", host_triple));
 
     // Also copy to target/debug/binaries for dev
     let debug_binaries = project_root().join("target").join("debug").join("binaries");
     fs::create_dir_all(&debug_binaries)?;
-    let debug_dst_path = debug_binaries.join(&dst_binary_name);
-    println!("  Copying binary to {}", debug_dst_path.display());
-    fs::copy(&src_binary_path, &debug_dst_path)?;
+    let debug_legacy_dst_path = debug_binaries.join(&legacy_dst_binary_name);
+    let debug_runtime_dst_dir = debug_binaries.join(format!("ocr-runtime-{}", host_triple));
 
-    Ok(())
+    if src_runtime_dir.is_dir() {
+        println!("  Copying OCR runtime dir to {}", runtime_dst_dir.display());
+        if runtime_dst_dir.exists() {
+            fs::remove_dir_all(&runtime_dst_dir)?;
+        }
+        copy_dir_all(&src_runtime_dir, &runtime_dst_dir)?;
+
+        if legacy_dst_binary_path.exists() {
+            fs::remove_file(&legacy_dst_binary_path)?;
+        }
+
+        println!(
+            "  Copying OCR runtime dir to {}",
+            debug_runtime_dst_dir.display()
+        );
+        if debug_runtime_dst_dir.exists() {
+            fs::remove_dir_all(&debug_runtime_dst_dir)?;
+        }
+        copy_dir_all(&src_runtime_dir, &debug_runtime_dst_dir)?;
+
+        if debug_legacy_dst_path.exists() {
+            fs::remove_file(&debug_legacy_dst_path)?;
+        }
+        return Ok(());
+    }
+
+    if src_binary_path.exists() {
+        println!(
+            "  Copying legacy OCR binary to {}",
+            legacy_dst_binary_path.display()
+        );
+        fs::copy(&src_binary_path, &legacy_dst_binary_path)?;
+
+        if runtime_dst_dir.exists() {
+            fs::remove_dir_all(&runtime_dst_dir)?;
+        }
+
+        println!(
+            "  Copying legacy OCR binary to {}",
+            debug_legacy_dst_path.display()
+        );
+        fs::copy(&src_binary_path, &debug_legacy_dst_path)?;
+        if debug_runtime_dst_dir.exists() {
+            fs::remove_dir_all(&debug_runtime_dst_dir)?;
+        }
+        return Ok(());
+    }
+
+    anyhow::bail!(
+        "OCR artifacts not found. Expected runtime dir {} or binary {}",
+        src_runtime_dir.display(),
+        src_binary_path.display()
+    );
 }
 
 pub fn whisper() -> Result<()> {

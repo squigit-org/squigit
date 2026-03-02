@@ -70,6 +70,24 @@ pub fn app() -> Result<()> {
             if name.starts_with("ocr-engine-") || name.starts_with("capture-engine-") {
                 println!("  Removing {}", entry.path().display());
                 fs::remove_file(entry.path())?;
+            } else if name.starts_with("ocr-runtime-") {
+                println!("  Removing {}", entry.path().display());
+                fs::remove_dir_all(entry.path())?;
+            }
+        }
+    }
+
+    let debug_binaries = project_root().join("target").join("debug").join("binaries");
+    if debug_binaries.exists() {
+        for entry in fs::read_dir(&debug_binaries)? {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("ocr-engine-") || name.starts_with("capture-engine-") {
+                println!("  Removing {}", entry.path().display());
+                fs::remove_file(entry.path())?;
+            } else if name.starts_with("ocr-runtime-") {
+                println!("  Removing {}", entry.path().display());
+                fs::remove_dir_all(entry.path())?;
             }
         }
     }

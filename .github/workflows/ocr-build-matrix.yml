@@ -5,35 +5,127 @@ on:
 
 jobs:
   build-ocr:
-    name: OCR ${{ matrix.os_name }} / py${{ matrix.python-version }}
+    name: OCR ${{ matrix.os_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            os_name: Linux-x64
-            python-version: "3.12"
-          - os: ubuntu-latest
-            os_name: Linux-x64
-            python-version: "3.13"
           - os: windows-latest
             os_name: Windows-x64
-            python-version: "3.12"
-          - os: windows-latest
-            os_name: Windows-x64
-            python-version: "3.13"
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            os_name: Linux-x64
+            target: x86_64-unknown-linux-gnu
           - os: macos-latest
             os_name: macOS-ARM
-            python-version: "3.12"
-          - os: macos-latest
-            os_name: macOS-ARM
-            python-version: "3.13"
+            target: aarch64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build OCR Engine
+      - name: Build OCR Baseline (onefile)
         uses: ./.github/actions/build-ocr-engine
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
+          pyi-mode: "onefile"
+
+      - name: Measure baseline size (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          python sidecars/paddle-ocr/scripts/measure_runtime_size.py \
+            --input app/binaries/ocr-engine-${{ matrix.target }} \
+            --output target/ocr-size/baseline-${{ matrix.target }}.json \
+            --label baseline-onefile
+
+      - name: Measure baseline size (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python sidecars/paddle-ocr/scripts/measure_runtime_size.py `
+            --input app/binaries/ocr-engine-${{ matrix.target }}.exe `
+            --output target/ocr-size/baseline-${{ matrix.target }}.json `
+            --label baseline-onefile
+
+      - name: Upload baseline size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocr-size-baseline-${{ matrix.target }}
+          path: target/ocr-size/baseline-${{ matrix.target }}.json
+
+      - name: Clean OCR build folders only
+        if: runner.os != 'Windows'
+        run: |
+          rm -rf sidecars/paddle-ocr/build sidecars/paddle-ocr/dist
+
+      - name: Clean OCR build folders only (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force sidecars/paddle-ocr/build, sidecars/paddle-ocr/dist -ErrorAction SilentlyContinue
+
+      - name: Build OCR Candidate (onedir)
+        uses: ./.github/actions/build-ocr-engine
+        with:
+          python-version: "3.13"
+          pyi-mode: "onedir"
+
+      - name: Smoke test sidecar (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          python sidecars/paddle-ocr/scripts/smoke_sidecar.py \
+            --sidecar app/binaries/ocr-runtime-${{ matrix.target }}/ocr-engine
+
+      - name: Smoke test sidecar (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python sidecars/paddle-ocr/scripts/smoke_sidecar.py `
+            --sidecar app/binaries/ocr-runtime-${{ matrix.target }}/ocr-engine.exe
+
+      - name: Offline smoke (Linux network namespace)
+        if: runner.os == 'Linux'
+        run: |
+          sudo unshare -n python sidecars/paddle-ocr/scripts/smoke_sidecar.py \
+            --sidecar app/binaries/ocr-runtime-${{ matrix.target }}/ocr-engine \
+            --skip-cancel
+
+      - name: Measure candidate size (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          python sidecars/paddle-ocr/scripts/measure_runtime_size.py \
+            --input app/binaries/ocr-runtime-${{ matrix.target }} \
+            --output target/ocr-size/candidate-${{ matrix.target }}.json \
+            --label candidate-onedir
+
+      - name: Measure candidate size (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python sidecars/paddle-ocr/scripts/measure_runtime_size.py `
+            --input app/binaries/ocr-runtime-${{ matrix.target }} `
+            --output target/ocr-size/candidate-${{ matrix.target }}.json `
+            --label candidate-onedir
+
+      - name: Compressed size gate (<= 0.65 baseline) (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          python sidecars/paddle-ocr/scripts/compare_size_gate.py \
+            --baseline target/ocr-size/baseline-${{ matrix.target }}.json \
+            --candidate target/ocr-size/candidate-${{ matrix.target }}.json \
+            --max-ratio 0.65
+
+      - name: Compressed size gate (<= 0.65 baseline) (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python sidecars/paddle-ocr/scripts/compare_size_gate.py `
+            --baseline target/ocr-size/baseline-${{ matrix.target }}.json `
+            --candidate target/ocr-size/candidate-${{ matrix.target }}.json `
+            --max-ratio 0.65
+
+      - name: Upload candidate size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocr-size-candidate-${{ matrix.target }}
+          path: target/ocr-size/candidate-${{ matrix.target }}.json

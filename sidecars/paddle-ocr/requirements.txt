@@ -1,10 +1,8 @@
 # Copyright 2026 a7mddra
 # SPDX-License-Identifier: Apache-2.0
 
-# PaddleOCR standalone executable dependencies
-
-paddlepaddle==3.3.0
-paddleocr==3.4.0
-paddlex==3.4.2
-requests
-pyinstaller==6.19.0
+# Compatibility aggregator for OCR build requirements.
+# New build flow installs from split requirement groups directly.
+-r requirements-build.txt
+-r requirements-core.txt
+-r requirements-runtime.txt

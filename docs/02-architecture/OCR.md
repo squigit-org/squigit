@@ -93,27 +93,35 @@ This document intentionally focuses on technical implementation details: protoco
 
 ## 3.1 Sidecar dependency baseline
 
-`sidecars/paddle-ocr/requirements.txt` pins runtime dependencies:
+OCR dependencies are split into install groups:
 
-- `paddlepaddle==3.3.0`
-- `paddleocr==3.4.0`
-- `paddlex==3.4.2`
-- `requests`
-- `pyinstaller==6.19.0`
+- `sidecars/paddle-ocr/requirements-core.txt`
+  - `paddlepaddle==3.3.0`
+  - `paddleocr==3.4.0`
+  - `paddlex==3.4.2`
+- `sidecars/paddle-ocr/requirements-runtime.txt`
+  - explicit runtime deps required for PP3 OCR inference
+  - excludes optional document/PDF/cloud toolchain unless smoke checks prove required
+- `sidecars/paddle-ocr/requirements-build.txt`
+  - `pyinstaller==6.19.0`
 
-These packages are installed into a local venv during sidecar build.
+`requirements.txt` remains as a compatibility aggregator for local tooling.
 
 ## 3.2 Sidecar build pipeline (`cargo xtask build` -> OCR stage)
 
 `xtask/src/commands/build.rs` (`ocr()`):
 
 1. Creates virtual environment (`python3`/`python`/`py -3`) if missing.
-2. Installs dependencies from `requirements.txt`.
+2. Installs build deps from `requirements-build.txt`.
+3. Installs core OCR stack with `--no-deps` from `requirements-core.txt`.
+4. Installs explicit runtime deps from `requirements-runtime.txt`.
+5. Runs `pip check` + runtime smoke (`scripts/smoke_runtime.py`).
 3. Applies packaging compatibility patches:
    - `patches/paddle_core.py`
 4. Downloads baseline OCR models via `download_models.py`.
 6. Runs `pyinstaller --clean ocr-engine.spec`.
 7. Packages resulting binary into Tauri binaries via `pkg::ocr()`.
+8. Emits payload size report via `scripts/measure_runtime_size.py`.
 
 Model bootstrap behavior in `download_models.py`:
 
@@ -137,24 +145,27 @@ Patches ensure frozen execution works reliably:
 
 - `patches/paddle_core.py` injects `_MEIPASS`-aware Paddle lib loading.
 
-Result: OCR sidecar is shipped as a single executable artifact (`dist/ocr-engine(.exe)`), with packaged resources loaded in frozen mode.
+Default build mode is **OneDir** (runtime folder):
+
+- `dist/ocr-engine/ocr-engine(.exe)` + runtime files
+- mode can be overridden for baseline measurement with `SNAPLLM_OCR_PYI_MODE=onefile`
 
 ## 3.4 Host-triple packaging and Tauri bundling
 
-`xtask/src/commands/pkg.rs` copies `dist/ocr-engine(.exe)` into:
+`xtask/src/commands/pkg.rs` copies OneDir runtime into:
 
-- `app/binaries/ocr-engine-<host-triple>(.exe)`
-- `target/debug/binaries/ocr-engine-<host-triple>(.exe)` for dev convenience
+- `app/binaries/ocr-runtime-<host-triple>/`
+- `target/debug/binaries/ocr-runtime-<host-triple>/` for dev convenience
 
 `app/tauri.conf.json` declares:
 
-- `bundle.externalBin = ["binaries/ocr-engine", ...]`
+- OCR runtime is bundled as app resources (`binaries/ocr-runtime-*/**/*`)
 
 At runtime, Rust resolves from Tauri resource directory:
 
-- `app/src/commands/ocr.rs` -> `resource_dir()/binaries/<resolved-sidecar-name>`
+- `app/src/commands/ocr.rs` -> `resource_dir()/binaries/ocr-runtime-<target-triple>/ocr-engine(.exe)`
 
-Windows runtime name in command code is `ocr-engine.exe`; Linux is `ocr-engine-x86_64-unknown-linux-gnu`; macOS is `ocr-engine`.
+Rust keeps a backward-compatible fallback to legacy onefile/externalBin paths.
 
 Current release target policy for OCR sidecar artifacts is:
 - Linux x64
@@ -728,17 +739,18 @@ cargo xtask build ocr
 Expected:
 
 - venv created under `sidecars/paddle-ocr/venv`
-- dependencies installed (PP3 stack)
+- dependencies installed via split requirement files (`build/core/runtime`)
 - models downloaded under `sidecars/paddle-ocr/models`
-- executable produced at `sidecars/paddle-ocr/dist/ocr-engine`
+- OneDir runtime produced under `sidecars/paddle-ocr/dist/ocr-engine/`
 - packaged copies:
-  - `app/binaries/ocr-engine-x86_64-unknown-linux-gnu`
-  - `target/debug/binaries/ocr-engine-x86_64-unknown-linux-gnu`
+  - `app/binaries/ocr-runtime-x86_64-unknown-linux-gnu/`
+  - `target/debug/binaries/ocr-runtime-x86_64-unknown-linux-gnu/`
+  - size report at `target/ocr-size/ocr-size-<host-triple>.json`
 
 ### 16.3 Sidecar runtime smoke (CLI)
 
 ```bash
-sidecars/paddle-ocr/dist/ocr-engine /absolute/path/to/image.png
+sidecars/paddle-ocr/dist/ocr-engine/ocr-engine /absolute/path/to/image.png
 ```
 
 Expected JSON array:
@@ -751,7 +763,7 @@ Expected JSON array:
 
 ```bash
 PAYLOAD='{"type":"path","data":"/absolute/path/to/image.png"}'
-{ printf "%s\n" "${#PAYLOAD}"; printf "%s" "$PAYLOAD"; } | sidecars/paddle-ocr/dist/ocr-engine
+{ printf "%s\n" "${#PAYLOAD}"; printf "%s" "$PAYLOAD"; } | sidecars/paddle-ocr/dist/ocr-engine/ocr-engine
 ```
 
 Expected: same JSON contract as CLI.
@@ -799,11 +811,23 @@ These can appear while build/runtime still succeeds.
 7. `libmklml_intel.so: cannot open shared object file` in frozen sidecar:
    - dynamic loader cannot resolve Paddle CPU runtime libs from bundled path
    - fixed by including `paddle/libs/*` as top-level `binaries` in `ocr-engine.spec` (in addition to packaged data)
+8. OneDir runtime launch fails due missing working directory/resource root:
+   - ensure Rust sets sidecar `current_dir` to `ocr-runtime-<target-triple>/`
+   - ensure `ocr-runtime-*/**/*` is declared in Tauri resources
 
 ### 17.3 Model file compatibility
 
 Both `inference.pdmodel` and `inference.json` are accepted model graph formats.
 Validation still requires `inference.pdiparams`.
+
+### 17.4 Shipping size gate
+
+- Hard gate: compressed payload size (zip, deflate level 9) must satisfy:
+  - `candidate_compressed_bytes <= baseline_compressed_bytes * 0.65`
+- Soft metric: raw payload footprint is reported for trend visibility.
+- Helper scripts:
+  - `sidecars/paddle-ocr/scripts/measure_runtime_size.py`
+  - `sidecars/paddle-ocr/scripts/compare_size_gate.py`
 
 ---
 
@@ -815,4 +839,6 @@ When upgrading Paddle/PaddleOCR/PaddleX again:
 2. Re-run build smoke on Windows and Ubuntu at minimum.
 3. Re-run CLI + length-prefixed IPC smoke.
 4. Verify PyInstaller frozen runtime, not just venv runtime.
-5. Keep `OCR.md` and model-id migration mapping updated in same PR.
+5. Re-run sidecar smoke on packaged executable (`scripts/smoke_sidecar.py`).
+6. Re-run compressed-size gate and track raw footprint deltas.
+7. Keep `OCR.md` and model-id migration mapping updated in same PR.

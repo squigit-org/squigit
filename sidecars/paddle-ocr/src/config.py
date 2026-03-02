@@ -29,9 +29,12 @@ def _get_base_dir() -> Path:
     @return Path to the base directory.
     """
     if getattr(sys, 'frozen', False):
-        return Path(sys._MEIPASS)
-    else:
-        return Path(__file__).parent.parent.absolute()
+        if hasattr(sys, "_MEIPASS"):
+            return Path(sys._MEIPASS)
+        # OneDir fallback: keep resources relative to the executable directory.
+        return Path(sys.executable).resolve().parent
+
+    return Path(__file__).parent.parent.absolute()
 
 
 @dataclass

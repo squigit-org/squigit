@@ -88,15 +88,15 @@ jobs:
       - name: Prepare Artifacts (Unix)
         if: runner.os != 'Windows'
         run: |
-          mkdir -p dist-staging
-          cp app/binaries/ocr-engine-${{ matrix.target }} dist-staging/
+          mkdir -p dist-staging/ocr-runtime-${{ matrix.target }}
+          cp -r app/binaries/ocr-runtime-${{ matrix.target }}/* dist-staging/ocr-runtime-${{ matrix.target }}/
 
       - name: Prepare Artifacts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path dist-staging -Force
-          Copy-Item app/binaries/ocr-engine-${{ matrix.target }}.exe dist-staging/
+          New-Item -ItemType Directory -Path dist-staging/ocr-runtime-${{ matrix.target }} -Force
+          Copy-Item -Recurse app/binaries/ocr-runtime-${{ matrix.target }}/* dist-staging/ocr-runtime-${{ matrix.target }}/
 
       - name: Upload OCR Artifacts
         uses: actions/upload-artifact@v4
@@ -145,10 +145,15 @@ jobs:
 
           cp -r staging/capture/qt-runtime/* final/sidecars/qt-runtime/
 
-          if [ -f staging/ocr/ocr-engine-${{ matrix.target }}.exe ]; then
+          if [ -d staging/ocr/ocr-runtime-${{ matrix.target }} ]; then
+            mv staging/ocr/ocr-runtime-${{ matrix.target }} final/sidecars/
+          elif [ -f staging/ocr/ocr-engine-${{ matrix.target }}.exe ]; then
             mv staging/ocr/ocr-engine-${{ matrix.target }}.exe final/sidecars/
-          else
+          elif [ -f staging/ocr/ocr-engine-${{ matrix.target }} ]; then
             mv staging/ocr/ocr-engine-${{ matrix.target }} final/sidecars/
+          else
+            echo "Missing OCR artifact for ${{ matrix.target }}"
+            exit 1
           fi
 
           cd final

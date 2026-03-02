@@ -4,7 +4,7 @@
 use anyhow::Result;
 use std::fs;
 use xtask::{capture_sidecar_dir, qt_native_dir};
-use xtask::{ocr_sidecar_dir, venv_python};
+use xtask::{get_host_target_triple, ocr_sidecar_dir, venv_python};
 use xtask::{project_root, run_cmd, run_cmd_with_node_bin};
 use xtask::{tauri_dir, ui_dir};
 
@@ -79,6 +79,16 @@ pub fn ocr() -> Result<()> {
     println!("\nBuilding PaddleOCR sidecar...");
     let sidecar = ocr_sidecar_dir();
     let venv = sidecar.join("venv");
+    let deps_marker = venv.join(".snapllm-ocr-deps-v3");
+    let force_recreate = std::env::var("SNAPLLM_OCR_RECREATE_VENV")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    if venv.exists() && (force_recreate || !deps_marker.exists()) {
+        println!("\nRefreshing OCR venv to match dependency baseline...");
+        fs::remove_dir_all(&venv)?;
+    }
+
     if !venv.exists() {
         println!("\nCreating virtual environment...");
         let mut created = false;
@@ -105,39 +115,83 @@ pub fn ocr() -> Result<()> {
     let py = python.to_str().unwrap();
     run_cmd(
         py,
-        &["-m", "pip", "install", "-r", "requirements.txt"],
+        &["-m", "pip", "install", "-r", "requirements-build.txt"],
+        &sidecar,
+    )?;
+    run_cmd(
+        py,
+        &[
+            "-m",
+            "pip",
+            "install",
+            "--no-deps",
+            "-r",
+            "requirements-core.txt",
+        ],
+        &sidecar,
+    )?;
+    run_cmd(
+        py,
+        &["-m", "pip", "install", "-r", "requirements-runtime.txt"],
+        &sidecar,
+    )?;
+
+    println!("\nApplying patches...");
+    run_cmd(py, &["patches/paddle_core.py"], &sidecar)?;
+    run_cmd(py, &["patches/paddlex_official_models.py"], &sidecar)?;
+    run_cmd(py, &["patches/paddlex_deps.py"], &sidecar)?;
+    run_cmd(py, &["patches/paddlex_image_batch_sampler.py"], &sidecar)?;
+
+    run_cmd(
+        py,
+        &[
+            "-m",
+            "pip",
+            "uninstall",
+            "-y",
+            "modelscope",
+            "huggingface-hub",
+            "hf-xet",
+            "pypdfium2",
+            "pypdfium2-raw",
+            "opencv-contrib-python",
+            "rich",
+            "typer",
+            "markdown-it-py",
+            "mdurl",
+        ],
         &sidecar,
     )?;
     run_cmd(
         py,
         &[
             "-c",
-            r###"import importlib, pathlib, sys
-req = {}
-for line in pathlib.Path("requirements.txt").read_text().splitlines():
-    line = line.strip()
-    if not line or line.startswith("#") or "==" not in line:
-        continue
-    name, version = [v.strip() for v in line.split("==", 1)]
-    req[name.lower()] = version
+            r###"import pathlib
+import re
+import sys
+from importlib import metadata
 
-module_map = {
-    "paddlepaddle": "paddle",
-    "paddleocr": "paddleocr",
-    "paddlex": "paddlex",
-    "pyinstaller": "PyInstaller",
-}
+req = {}
+for req_file in ("requirements-core.txt", "requirements-build.txt", "requirements-runtime.txt"):
+    for line in pathlib.Path(req_file).read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        line = line.split("#", 1)[0].strip()
+        if "==" not in line:
+            continue
+        name, version = line.split("==", 1)
+        name = re.split(r"[;\s]", name.strip(), maxsplit=1)[0]
+        req[name.lower().replace("_", "-")] = version.strip()
 
 errors = []
 for package, expected in req.items():
-    module_name = module_map.get(package, package)
     try:
-        mod = importlib.import_module(module_name)
+        actual = metadata.version(package)
     except Exception as exc:
-        errors.append(f"{package}: import failed: {exc}")
+        errors.append(f"{package}: metadata lookup failed: {exc}")
         continue
 
-    actual = getattr(mod, "__version__", None)
     if actual != expected:
         errors.append(f"{package}: expected {expected}, got {actual}")
 
@@ -150,21 +204,60 @@ print("OCR dependency verification passed.")"###,
         ],
         &sidecar,
     )?;
-
-    println!("\nApplying patches...");
-    run_cmd(py, &["patches/paddle_core.py"], &sidecar)?;
+    fs::write(&deps_marker, "v3\n")?;
 
     println!("\nDownloading models...");
     run_cmd(py, &["download_models.py"], &sidecar)?;
+    println!("\nRunning OCR runtime smoke check...");
+    run_cmd(py, &["scripts/smoke_runtime.py"], &sidecar)?;
 
     println!("\nBuilding executable...");
     run_cmd(
         py,
-        &["-m", "PyInstaller", "--clean", "ocr-engine.spec"],
+        &["-m", "PyInstaller", "--clean", "-y", "ocr-engine.spec"],
         &sidecar,
     )?;
 
     pkg::ocr()?;
+
+    println!("\nMeasuring OCR payload size...");
+    let host_triple = get_host_target_triple()?;
+    let app_binaries = project_root().join("app").join("binaries");
+    let runtime_dir = app_binaries.join(format!("ocr-runtime-{}", host_triple));
+    let legacy_bin = app_binaries.join(format!(
+        "ocr-engine-{}{}",
+        host_triple,
+        if cfg!(windows) { ".exe" } else { "" }
+    ));
+    let size_input = if runtime_dir.exists() {
+        runtime_dir
+    } else {
+        legacy_bin
+    };
+    if size_input.exists() {
+        let reports_dir = project_root().join("target").join("ocr-size");
+        fs::create_dir_all(&reports_dir)?;
+        let report_path = reports_dir.join(format!("ocr-size-{}.json", host_triple));
+        let size_input_str = size_input.to_string_lossy().to_string();
+        let report_path_str = report_path.to_string_lossy().to_string();
+        run_cmd(
+            py,
+            &[
+                "scripts/measure_runtime_size.py",
+                "--input",
+                &size_input_str,
+                "--output",
+                &report_path_str,
+            ],
+            &sidecar,
+        )?;
+    } else {
+        println!(
+            "  [warn] OCR payload path not found for size report: {}",
+            size_input.display()
+        );
+    }
+
     println!("\nSidecar build complete!");
     Ok(())
 }
