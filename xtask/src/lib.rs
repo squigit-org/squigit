@@ -4,6 +4,8 @@
 use anyhow::{Context, Result};
 use std::env;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -113,6 +115,53 @@ pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
         } else {
             fs::copy(&src_path, &dst_path)?;
         }
+    }
+    Ok(())
+}
+
+fn remove_existing_path(path: &Path) -> Result<()> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(meta) => meta,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(err) => return Err(err.into()),
+    };
+
+    if metadata.is_dir() && !metadata.file_type().is_symlink() {
+        fs::remove_dir_all(path)?;
+    } else {
+        fs::remove_file(path)?;
+    }
+    Ok(())
+}
+
+pub fn copy_dir_all_preserve_symlinks(src: &Path, dst: &Path) -> Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if ty.is_dir() {
+            copy_dir_all_preserve_symlinks(&src_path, &dst_path)?;
+            continue;
+        }
+
+        if ty.is_symlink() {
+            let link_target = fs::read_link(&src_path)?;
+            remove_existing_path(&dst_path)?;
+            #[cfg(unix)]
+            {
+                unix_fs::symlink(&link_target, &dst_path)?;
+            }
+            #[cfg(windows)]
+            {
+                fs::copy(&src_path, &dst_path)?;
+            }
+            continue;
+        }
+
+        fs::copy(&src_path, &dst_path)?;
     }
     Ok(())
 }

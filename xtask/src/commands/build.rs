@@ -3,6 +3,8 @@
 
 use anyhow::Result;
 use std::fs;
+#[cfg(not(target_os = "windows"))]
+use std::path::Path;
 use xtask::{capture_sidecar_dir, qt_native_dir};
 use xtask::{get_host_target_triple, ocr_sidecar_dir, venv_python};
 use xtask::{project_root, run_cmd, run_cmd_with_node_bin};
@@ -73,6 +75,16 @@ fn build_capture_rust_wrapper() -> Result<()> {
         &project_root(),
     )?;
     Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn smoke_packaged_sidecar(py: &str, sidecar_dir: &Path, sidecar_path: &Path) -> Result<()> {
+    let sidecar_str = sidecar_path.to_string_lossy().to_string();
+    run_cmd(
+        py,
+        &["scripts/smoke_sidecar.py", "--sidecar", &sidecar_str],
+        sidecar_dir,
+    )
 }
 
 pub fn ocr() -> Result<()> {
@@ -207,7 +219,10 @@ print("OCR dependency verification passed.")"###,
     fs::write(&deps_marker, "v3\n")?;
 
     println!("\nDownloading models...");
+    #[cfg(target_os = "windows")]
     run_cmd(py, &["download_models.py"], &sidecar)?;
+    #[cfg(not(target_os = "windows"))]
+    run_cmd(py, &["download_models.py", "--clean-stale"], &sidecar)?;
     println!("\nRunning OCR runtime smoke check...");
     run_cmd(py, &["scripts/smoke_runtime.py"], &sidecar)?;
 
@@ -218,11 +233,28 @@ print("OCR dependency verification passed.")"###,
         &sidecar,
     )?;
 
+    #[cfg(not(target_os = "windows"))]
+    {
+        println!("\nRunning dist sidecar smoke checks...");
+        let dist_sidecar = sidecar.join("dist").join("ocr-engine").join("ocr-engine");
+        smoke_packaged_sidecar(py, &sidecar, &dist_sidecar)?;
+    }
+
     pkg::ocr()?;
 
-    println!("\nMeasuring OCR payload size...");
     let host_triple = get_host_target_triple()?;
     let app_binaries = project_root().join("app").join("binaries");
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        println!("\nRunning packaged sidecar smoke checks...");
+        let packaged_sidecar = app_binaries
+            .join(format!("paddle-ocr-{}", host_triple))
+            .join("ocr-engine");
+        smoke_packaged_sidecar(py, &sidecar, &packaged_sidecar)?;
+    }
+
+    println!("\nMeasuring OCR payload size...");
     let runtime_dir = app_binaries.join(format!("paddle-ocr-{}", host_triple));
     let legacy_bin = app_binaries.join(format!(
         "ocr-engine-{}{}",
@@ -240,17 +272,18 @@ print("OCR dependency verification passed.")"###,
         let report_path = reports_dir.join(format!("ocr-size-{}.json", host_triple));
         let size_input_str = size_input.to_string_lossy().to_string();
         let report_path_str = report_path.to_string_lossy().to_string();
-        run_cmd(
-            py,
-            &[
-                "scripts/measure_runtime_size.py",
-                "--input",
-                &size_input_str,
-                "--output",
-                &report_path_str,
-            ],
-            &sidecar,
-        )?;
+        let mut measure_args = vec![
+            "scripts/measure_runtime_size.py".to_string(),
+            "--input".to_string(),
+            size_input_str,
+            "--output".to_string(),
+            report_path_str,
+        ];
+        #[cfg(not(target_os = "windows"))]
+        measure_args.push("--preserve-symlinks".to_string());
+
+        let measure_arg_refs: Vec<&str> = measure_args.iter().map(String::as_str).collect();
+        run_cmd(py, &measure_arg_refs, &sidecar)?;
     } else {
         println!(
             "  [warn] OCR payload path not found for size report: {}",

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -47,13 +48,45 @@ def _write_ppm_image(path: Path, width: int, height: int, mode: str) -> None:
                 f.write(row_a if y % 2 == 0 else row_b)
 
 
-def smoke_cli(sidecar: Path, image_path: Path) -> None:
+def _prepend_env_path(env: dict[str, str], key: str, value: str, sep: str) -> None:
+    current = env.get(key, "")
+    parts = [p for p in current.split(sep) if p]
+    if value in parts:
+        return
+    env[key] = f"{value}{sep}{current}" if current else value
+
+
+def _sidecar_env(sidecar: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    runtime_dir = sidecar.parent
+    candidates = [
+        runtime_dir / "_internal" / "paddle" / "libs",
+        runtime_dir / "paddle" / "libs",
+    ]
+    paddle_lib_dir = next((p for p in candidates if p.is_dir()), None)
+    if not paddle_lib_dir:
+        return env
+
+    if sys.platform == "darwin":
+        _prepend_env_path(env, "DYLD_LIBRARY_PATH", str(paddle_lib_dir), ":")
+        _prepend_env_path(env, "PATH", str(paddle_lib_dir), ":")
+    elif os.name == "nt":
+        _prepend_env_path(env, "PATH", str(paddle_lib_dir), ";")
+    else:
+        _prepend_env_path(env, "LD_LIBRARY_PATH", str(paddle_lib_dir), ":")
+        _prepend_env_path(env, "PATH", str(paddle_lib_dir), ":")
+
+    return env
+
+
+def smoke_cli(sidecar: Path, image_path: Path, env: dict[str, str]) -> None:
     proc = subprocess.run(
         [str(sidecar), str(image_path)],
         capture_output=True,
         text=True,
         timeout=240,
         check=False,
+        env=env,
     )
     if proc.returncode != 0:
         raise RuntimeError(
@@ -62,18 +95,20 @@ def smoke_cli(sidecar: Path, image_path: Path) -> None:
     _read_json_output(proc.stdout, proc.stderr, "cli")
 
 
-def smoke_ipc(sidecar: Path, image_path: Path) -> None:
+def smoke_ipc(sidecar: Path, image_path: Path, env: dict[str, str]) -> None:
     payload = json.dumps({"type": "path", "data": str(image_path)}).encode("utf-8")
     proc = subprocess.Popen(
         [str(sidecar)],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=env,
     )
     assert proc.stdin and proc.stdout and proc.stderr
     proc.stdin.write(f"{len(payload)}\n".encode("ascii"))
     proc.stdin.write(payload)
     proc.stdin.close()
+    proc.stdin = None
     stdout_b, stderr_b = proc.communicate(timeout=240)
     if proc.returncode != 0:
         raise RuntimeError(
@@ -86,13 +121,14 @@ def smoke_ipc(sidecar: Path, image_path: Path) -> None:
     )
 
 
-def smoke_cancel(sidecar: Path, image_path: Path) -> None:
+def smoke_cancel(sidecar: Path, image_path: Path, env: dict[str, str]) -> None:
     payload = json.dumps({"type": "path", "data": str(image_path)}).encode("utf-8")
     proc = subprocess.Popen(
         [str(sidecar)],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=env,
     )
     assert proc.stdin and proc.stdout and proc.stderr
 
@@ -102,6 +138,7 @@ def smoke_cancel(sidecar: Path, image_path: Path) -> None:
     proc.stdin.write(b"CANCEL\n")
     proc.stdin.flush()
     proc.stdin.close()
+    proc.stdin = None
 
     try:
         stdout_b, stderr_b = proc.communicate(timeout=20)
@@ -137,13 +174,14 @@ def main() -> int:
         tmp = Path(tmpdir)
         normal_image = tmp / "normal.ppm"
         cancel_image = tmp / "cancel.ppm"
+        env = _sidecar_env(sidecar)
         _write_ppm_image(normal_image, width=960, height=240, mode="normal")
         _write_ppm_image(cancel_image, width=4200, height=4200, mode="cancel")
 
-        smoke_cli(sidecar, normal_image)
-        smoke_ipc(sidecar, normal_image)
+        smoke_cli(sidecar, normal_image, env)
+        smoke_ipc(sidecar, normal_image, env)
         if not args.skip_cancel:
-            smoke_cancel(sidecar, cancel_image)
+            smoke_cancel(sidecar, cancel_image, env)
 
     print("OCR sidecar smoke passed.")
     return 0

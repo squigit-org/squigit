@@ -21,7 +21,7 @@ This document intentionally focuses on technical implementation details: protoco
   - `paddlex==3.4.2`
   - `pyinstaller==6.19.0`
 - Bundled default model ids:
-  - `PP-OCRv5_server_det`
+  - `PP-OCRv5_mobile_det`
   - `en_PP-OCRv5_mobile_rec`
   - `PP-LCNet_x1_0_textline_ori`
 - App default OCR language/model id:
@@ -115,13 +115,18 @@ OCR dependencies are split into install groups:
 2. Installs build deps from `requirements-build.txt`.
 3. Installs core OCR stack with `--no-deps` from `requirements-core.txt`.
 4. Installs explicit runtime deps from `requirements-runtime.txt`.
-5. Runs `pip check` + runtime smoke (`scripts/smoke_runtime.py`).
-3. Applies packaging compatibility patches:
+5. Applies packaging compatibility patches:
    - `patches/paddle_core.py`
-4. Downloads baseline OCR models via `download_models.py`.
-6. Runs `pyinstaller --clean ocr-engine.spec`.
-7. Packages resulting binary into Tauri binaries via `pkg::ocr()`.
-8. Emits payload size report via `scripts/measure_runtime_size.py`.
+6. Downloads baseline OCR models via `download_models.py`.
+   - Linux/macOS call `download_models.py --clean-stale` to prune non-allowlisted model folders.
+   - Windows keeps the default `download_models.py` invocation.
+7. Runs `scripts/smoke_runtime.py` (venv runtime smoke).
+8. Runs `pyinstaller --clean ocr-engine.spec`.
+9. Runs packaged sidecar smoke on the `dist/ocr-engine/ocr-engine` executable (Linux/macOS).
+10. Packages resulting binary into Tauri binaries via `pkg::ocr()`.
+11. Runs packaged sidecar smoke on `app/binaries/paddle-ocr-<host-triple>/ocr-engine` (Linux/macOS).
+12. Emits payload size report via `scripts/measure_runtime_size.py`.
+   - Linux/macOS use `--preserve-symlinks` for symlink-aware measurement.
 
 Model bootstrap behavior in `download_models.py`:
 
@@ -129,6 +134,10 @@ Model bootstrap behavior in `download_models.py`:
 - Extracts archives locally and normalizes extracted folder names to canonical names above.
 - Supports PP3 layouts that use `inference.json` (instead of only `inference.pdmodel`).
 - Removes temporary archives after successful extraction.
+- Optional `--clean-stale` mode removes model directories outside the allowlist:
+  - `PP-OCRv5_mobile_det`
+  - `PP-LCNet_x1_0_textline_ori`
+  - `en_PP-OCRv5_mobile_rec`
 
 ## 3.3 PyInstaller artifact and frozen runtime behavior
 
@@ -144,6 +153,7 @@ Model bootstrap behavior in `download_models.py`:
 Patches ensure frozen execution works reliably:
 
 - `patches/paddle_core.py` injects `_MEIPASS`-aware Paddle lib loading.
+- On Linux/macOS, preload order is explicitly `libiomp5` before `libmklml_intel`.
 
 Default build mode is **OneDir** (runtime folder):
 
@@ -156,6 +166,7 @@ Default build mode is **OneDir** (runtime folder):
 
 - `app/binaries/ocr-runtime-<host-triple>/`
 - `target/debug/binaries/ocr-runtime-<host-triple>/` for dev convenience
+- Linux/macOS OCR packaging preserves PyInstaller-generated symlinks and asserts post-copy symlink integrity.
 
 `app/tauri.conf.json` declares:
 
@@ -329,13 +340,13 @@ Output serialization uses `models.py` dataclasses (`OCRResult`, `BoundingBox`) a
 
 Bundled at build-time from `download_models.py`:
 
-- Detection model: `PP-OCRv5_server_det`
+- Detection model: `PP-OCRv5_mobile_det`
 - Recognition model: `en_PP-OCRv5_mobile_rec`
 - Textline orientation model: `PP-LCNet_x1_0_textline_ori`
 
 Default model paths in `sidecars/paddle-ocr/src/config.py`:
 
-- `models/PP-OCRv5_server_det`
+- `models/PP-OCRv5_mobile_det`
 - `models/en_PP-OCRv5_mobile_rec`
 - `models/PP-LCNet_x1_0_textline_ori`
 
@@ -809,11 +820,14 @@ These can appear while build/runtime still succeeds.
    - frozen bundle is missing `Cython/Utility/*` resources required by `paddle.utils.cpp_extension`
    - fixed by bundling `collect_data_files("Cython")` in `ocr-engine.spec`
 7. `libmklml_intel.so: cannot open shared object file` in frozen sidecar:
-   - dynamic loader cannot resolve Paddle CPU runtime libs from bundled path
-   - fixed by including `paddle/libs/*` as top-level `binaries` in `ocr-engine.spec` (in addition to packaged data)
+   - frozen preload order attempts `libmklml_intel` before `libiomp5` on Linux/macOS
+   - fixed by preloading `libiomp5` before `libmklml_intel` in `patches/paddle_core.py`
 8. OneDir runtime launch fails due missing working directory/resource root:
    - ensure Rust sets sidecar `current_dir` to `ocr-runtime-<target-triple>/`
    - ensure `ocr-runtime-*/**/*` is declared in Tauri resources
+9. Linux/macOS packaged runtime unexpectedly regains ~300MB:
+   - caused by symlink flattening while copying PyInstaller runtime directories
+   - fixed by symlink-preserving OCR runtime copy path in `xtask` packaging
 
 ### 17.3 Model file compatibility
 

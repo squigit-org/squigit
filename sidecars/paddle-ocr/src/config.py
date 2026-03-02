@@ -82,7 +82,7 @@ class EngineConfig:
         """
         if self.det_model_path:
             return self.det_model_path
-        return str(self.model_dir / "PP-OCRv5_server_det")
+        return str(self.model_dir / "PP-OCRv5_mobile_det")
     
     @property
     def rec_model_dir(self) -> str:

@@ -44,16 +44,66 @@ def _get_frozen_runtime_root() -> str | None:
     return str(Path(sys.executable).resolve().parent)
 
 
+def _get_frozen_paddle_lib_dir() -> str | None:
+    candidates: list[str] = []
+
+    runtime_root = _get_frozen_runtime_root()
+    if runtime_root:
+        candidates.append(os.path.join(runtime_root, "paddle", "libs"))
+        candidates.append(os.path.join(runtime_root, "_internal", "paddle", "libs"))
+
+    exe_dir = str(Path(sys.executable).resolve().parent)
+    candidates.append(os.path.join(exe_dir, "paddle", "libs"))
+    candidates.append(os.path.join(exe_dir, "_internal", "paddle", "libs"))
+
+    for candidate in candidates:
+        if os.path.isdir(candidate):
+            return candidate
+    return None
+
+
+def _bootstrap_frozen_loader_env() -> None:
+    """
+    Re-exec frozen sidecar with loader env pointing to bundled Paddle libs.
+
+    Paddle may dlopen CPU libs by bare soname (e.g., libmklml_intel.so),
+    so the dynamic loader search path must be ready before those calls.
+    """
+    if os.name == "nt":
+        return
+
+    paddle_lib_dir = _get_frozen_paddle_lib_dir()
+    if not paddle_lib_dir:
+        return
+
+    if os.environ.get("SNAPLLM_PADDLE_LIBPATH_BOOTSTRAPPED") == "1":
+        return
+
+    if sys.platform == "darwin":
+        key = "DYLD_LIBRARY_PATH"
+        sep = ":"
+    else:
+        key = "LD_LIBRARY_PATH"
+        sep = ":"
+
+    current = os.environ.get(key, "")
+    parts = [p for p in current.split(sep) if p]
+    if paddle_lib_dir in parts:
+        return
+
+    env = os.environ.copy()
+    env[key] = f"{paddle_lib_dir}{sep}{current}" if current else paddle_lib_dir
+    env["SNAPLLM_PADDLE_LIBPATH_BOOTSTRAPPED"] = "1"
+    # Preserve user arguments on re-exec; avoid duplicating argv[0] as input.
+    os.execvpe(sys.executable, [sys.executable, *sys.argv[1:]], env)
+
+
 def _configure_frozen_lib_paths() -> None:
     """
     Ensure Paddle bundled shared libs are discoverable in frozen builds.
     """
-    runtime_root = _get_frozen_runtime_root()
-    if not runtime_root:
-        return
-
-    paddle_lib_dir = os.path.join(runtime_root, "paddle", "libs")
-    if not os.path.isdir(paddle_lib_dir):
+    paddle_lib_dir = _get_frozen_paddle_lib_dir()
+    if not paddle_lib_dir:
         return
 
     if os.name == "nt":
@@ -66,7 +116,55 @@ def _configure_frozen_lib_paths() -> None:
         _prepend_env_path("PATH", paddle_lib_dir, ":")
 
 
+def _preload_frozen_paddle_libs() -> None:
+    """
+    Preload Paddle CPU runtime libs in frozen builds.
+
+    This avoids loader-order issues where libmklml is requested before
+    libiomp5 is resolved from the bundled runtime tree.
+    """
+    if os.name == "nt":
+        return
+
+    paddle_lib_dir = _get_frozen_paddle_lib_dir()
+    if not paddle_lib_dir:
+        return
+
+    try:
+        import ctypes
+    except Exception:
+        return
+
+    if sys.platform == "darwin":
+        lib_candidates = (
+            "libiomp5.dylib",
+            "libmklml_intel.dylib",
+        )
+    else:
+        lib_candidates = (
+            "libiomp5.so",
+            "libmklml_intel.so",
+            "libgfortran.so.3",
+            "libquadmath.so.0",
+        )
+
+    rtld_global = getattr(ctypes, "RTLD_GLOBAL", None)
+    for lib_name in lib_candidates:
+        lib_path = os.path.join(paddle_lib_dir, lib_name)
+        if not os.path.exists(lib_path):
+            continue
+        try:
+            if rtld_global is None:
+                ctypes.CDLL(lib_path)
+            else:
+                ctypes.CDLL(lib_path, mode=rtld_global)
+        except OSError:
+            pass
+
+
+_bootstrap_frozen_loader_env()
 _configure_frozen_lib_paths()
+_preload_frozen_paddle_libs()
 
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).parent.parent))

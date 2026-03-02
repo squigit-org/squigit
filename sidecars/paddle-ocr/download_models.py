@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import shutil
 import tarfile
 from pathlib import Path
@@ -14,7 +15,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 MODELS_DIR = SCRIPT_DIR / "models"
 
 MODELS = [
-    "PP-OCRv5_server_det_infer.tar",
+    "PP-OCRv5_mobile_det_infer.tar",
     "en_PP-OCRv5_mobile_rec_infer.tar",
     "PP-LCNet_x1_0_textline_ori_infer.tar",
 ]
@@ -22,6 +23,15 @@ MODELS = [
 
 def _model_dir_name(archive_name: str) -> str:
     return archive_name.removesuffix("_infer.tar")
+
+
+def _allowlisted_model_dirs() -> set[str]:
+    allowed = set()
+    for archive_name in MODELS:
+        model_name = _model_dir_name(archive_name)
+        allowed.add(model_name)
+        allowed.add(f"{model_name}_infer")
+    return allowed
 
 
 def _has_model_graph(model_dir: Path) -> bool:
@@ -102,8 +112,32 @@ def ensure_model(archive_name: str) -> None:
         )
 
 
+def prune_stale_model_dirs() -> None:
+    if not MODELS_DIR.exists():
+        return
+
+    allowed = _allowlisted_model_dirs()
+    for path in sorted(MODELS_DIR.iterdir()):
+        if not path.is_dir():
+            continue
+        if path.name in allowed:
+            continue
+        print(f"Removing stale model directory: {path.name}")
+        shutil.rmtree(path)
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Prepare bundled OCR model directories.")
+    parser.add_argument(
+        "--clean-stale",
+        action="store_true",
+        help="Remove non-allowlisted model directories before ensuring required models.",
+    )
+    args = parser.parse_args()
+
     print("Preparing bundled PP-OCRv5 models...")
+    if args.clean_stale:
+        prune_stale_model_dirs()
     for archive_name in MODELS:
         ensure_model(archive_name)
     print("All bundled models are ready.")

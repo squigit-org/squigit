@@ -3,10 +3,65 @@
 
 use anyhow::Result;
 use std::fs;
+use std::path::Path;
 use xtask::{
     copy_dir_all, get_host_target_triple, ocr_sidecar_dir, project_root, qt_native_dir,
     whisper_sidecar_dir,
 };
+#[cfg(not(windows))]
+use xtask::copy_dir_all_preserve_symlinks;
+
+fn copy_ocr_runtime_dir(src: &Path, dst: &Path) -> Result<()> {
+    #[cfg(windows)]
+    {
+        copy_dir_all(src, dst)?;
+        return Ok(());
+    }
+
+    #[cfg(not(windows))]
+    {
+        copy_dir_all_preserve_symlinks(src, dst)?;
+        verify_symlink_integrity(src, dst)?;
+        return Ok(());
+    }
+}
+
+#[cfg(not(windows))]
+fn count_symlinks_recursive(path: &Path) -> Result<usize> {
+    if !path.exists() {
+        return Ok(0);
+    }
+
+    let mut count = 0usize;
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        if file_type.is_symlink() {
+            count += 1;
+            continue;
+        }
+        if file_type.is_dir() {
+            count += count_symlinks_recursive(&entry.path())?;
+        }
+    }
+    Ok(count)
+}
+
+#[cfg(not(windows))]
+fn verify_symlink_integrity(src: &Path, dst: &Path) -> Result<()> {
+    let src_count = count_symlinks_recursive(src)?;
+    let dst_count = count_symlinks_recursive(dst)?;
+    if src_count != dst_count {
+        anyhow::bail!(
+            "OCR runtime symlink integrity failed: src={} dst={} ({} -> {})",
+            src_count,
+            dst_count,
+            src.display(),
+            dst.display()
+        );
+    }
+    Ok(())
+}
 
 pub fn capture() -> Result<()> {
     println!("\nPackaging Capture Engine artifacts for Tauri...");
@@ -97,7 +152,7 @@ pub fn ocr() -> Result<()> {
         if runtime_dst_dir.exists() {
             fs::remove_dir_all(&runtime_dst_dir)?;
         }
-        copy_dir_all(&src_runtime_dir, &runtime_dst_dir)?;
+        copy_ocr_runtime_dir(&src_runtime_dir, &runtime_dst_dir)?;
 
         if legacy_dst_binary_path.exists() {
             fs::remove_file(&legacy_dst_binary_path)?;
@@ -110,7 +165,7 @@ pub fn ocr() -> Result<()> {
         if debug_runtime_dst_dir.exists() {
             fs::remove_dir_all(&debug_runtime_dst_dir)?;
         }
-        copy_dir_all(&src_runtime_dir, &debug_runtime_dst_dir)?;
+        copy_ocr_runtime_dir(&src_runtime_dir, &debug_runtime_dst_dir)?;
 
         if debug_legacy_dst_path.exists() {
             fs::remove_file(&debug_legacy_dst_path)?;
