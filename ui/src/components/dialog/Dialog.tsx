@@ -8,6 +8,7 @@ import React, { useEffect, useRef } from "react";
 
 import { createPortal } from "react-dom";
 import { AlertCircle, AlertTriangle, Info, Sparkles } from "lucide-react";
+import { playWarning } from "@/assets";
 import styles from "./Dialog.module.css";
 
 export type DialogVariant = "error" | "warning" | "info" | "update";
@@ -57,7 +58,6 @@ export const Dialog: React.FC<DialogProps> = ({
   const finalTitle = activeContent.title || title;
   const finalMessage = activeContent.message || message || "";
 
-  // Merge actions logic
   const finalActions = activeContent.actions
     ? activeContent.actions.map((a) => ({
         ...a,
@@ -74,10 +74,10 @@ export const Dialog: React.FC<DialogProps> = ({
     }
   }, [isOpen, finalMessage]);
 
-  // Toggle body class for TitleBar interactivity
   useEffect(() => {
     if (isOpen) {
       document.body.classList.add("has-open-dialog");
+      playWarning();
     } else {
       document.body.classList.remove("has-open-dialog");
     }
