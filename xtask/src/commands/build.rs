@@ -223,7 +223,7 @@ print("OCR dependency verification passed.")"###,
     println!("\nMeasuring OCR payload size...");
     let host_triple = get_host_target_triple()?;
     let app_binaries = project_root().join("app").join("binaries");
-    let runtime_dir = app_binaries.join(format!("ocr-runtime-{}", host_triple));
+    let runtime_dir = app_binaries.join(format!("paddle-ocr-{}", host_triple));
     let legacy_bin = app_binaries.join(format!(
         "ocr-engine-{}{}",
         host_triple,

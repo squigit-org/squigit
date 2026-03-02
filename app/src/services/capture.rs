@@ -209,8 +209,14 @@ fn parse_display_geo(s: &str) -> Option<DisplayGeo> {
 }
 
 fn resolve_sidecar_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    let binary_name = format!("capture-engine{}", if cfg!(windows) { ".exe" } else { "" });
+    let sidecar_dir_name = format!("qt-capture-{}", get_capture_target_triple());
+
     if let Ok(resource_dir) = app.path().resource_dir() {
-        let prod_path = resource_dir.join("binaries").join(get_sidecar_name());
+        let prod_path = resource_dir
+            .join("binaries")
+            .join(&sidecar_dir_name)
+            .join(&binary_name);
         if prod_path.exists() {
             return Ok(prod_path);
         }
@@ -245,22 +251,22 @@ fn resolve_sidecar_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
     }
 
     Err(format!(
-        "Capture sidecar not found. Searched production and dev locations for: {}",
-        get_sidecar_name()
+        "Capture sidecar not found. Searched production and dev locations for: {}/{}",
+        sidecar_dir_name, binary_name
     ))
 }
 
-fn get_sidecar_name() -> String {
+fn get_capture_target_triple() -> &'static str {
     #[cfg(target_os = "windows")]
     {
-        "capture-engine.exe".to_string()
+        "x86_64-pc-windows-msvc"
     }
     #[cfg(target_os = "macos")]
     {
-        "capture-engine".to_string()
+        "aarch64-apple-darwin"
     }
     #[cfg(target_os = "linux")]
     {
-        "capture-engine-x86_64-unknown-linux-gnu".to_string()
+        "x86_64-unknown-linux-gnu"
     }
 }

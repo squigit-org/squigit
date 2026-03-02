@@ -501,7 +501,7 @@ fn get_legacy_sidecar_name() -> String {
 }
 
 fn get_runtime_dir_name() -> String {
-    format!("ocr-runtime-{}", get_target_triple())
+    format!("paddle-ocr-{}", get_target_triple())
 }
 
 fn resolve_sidecar_path(resource_dir: &Path) -> (PathBuf, Option<PathBuf>) {

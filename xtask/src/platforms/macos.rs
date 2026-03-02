@@ -59,7 +59,7 @@ pub fn build(native_dir: &Path) -> Result<()> {
 
 pub fn deploy(native_dir: &Path) -> Result<()> {
     let build_dir = native_dir.join("build");
-    let dist_dir = native_dir.join("qt-runtime");
+    let dist_dir = native_dir.join("_internal");
 
     let qt_prefix = find_qt_prefix()?;
 
@@ -72,7 +72,7 @@ pub fn deploy(native_dir: &Path) -> Result<()> {
 pub fn sign(native_dir: &Path) -> Result<()> {
     println!("  Signing bundle...");
 
-    let app_bundle = native_dir.join("qt-runtime").join("capture.app");
+    let app_bundle = native_dir.join("_internal").join("capture.app");
 
     if !app_bundle.exists() {
         anyhow::bail!("App bundle not found at {}", app_bundle.display());

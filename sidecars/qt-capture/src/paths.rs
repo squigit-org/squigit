@@ -14,7 +14,7 @@ impl QtPaths {
     pub fn resolve() -> Result<Self> {
         let exe_path = env::current_exe()?;
         let exe_dir = exe_path.parent().context("No parent dir for executable")?;
-        let qt_runtime = exe_dir.join("qt-runtime");
+        let qt_runtime = exe_dir.join("_internal");
 
         #[cfg(target_os = "linux")]
         {

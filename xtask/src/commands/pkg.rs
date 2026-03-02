@@ -12,26 +12,34 @@ pub fn capture() -> Result<()> {
     println!("\nPackaging Capture Engine artifacts for Tauri...");
 
     let target_dir = project_root().join("target").join("release");
-    let qt_runtime_src = qt_native_dir().join("qt-runtime");
+    let qt_internal_src = qt_native_dir().join("_internal");
 
     let app_binaries = project_root().join("app").join("binaries");
     fs::create_dir_all(&app_binaries)?;
 
-    let qt_runtime_dst = app_binaries.join("qt-runtime");
-    if qt_runtime_dst.exists() {
-        fs::remove_dir_all(&qt_runtime_dst)?;
+    let host_triple = get_host_target_triple()?;
+    let sidecar_dir_name = format!("qt-capture-{}", host_triple);
+
+    // Create qt-capture-{triple}/ with _internal/ nested inside
+    let sidecar_dst = app_binaries.join(&sidecar_dir_name);
+    if sidecar_dst.exists() {
+        fs::remove_dir_all(&sidecar_dst)?;
+    }
+    fs::create_dir_all(&sidecar_dst)?;
+
+    let internal_dst = sidecar_dst.join("_internal");
+
+    if !qt_internal_src.exists() {
+        anyhow::bail!("Qt runtime not found at {}", qt_internal_src.display());
     }
 
-    if !qt_runtime_src.exists() {
-        anyhow::bail!("Qt runtime not found at {}", qt_runtime_src.display());
+    println!("  Moving _internal to {}", internal_dst.display());
+    if fs::rename(&qt_internal_src, &internal_dst).is_err() {
+        copy_dir_all(&qt_internal_src, &internal_dst)?;
+        fs::remove_dir_all(&qt_internal_src)?;
     }
 
-    println!("  Moving qt-runtime to {}", qt_runtime_dst.display());
-    if fs::rename(&qt_runtime_src, &qt_runtime_dst).is_err() {
-        copy_dir_all(&qt_runtime_src, &qt_runtime_dst)?;
-        fs::remove_dir_all(&qt_runtime_src)?;
-    }
-
+    // Place binary inside qt-capture-{triple}/ (no triple suffix on binary name)
     let src_binary_name = format!("capture-engine{}", if cfg!(windows) { ".exe" } else { "" });
     let src_binary_path = target_dir.join(&src_binary_name);
 
@@ -39,31 +47,19 @@ pub fn capture() -> Result<()> {
         anyhow::bail!("Rust binary not found: {}", src_binary_path.display());
     }
 
-    let host_triple = get_host_target_triple()?;
-
-    let dst_binary_name = format!(
-        "capture-engine-{}{}",
-        host_triple,
-        if cfg!(windows) { ".exe" } else { "" }
-    );
-    let dst_binary_path = app_binaries.join(&dst_binary_name);
-
+    let dst_binary_path = sidecar_dst.join(&src_binary_name);
     println!("  Copying binary to {}", dst_binary_path.display());
     fs::copy(&src_binary_path, &dst_binary_path)?;
 
     // Also copy to target/debug/binaries for dev
     let debug_binaries = project_root().join("target").join("debug").join("binaries");
     fs::create_dir_all(&debug_binaries)?;
-    let debug_dst_path = debug_binaries.join(&dst_binary_name);
-    println!("  Copying binary to {}", debug_dst_path.display());
-    fs::copy(&src_binary_path, &debug_dst_path)?;
 
-    // Copy qt-runtime to target/debug/binaries for dev too
-    let debug_qt_runtime_dst = debug_binaries.join("qt-runtime");
-    if debug_qt_runtime_dst.exists() {
-        fs::remove_dir_all(&debug_qt_runtime_dst)?;
+    let debug_sidecar_dst = debug_binaries.join(&sidecar_dir_name);
+    if debug_sidecar_dst.exists() {
+        fs::remove_dir_all(&debug_sidecar_dst)?;
     }
-    copy_dir_all(&qt_runtime_dst, &debug_qt_runtime_dst)?;
+    copy_dir_all(&sidecar_dst, &debug_sidecar_dst)?;
 
     Ok(())
 }
@@ -88,13 +84,13 @@ pub fn ocr() -> Result<()> {
         if cfg!(windows) { ".exe" } else { "" }
     );
     let legacy_dst_binary_path = app_binaries.join(&legacy_dst_binary_name);
-    let runtime_dst_dir = app_binaries.join(format!("ocr-runtime-{}", host_triple));
+    let runtime_dst_dir = app_binaries.join(format!("paddle-ocr-{}", host_triple));
 
     // Also copy to target/debug/binaries for dev
     let debug_binaries = project_root().join("target").join("debug").join("binaries");
     fs::create_dir_all(&debug_binaries)?;
     let debug_legacy_dst_path = debug_binaries.join(&legacy_dst_binary_name);
-    let debug_runtime_dst_dir = debug_binaries.join(format!("ocr-runtime-{}", host_triple));
+    let debug_runtime_dst_dir = debug_binaries.join(format!("paddle-ocr-{}", host_triple));
 
     if src_runtime_dir.is_dir() {
         println!("  Copying OCR runtime dir to {}", runtime_dst_dir.display());

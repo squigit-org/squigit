@@ -52,9 +52,9 @@ pub fn build(native_dir: &Path) -> Result<()> {
 
 pub fn deploy(native_dir: &Path) -> Result<()> {
     let build_dir = native_dir.join("build");
-    let runtime_dir = native_dir.join("qt-runtime");
+    let runtime_dir = native_dir.join("_internal");
 
-    println!("  Creating 'qt-runtime' distribution using linuxdeployqt...");
+    println!("  Creating '_internal' distribution using linuxdeployqt...");
     create_runtime_distribution(native_dir, &build_dir, &runtime_dir)?;
 
     Ok(())

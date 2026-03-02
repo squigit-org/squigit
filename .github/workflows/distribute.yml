@@ -39,17 +39,17 @@ jobs:
       - name: Prepare Artifacts (Unix)
         if: runner.os != 'Windows'
         run: |
-          mkdir -p dist-staging/qt-runtime
-          cp app/binaries/capture-engine-${{ matrix.target }} dist-staging/
-          cp -r app/binaries/qt-runtime/* dist-staging/qt-runtime/
+          mkdir -p dist-staging/qt-capture-${{ matrix.target }}/_internal
+          cp -r app/binaries/qt-capture-${{ matrix.target }}/_internal/* dist-staging/qt-capture-${{ matrix.target }}/_internal/
+          cp app/binaries/qt-capture-${{ matrix.target }}/capture-engine dist-staging/qt-capture-${{ matrix.target }}/
 
       - name: Prepare Artifacts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path dist-staging/qt-runtime -Force
-          Copy-Item app/binaries/capture-engine-${{ matrix.target }}.exe dist-staging/
-          Copy-Item -Recurse app/binaries/qt-runtime/* dist-staging/qt-runtime/
+          New-Item -ItemType Directory -Path dist-staging/qt-capture-${{ matrix.target }}/_internal -Force
+          Copy-Item -Recurse app/binaries/qt-capture-${{ matrix.target }}/_internal/* dist-staging/qt-capture-${{ matrix.target }}/_internal/
+          Copy-Item app/binaries/qt-capture-${{ matrix.target }}/capture-engine.exe dist-staging/qt-capture-${{ matrix.target }}/
 
       - name: Upload Capture Artifacts
         uses: actions/upload-artifact@v4
@@ -88,15 +88,15 @@ jobs:
       - name: Prepare Artifacts (Unix)
         if: runner.os != 'Windows'
         run: |
-          mkdir -p dist-staging/ocr-runtime-${{ matrix.target }}
-          cp -r app/binaries/ocr-runtime-${{ matrix.target }}/* dist-staging/ocr-runtime-${{ matrix.target }}/
+          mkdir -p dist-staging/paddle-ocr-${{ matrix.target }}
+          cp -r app/binaries/paddle-ocr-${{ matrix.target }}/* dist-staging/paddle-ocr-${{ matrix.target }}/
 
       - name: Prepare Artifacts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path dist-staging/ocr-runtime-${{ matrix.target }} -Force
-          Copy-Item -Recurse app/binaries/ocr-runtime-${{ matrix.target }}/* dist-staging/ocr-runtime-${{ matrix.target }}/
+          New-Item -ItemType Directory -Path dist-staging/paddle-ocr-${{ matrix.target }} -Force
+          Copy-Item -Recurse app/binaries/paddle-ocr-${{ matrix.target }}/* dist-staging/paddle-ocr-${{ matrix.target }}/
 
       - name: Upload OCR Artifacts
         uses: actions/upload-artifact@v4
@@ -135,22 +135,17 @@ jobs:
 
       - name: Assemble & Zip
         run: |
-          mkdir -p final/sidecars/qt-runtime
+          mkdir -p final/sidecars
 
-          if [ -f staging/capture/capture-engine-${{ matrix.target }}.exe ]; then
-            mv staging/capture/capture-engine-${{ matrix.target }}.exe final/sidecars/
+          if [ -d staging/capture/qt-capture-${{ matrix.target }} ]; then
+            cp -r staging/capture/qt-capture-${{ matrix.target }} final/sidecars/
           else
-            mv staging/capture/capture-engine-${{ matrix.target }} final/sidecars/
+            echo "Missing capture artifact for ${{ matrix.target }}"
+            exit 1
           fi
 
-          cp -r staging/capture/qt-runtime/* final/sidecars/qt-runtime/
-
-          if [ -d staging/ocr/ocr-runtime-${{ matrix.target }} ]; then
-            mv staging/ocr/ocr-runtime-${{ matrix.target }} final/sidecars/
-          elif [ -f staging/ocr/ocr-engine-${{ matrix.target }}.exe ]; then
-            mv staging/ocr/ocr-engine-${{ matrix.target }}.exe final/sidecars/
-          elif [ -f staging/ocr/ocr-engine-${{ matrix.target }} ]; then
-            mv staging/ocr/ocr-engine-${{ matrix.target }} final/sidecars/
+          if [ -d staging/ocr/paddle-ocr-${{ matrix.target }} ]; then
+            cp -r staging/ocr/paddle-ocr-${{ matrix.target }} final/sidecars/
           else
             echo "Missing OCR artifact for ${{ matrix.target }}"
             exit 1

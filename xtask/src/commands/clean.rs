@@ -25,13 +25,13 @@ pub fn capture() -> Result<()> {
         }
     }
 
-    let qt_runtime = project_root()
+    let qt_internal = project_root()
         .join("target")
         .join("release")
-        .join("qt-runtime");
-    if qt_runtime.exists() {
-        println!("  Removing {}", qt_runtime.display());
-        fs::remove_dir_all(&qt_runtime)?;
+        .join("_internal");
+    if qt_internal.exists() {
+        println!("  Removing {}", qt_internal.display());
+        fs::remove_dir_all(&qt_internal)?;
     }
 
     Ok(())
@@ -70,7 +70,7 @@ pub fn app() -> Result<()> {
             if name.starts_with("ocr-engine-") || name.starts_with("capture-engine-") {
                 println!("  Removing {}", entry.path().display());
                 fs::remove_file(entry.path())?;
-            } else if name.starts_with("ocr-runtime-") {
+            } else if name.starts_with("paddle-ocr-") || name.starts_with("qt-capture-") {
                 println!("  Removing {}", entry.path().display());
                 fs::remove_dir_all(entry.path())?;
             }
@@ -85,7 +85,7 @@ pub fn app() -> Result<()> {
             if name.starts_with("ocr-engine-") || name.starts_with("capture-engine-") {
                 println!("  Removing {}", entry.path().display());
                 fs::remove_file(entry.path())?;
-            } else if name.starts_with("ocr-runtime-") {
+            } else if name.starts_with("paddle-ocr-") || name.starts_with("qt-capture-") {
                 println!("  Removing {}", entry.path().display());
                 fs::remove_dir_all(entry.path())?;
             }
