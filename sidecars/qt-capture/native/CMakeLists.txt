@@ -18,7 +18,6 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui)
 find_package(Qt6 REQUIRED COMPONENTS Quick)
-find_package(Qt6 REQUIRED COMPONENTS Core5Compat)
 find_package(Qt6 REQUIRED COMPONENTS Qml)
 if(UNIX AND NOT APPLE)
     find_package(Qt6 REQUIRED COMPONENTS DBus)
@@ -78,7 +77,7 @@ target_include_directories(capture PRIVATE
 
 target_link_libraries(capture PRIVATE 
     Qt6::Core Qt6::Gui 
-    Qt6::Quick Qt6::Core5Compat Qt6::Qml
+    Qt6::Quick Qt6::Qml
     ${PLATFORM_LIBS}
 )
 

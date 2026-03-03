@@ -281,6 +281,15 @@ print("OCR dependency verification passed.")"###,
         let report_path = reports_dir.join(format!("ocr-size-{}.json", host_triple));
         let size_input_str = size_input.to_string_lossy().to_string();
         let report_path_str = report_path.to_string_lossy().to_string();
+        #[cfg(target_os = "windows")]
+        let measure_args = vec![
+            "scripts/measure_runtime_size.py".to_string(),
+            "--input".to_string(),
+            size_input_str,
+            "--output".to_string(),
+            report_path_str,
+        ];
+        #[cfg(not(target_os = "windows"))]
         let mut measure_args = vec![
             "scripts/measure_runtime_size.py".to_string(),
             "--input".to_string(),

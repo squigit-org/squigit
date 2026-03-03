@@ -148,10 +148,10 @@ pub fn copy_dir_all_preserve_symlinks(src: &Path, dst: &Path) -> Result<()> {
         }
 
         if ty.is_symlink() {
-            let link_target = fs::read_link(&src_path)?;
             remove_existing_path(&dst_path)?;
             #[cfg(unix)]
             {
+                let link_target = fs::read_link(&src_path)?;
                 unix_fs::symlink(&link_target, &dst_path)?;
             }
             #[cfg(windows)]
