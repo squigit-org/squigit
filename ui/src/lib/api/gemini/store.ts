@@ -4,13 +4,28 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export const geminiStore = {
+import { DEFAULT_MODEL_ID } from "@/lib/config/models";
+
+interface GeminiStoreState {
+  currentAbortController: AbortController | null;
+  currentUnlisten: (() => void) | null;
+  currentChannelId: string | null;
+  generationId: number;
+  storedApiKey: string | null;
+  currentModelId: string;
+  imageDescription: string | null;
+  userFirstMsg: string | null;
+  conversationHistory: Array<{ role: string; content: string }>;
+  storedImagePath: string | null;
+}
+
+export const geminiStore: GeminiStoreState = {
   currentAbortController: null as AbortController | null,
   currentUnlisten: null as (() => void) | null,
   currentChannelId: null as string | null,
   generationId: 0,
   storedApiKey: null as string | null,
-  currentModelId: "gemini-2.0-flash",
+  currentModelId: DEFAULT_MODEL_ID,
   imageDescription: null as string | null,
   userFirstMsg: null as string | null,
   conversationHistory: [] as Array<{ role: string; content: string }>,

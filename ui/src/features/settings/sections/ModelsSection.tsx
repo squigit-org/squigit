@@ -7,7 +7,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import styles from "./ModelsSection.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components";
-import { UserPreferences, DEFAULT_OCR_MODEL_ID } from "@/lib";
+import { UserPreferences, DEFAULT_OCR_MODEL_ID, MODELS } from "@/lib";
 import { OCRModelDownloader, useModelsStore, getModelById } from "@/features";
 
 interface ModelsSectionProps {
@@ -49,18 +49,8 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
     setOcrMenuOpen(false);
   };
 
-  const getModelLabel = (id: string) => {
-    switch (id) {
-      case "gemini-2.5-pro":
-        return "Gemini 2.5 Pro";
-      case "gemini-2.5-flash":
-        return "Gemini 2.5 Flash";
-      case "gemini-flash-lite-latest":
-        return "Gemini 2.5 Lite";
-      default:
-        return id;
-    }
-  };
+  const getModelLabel = (id: string) =>
+    MODELS.find((model) => model.id === id)?.name || id;
 
   return (
     <section className={styles.container} aria-labelledby="models-heading">
@@ -87,21 +77,14 @@ export const ModelsSection: React.FC<ModelsSectionProps> = ({
             >
               <DropdownSectionTitle>Gemini Models</DropdownSectionTitle>
               <div className={styles.list}>
-                <DropdownItem
-                  label="Gemini 2.5 Pro"
-                  isActive={activeModel === "gemini-2.5-pro"}
-                  onClick={() => handleModelSelect("gemini-2.5-pro")}
-                />
-                <DropdownItem
-                  label="Gemini 2.5 Flash"
-                  isActive={activeModel === "gemini-2.5-flash"}
-                  onClick={() => handleModelSelect("gemini-2.5-flash")}
-                />
-                <DropdownItem
-                  label="Gemini 2.5 Lite"
-                  isActive={activeModel === "gemini-flash-lite-latest"}
-                  onClick={() => handleModelSelect("gemini-flash-lite-latest")}
-                />
+                {MODELS.map((model) => (
+                  <DropdownItem
+                    key={model.id}
+                    label={model.name}
+                    isActive={activeModel === model.id}
+                    onClick={() => handleModelSelect(model.id)}
+                  />
+                ))}
               </div>
             </Dropdown>
           </div>

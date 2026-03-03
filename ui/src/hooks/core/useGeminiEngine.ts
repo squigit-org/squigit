@@ -204,9 +204,9 @@ export const useGeminiEngine = (config: {
         !isRetry &&
         (apiError.message?.includes("429") || apiError.message?.includes("503"))
       ) {
-        if (config.currentModel !== ModelType.GEMINI_FLASH_LITE) {
+        if (config.currentModel !== ModelType.GEMINI_3_1_FLASH) {
           console.log("Model failed, trying lite version...");
-          config.setCurrentModel(ModelType.GEMINI_FLASH_LITE);
+          config.setCurrentModel(ModelType.GEMINI_3_1_FLASH);
           return;
         }
       }

@@ -40,7 +40,7 @@ The BYOK architecture is designed for minimal latency.
 
 We support the full range of modern Gemini models and essential media tools.
 
-* **Model Switching:** Instantly hot-swap between **Gemini 2.5 Flash** (for efficiency), **Gemini 2.5 Pro** (for reasoning), and **Gemini 1.5 Lite** (for speed).
+* **Model Switching:** Instantly hot-swap between **Gemini 3.1 Flash** (for efficiency) and **Gemini 3.1 Pro** (for reasoning-heavy tasks).
 
 * **Image Injection:** We integrate **ImgBB** to handle image uploads. This allows you to upload images via the API, get a direct URL, and inject them into the **Google Lens official service** to get you ready results in your default browser with a single button press.
 
@@ -56,7 +56,7 @@ To get started, generate keys from the supported providers below:
 
 | **Provider** | **Service / Models** | **Get Key** |
  | ----- | ----- | ----- |
-| **Google** | **LLM:** Gemini 2.5 Flash, 2.5 Pro, 1.5 Lite | [Google AI Studio](https://aistudio.google.com/app/apikey) |
+| **Google** | **LLM:** Gemini 3.1 Flash, 3.1 Pro | [Google AI Studio](https://aistudio.google.com/app/apikey) |
 | **ImgBB** | **Image Hosting:** For uploading/analyzing images | [ImgBB API](https://api.imgbb.com/) |
 
 ### How to add your keys (Automated Flow)

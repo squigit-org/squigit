@@ -5,16 +5,33 @@
  */
 
 export enum ModelType {
-  GEMINI_2_5_FLASH = "gemini-2.5-flash",
-  GEMINI_FLASH_LITE = "gemini-flash-lite-latest",
-  GEMINI_2_5_PRO = "gemini-2.5-pro",
+  GEMINI_3_1_FLASH = "gemini-3.1-flash-lite-preview",
+  GEMINI_3_1_PRO = "gemini-3.1-pro",
 }
 
 export const MODELS = [
-  { id: ModelType.GEMINI_2_5_FLASH, name: "Gemini 2.5 Flash" },
-  { id: ModelType.GEMINI_FLASH_LITE, name: "Gemini Flash Lite" },
-  { id: ModelType.GEMINI_2_5_PRO, name: "Gemini 2.5 Pro" },
-];
+  { id: ModelType.GEMINI_3_1_FLASH, name: "Gemini 3.1 Flash" },
+  { id: ModelType.GEMINI_3_1_PRO, name: "Gemini 3.1 Pro" },
+] as const;
+
+export const DEFAULT_MODEL_ID = MODELS[0].id;
+
+const SUPPORTED_MODEL_ID_SET = new Set<string>(MODELS.map((model) => model.id));
+
+export const isSupportedModelId = (modelId?: string | null): boolean => {
+  if (!modelId) return false;
+  return SUPPORTED_MODEL_ID_SET.has(modelId);
+};
+
+export const resolveModelId = (
+  modelId?: string | null,
+  fallback: string = DEFAULT_MODEL_ID,
+): string => {
+  if (modelId && isSupportedModelId(modelId)) {
+    return modelId;
+  }
+  return isSupportedModelId(fallback) ? fallback : DEFAULT_MODEL_ID;
+};
 
 export const DEFAULT_OCR_MODEL_ID = "pp-ocr-v5-en";
 

@@ -12,8 +12,7 @@ import {
   mkdir,
 } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { commands } from "@/lib";
-import { resolveOcrModelId } from "@/lib";
+import { commands, resolveModelId, resolveOcrModelId } from "@/lib";
 
 export interface UserPreferences {
   model: string;
@@ -83,6 +82,7 @@ export async function loadPreferences(): Promise<UserPreferences> {
     });
     const parsed = JSON.parse(content) as Partial<UserPreferences>;
 
+    const normalizedModel = resolveModelId(parsed.model, defaultPrefs.model);
     const normalizedOcrLanguage = resolveOcrModelId(
       parsed.ocrLanguage,
       defaultPrefs.ocrLanguage,
@@ -90,11 +90,15 @@ export async function loadPreferences(): Promise<UserPreferences> {
     const merged = {
       ...defaultPrefs,
       ...parsed,
+      model: normalizedModel,
       ocrLanguage: normalizedOcrLanguage,
     };
 
-    // One-time on-load rewrite for unsupported OCR model IDs.
-    if (parsed.ocrLanguage !== normalizedOcrLanguage) {
+    // One-time on-load rewrite for unsupported model IDs.
+    if (
+      parsed.model !== normalizedModel ||
+      parsed.ocrLanguage !== normalizedOcrLanguage
+    ) {
       await savePreferences(merged);
     }
 

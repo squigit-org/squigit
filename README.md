@@ -15,7 +15,7 @@ Explore detailed guides and architecture in our [documentation](https://github.c
 - **🎯 Native Performance**: Polyglot architecture with C++ capture, Rust orchestration, and Tauri UI.
 - **🔗 Bring Your Own Key (BYOK)**: No middleman. Plug your own Gemini and ImgBB API keys for direct, cost-effective access.
 - **⚡ Instant Global Hotkey**: `Super/Cmd/Win + Shift + A` freezes your desktop for instant capture from anywhere.
-- **🧠 Multi-Model Support**: Switch between Gemini 2.5 Flash (speed), 2.5 Pro (power), and 1.5 Lite.
+- **🧠 Multi-Model Support**: Switch between Gemini 3.1 Flash (efficiency) and Gemini 3.1 Pro (power).
 - **🪄 Google Lens Integration**: One-click visual search by automatically hosting images and launching Google Lens.
 - **🔒 Local-First Security**: Your API keys, images, and conversations never leave your machine.
 

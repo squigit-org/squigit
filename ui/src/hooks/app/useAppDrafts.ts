@@ -11,7 +11,7 @@ export const useAppDrafts = () => {
   const [input, setInput] = useState("");
   const [imageInput, setImageInput] = useState("");
   const [inputModel, setInputModel] = useState<string>(
-    ModelType.GEMINI_2_5_FLASH,
+    ModelType.GEMINI_3_1_FLASH,
   );
 
   return {
