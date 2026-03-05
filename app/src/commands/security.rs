@@ -9,17 +9,18 @@ pub fn check_file_exists(path: String) -> bool {
 }
 
 #[tauri::command]
-pub fn encrypt_and_save(
+pub async fn encrypt_and_save(
     app: AppHandle,
     profile_id: String,
     provider: String,
     plaintext: String,
 ) -> Result<(), String> {
-    match crate::services::security::encrypt_and_save_key(&app, &plaintext, &provider, &profile_id)
-    {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e),
-    }
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::services::security::encrypt_and_save_key(&app, &plaintext, &provider, &profile_id)
+            .map(|_| ())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
