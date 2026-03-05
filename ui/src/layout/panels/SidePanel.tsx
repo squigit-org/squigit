@@ -328,7 +328,6 @@ export const SidePanel: React.FC = () => {
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
-  const [isHoverDisabled, setIsHoverDisabled] = useState(false);
 
   const userChats = chats.filter((c: any) => !c.id.startsWith("__system_"));
   const groupedChats = groupChatsByDate(userChats);
@@ -349,7 +348,6 @@ export const SidePanel: React.FC = () => {
   };
 
   const toggleSelectionMode = () => {
-    setIsHoverDisabled(true);
     setIsSelectionMode(!isSelectionMode);
     setSelectedIds([]);
   };
@@ -439,19 +437,8 @@ export const SidePanel: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className={styles.headerArea}>
-          <div className={styles.utilityBar}>
-            <button
-              className={`${styles.newChatBtn} ${isHoverDisabled ? styles.noHover : ""}`}
-              onClick={app.handleNewSession}
-              onMouseLeave={() => setIsHoverDisabled(false)}
-              style={{ flex: 1 }}
-            >
-              <span>New chat</span>
-            </button>
-          </div>
-
-          {(showWelcome || update) && (
+        (showWelcome || update) && (
+          <div className={styles.headerArea}>
             <div className={styles.groupContent}>
               <div className={styles.groupInner}>
                 {showWelcome && (
@@ -493,8 +480,8 @@ export const SidePanel: React.FC = () => {
                 )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )
       )}
 
       <div className={styles.scrollArea}>

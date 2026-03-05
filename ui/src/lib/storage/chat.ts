@@ -233,10 +233,10 @@ export function groupChatsByDate(
         return pinnedB - pinnedA;
       }
 
-      // 3. Date check (created_at descending)
-      return (
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      // 3. Recent activity check (updated_at descending), fallback to created_at
+      const aTime = new Date(a.updated_at || a.created_at).getTime();
+      const bTime = new Date(b.updated_at || b.created_at).getTime();
+      return bTime - aTime;
     });
   });
 

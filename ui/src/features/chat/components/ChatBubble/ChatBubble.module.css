@@ -29,6 +29,11 @@
   flex-direction: row-reverse;
 }
 
+.userRichContainer {
+  width: 100%;
+  max-width: 100%;
+}
+
 .botContainer {
   flex-direction: row;
   width: 100%;
@@ -43,6 +48,11 @@
 
 .userContent {
   align-items: flex-end;
+}
+
+.userRichContent {
+  width: 100%;
+  align-items: stretch;
 }
 
 .botContent {
@@ -74,10 +84,16 @@
   background-color: var(--c-raw-012);
 }
 
+.userRichBubble {
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+}
+
 .botBubble {
   background-color: transparent;
   border: none;
-  padding-left: 10;
+  padding-left: 10px;
 }
 
 .inlineCode {
@@ -154,6 +170,116 @@
   overflow-wrap: break-word;
 }
 
+.markdownContent {
+  color: var(--c-raw-003);
+  line-height: 1.75;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.userMarkdownContent {
+  color: inherit;
+  line-height: inherit;
+}
+
+.userMarkdownContent :where(pre, table) {
+  max-width: 100%;
+}
+
+.markdownContent > :first-child {
+  margin-top: 0 !important;
+}
+
+.markdownContent > :last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdownContent :where(p, ul, ol, blockquote, pre, table, hr) {
+  margin: 0.75em 0;
+}
+
+.markdownContent :where(h1, h2, h3, h4, h5, h6) {
+  color: var(--c-raw-050);
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 1.1em 0 0.45em;
+}
+
+.markdownContent h1 {
+  font-size: 1.55em;
+}
+
+.markdownContent h2 {
+  font-size: 1.35em;
+}
+
+.markdownContent h3 {
+  font-size: 1.2em;
+}
+
+.markdownContent h4 {
+  font-size: 1.1em;
+}
+
+.markdownContent h5,
+.markdownContent h6 {
+  font-size: 1em;
+}
+
+.markdownContent :where(ul, ol) {
+  padding-left: 1.4em;
+}
+
+.markdownContent li {
+  margin: 0.3em 0;
+  padding-left: 0.15em;
+}
+
+.markdownContent li > p {
+  margin: 0.3em 0;
+}
+
+.markdownContent blockquote {
+  border-left: 3px solid var(--c-raw-036);
+  padding-left: 1em;
+  color: var(--c-raw-004);
+}
+
+.markdownContent hr {
+  border: 0;
+  border-top: 1px solid var(--c-raw-010);
+}
+
+.markdownContent table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdownContent th,
+.markdownContent td {
+  border: 1px solid var(--c-raw-010);
+  padding: 0.35em 0.5em;
+}
+
+.markdownContent th {
+  background-color: var(--c-raw-012);
+}
+
+.markdownContent pre {
+  margin: 0.9em 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdownContent :global(.katex-display) {
+  margin: 0.7em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .paragraphGap {
   display: block;
   height: 0.875em;
@@ -171,9 +297,9 @@
 
 .listItem {
   display: list-item;
-  list-style-type: disc;
   margin-left: 1.5em;
   padding-left: 0.25em;
+  white-space: pre-wrap;
 }
 
 .blockquote {
@@ -187,12 +313,12 @@
 .cursor {
   display: inline-block;
   margin-left: 2px;
-  animation: "dim" 1s step-end infinite;
+  animation: dim 1s step-end infinite;
   color: var(--c-raw-004);
 }
 
 .popIn {
-  animation: "popIn" 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   transform-origin: top center;
 }
 

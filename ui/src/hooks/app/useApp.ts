@@ -258,9 +258,10 @@ export const useApp = () => {
       if (activeId) {
         const role = msg.role === "user" ? "user" : "assistant";
         appendChatMessage(activeId, role, msg.text).catch(console.error);
+        chatHistory.touchChat(activeId).catch(console.error);
       }
     },
-    [chatHistory.activeSessionId],
+    [chatHistory.activeSessionId, chatHistory.touchChat],
   );
 
   const handleOverwriteMessages = useCallback(
@@ -275,9 +276,10 @@ export const useApp = () => {
           timestamp: new Date(m.timestamp).toISOString(),
         }));
         overwriteChatMessages(activeId, formatted).catch(console.error);
+        chatHistory.touchChat(activeId).catch(console.error);
       }
     },
-    [chatHistory.activeSessionId],
+    [chatHistory.activeSessionId, chatHistory.touchChat],
   );
 
   const chatTitle = isImageMissing
@@ -338,6 +340,7 @@ export const useApp = () => {
       ocr_lang: targetOcrLang,
       updated_at: new Date().toISOString(),
     }).then(() => {
+      chatHistory.touchChat(activeId).catch(console.error);
       console.log(
         "Automatically saved OCR language to chat metadata:",
         targetOcrLang,
@@ -347,7 +350,30 @@ export const useApp = () => {
     system.sessionOcrLanguage,
     chatHistory.activeSessionId,
     chatHistory.chats,
+    chatHistory.touchChat,
   ]);
+
+  const handleUpdateLensUrl = useCallback(
+    (url: string | null) => {
+      ocr.handleUpdateLensUrl(url);
+      const activeId = chatHistory.activeSessionId;
+      if (activeId && url) {
+        chatHistory.touchChat(activeId).catch(console.error);
+      }
+    },
+    [ocr, chatHistory.activeSessionId, chatHistory.touchChat],
+  );
+
+  const handleUpdateOCRData = useCallback(
+    (modelId: string, data: { text: string; box: number[][] }[]) => {
+      ocr.handleUpdateOCRData(modelId, data);
+      const activeId = chatHistory.activeSessionId;
+      if (activeId) {
+        chatHistory.touchChat(activeId).catch(console.error);
+      }
+    },
+    [ocr, chatHistory.activeSessionId, chatHistory.touchChat],
+  );
 
   const [isNavigating, setIsNavigating] = useState(false);
   const [busyDialog, setBusyDialog] = useState<DialogContent | null>(null);
@@ -1021,8 +1047,8 @@ export const useApp = () => {
     setShowLoginRequiredDialog: dialogs.setShowLoginRequiredDialog,
     setShowCaptureDeniedDialog: dialogs.setShowCaptureDeniedDialog,
     performLogout,
-    handleUpdateLensUrl: ocr.handleUpdateLensUrl,
-    handleUpdateOCRData: ocr.handleUpdateOCRData,
+    handleUpdateLensUrl,
+    handleUpdateOCRData,
     handleImageReady,
     handleSelectChat,
     handleNewSession,

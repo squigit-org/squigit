@@ -127,7 +127,6 @@ export const useGeminiEngine = (config: {
       await startNewChatStream(modelId, imgData.path, (token: string) => {
         if (signal.aborted) return;
         fullResponse += token;
-        setStreamingText(fullResponse);
 
         if (
           !isRetry &&
@@ -172,6 +171,8 @@ export const useGeminiEngine = (config: {
         setIsLoading(false);
         return;
       }
+
+      setStreamingText(fullResponse);
 
       const targetChatId = sessionChatIdRef.current;
 
@@ -267,9 +268,10 @@ export const useGeminiEngine = (config: {
         config.startupImage.path,
         (token: string) => {
           fullResponse += token;
-          setStreamingText(fullResponse);
         },
       );
+
+      setStreamingText(fullResponse);
 
       if (config.onMessage && targetChatId) {
         config.onMessage(
@@ -424,8 +426,6 @@ export const useGeminiEngine = (config: {
     setRetryingMessageId(messageId);
     isRequestCancelledRef.current = false;
 
-    let hasStartedStreaming = false;
-
     const newResponseId = Date.now().toString();
 
     let fallbackImagePath: string | undefined;
@@ -434,73 +434,33 @@ export const useGeminiEngine = (config: {
     }
 
     try {
-      let hasTriggeredTitle = false;
-
       const responseText = await apiRetryFromMessage(
         msgIndex,
         messages,
         retryModelId,
-        (token) => {
-          if (!hasStartedStreaming) {
-            hasStartedStreaming = true;
-
-            setRetryingMessageId(null);
-            setMessages(truncatedMessages);
-            setIsStreaming(true);
-            setIsAiTyping(true);
-            setFirstResponseId(newResponseId);
-            setStreamingText(token);
-          } else {
-            setStreamingText((prev: string) => prev + token);
-          }
-
-          if (
-            msgIndex === 0 &&
-            !hasTriggeredTitle &&
-            (!config.chatTitle || config.chatTitle === "New Chat") &&
-            (streamingText + token).length > 50
-          ) {
-            console.log(
-              "[useGeminiEngine] Triggering title generation on retry due to stream length > 50",
-            );
-            hasTriggeredTitle = true;
-            if (config.generateTitle && config.onTitleGenerated) {
-              config
-                .generateTitle(streamingText + token)
-                .then((title) => {
-                  console.log(
-                    "[useGeminiEngine] Title generated on retry:",
-                    title,
-                  );
-                  config.onTitleGenerated?.(title);
-                })
-                .catch(console.error);
-            }
-          }
-        },
+        undefined,
         fallbackImagePath,
       );
 
-      const botMsg: Message = {
-        id: newResponseId,
-        role: "model",
-        text: responseText,
-        timestamp: Date.now(),
-      };
-
-      if (!hasStartedStreaming) {
-        setMessages(truncatedMessages);
-        setRetryingMessageId(null);
+      if (
+        msgIndex === 0 &&
+        (!config.chatTitle || config.chatTitle === "New Chat") &&
+        responseText.length > 50 &&
+        config.generateTitle &&
+        config.onTitleGenerated
+      ) {
+        config
+          .generateTitle(responseText)
+          .then((title) => config.onTitleGenerated?.(title))
+          .catch(console.error);
       }
 
-      const newMessages = [...truncatedMessages, botMsg];
-      setMessages(newMessages);
-      setIsAiTyping(false);
-      setStreamingText("");
-      setFirstResponseId(null);
       setRetryingMessageId(null);
-
-      config.onOverwriteMessages?.(newMessages);
+      setMessages(truncatedMessages);
+      setIsStreaming(true);
+      setIsAiTyping(true);
+      setFirstResponseId(newResponseId);
+      setStreamingText(responseText);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
         setIsAiTyping(false);
@@ -556,7 +516,6 @@ export const useGeminiEngine = (config: {
     setIsLoading(true);
     isRequestCancelledRef.current = false;
 
-    let hasStartedStreaming = false;
     const newResponseId = Date.now().toString();
 
     let fallbackImagePath: string | undefined;
@@ -570,39 +529,16 @@ export const useGeminiEngine = (config: {
         newText,
         messages,
         retryModelId,
-        (token) => {
-          if (!hasStartedStreaming) {
-            hasStartedStreaming = true;
-            setIsStreaming(true);
-            setIsAiTyping(true);
-            setFirstResponseId(newResponseId);
-            setStreamingText(token);
-          } else {
-            setStreamingText((prev: string) => prev + token);
-          }
-        },
+        undefined,
         fallbackImagePath,
       );
 
-      const botMsg: Message = {
-        id: newResponseId,
-        role: "model",
-        text: responseText,
-        timestamp: Date.now(),
-      };
-
-      setMessages([...truncatedMessages, editedUserMsg, botMsg]);
+      setMessages([...truncatedMessages, editedUserMsg]);
       setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
-      setStreamingText("");
-      setFirstResponseId(null);
-
-      config.onOverwriteMessages?.([
-        ...truncatedMessages,
-        editedUserMsg,
-        botMsg,
-      ]);
+      setIsStreaming(true);
+      setIsAiTyping(true);
+      setFirstResponseId(newResponseId);
+      setStreamingText(responseText);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
         setIsLoading(false);
@@ -764,13 +700,17 @@ export const useGeminiEngine = (config: {
         if (idx !== -1) {
           const newMsgs = [...prev];
           newMsgs[idx] = botMsg;
+          config.onOverwriteMessages?.(newMsgs);
           return newMsgs;
         }
-        return [...prev, botMsg];
+        const newMsgs = [...prev, botMsg];
+        config.onOverwriteMessages?.(newMsgs);
+        return newMsgs;
       });
       setStreamingText("");
       setFirstResponseId(null);
     }
+    setIsStreaming(false);
     setIsAiTyping(false);
   };
 

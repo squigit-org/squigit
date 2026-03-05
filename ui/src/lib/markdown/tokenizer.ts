@@ -15,13 +15,13 @@ export interface StreamToken {
 }
 
 const DELAYS = {
-  text: 25,
-  bold: 25,
-  italic: 25,
-  heading: 20,
-  listItem: 25,
-  link: 25,
-  blockquote: 25,
+  text: 16,
+  bold: 16,
+  italic: 16,
+  heading: 18,
+  listItem: 18,
+  link: 16,
+  blockquote: 18,
   code: 15,
   codeblock: 3,
   math: 0,
@@ -29,6 +29,48 @@ const DELAYS = {
   paragraph: 0,
   break: 0,
 } as const;
+
+function chunkText(
+  content: string,
+  options: { maxWords: number; maxChars: number },
+): string[] {
+  const units = content.match(/[^\s]+\s*|\s+/g) || [content];
+  const chunks: string[] = [];
+  let buffer = "";
+  let words = 0;
+
+  const flush = () => {
+    if (buffer.length > 0) {
+      chunks.push(buffer);
+      buffer = "";
+      words = 0;
+    }
+  };
+
+  for (const unit of units) {
+    const isWord = /\S/.test(unit);
+    const wouldExceed =
+      buffer.length > 0 &&
+      ((isWord && words + 1 > options.maxWords) ||
+        buffer.length + unit.length > options.maxChars);
+
+    if (wouldExceed) {
+      flush();
+    }
+
+    buffer += unit;
+    if (isWord) {
+      words += 1;
+    }
+
+    if (unit.includes("\n")) {
+      flush();
+    }
+  }
+
+  flush();
+  return chunks.length > 0 ? chunks : [content];
+}
 
 export function tokenizeSegments(segments: StreamSegment[]): StreamToken[] {
   const tokens: StreamToken[] = [];
@@ -79,14 +121,20 @@ export function tokenizeSegments(segments: StreamSegment[]): StreamToken[] {
         });
       }
     } else {
-      const words = segment.content.match(/\S+|\s+/g) || [segment.content];
-      words.forEach((word, i) => {
+      const chunks =
+        segment.type === "heading" ||
+        segment.type === "listItem" ||
+        segment.type === "blockquote"
+          ? [segment.content]
+          : chunkText(segment.content, { maxWords: 3, maxChars: 26 });
+
+      chunks.forEach((chunk, i) => {
         tokens.push({
           segmentIndex,
-          text: word,
+          text: chunk,
           isFirst: i === 0,
-          isLast: i === words.length - 1,
-          delay: word.trim() ? baseDelay : 0,
+          isLast: i === chunks.length - 1,
+          delay: chunk.trim() ? baseDelay : 0,
         });
       });
     }

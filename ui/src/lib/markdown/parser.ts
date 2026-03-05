@@ -31,6 +31,7 @@ export interface StreamSegment {
     level?: number;
     href?: string;
     ordered?: boolean;
+    listIndex?: number;
   };
 }
 
@@ -182,6 +183,7 @@ function processNode(
   node: Root | RootContent | PhrasingContent,
   segments: StreamSegment[],
   inheritedStyle?: "bold" | "italic",
+  listMeta?: { ordered: boolean; index: number },
 ): void {
   switch (node.type) {
     case "root":
@@ -251,8 +253,16 @@ function processNode(
       break;
 
     case "list":
-      for (const child of node.children) {
-        processNode(child, segments);
+      {
+        const ordered = Boolean(node.ordered);
+        let index = node.start ?? 1;
+
+        for (const child of node.children) {
+          processNode(child, segments, undefined, { ordered, index });
+          index += 1;
+        }
+
+        segments.push({ type: "text", content: "\n" });
       }
       break;
 
@@ -260,7 +270,10 @@ function processNode(
       segments.push({
         type: "listItem",
         content: extractText(node),
-        meta: { ordered: false },
+        meta: {
+          ordered: listMeta?.ordered ?? false,
+          listIndex: listMeta?.index,
+        },
       });
       segments.push({ type: "text", content: "\n" });
       break;
@@ -425,11 +438,25 @@ function extractText(node: any): string {
   if (node.type === "text") {
     return node.value;
   }
+  if (node.type === "inlineMath") {
+    return `$${node.value}$`;
+  }
+  if (node.type === "math") {
+    return `$$\n${node.value}\n$$`;
+  }
   if (node.type === "inlineCode") {
     return node.value;
   }
+  if (node.type === "break") {
+    return "\n";
+  }
+  if (node.type === "thematicBreak") {
+    return "\n---\n";
+  }
   if (node.children) {
-    return node.children.map(extractText).join("");
+    const joiner =
+      node.type === "list" || node.type === "listItem" ? "\n" : "";
+    return node.children.map(extractText).join(joiner);
   }
   return "";
 }

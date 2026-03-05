@@ -24,60 +24,11 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   position: sticky;
   top: 0;
   z-index: 10;
   background: var(--c-raw-013);
   border-bottom: 1px solid transparent;
-}
-
-.utilityBar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.newChatBtn {
-  background-color: var(--c-raw-038);
-
-  border: 1px solid var(--c-raw-037);
-  border-radius: 4px;
-
-  box-shadow: 0 3px 0 var(--c-raw-045);
-
-  color: var(--c-raw-046);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1;
-
-  padding: 4px 8px;
-  min-width: 24px;
-  text-align: center;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-
-  transition:
-    transform 0.1s ease-out,
-    box-shadow 0.1s ease-out;
-
-  backface-visibility: hidden;
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-}
-
-.newChatBtn:hover {
-  transform: translate3d(0, 3px, 0);
-  box-shadow: none;
-}
-
-.newChatBtn.noHover:hover {
-  transform: translate3d(0, 0, 0) !important;
-  box-shadow: 0 3px 0 var(--c-raw-045) !important;
-  cursor: default !important;
 }
 
 .iconBtn {

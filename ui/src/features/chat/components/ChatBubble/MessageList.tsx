@@ -31,7 +31,7 @@ interface MessageListProps {
   onSystemAction?: (actionId: string, value?: string) => void;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({
+const MessageListComponent: React.FC<MessageListProps> = ({
   messages,
   streamingText,
   isGenerating,
@@ -124,3 +124,18 @@ export const MessageList: React.FC<MessageListProps> = ({
     </div>
   );
 };
+
+export const MessageList = React.memo(
+  MessageListComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.messages === nextProps.messages &&
+      prevProps.streamingText === nextProps.streamingText &&
+      prevProps.isGenerating === nextProps.isGenerating &&
+      prevProps.retryingMessageId === nextProps.retryingMessageId &&
+      prevProps.stopRequested === nextProps.stopRequested &&
+      prevProps.selectedModel === nextProps.selectedModel &&
+      prevProps.isAnalyzing === nextProps.isAnalyzing
+    );
+  },
+);

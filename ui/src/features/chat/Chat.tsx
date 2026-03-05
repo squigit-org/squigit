@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAppContext } from "@/providers/AppProvider";
@@ -25,6 +25,7 @@ import styles from "./Chat.module.css";
 export const Chat: React.FC = () => {
   const app = useAppContext();
   const [stopRequested, setStopRequested] = useState(false);
+  const [inputValue, setInputValue] = useState("");
 
   // Refs
   const headerRef = useRef<HTMLDivElement>(null);
@@ -129,18 +130,18 @@ export const Chat: React.FC = () => {
   }, [showFlatMenu]);
 
   // Handlers
-  const handleSend = () => {
-    let finalInput = app.input;
+  const handleSend = useCallback(() => {
+    let finalInput = inputValue;
     if (app.attachments.length > 0) {
       const mentions = app.attachments
         .map((a) => buildAttachmentMention(a.path))
         .join("\n");
-      finalInput = `${app.input}\n\n${mentions}`.trim();
+      finalInput = `${inputValue}\n\n${mentions}`.trim();
     }
     app.chat.handleSend(finalInput, app.inputModel);
-    app.setInput("");
+    setInputValue("");
     app.clearAttachments();
-  };
+  }, [app.attachments, app.chat, app.clearAttachments, app.inputModel, inputValue]);
 
   const handleCaptureToInput = async () => {
     try {
@@ -149,6 +150,10 @@ export const Chat: React.FC = () => {
       console.error("Failed to spawn capture to input:", err);
     }
   };
+
+  useEffect(() => {
+    setInputValue("");
+  }, [app.chatHistory.activeSessionId]);
 
   return (
     <div className={styles.chatContainer}>
@@ -245,8 +250,8 @@ export const Chat: React.FC = () => {
           <div style={{ pointerEvents: "auto", width: "100%" }}>
             <ChatInput
               startupImage={app.system.startupImage}
-              input={app.input}
-              onInputChange={app.setInput}
+              input={inputValue}
+              onInputChange={setInputValue}
               onSend={handleSend}
               isLoading={app.chat.isLoading}
               isAiTyping={app.chat.isAiTyping}

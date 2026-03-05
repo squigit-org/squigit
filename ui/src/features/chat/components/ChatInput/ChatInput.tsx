@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { TextContextMenu } from "@/layout";
 import { useAppContext } from "@/providers/AppProvider";
@@ -97,13 +97,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     onSubmit: handleSubmit,
     preventNewLine: false,
   });
-
-  useLayoutEffect(() => {
-    if (editorRef.current) {
-      // @ts-ignore
-      textareaRef.current = editorRef.current;
-    }
-  }, [editorRef.current]);
 
   const {
     data: contextMenuData,

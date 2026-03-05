@@ -56,6 +56,70 @@ function renderKatex(latex: string, displayMode: boolean): string {
   return html;
 }
 
+function renderTextWithInlineMath(content: string, keyPrefix: string) {
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+  let keyIndex = 0;
+
+  while (cursor < content.length) {
+    const open = content.indexOf("$", cursor);
+    if (open === -1) break;
+
+    const isEscaped = open > 0 && content[open - 1] === "\\";
+    const isBlockFence = open + 1 < content.length && content[open + 1] === "$";
+    if (isEscaped || isBlockFence) {
+      cursor = open + 1;
+      continue;
+    }
+
+    let close = open + 1;
+    while (close < content.length) {
+      if (content[close] === "$" && content[close - 1] !== "\\") break;
+      close += 1;
+    }
+    if (close >= content.length) break;
+
+    if (open > cursor) {
+      nodes.push(
+        <React.Fragment key={`${keyPrefix}-t-${keyIndex++}`}>
+          {content.slice(cursor, open)}
+        </React.Fragment>,
+      );
+    }
+
+    const latex = content.slice(open + 1, close).trim();
+    if (latex) {
+      try {
+        const html = renderKatex(latex, false);
+        nodes.push(
+          <span
+            key={`${keyPrefix}-m-${keyIndex++}`}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />,
+        );
+      } catch {
+        nodes.push(
+          <code key={`${keyPrefix}-c-${keyIndex++}`} className={styles.inlineCode}>
+            {`$${latex}$`}
+          </code>,
+        );
+      }
+    }
+
+    cursor = close + 1;
+  }
+
+  if (cursor < content.length) {
+    nodes.push(
+      <React.Fragment key={`${keyPrefix}-tail`}>
+        {content.slice(cursor)}
+      </React.Fragment>,
+    );
+  }
+
+  return nodes.length > 0 ? nodes : content;
+}
+
 function getBaseName(path: string): string {
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
@@ -92,6 +156,12 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const displayText = useMemo(() => {
     return stripAttachmentMentions(message.text);
   }, [message.text]);
+  const isRichMarkdownUserMessage = useMemo(() => {
+    if (!isUser) return false;
+    return /(^|\n)\s*(#{1,6}\s|[-+*]\s|\d+\.\s|>\s|```|~~~|\$\$|\|.+\|)/m.test(
+      displayText,
+    );
+  }, [displayText, isUser]);
   const [bubbleWidth, setBubbleWidth] = useState<number | undefined>(undefined);
   const [bubbleHeight, setBubbleHeight] = useState<number | undefined>(
     undefined,
@@ -114,6 +184,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const [revealedCount, setRevealedCount] = useState(0);
   const [isStreamingComplete, setIsStreamingComplete] = useState(!isStreamed);
   const timeoutRef = useRef<number | null>(null);
+  const shouldRenderStreaming = !isUser && isStreamed;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(displayText).then(() => {
@@ -288,6 +359,11 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         truncated += "$$\n" + seg.content + "\n$$\n";
       } else if (seg.type === "math") {
         truncated += "$" + texts.join("") + "$";
+      } else if (seg.type === "listItem") {
+        const prefix = seg.meta?.ordered
+          ? `${seg.meta.listIndex ?? 1}. `
+          : "- ";
+        truncated += prefix + texts.join("") + "\n";
       } else {
         truncated += texts.join("");
       }
@@ -481,29 +557,35 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
               marginBottom: bottomMargins[level - 1],
             }}
           >
-            {content}
+            {renderTextWithInlineMath(content, `heading-${index}`)}
           </Tag>
         );
       }
 
       case "listItem":
         return (
-          <div key={index} className={styles.listItem}>
-            {content}
+          <div
+            key={index}
+            className={styles.listItem}
+            style={{
+              listStyleType: segment.meta?.ordered ? "decimal" : "disc",
+            }}
+          >
+            {renderTextWithInlineMath(content, `list-${index}`)}
           </div>
         );
 
       case "blockquote":
         return (
           <blockquote key={index} className={styles.blockquote}>
-            {content}
+            {renderTextWithInlineMath(content, `quote-${index}`)}
           </blockquote>
         );
 
       case "link":
         return (
           <a key={index} href={segment.meta?.href} className={styles.link}>
-            {content}
+            {renderTextWithInlineMath(content, `link-${index}`)}
           </a>
         );
 
@@ -558,19 +640,21 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         <div
           className={`${styles.container} ${
             isUser ? styles.userContainer : styles.botContainer
-          }`}
+          } ${isUser && isRichMarkdownUserMessage ? styles.userRichContainer : ""}`}
         >
           <div
             className={`${styles.contentColumn} ${
               isUser ? styles.userContent : styles.botContent
-            }`}
+            } ${isUser && isRichMarkdownUserMessage ? styles.userRichContent : ""}`}
           >
             <div
               dir="auto"
               data-component="chat-bubble"
               className={`${styles.bubble} ${
                 isUser ? styles.userBubble : styles.botBubble
-              } ${isEditing ? styles.editing : ""}`}
+              } ${isEditing ? styles.editing : ""} ${
+                isUser && isRichMarkdownUserMessage ? styles.userRichBubble : ""
+              }`}
               ref={bubbleRef}
               style={
                 isEditing && bubbleWidth
@@ -608,26 +692,44 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
               ) : isRetrying ? (
                 <TextShimmer text="Regenerating response..." />
               ) : !isUser ? (
-                <div className={styles.streamingContainer}>
-                  {segments.map((segment, index) =>
-                    renderStreamSegment(segment, index),
-                  )}
-                  {!isStreamingComplete && isStreamed && (
-                    <span className={styles.cursor}>▋</span>
-                  )}
-                </div>
+                shouldRenderStreaming ? (
+                  <div className={styles.streamingContainer}>
+                    {segments.map((segment, index) =>
+                      renderStreamSegment(segment, index),
+                    )}
+                    {!isStreamingComplete && isStreamed && (
+                      <span className={styles.cursor}>▋</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className={styles.markdownContent}>
+                    <ReactMarkdown
+                      remarkPlugins={[
+                        remarkGfm,
+                        remarkMath,
+                        remarkDisableIndentedCode,
+                      ]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={markdownComponents}
+                    >
+                      {preprocessMarkdown(displayText)}
+                    </ReactMarkdown>
+                  </div>
+                )
               ) : (
-                <ReactMarkdown
-                  remarkPlugins={[
-                    remarkGfm,
-                    remarkMath,
-                    remarkDisableIndentedCode,
-                  ]}
-                  rehypePlugins={[rehypeKatex]}
-                  components={markdownComponents}
-                >
-                  {preprocessMarkdown(displayText, { doubleNewlines: isUser })}
-                </ReactMarkdown>
+                <div className={`${styles.markdownContent} ${styles.userMarkdownContent}`}>
+                  <ReactMarkdown
+                    remarkPlugins={[
+                      remarkGfm,
+                      remarkMath,
+                      remarkDisableIndentedCode,
+                    ]}
+                    rehypePlugins={[rehypeKatex]}
+                    components={markdownComponents}
+                  >
+                    {preprocessMarkdown(displayText, { doubleNewlines: isUser })}
+                  </ReactMarkdown>
+                </div>
               )}
             </div>
 

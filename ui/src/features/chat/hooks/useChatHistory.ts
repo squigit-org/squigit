@@ -137,6 +137,28 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     }
   };
 
+  const touchChat = useCallback(
+    async (id: string) => {
+      if (isOnboardingId(id)) return;
+      const chat = chats.find((c) => c.id === id);
+      if (!chat) return;
+
+      const updated = {
+        ...chat,
+        updated_at: new Date().toISOString(),
+      };
+
+      setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
+
+      try {
+        await updateChatMeta(updated);
+      } catch (e) {
+        console.error("Failed to touch chat metadata:", e);
+      }
+    },
+    [chats],
+  );
+
   return {
     chats,
     activeSessionId,
@@ -148,5 +170,6 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     handleRenameChat,
     handleTogglePinChat,
     handleToggleStarChat,
+    touchChat,
   };
 };
