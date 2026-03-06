@@ -17,7 +17,9 @@ body *::selection {
 }
 
 body.light-mode .shiki-dual-theme span,
-body.light-mode .shiki-dual-theme .shiki {
+body.light-mode .shiki-dual-theme .shiki,
+html.light .shiki-dual-theme span,
+html.light .shiki-dual-theme .shiki {
   color: var(--shiki-light) !important;
   background-color: transparent !important;
   font-style: var(--shiki-light-font-style) !important;
@@ -69,6 +71,10 @@ body {
 }
 
 body.light-mode {
+  color: #333333;
+}
+
+html.light body {
   color: #333333;
 }
 

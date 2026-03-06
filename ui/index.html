@@ -10,6 +10,41 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const root = document.documentElement;
+        const storageKey = "theme";
+
+        let theme = "system";
+        try {
+          const cached = localStorage.getItem(storageKey);
+          if (cached === "light" || cached === "dark" || cached === "system") {
+            theme = cached;
+          }
+        } catch {}
+
+        const nativeTheme = window.__SNAPLLM_SAVED_THEME__;
+        if (
+          theme === "system" &&
+          (nativeTheme === "light" ||
+            nativeTheme === "dark" ||
+            nativeTheme === "system")
+        ) {
+          theme = nativeTheme;
+        }
+
+        const prefersDark =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        const resolved =
+          theme === "system" ? (prefersDark ? "dark" : "light") : theme;
+
+        root.classList.toggle("light", resolved === "light");
+        root.classList.toggle("dark", resolved === "dark");
+        root.style.colorScheme = resolved;
+      })();
+    </script>
     <title>SnapLLM</title>
   </head>
   <body>

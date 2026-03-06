@@ -195,7 +195,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
       tabIndex={-1}
     >
       <div className={styles.content}>
-        <AppLogo size={80} />
+        <AppLogo size={80} color="var(--c-raw-000)" />
         <h1 className={styles.title}>{app.system.appName}</h1>
 
         <div className={styles.actions}>

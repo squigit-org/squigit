@@ -23,7 +23,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       <div className={styles.mainContent}>
         <div className={styles.loadingContent}>
           <div className={styles.logoOffset}>
-            <AppLogo size={40} />
+            <AppLogo size={40} color="var(--c-raw-002)" />
           </div>
         </div>
       </div>

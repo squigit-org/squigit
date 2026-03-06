@@ -6,9 +6,11 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Windo
 /// Returns the initial background color based on the saved theme preference,
 /// falling back to system theme detection.
 fn initial_bg_color(app: &AppHandle) -> tauri::window::Color {
-    let is_light = match resolve_saved_theme(app) {
-        Some(theme) => theme == "light",
+    let is_light = match resolve_saved_theme_preference(app).as_deref() {
+        Some("light") => true,
+        Some("dark") => false,
         None => crate::services::theme::get_system_theme() == "light",
+        _ => crate::services::theme::get_system_theme() == "light",
     };
 
     if is_light {
@@ -19,17 +21,24 @@ fn initial_bg_color(app: &AppHandle) -> tauri::window::Color {
 }
 
 /// Reads the saved theme preference from preferences.json.
-/// Returns None if the theme is "system" or if reading fails.
-fn resolve_saved_theme(app: &AppHandle) -> Option<String> {
+/// Returns None if reading fails or the value is invalid.
+fn resolve_saved_theme_preference(app: &AppHandle) -> Option<String> {
     let config_dir = crate::utils::get_app_config_dir(app);
     let prefs_file = config_dir.join("preferences.json");
     let content = std::fs::read_to_string(prefs_file).ok()?;
     let json: serde_json::Value = serde_json::from_str(&content).ok()?;
     let theme = json.get("theme")?.as_str()?;
     match theme {
-        "light" | "dark" => Some(theme.to_string()),
-        _ => None, // "system" → fall back to system detection
+        "light" | "dark" | "system" => Some(theme.to_string()),
+        _ => None,
     }
+}
+
+/// Injects a best-effort persisted theme hint for early frontend bootstrap.
+fn theme_bootstrap_script(app: &AppHandle) -> String {
+    let saved_theme = resolve_saved_theme_preference(app).unwrap_or_else(|| "system".to_string());
+    let serialized = serde_json::to_string(&saved_theme).unwrap_or_else(|_| "\"system\"".to_string());
+    format!("window.__SNAPLLM_SAVED_THEME__ = {};", serialized)
 }
 
 pub fn calculate_dynamic_window(
@@ -144,6 +153,7 @@ pub fn spawn_app_window(
         .visible(visible)
         .resizable(true)
         .decorations(false)
+        .initialization_script(theme_bootstrap_script(app))
         .background_color(initial_bg_color(app))
         .build()
         .map_err(|e| e.to_string())?;
