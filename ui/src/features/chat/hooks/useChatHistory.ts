@@ -83,11 +83,12 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
       title: newTitle,
       updated_at: new Date().toISOString(),
     };
+    setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
     try {
       await updateChatMeta(updated);
-      setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
     } catch (e) {
       console.error("Failed to rename chat:", e);
+      setChats((prev) => prev.map((c) => (c.id === id ? chat : c)));
     }
   };
 
@@ -101,13 +102,14 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
       ...chat,
       is_pinned: newPinnedState,
       pinned_at: newPinnedState ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
     };
+
+    setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
     try {
       await updateChatMeta(updated);
-      setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
     } catch (e) {
       console.error("Failed to toggle pin:", e);
+      setChats((prev) => prev.map((c) => (c.id === id ? chat : c)));
     }
   };
 
@@ -127,13 +129,14 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
       is_pinned: false,
       pinned_at: null,
       ...overrides,
-      updated_at: new Date().toISOString(),
     };
+
+    setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
     try {
       await updateChatMeta(updated);
-      setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
     } catch (e) {
       console.error("Failed to toggle star:", e);
+      setChats((prev) => prev.map((c) => (c.id === id ? chat : c)));
     }
   };
 

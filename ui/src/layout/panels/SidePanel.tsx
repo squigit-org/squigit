@@ -4,19 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef, useState } from "react";
-import {
-  MoreHorizontal,
-  Pin,
-  Trash2,
-  ChevronDown,
-  Star,
-  Check,
-  X,
-  StarOff,
-} from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MoreHorizontal, Pin, Trash2, Check, X } from "lucide-react";
 
-import { ChatMetadata, groupChatsByDate } from "@/lib";
+import { ChatMetadata } from "@/lib";
 import { updateIcon, welcomeIcon } from "@/assets";
 import { Dialog } from "@/components";
 import { getDeleteMultipleChatsDialog } from "@/lib";
@@ -52,7 +43,6 @@ interface ChatItemProps {
   onDelete: () => void;
   onRename: (newTitle: string) => void;
   onTogglePin: () => void;
-  onToggleStar: () => void;
   activeContextMenu: { id: string; x: number; y: number } | null;
   onOpenContextMenu: (id: string, x: number, y: number) => void;
   onCloseContextMenu: () => void;
@@ -69,7 +59,6 @@ const ChatItem: React.FC<ChatItemProps> = ({
   onDelete,
   onRename,
   onTogglePin,
-  onToggleStar,
   activeContextMenu,
   onOpenContextMenu,
   onCloseContextMenu,
@@ -77,7 +66,6 @@ const ChatItem: React.FC<ChatItemProps> = ({
 }) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(chat.title);
-  const menuBtnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const showMenu = activeContextMenu?.id === chat.id;
@@ -93,13 +81,9 @@ const ChatItem: React.FC<ChatItemProps> = ({
     e.stopPropagation();
     e.preventDefault();
     if (showMenu) {
-      onCloseContextMenu();
       return;
     }
-    const rect = menuBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      onOpenContextMenu(chat.id, e.clientX, e.clientY);
-    }
+    onOpenContextMenu(chat.id, e.clientX, e.clientY);
   };
 
   const handleRenameSubmit = () => {
@@ -120,7 +104,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
   return (
     <>
       <div
-        className={`${styles.chatRow} ${isActive ? styles.active : ""}`}
+        className={`${styles.chatRow} ${isActive ? styles.active : ""} ${showMenu ? styles.menuOpen : ""}`}
         onClick={isSelectionMode ? onToggleSelection : onSelect}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -158,35 +142,36 @@ const ChatItem: React.FC<ChatItemProps> = ({
         {!isSelectionMode && (
           <div className={styles.chatActions}>
             <div className={styles.statusRow}>
-              {chat.is_pinned && (
-                <div className={styles.pinIcon}>
+              <button
+                className={`${styles.starBtn} ${chat.is_pinned ? styles.pinned : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePin();
+                }}
+                title={chat.is_pinned ? "Unpin" : "Pin"}
+              >
+                {chat.is_pinned ? (
                   <Pin
                     size={14}
                     style={{ transform: "rotate(45deg)" }}
                     fill="currentColor"
                   />
-                </div>
-              )}
+                ) : (
+                  <Pin size={14} style={{ transform: "rotate(45deg)" }} />
+                )}
+              </button>
 
               <button
-                className={styles.starBtn}
-                onClick={(e) => {
+                className={styles.menuBtn}
+                onMouseDown={(e) => {
                   e.stopPropagation();
-                  onToggleStar();
+                  e.preventDefault();
                 }}
-                title={chat.is_starred ? "Unstar" : "Star"}
+                onClick={handleMenuClick}
               >
-                {chat.is_starred ? <StarOff size={14} /> : <Star size={14} />}
+                <MoreHorizontal size={14} />
               </button>
             </div>
-
-            <button
-              ref={menuBtnRef}
-              className={styles.menuBtn}
-              onClick={handleMenuClick}
-            >
-              <MoreHorizontal size={14} />
-            </button>
           </div>
         )}
       </div>
@@ -198,118 +183,20 @@ const ChatItem: React.FC<ChatItemProps> = ({
           onClose={onCloseContextMenu}
           onRename={() => {
             setIsRenaming(true);
-            onCloseContextMenu();
-          }}
-          onTogglePin={() => {
-            onTogglePin();
-            onCloseContextMenu();
           }}
           onToggleSelection={() => {
             onEnableSelectionMode();
-            if (!isSelected) onToggleSelection();
-            onCloseContextMenu();
+            if (!isSelected) {
+              onToggleSelection();
+            }
           }}
           onDelete={() => {
             onDelete();
-            onCloseContextMenu();
           }}
-          isPinned={chat.is_pinned}
           isSelected={isSelected}
         />
       )}
     </>
-  );
-};
-
-interface ChatGroupProps {
-  title: string;
-  chats: ChatMetadata[];
-  activeSessionId: string | null;
-  isSelectionMode: boolean;
-  selectedIds: string[];
-  onSelectChat: (id: string) => void;
-  onToggleChatSelection: (id: string) => void;
-  onDeleteChat: (id: string) => void;
-  onRenameChat: (id: string, title: string) => void;
-  onTogglePinChat: (id: string) => void;
-  onToggleStarChat: (id: string) => void;
-  defaultExpanded?: boolean;
-  activeContextMenu: { id: string; x: number; y: number } | null;
-  onOpenContextMenu: (id: string, x: number, y: number) => void;
-  onCloseContextMenu: () => void;
-  onEnableSelectionMode: () => void;
-}
-
-const ChatGroup: React.FC<ChatGroupProps> = ({
-  title,
-  chats,
-  activeSessionId,
-  isSelectionMode,
-  selectedIds,
-  onSelectChat,
-  onToggleChatSelection,
-  onDeleteChat,
-  onRenameChat,
-  onTogglePinChat,
-  onToggleStarChat,
-  defaultExpanded = true,
-  activeContextMenu,
-  onOpenContextMenu,
-  onCloseContextMenu,
-  onEnableSelectionMode,
-}) => {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-
-  return (
-    <div className={styles.groupWrapper}>
-      <div
-        className={styles.groupHeader}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <ChevronDown
-          className={`${styles.groupChevron} ${!isExpanded ? styles.collapsed : ""}`}
-        />
-        <h4 className={styles.groupTitle}>{title}</h4>
-      </div>
-      <div
-        className={`${styles.groupContent} ${!isExpanded ? styles.collapsed : ""}`}
-      >
-        <div className={styles.groupInner}>
-          {chats.length > 0 ? (
-            chats.map((chat) => (
-              <ChatItem
-                key={chat.id}
-                chat={chat}
-                isActive={chat.id === activeSessionId}
-                isSelectionMode={isSelectionMode}
-                isSelected={selectedIds.includes(chat.id)}
-                onSelect={() => onSelectChat(chat.id)}
-                onToggleSelection={() => onToggleChatSelection(chat.id)}
-                onDelete={() => onDeleteChat(chat.id)}
-                onRename={(newTitle) => onRenameChat(chat.id, newTitle)}
-                onTogglePin={() => onTogglePinChat(chat.id)}
-                onToggleStar={() => onToggleStarChat(chat.id)}
-                activeContextMenu={activeContextMenu}
-                onOpenContextMenu={onOpenContextMenu}
-                onCloseContextMenu={onCloseContextMenu}
-                onEnableSelectionMode={onEnableSelectionMode}
-              />
-            ))
-          ) : (
-            <div
-              style={{
-                padding: "20px 20px",
-                textAlign: "center",
-                color: "var(--text-muted)",
-                fontSize: "0.9rem",
-              }}
-            >
-              No chats found
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
   );
 };
 
@@ -329,23 +216,39 @@ export const SidePanel: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
 
-  const userChats = chats.filter((c: any) => !c.id.startsWith("__system_"));
-  const groupedChats = groupChatsByDate(userChats);
+  // Directly filter out system chats, no grouping needed
+  const displayChats = useMemo(
+    () =>
+      chats
+        .filter((c: any) => !c.id.startsWith("__system_"))
+        // Sort pinned chats first, then by updated_at descending
+        .sort((a, b) => {
+          if (a.is_pinned && !b.is_pinned) return -1;
+          if (!a.is_pinned && b.is_pinned) return 1;
+          return (
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          );
+        }),
+    [chats],
+  );
 
   const update = getPendingUpdate();
   const showWelcome =
     !app.system.activeProfile && app.system.hasAgreed === false;
 
-  useEffect(() => {
-    const handleClick = () => setActiveContextMenu(null);
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
+  const handleOpenContextMenu = useCallback((id: string, x: number, y: number) => {
+    const xPos = x + 180 > window.innerWidth ? x - 180 : x;
+    setActiveContextMenu((prev) => {
+      if (prev && prev.id === id && prev.x === xPos && prev.y === y) {
+        return prev;
+      }
+      return { id, x: xPos, y };
+    });
   }, []);
 
-  const handleOpenContextMenu = (id: string, x: number, y: number) => {
-    const xPos = x + 180 > window.innerWidth ? x - 180 : x;
-    setActiveContextMenu({ id, x: xPos, y });
-  };
+  const handleCloseContextMenu = useCallback(() => {
+    setActiveContextMenu((prev) => (prev === null ? prev : null));
+  }, []);
 
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
@@ -377,32 +280,6 @@ export const SidePanel: React.FC = () => {
     setIsSelectionMode(false);
     setShowBulkDelete(false);
   };
-
-  const renderGroup = (
-    title: string,
-    groupChats: ChatMetadata[],
-    expanded = true,
-  ) => (
-    <ChatGroup
-      key={title}
-      title={title}
-      chats={groupChats}
-      activeSessionId={activeSessionId}
-      isSelectionMode={isSelectionMode}
-      selectedIds={selectedIds}
-      onSelectChat={(id) => app.handleSelectChat(id)}
-      onToggleChatSelection={toggleChatSelection}
-      onDeleteChat={setDeleteId}
-      onRenameChat={app.chatHistory.handleRenameChat}
-      onTogglePinChat={app.chatHistory.handleTogglePinChat}
-      onToggleStarChat={app.handleToggleStarChat}
-      defaultExpanded={expanded}
-      activeContextMenu={activeContextMenu}
-      onOpenContextMenu={handleOpenContextMenu}
-      onCloseContextMenu={() => setActiveContextMenu(null)}
-      onEnableSelectionMode={() => setIsSelectionMode(true)}
-    />
-  );
 
   return (
     <div className={styles.panel}>
@@ -485,11 +362,45 @@ export const SidePanel: React.FC = () => {
       )}
 
       <div className={styles.scrollArea}>
-        {groupedChats.get("Starred") &&
-          groupedChats.get("Starred")!.length > 0 &&
-          renderGroup("Starred", groupedChats.get("Starred")!)}
-
-        {renderGroup("Recents", groupedChats.get("Recents") || [])}
+        <div className={styles.groupInner}>
+          {displayChats.length > 0 ? (
+            displayChats.map((chat) => (
+              <ChatItem
+                key={chat.id}
+                chat={chat}
+                isActive={chat.id === activeSessionId}
+                isSelectionMode={isSelectionMode}
+                isSelected={selectedIds.includes(chat.id)}
+                onSelect={() => {
+                  if (chat.id !== activeSessionId) {
+                    app.handleSelectChat(chat.id);
+                  }
+                }}
+                onToggleSelection={() => toggleChatSelection(chat.id)}
+                onDelete={() => setDeleteId(chat.id)}
+                onRename={(newTitle) =>
+                  app.chatHistory.handleRenameChat(chat.id, newTitle)
+                }
+                onTogglePin={() => app.chatHistory.handleTogglePinChat(chat.id)}
+                activeContextMenu={activeContextMenu}
+                onOpenContextMenu={handleOpenContextMenu}
+                onCloseContextMenu={handleCloseContextMenu}
+                onEnableSelectionMode={() => setIsSelectionMode(true)}
+              />
+            ))
+          ) : (
+            <div
+              style={{
+                padding: "20px 20px",
+                textAlign: "center",
+                color: "var(--c-raw-073)",
+                fontSize: "0.9rem",
+              }}
+            >
+              No chats found
+            </div>
+          )}
+        </div>
       </div>
 
       <Dialog

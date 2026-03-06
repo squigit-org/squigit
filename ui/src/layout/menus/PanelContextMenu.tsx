@@ -10,17 +10,15 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
 } from "@/components";
-import { Pencil, Pin, PinOff, CheckSquare, Trash2 } from "lucide-react";
+import { Pencil, CheckSquare, Trash2 } from "lucide-react";
 
 interface PanelContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
   onRename: () => void;
-  onTogglePin: () => void;
   onToggleSelection: () => void;
   onDelete: () => void;
-  isPinned: boolean;
   isSelected: boolean;
 }
 
@@ -29,10 +27,8 @@ export const PanelContextMenu: React.FC<PanelContextMenuProps> = ({
   y,
   onClose,
   onRename,
-  onTogglePin,
   onToggleSelection,
   onDelete,
-  isPinned,
   isSelected: _isSelected,
 }) => {
   return (
@@ -45,22 +41,6 @@ export const PanelContextMenu: React.FC<PanelContextMenuProps> = ({
         icon={<Pencil size={14} />}
       >
         Rename
-      </ContextMenuItem>
-
-      <ContextMenuItem
-        onClick={() => {
-          onTogglePin();
-          onClose();
-        }}
-        icon={
-          isPinned ? (
-            <PinOff size={14} style={{ transform: "rotate(45deg)" }} />
-          ) : (
-            <Pin size={14} style={{ transform: "rotate(45deg)" }} />
-          )
-        }
-      >
-        {isPinned ? "Unpin Chat" : "Pin Chat"}
       </ContextMenuItem>
 
       <ContextMenuSeparator />
