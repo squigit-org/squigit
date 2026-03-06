@@ -81,6 +81,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
     e.stopPropagation();
     e.preventDefault();
     if (showMenu) {
+      onCloseContextMenu();
       return;
     }
     onOpenContextMenu(chat.id, e.clientX, e.clientY);
