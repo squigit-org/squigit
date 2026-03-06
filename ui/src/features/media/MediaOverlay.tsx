@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { WidgetOverlay } from "@/components";
 import { AppContextMenu } from "@/layout";
 import { GlobalWorkerOptions } from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -29,8 +30,6 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
   onClose,
   item,
 }) => {
-  const appRef = useRef<HTMLDivElement>(null);
-
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -82,34 +81,6 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     }
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      const isContextMenu = target.closest('[data-is-context-menu="true"]');
-      const isDialog = target.closest('[data-dialog-container="true"]');
-      const isTitleBar = target.closest("[data-tauri-drag-region]");
-
-      if (
-        isOpen &&
-        appRef.current &&
-        !appRef.current.contains(target as Node) &&
-        !isContextMenu &&
-        !isDialog &&
-        !isTitleBar
-      ) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-
   const renderViewer = () => {
     if (!item) return <div className={styles.emptyText}>No file selected.</div>;
 
@@ -130,33 +101,23 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
   };
 
   return (
-    <div
-      className={`${styles.settingsOverlay} ${isOpen ? styles.open : ""}`}
-      onContextMenu={handleContextMenu}
-    >
-      <div
-        ref={appRef}
-        className={`${styles.container} ${isOpen ? styles.open : ""}`}
-        onClick={(e) => e.stopPropagation()}
+    <>
+      <WidgetOverlay
+        isOpen={isOpen}
+        onClose={onClose}
+        onContextMenu={handleContextMenu}
+        sectionContentClassName={styles.sectionContent}
+        sidebarBottom={
+          <MediaSidebar onReveal={handleReveal} onCopyPath={handleCopyPath} />
+        }
       >
-        <MediaSidebar
-          onClose={onClose}
-          onReveal={handleReveal}
-          onCopyPath={handleCopyPath}
-        />
-
-        <div className={styles.content}>
-          <div className={styles.sectionContent}>
-            <div className={styles.viewerRoot}>
-              <div className={styles.viewerHeader}>
-                <h3 className={styles.viewerTitle}>{item?.name || "Viewer"}</h3>
-              </div>
-              <div className={styles.viewerBody}>{renderViewer()}</div>
-            </div>
+        <div className={styles.viewerRoot}>
+          <div className={styles.viewerHeader}>
+            <h3 className={styles.viewerTitle}>{item?.name || "Viewer"}</h3>
           </div>
+          <div className={styles.viewerBody}>{renderViewer()}</div>
         </div>
-      </div>
-
+      </WidgetOverlay>
       {contextMenu && (
         <AppContextMenu
           x={contextMenu.x}
@@ -166,6 +127,6 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
           hasSelection={contextMenu.hasSelection}
         />
       )}
-    </div>
+    </>
   );
 };

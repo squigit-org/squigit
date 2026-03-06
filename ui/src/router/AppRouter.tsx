@@ -13,6 +13,7 @@ import {
   UpdateNotes,
   Chat,
   MediaOverlay,
+  SearchOverlay,
 } from "@/features";
 import { AppProvider, useAppContext } from "@/providers/AppProvider";
 import { AppContextMenu } from "@/layout";
@@ -122,6 +123,11 @@ const AppRouterContent: React.FC = () => {
         isOpen={app.mediaViewer.isOpen}
         onClose={app.closeMediaViewer}
         item={app.mediaViewer.item}
+      />
+
+      <SearchOverlay
+        isOpen={app.searchOverlay.isOpen}
+        onClose={app.closeSearchOverlay}
       />
     </>
   );

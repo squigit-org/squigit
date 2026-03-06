@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MoreHorizontal, Pin, Trash2, Check, X } from "lucide-react";
+import { MoreHorizontal, Pin, Trash2, Check, X, Search } from "lucide-react";
 
 import { ChatMetadata } from "@/lib";
 import { updateIcon, welcomeIcon } from "@/assets";
@@ -315,51 +315,59 @@ export const SidePanel: React.FC = () => {
           </div>
         </div>
       ) : (
-        (showWelcome || update) && (
-          <div className={styles.headerArea}>
-            <div className={styles.groupContent}>
-              <div className={styles.groupInner}>
-                {showWelcome && (
-                  <div
-                    className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
-                    onClick={() => app.handleSelectChat("__system_welcome")}
-                  >
-                    <div className={styles.chatIconMain}>
-                      <img
-                        src={welcomeIcon}
-                        alt="Welcome"
-                        className="w-5 h-5 object-contain"
-                      />
-                    </div>
-                    <span className={styles.chatTitle}>
-                      Welcome to {app.system.appName}!
-                    </span>
-                  </div>
-                )}
-
-                {update && (
-                  <div
-                    className={`${styles.chatRow} ${activeSessionId && activeSessionId.startsWith("__system_update") ? styles.active : ""}`}
-                    onClick={() =>
-                      app.handleSelectChat(`__system_update_${update.version}`)
-                    }
-                  >
-                    <div className={styles.chatIconMain}>
-                      <img
-                        src={updateIcon}
-                        alt="Update"
-                        className="w-5 h-5 object-contain"
-                      />
-                    </div>
-                    <span className={styles.chatTitle}>
-                      Update Available: {update.version}
-                    </span>
-                  </div>
-                )}
+        <div className={styles.headerArea}>
+          <div className={styles.groupContent}>
+            <div className={styles.groupInner}>
+              <div
+                className={`${styles.chatRow} ${app.searchOverlay.isOpen ? styles.active : ""}`}
+                onClick={app.openSearchOverlay}
+              >
+                <div className={styles.chatIconMain}>
+                  <Search size={18} />
+                </div>
+                <span className={styles.chatTitle}>Search chats</span>
               </div>
+
+              {showWelcome && (
+                <div
+                  className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
+                  onClick={() => app.handleSelectChat("__system_welcome")}
+                >
+                  <div className={styles.chatIconMain}>
+                    <img
+                      src={welcomeIcon}
+                      alt="Welcome"
+                      className="w-5 h-5 object-contain"
+                    />
+                  </div>
+                  <span className={styles.chatTitle}>
+                    Welcome to {app.system.appName}!
+                  </span>
+                </div>
+              )}
+
+              {update && (
+                <div
+                  className={`${styles.chatRow} ${activeSessionId && activeSessionId.startsWith("__system_update") ? styles.active : ""}`}
+                  onClick={() =>
+                    app.handleSelectChat(`__system_update_${update.version}`)
+                  }
+                >
+                  <div className={styles.chatIconMain}>
+                    <img
+                      src={updateIcon}
+                      alt="Update"
+                      className="w-5 h-5 object-contain"
+                    />
+                  </div>
+                  <span className={styles.chatTitle}>
+                    Update Available: {update.version}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-        )
+        </div>
       )}
 
       <div className={styles.scrollArea}>

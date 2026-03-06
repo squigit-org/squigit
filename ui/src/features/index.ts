@@ -61,3 +61,5 @@ export * from "./settings/SettingsOverlay";
 
 export * from "./media/MediaOverlay";
 export * from "./media/types";
+
+export * from "./search/SearchOverlay";

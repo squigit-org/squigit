@@ -4,9 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  X,
   Book,
   SettingsIcon,
   Package,
@@ -17,7 +16,7 @@ import {
 
 import { invoke } from "@tauri-apps/api/core";
 import { UserPreferences, github } from "@/lib";
-import { Tooltip } from "@/components";
+import { WidgetOverlay, WidgetOverlayIconButton } from "@/components";
 
 import {
   GeneralSection,
@@ -79,9 +78,6 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   onSetAPIKey,
   isGuest = false,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const appRef = useRef<HTMLDivElement>(null);
-
   const [localPrompt, setLocalPrompt] = useState(currentPrompt);
 
   const [contextMenu, setContextMenu] = useState<{
@@ -128,54 +124,15 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
     updatePreferences({ captureType: type });
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      const isContextMenu = target.closest('[data-is-context-menu="true"]');
-      const isDialog = target.closest('[data-dialog-container="true"]');
-      const isTitleBar = target.closest("[data-tauri-drag-region]");
-
-      if (
-        isOpen &&
-        appRef.current &&
-        !appRef.current.contains(target as Node) &&
-        !isContextMenu &&
-        !isDialog &&
-        !isTitleBar
-      ) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-
   return (
-    <div
-      className={`${styles.settingsOverlay} ${isOpen ? styles.open : ""}`}
-      ref={containerRef}
-      onContextMenu={handleContextMenu}
-    >
-      <div
-        ref={appRef}
-        className={`${styles.container} ${isOpen ? styles.open : ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={styles.sidebar}>
-          <div className={styles.sidebarSection}>
-            <button className={styles.closeButton} onClick={onClose}>
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className={styles.spacer} />
-
-          <div className={styles.sidebarSection}>
+    <>
+      <WidgetOverlay
+        isOpen={isOpen}
+        onClose={onClose}
+        onContextMenu={handleContextMenu}
+        sectionContentClassName={styles.sectionContent}
+        sidebarMiddle={
+          <>
             <SidebarButtonWithTooltip
               icon={<SettingsIcon size={22} />}
               label="General"
@@ -200,11 +157,10 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
               isActive={activeSection === "personalization"}
               onClick={() => onSectionChange("personalization")}
             />
-          </div>
-
-          <div className={styles.spacer} />
-
-          <div className={`${styles.sidebarSection} ${styles.footer}`}>
+          </>
+        }
+        sidebarBottom={
+          <>
             <SidebarButtonWithTooltip
               icon={<HelpCircle size={22} />}
               label="Help & Support"
@@ -218,50 +174,46 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
                 invoke("open_external_url", { url: github.docs() })
               }
             />
-          </div>
-        </div>
-
-        <div className={styles.content}>
-          <div className={styles.sectionContent}>
-            {activeSection === "general" && (
-              <GeneralSection
-                themePreference={themePreference}
-                onSetTheme={onSetTheme}
-                autoExpandOCR={autoExpandOCR}
-                onToggleAutoExpand={handleToggleAutoExpand}
-                ocrEnabled={ocrEnabled}
-                onToggleOcrEnabled={handleToggleOcrEnabled}
-                captureType={captureType}
-                onCaptureTypeChange={handleCaptureTypeChange}
-              />
-            )}
-            {activeSection === "models" && (
-              <ModelsSection
-                localModel={defaultModel}
-                ocrLanguage={defaultOcrLanguage}
-                updatePreferences={updatePreferences}
-              />
-            )}
-            {activeSection === "apikeys" && (
-              <APIKeysSection
-                geminiKey={geminiKey}
-                imgbbKey={imgbbKey}
-                onSetAPIKey={onSetAPIKey}
-                isGuest={isGuest}
-              />
-            )}
-            {activeSection === "personalization" && (
-              <PersonalizationSection
-                localPrompt={localPrompt}
-                currentPrompt={currentPrompt}
-                setLocalPrompt={setLocalPrompt}
-                updatePreferences={updatePreferences}
-              />
-            )}
-            {activeSection === "help" && <HelpSection />}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      >
+        {activeSection === "general" && (
+          <GeneralSection
+            themePreference={themePreference}
+            onSetTheme={onSetTheme}
+            autoExpandOCR={autoExpandOCR}
+            onToggleAutoExpand={handleToggleAutoExpand}
+            ocrEnabled={ocrEnabled}
+            onToggleOcrEnabled={handleToggleOcrEnabled}
+            captureType={captureType}
+            onCaptureTypeChange={handleCaptureTypeChange}
+          />
+        )}
+        {activeSection === "models" && (
+          <ModelsSection
+            localModel={defaultModel}
+            ocrLanguage={defaultOcrLanguage}
+            updatePreferences={updatePreferences}
+          />
+        )}
+        {activeSection === "apikeys" && (
+          <APIKeysSection
+            geminiKey={geminiKey}
+            imgbbKey={imgbbKey}
+            onSetAPIKey={onSetAPIKey}
+            isGuest={isGuest}
+          />
+        )}
+        {activeSection === "personalization" && (
+          <PersonalizationSection
+            localPrompt={localPrompt}
+            currentPrompt={currentPrompt}
+            setLocalPrompt={setLocalPrompt}
+            updatePreferences={updatePreferences}
+          />
+        )}
+        {activeSection === "help" && <HelpSection />}
+      </WidgetOverlay>
       {contextMenu && (
         <AppContextMenu
           x={contextMenu.x}
@@ -271,7 +223,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
           hasSelection={contextMenu.hasSelection}
         />
       )}
-    </div>
+    </>
   );
 };
 
@@ -285,22 +237,11 @@ const SidebarButtonWithTooltip = ({
   label: string;
   isActive?: boolean;
   onClick: () => void;
-}) => {
-  const [hover, setHover] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        className={`${styles.sidebarButton} ${isActive ? styles.active : ""}`}
-        onClick={onClick}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        {icon}
-      </button>
-      <Tooltip text={label} parentRef={btnRef} show={hover} />
-    </>
-  );
-};
+}) => (
+  <WidgetOverlayIconButton
+    icon={icon}
+    label={label}
+    isActive={isActive}
+    onClick={onClick}
+  />
+);

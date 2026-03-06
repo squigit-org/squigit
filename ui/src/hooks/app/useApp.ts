@@ -502,6 +502,15 @@ export const useApp = () => {
     isOpen: false,
     item: null,
   });
+  const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
+
+  const openSearchOverlay = useCallback(() => {
+    setIsSearchOverlayOpen(true);
+  }, []);
+
+  const closeSearchOverlay = useCallback(() => {
+    setIsSearchOverlayOpen(false);
+  }, []);
 
   const closeMediaViewer = useCallback(() => {
     setMediaViewer((prev) => ({ ...prev, isOpen: false }));
@@ -1040,6 +1049,7 @@ export const useApp = () => {
     agreedToTerms,
     busyDialog,
     mediaViewer,
+    searchOverlay: { isOpen: isSearchOverlayOpen },
 
     toggleSidePanel: panel.toggleSidePanel,
     isNavigating,
@@ -1071,6 +1081,8 @@ export const useApp = () => {
     handleBusyDialogAction,
     openMediaViewer,
     closeMediaViewer,
+    openSearchOverlay,
+    closeSearchOverlay,
     getAttachmentSourcePath,
     containerRef,
     isOcrScanning: ocr.isOcrScanning,
