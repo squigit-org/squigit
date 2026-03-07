@@ -18,7 +18,7 @@ setuptools; python_version >= "3.12"
 
 # PaddleX core/runtime path used by PaddleOCR inference.
 aistudio-sdk>=0.3.5
-chardet
+chardet==5.2.0
 colorlog
 filelock
 packaging
