@@ -47,7 +47,7 @@ public slots:
                 "/org/freedesktop/impl/portal/PermissionStore",
                 "org.freedesktop.impl.portal.PermissionStore",
                 "DeletePermission");
-            dropPerm << "screenshot" << "screenshot" << "snapllm";
+            dropPerm << "screenshot" << "screenshot" << "squigit";
             QDBusConnection::sessionBus().call(dropPerm);
 
             std::cout << "CAPTURE_DENIED" << std::endl;

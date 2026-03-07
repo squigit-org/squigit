@@ -12,7 +12,7 @@ fn main() {
 
 fn embed_google_credentials() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR is not set"));
-    let embedded_path = out_dir.join("snapllm-google-credentials.json");
+    let embedded_path = out_dir.join("squigit-google-credentials.json");
 
     let payload = load_google_credentials_json().unwrap_or_default();
     if let Err(err) = fs::write(&embedded_path, payload) {
@@ -24,11 +24,11 @@ fn embed_google_credentials() {
     }
 
     println!(
-        "cargo:rustc-env=SNAPLLM_GOOGLE_CREDENTIALS_EMBEDDED_FILE={}",
+        "cargo:rustc-env=SQUIGIT_GOOGLE_CREDENTIALS_EMBEDDED_FILE={}",
         embedded_path.display()
     );
-    println!("cargo:rerun-if-env-changed=SNAPLLM_GOOGLE_CREDENTIALS_JSON");
-    println!("cargo:rerun-if-env-changed=SNAPLLM_GOOGLE_CREDENTIALS_PATH");
+    println!("cargo:rerun-if-env-changed=SQUIGIT_GOOGLE_CREDENTIALS_JSON");
+    println!("cargo:rerun-if-env-changed=SQUIGIT_GOOGLE_CREDENTIALS_PATH");
 
     if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
         let default_credentials_path = Path::new(&manifest_dir)
@@ -43,21 +43,21 @@ fn embed_google_credentials() {
 }
 
 fn load_google_credentials_json() -> Option<String> {
-    if let Ok(raw_json) = env::var("SNAPLLM_GOOGLE_CREDENTIALS_JSON") {
+    if let Ok(raw_json) = env::var("SQUIGIT_GOOGLE_CREDENTIALS_JSON") {
         let trimmed = raw_json.trim();
         if !trimmed.is_empty() {
             return Some(trimmed.to_string());
         }
     }
 
-    if let Ok(path) = env::var("SNAPLLM_GOOGLE_CREDENTIALS_PATH") {
+    if let Ok(path) = env::var("SQUIGIT_GOOGLE_CREDENTIALS_PATH") {
         let trimmed = path.trim();
         if !trimmed.is_empty() {
             match fs::read_to_string(trimmed) {
                 Ok(contents) => return Some(contents),
                 Err(err) => {
                     println!(
-                        "cargo:warning=Failed to read SNAPLLM_GOOGLE_CREDENTIALS_PATH ({}): {}",
+                        "cargo:warning=Failed to read SQUIGIT_GOOGLE_CREDENTIALS_PATH ({}): {}",
                         trimmed, err
                     );
                 }

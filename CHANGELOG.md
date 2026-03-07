@@ -40,8 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar**: Improved sidebar UI with colored status indicators.
 - **Typography**: Enhanced font readability across the app.
 
-## [1.0.0] - 2025-10-02
+## [0.1.0] - 2025-10-02
 
 ### Added
 
-- Initial release of SnapLLM.
+- Initial release of Squigit.

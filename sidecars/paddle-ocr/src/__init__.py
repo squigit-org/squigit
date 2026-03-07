@@ -8,7 +8,7 @@ A standalone OCR engine built on PaddleOCR for extracting
 text and bounding boxes from images.
 
 @author a7mddra
-@version 1.0.0
+@version 0.1.0
 
 @example
     from src import OCREngine
@@ -32,4 +32,4 @@ __all__ = [
     "NumpyEncoder",
 ]
 
-__version__ = "1.0.0"
+__version__ = "0.1.0"

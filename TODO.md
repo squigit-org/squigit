@@ -1,4 +1,4 @@
-# TODO for SnapLLM
+# TODO for Squigit
 
 - **Support multiple AI providers via OpenAI-compatible library**:
   Decouple the application from the Google Gemini SDK. Integrate a library like `openai` (which supports multiple providers) to allow users to configure and use APIs for GPT, Claude, Grok, or any OpenAI-compatible endpoint.

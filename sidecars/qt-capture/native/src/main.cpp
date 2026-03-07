@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     app.setApplicationName(APP_NAME);
-    app.setDesktopFileName("snapllm"); 
+    app.setDesktopFileName("squigit"); 
     app.setOrganizationName(ORG_NAME);
     app.setApplicationVersion(APP_VERSION);
     app.setQuitOnLastWindowClosed(true);

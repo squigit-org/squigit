@@ -73,7 +73,7 @@ def _bootstrap_frozen_loader_env() -> None:
     if not paddle_lib_dir:
         return
 
-    if os.environ.get("SNAPLLM_PADDLE_LIBPATH_BOOTSTRAPPED") == "1":
+    if os.environ.get("SQUIGIT_PADDLE_LIBPATH_BOOTSTRAPPED") == "1":
         return
 
     if sys.platform == "darwin":
@@ -90,7 +90,7 @@ def _bootstrap_frozen_loader_env() -> None:
 
     env = os.environ.copy()
     env[key] = f"{paddle_lib_dir}{sep}{current}" if current else paddle_lib_dir
-    env["SNAPLLM_PADDLE_LIBPATH_BOOTSTRAPPED"] = "1"
+    env["SQUIGIT_PADDLE_LIBPATH_BOOTSTRAPPED"] = "1"
     os.execvpe(sys.executable, [sys.executable, *sys.argv[1:]], env)
 
 
@@ -209,7 +209,7 @@ def process_path(image_path: str, args: argparse.Namespace) -> int:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="SnapLLM PaddleOCR sidecar (CLI mode).")
+    parser = argparse.ArgumentParser(description="Squigit PaddleOCR sidecar (CLI mode).")
     parser.add_argument("image_path", help="Path to image file.")
     parser.add_argument("--lang", default="en", help="Language hint (default: en).")
     parser.add_argument("--det-model-dir", default=None, help="Detection model directory.")

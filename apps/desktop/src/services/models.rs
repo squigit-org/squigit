@@ -187,7 +187,7 @@ impl ModelManager {
 
         let temp_file_path = self.get_temp_file_path(model_id);
         let client = reqwest::Client::builder()
-            .user_agent("snapllm-ocr-model-downloader/1.0")
+            .user_agent("squigit-ocr-model-downloader/1.0")
             .build()?;
         let archive_candidates = build_archive_candidates(url, model_id);
         let mut selected_archive_url: Option<String> = None;

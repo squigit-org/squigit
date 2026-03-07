@@ -1,11 +1,11 @@
 {
-  "name": "snapllm",
-  "version": "1.0.0",
+  "name": "squigit",
+  "version": "0.1.0",
   "description": "AI and contextual analysis module for screenshot data.",
   "type": "module",
   "author": "a7mddra <a7mddra@gmail.com>",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/a7mddra/snapllm",
+  "homepage": "https://github.com/a7mddra/squigit",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

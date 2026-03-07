@@ -38,7 +38,7 @@ fn resolve_saved_theme_preference(app: &AppHandle) -> Option<String> {
 fn theme_bootstrap_script(app: &AppHandle) -> String {
     let saved_theme = resolve_saved_theme_preference(app).unwrap_or_else(|| "system".to_string());
     let serialized = serde_json::to_string(&saved_theme).unwrap_or_else(|_| "\"system\"".to_string());
-    format!("window.__SNAPLLM_SAVED_THEME__ = {};", serialized)
+    format!("window.__SQUIGIT_SAVED_THEME__ = {};", serialized)
 }
 
 pub fn calculate_dynamic_window(

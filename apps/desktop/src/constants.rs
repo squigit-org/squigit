@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-pub const APP_NAME: &str = "SnapLLM";
+pub const APP_NAME: &str = "Squigit";
 pub const DEFAULT_MODEL: &str = "gemini-3.1-flash-lite-preview";
 pub const DEFAULT_THEME: &str = "system";
 pub const DEFAULT_PROMPT: &str =

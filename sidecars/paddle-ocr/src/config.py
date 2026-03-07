@@ -8,7 +8,7 @@ This module defines the configuration options for the OCR engine
 including model paths and processing settings.
 
 @author a7mddra
-@version 1.0.0
+@version 0.1.0
 """
 
 import os

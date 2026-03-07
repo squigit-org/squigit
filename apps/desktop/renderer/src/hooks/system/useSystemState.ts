@@ -8,7 +8,7 @@ import { useState } from "react";
 import { SettingsSection } from "@/features";
 
 export const useSystemState = () => {
-  const [appName, setAppName] = useState<string>("SnapLLM");
+  const [appName, setAppName] = useState<string>("Squigit");
   const [startupImage, setStartupImage] = useState<{
     path: string;
     mimeType: string;

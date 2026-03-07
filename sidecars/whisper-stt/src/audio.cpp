@@ -4,7 +4,7 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
-namespace snapllm {
+namespace squigit {
 
     struct AudioCapture::Context {
         ma_context context;

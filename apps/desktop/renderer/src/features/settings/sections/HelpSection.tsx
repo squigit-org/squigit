@@ -17,7 +17,7 @@ import styles from "./HelpSection.module.css";
 export const HelpSection: React.FC = () => {
   const app = useAppContext();
   const [sysInfo, setSysInfo] = useState<Record<string, string>>({
-    [app.system.appName]: "v1.0.0",
+    [app.system.appName]: "v0.1.0",
     Tauri: "Loading...",
     React: React.version,
     PaddlePaddle: "v2.6.0",

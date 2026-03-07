@@ -29,7 +29,7 @@ def main() -> int:
     parser.add_argument("--output", required=True, help="Output PNG path")
     parser.add_argument(
         "--text",
-        default="SNAPLLM MACOS OCR SMOKE",
+        default="SQUIGIT MACOS OCR SMOKE",
         help="Main text rendered into the image",
     )
     args = parser.parse_args()

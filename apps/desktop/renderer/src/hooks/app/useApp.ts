@@ -131,7 +131,7 @@ const UNSUPPORTED_PREVIEW_EXTENSIONS = new Set([
   "key",
 ]);
 
-const ATTACHMENT_SOURCE_MAP_STORAGE_KEY = "snapllm:attachment-source-map:v1";
+const ATTACHMENT_SOURCE_MAP_STORAGE_KEY = "squigit:attachment-source-map:v1";
 const ATTACHMENT_SOURCE_MAP_MAX_ENTRIES = 2048;
 
 function readAttachmentSourceMap(): Map<string, string> {
@@ -328,10 +328,10 @@ export const useApp = () => {
 
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
-    const isBusy =
-      !!activeId && !isOnboardingId(activeId) && isActiveChatBusy;
+    const isBusy = !!activeId && !isOnboardingId(activeId) && isActiveChatBusy;
     const lastState = busyTouchStateRef.current;
-    const wasBusyForSameChat = lastState.chatId === activeId && lastState.isBusy;
+    const wasBusyForSameChat =
+      lastState.chatId === activeId && lastState.isBusy;
 
     if (isBusy && !wasBusyForSameChat && activeId) {
       chatHistory.touchChat(activeId).catch(console.error);
@@ -1099,7 +1099,10 @@ export const useApp = () => {
     agreedToTerms,
     busyDialog,
     mediaViewer,
-    searchOverlay: { isOpen: isSearchOverlayOpen, pendingReveal: pendingSearchReveal },
+    searchOverlay: {
+      isOpen: isSearchOverlayOpen,
+      pendingReveal: pendingSearchReveal,
+    },
 
     toggleSidePanel: panel.toggleSidePanel,
     isNavigating,

@@ -91,8 +91,8 @@ pub fn ocr() -> Result<()> {
     println!("\nBuilding PaddleOCR sidecar...");
     let sidecar = ocr_sidecar_dir();
     let venv = sidecar.join("venv");
-    let deps_marker = venv.join(".snapllm-ocr-deps-v3");
-    let force_recreate = std::env::var("SNAPLLM_OCR_RECREATE_VENV")
+    let deps_marker = venv.join(".squigit-ocr-deps-v3");
+    let force_recreate = std::env::var("SQUIGIT_OCR_RECREATE_VENV")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
 

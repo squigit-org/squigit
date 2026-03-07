@@ -40,7 +40,7 @@ def main() -> int:
     image = np.full((220, 900, 3), 255, dtype=np.uint8)
     cv2.putText(
         image,
-        "SNAPLLM OCR SMOKE",
+        "SQUIGIT OCR SMOKE",
         (20, 130),
         cv2.FONT_HERSHEY_SIMPLEX,
         1.6,

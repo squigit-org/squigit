@@ -3,8 +3,8 @@
 version = 4
 
 [[package]]
-name = "SnapLLM"
-version = "1.0.0"
+name = "Squigit"
+version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "arboard",

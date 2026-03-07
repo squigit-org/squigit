@@ -1,6 +1,6 @@
 # Linux Configuration & Privacy Policy
 
-SnapLLM is designed as a self-contained, XDG-compliant application with native Wayland and X11 support.
+Squigit is designed as a self-contained, XDG-compliant application with native Wayland and X11 support.
 
 ## 1. Global Shortcut Configuration
 
@@ -8,7 +8,7 @@ The installer registers `Super+Shift+A` with your desktop environment to trigger
 On Linux, this shortcut does _not_ launch a new binary. Instead, it fires a D-Bus message to the background application's shortcut listener:
 
 ```bash
-dbus-send --session --type=method_call --dest=com.snapllm.app /com/snapllm/app com.snapllm.app.Capture
+dbus-send --session --type=method_call --dest=com.squigit.app /com/squigit/app com.squigit.app.Capture
 ```
 
 - **Manual Setup:** If the hotkey does not trigger:
@@ -27,8 +27,8 @@ Unlike traditional X11 tools, this application respects Wayland security protoco
 
 ## 3. Application Architecture
 
-- **Single Instance & Autostart:** SnapLLM operates as a single-instance application. It will launch silently to the System Tray on boot if autostart is enabled.
-- **Desktop Integration:** An entry is automatically created at `~/.local/share/applications/snapllm.desktop` for launcher access.
+- **Single Instance & Autostart:** Squigit operates as a single-instance application. It will launch silently to the System Tray on boot if autostart is enabled.
+- **Desktop Integration:** An entry is automatically created at `~/.local/share/applications/squigit.desktop` for launcher access.
 
 ## 4. Zero-Trust Architecture
 

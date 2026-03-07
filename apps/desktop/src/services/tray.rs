@@ -243,7 +243,7 @@ mod sni {
         ) -> zbus::fdo::Result<()> {
             if event_id == "clicked" {
                 match id {
-                    2 => super::show_window(&self.app_handle), // SnapLLM
+                    2 => super::show_window(&self.app_handle), // Squigit
                     1 => super::capture_screen_with_source(&self.app_handle, "tray"), // Capture
                     4 => self.app_handle.exit(0),              // Exit
                     _ => {}

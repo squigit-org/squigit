@@ -39,7 +39,7 @@ const OCR_TIMEOUT_SECS_DEFAULT: u64 = 120;
 static OCR_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 fn get_ocr_timeout_secs() -> u64 {
-    std::env::var("SNAPLLM_OCR_TIMEOUT_SECS")
+    std::env::var("SQUIGIT_OCR_TIMEOUT_SECS")
         .ok()
         .and_then(|raw| raw.parse::<u64>().ok())
         .filter(|v| *v > 0)

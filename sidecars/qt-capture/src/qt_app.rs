@@ -54,8 +54,8 @@ impl QtApp {
         let mut cmd = Command::new(&paths.bin);
 
         cmd.args(&self.args)
-            .env("GIO_LAUNCHED_DESKTOP_APP_ID", "snapllm")
-            .env("G_APPLICATION_ID", "snapllm")
+            .env("GIO_LAUNCHED_DESKTOP_APP_ID", "squigit")
+            .env("G_APPLICATION_ID", "squigit")
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
 
@@ -103,7 +103,7 @@ impl QtApp {
                                 );
                                 eprintln!("screen capture portal configurations (e.g. xdg-desktop-portal-hyprland/wlr).");
                                 eprintln!("\nFor help, please report an issue at:");
-                                eprintln!("-> https://github.com/a7mddra/snapllm/issues/new");
+                                eprintln!("-> https://github.com/a7mddra/squigit/issues/new");
                                 eprintln!("============================================================\n");
                                 break;
                             }

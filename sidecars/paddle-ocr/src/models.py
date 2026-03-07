@@ -8,7 +8,7 @@ This module defines the data structures used to represent
 OCR results including bounding boxes and text detections.
 
 @author a7mddra
-@version 1.0.0
+@version 0.1.0
 """
 
 import json

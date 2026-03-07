@@ -24,7 +24,7 @@ const PROFILE_FILE: &str = "profile.json";
 /// Handles CRUD operations for profiles, maintaining an index
 /// of all profiles and tracking the active profile.
 pub struct ProfileStore {
-    /// Base directory: `{config_dir}/snapllm/Local Storage/`
+    /// Base directory: `{config_dir}/squigit/Local Storage/`
     base_dir: PathBuf,
     /// Path to the index file.
     index_path: PathBuf,
@@ -34,13 +34,13 @@ impl ProfileStore {
     /// Create a new profile store.
     ///
     /// Uses the OS-appropriate config directory:
-    /// - Linux: `~/.config/snapllm/Local Storage/`
-    /// - macOS: `~/Library/Application Support/snapllm/Local Storage/`
-    /// - Windows: `%APPDATA%/snapllm/Local Storage/`
+    /// - Linux: `~/.config/squigit/Local Storage/`
+    /// - macOS: `~/Library/Application Support/squigit/Local Storage/`
+    /// - Windows: `%APPDATA%/squigit/Local Storage/`
     pub fn new() -> Result<Self> {
         let base_dir = dirs::config_dir()
             .ok_or(ProfileError::NoConfigDir)?
-            .join("SnapLLM".to_lowercase())
+            .join("Squigit".to_lowercase())
             .join(STORAGE_DIR);
 
         let index_path = base_dir.join(INDEX_FILE);

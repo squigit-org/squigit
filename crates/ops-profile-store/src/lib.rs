@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Profile storage and management for SnapLLM.
+//! Profile storage and management for Squigit.
 //!
 //! This crate provides multi-account profile management where each profile
 //! is tied to a Google account. Profiles store user identity, BYOK keys,
@@ -10,7 +10,7 @@
 //! # Directory Structure
 //!
 //! ```text
-//! {config_dir}/snapllm/
+//! {config_dir}/squigit/
 //! ├── preferences.json              # GLOBAL (shared across profiles)
 //! └── Local Storage/
 //!     ├── index.json                # Profile index + active profile

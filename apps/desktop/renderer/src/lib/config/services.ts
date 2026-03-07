@@ -9,7 +9,7 @@
 // =============================================================================
 
 const GITHUB_BASE = (sub: string = "github") =>
-  `https://${sub}.com/a7mddra/snapllm`;
+  `https://${sub}.com/a7mddra/squigit`;
 
 export const github = {
   repo: GITHUB_BASE(),

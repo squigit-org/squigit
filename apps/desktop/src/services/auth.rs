@@ -14,7 +14,7 @@ use url::Url;
 
 use ops_profile_store::{Profile, ProfileStore};
 
-const EMBEDDED_SECRETS_JSON: &str = include_str!(env!("SNAPLLM_GOOGLE_CREDENTIALS_EMBEDDED_FILE"));
+const EMBEDDED_SECRETS_JSON: &str = include_str!(env!("SQUIGIT_GOOGLE_CREDENTIALS_EMBEDDED_FILE"));
 
 const HTML_TEMPLATE: &str = include_str!("../data/success.html");
 
@@ -80,8 +80,8 @@ fn missing_credentials_message() -> String {
         The app can run normally, but sign-in is disabled.\n\n\
         To enable Google auth, provide credentials using one of:\n\
         - copy apps/desktop/src/data/credentials.example.json to apps/desktop/src/data/credentials.json (gitignored)\n\
-        - SNAPLLM_GOOGLE_CREDENTIALS_PATH=<absolute path to credentials.json>\n\
-        - SNAPLLM_GOOGLE_CREDENTIALS_JSON=<raw credentials json>\n\n\
+        - SQUIGIT_GOOGLE_CREDENTIALS_PATH=<absolute path to credentials.json>\n\
+        - SQUIGIT_GOOGLE_CREDENTIALS_JSON=<raw credentials json>\n\n\
         Then rebuild the app and try again from {}.",
         crate::constants::APP_NAME
     )

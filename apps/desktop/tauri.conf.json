@@ -1,13 +1,13 @@
 {
-  "$schema": "ui/node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "SnapLLM",
-  "version": "1.0.0",
-  "identifier": "snapllm",
+  "$schema": "renderer/node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Squigit",
+  "version": "0.1.0",
+  "identifier": "squigit",
   "build": {
-    "beforeDevCommand": "npm --prefix ui run dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm --prefix ui run build",
-    "frontendDist": "ui/dist"
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "renderer/dist"
   },
   "app": {
     "windows": [],
@@ -22,12 +22,12 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/a7mddra/snapllm/releases/latest/download/latest.json"
+        "https://github.com/a7mddra/squigit/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhBRkVGRUQxQ0Q3M0IxODUKUldTRnNYUE4wZjcraXBpNkgyS0ZnTVdzUFlTVjdwMk14dFNDRUZsUC9iM2FjSGxNbTlxaGoxa20K"
     },
     "cli": {
-      "description": "snapllm",
+      "description": "squigit",
       "args": [
         {
           "name": "image",
@@ -47,10 +47,7 @@
     "active": true,
     "targets": "all",
     "externalBin": ["binaries/whisper-stt"],
-    "resources": [
-      "binaries/qt-capture-*/**/*",
-      "binaries/paddle-ocr-*/**/*"
-    ],
+    "resources": ["binaries/qt-capture-*/**/*", "binaries/paddle-ocr-*/**/*"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

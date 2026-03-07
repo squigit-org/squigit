@@ -13,7 +13,7 @@
 #include <condition_variable>
 #include <algorithm>
 
-namespace snapllm {
+namespace squigit {
 
     struct InferenceEngine::Impl {
         struct whisper_context* ctx = nullptr;
@@ -232,4 +232,4 @@ namespace snapllm {
         impl->running = false;
     }
 
-} // namespace snapllm
+} // namespace squigit

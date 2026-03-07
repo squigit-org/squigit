@@ -90,7 +90,7 @@ impl ChatStorage {
 
     /// Create a new storage manager using the default location.
     ///
-    /// Uses `~/.config/snapllm/chats/` on Linux (and appropriate config dirs on other OSs).
+    /// Uses `~/.config/squigit/chats/` on Linux (and appropriate config dirs on other OSs).
     ///
     /// **Note**: This constructor is provided for backward compatibility.
     /// New code should use `with_base_dir()` with a profile-specific path.
@@ -101,7 +101,7 @@ impl ChatStorage {
     pub fn new() -> Result<Self> {
         let base_dir = dirs::config_dir()
             .ok_or(StorageError::NoDataDir)?
-            .join("SnapLLM".to_lowercase())
+            .join("Squigit".to_lowercase())
             .join("chats");
 
         Self::with_base_dir(base_dir)

@@ -40,7 +40,7 @@ HF_REQUIRED_FILES = (
 )
 
 REQUEST_HEADERS = {
-    "User-Agent": "snapllm-ocr-model-bootstrap/1.0",
+    "User-Agent": "squigit-ocr-model-bootstrap/1.0",
 }
 
 

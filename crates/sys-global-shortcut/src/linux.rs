@@ -30,7 +30,7 @@ pub fn install_linux_shortcut(_bin_path: &str, trigger: &str, name: &str) -> Res
         trigger.split('+').last().unwrap_or("A").to_uppercase()
     );
 
-    let app_lower = "SnapLLM".to_lowercase();
+    let app_lower = "Squigit".to_lowercase();
     let command_str = format!("dbus-send --session --type=method_call --dest=com.{0}.app /com/{0}/app com.{0}.app.Capture", app_lower);
     let command = command_str.as_str();
 
@@ -165,7 +165,7 @@ struct AppDbus {
     callback: Arc<dyn Fn() + Send + Sync + 'static>,
 }
 
-#[interface(name = "com.snapllm.app")]
+#[interface(name = "com.squigit.app")]
 impl AppDbus {
     async fn capture(&self) {
         (self.callback)();
@@ -194,7 +194,7 @@ impl LinuxHandle {
 
                 rt.block_on(async {
                     let dbus_service = AppDbus { callback: cb };
-                    let app_lower = "SnapLLM".to_lowercase();
+                    let app_lower = "Squigit".to_lowercase();
 
                     let _conn = match zbus::connection::Builder::session() {
                         Ok(builder) => match builder

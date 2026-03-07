@@ -85,7 +85,7 @@ export const Agreement: React.FC = () => {
           By installing this software, you agree to the{" "}
           <strong>
             <a
-              href="https://github.com/a7mddra/snapllm?tab=Apache-2.0-1-ov-file#readme"
+              href="https://github.com/a7mddra/squigit?tab=Apache-2.0-1-ov-file#readme"
               target="_blank"
               rel="noreferrer"
             >

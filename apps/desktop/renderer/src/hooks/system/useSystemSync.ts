@@ -30,7 +30,8 @@ const isTransientProfileReadError = (error: unknown) => {
   const message = String(error).toLowerCase();
   return (
     message.includes("json error") &&
-    (message.includes("eof while parsing") || message.includes("unexpected end"))
+    (message.includes("eof while parsing") ||
+      message.includes("unexpected end"))
   );
 };
 
@@ -109,7 +110,7 @@ export const useSystemSync = () => {
       if (cancelled) return;
 
       state.setHasAgreed(agreed);
-      state.setAppName(appConstants.appName || "SnapLLM");
+      state.setAppName(appConstants.appName || "Squigit");
 
       if (agreed) {
         const loadedPrefs = await loadPreferences();

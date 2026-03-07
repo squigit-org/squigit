@@ -40,7 +40,7 @@ export const Dialog: React.FC<DialogProps> = ({
   isOpen,
   type,
   onAction,
-  appName = "SnapLLM",
+  appName = "Squigit",
 }) => {
   let activeContent: Partial<DialogContent> = {};
 

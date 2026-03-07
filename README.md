@@ -1,16 +1,16 @@
 # <img src="docs/data/header.svg" alt="logo">
 
-[![SnapLLM CI](https://github.com/a7mddra/snapllm/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/snapllm/actions/workflows/distribute.yml)
-[![snapllm](https://img.shields.io/github/package-json/v/a7mddra/snapllm?filename=package.json&label=snapllm&color=orange)](https://github.com/a7mddra/snapllm/blob/main/package.json)
-[![License](https://img.shields.io/github/license/a7mddra/snapllm)](https://github.com/a7mddra/snapllm/blob/main/LICENSE)
+[![Squigit CI](https://github.com/a7mddra/squigit/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/squigit/actions/workflows/distribute.yml)
+[![squigit](https://img.shields.io/github/package-json/v/a7mddra/squigit?filename=package.json&label=squigit&color=orange)](https://github.com/a7mddra/squigit/blob/main/package.json)
+[![License](https://img.shields.io/github/license/a7mddra/squigit)](https://github.com/a7mddra/squigit/blob/main/LICENSE)
 
-![SnapLLM demo](docs/data/demo.gif)
+![Squigit demo](docs/data/demo.gif)
 
-SnapLLM is an open-source "Circle to Search" desktop utility that brings the power of AI vision directly to your screen. It provides seamless screen capture, analysis, and visual search capabilities with a single hotkey.
+Squigit is an open-source "Circle to Search" desktop utility that brings the power of AI vision directly to your screen. It provides seamless screen capture, analysis, and visual search capabilities with a single hotkey.
 
-Explore detailed guides and architecture in our [documentation](https://github.com/a7mddra/snapllm/tree/main/docs).
+Explore detailed guides and architecture in our [documentation](https://github.com/a7mddra/squigit/tree/main/docs).
 
-## 🚀 Why SnapLLM?
+## 🚀 Why Squigit?
 
 - **🎯 Native Performance**: Polyglot architecture with C++ capture, Rust orchestration, and Tauri UI.
 - **🔗 Bring Your Own Key (BYOK)**: No middleman. Plug your own Gemini and ImgBB API keys for direct, cost-effective access.
@@ -32,15 +32,15 @@ Download the appropriate installer for your operating system:
 
 #### Windows
 
-Download [`SnapLLM_Installer.exe`](https://github.com/a7mddra/snapllm/releases/download/installers/snapllm-installer-win-x64.zip).
+Download [`Squigit_Installer.exe`](https://github.com/a7mddra/squigit/releases/download/installers/squigit-installer-win-x64.zip).
 
 #### macOS
 
-Download [`snapllm-installer.dmg`](https://github.com/a7mddra/snapllm/releases/download/installers/snapllm-installer-mac-x64.zip).
+Download [`squigit-installer.dmg`](https://github.com/a7mddra/squigit/releases/download/installers/squigit-installer-mac-x64.zip).
 
 #### Linux
 
-Download [`snapllm-installer`](https://github.com/a7mddra/snapllm/releases/download/installers/snapllm-installer-linux-x64.zip).
+Download [`squigit-installer`](https://github.com/a7mddra/squigit/releases/download/installers/squigit-installer-linux-x64.zip).
 
 ## ⭐ Key Features
 
@@ -71,15 +71,15 @@ Download [`snapllm-installer`](https://github.com/a7mddra/snapllm/releases/downl
 
 ## 🔐 Authentication: Bring Your Own Key ([BYOK](docs/06-policies/BYOK.md))
 
-SnapLLM operates on a zero-trust, local-first model where you provide your own API keys.
+Squigit operates on a zero-trust, local-first model where you provide your own API keys.
 
 ### Setup Process
 
-1. **Launch SnapLLM** and signup
+1. **Launch Squigit** and signup
 2. **Generate API Keys** on the official provider sites:
    - **Gemini**: [Google AI Studio](https://aistudio.google.com/app/apikey)
    - **ImgBB**: [ImgBB API](https://api.imgbb.com/)
-3. **Copy to Clipboard** - SnapLLM automatically detects and securely stores your keys
+3. **Copy to Clipboard** - Squigit automatically detects and securely stores your keys
 
 ### Security Guarantees
 
@@ -96,11 +96,11 @@ SnapLLM operates on a zero-trust, local-first model where you provide your own A
 
 1. Press `Super/Cmd/Win + Shift + A`
 2. Draw a shape around the content you want to analyze
-3. Release to capture and open SnapLLM with AI analysis
+3. Release to capture and open Squigit with AI analysis
 
 #### Direct Application Launch
 
-1. Open SnapLLM from your applications menu
+1. Open Squigit from your applications menu
 2. Drag & drop an image or use the file dialog
 3. Chat with the AI about your uploaded image
 
@@ -150,7 +150,7 @@ SnapLLM operates on a zero-trust, local-first model where you provide your own A
 - [**Build System**](docs/02-architecture/BUILD.md) - Compilation and packaging
 - [**CaptureKit**](docs/02-architecture/CAPTUREKIT.md) - Screen capture engine (C++/Qt6)
 - [**Orchestrator**](docs/02-architecture/ORCHESTRATOR.md) - Core lifecycle manager (Rust)
-- [**SnapLLM App**](docs/02-architecture/SNAPLLM.md) - Electron/React application
+- [**Squigit App**](docs/02-architecture/SQUIGIT.md) - Electron/React application
 
 ### Development & Contribution
 
@@ -176,7 +176,7 @@ SnapLLM operates on a zero-trust, local-first model where you provide your own A
 
 ## 🤝 Contributing
 
-We welcome contributions! SnapLLM is fully open source, and we encourage the community to:
+We welcome contributions! Squigit is fully open source, and we encourage the community to:
 
 - Report bugs and suggest features
 - Improve documentation
@@ -189,8 +189,8 @@ Check our [TODO List](TODO.md) for planned features and priorities.
 
 ## 📖 Resources
 
-- **[Documentation](https://github.com/a7mddra/snapllm/tree/main/docs)** - Complete documentation hub
-- **[GitHub Issues](https://github.com/a7mddra/snapllm/issues)** - Report bugs or request features
+- **[Documentation](https://github.com/a7mddra/squigit/tree/main/docs)** - Complete documentation hub
+- **[GitHub Issues](https://github.com/a7mddra/squigit/issues)** - Report bugs or request features
 - **[Security Policy](docs/06-policies/SECURITY.md)** - Security updates and reporting
 
 ## 📄 Legal

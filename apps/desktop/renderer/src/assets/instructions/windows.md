@@ -1,6 +1,6 @@
 # Windows Configuration & Privacy Policy
 
-SnapLLM operates as a lightweight background service designed for minimal resource usage. Please review the following installation and privacy protocols.
+Squigit operates as a lightweight background service designed for minimal resource usage. Please review the following installation and privacy protocols.
 
 ## 1. Installation Verification (SmartScreen)
 

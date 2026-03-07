@@ -134,7 +134,7 @@ void CaptureController::cropAndSave(const QRectF &logicalRect)
     cropped.setDevicePixelRatio(1.0);
     
     QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss_zzz");
-    QString finalPath = QDir::temp().filePath(QString("snapllm_capture_%1.png").arg(timestamp));
+    QString finalPath = QDir::temp().filePath(QString("squigit_capture_%1.png").arg(timestamp));
     
     if (cropped.save(finalPath, "PNG", -1))
     {

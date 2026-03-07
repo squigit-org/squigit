@@ -20,6 +20,6 @@ runs:
     - name: Build OCR Engine
       shell: bash
       env:
-        SNAPLLM_OCR_PYI_MODE: ${{ inputs.pyi-mode }}
+        SQUIGIT_OCR_PYI_MODE: ${{ inputs.pyi-mode }}
       run: |
         cargo xtask build ocr

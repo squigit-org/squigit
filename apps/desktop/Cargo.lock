@@ -4850,8 +4850,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "snapllm"
-version = "1.0.0"
+name = "squigit"
+version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "arboard",

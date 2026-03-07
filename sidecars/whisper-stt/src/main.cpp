@@ -11,8 +11,8 @@
 using json = nlohmann::json;
 
 // Global state
-std::unique_ptr<snapllm::AudioCapture> audio_capture;
-std::unique_ptr<snapllm::InferenceEngine> inference_engine;
+std::unique_ptr<squigit::AudioCapture> audio_capture;
+std::unique_ptr<squigit::InferenceEngine> inference_engine;
 std::thread inference_thread;
 std::atomic<bool> is_processing{false};
 
@@ -20,7 +20,7 @@ void send_json(const json& j) {
     std::cout << j.dump() << std::endl;
 }
 
-void on_transcription(const snapllm::TranscriptionResult& result) {
+void on_transcription(const squigit::TranscriptionResult& result) {
     json j;
     j["type"] = "transcription";
     j["text"] = result.text;
@@ -35,10 +35,10 @@ void start_engine(const std::string& model_path, const std::string& language, in
         return;
     }
 
-    audio_capture = std::make_unique<snapllm::AudioCapture>();
-    inference_engine = std::make_unique<snapllm::InferenceEngine>();
+    audio_capture = std::make_unique<squigit::AudioCapture>();
+    inference_engine = std::make_unique<squigit::InferenceEngine>();
 
-    snapllm::InferenceParams params;
+    squigit::InferenceParams params;
     params.model_path = model_path;
     params.language = language;
 

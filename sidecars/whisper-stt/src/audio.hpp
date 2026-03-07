@@ -9,7 +9,7 @@
 
 struct ma_device;
 
-namespace snapllm {
+namespace squigit {
 
     using AudioCallback = std::function<void(const std::vector<float>& pcm_data)>;
 

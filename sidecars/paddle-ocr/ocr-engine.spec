@@ -6,10 +6,10 @@ import sys
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
-BUILD_MODE = os.environ.get("SNAPLLM_OCR_PYI_MODE", "onedir").strip().lower()
+BUILD_MODE = os.environ.get("SQUIGIT_OCR_PYI_MODE", "onedir").strip().lower()
 if BUILD_MODE not in {"onedir", "onefile"}:
     raise ValueError(
-        f"Unsupported SNAPLLM_OCR_PYI_MODE={BUILD_MODE!r}; expected 'onedir' or 'onefile'"
+        f"Unsupported SQUIGIT_OCR_PYI_MODE={BUILD_MODE!r}; expected 'onedir' or 'onefile'"
     )
 
 if sys.platform == "win32":

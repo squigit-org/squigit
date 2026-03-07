@@ -7,7 +7,7 @@
 
 struct whisper_context;
 
-namespace snapllm {
+namespace squigit {
 
     struct InferenceParams {
         std::string model_path;
