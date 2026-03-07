@@ -116,6 +116,10 @@
   min-width: 0;
 }
 
+.scrollArea .chatRow {
+  margin-right: 8px;
+}
+
 .chatRow:hover {
   background: var(--c-raw-067);
 }

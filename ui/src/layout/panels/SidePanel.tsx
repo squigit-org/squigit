@@ -534,7 +534,7 @@ export const SidePanel: React.FC = () => {
 
       <div className={styles.scrollArea}>
         <div className={styles.stickyThreadHeader}>
-          {pinnedChats.length > 0 && (
+          {(pinnedChats.length > 0 || (showWelcome && !isSelectionMode)) && (
             <div className={styles.groupInner}>
               {pinnedChats.map((chat) => (
                 <ChatItem
@@ -557,6 +557,28 @@ export const SidePanel: React.FC = () => {
                   onEnableSelectionMode={handleEnableSelectionMode}
                 />
               ))}
+
+              {showWelcome && !isSelectionMode && (
+                <div
+                  className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
+                  onClick={() => app.handleSelectChat("__system_welcome")}
+                >
+                  <div className={styles.chatLeading}>
+                    {busyChatId === "__system_welcome" ? (
+                      <span className={styles.rowSpinner} aria-hidden="true">
+                        <span className={styles.rowSpinnerInner}>
+                          <LoadingSpinner />
+                        </span>
+                      </span>
+                    ) : (
+                      <span className={styles.welcomeDot} aria-hidden="true" />
+                    )}
+                  </div>
+                  <span className={styles.chatTitle}>
+                    Welcome to {app.system.appName}!
+                  </span>
+                </div>
+              )}
             </div>
           )}
           <div className={styles.threadsDivider}>
@@ -565,28 +587,6 @@ export const SidePanel: React.FC = () => {
         </div>
 
         <div className={styles.groupInner}>
-          {showWelcome && !isSelectionMode && (
-            <div
-              className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
-              onClick={() => app.handleSelectChat("__system_welcome")}
-            >
-              <div className={styles.chatLeading}>
-                {busyChatId === "__system_welcome" ? (
-                  <span className={styles.rowSpinner} aria-hidden="true">
-                    <span className={styles.rowSpinnerInner}>
-                      <LoadingSpinner />
-                    </span>
-                  </span>
-                ) : (
-                  <span className={styles.welcomeDot} aria-hidden="true" />
-                )}
-              </div>
-              <span className={styles.chatTitle}>
-                Welcome to {app.system.appName}!
-              </span>
-            </div>
-          )}
-
           {threadChats.map((chat) => (
             <ChatItem
               key={chat.id}
@@ -609,20 +609,18 @@ export const SidePanel: React.FC = () => {
             />
           ))}
 
-          {!showWelcome &&
-            threadChats.length === 0 &&
-            pinnedChats.length === 0 && (
-              <div
-                style={{
-                  padding: "20px 20px",
-                  textAlign: "center",
-                  color: "var(--c-raw-073)",
-                  fontSize: "0.9rem",
-                }}
-              >
-                No chats found
-              </div>
-            )}
+          {threadChats.length === 0 && (
+            <div
+              style={{
+                padding: "20px 20px",
+                textAlign: "center",
+                color: "var(--c-raw-073)",
+                fontSize: "0.9rem",
+              }}
+            >
+              No threads yet.
+            </div>
+          )}
         </div>
       </div>
 

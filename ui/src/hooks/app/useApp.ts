@@ -268,10 +268,9 @@ export const useApp = () => {
       if (activeId) {
         const role = msg.role === "user" ? "user" : "assistant";
         appendChatMessage(activeId, role, msg.text).catch(console.error);
-        chatHistory.touchChat(activeId).catch(console.error);
       }
     },
-    [chatHistory.activeSessionId, chatHistory.touchChat],
+    [chatHistory.activeSessionId],
   );
 
   const handleOverwriteMessages = useCallback(
@@ -286,10 +285,9 @@ export const useApp = () => {
           timestamp: new Date(m.timestamp).toISOString(),
         }));
         overwriteChatMessages(activeId, formatted).catch(console.error);
-        chatHistory.touchChat(activeId).catch(console.error);
       }
     },
-    [chatHistory.activeSessionId, chatHistory.touchChat],
+    [chatHistory.activeSessionId],
   );
 
   const chatTitle = isImageMissing
@@ -318,6 +316,33 @@ export const useApp = () => {
     generateTitle: generateTitleForText,
   });
 
+  const isActiveChatBusy =
+    chat.isAnalyzing ||
+    chat.isGenerating ||
+    chat.isAiTyping ||
+    ocr.isOcrScanning;
+  const busyTouchStateRef = useRef<{ chatId: string | null; isBusy: boolean }>({
+    chatId: null,
+    isBusy: false,
+  });
+
+  useEffect(() => {
+    const activeId = chatHistory.activeSessionId;
+    const isBusy =
+      !!activeId && !isOnboardingId(activeId) && isActiveChatBusy;
+    const lastState = busyTouchStateRef.current;
+    const wasBusyForSameChat = lastState.chatId === activeId && lastState.isBusy;
+
+    if (isBusy && !wasBusyForSameChat && activeId) {
+      chatHistory.touchChat(activeId).catch(console.error);
+    }
+
+    busyTouchStateRef.current = {
+      chatId: activeId,
+      isBusy,
+    };
+  }, [chatHistory.activeSessionId, chatHistory.touchChat, isActiveChatBusy]);
+
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
     if (activeId && chatTitle && chatTitle !== "New Chat") {
@@ -326,7 +351,6 @@ export const useApp = () => {
         updateChatMetadata({
           ...currentChat,
           title: chatTitle,
-          updated_at: new Date().toISOString(),
         }).then(() => {
           chatHistory.handleRenameChat(activeId, chatTitle);
         });
@@ -348,9 +372,7 @@ export const useApp = () => {
     updateChatMetadata({
       ...currentChat,
       ocr_lang: targetOcrLang,
-      updated_at: new Date().toISOString(),
     }).then(() => {
-      chatHistory.touchChat(activeId).catch(console.error);
       console.log(
         "Automatically saved OCR language to chat metadata:",
         targetOcrLang,
@@ -360,29 +382,20 @@ export const useApp = () => {
     system.sessionOcrLanguage,
     chatHistory.activeSessionId,
     chatHistory.chats,
-    chatHistory.touchChat,
   ]);
 
   const handleUpdateLensUrl = useCallback(
     (url: string | null) => {
       ocr.handleUpdateLensUrl(url);
-      const activeId = chatHistory.activeSessionId;
-      if (activeId && url) {
-        chatHistory.touchChat(activeId).catch(console.error);
-      }
     },
-    [ocr, chatHistory.activeSessionId, chatHistory.touchChat],
+    [ocr],
   );
 
   const handleUpdateOCRData = useCallback(
     (modelId: string, data: { text: string; box: number[][] }[]) => {
       ocr.handleUpdateOCRData(modelId, data);
-      const activeId = chatHistory.activeSessionId;
-      if (activeId) {
-        chatHistory.touchChat(activeId).catch(console.error);
-      }
     },
-    [ocr, chatHistory.activeSessionId, chatHistory.touchChat],
+    [ocr],
   );
 
   const [isNavigating, setIsNavigating] = useState(false);
