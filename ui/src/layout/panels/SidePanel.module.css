@@ -24,7 +24,7 @@
 }
 
 .headerArea {
-  padding: 12px;
+  padding: 12px 8px 8px 10px;
   display: flex;
   flex-direction: column;
   background: var(--c-raw-013);
@@ -65,7 +65,7 @@
   flex: 1;
   overflow-y: scroll;
   overflow-x: hidden;
-  padding: 0 8px 16px 8px;
+  padding: 0;
   scrollbar-gutter: stable both-edges;
   contain: paint;
 }
@@ -83,12 +83,31 @@
   min-width: 0;
 }
 
+.stickyThreadHeader {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--c-raw-013);
+  padding-top: 4px;
+  padding-left: 3px;
+}
+
+.threadsDivider {
+  margin: 6px 4px 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--c-raw-000);
+  text-align: left;
+}
+
 .chatRow {
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 8px 8px 8px 6px;
   border-radius: 6px;
   cursor: pointer;
   color: var(--c-raw-050);
@@ -110,6 +129,10 @@
   color: var(--c-raw-050);
 }
 
+.pinnedRow {
+  background: transparent;
+}
+
 .chatIconMain {
   color: var(--c-raw-106);
   flex-shrink: 0;
@@ -117,6 +140,89 @@
 
 .chatRow.active .chatIconMain {
   color: var(--c-raw-050);
+}
+
+.chatLeading {
+  width: 16px;
+  height: 16px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 16px;
+}
+
+.chatBubbleIcon {
+  color: var(--c-raw-106);
+  transition: opacity 0.15s ease;
+}
+
+.pinLeftBtn {
+  position: absolute;
+  inset: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--c-raw-106);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.chatRow:hover .pinLeftBtn,
+.chatRow.menuOpen .pinLeftBtn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pinLeftBtn.pinActive {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chatRow:hover .chatBubbleIcon,
+.chatRow.menuOpen .chatBubbleIcon,
+.pinnedRow .chatBubbleIcon {
+  opacity: 0;
+}
+
+.chatRow.active .chatBubbleIcon,
+.chatRow.active .pinLeftBtn {
+  color: var(--c-raw-050);
+}
+
+.pinLeftBtn:hover {
+  color: var(--c-raw-050);
+}
+
+.pinLeftBtn:hover svg {
+  fill: currentColor;
+}
+
+.welcomeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #2f86ff;
+  box-shadow: 0 0 0 3px rgba(47, 134, 255, 0.22);
+}
+
+.rowSpinner {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rowSpinnerInner {
+  transform: scale(0.78);
+  transform-origin: center;
+  display: inline-flex;
 }
 
 .chatTitleInput {
@@ -147,28 +253,39 @@
 }
 
 .chatActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex: 0 0 52px;
-  width: 52px;
-  min-width: 52px;
-}
-
-.statusRow {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  width: 100%;
+  position: relative;
+  margin-left: auto;
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
   height: 24px;
 }
 
-.menuBtn,
-.starBtn {
+.chatDate {
+  font-size: 0.72rem;
+  color: var(--c-raw-106);
+  line-height: 1;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: right;
+  transition: opacity 0.15s ease;
+}
+
+.chatRow:hover .chatDate,
+.chatRow.menuOpen .chatDate {
+  opacity: 0;
+}
+
+.menuBtn {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
   width: 24px;
   height: 24px;
   border-radius: 4px;
@@ -176,56 +293,35 @@
   border: none;
   color: var(--c-raw-106);
   transition: none;
-}
-
-.starBtn {
-  opacity: 0;
-  cursor: pointer;
-  pointer-events: none;
-}
-
-.starBtn.pinned {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.chatRow:hover .starBtn {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.chatRow.menuOpen .starBtn {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.starBtn:hover {
-  background: transparent;
-  color: var(--c-raw-050);
-}
-
-.starBtn:hover svg {
-  fill: currentColor;
-}
-
-.menuBtn {
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
 }
 
-.chatRow:hover .menuBtn {
-  opacity: 1;
-  pointer-events: auto;
-}
-
+.chatRow:hover .menuBtn,
 .chatRow.menuOpen .menuBtn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pinnedMenuBtn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chatRow:hover .pinnedMenuBtn,
+.chatRow.menuOpen .pinnedMenuBtn {
   opacity: 1;
   pointer-events: auto;
 }
 
 .menuBtn:hover {
   background: transparent;
+  color: var(--c-raw-050);
+}
+
+.chatRow.active .chatDate,
+.chatRow.active .menuBtn {
   color: var(--c-raw-050);
 }
 

@@ -100,10 +100,11 @@ export const GalleryScreen: React.FC = () => {
   const handleOpenImage = useCallback(
     (item: GalleryImage) => {
       const extension = item.path.split(".").pop()?.toLowerCase() || "png";
+      const viewerName = item.title.trim() || "Image";
       const attachment: Attachment = {
         id: `gallery-${item.hash}`,
         type: "image",
-        name: `${item.hash}.${extension}`,
+        name: viewerName,
         extension,
         path: item.path,
       };

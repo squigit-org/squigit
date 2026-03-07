@@ -22,7 +22,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({
   const src = useMemo(() => convertFileSrc(imagePath), [imagePath]);
 
   return (
-    <button className={styles.card} onClick={onClick} title={title}>
+    <button className={styles.card} onClick={onClick}>
       <img src={src} alt={title} className={styles.preview} loading="lazy" />
       <div className={styles.meta}>
         <span className={styles.title}>{title}</span>

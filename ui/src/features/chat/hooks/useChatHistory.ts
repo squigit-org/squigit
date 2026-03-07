@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   type ChatSearchResult,
   ChatMetadata,
@@ -15,11 +15,18 @@ import {
 } from "@/lib";
 const SYSTEM_PREFIX = "__system_";
 const isOnboardingId = (id: string) => id.startsWith(SYSTEM_PREFIX);
+const TOUCH_THROTTLE_MS = 1200;
 
 export const useChatHistory = (activeProfileId: string | null = null) => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const chatsRef = useRef<ChatMetadata[]>([]);
+  const lastTouchAtRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
 
   const refreshChats = useCallback(async () => {
     if (!activeProfileId) {
@@ -83,7 +90,6 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     const updated = {
       ...chat,
       title: newTitle,
-      updated_at: new Date().toISOString(),
     };
     setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
     try {
@@ -142,27 +148,32 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
     }
   };
 
-  const touchChat = useCallback(
-    async (id: string) => {
-      if (isOnboardingId(id)) return;
-      const chat = chats.find((c) => c.id === id);
-      if (!chat) return;
+  const touchChat = useCallback(async (id: string) => {
+    if (isOnboardingId(id)) return;
 
-      const updated = {
-        ...chat,
-        updated_at: new Date().toISOString(),
-      };
+    const now = Date.now();
+    const lastTouchedAt = lastTouchAtRef.current.get(id) || 0;
+    if (now - lastTouchedAt < TOUCH_THROTTLE_MS) {
+      return;
+    }
+    lastTouchAtRef.current.set(id, now);
 
-      setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    const chat = chatsRef.current.find((c) => c.id === id);
+    if (!chat) return;
 
-      try {
-        await updateChatMeta(updated);
-      } catch (e) {
-        console.error("Failed to touch chat metadata:", e);
-      }
-    },
-    [chats],
-  );
+    const updated = {
+      ...chat,
+      updated_at: new Date(now).toISOString(),
+    };
+
+    setChats((prev) => prev.map((c) => (c.id === id ? updated : c)));
+
+    try {
+      await updateChatMeta(updated);
+    } catch (e) {
+      console.error("Failed to touch chat metadata:", e);
+    }
+  }, []);
 
   const searchChats = useCallback(
     async (query: string, limit = 60): Promise<ChatSearchResult[]> => {

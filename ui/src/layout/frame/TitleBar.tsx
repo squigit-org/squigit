@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Pin } from "lucide-react";
+import { Box, Package2, PackageIcon, Pin } from "lucide-react";
 import { useAppContext } from "@/providers/AppProvider";
 import { usePlatform } from "@/hooks";
 import { SettingsPanel, SettingsOverlay } from "@/features";
@@ -22,6 +22,7 @@ export const TitleBar: React.FC = () => {
   const app = useAppContext();
   const { os: platform } = usePlatform();
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
+  const [hasSeenUpdateButton, setHasSeenUpdateButton] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -33,6 +34,14 @@ export const TitleBar: React.FC = () => {
   const dragRegionProps = isWindows
     ? {}
     : ({ "data-tauri-drag-region": true } as const);
+  const pendingUpdate = app.pendingUpdate;
+  const updateTitle = pendingUpdate
+    ? `Update Available: ${pendingUpdate.version}`
+    : "Update Available";
+
+  useEffect(() => {
+    setHasSeenUpdateButton(false);
+  }, [pendingUpdate?.version]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -88,6 +97,12 @@ export const TitleBar: React.FC = () => {
     });
   };
 
+  const handleOpenUpdate = () => {
+    if (!pendingUpdate) return;
+    setHasSeenUpdateButton(true);
+    app.handleSelectChat(`__system_update_${pendingUpdate.version}`);
+  };
+
   return (
     <header
       className={`${styles.header} ${isWindows ? styles.headerWindows : ""}`}
@@ -140,6 +155,26 @@ export const TitleBar: React.FC = () => {
       >
         {!app.isLoadingState && (
           <>
+            {pendingUpdate && (
+              <button
+                onClick={handleOpenUpdate}
+                className={`${styles.iconButton} ${styles.updateButton} ${
+                  app.chatHistory.activeSessionId?.startsWith("__system_update")
+                    ? styles.active
+                    : ""
+                }`}
+                title={updateTitle}
+                aria-label={updateTitle}
+              >
+                <span className={styles.updateEmoji} aria-hidden="true">
+                  <Box size={22} />
+                </span>
+                {!hasSeenUpdateButton && (
+                  <span className={styles.updateDot} aria-hidden="true" />
+                )}
+              </button>
+            )}
+
             <SettingsPanel
               onOpenSettings={app.system.openSettings}
               isSettingsOpen={app.system.isSettingsOpen}

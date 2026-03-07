@@ -51,6 +51,16 @@
   font-size: 1.55rem;
   font-weight: 600;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.titleIcon {
+  width: 1.1em;
+  height: 1.1em;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .subtitle {

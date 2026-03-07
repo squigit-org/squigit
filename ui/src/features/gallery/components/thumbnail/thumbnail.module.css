@@ -14,17 +14,16 @@
   cursor: pointer;
   text-align: left;
   padding: 0;
-  transition:
-    border-color 0.15s ease,
-    transform 0.15s ease;
+  transition: border-color 0.15s ease;
+  contain: paint;
 }
 
 .card:hover {
   border-color: var(--c-raw-073);
-  transform: translateY(-1px);
 }
 
 .preview {
+  display: block;
   width: 100%;
   aspect-ratio: 1 / 1;
   object-fit: cover;

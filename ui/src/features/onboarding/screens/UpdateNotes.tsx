@@ -8,6 +8,7 @@ import React, { useMemo, useState } from "react";
 import { OnboardingLayout } from "../OnboardingLayout";
 import { useAppContext } from "@/providers/AppProvider";
 import { getPendingUpdate } from "@/hooks";
+import { updateIcon } from "@/assets";
 import { ChevronRight, DownloadCloud } from "lucide-react";
 import { clsx } from "clsx";
 import styles from "./UpdateNotes.module.css";
@@ -75,7 +76,15 @@ export const UpdateNotes: React.FC = () => {
       contentClassName={`${styles.container} ${styles.appOverride}`}
     >
       <div className={styles.header}>
-        <div className={styles.title}>{app.system.appName}</div>
+        <div className={styles.title}>
+          <img
+            src={updateIcon}
+            alt=""
+            aria-hidden="true"
+            className={styles.titleIcon}
+          />
+          <span>{app.system.appName}</span>
+        </div>
         <div className={styles.subtitle}>v{update.version} is Here!</div>
       </div>
 
