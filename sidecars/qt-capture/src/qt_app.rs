@@ -173,7 +173,7 @@ impl QtApp {
                     .map(|stored| (storage, stored))
             })
             .map(|(storage, stored)| {
-                let metadata = ChatMetadata::new("New Chat".to_string(), stored.hash.clone(), None);
+                let metadata = ChatMetadata::new("New thread".to_string(), stored.hash.clone(), None);
                 let chat = ChatData::new(metadata.clone());
                 let _ = storage.save_chat(&chat);
                 let _ = std::fs::remove_file(path);

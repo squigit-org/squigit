@@ -293,8 +293,8 @@ export const useApp = () => {
   const chatTitle = isImageMissing
     ? system.appName
     : isGeneratingTitle
-      ? "New Chat"
-      : system.sessionChatTitle || "New Chat";
+      ? "New thread"
+      : system.sessionChatTitle || "New thread";
 
   const chat = useChat({
     apiKey: system.apiKey,
@@ -345,7 +345,7 @@ export const useApp = () => {
 
   useEffect(() => {
     const activeId = chatHistory.activeSessionId;
-    if (activeId && chatTitle && chatTitle !== "New Chat") {
+    if (activeId && chatTitle && chatTitle !== "New thread") {
       const currentChat = chatHistory.chats.find((c: any) => c.id === activeId);
       if (currentChat && currentChat.title !== chatTitle) {
         updateChatMetadata({
@@ -678,7 +678,7 @@ export const useApp = () => {
 
     try {
       const newChat = await createChat(
-        "New Chat",
+        "New thread",
         imageData.imageId,
         systemRef.current.ocrEnabled
           ? resolveOcrModelId(systemRef.current.startupOcrLanguage)
@@ -689,7 +689,7 @@ export const useApp = () => {
       }
       chatHistory.setActiveSessionId(newChat.id);
       chatHistory.refreshChats();
-      console.log("Created new chat:", newChat.id);
+      console.log("Created new thread:", newChat.id);
     } catch (e) {
       console.error("Failed to create chat:", e);
     }

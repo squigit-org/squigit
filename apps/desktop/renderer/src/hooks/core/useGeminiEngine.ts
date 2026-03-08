@@ -444,7 +444,7 @@ export const useGeminiEngine = (config: {
 
       if (
         msgIndex === 0 &&
-        (!config.chatTitle || config.chatTitle === "New Chat") &&
+        (!config.chatTitle || config.chatTitle === "New thread") &&
         responseText.length > 50 &&
         config.generateTitle &&
         config.onTitleGenerated

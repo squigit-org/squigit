@@ -233,7 +233,7 @@ pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
 // Chat Storage Commands
 // =============================================================================
 
-/// Create a new chat with the given image hash.
+/// Create a new thread with the given image hash.
 #[tauri::command]
 pub fn create_chat(
     title: String,

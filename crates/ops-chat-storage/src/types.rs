@@ -36,7 +36,7 @@ pub struct ChatMetadata {
 }
 
 impl ChatMetadata {
-    /// Create new chat metadata with a generated ID.
+    /// Create new thread metadata with a generated ID.
     pub fn new(title: String, image_hash: String, ocr_lang: Option<String>) -> Self {
         let now = Utc::now();
         // Generate ID: YYYYMMDD-HHMMSS-<UUID_SUFFIX>
@@ -121,7 +121,7 @@ pub struct ChatData {
 }
 
 impl ChatData {
-    /// Create new chat data with metadata.
+    /// Create new thread data with metadata.
     pub fn new(metadata: ChatMetadata) -> Self {
         Self {
             metadata,

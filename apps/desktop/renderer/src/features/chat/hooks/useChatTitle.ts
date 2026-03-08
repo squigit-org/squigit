@@ -20,7 +20,7 @@ export const useChatTitle = ({ apiKey }: UseChatTitleProps) => {
 
   const generateTitleForText = useCallback(
     async (text: string): Promise<string> => {
-      if (!apiKey || !text) return "New Chat";
+      if (!apiKey || !text) return "New thread";
 
       setIsGenerating(true);
 
@@ -35,9 +35,9 @@ export const useChatTitle = ({ apiKey }: UseChatTitleProps) => {
           `[ChatTitleTracker] Selected Model: ${TITLE_MODEL_PRIMARY}`,
         );
         console.log(
-          `[ChatTitleTracker] Generated Chat Title: "${title || "New Chat"}"`,
+          `[ChatTitleTracker] Generated Chat Title: "${title || "New thread"}"`,
         );
-        return title || "New Chat";
+        return title || "New thread";
       } catch (liteError) {
         console.warn(
           "Failed to generate text title with primary model, retrying flash:",
@@ -55,15 +55,15 @@ export const useChatTitle = ({ apiKey }: UseChatTitleProps) => {
             `[ChatTitleTracker] Selected Model: ${TITLE_MODEL_RETRY} (Retry)`,
           );
           console.log(
-            `[ChatTitleTracker] Generated Chat Title: "${fallbackTitle || "New Chat"}"`,
+            `[ChatTitleTracker] Generated Chat Title: "${fallbackTitle || "New thread"}"`,
           );
-          return fallbackTitle || "New Chat";
+          return fallbackTitle || "New thread";
         } catch (flashError) {
           console.error(
             "Failed to generate text title with fallback model:",
             flashError,
           );
-          return "New Chat";
+          return "New thread";
         }
       } finally {
         setIsGenerating(false);

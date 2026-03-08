@@ -101,7 +101,7 @@ export async function getImagePath(hash: string): Promise<string> {
 // Chat Commands
 // =============================================================================
 
-/** Create a new chat with the given image hash. */
+/** Create a new thread with the given image hash. */
 export async function createChat(
   title: string,
   imageHash: string,

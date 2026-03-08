@@ -457,5 +457,5 @@ pub async fn generate_chat_title(
     }
 
     println!("Title Gen Failed to extract text from candidates");
-    Ok("New Chat".to_string())
+    Ok("New thread".to_string())
 }

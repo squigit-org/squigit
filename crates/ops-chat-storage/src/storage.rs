@@ -230,7 +230,7 @@ impl ChatStorage {
         self.base_dir.join(chat_id)
     }
 
-    /// Save a new chat or update an existing one.
+    /// Save a new thread or update an existing one.
     pub fn save_chat(&self, chat: &ChatData) -> Result<()> {
         let chat_dir = self.chat_dir(&chat.metadata.id);
         fs::create_dir_all(&chat_dir)?;

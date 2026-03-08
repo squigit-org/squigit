@@ -82,7 +82,7 @@ export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
 
       <ContextMenuSeparator />
 
-      <ContextMenuItem onClick={handleNewChat}>New Chat</ContextMenuItem>
+      <ContextMenuItem onClick={handleNewChat}>New thread</ContextMenuItem>
 
       <ContextMenuItem onClick={handleSettings}>Settings</ContextMenuItem>
 
