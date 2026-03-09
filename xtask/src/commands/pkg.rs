@@ -332,6 +332,8 @@ fn collect_whisper_runtime_libs(build_dir: &Path) -> Result<Vec<PathBuf>> {
         build_dir.join("bin").join("Release"),
         build_dir.join("bin"),
         build_dir.join("Release"),
+        build_dir.join("_deps").join("whisper_cpp-build").join("ggml").join("src"),
+        build_dir.join("_deps").join("whisper_cpp-build").join("src"),
     ];
 
     let mut out = Vec::new();
