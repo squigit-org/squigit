@@ -34,7 +34,7 @@ export const ChatRow: React.FC<ChatRowProps> = ({
       </div>
 
       <div className={styles.rowText}>
-        <div className={styles.rowTitle}>{title || "Untitled Chat"}</div>
+        <div className={styles.rowTitle}>{title || "Untitled thread"}</div>
         {snippet ? <div className={styles.rowSnippet}>{snippet}</div> : null}
       </div>
 

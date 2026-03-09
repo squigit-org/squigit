@@ -52,7 +52,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({
             ? results.map((result) => (
                 <ChatRow
                   key={`${result.chat_id}:${result.message_index}`}
-                  title={result.chat_title || "Untitled Chat"}
+                  title={result.chat_title || "Untitled thread"}
                   snippet={renderSnippetWithHighlights(
                     result.snippet,
                     highlightTokens,
@@ -77,7 +77,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({
                 <ChatRow
                   key={chat.id}
                   compact
-                  title={chat.title || "Untitled Chat"}
+                  title={chat.title || "Untitled thread"}
                   onClick={() => onSelectChat(chat.id)}
                 />
               ))}

@@ -7,7 +7,7 @@
 import { useRef } from "react";
 import { Message } from "@/features";
 import {
-  startNewChatStream,
+  startNewThreadStream,
   sendMessage as apiSendMessage,
   retryFromMessage as apiRetryFromMessage,
   editUserMessage as apiEditUserMessage,
@@ -121,10 +121,10 @@ export const useGeminiEngine = (config: {
       let hasTriggeredTitle = false;
 
       console.log(
-        "[useGeminiEngine] Calling startNewChatStream with model:",
+        "[useGeminiEngine] Calling startNewThreadStream with model:",
         modelId,
       );
-      await startNewChatStream(modelId, imgData.path, (token: string) => {
+      await startNewThreadStream(modelId, imgData.path, (token: string) => {
         if (signal.aborted) return;
         fullResponse += token;
 
@@ -149,7 +149,7 @@ export const useGeminiEngine = (config: {
           }
         }
       });
-      console.log("[useGeminiEngine] startNewChatStream finished!");
+      console.log("[useGeminiEngine] startNewThreadStream finished!");
 
       if (!isRetry && !imgData.fromHistory && !hasTriggeredTitle) {
         hasTriggeredTitle = true;
@@ -263,7 +263,7 @@ export const useGeminiEngine = (config: {
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
-      await startNewChatStream(
+      await startNewThreadStream(
         config.currentModel,
         config.startupImage.path,
         (token: string) => {

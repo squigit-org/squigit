@@ -27,7 +27,7 @@ export const getDialogs = (appName: string): Record<string, DialogContent> => ({
   },
   GEMINI_AUTH: {
     title: "Gemini API Key Required",
-    message: "To begin using the chat, please configure your Gemini API key.",
+    message: "To begin using Squigit, please configure your Gemini API key.",
     variant: "info",
     actions: [
       { label: "Cancel", variant: "secondary", actionKey: "cancel" },

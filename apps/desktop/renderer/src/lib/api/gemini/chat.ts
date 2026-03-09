@@ -15,7 +15,7 @@ import {
   addToHistory,
 } from "./context";
 
-export const startNewChatStream = async (
+export const startNewThreadStream = async (
   modelId: string,
   imagePath: string,
   onToken: (token: string) => void,
@@ -84,12 +84,12 @@ export const startNewChatStream = async (
   }
 };
 
-export const startNewChat = async (
+export const startNewThread = async (
   modelId: string,
   imagePath: string,
 ): Promise<string> => {
   let fullText = "";
-  await startNewChatStream(modelId, imagePath, (token) => {
+  await startNewThreadStream(modelId, imagePath, (token) => {
     fullText += token;
   });
   return fullText;

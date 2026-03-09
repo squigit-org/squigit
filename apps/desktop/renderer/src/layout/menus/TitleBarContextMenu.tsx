@@ -18,7 +18,7 @@ interface TitleBarContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
-  onNewChat: () => void;
+  onNewThread: () => void;
   onOpenSettings: () => void;
   isAlwaysOnTop: boolean;
   onToggleAlwaysOnTop: () => void;
@@ -28,7 +28,7 @@ export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
   x,
   y,
   onClose,
-  onNewChat,
+  onNewThread,
   onOpenSettings,
   isAlwaysOnTop,
   onToggleAlwaysOnTop,
@@ -50,8 +50,8 @@ export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
     onClose();
   };
 
-  const handleNewChat = () => {
-    onNewChat();
+  const handleNewThread = () => {
+    onNewThread();
     onClose();
   };
 
@@ -82,7 +82,7 @@ export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
 
       <ContextMenuSeparator />
 
-      <ContextMenuItem onClick={handleNewChat}>New thread</ContextMenuItem>
+      <ContextMenuItem onClick={handleNewThread}>New thread</ContextMenuItem>
 
       <ContextMenuItem onClick={handleSettings}>Settings</ContextMenuItem>
 

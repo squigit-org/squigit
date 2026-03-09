@@ -248,7 +248,7 @@ export const TitleBar: React.FC = () => {
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={() => setContextMenu(null)}
-          onNewChat={app.handleNewSession}
+          onNewThread={app.handleNewSession}
           onOpenSettings={() => app.system.openSettings("general")}
           isAlwaysOnTop={isAlwaysOnTop}
           onToggleAlwaysOnTop={handleToggleAlwaysOnTop}

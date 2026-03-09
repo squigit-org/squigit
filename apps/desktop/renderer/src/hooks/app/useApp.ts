@@ -677,7 +677,7 @@ export const useApp = () => {
     });
 
     try {
-      const newChat = await createChat(
+      const newThread = await createChat(
         "New thread",
         imageData.imageId,
         systemRef.current.ocrEnabled
@@ -685,11 +685,11 @@ export const useApp = () => {
           : null,
       );
       if (!systemRef.current.ocrEnabled) {
-        await saveOcrData(newChat.id, AUTO_OCR_DISABLED_MODEL_ID, []);
+        await saveOcrData(newThread.id, AUTO_OCR_DISABLED_MODEL_ID, []);
       }
-      chatHistory.setActiveSessionId(newChat.id);
+      chatHistory.setActiveSessionId(newThread.id);
       chatHistory.refreshChats();
-      console.log("Created new thread:", newChat.id);
+      console.log("Created new thread:", newThread.id);
     } catch (e) {
       console.error("Failed to create chat:", e);
     }

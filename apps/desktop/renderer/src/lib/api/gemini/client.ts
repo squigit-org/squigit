@@ -17,6 +17,6 @@ export {
   restoreSession,
   getSessionState,
 } from "./context";
-export { startNewChatStream, startNewChat } from "./chat";
+export { startNewThreadStream, startNewThread } from "./chat";
 export { sendMessage } from "./message";
 export { retryFromMessage, editUserMessage } from "./edit";
