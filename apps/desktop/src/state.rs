@@ -5,18 +5,14 @@ use ops_chat_storage::StoredImage;
 use parking_lot::Mutex;
 use std::sync::{atomic::AtomicBool, Arc};
 
-/// Handle to a running OCR job for cancellation support.
 pub struct OcrJobHandle {
-    /// Child process handle for kill-based cancellation.
     pub child: tokio::process::Child,
 }
 
 pub struct AppState {
     pub image_data: Arc<Mutex<Option<StoredImage>>>,
     pub auth_running: Arc<AtomicBool>,
-    /// Flag set when auth is cancelled or timed out - prevents late auth from succeeding
     pub auth_cancelled: Arc<AtomicBool>,
-    /// Active OCR job handle for cancellation support.
     pub ocr_job: Arc<tokio::sync::Mutex<Option<OcrJobHandle>>>,
     pub gemini_file_cache: Arc<
         tokio::sync::Mutex<
