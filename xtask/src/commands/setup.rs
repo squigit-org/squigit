@@ -459,8 +459,6 @@ fn attempt_admin_install_linux(component: Component, ansi: &Ansi) {
         Component::Cargo => {
             if manager == "apt" {
                 packages.extend(["cargo", "rustc"]);
-            } else if manager == "dnf" {
-                packages.extend(["cargo", "rust"]);
             } else {
                 packages.extend(["cargo", "rust"]);
             }

@@ -93,7 +93,7 @@ fn check_portal() -> Option<String> {
 #[cfg(target_os = "linux")]
 fn check_gsettings() -> Option<String> {
     let output = Command::new("gsettings")
-        .args(&["get", "org.gnome.desktop.interface", "gtk-theme"])
+        .args(["get", "org.gnome.desktop.interface", "gtk-theme"])
         .output()
         .ok()?;
 
@@ -106,7 +106,7 @@ fn check_gsettings() -> Option<String> {
     }
 
     let output = Command::new("gsettings")
-        .args(&["get", "org.gnome.desktop.interface", "color-scheme"])
+        .args(["get", "org.gnome.desktop.interface", "color-scheme"])
         .output()
         .ok()?;
 
@@ -127,12 +127,12 @@ fn check_gsettings() -> Option<String> {
 #[cfg(target_os = "linux")]
 fn check_kreadconfig() -> Option<String> {
     let output = Command::new("kreadconfig5")
-        .args(&["--group", "General", "--key", "ColorScheme"])
+        .args(["--group", "General", "--key", "ColorScheme"])
         .output()
         .ok()
         .or_else(|| {
             Command::new("kreadconfig6")
-                .args(&["--group", "General", "--key", "ColorScheme"])
+                .args(["--group", "General", "--key", "ColorScheme"])
                 .output()
                 .ok()
         })?;

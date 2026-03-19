@@ -28,6 +28,12 @@ pub struct PeerNetworkMonitor {
     state: Arc<Mutex<NetworkState>>,
 }
 
+impl Default for PeerNetworkMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PeerNetworkMonitor {
     pub fn new() -> Self {
         Self {

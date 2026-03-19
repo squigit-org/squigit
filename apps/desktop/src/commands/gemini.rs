@@ -200,6 +200,7 @@ struct GeminiEvent {
 ///   - Uses frame.md template with context anchors
 ///   - Requires image_description, user_first_msg, history_log
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn stream_gemini_chat_v2(
     app: AppHandle,
     state: tauri::State<'_, crate::state::AppState>,

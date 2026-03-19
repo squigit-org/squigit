@@ -123,8 +123,14 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(target_os = "linux")]
 mod sni {
     use image::GenericImageView;
+    use std::collections::HashMap;
     use tauri::AppHandle;
     use zbus::object_server::SignalEmitter;
+    use zbus::zvariant::OwnedValue;
+
+    type DbusMenuNode = (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>);
+    type DbusLayout = (u32, DbusMenuNode);
+    type DbusGroupProps = Vec<(i32, HashMap<String, OwnedValue>)>;
 
     fn load_icon_argb() -> (i32, i32, Vec<u8>) {
         let img = image::load_from_memory_with_format(
@@ -162,20 +168,13 @@ mod sni {
             "normal"
         }
 
+        #[allow(clippy::type_complexity)]
         fn get_layout(
             &self,
             _parent_id: i32,
             _recursion_depth: i32,
             _property_names: Vec<String>,
-        ) -> zbus::fdo::Result<(
-            u32,
-            (
-                i32,
-                std::collections::HashMap<String, zbus::zvariant::OwnedValue>,
-                Vec<zbus::zvariant::OwnedValue>,
-            ),
-        )> {
-            use std::collections::HashMap;
+        ) -> zbus::fdo::Result<DbusLayout> {
             use zbus::zvariant::{OwnedValue, Value};
 
             let mut show_props: HashMap<String, OwnedValue> = HashMap::new();
@@ -196,14 +195,10 @@ mod sni {
             exit_props.insert("label".into(), Value::from("Exit").try_into().unwrap());
             exit_props.insert("enabled".into(), Value::from(true).try_into().unwrap());
 
-            let show_item: (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>) =
-                (1, show_props, vec![]);
-            let show_ui_item: (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>) =
-                (2, show_ui_props, vec![]);
-            let sep_item: (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>) =
-                (3, sep_props, vec![]);
-            let exit_item: (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>) =
-                (4, exit_props, vec![]);
+            let show_item: DbusMenuNode = (1, show_props, vec![]);
+            let show_ui_item: DbusMenuNode = (2, show_ui_props, vec![]);
+            let sep_item: DbusMenuNode = (3, sep_props, vec![]);
+            let exit_item: DbusMenuNode = (4, exit_props, vec![]);
 
             let children: Vec<OwnedValue> = vec![
                 Value::from(show_ui_item).try_into().unwrap(),
@@ -225,12 +220,7 @@ mod sni {
             &self,
             _ids: Vec<i32>,
             _property_names: Vec<String>,
-        ) -> zbus::fdo::Result<
-            Vec<(
-                i32,
-                std::collections::HashMap<String, zbus::zvariant::OwnedValue>,
-            )>,
-        > {
+        ) -> zbus::fdo::Result<DbusGroupProps> {
             Ok(vec![])
         }
 

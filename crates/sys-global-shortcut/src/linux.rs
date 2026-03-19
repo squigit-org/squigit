@@ -32,10 +32,13 @@ pub fn install_linux_shortcut(_bin_path: &str, trigger: &str, name: &str) -> Res
         .unwrap_or_default()
         .to_lowercase();
 
-    let trigger_gnome = format!("<Super><Shift>{}", trigger.split('+').last().unwrap_or("a"));
+    let trigger_gnome = format!(
+        "<Super><Shift>{}",
+        trigger.split('+').next_back().unwrap_or("a")
+    );
     let trigger_kde = format!(
         "Meta+Shift+{}",
-        trigger.split('+').last().unwrap_or("A").to_uppercase()
+        trigger.split('+').next_back().unwrap_or("A").to_uppercase()
     );
 
     let app_lower = "Squigit".to_lowercase();
@@ -72,37 +75,35 @@ pub fn install_linux_shortcut(_bin_path: &str, trigger: &str, name: &str) -> Res
                     format!("{}, '{}']", list.trim_end_matches(']'), binding_path)
                 };
                 let _ = Command::new("gsettings")
-                    .args(&[
-                        "set",
-                        "org.gnome.settings-daemon.plugins.media-keys",
-                        "custom-keybindings",
-                        &new_list,
-                    ])
+                    .arg("set")
+                    .arg("org.gnome.settings-daemon.plugins.media-keys")
+                    .arg("custom-keybindings")
+                    .arg(new_list)
                     .output();
             }
 
+            let binding_schema_path = format!("{}:{}", schema, binding_path);
             let _ = Command::new("gsettings")
-                .args(&["set", &format!("{}:{}", schema, binding_path), "name", name])
+                .arg("set")
+                .arg(&binding_schema_path)
+                .arg("name")
+                .arg(name)
                 .output();
             let _ = Command::new("gsettings")
-                .args(&[
-                    "set",
-                    &format!("{}:{}", schema, binding_path),
-                    "command",
-                    command,
-                ])
+                .arg("set")
+                .arg(&binding_schema_path)
+                .arg("command")
+                .arg(command)
                 .output();
             let _ = Command::new("gsettings")
-                .args(&[
-                    "set",
-                    &format!("{}:{}", schema, binding_path),
-                    "binding",
-                    &trigger_gnome,
-                ])
+                .arg("set")
+                .arg(&binding_schema_path)
+                .arg("binding")
+                .arg(&trigger_gnome)
                 .output();
             return Ok(());
         }
-        return Err("Failed to setup GNOME bindings via gsettings".into());
+        return Err("Failed to setup GNOME bindings via gsettings".to_string());
     } else if de.contains("kde") || de.contains("plasma") {
         let uuid_str = format!("12345678-1234-5678-1234-{:012x}", std::process::id());
         let import_file = format!("/tmp/{}-binding.khotkeys", app_lower);
@@ -129,35 +130,30 @@ Uuid={{{uuid_str}}}"
         std::fs::write(&import_file, content).map_err(|e| e.to_string())?;
 
         let _ = Command::new("qdbus")
-            .args(&[
-                "org.kde.kded5",
-                "/modules/khotkeys",
-                "org.kde.khotkeys.import_shortcuts_list",
-                &import_file,
-            ])
+            .arg("org.kde.kded5")
+            .arg("/modules/khotkeys")
+            .arg("org.kde.khotkeys.import_shortcuts_list")
+            .arg(&import_file)
             .output();
         let _ = Command::new("qdbus")
-            .args(&[
-                "org.kde.kglobalaccel",
-                "/kglobalaccel",
-                "org.kde.kglobalaccel.Component.importLegacyShortcuts",
-                &import_file,
-            ])
+            .arg("org.kde.kglobalaccel")
+            .arg("/kglobalaccel")
+            .arg("org.kde.kglobalaccel.Component.importLegacyShortcuts")
+            .arg(&import_file)
             .output();
         return Ok(());
     } else if de.contains("xfce") {
+        let xfce_property = format!("/commands/custom/{}", trigger_gnome);
         let _ = Command::new("xfconf-query")
-            .args(&[
-                "--channel",
-                "xfce4-keyboard-shortcuts",
-                "--property",
-                &format!("/commands/custom/{}", trigger_gnome),
-                "--create",
-                "--type",
-                "string",
-                "--set",
-                command,
-            ])
+            .arg("--channel")
+            .arg("xfce4-keyboard-shortcuts")
+            .arg("--property")
+            .arg(&xfce_property)
+            .arg("--create")
+            .arg("--type")
+            .arg("string")
+            .arg("--set")
+            .arg(command)
             .output();
         return Ok(());
     }
@@ -165,8 +161,7 @@ Uuid={{{uuid_str}}}"
     Err(format!(
         "Unsupported Desktop Environment: {}, please configure shortcut manually",
         de
-    )
-    .into())
+    ))
 }
 
 fn build_shortcut_command() -> Result<String, String> {

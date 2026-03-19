@@ -3,17 +3,12 @@
 
 //! The "Single Button" state machine.
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum EngineState {
+    #[default]
     Idle,
     Starting,
     Listening,
     Stopping,
     Error(String),
-}
-
-impl Default for EngineState {
-    fn default() -> Self {
-        Self::Idle
-    }
 }

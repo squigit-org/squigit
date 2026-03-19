@@ -23,7 +23,7 @@ fn copy_ocr_runtime_dir(src: &Path, dst: &Path) -> Result<()> {
     {
         copy_dir_all_preserve_symlinks(src, dst)?;
         verify_symlink_integrity(src, dst)?;
-        return Ok(());
+        Ok(())
     }
 }
 

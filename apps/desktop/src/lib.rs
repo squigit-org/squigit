@@ -177,7 +177,7 @@ pub fn run() {
             let launch_args: Vec<String> = std::env::args().skip(1).collect();
             let has_cli_image = launch_args.iter().find(|arg| !arg.starts_with('-'));
 
-            if let Some(path) = has_cli_image.clone() {
+            if let Some(path) = has_cli_image {
                 println!("CLI Image argument detected: {}", path);
                 let state = handle.state::<AppState>();
                 let _ = process_and_store_image(path.clone(), &state);
@@ -270,7 +270,7 @@ pub fn run() {
             let _shortcut = sys_global_shortcut::ShortcutHandle::register(
                 sys_global_shortcut::ShortcutConfig {
                     linux_trigger: "SUPER+SHIFT+a".into(),
-                    linux_description: format!("{} Capture", crate::constants::APP_NAME).into(),
+                    linux_description: format!("{} Capture", crate::constants::APP_NAME),
                     windows_modifiers: 0x0008 | 0x0004, // MOD_WIN | MOD_SHIFT
                     windows_vk: 0x41,                   // VK_A
                     macos_modifiers: 0x0100 | 0x0200,   // cmdKey | shiftKey

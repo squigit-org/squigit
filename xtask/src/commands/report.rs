@@ -252,7 +252,7 @@ fn sidecar_checks() -> Result<Vec<CheckResult>> {
 
     checks.push(CheckResult::pass(
         "binaries total size (apps/desktop/binaries)",
-        format!("{}", format_bytes(total_app_size)),
+        format_bytes(total_app_size),
     ));
 
     Ok(checks)

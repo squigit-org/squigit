@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::LazyLock;
+use std::sync::OnceLock;
 use tauri::Manager;
 use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
@@ -36,7 +36,11 @@ const OCR_TIMEOUT_SECS_DEFAULT: u64 = 120;
 
 /// Global mutex to ensure only one OCR job runs at a time.
 /// Prevents concurrent calls from compounding CPU pressure.
-static OCR_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+static OCR_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+fn ocr_lock() -> &'static Mutex<()> {
+    OCR_LOCK.get_or_init(|| Mutex::new(()))
+}
 
 fn get_ocr_timeout_secs() -> u64 {
     std::env::var("SQUIGIT_OCR_TIMEOUT_SECS")
@@ -161,7 +165,6 @@ async fn cancel_job_handle(mut handle: OcrJobHandle) {
             signal_process_group(pid, libc::SIGHUP);
         }
         let _ = timeout(Duration::from_millis(800), handle.child.wait()).await;
-        return;
     }
 
     #[cfg(windows)]
@@ -243,7 +246,7 @@ pub async fn ocr_image(
     is_base64: bool,
     model_name: Option<String>,
 ) -> Result<Vec<OcrBox>, String> {
-    let _guard = OCR_LOCK.lock().await;
+    let _guard = ocr_lock().lock().await;
     let ocr_timeout_secs = get_ocr_timeout_secs();
 
     let state = app.state::<AppState>();
