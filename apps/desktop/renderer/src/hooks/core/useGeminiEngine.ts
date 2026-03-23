@@ -18,6 +18,8 @@ import {
   ModelType,
 } from "@/lib";
 
+const STREAM_UPDATE_INTERVAL_MS = 80;
+
 export const useGeminiEngine = (config: {
   apiKey: string;
   currentModel: string;
@@ -125,10 +127,15 @@ export const useGeminiEngine = (config: {
         "[useGeminiEngine] Calling startNewThreadStream with model:",
         modelId,
       );
+      let lastUpdateTime = Date.now();
       await startNewThreadStream(modelId, imgData.path, (token: string) => {
         if (signal.aborted) return;
         fullResponse += token;
-
+        if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
+          setStreamingText(fullResponse);
+          lastUpdateTime = Date.now();
+        }
+        
         if (
           !isRetry &&
           !imgData.fromHistory &&
@@ -173,23 +180,25 @@ export const useGeminiEngine = (config: {
         return;
       }
 
-      setStreamingText(fullResponse);
+      const botMsg: Message = {
+        id: responseId,
+        role: "model",
+        text: fullResponse,
+        timestamp: Date.now(),
+        alreadyStreamed: true,
+      };
+      setMessages((prev: Message[]) => [...prev, botMsg]);
+      setStreamingText("");
+      setFirstResponseId(null);
 
       const targetChatId = sessionChatIdRef.current;
 
       if (config.onMessage && targetChatId) {
-        config.onMessage(
-          {
-            id: responseId,
-            role: "model",
-            text: fullResponse,
-            timestamp: Date.now(),
-          },
-          targetChatId,
-        );
+        config.onMessage(botMsg, targetChatId);
       }
 
       setIsStreaming(false);
+      setIsAiTyping(false);
       setIsLoading(false);
     } catch (apiError: any) {
       if (
@@ -198,6 +207,7 @@ export const useGeminiEngine = (config: {
         isRequestCancelledRef.current
       ) {
         setIsLoading(false);
+        setIsStreaming(false);
         setIsAiTyping(false);
         return;
       }
@@ -210,6 +220,9 @@ export const useGeminiEngine = (config: {
         if (config.currentModel !== ModelType.GEMINI_3_1_FLASH) {
           console.log("Model failed, trying lite version...");
           config.setCurrentModel(ModelType.GEMINI_3_1_FLASH);
+          setIsLoading(false);
+          setIsStreaming(false);
+          setIsAiTyping(false);
           return;
         }
       }
@@ -229,6 +242,9 @@ export const useGeminiEngine = (config: {
 
       appendErrorMessage(errorMsg, sessionChatIdRef.current || config.chatId);
     } finally {
+      setIsLoading(false);
+      setIsStreaming(false);
+      setIsAiTyping(false);
       if (abortControllerRef.current?.signal === signal) {
         abortControllerRef.current = null;
       }
@@ -264,15 +280,29 @@ export const useGeminiEngine = (config: {
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
+      let lastUpdateTime = Date.now();
       await startNewThreadStream(
         config.currentModel,
         config.startupImage.path,
         (token: string) => {
           fullResponse += token;
+          if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
+            setStreamingText(fullResponse); // ← LIVE UPDATE
+            lastUpdateTime = Date.now();
+          }
         },
       );
 
-      setStreamingText(fullResponse);
+      const botMsg: Message = {
+        id: responseId,
+        role: "model",
+        text: fullResponse,
+        timestamp: Date.now(),
+        alreadyStreamed: true,
+      };
+      setMessages((prev: Message[]) => [...prev, botMsg]);
+      setStreamingText("");
+      setFirstResponseId(null);
 
       if (config.onMessage && targetChatId) {
         config.onMessage(
@@ -287,9 +317,12 @@ export const useGeminiEngine = (config: {
       }
 
       setIsStreaming(false);
+      setIsAiTyping(false);
       setIsLoading(false);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
+        setIsLoading(false);
+        setIsStreaming(false);
         setIsAiTyping(false);
         return;
       }
@@ -302,6 +335,10 @@ export const useGeminiEngine = (config: {
       else if (apiError.message) errorMsg = apiError.message;
 
       appendErrorMessage(errorMsg, targetChatId);
+    } finally {
+      setIsLoading(false);
+      setIsStreaming(false);
+      setIsAiTyping(false);
     }
   };
 
@@ -313,20 +350,43 @@ export const useGeminiEngine = (config: {
     const targetChatId = config.chatId;
 
     try {
-      const responseText = await apiSendMessage(lastSentMessage.text);
+      let fullResponse = "";
+      const responseId = (Date.now() + 1).toString();
       setIsAiTyping(true);
+      setIsStreaming(true);
+      setFirstResponseId(responseId);
+
+      let lastUpdateTime = Date.now();
+      const responseText = await apiSendMessage(
+        lastSentMessage.text,
+        undefined,
+        (token: string) => {
+          fullResponse += token;
+          if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
+            setStreamingText(fullResponse);
+            lastUpdateTime = Date.now();
+          }
+        }
+      );
       const botMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: responseId,
         role: "model",
         text: responseText,
         timestamp: Date.now(),
+        alreadyStreamed: true,
       };
       setMessages((prev: Message[]) => [...prev, botMsg]);
-      if (config.onMessage && targetChatId)
+      if (config.onMessage && targetChatId) {
         config.onMessage(botMsg, targetChatId);
+      }
       setLastSentMessage(null);
+      setStreamingText("");
+      setFirstResponseId(null);
+      setIsStreaming(false);
+      setIsAiTyping(false);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
+        setIsStreaming(false);
         setIsAiTyping(false);
         return;
       }
@@ -337,6 +397,8 @@ export const useGeminiEngine = (config: {
       );
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
+      setIsAiTyping(false);
     }
   };
 
@@ -389,20 +451,43 @@ export const useGeminiEngine = (config: {
     isRequestCancelledRef.current = false;
 
     try {
-      const responseText = await apiSendMessage(userText, modelId);
+      let fullResponse = "";
+      const responseId = (Date.now() + 1).toString();
       setIsAiTyping(true);
+      setIsStreaming(true);
+      setFirstResponseId(responseId);
+
+      let lastUpdateTime = Date.now();
+      const responseText = await apiSendMessage(
+        userText,
+        modelId,
+        (token: string) => {
+          fullResponse += token;
+          if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
+            setStreamingText(fullResponse);
+            lastUpdateTime = Date.now();
+          }
+        }
+      );
       const botMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: responseId,
         role: "model",
         text: responseText,
         timestamp: Date.now(),
+        alreadyStreamed: true,
       };
       setMessages((prev: Message[]) => [...prev, botMsg]);
-      if (config.onMessage && targetChatId)
+      if (config.onMessage && targetChatId) {
         config.onMessage(botMsg, targetChatId);
+      }
       setLastSentMessage(null);
+      setStreamingText("");
+      setFirstResponseId(null);
+      setIsStreaming(false);
+      setIsAiTyping(false);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
+        setIsStreaming(false);
         setIsAiTyping(false);
         return;
       }
@@ -413,6 +498,8 @@ export const useGeminiEngine = (config: {
       );
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
+      setIsAiTyping(false);
     }
   };
 
@@ -435,11 +522,23 @@ export const useGeminiEngine = (config: {
     }
 
     try {
+      let fullResponse = "";
+      setFirstResponseId(newResponseId);
+      setIsStreaming(true);
+      setIsAiTyping(true);
+
+      let lastUpdateTime = Date.now();
       const responseText = await apiRetryFromMessage(
         msgIndex,
         messages,
         retryModelId,
-        undefined,
+        (token: string) => {
+          fullResponse += token;
+          if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
+            setStreamingText(fullResponse);
+            lastUpdateTime = Date.now();
+          }
+        },
         fallbackImagePath,
       );
 
@@ -456,14 +555,24 @@ export const useGeminiEngine = (config: {
           .catch(console.error);
       }
 
+      const botMsg: Message = {
+        id: newResponseId,
+        role: "model",
+        text: responseText,
+        timestamp: Date.now(),
+        alreadyStreamed: true,
+      };
       setRetryingMessageId(null);
-      setMessages(truncatedMessages);
-      setIsStreaming(true);
-      setIsAiTyping(true);
-      setFirstResponseId(newResponseId);
-      setStreamingText(responseText);
+      setMessages([...truncatedMessages, botMsg]);
+      setIsStreaming(false);
+      setIsAiTyping(false);
+      setFirstResponseId(null);
+      setStreamingText("");
+      setIsLoading(false);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
+        setIsLoading(false);
+        setIsStreaming(false);
         setIsAiTyping(false);
         return;
       }
@@ -494,6 +603,10 @@ export const useGeminiEngine = (config: {
       setStreamingText("");
       setFirstResponseId(null);
       setRetryingMessageId(null);
+    } finally {
+      setIsLoading(false);
+      setIsStreaming(false);
+      setIsAiTyping(false);
     }
   };
 
@@ -519,12 +632,12 @@ export const useGeminiEngine = (config: {
     setFirstResponseId(null);
 
     const firstAssistantMessage = truncatedMessages.find(
-      (message) => message.role === "model",
+      (message: Message) => message.role === "model",
     );
     const firstUserMessage = truncatedMessages.find(
-      (message) => message.role === "user",
+      (message: Message) => message.role === "user",
     );
-    const savedHistory = truncatedMessages.map((message) => ({
+    const savedHistory = truncatedMessages.map((message: Message) => ({
       role: message.role === "model" ? "Assistant" : "User",
       content: message.text,
     }));

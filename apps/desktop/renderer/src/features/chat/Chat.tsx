@@ -33,6 +33,7 @@ function getBaseName(path: string): string {
 export const Chat: React.FC = () => {
   const app = useAppContext();
   const [stopRequested, setStopRequested] = useState(false);
+  const [inputValue, setInputValue] = useState("");
   const [pendingUndoMessageId, setPendingUndoMessageId] = useState<
     string | null
   >(null);
@@ -146,23 +147,22 @@ export const Chat: React.FC = () => {
 
   // Handlers
   const handleSend = useCallback(() => {
-    let finalInput = app.input;
+    let finalInput = inputValue;
     if (app.attachments.length > 0) {
       const mentions = app.attachments
         .map((a) => buildAttachmentMention(a.path))
         .join("\n");
-      finalInput = `${app.input}\n\n${mentions}`.trim();
+      finalInput = `${inputValue}\n\n${mentions}`.trim();
     }
     app.chat.handleSend(finalInput, app.inputModel);
-    app.setInput("");
+    setInputValue("");
     app.clearAttachments();
   }, [
     app.attachments,
     app.chat,
     app.clearAttachments,
-    app.input,
     app.inputModel,
-    app.setInput,
+    inputValue,
   ]);
 
   const handleCaptureToInput = async () => {
@@ -200,7 +200,7 @@ export const Chat: React.FC = () => {
         },
       );
 
-      app.setInput(restoredText);
+      setInputValue(restoredText);
       app.setAttachments(restoredAttachments);
       app.chat.handleUndoMessage(messageId);
     },
@@ -209,6 +209,10 @@ export const Chat: React.FC = () => {
 
   useEffect(() => {
     setPendingUndoMessageId(null);
+  }, [app.chatHistory.activeSessionId]);
+
+  useEffect(() => {
+    setInputValue("");
   }, [app.chatHistory.activeSessionId]);
 
   useEffect(() => {
@@ -379,8 +383,8 @@ export const Chat: React.FC = () => {
           <div style={{ pointerEvents: "auto", width: "100%" }}>
             <ChatInput
               startupImage={app.system.startupImage}
-              input={app.input}
-              onInputChange={app.setInput}
+              input={inputValue}
+              onInputChange={setInputValue}
               onSend={handleSend}
               isLoading={app.chat.isLoading}
               isAiTyping={app.chat.isAiTyping}

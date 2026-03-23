@@ -359,9 +359,13 @@ export const SidePanel: React.FC = () => {
     }
   }, []);
 
-  const handleSelectChat = useCallback((chatId: string) => {
-    selectChatRef.current(chatId);
-  }, []);
+  const handleSelectChat = useCallback(
+    (chatId: string) => {
+      if (chatId === activeSessionId) return;
+      selectChatRef.current(chatId);
+    },
+    [activeSessionId],
+  );
 
   const handleRenameChat = useCallback((chatId: string, newTitle: string) => {
     renameChatRef.current(chatId, newTitle);

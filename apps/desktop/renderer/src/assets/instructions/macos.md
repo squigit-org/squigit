@@ -9,7 +9,7 @@ We've registered `Cmd+Shift+A` with macOS so you can trigger a capture from anyw
 **Important:** For this to work instantly, Squigit needs to stay running in your menu bar. It's incredibly lightweight, so you can safely leave it alive 24/7 to guarantee a rapid response when you need it.
 
 <details>
-<summary><strong>See a blank black screen? Let's fix it</strong></summary>
+<summary><strong>See a blank black screen? Expand for details</strong></summary>
 
 Because Apple takes your privacy seriously, Squigit's screen capture engine needs explicit permission to read screen pixels. The first time you try to capture, Squigit will show a popup that takes you straight to the right settings page.
 

@@ -76,3 +76,33 @@
 .licenseText a:hover {
   color: var(--c-raw-036);
 }
+
+.content :global([data-component="chat-bubble"] a),
+.content :global([data-component="chat-bubble"] a:visited) {
+  color: var(--c-raw-050) !important;
+}
+
+.content :global([data-component="chat-bubble"] a[href^="#settings-"]),
+.content :global([data-component="chat-bubble"] a[href^="#settings-"]:visited) {
+  color: var(--c-raw-002) !important;
+  font-weight: 700;
+}
+
+.content :global([data-component="chat-bubble"] a:hover) {
+  color: var(--c-raw-036) !important;
+}
+
+.content :global([data-component="chat-bubble"] a[href^="#settings-"]:hover) {
+  color: var(--c-raw-002) !important;
+  text-decoration: underline;
+}
+
+.content :global([data-component="chat-bubble"] span[role="button"]) {
+  color: var(--c-raw-002) !important;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.content :global([data-component="chat-bubble"] span[role="button"]:hover) {
+  text-decoration: underline;
+}

@@ -26,9 +26,8 @@ export * from "./helpers/files.ts";
 export * from "./helpers/reporting.ts";
 
 // markdown
-export * from "./markdown/parser";
+export * from "./markdown/utils";
 export * from "./markdown/plugins";
-export * from "./markdown/tokenizer";
 export * from "./markdown/code-highlighter";
 
 // storage

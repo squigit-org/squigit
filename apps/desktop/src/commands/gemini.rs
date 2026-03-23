@@ -167,7 +167,7 @@ struct GeminiRequest {
 struct GeminiResponseCandidate {
     content: Option<GeminiResponseContent>,
     #[serde(rename = "finishReason")]
-    _finish_reason: Option<String>,
+    pub finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -221,7 +221,7 @@ pub async fn stream_gemini_chat_v2(
 
     let client = reqwest::Client::new();
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?key={}",
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse&key={}",
         model, api_key
     );
 
@@ -339,36 +339,60 @@ pub async fn stream_gemini_chat_v2(
         return Err(format!("Gemini API Error: {}", error_text));
     }
 
-    let body = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
+    use futures_util::StreamExt;
+    let mut stream = response.bytes_stream();
+    let mut buffer = String::new();
 
-    let chunks: Vec<GeminiResponseChunk> = serde_json::from_str(&body).map_err(|e| {
-        format!(
-            "Failed to parse Gemini response: {} - Body: {}",
-            e,
-            &body[..body.len().min(500)]
-        )
-    })?;
-
-    for chunk in chunks {
-        if let Some(candidates) = chunk.candidates {
-            if let Some(first) = candidates.first() {
-                if let Some(content) = &first.content {
-                    if let Some(parts) = &content.parts {
-                        for part in parts {
-                            if let Some(text) = &part.text {
-                                let _ = app.emit(
-                                    &channel_id,
-                                    GeminiEvent {
-                                        token: text.clone(),
-                                    },
-                                );
+    'stream_loop: loop {
+        tokio::select! {
+            chunk_opt = stream.next() => {
+                match chunk_opt {
+                    Some(Ok(chunk)) => {
+                        buffer.push_str(&String::from_utf8_lossy(&chunk));
+                        while let Some(idx) = buffer.find('\n') {
+                            let line = buffer[..idx].to_string();
+                            buffer.drain(..idx + 1);
+                            
+                            let trimmed = line.trim();
+                            if trimmed.starts_with("data: ") {
+                                let data = &trimmed[6..];
+                                if data == "[DONE]" {
+                                    break 'stream_loop;
+                                }
+                                if let Ok(chunk_data) = serde_json::from_str::<GeminiResponseChunk>(data) {
+                                    if let Some(candidates) = chunk_data.candidates {
+                                        if let Some(first) = candidates.first() {
+                                            if let Some(content) = &first.content {
+                                                if let Some(parts) = &content.parts {
+                                                    for part in parts {
+                                                        if let Some(text) = &part.text {
+                                                            let _ = app.emit(
+                                                                &channel_id,
+                                                                GeminiEvent {
+                                                                    token: text.clone(),
+                                                                },
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if first.finish_reason.is_some() {
+                                                break 'stream_loop;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+                    Some(Err(e)) => return Err(format!("Stream error: {}", e)),
+                    None => break,
                 }
+            }
+            _ = cancel_token.cancelled() => {
+                let mut map = ACTIVE_REQUESTS.lock().await;
+                map.remove(&channel_id);
+                return Err("CANCELLED".to_string());
             }
         }
     }

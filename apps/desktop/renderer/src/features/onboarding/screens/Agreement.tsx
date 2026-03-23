@@ -6,7 +6,7 @@
 
 import React, { useMemo } from "react";
 import { usePlatform } from "@/hooks";
-import { ChatBubble, Message } from "@/features";
+import { ChatBubble, Message, SettingsSection } from "@/features";
 import { useAppContext } from "@/providers/AppProvider";
 import { OnboardingLayout } from "../OnboardingLayout";
 
@@ -24,15 +24,41 @@ const INSTRUCTIONS: Record<string, string> = {
   windows,
 };
 
+const SETTINGS_LINKS: Array<{ label: string; section: SettingsSection }> = [
+  { label: "Settings -> Models", section: "models" },
+  { label: "Settings -> API Keys", section: "apikeys" },
+  { label: "Settings -> Personalization", section: "personalization" },
+  { label: "Settings -> Help & Support", section: "help" },
+  { label: "Settings -> General", section: "general" },
+];
+
+
+const linkifySettingsMentions = (raw: string): string => {
+  let next = raw;
+  for (const item of SETTINGS_LINKS) {
+    const escaped = item.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "g");
+    next = next.replace(
+      regex,
+      `[${item.label}](#settings-${item.section})`,
+    );
+  }
+  return next;
+};
+
 export const Agreement: React.FC = () => {
   const { isMac, isWin } = usePlatform();
   const app = useAppContext();
   const [selected, setSelected] = React.useState("disagree");
 
   const content = useMemo(() => {
-    if (isMac) return INSTRUCTIONS.macos;
-    if (isWin) return INSTRUCTIONS.windows;
-    return INSTRUCTIONS.linux;
+    const raw = isMac
+      ? INSTRUCTIONS.macos
+      : isWin
+        ? INSTRUCTIONS.windows
+        : INSTRUCTIONS.linux;
+
+    return linkifySettingsMentions(raw);
   }, [isMac, isWin]);
 
   const message: Message = {
@@ -47,10 +73,24 @@ export const Agreement: React.FC = () => {
     app.handleSystemAction(value, value);
   };
 
+  const handleAgreementAction = (actionId: string, value?: string) => {
+    if (actionId === "open_settings" && value) {
+      app.system.openSettings(value as SettingsSection);
+      return;
+    }
+    app.handleSystemAction(actionId, value);
+  };
+
   return (
     <OnboardingLayout allowScroll contentClassName={styles.content}>
       <div className={styles.inner}>
-        <ChatBubble message={message} />
+        <div>
+          <ChatBubble 
+            message={message} 
+            enableInternalLinks={true} 
+            onAction={handleAgreementAction} 
+          />
+        </div>
         <div className={styles.actions}>
           <label
             className={`${styles.radioAction} ${

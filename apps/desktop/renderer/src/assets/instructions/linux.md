@@ -9,7 +9,7 @@ We've attempted to register `Super+Shift+A` with your desktop environment so you
 **Important:** For this to work instantly, Squigit needs to stay running in your system tray. It's incredibly lightweight, so you can safely leave it alive 24/7 to guarantee a rapid response when you need it.
 
 <details>
-<summary><strong>Not working? Try to fix it</strong></summary>
+<summary><strong>Not working? Expand for details</strong></summary>
 
 Because Linux environments vary wildly, automated installation sometimes fails on specific setups (especially Wayland). If the shortcut didn't work, we recommend manually copying this command:
 

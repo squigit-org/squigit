@@ -14,8 +14,8 @@
 }
 
 .trafficButton {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border: none;
   appearance: none;
   -webkit-appearance: none;
@@ -31,8 +31,16 @@
 }
 
 .icon {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   display: block;
   pointer-events: none;
+}
+
+:global(html.dark) .iconUnfocused {
+  opacity: 0.72;
+}
+
+:global(html.light) .iconUnfocused {
+  opacity: 1;
 }

@@ -52,7 +52,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
 
   return (
     <div className={styles.container}>
-      {isGenerating && !retryingMessageId && (
+      {isGenerating && !retryingMessageId && !streamingText && (
         <TextShimmer text="Planning next moves" />
       )}
       {streamingText && (
