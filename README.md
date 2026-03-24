@@ -233,6 +233,8 @@ Check our [TODO List](TODO.md) for planned features and priorities.
 
 - **License**: [Apache License 2.0](LICENSE)
 - **Security**: [Security Policy](docs/06-policies/SECURITY.md)
+- **Privacy Policy**: [Privacy Policy](docs/06-policies/PRIVACY.md)
+- **Terms of Service**: [Terms](docs/06-policies/TERMS.md)
 - **Privacy**: No data collection, local-only operation
 
 ---
