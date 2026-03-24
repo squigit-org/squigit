@@ -19,8 +19,12 @@ export const cancelCurrentRequest = () => {
   }
   if (geminiStore.currentChannelId) {
     invoke("cancel_gemini_request", {
-      channelId: geminiStore.currentChannelId,
+      channelId: null,
     }).catch(console.error);
     geminiStore.currentChannelId = null;
+  } else {
+    invoke("cancel_gemini_request", {
+      channelId: null,
+    }).catch(console.error);
   }
 };

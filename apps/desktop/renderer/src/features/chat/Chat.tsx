@@ -9,7 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAppContext } from "@/providers/AppProvider";
 import { useInlineMenu } from "@/hooks";
-import { InlineMenu, LoadingSpinner, TextShimmer, Dialog } from "@/components";
+import { InlineMenu, LoadingSpinner, Dialog } from "@/components";
 import {
   buildAttachmentMention,
   parseAttachmentPaths,
@@ -323,15 +323,11 @@ export const Chat: React.FC = () => {
           <main style={{ paddingBottom: inputHeight + 10 }}>
             <div
               className={`${styles.contentInner} ${
-                isSpinnerVisible || app.chat.isAnalyzing
+                isSpinnerVisible
                   ? styles.contentOffsetUp
                   : styles.contentOffsetDown
               }`}
             >
-              {app.chat.isAnalyzing && (
-                <TextShimmer text="Analyzing your image" />
-              )}
-
               {parsedError && (
                 <Dialog
                   isOpen={isErrorOpen}
@@ -390,7 +386,7 @@ export const Chat: React.FC = () => {
               isAiTyping={app.chat.isAiTyping}
               isStoppable={app.chat.isAnalyzing || app.chat.isGenerating}
               onStopGeneration={() => {
-                if (app.chat.isAiTyping) {
+                if (app.chat.isAiTyping && app.chat.streamingText) {
                   setStopRequested(true);
                 } else {
                   app.chat.handleStopGeneration();

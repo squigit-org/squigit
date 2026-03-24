@@ -164,6 +164,27 @@
   width: 100%;
 }
 
+.liveStream .markdownContent {
+  opacity: 0.95;
+  mask-image: linear-gradient(180deg, black calc(100% - 1.5em), transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, black calc(100% - 1.5em), transparent 100%);
+}
+
+.liveStream .markdownContent :where(p, li, code, pre) {
+  animation: streamRevealFade 0.4s ease-out forwards;
+}
+
+@keyframes streamRevealFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .streamingPlain {
   color: var(--c-raw-003);
   line-height: 1.75;
@@ -379,6 +400,11 @@ details[open] .summary .chevron {
   margin-left: 2px;
   animation: dim 1s step-end infinite;
   color: var(--c-raw-004);
+}
+
+@keyframes dim {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .popIn {

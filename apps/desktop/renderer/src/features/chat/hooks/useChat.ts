@@ -83,14 +83,10 @@ export const useChat = ({
     streamingText: state.streamingText,
     lastSentMessage: state.lastSentMessage,
     isAnalyzing:
-      (!!startupImage &&
-        state.isLoading &&
-        !state.streamingText &&
-        state.messages.length === 0) ||
-      (!!startupImage &&
-        !!state.retryingMessageId &&
-        state.messages.findIndex((m) => m.id === state.retryingMessageId) ===
-          0),
+      !!startupImage &&
+      (state.isLoading || !!state.retryingMessageId) &&
+      !state.streamingText &&
+      state.messages.length === 0,
     isGenerating:
       (state.isLoading || !!state.retryingMessageId) &&
       state.messages.length > 0,

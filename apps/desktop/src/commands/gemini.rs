@@ -11,11 +11,18 @@ lazy_static::lazy_static! {
 }
 
 #[tauri::command]
-pub async fn cancel_gemini_request(channel_id: String) -> Result<(), String> {
-    log::info!("Cancelling request for channel: {}", channel_id);
+pub async fn cancel_gemini_request(channel_id: Option<String>) -> Result<(), String> {
     let mut map = ACTIVE_REQUESTS.lock().await;
-    if let Some(token) = map.remove(&channel_id) {
-        token.cancel();
+    if let Some(id) = channel_id {
+        log::info!("Cancelling request for channel: {}", id);
+        if let Some(token) = map.remove(&id) {
+            token.cancel();
+        }
+    } else {
+        log::info!("Cancelling ALL Gemini requests");
+        for (_, token) in map.drain() {
+            token.cancel();
+        }
     }
     Ok(())
 }
@@ -217,97 +224,11 @@ pub async fn stream_gemini_chat_v2(
     user_message: String,
     channel_id: String,
 ) -> Result<(), String> {
-    use crate::brain::processor::{build_initial_system_prompt, build_turn_context};
-
     let client = reqwest::Client::new();
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse&key={}",
         model, api_key
     );
-
-    // Build contents based on turn type
-    let contents: Vec<GeminiContent> = if is_initial_turn {
-        // Initial turn: soul + scenes + image
-        let system_prompt = build_initial_system_prompt()?;
-
-        let mut parts = vec![];
-
-        if let Some(path) = image_path.clone() {
-            let file_ref = crate::commands::gemini_files::ensure_file_uploaded(
-                &api_key,
-                &path,
-                &state.gemini_file_cache,
-            )
-            .await?;
-            parts.push(GeminiPart {
-                file_data: Some(GeminiFileData {
-                    mime_type: file_ref.mime_type.clone(),
-                    file_uri: file_ref.file_uri.clone(),
-                }),
-                ..Default::default()
-            });
-        } else {
-            return Err("image_path required for initial turn".to_string());
-        }
-
-        parts.push(GeminiPart {
-            text: Some(system_prompt),
-            ..Default::default()
-        });
-
-        // Add user message if provided
-        if !user_message.is_empty() {
-            let interleaved_parts =
-                build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache).await?;
-            parts.extend(interleaved_parts);
-        }
-
-        vec![GeminiContent {
-            role: "user".to_string(),
-            parts,
-        }]
-    } else {
-        // Subsequent turn: frame.md with context
-        let img_desc =
-            image_description.ok_or("image_description required for subsequent turns")?;
-        let first_msg = user_first_msg.unwrap_or_default();
-        let history = history_log.unwrap_or_default();
-
-        let context_prompt = build_turn_context(&img_desc, &first_msg, &history);
-
-        let mut parts = vec![GeminiPart {
-            text: Some(context_prompt),
-            ..Default::default()
-        }];
-
-        // Re-send image if provided (e.g. for first user intent message)
-        if let Some(path) = image_path {
-            let file_ref = crate::commands::gemini_files::ensure_file_uploaded(
-                &api_key,
-                &path,
-                &state.gemini_file_cache,
-            )
-            .await?;
-            parts.push(GeminiPart {
-                file_data: Some(GeminiFileData {
-                    mime_type: file_ref.mime_type.clone(),
-                    file_uri: file_ref.file_uri.clone(),
-                }),
-                ..Default::default()
-            });
-        }
-
-        let interleaved_parts =
-            build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache).await?;
-        parts.extend(interleaved_parts);
-
-        vec![GeminiContent {
-            role: "user".to_string(),
-            parts,
-        }]
-    };
-
-    let request_body = GeminiRequest { contents };
 
     let cancel_token = tokio_util::sync::CancellationToken::new();
     {
@@ -315,10 +236,96 @@ pub async fn stream_gemini_chat_v2(
         map.insert(channel_id.clone(), cancel_token.clone());
     }
 
-    let req_future = client.post(&url).json(&request_body).send();
+    let contents_future = async {
+        let contents: Vec<GeminiContent> = if is_initial_turn {
+            // Initial turn: soul + scenes + image
+            let system_prompt = crate::brain::processor::build_initial_system_prompt()?;
+
+            let mut parts = vec![];
+
+            if let Some(path) = image_path.clone() {
+                let file_ref = crate::commands::gemini_files::ensure_file_uploaded(
+                    &api_key,
+                    &path,
+                    &state.gemini_file_cache,
+                )
+                .await?;
+                parts.push(GeminiPart {
+                    file_data: Some(GeminiFileData {
+                        mime_type: file_ref.mime_type.clone(),
+                        file_uri: file_ref.file_uri.clone(),
+                    }),
+                    ..Default::default()
+                });
+            } else {
+                return Err("image_path required for initial turn".to_string());
+            }
+
+            parts.push(GeminiPart {
+                text: Some(system_prompt),
+                ..Default::default()
+            });
+
+            // Add user message if provided
+            if !user_message.is_empty() {
+                let interleaved_parts =
+                    build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache).await?;
+                parts.extend(interleaved_parts);
+            }
+
+            vec![GeminiContent {
+                role: "user".to_string(),
+                parts,
+            }]
+        } else {
+            // Subsequent turn: frame.md with context
+            let img_desc =
+                image_description.ok_or("image_description required for subsequent turns")?;
+            let first_msg = user_first_msg.unwrap_or_default();
+            let history = history_log.unwrap_or_default();
+
+            let context_prompt = crate::brain::processor::build_turn_context(&img_desc, &first_msg, &history);
+
+            let mut parts = vec![GeminiPart {
+                text: Some(context_prompt),
+                ..Default::default()
+            }];
+
+            // Re-send image if provided (e.g. for first user intent message)
+            if let Some(path) = image_path {
+                let file_ref = crate::commands::gemini_files::ensure_file_uploaded(
+                    &api_key,
+                    &path,
+                    &state.gemini_file_cache,
+                )
+                .await?;
+                parts.push(GeminiPart {
+                    file_data: Some(GeminiFileData {
+                        mime_type: file_ref.mime_type.clone(),
+                        file_uri: file_ref.file_uri.clone(),
+                    }),
+                    ..Default::default()
+                });
+            }
+
+            let interleaved_parts =
+                build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache).await?;
+            parts.extend(interleaved_parts);
+
+            vec![GeminiContent {
+                role: "user".to_string(),
+                parts,
+            }]
+        };
+
+        let request_body = GeminiRequest { contents };
+        let response = client.post(&url).json(&request_body).send().await.map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
+        
+        Ok::<reqwest::Response, String>(response)
+    };
 
     let response_result = tokio::select! {
-        res = req_future => res,
+        res = contents_future => res,
         _ = cancel_token.cancelled() => {
             let mut map = ACTIVE_REQUESTS.lock().await;
             map.remove(&channel_id);
@@ -326,15 +333,11 @@ pub async fn stream_gemini_chat_v2(
         }
     };
 
-    {
-        let mut map = ACTIVE_REQUESTS.lock().await;
-        map.remove(&channel_id);
-    }
-
-    let response =
-        response_result.map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
+    let response = response_result?;
 
     if !response.status().is_success() {
+        let mut map = ACTIVE_REQUESTS.lock().await;
+        map.remove(&channel_id);
         let error_text = response.text().await.unwrap_or_default();
         return Err(format!("Gemini API Error: {}", error_text));
     }
@@ -384,7 +387,11 @@ pub async fn stream_gemini_chat_v2(
                             }
                         }
                     }
-                    Some(Err(e)) => return Err(format!("Stream error: {}", e)),
+                    Some(Err(e)) => {
+                        let mut map = ACTIVE_REQUESTS.lock().await;
+                        map.remove(&channel_id);
+                        return Err(format!("Stream error: {}", e));
+                    }
                     None => break,
                 }
             }
@@ -395,6 +402,9 @@ pub async fn stream_gemini_chat_v2(
             }
         }
     }
+
+    let mut map = ACTIVE_REQUESTS.lock().await;
+    map.remove(&channel_id);
 
     Ok(())
 }

@@ -14,6 +14,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import { preprocessMarkdown, remarkDisableIndentedCode } from "@/lib";
+import { useSmoothStream } from "../../hooks/useSmoothStream";
 import {
   parseAttachmentPaths,
   stripAttachmentMentions,
@@ -31,7 +32,6 @@ interface ChatBubbleProps {
   stopRequested?: boolean;
   onStopGeneration?: (truncatedText: string) => void;
   onRetry?: () => void;
-  isRetrying?: boolean;
   onUndo?: () => void;
   onAction?: (actionId: string, value?: string) => void;
   enableInternalLinks?: boolean;
@@ -50,7 +50,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   stopRequested,
   onStopGeneration,
   onRetry,
-  isRetrying,
   onUndo,
 
   onAction,
@@ -89,6 +88,9 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   };
 
   const isBotStreaming = !isUser && isStreamed && !message.stopped;
+  
+  const { text: smoothText, isWritingCode } = useSmoothStream(displayText, isBotStreaming);
+  
   const prevIsTypingRef = useRef(false);
 
   useEffect(() => {
@@ -121,8 +123,8 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   useEffect(() => {
     if (!stopRequested || !isBotStreaming || stoppedRef.current) return;
     stoppedRef.current = true;
-    onStopGeneration?.(displayText.trimEnd());
-  }, [stopRequested, isBotStreaming, displayText, onStopGeneration]);
+    onStopGeneration?.(smoothText.trimEnd());
+  }, [stopRequested, isBotStreaming, smoothText, onStopGeneration]);
 
   const markdownComponents = useMemo(
     () => ({
@@ -225,9 +227,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     [enableInternalLinks, onAction],
   );
 
-  const markdownToRender = isBotStreaming && displayText.endsWith("\`\`\`")
-    ? displayText + "\n\`\`\`"
-    : displayText;
+  const markdownToRender = isBotStreaming ? smoothText : displayText;
 
   const shouldDoubleNewlines = isUser && !isRichMarkdownUserMessage;
 
@@ -257,7 +257,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 isUser ? styles.userBubble : styles.botBubble
               } ${
                 isUser && isRichMarkdownUserMessage ? styles.userRichBubble : ""
-              }`}
+              } ${isBotStreaming ? styles.liveStream : ""}`}
             >
               {attachments.length > 0 && (
                 <div
@@ -272,30 +272,22 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                   />
                 </div>
               )}
-              {isRetrying ? (
-                <TextShimmer text="Regenerating response..." />
-              ) : isBotStreaming ? (
-                <div className={`${styles.streamingContainer} ${styles.streamingPlain}`}>
-                  {markdownToRender}
-                  <span className={styles.cursor}>▋</span>
-                </div>
-              ) : (
-                <div className={isUser ? `${styles.markdownContent} ${styles.userMarkdownContent}` : styles.markdownContent}>
-                  <ReactMarkdown
-                    remarkPlugins={[
-                      remarkGfm,
-                      remarkMath,
-                      remarkDisableIndentedCode,
-                    ]}
-                    rehypePlugins={[rehypeKatex, rehypeRaw]}
-                    components={markdownComponents}
-                  >
-                    {preprocessMarkdown(markdownToRender, {
-                      doubleNewlines: shouldDoubleNewlines,
-                    })}
-                  </ReactMarkdown>
-                </div>
-              )}
+              <div className={isUser ? `${styles.markdownContent} ${styles.userMarkdownContent}` : styles.markdownContent}>
+                <ReactMarkdown
+                  remarkPlugins={[
+                    remarkGfm,
+                    remarkMath,
+                    remarkDisableIndentedCode,
+                  ]}
+                  rehypePlugins={[rehypeKatex, rehypeRaw]}
+                  components={markdownComponents}
+                >
+                  {preprocessMarkdown(markdownToRender, {
+                    doubleNewlines: shouldDoubleNewlines,
+                  })}
+                </ReactMarkdown>
+                {isWritingCode && <TextShimmer text="Writing code..." />}
+              </div>
             </div>
 
             {message.image && (
@@ -327,8 +319,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 </span>
               )}
 
-              {isBotStreaming ? null : isRetrying ||
-                message.role === "system" ? null : (
+              {isBotStreaming || message.role === "system" ? null : (
                 <>
                   {!isUser && onRetry && (
                     <button onClick={onRetry} title="Retry" aria-label="Retry">
@@ -366,7 +357,6 @@ export const ChatBubble = React.memo(
       prevProps.isStreamed === nextProps.isStreamed &&
       prevProps.stopRequested === nextProps.stopRequested &&
       !!prevProps.onRetry === !!nextProps.onRetry &&
-      prevProps.isRetrying === nextProps.isRetrying &&
       !!prevProps.onUndo === !!nextProps.onUndo &&
       prevProps.enableInternalLinks === nextProps.enableInternalLinks
     );

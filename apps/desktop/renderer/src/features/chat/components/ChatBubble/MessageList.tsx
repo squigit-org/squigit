@@ -52,8 +52,8 @@ const MessageListComponent: React.FC<MessageListProps> = ({
 
   return (
     <div className={styles.container}>
-      {isGenerating && !retryingMessageId && !streamingText && (
-        <TextShimmer text="Planning next moves" />
+      {(isGenerating || isAnalyzing) && !streamingText && (
+        <TextShimmer text={retryingMessageId ? "Regenerating response..." : (isAnalyzing ? "Analyzing your image" : "Planning next moves")} />
       )}
       {streamingText && (
         <div className={styles.item}>
@@ -83,8 +83,6 @@ const MessageListComponent: React.FC<MessageListProps> = ({
           const isLatestModel =
             msg.role === "model" && index === 0 && !msg.alreadyStreamed;
 
-          if (isAnalyzing && msg.id === retryingMessageId) return null;
-
           return (
             <div key={msg.id} className={styles.item}>
               <ChatBubble
@@ -105,9 +103,6 @@ const MessageListComponent: React.FC<MessageListProps> = ({
                   msg.role !== "user" && onRetryMessage
                     ? () => onRetryMessage(msg.id, selectedModel)
                     : undefined
-                }
-                isRetrying={
-                  msg.id === retryingMessageId && streamingText.length === 0
                 }
                 onUndo={
                   msg.role === "user" && onUndoMessage

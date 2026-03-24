@@ -18,8 +18,6 @@ import {
   ModelType,
 } from "@/lib";
 
-const STREAM_UPDATE_INTERVAL_MS = 80;
-
 export const useGeminiEngine = (config: {
   apiKey: string;
   currentModel: string;
@@ -127,14 +125,10 @@ export const useGeminiEngine = (config: {
         "[useGeminiEngine] Calling startNewThreadStream with model:",
         modelId,
       );
-      let lastUpdateTime = Date.now();
       await startNewThreadStream(modelId, imgData.path, (token: string) => {
         if (signal.aborted) return;
         fullResponse += token;
-        if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
-          setStreamingText(fullResponse);
-          lastUpdateTime = Date.now();
-        }
+        setStreamingText(fullResponse);
         
         if (
           !isRetry &&
@@ -187,15 +181,15 @@ export const useGeminiEngine = (config: {
         timestamp: Date.now(),
         alreadyStreamed: true,
       };
-      setMessages((prev: Message[]) => [...prev, botMsg]);
+      setMessages((prev: Message[]) => {
+        const newMsgs = [...prev, botMsg];
+        if (config.onOverwriteMessages) {
+          config.onOverwriteMessages(newMsgs);
+        }
+        return newMsgs;
+      });
       setStreamingText("");
       setFirstResponseId(null);
-
-      const targetChatId = sessionChatIdRef.current;
-
-      if (config.onMessage && targetChatId) {
-        config.onMessage(botMsg, targetChatId);
-      }
 
       setIsStreaming(false);
       setIsAiTyping(false);
@@ -280,16 +274,12 @@ export const useGeminiEngine = (config: {
       const responseId = Date.now().toString();
       setFirstResponseId(responseId);
 
-      let lastUpdateTime = Date.now();
       await startNewThreadStream(
         config.currentModel,
         config.startupImage.path,
         (token: string) => {
           fullResponse += token;
-          if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
-            setStreamingText(fullResponse); // ← LIVE UPDATE
-            lastUpdateTime = Date.now();
-          }
+          setStreamingText(fullResponse); // ← LIVE UPDATE
         },
       );
 
@@ -300,21 +290,15 @@ export const useGeminiEngine = (config: {
         timestamp: Date.now(),
         alreadyStreamed: true,
       };
-      setMessages((prev: Message[]) => [...prev, botMsg]);
+      setMessages((prev: Message[]) => {
+        const newMsgs = [...prev, botMsg];
+        if (config.onOverwriteMessages) {
+          config.onOverwriteMessages(newMsgs);
+        }
+        return newMsgs;
+      });
       setStreamingText("");
       setFirstResponseId(null);
-
-      if (config.onMessage && targetChatId) {
-        config.onMessage(
-          {
-            id: responseId,
-            role: "model",
-            text: fullResponse,
-            timestamp: Date.now(),
-          },
-          targetChatId,
-        );
-      }
 
       setIsStreaming(false);
       setIsAiTyping(false);
@@ -356,16 +340,12 @@ export const useGeminiEngine = (config: {
       setIsStreaming(true);
       setFirstResponseId(responseId);
 
-      let lastUpdateTime = Date.now();
       const responseText = await apiSendMessage(
         lastSentMessage.text,
         undefined,
         (token: string) => {
           fullResponse += token;
-          if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
-            setStreamingText(fullResponse);
-            lastUpdateTime = Date.now();
-          }
+          setStreamingText(fullResponse);
         }
       );
       const botMsg: Message = {
@@ -375,10 +355,13 @@ export const useGeminiEngine = (config: {
         timestamp: Date.now(),
         alreadyStreamed: true,
       };
-      setMessages((prev: Message[]) => [...prev, botMsg]);
-      if (config.onMessage && targetChatId) {
-        config.onMessage(botMsg, targetChatId);
-      }
+      setMessages((prev: Message[]) => {
+        const newMsgs = [...prev, botMsg];
+        if (config.onOverwriteMessages) {
+          config.onOverwriteMessages(newMsgs);
+        }
+        return newMsgs;
+      });
       setLastSentMessage(null);
       setStreamingText("");
       setFirstResponseId(null);
@@ -423,14 +406,17 @@ export const useGeminiEngine = (config: {
         if (idx !== -1) {
           const newMsgs = [...prev];
           newMsgs[idx] = botMsg;
+          if (config.onOverwriteMessages) {
+            config.onOverwriteMessages(newMsgs);
+          }
           return newMsgs;
         }
-        return [...prev, botMsg];
+        const newMsgs = [...prev, botMsg];
+        if (config.onOverwriteMessages) {
+          config.onOverwriteMessages(newMsgs);
+        }
+        return newMsgs;
       });
-
-      if (config.state.isStreaming && config.onMessage && targetChatId) {
-        config.onMessage(botMsg, targetChatId);
-      }
 
       setStreamingText("");
       setFirstResponseId(null);
@@ -457,16 +443,12 @@ export const useGeminiEngine = (config: {
       setIsStreaming(true);
       setFirstResponseId(responseId);
 
-      let lastUpdateTime = Date.now();
       const responseText = await apiSendMessage(
         userText,
         modelId,
         (token: string) => {
           fullResponse += token;
-          if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
-            setStreamingText(fullResponse);
-            lastUpdateTime = Date.now();
-          }
+          setStreamingText(fullResponse);
         }
       );
       const botMsg: Message = {
@@ -476,10 +458,13 @@ export const useGeminiEngine = (config: {
         timestamp: Date.now(),
         alreadyStreamed: true,
       };
-      setMessages((prev: Message[]) => [...prev, botMsg]);
-      if (config.onMessage && targetChatId) {
-        config.onMessage(botMsg, targetChatId);
-      }
+      setMessages((prev: Message[]) => {
+        const newMsgs = [...prev, botMsg];
+        if (config.onOverwriteMessages) {
+          config.onOverwriteMessages(newMsgs);
+        }
+        return newMsgs;
+      });
       setLastSentMessage(null);
       setStreamingText("");
       setFirstResponseId(null);
@@ -511,7 +496,14 @@ export const useGeminiEngine = (config: {
     const retryModelId = modelId || config.currentModel;
 
     preRetryMessagesRef.current = [...messages];
-    setRetryingMessageId(messageId);
+    
+    // Immediately truncate messages to avoid full text flash on completion
+    setMessages(truncatedMessages);
+    if (config.onOverwriteMessages) {
+      config.onOverwriteMessages(truncatedMessages);
+    }
+    
+    setRetryingMessageId(messageId); // Keep for "Analyzing" shimmer if needed
     isRequestCancelledRef.current = false;
 
     const newResponseId = Date.now().toString();
@@ -528,7 +520,6 @@ export const useGeminiEngine = (config: {
       setIsStreaming(true);
       setIsAiTyping(true);
 
-      let lastUpdateTime = Date.now();
       const responseText = await apiRetryFromMessage(
         msgIndex,
         messages,
@@ -537,13 +528,8 @@ export const useGeminiEngine = (config: {
           fullResponse += token;
           if (!hasReceivedFirstToken) {
             hasReceivedFirstToken = true;
-            setStreamingText(fullResponse);
-            return;
           }
-          if (Date.now() - lastUpdateTime > STREAM_UPDATE_INTERVAL_MS) {
-            setStreamingText(fullResponse);
-            lastUpdateTime = Date.now();
-          }
+          setStreamingText(fullResponse);
         },
         fallbackImagePath,
       );
@@ -569,7 +555,17 @@ export const useGeminiEngine = (config: {
         alreadyStreamed: true,
       };
       setRetryingMessageId(null);
-      setMessages([...truncatedMessages, botMsg]);
+      const newMessages = [...truncatedMessages, botMsg];
+      setMessages(newMessages);
+      
+      if (config.onMessage && config.chatId) {
+        config.onMessage(botMsg, config.chatId);
+      }
+      
+      if (config.onOverwriteMessages) {
+        config.onOverwriteMessages(newMessages);
+      }
+      
       setIsStreaming(false);
       setIsAiTyping(false);
       setFirstResponseId(null);
@@ -659,12 +655,10 @@ export const useGeminiEngine = (config: {
 
   const handleStopGeneration = (truncatedText?: string) => {
     isRequestCancelledRef.current = true;
+    cancelCurrentRequest();
+    cleanupAbortController();
+
     if (typeof truncatedText === "string") {
-      cancelCurrentRequest();
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
       replaceLastAssistantHistory(truncatedText);
       if (messages.length === 0) {
         setImageDescription(truncatedText);
@@ -691,74 +685,45 @@ export const useGeminiEngine = (config: {
           config.onOverwriteMessages?.(newMsgs);
           return newMsgs;
         });
-        setStreamingText("");
-        setFirstResponseId(null);
-        setIsLoading(false);
-        setIsStreaming(false);
-        setIsAiTyping(false);
-        return;
-      }
-
-      setMessages((prev: Message[]) => {
-        const updated = [...prev];
-        for (let i = updated.length - 1; i >= 0; i--) {
-          if (updated[i].role === "model") {
-            updated[i] = {
-              ...updated[i],
-              text: truncatedText,
-              stopped: true,
-              alreadyStreamed: true,
-            };
-            break;
+      } else {
+        setMessages((prev: Message[]) => {
+          const updated = [...prev];
+          for (let i = updated.length - 1; i >= 0; i--) {
+            if (updated[i].role === "model") {
+              updated[i] = {
+                ...updated[i],
+                text: truncatedText,
+                stopped: true,
+                alreadyStreamed: true,
+              };
+              break;
+            }
           }
-        }
 
-        config.onOverwriteMessages?.(updated);
-        return updated;
-      });
-      setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
-      return;
-    }
-
-    if (config.state.retryingMessageId) {
-      cancelCurrentRequest();
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
+          config.onOverwriteMessages?.(updated);
+          return updated;
+        });
       }
+    } else if (config.state.retryingMessageId) {
       const oldMessages = preRetryMessagesRef.current;
       setMessages(oldMessages);
       config.onOverwriteMessages?.(oldMessages);
-      setRetryingMessageId(null);
-      setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
-      setStreamingText("");
-      setFirstResponseId(null);
-      return;
+    } else {
+      const stoppedMsg: Message = {
+        id: Date.now().toString(),
+        role: "model",
+        text: "You stopped this response.",
+        timestamp: Date.now(),
+        stopped: true,
+      };
+      setMessages((prev: Message[]) => [...prev, stoppedMsg]);
+      const targetChatId = sessionChatIdRef.current;
+      if (config.onMessage && targetChatId) {
+        config.onMessage(stoppedMsg, targetChatId);
+      }
     }
 
-    cancelCurrentRequest();
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-
-    const stoppedMsg: Message = {
-      id: Date.now().toString(),
-      role: "model",
-      text: "You stopped this response.",
-      timestamp: Date.now(),
-      stopped: true,
-    };
-    setMessages((prev: Message[]) => [...prev, stoppedMsg]);
-    const targetChatId = sessionChatIdRef.current;
-    if (config.onMessage && targetChatId) {
-      config.onMessage(stoppedMsg, targetChatId);
-    }
-
+    setRetryingMessageId(null);
     setIsLoading(false);
     setIsStreaming(false);
     setIsAiTyping(false);

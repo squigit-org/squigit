@@ -265,7 +265,7 @@ export const useApp = () => {
   const handleMessageAdded = useCallback(
     (msg: any, targetChatId?: string) => {
       const activeId = targetChatId || chatHistory.activeSessionId;
-      if (activeId) {
+      if (activeId && !isOnboardingId(activeId)) {
         const role = msg.role === "user" ? "user" : "assistant";
         appendChatMessage(activeId, role, msg.text).catch(console.error);
       }
