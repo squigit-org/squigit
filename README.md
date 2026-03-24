@@ -1,4 +1,4 @@
-# <img src="docs/data/header.svg" alt="logo">
+# <img src="docs/data/icon.png" alt="logo">
 
 [![Squigit CI](https://github.com/a7mddra/squigit/actions/workflows/distribute.yml/badge.svg?branch=v1.0.0)](https://github.com/a7mddra/squigit/actions/workflows/distribute.yml)
 [![squigit](https://img.shields.io/github/package-json/v/a7mddra/squigit?filename=package.json&label=squigit&color=orange)](https://github.com/a7mddra/squigit/blob/main/package.json)
