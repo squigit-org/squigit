@@ -1,6 +1,4 @@
-# Squigit
-
-> Local-first "Circle to Search" desktop app for Windows, macOS, and Linux.
+# Local-first "Circle to Search" desktop app for Windows, macOS, and Linux
 
 Squigit lets you capture anything on screen and ask AI about it instantly—without sending your data through a middleman server.
 
