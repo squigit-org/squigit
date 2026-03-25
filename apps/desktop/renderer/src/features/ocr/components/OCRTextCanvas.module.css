@@ -12,6 +12,9 @@
   height: 100%;
   pointer-events: none;
   z-index: 10;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .dimOverlay {

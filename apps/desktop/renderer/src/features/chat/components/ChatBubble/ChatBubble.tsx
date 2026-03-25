@@ -14,15 +14,16 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import { preprocessMarkdown, remarkDisableIndentedCode } from "@/lib";
-import { useSmoothStream } from "../../hooks/useSmoothStream";
 import {
   parseAttachmentPaths,
+  useSmoothStream,
   stripAttachmentMentions,
   attachmentFromPath,
   AttachmentStrip,
   Message,
 } from "@/features";
 import styles from "./ChatBubble.module.css";
+import mdStyles from "./BubbleMD.module.css";
 
 interface ChatBubbleProps {
   message: Message;
@@ -88,9 +89,12 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   };
 
   const isBotStreaming = !isUser && isStreamed && !message.stopped;
-  
-  const { text: smoothText, isWritingCode } = useSmoothStream(displayText, isBotStreaming);
-  
+
+  const { text: smoothText, isWritingCode } = useSmoothStream(
+    displayText,
+    isBotStreaming,
+  );
+
   const prevIsTypingRef = useRef(false);
 
   useEffect(() => {
@@ -141,7 +145,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
           );
         }
         return (
-          <code className={styles.inlineCode} {...props}>
+          <code className={mdStyles.inlineCode} {...props}>
             {children}
           </code>
         );
@@ -164,7 +168,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
             <span
               role="button"
               tabIndex={0}
-              className={styles.link}
+              className={mdStyles.link}
               style={{
                 cursor: "pointer",
                 fontWeight: 700,
@@ -193,18 +197,18 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className={styles.link}
+            className={mdStyles.link}
             onClick={onClick}
           >
             {children}
           </a>
         );
       },
-      
+
       li({ checked, children, ...props }: any) {
         if (typeof checked === "boolean") {
           return (
-            <li className={styles.taskListItem} {...props}>
+            <li className={mdStyles.taskListItem} {...props}>
               <input type="checkbox" checked={checked} disabled readOnly />
               {children}
             </li>
@@ -214,12 +218,12 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       },
 
       details: ({ children }: any) => (
-        <details className={styles.details}>{children}</details>
+        <details className={mdStyles.details}>{children}</details>
       ),
-      
+
       summary: ({ children }: any) => (
-        <summary className={styles.summary}>
-          <ChevronRight className={styles.chevron} size={18} />
+        <summary className={mdStyles.summary}>
+          <ChevronRight className={mdStyles.chevron} size={18} />
           {children}
         </summary>
       ),
@@ -257,7 +261,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 isUser ? styles.userBubble : styles.botBubble
               } ${
                 isUser && isRichMarkdownUserMessage ? styles.userRichBubble : ""
-              } ${isBotStreaming ? styles.liveStream : ""}`}
+              } ${isBotStreaming ? mdStyles.liveStream : ""}`}
             >
               {attachments.length > 0 && (
                 <div
@@ -272,7 +276,13 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                   />
                 </div>
               )}
-              <div className={isUser ? `${styles.markdownContent} ${styles.userMarkdownContent}` : styles.markdownContent}>
+              <div
+                className={
+                  isUser
+                    ? `${mdStyles.markdownContent} ${mdStyles.userMarkdownContent}`
+                    : mdStyles.markdownContent
+                }
+              >
                 <ReactMarkdown
                   remarkPlugins={[
                     remarkGfm,

@@ -32,6 +32,7 @@ export * from "./chat/hooks/useChatWheel";
 export * from "./chat/hooks/useChatError";
 export * from "./chat/hooks/useChatTitle";
 export * from "./chat/hooks/useChatHistory";
+export * from "./chat/hooks/useSmoothStream";
 export * from "./chat/chat.types";
 export * from "./chat/Chat";
 

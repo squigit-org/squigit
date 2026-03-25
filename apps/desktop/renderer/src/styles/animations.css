@@ -97,6 +97,16 @@
   }
 }
 
+@keyframes dim2 {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
 @keyframes popIn {
   from {
     opacity: 0;
@@ -275,5 +285,29 @@
   100% {
     stroke-dasharray: 14 100;
     stroke-dashoffset: -22;
+  }
+}
+
+@keyframes revealFlashPulse {
+  0% {
+    box-shadow:
+      0 0 0 1px var(--c-raw-037),
+      0 0 0 0 color-mix(in srgb, var(--c-raw-037) 40%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px var(--c-raw-037),
+      0 0 0 8px transparent;
+  }
+}
+
+@keyframes streamRevealFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

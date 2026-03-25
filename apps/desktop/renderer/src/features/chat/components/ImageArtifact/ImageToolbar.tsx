@@ -83,6 +83,11 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       const offsetParent = toolbar.offsetParent as HTMLElement;
       if (!offsetParent) return;
 
+      const hasInlinePosition = !!toolbar.style.left && !!toolbar.style.top;
+      if (!hasInlinePosition) {
+        return;
+      }
+
       const constraintRect = constraint.getBoundingClientRect();
       const parentRect = offsetParent.getBoundingClientRect();
       const toolbarRect = toolbar.getBoundingClientRect();
@@ -102,13 +107,8 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       let currentLeft: number;
       let currentTop: number;
 
-      if (!toolbar.style.left || !toolbar.style.top) {
-        currentLeft = minLeft + 8;
-        currentTop = minTop + 8;
-      } else {
-        currentLeft = toolbarRect.left - parentRect.left;
-        currentTop = toolbarRect.top - parentRect.top;
-      }
+      currentLeft = toolbarRect.left - parentRect.left;
+      currentTop = toolbarRect.top - parentRect.top;
 
       const newLeft = Math.max(minLeft, Math.min(currentLeft, maxLeft));
       const newTop = Math.max(minTop, Math.min(currentTop, maxTop));
@@ -117,10 +117,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       toolbar.style.top = `${newTop}px`;
     };
 
-    updatePosition();
-
     const resizeObserver = new ResizeObserver(() => {
-      requestAnimationFrame(updatePosition);
+      if (toolbar.style.left && toolbar.style.top) {
+        requestAnimationFrame(updatePosition);
+      }
     });
 
     resizeObserver.observe(constraint);
@@ -134,7 +134,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       resizeObserver.disconnect();
       window.removeEventListener("resize", updatePosition);
     };
-  }, [toolbarRef, constraintRef]);
+  }, [toolbarRef, constraintRef, isExpanded]);
 
   const startDrag = (e: React.MouseEvent) => {
     e.preventDefault();

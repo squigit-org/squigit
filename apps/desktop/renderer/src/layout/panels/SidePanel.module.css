@@ -40,7 +40,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 7px;
-  background: transparent;
+  background-color: transparent;
   border: 1px solid transparent;
   color: var(--c-raw-106);
   cursor: pointer;
@@ -51,13 +51,13 @@
 }
 
 .iconBtn:hover {
-  background: var(--c-raw-067);
+  background-color: var(--c-raw-067);
   border-color: var(--c-raw-010);
   color: var(--c-raw-050);
 }
 
 .iconBtn.active {
-  background: var(--c-raw-067);
+  background-color: var(--c-raw-067);
   border-color: var(--c-raw-010);
   color: var(--c-raw-050);
 }
@@ -106,7 +106,6 @@
   color: var(--c-raw-000);
   text-align: left;
   background: var(--c-raw-013);
-  transform: translateZ(0);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -120,29 +119,34 @@
   cursor: pointer;
   color: var(--c-raw-106);
   height: var(--panel-row-height);
+  box-sizing: border-box;
+  background-color: transparent;
   transition:
     background-color 0.16s ease,
     color 0.16s ease;
   min-width: 0;
+  will-change: background-color, color;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .chatRow:hover {
-  background: var(--c-raw-067);
+  background-color: var(--c-raw-067);
   color: var(--c-raw-050);
 }
 
 .chatRow.menuOpen {
-  background: var(--c-raw-067);
+  background-color: var(--c-raw-067);
   color: var(--c-raw-050);
 }
 
 .chatRow.active {
-  background: var(--c-raw-067);
+  background-color: var(--c-raw-067);
   color: var(--c-raw-050);
 }
 
 .pinnedRow {
-  background: transparent;
+  background-color: transparent;
 }
 
 .chatIconMain {
@@ -165,21 +169,31 @@
   height: 22px;
   flex-shrink: 0;
   position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .chatBubbleIcon {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--c-raw-106);
   transition:
     opacity 0.15s ease,
     color 0.15s ease;
+  will-change: opacity;
+  transform: translateZ(0);
 }
 
 .pinLeftBtn {
   position: absolute;
-  inset: -3px;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -188,22 +202,26 @@
   background: transparent;
   color: var(--c-raw-106);
   opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
   cursor: pointer;
   transition:
     opacity 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    visibility 0s linear 0.15s;
+  will-change: opacity;
+  transform: translateZ(0);
 }
 
 .chatRow:hover .pinLeftBtn,
 .chatRow.menuOpen .pinLeftBtn {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .pinLeftBtn.pinActive {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
 }
 
 .chatRow:hover .chatBubbleIcon,
@@ -294,6 +312,7 @@
   transform: translateY(-50%);
   text-align: right;
   transition: opacity 0.15s ease;
+  will-change: opacity;
 }
 
 .rowShortcut {
@@ -305,10 +324,12 @@
   justify-content: flex-end;
   color: var(--c-raw-000);
   opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
   transition:
     opacity 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    visibility 0s linear 0.15s;
+  will-change: opacity;
 }
 
 .rowShortcutText {
@@ -324,6 +345,8 @@
 
 .chatRow:hover .rowShortcut {
   opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .chatRow:hover .chatDate,
@@ -347,27 +370,31 @@
   color: var(--c-raw-000);
   transition:
     opacity 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    visibility 0s linear 0.15s;
   cursor: pointer;
   opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
+  will-change: opacity;
+  transform: translateZ(0);
 }
 
 .chatRow:hover .menuBtn,
 .chatRow.menuOpen .menuBtn {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .pinnedMenuBtn {
   opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
 }
 
 .chatRow:hover .pinnedMenuBtn,
 .chatRow.menuOpen .pinnedMenuBtn {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
 }
 
 .menuBtn:hover {

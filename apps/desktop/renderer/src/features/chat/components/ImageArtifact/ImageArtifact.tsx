@@ -557,17 +557,9 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     }
   }, [displayData]);
 
-  const [isAnimating, setIsAnimating] = useState(false);
-
   useEffect(() => {
-    setIsAnimating(true);
-    const timer = setTimeout(() => {
-      setIsAnimating(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [isExpanded]);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-  useEffect(() => {
     const checkOverflow = () => {
       const el = scrollWrapperRef.current;
       if (el) {
@@ -577,16 +569,19 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     };
 
     if (isExpanded) {
-      if (!isAnimating) {
-        checkOverflow();
-      }
+      timeoutId = setTimeout(checkOverflow, 260);
       window.addEventListener("resize", checkOverflow);
     } else {
       setShowScrollbar(false);
     }
 
-    return () => window.removeEventListener("resize", checkOverflow);
-  }, [isExpanded, size, isAnimating]);
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      window.removeEventListener("resize", checkOverflow);
+    };
+  }, [isExpanded, size]);
 
   const isExpandedRef = useRef(isExpanded);
   isExpandedRef.current = isExpanded;
@@ -674,7 +669,6 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
           <div
             className={`${styles.bigImageBox} ${showScrollbar ? styles.showScrollbar : ""}`}
             ref={scrollWrapperRef}
-            style={isAnimating ? { overflow: "hidden" } : undefined}
           >
             <div className={styles.viewer} ref={viewerRef}>
               <div className={styles.imageWrap}>
