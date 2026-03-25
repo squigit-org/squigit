@@ -49,6 +49,7 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
+            libasound2-dev \
             patchelf
 
       - name: Build Capture Sidecar
@@ -59,7 +60,7 @@ jobs:
       - name: Build OCR Sidecar
         uses: ./.github/actions/build-ocr-engine
         with:
-          python-version: "3.13"
+          python-version: "3.12"
 
       - name: Build Whisper Sidecar
         uses: ./.github/actions/build-whisper-engine
@@ -80,6 +81,24 @@ jobs:
           if [ -d "apps/desktop/binaries/qt-capture-${{ matrix.target }}/_internal/capture.app" ]; then
             codesign --force --deep --options runtime --timestamp=none --sign "$IDENTITY" "apps/desktop/binaries/qt-capture-${{ matrix.target }}/_internal/capture.app"
           fi
+
+      - name: Upload Capture Sidecar
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-capture-${{ matrix.target }}
+          path: apps/desktop/binaries/qt-capture-${{ matrix.target }}/
+
+      - name: Upload OCR Sidecar
+        uses: actions/upload-artifact@v4
+        with:
+          name: paddle-ocr-${{ matrix.target }}
+          path: apps/desktop/binaries/paddle-ocr-${{ matrix.target }}/
+
+      - name: Upload Whisper Sidecar
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-stt-${{ matrix.target }}
+          path: apps/desktop/binaries/whisper-stt-${{ matrix.target }}/
 
       - name: Build Tauri Desktop
         run: cargo xtask build desktop
@@ -103,15 +122,15 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path dist -Force | Out-Null
 
-          $candidate = Get-ChildItem -Path $PWD -Recurse -File -Filter Squigit.exe |
-            Where-Object { $_.FullName -match '[\\/]target[\\/]release[\\/]Squigit\.exe$' } |
-            Select-Object -First 1
+          $nsis = Get-ChildItem -Path "$PWD/target/release/bundle/nsis" -Filter "*-setup.exe" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($nsis) { Copy-Item $nsis.FullName dist/ }
 
-          if (-not $candidate) {
-            throw "Squigit.exe not found under target/release"
+          $msi = Get-ChildItem -Path "$PWD/target/release/bundle/msi" -Filter "*.msi" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($msi) { Copy-Item $msi.FullName dist/ }
+
+          if (-not $nsis -and -not $msi) {
+            throw "No NSIS or MSI bundle found under target/release/bundle"
           }
-
-          Copy-Item $candidate.FullName dist/squigit.exe
 
       - name: Collect macOS Artifact
         if: runner.os == 'macOS'
@@ -120,18 +139,17 @@ jobs:
           set -euo pipefail
           mkdir -p dist
 
-          BIN_PATH="$(find "$PWD" -type f -path "*/target/release/Squigit.app/Contents/MacOS/Squigit" | head -n 1)"
-          if [ -z "$BIN_PATH" ]; then
+          DMG_PATH="$(find "$PWD/target/release/bundle" -name '*.dmg' -type f 2>/dev/null | head -n 1)"
+          if [ -n "$DMG_PATH" ]; then
+            cp "$DMG_PATH" dist/
+          else
+            echo "No .dmg bundle found, falling back to raw binary"
             BIN_PATH="$(find "$PWD" -type f -path "*/target/release/Squigit" | head -n 1)"
+            if [ -z "$BIN_PATH" ]; then echo "macOS executable not found"; exit 1; fi
+            cp "$BIN_PATH" dist/squigit
+            chmod +x dist/squigit
+            codesign --force --options runtime --timestamp=none --sign "-" dist/squigit
           fi
-          if [ -z "$BIN_PATH" ]; then
-            echo "macOS executable not found"
-            exit 1
-          fi
-
-          cp "$BIN_PATH" dist/squigit
-          chmod +x dist/squigit
-          codesign --force --options runtime --timestamp=none --sign "-" dist/squigit
 
       - name: Upload Executable Artifact
         uses: actions/upload-artifact@v4

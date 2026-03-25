@@ -27,7 +27,7 @@ jobs:
       - name: Build OCR Baseline (onefile)
         uses: ./.github/actions/build-ocr-engine
         with:
-          python-version: "3.13"
+          python-version: "3.12"
           pyi-mode: "onefile"
 
       - name: Measure baseline size (Unix)
@@ -67,7 +67,7 @@ jobs:
       - name: Build OCR Candidate (onedir)
         uses: ./.github/actions/build-ocr-engine
         with:
-          python-version: "3.13"
+          python-version: "3.12"
           pyi-mode: "onedir"
 
       - name: Smoke test sidecar (Unix)
