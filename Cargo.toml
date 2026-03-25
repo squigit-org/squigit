@@ -16,5 +16,5 @@ edition = "2021"
 lto = true
 codegen-units = 1
 opt-level = "z"
-strip = true
+strip = "debuginfo"
 panic = "abort"

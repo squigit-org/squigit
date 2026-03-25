@@ -597,21 +597,13 @@ pub fn desktop() -> Result<()> {
 
     let mut env_vars = Vec::new();
     if cfg!(target_os = "linux") {
-        let host_triple = get_host_target_triple()?;
-        let ocr_sidecar_path = project_root()
-            .join("apps")
-            .join("desktop")
-            .join("binaries")
-            .join(format!("paddle-ocr-{}", host_triple))
-            .join("_internal");
-
-        if ocr_sidecar_path.exists() {
-            println!("  [info] Applying LD_LIBRARY_PATH for paddle-ocr sidecar");
-            env_vars.push((
-                "LD_LIBRARY_PATH".to_string(),
-                ocr_sidecar_path.to_string_lossy().to_string(),
-            ));
-        }
+        // linuxdeploy is executed during bundling and can break if LD_LIBRARY_PATH is polluted
+        // with sidecar runtime libs. Keep bundling environment clean and only set AppImage
+        // extract mode for CI/non-FUSE environments.
+        env_vars.push((
+            "APPIMAGE_EXTRACT_AND_RUN".to_string(),
+            "1".to_string(),
+        ));
     }
 
     if env_vars.is_empty() {
