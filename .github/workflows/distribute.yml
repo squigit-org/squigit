@@ -56,7 +56,15 @@ jobs:
           # Try the current package name first, then the legacy one.
           sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2
 
+      - name: Cache Capture Engine
+        id: cache-capture
+        uses: actions/cache@v4
+        with:
+          path: apps/desktop/binaries/qt-capture-${{ matrix.target }}
+          key: capture-engine-${{ matrix.target }}-${{ hashFiles('.github/actions/build-capture-engine/**', 'sidecars/qt-capture/**', 'sidecars/capture/**', 'crates/**', 'xtask/**', 'Cargo.lock') }}
+
       - name: Build Capture Sidecar
+        if: steps.cache-capture.outputs.cache-hit != 'true'
         uses: ./.github/actions/build-capture-engine
         with:
           target: ${{ matrix.target }}
