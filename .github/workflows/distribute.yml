@@ -119,7 +119,6 @@ jobs:
             squashfs-tools \
             zsync \
             patchelf \
-            libfuse2t64 || sudo apt-get install -y libfuse2 \
             libxdo3
 
           # ubuntu-latest can change (22.04/24.04). AppImage runtime needs libfuse.so.2.
@@ -138,13 +137,20 @@ jobs:
         run: |
           set -euo pipefail
           IDENTITY="-"
+          CAPTURE_APP="apps/desktop/binaries/qt-capture-${{ matrix.target }}/_internal/capture.app"
 
           find "apps/desktop/binaries" -type f \( -name "*.dylib" -o -name "capture-engine" -o -name "whisper-stt" -o -name "ocr-engine" \) -print0 | while IFS= read -r -d '' f; do
             codesign --force --options runtime --timestamp=none --sign "$IDENTITY" "$f"
           done
 
-          if [ -d "apps/desktop/binaries/qt-capture-${{ matrix.target }}/_internal/capture.app" ]; then
-            codesign --force --deep --options runtime --timestamp=none --sign "$IDENTITY" "apps/desktop/binaries/qt-capture-${{ matrix.target }}/_internal/capture.app"
+          if [ -d "$CAPTURE_APP" ]; then
+            # Sign nested frameworks explicitly first to avoid --deep ambiguity errors.
+            find "$CAPTURE_APP" -type d -name "*.framework" -print0 | while IFS= read -r -d '' fw; do
+              codesign --force --options runtime --timestamp=none --sign "$IDENTITY" "$fw"
+            done
+
+            # Finally sign the app bundle itself without --deep.
+            codesign --force --options runtime --timestamp=none --sign "$IDENTITY" "$CAPTURE_APP"
           fi
 
       - name: Build Tauri Desktop
