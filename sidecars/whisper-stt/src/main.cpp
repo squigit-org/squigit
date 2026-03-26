@@ -57,6 +57,7 @@ std::string resolve_model_path(const std::string& provided_model) {
         fs::current_path() / "models" / provided_model,
         fs::current_path() / provided_model,
         get_executable_dir() / "models" / provided_model,
+        get_executable_dir() / "_internal" / "models" / provided_model,
         get_executable_dir() / provided_model,
         get_executable_dir().parent_path() / "share" / "squigit-stt" / "models" / provided_model,
         fs::path("/usr/share/squigit-stt/models") / provided_model,
@@ -166,7 +167,12 @@ void stop_engine() {
   send_json(j);
 }
 
-int main() {
+int main(int argc, char** argv) {
+  if (argc > 1 && std::string(argv[1]) == "--version") {
+    std::cout << "1.2.0" << std::endl;
+    return 0;
+  }
+
   std::string line;
   while (std::getline(std::cin, line)) {
     try {

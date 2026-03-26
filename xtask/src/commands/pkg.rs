@@ -143,13 +143,13 @@ pub fn ocr() -> Result<()> {
 
     fs::create_dir_all(&app_binaries)?;
 
-    let src_binary_name = format!("ocr-engine{}", if cfg!(windows) { ".exe" } else { "" });
+    let src_binary_name = format!("squigit-ocr{}", if cfg!(windows) { ".exe" } else { "" });
     let src_binary_path = dist_dir.join(&src_binary_name);
-    let src_runtime_dir = dist_dir.join("ocr-engine");
+    let src_runtime_dir = dist_dir.join("squigit-ocr");
 
     let host_triple = get_host_target_triple()?;
     let legacy_dst_binary_name = format!(
-        "ocr-engine-{}{}",
+        "squigit-ocr-{}{}",
         host_triple,
         if cfg!(windows) { ".exe" } else { "" }
     );
@@ -290,9 +290,9 @@ pub fn whisper() -> Result<()> {
 
 fn whisper_binary_name() -> &'static str {
     if cfg!(windows) {
-        "whisper-stt.exe"
+        "squigit-stt.exe"
     } else {
-        "whisper-stt"
+        "squigit-stt"
     }
 }
 

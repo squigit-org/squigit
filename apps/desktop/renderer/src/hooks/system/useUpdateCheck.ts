@@ -7,24 +7,22 @@
 import { useEffect } from "react";
 import { github } from "@/lib";
 import packageJson from "../../../package.json";
+import { invoke } from "@tauri-apps/api/core";
 
-const RELEASE_NOTES_URL = github.rawChangelog;
+const TAURI_CHANGELOG_URL = github.rawChangelog;
+
+export type UpdateComponent = "tauri" | "ocr" | "stt";
 
 export interface ReleaseInfo {
+  component: UpdateComponent;
   version: string;
   notes: string;
-  hasUpdate: boolean;
   sections?: Record<string, string[]>;
   size?: string;
+  hasUpdate: boolean;
 }
 
-const STORAGE_KEYS = {
-  VERSION: "pending_update_version",
-  NOTES: "pending_update_notes",
-  SECTIONS: "pending_update_sections",
-  SIZE: "pending_update_size",
-  AVAILABLE: "pending_update_available",
-};
+const STORAGE_KEY = "pending_updates_queue";
 
 function compareVersions(v1: string, v2: string): number {
   const parts1 = v1.split(".").map(Number);
@@ -39,9 +37,21 @@ function compareVersions(v1: string, v2: string): number {
   return 0;
 }
 
-export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
+async function getSidecarVersion(cmd: string): Promise<string | null> {
   try {
-    const response = await fetch(RELEASE_NOTES_URL);
+    const output = await invoke<string>("run_sidecar_version", {
+      command: cmd,
+    });
+    const match = output.match(/(\d+\.\d+\.\d+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null; // not installed or error
+  }
+}
+
+async function fetchReleaseNotes(url: string, currentVersion: string, component: UpdateComponent): Promise<ReleaseInfo | null> {
+  try {
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch release notes: ${response.statusText}`);
     }
@@ -51,14 +61,14 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
     const matches = Array.from(text.matchAll(headerRegex));
 
     if (matches.length === 0) {
-      return { version: packageJson.version, notes: "", hasUpdate: false };
+      return null;
     }
 
     const latestMatch = matches[0];
     const latestVersion = latestMatch[1];
 
-    if (compareVersions(latestVersion, packageJson.version) <= 0) {
-      return { version: latestVersion, notes: "", hasUpdate: false };
+    if (compareVersions(latestVersion, currentVersion) <= 0) {
+      return null;
     }
 
     const startIdx = latestMatch.index! + latestMatch[0].length;
@@ -86,11 +96,9 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
 
     while ((sectionMatch = sectionRegex.exec(rawBody)) !== null) {
       const title = sectionMatch[1].trim();
-
       if (title === "Version Info") continue;
 
       const content = sectionMatch[2].trim();
-
       const items = content
         .split("\n")
         .map((line) => line.trim())
@@ -121,6 +129,7 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
     }
 
     return {
+      component,
       version: latestVersion,
       notes: notes,
       hasUpdate: true,
@@ -128,78 +137,83 @@ export const fetchReleaseNotes = async (): Promise<ReleaseInfo> => {
       size,
     };
   } catch (error) {
-    console.error("Error fetching release notes:", error);
-    return { version: packageJson.version, notes: "", hasUpdate: false };
+    console.error(`Error fetching release notes for ${component}:`, error);
+    return null;
   }
-};
+}
 
 export function useUpdateCheck() {
   useEffect(() => {
-    const checkUpdate = async () => {
-      try {
-        const { hasUpdate, version, notes, sections, size } =
-          await fetchReleaseNotes();
+    const checkAll = async () => {
+      const queue: ReleaseInfo[] = [];
 
-        if (hasUpdate) {
-          localStorage.setItem(STORAGE_KEYS.AVAILABLE, "true");
-          localStorage.setItem(STORAGE_KEYS.VERSION, version);
-          localStorage.setItem(STORAGE_KEYS.NOTES, notes);
-          if (sections) {
-            localStorage.setItem(
-              STORAGE_KEYS.SECTIONS,
-              JSON.stringify(sections),
-            );
-          }
-          if (size) {
-            localStorage.setItem(STORAGE_KEYS.SIZE, size);
-          }
-        } else {
-          clearPendingUpdate();
-        }
-      } catch (error) {
-        console.error("Failed to check for updates", error);
+      // 1. Tauri
+      const tauriUpdate = await fetchReleaseNotes(TAURI_CHANGELOG_URL, packageJson.version, "tauri");
+      if (tauriUpdate?.hasUpdate) queue.push(tauriUpdate);
+
+      // 2. OCR
+      const installedOcrVersion = await getSidecarVersion("squigit-ocr --version");
+      if (installedOcrVersion) {
+        const ocrUpdate = await fetchReleaseNotes(
+          "https://raw.githubusercontent.com/a7mddra/squigit/main/sidecars/paddle-ocr/CHANGELOG.md",
+          installedOcrVersion,
+          "ocr"
+        );
+        if (ocrUpdate?.hasUpdate) queue.push(ocrUpdate);
+      }
+
+      // 3. STT (Future)
+      const installedSttVersion = await getSidecarVersion("squigit-stt --version");
+      if (installedSttVersion) {
+        const sttUpdate = await fetchReleaseNotes(
+          "https://raw.githubusercontent.com/a7mddra/squigit/main/sidecars/whisper-stt/CHANGELOG.md",
+          installedSttVersion,
+          "stt"
+        );
+        if (sttUpdate?.hasUpdate) queue.push(sttUpdate);
+      }
+
+      if (queue.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
       }
     };
 
-    checkUpdate();
+    checkAll();
   }, []);
 }
 
-export function getPendingUpdate() {
-  const available = localStorage.getItem(STORAGE_KEYS.AVAILABLE) === "true";
-  if (!available) return null;
+export function getPendingUpdate(): ReleaseInfo | null {
+  const queueJson = localStorage.getItem(STORAGE_KEY);
+  if (!queueJson) return null;
 
-  const storedVersion = localStorage.getItem(STORAGE_KEYS.VERSION) || "";
-  const currentVersion = packageJson.version;
-
-  if (compareVersions(storedVersion, currentVersion) <= 0) {
-    console.log(
-      `Clearing stale update: stored ${storedVersion} <= current ${currentVersion}`,
-    );
-    clearPendingUpdate();
+  try {
+    const queue: ReleaseInfo[] = JSON.parse(queueJson);
+    return queue[0] || null;
+  } catch {
     return null;
   }
-
-  const sectionsStr = localStorage.getItem(STORAGE_KEYS.SECTIONS);
-  let sections;
-  try {
-    sections = sectionsStr ? JSON.parse(sectionsStr) : undefined;
-  } catch (e) {
-    console.warn("Failed to parse update sections", e);
-  }
-
-  return {
-    version: storedVersion,
-    notes: localStorage.getItem(STORAGE_KEYS.NOTES) || "",
-    sections,
-    size: localStorage.getItem(STORAGE_KEYS.SIZE) || undefined,
-  };
 }
 
 export function clearPendingUpdate() {
-  localStorage.removeItem(STORAGE_KEYS.AVAILABLE);
-  localStorage.removeItem(STORAGE_KEYS.VERSION);
-  localStorage.removeItem(STORAGE_KEYS.NOTES);
-  localStorage.removeItem(STORAGE_KEYS.SECTIONS);
-  localStorage.removeItem(STORAGE_KEYS.SIZE);
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+export function markUpdateDone(component: UpdateComponent) {
+  const queueJson = localStorage.getItem(STORAGE_KEY);
+  if (!queueJson) return;
+
+  try {
+    let queue: ReleaseInfo[] = JSON.parse(queueJson);
+    queue = queue.filter((u) => u.component !== component);
+
+    if (queue.length === 0) {
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+    }
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+  }
 }

@@ -7,10 +7,12 @@
 import React, { useMemo, useState } from "react";
 import { OnboardingLayout } from "../OnboardingLayout";
 import { useAppContext } from "@/providers/AppProvider";
-import { getPendingUpdate } from "@/hooks";
+import { getPendingUpdate, markUpdateDone } from "@/hooks";
 import { updateIcon } from "@/assets";
 import { ChevronRight, DownloadCloud } from "lucide-react";
 import { clsx } from "clsx";
+import { usePlatform } from "@/hooks/core/usePlatform";
+import { CodeBlock } from "@/components/code-block/CodeBlock";
 import styles from "./UpdateNotes.module.css";
 
 interface UpdateSectionProps {
@@ -61,6 +63,7 @@ const UpdateSection: React.FC<UpdateSectionProps> = ({
 export const UpdateNotes: React.FC = () => {
   const app = useAppContext();
   const update = useMemo(() => getPendingUpdate(), []);
+  const platform = usePlatform();
 
   const SECTION_ORDER = ["New Features", "Bug Fixes", "UI Improvements"];
 
@@ -70,6 +73,27 @@ export const UpdateNotes: React.FC = () => {
 
   const sections = update.sections || {};
   const hasSections = Object.keys(sections).length > 0;
+
+  const isTauri = update.component === "tauri";
+  const isOcr = update.component === "ocr";
+
+  const titleText = isTauri
+    ? `${app.system.appName}`
+    : `Squigit ${update.component.toUpperCase()}`;
+
+  const getUpgradeCommand = () => {
+    const pkg = isOcr ? "squigit-ocr" : "squigit-stt";
+    return platform.getPkgUpgradeCmd(pkg);
+  };
+
+  const handleUpdate = () => {
+    if (isTauri) {
+      app.handleSystemAction("update_now");
+    } else {
+      markUpdateDone(update.component);
+      app.handleSystemAction("dismiss_overlay");
+    }
+  };
 
   return (
     <OnboardingLayout
@@ -83,12 +107,23 @@ export const UpdateNotes: React.FC = () => {
             aria-hidden="true"
             className={styles.titleIcon}
           />
-          <span>{app.system.appName}</span>
+          <span>{titleText}</span>
         </div>
         <div className={styles.subtitle}>v{update.version} is Here!</div>
       </div>
 
       <div className={styles.scrollableContent}>
+        {!isTauri && (
+          <div className={styles.section} style={{ marginBottom: '1.5rem' }}>
+             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                The new version is available via {platform.pkgMgrName}. Copy the command below and execute it in your terminal.
+             </p>
+             <div style={{ borderRadius: '8px', overflow: 'hidden' }}>
+                <CodeBlock language="bash" value={getUpgradeCommand()} />
+             </div>
+          </div>
+        )}
+
         {hasSections ? (
           <>
             {SECTION_ORDER.map((sectionTitle) => (
@@ -146,9 +181,9 @@ export const UpdateNotes: React.FC = () => {
         <div className={styles.footerRight}>
           <button
             className={styles.updateButton}
-            onClick={() => app.handleSystemAction("update_now")}
+            onClick={handleUpdate}
           >
-            Update Now
+            {isTauri ? "Update Now" : "I've Upgraded"}
           </button>
         </div>
       </div>

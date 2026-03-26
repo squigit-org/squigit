@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect } from "react";
-import { getDialogs } from "@/lib";
+import { getDialogs, getUpdateAvailableDialog } from "@/lib";
 import { Dialog } from "@/components";
 import { usePlatform } from "@/hooks";
 import {
@@ -151,6 +151,20 @@ const AppRouterContent: React.FC = () => {
         appName={app.system.appName}
         onAction={app.handleBusyDialogAction}
       />
+
+      {app.showUpdate && app.pendingUpdate && app.pendingUpdate.component !== "tauri" && (
+        <Dialog
+          isOpen={true}
+          type={getUpdateAvailableDialog(`squigit-${app.pendingUpdate.component}`)}
+          onAction={(key) => {
+            if (key === "show_changelog" && app.pendingUpdate) {
+               app.handleSelectChat(`__system_update_${app.pendingUpdate.version}`);
+            }
+            app.setShowUpdate(false);
+            sessionStorage.setItem("update_dismissed", "1");
+          }}
+        />
+      )}
 
       <MediaOverlay
         isOpen={app.mediaViewer.isOpen}

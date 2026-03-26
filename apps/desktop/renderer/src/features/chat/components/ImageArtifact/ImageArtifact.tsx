@@ -22,6 +22,7 @@ import {
   useTextSelection,
   type SettingsSection,
 } from "@/features";
+import { usePlatform } from "@/hooks/core/usePlatform";
 import styles from "./ImageArtifact.module.css";
 import { Dialog } from "@/components";
 import {
@@ -30,6 +31,7 @@ import {
   DEFAULT_OCR_MODEL_ID,
   getErrorDialog,
   getMissingPackageDialog,
+  getOutdatedPackageDialog,
   OcrFrame,
   cancelOcrJob,
   saveOcrData,
@@ -380,7 +382,9 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
         }
 
         if (errorText.includes("ERR_MISSING_OCR_PACKAGE")) {
-          setErrorDialog(getMissingPackageDialog("squigit-ocr"));
+          setErrorDialog(getMissingPackageDialog("squigit-ocr", platform.getPkgInstallCmd("squigit-ocr")));
+        } else if (errorText.includes("ERR_OUTDATED_OCR_PACKAGE")) {
+          setErrorDialog(getOutdatedPackageDialog("squigit-ocr"));
         } else {
           setErrorDialog(getErrorDialog(errorText));
         }
@@ -493,6 +497,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     ocrEnabled,
   ]);
 
+  const platform = usePlatform();
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollWrapperRef = useRef<HTMLDivElement>(null);
 

@@ -10,6 +10,7 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { Mic, Square } from "lucide-react";
 import styles from "./ChatInput.module.css";
 import { Tooltip, Dialog } from "@/components";
+import { usePlatform } from "@/hooks/core/usePlatform";
 import { type DialogContent, getMissingPackageDialog } from "@/lib";
 
 interface VoiceButtonProps {
@@ -29,6 +30,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
   onTranscript,
   disabled,
 }) => {
+  const platform = usePlatform();
   const [isRecording, setIsRecording] = useState(false);
   const [errorDialog, setErrorDialog] = useState<DialogContent | null>(null);
 
@@ -59,6 +61,14 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
             }
           } else if (payload.type === "error") {
             console.error("[STT] Error:", payload.message);
+            if (payload.message === "Failed to init model") {
+              setErrorDialog({
+                title: "Missing AI Dictation Model",
+                message: "The local dictation model file is missing or corrupted. If you installed via Homebrew or a package manager, please ensure the `_internal/models/ggml-tiny.en.bin` dependency exists and rerun squigit-stt.",
+                variant: "warning",
+                actions: [{ label: "Dismiss Window", variant: "primary", actionKey: "close" }]
+              });
+            }
             setIsRecording(false);
           }
         });
@@ -105,7 +115,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
       } catch (err: any) {
         const errorText = err instanceof Error ? err.message : String(err);
         if (errorText.includes("ERR_MISSING_STT_PACKAGE")) {
-          setErrorDialog(getMissingPackageDialog("squigit-stt"));
+          setErrorDialog(getMissingPackageDialog("squigit-stt", platform.getPkgInstallCmd("squigit-stt")));
         } else {
           console.error("Failed to start STT:", err);
         }

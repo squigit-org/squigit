@@ -500,7 +500,7 @@ print("OCR dependency verification passed.")"###,
     #[cfg(not(target_os = "windows"))]
     {
         println!("\nRunning dist sidecar smoke checks...");
-        let dist_sidecar = sidecar.join("dist").join("ocr-engine").join("ocr-engine");
+        let dist_sidecar = sidecar.join("dist").join("squigit-ocr").join("squigit-ocr");
         smoke_packaged_sidecar(py, &sidecar, &dist_sidecar)?;
     }
 
@@ -514,7 +514,7 @@ print("OCR dependency verification passed.")"###,
         println!("\nRunning packaged sidecar smoke checks...");
         let packaged_sidecar = app_binaries
             .join(format!("paddle-ocr-{}", host_triple))
-            .join("ocr-engine");
+            .join("squigit-ocr");
         smoke_packaged_sidecar(py, &sidecar, &packaged_sidecar)?;
     }
 
@@ -523,7 +523,7 @@ print("OCR dependency verification passed.")"###,
         println!("\nMeasuring OCR payload size...");
         let runtime_dir = app_binaries.join(format!("paddle-ocr-{}", host_triple));
         let legacy_bin = app_binaries.join(format!(
-            "ocr-engine-{}{}",
+            "squigit-ocr-{}{}",
             host_triple,
             if cfg!(windows) { ".exe" } else { "" }
         ));

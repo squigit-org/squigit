@@ -129,12 +129,30 @@ export const getErrorDialog = (error: any): DialogContent => {
   };
 };
 
-export const getMissingPackageDialog = (pkgName: string): DialogContent => ({
-  title: "Missing System Package",
-  message: `${pkgName} not found, you need to install ${pkgName} on your system`,
+export const getMissingPackageDialog = (pkgName: string, installCmd: string): DialogContent => ({
+  title: "Missing System Dependency",
+  message: `A runtime dependency is missing for ${pkgName}. You can quickly install it using your terminal:\n\n${installCmd}`,
   variant: "warning",
   actions: [
+    { label: "Dismiss", variant: "secondary", actionKey: "cancel" },
+  ],
+});
+
+export const getOutdatedPackageDialog = (pkgName: string): DialogContent => ({
+  title: "Version Mismatch",
+  message: `Your installed version of ${pkgName} is incompatible with this application version. Please upgrade or downgrade it to match the required package lock specifications.`,
+  variant: "warning",
+  actions: [
+    { label: "Close", variant: "primary", actionKey: "cancel" },
+  ],
+});
+
+export const getUpdateAvailableDialog = (pkgName: string): DialogContent => ({
+  title: "Update Available",
+  message: `This package has new versions. Update your system: ${pkgName}`,
+  variant: "info",
+  actions: [
     { label: "Cancel", variant: "secondary", actionKey: "cancel" },
-    { label: "Install", variant: "primary", actionKey: "install" },
+    { label: "Show Changelog", variant: "primary", actionKey: "show_changelog" },
   ],
 });

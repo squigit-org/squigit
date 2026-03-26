@@ -129,14 +129,15 @@ impl SpeechEngine {
 ",
                 )
                 .await;
-            let _ = process.stdin.flush().await;
 
-            // Wait a bit or kill
-            // For now, just wait for the OS to cleanup or we can explicitly kill if needed
-            // But since we dropped the stdin handle, the sidecar loop reading stdin might fail/EOF and exit.
-            // Let's ensure it's dead.
-            let _ = process.kill().await;
-            let _ = process.child.wait().await;
+            let child = &mut process.child;
+            if tokio::time::timeout(std::time::Duration::from_millis(500), child.wait())
+                .await
+                .is_err()
+            {
+                let _ = child.kill().await;
+                let _ = child.wait().await;
+            }
 
             Ok(())
         } else {

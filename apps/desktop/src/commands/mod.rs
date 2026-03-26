@@ -12,6 +12,7 @@ pub mod models;
 pub mod ocr;
 pub mod profile;
 pub mod security;
+pub mod system;
 
 pub mod capture;
 pub mod constants;

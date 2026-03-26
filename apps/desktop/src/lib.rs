@@ -41,6 +41,7 @@ use commands::profile::{
     list_profiles, set_active_profile,
 };
 use commands::security::{check_file_exists, encrypt_and_save, has_agreed_flag, set_agreed_flag};
+use commands::system::{run_sidecar_version, get_linux_package_manager};
 use commands::speech::SpeechState;
 use commands::window::{
     close_window, get_always_on_top, maximize_window, minimize_window, open_external_url,
@@ -118,6 +119,8 @@ pub fn run() {
             // OCR
             ocr_image,
             cancel_ocr_job,
+            run_sidecar_version,
+            get_linux_package_manager,
             // Model Management
             download_ocr_model,
             commands::models::cancel_download_ocr_model,
