@@ -35,7 +35,7 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Build OCR Baseline (onefile)
         uses: ./.github/actions/build-paddle-ocr
@@ -136,12 +136,20 @@ jobs:
           "@
           & sidecars/paddle-ocr/venv/Scripts/python.exe -c $code
 
-      - name: Upload OCR smoke artifacts
+      - name: Upload OCR smoke artifacts (Unix)
+        if: runner.os != 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: ocr-smoke-artifacts-${{ matrix.os_name }}
           path: |
             /tmp/ocr-smoke.png
             /tmp/ocr-smoke-output.json
-            ${{ runner.os == 'Windows' && env.TEMP || '' }}/ocr-smoke.png
-            ${{ runner.os == 'Windows' && env.TEMP || '' }}/ocr-smoke-output.json
+
+      - name: Upload OCR smoke artifacts (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocr-smoke-artifacts-${{ matrix.os_name }}
+          path: |
+            ${{ runner.temp }}/ocr-smoke.png
+            ${{ runner.temp }}/ocr-smoke-output.json
