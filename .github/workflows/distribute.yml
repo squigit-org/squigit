@@ -50,6 +50,10 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             libasound2-dev \
+            appstream \
+            desktop-file-utils \
+            squashfs-tools \
+            zsync \
             patchelf
 
           # ubuntu-latest can change (22.04/24.04). AppImage runtime needs libfuse.so.2.
@@ -140,7 +144,15 @@ jobs:
           command -v appstreamcli || true
           command -v desktop-file-validate || true
           command -v mksquashfs || true
+          command -v zsyncmake || true
           command -v patchelf || true
+
+          echo "== Tool versions =="
+          appstreamcli --version || true
+          desktop-file-validate --version || true
+          mksquashfs -version || true
+          zsyncmake --version || true
+          patchelf --version || true
 
       - name: Linux bundling diagnostics (on failure)
         if: failure() && runner.os == 'Linux'
@@ -148,10 +160,16 @@ jobs:
         run: |
           set -euo pipefail
           echo "== AppImage bundle directory =="
-          find "$PWD/target/release/bundle" -maxdepth 4 -type f 2>/dev/null | sort || true
+          find "$PWD/target/release/bundle" -type f 2>/dev/null | sort || true
+
+          echo "== AppImage AppDir tree =="
+          find "$PWD/target/release/bundle/appimage" -maxdepth 8 -print 2>/dev/null | sort || true
+
+          echo "== Disk space =="
+          df -h || true
 
           echo "== Recent linuxdeploy/appimage traces in workspace =="
-          grep -RInE "linuxdeploy|appimage|AppImage|failed to run linuxdeploy" "$PWD" 2>/dev/null | head -n 200 || true
+          grep -RInE "linuxdeploy|appimage|AppImage|failed to run linuxdeploy|mksquashfs|desktop-file-validate|appstream" "$PWD" 2>/dev/null | head -n 300 || true
 
       - name: Collect Linux Artifact
         if: runner.os == 'Linux'
