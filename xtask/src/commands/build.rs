@@ -604,6 +604,9 @@ pub fn desktop() -> Result<()> {
             "APPIMAGE_EXTRACT_AND_RUN".to_string(),
             "1".to_string(),
         ));
+        // linuxdeploy's strip step can fail on CI runners (e.g. GitHub Actions).
+        // Disable stripping to avoid "failed to run linuxdeploy" errors.
+        env_vars.push(("NO_STRIP".to_string(), "true".to_string()));
     }
 
     if env_vars.is_empty() {

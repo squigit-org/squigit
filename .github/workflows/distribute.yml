@@ -108,6 +108,8 @@ jobs:
         env:
           # linuxdeploy and plugin binaries are AppImages; avoid FUSE runtime issues in CI.
           APPIMAGE_EXTRACT_AND_RUN: "1"
+          # Prevent linuxdeploy from failing during symbol stripping on CI runners.
+          NO_STRIP: "true"
         run: cargo xtask build desktop
 
       - name: Collect Linux Artifact
