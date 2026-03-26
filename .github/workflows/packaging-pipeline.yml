@@ -2,9 +2,6 @@ name: Build and Package Standalone Sidecars
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 jobs:
   build-and-package:
