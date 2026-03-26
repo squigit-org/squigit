@@ -45,16 +45,34 @@ pub fn capture() -> Result<()> {
     }
     fs::create_dir_all(&sidecar_dst)?;
 
-    let internal_dst = sidecar_dst.join("_internal");
-
     if !qt_internal_src.exists() {
         anyhow::bail!("Qt runtime not found at {}", qt_internal_src.display());
     }
 
-    println!("  Moving _internal to {}", internal_dst.display());
-    if fs::rename(&qt_internal_src, &internal_dst).is_err() {
-        copy_capture_runtime_dir(&qt_internal_src, &internal_dst)?;
+    #[cfg(target_os = "linux")]
+    {
+        println!("  Compressing _internal to tar.gz to hide from Tauri linuxdeploy...");
+        let tarball_path = sidecar_dst.join("runtime.tar.gz");
+
+        let status = std::process::Command::new("tar")
+            .current_dir(qt_native_dir())
+            .args(["-czf", tarball_path.to_str().unwrap(), "_internal"])
+            .status()?;
+
+        if !status.success() {
+            anyhow::bail!("Failed to compress Qt runtime");
+        }
+        
         fs::remove_dir_all(&qt_internal_src)?;
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        println!("  Moving _internal to {}", internal_dst.display());
+        if fs::rename(&qt_internal_src, &internal_dst).is_err() {
+            copy_capture_runtime_dir(&qt_internal_src, &internal_dst)?;
+            fs::remove_dir_all(&qt_internal_src)?;
+        }
     }
 
     

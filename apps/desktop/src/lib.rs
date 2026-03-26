@@ -190,7 +190,48 @@ pub fn run() {
 
             #[cfg(target_os = "linux")]
             {
+                let app_local_data = handle.path().app_local_data_dir().expect("Failed to get local data dir");
+                let target_sidecar_dir = app_local_data.join("qt-capture-runtime");
                 let config_dir = crate::utils::get_app_config_dir(&handle);
+                let capture_installed_marker = config_dir.join(".capture_installed");
+
+                if !capture_installed_marker.exists() && !target_sidecar_dir.exists() {
+                    log::info!("First launch: Extracting Qt capture sidecar...");
+                    std::fs::create_dir_all(&target_sidecar_dir).unwrap();
+
+                    if let Ok(resource_dir) = handle.path().resource_dir() {
+                        let tar_path = resource_dir
+                            .join("binaries")
+                            .join("qt-capture-x86_64-unknown-linux-gnu")
+                            .join("runtime.tar.gz");
+
+                        if tar_path.exists() {
+                            use std::fs::File;
+                            use flate2::read::GzDecoder;
+                            use tar::Archive;
+
+                            let tar_gz = File::open(&tar_path).expect("Failed to open sidecar tarball");
+                            let tar = GzDecoder::new(tar_gz);
+                            let mut archive = Archive::new(tar);
+                            if let Err(e) = archive.unpack(&target_sidecar_dir) {
+                                log::error!("Failed to unpack sidecar: {}", e);
+                            } else {
+                                // Ensure the binary is executable
+                                let bin_path = target_sidecar_dir.join("_internal/usr/bin/capture-bin");
+                                if bin_path.exists() {
+                                    use std::os::unix::fs::PermissionsExt;
+                                    let mut perms = std::fs::metadata(&bin_path).unwrap().permissions();
+                                    perms.set_mode(0o755);
+                                    std::fs::set_permissions(&bin_path, perms).unwrap();
+                                }
+                                let _ = std::fs::write(&capture_installed_marker, "1");
+                            }
+                        } else {
+                            log::error!("Sidecar tarball not found at {}", tar_path.display());
+                        }
+                    }
+                }
+
                 let marker_file = config_dir.join(".shortcut_installed");
                 const SHORTCUT_MARKER_VERSION: &str = "2";
 

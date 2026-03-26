@@ -12,9 +12,18 @@ pub struct QtPaths {
 
 impl QtPaths {
     pub fn resolve() -> Result<Self> {
-        let exe_path = env::current_exe()?;
-        let exe_dir = exe_path.parent().context("No parent dir for executable")?;
-        let qt_runtime = exe_dir.join("_internal");
+        #[cfg(target_os = "linux")]
+        let qt_runtime = dirs::data_local_dir()
+            .context("No local data dir")?
+            .join("squigit")
+            .join("qt-capture-runtime")
+            .join("_internal");
+
+        #[cfg(not(target_os = "linux"))]
+        let qt_runtime = {
+            let exe_path = env::current_exe()?;
+            exe_path.parent().context("No parent dir for executable")?.join("_internal")
+        };
 
         #[cfg(target_os = "linux")]
         {

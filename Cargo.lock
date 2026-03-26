@@ -774,6 +774,7 @@ name = "capture-engine"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "dirs 5.0.1",
  "ops-chat-storage",
  "ops-profile-store",
  "sys-display-hotplug",
