@@ -232,6 +232,67 @@ pub fn run() {
                     }
                 }
 
+                if let (Ok(appimage_path), Ok(appdir_path)) = (std::env::var("APPIMAGE"), std::env::var("APPDIR")) {
+                    let appimage_path = std::path::PathBuf::from(appimage_path);
+                    let appdir_path = std::path::PathBuf::from(appdir_path);
+                    if let Some(home_dir) = dirs::home_dir() {
+                        let applications_dir = home_dir.join("Applications");
+                        
+                        if !appimage_path.starts_with(&applications_dir) && !appimage_path.starts_with("/usr") && !appimage_path.starts_with("/opt") {
+                            log::info!("AppImage running from temporary location: {}. Migrating...", appimage_path.display());
+                            
+                            let _ = std::fs::create_dir_all(&applications_dir);
+                            let target_appimage = applications_dir.join("Squigit.AppImage");
+                            
+                            if std::fs::rename(&appimage_path, &target_appimage).is_err() {
+                                if std::fs::copy(&appimage_path, &target_appimage).is_ok() {
+                                    let _ = std::fs::remove_file(&appimage_path);
+                                }
+                            }
+                            
+                            let target_icon_dir = home_dir.join(".local/share/icons/hicolor/512x512/apps");
+                            let _ = std::fs::create_dir_all(&target_icon_dir);
+                            let target_icon = target_icon_dir.join("squigit.png");
+                            
+                            let candidate_icons = [
+                                appdir_path.join("usr/share/icons/hicolor/512x512/apps/squigit.png"),
+                                appdir_path.join("usr/share/icons/hicolor/512x512/apps/Squigit.png"),
+                                appdir_path.join(".DirIcon"),
+                                appdir_path.join("squigit.png"),
+                                appdir_path.join("Squigit.png"),
+                            ];
+                            for candidate in candidate_icons {
+                                if candidate.exists() {
+                                    let _ = std::fs::copy(&candidate, &target_icon);
+                                    break;
+                                }
+                            }
+                            
+                            let target_desktop_dir = home_dir.join(".local/share/applications");
+                            let _ = std::fs::create_dir_all(&target_desktop_dir);
+                            let target_desktop = target_desktop_dir.join("squigit.desktop");
+                            let desktop_content = format!(
+r#"[Desktop Entry]
+Name=Squigit
+Comment=AI and contextual analysis module for screenshot data
+Exec="{}" %u
+Icon=squigit
+Terminal=false
+Type=Application
+Categories=Utility;"#,
+                                target_appimage.display()
+                            );
+                            let _ = std::fs::write(&target_desktop, desktop_content);
+                            
+                            let _ = std::process::Command::new("update-desktop-database")
+                                .arg(home_dir.join(".local/share/applications"))
+                                .status();
+                            
+                            log::info!("AppImage permanently installed to ~/Applications.");
+                        }
+                    }
+                }
+
                 let marker_file = config_dir.join(".shortcut_installed");
                 const SHORTCUT_MARKER_VERSION: &str = "2";
 
