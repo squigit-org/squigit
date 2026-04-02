@@ -764,6 +764,7 @@ export const useApp = () => {
             mimeType: "image/png",
             imageId: chatData.metadata.image_hash,
           },
+          chatData.rolling_summary,
         );
 
         ocr.setOcrData(navigationSafeOcrData);

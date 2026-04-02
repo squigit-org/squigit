@@ -51,6 +51,7 @@ export interface ChatData {
   messages: ChatMessage[];
   ocr_data: OcrFrame;
   imgbb_url: string | null;
+  rolling_summary: string | null;
 }
 
 /** Ranked chat search hit returned by the local search engine. */
@@ -212,6 +213,18 @@ export async function saveImgbbUrl(chatId: string, url: string): Promise<void> {
 /** Get imgbb URL for a chat. */
 export async function getImgbbUrl(chatId: string): Promise<string | null> {
   return invoke("get_imgbb_url", { chatId });
+}
+
+// =============================================================================
+// Rolling Summary Commands
+// =============================================================================
+
+/** Save rolling summary for a chat. */
+export async function saveRollingSummary(
+  chatId: string,
+  summary: string,
+): Promise<void> {
+  return invoke("save_rolling_summary", { chatId, summary });
 }
 
 // =============================================================================

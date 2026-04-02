@@ -21,6 +21,7 @@ interface GeminiStoreState {
   userName: string | null;
   userEmail: string | null;
   userInstruction: string | null;
+  conversationSummary: string | null;
 }
 
 export const geminiStore: GeminiStoreState = {
@@ -38,4 +39,5 @@ export const geminiStore: GeminiStoreState = {
   userName: null as string | null,
   userEmail: null as string | null,
   userInstruction: null as string | null,
+  conversationSummary: null as string | null,
 };

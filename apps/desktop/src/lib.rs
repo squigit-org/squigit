@@ -103,6 +103,7 @@ pub fn run() {
             commands::gemini::stream_gemini_chat_v2,
             commands::gemini::generate_chat_title,
             commands::gemini::generate_image_brief,
+            commands::gemini::compress_conversation,
             commands::gemini::cancel_gemini_request,
             // Window
             open_external_url,
@@ -154,6 +155,8 @@ pub fn run() {
             // ImgBB Storage
             save_imgbb_url,
             get_imgbb_url,
+            // Rolling Summary Storage
+            commands::chat::save_rolling_summary,
             // Native File IO
             copy_image_to_path,
             // Profile Management

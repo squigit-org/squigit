@@ -329,7 +329,8 @@ export const useGeminiEngine = (config: {
         (token: string) => {
           fullResponse += token;
           setStreamingText(fullResponse);
-        }
+        },
+        config.chatId,
       );
       const botMsg: Message = {
         id: responseId,
@@ -432,7 +433,8 @@ export const useGeminiEngine = (config: {
         (token: string) => {
           fullResponse += token;
           setStreamingText(fullResponse);
-        }
+        },
+        config.chatId,
       );
       const botMsg: Message = {
         id: responseId,

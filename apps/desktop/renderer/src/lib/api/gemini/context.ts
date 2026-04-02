@@ -19,6 +19,7 @@ export const resetBrainContext = () => {
   geminiStore.userName = null;
   geminiStore.userEmail = null;
   geminiStore.userInstruction = null;
+  geminiStore.conversationSummary = null;
 };
 
 export const setImageDescription = (description: string) => {
@@ -47,10 +48,7 @@ export const setUserFirstMsg = (msg: string) => {
 
 export const addToHistory = (role: "User" | "Assistant", content: string) => {
   geminiStore.conversationHistory.push({ role, content });
-
-  if (geminiStore.conversationHistory.length > 6) {
-    geminiStore.conversationHistory = geminiStore.conversationHistory.slice(-6);
-  }
+  // No more slice(-6) — summarize.ts handles windowing via maybeCompressHistory()
 };
 
 export const replaceLastAssistantHistory = (content: string) => {
@@ -80,13 +78,15 @@ export const restoreSession = (
   savedHistory: Array<{ role: string; content: string }>,
   savedImagePath: string | null,
   savedImageBrief: string | null = null,
+  savedSummary: string | null = null,
 ) => {
   geminiStore.currentModelId = modelId;
   geminiStore.imageDescription = savedImageDescription;
   geminiStore.userFirstMsg = savedUserFirstMsg;
-  geminiStore.conversationHistory = savedHistory.slice(-6);
+  geminiStore.conversationHistory = savedHistory;
   geminiStore.storedImagePath = savedImagePath;
   geminiStore.imageBrief = savedImageBrief;
+  geminiStore.conversationSummary = savedSummary;
 };
 
 export const getSessionState = () => ({

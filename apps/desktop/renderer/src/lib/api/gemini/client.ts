@@ -17,6 +17,12 @@ export {
   restoreSession,
   getSessionState,
 } from "./context";
+export {
+  buildContextWindow,
+  maybeCompressHistory,
+  setConversationSummary,
+  getConversationSummary,
+} from "./summarize";
 export { startNewThreadStream, startNewThread } from "./chat";
 export { sendMessage } from "./message";
 export { retryFromMessage } from "./edit";

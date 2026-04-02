@@ -8,12 +8,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { geminiStore } from "./store";
 import { GeminiEvent } from "./gemini.types";
-import { setUserFirstMsg, addToHistory, formatHistoryLog } from "./context";
+import { setUserFirstMsg, addToHistory } from "./context";
+import { buildContextWindow, maybeCompressHistory } from "./summarize";
 
 export const sendMessage = async (
   text: string,
   modelId?: string,
   onToken?: (token: string) => void,
+  chatId?: string | null,
 ): Promise<string> => {
   if (!geminiStore.storedApiKey) throw new Error("Gemini API Key not set");
   if (!geminiStore.imageDescription) throw new Error("No active chat session");
@@ -45,6 +47,8 @@ export const sendMessage = async (
       `[GeminiClient] Image Brief Present: ${Boolean(geminiStore.imageBrief)}`,
     );
 
+    const { historyLog, rollingSummary } = buildContextWindow();
+
     await invoke("stream_gemini_chat_v2", {
       apiKey: geminiStore.storedApiKey,
       model: geminiStore.currentModelId,
@@ -52,7 +56,8 @@ export const sendMessage = async (
       imagePath: null, // Image never re-sent, brief is used instead
       imageDescription: geminiStore.imageDescription,
       userFirstMsg: geminiStore.userFirstMsg,
-      historyLog: formatHistoryLog(),
+      historyLog,
+      rollingSummary,
       userMessage: text,
       channelId: channelId,
       userName: geminiStore.userName,
@@ -60,7 +65,6 @@ export const sendMessage = async (
       userInstruction: null, // One-time intent hook only sent on initial turn
       imageBrief: geminiStore.imageBrief,
     });
-
     unlisten();
     if (geminiStore.currentUnlisten === unlisten)
       geminiStore.currentUnlisten = null;
@@ -68,6 +72,9 @@ export const sendMessage = async (
     if (geminiStore.generationId !== myGenId) throw new Error("CANCELLED");
 
     addToHistory("Assistant", fullResponse);
+
+    // Fire-and-forget: compress older turns if threshold reached
+    maybeCompressHistory(chatId ?? null);
 
     console.log(
       `[GeminiClient] Stream Completed. Final Response: "${fullResponse}"`,

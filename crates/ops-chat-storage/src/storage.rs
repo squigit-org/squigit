@@ -426,11 +426,20 @@ impl ChatStorage {
             None
         };
 
+        // Load rolling summary
+        let summary_path = chat_dir.join("rolling_summary.txt");
+        let rolling_summary = if summary_path.exists() {
+            Some(fs::read_to_string(&summary_path)?)
+        } else {
+            None
+        };
+
         Ok(ChatData {
             metadata,
             messages,
             ocr_data,
             imgbb_url,
+            rolling_summary,
         })
     }
 
@@ -597,6 +606,29 @@ impl ChatStorage {
 
         let url = fs::read_to_string(&url_path)?;
         Ok(Some(url))
+    }
+
+    /// Save rolling summary for a chat.
+    pub fn save_rolling_summary(&self, chat_id: &str, summary: &str) -> Result<()> {
+        let chat_dir = self.chat_dir(chat_id);
+        fs::create_dir_all(&chat_dir)?;
+
+        let summary_path = chat_dir.join("rolling_summary.txt");
+        fs::write(&summary_path, summary)?;
+
+        Ok(())
+    }
+
+    /// Get rolling summary for a chat.
+    pub fn get_rolling_summary(&self, chat_id: &str) -> Result<Option<String>> {
+        let summary_path = self.chat_dir(chat_id).join("rolling_summary.txt");
+
+        if !summary_path.exists() {
+            return Ok(None);
+        }
+
+        let summary = fs::read_to_string(&summary_path)?;
+        Ok(Some(summary))
     }
 
     /// Append a message to a chat.

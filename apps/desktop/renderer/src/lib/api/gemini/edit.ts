@@ -8,7 +8,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { geminiStore } from "./store";
 import { GeminiEvent } from "./gemini.types";
-import { setImageDescription, setImageBrief, formatHistoryLog, addToHistory } from "./context";
+import { setImageDescription, setImageBrief, addToHistory } from "./context";
+import { buildContextWindow } from "./summarize";
 
 export const retryFromMessage = async (
   messageIndex: number,
@@ -70,6 +71,7 @@ export const retryFromMessage = async (
         imageDescription: null,
         userFirstMsg: null,
         historyLog: null,
+        rollingSummary: null,
         userMessage: "",
         channelId,
         userName: geminiStore.userName,
@@ -113,10 +115,7 @@ export const retryFromMessage = async (
     role: m.role === "user" ? "User" : "Assistant",
     content: m.text,
   }));
-
-  if (geminiStore.conversationHistory.length > 6) {
-    geminiStore.conversationHistory = geminiStore.conversationHistory.slice(-6);
-  }
+  // No more slice(-6) — summarize.ts handles windowing
 
   const lastUserMsg = [...messagesBefore]
     .reverse()
@@ -137,6 +136,8 @@ export const retryFromMessage = async (
   geminiStore.currentUnlisten = unlisten;
 
   try {
+    const { historyLog, rollingSummary } = buildContextWindow();
+
     await invoke("stream_gemini_chat_v2", {
       apiKey: geminiStore.storedApiKey,
       model: geminiStore.currentModelId,
@@ -144,7 +145,8 @@ export const retryFromMessage = async (
       imagePath: null, // Image never re-sent, brief is used instead
       imageDescription: imgDesc,
       userFirstMsg: geminiStore.userFirstMsg,
-      historyLog: formatHistoryLog(),
+      historyLog,
+      rollingSummary,
       userMessage: lastUserMsg.text,
       channelId,
       userName: geminiStore.userName,

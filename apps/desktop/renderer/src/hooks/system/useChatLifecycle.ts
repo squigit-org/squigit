@@ -119,6 +119,7 @@ export const useChatLifecycle = (config: {
       firstResponseId: string | null;
     },
     image?: { path: string; mimeType: string; imageId: string },
+    rollingSummary?: string | null,
   ) => {
     setMessages(state.messages);
     setStreamingText(state.streamingText);
@@ -152,6 +153,7 @@ export const useChatLifecycle = (config: {
           savedHistory,
           imagePath,
           firstMsg.text, // fallback for older sessions
+          rollingSummary ?? null,
         );
       } catch (e) {
         console.error("Failed to restore Gemini session:", e);

@@ -120,6 +120,10 @@ pub struct ChatData {
     /// Optional imgbb upload URL.
     #[serde(default)]
     pub imgbb_url: Option<String>,
+    /// Rolling summary of compressed older conversation turns.
+    /// Persisted so summaries survive app restarts and session switches.
+    #[serde(default)]
+    pub rolling_summary: Option<String>,
 }
 
 impl ChatData {
@@ -130,6 +134,7 @@ impl ChatData {
             messages: Vec::new(),
             ocr_data: HashMap::new(),
             imgbb_url: None,
+            rolling_summary: None,
         }
     }
 }

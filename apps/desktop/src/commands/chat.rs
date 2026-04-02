@@ -393,3 +393,12 @@ pub fn get_imgbb_url(chat_id: String) -> Result<Option<String>, String> {
     let storage = get_active_storage()?;
     storage.get_imgbb_url(&chat_id).map_err(|e| e.to_string())
 }
+
+/// Save rolling summary for a chat.
+#[tauri::command]
+pub fn save_rolling_summary(chat_id: String, summary: String) -> Result<(), String> {
+    let storage = get_active_storage()?;
+    storage
+        .save_rolling_summary(&chat_id, &summary)
+        .map_err(|e| e.to_string())
+}

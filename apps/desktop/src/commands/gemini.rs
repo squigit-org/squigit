@@ -227,6 +227,8 @@ pub async fn stream_gemini_chat_v2(
     image_description: Option<String>,
     user_first_msg: Option<String>,
     history_log: Option<String>,
+    // Rolling summary of compressed older turns
+    rolling_summary: Option<String>,
     // Current user message (empty on first turn for image-only analysis)
     user_message: String,
     channel_id: String,
@@ -321,7 +323,8 @@ pub async fn stream_gemini_chat_v2(
             let first_msg = user_first_msg.unwrap_or_default();
             let history = history_log.unwrap_or_default();
 
-            let context_prompt = crate::brain::processor::build_turn_context(&img_desc, &first_msg, &history);
+            let summary = rolling_summary.clone().unwrap_or_default();
+            let context_prompt = crate::brain::processor::build_turn_context(&img_desc, &first_msg, &history, &summary);
 
             let mut parts = vec![GeminiPart {
                 text: Some(context_prompt),
@@ -610,5 +613,81 @@ pub async fn generate_image_brief(
     }
 
     println!("[ImageBrief] Failed to extract text, returning empty");
+    Ok(String::new())
+}
+
+/// Compress older conversation turns into a rolling summary.
+/// Uses the cheapest/fastest model (same as image_brief and title gen).
+/// Non-streaming, returns the compressed summary text.
+#[tauri::command]
+pub async fn compress_conversation(
+    api_key: String,
+    image_brief: String,
+    history_to_compress: String,
+) -> Result<String, String> {
+    let summary_prompt = crate::brain::memory::build_summary_prompt(&image_brief, &history_to_compress);
+    let lite_model = crate::constants::DEFAULT_MODEL;
+
+    println!("[Summarizer] Compressing conversation using model: {}", lite_model);
+
+    let client = reqwest::Client::new();
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        lite_model, api_key
+    );
+
+    let parts = vec![GeminiPart {
+        text: Some(summary_prompt),
+        ..Default::default()
+    }];
+
+    let contents = vec![GeminiContent {
+        role: "user".to_string(),
+        parts,
+    }];
+
+    let request_body = GeminiRequest {
+        system_instruction: None,
+        contents,
+    };
+
+    let response = client
+        .post(&url)
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send compress request: {}", e))?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        println!("[Summarizer] Error: {}", error_text);
+        return Err(format!("Compress API error: {}", error_text));
+    }
+
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read compress response: {}", e))?;
+
+    let chunk: GeminiResponseChunk = serde_json::from_str(&body).map_err(|e| {
+        format!("Failed to parse compress response: {} - Body: {}", e, &body[..body.len().min(500)])
+    })?;
+
+    if let Some(candidates) = chunk.candidates {
+        if let Some(first) = candidates.first() {
+            if let Some(content) = &first.content {
+                if let Some(parts) = &content.parts {
+                    for part in parts {
+                        if let Some(text) = &part.text {
+                            println!("[Summarizer] Compressed to {} chars", text.trim().len());
+                            return Ok(text.trim().to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    println!("[Summarizer] Failed to extract summary, returning empty");
     Ok(String::new())
 }
