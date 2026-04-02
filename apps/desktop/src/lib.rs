@@ -102,6 +102,7 @@ pub fn run() {
             // Gemini
             commands::gemini::stream_gemini_chat_v2,
             commands::gemini::generate_chat_title,
+            commands::gemini::generate_image_brief,
             commands::gemini::cancel_gemini_request,
             // Window
             open_external_url,
@@ -232,9 +233,8 @@ pub fn run() {
                     }
                 }
 
-                if let (Ok(appimage_path), Ok(appdir_path)) = (std::env::var("APPIMAGE"), std::env::var("APPDIR")) {
+                if let (Ok(appimage_path), Ok(_appdir_path)) = (std::env::var("APPIMAGE"), std::env::var("APPDIR")) {
                     let appimage_path = std::path::PathBuf::from(appimage_path);
-                    let appdir_path = std::path::PathBuf::from(appdir_path);
                     if let Some(home_dir) = dirs::home_dir() {
                         let applications_dir = home_dir.join("Applications");
                         

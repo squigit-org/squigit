@@ -31,6 +31,9 @@ export const useGeminiEngine = (config: {
   onTitleGenerated?: (title: string) => void;
   generateTitle?: (text: string) => Promise<string>;
   state: any; // from useChatState
+  userName?: string;
+  userEmail?: string;
+  userInstruction?: string;
 }) => {
   const {
     messages,
@@ -119,30 +122,26 @@ export const useGeminiEngine = (config: {
         return;
       }
 
-      let hasTriggeredTitle = false;
-
       console.log(
         "[useGeminiEngine] Calling startNewThreadStream with model:",
         modelId,
       );
-      await startNewThreadStream(modelId, imgData.path, (token: string) => {
-        if (signal.aborted) return;
-        fullResponse += token;
-        setStreamingText(fullResponse);
-        
-        if (
-          !isRetry &&
-          !imgData.fromHistory &&
-          !hasTriggeredTitle &&
-          fullResponse.length > 50
-        ) {
-          console.log(
-            "[useGeminiEngine] Triggering title generation due to stream length > 50",
-          );
-          hasTriggeredTitle = true;
-          if (config.generateTitle && config.onTitleGenerated) {
+      await startNewThreadStream(
+        modelId,
+        imgData.path,
+        (token: string) => {
+          if (signal.aborted) return;
+          fullResponse += token;
+          setStreamingText(fullResponse);
+        },
+        config.userName,
+        config.userEmail,
+        config.userInstruction,
+        (brief: string) => {
+          if (!isRetry && !imgData.fromHistory && config.generateTitle && config.onTitleGenerated) {
+            console.log("[useGeminiEngine] Triggering title generation using image brief");
             config
-              .generateTitle(fullResponse)
+              .generateTitle(brief)
               .then((title) => {
                 console.log("[useGeminiEngine] Title generated:", title);
                 if (!signal.aborted) config.onTitleGenerated?.(title);
@@ -150,24 +149,8 @@ export const useGeminiEngine = (config: {
               .catch(console.error);
           }
         }
-      });
+      );
       console.log("[useGeminiEngine] startNewThreadStream finished!");
-
-      if (!isRetry && !imgData.fromHistory && !hasTriggeredTitle) {
-        hasTriggeredTitle = true;
-        if (
-          config.generateTitle &&
-          config.onTitleGenerated &&
-          fullResponse.length > 0
-        ) {
-          config
-            .generateTitle(fullResponse)
-            .then((title) => {
-              if (!signal.aborted) config.onTitleGenerated?.(title);
-            })
-            .catch(console.error);
-        }
-      }
 
       if (signal.aborted) {
         setIsLoading(false);

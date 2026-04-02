@@ -23,8 +23,6 @@ export const sendMessage = async (
   }
 
   const myGenId = geminiStore.generationId;
-  const isFirstTurnWithImage =
-    !geminiStore.userFirstMsg && geminiStore.storedImagePath;
   setUserFirstMsg(text);
   addToHistory("User", text);
 
@@ -44,21 +42,23 @@ export const sendMessage = async (
     console.log(`[GeminiClient] Target Model: ${geminiStore.currentModelId}`);
     console.log(`[GeminiClient] Prompt: "${text}"`);
     console.log(
-      `[GeminiClient] Has Initial Image Active: ${Boolean(isFirstTurnWithImage)}`,
+      `[GeminiClient] Image Brief Present: ${Boolean(geminiStore.imageBrief)}`,
     );
 
     await invoke("stream_gemini_chat_v2", {
       apiKey: geminiStore.storedApiKey,
       model: geminiStore.currentModelId,
       isInitialTurn: false,
-      imageBase64: null,
-      imageMimeType: null,
-      imagePath: isFirstTurnWithImage ? geminiStore.storedImagePath : null,
+      imagePath: null, // Image never re-sent, brief is used instead
       imageDescription: geminiStore.imageDescription,
       userFirstMsg: geminiStore.userFirstMsg,
       historyLog: formatHistoryLog(),
       userMessage: text,
       channelId: channelId,
+      userName: geminiStore.userName,
+      userEmail: geminiStore.userEmail,
+      userInstruction: null, // One-time intent hook only sent on initial turn
+      imageBrief: geminiStore.imageBrief,
     });
 
     unlisten();

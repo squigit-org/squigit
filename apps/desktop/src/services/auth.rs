@@ -15,7 +15,7 @@ use url::Url;
 
 use ops_profile_store::{Profile, ProfileStore};
 
-const EMBEDDED_SECRETS_JSON: &str = include_str!("../data/credentials.example.json");
+const EMBEDDED_SECRETS_JSON: &str = include_str!(env!("SQUIGIT_GOOGLE_CREDENTIALS_EMBEDDED_FILE"));
 
 const HTML_TEMPLATE: &str = include_str!("../data/success.html");
 

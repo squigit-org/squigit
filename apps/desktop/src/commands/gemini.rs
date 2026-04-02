@@ -167,6 +167,8 @@ pub struct GeminiContent {
 
 #[derive(Debug, Serialize)]
 struct GeminiRequest {
+    #[serde(rename = "systemInstruction", skip_serializing_if = "Option::is_none")]
+    system_instruction: Option<GeminiContent>,
     contents: Vec<GeminiContent>,
 }
 
@@ -200,12 +202,17 @@ struct GeminiEvent {
 /// Brain-aware chat command (v2)
 ///
 /// For initial turns (is_initial_turn=true):
-///   - Uses soul.yml + scenes.json to build system prompt
-///   - Requires image_base64 and image_mime_type
+///   - Uses soul.yml + scenes.json to build system prompt (user content)
+///   - Requires image_path
+///   - user_instruction appended as one-time intent hook
 ///
 /// For subsequent turns (is_initial_turn=false):
 ///   - Uses frame.md template with context anchors
 ///   - Requires image_description, user_first_msg, history_log
+///
+/// On ALL turns:
+///   - system.yml is sent via native system_instruction field
+///   - Contains: identity brief + OS + timezone + user profile + image_brief
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn stream_gemini_chat_v2(
@@ -223,6 +230,11 @@ pub async fn stream_gemini_chat_v2(
     // Current user message (empty on first turn for image-only analysis)
     user_message: String,
     channel_id: String,
+    // Runtime context params (NEW)
+    user_name: Option<String>,
+    user_email: Option<String>,
+    user_instruction: Option<String>,
+    image_brief: Option<String>,
 ) -> Result<(), String> {
     let client = reqwest::Client::new();
     let url = format!(
@@ -237,8 +249,22 @@ pub async fn stream_gemini_chat_v2(
     }
 
     let contents_future = async {
+        // Build system_instruction (present on ALL turns)
+        let sys_instruction = crate::brain::processor::build_system_instruction(
+            user_name.as_deref().unwrap_or(""),
+            user_email.as_deref().unwrap_or(""),
+            image_brief.as_deref().unwrap_or(""),
+        )?;
+        let system_instruction = Some(GeminiContent {
+            role: "user".to_string(), // role is ignored for system_instruction per API docs
+            parts: vec![GeminiPart {
+                text: Some(sys_instruction),
+                ..Default::default()
+            }],
+        });
+
         let contents: Vec<GeminiContent> = if is_initial_turn {
-            // Initial turn: soul + scenes + image
+            // Initial turn: soul + scenes + image + user_instruction (one-time intent hook)
             let system_prompt = crate::brain::processor::build_initial_system_prompt()?;
 
             let mut parts = vec![];
@@ -266,6 +292,16 @@ pub async fn stream_gemini_chat_v2(
                 ..Default::default()
             });
 
+            // Append user's default instruction as one-time intent hook
+            if let Some(ref instruction) = user_instruction {
+                if !instruction.trim().is_empty() {
+                    parts.push(GeminiPart {
+                        text: Some(format!("\n## User's Default Instruction\n{}", instruction)),
+                        ..Default::default()
+                    });
+                }
+            }
+
             // Add user message if provided
             if !user_message.is_empty() {
                 let interleaved_parts =
@@ -279,6 +315,7 @@ pub async fn stream_gemini_chat_v2(
             }]
         } else {
             // Subsequent turn: frame.md with context
+            // Image is NO LONGER re-sent — image_brief is in system_instruction
             let img_desc =
                 image_description.ok_or("image_description required for subsequent turns")?;
             let first_msg = user_first_msg.unwrap_or_default();
@@ -291,23 +328,6 @@ pub async fn stream_gemini_chat_v2(
                 ..Default::default()
             }];
 
-            // Re-send image if provided (e.g. for first user intent message)
-            if let Some(path) = image_path {
-                let file_ref = crate::commands::gemini_files::ensure_file_uploaded(
-                    &api_key,
-                    &path,
-                    &state.gemini_file_cache,
-                )
-                .await?;
-                parts.push(GeminiPart {
-                    file_data: Some(GeminiFileData {
-                        mime_type: file_ref.mime_type.clone(),
-                        file_uri: file_ref.file_uri.clone(),
-                    }),
-                    ..Default::default()
-                });
-            }
-
             let interleaved_parts =
                 build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache).await?;
             parts.extend(interleaved_parts);
@@ -318,7 +338,7 @@ pub async fn stream_gemini_chat_v2(
             }]
         };
 
-        let request_body = GeminiRequest { contents };
+        let request_body = GeminiRequest { system_instruction, contents };
         let response = client.post(&url).json(&request_body).send().await.map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
         
         Ok::<reqwest::Response, String>(response)
@@ -444,7 +464,10 @@ pub async fn generate_chat_title(
         parts,
     }];
 
-    let request_body = GeminiRequest { contents };
+    let request_body = GeminiRequest {
+        system_instruction: None,
+        contents,
+    };
 
     let response = client
         .post(&url)
@@ -492,4 +515,100 @@ pub async fn generate_chat_title(
 
     println!("Title Gen Failed to extract text from candidates");
     Ok("New thread".to_string())
+}
+
+/// Generate a lightweight text description of an image using the cheapest model.
+/// Returns a 2-3 sentence plain-text description of what the image shows.
+/// This runs in parallel with the main analysis and the result is stored
+/// as `image_brief` in system_instruction for all subsequent turns.
+#[tauri::command]
+pub async fn generate_image_brief(
+    state: tauri::State<'_, crate::state::AppState>,
+    api_key: String,
+    image_path: String,
+) -> Result<String, String> {
+    use crate::brain::processor::get_image_brief_prompt;
+
+    let brief_prompt = get_image_brief_prompt()?;
+    let lite_model = crate::constants::DEFAULT_MODEL;
+
+    println!("[ImageBrief] Generating brief using model: {}", lite_model);
+
+    let client = reqwest::Client::new();
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        lite_model, api_key
+    );
+
+    // Upload image via Files API (reuses cache)
+    let file_ref = crate::commands::gemini_files::ensure_file_uploaded(
+        &api_key,
+        &image_path,
+        &state.gemini_file_cache,
+    )
+    .await?;
+
+    let parts = vec![
+        GeminiPart {
+            file_data: Some(GeminiFileData {
+                mime_type: file_ref.mime_type.clone(),
+                file_uri: file_ref.file_uri.clone(),
+            }),
+            ..Default::default()
+        },
+        GeminiPart {
+            text: Some(brief_prompt),
+            ..Default::default()
+        },
+    ];
+
+    let contents = vec![GeminiContent {
+        role: "user".to_string(),
+        parts,
+    }];
+
+    let request_body = GeminiRequest {
+        system_instruction: None,
+        contents,
+    };
+
+    let response = client
+        .post(&url)
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send image brief request: {}", e))?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        println!("[ImageBrief] Error: {}", error_text);
+        return Err(format!("Image brief API error: {}", error_text));
+    }
+
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read image brief response: {}", e))?;
+
+    let chunk: GeminiResponseChunk = serde_json::from_str(&body).map_err(|e| {
+        format!("Failed to parse image brief response: {} - Body: {}", e, &body[..body.len().min(500)])
+    })?;
+
+    if let Some(candidates) = chunk.candidates {
+        if let Some(first) = candidates.first() {
+            if let Some(content) = &first.content {
+                if let Some(parts) = &content.parts {
+                    for part in parts {
+                        if let Some(text) = &part.text {
+                            println!("[ImageBrief] Generated: {}", text.trim());
+                            return Ok(text.trim().to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    println!("[ImageBrief] Failed to extract text, returning empty");
+    Ok(String::new())
 }

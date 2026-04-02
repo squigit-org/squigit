@@ -151,6 +151,7 @@ export const useChatLifecycle = (config: {
           firstUserMsg?.text || null,
           savedHistory,
           imagePath,
+          firstMsg.text, // fallback for older sessions
         );
       } catch (e) {
         console.error("Failed to restore Gemini session:", e);

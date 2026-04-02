@@ -15,6 +15,10 @@ export const resetBrainContext = () => {
   geminiStore.userFirstMsg = null;
   geminiStore.conversationHistory = [];
   geminiStore.storedImagePath = null;
+  geminiStore.imageBrief = null;
+  geminiStore.userName = null;
+  geminiStore.userEmail = null;
+  geminiStore.userInstruction = null;
 };
 
 export const setImageDescription = (description: string) => {
@@ -22,6 +26,18 @@ export const setImageDescription = (description: string) => {
 };
 
 export const getImageDescription = () => geminiStore.imageDescription;
+
+export const setUserInfo = (name?: string, email?: string, instruction?: string) => {
+  if (name) geminiStore.userName = name;
+  if (email) geminiStore.userEmail = email;
+  if (instruction) geminiStore.userInstruction = instruction;
+};
+
+export const setImageBrief = (brief: string) => {
+  geminiStore.imageBrief = brief;
+};
+
+export const getImageBrief = () => geminiStore.imageBrief;
 
 export const setUserFirstMsg = (msg: string) => {
   if (!geminiStore.userFirstMsg && msg) {
@@ -63,16 +79,19 @@ export const restoreSession = (
   savedUserFirstMsg: string | null,
   savedHistory: Array<{ role: string; content: string }>,
   savedImagePath: string | null,
+  savedImageBrief: string | null = null,
 ) => {
   geminiStore.currentModelId = modelId;
   geminiStore.imageDescription = savedImageDescription;
   geminiStore.userFirstMsg = savedUserFirstMsg;
   geminiStore.conversationHistory = savedHistory.slice(-6);
   geminiStore.storedImagePath = savedImagePath;
+  geminiStore.imageBrief = savedImageBrief;
 };
 
 export const getSessionState = () => ({
   imageDescription: geminiStore.imageDescription,
   userFirstMsg: geminiStore.userFirstMsg,
   conversationHistory: [...geminiStore.conversationHistory],
+  imageBrief: geminiStore.imageBrief,
 });

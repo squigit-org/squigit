@@ -8,7 +8,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { geminiStore } from "./store";
 import { GeminiEvent } from "./gemini.types";
-import { setImageDescription, formatHistoryLog, addToHistory } from "./context";
+import { setImageDescription, setImageBrief, formatHistoryLog, addToHistory } from "./context";
 
 export const retryFromMessage = async (
   messageIndex: number,
@@ -16,6 +16,7 @@ export const retryFromMessage = async (
   modelId: string,
   onToken?: (token: string) => void,
   fallbackImagePath?: string,
+  onBriefReady?: (brief: string) => void,
 ): Promise<string> => {
   if (!geminiStore.storedApiKey) throw new Error("Gemini API Key not set");
 
@@ -47,18 +48,34 @@ export const retryFromMessage = async (
     geminiStore.currentUnlisten = unlisten;
 
     try {
+      // Fire image brief in parallel for index 0 retry, same as chat.ts
+      const briefPromise = invoke<string>("generate_image_brief", {
+        apiKey: geminiStore.storedApiKey,
+        imagePath: geminiStore.storedImagePath,
+      }).then((brief) => {
+        if (brief && onBriefReady) {
+          onBriefReady(brief);
+        }
+        return brief;
+      }).catch((e) => {
+        console.warn("[GeminiClient] Image brief failed during retry:", e);
+        return "";
+      });
+
       await invoke("stream_gemini_chat_v2", {
         apiKey: geminiStore.storedApiKey,
         model: geminiStore.currentModelId,
         isInitialTurn: true,
-        imageBase64: null,
-        imageMimeType: null,
         imagePath: geminiStore.storedImagePath,
         imageDescription: null,
         userFirstMsg: null,
         historyLog: null,
         userMessage: "",
         channelId,
+        userName: geminiStore.userName,
+        userEmail: geminiStore.userEmail,
+        userInstruction: geminiStore.userInstruction,
+        imageBrief: "",
       });
 
       unlisten();
@@ -68,6 +85,10 @@ export const retryFromMessage = async (
       if (geminiStore.generationId !== myGenId) throw new Error("CANCELLED");
 
       setImageDescription(fullResponse);
+      const brief = await briefPromise;
+      if (brief) {
+        setImageBrief(brief);
+      }
       geminiStore.conversationHistory = [
         { role: "Assistant", content: fullResponse },
       ];
@@ -104,8 +125,6 @@ export const retryFromMessage = async (
     throw new Error("No user message found before the retried message");
   }
 
-  const isFirstTurnWithImage = !firstUser && geminiStore.storedImagePath;
-
   const channelId = `gemini-stream-${Date.now()}`;
   geminiStore.currentChannelId = channelId;
   let fullResponse = "";
@@ -122,14 +141,16 @@ export const retryFromMessage = async (
       apiKey: geminiStore.storedApiKey,
       model: geminiStore.currentModelId,
       isInitialTurn: false,
-      imageBase64: null,
-      imageMimeType: null,
-      imagePath: isFirstTurnWithImage ? geminiStore.storedImagePath : null,
+      imagePath: null, // Image never re-sent, brief is used instead
       imageDescription: imgDesc,
       userFirstMsg: geminiStore.userFirstMsg,
       historyLog: formatHistoryLog(),
       userMessage: lastUserMsg.text,
       channelId,
+      userName: geminiStore.userName,
+      userEmail: geminiStore.userEmail,
+      userInstruction: null, // One-time intent hook not needed on retries
+      imageBrief: geminiStore.imageBrief,
     });
 
     unlisten();

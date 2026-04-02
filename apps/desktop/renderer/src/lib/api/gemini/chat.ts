@@ -11,7 +11,9 @@ import { GeminiEvent } from "./gemini.types";
 import { cancelCurrentRequest } from "./cancel";
 import {
   resetBrainContext,
+  setUserInfo,
   setImageDescription,
+  setImageBrief,
   addToHistory,
 } from "./context";
 
@@ -19,6 +21,10 @@ export const startNewThreadStream = async (
   modelId: string,
   imagePath: string,
   onToken: (token: string) => void,
+  userName?: string,
+  userEmail?: string,
+  userInstruction?: string,
+  onBriefReady?: (brief: string) => void,
 ): Promise<string> => {
   if (!geminiStore.storedApiKey) throw new Error("Gemini API Key not set");
 
@@ -28,6 +34,7 @@ export const startNewThreadStream = async (
   const myGenId = geminiStore.generationId;
 
   resetBrainContext();
+  setUserInfo(userName, userEmail, userInstruction);
   geminiStore.storedImagePath = imagePath;
 
   const channelId = `gemini-stream-${Date.now()}`;
@@ -45,18 +52,34 @@ export const startNewThreadStream = async (
     console.log(`[GeminiClient] Starting New Stream`);
     console.log(`[GeminiClient] Target Model: ${modelId}`);
 
+    // Fire image brief in parallel
+    const briefPromise = invoke<string>("generate_image_brief", {
+      apiKey: geminiStore.storedApiKey,
+      imagePath,
+    }).then((brief) => {
+      if (brief && onBriefReady) {
+        onBriefReady(brief);
+      }
+      return brief;
+    }).catch((e) => {
+      console.warn("[GeminiClient] Image brief failed, continuing without:", e);
+      return "";
+    });
+
     await invoke("stream_gemini_chat_v2", {
       apiKey: geminiStore.storedApiKey,
       model: modelId,
       isInitialTurn: true,
-      imageBase64: null,
-      imageMimeType: null,
       imagePath,
       imageDescription: null,
       userFirstMsg: null,
       historyLog: null,
       userMessage: "",
       channelId: channelId,
+      userName,
+      userEmail,
+      userInstruction,
+      imageBrief: "", // Empty on initial turn
     });
 
     unlisten();
@@ -72,7 +95,12 @@ export const startNewThreadStream = async (
     console.log(
       `[GeminiClient] Stream Completed successfully. Length: ${fullResponse.length} chars.`,
     );
-    return fullResponse;
+    const brief = await briefPromise;
+    if (brief) {
+      setImageBrief(brief);
+    }
+    
+    return fullResponse.trim();
   } catch (error) {
     unlisten();
     if (geminiStore.currentUnlisten === unlisten)

@@ -96,6 +96,33 @@ pub fn interpolate(template: &str, vars: &HashMap<String, String>) -> String {
     result
 }
 
+/// System runtime configuration from system.yml
+#[derive(Debug, Deserialize)]
+pub struct SystemConfig {
+    pub identity_brief: String,
+    pub runtime_template: String,
+}
+
+/// Image brief configuration from image_brief.yml
+#[derive(Debug, Deserialize)]
+pub struct ImageBriefConfig {
+    pub describe_image: String,
+}
+
+/// Load the system runtime configuration from embedded YAML
+pub fn load_system() -> Result<SystemConfig, String> {
+    let yaml_content = include_str!("prompts/core/system.yml");
+    serde_yaml::from_str(yaml_content).map_err(|e| format!("Failed to parse system.yml: {}", e))
+}
+
+/// Load the image brief prompt from embedded YAML
+pub fn load_image_brief_prompt() -> Result<String, String> {
+    let yaml_content = include_str!("prompts/core/image_brief.yml");
+    let config: ImageBriefConfig = serde_yaml::from_str(yaml_content)
+        .map_err(|e| format!("Failed to parse image_brief.yml: {}", e))?;
+    Ok(config.describe_image)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

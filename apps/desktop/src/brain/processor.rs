@@ -3,7 +3,10 @@
 
 //! Processor module - Builds API payloads for initial and subsequent turns.
 
-use crate::brain::loader::{interpolate, load_frame, load_scenes, load_soul, load_title_prompt};
+use crate::brain::loader::{
+    interpolate, load_frame, load_image_brief_prompt, load_scenes, load_soul, load_system,
+    load_title_prompt,
+};
 use std::collections::HashMap;
 
 /// Build the system prompt for the initial turn (with image).
@@ -94,6 +97,92 @@ pub fn build_turn_context(
 /// Get the title generation prompt.
 pub fn get_title_prompt() -> Result<String, String> {
     load_title_prompt()
+}
+
+/// Get the image brief prompt (for lightweight description via Lite model).
+pub fn get_image_brief_prompt() -> Result<String, String> {
+    load_image_brief_prompt()
+}
+
+/// Build the system instruction for the native Gemini `system_instruction` field.
+/// Called on EVERY turn. Interpolates system.yml with runtime data.
+pub fn build_system_instruction(
+    user_name: &str,
+    user_email: &str,
+    image_brief: &str,
+) -> Result<String, String> {
+    let system_config = load_system()?;
+
+    // Collect runtime data
+    let now = chrono::Local::now();
+    let datetime = now.format("%Y-%m-%d %H:%M:%S").to_string();
+    let timezone = iana_time_zone::get_timezone().unwrap_or_else(|_| "Unknown".to_string());
+
+    // OS info via std (tauri_plugin_os requires AppHandle, so we use std::env::consts + sysinfo)
+    let os_type = std::env::consts::OS; // "linux", "macos", "windows"
+    let os_arch = std::env::consts::ARCH; // "x86_64", "aarch64"
+    let platform = if cfg!(target_os = "linux") {
+        "desktop/linux"
+    } else if cfg!(target_os = "macos") {
+        "desktop/macos"
+    } else if cfg!(target_os = "windows") {
+        "desktop/windows"
+    } else {
+        "desktop/unknown"
+    };
+
+    // OS version: try /etc/os-release on Linux, fallback to consts
+    let os_version = get_os_version();
+
+    // Hostname via system command (no extra crate needed)
+    let hostname = std::process::Command::new("hostname")
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    // Locale from environment
+    let locale = std::env::var("LANG")
+        .or_else(|_| std::env::var("LC_ALL"))
+        .unwrap_or_else(|_| "en_US.UTF-8".to_string());
+
+    // Interpolate runtime template
+    let mut vars = HashMap::new();
+    vars.insert("DATETIME".to_string(), datetime);
+    vars.insert("TIMEZONE".to_string(), timezone);
+    vars.insert("OS_TYPE".to_string(), os_type.to_string());
+    vars.insert("OS_VERSION".to_string(), os_version);
+    vars.insert("OS_ARCH".to_string(), os_arch.to_string());
+    vars.insert("PLATFORM".to_string(), platform.to_string());
+    vars.insert("HOSTNAME".to_string(), hostname);
+    vars.insert("LOCALE".to_string(), locale);
+    vars.insert("USER_NAME".to_string(), user_name.to_string());
+    vars.insert("USER_EMAIL".to_string(), user_email.to_string());
+    vars.insert("IMAGE_BRIEF".to_string(), if image_brief.is_empty() {
+        "(Image file is attached directly to this request)".to_string()
+    } else {
+        image_brief.to_string()
+    });
+
+    let runtime_section = interpolate(&system_config.runtime_template, &vars);
+    let full_instruction = format!("{}\n{}", system_config.identity_brief.trim(), runtime_section);
+
+    Ok(full_instruction)
+}
+
+/// Try to get a descriptive OS version string.
+fn get_os_version() -> String {
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(content) = std::fs::read_to_string("/etc/os-release") {
+            for line in content.lines() {
+                if let Some(pretty) = line.strip_prefix("PRETTY_NAME=") {
+                    return pretty.trim_matches('"').to_string();
+                }
+            }
+        }
+    }
+    // Fallback for all platforms
+    std::env::consts::OS.to_string()
 }
 
 /// Format conversation history for the frame template.

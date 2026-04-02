@@ -17,6 +17,10 @@ interface GeminiStoreState {
   userFirstMsg: string | null;
   conversationHistory: Array<{ role: string; content: string }>;
   storedImagePath: string | null;
+  imageBrief: string | null;
+  userName: string | null;
+  userEmail: string | null;
+  userInstruction: string | null;
 }
 
 export const geminiStore: GeminiStoreState = {
@@ -30,4 +34,8 @@ export const geminiStore: GeminiStoreState = {
   userFirstMsg: null as string | null,
   conversationHistory: [] as Array<{ role: string; content: string }>,
   storedImagePath: null as string | null,
+  imageBrief: null as string | null,
+  userName: null as string | null,
+  userEmail: null as string | null,
+  userInstruction: null as string | null,
 };

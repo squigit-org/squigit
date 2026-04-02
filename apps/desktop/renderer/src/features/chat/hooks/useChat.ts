@@ -22,6 +22,8 @@ export const useChat = ({
   onMissingApiKey,
   onTitleGenerated,
   generateTitle,
+  userName,
+  userEmail,
 }: {
   apiKey: string;
   currentModel: string;
@@ -41,6 +43,8 @@ export const useChat = ({
   onMissingApiKey?: () => void;
   onTitleGenerated?: (title: string) => void;
   generateTitle?: (text: string) => Promise<string>;
+  userName?: string;
+  userEmail?: string;
 }) => {
   const state = useChatState(enabled);
 
@@ -57,6 +61,9 @@ export const useChat = ({
     onTitleGenerated,
     generateTitle,
     state,
+    userName,
+    userEmail,
+    userInstruction: prompt,
   });
 
   const lifecycle = useChatLifecycle({

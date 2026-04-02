@@ -314,6 +314,8 @@ export const useApp = () => {
       system.setSessionChatTitle(title);
     },
     generateTitle: generateTitleForText,
+    userName: system.userName,
+    userEmail: system.userEmail,
   });
 
   const isActiveChatBusy =
