@@ -361,7 +361,7 @@
   position: absolute;
   top: 50%;
   right: 0;
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateZ(0);
   width: 24px;
   height: 24px;
   border-radius: 4px;
@@ -376,7 +376,6 @@
   opacity: 0;
   visibility: hidden;
   will-change: opacity;
-  transform: translateZ(0);
 }
 
 .chatRow:hover .menuBtn,

@@ -6,7 +6,7 @@
 
 .contextMenu {
   background: var(--c-raw-147);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--c-raw-149);
   border-radius: 8px;
   box-shadow: 0 4px 12px var(--c-raw-084);
   padding: 4px;
@@ -34,7 +34,7 @@
 }
 
 .contextMenuItem:hover {
-  background: var(--c-raw-038);
+  background: var(--c-raw-150);
 }
 
 .contextMenuItem:disabled {
