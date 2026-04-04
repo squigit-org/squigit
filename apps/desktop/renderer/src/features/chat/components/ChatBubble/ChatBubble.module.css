@@ -96,6 +96,46 @@
   padding-left: 10px;
 }
 
+.toolTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.toolRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  color: var(--c-raw-004);
+}
+
+.toolDot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.toolDotRunning {
+  background: color-mix(in srgb, var(--c-raw-037) 74%, transparent);
+}
+
+.toolDotDone {
+  background: color-mix(in srgb, var(--c-raw-011) 74%, transparent);
+}
+
+.toolDotError {
+  background: color-mix(in srgb, #f04d4d 72%, transparent);
+}
+
+.toolLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .imageWrapper {
   margin-top: 0.5rem;
   width: 100%;
@@ -128,6 +168,45 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--c-raw-050);
+}
+
+.citationFooter {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.citationChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 220px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--c-raw-043);
+  background: color-mix(in srgb, var(--c-raw-012) 70%, transparent);
+  text-decoration: none;
+  color: var(--c-raw-003);
+  font-size: 0.78rem;
+  transition: background-color 0.16s ease;
+}
+
+.citationChip:hover {
+  background: color-mix(in srgb, var(--c-raw-012) 85%, transparent);
+}
+
+.citationIcon {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.citationTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .userFooter {

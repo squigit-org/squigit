@@ -12,4 +12,5 @@ pub mod security;
 pub mod theme;
 pub mod tone;
 pub mod tray;
+pub mod web_search;
 pub mod window;

@@ -70,6 +70,32 @@ pub struct ChatMessage {
     pub content: String,
     /// When the message was sent.
     pub timestamp: DateTime<Utc>,
+    /// Optional structured citation chips shown under assistant responses.
+    #[serde(default)]
+    pub citations: Vec<CitationSource>,
+    /// Optional tool call timeline metadata for this message.
+    #[serde(default)]
+    pub tool_steps: Vec<ToolStep>,
+}
+
+/// Structured citation source metadata persisted with a message.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitationSource {
+    pub title: String,
+    pub url: String,
+    pub summary: String,
+}
+
+/// Tool-step metadata persisted with a message.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolStep {
+    pub id: String,
+    pub name: String,
+    pub status: String,
+    #[serde(default)]
+    pub args: serde_json::Value,
+    #[serde(default)]
+    pub message: Option<String>,
 }
 
 impl ChatMessage {
@@ -79,6 +105,8 @@ impl ChatMessage {
             role: "user".to_string(),
             content,
             timestamp: Utc::now(),
+            citations: Vec::new(),
+            tool_steps: Vec::new(),
         }
     }
 
@@ -88,6 +116,8 @@ impl ChatMessage {
             role: "assistant".to_string(),
             content,
             timestamp: Utc::now(),
+            citations: Vec::new(),
+            tool_steps: Vec::new(),
         }
     }
 }

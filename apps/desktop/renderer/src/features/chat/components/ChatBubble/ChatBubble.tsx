@@ -70,6 +70,9 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     });
   }, [app.getAttachmentSourcePath, message.text]);
 
+  const toolSteps = message.toolSteps || [];
+  const citations = message.citations || [];
+
   const displayText = useMemo(() => {
     return stripAttachmentMentions(message.text);
   }, [message.text]);
@@ -276,6 +279,26 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                   />
                 </div>
               )}
+              {!isUser && toolSteps.length > 0 && (
+                <div className={styles.toolTimeline}>
+                  {toolSteps.map((step) => (
+                    <div key={step.id} className={styles.toolRow}>
+                      <span
+                        className={`${styles.toolDot} ${
+                          step.status === "error"
+                            ? styles.toolDotError
+                            : step.status === "done"
+                              ? styles.toolDotDone
+                              : styles.toolDotRunning
+                        }`}
+                      />
+                      <span className={styles.toolLabel}>
+                        {step.message || `Called ${step.name}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div
                 className={
                   isUser
@@ -298,6 +321,41 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 </ReactMarkdown>
                 {isWritingCode && <TextShimmer text="Writing code..." />}
               </div>
+              {!isUser && citations.length > 0 && (
+                <div className={styles.citationFooter}>
+                  {citations.map((citation, index) => {
+                    let domain = citation.url;
+                    try {
+                      domain = new URL(citation.url).hostname.replace(/^www\./, "");
+                    } catch {
+                      // noop
+                    }
+                    const tooltip = `${citation.summary || "No summary available"}\n${citation.url}`;
+                    return (
+                      <a
+                        key={`${citation.url}-${index}`}
+                        href={citation.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.citationChip}
+                        title={tooltip}
+                      >
+                        <img
+                          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                          alt=""
+                          className={styles.citationIcon}
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                        <span className={styles.citationTitle}>
+                          {citation.title || domain}
+                        </span>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {message.image && (
@@ -364,6 +422,8 @@ export const ChatBubble = React.memo(
     return (
       prevProps.message.id === nextProps.message.id &&
       prevProps.message.text === nextProps.message.text &&
+      prevProps.message.citations === nextProps.message.citations &&
+      prevProps.message.toolSteps === nextProps.message.toolSteps &&
       prevProps.isStreamed === nextProps.isStreamed &&
       prevProps.stopRequested === nextProps.stopRequested &&
       !!prevProps.onRetry === !!nextProps.onRetry &&

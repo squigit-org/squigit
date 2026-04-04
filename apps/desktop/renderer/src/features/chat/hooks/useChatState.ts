@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { Message } from "@/features";
+import { Message, ToolStep, Citation } from "@/features";
 import { appendChatMessage } from "@/lib";
 
 export const useChatState = (enabled: boolean) => {
@@ -20,12 +20,18 @@ export const useChatState = (enabled: boolean) => {
   );
   const [firstResponseId, setFirstResponseId] = useState<string | null>(null);
   const [lastSentMessage, setLastSentMessage] = useState<Message | null>(null);
+  const [toolStatus, setToolStatus] = useState<string | null>(null);
+  const [streamingToolSteps, setStreamingToolSteps] = useState<ToolStep[]>([]);
+  const [streamingCitations, setStreamingCitations] = useState<Citation[]>([]);
 
   const clearError = () => setError(null);
 
   const resetInitialUi = () => {
     setStreamingText("");
     setError(null);
+    setToolStatus(null);
+    setStreamingToolSteps([]);
+    setStreamingCitations([]);
   };
 
   const appendErrorMessage = (
@@ -54,6 +60,9 @@ export const useChatState = (enabled: boolean) => {
     setStreamingText("");
     setFirstResponseId(null);
     setRetryingMessageId(null);
+    setToolStatus(null);
+    setStreamingToolSteps([]);
+    setStreamingCitations([]);
   };
 
   return {
@@ -76,6 +85,12 @@ export const useChatState = (enabled: boolean) => {
     setFirstResponseId,
     lastSentMessage,
     setLastSentMessage,
+    toolStatus,
+    setToolStatus,
+    streamingToolSteps,
+    setStreamingToolSteps,
+    streamingCitations,
+    setStreamingCitations,
     resetInitialUi,
     appendErrorMessage,
   };

@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { Message } from "../../chat.types";
+import { Message, Citation, ToolStep } from "../../chat.types";
 import { ChatBubble } from "./ChatBubble";
 import { TextShimmer } from "@/components";
 import styles from "./MessageList.module.css";
@@ -18,6 +18,10 @@ interface MessageListProps {
   stopRequested: boolean;
   selectedModel: string;
   isAnalyzing: boolean;
+  isSearching?: boolean;
+  toolStatus?: string | null;
+  streamingToolSteps?: ToolStep[];
+  streamingCitations?: Citation[];
   onStreamComplete?: () => void;
   onTypingChange?: (isTyping: boolean) => void;
   onStopGeneration?: (truncatedText?: string) => void;
@@ -35,6 +39,10 @@ const MessageListComponent: React.FC<MessageListProps> = ({
   stopRequested,
   selectedModel,
   isAnalyzing,
+  isSearching,
+  toolStatus,
+  streamingToolSteps = [],
+  streamingCitations = [],
   onStreamComplete,
   onTypingChange,
   onStopGeneration,
@@ -52,8 +60,16 @@ const MessageListComponent: React.FC<MessageListProps> = ({
 
   return (
     <div className={styles.container}>
-      {(isGenerating || isAnalyzing) && !streamingText && (
-        <TextShimmer text={retryingMessageId ? "Regenerating response..." : (isAnalyzing ? "Analyzing your image" : "Planning next moves")} />
+      {(isGenerating || isAnalyzing || isSearching) && !streamingText && (
+        <TextShimmer
+          text={
+            retryingMessageId
+              ? "Regenerating response..."
+              : isAnalyzing
+                ? "Analyzing your image"
+                : toolStatus || "Planning next moves"
+          }
+        />
       )}
       {streamingText && (
         <div className={styles.item}>
@@ -63,6 +79,8 @@ const MessageListComponent: React.FC<MessageListProps> = ({
               role: "model",
               text: streamingText,
               timestamp: Date.now(),
+              toolSteps: streamingToolSteps,
+              citations: streamingCitations,
             }}
             isStreamed={true}
             onStreamComplete={onStreamComplete}
@@ -128,7 +146,11 @@ export const MessageList = React.memo(
       prevProps.retryingMessageId === nextProps.retryingMessageId &&
       prevProps.stopRequested === nextProps.stopRequested &&
       prevProps.selectedModel === nextProps.selectedModel &&
-      prevProps.isAnalyzing === nextProps.isAnalyzing
+      prevProps.isAnalyzing === nextProps.isAnalyzing &&
+      prevProps.isSearching === nextProps.isSearching &&
+      prevProps.toolStatus === nextProps.toolStatus &&
+      prevProps.streamingToolSteps === nextProps.streamingToolSteps &&
+      prevProps.streamingCitations === nextProps.streamingCitations
     );
   },
 );

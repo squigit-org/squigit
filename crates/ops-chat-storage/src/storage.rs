@@ -332,13 +332,21 @@ impl ChatStorage {
         let ocr_json = serde_json::to_string_pretty(&chat.ocr_data)?;
         fs::write(&ocr_path, ocr_json)?;
 
-        // Save messages file
+        // Save messages files.
+        // - messages.json: canonical structured source for metadata-aware rendering
+        // - messages.md: backward-compatible human-readable transcript
+        let messages_json_path = chat_dir.join("messages.json");
         let messages_path = chat_dir.join("messages.md");
         if !chat.messages.is_empty() {
+            let json_content = serde_json::to_string_pretty(&chat.messages)?;
+            fs::write(&messages_json_path, json_content)?;
             let md_content = self.messages_to_markdown(&chat.messages);
             fs::write(&messages_path, md_content)?;
         } else if messages_path.exists() {
             fs::remove_file(&messages_path)?;
+            if messages_json_path.exists() {
+                fs::remove_file(&messages_json_path)?;
+            }
         }
 
         // Save imgbb URL if present
@@ -409,9 +417,13 @@ impl ChatStorage {
             self.update_index(&metadata)?;
         }
 
-        // Load messages from markdown
+        // Load messages (prefer structured JSON, fallback to legacy markdown)
+        let messages_json_path = chat_dir.join("messages.json");
         let messages_path = chat_dir.join("messages.md");
-        let messages = if messages_path.exists() {
+        let messages = if messages_json_path.exists() {
+            let json_content = fs::read_to_string(&messages_json_path)?;
+            serde_json::from_str::<Vec<ChatMessage>>(&json_content)?
+        } else if messages_path.exists() {
             let md_content = fs::read_to_string(&messages_path)?;
             self.markdown_to_messages(&md_content)
         } else {
@@ -636,16 +648,33 @@ impl ChatStorage {
         let chat_dir = self.chat_dir(chat_id);
         fs::create_dir_all(&chat_dir)?;
 
+        let messages_json_path = chat_dir.join("messages.json");
         let messages_path = chat_dir.join("messages.md");
 
-        // Append to existing file or create new
-        let mut file = fs::OpenOptions::new()
+        // Keep a structured JSON transcript for metadata-aware rendering.
+        let mut json_messages: Vec<ChatMessage> = if messages_json_path.exists() {
+            let json = fs::read_to_string(&messages_json_path)?;
+            serde_json::from_str(&json)?
+        } else if messages_path.exists() {
+            // One-time migration path for older chats that only have markdown.
+            let md_content = fs::read_to_string(&messages_path)?;
+            self.markdown_to_messages(&md_content)
+        } else {
+            Vec::new()
+        };
+        json_messages.push(message.clone());
+        fs::write(
+            &messages_json_path,
+            serde_json::to_string_pretty(&json_messages)?,
+        )?;
+
+        // Keep markdown transcript for compatibility and quick inspection.
+        let mut md_file = fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&messages_path)?;
-
         let md_entry = self.message_to_markdown(message);
-        file.write_all(md_entry.as_bytes())?;
+        md_file.write_all(md_entry.as_bytes())?;
 
         // Update the chat's updated_at timestamp
         let meta_path = chat_dir.join("meta.json");
@@ -735,6 +764,8 @@ impl ChatStorage {
                         role,
                         content: current_content.trim().to_string(),
                         timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
+                        citations: Vec::new(),
+                        tool_steps: Vec::new(),
                     });
                 }
                 current_role = Some("user".to_string());
@@ -747,6 +778,8 @@ impl ChatStorage {
                         role,
                         content: current_content.trim().to_string(),
                         timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
+                        citations: Vec::new(),
+                        tool_steps: Vec::new(),
                     });
                 }
                 current_role = Some("assistant".to_string());
@@ -770,6 +803,8 @@ impl ChatStorage {
                 role,
                 content: current_content.trim().to_string(),
                 timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
+                citations: Vec::new(),
+                tool_steps: Vec::new(),
             });
         }
 

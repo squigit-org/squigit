@@ -283,6 +283,8 @@ export const useApp = () => {
             | "assistant",
           content: m.text,
           timestamp: new Date(m.timestamp).toISOString(),
+          citations: Array.isArray(m.citations) ? m.citations : [],
+          tool_steps: Array.isArray(m.toolSteps) ? m.toolSteps : [],
         }));
         overwriteChatMessages(activeId, formatted).catch(console.error);
       }
@@ -748,9 +750,12 @@ export const useApp = () => {
 
         const messages = chatData.messages.map((m, idx) => ({
           id: idx.toString(),
-          role: m.role as "user" | "model",
+          role: (m.role === "user" ? "user" : "model") as "user" | "model",
           text: m.content,
           timestamp: new Date(m.timestamp).getTime(),
+          alreadyStreamed: true,
+          citations: m.citations || [],
+          toolSteps: m.tool_steps || [],
         }));
 
         chat.restoreState(

@@ -356,6 +356,10 @@ export const Chat: React.FC = () => {
                   stopRequested={stopRequested}
                   selectedModel={app.inputModel}
                   isAnalyzing={app.chat.isAnalyzing}
+                  isSearching={app.chat.isSearching}
+                  toolStatus={app.chat.toolStatus}
+                  streamingToolSteps={app.chat.streamingToolSteps}
+                  streamingCitations={app.chat.streamingCitations}
                   onStreamComplete={app.chat.handleStreamComplete}
                   onTypingChange={app.chat.setIsAiTyping}
                   onStopGeneration={(truncatedText) =>

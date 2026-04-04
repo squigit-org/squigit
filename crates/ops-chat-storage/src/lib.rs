@@ -12,11 +12,11 @@
 //! ```no_run
 //! use ops_chat_storage::{ChatStorage, ChatMetadata, ChatData};
 //!
-//! let storage = ChatStorage::new().unwrap();
+//! let storage = ChatStorage::with_base_dir(std::env::temp_dir().join("squigit-doc-example")).unwrap();
 //!
 //! // Store an image
 //! let image_bytes = std::fs::read("screenshot.png").unwrap();
-//! let stored = storage.store_image(&image_bytes).unwrap();
+//! let stored = storage.store_image(&image_bytes, None).unwrap();
 //! println!("Image hash: {}", stored.hash);
 //! println!("Image path: {}", stored.path);
 //!

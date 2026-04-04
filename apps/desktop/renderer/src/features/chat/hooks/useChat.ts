@@ -88,7 +88,15 @@ export const useChat = ({
     setIsAiTyping: state.setIsAiTyping,
     retryingMessageId: state.retryingMessageId,
     streamingText: state.streamingText,
+    toolStatus: state.toolStatus,
+    streamingToolSteps: state.streamingToolSteps,
+    streamingCitations: state.streamingCitations,
     lastSentMessage: state.lastSentMessage,
+    isSearching:
+      (state.streamingToolSteps.length > 0 ||
+        !!state.toolStatus ||
+        state.streamingCitations.length > 0) &&
+      (state.isLoading || !!state.retryingMessageId),
     isAnalyzing:
       !!startupImage &&
       (state.isLoading || !!state.retryingMessageId) &&

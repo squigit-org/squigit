@@ -27,5 +27,39 @@ export interface GeminiContent {
 export type Content = GeminiContent;
 
 export interface GeminiEvent {
+  type: "token";
   token: string;
 }
+
+export interface GeminiResetEvent {
+  type: "reset";
+}
+
+export interface GeminiToolStatusEvent {
+  type: "tool_status";
+  message: string;
+}
+
+export interface GeminiToolStartEvent {
+  type: "tool_start";
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  message: string;
+}
+
+export interface GeminiToolEndEvent {
+  type: "tool_end";
+  id: string;
+  name: string;
+  status: "done" | "error" | string;
+  result: Record<string, unknown>;
+  message: string;
+}
+
+export type GeminiStreamEvent =
+  | GeminiEvent
+  | GeminiResetEvent
+  | GeminiToolStatusEvent
+  | GeminiToolStartEvent
+  | GeminiToolEndEvent;

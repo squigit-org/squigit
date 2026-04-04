@@ -4,6 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export interface Citation {
+  title: string;
+  url: string;
+  summary: string;
+}
+
+export interface ToolStep {
+  id: string;
+  name: string;
+  status: "running" | "done" | "error";
+  args?: Record<string, unknown>;
+  message?: string;
+}
+
 export interface Message {
   id: string;
   role: "user" | "model" | "system";
@@ -12,6 +26,8 @@ export interface Message {
   timestamp: number;
   stopped?: boolean;
   alreadyStreamed?: boolean;
+  citations?: Citation[];
+  toolSteps?: ToolStep[];
 }
 
 export interface AppConfig {

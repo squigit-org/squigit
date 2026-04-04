@@ -24,10 +24,28 @@ export interface ChatMetadata {
 }
 
 /** A single chat message (matches Rust ChatMessage). */
+export interface ChatCitation {
+  title: string;
+  url: string;
+  summary: string;
+}
+
+/** Tool timeline step metadata persisted with assistant messages. */
+export interface ChatToolStep {
+  id: string;
+  name: string;
+  status: string;
+  args?: Record<string, unknown>;
+  message?: string | null;
+}
+
+/** A single chat message (matches Rust ChatMessage). */
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  citations?: ChatCitation[];
+  tool_steps?: ChatToolStep[];
 }
 
 /** OCR data for an image region (matches Rust OcrRegion). */

@@ -7,7 +7,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { geminiStore } from "./store";
-import { GeminiEvent } from "./gemini.types";
+import { GeminiStreamEvent } from "./gemini.types";
 import { setImageDescription, setImageBrief, addToHistory } from "./context";
 import { buildContextWindow } from "./summarize";
 
@@ -18,6 +18,7 @@ export const retryFromMessage = async (
   onToken?: (token: string) => void,
   fallbackImagePath?: string,
   onBriefReady?: (brief: string) => void,
+  onEvent?: (event: GeminiStreamEvent) => void,
 ): Promise<string> => {
   if (!geminiStore.storedApiKey) throw new Error("Gemini API Key not set");
 
@@ -41,10 +42,22 @@ export const retryFromMessage = async (
     geminiStore.currentChannelId = channelId;
     let fullResponse = "";
 
-    const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+    const unlisten = await listen<GeminiStreamEvent>(channelId, (event) => {
       if (geminiStore.generationId !== myGenId) return;
-      fullResponse += event.payload.token;
-      onToken?.(event.payload.token);
+      const payload: any = event.payload;
+      if (!payload?.type || payload.type === "token") {
+        const token = payload.token || "";
+        fullResponse += token;
+        onToken?.(token);
+        onEvent?.({ type: "token", token });
+        return;
+      }
+      if (payload.type === "reset") {
+        fullResponse = "";
+        onEvent?.(payload as GeminiStreamEvent);
+        return;
+      }
+      onEvent?.(payload as GeminiStreamEvent);
     });
     geminiStore.currentUnlisten = unlisten;
 
@@ -128,10 +141,22 @@ export const retryFromMessage = async (
   geminiStore.currentChannelId = channelId;
   let fullResponse = "";
 
-  const unlisten = await listen<GeminiEvent>(channelId, (event) => {
+  const unlisten = await listen<GeminiStreamEvent>(channelId, (event) => {
     if (geminiStore.generationId !== myGenId) return;
-    fullResponse += event.payload.token;
-    onToken?.(event.payload.token);
+    const payload: any = event.payload;
+    if (!payload?.type || payload.type === "token") {
+      const token = payload.token || "";
+      fullResponse += token;
+      onToken?.(token);
+      onEvent?.({ type: "token", token });
+      return;
+    }
+    if (payload.type === "reset") {
+      fullResponse = "";
+      onEvent?.(payload as GeminiStreamEvent);
+      return;
+    }
+    onEvent?.(payload as GeminiStreamEvent);
   });
   geminiStore.currentUnlisten = unlisten;
 
