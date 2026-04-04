@@ -103,10 +103,30 @@
 }
 
 .thoughtBadge {
-  font-size: 0.77rem;
+  font-size: 0.88rem;
   line-height: 1.2;
   color: var(--c-raw-004);
   user-select: none;
+}
+
+.pendingBubbleShell {
+  min-height: 4.2rem;
+}
+
+.pendingBubbleEmpty {
+  min-height: 4.5rem;
+}
+
+.livePendingBubble {
+  overflow: clip;
+}
+
+.markdownFrame {
+  width: 100%;
+}
+
+.pendingMarkdownFrame {
+  min-height: 1.65rem;
 }
 
 .imageWrapper {
@@ -143,12 +163,22 @@
   color: var(--c-raw-050);
 }
 
+.footer button[disabled] {
+  opacity: 0.38;
+  cursor: default;
+  pointer-events: none;
+}
+
 .citationFooter {
   margin-top: 0.75rem;
   display: grid;
   width: 100%;
   grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
   gap: 0.45rem;
+}
+
+.citationFooterReveal {
+  animation: citationFooterReveal 0.22s ease-out both;
 }
 
 .citationChip {
@@ -174,6 +204,10 @@
   border-color: color-mix(in srgb, var(--c-raw-043) 80%, var(--c-raw-003) 20%);
 }
 
+.citationChipReveal {
+  animation: citationChipReveal 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .citationIcon {
   width: 14px;
   height: 14px;
@@ -197,4 +231,28 @@
 
 .timestamp {
   font-size: 0.75rem;
+}
+
+@keyframes citationFooterReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes citationChipReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

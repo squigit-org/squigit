@@ -91,20 +91,19 @@ export const useChat = ({
     toolStatus: state.toolStatus,
     streamingToolSteps: state.streamingToolSteps,
     streamingCitations: state.streamingCitations,
+    pendingAssistantTurn: state.pendingAssistantTurn,
     lastSentMessage: state.lastSentMessage,
     isSearching:
-      (state.streamingToolSteps.length > 0 ||
-        !!state.toolStatus ||
-        state.streamingCitations.length > 0) &&
-      (state.isLoading || !!state.retryingMessageId),
+      !!state.pendingAssistantTurn &&
+      (state.pendingAssistantTurn.toolSteps.length > 0 ||
+        state.pendingAssistantTurn.pendingCitations.length > 0 ||
+        /search|source|web/i.test(state.pendingAssistantTurn.progressText)),
     isAnalyzing:
       !!startupImage &&
-      (state.isLoading || !!state.retryingMessageId) &&
-      !state.streamingText &&
-      state.messages.length === 0,
-    isGenerating:
-      (state.isLoading || !!state.retryingMessageId) &&
-      state.messages.length > 0,
+      !!state.pendingAssistantTurn &&
+      state.pendingAssistantTurn.requestKind === "initial" &&
+      state.pendingAssistantTurn.phase === "thinking",
+    isGenerating: !!state.pendingAssistantTurn,
     handleSend: engine.handleSend,
     handleRetrySend: engine.handleRetrySend,
     handleRetryMessage: engine.handleRetryMessage,

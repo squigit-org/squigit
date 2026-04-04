@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Check, Copy, RotateCcw, Pencil, ChevronRight } from "lucide-react";
-import { CitationTip, CodeBlock, TextShimmer } from "@/components";
+import { CitationTip, CodeBlock } from "@/components";
 import { useAppContext } from "@/providers/AppProvider";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";
@@ -17,11 +17,11 @@ import rehypeRaw from "rehype-raw";
 import { preprocessMarkdown, remarkDisableIndentedCode } from "@/lib";
 import {
   parseAttachmentPaths,
-  useSmoothStream,
   stripAttachmentMentions,
   attachmentFromPath,
   AttachmentStrip,
   Message,
+  PendingAssistantTurn,
   ToolStep,
 } from "@/features";
 import styles from "./ChatBubble.module.css";
@@ -29,12 +29,10 @@ import mdStyles from "./BubbleMD.module.css";
 
 interface ChatBubbleProps {
   message: Message;
-  isStreamed?: boolean;
-  onStreamComplete?: () => void;
-  onTypingChange?: (isTyping: boolean) => void;
-  stopRequested?: boolean;
-  onStopGeneration?: (truncatedText: string) => void;
+  pendingTurn?: PendingAssistantTurn | null;
   onRetry?: () => void;
+  retryDisabled?: boolean;
+  copyDisabled?: boolean;
   onUndo?: () => void;
   onAction?: (actionId: string, value?: string) => void;
   enableInternalLinks?: boolean;
@@ -49,7 +47,7 @@ const CITATION_PREVIEW_TOKENS = 28;
 
 function getCitationDomain(url: string): string {
   try {
-    return new URL(url).hostname.replace(/^www\./, "");
+    return new URL(url).hostname.replace(/^www\./u, "");
   } catch {
     return url;
   }
@@ -58,7 +56,7 @@ function getCitationDomain(url: string): string {
 function toCitationPreview(summary: string): string {
   const tokens = summary
     .trim()
-    .split(/\s+/)
+    .split(/\s+/u)
     .filter(Boolean);
   if (tokens.length === 0) {
     return "No summary available...";
@@ -77,10 +75,10 @@ function resolveCitationFavicon(
   }
 
   if (
-    /^https?:\/\//i.test(candidate) ||
-    /^data:/i.test(candidate) ||
-    /^asset:/i.test(candidate) ||
-    /^tauri:/i.test(candidate)
+    /^https?:\/\//iu.test(candidate) ||
+    /^data:/iu.test(candidate) ||
+    /^asset:/iu.test(candidate) ||
+    /^tauri:/iu.test(candidate)
   ) {
     return candidate;
   }
@@ -101,7 +99,7 @@ function getToolStepThoughtSeconds(step: ToolStep): number {
     return Math.max(1, Math.round((step.endedAtMs - step.startedAtMs) / 1000));
   }
 
-  const match = step.message?.trim().match(/^Thought for (\d+)s$/i);
+  const match = step.message?.trim().match(/^Thought for (\d+)s$/iu);
   if (!match) return 0;
   const value = Number.parseInt(match[1], 10);
   return Number.isFinite(value) && value > 0 ? value : 0;
@@ -113,9 +111,8 @@ function getCombinedThoughtSeconds(steps: ToolStep[]): number {
 
 const CitationChip: React.FC<{
   citation: NonNullable<Message["citations"]>[number];
-}> = ({
-  citation,
-}) => {
+  animate?: boolean;
+}> = ({ citation, animate = false }) => {
   const [showTip, setShowTip] = useState(false);
   const anchorRef = useRef<HTMLAnchorElement>(null);
 
@@ -136,7 +133,9 @@ const CitationChip: React.FC<{
         href={citation.url}
         target="_blank"
         rel="noopener noreferrer"
-        className={styles.citationChip}
+        className={`${styles.citationChip} ${
+          animate ? styles.citationChipReveal : ""
+        }`}
         onMouseEnter={() => setShowTip(true)}
         onMouseLeave={() => setShowTip(false)}
         onFocus={() => setShowTip(true)}
@@ -146,8 +145,8 @@ const CitationChip: React.FC<{
           src={faviconUrl}
           alt=""
           className={styles.citationIcon}
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
           }}
         />
         <span className={styles.citationTitle}>{citation.title || domain}</span>
@@ -165,61 +164,82 @@ const CitationChip: React.FC<{
 
 const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   message,
-  isStreamed = false,
-  onStreamComplete,
-  onTypingChange,
-  stopRequested,
-  onStopGeneration,
+  pendingTurn = null,
   onRetry,
+  retryDisabled = false,
+  copyDisabled = false,
   onUndo,
-
   onAction,
   enableInternalLinks = false,
 }) => {
   const app = useAppContext();
   const isUser = message.role === "user";
+  const isPendingAssistant = !!pendingTurn && message.role === "model";
   const [isCopied, setIsCopied] = useState(false);
 
   const attachments = useMemo(() => {
     const paths = parseAttachmentPaths(message.text);
-    return paths.map((p) => {
-      const sourcePath = app.getAttachmentSourcePath(p) || undefined;
+    return paths.map((path) => {
+      const sourcePath = app.getAttachmentSourcePath(path) || undefined;
       const originalName = sourcePath ? getBaseName(sourcePath) : undefined;
 
-      return attachmentFromPath(p, undefined, originalName, sourcePath);
+      return attachmentFromPath(path, undefined, originalName, sourcePath);
     });
   }, [app.getAttachmentSourcePath, message.text]);
 
-  const toolSteps = message.toolSteps || [];
-  const citations = message.citations || [];
+  const toolSteps = pendingTurn?.toolSteps || message.toolSteps || [];
+  const citations = pendingTurn?.visibleCitations || message.citations || [];
+  const displayText = useMemo(() => {
+    if (isPendingAssistant) {
+      return pendingTurn?.displayText || "";
+    }
+    return stripAttachmentMentions(message.text);
+  }, [isPendingAssistant, message.text, pendingTurn]);
+
   const thoughtBadgeText = useMemo(() => {
     if (isUser || message.role !== "model") return null;
 
+    const explicitThoughtSeconds = pendingTurn?.thoughtSeconds ?? message.thoughtSeconds;
     if (
-      typeof message.thoughtSeconds === "number" &&
-      Number.isFinite(message.thoughtSeconds) &&
-      message.thoughtSeconds > 0
+      typeof explicitThoughtSeconds === "number" &&
+      Number.isFinite(explicitThoughtSeconds) &&
+      explicitThoughtSeconds > 0
     ) {
-      return `Thought for ${Math.round(message.thoughtSeconds)}s`;
+      return `Thought for ${Math.round(explicitThoughtSeconds)}s`;
     }
 
     const combined = getCombinedThoughtSeconds(toolSteps);
     if (combined <= 0) return null;
     return `Thought for ${combined}s`;
-  }, [isUser, message.role, message.thoughtSeconds, toolSteps]);
-
-  const displayText = useMemo(() => {
-    return stripAttachmentMentions(message.text);
-  }, [message.text]);
+  }, [isUser, message.role, message.thoughtSeconds, pendingTurn?.thoughtSeconds, toolSteps]);
 
   const isRichMarkdownUserMessage = useMemo(() => {
     if (!isUser) return false;
-    return /(^|\n)\s*(#{1,6}\s|[-+*]\s|\d+\.\s|>\s|```|~~~|\$\$|\|.+\|)/m.test(
+    return /(^|\n)\s*(#{1,6}\s|[-+*]\s|\d+\.\s|>\s|```|~~~|\$\$|\|.+\|)/mu.test(
       displayText,
     );
   }, [displayText, isUser]);
 
+  const showThoughtLabel =
+    !isUser &&
+    !!thoughtBadgeText &&
+    (isPendingAssistant || displayText.trim().length > 0);
+  const showCitations =
+    !isUser &&
+    citations.length > 0 &&
+    (!isPendingAssistant ||
+      pendingTurn?.phase === "complete" ||
+      pendingTurn?.phase === "stopped");
+  const shouldDoubleNewlines = isUser && !isRichMarkdownUserMessage;
+  const canCopy = !copyDisabled && displayText.trim().length > 0;
+  const shouldShowRetryButton = !isUser && message.role !== "system" && !!onRetry;
+  const shouldShowCopyButton = message.role !== "system";
+  const isPendingEmpty = isPendingAssistant && displayText.trim().length === 0;
+  const animateCitations = isPendingAssistant;
+
   const handleCopy = () => {
+    if (!canCopy) return;
+
     let copyText = displayText;
     if (!isUser && citations.length > 0) {
       const uniqueByUrl = new Map<string, (typeof citations)[number]>();
@@ -231,7 +251,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       if (uniqueByUrl.size > 0) {
         const sourceLines = Array.from(uniqueByUrl.values()).map((citation) => {
           const title = (citation.title || getCitationDomain(citation.url))
-            .replace(/\r?\n/g, " ")
+            .replace(/\r?\n/gu, " ")
             .trim();
           return `- [${title}](${citation.url})`;
         });
@@ -244,63 +264,21 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
 
     navigator.clipboard.writeText(copyText).then(() => {
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      window.setTimeout(() => setIsCopied(false), 2000);
     });
   };
 
-  const isBotStreaming = !isUser && isStreamed && !message.stopped;
-
-  const { text: smoothText, isWritingCode } = useSmoothStream(
-    displayText,
-    isBotStreaming,
-  );
-
-  const prevIsTypingRef = useRef(false);
-
-  useEffect(() => {
-    if (prevIsTypingRef.current !== isBotStreaming) {
-      prevIsTypingRef.current = isBotStreaming;
-      onTypingChange?.(isBotStreaming);
-      if (!isBotStreaming) {
-        onStreamComplete?.();
-      }
-    }
-  }, [isBotStreaming, onTypingChange, onStreamComplete]);
-
-  useEffect(() => {
-    return () => {
-      if (prevIsTypingRef.current) {
-        prevIsTypingRef.current = false;
-        onTypingChange?.(false);
-      }
-    };
-  }, [onTypingChange]);
-
-  const stoppedRef = useRef(false);
-
-  useEffect(() => {
-    if (!stopRequested) {
-      stoppedRef.current = false;
-    }
-  }, [stopRequested]);
-
-  useEffect(() => {
-    if (!stopRequested || !isBotStreaming || stoppedRef.current) return;
-    stoppedRef.current = true;
-    onStopGeneration?.(smoothText.trimEnd());
-  }, [stopRequested, isBotStreaming, smoothText, onStopGeneration]);
-
   const markdownComponents = useMemo(
     () => ({
-      code({ node, className, children, ...props }: any) {
-        const match = /language-(\w+)/.exec(className || "");
+      code({ className, children, ...props }: any) {
+        const match = /language-(\w+)/u.exec(className || "");
         const isInline = !match && !String(children).includes("\n");
 
         if (!isInline) {
           return (
             <CodeBlock
               language={match ? match[1] : ""}
-              value={String(children).replace(/\n$/, "")}
+              value={String(children).replace(/\n$/u, "")}
             />
           );
         }
@@ -311,7 +289,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         );
       },
 
-      a: ({ node, href, onClick, children, ...props }: any) => {
+      a: ({ href, onClick, children, ...props }: any) => {
         const isInternalSettingsLink =
           enableInternalLinks &&
           typeof href === "string" &&
@@ -320,7 +298,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         if (isInternalSettingsLink) {
           const section = href
             .replace("#settings-", "")
-            .split(/[?#]/)[0]
+            .split(/[?#]/u)[0]
             .trim()
             .toLowerCase();
 
@@ -334,14 +312,14 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 fontWeight: 700,
                 color: "var(--c-raw-011)",
               }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
                 if (section) onAction?.("open_settings", section);
               }}
-              onKeyDown={(e: React.KeyboardEvent) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
+              onKeyDown={(event: React.KeyboardEvent) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
                   if (section) onAction?.("open_settings", section);
                 }
               }}
@@ -391,58 +369,62 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     [enableInternalLinks, onAction],
   );
 
-  const markdownToRender = isBotStreaming ? smoothText : displayText;
-
-  const shouldDoubleNewlines = isUser && !isRichMarkdownUserMessage;
-  const showThoughtLabel =
-    !isUser && !!thoughtBadgeText && displayText.trim().length > 0;
-
   return (
-    <>
+    <div
+      className={`${styles.wrapper} ${isUser ? styles.userAlign : styles.botAlign}`}
+    >
       <div
-        className={`${styles.wrapper} ${
-          isUser ? styles.userAlign : styles.botAlign
-        }`}
+        className={`${styles.container} ${
+          isUser ? styles.userContainer : styles.botContainer
+        } ${isUser && isRichMarkdownUserMessage ? styles.userRichContainer : ""}`}
       >
         <div
-          className={`${styles.container} ${
-            isUser ? styles.userContainer : styles.botContainer
-          } ${isUser && isRichMarkdownUserMessage ? styles.userRichContainer : ""}`}
+          className={`${styles.contentColumn} ${
+            isUser ? styles.userContent : styles.botContent
+          } ${isUser && isRichMarkdownUserMessage ? styles.userRichContent : ""}`}
         >
+          {!isUser && showThoughtLabel && (
+            <div className={styles.thoughtLabelRow}>
+              <span className={styles.thoughtBadge}>{thoughtBadgeText}</span>
+            </div>
+          )}
+
           <div
-            className={`${styles.contentColumn} ${
-              isUser ? styles.userContent : styles.botContent
-            } ${isUser && isRichMarkdownUserMessage ? styles.userRichContent : ""}`}
+            dir="auto"
+            data-component="chat-bubble"
+            data-message-index={message.id}
+            data-message-role={isUser ? "user" : "assistant"}
+            className={`${styles.bubble} ${
+              isUser ? styles.userBubble : styles.botBubble
+            } ${
+              isUser && isRichMarkdownUserMessage ? styles.userRichBubble : ""
+            } ${isPendingAssistant ? styles.pendingBubbleShell : ""} ${
+              isPendingEmpty ? styles.pendingBubbleEmpty : ""
+            } ${
+              pendingTurn?.phase === "streaming" || pendingTurn?.phase === "finalizing"
+                ? styles.livePendingBubble
+                : ""
+            }`}
           >
-            {!isUser && showThoughtLabel && (
-              <div className={styles.thoughtLabelRow}>
-                <span className={styles.thoughtBadge}>{thoughtBadgeText}</span>
+            {attachments.length > 0 && (
+              <div
+                style={{
+                  marginBottom: displayText.length > 0 ? "8px" : "0",
+                }}
+              >
+                <AttachmentStrip
+                  attachments={attachments}
+                  onClick={app.openMediaViewer}
+                  readOnly
+                />
               </div>
             )}
+
             <div
-              dir="auto"
-              data-component="chat-bubble"
-              data-message-index={message.id}
-              data-message-role={isUser ? "user" : "assistant"}
-              className={`${styles.bubble} ${
-                isUser ? styles.userBubble : styles.botBubble
-              } ${
-                isUser && isRichMarkdownUserMessage ? styles.userRichBubble : ""
-              } ${isBotStreaming ? mdStyles.liveStream : ""}`}
+              className={`${styles.markdownFrame} ${
+                isPendingAssistant ? styles.pendingMarkdownFrame : ""
+              }`}
             >
-              {attachments.length > 0 && (
-                <div
-                  style={{
-                    marginBottom: displayText.length > 0 ? "8px" : "0",
-                  }}
-                >
-                  <AttachmentStrip
-                    attachments={attachments}
-                    onClick={app.openMediaViewer}
-                    readOnly
-                  />
-                </div>
-              )}
               <div
                 className={
                   isUser
@@ -459,79 +441,94 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                   rehypePlugins={[rehypeKatex, rehypeRaw]}
                   components={markdownComponents}
                 >
-                  {preprocessMarkdown(markdownToRender, {
+                  {preprocessMarkdown(displayText, {
                     doubleNewlines: shouldDoubleNewlines,
                   })}
                 </ReactMarkdown>
-                {isWritingCode && <TextShimmer text="Writing code..." />}
               </div>
-              {!isUser && citations.length > 0 && (
-                <div className={styles.citationFooter}>
-                  {citations.map((citation, index) => (
-                    <CitationChip
-                      key={`${citation.url}-${index}`}
-                      citation={citation}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
 
-            {message.image && (
-              <div className={styles.imageWrapper}>
-                <img
-                  src={
-                    message.image.startsWith("data:")
-                      ? message.image
-                      : `data:image/jpeg;base64,${message.image}`
-                  }
-                  alt="Analyzed content"
-                  className={styles.image}
-                />
-                <div className={styles.imageCaption}>Analyzed image</div>
+            {showCitations && (
+              <div
+                className={`${styles.citationFooter} ${
+                  animateCitations ? styles.citationFooterReveal : ""
+                }`}
+              >
+                {citations.map((citation, index) => (
+                  <CitationChip
+                    key={`${citation.url}-${index}`}
+                    citation={citation}
+                    animate={animateCitations}
+                  />
+                ))}
               </div>
             )}
+          </div>
 
-            <div
-              className={`${styles.footer} ${
-                isUser ? styles.userFooter : styles.botFooter
-              }`}
-            >
-              {isUser && (
-                <span className={styles.timestamp}>
-                  {new Date(message.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              )}
-
-              {isBotStreaming || message.role === "system" ? null : (
-                <>
-                  {!isUser && onRetry && (
-                    <button onClick={onRetry} title="Retry" aria-label="Retry">
-                      <RotateCcw size={14} />
-                    </button>
-                  )}
-                  <button onClick={handleCopy} title="Copy" aria-label="Copy">
-                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                  </button>
-                  {isUser && onUndo && (
-                    <button
-                      onClick={onUndo}
-                      title="Undo and Edit"
-                      aria-label="Undo and Edit"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  )}
-                </>
-              )}
+          {message.image && (
+            <div className={styles.imageWrapper}>
+              <img
+                src={
+                  message.image.startsWith("data:")
+                    ? message.image
+                    : `data:image/jpeg;base64,${message.image}`
+                }
+                alt="Analyzed content"
+                className={styles.image}
+              />
+              <div className={styles.imageCaption}>Analyzed image</div>
             </div>
+          )}
+
+          <div
+            className={`${styles.footer} ${
+              isUser ? styles.userFooter : styles.botFooter
+            }`}
+          >
+            {isUser && (
+              <span className={styles.timestamp}>
+                {new Date(message.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            )}
+
+            {!isUser && shouldShowRetryButton && (
+              <button
+                onClick={onRetry}
+                title="Retry"
+                aria-label="Retry"
+                disabled={retryDisabled}
+              >
+                <RotateCcw size={14} />
+              </button>
+            )}
+
+            {shouldShowCopyButton && (
+              <button
+                onClick={handleCopy}
+                title="Copy"
+                aria-label="Copy"
+                disabled={!canCopy}
+              >
+                {isCopied ? <Check size={14} /> : <Copy size={14} />}
+              </button>
+            )}
+
+            {isUser && onUndo && (
+              <button
+                onClick={onUndo}
+                title="Undo and Edit"
+                aria-label="Undo and Edit"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
@@ -539,13 +536,10 @@ export const ChatBubble = React.memo(
   ChatBubbleComponent,
   (prevProps, nextProps) => {
     return (
-      prevProps.message.id === nextProps.message.id &&
-      prevProps.message.text === nextProps.message.text &&
-      prevProps.message.thoughtSeconds === nextProps.message.thoughtSeconds &&
-      prevProps.message.citations === nextProps.message.citations &&
-      prevProps.message.toolSteps === nextProps.message.toolSteps &&
-      prevProps.isStreamed === nextProps.isStreamed &&
-      prevProps.stopRequested === nextProps.stopRequested &&
+      prevProps.message === nextProps.message &&
+      prevProps.pendingTurn === nextProps.pendingTurn &&
+      prevProps.retryDisabled === nextProps.retryDisabled &&
+      prevProps.copyDisabled === nextProps.copyDisabled &&
       !!prevProps.onRetry === !!nextProps.onRetry &&
       !!prevProps.onUndo === !!nextProps.onUndo &&
       prevProps.enableInternalLinks === nextProps.enableInternalLinks

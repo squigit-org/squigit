@@ -9,6 +9,7 @@ import { listen } from "@tauri-apps/api/event";
 import { geminiStore } from "./store";
 import { GeminiStreamEvent } from "./gemini.types";
 import { cancelCurrentRequest } from "./cancel";
+import { createStreamWatchdog } from "./streamWatchdog";
 import {
   resetBrainContext,
   setUserInfo,
@@ -41,9 +42,11 @@ export const startNewThreadStream = async (
   const channelId = `gemini-stream-${Date.now()}`;
   geminiStore.currentChannelId = channelId;
   let fullResponse = "";
+  const streamWatchdog = createStreamWatchdog(() => cancelCurrentRequest());
 
   const unlisten = await listen<GeminiStreamEvent>(channelId, (event) => {
     if (geminiStore.generationId !== myGenId) return;
+    streamWatchdog.touch();
     const payload: any = event.payload;
     if (!payload?.type || payload.type === "token") {
       const token = payload.token || "";
@@ -69,32 +72,46 @@ export const startNewThreadStream = async (
     const briefPromise = invoke<string>("generate_image_brief", {
       apiKey: geminiStore.storedApiKey,
       imagePath,
-    }).then((brief) => {
-      if (brief && onBriefReady) {
-        onBriefReady(brief);
+    })
+      .then((brief) => {
+        if (brief && onBriefReady) {
+          onBriefReady(brief);
+        }
+        return brief;
+      })
+      .catch((e) => {
+        console.warn("[GeminiClient] Image brief failed, continuing without:", e);
+        return "";
+      });
+
+    void briefPromise.then((brief) => {
+      if (geminiStore.generationId !== myGenId) return;
+      if (brief) {
+        setImageBrief(brief);
       }
-      return brief;
-    }).catch((e) => {
-      console.warn("[GeminiClient] Image brief failed, continuing without:", e);
-      return "";
     });
 
-    await invoke("stream_gemini_chat_v2", {
-      apiKey: geminiStore.storedApiKey,
-      model: modelId,
-      isInitialTurn: true,
-      imagePath,
-      imageDescription: null,
-      userFirstMsg: null,
-      historyLog: null,
-      rollingSummary: null,
-      userMessage: "",
-      channelId: channelId,
-      userName,
-      userEmail,
-      userInstruction,
-      imageBrief: "", // Empty on initial turn
-    });
+    streamWatchdog.touch();
+    await Promise.race([
+      invoke("stream_gemini_chat_v2", {
+        apiKey: geminiStore.storedApiKey,
+        model: modelId,
+        isInitialTurn: true,
+        imagePath,
+        imageDescription: null,
+        userFirstMsg: null,
+        historyLog: null,
+        rollingSummary: null,
+        userMessage: "",
+        channelId: channelId,
+        userName,
+        userEmail,
+        userInstruction,
+        imageBrief: "", // Empty on initial turn
+      }),
+      streamWatchdog.stallPromise,
+    ]);
+    streamWatchdog.stop();
 
     unlisten();
     if (geminiStore.currentUnlisten === unlisten)
@@ -111,13 +128,9 @@ export const startNewThreadStream = async (
     console.log(
       `[GeminiClient] Stream Completed successfully. Length: ${fullResponse.length} chars.`,
     );
-    const brief = await briefPromise;
-    if (brief) {
-      setImageBrief(brief);
-    }
-    
     return fullResponse.trim();
   } catch (error) {
+    streamWatchdog.stop();
     unlisten();
     if (geminiStore.currentUnlisten === unlisten)
       geminiStore.currentUnlisten = null;

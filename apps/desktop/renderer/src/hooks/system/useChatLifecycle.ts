@@ -33,6 +33,7 @@ export const useChatLifecycle = (config: {
     setLastSentMessage,
     setError,
     setIsStreaming,
+    setPendingAssistantTurn,
   } = config.state;
 
   const sessionStartedForImageRef = useRef<string | null>(null);
@@ -102,6 +103,7 @@ export const useChatLifecycle = (config: {
       setFirstResponseId(null);
       setLastSentMessage(null);
       setError(null);
+      setPendingAssistantTurn(null);
       sessionStartedForImageRef.current = null;
     }
   }, [config.chatId]);
@@ -126,6 +128,7 @@ export const useChatLifecycle = (config: {
     setFirstResponseId(state.firstResponseId);
     setIsLoading(false);
     setIsStreaming(false);
+    setPendingAssistantTurn(null);
 
     // Clear the current image ref so a session doesn't auto-start
     sessionStartedForImageRef.current = image?.path?.substring(0, 50) ?? null;

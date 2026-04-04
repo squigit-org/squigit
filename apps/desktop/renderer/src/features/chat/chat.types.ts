@@ -21,6 +21,36 @@ export interface ToolStep {
   endedAtMs?: number;
 }
 
+export type AssistantTurnPhase =
+  | "thinking"
+  | "primed"
+  | "streaming"
+  | "finalizing"
+  | "complete"
+  | "stopped";
+
+export type PendingAssistantRequestKind =
+  | "initial"
+  | "message"
+  | "retry"
+  | "edit";
+
+export interface PendingAssistantTurn {
+  id: string;
+  requestKind: PendingAssistantRequestKind;
+  phase: AssistantTurnPhase;
+  requestStartedAtMs: number;
+  thoughtSeconds?: number;
+  progressText: string;
+  rawText: string;
+  displayText: string;
+  transportDone: boolean;
+  toolSteps: ToolStep[];
+  pendingCitations: Citation[];
+  visibleCitations: Citation[];
+  stopped: boolean;
+}
+
 export interface Message {
   id: string;
   role: "user" | "model" | "system";
@@ -49,4 +79,5 @@ export interface ChatSession {
   firstResponseId: string | null;
   createdAt: number;
   type: "default" | "edit";
+  pendingAssistantTurn?: PendingAssistantTurn | null;
 }

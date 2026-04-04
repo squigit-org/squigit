@@ -8,6 +8,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { geminiStore } from "./store";
 import { GeminiStreamEvent } from "./gemini.types";
+import { cancelCurrentRequest } from "./cancel";
+import { createStreamWatchdog } from "./streamWatchdog";
 import { setUserFirstMsg, addToHistory } from "./context";
 import { buildContextWindow, maybeCompressHistory } from "./summarize";
 
@@ -32,9 +34,11 @@ export const sendMessage = async (
   const channelId = `gemini-stream-${Date.now()}`;
   geminiStore.currentChannelId = channelId;
   let fullResponse = "";
+  const streamWatchdog = createStreamWatchdog(() => cancelCurrentRequest());
 
   const unlisten = await listen<GeminiStreamEvent>(channelId, (event) => {
     if (geminiStore.generationId !== myGenId) return;
+    streamWatchdog.touch();
     const payload: any = event.payload;
 
     if (!payload?.type || payload.type === "token") {
@@ -65,22 +69,27 @@ export const sendMessage = async (
 
     const { historyLog, rollingSummary } = buildContextWindow();
 
-    await invoke("stream_gemini_chat_v2", {
-      apiKey: geminiStore.storedApiKey,
-      model: geminiStore.currentModelId,
-      isInitialTurn: false,
-      imagePath: null, // Image never re-sent, brief is used instead
-      imageDescription: geminiStore.imageDescription,
-      userFirstMsg: geminiStore.userFirstMsg,
-      historyLog,
-      rollingSummary,
-      userMessage: text,
-      channelId: channelId,
-      userName: geminiStore.userName,
-      userEmail: geminiStore.userEmail,
-      userInstruction: null, // One-time intent hook only sent on initial turn
-      imageBrief: geminiStore.imageBrief,
-    });
+    streamWatchdog.touch();
+    await Promise.race([
+      invoke("stream_gemini_chat_v2", {
+        apiKey: geminiStore.storedApiKey,
+        model: geminiStore.currentModelId,
+        isInitialTurn: false,
+        imagePath: null, // Image never re-sent, brief is used instead
+        imageDescription: geminiStore.imageDescription,
+        userFirstMsg: geminiStore.userFirstMsg,
+        historyLog,
+        rollingSummary,
+        userMessage: text,
+        channelId: channelId,
+        userName: geminiStore.userName,
+        userEmail: geminiStore.userEmail,
+        userInstruction: null, // One-time intent hook only sent on initial turn
+        imageBrief: geminiStore.imageBrief,
+      }),
+      streamWatchdog.stallPromise,
+    ]);
+    streamWatchdog.stop();
     unlisten();
     if (geminiStore.currentUnlisten === unlisten)
       geminiStore.currentUnlisten = null;
@@ -99,6 +108,7 @@ export const sendMessage = async (
     );
     return fullResponse;
   } catch (error) {
+    streamWatchdog.stop();
     unlisten();
     if (geminiStore.currentUnlisten === unlisten)
       geminiStore.currentUnlisten = null;

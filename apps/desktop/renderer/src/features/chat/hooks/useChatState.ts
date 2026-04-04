@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from "react";
-import { Message, ToolStep, Citation } from "@/features";
+import { useCallback, useRef, useState } from "react";
+import { Message, ToolStep, Citation, PendingAssistantTurn } from "@/features";
 import { appendChatMessage } from "@/lib";
 
 export const useChatState = (enabled: boolean) => {
@@ -23,6 +23,32 @@ export const useChatState = (enabled: boolean) => {
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [streamingToolSteps, setStreamingToolSteps] = useState<ToolStep[]>([]);
   const [streamingCitations, setStreamingCitations] = useState<Citation[]>([]);
+  const [pendingAssistantTurnState, setPendingAssistantTurnState] =
+    useState<PendingAssistantTurn | null>(null);
+  const pendingAssistantTurnRef = useRef<PendingAssistantTurn | null>(null);
+
+  const setPendingAssistantTurn = useCallback(
+    (
+      value:
+        | PendingAssistantTurn
+        | null
+        | ((previous: PendingAssistantTurn | null) => PendingAssistantTurn | null),
+    ) => {
+      setPendingAssistantTurnState((previous) => {
+        const next =
+          typeof value === "function"
+            ? (
+                value as (
+                  previous: PendingAssistantTurn | null,
+                ) => PendingAssistantTurn | null
+              )(previous)
+            : value;
+        pendingAssistantTurnRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
 
   const clearError = () => setError(null);
 
@@ -32,6 +58,7 @@ export const useChatState = (enabled: boolean) => {
     setToolStatus(null);
     setStreamingToolSteps([]);
     setStreamingCitations([]);
+    setPendingAssistantTurn(null);
   };
 
   const appendErrorMessage = (
@@ -63,6 +90,7 @@ export const useChatState = (enabled: boolean) => {
     setToolStatus(null);
     setStreamingToolSteps([]);
     setStreamingCitations([]);
+    setPendingAssistantTurn(null);
   };
 
   return {
@@ -91,6 +119,9 @@ export const useChatState = (enabled: boolean) => {
     setStreamingToolSteps,
     streamingCitations,
     setStreamingCitations,
+    pendingAssistantTurn: pendingAssistantTurnState,
+    pendingAssistantTurnRef,
+    setPendingAssistantTurn,
     resetInitialUi,
     appendErrorMessage,
   };

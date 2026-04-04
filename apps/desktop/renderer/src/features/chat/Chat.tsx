@@ -33,7 +33,6 @@ function getBaseName(path: string): string {
 
 export const Chat: React.FC = () => {
   const app = useAppContext();
-  const [stopRequested, setStopRequested] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [pendingUndoMessageId, setPendingUndoMessageId] = useState<
     string | null
@@ -389,18 +388,9 @@ export const Chat: React.FC = () => {
                   )}
                   <MessageList
                     messages={app.chat.messages}
-                    streamingText={app.chat.streamingText}
-                    retryingMessageId={app.chat.retryingMessageId}
-                    stopRequested={stopRequested}
+                    pendingAssistantTurn={app.chat.pendingAssistantTurn}
                     selectedModel={app.inputModel}
-                    streamingToolSteps={app.chat.streamingToolSteps}
-                    streamingCitations={app.chat.streamingCitations}
-                    onStreamComplete={app.chat.handleStreamComplete}
-                    onTypingChange={app.chat.setIsAiTyping}
-                    onStopGeneration={(truncatedText) =>
-                      app.chat.handleStopGeneration(truncatedText)
-                    }
-                    onStopRequestedChange={setStopRequested}
+                    onAnswerNow={app.chat.handleAnswerNow}
                     onRetryMessage={app.chat.handleRetryMessage}
                     onUndoMessage={handleRequestUndoMessage}
                     onSystemAction={app.handleSystemAction}
@@ -426,11 +416,7 @@ export const Chat: React.FC = () => {
               isAiTyping={app.chat.isAiTyping}
               isStoppable={app.chat.isAnalyzing || app.chat.isGenerating}
               onStopGeneration={() => {
-                if (app.chat.isAiTyping && app.chat.streamingText) {
-                  setStopRequested(true);
-                } else {
-                  app.chat.handleStopGeneration();
-                }
+                app.chat.handleStopGeneration();
               }}
               selectedModel={app.inputModel}
               onModelChange={app.setInputModel}

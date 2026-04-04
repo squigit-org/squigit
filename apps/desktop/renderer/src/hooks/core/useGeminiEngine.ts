@@ -4,8 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useRef } from "react";
-import { Citation, Message, ToolStep } from "@/features";
+import { useEffect, useRef } from "react";
+import {
+  Citation,
+  Message,
+  PendingAssistantTurn,
+  PendingAssistantRequestKind,
+  ToolStep,
+  STREAM_PLAYBACK_INTERVAL_MS,
+  STREAM_PRIME_DELAY_MS,
+  advanceStreamCursorByWords,
+  countRemainingStreamWords,
+  getRenderableStreamingText,
+  getStreamBatchSize,
+} from "@/features";
 import {
   startNewThreadStream,
   sendMessage as apiSendMessage,
@@ -50,20 +62,25 @@ export const useGeminiEngine = (config: {
     setLastSentMessage,
     resetInitialUi,
     appendErrorMessage,
-    streamingText,
-    streamingToolSteps,
-    streamingCitations,
     setToolStatus,
     setStreamingToolSteps,
     setStreamingCitations,
-    firstResponseId,
     lastSentMessage,
+    pendingAssistantTurn,
+    pendingAssistantTurnRef,
+    setPendingAssistantTurn,
   } = config.state;
 
   const sessionChatIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isRequestCancelledRef = useRef(false);
   const preRetryMessagesRef = useRef<Message[]>([]);
+  const playbackTimeoutRef = useRef<number | null>(null);
+  const primingTimeoutRef = useRef<number | null>(null);
+  const finalizeTimeoutRef = useRef<number | null>(null);
+  const playbackCursorRef = useRef(0);
+  const activePendingTurnIdRef = useRef<string | null>(null);
+  const finalizedPendingTurnIdRef = useRef<string | null>(null);
 
   const cleanupAbortController = () => {
     if (abortControllerRef.current) {
@@ -72,10 +89,45 @@ export const useGeminiEngine = (config: {
     }
   };
 
+  const clearPlaybackTimeout = () => {
+    if (playbackTimeoutRef.current !== null) {
+      window.clearTimeout(playbackTimeoutRef.current);
+      playbackTimeoutRef.current = null;
+    }
+  };
+
+  const clearPrimingTimeout = () => {
+    if (primingTimeoutRef.current !== null) {
+      window.clearTimeout(primingTimeoutRef.current);
+      primingTimeoutRef.current = null;
+    }
+  };
+
+  const clearFinalizeTimeout = () => {
+    if (finalizeTimeoutRef.current !== null) {
+      window.clearTimeout(finalizeTimeoutRef.current);
+      finalizeTimeoutRef.current = null;
+    }
+  };
+
+  const clearPendingTimers = () => {
+    clearPlaybackTimeout();
+    clearPrimingTimeout();
+    clearFinalizeTimeout();
+  };
+
   const resetToolStreamingState = () => {
     setToolStatus(null);
     setStreamingToolSteps([]);
     setStreamingCitations([]);
+  };
+
+  const resetLegacyStreamingState = () => {
+    setStreamingText("");
+    setToolStatus(null);
+    setStreamingToolSteps([]);
+    setStreamingCitations([]);
+    setFirstResponseId(null);
   };
 
   const getThoughtSecondsFromToolSteps = (steps: ToolStep[]): number | undefined => {
@@ -100,6 +152,346 @@ export const useGeminiEngine = (config: {
   const getElapsedThoughtSeconds = (startedAtMs: number): number => {
     return Math.max(1, Math.round((Date.now() - startedAtMs) / 1000));
   };
+
+  const getDefaultProgressText = (
+    requestKind: PendingAssistantRequestKind,
+  ): string => {
+    if (requestKind === "retry") {
+      return API_STATUS_TEXT.REGENERATING_RESPONSE;
+    }
+    if (requestKind === "initial" || requestKind === "edit") {
+      return API_STATUS_TEXT.ANALYZING_IMAGE;
+    }
+    return API_STATUS_TEXT.THINKING;
+  };
+
+  const beginPendingAssistantTurn = (
+    id: string,
+    requestKind: PendingAssistantRequestKind,
+    requestStartedAtMs: number,
+  ) => {
+    finalizedPendingTurnIdRef.current = null;
+    playbackCursorRef.current = 0;
+    clearPendingTimers();
+    setPendingAssistantTurn({
+      id,
+      requestKind,
+      phase: "thinking",
+      requestStartedAtMs,
+      thoughtSeconds: undefined,
+      progressText: getDefaultProgressText(requestKind),
+      rawText: "",
+      displayText: "",
+      transportDone: false,
+      toolSteps: [],
+      pendingCitations: [],
+      visibleCitations: [],
+      stopped: false,
+    } satisfies PendingAssistantTurn);
+    resetLegacyStreamingState();
+    setIsStreaming(true);
+    setIsAiTyping(true);
+  };
+
+  const updatePendingAssistantTurn = (
+    updater: (turn: PendingAssistantTurn) => PendingAssistantTurn,
+  ) => {
+    setPendingAssistantTurn((previous) => {
+      if (!previous) return previous;
+      return updater(previous);
+    });
+  };
+
+  const appendPendingRawText = (token: string) => {
+    if (!token) return;
+
+    updatePendingAssistantTurn((turn) => {
+      const nextRawText = `${turn.rawText}${token}`;
+      const hasFirstVisibleText = turn.rawText.trim().length === 0 && nextRawText.trim().length > 0;
+
+      return {
+        ...turn,
+        rawText: nextRawText,
+        thoughtSeconds: hasFirstVisibleText
+          ? getElapsedThoughtSeconds(turn.requestStartedAtMs)
+          : turn.thoughtSeconds,
+        phase: hasFirstVisibleText ? "primed" : turn.phase,
+      };
+    });
+  };
+
+  const resetPendingRawText = () => {
+    playbackCursorRef.current = 0;
+    clearPendingTimers();
+    updatePendingAssistantTurn((turn) => ({
+      ...turn,
+      phase: "thinking",
+      thoughtSeconds: undefined,
+      rawText: "",
+      displayText: "",
+      transportDone: false,
+      visibleCitations: [],
+      stopped: false,
+    }));
+  };
+
+  const markPendingTransportDone = (finalResponse: string) => {
+    updatePendingAssistantTurn((turn) => {
+      const nextRawText =
+        finalResponse.length > turn.rawText.length ? finalResponse : turn.rawText;
+      const hasVisibleText = nextRawText.trim().length > 0;
+
+      return {
+        ...turn,
+        rawText: nextRawText,
+        thoughtSeconds: hasVisibleText
+          ? turn.thoughtSeconds ?? getElapsedThoughtSeconds(turn.requestStartedAtMs)
+          : turn.thoughtSeconds,
+        phase:
+          turn.phase === "thinking"
+            ? hasVisibleText
+              ? "primed"
+              : "complete"
+            : turn.phase,
+        transportDone: true,
+        visibleCitations:
+          !hasVisibleText && turn.phase === "thinking"
+            ? turn.pendingCitations
+            : turn.visibleCitations,
+      };
+    });
+  };
+
+  const clearPendingAssistantTurn = () => {
+    clearPendingTimers();
+    playbackCursorRef.current = 0;
+    activePendingTurnIdRef.current = null;
+    finalizedPendingTurnIdRef.current = null;
+    setPendingAssistantTurn(null);
+    resetLegacyStreamingState();
+  };
+
+  const buildCommittedAssistantMessage = (
+    turn: PendingAssistantTurn,
+  ): Message => ({
+    id: turn.id,
+    role: "model",
+    text: turn.displayText.trimEnd(),
+    timestamp: Date.now(),
+    thoughtSeconds:
+      turn.thoughtSeconds ?? getThoughtSecondsFromToolSteps(turn.toolSteps),
+    stopped: turn.stopped || turn.phase === "stopped",
+    alreadyStreamed: true,
+    citations: turn.visibleCitations,
+    toolSteps: turn.toolSteps,
+  });
+
+  const commitPendingAssistantTurn = (turn: PendingAssistantTurn) => {
+    if (finalizedPendingTurnIdRef.current === turn.id) return;
+    finalizedPendingTurnIdRef.current = turn.id;
+
+    const botMsg = buildCommittedAssistantMessage(turn);
+
+    if (turn.displayText !== turn.rawText && botMsg.text.trim().length > 0) {
+      replaceLastAssistantHistory(botMsg.text);
+      if (messages.length === 0) {
+        setImageDescription(botMsg.text);
+      }
+    }
+
+    setMessages((previous: Message[]) => {
+      const newMessages = [...previous, botMsg];
+      config.onOverwriteMessages?.(newMessages);
+      return newMessages;
+    });
+
+    setLastSentMessage(null);
+    setRetryingMessageId(null);
+    setIsLoading(false);
+    setIsStreaming(false);
+    setIsAiTyping(false);
+    clearPendingAssistantTurn();
+  };
+
+  const clearPendingGenerationState = () => {
+    clearPendingAssistantTurn();
+    resetToolStreamingState();
+    setIsLoading(false);
+    setIsStreaming(false);
+    setIsAiTyping(false);
+  };
+
+  useEffect(() => {
+    const nextTurnId = pendingAssistantTurn?.id ?? null;
+    if (activePendingTurnIdRef.current !== nextTurnId) {
+      clearPendingTimers();
+      playbackCursorRef.current = 0;
+      activePendingTurnIdRef.current = nextTurnId;
+    }
+
+    if (!pendingAssistantTurn) {
+      finalizedPendingTurnIdRef.current = null;
+    }
+  }, [pendingAssistantTurn?.id]);
+
+  useEffect(() => {
+    return () => {
+      clearPendingTimers();
+    };
+  }, []);
+
+  useEffect(() => {
+    const turn = pendingAssistantTurn;
+    if (!turn) return;
+
+    if (turn.phase === "stopped" || turn.stopped) {
+      clearPlaybackTimeout();
+      clearPrimingTimeout();
+      return;
+    }
+
+    if (turn.phase === "complete") {
+      clearPlaybackTimeout();
+      clearPrimingTimeout();
+      if (finalizeTimeoutRef.current === null) {
+        finalizeTimeoutRef.current = window.setTimeout(() => {
+          finalizeTimeoutRef.current = null;
+          const latest = pendingAssistantTurnRef.current;
+          if (!latest || latest.id !== turn.id || latest.phase !== "complete") {
+            return;
+          }
+          commitPendingAssistantTurn(latest);
+        }, 180);
+      }
+      return;
+    }
+
+    clearFinalizeTimeout();
+
+    if (turn.phase === "thinking") {
+      clearPrimingTimeout();
+      clearPlaybackTimeout();
+      return;
+    }
+
+    if (turn.phase === "primed") {
+      clearPlaybackTimeout();
+      if (!turn.rawText.trim()) return;
+      if (primingTimeoutRef.current === null) {
+        primingTimeoutRef.current = window.setTimeout(() => {
+          primingTimeoutRef.current = null;
+          const latest = pendingAssistantTurnRef.current;
+          if (!latest || latest.id !== turn.id || latest.phase !== "primed") {
+            return;
+          }
+
+          setPendingAssistantTurn((previous) => {
+            if (!previous || previous.id !== turn.id || previous.phase !== "primed") {
+              return previous;
+            }
+            return {
+              ...previous,
+              phase: previous.transportDone ? "finalizing" : "streaming",
+            };
+          });
+        }, STREAM_PRIME_DELAY_MS);
+      }
+      return;
+    }
+
+    clearPrimingTimeout();
+
+    if (turn.rawText.length < playbackCursorRef.current) {
+      playbackCursorRef.current = 0;
+    }
+
+    const remainingWords = countRemainingStreamWords(
+      turn.rawText,
+      playbackCursorRef.current,
+    );
+
+    if (remainingWords === 0) {
+      clearPlaybackTimeout();
+      if (!turn.transportDone) return;
+
+      const { text: visibleText } = getRenderableStreamingText(
+        turn.rawText.slice(0, playbackCursorRef.current),
+      );
+
+      updatePendingAssistantTurn((currentTurn) => ({
+        ...currentTurn,
+        displayText: visibleText,
+        phase: "complete",
+        visibleCitations: currentTurn.pendingCitations,
+      }));
+      return;
+    }
+
+    if (playbackTimeoutRef.current !== null) return;
+
+    playbackTimeoutRef.current = window.setTimeout(() => {
+      playbackTimeoutRef.current = null;
+      const latest = pendingAssistantTurnRef.current;
+      if (
+        !latest ||
+        latest.stopped ||
+        (latest.phase !== "streaming" && latest.phase !== "finalizing")
+      ) {
+        return;
+      }
+
+      if (latest.rawText.length < playbackCursorRef.current) {
+        playbackCursorRef.current = 0;
+      }
+
+      const backlogWords = countRemainingStreamWords(
+        latest.rawText,
+        playbackCursorRef.current,
+      );
+
+      if (backlogWords === 0) {
+        if (latest.transportDone) {
+          const { text: visibleText } = getRenderableStreamingText(
+            latest.rawText.slice(0, playbackCursorRef.current),
+          );
+          updatePendingAssistantTurn((currentTurn) => ({
+            ...currentTurn,
+            displayText: visibleText,
+            phase: "complete",
+            visibleCitations: currentTurn.pendingCitations,
+          }));
+        }
+        return;
+      }
+
+      const nextCursor = advanceStreamCursorByWords(
+        latest.rawText,
+        playbackCursorRef.current,
+        getStreamBatchSize(backlogWords),
+      );
+      playbackCursorRef.current = nextCursor;
+
+      const { text: nextDisplayText } = getRenderableStreamingText(
+        latest.rawText.slice(0, nextCursor),
+      );
+      const isBufferDrained = nextCursor >= latest.rawText.length;
+
+      updatePendingAssistantTurn((currentTurn) => ({
+        ...currentTurn,
+        displayText: nextDisplayText,
+        phase:
+          isBufferDrained && currentTurn.transportDone
+            ? "complete"
+            : currentTurn.transportDone
+              ? "finalizing"
+              : "streaming",
+        visibleCitations:
+          isBufferDrained && currentTurn.transportDone
+            ? currentTurn.pendingCitations
+            : currentTurn.visibleCitations,
+      }));
+    }, STREAM_PLAYBACK_INTERVAL_MS);
+  }, [commitPendingAssistantTurn, pendingAssistantTurn, pendingAssistantTurnRef, setPendingAssistantTurn]);
 
   const createToolEventHandler = (onResetText?: () => void) => {
     let steps: ToolStep[] = [];
@@ -151,8 +543,16 @@ export const useGeminiEngine = (config: {
         const mappedStatus = mapToolStatusText(event.message);
         if (mappedStatus.type === "set") {
           setToolStatus(mappedStatus.text);
+          updatePendingAssistantTurn((turn) => ({
+            ...turn,
+            progressText: mappedStatus.text,
+          }));
         } else if (mappedStatus.type === "clear") {
           setToolStatus(null);
+          updatePendingAssistantTurn((turn) => ({
+            ...turn,
+            progressText: getDefaultProgressText(turn.requestKind),
+          }));
         }
         return;
       }
@@ -169,6 +569,10 @@ export const useGeminiEngine = (config: {
         };
         steps = [...steps, next];
         setStreamingToolSteps([...steps]);
+        updatePendingAssistantTurn((turn) => ({
+          ...turn,
+          toolSteps: [...steps],
+        }));
         return;
       }
 
@@ -211,6 +615,16 @@ export const useGeminiEngine = (config: {
           mergeCitations(parsed);
           setStreamingCitations([...citations]);
         }
+
+        updatePendingAssistantTurn((turn) => ({
+          ...turn,
+          toolSteps: [...steps],
+          pendingCitations: [...citations],
+          visibleCitations:
+            turn.phase === "complete" || turn.phase === "stopped" || turn.stopped
+              ? [...citations]
+              : turn.visibleCitations,
+        }));
       }
     };
 
@@ -253,11 +667,10 @@ export const useGeminiEngine = (config: {
     if (!isRetry) {
       resetInitialUi();
       setMessages([]);
-      setFirstResponseId(null);
       setLastSentMessage(null);
       await new Promise((resolve) => setTimeout(resolve, 3000));
       if (signal.aborted) {
-        setIsLoading(false);
+        clearPendingGenerationState();
         return;
       }
     }
@@ -268,35 +681,28 @@ export const useGeminiEngine = (config: {
     }
 
     resetToolStreamingState();
-    setIsStreaming(true);
-    setIsAiTyping(true);
     const requestStartedAtMs = Date.now();
+    const responseId = Date.now().toString();
+    beginPendingAssistantTurn(responseId, "initial", requestStartedAtMs);
 
     try {
-      let fullResponse = "";
-      const toolTracker = createToolEventHandler(() => {
-        fullResponse = "";
-        setStreamingText("");
-      });
-      const responseId = Date.now().toString();
-      setFirstResponseId(responseId);
-
       if (signal.aborted) {
-        setIsLoading(false);
+        clearPendingGenerationState();
         return;
       }
+
+      const toolTracker = createToolEventHandler(resetPendingRawText);
 
       console.log(
         "[useGeminiEngine] Calling startNewThreadStream with model:",
         modelId,
       );
-      await startNewThreadStream(
+      const responseText = await startNewThreadStream(
         modelId,
         imgData.path,
         (token: string) => {
           if (signal.aborted) return;
-          fullResponse += token;
-          setStreamingText(fullResponse);
+          appendPendingRawText(token);
         },
         config.userName,
         config.userEmail,
@@ -318,43 +724,18 @@ export const useGeminiEngine = (config: {
       console.log("[useGeminiEngine] startNewThreadStream finished!");
 
       if (signal.aborted) {
-        setIsLoading(false);
+        clearPendingGenerationState();
         return;
       }
 
-      const botMsg: Message = {
-        id: responseId,
-        role: "model",
-        text: fullResponse,
-        timestamp: Date.now(),
-        thoughtSeconds: getElapsedThoughtSeconds(requestStartedAtMs),
-        alreadyStreamed: true,
-        toolSteps: toolTracker.snapshot().steps,
-        citations: toolTracker.snapshot().citations,
-      };
-      setMessages((prev: Message[]) => {
-        const newMsgs = [...prev, botMsg];
-        if (config.onOverwriteMessages) {
-          config.onOverwriteMessages(newMsgs);
-        }
-        return newMsgs;
-      });
-      setStreamingText("");
-      resetToolStreamingState();
-      setFirstResponseId(null);
-
-      setIsStreaming(false);
-      setIsAiTyping(false);
-      setIsLoading(false);
+      void toolTracker;
+      markPendingTransportDone(responseText);
     } catch (apiError: any) {
       if (
         signal.aborted ||
         apiError?.message === "CANCELLED" ||
         isRequestCancelledRef.current
       ) {
-        setIsLoading(false);
-        setIsStreaming(false);
-        setIsAiTyping(false);
         return;
       }
 
@@ -366,14 +747,11 @@ export const useGeminiEngine = (config: {
         if (config.currentModel !== ModelType.GEMINI_3_1_FLASH) {
           console.log("Model failed, trying lite version...");
           config.setCurrentModel(ModelType.GEMINI_3_1_FLASH);
-          setIsLoading(false);
-          setIsStreaming(false);
-          setIsAiTyping(false);
+          clearPendingGenerationState();
           return;
         }
       }
 
-      setIsAiTyping(false);
       cancelCurrentRequest();
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -386,12 +764,9 @@ export const useGeminiEngine = (config: {
         errorMsg = "Service temporarily unavailable.";
       else if (apiError.message) errorMsg = apiError.message;
 
+      clearPendingAssistantTurn();
       appendErrorMessage(errorMsg, sessionChatIdRef.current || config.chatId);
     } finally {
-      resetToolStreamingState();
-      setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
       if (abortControllerRef.current?.signal === signal) {
         abortControllerRef.current = null;
       }
@@ -411,34 +786,27 @@ export const useGeminiEngine = (config: {
       return;
     }
     const targetChatId = config.chatId;
+    sessionChatIdRef.current = targetChatId;
     isRequestCancelledRef.current = false;
 
     setIsLoading(true);
     resetInitialUi();
     setMessages([]);
-    setFirstResponseId(null);
     setLastSentMessage(null);
 
     resetToolStreamingState();
-    setIsStreaming(true);
-    setIsAiTyping(true);
     const requestStartedAtMs = Date.now();
+    const responseId = Date.now().toString();
+    beginPendingAssistantTurn(responseId, "edit", requestStartedAtMs);
 
     try {
-      let fullResponse = "";
-      const toolTracker = createToolEventHandler(() => {
-        fullResponse = "";
-        setStreamingText("");
-      });
-      const responseId = Date.now().toString();
-      setFirstResponseId(responseId);
+      const toolTracker = createToolEventHandler(resetPendingRawText);
 
-      await startNewThreadStream(
+      const responseText = await startNewThreadStream(
         config.currentModel,
         config.startupImage.path,
         (token: string) => {
-          fullResponse += token;
-          setStreamingText(fullResponse); // ← LIVE UPDATE
+          appendPendingRawText(token);
         },
         undefined,
         undefined,
@@ -447,35 +815,10 @@ export const useGeminiEngine = (config: {
         toolTracker.onEvent,
       );
 
-      const botMsg: Message = {
-        id: responseId,
-        role: "model",
-        text: fullResponse,
-        timestamp: Date.now(),
-        thoughtSeconds: getElapsedThoughtSeconds(requestStartedAtMs),
-        alreadyStreamed: true,
-        toolSteps: toolTracker.snapshot().steps,
-        citations: toolTracker.snapshot().citations,
-      };
-      setMessages((prev: Message[]) => {
-        const newMsgs = [...prev, botMsg];
-        if (config.onOverwriteMessages) {
-          config.onOverwriteMessages(newMsgs);
-        }
-        return newMsgs;
-      });
-      setStreamingText("");
-      resetToolStreamingState();
-      setFirstResponseId(null);
-
-      setIsStreaming(false);
-      setIsAiTyping(false);
-      setIsLoading(false);
+      void toolTracker;
+      markPendingTransportDone(responseText);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
-        setIsLoading(false);
-        setIsStreaming(false);
-        setIsAiTyping(false);
         return;
       }
       console.error(apiError);
@@ -486,127 +829,54 @@ export const useGeminiEngine = (config: {
         errorMsg = "Service temporarily unavailable.";
       else if (apiError.message) errorMsg = apiError.message;
 
+      clearPendingAssistantTurn();
       appendErrorMessage(errorMsg, targetChatId);
-    } finally {
-      resetToolStreamingState();
-      setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
     }
   };
 
   const handleRetrySend = async () => {
     if (!lastSentMessage) return;
+    sessionChatIdRef.current = config.chatId;
     setIsLoading(true);
     isRequestCancelledRef.current = false;
     setMessages((prev: Message[]) => [...prev, lastSentMessage]);
     const targetChatId = config.chatId;
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
+    const responseId = (Date.now() + 1).toString();
+    beginPendingAssistantTurn(responseId, "message", requestStartedAtMs);
 
     try {
-      let fullResponse = "";
-      const toolTracker = createToolEventHandler(() => {
-        fullResponse = "";
-        setStreamingText("");
-      });
-      const responseId = (Date.now() + 1).toString();
-      setIsAiTyping(true);
-      setIsStreaming(true);
-      setFirstResponseId(responseId);
-
+      const toolTracker = createToolEventHandler(resetPendingRawText);
       const responseText = await apiSendMessage(
         lastSentMessage.text,
         undefined,
         (token: string) => {
-          fullResponse += token;
-          setStreamingText(fullResponse);
+          appendPendingRawText(token);
         },
         config.chatId,
         toolTracker.onEvent,
       );
-      const botMsg: Message = {
-        id: responseId,
-        role: "model",
-        text: responseText,
-        timestamp: Date.now(),
-        thoughtSeconds: getElapsedThoughtSeconds(requestStartedAtMs),
-        alreadyStreamed: true,
-        toolSteps: toolTracker.snapshot().steps,
-        citations: toolTracker.snapshot().citations,
-      };
-      setMessages((prev: Message[]) => {
-        const newMsgs = [...prev, botMsg];
-        if (config.onOverwriteMessages) {
-          config.onOverwriteMessages(newMsgs);
-        }
-        return newMsgs;
-      });
-      setLastSentMessage(null);
-      setStreamingText("");
-      resetToolStreamingState();
-      setFirstResponseId(null);
-      setIsStreaming(false);
-      setIsAiTyping(false);
+
+      void toolTracker;
+      markPendingTransportDone(responseText);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
-        setIsStreaming(false);
-        setIsAiTyping(false);
         return;
       }
+      clearPendingAssistantTurn();
       appendErrorMessage(
         "An error occurred while sending the message. " +
           (apiError.message || ""),
         targetChatId,
       );
-    } finally {
-      resetToolStreamingState();
-      setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
     }
   };
 
   const handleSend = async (userText: string, modelId?: string) => {
     if (!userText.trim() || config.state.isLoading) return;
     const targetChatId = config.chatId;
-
-    if (streamingText && firstResponseId) {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-
-      const botMsg: Message = {
-        id: firstResponseId,
-        role: "model",
-        text: streamingText,
-        timestamp: Date.now(),
-        thoughtSeconds: getThoughtSecondsFromToolSteps(streamingToolSteps),
-        citations: streamingCitations,
-        toolSteps: streamingToolSteps,
-      };
-      setMessages((prev: Message[]) => {
-        const idx = prev.findIndex((m) => m.id === botMsg.id);
-        if (idx !== -1) {
-          const newMsgs = [...prev];
-          newMsgs[idx] = botMsg;
-          if (config.onOverwriteMessages) {
-            config.onOverwriteMessages(newMsgs);
-          }
-          return newMsgs;
-        }
-        const newMsgs = [...prev, botMsg];
-        if (config.onOverwriteMessages) {
-          config.onOverwriteMessages(newMsgs);
-        }
-        return newMsgs;
-      });
-
-      setStreamingText("");
-      resetToolStreamingState();
-      setFirstResponseId(null);
-    }
+    sessionChatIdRef.current = targetChatId;
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -623,73 +893,40 @@ export const useGeminiEngine = (config: {
     isRequestCancelledRef.current = false;
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
+    const responseId = (Date.now() + 1).toString();
+    beginPendingAssistantTurn(responseId, "message", requestStartedAtMs);
 
     try {
-      let fullResponse = "";
-      const toolTracker = createToolEventHandler(() => {
-        fullResponse = "";
-        setStreamingText("");
-      });
-      const responseId = (Date.now() + 1).toString();
-      setIsAiTyping(true);
-      setIsStreaming(true);
-      setFirstResponseId(responseId);
-
+      const toolTracker = createToolEventHandler(resetPendingRawText);
       const responseText = await apiSendMessage(
         userText,
         modelId,
         (token: string) => {
-          fullResponse += token;
-          setStreamingText(fullResponse);
+          appendPendingRawText(token);
         },
         config.chatId,
         toolTracker.onEvent,
       );
-      const botMsg: Message = {
-        id: responseId,
-        role: "model",
-        text: responseText,
-        timestamp: Date.now(),
-        thoughtSeconds: getElapsedThoughtSeconds(requestStartedAtMs),
-        alreadyStreamed: true,
-        toolSteps: toolTracker.snapshot().steps,
-        citations: toolTracker.snapshot().citations,
-      };
-      setMessages((prev: Message[]) => {
-        const newMsgs = [...prev, botMsg];
-        if (config.onOverwriteMessages) {
-          config.onOverwriteMessages(newMsgs);
-        }
-        return newMsgs;
-      });
-      setLastSentMessage(null);
-      setStreamingText("");
-      resetToolStreamingState();
-      setFirstResponseId(null);
-      setIsStreaming(false);
-      setIsAiTyping(false);
+
+      void toolTracker;
+      markPendingTransportDone(responseText);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
-        setIsStreaming(false);
-        setIsAiTyping(false);
         return;
       }
+      clearPendingAssistantTurn();
       appendErrorMessage(
         "An error occurred while sending the message. " +
           (apiError.message || ""),
         targetChatId,
       );
-    } finally {
-      resetToolStreamingState();
-      setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
     }
   };
 
   const handleRetryMessage = async (messageId: string, modelId?: string) => {
     const msgIndex = messages.findIndex((m: Message) => m.id === messageId);
     if (msgIndex === -1) return;
+    sessionChatIdRef.current = config.chatId;
 
     const truncatedMessages = messages.slice(0, msgIndex);
     const retryModelId = modelId || config.currentModel;
@@ -703,6 +940,7 @@ export const useGeminiEngine = (config: {
     }
     
     setRetryingMessageId(messageId); // Keep for "Analyzing" shimmer if needed
+    setIsLoading(true);
     isRequestCancelledRef.current = false;
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
@@ -715,26 +953,18 @@ export const useGeminiEngine = (config: {
     }
 
     try {
-      let fullResponse = "";
-      const toolTracker = createToolEventHandler(() => {
-        fullResponse = "";
-        setStreamingText("");
-      });
-      let hasReceivedFirstToken = false;
-      setFirstResponseId(newResponseId);
-      setIsStreaming(true);
-      setIsAiTyping(true);
-
+      const toolTracker = createToolEventHandler(resetPendingRawText);
+      beginPendingAssistantTurn(
+        newResponseId,
+        msgIndex === 0 ? "initial" : "retry",
+        requestStartedAtMs,
+      );
       const responseText = await apiRetryFromMessage(
         msgIndex,
         messages,
         retryModelId,
         (token: string) => {
-          fullResponse += token;
-          if (!hasReceivedFirstToken) {
-            hasReceivedFirstToken = true;
-          }
-          setStreamingText(fullResponse);
+          appendPendingRawText(token);
         },
         fallbackImagePath,
         undefined,
@@ -754,39 +984,10 @@ export const useGeminiEngine = (config: {
           .catch(console.error);
       }
 
-      const botMsg: Message = {
-        id: newResponseId,
-        role: "model",
-        text: responseText,
-        timestamp: Date.now(),
-        thoughtSeconds: getElapsedThoughtSeconds(requestStartedAtMs),
-        alreadyStreamed: true,
-        toolSteps: toolTracker.snapshot().steps,
-        citations: toolTracker.snapshot().citations,
-      };
-      setRetryingMessageId(null);
-      const newMessages = [...truncatedMessages, botMsg];
-      setMessages(newMessages);
-      
-      if (config.onMessage && config.chatId) {
-        config.onMessage(botMsg, config.chatId);
-      }
-      
-      if (config.onOverwriteMessages) {
-        config.onOverwriteMessages(newMessages);
-      }
-      
-      setIsStreaming(false);
-      setIsAiTyping(false);
-      setFirstResponseId(null);
-      setStreamingText("");
-      resetToolStreamingState();
-      setIsLoading(false);
+      void toolTracker;
+      markPendingTransportDone(responseText);
     } catch (apiError: any) {
       if (apiError?.message === "CANCELLED" || isRequestCancelledRef.current) {
-        setIsLoading(false);
-        setIsStreaming(false);
-        setIsAiTyping(false);
         return;
       }
       console.error("Retry failed:", apiError);
@@ -794,34 +995,9 @@ export const useGeminiEngine = (config: {
       const errorMsg =
         "An error occurred while regenerating the response. " +
         (apiError.message || "");
-
-      const errorBubble: Message = {
-        id: Date.now().toString(),
-        role: "model",
-        text: errorMsg,
-        timestamp: Date.now(),
-        stopped: true,
-      };
-
-      const newMessages = [...truncatedMessages, errorBubble];
-      setMessages(newMessages);
-
-      if (config.onOverwriteMessages) {
-        config.onOverwriteMessages(newMessages);
-      }
-
-      setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
-      setStreamingText("");
-      setFirstResponseId(null);
+      clearPendingAssistantTurn();
       setRetryingMessageId(null);
-      resetToolStreamingState();
-    } finally {
-      resetToolStreamingState();
-      setIsLoading(false);
-      setIsStreaming(false);
-      setIsAiTyping(false);
+      appendErrorMessage(errorMsg, config.chatId);
     }
   };
 
@@ -840,12 +1016,7 @@ export const useGeminiEngine = (config: {
 
     setRetryingMessageId(null);
     setLastSentMessage(null);
-    setIsLoading(false);
-    setIsStreaming(false);
-    setIsAiTyping(false);
-    setStreamingText("");
-    setFirstResponseId(null);
-    resetToolStreamingState();
+    clearPendingGenerationState();
 
     const firstAssistantMessage = truncatedMessages.find(
       (message: Message) => message.role === "model",
@@ -867,60 +1038,28 @@ export const useGeminiEngine = (config: {
     );
   };
 
-  const handleStopGeneration = (truncatedText?: string) => {
+  const handleStopGeneration = () => {
     isRequestCancelledRef.current = true;
     cancelCurrentRequest();
     cleanupAbortController();
 
-    if (typeof truncatedText === "string") {
-      replaceLastAssistantHistory(truncatedText);
-      if (messages.length === 0) {
-        setImageDescription(truncatedText);
-      }
-
-      if (streamingText && firstResponseId) {
-        const botMsg: Message = {
-          id: firstResponseId,
-          role: "model",
-          text: truncatedText,
-          timestamp: Date.now(),
-          thoughtSeconds: getThoughtSecondsFromToolSteps(streamingToolSteps),
-          stopped: true,
-          alreadyStreamed: true,
-          citations: streamingCitations,
-          toolSteps: streamingToolSteps,
-        };
-        setMessages((prev: Message[]) => {
-          const idx = prev.findIndex((m) => m.id === botMsg.id);
-          if (idx !== -1) {
-            const newMsgs = [...prev];
-            newMsgs[idx] = botMsg;
-            config.onOverwriteMessages?.(newMsgs);
-            return newMsgs;
-          }
-          const newMsgs = [...prev, botMsg];
-          config.onOverwriteMessages?.(newMsgs);
-          return newMsgs;
-        });
-      } else {
-        setMessages((prev: Message[]) => {
-          const updated = [...prev];
-          for (let i = updated.length - 1; i >= 0; i--) {
-            if (updated[i].role === "model") {
-              updated[i] = {
-                ...updated[i],
-                text: truncatedText,
-                stopped: true,
-                alreadyStreamed: true,
-              };
-              break;
-            }
-          }
-
-          config.onOverwriteMessages?.(updated);
-          return updated;
-        });
-      }
+    const currentPendingTurn = pendingAssistantTurnRef.current;
+    if (
+      currentPendingTurn &&
+      (currentPendingTurn.phase !== "thinking" ||
+        currentPendingTurn.displayText.trim().length > 0 ||
+        currentPendingTurn.pendingCitations.length > 0)
+    ) {
+      const stoppedTurn: PendingAssistantTurn = {
+        ...currentPendingTurn,
+        phase: "stopped",
+        stopped: true,
+        transportDone: true,
+        visibleCitations: currentPendingTurn.pendingCitations,
+      };
+      setPendingAssistantTurn(stoppedTurn);
+      commitPendingAssistantTurn(stoppedTurn);
+      return;
     } else if (config.state.retryingMessageId) {
       const oldMessages = preRetryMessagesRef.current;
       setMessages(oldMessages);
@@ -934,56 +1073,30 @@ export const useGeminiEngine = (config: {
         stopped: true,
       };
       setMessages((prev: Message[]) => [...prev, stoppedMsg]);
-      const targetChatId = sessionChatIdRef.current;
+      const targetChatId = sessionChatIdRef.current || config.chatId;
       if (config.onMessage && targetChatId) {
         config.onMessage(stoppedMsg, targetChatId);
       }
     }
 
     setRetryingMessageId(null);
-    setIsLoading(false);
-    setIsStreaming(false);
-    setIsAiTyping(false);
-    setStreamingText("");
-    setFirstResponseId(null);
-    resetToolStreamingState();
+    clearPendingGenerationState();
   };
 
   const handleAnswerNow = async () => {
     await answerNowCurrentRequest();
     setToolStatus(API_STATUS_TEXT.WRAPPING_UP);
+    updatePendingAssistantTurn((turn) => ({
+      ...turn,
+      progressText: API_STATUS_TEXT.WRAPPING_UP,
+    }));
   };
 
   const handleStreamComplete = () => {
-    if (streamingText && firstResponseId) {
-      const botMsg: Message = {
-        id: firstResponseId,
-        role: "model",
-        text: streamingText,
-        timestamp: Date.now(),
-        thoughtSeconds: getThoughtSecondsFromToolSteps(streamingToolSteps),
-        alreadyStreamed: true,
-        citations: streamingCitations,
-        toolSteps: streamingToolSteps,
-      };
-      setMessages((prev: Message[]) => {
-        const idx = prev.findIndex((m) => m.id === botMsg.id);
-        if (idx !== -1) {
-          const newMsgs = [...prev];
-          newMsgs[idx] = botMsg;
-          config.onOverwriteMessages?.(newMsgs);
-          return newMsgs;
-        }
-        const newMsgs = [...prev, botMsg];
-        config.onOverwriteMessages?.(newMsgs);
-        return newMsgs;
-      });
-      setStreamingText("");
-      setFirstResponseId(null);
-      resetToolStreamingState();
+    const currentPendingTurn = pendingAssistantTurnRef.current;
+    if (currentPendingTurn?.phase === "complete") {
+      commitPendingAssistantTurn(currentPendingTurn);
     }
-    setIsStreaming(false);
-    setIsAiTyping(false);
   };
 
   return {
