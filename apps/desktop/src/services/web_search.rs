@@ -6,19 +6,23 @@ use rand::Rng;
 use regex::Regex;
 use reqwest::{header, redirect::Policy, StatusCode};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::cmp::Reverse;
+use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, Ipv6Addr};
 use std::time::Duration;
 use tokio::time::sleep;
 use url::Url;
 
 const DDG_SEARCH_URL: &str = "https://html.duckduckgo.com/html/?q=";
+const MOJEEK_SEARCH_URL: &str = "https://www.mojeek.com/search?q=";
 const DEFAULT_MAX_RESULTS: usize = 6;
 const MAX_REDIRECTS: usize = 5;
 const MAX_FETCH_BYTES: usize = 320 * 1024;
 const MAX_FETCH_CHARS: usize = 12_000;
 const MAX_SUMMARY_WORDS: usize = 50;
 const MAX_RETRIES: usize = 2;
+const REQUEST_TIMEOUT_SECS: u64 = 15;
+const CONNECT_TIMEOUT_SECS: u64 = 8;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CitationSource {
@@ -41,26 +45,149 @@ pub struct WebSearchResult {
     pub message: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SearchFailureClass {
+    ProxyTransport,
+    ConnectTimeout,
+    ReadTimeout,
+    Challenge,
+    HttpStatus,
+    NoResults,
+    Dns,
+    InvalidUrl,
+    BlockedTarget,
+    Parse,
+    Other,
+}
+
+impl SearchFailureClass {
+    fn as_str(self) -> &'static str {
+        match self {
+            SearchFailureClass::ProxyTransport => "proxy_transport",
+            SearchFailureClass::ConnectTimeout => "connect_timeout",
+            SearchFailureClass::ReadTimeout => "read_timeout",
+            SearchFailureClass::Challenge => "challenge",
+            SearchFailureClass::HttpStatus => "http_status",
+            SearchFailureClass::NoResults => "no_results",
+            SearchFailureClass::Dns => "dns",
+            SearchFailureClass::InvalidUrl => "invalid_url",
+            SearchFailureClass::BlockedTarget => "blocked_target",
+            SearchFailureClass::Parse => "parse",
+            SearchFailureClass::Other => "other",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct SearchError {
+    kind: SearchFailureClass,
     message: String,
     retriable: bool,
 }
 
 impl SearchError {
-    fn fatal(message: impl Into<String>) -> Self {
+    fn fatal(kind: SearchFailureClass, message: impl Into<String>) -> Self {
         Self {
+            kind,
             message: message.into(),
             retriable: false,
         }
     }
 
-    fn retriable(message: impl Into<String>) -> Self {
+    fn retriable(kind: SearchFailureClass, message: impl Into<String>) -> Self {
         Self {
+            kind,
             message: message.into(),
             retriable: true,
         }
     }
+
+    fn public_message(&self) -> String {
+        format!("[{}] {}", self.kind.as_str(), self.message)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TransportRoute {
+    Direct,
+    Proxy,
+}
+
+impl TransportRoute {
+    fn as_str(self) -> &'static str {
+        match self {
+            TransportRoute::Direct => "direct",
+            TransportRoute::Proxy => "proxy",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SearchBackend {
+    DuckDuckGo,
+    Mojeek,
+}
+
+impl SearchBackend {
+    fn as_str(self) -> &'static str {
+        match self {
+            SearchBackend::DuckDuckGo => "ddg",
+            SearchBackend::Mojeek => "mojeek",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TransportClients {
+    direct: reqwest::Client,
+    proxy: Option<reqwest::Client>,
+}
+
+impl TransportClients {
+    fn build() -> Result<Self, SearchError> {
+        let direct = build_client(true)?;
+        let proxy = if has_proxy_env() {
+            Some(build_client(false)?)
+        } else {
+            None
+        };
+
+        Ok(Self { direct, proxy })
+    }
+
+    fn route_order(&self) -> [TransportRoute; 2] {
+        if self.proxy.is_some() {
+            [TransportRoute::Proxy, TransportRoute::Direct]
+        } else {
+            [TransportRoute::Direct, TransportRoute::Direct]
+        }
+    }
+
+    fn client_for(&self, route: TransportRoute) -> Option<&reqwest::Client> {
+        match route {
+            TransportRoute::Direct => Some(&self.direct),
+            TransportRoute::Proxy => self.proxy.as_ref(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SafeSourcesCatalog {
+    safe_sources: Vec<SafeSourcesCategory>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SafeSourcesCategory {
+    category: String,
+    sites: Vec<SafeSourceSite>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SafeSourceSite {
+    name: String,
+    domain: String,
+    #[serde(default)]
+    rss: Option<String>,
 }
 
 lazy_static::lazy_static! {
@@ -76,20 +203,71 @@ lazy_static::lazy_static! {
     ).expect("valid skip block regex");
     static ref TAG_RE: Regex = Regex::new(r#"(?is)<[^>]+>"#).expect("valid tag regex");
     static ref WS_RE: Regex = Regex::new(r#"\s+"#).expect("valid whitespace regex");
+    static ref MOJEEK_RESULT_BLOCK_RE: Regex = Regex::new(
+        r#"(?is)<li[^>]*class="[^"]*(?:result|results-standard|serp-result)[^"]*"[^>]*>(.*?)</li>"#
+    ).expect("valid mojeek result block regex");
+    static ref MOJEEK_LINK_RE: Regex = Regex::new(
+        r#"(?is)<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#
+    ).expect("valid mojeek link regex");
+    static ref MOJEEK_SNIPPET_RE: Regex = Regex::new(
+        r#"(?is)<p[^>]*class="[^"]*(?:s|snippet|desc|description)[^"]*"[^>]*>(.*?)</p>"#
+    ).expect("valid mojeek snippet regex");
+    static ref SAFE_SOURCES_DATA: Vec<SafeSourcesCategory> = {
+        let json_content = include_str!("../brain/knowledge/safe_sources.json");
+        serde_json::from_str::<SafeSourcesCatalog>(json_content)
+            .map(|catalog| catalog.safe_sources)
+            .unwrap_or_default()
+    };
+    static ref SAFE_DOMAINS: HashSet<String> = {
+        let mut out = HashSet::new();
+        for category in SAFE_SOURCES_DATA.iter() {
+            for site in &category.sites {
+                out.insert(normalize_domain(&site.domain));
+            }
+        }
+        out
+    };
 }
 
 fn user_agent() -> &'static str {
-    // Desktop UA to reduce anti-bot friction on public HTML endpoints.
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
 }
 
-fn build_client() -> Result<reqwest::Client, SearchError> {
-    reqwest::Client::builder()
+fn has_proxy_env() -> bool {
+    [
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+    ]
+    .iter()
+    .any(|key| {
+        std::env::var(key)
+            .ok()
+            .map(|v| !v.trim().is_empty())
+            .unwrap_or(false)
+    })
+}
+
+fn build_client(no_proxy: bool) -> Result<reqwest::Client, SearchError> {
+    let mut builder = reqwest::Client::builder()
         .redirect(Policy::none())
-        .timeout(Duration::from_secs(15))
-        .user_agent(user_agent())
-        .build()
-        .map_err(|e| SearchError::fatal(format!("HTTP client init failed: {}", e)))
+        .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
+        .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS))
+        .user_agent(user_agent());
+
+    if no_proxy {
+        builder = builder.no_proxy();
+    }
+
+    builder.build().map_err(|e| {
+        SearchError::fatal(
+            SearchFailureClass::Other,
+            format!("HTTP client init failed: {}", e),
+        )
+    })
 }
 
 fn encode_query(query: &str) -> String {
@@ -102,9 +280,16 @@ fn looks_like_loopback_host(host: &str) -> bool {
 }
 
 fn is_documentation_v6(v6: &Ipv6Addr) -> bool {
-    // 2001:db8::/32 is reserved for documentation/examples.
     let segments = v6.segments();
     segments[0] == 0x2001 && segments[1] == 0x0db8
+}
+
+fn is_unique_local_v6(v6: &Ipv6Addr) -> bool {
+    (v6.segments()[0] & 0xfe00) == 0xfc00
+}
+
+fn is_unicast_link_local_v6(v6: &Ipv6Addr) -> bool {
+    (v6.segments()[0] & 0xffc0) == 0xfe80
 }
 
 fn is_public_ip(ip: IpAddr) -> bool {
@@ -122,40 +307,50 @@ fn is_public_ip(ip: IpAddr) -> bool {
             !v6.is_loopback()
                 && !v6.is_unspecified()
                 && !v6.is_multicast()
-                && !v6.is_unique_local()
-                && !v6.is_unicast_link_local()
+                && !is_unique_local_v6(&v6)
+                && !is_unicast_link_local_v6(&v6)
                 && !is_documentation_v6(&v6)
         }
     }
 }
 
 async fn ensure_public_target(url: &Url) -> Result<(), SearchError> {
-    let host = url
-        .host_str()
-        .ok_or_else(|| SearchError::fatal("Blocked URL: missing host"))?;
+    let host = url.host_str().ok_or_else(|| {
+        SearchError::fatal(
+            SearchFailureClass::BlockedTarget,
+            "Blocked URL: missing host",
+        )
+    })?;
     if looks_like_loopback_host(host) {
-        return Err(SearchError::fatal("Blocked URL: local host is not allowed"));
+        return Err(SearchError::fatal(
+            SearchFailureClass::BlockedTarget,
+            "Blocked URL: local host is not allowed",
+        ));
     }
 
-    let port = url
-        .port_or_known_default()
-        .ok_or_else(|| SearchError::fatal("Blocked URL: unknown port"))?;
-    let lookup = tokio::net::lookup_host((host, port))
-        .await
-        .map_err(|e| SearchError::retriable(format!("DNS lookup failed: {}", e)))?;
+    let port = url.port_or_known_default().ok_or_else(|| {
+        SearchError::fatal(
+            SearchFailureClass::BlockedTarget,
+            "Blocked URL: unknown port",
+        )
+    })?;
+    let lookup = tokio::net::lookup_host((host, port)).await.map_err(|e| {
+        SearchError::retriable(SearchFailureClass::Dns, format!("DNS lookup failed: {}", e))
+    })?;
 
     let mut has_ip = false;
     for socket_addr in lookup {
         has_ip = true;
         if !is_public_ip(socket_addr.ip()) {
-            return Err(SearchError::fatal(format!(
-                "Blocked URL: non-public IP target ({})",
-                socket_addr.ip()
-            )));
+            return Err(SearchError::fatal(
+                SearchFailureClass::BlockedTarget,
+                format!("Blocked URL: non-public IP target ({})", socket_addr.ip()),
+            ));
         }
     }
     if !has_ip {
         return Err(SearchError::retriable(
+            SearchFailureClass::Dns,
             "DNS lookup returned no IP addresses".to_string(),
         ));
     }
@@ -180,6 +375,12 @@ fn looks_like_ddg_challenge_page(html: &str) -> bool {
     lower.contains("anomaly-modal")
         || lower.contains("id=\"challenge-form\"")
         || lower.contains("unfortunately, bots use duckduckgo too")
+}
+
+fn looks_like_mojeek_block_page(html: &str) -> bool {
+    let lower = html.to_ascii_lowercase();
+    (lower.contains("403 - forbidden") && lower.contains("automated queries"))
+        || lower.contains("captcha")
 }
 
 fn clean_page_text(raw_html: &str) -> String {
@@ -224,7 +425,10 @@ fn extract_title(raw_html: &str, fallback_url: &str) -> String {
 fn canonicalize_url(raw: &str) -> Result<String, SearchError> {
     let mut input = raw.trim().to_string();
     if input.is_empty() {
-        return Err(SearchError::fatal("Invalid URL: empty"));
+        return Err(SearchError::fatal(
+            SearchFailureClass::InvalidUrl,
+            "Invalid URL: empty",
+        ));
     }
 
     if input.starts_with("//") {
@@ -234,8 +438,12 @@ fn canonicalize_url(raw: &str) -> Result<String, SearchError> {
         input = format!("https://duckduckgo.com{}", input);
     }
 
-    let mut parsed = Url::parse(&input)
-        .map_err(|_| SearchError::fatal(format!("Invalid URL: {}", raw.trim())))?;
+    let mut parsed = Url::parse(&input).map_err(|_| {
+        SearchError::fatal(
+            SearchFailureClass::InvalidUrl,
+            format!("Invalid URL: {}", raw.trim()),
+        )
+    })?;
 
     if parsed.host_str() == Some("duckduckgo.com") && parsed.path().starts_with("/l/") {
         let mut uddg_value = None;
@@ -246,20 +454,27 @@ fn canonicalize_url(raw: &str) -> Result<String, SearchError> {
             }
         }
         if let Some(decoded) = uddg_value {
-            parsed = Url::parse(&decoded)
-                .map_err(|_| SearchError::fatal(format!("Invalid redirect URL: {}", decoded)))?;
+            parsed = Url::parse(&decoded).map_err(|_| {
+                SearchError::fatal(
+                    SearchFailureClass::InvalidUrl,
+                    format!("Invalid redirect URL: {}", decoded),
+                )
+            })?;
         }
     }
 
     let scheme = parsed.scheme().to_ascii_lowercase();
     if scheme != "http" && scheme != "https" {
-        return Err(SearchError::fatal(format!(
-            "Blocked URL scheme: {}",
-            parsed.scheme()
-        )));
+        return Err(SearchError::fatal(
+            SearchFailureClass::InvalidUrl,
+            format!("Blocked URL scheme: {}", parsed.scheme()),
+        ));
     }
     if parsed.host_str().is_none() {
-        return Err(SearchError::fatal("Blocked URL: host is required"));
+        return Err(SearchError::fatal(
+            SearchFailureClass::InvalidUrl,
+            "Blocked URL: host is required",
+        ));
     }
 
     parsed.set_fragment(None);
@@ -272,6 +487,118 @@ fn canonicalize_url(raw: &str) -> Result<String, SearchError> {
     Ok(parsed.to_string())
 }
 
+fn classify_reqwest_error(error: &reqwest::Error, route: TransportRoute) -> SearchError {
+    let message = error.to_string();
+    let lower = message.to_ascii_lowercase();
+
+    if error.is_timeout() {
+        if lower.contains("connect") || lower.contains("dns") {
+            return SearchError::retriable(
+                SearchFailureClass::ConnectTimeout,
+                format!(
+                    "Request timed out during connect ({}): {}",
+                    route.as_str(),
+                    message
+                ),
+            );
+        }
+        return SearchError::retriable(
+            SearchFailureClass::ReadTimeout,
+            format!(
+                "Request timed out during read ({}): {}",
+                route.as_str(),
+                message
+            ),
+        );
+    }
+
+    if error.is_connect() {
+        if route == TransportRoute::Proxy || lower.contains("proxy") || lower.contains("socks") {
+            return SearchError::retriable(
+                SearchFailureClass::ProxyTransport,
+                format!("Proxy transport failure: {}", message),
+            );
+        }
+        if lower.contains("dns") || lower.contains("lookup") {
+            return SearchError::retriable(
+                SearchFailureClass::Dns,
+                format!("DNS/connect failure: {}", message),
+            );
+        }
+        return SearchError::retriable(
+            SearchFailureClass::ConnectTimeout,
+            format!("Connection failure: {}", message),
+        );
+    }
+
+    if lower.contains("dns") || lower.contains("lookup") {
+        return SearchError::retriable(
+            SearchFailureClass::Dns,
+            format!("DNS failure: {}", message),
+        );
+    }
+
+    SearchError::retriable(
+        SearchFailureClass::Other,
+        format!("Transport failure: {}", message),
+    )
+}
+
+fn can_fallback_to_direct(kind: SearchFailureClass) -> bool {
+    matches!(
+        kind,
+        SearchFailureClass::ProxyTransport
+            | SearchFailureClass::ConnectTimeout
+            | SearchFailureClass::ReadTimeout
+            | SearchFailureClass::Dns
+            | SearchFailureClass::Other
+    )
+}
+
+async fn send_with_transport<F>(
+    clients: &TransportClients,
+    mut request_factory: F,
+) -> Result<(reqwest::Response, TransportRoute), SearchError>
+where
+    F: FnMut(&reqwest::Client) -> reqwest::RequestBuilder,
+{
+    let routes = clients.route_order();
+    let mut last_error: Option<SearchError> = None;
+
+    for (idx, route) in routes.iter().copied().enumerate() {
+        let Some(client) = clients.client_for(route) else {
+            continue;
+        };
+
+        match request_factory(client).send().await {
+            Ok(response) => return Ok((response, route)),
+            Err(error) => {
+                let mapped = classify_reqwest_error(&error, route);
+                let has_next = idx + 1 < routes.len();
+                if route == TransportRoute::Proxy && has_next && can_fallback_to_direct(mapped.kind)
+                {
+                    println!(
+                        "[WebSearch] transport={} failed [{}]: {}; retrying direct",
+                        route.as_str(),
+                        mapped.kind.as_str(),
+                        mapped.message
+                    );
+                    last_error = Some(mapped);
+                    continue;
+                }
+                return Err(mapped);
+            }
+        }
+    }
+
+    Err(last_error.unwrap_or_else(|| {
+        SearchError::retriable(
+            SearchFailureClass::Other,
+            "No transport route available for request",
+        )
+    }))
+}
+
 async fn read_capped_response_body(
     response: reqwest::Response,
     max_bytes: usize,
@@ -281,8 +608,21 @@ async fn read_capped_response_body(
     let mut bytes = Vec::<u8>::new();
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk
-            .map_err(|e| SearchError::retriable(format!("Read body failed: {}", e)))?;
+        let chunk = chunk.map_err(|e| {
+            let lower = e.to_string().to_ascii_lowercase();
+            if lower.contains("timed out") {
+                SearchError::retriable(
+                    SearchFailureClass::ReadTimeout,
+                    format!("Read body timed out: {}", e),
+                )
+            } else {
+                SearchError::retriable(
+                    SearchFailureClass::Other,
+                    format!("Read body failed: {}", e),
+                )
+            }
+        })?;
+
         total += chunk.len();
         if total > max_bytes {
             let allowed = chunk.len().saturating_sub(total - max_bytes);
@@ -295,98 +635,92 @@ async fn read_capped_response_body(
     Ok(String::from_utf8_lossy(&bytes).to_string())
 }
 
-async fn fetch_html_with_redirects(url: &str) -> Result<String, SearchError> {
-    let client = build_client()?;
-    let mut current =
-        Url::parse(url).map_err(|_| SearchError::fatal(format!("Invalid URL: {}", url)))?;
+async fn fetch_html_with_redirects(
+    url: &str,
+    clients: &TransportClients,
+) -> Result<String, SearchError> {
+    let mut current = Url::parse(url).map_err(|_| {
+        SearchError::fatal(
+            SearchFailureClass::InvalidUrl,
+            format!("Invalid URL: {}", url),
+        )
+    })?;
 
     for hop in 0..=MAX_REDIRECTS {
         ensure_public_target(&current).await?;
+        let current_url = current.clone();
 
-        let response = client
-            .get(current.clone())
-            .header(header::ACCEPT, "text/html,application/xhtml+xml")
-            .send()
-            .await
-            .map_err(|e| SearchError::retriable(format!("Fetch failed: {}", e)))?;
+        let (response, route) = send_with_transport(clients, move |client| {
+            client
+                .get(current_url.clone())
+                .header(header::ACCEPT, "text/html,application/xhtml+xml")
+        })
+        .await?;
 
         if response.status().is_redirection() {
             let location = response
                 .headers()
                 .get(header::LOCATION)
                 .and_then(|v| v.to_str().ok())
-                .ok_or_else(|| SearchError::fatal("Redirect missing Location header"))?;
-            let next = current
-                .join(location)
-                .map_err(|e| SearchError::fatal(format!("Bad redirect URL: {}", e)))?;
+                .ok_or_else(|| {
+                    SearchError::fatal(
+                        SearchFailureClass::HttpStatus,
+                        "Redirect missing Location header",
+                    )
+                })?;
+            let next = current.join(location).map_err(|e| {
+                SearchError::fatal(
+                    SearchFailureClass::InvalidUrl,
+                    format!("Bad redirect URL: {}", e),
+                )
+            })?;
             current = next;
             if hop == MAX_REDIRECTS {
-                return Err(SearchError::fatal("Too many redirects"));
+                return Err(SearchError::fatal(
+                    SearchFailureClass::HttpStatus,
+                    "Too many redirects",
+                ));
             }
             continue;
         }
 
         if !response.status().is_success() {
             let status = response.status();
-            if status == StatusCode::TOO_MANY_REQUESTS
+            let retriable = status == StatusCode::TOO_MANY_REQUESTS
                 || status == StatusCode::BAD_GATEWAY
                 || status == StatusCode::SERVICE_UNAVAILABLE
                 || status == StatusCode::GATEWAY_TIMEOUT
-                || status.is_server_error()
-            {
-                return Err(SearchError::retriable(format!(
-                    "HTTP {} while fetching URL",
-                    status.as_u16()
-                )));
-            }
-            return Err(SearchError::fatal(format!(
-                "HTTP {} while fetching URL",
-                status.as_u16()
-            )));
+                || status.is_server_error();
+            let message = format!(
+                "HTTP {} while fetching URL via {}",
+                status.as_u16(),
+                route.as_str()
+            );
+
+            return if retriable {
+                Err(SearchError::retriable(
+                    SearchFailureClass::HttpStatus,
+                    message,
+                ))
+            } else {
+                Err(SearchError::fatal(SearchFailureClass::HttpStatus, message))
+            };
         }
 
         return read_capped_response_body(response, MAX_FETCH_BYTES).await;
     }
 
-    Err(SearchError::fatal("Too many redirects"))
+    Err(SearchError::fatal(
+        SearchFailureClass::HttpStatus,
+        "Too many redirects",
+    ))
 }
 
-async fn run_query_once(query: &str, max_results: usize) -> Result<WebSearchResult, SearchError> {
-    let client = build_client()?;
-    let encoded = encode_query(query);
-    let search_url = format!("{}{}", DDG_SEARCH_URL, encoded);
-
-    let response = client
-        .get(search_url)
-        .header(header::ACCEPT, "text/html")
-        .send()
-        .await
-        .map_err(|e| SearchError::retriable(format!("Search failed: {}", e)))?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        if status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error() {
-            return Err(SearchError::retriable(format!(
-                "DuckDuckGo returned HTTP {}",
-                status.as_u16()
-            )));
-        }
-        return Err(SearchError::fatal(format!(
-            "Search failed with HTTP {}",
-            status.as_u16()
-        )));
-    }
-
-    let html = read_capped_response_body(response, MAX_FETCH_BYTES).await?;
-    if looks_like_ddg_challenge_page(&html) {
-        return Err(SearchError::retriable(
-            "DuckDuckGo temporarily blocked automated requests (challenge page)".to_string(),
-        ));
-    }
+fn parse_ddg_results(html: &str, max_results: usize) -> Vec<CitationSource> {
     let mut sources = Vec::<CitationSource>::new();
     let mut seen = HashSet::<String>::new();
 
-    let link_matches: Vec<_> = RESULT_LINK_RE.find_iter(&html).collect();
+    let link_matches: Vec<_> = RESULT_LINK_RE.find_iter(html).collect();
     for (idx, m) in link_matches.iter().enumerate() {
         if sources.len() >= max_results {
             break;
@@ -416,6 +750,7 @@ async fn run_query_once(query: &str, max_results: usize) -> Result<WebSearchResu
             .map(|n| n.start())
             .unwrap_or(html.len());
         let segment = &html[segment_start..segment_end.min(html.len())];
+
         let snippet = RESULT_SNIPPET_RE
             .captures(segment)
             .and_then(|c| c.get(1).or_else(|| c.get(2)))
@@ -437,14 +772,178 @@ async fn run_query_once(query: &str, max_results: usize) -> Result<WebSearchResu
         });
     }
 
-    if sources.is_empty() {
-        return Err(SearchError::retriable(
-            "No search results returned from DuckDuckGo".to_string(),
-        ));
+    sources
+}
+
+fn parse_mojeek_results(html: &str, max_results: usize) -> Vec<CitationSource> {
+    let mut sources = Vec::<CitationSource>::new();
+    let mut seen = HashSet::<String>::new();
+
+    for block in MOJEEK_RESULT_BLOCK_RE.captures_iter(html) {
+        if sources.len() >= max_results {
+            break;
+        }
+
+        let Some(block_html) = block.get(1).map(|m| m.as_str()) else {
+            continue;
+        };
+
+        let Some(link_cap) = MOJEEK_LINK_RE.captures(block_html) else {
+            continue;
+        };
+
+        let Some(url_raw) = link_cap.get(1).map(|m| m.as_str()) else {
+            continue;
+        };
+        let Some(title_raw) = link_cap.get(2).map(|m| m.as_str()) else {
+            continue;
+        };
+
+        let canonical = match canonicalize_url(url_raw) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        if let Some(domain) = domain_from_url(&canonical) {
+            if domain.ends_with("mojeek.com") {
+                continue;
+            }
+        }
+
+        if !seen.insert(canonical.clone()) {
+            continue;
+        }
+
+        let snippet = MOJEEK_SNIPPET_RE
+            .captures(block_html)
+            .and_then(|c| c.get(1))
+            .map(|v| clean_html_fragment(v.as_str()))
+            .unwrap_or_default();
+
+        let title = clean_html_fragment(title_raw);
+        sources.push(CitationSource {
+            title: if title.is_empty() {
+                Url::parse(&canonical)
+                    .ok()
+                    .and_then(|u| u.host_str().map(|h| h.to_string()))
+                    .unwrap_or_else(|| canonical.clone())
+            } else {
+                title
+            },
+            url: canonical,
+            summary: compact_summary(&snippet, MAX_SUMMARY_WORDS),
+        });
     }
 
+    if !sources.is_empty() {
+        return sources;
+    }
+
+    // Fallback parser for looser markup.
+    for cap in MOJEEK_LINK_RE.captures_iter(html) {
+        if sources.len() >= max_results {
+            break;
+        }
+
+        let Some(url_raw) = cap.get(1).map(|m| m.as_str()) else {
+            continue;
+        };
+        let Some(title_raw) = cap.get(2).map(|m| m.as_str()) else {
+            continue;
+        };
+
+        if !url_raw.starts_with("http://") && !url_raw.starts_with("https://") {
+            continue;
+        }
+
+        let canonical = match canonicalize_url(url_raw) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        if let Some(domain) = domain_from_url(&canonical) {
+            if domain.ends_with("mojeek.com") {
+                continue;
+            }
+        }
+
+        if !seen.insert(canonical.clone()) {
+            continue;
+        }
+
+        let title = clean_html_fragment(title_raw);
+        if title.len() < 8 {
+            continue;
+        }
+
+        sources.push(CitationSource {
+            title,
+            url: canonical,
+            summary: String::new(),
+        });
+    }
+
+    sources
+}
+
+fn source_score(query: &str, source: &CitationSource) -> i32 {
+    let mut score = 0i32;
+
+    if let Some(domain) = domain_from_url(&source.url) {
+        if is_safe_domain(&domain) {
+            score += 30;
+        }
+    }
+
+    if source.summary.is_empty() {
+        score -= 3;
+    } else {
+        score += 4;
+    }
+
+    if let Ok(url) = Url::parse(&source.url) {
+        let path = url.path().trim_matches('/');
+        if path.is_empty() {
+            score -= 8;
+        } else {
+            score += 2;
+        }
+    }
+
+    let q = query.to_ascii_lowercase();
+    let title = source.title.to_ascii_lowercase();
+    if !q.is_empty() && q.split_whitespace().any(|token| title.contains(token)) {
+        score += 2;
+    }
+
+    score
+}
+
+fn rerank_sources(
+    query: &str,
+    mut sources: Vec<CitationSource>,
+    max_results: usize,
+) -> Vec<CitationSource> {
+    let mut indexed: Vec<(usize, CitationSource, i32)> = sources
+        .drain(..)
+        .enumerate()
+        .map(|(idx, source)| {
+            let score = source_score(query, &source);
+            (idx, source, score)
+        })
+        .collect();
+
+    indexed.sort_by_key(|(idx, _, score)| (Reverse(*score), *idx));
+    indexed
+        .into_iter()
+        .take(max_results)
+        .map(|(_, source, _)| source)
+        .collect()
+}
+
+fn build_query_context(query: &str, sources: &[CitationSource]) -> String {
     let mut context = format!("[Search results for \"{}\"]\n", query.trim());
-    for source in &sources {
+    for source in sources {
         context.push_str(&format!(
             "- {} — {}\n  {}\n",
             source.title,
@@ -456,25 +955,114 @@ async fn run_query_once(query: &str, max_results: usize) -> Result<WebSearchResu
             }
         ));
     }
+    context.trim().to_string()
+}
 
-    Ok(WebSearchResult {
+pub fn build_query_result(
+    query: &str,
+    sources: Vec<CitationSource>,
+    message: Option<String>,
+) -> WebSearchResult {
+    WebSearchResult {
         mode: "query".to_string(),
         query: Some(query.trim().to_string()),
         requested_url: None,
-        context_markdown: context.trim().to_string(),
+        context_markdown: build_query_context(query, &sources),
         sources,
         success: true,
-        message: None,
-    })
+        message,
+    }
 }
 
-async fn run_url_fetch_once(url: &str) -> Result<WebSearchResult, SearchError> {
+async fn run_backend_query_once(
+    backend: SearchBackend,
+    query: &str,
+    max_results: usize,
+    clients: &TransportClients,
+) -> Result<Vec<CitationSource>, SearchError> {
+    let encoded = encode_query(query);
+    let search_url = match backend {
+        SearchBackend::DuckDuckGo => format!("{}{}", DDG_SEARCH_URL, encoded),
+        SearchBackend::Mojeek => format!("{}{}", MOJEEK_SEARCH_URL, encoded),
+    };
+
+    let (response, route) = send_with_transport(clients, move |client| {
+        client
+            .get(search_url.clone())
+            .header(header::ACCEPT, "text/html")
+    })
+    .await?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let status_message = format!(
+            "{} returned HTTP {} via {}",
+            backend.as_str(),
+            status.as_u16(),
+            route.as_str()
+        );
+
+        if backend == SearchBackend::Mojeek && status == StatusCode::FORBIDDEN {
+            return Err(SearchError::retriable(
+                SearchFailureClass::Challenge,
+                "Mojeek blocked automated requests (403)",
+            ));
+        }
+
+        return if status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error() {
+            Err(SearchError::retriable(
+                SearchFailureClass::HttpStatus,
+                status_message,
+            ))
+        } else {
+            Err(SearchError::fatal(
+                SearchFailureClass::HttpStatus,
+                status_message,
+            ))
+        };
+    }
+
+    let html = read_capped_response_body(response, MAX_FETCH_BYTES).await?;
+
+    if backend == SearchBackend::DuckDuckGo && looks_like_ddg_challenge_page(&html) {
+        return Err(SearchError::retriable(
+            SearchFailureClass::Challenge,
+            "DuckDuckGo temporarily blocked automated requests (challenge page)",
+        ));
+    }
+    if backend == SearchBackend::Mojeek && looks_like_mojeek_block_page(&html) {
+        return Err(SearchError::retriable(
+            SearchFailureClass::Challenge,
+            "Mojeek temporarily blocked automated requests",
+        ));
+    }
+
+    let parsed = match backend {
+        SearchBackend::DuckDuckGo => parse_ddg_results(&html, max_results),
+        SearchBackend::Mojeek => parse_mojeek_results(&html, max_results),
+    };
+
+    if parsed.is_empty() {
+        return Err(SearchError::retriable(
+            SearchFailureClass::NoResults,
+            format!("{} returned no usable results", backend.as_str()),
+        ));
+    }
+
+    Ok(rerank_sources(query, parsed, max_results))
+}
+
+async fn run_url_fetch_once(
+    url: &str,
+    clients: &TransportClients,
+) -> Result<WebSearchResult, SearchError> {
     let canonical = canonicalize_url(url)?;
-    let html = fetch_html_with_redirects(&canonical).await?;
+    let html = fetch_html_with_redirects(&canonical, clients).await?;
     let text = clean_page_text(&html);
     if text.trim().is_empty() {
         return Err(SearchError::retriable(
-            "Fetched page returned no readable text".to_string(),
+            SearchFailureClass::Parse,
+            "Fetched page returned no readable text",
         ));
     }
 
@@ -508,10 +1096,10 @@ async fn run_url_fetch_once(url: &str) -> Result<WebSearchResult, SearchError> {
     })
 }
 
-async fn with_retries<F, Fut>(mut op: F) -> Result<WebSearchResult, SearchError>
+async fn with_retries<T, F, Fut>(mut op: F) -> Result<T, SearchError>
 where
     F: FnMut() -> Fut,
-    Fut: std::future::Future<Output = Result<WebSearchResult, SearchError>>,
+    Fut: std::future::Future<Output = Result<T, SearchError>>,
 {
     let mut attempt = 0usize;
     loop {
@@ -531,39 +1119,260 @@ where
     }
 }
 
-pub async fn search_query(query: &str, max_results: Option<usize>) -> Result<WebSearchResult, String> {
+fn normalize_domain(domain: &str) -> String {
+    domain.trim().trim_start_matches('.').to_ascii_lowercase()
+}
+
+pub fn domain_from_url(url: &str) -> Option<String> {
+    Url::parse(url)
+        .ok()
+        .and_then(|u| u.host_str().map(normalize_domain))
+        .map(|d| d.trim_start_matches("www.").to_string())
+}
+
+fn is_safe_domain(domain: &str) -> bool {
+    let normalized = normalize_domain(domain)
+        .trim_start_matches("www.")
+        .to_string();
+    SAFE_DOMAINS
+        .iter()
+        .any(|allowed| normalized == *allowed || normalized.ends_with(&format!(".{}", allowed)))
+}
+
+fn make_safe_source_url(site: &SafeSourceSite) -> Option<String> {
+    let preferred = site
+        .rss
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| format!("https://{}/", site.domain.trim()));
+
+    canonicalize_url(&preferred).ok()
+}
+
+fn query_terms(query: &str) -> HashSet<String> {
+    query
+        .split(|c: char| !c.is_alphanumeric())
+        .map(|part| part.trim().to_ascii_lowercase())
+        .filter(|part| part.len() >= 2)
+        .collect()
+}
+
+fn safe_source_relevance_score(query: &str, category: &str, site: &SafeSourceSite) -> i32 {
+    let terms = query_terms(query);
+    if terms.is_empty() {
+        return 0;
+    }
+
+    let haystack = format!(
+        "{} {} {}",
+        category.to_ascii_lowercase(),
+        site.name.to_ascii_lowercase(),
+        site.domain.to_ascii_lowercase()
+    );
+
+    terms
+        .iter()
+        .filter(|term| haystack.contains(term.as_str()))
+        .count() as i32
+}
+
+pub fn local_safe_source_candidates(
+    query: &str,
+    attempted_domains: &HashSet<String>,
+    max_candidates: usize,
+) -> Vec<CitationSource> {
+    if max_candidates == 0 {
+        return Vec::new();
+    }
+
+    let mut candidates = Vec::<(usize, i32, String, SafeSourceSite)>::new();
+    let mut seen_domains = HashSet::<String>::new();
+    let mut ordinal = 0usize;
+
+    for category in SAFE_SOURCES_DATA.iter() {
+        let category_name = category.category.to_ascii_lowercase();
+        for site in &category.sites {
+            let domain = normalize_domain(&site.domain)
+                .trim_start_matches("www.")
+                .to_string();
+
+            if attempted_domains.contains(&domain) || !seen_domains.insert(domain.clone()) {
+                continue;
+            }
+
+            let score = safe_source_relevance_score(query, &category_name, site);
+            candidates.push((ordinal, score, category_name.clone(), site.clone()));
+            ordinal += 1;
+        }
+    }
+
+    candidates.sort_by_key(|(idx, score, _, _)| (Reverse(*score), *idx));
+
+    let mut out = Vec::<CitationSource>::new();
+    for (_, _, category, site) in candidates.into_iter().take(max_candidates) {
+        let Some(url) = make_safe_source_url(&site) else {
+            continue;
+        };
+        out.push(CitationSource {
+            title: site.name,
+            url,
+            summary: format!("Trusted {} source candidate.", category),
+        });
+    }
+
+    out
+}
+
+pub fn filter_suggested_urls_to_safe_sources(
+    urls: &[String],
+    attempted_domains: &HashSet<String>,
+    max_candidates: usize,
+) -> Vec<CitationSource> {
+    if max_candidates == 0 {
+        return Vec::new();
+    }
+
+    let mut out = Vec::<CitationSource>::new();
+    let mut seen_domains = HashSet::<String>::new();
+    let mut seen_urls = HashSet::<String>::new();
+
+    for url in urls {
+        if out.len() >= max_candidates {
+            break;
+        }
+
+        let Ok(canonical) = canonicalize_url(url) else {
+            continue;
+        };
+        let Some(domain) = domain_from_url(&canonical) else {
+            continue;
+        };
+
+        if !is_safe_domain(&domain)
+            || attempted_domains.contains(&domain)
+            || !seen_domains.insert(domain.clone())
+            || !seen_urls.insert(canonical.clone())
+        {
+            continue;
+        }
+
+        out.push(CitationSource {
+            title: domain.clone(),
+            url: canonical,
+            summary: "Gemini-assisted trusted source candidate.".to_string(),
+        });
+    }
+
+    out
+}
+
+pub async fn search_query(
+    query: &str,
+    max_results: Option<usize>,
+) -> Result<WebSearchResult, String> {
     let q = query.trim();
     if q.is_empty() {
         return Err("No query provided".to_string());
     }
+
     let limit = max_results
         .unwrap_or(DEFAULT_MAX_RESULTS)
         .clamp(1, DEFAULT_MAX_RESULTS);
 
-    with_retries(|| run_query_once(q, limit))
-        .await
-        .map_err(|e| e.message)
+    let clients = TransportClients::build().map_err(|e| e.public_message())?;
+    let mut last_error: Option<SearchError> = None;
+
+    for backend in [SearchBackend::DuckDuckGo, SearchBackend::Mojeek] {
+        match with_retries(|| run_backend_query_once(backend, q, limit, &clients)).await {
+            Ok(sources) => {
+                println!(
+                    "[WebSearch] backend={} success results={}",
+                    backend.as_str(),
+                    sources.len()
+                );
+                return Ok(build_query_result(q, sources, None));
+            }
+            Err(error) => {
+                println!(
+                    "[WebSearch] backend={} failed [{}]: {}",
+                    backend.as_str(),
+                    error.kind.as_str(),
+                    error.message
+                );
+                last_error = Some(error);
+            }
+        }
+    }
+
+    Err(last_error
+        .map(|e| e.public_message())
+        .unwrap_or_else(|| "[other] Search unavailable".to_string()))
 }
 
-pub fn collect_allowed_urls(result: &WebSearchResult) -> HashSet<String> {
-    result.sources.iter().map(|s| s.url.clone()).collect()
+pub fn collect_allowed_sources(result: &WebSearchResult) -> HashMap<String, CitationSource> {
+    let mut out = HashMap::<String, CitationSource>::new();
+    for source in &result.sources {
+        if let Ok(canonical) = canonicalize_url(&source.url) {
+            out.insert(canonical, source.clone());
+        }
+    }
+    out
+}
+
+fn build_degraded_url_result(
+    canonical_url: &str,
+    source: &CitationSource,
+    fetch_error: &SearchError,
+) -> WebSearchResult {
+    let summary = if source.summary.trim().is_empty() {
+        "(No prior snippet available)".to_string()
+    } else {
+        source.summary.trim().to_string()
+    };
+
+    let context = format!(
+        "[Fetched page unavailable: {}]\n- {}\n\nUsing snippet from prior search result:\n{}",
+        canonical_url, source.title, summary
+    );
+
+    WebSearchResult {
+        mode: "url".to_string(),
+        query: None,
+        requested_url: Some(canonical_url.to_string()),
+        context_markdown: context,
+        sources: vec![source.clone()],
+        success: true,
+        message: Some(format!(
+            "Full page fetch failed ({}); returned snippet-based fallback.",
+            fetch_error.kind.as_str()
+        )),
+    }
 }
 
 pub async fn fetch_url_from_allowed(
     url: &str,
-    allowed_urls: &HashSet<String>,
+    allowed_sources: &HashMap<String, CitationSource>,
 ) -> Result<WebSearchResult, String> {
-    let canonical = canonicalize_url(url).map_err(|e| e.message)?;
-    if !allowed_urls.contains(&canonical) {
-        return Err(
-            "Blocked URL fetch: URL must come from a previous search result in this turn"
-                .to_string(),
-        );
-    }
+    let canonical = canonicalize_url(url).map_err(|e| e.public_message())?;
+    let source = allowed_sources.get(&canonical).ok_or_else(|| {
+        "Blocked URL fetch: URL must come from a previous search result in this turn".to_string()
+    })?;
 
-    with_retries(|| run_url_fetch_once(&canonical))
-        .await
-        .map_err(|e| e.message)
+    let clients = TransportClients::build().map_err(|e| e.public_message())?;
+
+    match with_retries(|| run_url_fetch_once(&canonical, &clients)).await {
+        Ok(result) => Ok(result),
+        Err(fetch_error) => {
+            println!(
+                "[WebSearch] url_fetch_failed [{}]: {}",
+                fetch_error.kind.as_str(),
+                fetch_error.message
+            );
+            Ok(build_degraded_url_result(&canonical, source, &fetch_error))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -588,5 +1397,84 @@ mod tests {
         let text = "one two three four five six";
         let out = compact_summary(text, 4);
         assert_eq!(out, "one two three four...");
+    }
+
+    #[test]
+    fn ddg_challenge_detection_works() {
+        let html = "<div id=\"challenge-form\">Unfortunately, bots use DuckDuckGo too</div>";
+        assert!(looks_like_ddg_challenge_page(html));
+    }
+
+    #[test]
+    fn mojeek_block_detection_works() {
+        let html = "<title>403 - Forbidden</title> Sorry your network appears to be sending automated queries";
+        assert!(looks_like_mojeek_block_page(html));
+    }
+
+    #[test]
+    fn parses_mojeek_results_fixture() {
+        let html = r#"
+        <ul>
+          <li class="results-standard">
+            <h2><a href="https://example.com/post">Example Post</a></h2>
+            <p class="s">Example snippet from fixture.</p>
+          </li>
+          <li class="results-standard">
+            <h2><a href="https://docs.rust-lang.org/book/">Rust Book</a></h2>
+            <p class="description">Learn Rust from official docs.</p>
+          </li>
+        </ul>
+        "#;
+
+        let out = parse_mojeek_results(html, 5);
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0].title, "Example Post");
+        assert!(out[0].url.starts_with("https://example.com/post"));
+    }
+
+    #[test]
+    fn safe_source_candidates_respect_attempted_domains() {
+        let mut attempted = HashSet::new();
+        attempted.insert("news.ycombinator.com".to_string());
+
+        let candidates = local_safe_source_candidates("latest ai models", &attempted, 5);
+        assert!(!candidates.is_empty());
+        for c in candidates {
+            let domain = domain_from_url(&c.url).expect("domain expected");
+            assert_ne!(domain, "news.ycombinator.com");
+        }
+    }
+
+    #[test]
+    fn filter_suggested_urls_keeps_only_safe_domains() {
+        let attempted = HashSet::new();
+        let urls = vec![
+            "https://news.ycombinator.com/item?id=123".to_string(),
+            "https://example.org/unsafe".to_string(),
+        ];
+        let out = filter_suggested_urls_to_safe_sources(&urls, &attempted, 5);
+
+        assert_eq!(out.len(), 1);
+        assert!(out[0].url.contains("news.ycombinator.com"));
+    }
+
+    #[test]
+    fn collect_allowed_sources_canonicalizes_and_maps() {
+        let result = WebSearchResult {
+            mode: "query".to_string(),
+            query: Some("test".to_string()),
+            requested_url: None,
+            context_markdown: String::new(),
+            success: true,
+            message: None,
+            sources: vec![CitationSource {
+                title: "Example".to_string(),
+                url: "https://example.com:443/path#section".to_string(),
+                summary: "Summary".to_string(),
+            }],
+        };
+
+        let allowed = collect_allowed_sources(&result);
+        assert!(allowed.contains_key("https://example.com/path"));
     }
 }

@@ -5,7 +5,7 @@ use futures_util::{future::join_all, StreamExt};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
@@ -399,7 +399,7 @@ fn tool_status_text(function_call: &GeminiFunctionCall) -> String {
         .filter(|v| !v.is_empty());
 
     if let Some(q) = query {
-        return format!("Searching DuckDuckGo for \"{}\"...", q);
+        return format!("Searching the web for \"{}\"...", q);
     }
     if let Some(u) = url {
         return format!("Fetching {}", u);
@@ -413,11 +413,8 @@ fn build_system_instruction_with_search_policy(
     image_brief: &str,
     tools_enabled: bool,
 ) -> Result<String, String> {
-    let mut instruction = crate::brain::processor::build_system_instruction(
-        user_name,
-        user_email,
-        image_brief,
-    )?;
+    let mut instruction =
+        crate::brain::processor::build_system_instruction(user_name, user_email, image_brief)?;
 
     if tools_enabled {
         instruction.push_str(
@@ -426,6 +423,7 @@ fn build_system_instruction_with_search_policy(
              - If greeting/chit-chat, do not call tools.\n\
              - Never invent URLs or sources.\n\
              - When using `url`, only fetch URLs from prior search results in this turn.\n\
+             - If one search pass is too shallow, call `web_search` again with a refined query.\n\
              - If web search fails repeatedly, answer from model knowledge and clearly state web search was unavailable.",
         );
     }
@@ -562,36 +560,51 @@ async fn suggest_fallback_urls(
     parse_url_array_from_text(&text, max_urls)
 }
 
-async fn search_query_with_timeout(
-    query: &str,
-    max_results: usize,
-    timeout_secs: u64,
-) -> Result<crate::services::web_search::WebSearchResult, String> {
-    match tokio::time::timeout(
-        Duration::from_secs(timeout_secs),
-        crate::services::web_search::search_query(query, Some(max_results)),
-    )
-    .await
-    {
-        Ok(result) => result,
-        Err(_) => Err("Search request timed out".to_string()),
+fn merge_allowed_sources(
+    allowed_sources: &mut HashMap<String, crate::services::web_search::CitationSource>,
+    result: &crate::services::web_search::WebSearchResult,
+) {
+    for (url, source) in crate::services::web_search::collect_allowed_sources(result) {
+        allowed_sources.insert(url, source);
     }
 }
 
-async fn fetch_allowed_url_with_timeout(
-    url: &str,
-    allowed: &HashSet<String>,
-    timeout_secs: u64,
-) -> Result<crate::services::web_search::WebSearchResult, String> {
-    match tokio::time::timeout(
-        Duration::from_secs(timeout_secs),
-        crate::services::web_search::fetch_url_from_allowed(url, allowed),
-    )
-    .await
-    {
-        Ok(result) => result,
-        Err(_) => Err("URL fetch timed out".to_string()),
+fn track_attempted_sources(
+    sources: &[crate::services::web_search::CitationSource],
+    attempted_urls: &mut HashSet<String>,
+    attempted_domains: &mut HashSet<String>,
+) {
+    for source in sources {
+        attempted_urls.insert(source.url.clone());
+        if let Some(domain) = crate::services::web_search::domain_from_url(&source.url) {
+            attempted_domains.insert(domain);
+        }
     }
+}
+
+fn mark_attempted_url(
+    raw_url: &str,
+    attempted_urls: &mut HashSet<String>,
+    attempted_domains: &mut HashSet<String>,
+) {
+    attempted_urls.insert(raw_url.to_string());
+    if let Some(domain) = crate::services::web_search::domain_from_url(raw_url) {
+        attempted_domains.insert(domain);
+    }
+}
+
+fn wrap_query_fallback_result(
+    query: &str,
+    mut result: crate::services::web_search::WebSearchResult,
+    fallback_message: &str,
+) -> crate::services::web_search::WebSearchResult {
+    result.mode = "query".to_string();
+    result.query = Some(query.trim().to_string());
+    result.requested_url = None;
+    if result.message.is_none() {
+        result.message = Some(fallback_message.to_string());
+    }
+    result
 }
 
 /// Brain-aware chat command (v2)
@@ -652,7 +665,10 @@ pub async fn stream_gemini_chat_v2(
         let mut allow_tools = !is_initial_turn;
         let mut tool_calls = 0usize;
         let mut consecutive_tool_failures = 0usize;
-        let mut allowed_urls = HashSet::<String>::new();
+        let mut allowed_sources =
+            HashMap::<String, crate::services::web_search::CitationSource>::new();
+        let mut attempted_urls = HashSet::<String>::new();
+        let mut attempted_domains = HashSet::<String>::new();
 
         // Build conversation contents once; then append tool call/response turns as needed.
         let mut contents: Vec<GeminiContent> = if is_initial_turn {
@@ -825,86 +841,179 @@ pub async fn stream_gemini_chat_v2(
                 .filter(|v| !v.is_empty());
 
             let tool_result = if let Some(q) = query {
-                match search_query_with_timeout(q, 6, 14).await {
+                match crate::services::web_search::search_query(q, Some(6)).await {
                     Ok(result) => Ok(result),
                     Err(search_error) => {
                         println!("[WebSearch] Primary query failed: {}", search_error);
+                        let mut final_error = search_error;
+                        let mut resolved: Option<crate::services::web_search::WebSearchResult> = None;
 
-                        // Retry strategy (max 3 unique URLs):
-                        // ask Gemini for likely captcha-free source URLs, then fetch them directly.
                         emit_event(
                             &app,
                             &channel_id,
                             GeminiEvent::ToolStatus {
-                                message: "Search failed. Trying another source...".to_string(),
+                                message:
+                                    "Primary search blocked. Trying trusted fallback sources..."
+                                        .to_string(),
                             },
                         );
 
-                        let fallback_urls =
-                            suggest_fallback_urls(&client, &api_key, &model, q, 6).await;
+                        let local_candidates =
+                            crate::services::web_search::local_safe_source_candidates(
+                                q,
+                                &attempted_domains,
+                                3,
+                            );
                         println!(
-                            "[WebSearch] Gemini suggested {} fallback URLs",
-                            fallback_urls.len()
+                            "[WebSearch] Local safe-source candidates: {}",
+                            local_candidates.len()
                         );
-                        let mut attempted = HashSet::<String>::new();
-                        let mut final_error = search_error;
-                        let mut fetched: Option<crate::services::web_search::WebSearchResult> = None;
 
-                        for candidate in fallback_urls {
-                            if attempted.len() >= 3 {
-                                break;
-                            }
-                            if !attempted.insert(candidate.clone()) {
+                        for candidate in local_candidates {
+                            if attempted_urls.contains(&candidate.url) {
                                 continue;
                             }
-                            println!(
-                                "[WebSearch] Fallback attempt {}/3: {}",
-                                attempted.len(),
-                                candidate
+
+                            mark_attempted_url(
+                                &candidate.url,
+                                &mut attempted_urls,
+                                &mut attempted_domains,
+                            );
+                            emit_event(
+                                &app,
+                                &channel_id,
+                                GeminiEvent::ToolStatus {
+                                    message: format!("Trying trusted source: {}", candidate.title),
+                                },
                             );
 
-                            let mut allowed = HashSet::<String>::new();
-                            allowed.insert(candidate.clone());
-                            match fetch_allowed_url_with_timeout(
-                                &candidate,
+                            let mut allowed = HashMap::new();
+                            allowed.insert(candidate.url.clone(), candidate.clone());
+
+                            match crate::services::web_search::fetch_url_from_allowed(
+                                &candidate.url,
                                 &allowed,
-                                8,
                             )
                             .await
                             {
                                 Ok(result) => {
-                                    println!("[WebSearch] Fallback fetch succeeded");
-                                    fetched = Some(result);
+                                    let fallback_message = format!(
+                                        "Primary search failed; used trusted fallback source: {}.",
+                                        candidate.title
+                                    );
+                                    resolved = Some(wrap_query_fallback_result(
+                                        q,
+                                        result,
+                                        &fallback_message,
+                                    ));
                                     break;
                                 }
                                 Err(fetch_error) => {
-                                    println!("[WebSearch] Fallback fetch failed: {}", fetch_error);
+                                    println!(
+                                        "[WebSearch] Local safe-source fallback failed: {}",
+                                        fetch_error
+                                    );
                                     final_error = fetch_error;
                                 }
                             }
                         }
 
-                        if fetched.is_none() {
-                            println!(
-                                "[WebSearch] All fallback attempts failed; final error: {}",
-                                final_error
+                        if resolved.is_none() {
+                            emit_event(
+                                &app,
+                                &channel_id,
+                                GeminiEvent::ToolStatus {
+                                    message:
+                                        "Trusted local fallback failed. Trying model-assisted safe sources..."
+                                            .to_string(),
+                                },
                             );
+
+                            let suggested_urls =
+                                suggest_fallback_urls(&client, &api_key, &model, q, 6).await;
+                            let filtered_candidates =
+                                crate::services::web_search::filter_suggested_urls_to_safe_sources(
+                                    &suggested_urls,
+                                    &attempted_domains,
+                                    3,
+                                );
+                            println!(
+                                "[WebSearch] Gemini suggested {} URLs, {} passed safe filtering",
+                                suggested_urls.len(),
+                                filtered_candidates.len()
+                            );
+
+                            for candidate in filtered_candidates {
+                                if attempted_urls.contains(&candidate.url) {
+                                    continue;
+                                }
+
+                                mark_attempted_url(
+                                    &candidate.url,
+                                    &mut attempted_urls,
+                                    &mut attempted_domains,
+                                );
+                                let mut allowed = HashMap::new();
+                                allowed.insert(candidate.url.clone(), candidate.clone());
+
+                                match crate::services::web_search::fetch_url_from_allowed(
+                                    &candidate.url,
+                                    &allowed,
+                                )
+                                .await
+                                {
+                                    Ok(result) => {
+                                        let fallback_message = format!(
+                                            "Primary search failed; used model-assisted trusted fallback source: {}.",
+                                            candidate.title
+                                        );
+                                        resolved = Some(wrap_query_fallback_result(
+                                            q,
+                                            result,
+                                            &fallback_message,
+                                        ));
+                                        break;
+                                    }
+                                    Err(fetch_error) => {
+                                        println!(
+                                            "[WebSearch] Gemini-assisted fallback failed: {}",
+                                            fetch_error
+                                        );
+                                        final_error = fetch_error;
+                                    }
+                                }
+                            }
                         }
-                        fetched.ok_or(final_error)
+
+                        resolved.ok_or_else(|| {
+                            format!(
+                                "Search unavailable after all fallbacks. Last error: {}",
+                                final_error
+                            )
+                        })
                     }
                 }
             } else if let Some(u) = requested_url {
-                fetch_allowed_url_with_timeout(u, &allowed_urls, 8).await
+                mark_attempted_url(u, &mut attempted_urls, &mut attempted_domains);
+                crate::services::web_search::fetch_url_from_allowed(u, &allowed_sources).await
             } else {
                 Err("Tool call requires either `query` or `url`.".to_string())
             };
 
             let (tool_response_value, tool_status, tool_message) = match tool_result {
                 Ok(result) => {
-                    if result.mode == "query" {
-                        allowed_urls = crate::services::web_search::collect_allowed_urls(&result);
-                    }
+                    merge_allowed_sources(&mut allowed_sources, &result);
+                    track_attempted_sources(
+                        &result.sources,
+                        &mut attempted_urls,
+                        &mut attempted_domains,
+                    );
                     consecutive_tool_failures = 0;
+                    let done_message = result
+                        .message
+                        .as_ref()
+                        .map(|m| format!("Search complete. {}", m))
+                        .unwrap_or_else(|| "Search complete.".to_string());
                     (
                         serde_json::to_value(&result).unwrap_or_else(|_| {
                             json!({
@@ -914,7 +1023,7 @@ pub async fn stream_gemini_chat_v2(
                             })
                         }),
                         "done".to_string(),
-                        "Search complete.".to_string(),
+                        done_message,
                     )
                 }
                 Err(error_message) => {
@@ -1166,7 +1275,11 @@ pub async fn generate_image_brief(
         .map_err(|e| format!("Failed to read image brief response: {}", e))?;
 
     let chunk: GeminiResponseChunk = serde_json::from_str(&body).map_err(|e| {
-        format!("Failed to parse image brief response: {} - Body: {}", e, &body[..body.len().min(500)])
+        format!(
+            "Failed to parse image brief response: {} - Body: {}",
+            e,
+            &body[..body.len().min(500)]
+        )
     })?;
 
     if let Some(candidates) = chunk.candidates {
@@ -1197,10 +1310,14 @@ pub async fn compress_conversation(
     image_brief: String,
     history_to_compress: String,
 ) -> Result<String, String> {
-    let summary_prompt = crate::brain::memory::build_summary_prompt(&image_brief, &history_to_compress);
+    let summary_prompt =
+        crate::brain::memory::build_summary_prompt(&image_brief, &history_to_compress);
     let lite_model = crate::constants::DEFAULT_MODEL;
 
-    println!("[Summarizer] Compressing conversation using model: {}", lite_model);
+    println!(
+        "[Summarizer] Compressing conversation using model: {}",
+        lite_model
+    );
 
     let client = reqwest::Client::new();
     let url = format!(
@@ -1244,7 +1361,11 @@ pub async fn compress_conversation(
         .map_err(|e| format!("Failed to read compress response: {}", e))?;
 
     let chunk: GeminiResponseChunk = serde_json::from_str(&body).map_err(|e| {
-        format!("Failed to parse compress response: {} - Body: {}", e, &body[..body.len().min(500)])
+        format!(
+            "Failed to parse compress response: {} - Body: {}",
+            e,
+            &body[..body.len().min(500)]
+        )
     })?;
 
     if let Some(candidates) = chunk.candidates {

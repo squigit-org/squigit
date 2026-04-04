@@ -247,10 +247,10 @@ pub fn run() {
                             let _ = std::fs::create_dir_all(&applications_dir);
                             let target_appimage = applications_dir.join("Squigit.AppImage");
                             
-                            if std::fs::rename(&appimage_path, &target_appimage).is_err() {
-                                if std::fs::copy(&appimage_path, &target_appimage).is_ok() {
-                                    let _ = std::fs::remove_file(&appimage_path);
-                                }
+                            if std::fs::rename(&appimage_path, &target_appimage).is_err()
+                                && std::fs::copy(&appimage_path, &target_appimage).is_ok()
+                            {
+                                let _ = std::fs::remove_file(&appimage_path);
                             }
                             
                             let target_icon_dir = home_dir.join(".local/share/icons/hicolor/512x512/apps");
