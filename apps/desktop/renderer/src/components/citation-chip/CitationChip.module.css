@@ -1,0 +1,98 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--c-raw-043);
+  background: color-mix(in srgb, var(--c-raw-012) 70%, transparent);
+  text-decoration: none;
+  color: var(--c-raw-003);
+  font-size: 0.78rem;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.chip:hover {
+  background: color-mix(in srgb, var(--c-raw-012) 78%, transparent);
+  border-color: color-mix(in srgb, var(--c-raw-043) 80%, var(--c-raw-003) 20%);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--c-raw-004);
+  outline-offset: 2px;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.reveal {
+  animation: citationChipReveal 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.iconImage {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.fileIconFrame {
+  fill: color-mix(in srgb, var(--chip-file-accent) 18%, white);
+  stroke: var(--chip-file-accent);
+  stroke-width: 1.1;
+}
+
+.fileIconFold {
+  fill: color-mix(in srgb, var(--chip-file-accent) 38%, white);
+}
+
+.fileIconText {
+  fill: var(--chip-file-accent);
+  font-size: 4.1px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-family:
+    "SF Mono",
+    "Consolas",
+    "Liberation Mono",
+    "Menlo",
+    monospace;
+}
+
+@keyframes citationChipReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

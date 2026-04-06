@@ -6,7 +6,7 @@
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Check, Copy, RotateCcw, Pencil, ChevronRight } from "lucide-react";
-import { CitationTip, CodeBlock } from "@/components";
+import { CitationChip, CitationTip, CodeBlock } from "@/components";
 import { useAppContext } from "@/providers/AppProvider";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";
@@ -14,12 +14,17 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
-import { preprocessMarkdown, remarkDisableIndentedCode } from "@/lib";
 import {
-  parseAttachmentPaths,
-  stripAttachmentMentions,
   attachmentFromPath,
-  AttachmentStrip,
+  unwrapMarkdownLinkDestination,
+  isAttachmentPath,
+  normalizeAttachmentMarkdownLinks,
+  parseAttachmentPaths,
+  preprocessMarkdown,
+  remarkDisableIndentedCode,
+  stripImageAttachmentMentions,
+} from "@/lib";
+import {
   Message,
   PendingAssistantTurn,
   ToolStep,
@@ -110,7 +115,33 @@ function getCombinedThoughtSeconds(steps: ToolStep[]): number {
   return steps.reduce((sum, step) => sum + getToolStepThoughtSeconds(step), 0);
 }
 
-const CitationChip: React.FC<{
+function getNodeText(node: React.ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((item) => getNodeText(item)).join("");
+  }
+
+  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+    return getNodeText(node.props.children);
+  }
+
+  return "";
+}
+
+function normalizeAttachmentHref(href: string): string {
+  const unwrapped = unwrapMarkdownLinkDestination(href);
+
+  try {
+    return decodeURI(unwrapped);
+  } catch {
+    return unwrapped;
+  }
+}
+
+const WebsiteCitationChip: React.FC<{
   citation: NonNullable<Message["citations"]>[number];
   animate?: boolean;
 }> = ({ citation, animate = false }) => {
@@ -129,29 +160,23 @@ const CitationChip: React.FC<{
 
   return (
     <>
-      <a
+      <CitationChip
         ref={anchorRef}
+        label={citation.title || domain}
         href={citation.url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`${styles.citationChip} ${
-          animate ? styles.citationChipReveal : ""
-        }`}
+        fullWidth
+        animate={animate}
+        visual={{
+          kind: "favicon",
+          src: faviconUrl,
+        }}
         onMouseEnter={() => setShowTip(true)}
         onMouseLeave={() => setShowTip(false)}
         onFocus={() => setShowTip(true)}
         onBlur={() => setShowTip(false)}
-      >
-        <img
-          src={faviconUrl}
-          alt=""
-          className={styles.citationIcon}
-          onError={(event) => {
-            event.currentTarget.style.display = "none";
-          }}
-        />
-        <span className={styles.citationTitle}>{citation.title || domain}</span>
-      </a>
+      />
       <CitationTip
         parentRef={anchorRef}
         show={showTip}
@@ -191,10 +216,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     () => attachments.filter((attachment) => attachment.type === "image"),
     [attachments],
   );
-  const fileAttachments = useMemo(
-    () => attachments.filter((attachment) => attachment.type !== "image"),
-    [attachments],
-  );
 
   const toolSteps = pendingTurn?.toolSteps || message.toolSteps || [];
   const citations = pendingTurn?.visibleCitations || message.citations || [];
@@ -202,7 +223,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     if (isPendingAssistant) {
       return pendingTurn?.displayText || "";
     }
-    return stripAttachmentMentions(message.text);
+    return stripImageAttachmentMentions(message.text);
   }, [isPendingAssistant, message.text, pendingTurn]);
 
   const thoughtBadgeText = useMemo(() => {
@@ -245,12 +266,10 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       pendingTurn?.phase === "stopped");
   const hasDisplayText = displayText.trim().length > 0;
   const hasImageAttachments = imageAttachments.length > 0;
-  const hasFileAttachments = fileAttachments.length > 0;
   const hasPendingShellContent = isPendingAssistant && !hasDisplayText;
   const isImageOnlyEmptyCaption =
     hasImageAttachments &&
     !hasDisplayText &&
-    !hasFileAttachments &&
     !showCitations &&
     !hasPendingShellContent;
   const shouldRenderBubble = !isImageOnlyEmptyCaption;
@@ -272,6 +291,33 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       });
     },
     [app, imageAttachments],
+  );
+
+  const handleLocalAttachmentLink = useCallback(
+    (href: string, children: React.ReactNode) => {
+      const normalizedHref = normalizeAttachmentHref(href);
+      const sourcePath =
+        app.getAttachmentSourcePath(normalizedHref) ||
+        app.getAttachmentSourcePath(href) ||
+        undefined;
+      const attachment = attachmentFromPath(
+        normalizedHref,
+        undefined,
+        undefined,
+        sourcePath,
+      );
+      const label = getNodeText(children).trim();
+      const originalName =
+        label || (sourcePath ? getBaseName(sourcePath) : attachment.name);
+
+      void app.openMediaViewer(
+        {
+          ...attachment,
+          name: originalName,
+        },
+      );
+    },
+    [app],
   );
 
   const handleCopy = () => {
@@ -331,6 +377,8 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
           enableInternalLinks &&
           typeof href === "string" &&
           href.startsWith("#settings-");
+        const isLocalAttachmentLink =
+          typeof href === "string" && isAttachmentPath(href);
 
         if (isInternalSettingsLink) {
           const section = href
@@ -363,6 +411,39 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
             >
               {children}
             </span>
+          );
+        }
+
+        if (isLocalAttachmentLink && typeof href === "string") {
+          const normalizedHref = normalizeAttachmentHref(href);
+          const sourcePath =
+            app.getAttachmentSourcePath(normalizedHref) ||
+            app.getAttachmentSourcePath(href) ||
+            undefined;
+          const attachment = attachmentFromPath(
+            normalizedHref,
+            undefined,
+            undefined,
+            sourcePath,
+          );
+          const label =
+            getNodeText(children).trim() ||
+            (sourcePath ? getBaseName(sourcePath) : attachment.name);
+
+          return (
+            <CitationChip
+              href={normalizedHref}
+              label={label}
+              visual={{
+                kind: "file",
+                extension: attachment.extension,
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleLocalAttachmentLink(href, children);
+              }}
+            />
           );
         }
 
@@ -403,7 +484,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         </summary>
       ),
     }),
-    [enableInternalLinks, onAction],
+    [enableInternalLinks, handleLocalAttachmentLink, onAction],
   );
 
   return (
@@ -460,20 +541,6 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                     : ""
                 }`}
               >
-                {hasFileAttachments && (
-                  <div
-                    style={{
-                      marginBottom: hasDisplayText ? "8px" : "0",
-                    }}
-                  >
-                    <AttachmentStrip
-                      attachments={fileAttachments}
-                      onClick={app.openMediaViewer}
-                      readOnly
-                    />
-                  </div>
-                )}
-
                 <div
                   className={`${styles.markdownFrame} ${
                     isPendingAssistant ? styles.pendingMarkdownFrame : ""
@@ -495,9 +562,12 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                       rehypePlugins={[rehypeKatex, rehypeRaw]}
                       components={markdownComponents}
                     >
-                      {preprocessMarkdown(displayText, {
+                      {preprocessMarkdown(
+                        normalizeAttachmentMarkdownLinks(displayText),
+                        {
                         doubleNewlines: shouldDoubleNewlines,
-                      })}
+                        },
+                      )}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -509,7 +579,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                     }`}
                   >
                     {citations.map((citation, index) => (
-                      <CitationChip
+                      <WebsiteCitationChip
                         key={`${citation.url}-${index}`}
                         citation={citation}
                         animate={animateCitations}

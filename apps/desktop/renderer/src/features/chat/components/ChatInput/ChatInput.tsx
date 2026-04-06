@@ -11,15 +11,16 @@ import { useAppContext } from "@/providers/AppProvider";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
-  AttachmentStrip,
-  isImageExtension,
-  getExtension,
   attachmentFromPath,
-  ACCEPTED_EXTENSIONS,
-} from "@/features";
+  buildAttachmentMention,
+  getExtension,
+  isAcceptedExtension,
+  isImageExtension,
+} from "@/lib";
 import { InputTextarea } from "./InputTextarea";
 import { InputCodeEditor, useCodeEditor } from "./InputCodeEditor";
 import { InputActions } from "./InputActions";
+import { ImageStrip } from "./ImageStrip";
 import type { ChatInputProps } from "./chat-input.types";
 import styles from "./ChatInput.module.css";
 
@@ -59,6 +60,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setCodeValue,
     handleChange,
     handleCodeKeyDown,
+    commitCodeBlockToTextarea,
     resetCodeEditor,
   } = useCodeEditor({
     value,
@@ -113,7 +115,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         );
         if (result && result.path) {
           onAttachmentsChange([
-            ...attachments,
+            ...latestAttachmentsRef.current,
             attachmentFromPath(result.path),
           ]);
         }
@@ -132,6 +134,155 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       attachments.length > 0);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const pendingInlineInsertRef = useRef<string | null>(null);
+  const latestValueRef = useRef(value);
+  const latestAttachmentsRef = useRef(attachments);
+
+  useEffect(() => {
+    latestValueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    latestAttachmentsRef.current = attachments;
+  }, [attachments]);
+
+  const insertTextAtCaret = React.useCallback(
+    (textToInsert: string) => {
+      if (!textToInsert) return;
+
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        onChange(latestValueRef.current + textToInsert);
+        return;
+      }
+
+      const currentValue = latestValueRef.current;
+      const start = textarea.selectionStart ?? currentValue.length;
+      const end = textarea.selectionEnd ?? start;
+      const nextValue =
+        currentValue.slice(0, start) +
+        textToInsert +
+        currentValue.slice(end);
+      const cursorPos = start + textToInsert.length;
+
+      onChange(nextValue);
+      window.setTimeout(() => {
+        const nextTextarea = textareaRef.current;
+        if (!nextTextarea) return;
+        nextTextarea.focus();
+        nextTextarea.setSelectionRange(cursorPos, cursorPos);
+      }, 0);
+    },
+    [onChange],
+  );
+
+  const insertInlineFileLinks = React.useCallback(
+    (links: string[]) => {
+      if (links.length === 0) return;
+
+      const textToInsert = `${links.join(" ")} `;
+      if (isCodeBlockActive) {
+        pendingInlineInsertRef.current = textToInsert;
+        commitCodeBlockToTextarea();
+        return;
+      }
+
+      insertTextAtCaret(textToInsert);
+    },
+    [commitCodeBlockToTextarea, insertTextAtCaret, isCodeBlockActive],
+  );
+
+  useEffect(() => {
+    if (!pendingInlineInsertRef.current || isCodeBlockActive) {
+      return;
+    }
+
+    const textToInsert = pendingInlineInsertRef.current;
+    pendingInlineInsertRef.current = null;
+    window.setTimeout(() => {
+      insertTextAtCaret(textToInsert);
+    }, 0);
+  }, [insertTextAtCaret, isCodeBlockActive, value]);
+
+  const handleFilePaths = React.useCallback(
+    async (paths: string[]) => {
+      const currentAttachments = latestAttachmentsRef.current;
+      const nextAttachments = [...currentAttachments];
+      const inlineLinks: string[] = [];
+
+      for (const filePath of paths) {
+        const originalName = filePath.split(/[/\\]/).pop() || filePath;
+        const ext = getExtension(filePath);
+        const isAllowed = isAcceptedExtension(ext);
+
+        if (isImageExtension(ext)) {
+          try {
+            const result = await invoke<{ hash: string; path: string }>(
+              "store_image_from_path",
+              { path: filePath },
+            );
+            app.rememberAttachmentSourcePath(result.path, filePath);
+            nextAttachments.push(
+              attachmentFromPath(
+                result.path,
+                undefined,
+                originalName,
+                filePath,
+              ),
+            );
+          } catch (err) {
+            console.error("Failed to store image:", err);
+          }
+          continue;
+        }
+
+        if (isAllowed) {
+          try {
+            const result = await invoke<{ hash: string; path: string }>(
+              "store_file_from_path",
+              { path: filePath },
+            );
+            app.rememberAttachmentSourcePath(result.path, filePath);
+            inlineLinks.push(buildAttachmentMention(result.path, originalName));
+          } catch (err) {
+            console.error("Failed to store file:", err);
+          }
+          continue;
+        }
+
+        try {
+          const isText = await invoke<boolean>("validate_text_file", {
+            path: filePath,
+          });
+          if (!isText) {
+            console.warn("Selected file is binary and not supported:", filePath);
+            continue;
+          }
+
+          const result = await invoke<{ hash: string; path: string }>(
+            "store_file_from_path",
+            { path: filePath },
+          );
+          app.rememberAttachmentSourcePath(result.path, filePath);
+          inlineLinks.push(buildAttachmentMention(result.path, originalName));
+        } catch (err) {
+          console.error("Failed to validate selected text file:", err);
+        }
+      }
+
+      if (nextAttachments.length > currentAttachments.length) {
+        onAttachmentsChange(nextAttachments);
+      }
+      if (inlineLinks.length > 0) {
+        insertInlineFileLinks(inlineLinks);
+      }
+    },
+    [
+      app,
+      insertInlineFileLinks,
+      onAttachmentsChange,
+    ],
+  );
 
   useEffect(() => {
     const unlistenDrop = listen<{ paths: string[] }>(
@@ -139,87 +290,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       async (event) => {
         const paths = Array.from(event.payload.paths || []);
         if (paths.length === 0) return;
-
-        const newAttachments = [...attachments];
-        for (const filePath of paths) {
-          const originalName = filePath.split(/[/\\]/).pop() || filePath;
-          const ext = getExtension(filePath);
-          const isAllowed = ACCEPTED_EXTENSIONS.includes(ext);
-
-          if (isImageExtension(ext)) {
-            try {
-              const result = await invoke<{ hash: string; path: string }>(
-                "store_image_from_path",
-                { path: filePath },
-              );
-              newAttachments.push(
-                attachmentFromPath(
-                  result.path,
-                  undefined,
-                  originalName,
-                  filePath,
-                ),
-              );
-            } catch (err) {
-              console.error("Failed to store dropped image:", err);
-            }
-          } else if (isAllowed) {
-            try {
-              const result = await invoke<{ hash: string; path: string }>(
-                "store_file_from_path",
-                { path: filePath },
-              );
-              newAttachments.push(
-                attachmentFromPath(
-                  result.path,
-                  undefined,
-                  originalName,
-                  filePath,
-                ),
-              );
-            } catch (err) {
-              console.error("Failed to store dropped file:", err);
-            }
-          } else {
-            // Check if it's a valid text file
-            try {
-              const isText = await invoke<boolean>("validate_text_file", {
-                path: filePath,
-              });
-              if (isText) {
-                const result = await invoke<{ hash: string; path: string }>(
-                  "store_file_from_path",
-                  { path: filePath },
-                );
-                newAttachments.push(
-                  attachmentFromPath(
-                    result.path,
-                    undefined,
-                    originalName,
-                    filePath,
-                  ),
-                );
-              } else {
-                console.warn(
-                  "Dropped file is binary and not supported:",
-                  filePath,
-                );
-              }
-            } catch (err) {
-              console.error("Failed to validate dropped text file:", err);
-            }
-          }
-        }
-        if (newAttachments.length > attachments.length) {
-          onAttachmentsChange(newAttachments);
-        }
+        await handleFilePaths(paths);
       },
     );
 
     return () => {
       unlistenDrop.then((fn) => fn());
     };
-  }, [attachments, onAttachmentsChange]);
+  }, [handleFilePaths]);
 
   const containerContent = (
     <div
@@ -228,7 +306,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       }`}
       ref={containerRef}
     >
-      <AttachmentStrip
+      <ImageStrip
         attachments={attachments}
         onClick={app.openMediaViewer}
         onRemove={(id) =>
@@ -264,7 +342,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               );
               if (result && result.path) {
                 onAttachmentsChange([
-                  ...attachments,
+                  ...latestAttachmentsRef.current,
                   attachmentFromPath(result.path),
                 ]);
                 return;
@@ -307,79 +385,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         }}
         onCaptureToInput={onCaptureToInput}
         onFilePaths={async (paths: string[]) => {
-          const newAttachments = [...attachments];
-          for (const filePath of paths) {
-            const originalName = filePath.split(/[/\\]/).pop() || filePath;
-            const ext = getExtension(filePath);
-            const isAllowed = ACCEPTED_EXTENSIONS.includes(ext);
-
-            if (isImageExtension(ext)) {
-              try {
-                const result = await invoke<{ hash: string; path: string }>(
-                  "store_image_from_path",
-                  { path: filePath },
-                );
-                newAttachments.push(
-                  attachmentFromPath(
-                    result.path,
-                    undefined,
-                    originalName,
-                    filePath,
-                  ),
-                );
-              } catch (err) {
-                console.error("Failed to store image:", err);
-              }
-            } else if (isAllowed) {
-              try {
-                const result = await invoke<{ hash: string; path: string }>(
-                  "store_file_from_path",
-                  { path: filePath },
-                );
-                newAttachments.push(
-                  attachmentFromPath(
-                    result.path,
-                    undefined,
-                    originalName,
-                    filePath,
-                  ),
-                );
-              } catch (err) {
-                console.error("Failed to store file:", err);
-              }
-            } else {
-              // Validated unknown extensions from 'All files'
-              try {
-                const isText = await invoke<boolean>("validate_text_file", {
-                  path: filePath,
-                });
-                if (isText) {
-                  const result = await invoke<{ hash: string; path: string }>(
-                    "store_file_from_path",
-                    { path: filePath },
-                  );
-                  newAttachments.push(
-                    attachmentFromPath(
-                      result.path,
-                      undefined,
-                      originalName,
-                      filePath,
-                    ),
-                  );
-                } else {
-                  console.warn(
-                    "Selected file is binary and not supported:",
-                    filePath,
-                  );
-                }
-              } catch (err) {
-                console.error("Failed to validate selected text file:", err);
-              }
-            }
-          }
-          if (newAttachments.length > attachments.length) {
-            onAttachmentsChange(newAttachments);
-          }
+          await handleFilePaths(paths);
         }}
       />
     </div>

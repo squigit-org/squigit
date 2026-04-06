@@ -27,6 +27,10 @@ import {
   github,
   SUPPORTED_OCR_MODEL_IDS,
   resolveOcrModelId,
+  getExtension,
+  isImageExtension,
+  type Attachment,
+  unwrapMarkdownLinkDestination,
 } from "@/lib";
 import {
   useSystemSync,
@@ -35,13 +39,10 @@ import {
   useAuth,
 } from "@/hooks";
 import {
-  useAttachments,
   type Citation,
   useChat,
   useChatHistory,
   useChatTitle,
-  isImageExtension,
-  type Attachment,
   type Message,
   type MediaGalleryItem,
   type MediaViewerItem,
@@ -58,6 +59,7 @@ import { useAppDrafts } from "./useAppDrafts";
 import { useAppContextMenu } from "./useAppContextMenu";
 import { useAppOcr } from "./useAppOcr";
 import { useAppPanel } from "./useAppPanel";
+import { useAttachments } from "./useAttachments";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 const SYSTEM_GALLERY_ID = "__system_gallery";
@@ -139,6 +141,16 @@ const UNSUPPORTED_PREVIEW_EXTENSIONS = new Set([
 
 const ATTACHMENT_SOURCE_MAP_STORAGE_KEY = "squigit:attachment-source-map:v1";
 const ATTACHMENT_SOURCE_MAP_MAX_ENTRIES = 2048;
+
+function normalizeAttachmentPath(path: string): string {
+  const unwrapped = unwrapMarkdownLinkDestination(path);
+
+  try {
+    return decodeURI(unwrapped);
+  } catch {
+    return unwrapped;
+  }
+}
 
 function readAttachmentSourceMap(): Map<string, string> {
   if (typeof window === "undefined") return new Map();
@@ -656,16 +668,22 @@ export const useApp = () => {
 
   const openMediaViewer = useCallback(
     async (attachment: Attachment, options?: MediaViewerOpenOptions) => {
-      const extension = attachment.extension.toLowerCase();
+      const normalizedAttachmentPath = normalizeAttachmentPath(attachment.path);
+      const pathExtension = getExtension(normalizedAttachmentPath).toLowerCase();
+      const extension =
+        pathExtension && pathExtension !== "file"
+          ? pathExtension
+          : attachment.extension.toLowerCase();
       const sourcePath =
         attachment.sourcePath ||
+        getAttachmentSourcePath(normalizedAttachmentPath) ||
         getAttachmentSourcePath(attachment.path) ||
         undefined;
 
-      let resolvedPath = attachment.path;
+      let resolvedPath = normalizedAttachmentPath;
       try {
         resolvedPath = await invoke<string>("resolve_attachment_path", {
-          path: attachment.path,
+          path: normalizedAttachmentPath,
         });
       } catch (error) {
         console.warn("[media] Could not resolve attachment path:", error);
@@ -1285,6 +1303,7 @@ export const useApp = () => {
     trackPendingPromptAttachmentAnalysis,
     addAttachmentFromPath: attachments.addFromPath,
     clearAttachments: attachments.clearAttachments,
+    rememberAttachmentSourcePath,
     setShowUpdate,
     handleContextMenu: contextMenuState.handleContextMenu,
     handleCloseContextMenu: contextMenuState.handleCloseContextMenu,

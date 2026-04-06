@@ -5,6 +5,7 @@
  */
 
 export * from "./app/useApp";
+export * from "./app/useAttachments";
 
 export * from "./auth/useAuth";
 

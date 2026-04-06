@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* ─── Layout ─────────────────────────────────────────────────────────────── */
-
 .wrapper {
   position: relative;
   width: 100%;
@@ -33,8 +31,6 @@
 .strip::-webkit-scrollbar {
   display: none;
 }
-
-/* ─── Custom scrollbar ───────────────────────────────────────────────────── */
 
 .scrollbarTrack {
   position: absolute;
@@ -73,8 +69,6 @@
   background-color: var(--c-raw-003);
 }
 
-/* ─── Thumbnail wrapper ──────────────────────────────────────────────────── */
-
 .thumbWrapper {
   position: relative;
   flex-shrink: 0;
@@ -91,8 +85,6 @@
   box-shadow: 0 0 0 2px var(--c-raw-004);
 }
 
-/* ─── Image thumbnail ────────────────────────────────────────────────────── */
-
 .imageThumb {
   width: 60px;
   height: 60px;
@@ -106,53 +98,6 @@
   border-radius: 9px;
   pointer-events: none;
 }
-
-/* ─── File thumbnail ─────────────────────────────────────────────────────── */
-
-.fileThumb {
-  display: flex;
-  align-items: stretch;
-  width: 140px;
-  height: 60px;
-  background-color: var(--c-raw-012);
-  border-radius: 9px;
-  overflow: hidden;
-}
-
-.fileExtBadge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  flex-shrink: 0;
-  font-family: "SF Mono", "Consolas", monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--c-raw-036);
-  border-right: 1px solid var(--c-raw-037);
-  border-radius: 9px 0 0 9px;
-}
-
-.fileInfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-}
-
-.fileName {
-  font-size: 11px;
-  color: var(--c-raw-003);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-
-/* ─── Remove button ──────────────────────────────────────────────────────── */
 
 .removeBtn {
   --remove-badge-bg: var(--c-raw-012);

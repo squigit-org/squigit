@@ -8,20 +8,6 @@ export * from "./chat/components/ChatBubble/ChatBubble";
 export * from "./chat/components/ChatBubble/MessageList";
 export * from "./chat/components/ChatInput/ChatInput";
 export { ImageArtifact } from "./chat/components/ImageArtifact/ImageArtifact";
-export { AttachmentStrip } from "./chat/components/AttachmentStrip/AttachmentStrip";
-export type { AttachmentStripProps } from "./chat/components/AttachmentStrip/AttachmentStrip";
-export { useAttachments } from "./chat/components/AttachmentStrip/useAttachments";
-export type { Attachment } from "./chat/components/AttachmentStrip/attachment.types";
-export {
-  IMAGE_EXTENSIONS,
-  ACCEPTED_EXTENSIONS,
-  isImageExtension,
-  getExtension,
-  parseAttachmentPaths,
-  stripAttachmentMentions,
-  buildAttachmentMention,
-  attachmentFromPath,
-} from "./chat/components/AttachmentStrip/attachment.types";
 export * from "./chat/components/ImageArtifact/ImageSearchInput";
 export * from "./chat/components/ImageArtifact/ImageTextMenu";
 export * from "./chat/components/ImageArtifact/ImageToolbar";

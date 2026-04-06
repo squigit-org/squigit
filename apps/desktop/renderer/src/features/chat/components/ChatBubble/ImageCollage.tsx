@@ -6,7 +6,7 @@
 
 import React, { useMemo } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import type { Attachment } from "../AttachmentStrip/attachment.types";
+import type { Attachment } from "@/lib";
 import styles from "./ImageCollage.module.css";
 
 interface ImageCollageProps {

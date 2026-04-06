@@ -7,7 +7,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 const LEGACY_ATTACHMENT_MENTION_RE = /\{\{([^}]+)\}\}/g;
-const LINK_ATTACHMENT_MENTION_RE = /\[([^\]\n]+)\]\(([^)\n]+)\)/g;
+const LINK_ATTACHMENT_MENTION_RE = /\[([^\]\n]+)\]\((<[^>\n]+>|[^)\n]+)\)/g;
 const ATTACHMENT_MEMORY_TIMEOUT_MS = 1600;
 
 type AttachmentMention = {
@@ -20,8 +20,16 @@ function basename(path: string): string {
   return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
 }
 
+function unwrapMarkdownLinkDestination(destination: string): string {
+  const value = destination.trim();
+  if (value.startsWith("<") && value.endsWith(">")) {
+    return value.slice(1, -1).trim();
+  }
+  return value;
+}
+
 function isLikelyAttachmentPath(path: string): boolean {
-  const value = path.trim();
+  const value = unwrapMarkdownLinkDestination(path);
   if (!value) return false;
 
   const lower = value.toLowerCase();
@@ -59,7 +67,7 @@ function extractAttachmentMentions(text: string): AttachmentMention[] {
 
   for (const match of text.matchAll(LINK_ATTACHMENT_MENTION_RE)) {
     const label = (match[1] || "").trim();
-    const path = (match[2] || "").trim();
+    const path = unwrapMarkdownLinkDestination(String(match[2] || ""));
     if (!isLikelyAttachmentPath(path) || seen.has(path)) continue;
     seen.add(path);
     out.push({
@@ -81,7 +89,7 @@ export function stripAttachmentMentionsForHistory(text: string): string {
     LINK_ATTACHMENT_MENTION_RE,
     (...args: unknown[]) => {
       const full = String(args[0] || "");
-      const path = String(args[2] || "");
+      const path = unwrapMarkdownLinkDestination(String(args[2] || ""));
       return isLikelyAttachmentPath(path) ? "" : full;
     },
   );

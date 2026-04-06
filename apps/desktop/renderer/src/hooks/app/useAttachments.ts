@@ -6,18 +6,26 @@
 
 import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { Attachment } from "./attachment.types";
-import { attachmentFromPath } from "./attachment.types";
+import type { Attachment } from "@/lib";
+import { attachmentFromPath } from "@/lib";
+
+function filterImageAttachments(attachments: Attachment[]): Attachment[] {
+  return attachments.filter((attachment) => attachment.type === "image");
+}
 
 export function useAttachments() {
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachments, setAttachmentsState] = useState<Attachment[]>([]);
+
+  const setAttachments = useCallback((nextAttachments: Attachment[]) => {
+    setAttachmentsState(filterImageAttachments(nextAttachments));
+  }, []);
 
   const addAttachments = useCallback((newOnes: Attachment[]) => {
-    setAttachments((prev) => [...prev, ...newOnes]);
+    setAttachmentsState((prev) => [...prev, ...filterImageAttachments(newOnes)]);
   }, []);
 
   const removeAttachment = useCallback((id: string) => {
-    setAttachments((prev) => {
+    setAttachmentsState((prev) => {
       const target = prev.find((a) => a.id === id);
       if (target?.isTemp) {
         invoke("delete_temp_file", { path: target.path }).catch(() => {});
@@ -27,7 +35,7 @@ export function useAttachments() {
   }, []);
 
   const clearAttachments = useCallback(() => {
-    setAttachments((prev) => {
+    setAttachmentsState((prev) => {
       prev
         .filter((a) => a.isTemp)
         .forEach((a) => {

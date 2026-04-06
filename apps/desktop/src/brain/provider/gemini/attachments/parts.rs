@@ -8,8 +8,17 @@ use std::sync::Arc;
 
 use crate::brain::provider::gemini::transport::types::{GeminiFileData, GeminiPart};
 
+fn unwrap_link_destination(path: &str) -> &str {
+    let trimmed = path.trim();
+    trimmed
+        .strip_prefix('<')
+        .and_then(|value| value.strip_suffix('>'))
+        .map(str::trim)
+        .unwrap_or(trimmed)
+}
+
 fn is_attachment_link_path(path: &str) -> bool {
-    let value = path.trim();
+    let value = unwrap_link_destination(path);
     if value.is_empty() {
         return false;
     }
@@ -57,7 +66,7 @@ pub(crate) async fn build_interleaved_parts(
         r"(?x)
         (\{\{(?P<legacy_path>[^}]+)\}\})
         |
-        (\[(?P<link_label>[^\]\n]+)\]\((?P<link_path>[^)\n]+)\))
+        (\[(?P<link_label>[^\]\n]+)\]\((?P<link_path><[^>\n]+>|[^)\n]+)\))
     ",
     )
     .map_err(|e| format!("Regex Error: {}", e))?;
@@ -77,7 +86,7 @@ pub(crate) async fn build_interleaved_parts(
         let maybe_path = if let Some(legacy) = cap.name("legacy_path") {
             Some(legacy.as_str().trim().to_string())
         } else if let Some(link_path) = cap.name("link_path") {
-            let path = link_path.as_str().trim();
+            let path = unwrap_link_destination(link_path.as_str());
             if is_attachment_link_path(path) {
                 Some(path.to_string())
             } else {

@@ -14,52 +14,10 @@ import React, {
 } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { CloseCrossIcon } from "@/assets";
-import type { Attachment } from "./attachment.types";
-import styles from "./AttachmentStrip.module.css";
-
-// ─── Constants ─────────────────────────────────────────────────────────────
+import type { Attachment } from "@/lib";
+import styles from "./ImageStrip.module.css";
 
 const MIN_THUMB_WIDTH = 30;
-
-const EXT_COLORS: Record<string, string> = {
-  // Documents
-  pdf: "var(--c-raw-123)",
-  doc: "var(--c-raw-069)",
-  docx: "var(--c-raw-069)",
-  xls: "var(--c-raw-066)",
-  xlsx: "var(--c-raw-066)",
-  ppt: "var(--c-raw-076)",
-  pptx: "var(--c-raw-076)",
-  rtf: "var(--c-raw-101)",
-  // Text / Code
-  txt: "var(--c-raw-117)",
-  md: "var(--c-raw-098)",
-  csv: "var(--c-raw-087)",
-  json: "var(--c-raw-107)",
-  xml: "var(--c-raw-111)",
-  yaml: "var(--c-raw-063)",
-  yml: "var(--c-raw-063)",
-  html: "var(--c-raw-122)",
-  css: "var(--c-raw-091)",
-  js: "var(--c-raw-125)",
-  ts: "var(--c-raw-093)",
-  jsx: "var(--c-raw-074)",
-  tsx: "var(--c-raw-074)",
-  py: "var(--c-raw-094)",
-  rs: "var(--c-raw-119)",
-  go: "var(--c-raw-086)",
-  java: "var(--c-raw-127)",
-  c: "var(--c-raw-049)",
-  cpp: "var(--c-raw-062)",
-  h: "var(--c-raw-049)",
-  hpp: "var(--c-raw-062)",
-};
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function getBadgeColor(ext: string): string {
-  return EXT_COLORS[ext.toLowerCase()] ?? "#6b7280";
-}
 
 function shouldUseGeneratedImageName(attachment: Attachment): boolean {
   if (attachment.type !== "image") return false;
@@ -97,24 +55,6 @@ function getThumbGeometry(
   return { thumbWidth, thumbLeft, scrollableTrack, scrollableContent };
 }
 
-// ─── Sub-components ─────────────────────────────────────────────────────────
-
-const FileThumbnail: React.FC<{ attachment: Attachment }> = ({
-  attachment,
-}) => (
-  <div className={styles.fileThumb}>
-    <div
-      className={styles.fileExtBadge}
-      style={{ backgroundColor: getBadgeColor(attachment.extension) }}
-    >
-      {attachment.extension.toUpperCase().slice(0, 4)}
-    </div>
-    <div className={styles.fileInfo}>
-      <span className={styles.fileName}>{attachment.name}</span>
-    </div>
-  </div>
-);
-
 const ImageThumbnail: React.FC<{ attachment: Attachment }> = ({
   attachment,
 }) => {
@@ -146,8 +86,6 @@ const RemoveButton: React.FC<{
   </button>
 );
 
-// ─── Scrollbar thumb drag hook ───────────────────────────────────────────────
-
 interface ScrollbarThumbProps {
   thumbWidth: number;
   thumbLeft: number;
@@ -171,7 +109,7 @@ const ScrollbarThumb: React.FC<ScrollbarThumbProps> = ({
       startX.current = e.clientX;
       scrollLeftStart.current = stripRef.current?.scrollLeft ?? 0;
       e.currentTarget.setPointerCapture(e.pointerId);
-      e.preventDefault(); // prevent text selection while dragging
+      e.preventDefault();
     },
     [stripRef],
   );
@@ -219,13 +157,10 @@ const ScrollbarThumb: React.FC<ScrollbarThumbProps> = ({
   );
 };
 
-// ─── AttachmentStrip ─────────────────────────────────────────────────────────
-
-export interface AttachmentStripProps {
+interface ImageStripProps {
   attachments: Attachment[];
   onRemove?: (id: string) => void;
   onClick?: (attachment: Attachment) => void;
-  readOnly?: boolean;
 }
 
 interface ScrollState {
@@ -240,37 +175,34 @@ const INITIAL_SCROLL_STATE: ScrollState = {
   thumbLeft: 0,
 };
 
-export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
+export const ImageStrip: React.FC<ImageStripProps> = ({
   attachments,
   onRemove,
   onClick,
-  readOnly = false,
 }) => {
   const stripRef = useRef<HTMLDivElement>(null);
   const [scrollState, setScrollState] =
     useState<ScrollState>(INITIAL_SCROLL_STATE);
 
-  const renderAttachments = useMemo(
-    () =>
-      readOnly
-        ? attachments.filter((attachment) => attachment.type !== "image")
-        : attachments,
-    [attachments, readOnly],
+  const imageAttachments = useMemo(
+    () => attachments.filter((attachment) => attachment.type === "image"),
+    [attachments],
   );
 
   const displayAttachments = useMemo(() => {
     let unnamedImageIndex = 0;
-    return renderAttachments.map((attachment) => {
+    return imageAttachments.map((attachment) => {
       if (!shouldUseGeneratedImageName(attachment)) {
         return attachment;
       }
+
       unnamedImageIndex += 1;
       return {
         ...attachment,
         name: `image-${unnamedImageIndex}.${attachment.extension}`,
       };
     });
-  }, [renderAttachments]);
+  }, [imageAttachments]);
 
   const updateScroll = useCallback(() => {
     const el = stripRef.current;
@@ -301,12 +233,10 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
     });
   }, []);
 
-  // Measure synchronously after DOM mutations so the thumb is visible on first render.
   useLayoutEffect(() => {
     updateScroll();
   }, [updateScroll, displayAttachments]);
 
-  // Wire up resize + wheel listeners.
   useEffect(() => {
     const el = stripRef.current;
     if (!el) return;
@@ -372,13 +302,9 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({
               if (e.key === "Enter" || e.key === " ") handleClick(attachment);
             }}
           >
-            {attachment.type === "image" ? (
-              <ImageThumbnail attachment={attachment} />
-            ) : (
-              <FileThumbnail attachment={attachment} />
-            )}
+            <ImageThumbnail attachment={attachment} />
 
-            {!readOnly && onRemove && (
+            {onRemove && (
               <RemoveButton
                 name={attachment.name}
                 onRemove={(e) => handleRemove(e, attachment.id)}

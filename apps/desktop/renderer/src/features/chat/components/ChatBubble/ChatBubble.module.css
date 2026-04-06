@@ -205,46 +205,6 @@
   animation: citationFooterReveal 0.22s ease-out both;
 }
 
-.citationChip {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  width: 100%;
-  min-width: 0;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--c-raw-043);
-  background: color-mix(in srgb, var(--c-raw-012) 70%, transparent);
-  text-decoration: none;
-  color: var(--c-raw-003);
-  font-size: 0.78rem;
-  transition:
-    background-color 0.16s ease,
-    border-color 0.16s ease;
-}
-
-.citationChip:hover {
-  background: color-mix(in srgb, var(--c-raw-012) 78%, transparent);
-  border-color: color-mix(in srgb, var(--c-raw-043) 80%, var(--c-raw-003) 20%);
-}
-
-.citationChipReveal {
-  animation: citationChipReveal 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.citationIcon {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-.citationTitle {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .userFooter {
   flex-direction: row-reverse;
 }
@@ -266,17 +226,5 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes citationChipReveal {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }

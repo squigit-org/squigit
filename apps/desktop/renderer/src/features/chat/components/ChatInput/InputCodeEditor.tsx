@@ -97,6 +97,26 @@ export const useCodeEditor = ({
     }
   };
 
+  const commitCodeBlockToTextarea = () => {
+    if (!isCodeBlockActive) return;
+
+    const nextPrompt = `${value}\n${codeBlockDelimiter}${codeLanguage}\n${codeValue.trim()}\n${codeBlockDelimiter}\n`;
+    onChange(nextPrompt);
+    setCodeValue("");
+    setIsCodeBlockActive(false);
+    setCodeLanguage("");
+    setOriginalCodeLanguage("");
+    setCodeBlockDelimiter("```");
+    setConsecutiveEnters(0);
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      const end = ta.value.length;
+      ta.setSelectionRange(end, end);
+    }, 0);
+  };
+
   return {
     isCodeBlockActive,
     codeLanguage,
@@ -105,6 +125,7 @@ export const useCodeEditor = ({
     handleChange,
     handleCodeKeyDown,
     setIsCodeBlockActive,
+    commitCodeBlockToTextarea,
     resetCodeEditor: () => {
       setCodeValue("");
       setIsCodeBlockActive(false);

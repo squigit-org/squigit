@@ -7,6 +7,7 @@
 export * from "./code-block/CodeBlock";
 export * from "./code-block/variants/CodeBlockEditor";
 export * from "./code-block/variants/CodeBlockViewer";
+export * from "./citation-chip/CitationChip";
 
 export * from "./context-menu/ContextMenu";
 

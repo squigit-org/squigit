@@ -13,14 +13,15 @@ import { InlineMenu, LoadingSpinner, Dialog, TextShimmer } from "@/components";
 import {
   API_STATUS_TEXT,
   ATTACHMENT_ANALYSIS_STATUS_DELAY_MS,
+  attachmentFromPath,
+  buildAttachmentMention,
   getAttachmentAnalysisStatusText,
   isAnswerNowSuppressedProgressText,
+  parseAttachmentPaths,
+  stripImageAttachmentMentions,
+  type Attachment,
 } from "@/lib";
 import {
-  buildAttachmentMention,
-  parseAttachmentPaths,
-  stripAttachmentMentions,
-  attachmentFromPath,
   ChatInput,
   ImageArtifact,
   useChatScroll,
@@ -42,6 +43,16 @@ function getVisibleImageProgressText(text: string | null | undefined): string | 
     return null;
   }
   return trimmed;
+}
+
+function dedupeAttachmentsByPath(items: Attachment[]): Attachment[] {
+  const byPath = new Map<string, Attachment>();
+  for (const item of items) {
+    if (!byPath.has(item.path)) {
+      byPath.set(item.path, item);
+    }
+  }
+  return Array.from(byPath.values());
 }
 
 export const Chat: React.FC = () => {
@@ -166,9 +177,14 @@ export const Chat: React.FC = () => {
 
   // Handlers
   const handleSend = useCallback(() => {
+    const existingPaths = new Set(parseAttachmentPaths(inputValue));
+    const imageAttachments = app.attachments.filter(
+      (attachment) =>
+        attachment.type === "image" && !existingPaths.has(attachment.path),
+    );
     let finalInput = inputValue;
-    if (app.attachments.length > 0) {
-      const mentions = app.attachments
+    if (imageAttachments.length > 0) {
+      const mentions = imageAttachments
         .map((a) => buildAttachmentMention(a.path, a.name))
         .join("\n");
       finalInput = `${inputValue}\n\n${mentions}`.trim();
@@ -176,7 +192,16 @@ export const Chat: React.FC = () => {
     if (!finalInput.trim() || app.chat.isLoading) {
       return;
     }
-    app.trackPendingPromptAttachmentAnalysis(app.attachments);
+
+    const parsedPromptAttachments = parseAttachmentPaths(inputValue).map((path) => {
+      const sourcePath = app.getAttachmentSourcePath(path) || undefined;
+      const originalName = sourcePath ? getBaseName(sourcePath) : undefined;
+      return attachmentFromPath(path, undefined, originalName, sourcePath);
+    });
+
+    app.trackPendingPromptAttachmentAnalysis(
+      dedupeAttachmentsByPath([...app.attachments, ...parsedPromptAttachments]),
+    );
     app.chat.handleSend(finalInput, app.inputModel);
     setInputValue("");
     app.clearAttachments();
@@ -184,6 +209,7 @@ export const Chat: React.FC = () => {
     app.attachments,
     app.chat,
     app.clearAttachments,
+    app.getAttachmentSourcePath,
     app.inputModel,
     app.trackPendingPromptAttachmentAnalysis,
     inputValue,
@@ -257,16 +283,15 @@ export const Chat: React.FC = () => {
       );
       if (!targetMessage) return;
 
-      const restoredText = stripAttachmentMentions(targetMessage.text);
-      const restoredAttachments = parseAttachmentPaths(targetMessage.text).map(
-        (path) => {
+      const restoredAttachments = parseAttachmentPaths(targetMessage.text)
+        .map((path) => {
           const sourcePath = app.getAttachmentSourcePath(path) || undefined;
           const originalName = sourcePath ? getBaseName(sourcePath) : undefined;
           return attachmentFromPath(path, undefined, originalName, sourcePath);
-        },
-      );
+        })
+        .filter((attachment) => attachment.type === "image");
 
-      setInputValue(restoredText);
+      setInputValue(stripImageAttachmentMentions(targetMessage.text));
       app.setAttachments(restoredAttachments);
       app.chat.handleUndoMessage(messageId);
     },

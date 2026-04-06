@@ -5,8 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { getImagePath, type ChatMetadata } from "@/lib";
-import type { Attachment } from "@/features/chat/components/AttachmentStrip/attachment.types";
+import { getImagePath, type ChatMetadata, type Attachment } from "@/lib";
 import { useAppContext } from "@/providers/AppProvider";
 import { Thumbnail } from "./components/thumbnail/thumbnail";
 import styles from "./galleryScreen.module.css";

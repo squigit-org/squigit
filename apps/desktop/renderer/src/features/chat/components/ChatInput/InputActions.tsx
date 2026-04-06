@@ -7,7 +7,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Paperclip, ArrowUp, Square, Camera } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { MODELS } from "@/lib";
+import { ACCEPTED_EXTENSIONS, MODELS } from "@/lib";
 import {
   Dropdown,
   DropdownItem,
@@ -22,8 +22,6 @@ const GEMINI_MODELS = MODELS.map((m) => ({
   label: m.name,
   triggerLabel: m.name.replace("Gemini ", ""),
 }));
-
-import { ACCEPTED_EXTENSIONS } from "@/features";
 
 interface InputActionsProps {
   onSubmit: () => void;
