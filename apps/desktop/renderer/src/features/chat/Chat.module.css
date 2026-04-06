@@ -140,16 +140,44 @@
   padding-top: 0.75rem;
 }
 
+.imagePendingProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
 .imageProgressRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .imageProgressShimmer {
   flex: 1;
   min-width: 0;
+}
+
+.imageProgressText {
+  max-width: min(100%, 42rem);
+  color: var(--c-raw-057);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  opacity: 0;
+  animation: imageProgressReveal 180ms ease-out forwards;
+}
+
+@keyframes imageProgressReveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .answerNowButton {
@@ -167,6 +195,14 @@
 
 .answerNowButton:hover {
   color: var(--c-raw-003);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imageProgressText {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .revealFlash {

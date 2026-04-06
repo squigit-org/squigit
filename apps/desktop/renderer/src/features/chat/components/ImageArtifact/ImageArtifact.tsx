@@ -13,6 +13,7 @@ import React, {
 } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
+import { CloseCrossIcon } from "@/assets";
 import {
   ImageToolbar,
   ImageSearchInput,
@@ -641,18 +642,11 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
                 onClick={handleCancel}
                 title="Cancel OCR"
               >
-                <svg
+                <CloseCrossIcon
+                  size={24}
                   className={styles.cancelIcon}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                  ariaHidden
+                />
               </div>
             )}
           </div>

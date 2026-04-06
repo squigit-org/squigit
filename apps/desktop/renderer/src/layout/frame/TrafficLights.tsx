@@ -6,16 +6,18 @@
 
 import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import noFocusSvg from "@/assets/icons/traffic-lights/0-all-three-nofocus.svg";
-import closeNormalSvg from "@/assets/icons/traffic-lights/1-close-1-normal.svg";
-import closeHoverSvg from "@/assets/icons/traffic-lights/2-close-2-hover.svg";
-import closePressSvg from "@/assets/icons/traffic-lights/2-close-3-press.svg";
-import minimizeNormalSvg from "@/assets/icons/traffic-lights/2-minimize-1-normal.svg";
-import minimizeHoverSvg from "@/assets/icons/traffic-lights/2-minimize-2-hover.svg";
-import minimizePressSvg from "@/assets/icons/traffic-lights/2-minimize-3-press.svg";
-import maximizeNormalSvg from "@/assets/icons/traffic-lights/3-maximize-1-normal.svg";
-import maximizeHoverSvg from "@/assets/icons/traffic-lights/3-maximize-2-hover.svg";
-import maximizePressSvg from "@/assets/icons/traffic-lights/3-maximize-3-press.svg";
+import {
+  noFocusSvg,
+  closeNormalSvg,
+  closeHoverSvg,
+  closePressSvg,
+  minimizeNormalSvg,
+  minimizeHoverSvg,
+  minimizePressSvg,
+  maximizeNormalSvg,
+  maximizeHoverSvg,
+  maximizePressSvg,
+} from "@/assets";
 import styles from "./TrafficLights.module.css";
 
 type TrafficButton = "close" | "minimize" | "maximize";
@@ -82,7 +84,9 @@ export const TrafficLights: React.FC = () => {
     setIsClusterHovered(true);
   };
 
-  const handleMouseLeaveButton = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleMouseLeaveButton = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
     const nextTarget = event.relatedTarget as Node | null;
     const stillInsideCluster =
       nextTarget instanceof Element &&

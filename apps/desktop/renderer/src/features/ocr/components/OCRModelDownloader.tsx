@@ -6,6 +6,7 @@
 
 import React, { useState } from "react";
 import { Download, Check, Loader2, X } from "lucide-react";
+import { OcrCircularArcIcon } from "@/assets";
 import { useModelsStore } from "@/features";
 import { Dialog } from "@/components";
 import { getErrorDialog, DEFAULT_OCR_MODEL_ID } from "@/lib";
@@ -13,21 +14,12 @@ import styles from "./OCRModelDownloader.module.css";
 
 const CircularProgress: React.FC<{ progress: number }> = ({ progress }) => (
   <div className={styles.circularProgress}>
-    <svg viewBox="0 0 36 36" className={styles.circularChart}>
-      <path
-        className={styles.circleBg}
-        d="M18 2.0845
-           a 15.9155 15.9155 0 0 1 0 31.831
-           a 15.9155 15.9155 0 0 1 0 -31.831"
-      />
-      <path
-        className={styles.circle}
-        strokeDasharray={`${progress}, 100`}
-        d="M18 2.0845
-           a 15.9155 15.9155 0 0 1 0 31.831
-           a 15.9155 15.9155 0 0 1 0 -31.831"
-      />
-    </svg>
+    <OcrCircularArcIcon
+      className={styles.circularChart}
+      trackClassName={styles.circleBg}
+      arcClassName={styles.circle}
+      strokeDasharray={`${progress}, 100`}
+    />
   </div>
 );
 
@@ -40,24 +32,12 @@ const CircularSpinner: React.FC<{
     <div
       className={`${styles.circularProgress} ${paused ? styles.spinnerPaused : ""}`}
     >
-      <svg
-        viewBox="0 0 36 36"
+      <OcrCircularArcIcon
         className={`${styles.circularChart} ${styles.spinnerOrbit}`}
-      >
-        <path
-          className={styles.circleBg}
-          d="M18 2.0845
-           a 15.9155 15.9155 0 0 1 0 31.831
-           a 15.9155 15.9155 0 0 1 0 -31.831"
-        />
-        <path
-          className={styles.spinnerArc}
-          strokeDasharray={`${dashHead}, 100`}
-          d="M18 2.0845
-           a 15.9155 15.9155 0 0 1 0 31.831
-           a 15.9155 15.9155 0 0 1 0 -31.831"
-        />
-      </svg>
+        trackClassName={styles.circleBg}
+        arcClassName={styles.spinnerArc}
+        strokeDasharray={`${dashHead}, 100`}
+      />
     </div>
   );
 };

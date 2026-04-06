@@ -7,6 +7,14 @@
 import { useRef, useState, useEffect, useLayoutEffect, RefObject } from "react";
 import { Message } from "../chat.types";
 
+const BOTTOM_THRESHOLD_PX = 48;
+
+function isNearBottom(el: HTMLDivElement): boolean {
+  const distanceFromBottom =
+    el.scrollHeight - el.scrollTop - el.clientHeight;
+  return distanceFromBottom < BOTTOM_THRESHOLD_PX;
+}
+
 export function useChatScroll({
   messages,
   chatId,
@@ -30,6 +38,21 @@ export function useChatScroll({
   const prevMessageCountRef = useRef(messages.length);
   const MIN_SPINNER_DURATION = 400;
   const previousInputHeightRef = useRef(0);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const updateBottomState = () => {
+      wasAtBottomRef.current = isNearBottom(el);
+    };
+
+    updateBottomState();
+    el.addEventListener("scroll", updateBottomState, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", updateBottomState);
+    };
+  }, [scrollContainerRef, wasAtBottomRef]);
 
   useEffect(() => {
     if (isNavigating) {
@@ -117,6 +140,20 @@ export function useChatScroll({
     }
     previousInputHeightRef.current = inputHeight;
   }, [inputHeight, isSpinnerVisible, scrollContainerRef, wasAtBottomRef]);
+
+  useLayoutEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+    const contentEl = scrollEl?.firstElementChild;
+    if (!scrollEl || !contentEl || isSpinnerVisible) return;
+
+    const observer = new ResizeObserver(() => {
+      if (!wasAtBottomRef.current) return;
+      scrollEl.scrollTop = scrollEl.scrollHeight;
+    });
+
+    observer.observe(contentEl);
+    return () => observer.disconnect();
+  }, [isSpinnerVisible, scrollContainerRef, wasAtBottomRef]);
 
   return { isSpinnerVisible };
 }

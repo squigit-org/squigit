@@ -5,6 +5,7 @@
  */
 
 import React from "react";
+import { InlineChevronLeft, InlineChevronRight } from "@/assets";
 import styles from "./InlineMenu.module.css";
 
 interface InlineMenuProps {
@@ -69,19 +70,7 @@ export const InlineMenu: React.FC<
               onSwitchPage(1);
             }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m9 18 6-6-6-6" />
-            </svg>
+            <InlineChevronRight size={20} />
           </div>
         </div>
 
@@ -94,19 +83,7 @@ export const InlineMenu: React.FC<
               onSwitchPage(0);
             }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
+            <InlineChevronLeft size={20} />
           </div>
           <div className={styles.divider}></div>
           <div

@@ -8,6 +8,7 @@ import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Box, Pin } from "lucide-react";
+import { SidePanelToggleIcon } from "@/assets";
 import { useAppContext } from "@/providers/AppProvider";
 import { usePlatform } from "@/hooks";
 import { SettingsPanel, SettingsOverlay } from "@/features";
@@ -125,24 +126,7 @@ export const TitleBar: React.FC = () => {
               title="Recent Chats"
               aria-label="Recent chats"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <path
-                  d="M9 3V21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9Z"
-                  fill={app.isSidePanelOpen ? "currentColor" : "none"}
-                  stroke={app.isSidePanelOpen ? "none" : "currentColor"}
-                />
-                <line x1="9" y1="3" x2="9" y2="21" />
-              </svg>
+              <SidePanelToggleIcon size={20} active={app.isSidePanelOpen} />
             </button>
           </div>
         )}

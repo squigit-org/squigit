@@ -6,6 +6,7 @@
 
 import React from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
+import { GoogleLensIcon, TranslateIcon } from "@/assets";
 import { TextContextMenu } from "@/layout";
 import { useTextContextMenu, useTextEditor } from "@/hooks";
 import { OCRModelSwitcher, SettingsSection } from "@/features";
@@ -95,20 +96,7 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
               {isLensLoading ? (
                 <Loader2 size={20} className={styles.spinner} />
               ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                  <circle cx="12" cy="13" r="3" />
-                </svg>
+                <GoogleLensIcon size={24} color="currentColor" />
               )}
             </button>
 
@@ -118,24 +106,7 @@ export const ImageSearchInput: React.FC<ImageSearchInputProps> = ({
               disabled={isTranslateDisabled || isOCRLoading}
               title="Translate all text"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m5 8 6 6" />
-                <path d="m4 14 6-6 2-3" />
-                <path d="M2 5h12" />
-                <path d="M7 2h1" />
-                <path d="m22 22-5-10-5 10" />
-                <path d="M14 18h6" />
-              </svg>
+              <TranslateIcon size={22} />
             </button>
 
             <div className={styles.searchDivider} />

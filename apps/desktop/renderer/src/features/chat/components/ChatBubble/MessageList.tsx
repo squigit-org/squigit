@@ -14,6 +14,8 @@ import { TextShimmer } from "@/components";
 import { API_STATUS_TEXT } from "@/lib";
 import styles from "./MessageList.module.css";
 
+const THINKING_LABEL = "Thinking";
+
 interface MessageListProps {
   messages: Message[];
   pendingAssistantTurn?: PendingAssistantTurn | null;
@@ -38,6 +40,14 @@ function isAnswerNowEligibleProgress(text: string | undefined): boolean {
   ].some((status) => text.startsWith(status));
 }
 
+function getVisibleProgressText(text: string | undefined): string | null {
+  const trimmed = text?.trim();
+  if (!trimmed || trimmed === THINKING_LABEL) {
+    return null;
+  }
+  return trimmed;
+}
+
 const MessageListComponent: React.FC<MessageListProps> = ({
   messages,
   pendingAssistantTurn,
@@ -48,13 +58,17 @@ const MessageListComponent: React.FC<MessageListProps> = ({
   onUndoMessage,
   onSystemAction,
 }) => {
-  const shouldShowThinkingProgress =
+  const shouldShowThinkingLabel =
     pendingAssistantTurn?.phase === "thinking" && !hideThinkingProgress;
+  const visibleProgressText =
+    shouldShowThinkingLabel
+      ? getVisibleProgressText(pendingAssistantTurn?.progressText)
+      : null;
   const hasRunningToolStep =
     pendingAssistantTurn?.toolSteps.some((step) => step.status === "running") ??
     false;
   const showAnswerNow =
-    shouldShowThinkingProgress &&
+    shouldShowThinkingLabel &&
     !!onAnswerNow &&
     !!pendingAssistantTurn &&
     pendingAssistantTurn.phase === "thinking" &&
@@ -63,39 +77,55 @@ const MessageListComponent: React.FC<MessageListProps> = ({
 
   return (
     <div className={styles.container}>
-      {shouldShowThinkingProgress && (
-        <div className={styles.progressRow}>
-          <TextShimmer text={pendingAssistantTurn.progressText} />
-          {showAnswerNow && (
-            <button
-              type="button"
-              className={styles.answerNowButton}
-              onClick={onAnswerNow}
-            >
-              {API_STATUS_TEXT.ANSWER_NOW_BUTTON}
-            </button>
-          )}
-        </div>
-      )}
-
-      {pendingAssistantTurn && pendingAssistantTurn.phase !== "thinking" && (
+      {pendingAssistantTurn && (
         <div className={styles.item}>
-          <ChatBubble
-            message={{
-              id: pendingAssistantTurn.id,
-              role: "model",
-              text: pendingAssistantTurn.displayText,
-              timestamp: pendingAssistantTurn.requestStartedAtMs,
-              thoughtSeconds: pendingAssistantTurn.thoughtSeconds,
-              citations: pendingAssistantTurn.visibleCitations,
-              toolSteps: pendingAssistantTurn.toolSteps,
-              stopped: pendingAssistantTurn.stopped,
-            }}
-            pendingTurn={pendingAssistantTurn}
-            onRetry={onRetryMessage ? () => {} : undefined}
-            retryDisabled={true}
-            copyDisabled={pendingAssistantTurn.displayText.trim().length === 0}
-          />
+          <div className={styles.pendingTurn}>
+            {shouldShowThinkingLabel && (
+              <div className={styles.pendingProgress}>
+                <div className={styles.progressRow}>
+                  <TextShimmer text={THINKING_LABEL} compact={true} />
+                  {showAnswerNow && (
+                    <button
+                      type="button"
+                      className={styles.answerNowButton}
+                      onClick={onAnswerNow}
+                    >
+                      {API_STATUS_TEXT.ANSWER_NOW_BUTTON}
+                    </button>
+                  )}
+                </div>
+
+                {visibleProgressText && (
+                  <p
+                    key={visibleProgressText}
+                    className={styles.progressText}
+                    aria-live="polite"
+                  >
+                    {visibleProgressText}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {pendingAssistantTurn.phase !== "thinking" && (
+              <ChatBubble
+                message={{
+                  id: pendingAssistantTurn.id,
+                  role: "model",
+                  text: pendingAssistantTurn.displayText,
+                  timestamp: pendingAssistantTurn.requestStartedAtMs,
+                  thoughtSeconds: pendingAssistantTurn.thoughtSeconds,
+                  citations: pendingAssistantTurn.visibleCitations,
+                  toolSteps: pendingAssistantTurn.toolSteps,
+                  stopped: pendingAssistantTurn.stopped,
+                }}
+                pendingTurn={pendingAssistantTurn}
+                onRetry={onRetryMessage ? () => {} : undefined}
+                retryDisabled={true}
+                copyDisabled={pendingAssistantTurn.displayText.trim().length === 0}
+              />
+            )}
+          </div>
         </div>
       )}
 

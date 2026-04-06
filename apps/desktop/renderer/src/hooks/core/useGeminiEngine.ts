@@ -156,13 +156,10 @@ export const useGeminiEngine = (config: {
   const getDefaultProgressText = (
     requestKind: PendingAssistantRequestKind,
   ): string => {
-    if (requestKind === "retry") {
-      return API_STATUS_TEXT.REGENERATING_RESPONSE;
-    }
     if (requestKind === "initial" || requestKind === "edit") {
       return API_STATUS_TEXT.ANALYZING_IMAGE;
     }
-    return API_STATUS_TEXT.THINKING;
+    return "";
   };
 
   const beginPendingAssistantTurn = (

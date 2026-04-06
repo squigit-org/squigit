@@ -10,7 +10,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useAppContext } from "@/providers/AppProvider";
 import { useInlineMenu } from "@/hooks";
 import { InlineMenu, LoadingSpinner, Dialog, TextShimmer } from "@/components";
-import { API_STATUS_TEXT, getProgressStatusText } from "@/lib";
+import { API_STATUS_TEXT } from "@/lib";
 import {
   buildAttachmentMention,
   parseAttachmentPaths,
@@ -29,6 +29,14 @@ import styles from "./Chat.module.css";
 function getBaseName(path: string): string {
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
+}
+
+function getVisibleImageProgressText(text: string | null | undefined): string | null {
+  const trimmed = text?.trim();
+  if (!trimmed || trimmed === API_STATUS_TEXT.ANALYZING_IMAGE) {
+    return null;
+  }
+  return trimmed;
 }
 
 export const Chat: React.FC = () => {
@@ -287,12 +295,8 @@ export const Chat: React.FC = () => {
     !!app.system.startupImage &&
     app.chat.messages.length === 0 &&
     !app.chat.streamingText &&
-    (app.chat.isAnalyzing || app.chat.isSearching);
-  const imageProgressText = getProgressStatusText({
-    toolStatus: app.chat.toolStatus,
-    isAnalyzing: app.chat.isAnalyzing,
-    isRetrying: !!app.chat.retryingMessageId,
-  });
+    app.chat.isAnalyzing;
+  const imageProgressText = getVisibleImageProgressText(app.chat.toolStatus);
   const hasRunningToolStep = app.chat.streamingToolSteps.some(
     (step) => step.status === "running",
   );
@@ -369,20 +373,38 @@ export const Chat: React.FC = () => {
               ) : (
                 <>
                   {isImageProgressVisible && (
-                    <div className={styles.imageProgressRow}>
-                      <TextShimmer
-                        text={imageProgressText}
-                        compact={true}
-                        className={styles.imageProgressShimmer}
-                      />
-                      {showAnswerNow && (
-                        <button
-                          type="button"
-                          className={styles.answerNowButton}
-                          onClick={app.chat.handleAnswerNow}
+                    <div className={styles.imagePendingProgress}>
+                      <div className={styles.imageProgressRow}>
+                        <TextShimmer
+                          text={API_STATUS_TEXT.ANALYZING_IMAGE}
+                          compact={true}
+                          duration={2}
+                          spotWidth={30}
+                          angle={90}
+                          peakWidth={3}
+                          bleedInner={8}
+                          bleedOuter={30}
+                          className={styles.imageProgressShimmer}
+                        />
+                        {showAnswerNow && (
+                          <button
+                            type="button"
+                            className={styles.answerNowButton}
+                            onClick={app.chat.handleAnswerNow}
+                          >
+                            {API_STATUS_TEXT.ANSWER_NOW_BUTTON}
+                          </button>
+                        )}
+                      </div>
+
+                      {imageProgressText && (
+                        <p
+                          key={imageProgressText}
+                          className={styles.imageProgressText}
+                          aria-live="polite"
                         >
-                          {API_STATUS_TEXT.ANSWER_NOW_BUTTON}
-                        </button>
+                          {imageProgressText}
+                        </p>
                       )}
                     </div>
                   )}

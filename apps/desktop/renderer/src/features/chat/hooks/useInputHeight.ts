@@ -6,6 +6,8 @@
 
 import { useState, useRef, useEffect, RefObject } from "react";
 
+const BOTTOM_THRESHOLD_PX = 48;
+
 export function useInputHeight({
   scrollContainerRef,
   wasAtBottomRef,
@@ -25,7 +27,7 @@ export function useInputHeight({
       if (scrollEl) {
         const distanceFromBottom =
           scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
-        wasAtBottomRef.current = distanceFromBottom < 20;
+        wasAtBottomRef.current = distanceFromBottom < BOTTOM_THRESHOLD_PX;
       }
 
       for (const entry of entries) {

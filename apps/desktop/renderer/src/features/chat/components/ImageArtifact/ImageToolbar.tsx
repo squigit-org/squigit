@@ -18,6 +18,14 @@ interface ImageToolbarProps {
 }
 
 import { Tooltip } from "@/components";
+import {
+  CheckmarkIcon,
+  CircularSpinnerIcon,
+  CopyImageIcon,
+  DragDotsIcon,
+  GoogleLensIcon,
+  SaveFileIcon,
+} from "@/assets";
 
 const ToolbarButton: React.FC<{
   icon: React.ReactNode;
@@ -222,16 +230,10 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   return (
     <div className={styles.imageToolbar} ref={toolbarRef} style={toolbarStyle}>
       <div className={styles.toolbarDrag} onMouseDown={startDrag}>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="currentColor"
+        <DragDotsIcon
+          size={16}
           style={{ transform: "rotate(90deg)" }}
-        >
-          <path d="M7 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 19c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-        </svg>
+        />
       </div>
 
       <div className={styles.toolbarSeparator}></div>
@@ -239,35 +241,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       <ToolbarButton
         icon={
           isLensLoading ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={styles.spinner}
-            >
-              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-            </svg>
+            <CircularSpinnerIcon size={20} className={styles.spinner} />
           ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-              <circle cx="12" cy="13" r="3" />
-            </svg>
+            <GoogleLensIcon size={24} color="currentColor" />
           )
         }
         tooltip="Search with Google Lens"
@@ -282,34 +258,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       <ToolbarButton
         icon={
           copySuccess ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <CheckmarkIcon size={20} />
           ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-            </svg>
+            <CopyImageIcon size={20} />
           )
         }
         tooltip={copySuccess ? "Copied to clipboard" : "Copy as Image"}
@@ -319,21 +270,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 
       <ToolbarButton
         icon={
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-            <polyline points="17 21 17 13 7 13 7 21" />
-            <polyline points="7 3 7 8 15 8" />
-          </svg>
+          <SaveFileIcon size={20} />
         }
         tooltip="Save"
         onClick={(e) => {

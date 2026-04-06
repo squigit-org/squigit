@@ -5,39 +5,8 @@
  */
 
 import React, { useLayoutEffect, useCallback, useState } from "react";
+import { CollapseTextareaIcon, ExpandTextareaIcon } from "@/assets";
 import styles from "./ChatInput.module.css";
-
-const ExpandIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M4 10V4h6" />
-    <path d="M20 14v6h-6" />
-  </svg>
-);
-
-const CollapseIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M8 2v6H2" />
-    <path d="M16 22v-6h6" />
-  </svg>
-);
 
 interface InputTextareaProps {
   value: string;
@@ -119,7 +88,11 @@ export const InputTextarea: React.FC<InputTextareaProps> = ({
             className={styles.expandButton}
             onClick={() => setIsExpanded(!isExpanded)}
           >
-            {isExpanded ? <CollapseIcon /> : <ExpandIcon />}
+            {isExpanded ? (
+              <CollapseTextareaIcon size={14} />
+            ) : (
+              <ExpandTextareaIcon size={14} />
+            )}
           </button>
         )}
       </div>

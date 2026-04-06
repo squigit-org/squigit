@@ -50,10 +50,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     <Dropdown
       className={styles.settingsPanel}
       label={
-        <Settings
-          size={22}
-          className={`${styles.triggerIcon} ${isOpen ? styles.iconActive : ""}`}
-        />
+        <span
+          className={`${styles.triggerIconWrap} ${isOpen ? styles.iconActive : ""}`}
+        >
+          <Settings size={22} className={styles.triggerIcon} />
+        </span>
       }
       width={200}
       isOpen={isOpen}

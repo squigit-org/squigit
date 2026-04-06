@@ -5,8 +5,6 @@
  */
 
 export const API_STATUS_TEXT = {
-  THINKING: "Thinking",
-  REGENERATING_RESPONSE: "Regenerating response",
   ANALYZING_IMAGE: "Analyzing your image",
   WRAPPING_UP: "Wrapping up with what I have so far",
   SEARCHING_RELEVANT_SOURCES: "Searching for relevant sources",
@@ -126,8 +124,5 @@ export const getProgressStatusText = (params: {
   if (params.isAnalyzing) {
     return API_STATUS_TEXT.ANALYZING_IMAGE;
   }
-  if (params.isRetrying) {
-    return API_STATUS_TEXT.REGENERATING_RESPONSE;
-  }
-  return API_STATUS_TEXT.THINKING;
+  return "";
 };

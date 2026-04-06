@@ -13,6 +13,7 @@ import React, {
   useState,
 } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { CloseCrossIcon } from "@/assets";
 import type { Attachment } from "./attachment.types";
 import styles from "./AttachmentStrip.module.css";
 
@@ -137,19 +138,11 @@ const RemoveButton: React.FC<{
     onClick={onRemove}
     aria-label={`Remove ${name}`}
   >
-    <svg
+    <CloseCrossIcon
+      size={24}
       className={styles.cancelIcon}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
+      ariaHidden
+    />
   </button>
 );
 

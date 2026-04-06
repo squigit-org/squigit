@@ -8,6 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  min-width: 0;
   padding: 2rem 0;
   min-height: 60px;
 }
@@ -18,38 +19,102 @@
 }
 
 .shimmerText {
+  --text-shimmer-base-color: #8a8a8a;
+  --text-shimmer-highlight-fade: rgba(255, 255, 255, 0.12);
+  --text-shimmer-highlight-mid: rgba(255, 255, 255, 0.3);
+  --text-shimmer-highlight-soft: rgba(255, 255, 255, 0.65);
+  --text-shimmer-highlight-color: rgba(255, 255, 255, 0.96);
+  --text-shimmer-spot-width: 32px;
+  --text-shimmer-duration: 2s;
+  --text-shimmer-angle: 90deg;
+  --text-shimmer-bleed-inner: 10px;
+  --text-shimmer-bleed-outer: 22px;
+  --text-shimmer-peak-width: 7px;
+
+  display: inline-block;
+  max-width: 100%;
+  min-width: 0;
   font-size: 1rem;
   font-weight: 500;
-  font-family:
-    -apple-system, "Inter", system-ui, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial;
+  line-height: 1.45;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   background-image:
     linear-gradient(
-      50deg,
-      transparent 0%,
-      transparent 20%,
-      var(--c-raw-072) 30%,
-      var(--c-raw-075) 45%,
-      var(--c-raw-110) 50%,
-      var(--c-raw-075) 55%,
-      var(--c-raw-072) 70%,
-      transparent 80%,
-      transparent 100%
+      var(--text-shimmer-angle),
+      transparent
+        calc(
+          50% -
+            (var(--text-shimmer-spot-width) + var(--text-shimmer-bleed-outer))
+        ),
+      var(--text-shimmer-highlight-fade)
+        calc(
+          50% -
+            (var(--text-shimmer-spot-width) + var(--text-shimmer-bleed-inner))
+        ),
+      var(--text-shimmer-highlight-mid)
+        calc(50% - (var(--text-shimmer-spot-width) + 2px)),
+      var(--text-shimmer-highlight-soft)
+        calc(50% - var(--text-shimmer-spot-width)),
+      var(--text-shimmer-highlight-color)
+        calc(50% - var(--text-shimmer-peak-width)),
+      var(--text-shimmer-highlight-color)
+        calc(50% + var(--text-shimmer-peak-width)),
+      var(--text-shimmer-highlight-soft)
+        calc(50% + var(--text-shimmer-spot-width)),
+      var(--text-shimmer-highlight-mid)
+        calc(50% + (var(--text-shimmer-spot-width) + 2px)),
+      var(--text-shimmer-highlight-fade)
+        calc(
+          50% +
+            (var(--text-shimmer-spot-width) + var(--text-shimmer-bleed-inner))
+        ),
+      transparent
+        calc(
+          50% +
+            (var(--text-shimmer-spot-width) + var(--text-shimmer-bleed-outer))
+        )
     ),
-    linear-gradient(var(--c-raw-070), var(--c-raw-070));
-
+    linear-gradient(
+      var(--text-shimmer-base-color),
+      var(--text-shimmer-base-color)
+    );
+  background-position:
+    130% center,
+    0 0;
   background-size:
-    170% 100%,
-    100% 100%;
-
-  background-repeat: no-repeat, repeat;
+    300% 100%,
+    auto;
+  background-repeat:
+    no-repeat,
+    no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
-
-  animation: "shimmer" 2s infinite linear;
-
+  animation: textShimmerSweep var(--text-shimmer-duration) linear infinite;
   will-change: background-position;
   transform: translateZ(0);
   backface-visibility: hidden;
+}
+
+@keyframes textShimmerSweep {
+  from {
+    background-position:
+      130% center,
+      0 0;
+  }
+
+  to {
+    background-position:
+      -30% center,
+      0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmerText {
+    animation: none;
+    background-position:
+      50% center,
+      0 0;
+  }
 }

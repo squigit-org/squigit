@@ -14,11 +14,45 @@
   margin-bottom: 0;
 }
 
+.pendingTurn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pendingProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
 .progressRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.progressText {
+  max-width: min(100%, 42rem);
+  color: var(--c-raw-057);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  opacity: 0;
+  animation: progressTextReveal 180ms ease-out forwards;
+}
+
+@keyframes progressTextReveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .answerNowButton {
@@ -36,4 +70,12 @@
 
 .answerNowButton:hover {
   color: var(--c-raw-003);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressText {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
