@@ -248,6 +248,27 @@
   margin-left: auto;
   margin-right: auto;
   pointer-events: auto;
+  position: relative;
+}
+
+.scrollToBottomButton {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--c-raw-043);
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: 0 4px 16px var(--c-raw-061);
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.scrollToBottomButton:hover {
+  border-color: var(--c-raw-049);
+  transform: translateX(-50%) translateY(-1px);
 }
 
 .voiceContainer {

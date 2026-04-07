@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
+import { ArrowDown } from "lucide-react";
 import { useTextEditor, useTextContextMenu } from "@/hooks";
 import { TextContextMenu } from "@/layout";
 import { useAppContext } from "@/providers/AppProvider";
@@ -40,6 +41,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   attachments,
   onAttachmentsChange,
   onCaptureToInput,
+  showScrollToBottomButton = false,
+  onScrollToBottom,
 }) => {
   const app = useAppContext();
   if (!startupImage) return null;
@@ -397,7 +400,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <footer className={styles.footer}>
-      <div className={styles.inputWrapper}>{containerContent}</div>
+      <div className={styles.inputWrapper}>
+        {showScrollToBottomButton && onScrollToBottom && (
+          <button
+            type="button"
+            className={`${styles.iconButton} ${styles.scrollToBottomButton}`}
+            onClick={onScrollToBottom}
+            aria-label="Scroll to bottom"
+          >
+            <ArrowDown size={14} />
+          </button>
+        )}
+        {containerContent}
+      </div>
     </footer>
   );
 };

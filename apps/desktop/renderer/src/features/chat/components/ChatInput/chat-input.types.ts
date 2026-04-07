@@ -33,4 +33,6 @@ export interface ChatInputProps {
   attachments: Attachment[];
   onAttachmentsChange: (attachments: Attachment[]) => void;
   onCaptureToInput?: () => void;
+  showScrollToBottomButton?: boolean;
+  onScrollToBottom?: () => void;
 }

@@ -55,12 +55,16 @@ function dedupeAttachmentsByPath(items: Attachment[]): Attachment[] {
   return Array.from(byPath.values());
 }
 
+const SCROLL_TO_BOTTOM_THRESHOLD_PX = 48;
+
 export const Chat: React.FC = () => {
   const app = useAppContext();
   const [inputValue, setInputValue] = useState("");
   const [pendingUndoMessageId, setPendingUndoMessageId] = useState<
     string | null
   >(null);
+  const [showScrollToBottomButton, setShowScrollToBottomButton] =
+    useState(false);
   const [delayedImageAttachmentStatus, setDelayedImageAttachmentStatus] =
     useState<{
       turnId: string;
@@ -102,6 +106,63 @@ export const Chat: React.FC = () => {
     wasAtBottomRef,
     suspendAutoScroll: isRevealPendingForActiveChat,
   });
+
+  const updateScrollToBottomButtonVisibility = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) {
+      setShowScrollToBottomButton(false);
+      return;
+    }
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    setShowScrollToBottomButton(
+      !isSpinnerVisible &&
+        distanceFromBottom > SCROLL_TO_BOTTOM_THRESHOLD_PX,
+    );
+  }, [isSpinnerVisible]);
+
+  const handleScrollToBottom = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    wasAtBottomRef.current = true;
+    setShowScrollToBottomButton(false);
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const content = container.firstElementChild;
+    updateScrollToBottomButtonVisibility();
+
+    container.addEventListener("scroll", updateScrollToBottomButtonVisibility, {
+      passive: true,
+    });
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollToBottomButtonVisibility();
+    });
+
+    resizeObserver.observe(container);
+    if (content instanceof HTMLElement) {
+      resizeObserver.observe(content);
+    }
+
+    return () => {
+      container.removeEventListener(
+        "scroll",
+        updateScrollToBottomButtonVisibility,
+      );
+      resizeObserver.disconnect();
+    };
+  }, [
+    app.chatHistory.activeSessionId,
+    updateScrollToBottomButtonVisibility,
+  ]);
 
   // Capture listen
   useEffect(() => {
@@ -606,6 +667,8 @@ export const Chat: React.FC = () => {
               attachments={app.attachments}
               onAttachmentsChange={app.setAttachments}
               onCaptureToInput={handleCaptureToInput}
+              showScrollToBottomButton={showScrollToBottomButton}
+              onScrollToBottom={handleScrollToBottom}
             />
           </div>
         </div>
