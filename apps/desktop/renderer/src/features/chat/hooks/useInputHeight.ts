@@ -4,17 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef, useEffect, RefObject } from "react";
+import { useState, useRef, useEffect } from "react";
 
-const BOTTOM_THRESHOLD_PX = 48;
-
-export function useInputHeight({
-  scrollContainerRef,
-  wasAtBottomRef,
-}: {
-  scrollContainerRef: RefObject<HTMLDivElement | null>;
-  wasAtBottomRef: React.MutableRefObject<boolean>;
-}) {
+export function useInputHeight() {
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const [inputHeight, setInputHeight] = useState(0);
 
@@ -23,13 +15,6 @@ export function useInputHeight({
     if (!el) return;
 
     const observer = new ResizeObserver((entries) => {
-      const scrollEl = scrollContainerRef.current;
-      if (scrollEl) {
-        const distanceFromBottom =
-          scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
-        wasAtBottomRef.current = distanceFromBottom < BOTTOM_THRESHOLD_PX;
-      }
-
       for (const entry of entries) {
         setInputHeight(entry.contentRect.height);
       }
@@ -37,7 +22,7 @@ export function useInputHeight({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [scrollContainerRef, wasAtBottomRef]);
+  }, []);
 
   return { inputContainerRef, inputHeight };
 }

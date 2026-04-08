@@ -60,17 +60,12 @@ function dedupeAttachmentsByPath(items: Attachment[]): Attachment[] {
   return Array.from(byPath.values());
 }
 
-const SCROLL_TO_BOTTOM_THRESHOLD_PX = 48;
-const CONTENT_REVEAL_SETTLE_DELAYS_MS = [0, 32, 96, 180] as const;
-
 export const Chat: React.FC = () => {
   const app = useAppContext();
   const [inputValue, setInputValue] = useState("");
   const [pendingUndoMessageId, setPendingUndoMessageId] = useState<
     string | null
   >(null);
-  const [showScrollToBottomButton, setShowScrollToBottomButton] =
-    useState(false);
   const [delayedImageAttachmentStatus, setDelayedImageAttachmentStatus] =
     useState<{
       turnId: string;
@@ -83,6 +78,7 @@ export const Chat: React.FC = () => {
   // Refs
   const headerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomAnchorRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(false);
   const imageProgressTurnIdRef = useRef<string | null>(null);
 
@@ -97,10 +93,7 @@ export const Chat: React.FC = () => {
     app.chatHistory.activeSessionId,
   );
 
-  const { inputContainerRef, inputHeight } = useInputHeight({
-    scrollContainerRef,
-    wasAtBottomRef,
-  });
+  const { inputContainerRef, inputHeight } = useInputHeight();
 
   useEffect(() => {
     if (app.system.startupImage) {
@@ -122,14 +115,11 @@ export const Chat: React.FC = () => {
   const isRevealPendingForActiveChat =
     revealTarget?.chatId === app.chatHistory.activeSessionId;
 
-  const { isSpinnerVisible } = useChatScroll({
-    messages: app.chat.messages,
-    chatId: app.chatHistory.activeSessionId,
+  const { isSpinnerVisible, isAtBottom } = useChatScroll({
     isNavigating: app.isNavigating,
-    inputHeight,
     scrollContainerRef,
+    bottomAnchorRef,
     wasAtBottomRef,
-    suspendAutoScroll: isRevealPendingForActiveChat,
   });
   const showLoadingState = app.isNavigating || !app.isChatContentReady;
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(showLoadingState);
@@ -137,64 +127,23 @@ export const Chat: React.FC = () => {
     () => !showLoadingState,
   );
   const deferredMessages = useDeferredValue(app.chat.messages);
-
-  const updateScrollToBottomButtonVisibility = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) {
-      setShowScrollToBottomButton(false);
-      return;
-    }
-
-    const distanceFromBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight;
-
-    setShowScrollToBottomButton(
-      !isSpinnerVisible &&
-        !showLoadingOverlay &&
-        distanceFromBottom > SCROLL_TO_BOTTOM_THRESHOLD_PX,
-    );
-  }, [isSpinnerVisible, showLoadingOverlay]);
+  const showScrollToBottomButton =
+    !isSpinnerVisible &&
+    !showLoadingOverlay &&
+    !isRevealPendingForActiveChat &&
+    !isAtBottom;
 
   const handleScrollToBottom = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    const bottomAnchor = bottomAnchorRef.current;
+    if (!bottomAnchor) return;
 
     wasAtBottomRef.current = true;
-    setShowScrollToBottomButton(false);
-    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    bottomAnchor.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+      inline: "nearest",
+    });
   }, []);
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const content = container.firstElementChild;
-    updateScrollToBottomButtonVisibility();
-
-    container.addEventListener("scroll", updateScrollToBottomButtonVisibility, {
-      passive: true,
-    });
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateScrollToBottomButtonVisibility();
-    });
-
-    resizeObserver.observe(container);
-    if (content instanceof HTMLElement) {
-      resizeObserver.observe(content);
-    }
-
-    return () => {
-      container.removeEventListener(
-        "scroll",
-        updateScrollToBottomButtonVisibility,
-      );
-      resizeObserver.disconnect();
-    };
-  }, [
-    app.chatHistory.activeSessionId,
-    updateScrollToBottomButtonVisibility,
-  ]);
 
   useLayoutEffect(() => {
     if (showLoadingState || isRevealPendingForActiveChat) {
@@ -203,56 +152,34 @@ export const Chat: React.FC = () => {
       return;
     }
 
-    const container = scrollContainerRef.current;
-    setIsContentMounted(true);
-    setShowLoadingOverlay(true);
-
-    if (!container) {
-      const revealFrameId = window.requestAnimationFrame(() => {
-        setShowLoadingOverlay(false);
-      });
-
-      return () => {
-        window.cancelAnimationFrame(revealFrameId);
-      };
+    if (!isContentMounted) {
+      setIsContentMounted(true);
+      setShowLoadingOverlay(true);
+      return;
     }
 
-    const syncToBottom = () => {
-      const maxScrollTop = Math.max(
-        0,
-        container.scrollHeight - container.clientHeight,
-      );
-      wasAtBottomRef.current = true;
-      if (Math.abs(container.scrollTop - maxScrollTop) > 1) {
-        container.scrollTop = maxScrollTop;
-      }
-    };
+    setShowLoadingOverlay(true);
 
     let revealFrameId: number | null = null;
-    const timeoutIds = CONTENT_REVEAL_SETTLE_DELAYS_MS.map(
-      (delayMs, index) =>
-        window.setTimeout(() => {
-          syncToBottom();
 
-          if (index !== CONTENT_REVEAL_SETTLE_DELAYS_MS.length - 1) {
-            return;
-          }
+    bottomAnchorRef.current?.scrollIntoView({
+      block: "end",
+      inline: "nearest",
+    });
+    wasAtBottomRef.current = true;
 
-          revealFrameId = window.requestAnimationFrame(() => {
-            syncToBottom();
-            setShowLoadingOverlay(false);
-          });
-        }, delayMs),
-    );
+    revealFrameId = window.requestAnimationFrame(() => {
+      setShowLoadingOverlay(false);
+    });
 
     return () => {
-      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
       if (revealFrameId !== null) {
         window.cancelAnimationFrame(revealFrameId);
       }
     };
   }, [
     app.chatHistory.activeSessionId,
+    isContentMounted,
     isRevealPendingForActiveChat,
     showLoadingState,
   ]);
@@ -475,19 +402,11 @@ export const Chat: React.FC = () => {
       const bubble = container.querySelector<HTMLElement>(selector);
       if (!bubble) return false;
 
-      const containerRect = container.getBoundingClientRect();
-      const bubbleRect = bubble.getBoundingClientRect();
-      const bubbleTopInContainer = bubbleRect.top - containerRect.top;
-      const targetScrollTop =
-        container.scrollTop +
-        bubbleTopInContainer -
-        container.clientHeight * 0.35;
-      const maxScrollTop = Math.max(
-        0,
-        container.scrollHeight - container.clientHeight,
-      );
-      const clampedTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
-      container.scrollTo({ top: clampedTop, behavior: "smooth" });
+      bubble.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
       bubble.classList.add(styles.revealFlash);
 
       if (hideHighlightTimer !== null) {
@@ -621,6 +540,7 @@ export const Chat: React.FC = () => {
     <ChatLayout
       headerRef={headerRef}
       scrollContainerRef={scrollContainerRef}
+      bottomAnchorRef={bottomAnchorRef}
       inputContainerRef={inputContainerRef}
       inputHeight={inputHeight}
       visibleStartupImage={visibleStartupImage}

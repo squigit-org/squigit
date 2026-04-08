@@ -21,6 +21,7 @@ type StartupImage = {
 interface ChatLayoutProps {
   headerRef: RefObject<HTMLDivElement | null>;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  bottomAnchorRef: RefObject<HTMLDivElement | null>;
   inputContainerRef: RefObject<HTMLDivElement | null>;
   inputHeight: number;
   visibleStartupImage: StartupImage;
@@ -83,6 +84,7 @@ interface ChatLayoutProps {
 const ChatLayoutComponent: React.FC<ChatLayoutProps> = ({
   headerRef,
   scrollContainerRef,
+  bottomAnchorRef,
   inputContainerRef,
   inputHeight,
   visibleStartupImage,
@@ -209,10 +211,7 @@ const ChatLayoutComponent: React.FC<ChatLayoutProps> = ({
             { "--input-height": `${inputHeight}px` } as React.CSSProperties
           }
         >
-          <main
-            className={styles.scrollContent}
-            style={{ paddingBottom: inputHeight + 10 }}
-          >
+          <main className={styles.scrollContent}>
             <div className={styles.contentViewport}>
               <div className={styles.contentStage}>
                 <div
@@ -232,6 +231,16 @@ const ChatLayoutComponent: React.FC<ChatLayoutProps> = ({
               </div>
             </div>
           </main>
+          <div
+            className={styles.scrollBottomSpacer}
+            style={{ height: inputHeight + 10 }}
+            aria-hidden="true"
+          />
+          <div
+            ref={bottomAnchorRef}
+            className={styles.scrollBottomAnchor}
+            aria-hidden="true"
+          />
         </div>
 
         <div
