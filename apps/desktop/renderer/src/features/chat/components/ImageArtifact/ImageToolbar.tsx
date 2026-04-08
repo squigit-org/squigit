@@ -219,7 +219,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
   };
 
   const toolbarStyle: React.CSSProperties = {
-    opacity: isExpanded ? 0.94 : 0,
+    opacity: isExpanded ? 0.98 : 0,
     visibility: isExpanded ? "visible" : "hidden",
     pointerEvents: isExpanded ? "auto" : "none",
     transition: "opacity 0.3s ease, visibility 0.3s",
@@ -231,7 +231,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     <div className={styles.imageToolbar} ref={toolbarRef} style={toolbarStyle}>
       <div className={styles.toolbarDrag} onMouseDown={startDrag}>
         <DragDotsIcon
-          size={16}
+          size={18}
           style={{ transform: "rotate(90deg)" }}
         />
       </div>
@@ -241,9 +241,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       <ToolbarButton
         icon={
           isLensLoading ? (
-            <CircularSpinnerIcon size={20} className={styles.spinner} />
+            <CircularSpinnerIcon size={24} className={styles.spinner} />
           ) : (
-            <GoogleLensIcon size={24} color="currentColor" />
+            <GoogleLensIcon size={26} color="currentColor" />
           )
         }
         tooltip="Search with Google Lens"
@@ -258,9 +258,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       <ToolbarButton
         icon={
           copySuccess ? (
-            <CheckmarkIcon size={20} />
+            <CheckmarkIcon size={18} />
           ) : (
-            <CopyImageIcon size={20} />
+            <CopyImageIcon size={18} />
           )
         }
         tooltip={copySuccess ? "Copied to clipboard" : "Copy as Image"}
@@ -270,7 +270,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 
       <ToolbarButton
         icon={
-          <SaveFileIcon size={20} />
+          <SaveFileIcon size={18} />
         }
         tooltip="Save"
         onClick={(e) => {

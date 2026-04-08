@@ -33,7 +33,7 @@ const CODE_IMPORT_EXTENSIONS = ACCEPTED_EXTENSIONS.filter(
 );
 
 const EDITOR_PLACEHOLDER =
-  "Rename 'text' to a programming language for syntax highlighting";
+  "Replace 'text' with a language for syntax highlighting.";
 
 const EDITOR_STYLE: React.CSSProperties = {
   height: "100%",

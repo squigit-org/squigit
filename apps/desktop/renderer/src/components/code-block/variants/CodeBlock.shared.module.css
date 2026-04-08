@@ -265,9 +265,53 @@
   min-height: 120px;
   max-height: 300px;
   overflow: hidden;
+  display: grid;
+  grid-template-columns:
+    calc(var(--cb-editor-gutter-digits, 2) * 1ch + 2.5rem)
+    minmax(0, 1fr);
   border-bottom-left-radius: 0.75rem;
   border-bottom-right-radius: 0.75rem;
   background-color: var(--c-raw-012);
+}
+
+.gutter {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  color: var(--c-raw-003);
+  user-select: none;
+}
+
+.gutterContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  transform: translateY(0);
+  will-change: transform;
+}
+
+.gutterLine {
+  width: 100%;
+  color: inherit;
+  opacity: 0.4;
+  transition:
+    color 120ms ease,
+    opacity 120ms ease;
+}
+
+.gutterLineActive {
+  opacity: 1;
+  font-weight: 400;
+}
+
+.editorCanvas {
+  position: relative;
+  min-width: 0;
+  height: 100%;
 }
 
 .highlightLayer,
