@@ -969,6 +969,7 @@ export const CodeBlockEditor = forwardRef<
               ref={textareaRef}
               className={styles.textareaOverlay}
               value={value}
+              wrap="off"
               onChange={(e) => onChange?.(e.target.value)}
               onKeyDown={(e) => {
                 handleEditorKeyDown(e);

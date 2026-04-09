@@ -48,6 +48,7 @@
 .fillHeight .EditorContainer {
   height: auto;
   max-height: none;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .header {
@@ -302,6 +303,7 @@
 .gutter {
   position: relative;
   overflow: hidden;
+  min-height: 0;
   background: transparent;
   color: var(--c-raw-003);
   user-select: none;
@@ -336,7 +338,9 @@
 .editorCanvas {
   position: relative;
   min-width: 0;
+  min-height: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 .highlightLayer,
