@@ -14,6 +14,9 @@ interface CodeBlockViewerProps {
   value: string;
   stickyHeader?: boolean;
   fillHeight?: boolean;
+  hideCodeContent?: boolean;
+  hiddenCodeLineCount?: number;
+  onRevealCodeContent?: () => void;
 }
 
 export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
@@ -21,6 +24,9 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
   value,
   stickyHeader = true,
   fillHeight = false,
+  hideCodeContent = false,
+  hiddenCodeLineCount,
+  onRevealCodeContent,
 }) => {
   const PLAIN_LANGUAGES = ["text", "txt", "plain", "plaintext", "prompt"];
   const isPlain = !language || PLAIN_LANGUAGES.includes(language.toLowerCase());
@@ -30,10 +36,13 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
   const { highlightedHtml, isLoading } = useCodeHighlighter(
     value,
     language,
-    !isPlain,
+    !hideCodeContent && !isPlain,
   );
   const handleCopy = () => copy(value);
 
+  const lineCount = Math.max(1, value.split("\n").length);
+  const hiddenLines = Math.max(1, hiddenCodeLineCount ?? lineCount);
+  const hiddenLineLabel = hiddenLines === 1 ? "line" : "lines";
   const shouldShowPlain = isPlain || isLoading;
 
   return (
@@ -62,7 +71,19 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
       </button>
 
       <div className={styles.content}>
-        {shouldShowPlain ? (
+        {hideCodeContent ? (
+          <button
+            type="button"
+            className={styles.hiddenCodeContentButton}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onRevealCodeContent?.();
+            }}
+          >
+            <em>{`show ${hiddenLines} hidden ${hiddenLineLabel}`}</em>
+          </button>
+        ) : shouldShowPlain ? (
           <pre className={styles.pre}>{value}</pre>
         ) : (
           <div

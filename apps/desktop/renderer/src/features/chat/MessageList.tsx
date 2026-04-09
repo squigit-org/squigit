@@ -172,29 +172,63 @@ const MessageListComponent: React.FC<MessageListProps> = ({
     !isQuickAnswerSuppressedProgressText(visibleProgressText) &&
     (hasRunningToolStep ||
       isQuickAnswerEligibleProgress(pendingAssistantTurn.progressText));
+  const latestMessageIdsByRole = React.useMemo(() => {
+    let latestUserMessageId: string | null = null;
+    let latestModelMessageId: string | null = null;
+
+    for (const message of messages) {
+      if (message.role === "user") {
+        latestUserMessageId = message.id;
+      } else if (message.role === "model") {
+        latestModelMessageId = message.id;
+      }
+    }
+
+    return {
+      user: latestUserMessageId,
+      model: latestModelMessageId,
+    };
+  }, [messages]);
 
   return (
     <div className={styles.container}>
-      {messages.map((msg) => (
-        <div key={msg.id} className={styles.item}>
-          <ChatBubble
-            message={msg}
-            collapseMode={getMessageCollapseMode?.(msg.id) ?? "none"}
-            onToggleCollapse={onToggleMessageCollapse}
-            onRetry={
-              msg.role !== "user" && onRetryMessage
-                ? () => onRetryMessage(msg.id, selectedModel)
-                : undefined
-            }
-            onUndo={
-              msg.role === "user" && onUndoMessage
-                ? () => onUndoMessage(msg.id)
-                : undefined
-            }
-            onAction={msg.role === "system" ? onSystemAction : undefined}
-          />
-        </div>
-      ))}
+      {messages.map((msg) => {
+        const roleCodeVisibilityKey =
+          msg.role === "user"
+            ? latestMessageIdsByRole.user
+            : msg.role === "model"
+              ? latestMessageIdsByRole.model
+              : null;
+        const hideCodeBlocksByDefault =
+          msg.role === "user"
+            ? roleCodeVisibilityKey !== null && msg.id !== roleCodeVisibilityKey
+            : msg.role === "model"
+              ? roleCodeVisibilityKey !== null && msg.id !== roleCodeVisibilityKey
+              : false;
+
+        return (
+          <div key={msg.id} className={styles.item}>
+            <ChatBubble
+              message={msg}
+              collapseMode={getMessageCollapseMode?.(msg.id) ?? "none"}
+              onToggleCollapse={onToggleMessageCollapse}
+              hideCodeBlocksByDefault={hideCodeBlocksByDefault}
+              roleCodeVisibilityKey={roleCodeVisibilityKey}
+              onRetry={
+                msg.role !== "user" && onRetryMessage
+                  ? () => onRetryMessage(msg.id, selectedModel)
+                  : undefined
+              }
+              onUndo={
+                msg.role === "user" && onUndoMessage
+                  ? () => onUndoMessage(msg.id)
+                  : undefined
+              }
+              onAction={msg.role === "system" ? onSystemAction : undefined}
+            />
+          </div>
+        );
+      })}
 
       {pendingAssistantTurn && (
         <div className={styles.item}>

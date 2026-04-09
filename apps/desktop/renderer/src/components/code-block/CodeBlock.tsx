@@ -27,6 +27,9 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
       actionDisabled,
       fillHeight,
       style,
+      hideCodeContent,
+      hiddenCodeLineCount,
+      onRevealCodeContent,
     },
     ref,
   ) => {
@@ -57,6 +60,9 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
         value={value}
         stickyHeader={stickyHeader}
         fillHeight={fillHeight}
+        hideCodeContent={hideCodeContent}
+        hiddenCodeLineCount={hiddenCodeLineCount}
+        onRevealCodeContent={onRevealCodeContent}
       />
     );
   },

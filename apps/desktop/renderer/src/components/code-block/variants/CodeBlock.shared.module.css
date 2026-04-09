@@ -193,6 +193,26 @@
   display: block;
 }
 
+.hiddenCodeContentButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: var(--c-raw-004);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.hiddenCodeContentButton:hover {
+  color: var(--c-raw-003);
+}
+
+.hiddenCodeContentButton em {
+  font-style: inherit;
+}
+
 .content,
 .textareaOverlay {
   scrollbar-width: thin;

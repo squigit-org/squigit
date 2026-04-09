@@ -6,6 +6,7 @@
 
 import React, {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -51,6 +52,8 @@ interface ChatBubbleProps {
   enableInternalLinks?: boolean;
   collapseMode?: MessageCollapseMode;
   onToggleCollapse?: (messageId: string, nextExpanded: boolean) => void;
+  hideCodeBlocksByDefault?: boolean;
+  roleCodeVisibilityKey?: string | null;
 }
 
 interface MarkdownErrorBoundaryProps {
@@ -339,11 +342,38 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   enableInternalLinks = false,
   collapseMode = "none",
   onToggleCollapse,
+  hideCodeBlocksByDefault = false,
+  roleCodeVisibilityKey = null,
 }) => {
   const app = useAppContext();
   const isUser = message.role === "user";
   const isPendingAssistant = !!pendingTurn && message.role === "model";
   const [isCopied, setIsCopied] = useState(false);
+  const [revealedCodeBlockKeys, setRevealedCodeBlockKeys] = useState<
+    Set<string>
+  >(() => new Set());
+  const previousRoleCodeVisibilityKeyRef = useRef<string | null>(
+    roleCodeVisibilityKey,
+  );
+
+  useEffect(() => {
+    const previousKey = previousRoleCodeVisibilityKeyRef.current;
+    previousRoleCodeVisibilityKeyRef.current = roleCodeVisibilityKey;
+
+    if (!hideCodeBlocksByDefault) {
+      return;
+    }
+    if (previousKey === roleCodeVisibilityKey) {
+      return;
+    }
+
+    setRevealedCodeBlockKeys((previous) => {
+      if (previous.size === 0) {
+        return previous;
+      }
+      return new Set();
+    });
+  }, [hideCodeBlocksByDefault, roleCodeVisibilityKey]);
 
   const attachments = useMemo(() => {
     const paths = parseAttachmentPaths(message.text);
@@ -492,6 +522,17 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     onToggleCollapse,
     shouldShowCollapseToggle,
   ]);
+  const revealCodeBlock = useCallback((blockKey: string) => {
+    setRevealedCodeBlockKeys((previous) => {
+      if (previous.has(blockKey)) {
+        return previous;
+      }
+
+      const next = new Set(previous);
+      next.add(blockKey);
+      return next;
+    });
+  }, []);
 
   const handleImageClick = useCallback(
     (attachment: (typeof imageAttachments)[number], index: number) => {
@@ -576,15 +617,29 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         return <pre {...props}>{children}</pre>;
       },
 
-      code({ className, children, ...props }: any) {
+      code({ node, className, children, ...props }: any) {
+        const codeText = String(children).replace(/\n$/u, "");
         const match = /language-(\w+)/u.exec(className || "");
         const isInline = !match && !String(children).includes("\n");
 
         if (!isInline) {
+          const blockKey =
+            typeof node?.position?.start?.offset === "number"
+              ? `offset:${node.position.start.offset}`
+              : `${className || "plain"}:${codeText.length}:${codeText.slice(0, 32)}`;
+          const shouldHideCodeBlock =
+            hideCodeBlocksByDefault &&
+            !isPendingAssistant &&
+            !revealedCodeBlockKeys.has(blockKey);
+          const hiddenLineCount = Math.max(1, getTextLineCount(codeText));
+
           return (
             <CodeBlock
               language={match ? match[1] : ""}
-              value={String(children).replace(/\n$/u, "")}
+              value={codeText}
+              hideCodeContent={shouldHideCodeBlock}
+              hiddenCodeLineCount={hiddenLineCount}
+              onRevealCodeContent={() => revealCodeBlock(blockKey)}
             />
           );
         }
@@ -708,7 +763,15 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
         </summary>
       ),
     }),
-    [enableInternalLinks, handleLocalAttachmentLink, onAction],
+    [
+      enableInternalLinks,
+      handleLocalAttachmentLink,
+      hideCodeBlocksByDefault,
+      isPendingAssistant,
+      onAction,
+      revealCodeBlock,
+      revealedCodeBlockKeys,
+    ],
   );
 
   return (
@@ -918,7 +981,9 @@ export const ChatBubble = React.memo(
       !!prevProps.onUndo === !!nextProps.onUndo &&
       prevProps.enableInternalLinks === nextProps.enableInternalLinks &&
       prevProps.collapseMode === nextProps.collapseMode &&
-      prevProps.onToggleCollapse === nextProps.onToggleCollapse
+      prevProps.onToggleCollapse === nextProps.onToggleCollapse &&
+      prevProps.hideCodeBlocksByDefault === nextProps.hideCodeBlocksByDefault &&
+      prevProps.roleCodeVisibilityKey === nextProps.roleCodeVisibilityKey
     );
   },
 );

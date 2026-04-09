@@ -34,4 +34,10 @@ export interface CodeBlockProps {
   /** Make the block fill its parent height */
   fillHeight?: boolean;
   style?: React.CSSProperties;
+  /** Hide code content behind an inline reveal label while keeping copy available */
+  hideCodeContent?: boolean;
+  /** Optional explicit hidden line count for reveal label text */
+  hiddenCodeLineCount?: number;
+  /** Reveal handler when hidden content label is clicked */
+  onRevealCodeContent?: () => void;
 }
