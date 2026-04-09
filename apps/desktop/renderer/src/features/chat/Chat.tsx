@@ -115,6 +115,13 @@ export const Chat: React.FC = () => {
   const wasAtBottomRef = useRef(false);
   const imageProgressTurnIdRef = useRef<string | null>(null);
   const isProgrammaticScrollRef = useRef(false);
+  const scrollFollowStateRef = useRef({
+    hasPendingTurn: false,
+    isStreamingAutoScrollEnabled: false,
+    isNavigationLoading: false,
+    showLoadingOverlay: false,
+    isRevealPendingForActiveChat: false,
+  });
   const previousCommittedMessageIdsRef = useRef<string[]>([]);
   const collapseAllOnLoadRef = useRef(true);
   const pendingHistoryPrependRef = useRef<{ previousScrollHeight: number } | null>(
@@ -232,6 +239,14 @@ export const Chat: React.FC = () => {
     !isRevealPendingForActiveChat &&
     !isAtBottom;
 
+  scrollFollowStateRef.current = {
+    hasPendingTurn: !!app.chat.pendingAssistantTurn,
+    isStreamingAutoScrollEnabled,
+    isNavigationLoading,
+    showLoadingOverlay,
+    isRevealPendingForActiveChat,
+  };
+
   const scrollBottomIntoView = useCallback(
     (behavior: ScrollBehavior = "auto") => {
       const container = scrollContainerRef.current;
@@ -284,6 +299,30 @@ export const Chat: React.FC = () => {
 
     handleScrollToBottom();
   }, [handleScrollToBottom]);
+
+  const handlePendingTurnLayoutChange = useCallback(() => {
+    const {
+      hasPendingTurn,
+      isStreamingAutoScrollEnabled: shouldStreamFollow,
+      isNavigationLoading: navigationLoading,
+      showLoadingOverlay: loadingOverlayVisible,
+      isRevealPendingForActiveChat: revealPending,
+    } = scrollFollowStateRef.current;
+    const shouldFollowStreaming = hasPendingTurn && shouldStreamFollow;
+    const shouldKeepPinnedForNonStreaming =
+      !hasPendingTurn && wasAtBottomRef.current;
+
+    if (
+      navigationLoading ||
+      loadingOverlayVisible ||
+      revealPending ||
+      (!shouldFollowStreaming && !shouldKeepPinnedForNonStreaming)
+    ) {
+      return;
+    }
+
+    scrollBottomIntoView("auto");
+  }, [scrollBottomIntoView]);
 
   useEffect(() => {
     latestCommittedMessageCountRef.current = app.chat.messages.length;
@@ -532,13 +571,15 @@ export const Chat: React.FC = () => {
 
     scrollBottomIntoView("auto");
   }, [
-    app.chat.messages,
     app.chat.pendingAssistantTurn,
+    effectivePendingAssistantTurn,
     isNavigationLoading,
-    isStreamingAutoScrollEnabled,
     isRevealPendingForActiveChat,
+    isStreamingAutoScrollEnabled,
+    messageWindowStartIndex,
     scrollBottomIntoView,
     showLoadingOverlay,
+    visibleMessages,
   ]);
 
   useEffect(() => {
@@ -1144,6 +1185,7 @@ export const Chat: React.FC = () => {
         showQuickAnswer={showQuickAnswer}
         visibleImageProgressText={visibleImageProgressText}
         onQuickAnswer={app.chat.handleQuickAnswer}
+        onPendingTurnLayoutChange={handlePendingTurnLayoutChange}
         messages={visibleWindowedMessages}
         pendingAssistantTurn={effectivePendingAssistantTurn}
         pendingPromptAttachmentAnalysis={app.pendingPromptAttachmentAnalysis}

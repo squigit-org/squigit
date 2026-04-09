@@ -28,6 +28,7 @@ interface ChatContentProps {
   showQuickAnswer: boolean;
   visibleImageProgressText: string | null;
   onQuickAnswer?: () => void;
+  onPendingTurnLayoutChange?: () => void;
   messages: Message[];
   pendingAssistantTurn?: PendingAssistantTurn | null;
   pendingPromptAttachmentAnalysis?: AttachmentAnalysisCounts | null;
@@ -50,6 +51,7 @@ const ChatContentComponent: React.FC<ChatContentProps> = ({
   showQuickAnswer,
   visibleImageProgressText,
   onQuickAnswer,
+  onPendingTurnLayoutChange,
   messages,
   pendingAssistantTurn,
   pendingPromptAttachmentAnalysis,
@@ -117,6 +119,7 @@ const ChatContentComponent: React.FC<ChatContentProps> = ({
 
       <MessageList
         messages={messages}
+        onPendingTurnLayoutChange={onPendingTurnLayoutChange}
         pendingAssistantTurn={pendingAssistantTurn}
         pendingPromptAttachmentAnalysis={pendingPromptAttachmentAnalysis}
         hideThinkingProgress={hideThinkingProgress}
@@ -151,6 +154,8 @@ export const ChatContent = React.memo(
       prevProps.visibleImageProgressText ===
         nextProps.visibleImageProgressText &&
       prevProps.onQuickAnswer === nextProps.onQuickAnswer &&
+      prevProps.onPendingTurnLayoutChange ===
+        nextProps.onPendingTurnLayoutChange &&
       prevProps.messages === nextProps.messages &&
       prevProps.pendingAssistantTurn === nextProps.pendingAssistantTurn &&
       prevProps.pendingPromptAttachmentAnalysis ===

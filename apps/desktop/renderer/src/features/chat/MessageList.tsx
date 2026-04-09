@@ -25,6 +25,7 @@ const THINKING_LABEL = "Thinking";
 
 interface MessageListProps {
   messages: Message[];
+  onPendingTurnLayoutChange?: () => void;
   pendingAssistantTurn?: PendingAssistantTurn | null;
   pendingPromptAttachmentAnalysis?: AttachmentAnalysisCounts | null;
   hideThinkingProgress?: boolean;
@@ -60,6 +61,7 @@ function getVisibleProgressText(text: string | undefined): string | null {
 
 const MessageListComponent: React.FC<MessageListProps> = ({
   messages,
+  onPendingTurnLayoutChange,
   pendingAssistantTurn,
   pendingPromptAttachmentAnalysis,
   hideThinkingProgress = false,
@@ -75,6 +77,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
     turnId: string;
     text: string;
   } | null>(null);
+  const pendingTurnRef = React.useRef<HTMLDivElement | null>(null);
   const realProgressTurnIdRef = React.useRef<string | null>(null);
   const shouldShowThinkingLabel =
     pendingAssistantTurn?.phase === "thinking" && !hideThinkingProgress;
@@ -190,6 +193,40 @@ const MessageListComponent: React.FC<MessageListProps> = ({
     };
   }, [messages]);
 
+  React.useEffect(() => {
+    const element = pendingTurnRef.current;
+    if (!element || !onPendingTurnLayoutChange) {
+      return;
+    }
+
+    let frameId: number | null = null;
+    const scheduleLayoutChange = () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        onPendingTurnLayoutChange();
+      });
+    };
+
+    scheduleLayoutChange();
+
+    const observer = new ResizeObserver(() => {
+      scheduleLayoutChange();
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, [onPendingTurnLayoutChange, pendingAssistantTurn?.id, shouldShowThinkingLabel]);
+
   return (
     <div className={styles.container}>
       {messages.map((msg) => {
@@ -232,7 +269,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
 
       {pendingAssistantTurn && (
         <div className={styles.item}>
-          <div className={styles.pendingTurn}>
+          <div ref={pendingTurnRef} className={styles.pendingTurn}>
             {shouldShowThinkingLabel && (
               <div className={styles.pendingProgress}>
                 <div className={styles.progressRow}>
@@ -291,6 +328,8 @@ export const MessageList = React.memo(
   (prevProps, nextProps) => {
     return (
       prevProps.messages === nextProps.messages &&
+      prevProps.onPendingTurnLayoutChange ===
+        nextProps.onPendingTurnLayoutChange &&
       prevProps.pendingAssistantTurn === nextProps.pendingAssistantTurn &&
       prevProps.pendingPromptAttachmentAnalysis ===
         nextProps.pendingPromptAttachmentAnalysis &&

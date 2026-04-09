@@ -214,30 +214,35 @@
 }
 
 .content,
+.highlightLayer,
 .textareaOverlay {
   scrollbar-width: thin;
   scrollbar-color: var(--c-raw-054) transparent;
 }
 
 .content::-webkit-scrollbar,
+.highlightLayer::-webkit-scrollbar,
 .textareaOverlay::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 .content::-webkit-scrollbar-track,
+.highlightLayer::-webkit-scrollbar-track,
 .textareaOverlay::-webkit-scrollbar-track {
   background: transparent;
-  margin: 4px;
+  margin: 2px;
 }
 
 .content::-webkit-scrollbar-thumb,
+.highlightLayer::-webkit-scrollbar-thumb,
 .textareaOverlay::-webkit-scrollbar-thumb {
   background: var(--c-raw-054);
   border-radius: 4px;
 }
 
 .content::-webkit-scrollbar-thumb:hover,
+.highlightLayer::-webkit-scrollbar-thumb:hover,
 .textareaOverlay::-webkit-scrollbar-thumb:hover {
   background: var(--c-raw-085);
 }
@@ -362,9 +367,12 @@
   z-index: 1;
   color: var(--c-raw-004);
   background-color: transparent !important;
-  overflow: hidden !important;
+  overflow: auto !important;
   pointer-events: none;
+  padding: 1rem !important;
   padding-bottom: 3rem !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .highlightLayer pre,
@@ -392,6 +400,10 @@
 
 .textareaOverlay::placeholder {
   color: var(--c-raw-005);
+}
+
+.highlightLayer::-webkit-scrollbar {
+  display: none;
 }
 
 .textareaOverlay::-webkit-scrollbar-corner {
