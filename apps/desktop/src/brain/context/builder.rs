@@ -166,14 +166,21 @@ pub fn build_system_instruction(
     vars.insert("LOCALE".to_string(), locale);
     vars.insert("USER_NAME".to_string(), user_name.to_string());
     vars.insert("USER_EMAIL".to_string(), user_email.to_string());
-    vars.insert("IMAGE_BRIEF".to_string(), if image_brief.is_empty() {
-        "(Image file is attached directly to this request)".to_string()
-    } else {
-        image_brief.to_string()
-    });
+    vars.insert(
+        "IMAGE_BRIEF".to_string(),
+        if image_brief.is_empty() {
+            "(Image file is attached directly to this request)".to_string()
+        } else {
+            image_brief.to_string()
+        },
+    );
 
     let runtime_section = interpolate(&system_config.runtime_template, &vars);
-    let full_instruction = format!("{}\n{}", system_config.identity_brief.trim(), runtime_section);
+    let full_instruction = format!(
+        "{}\n{}",
+        system_config.identity_brief.trim(),
+        runtime_section
+    );
 
     Ok(full_instruction)
 }

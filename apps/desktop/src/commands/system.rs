@@ -19,7 +19,7 @@ pub async fn run_sidecar_version(app: tauri::AppHandle, command: String) -> Resu
         }
         return Err("Sidecar command failed".to_string());
     }
-    
+
     if command == "squigit-stt --version" {
         let (sidecar_path, _) = crate::commands::speech::resolve_sidecar_path(&app)?;
         let output = std::process::Command::new(sidecar_path)
@@ -31,7 +31,7 @@ pub async fn run_sidecar_version(app: tauri::AppHandle, command: String) -> Resu
         }
         return Err("Sidecar command failed".to_string());
     }
-    
+
     Err("Unknown or unsupported sidecar command".to_string())
 }
 
@@ -39,11 +39,16 @@ pub async fn run_sidecar_version(app: tauri::AppHandle, command: String) -> Resu
 pub async fn get_linux_package_manager() -> Result<String, String> {
     #[cfg(target_os = "linux")]
     {
-        let debian = std::path::Path::new("/etc/debian_version").exists() || std::path::Path::new("/usr/bin/dpkg").exists() || std::path::Path::new("/bin/dpkg").exists();
+        let debian = std::path::Path::new("/etc/debian_version").exists()
+            || std::path::Path::new("/usr/bin/dpkg").exists()
+            || std::path::Path::new("/bin/dpkg").exists();
         if debian {
             return Ok("debian".to_string());
         }
-        let rpm = std::path::Path::new("/etc/redhat-release").exists() || std::path::Path::new("/etc/fedora-release").exists() || std::path::Path::new("/usr/bin/rpm").exists() || std::path::Path::new("/bin/rpm").exists();
+        let rpm = std::path::Path::new("/etc/redhat-release").exists()
+            || std::path::Path::new("/etc/fedora-release").exists()
+            || std::path::Path::new("/usr/bin/rpm").exists()
+            || std::path::Path::new("/bin/rpm").exists();
         if rpm {
             return Ok("rpm".to_string());
         }

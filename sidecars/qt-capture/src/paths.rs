@@ -22,7 +22,10 @@ impl QtPaths {
         #[cfg(not(target_os = "linux"))]
         let qt_runtime = {
             let exe_path = env::current_exe()?;
-            exe_path.parent().context("No parent dir for executable")?.join("_internal")
+            exe_path
+                .parent()
+                .context("No parent dir for executable")?
+                .join("_internal")
         };
 
         #[cfg(target_os = "linux")]

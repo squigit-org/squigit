@@ -4,8 +4,8 @@
 use anyhow::Result;
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
-use xtask::{run_cmd_with_node_bin, run_cmd_with_node_bin_and_env, tauri_dir, ui_dir};
 use xtask::run_cmd;
+use xtask::{run_cmd_with_node_bin, run_cmd_with_node_bin_and_env, tauri_dir, ui_dir};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuildTarget {
@@ -82,9 +82,11 @@ pub fn run(options: BuildCommandOptions) -> Result<()> {
         let started = Instant::now();
         let result = match target {
             BuildTarget::Cli => cli_placeholder(),
-            BuildTarget::Ocr => crate::compile::paddle_ocr::build(crate::compile::paddle_ocr::OcrBuildOptions {
-                measure_payload_size: measure_ocr_size,
-            }),
+            BuildTarget::Ocr => {
+                crate::compile::paddle_ocr::build(crate::compile::paddle_ocr::OcrBuildOptions {
+                    measure_payload_size: measure_ocr_size,
+                })
+            }
             BuildTarget::Stt => crate::compile::whisper_stt::build(),
             BuildTarget::Capture => crate::compile::qt_capture::build_all(),
             BuildTarget::CaptureQt => crate::compile::qt_capture::qt_only(),
@@ -311,13 +313,7 @@ pub fn desktop() -> Result<()> {
     if env_vars.is_empty() {
         run_cmd_with_node_bin("tauri", &tauri_args, &app, &node_bin)?;
     } else {
-        run_cmd_with_node_bin_and_env(
-            "tauri",
-            &tauri_args,
-            &app,
-            &node_bin,
-            &env_vars,
-        )?;
+        run_cmd_with_node_bin_and_env("tauri", &tauri_args, &app, &node_bin, &env_vars)?;
     }
 
     println!("\nDesktop app build complete!");
@@ -358,11 +354,7 @@ mod tests {
             resolve_targets(&selectors(&["all", "-ocr"]), false).expect("resolve all -ocr");
         assert_eq!(
             actual,
-            vec![
-                BuildTarget::Stt,
-                BuildTarget::Capture,
-                BuildTarget::Desktop,
-            ]
+            vec![BuildTarget::Stt, BuildTarget::Capture, BuildTarget::Desktop,]
         );
     }
 }

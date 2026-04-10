@@ -2,24 +2,103 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde_json::json;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::path::Path;
 use tauri::AppHandle;
 
 use crate::brain::provider::gemini::agent::request_control::{
     register_request, remove_request, GeminiRequestControl,
 };
-use crate::brain::provider::gemini::agent::tool_orchestrator::{
-    await_with_request_control, build_answer_now_partial_result,
-    build_system_instruction_with_search_policy, mark_attempted_url, merge_allowed_sources,
-    tool_status_text, tool_step_id, track_attempted_sources, wrap_query_fallback_result,
-    ControlledAwaitOutcome,
+use crate::brain::provider::gemini::agent::tool_dispatch::{
+    dispatch_tool_call, ToolDispatchContext, WebToolDispatchState,
 };
-use crate::brain::provider::gemini::attachments::build_interleaved_parts;
+use crate::brain::provider::gemini::agent::tool_orchestrator::{
+    build_system_instruction_with_tool_policy, tool_status_text, tool_step_id,
+};
+use crate::brain::provider::gemini::attachments::{
+    build_attachment_preview_context, build_interleaved_parts, extract_attachment_mentions,
+};
 use crate::brain::provider::gemini::transport::streaming::{emit_event, stream_request_iteration};
 use crate::brain::provider::gemini::transport::types::{
     GeminiContent, GeminiEvent, GeminiFileData, GeminiFunctionResponse, GeminiPart, GeminiRequest,
 };
-use crate::brain::tools::web::suggest_fallback_urls;
+
+fn normalize_attachment_lookup_key(path: &str) -> String {
+    let trimmed = path.trim();
+    trimmed
+        .strip_prefix('<')
+        .and_then(|value| value.strip_suffix('>'))
+        .map(str::trim)
+        .unwrap_or(trimmed)
+        .to_string()
+}
+
+fn attachment_lookup_aliases(path: &str) -> Vec<String> {
+    let mut aliases = Vec::<String>::new();
+    let mut push_unique = |value: String| {
+        if !value.is_empty() && !aliases.iter().any(|existing| existing == &value) {
+            aliases.push(value);
+        }
+    };
+
+    let normalized = normalize_attachment_lookup_key(path);
+    push_unique(normalized.clone());
+
+    let normalized_without_current_dir = normalized
+        .strip_prefix("./")
+        .map(str::to_string)
+        .unwrap_or_else(|| normalized.clone());
+    push_unique(normalized_without_current_dir.clone());
+
+    let normalized_path = Path::new(&normalized);
+    if let Some(file_name) = normalized_path.file_name().and_then(|value| value.to_str()) {
+        push_unique(file_name.to_string());
+    }
+    if let Some(stem) = normalized_path.file_stem().and_then(|value| value.to_str()) {
+        push_unique(stem.to_string());
+    }
+
+    if let Ok(canonical) =
+        crate::brain::provider::gemini::attachments::paths::resolve_attachment_path_internal(
+            &normalized,
+        )
+    {
+        let canonical_str = canonical.to_string_lossy().to_string();
+        push_unique(canonical_str.clone());
+
+        let canonical_path = Path::new(&canonical_str);
+        if let Some(file_name) = canonical_path.file_name().and_then(|value| value.to_str()) {
+            push_unique(file_name.to_string());
+        }
+        if let Some(stem) = canonical_path.file_stem().and_then(|value| value.to_str()) {
+            push_unique(stem.to_string());
+        }
+    }
+
+    aliases
+}
+
+fn insert_attachment_display_name(
+    map: &mut HashMap<String, String>,
+    path: &str,
+    display_name: &str,
+) {
+    for alias in attachment_lookup_aliases(path) {
+        map.entry(alias).or_insert_with(|| display_name.to_string());
+    }
+}
+
+fn find_attachment_display_name<'a>(
+    path: &str,
+    map: &'a HashMap<String, String>,
+) -> Option<&'a str> {
+    for alias in attachment_lookup_aliases(path) {
+        if let Some(value) = map.get(&alias) {
+            return Some(value.as_str());
+        }
+    }
+    None
+}
 
 /// Brain-aware chat command (v2)
 ///
@@ -77,14 +156,13 @@ pub async fn stream_gemini_chat_v2(
         let mut allow_tools = !is_initial_turn;
         let mut tool_calls = 0usize;
         let mut consecutive_tool_failures = 0usize;
-        let web_search_tool_declaration = if allow_tools {
-            Some(crate::brain::context::loader::load_web_search_tool_declaration()?)
+        let mut attachment_display_name_by_path = HashMap::<String, String>::new();
+        let tool_declarations = if allow_tools {
+            Some(crate::brain::context::loader::load_gemini_tool_declarations()?)
         } else {
             None
         };
-        let mut allowed_sources = HashMap::<String, crate::brain::tools::web::CitationSource>::new();
-        let mut attempted_urls = HashSet::<String>::new();
-        let mut attempted_domains = HashSet::<String>::new();
+        let mut web_tool_state = WebToolDispatchState::default();
 
         // Build conversation contents once; then append tool call/response turns as needed.
         let mut contents: Vec<GeminiContent> = if is_initial_turn {
@@ -137,19 +215,49 @@ pub async fn stream_gemini_chat_v2(
             let first_msg = user_first_msg.unwrap_or_default();
             let history = history_log.unwrap_or_default();
             let summary = rolling_summary.clone().unwrap_or_default();
-            let context_prompt =
-                crate::brain::context::builder::build_turn_context(&img_desc, &first_msg, &history, &summary);
+            let context_prompt = crate::brain::context::builder::build_turn_context(
+                &img_desc, &first_msg, &history, &summary,
+            );
 
-            let mut parts = vec![GeminiPart {
-                text: Some(context_prompt),
-                ..Default::default()
-            }];
-            let interleaved_parts =
-                build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache).await?;
-            parts.extend(interleaved_parts);
+            let mut composed_user_message = user_message.clone();
+            let attachment_mentions = extract_attachment_mentions(&user_message);
+            for mention in &attachment_mentions {
+                if let Some(display_name) = mention
+                    .display_name
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|v| !v.is_empty())
+                {
+                    insert_attachment_display_name(
+                        &mut attachment_display_name_by_path,
+                        &mention.path,
+                        display_name,
+                    );
+                }
+            }
+            let attachment_paths = attachment_mentions
+                .iter()
+                .map(|mention| mention.path.clone())
+                .collect::<Vec<_>>();
+            if let Some(preview_block) = build_attachment_preview_context(&attachment_paths).await? {
+                if !composed_user_message.trim().is_empty() {
+                    composed_user_message.push_str("\n\n");
+                }
+                composed_user_message.push_str(&preview_block);
+            }
+
             vec![GeminiContent {
                 role: "user".to_string(),
-                parts,
+                parts: vec![
+                    GeminiPart {
+                        text: Some(context_prompt),
+                        ..Default::default()
+                    },
+                    GeminiPart {
+                        text: Some(composed_user_message),
+                        ..Default::default()
+                    },
+                ],
             }]
         };
 
@@ -166,15 +274,17 @@ pub async fn stream_gemini_chat_v2(
             }
 
             let tools = if allow_tools {
-                Some(vec![web_search_tool_declaration
-                    .as_ref()
-                    .ok_or_else(|| "Web search tool declaration not loaded".to_string())?
-                    .clone()])
+                Some(
+                    tool_declarations
+                        .as_ref()
+                        .ok_or_else(|| "Tool declarations not loaded".to_string())?
+                        .clone(),
+                )
             } else {
                 None
             };
 
-            let sys_instruction = build_system_instruction_with_search_policy(
+            let sys_instruction = build_system_instruction_with_tool_policy(
                 user_name.as_deref().unwrap_or(""),
                 user_email.as_deref().unwrap_or(""),
                 image_brief.as_deref().unwrap_or(""),
@@ -224,13 +334,15 @@ pub async fn stream_gemini_chat_v2(
                 return Ok(());
             };
 
-            if function_call.name != "web_search" {
-                allow_tools = false;
-                continue;
-            }
-
-            let status_text = tool_status_text(&function_call);
-            let call_id = tool_step_id(iter);
+            let attachment_display_name = function_call
+                .args
+                .get("path")
+                .and_then(|value| value.as_str())
+                .and_then(|raw_path| {
+                    find_attachment_display_name(raw_path, &attachment_display_name_by_path)
+                });
+            let status_text = tool_status_text(&function_call, attachment_display_name);
+            let call_id = tool_step_id(iter, &function_call.name);
             if let Some(status_text_value) = status_text.as_ref() {
                 emit_event(
                     &app,
@@ -240,344 +352,47 @@ pub async fn stream_gemini_chat_v2(
                     },
                 );
             }
+
             emit_event(
                 &app,
                 &channel_id,
                 GeminiEvent::ToolStart {
                     id: call_id.clone(),
-                    name: "web_search".to_string(),
+                    name: function_call.name.clone(),
                     args: function_call.args.clone(),
                     message: status_text.unwrap_or_default(),
                 },
             );
 
-            let query = function_call
-                .args
-                .get("query")
-                .and_then(|v| v.as_str())
-                .map(str::trim)
-                .filter(|v| !v.is_empty());
-            let requested_url = function_call
-                .args
-                .get("url")
-                .and_then(|v| v.as_str())
-                .map(str::trim)
-                .filter(|v| !v.is_empty());
-
-            let tool_result = if request_control.is_answer_now_requested() {
-                Ok(build_answer_now_partial_result(
-                    query,
-                    requested_url,
-                    &allowed_sources,
-                ))
-            } else if let Some(q) = query {
-                match await_with_request_control(
-                    crate::brain::tools::web::search_query_with_progress(q, Some(6), |message| {
-                        emit_event(&app, &channel_id, GeminiEvent::ToolStatus { message });
-                    }),
-                    &request_control,
-                )
-                .await
-                {
-                    ControlledAwaitOutcome::Completed(Ok(result)) => Ok(result),
-                    ControlledAwaitOutcome::Completed(Err(search_error)) => {
-                        println!("[WebSearch] Primary query failed: {}", search_error);
-                        let mut final_error = search_error;
-                        let mut resolved: Option<crate::brain::tools::web::WebSearchResult> = None;
-
-                        emit_event(
-                            &app,
-                            &channel_id,
-                            GeminiEvent::ToolStatus {
-                                message: "Trying another reliable source".to_string(),
-                            },
-                        );
-
-                        let local_candidates = crate::brain::tools::web::local_safe_source_candidates(
-                            q,
-                            &attempted_domains,
-                            3,
-                        );
-                        println!(
-                            "[WebSearch] Local safe-source candidates: {}",
-                            local_candidates.len()
-                        );
-
-                        for candidate in local_candidates {
-                            if attempted_urls.contains(&candidate.url) {
-                                continue;
-                            }
-
-                            mark_attempted_url(
-                                &candidate.url,
-                                &mut attempted_urls,
-                                &mut attempted_domains,
-                            );
-                            emit_event(
-                                &app,
-                                &channel_id,
-                                GeminiEvent::ToolStatus {
-                                    message: "Trying another reliable source".to_string(),
-                                },
-                            );
-
-                            let mut allowed = HashMap::new();
-                            allowed.insert(candidate.url.clone(), candidate.clone());
-
-                            match await_with_request_control(
-                                crate::brain::tools::web::fetch_url_from_allowed_with_progress(
-                                    &candidate.url,
-                                    &allowed,
-                                    |message| {
-                                        emit_event(
-                                            &app,
-                                            &channel_id,
-                                            GeminiEvent::ToolStatus { message },
-                                        );
-                                    },
-                                ),
-                                &request_control,
-                            )
-                            .await
-                            {
-                                ControlledAwaitOutcome::Completed(Ok(result)) => {
-                                    let fallback_message = format!(
-                                        "Primary search failed; used trusted fallback source: {}.",
-                                        candidate.title
-                                    );
-                                    resolved = Some(wrap_query_fallback_result(
-                                        q,
-                                        result,
-                                        &fallback_message,
-                                    ));
-                                    break;
-                                }
-                                ControlledAwaitOutcome::Completed(Err(fetch_error)) => {
-                                    println!(
-                                        "[WebSearch] Local safe-source fallback failed: {}",
-                                        fetch_error
-                                    );
-                                    final_error = fetch_error;
-                                }
-                                ControlledAwaitOutcome::Cancelled => {
-                                    return Err("CANCELLED".to_string());
-                                }
-                                ControlledAwaitOutcome::AnswerNow => {
-                                    resolved = Some(build_answer_now_partial_result(
-                                        Some(q),
-                                        None,
-                                        &allowed_sources,
-                                    ));
-                                    break;
-                                }
-                            }
-                        }
-
-                        if resolved.is_none() {
-                            emit_event(
-                                &app,
-                                &channel_id,
-                                GeminiEvent::ToolStatus {
-                                    message: "Trying another reliable source".to_string(),
-                                },
-                            );
-
-                            let suggested_urls = match await_with_request_control(
-                                suggest_fallback_urls(&client, &api_key, &model, q, 6),
-                                &request_control,
-                            )
-                            .await
-                            {
-                                ControlledAwaitOutcome::Completed(urls) => urls,
-                                ControlledAwaitOutcome::Cancelled => {
-                                    return Err("CANCELLED".to_string());
-                                }
-                                ControlledAwaitOutcome::AnswerNow => {
-                                    resolved = Some(build_answer_now_partial_result(
-                                        Some(q),
-                                        None,
-                                        &allowed_sources,
-                                    ));
-                                    Vec::new()
-                                }
-                            };
-
-                            if resolved.is_none() {
-                                let filtered_candidates = crate::brain::tools::web::filter_suggested_urls_to_safe_sources(
-                                    &suggested_urls,
-                                    &attempted_domains,
-                                    3,
-                                );
-                                println!(
-                                    "[WebSearch] Gemini suggested {} URLs, {} passed safe filtering",
-                                    suggested_urls.len(),
-                                    filtered_candidates.len()
-                                );
-
-                                for candidate in filtered_candidates {
-                                    if attempted_urls.contains(&candidate.url) {
-                                        continue;
-                                    }
-
-                                    mark_attempted_url(
-                                        &candidate.url,
-                                        &mut attempted_urls,
-                                        &mut attempted_domains,
-                                    );
-                                    emit_event(
-                                        &app,
-                                        &channel_id,
-                                        GeminiEvent::ToolStatus {
-                                            message: "Trying another reliable source".to_string(),
-                                        },
-                                    );
-
-                                    let mut allowed = HashMap::new();
-                                    allowed.insert(candidate.url.clone(), candidate.clone());
-
-                                    match await_with_request_control(
-                                        crate::brain::tools::web::fetch_url_from_allowed_with_progress(
-                                            &candidate.url,
-                                            &allowed,
-                                            |message| {
-                                                emit_event(
-                                                    &app,
-                                                    &channel_id,
-                                                    GeminiEvent::ToolStatus { message },
-                                                );
-                                            },
-                                        ),
-                                        &request_control,
-                                    )
-                                    .await
-                                    {
-                                        ControlledAwaitOutcome::Completed(Ok(result)) => {
-                                            let fallback_message = format!(
-                                                "Primary search failed; used model-assisted trusted fallback source: {}.",
-                                                candidate.title
-                                            );
-                                            resolved = Some(wrap_query_fallback_result(
-                                                q,
-                                                result,
-                                                &fallback_message,
-                                            ));
-                                            break;
-                                        }
-                                        ControlledAwaitOutcome::Completed(Err(fetch_error)) => {
-                                            println!(
-                                                "[WebSearch] Gemini-assisted fallback failed: {}",
-                                                fetch_error
-                                            );
-                                            final_error = fetch_error;
-                                        }
-                                        ControlledAwaitOutcome::Cancelled => {
-                                            return Err("CANCELLED".to_string());
-                                        }
-                                        ControlledAwaitOutcome::AnswerNow => {
-                                            resolved = Some(build_answer_now_partial_result(
-                                                Some(q),
-                                                None,
-                                                &allowed_sources,
-                                            ));
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        resolved.ok_or_else(|| {
-                            format!(
-                                "Search unavailable after all fallbacks. Last error: {}",
-                                final_error
-                            )
-                        })
-                    }
-                    ControlledAwaitOutcome::Cancelled => return Err("CANCELLED".to_string()),
-                    ControlledAwaitOutcome::AnswerNow => {
-                        Ok(build_answer_now_partial_result(
-                            Some(q),
-                            None,
-                            &allowed_sources,
-                        ))
-                    }
-                }
-            } else if let Some(u) = requested_url {
-                mark_attempted_url(u, &mut attempted_urls, &mut attempted_domains);
-                match await_with_request_control(
-                    crate::brain::tools::web::fetch_url_from_allowed_with_progress(
-                        u,
-                        &allowed_sources,
-                        |message| {
-                            emit_event(&app, &channel_id, GeminiEvent::ToolStatus { message });
-                        },
-                    ),
-                    &request_control,
-                )
-                .await
-                {
-                    ControlledAwaitOutcome::Completed(result) => result,
-                    ControlledAwaitOutcome::Cancelled => return Err("CANCELLED".to_string()),
-                    ControlledAwaitOutcome::AnswerNow => {
-                        Ok(build_answer_now_partial_result(None, Some(u), &allowed_sources))
-                    }
-                }
-            } else {
-                Err("Tool call requires either `query` or `url`.".to_string())
+            let mut dispatch_context = ToolDispatchContext {
+                client: &client,
+                api_key: &api_key,
+                model: &model,
+                request_control: &request_control,
+                web_state: &mut web_tool_state,
             };
-
-            let (tool_response_value, tool_status, tool_message) = match tool_result {
-                Ok(result) => {
-                    merge_allowed_sources(&mut allowed_sources, &result);
-                    track_attempted_sources(
-                        &result.sources,
-                        &mut attempted_urls,
-                        &mut attempted_domains,
-                    );
-                    consecutive_tool_failures = 0;
-                    let done_message = result
-                        .message
-                        .clone()
-                        .unwrap_or_else(|| "Web search step completed.".to_string());
-                    (
-                        serde_json::to_value(&result).unwrap_or_else(|_| {
-                            json!({
-                                "success": false,
-                                "sources": [],
-                                "message": "Serialization failure for tool output"
-                            })
-                        }),
-                        "done".to_string(),
-                        done_message,
-                    )
-                }
-                Err(error_message) => {
-                    consecutive_tool_failures += 1;
-                    (
-                        json!({
-                            "mode": if requested_url.is_some() { "url" } else { "query" },
-                            "success": false,
-                            "sources": [],
-                            "context_markdown": "",
-                            "message": error_message
-                        }),
-                        "error".to_string(),
-                        "Web search step failed.".to_string(),
-                    )
-                }
-            };
+            let dispatch_result = dispatch_tool_call(&function_call, &mut dispatch_context, |message| {
+                emit_event(&app, &channel_id, GeminiEvent::ToolStatus { message });
+            })
+            .await?;
 
             emit_event(
                 &app,
                 &channel_id,
                 GeminiEvent::ToolEnd {
                     id: call_id,
-                    name: "web_search".to_string(),
-                    status: tool_status,
-                    result: tool_response_value.clone(),
-                    message: tool_message,
+                    name: function_call.name.clone(),
+                    status: dispatch_result.status.clone(),
+                    result: dispatch_result.response_value.clone(),
+                    message: dispatch_result.message.clone(),
                 },
             );
+
+            if dispatch_result.is_failure {
+                consecutive_tool_failures += 1;
+            } else {
+                consecutive_tool_failures = 0;
+            }
 
             if request_control.is_answer_now_requested() {
                 allow_tools = false;
@@ -608,7 +423,7 @@ pub async fn stream_gemini_chat_v2(
                     &channel_id,
                     GeminiEvent::ToolStatus {
                         message:
-                            "Search is unavailable right now, continuing with available context"
+                            "Tools are unavailable right now, continuing with available context"
                                 .to_string(),
                     },
                 );
@@ -627,7 +442,7 @@ pub async fn stream_gemini_chat_v2(
                 parts: vec![GeminiPart {
                     function_response: Some(GeminiFunctionResponse {
                         name: function_call.name.clone(),
-                        response: tool_response_value,
+                        response: dispatch_result.response_value,
                     }),
                     ..Default::default()
                 }],

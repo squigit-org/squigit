@@ -127,10 +127,9 @@ fn load_google_oauth_config() -> Result<OAuthConfig, String> {
     let wrapper: GoogleCredentials = serde_json::from_str(raw)
         .map_err(|e| format!("Failed to parse Google OAuth credentials: {}", e))?;
 
-    let config = wrapper
-        .installed
-        .or(wrapper.web)
-        .ok_or_else(|| "Invalid credentials.json: missing 'installed' or 'web' object".to_string())?;
+    let config = wrapper.installed.or(wrapper.web).ok_or_else(|| {
+        "Invalid credentials.json: missing 'installed' or 'web' object".to_string()
+    })?;
 
     if is_placeholder_config(&config) {
         let message = missing_credentials_message();

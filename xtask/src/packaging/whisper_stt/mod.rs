@@ -24,7 +24,7 @@ pub fn stt() -> Result<()> {
     let host_triple = get_host_target_triple()?;
     let runtime_dir_name = format!("whisper-stt-{}", host_triple);
     let sidecar_dst = pkg_binaries.join(&runtime_dir_name);
-    
+
     if sidecar_dst.exists() {
         fs::remove_dir_all(&sidecar_dst)?;
     }
@@ -114,8 +114,15 @@ fn collect_stt_runtime_libs(build_dir: &Path) -> Result<Vec<PathBuf>> {
         build_dir.join("bin").join("Release"),
         build_dir.join("bin"),
         build_dir.join("Release"),
-        build_dir.join("_deps").join("whisper_cpp-build").join("ggml").join("src"),
-        build_dir.join("_deps").join("whisper_cpp-build").join("src"),
+        build_dir
+            .join("_deps")
+            .join("whisper_cpp-build")
+            .join("ggml")
+            .join("src"),
+        build_dir
+            .join("_deps")
+            .join("whisper_cpp-build")
+            .join("src"),
     ];
 
     let mut out = Vec::new();

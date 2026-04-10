@@ -167,6 +167,20 @@ export const mapToolStatusText = (
     return { type: "set", text: API_STATUS_TEXT.FETCHING_SOURCE_FAILED };
   }
 
+  // Catch CAS hash filenames leaking through in tool status (e.g.
+  // "Reading local context from 00f8e1ec68a9...rs"). If the name after
+  // "from" is a long hex hash, show extension-aware fallback instead.
+  const readingMatch = trimmed.match(
+    /^Reading local context from ([a-f0-9]{32,})(\.\w+)?$/i,
+  );
+  if (readingMatch) {
+    const ext = readingMatch[2] || "";
+    return {
+      type: "set",
+      text: ext ? `Reading ${ext} file` : "Reading attached file",
+    };
+  }
+
   return { type: "set", text: trimmed };
 };
 

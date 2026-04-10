@@ -11,10 +11,10 @@
 //!   cargo xtask version --bump patch
 //!   cargo xtask setup --all
 
-pub mod compile;
-pub mod packaging;
 pub mod commands;
+pub mod compile;
 pub mod console;
+pub mod packaging;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};

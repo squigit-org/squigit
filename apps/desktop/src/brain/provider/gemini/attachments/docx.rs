@@ -72,16 +72,20 @@ fn extract_docx_text_from_bytes(bytes: &[u8]) -> Result<String, String> {
     Ok(text)
 }
 
-pub async fn extract_docx_text_for_prompt(file_path: &str) -> Result<String, String> {
-    const MAX_DOCX_CHARS: usize = 120_000;
-
+pub(crate) async fn extract_docx_text(file_path: &str) -> Result<String, String> {
     let bytes = tokio::fs::read(file_path)
         .await
         .map_err(|e| format!("Failed to read DOCX file: {}", e))?;
 
-    let text = tokio::task::spawn_blocking(move || extract_docx_text_from_bytes(&bytes))
+    tokio::task::spawn_blocking(move || extract_docx_text_from_bytes(&bytes))
         .await
-        .map_err(|e| format!("DOCX extraction task failed: {}", e))??;
+        .map_err(|e| format!("DOCX extraction task failed: {}", e))?
+}
+
+pub async fn extract_docx_text_for_prompt(file_path: &str) -> Result<String, String> {
+    const MAX_DOCX_CHARS: usize = 120_000;
+
+    let text = extract_docx_text(file_path).await?;
 
     if text.chars().count() > MAX_DOCX_CHARS {
         let truncated: String = text.chars().take(MAX_DOCX_CHARS).collect();

@@ -4,13 +4,11 @@
 use anyhow::Result;
 use std::fs;
 use std::path::Path;
-#[cfg(not(windows))]
-use xtask::copy_dir_all_preserve_symlinks;
 #[cfg(windows)]
 use xtask::copy_dir_all;
-use xtask::{
-    get_host_target_triple, ocr_sidecar_dir, project_root,
-};
+#[cfg(not(windows))]
+use xtask::copy_dir_all_preserve_symlinks;
+use xtask::{get_host_target_triple, ocr_sidecar_dir, project_root};
 
 fn copy_ocr_runtime_dir(src: &Path, dst: &Path) -> Result<()> {
     #[cfg(windows)]
@@ -68,7 +66,7 @@ pub fn ocr() -> Result<()> {
 
     let sidecar = ocr_sidecar_dir();
     let dist_dir = sidecar.join("dist");
-    
+
     // NEW DESTINATION
     let pkg_binaries = project_root().join("packaging").join("binaries");
     fs::create_dir_all(&pkg_binaries)?;

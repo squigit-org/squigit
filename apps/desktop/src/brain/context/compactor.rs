@@ -13,9 +13,7 @@ pub const APPROX_BYTES_PER_TOKEN: usize = 4;
 
 /// Estimate token count from a string using byte-length heuristic.
 pub fn approx_token_count(text: &str) -> usize {
-    text.len()
-        .saturating_add(APPROX_BYTES_PER_TOKEN - 1)
-        / APPROX_BYTES_PER_TOKEN
+    text.len().saturating_add(APPROX_BYTES_PER_TOKEN - 1) / APPROX_BYTES_PER_TOKEN
 }
 
 /// Build the summarization prompt that compresses older conversation turns

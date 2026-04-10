@@ -4,13 +4,11 @@
 use anyhow::Result;
 use std::fs;
 use std::path::Path;
-#[cfg(not(windows))]
-use xtask::copy_dir_all_preserve_symlinks;
 #[cfg(windows)]
 use xtask::copy_dir_all;
-use xtask::{
-    get_host_target_triple, project_root, qt_native_dir,
-};
+#[cfg(not(windows))]
+use xtask::copy_dir_all_preserve_symlinks;
+use xtask::{get_host_target_triple, project_root, qt_native_dir};
 
 fn copy_capture_runtime_dir(src: &Path, dst: &Path) -> Result<()> {
     #[cfg(windows)]
@@ -38,13 +36,12 @@ pub fn capture() -> Result<()> {
     let host_triple = get_host_target_triple()?;
     let sidecar_dir_name = format!("qt-capture-{}", host_triple);
 
-    
     let sidecar_dst = app_binaries.join(&sidecar_dir_name);
     if sidecar_dst.exists() {
         fs::remove_dir_all(&sidecar_dst)?;
     }
     fs::create_dir_all(&sidecar_dst)?;
-    
+
     #[cfg(not(target_os = "linux"))]
     let internal_dst = sidecar_dst.join("_internal");
 
@@ -65,7 +62,7 @@ pub fn capture() -> Result<()> {
         if !status.success() {
             anyhow::bail!("Failed to compress Qt runtime");
         }
-        
+
         fs::remove_dir_all(&qt_internal_src)?;
     }
 
@@ -78,7 +75,6 @@ pub fn capture() -> Result<()> {
         }
     }
 
-    
     let src_binary_name = format!("capture-engine{}", if cfg!(windows) { ".exe" } else { "" });
     let src_binary_path = target_dir.join(&src_binary_name);
 
@@ -90,7 +86,6 @@ pub fn capture() -> Result<()> {
     println!("  Copying binary to {}", dst_binary_path.display());
     fs::copy(&src_binary_path, &dst_binary_path)?;
 
-    
     let debug_binaries = project_root().join("target").join("debug").join("binaries");
     fs::create_dir_all(&debug_binaries)?;
 

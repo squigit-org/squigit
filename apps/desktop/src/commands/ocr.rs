@@ -510,8 +510,6 @@ pub async fn cancel_ocr_job(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-
-
 fn get_ocr_target_triple() -> &'static str {
     #[cfg(target_os = "windows")]
     {
@@ -528,7 +526,11 @@ fn get_ocr_target_triple() -> &'static str {
 }
 
 pub(crate) fn resolve_sidecar_path(_resource_dir: &Path) -> (PathBuf, Option<PathBuf>) {
-    let name = if cfg!(windows) { "squigit-ocr.exe" } else { "squigit-ocr" };
+    let name = if cfg!(windows) {
+        "squigit-ocr.exe"
+    } else {
+        "squigit-ocr"
+    };
 
     // 1. PATH (installed via winget/brew/apt/dnf)
     if let Ok(path) = which::which(name) {
@@ -540,8 +542,12 @@ pub(crate) fn resolve_sidecar_path(_resource_dir: &Path) -> (PathBuf, Option<Pat
     {
         let brew_arm = PathBuf::from("/opt/homebrew/bin/squigit-ocr");
         let brew_intel = PathBuf::from("/usr/local/bin/squigit-ocr");
-        if brew_arm.exists() { return (brew_arm, None); }
-        if brew_intel.exists() { return (brew_intel, None); }
+        if brew_arm.exists() {
+            return (brew_arm, None);
+        }
+        if brew_intel.exists() {
+            return (brew_intel, None);
+        }
     }
 
     // 3. Windows GUI (Winget) Fallback
@@ -549,14 +555,20 @@ pub(crate) fn resolve_sidecar_path(_resource_dir: &Path) -> (PathBuf, Option<Pat
     {
         if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
             let winget_path = PathBuf::from(local_app_data)
-                .join("Microsoft").join("WindowsApps").join("squigit-ocr.exe");
-            if winget_path.exists() { return (winget_path, None); }
+                .join("Microsoft")
+                .join("WindowsApps")
+                .join("squigit-ocr.exe");
+            if winget_path.exists() {
+                return (winget_path, None);
+            }
         }
     }
 
     // 4. Packaged runtime dir (legacy / transition case)
     let host_triple = get_ocr_target_triple();
-    let runtime = _resource_dir.join("binaries").join(format!("paddle-ocr-{}", host_triple));
+    let runtime = _resource_dir
+        .join("binaries")
+        .join(format!("paddle-ocr-{}", host_triple));
     let candidate = runtime.join(name);
     if candidate.exists() {
         return (candidate, Some(runtime.clone()));
@@ -565,7 +577,10 @@ pub(crate) fn resolve_sidecar_path(_resource_dir: &Path) -> (PathBuf, Option<Pat
     // 5. Dev mode fallback
     if let Ok(current_exe) = std::env::current_exe() {
         if let Some(target_dir) = current_exe.parent().and_then(|p| p.parent()) {
-            let debug_runtime = target_dir.join("debug").join("binaries").join(format!("paddle-ocr-{}", host_triple));
+            let debug_runtime = target_dir
+                .join("debug")
+                .join("binaries")
+                .join(format!("paddle-ocr-{}", host_triple));
             let debug_candidate = debug_runtime.join(name);
             if debug_candidate.exists() {
                 return (debug_candidate, Some(debug_runtime));
@@ -589,17 +604,24 @@ fn check_ocr_version(sidecar_path: &Path) -> Result<(), String> {
     }
 
     let version_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let parsed: Vec<u32> = version_str.split('.').filter_map(|s| s.parse().ok()).collect();
-    let req: Vec<u32> = REQUIRED_OCR_VERSION.split('.').filter_map(|s| s.parse().ok()).collect();
-    
+    let parsed: Vec<u32> = version_str
+        .split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    let req: Vec<u32> = REQUIRED_OCR_VERSION
+        .split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+
     if parsed.len() == 3 && req.len() == 3 {
         // Strict lock logic: Major must act as lock, minor/patch >=
-        if parsed[0] != req[0] || parsed[1] < req[1] || (parsed[1] == req[1] && parsed[2] < req[2]) {
+        if parsed[0] != req[0] || parsed[1] < req[1] || (parsed[1] == req[1] && parsed[2] < req[2])
+        {
             return Err("ERR_OUTDATED_OCR_PACKAGE".to_string());
         }
         return Ok(());
     }
-    
+
     if version_str != REQUIRED_OCR_VERSION {
         return Err("ERR_OUTDATED_OCR_PACKAGE".to_string());
     }

@@ -194,7 +194,11 @@ impl ChatStorage {
     }
 
     /// Store an image from a file path.
-    pub fn store_image_from_path(&self, path: &str, explicit_tone: Option<String>) -> Result<StoredImage> {
+    pub fn store_image_from_path(
+        &self,
+        path: &str,
+        explicit_tone: Option<String>,
+    ) -> Result<StoredImage> {
         let mut file = File::open(path)?;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)?;
@@ -205,7 +209,12 @@ impl ChatStorage {
     ///
     /// Returns the hash and path to the stored file.
     /// If the file already exists (same hash + extension), returns the existing path.
-    pub fn store_file(&self, bytes: &[u8], extension: &str, explicit_tone: Option<String>) -> Result<StoredImage> {
+    pub fn store_file(
+        &self,
+        bytes: &[u8],
+        extension: &str,
+        explicit_tone: Option<String>,
+    ) -> Result<StoredImage> {
         if bytes.is_empty() {
             return Err(StorageError::EmptyImage);
         }
@@ -236,7 +245,7 @@ impl ChatStorage {
             file.write_all(bytes)?;
 
             if is_image_ext {
-                 let _ = fs::write(&tone_path, &tone);
+                let _ = fs::write(&tone_path, &tone);
             }
         } else if is_image_ext {
             if let Some(explicit) = explicit_tone {
@@ -267,7 +276,11 @@ impl ChatStorage {
     }
 
     /// Store a file from a filesystem path, preserving the original extension.
-    pub fn store_file_from_path(&self, path: &str, explicit_tone: Option<String>) -> Result<StoredImage> {
+    pub fn store_file_from_path(
+        &self,
+        path: &str,
+        explicit_tone: Option<String>,
+    ) -> Result<StoredImage> {
         let source = std::path::Path::new(path);
         let extension = source
             .extension()

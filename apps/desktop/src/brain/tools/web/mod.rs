@@ -19,9 +19,9 @@ pub use fetch::{
 pub use html::build_query_result;
 pub use query::{search_query, search_query_with_progress};
 pub use safe_sources::{filter_suggested_urls_to_safe_sources, local_safe_source_candidates};
+pub(crate) use suggester::suggest_fallback_urls;
 pub use types::{CitationSource, WebSearchResult};
 pub use url_utils::domain_from_url;
-pub(crate) use suggester::suggest_fallback_urls;
 
 #[cfg(test)]
 mod tests {

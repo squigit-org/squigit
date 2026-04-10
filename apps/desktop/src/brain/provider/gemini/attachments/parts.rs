@@ -55,7 +55,11 @@ fn is_attachment_link_path(path: &str) -> bool {
 pub(crate) async fn build_interleaved_parts(
     text: &str,
     api_key: &str,
-    cache: &Arc<tokio::sync::Mutex<HashMap<String, crate::brain::provider::gemini::attachments::GeminiFileRef>>>,
+    cache: &Arc<
+        tokio::sync::Mutex<
+            HashMap<String, crate::brain::provider::gemini::attachments::GeminiFileRef>,
+        >,
+    >,
 ) -> Result<Vec<GeminiPart>, String> {
     enum PreparedAttachment {
         Uploaded(crate::brain::provider::gemini::attachments::GeminiFileRef),
@@ -126,11 +130,14 @@ pub(crate) async fn build_interleaved_parts(
     let prepare_futures = unique_paths.iter().map(|p| async {
         if crate::brain::provider::gemini::attachments::is_docx_path(p) {
             let extracted_text =
-                crate::brain::provider::gemini::attachments::extract_docx_text_for_prompt(p).await?;
+                crate::brain::provider::gemini::attachments::extract_docx_text_for_prompt(p)
+                    .await?;
             Ok::<PreparedAttachment, String>(PreparedAttachment::InlineText(extracted_text))
         } else {
-            let file_ref =
-                crate::brain::provider::gemini::attachments::ensure_file_uploaded(api_key, p, cache).await?;
+            let file_ref = crate::brain::provider::gemini::attachments::ensure_file_uploaded(
+                api_key, p, cache,
+            )
+            .await?;
             Ok::<PreparedAttachment, String>(PreparedAttachment::Uploaded(file_ref))
         }
     });

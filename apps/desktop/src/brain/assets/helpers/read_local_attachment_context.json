@@ -1,0 +1,22 @@
+{
+  "functionDeclarations": [
+    {
+      "name": "read_local_attachment_context",
+      "description": "Read local context from a CAS-backed attachment path available on this device.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Local attachment path exactly as referenced by the user."
+          },
+          "max_chars": {
+            "type": "integer",
+            "description": "Maximum characters of context to return. Defaults to 30000 and is capped at 30000."
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  ]
+}

@@ -130,16 +130,13 @@ pub async fn build_attachment_memory_context(
                 }
             };
 
-        let file_name = display_names
-            .get(&raw_path)
-            .cloned()
-            .unwrap_or_else(|| {
-                resolved
-                    .file_name()
-                    .and_then(|v| v.to_str())
-                    .unwrap_or(fallback_name.as_str())
-                    .to_string()
-            });
+        let file_name = display_names.get(&raw_path).cloned().unwrap_or_else(|| {
+            resolved
+                .file_name()
+                .and_then(|v| v.to_str())
+                .unwrap_or(fallback_name.as_str())
+                .to_string()
+        });
         let extension = resolved
             .extension()
             .and_then(|v| v.to_str())
@@ -149,7 +146,11 @@ pub async fn build_attachment_memory_context(
 
         let mut summary = if extension == "docx" {
             let resolved_path = resolved.to_string_lossy().to_string();
-            match crate::brain::provider::gemini::attachments::extract_docx_text_for_prompt(&resolved_path).await {
+            match crate::brain::provider::gemini::attachments::extract_docx_text_for_prompt(
+                &resolved_path,
+            )
+            .await
+            {
                 Ok(text) => normalize_for_memory(&text, MAX_ATTACHMENT_SNIPPET_CHARS),
                 Err(_) => String::new(),
             }

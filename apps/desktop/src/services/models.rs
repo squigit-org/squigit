@@ -624,15 +624,15 @@ impl ModelManager {
             let mut archive = Archive::new(tar);
             self.extract_archive(&mut archive, target_dir)?;
         } else if self.extract_archive(&mut archive, target_dir).is_err() {
-                if target_dir.exists() {
-                    fs::remove_dir_all(target_dir)?;
-                    fs::create_dir_all(target_dir)?;
-                }
-                let tar_file = fs::File::open(temp_file_path)?;
-                let tar_gz = GzDecoder::new(tar_file);
-                let mut archive_gz = Archive::new(tar_gz);
-                self.extract_archive(&mut archive_gz, target_dir)
-                    .map_err(|e| ModelError::Extraction(format!("Failed to extract: {:?}", e)))?;
+            if target_dir.exists() {
+                fs::remove_dir_all(target_dir)?;
+                fs::create_dir_all(target_dir)?;
+            }
+            let tar_file = fs::File::open(temp_file_path)?;
+            let tar_gz = GzDecoder::new(tar_file);
+            let mut archive_gz = Archive::new(tar_gz);
+            self.extract_archive(&mut archive_gz, target_dir)
+                .map_err(|e| ModelError::Extraction(format!("Failed to extract: {:?}", e)))?;
         }
 
         fs::remove_file(temp_file_path)?;

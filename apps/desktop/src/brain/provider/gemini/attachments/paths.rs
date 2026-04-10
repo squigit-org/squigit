@@ -15,6 +15,10 @@ fn get_active_storage() -> Result<ChatStorage, String> {
     ChatStorage::with_base_dir(chats_dir).map_err(|e| e.to_string())
 }
 
+fn is_path_within_base(path: &std::path::Path, base: &std::path::Path) -> bool {
+    path.starts_with(base)
+}
+
 pub(crate) fn resolve_attachment_path_internal(path: &str) -> Result<std::path::PathBuf, String> {
     use std::fs;
     use std::path::PathBuf;
@@ -55,4 +59,47 @@ pub(crate) fn resolve_attachment_path_internal(path: &str) -> Result<std::path::
     }
 
     Err(format!("Attachment not found: {}", path))
+}
+
+/// Resolve and enforce the attachment path to be inside the active profile chat storage scope.
+pub(crate) fn resolve_attachment_path_for_local_context(
+    path: &str,
+) -> Result<std::path::PathBuf, String> {
+    let resolved = resolve_attachment_path_internal(path)?;
+    let storage = get_active_storage()?;
+    let base_dir = std::fs::canonicalize(storage.base_dir()).map_err(|e| {
+        format!(
+            "Failed to canonicalize active chat storage directory: {}",
+            e
+        )
+    })?;
+
+    if is_path_within_base(&resolved, &base_dir) {
+        return Ok(resolved);
+    }
+
+    Err(format!(
+        "Attachment path is outside active chat storage scope: {}",
+        path
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_path_within_base;
+    use std::path::Path;
+
+    #[test]
+    fn scope_check_accepts_child_paths() {
+        let base = Path::new("/tmp/chats");
+        let child = Path::new("/tmp/chats/objects/ab/file.txt");
+        assert!(is_path_within_base(child, base));
+    }
+
+    #[test]
+    fn scope_check_rejects_siblings() {
+        let base = Path::new("/tmp/chats");
+        let other = Path::new("/tmp/other/file.txt");
+        assert!(!is_path_within_base(other, base));
+    }
 }

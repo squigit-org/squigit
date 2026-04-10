@@ -111,6 +111,14 @@ pub struct ImageBriefConfig {
     pub describe_image: String,
 }
 
+/// Attachment preview context template from attachment_preview_context.yml
+#[derive(Debug, Deserialize)]
+pub struct AttachmentPreviewContextConfig {
+    pub header: String,
+    pub success_item_template: String,
+    pub error_item_template: String,
+}
+
 /// Load the system runtime configuration from embedded YAML
 pub fn load_system() -> Result<SystemConfig, String> {
     let yaml_content = include_str!("../assets/core/system_prompt.yml");
@@ -126,11 +134,33 @@ pub fn load_image_brief_prompt() -> Result<String, String> {
     Ok(config.describe_image)
 }
 
+/// Load the attachment preview template from embedded YAML
+pub fn load_attachment_preview_context() -> Result<AttachmentPreviewContextConfig, String> {
+    let yaml_content = include_str!("../assets/helpers/attachment_preview_context.yml");
+    serde_yaml::from_str(yaml_content)
+        .map_err(|e| format!("Failed to parse attachment_preview_context.yml: {}", e))
+}
+
 /// Load the web search tool declaration from embedded JSON
 pub fn load_web_search_tool_declaration() -> Result<serde_json::Value, String> {
     let json_content = include_str!("../assets/helpers/web_search.json");
     serde_json::from_str(json_content)
         .map_err(|e| format!("Failed to parse web_search.json: {}", e))
+}
+
+/// Load the local attachment reader tool declaration from embedded JSON.
+pub fn load_read_local_attachment_context_tool_declaration() -> Result<serde_json::Value, String> {
+    let json_content = include_str!("../assets/helpers/read_local_attachment_context.json");
+    serde_json::from_str(json_content)
+        .map_err(|e| format!("Failed to parse read_local_attachment_context.json: {}", e))
+}
+
+/// Load all Gemini tool declarations enabled for chat turns with tools.
+pub fn load_gemini_tool_declarations() -> Result<Vec<serde_json::Value>, String> {
+    Ok(vec![
+        load_web_search_tool_declaration()?,
+        load_read_local_attachment_context_tool_declaration()?,
+    ])
 }
 
 #[cfg(test)]
@@ -174,5 +204,44 @@ mod tests {
             .and_then(|v| v.get("name"))
             .and_then(|v| v.as_str());
         assert_eq!(name, Some("web_search"));
+    }
+
+    #[test]
+    fn test_load_read_local_attachment_context_tool_declaration() {
+        let declaration = load_read_local_attachment_context_tool_declaration()
+            .expect("Failed to load local attachment tool declaration");
+        let name = declaration
+            .get("functionDeclarations")
+            .and_then(|v| v.as_array())
+            .and_then(|arr| arr.first())
+            .and_then(|v| v.get("name"))
+            .and_then(|v| v.as_str());
+        assert_eq!(name, Some("read_local_attachment_context"));
+    }
+
+    #[test]
+    fn test_load_gemini_tool_declarations() {
+        let declarations = load_gemini_tool_declarations().expect("Failed to load declarations");
+        assert_eq!(declarations.len(), 2);
+
+        let names = declarations
+            .iter()
+            .filter_map(|decl| {
+                decl.get("functionDeclarations")
+                    .and_then(|v| v.as_array())
+                    .and_then(|arr| arr.first())
+                    .and_then(|v| v.get("name"))
+                    .and_then(|v| v.as_str())
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(names, vec!["web_search", "read_local_attachment_context"]);
+    }
+
+    #[test]
+    fn test_load_attachment_preview_context() {
+        let cfg = load_attachment_preview_context().expect("Failed to load preview context");
+        assert!(cfg.header.contains("local files"));
+        assert!(cfg.success_item_template.contains("{{PATH}}"));
+        assert!(cfg.error_item_template.contains("{{ERROR_CODE}}"));
     }
 }

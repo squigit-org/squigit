@@ -6,11 +6,42 @@ use std::collections::{HashMap, HashSet};
 use super::request_control::GeminiRequestControl;
 use crate::brain::provider::gemini::transport::types::GeminiFunctionCall;
 
-pub(crate) fn tool_step_id(iter: usize) -> String {
-    format!("web-search-call-{}", iter + 1)
+pub(crate) fn tool_step_id(iter: usize, tool_name: &str) -> String {
+    let normalized_name = tool_name
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
+        .collect::<String>();
+    format!("{}-call-{}", normalized_name, iter + 1)
 }
 
-pub(crate) fn tool_status_text(function_call: &GeminiFunctionCall) -> Option<String> {
+pub(crate) fn tool_status_text(
+    function_call: &GeminiFunctionCall,
+    attachment_display_name: Option<&str>,
+) -> Option<String> {
+    if function_call.name == "read_local_attachment_context" {
+        if let Some(display_name) = attachment_display_name
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+        {
+            return Some(format!("Reading local context from {}", display_name));
+        }
+
+        let path = function_call
+            .args
+            .get("path")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|v| !v.is_empty());
+        if let Some(path_value) = path {
+            let file_name = std::path::Path::new(path_value)
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or(path_value);
+            return Some(format!("Reading local context from {}", file_name));
+        }
+        return Some("Reading local attachment context".to_string());
+    }
+
     let query = function_call
         .args
         .get("query")
@@ -33,23 +64,28 @@ pub(crate) fn tool_status_text(function_call: &GeminiFunctionCall) -> Option<Str
     None
 }
 
-pub(crate) fn build_system_instruction_with_search_policy(
+pub(crate) fn build_system_instruction_with_tool_policy(
     user_name: &str,
     user_email: &str,
     image_brief: &str,
     tools_enabled: bool,
 ) -> Result<String, String> {
-    let mut instruction =
-        crate::brain::context::builder::build_system_instruction(user_name, user_email, image_brief)?;
+    let mut instruction = crate::brain::context::builder::build_system_instruction(
+        user_name,
+        user_email,
+        image_brief,
+    )?;
 
     if tools_enabled {
         instruction.push_str(
-            "\n\n## Web Search Policy\n\
+            "\n\n## Tool Usage Policy\n\
              - If the user asks for current, time-sensitive, or uncertain facts, call `web_search`.\n\
+             - If the user asks about the content of local files they attached, call `read_local_attachment_context`.\n\
              - If greeting/chit-chat, do not call tools.\n\
              - Never invent URLs or sources.\n\
              - When using `url`, only fetch URLs from prior search results in this turn.\n\
              - If one search pass is too shallow, call `web_search` again with a refined query.\n\
+             - For local attachments, use paths exactly as provided by the user/tool context.\n\
              - If web search fails repeatedly, answer from model knowledge and clearly state web search was unavailable.",
         );
     }
@@ -186,5 +222,56 @@ pub(crate) fn build_answer_now_partial_result(
             "Answer requested before search completed; returning collected sources so far."
                 .to_string(),
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn tool_step_id_uses_tool_name() {
+        assert_eq!(tool_step_id(0, "web_search"), "web-search-call-1");
+        assert_eq!(
+            tool_step_id(1, "read_local_attachment_context"),
+            "read-local-attachment-context-call-2"
+        );
+    }
+
+    #[test]
+    fn tool_status_text_for_web_search_query() {
+        let call = GeminiFunctionCall {
+            name: "web_search".to_string(),
+            args: json!({ "query": "rust async" }),
+        };
+        assert_eq!(
+            tool_status_text(&call, None),
+            Some("Searching for relevant sources".to_string())
+        );
+    }
+
+    #[test]
+    fn tool_status_text_for_local_attachment() {
+        let call = GeminiFunctionCall {
+            name: "read_local_attachment_context".to_string(),
+            args: json!({ "path": "/tmp/report.pdf" }),
+        };
+        assert_eq!(
+            tool_status_text(&call, None),
+            Some("Reading local context from report.pdf".to_string())
+        );
+    }
+
+    #[test]
+    fn tool_status_text_prefers_display_name_when_available() {
+        let call = GeminiFunctionCall {
+            name: "read_local_attachment_context".to_string(),
+            args: json!({ "path": "objects/ab/abcdef123.pdf" }),
+        };
+        assert_eq!(
+            tool_status_text(&call, Some("Quarterly Report.pdf")),
+            Some("Reading local context from Quarterly Report.pdf".to_string())
+        );
     }
 }
