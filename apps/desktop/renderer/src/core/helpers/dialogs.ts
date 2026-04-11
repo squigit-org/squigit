@@ -25,9 +25,10 @@ export const getDialogs = (appName: string): Record<string, DialogContent> => ({
     variant: "warning",
     actions: [{ label: "Understood", variant: "primary", actionKey: "close" }],
   },
-  GEMINI_AUTH: {
-    title: "Gemini API Key Required",
-    message: "To begin using Squigit, please configure your Gemini API key.",
+  PROVIDER_AUTH: {
+    title: "AI API Key Required",
+    message:
+      "To begin using Squigit, please configure your AI provider API key.",
     variant: "info",
     actions: [
       { label: "Cancel", variant: "secondary", actionKey: "cancel" },

@@ -25,7 +25,7 @@ export interface StreamGeminiChatInput extends Record<string, unknown> {
 }
 
 export function streamGeminiChat(input: StreamGeminiChatInput): Promise<void> {
-  return invoke("stream_gemini_chat_v2", input);
+  return invoke("stream_chat", input);
 }
 
 export function generateGeminiImageBrief(
@@ -63,9 +63,9 @@ export function persistRollingSummary(
 }
 
 export function cancelGeminiRequest(channelId: string | null): Promise<void> {
-  return invoke("cancel_gemini_request", { channelId });
+  return invoke("cancel_request", { channelId });
 }
 
 export function requestGeminiQuickAnswer(channelId: string): Promise<void> {
-  return invoke("quick_answer_gemini_request", { channelId });
+  return invoke("quick_answer_request", { channelId });
 }

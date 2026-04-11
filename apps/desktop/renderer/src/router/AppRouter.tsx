@@ -113,13 +113,13 @@ const AppRouterContent: React.FC = () => {
 
       <Dialog
         isOpen={app.showProviderAuthDialog}
-        type="GEMINI_AUTH"
+        type="PROVIDER_AUTH"
         onAction={(key) => {
           let msg = "";
           if (key === "confirm") {
             app.system.openSettings("apikeys");
           } else {
-            msg = "Please configure your Gemini API key to continue.";
+            msg = "Please configure your AI provider API key to continue.";
           }
           app.chat.appendErrorMessage(msg, app.chatHistory.activeSessionId);
           app.setShowProviderAuthDialog(false);

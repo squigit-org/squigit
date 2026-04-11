@@ -153,7 +153,6 @@ fn tool_attachment_lookup_value(
         .filter(|value| !value.is_empty())
 }
 
-#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn stream_gemini_chat_v2(
     app: AppHandle,
@@ -211,7 +210,7 @@ pub async fn stream_gemini_chat_v2(
 
             if let Some(path) = image_path.clone() {
                 let file_ref =
-                    crate::brain::provider::gemini::attachments::ensure_file_uploaded(&api_key, &path, &state.gemini_file_cache)
+                    crate::brain::provider::gemini::attachments::ensure_file_uploaded(&api_key, &path, &state.provider_file_cache)
                         .await?;
                 parts.push(GeminiPart {
                     file_data: Some(GeminiFileData {
@@ -240,7 +239,7 @@ pub async fn stream_gemini_chat_v2(
 
             if !user_message.is_empty() {
                 let interleaved_parts =
-                    build_interleaved_parts(&user_message, &api_key, &state.gemini_file_cache)
+                    build_interleaved_parts(&user_message, &api_key, &state.provider_file_cache)
                         .await?;
                 parts.extend(interleaved_parts);
             }
@@ -286,7 +285,7 @@ pub async fn stream_gemini_chat_v2(
                 chat_id.as_deref(),
                 &attachment_mentions,
                 &api_key,
-                &state.gemini_file_cache,
+                &state.provider_file_cache,
             )
             .await?;
 
@@ -427,7 +426,7 @@ pub async fn stream_gemini_chat_v2(
                 api_key: &api_key,
                 model: &model,
                 chat_id: chat_id.as_deref(),
-                gemini_file_cache: &state.gemini_file_cache,
+                gemini_file_cache: &state.provider_file_cache,
                 request_control: &request_control,
                 web_state: &mut web_tool_state,
             };

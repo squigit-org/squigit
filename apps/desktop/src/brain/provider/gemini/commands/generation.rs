@@ -7,7 +7,6 @@ use crate::brain::provider::gemini::transport::types::{
 
 /// Generate a chat title for the chat using the brain's title prompt and the text context.
 /// Returns the generated title text directly.
-#[tauri::command]
 pub async fn generate_chat_title(
     api_key: String,
     model: String,
@@ -100,7 +99,6 @@ pub async fn generate_chat_title(
 /// Returns a 2-3 sentence plain-text description of what the image shows.
 /// This runs in parallel with the main analysis and the result is stored
 /// as `image_brief` in system_instruction for all subsequent turns.
-#[tauri::command]
 pub async fn generate_image_brief(
     state: tauri::State<'_, crate::state::AppState>,
     api_key: String,
@@ -123,7 +121,7 @@ pub async fn generate_image_brief(
     let file_ref = crate::brain::provider::gemini::attachments::ensure_file_uploaded(
         &api_key,
         &image_path,
-        &state.gemini_file_cache,
+        &state.provider_file_cache,
     )
     .await?;
 
@@ -202,7 +200,6 @@ pub async fn generate_image_brief(
 /// Compress older conversation turns into a rolling summary.
 /// Uses the cheapest/fastest model (same as image_brief and title gen).
 /// Non-streaming, returns the compressed summary text.
-#[tauri::command]
 pub async fn compress_conversation(
     api_key: String,
     image_brief: String,

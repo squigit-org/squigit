@@ -98,13 +98,13 @@ pub fn run() {
             logout,
             get_user_data,
             cache_avatar,
-            // Gemini
-            brain::provider::gemini::commands::chat::stream_gemini_chat_v2,
-            brain::provider::gemini::commands::generation::generate_chat_title,
-            brain::provider::gemini::commands::generation::generate_image_brief,
-            brain::provider::gemini::commands::generation::compress_conversation,
-            brain::provider::gemini::agent::request_control::cancel_gemini_request,
-            brain::provider::gemini::agent::request_control::answer_now_gemini_request,
+            // Brain
+            brain::provider::commands::chat::stream_chat,
+            brain::provider::commands::generation::generate_chat_title,
+            brain::provider::commands::generation::generate_image_brief,
+            brain::provider::commands::generation::compress_conversation,
+            brain::provider::agent::request_control::cancel_request,
+            brain::provider::agent::request_control::quick_answer_request,
             // Window
             open_external_url,
             set_background_color,

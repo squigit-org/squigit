@@ -17,10 +17,15 @@ import {
 import { VoiceButton } from "./VoiceButton";
 import styles from "./ChatInput.module.css";
 
-const GEMINI_MODELS = MODELS.map((m) => ({
+const getModelTriggerLabel = (name: string) => {
+  const tokens = name.trim().split(/\s+/);
+  return tokens.length > 1 ? tokens.slice(1).join(" ") : name;
+};
+
+const AI_MODELS = MODELS.map((m) => ({
   id: m.id,
   label: m.name,
-  triggerLabel: m.name.replace("Gemini ", ""),
+  triggerLabel: getModelTriggerLabel(m.name),
 }));
 
 interface InputActionsProps {
@@ -94,7 +99,7 @@ export const InputActions: React.FC<InputActionsProps> = ({
   );
 
   const selectedModelLabel =
-    GEMINI_MODELS.find((m) => m.id === selectedModel)?.triggerLabel || "Auto";
+    AI_MODELS.find((m) => m.id === selectedModel)?.triggerLabel || "Auto";
 
   return (
     <div className={styles.actions}>
@@ -167,7 +172,7 @@ export const InputActions: React.FC<InputActionsProps> = ({
           align="left"
         >
           <DropdownSectionTitle>Model</DropdownSectionTitle>
-          {GEMINI_MODELS.map((model) => (
+          {AI_MODELS.map((model) => (
             <div
               key={model.id}
               style={{

@@ -45,7 +45,6 @@ pub(crate) async fn remove_request(channel_id: &str) {
     map.remove(channel_id);
 }
 
-#[tauri::command]
 pub async fn cancel_gemini_request(channel_id: Option<String>) -> Result<(), String> {
     let mut map = ACTIVE_REQUESTS.lock().await;
     if let Some(id) = channel_id {
@@ -62,7 +61,6 @@ pub async fn cancel_gemini_request(channel_id: Option<String>) -> Result<(), Str
     Ok(())
 }
 
-#[tauri::command]
 pub async fn answer_now_gemini_request(channel_id: String) -> Result<(), String> {
     let map = ACTIVE_REQUESTS.lock().await;
     if let Some(control) = map.get(&channel_id) {

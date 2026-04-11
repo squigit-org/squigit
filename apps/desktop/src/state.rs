@@ -14,12 +14,9 @@ pub struct AppState {
     pub auth_running: Arc<AtomicBool>,
     pub auth_cancelled: Arc<AtomicBool>,
     pub ocr_job: Arc<tokio::sync::Mutex<Option<OcrJobHandle>>>,
-    pub gemini_file_cache: Arc<
+    pub provider_file_cache: Arc<
         tokio::sync::Mutex<
-            std::collections::HashMap<
-                String,
-                crate::brain::provider::gemini::attachments::GeminiFileRef,
-            >,
+            std::collections::HashMap<String, crate::brain::provider::attachments::ProviderFileRef>,
         >,
     >,
 }
@@ -31,7 +28,9 @@ impl AppState {
             auth_running: Arc::new(AtomicBool::new(false)),
             auth_cancelled: Arc::new(AtomicBool::new(false)),
             ocr_job: Arc::new(tokio::sync::Mutex::new(None)),
-            gemini_file_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+            provider_file_cache: Arc::new(
+                tokio::sync::Mutex::new(std::collections::HashMap::new()),
+            ),
         }
     }
 }

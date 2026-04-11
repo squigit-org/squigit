@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, Utc};
 use ops_chat_storage::{
-    ChatAttachmentGeminiFile, ChatAttachmentKind, ChatAttachmentRecord, ChatData, ChatStorage,
+    ChatAttachmentKind, ChatAttachmentProviderFile, ChatAttachmentRecord, ChatData, ChatStorage,
     StorageError,
 };
 use std::collections::HashMap;
@@ -94,13 +94,13 @@ fn catalog_access_label(record: &ChatAttachmentRecord) -> &'static str {
         ChatAttachmentKind::TextLocal => "local",
         ChatAttachmentKind::ImageUpload | ChatAttachmentKind::DocumentUpload => {
             if record
-                .gemini_file
+                .provider_file
                 .as_ref()
                 .map(|handle| !is_handle_expired(handle))
                 .unwrap_or(false)
             {
                 "live"
-            } else if record.gemini_file.is_some() {
+            } else if record.provider_file.is_some() {
                 "stale"
             } else {
                 "needs_upload"
@@ -156,8 +156,8 @@ fn save_chat_if_needed(
     Ok(())
 }
 
-fn file_ref_to_handle(file_ref: &GeminiFileRef) -> ChatAttachmentGeminiFile {
-    ChatAttachmentGeminiFile {
+fn file_ref_to_handle(file_ref: &GeminiFileRef) -> ChatAttachmentProviderFile {
+    ChatAttachmentProviderFile {
         file_uri: file_ref.file_uri.clone(),
         file_name: file_ref.file_name.clone(),
         mime_type: file_ref.mime_type.clone(),
@@ -167,7 +167,7 @@ fn file_ref_to_handle(file_ref: &GeminiFileRef) -> ChatAttachmentGeminiFile {
     }
 }
 
-fn handle_to_file_ref(handle: &ChatAttachmentGeminiFile, display_name: &str) -> GeminiFileRef {
+fn handle_to_file_ref(handle: &ChatAttachmentProviderFile, display_name: &str) -> GeminiFileRef {
     GeminiFileRef {
         file_uri: handle.file_uri.clone(),
         file_name: handle.file_name.clone(),
@@ -226,7 +226,7 @@ fn upsert_record(
                     kind,
                     mime_type,
                     source_path: None,
-                    gemini_file: None,
+                    provider_file: None,
                     last_seen_at: seen_at,
                     last_recalled_at: None,
                 },
@@ -295,7 +295,7 @@ async fn remove_cached_file_ref(path: &str, cache: &GeminiFileCache) -> Result<(
     Ok(())
 }
 
-fn is_handle_expired(handle: &ChatAttachmentGeminiFile) -> bool {
+fn is_handle_expired(handle: &ChatAttachmentProviderFile) -> bool {
     Utc::now() >= handle.expires_at
 }
 
@@ -352,7 +352,7 @@ async fn ensure_live_file_ref(
         ));
     }
 
-    if let Some(existing) = record.gemini_file.as_mut() {
+    if let Some(existing) = record.provider_file.as_mut() {
         if !is_handle_expired(existing)
             && validate_uploaded_file_handle(api_key, &existing.file_name).await
         {
@@ -369,7 +369,7 @@ async fn ensure_live_file_ref(
         if !is_file_ref_expired(&cached)
             && validate_uploaded_file_handle(api_key, &cached.file_name).await
         {
-            record.gemini_file = Some(file_ref_to_handle(&cached));
+            record.provider_file = Some(file_ref_to_handle(&cached));
             return Ok((cached, true, "cached_uri"));
         }
 
@@ -377,7 +377,7 @@ async fn ensure_live_file_ref(
     }
 
     let uploaded = ensure_file_uploaded(api_key, path, cache).await?;
-    record.gemini_file = Some(file_ref_to_handle(&uploaded));
+    record.provider_file = Some(file_ref_to_handle(&uploaded));
     Ok((uploaded, true, "silent_reupload"))
 }
 

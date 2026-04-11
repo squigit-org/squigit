@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "$schema": "https://json.schemastore.org/package.json",
   "homepage": "https://github.com/squigit-org/squigit#readme",
-  "description": "An open-source `Circle to search` that brings the power of Gemini directly into your screen.",
+  "description": "An open-source `Circle to search` that brings AI directly into your screen.",
   "author": "a7mddra <a7mddra@gmail.com>",
   "license": "Apache-2.0",
   "exports": {

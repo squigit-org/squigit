@@ -33,6 +33,6 @@ pub mod types;
 pub use error::{Result, StorageError};
 pub use storage::ChatStorage;
 pub use types::{
-    AttachmentRegistry, ChatAttachmentGeminiFile, ChatAttachmentKind, ChatAttachmentRecord,
+    AttachmentRegistry, ChatAttachmentKind, ChatAttachmentProviderFile, ChatAttachmentRecord,
     ChatData, ChatMessage, ChatMetadata, OcrFrame, OcrRegion, StoredImage,
 };

@@ -960,7 +960,7 @@ mod tests {
                 kind: ChatAttachmentKind::DocumentUpload,
                 mime_type: "application/pdf".to_string(),
                 source_path: None,
-                gemini_file: None,
+                provider_file: None,
                 last_seen_at: chrono::Utc::now(),
                 last_recalled_at: None,
             },

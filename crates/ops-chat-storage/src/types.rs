@@ -151,9 +151,9 @@ pub enum ChatAttachmentKind {
     DocumentUpload,
 }
 
-/// Persisted Gemini Files handle for a tracked attachment.
+/// Persisted provider-hosted file handle for a tracked attachment.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ChatAttachmentGeminiFile {
+pub struct ChatAttachmentProviderFile {
     pub file_uri: String,
     pub file_name: String,
     pub mime_type: String,
@@ -173,7 +173,7 @@ pub struct ChatAttachmentRecord {
     #[serde(default)]
     pub source_path: Option<String>,
     #[serde(default)]
-    pub gemini_file: Option<ChatAttachmentGeminiFile>,
+    pub provider_file: Option<ChatAttachmentProviderFile>,
     #[serde(default = "now_utc")]
     pub last_seen_at: DateTime<Utc>,
     #[serde(default)]

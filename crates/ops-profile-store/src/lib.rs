@@ -16,7 +16,7 @@
 //!     ├── index.json                # Profile index + active profile
 //!     └── {profile_id}/
 //!         ├── profile.json          # Google profile data
-//!         ├── gemini_key.json       # Per-profile BYOK
+//!         ├── {provider}_key.json   # Per-profile BYOK
 //!         ├── imgbb_key.json        # Per-profile BYOK
 //!         └── chats/                # Per-profile chat storage
 //! ```

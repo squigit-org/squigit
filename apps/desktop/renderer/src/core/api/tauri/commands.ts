@@ -55,7 +55,7 @@ export const commands = {
 
   // AI Runtime Control
   quickAnswerProviderRequest: (channelId: string) =>
-    invoke("quick_answer_gemini_request", { channelId }),
+    invoke("quick_answer_request", { channelId }),
 
   // UI audio
   playUiSound: (effect: "dialog-warning" = "dialog-warning") =>
