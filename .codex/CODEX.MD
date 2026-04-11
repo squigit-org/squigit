@@ -14,7 +14,7 @@ This repository keeps Codex automation assets under `.codex/` (not under `ui/`).
 - Source scan scope: `ui/src/**/*.module.css` and `ui/src/**/*.tsx`
 - Existing token reuse source: `ui/src/styles/variables.css`
 
-### Commands
+Commands
 
 ```bash
 python3 .codex/tools/color_tokenizer.py --report
@@ -23,7 +23,7 @@ python3 .codex/tools/color_tokenizer.py --apply
 python3 .codex/tools/color_tokenizer.py --write
 ```
 
-### Outputs
+Outputs
 
 - `.codex/reports/color-map.json`
 - `.codex/reports/color-report.md`
@@ -38,7 +38,7 @@ python3 .codex/tools/color_tokenizer.py --write
 - Script: `.codex/tools/replacing.py`
 - Purpose: fast multi-file replacement with looped rules (VS Code replace style in CLI)
 
-### Commands
+Commands
 
 ```bash
 # Dry-run with a replacement map
@@ -66,7 +66,7 @@ python3 .codex/tools/replacing.py \
 - Script: `.codex/tools/clean_unused_css_modules.py`
 - Purpose: remove unused simple top-level CSS module class blocks based on TSX `styles.*` usage
 
-### Commands
+Commands
 
 ```bash
 # Dry-run (default)
@@ -76,7 +76,7 @@ python3 .codex/tools/clean_unused_css_modules.py apps/desktop/renderer
 python3 .codex/tools/clean_unused_css_modules.py apps/desktop/renderer --write
 ```
 
-### Scope and Safety
+Scope and Safety
 
 - Scans usage only from `*.tsx`:
   - `styles.foo`
