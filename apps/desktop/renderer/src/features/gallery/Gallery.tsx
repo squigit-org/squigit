@@ -53,7 +53,7 @@ const selectLatestByHash = (chats: ChatMetadata[]): GalleryCandidate[] => {
   );
 };
 
-export const GalleryScreen: React.FC = () => {
+export const Gallery: React.FC = () => {
   const app = useAppContext();
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<GalleryImage[]>([]);

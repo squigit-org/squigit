@@ -13,7 +13,7 @@ import {
   Agreement,
   UpdateNotes,
   Chat,
-  GalleryScreen,
+  Gallery,
   MediaOverlay,
   SearchOverlay,
 } from "@/features";
@@ -81,7 +81,7 @@ const AppRouterContent: React.FC = () => {
         return <UpdateNotes />;
       }
       if (activeId === "__system_gallery") {
-        return <GalleryScreen />;
+        return <Gallery />;
       }
     }
 
