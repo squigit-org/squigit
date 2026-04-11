@@ -28,7 +28,7 @@ import {
   SidePanelSquigitsIcon,
 } from "@/components/icons";
 import { ChatMetadata, getDeleteMultipleChatsDialog } from "@/core";
-import { useAppContext } from "@/app/providers";
+import { useAppContext } from "@/app/providers/AppProvider";
 import { Dialog, LoadingSpinner } from "@/components/ui";
 import { PanelContextMenu } from "@/layout";
 import { useKeyDown, usePlatform } from "@/hooks";

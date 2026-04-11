@@ -21,13 +21,12 @@ import {
 import {
   getPendingUpdate,
   useAuth,
+  useAttachments,
   useBrainTitle,
   useSystemSync,
   useUpdateCheck,
 } from "@/hooks";
 import { useChat, useChatHistory } from "@/features";
-
-import { useAttachments } from "./useAttachments";
 import { useAppBusyGuard } from "./useAppBusyGuard";
 import { useAppCapture } from "./useAppCapture";
 import { useAppContextMenu } from "./useAppContextMenu";

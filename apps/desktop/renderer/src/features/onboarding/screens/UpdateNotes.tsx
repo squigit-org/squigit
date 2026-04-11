@@ -8,7 +8,6 @@ import React, { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { updateIcon } from "@/assets";
 import { OnboardingLayout } from "../OnboardingLayout";
-import { useAppContext } from "@/app/providers";
 import { getPendingUpdate, markUpdateDone, usePlatform } from "@/hooks";
 import { ChevronRight, DownloadCloud } from "lucide-react";
 import { CodeBlock } from "@/components/ui";
@@ -59,8 +58,15 @@ const UpdateSection: React.FC<UpdateSectionProps> = ({
   );
 };
 
-export const UpdateNotes: React.FC = () => {
-  const app = useAppContext();
+interface UpdateNotesProps {
+  appName: string;
+  onSystemAction: (actionId: string, value?: string) => void | Promise<void>;
+}
+
+export const UpdateNotes: React.FC<UpdateNotesProps> = ({
+  appName,
+  onSystemAction,
+}) => {
   const update = useMemo(() => getPendingUpdate(), []);
   const platform = usePlatform();
 
@@ -76,9 +82,7 @@ export const UpdateNotes: React.FC = () => {
   const isTauri = update.component === "tauri";
   const isOcr = update.component === "ocr";
 
-  const titleText = isTauri
-    ? `${app.system.appName}`
-    : `Squigit ${update.component.toUpperCase()}`;
+  const titleText = isTauri ? appName : `Squigit ${update.component.toUpperCase()}`;
 
   const getUpgradeCommand = () => {
     const pkg = isOcr ? "squigit-ocr" : "squigit-stt";
@@ -87,10 +91,10 @@ export const UpdateNotes: React.FC = () => {
 
   const handleUpdate = () => {
     if (isTauri) {
-      app.handleSystemAction("update_now");
+      void onSystemAction("update_now");
     } else {
       markUpdateDone(update.component);
-      app.handleSystemAction("dismiss_overlay");
+      void onSystemAction("dismiss_overlay");
     }
   };
 

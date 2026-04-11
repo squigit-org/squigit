@@ -48,7 +48,7 @@ import {
   isAttachmentPath,
   unwrapMarkdownLinkDestination,
 } from "@/core";
-import { useAppContext } from "@/app/providers";
+import { useMediaContext } from "@/app/context/AppMedia";
 import styles from "./ChatInput.module.css";
 
 const ATTACHMENT_LINK_RE = /\[([^\]\n]+)\]\((<[^>\n]+>|[^)\n]+)\)/g;
@@ -420,20 +420,20 @@ const Placeholder = Extension.create<{
 });
 
 const AttachmentMentionChip: React.FC<NodeViewProps> = ({ node }) => {
-  const app = useAppContext();
+  const { getAttachmentSourcePath, openMediaViewer } = useMediaContext();
   const path = String(node.attrs.path || "");
   const label = String(node.attrs.label || "").trim();
-  const sourcePath = app.getAttachmentSourcePath(path) || undefined;
+  const sourcePath = getAttachmentSourcePath(path) || undefined;
   const attachment = attachmentFromPath(path, undefined, undefined, sourcePath);
   const fileName = sourcePath ? getBaseName(sourcePath) : attachment.name;
   const chipLabel = label || fileName;
 
   const openAttachment = useCallback(() => {
-    void app.openMediaViewer({
+    void openMediaViewer({
       ...attachment,
       name: chipLabel,
     });
-  }, [app, attachment, chipLabel]);
+  }, [attachment, chipLabel, openMediaViewer]);
 
   return (
     <NodeViewWrapper

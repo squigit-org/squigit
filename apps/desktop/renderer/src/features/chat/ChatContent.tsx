@@ -16,6 +16,7 @@ import type {
 import styles from "./Chat.module.css";
 
 interface ChatContentProps {
+  activeChatId?: string | null;
   parsedError: { title: string; message: string } | null;
   isErrorOpen: boolean;
   errorActions: any[];
@@ -39,6 +40,7 @@ interface ChatContentProps {
 }
 
 const ChatContentComponent: React.FC<ChatContentProps> = ({
+  activeChatId,
   parsedError,
   isErrorOpen,
   errorActions,
@@ -115,6 +117,7 @@ const ChatContentComponent: React.FC<ChatContentProps> = ({
       )}
 
       <MessageList
+        activeChatId={activeChatId}
         messages={messages}
         onPendingTurnLayoutChange={onPendingTurnLayoutChange}
         pendingAssistantTurn={pendingAssistantTurn}
@@ -141,6 +144,7 @@ export const ChatContent = React.memo(
         : prevProps.errorActions === nextProps.errorActions;
 
     return (
+      prevProps.activeChatId === nextProps.activeChatId &&
       prevProps.parsedError === nextProps.parsedError &&
       prevProps.isErrorOpen === nextProps.isErrorOpen &&
       areErrorActionsStable &&

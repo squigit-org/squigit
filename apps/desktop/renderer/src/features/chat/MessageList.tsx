@@ -24,6 +24,7 @@ import styles from "./MessageList.module.css";
 const THINKING_LABEL = "Thinking";
 
 interface MessageListProps {
+  activeChatId?: string | null;
   messages: Message[];
   onPendingTurnLayoutChange?: () => void;
   pendingAssistantTurn?: PendingAssistantTurn | null;
@@ -60,6 +61,7 @@ function getVisibleProgressText(text: string | undefined): string | null {
 }
 
 const MessageListComponent: React.FC<MessageListProps> = ({
+  activeChatId,
   messages,
   onPendingTurnLayoutChange,
   pendingAssistantTurn,
@@ -251,6 +253,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
         return (
           <div key={msg.id} className={styles.item}>
             <ChatBubble
+              chatId={activeChatId}
               message={msg}
               collapseMode={getMessageCollapseMode?.(msg.id) ?? "none"}
               onToggleCollapse={onToggleMessageCollapse}
@@ -304,6 +307,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
 
             {pendingAssistantTurn.phase !== "thinking" && (
               <ChatBubble
+                chatId={activeChatId}
                 message={{
                   id: pendingAssistantTurn.id,
                   role: "model",
@@ -334,6 +338,7 @@ export const MessageList = React.memo(
   MessageListComponent,
   (prevProps, nextProps) => {
     return (
+      prevProps.activeChatId === nextProps.activeChatId &&
       prevProps.messages === nextProps.messages &&
       prevProps.onPendingTurnLayoutChange ===
         nextProps.onPendingTurnLayoutChange &&

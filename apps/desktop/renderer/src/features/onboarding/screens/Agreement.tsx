@@ -7,7 +7,6 @@
 import React, { useMemo } from "react";
 import { usePlatform } from "@/hooks";
 import { ChatBubble, Message, SettingsSection } from "@/features";
-import { useAppContext } from "@/app/providers";
 import { OnboardingLayout } from "../OnboardingLayout";
 
 import styles from "./Agreement.module.css";
@@ -42,9 +41,16 @@ const linkifySettingsMentions = (raw: string): string => {
   return next;
 };
 
-export const Agreement: React.FC = () => {
+interface AgreementProps {
+  onSystemAction: (actionId: string, value?: string) => void | Promise<void>;
+  onOpenSettings: (section: SettingsSection) => void;
+}
+
+export const Agreement: React.FC<AgreementProps> = ({
+  onSystemAction,
+  onOpenSettings,
+}) => {
   const { isMac, isWin } = usePlatform();
-  const app = useAppContext();
   const [selected, setSelected] = React.useState("disagree");
 
   const content = useMemo(() => {
@@ -66,15 +72,15 @@ export const Agreement: React.FC = () => {
 
   const handleSelection = (value: string) => {
     setSelected(value);
-    app.handleSystemAction(value, value);
+    void onSystemAction(value, value);
   };
 
   const handleAgreementAction = (actionId: string, value?: string) => {
     if (actionId === "open_settings" && value) {
-      app.system.openSettings(value as SettingsSection);
+      onOpenSettings(value as SettingsSection);
       return;
     }
-    app.handleSystemAction(actionId, value);
+    void onSystemAction(actionId, value);
   };
 
   return (

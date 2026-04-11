@@ -14,7 +14,7 @@ import React, {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useAppContext } from "@/app/providers";
+import { useAppContext } from "@/app/providers/AppProvider";
 import { useInlineMenu } from "@/hooks";
 import {
   API_STATUS_TEXT,
@@ -1176,6 +1176,7 @@ export const Chat: React.FC = () => {
       onInlineMenuSwitchPage={switchPage}
     >
       <ChatContent
+        activeChatId={app.chatHistory.activeSessionId}
         parsedError={parsedError}
         isErrorOpen={isErrorOpen}
         errorActions={errorActions}

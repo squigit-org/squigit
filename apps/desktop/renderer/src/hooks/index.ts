@@ -21,6 +21,7 @@ export * from "./editor/useTextSelection";
 
 export * from "./core/useTheme";
 export * from "./core/usePlatform";
+export * from "./core/useAttachments";
 
 export * from "./brain/useBrainEngine";
 export * from "./brain/useBrainLifecycle";

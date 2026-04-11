@@ -19,7 +19,7 @@ import {
   CodeBlock,
   TextShimmer,
 } from "@/components/ui";
-import { useAppContext } from "@/app/providers";
+import { useMediaContext } from "@/app/context/AppMedia";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -49,6 +49,7 @@ import mdStyles from "./BubbleMD.module.css";
 import { ImageCollage } from "./ImageCollage";
 
 interface ChatBubbleProps {
+  chatId?: string | null;
   message: Message;
   pendingTurn?: PendingAssistantTurn | null;
   onRetry?: () => void;
@@ -361,6 +362,7 @@ const WebsiteCitationChip: React.FC<{
 };
 
 const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
+  chatId = null,
   message,
   pendingTurn = null,
   onRetry,
@@ -374,9 +376,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   hideCodeBlocksByDefault = false,
   roleCodeVisibilityKey = null,
 }) => {
-  const app = useAppContext();
-  const getAttachmentSourcePath = app.getAttachmentSourcePath;
-  const openMediaViewer = app.openMediaViewer;
+  const { getAttachmentSourcePath, openMediaViewer } = useMediaContext();
   const isUser = message.role === "user";
   const isPendingAssistant = !!pendingTurn && message.role === "model";
   const [isCopied, setIsCopied] = useState(false);
@@ -604,13 +604,13 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     (attachment: (typeof imageAttachments)[number], index: number) => {
       void openMediaViewer(attachment, {
         isGallery: true,
-        chatId: app.chatHistory.activeSessionId || undefined,
+        chatId: chatId || undefined,
         galleryAttachments: imageAttachments,
         initialIndex: index,
         openedFromChat: true,
       });
     },
-    [app.chatHistory.activeSessionId, imageAttachments, openMediaViewer],
+    [chatId, imageAttachments, openMediaViewer],
   );
 
   const handleLocalAttachmentLink = useCallback(

@@ -9,7 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Box, Pin } from "lucide-react";
 import { SidePanelToggleIcon } from "@/components/icons";
-import { useAppContext } from "@/app/providers";
+import { useAppContext } from "@/app/providers/AppProvider";
 import { usePlatform } from "@/hooks";
 import { SettingsPanel, SettingsOverlay } from "@/features";
 import { TrafficLights } from "./TrafficLights";

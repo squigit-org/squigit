@@ -9,7 +9,7 @@ import { getDialogs, getUpdateAvailableDialog } from "@/core";
 import { Dialog } from "@/components/ui";
 import { MediaOverlay, SearchOverlay } from "@/features";
 import { AppContextMenu } from "@/layout";
-import { useAppContext } from "../providers";
+import { useAppContext } from "../providers/AppProvider";
 
 export const AppDialogs: React.FC = () => {
   const app = useAppContext();
@@ -115,6 +115,8 @@ export const AppDialogs: React.FC = () => {
       <SearchOverlay
         isOpen={app.searchOverlay.isOpen}
         onClose={app.closeSearchOverlay}
+        chats={app.chatHistory.chats}
+        searchChats={app.chatHistory.searchChats}
       />
     </>
   );

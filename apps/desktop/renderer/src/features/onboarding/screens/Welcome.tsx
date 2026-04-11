@@ -10,7 +10,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import styles from "./Welcome.module.css";
 import { ImageResult, storeImageFromPath } from "@/core";
-import { useAppContext } from "@/app/providers";
 import { OnboardingLayout } from "../OnboardingLayout";
 import { AppLogo } from "@/components/icons";
 
@@ -22,6 +21,7 @@ export interface CASImageData {
 }
 
 interface WelcomeProps {
+  appName: string;
   onImageReady: (data: CASImageData) => void;
   isActive?: boolean;
   isGuest?: boolean;
@@ -29,12 +29,12 @@ interface WelcomeProps {
 }
 
 export const Welcome: React.FC<WelcomeProps> = ({
+  appName,
   onImageReady,
   isActive = true,
   isGuest = false,
   onLoginRequired,
 }) => {
-  const app = useAppContext();
   const [isDragging, setIsDragging] = useState(false);
   const { isMac, isWin, modSymbol, shiftSymbol } = usePlatform();
 
@@ -196,7 +196,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
     >
       <div className={styles.content}>
         <AppLogo size={80} color="var(--c-raw-000)" />
-        <h1 className={styles.title}>{app.system.appName}</h1>
+        <h1 className={styles.title}>{appName}</h1>
 
         <div className={styles.actions}>
           <div className={styles.actionRow}>

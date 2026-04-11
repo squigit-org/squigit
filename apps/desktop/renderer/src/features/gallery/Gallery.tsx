@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { getImagePath, type ChatMetadata, type Attachment } from "@/core";
-import { useAppContext } from "@/app/providers";
+import { useMediaContext } from "@/app/context/AppMedia";
 import { Thumbnail } from "@/features";
 import styles from "./Gallery.module.css";
 
@@ -53,20 +53,27 @@ const selectLatestByHash = (chats: ChatMetadata[]): GalleryCandidate[] => {
   );
 };
 
-export const Gallery: React.FC = () => {
-  const app = useAppContext();
+interface GalleryProps {
+  chats: ChatMetadata[];
+  activeSessionId: string | null;
+  refreshChats: () => Promise<void> | void;
+}
+
+export const Gallery: React.FC<GalleryProps> = ({
+  chats,
+  activeSessionId,
+  refreshChats,
+}) => {
+  const { openMediaViewer } = useMediaContext();
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<GalleryImage[]>([]);
 
-  const candidates = useMemo(
-    () => selectLatestByHash(app.chatHistory.chats),
-    [app.chatHistory.chats],
-  );
+  const candidates = useMemo(() => selectLatestByHash(chats), [chats]);
 
   useEffect(() => {
-    if (app.chatHistory.activeSessionId !== SYSTEM_GALLERY_ID) return;
-    void app.chatHistory.refreshChats();
-  }, [app.chatHistory.activeSessionId, app.chatHistory.refreshChats]);
+    if (activeSessionId !== SYSTEM_GALLERY_ID) return;
+    void refreshChats();
+  }, [activeSessionId, refreshChats]);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,12 +117,12 @@ export const Gallery: React.FC = () => {
         path: item.path,
       };
 
-      void app.openMediaViewer(attachment, {
+      void openMediaViewer(attachment, {
         isGallery: true,
         chatId: item.chatId,
       });
     },
-    [app],
+    [openMediaViewer],
   );
 
   if (isLoading) {

@@ -6,7 +6,7 @@
 
 import React, { useEffect } from "react";
 import { usePlatform } from "@/hooks";
-import { AppProvider, useAppContext } from "../providers";
+import { AppProvider, useAppContext } from "../providers/AppProvider";
 import { MainScreen, SplashScreen } from "@/screens";
 import { AppRoutes } from "./routes";
 import { AppDialogs } from "./dialogs";

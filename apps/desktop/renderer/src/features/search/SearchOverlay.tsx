@@ -12,8 +12,8 @@ import React, {
   useState,
 } from "react";
 import { WidgetOverlay } from "@/components/ui";
-import type { ChatSearchResult } from "@/core";
-import { useAppContext } from "@/app/providers";
+import type { ChatMetadata, ChatSearchResult } from "@/core";
+import { useNavigationContext } from "@/app/context/AppNavigation";
 import { ChatsList } from "./components/ChatsList/ChatsList";
 import { SearchBar } from "./components/SearchBar/SearchBar";
 import { buildChatGroups, highlightTokensFromQuery } from "./search.utils";
@@ -25,13 +25,20 @@ const SEARCH_DEBOUNCE_MS = 120;
 interface SearchOverlayProps {
   isOpen: boolean;
   onClose: () => void;
+  chats: ChatMetadata[];
+  searchChats: (
+    query: string,
+    limit: number,
+  ) => Promise<ChatSearchResult[]>;
 }
 
 export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   isOpen,
   onClose,
+  chats,
+  searchChats,
 }) => {
-  const app = useAppContext();
+  const navigation = useNavigationContext();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ChatSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,10 +53,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     [normalizedQuery],
   );
 
-  const chatGroups = useMemo(
-    () => buildChatGroups(app.chatHistory.chats),
-    [app.chatHistory.chats],
-  );
+  const chatGroups = useMemo(() => buildChatGroups(chats), [chats]);
 
   const firstChatId = chatGroups[0]?.chats[0]?.id ?? null;
 
@@ -83,10 +87,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     const currentRequestId = ++requestIdRef.current;
     const timer = window.setTimeout(async () => {
       setIsLoading(true);
-      const hits = await app.chatHistory.searchChats(
-        normalizedQuery,
-        SEARCH_LIMIT,
-      );
+      const hits = await searchChats(normalizedQuery, SEARCH_LIMIT);
       if (currentRequestId !== requestIdRef.current) return;
       setResults(hits);
       setIsLoading(false);
@@ -95,24 +96,24 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [app.chatHistory.searchChats, hasQuery, isOpen, normalizedQuery]);
+  }, [hasQuery, isOpen, normalizedQuery, searchChats]);
 
   const handleSelectResult = useCallback(
     (result: ChatSearchResult) => {
-      app.revealSearchMatch({
+      navigation.revealSearchMatch({
         chatId: result.chat_id,
         messageIndex: result.message_index,
       });
     },
-    [app],
+    [navigation],
   );
 
   const handleSelectChat = useCallback(
     (chatId: string) => {
       onClose();
-      app.handleSelectChat(chatId);
+      navigation.handleSelectChat(chatId);
     },
-    [app, onClose],
+    [navigation, onClose],
   );
 
   const handleInputKeyDown = useCallback(
