@@ -6,7 +6,7 @@
 
 import React, { useMemo } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import styles from "./thumbnail.module.css";
+import styles from "./Thumbnail.module.css";
 
 interface ThumbnailProps {
   imagePath: string;

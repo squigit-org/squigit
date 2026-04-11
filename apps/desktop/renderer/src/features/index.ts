@@ -22,6 +22,12 @@ export * from "./chat/MessageList";
 export * from "./chat/chat.types";
 export * from "./chat/Chat";
 
+export * from "./gallery/Gallery";
+export * from "./gallery/components/Thumbnail/Thumbnail";
+
+export * from "./media/MediaOverlay";
+export * from "./media/media.types";
+
 export * from "./ocr/components/OCRModelDownloader";
 export * from "./ocr/components/OCRModelSwitcher";
 export * from "./ocr/components/OCRTextCanvas";
@@ -37,6 +43,8 @@ export * from "./onboarding/screens/Welcome";
 export * from "./onboarding/screens/Agreement";
 export * from "./onboarding/screens/UpdateNotes";
 
+export * from "./search/SearchOverlay";
+
 export * from "./settings/components/CapturePreview";
 export * from "./settings/components/SettingsPanel";
 export * from "./settings/sections/APIKeysSection";
@@ -45,9 +53,3 @@ export * from "./settings/sections/HelpSection";
 export * from "./settings/sections/ModelsSection";
 export * from "./settings/sections/PersonalizationSection";
 export * from "./settings/SettingsOverlay";
-
-export * from "./media/MediaOverlay";
-export * from "./media/media.types";
-
-export * from "./search/SearchOverlay";
-export * from "./gallery/galleryScreen";
