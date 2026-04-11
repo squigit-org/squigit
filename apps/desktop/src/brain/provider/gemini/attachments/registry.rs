@@ -1,6 +1,8 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(dead_code)]
+
 use chrono::{DateTime, Utc};
 use ops_chat_storage::{
     ChatAttachmentGeminiFile, ChatAttachmentKind, ChatAttachmentRecord, ChatData, ChatStorage,

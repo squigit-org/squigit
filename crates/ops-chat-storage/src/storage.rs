@@ -850,6 +850,7 @@ impl ChatStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
     use crate::types::{ChatAttachmentKind, ChatAttachmentRecord};
 
     fn make_test_storage() -> (ChatStorage, PathBuf) {
