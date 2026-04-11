@@ -264,7 +264,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       <ToolbarButton
         icon={
           isLensLoading ? (
-            <CircularSpinnerIcon size={24} className={styles.spinner} color="currentColor" />
+            <CircularSpinnerIcon size={20} className={styles.spinner} color="currentColor" />
           ) : (
             <GoogleLensIcon size={26} color="currentColor" />
           )
