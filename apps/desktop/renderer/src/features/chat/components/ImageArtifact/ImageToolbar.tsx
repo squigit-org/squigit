@@ -66,19 +66,41 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 }) => {
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const isDraggingRef = useRef(false);
+  const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  const clearCopyResetTimeout = useCallback(() => {
+    if (copyResetTimeoutRef.current !== null) {
+      clearTimeout(copyResetTimeoutRef.current);
+      copyResetTimeoutRef.current = null;
+    }
+  }, []);
 
   const handleCopyClick = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
-      const success = await onCopyImage();
-      if (success) {
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 1500);
+      clearCopyResetTimeout();
+      setCopySuccess(true);
+
+      try {
+        const success = await onCopyImage();
+        if (!success) {
+          setCopySuccess(false);
+          return;
+        }
+
+        copyResetTimeoutRef.current = setTimeout(() => {
+          setCopySuccess(false);
+          copyResetTimeoutRef.current = null;
+        }, 1500);
+      } catch {
+        setCopySuccess(false);
       }
     },
-    [onCopyImage],
+    [clearCopyResetTimeout, onCopyImage],
   );
+
+  useEffect(() => clearCopyResetTimeout, [clearCopyResetTimeout]);
 
   useEffect(() => {
     if (!isExpanded) return;
@@ -233,6 +255,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         <DragDotsIcon
           size={18}
           style={{ transform: "rotate(90deg)" }}
+          color="currentColor"
         />
       </div>
 
@@ -241,7 +264,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       <ToolbarButton
         icon={
           isLensLoading ? (
-            <CircularSpinnerIcon size={24} className={styles.spinner} />
+            <CircularSpinnerIcon size={24} className={styles.spinner} color="currentColor" />
           ) : (
             <GoogleLensIcon size={26} color="currentColor" />
           )
@@ -258,9 +281,9 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
       <ToolbarButton
         icon={
           copySuccess ? (
-            <CheckmarkIcon size={18} />
+            <CheckmarkIcon size={18}  color="currentColor" />
           ) : (
-            <CopyImageIcon size={18} />
+            <CopyImageIcon size={18}  color="currentColor" />
           )
         }
         tooltip={copySuccess ? "Copied to clipboard" : "Copy as Image"}
@@ -270,7 +293,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 
       <ToolbarButton
         icon={
-          <SaveFileIcon size={18} />
+          <SaveFileIcon size={18}  color="currentColor" />
         }
         tooltip="Save"
         onClick={(e) => {
