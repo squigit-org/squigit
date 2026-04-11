@@ -13,7 +13,7 @@ import { createStreamWatchdog } from "./streamWatchdog";
 import { setImageDescription, setImageBrief, addToHistory } from "./context";
 import { buildContextWindow } from "./summarize";
 import { normalizeMessageForHistory } from "./attachmentMemory";
-import { saveImageBrief } from "../../storage/chat";
+import { saveImageBrief } from "@/lib";
 
 export const retryFromMessage = async (
   messageIndex: number,
@@ -90,15 +90,23 @@ export const retryFromMessage = async (
             }
             return "";
           } catch (e) {
-            console.warn(`[GeminiClient] Image brief retry attempt ${attempt + 1} failed:`, e);
+            console.warn(
+              `[GeminiClient] Image brief retry attempt ${attempt + 1} failed:`,
+              e,
+            );
             lastError = e;
             attempt++;
             if (attempt < 5) {
-              await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+              await new Promise((r) =>
+                setTimeout(r, 1000 * Math.pow(2, attempt - 1)),
+              );
             }
           }
         }
-        console.warn("[GeminiClient] Image brief failed all retries.", lastError);
+        console.warn(
+          "[GeminiClient] Image brief failed all retries.",
+          lastError,
+        );
         return "";
       };
 

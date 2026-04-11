@@ -17,7 +17,7 @@ import {
   setImageBrief,
   addToHistory,
 } from "./context";
-import { saveImageBrief } from "../../storage/chat";
+import { saveImageBrief } from "@/lib";
 
 export const startNewThreadStream = async (
   modelId: string,
@@ -91,11 +91,16 @@ export const startNewThreadStream = async (
           }
           return "";
         } catch (e) {
-          console.warn(`[GeminiClient] Image brief attempt ${attempt + 1} failed:`, e);
+          console.warn(
+            `[GeminiClient] Image brief attempt ${attempt + 1} failed:`,
+            e,
+          );
           lastError = e;
           attempt++;
           if (attempt < 5) {
-            await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+            await new Promise((r) =>
+              setTimeout(r, 1000 * Math.pow(2, attempt - 1)),
+            );
           }
         }
       }
@@ -164,8 +169,13 @@ export const startNewThread = async (
   chatId?: string | null,
 ): Promise<string> => {
   let fullText = "";
-  await startNewThreadStream(modelId, imagePath, (token) => {
-    fullText += token;
-  }, chatId);
+  await startNewThreadStream(
+    modelId,
+    imagePath,
+    (token) => {
+      fullText += token;
+    },
+    chatId,
+  );
   return fullText;
 };
