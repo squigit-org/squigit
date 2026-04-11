@@ -54,7 +54,6 @@ runs:
       run: |
         set -euo pipefail
         IDENTITY="-"
-        # inputs.target handles the matrix logic gracefully inside the action context
         CAPTURE_APP="apps/desktop/binaries/qt-capture-${{ inputs.target }}/_internal/capture.app"
 
         find "apps/desktop/binaries" -type f \( -name "*.dylib" -o -name "capture-engine" \) -print0 | while IFS= read -r -d '' f; do

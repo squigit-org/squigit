@@ -63,7 +63,7 @@ jobs:
           rpmbuild -bb --define "_topdir $PWD/rpmbuild" packaging/rpm/squigit-stt.spec
           cp rpmbuild/RPMS/x86_64/*.rpm .
           
-      # Windows Packaging (InnoSetup)
+      # Windows Packaging
       - name: Package Windows EXE
         if: runner.os == 'Windows'
         run: |

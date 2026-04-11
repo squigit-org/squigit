@@ -1,7 +1,6 @@
 name: "OCR Build Matrix"
 
 on:
-  # push:
   workflow_dispatch:
 
 jobs:

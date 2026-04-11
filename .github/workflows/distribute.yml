@@ -104,8 +104,6 @@ jobs:
             patchelf \
             libxdo3
 
-          # ubuntu-latest can change (22.04/24.04). AppImage runtime needs libfuse.so.2.
-          # Try the current package name first, then the legacy one.
           sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2
 
       - name: Download Capture Sidecar

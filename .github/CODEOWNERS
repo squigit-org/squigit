@@ -1,0 +1,42 @@
+# Keep ownership rules explicit and easy to split later.
+# GitHub CODEOWNERS uses last-match-wins semantics.
+/.github/CODEOWNERS @a7mddra
+
+# Default owner for the whole repository.
+* @a7mddra
+
+# Governance, policy, and automation.
+/.github/ @a7mddra
+/README.md @a7mddra
+/CHANGELOG.md @a7mddra
+/CONTRIBUTING.md @a7mddra
+/SECURITY.md @a7mddra
+/VERSION @a7mddra
+/.codex/ @a7mddra
+
+# Workspace, build, release, and packaging.
+/Cargo.toml @a7mddra
+/rust-toolchain.toml @a7mddra
+/.cargo/ @a7mddra
+/xtask/ @a7mddra
+/packaging/ @a7mddra
+
+# Applications.
+/apps/cli/ @a7mddra
+/apps/desktop/src/ @a7mddra
+/apps/desktop/renderer/ @a7mddra
+/apps/desktop/capabilities/ @a7mddra
+/apps/shared/ @a7mddra
+
+# Shared Rust crates.
+/crates/ @a7mddra
+
+# Native sidecars and runtime helpers.
+/sidecars/paddle-ocr/ @a7mddra
+/sidecars/qt-capture/ @a7mddra
+/sidecars/whisper-stt/ @a7mddra
+
+# Architecture, deployment, and policy docs.
+/docs/02-architecture/ @a7mddra
+/docs/04-deployment/ @a7mddra
+/docs/06-policies/ @a7mddra
