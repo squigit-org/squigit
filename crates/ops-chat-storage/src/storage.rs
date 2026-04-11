@@ -8,7 +8,9 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 
 use crate::error::{Result, StorageError};
-use crate::types::{AttachmentRegistry, ChatData, ChatMessage, ChatMetadata, OcrFrame, OcrRegion, StoredImage};
+use crate::types::{
+    AttachmentRegistry, ChatData, ChatMessage, ChatMetadata, OcrFrame, OcrRegion, StoredImage,
+};
 
 const DEFAULT_OCR_MODEL_ID: &str = "pp-ocr-v5-en";
 const AUTO_OCR_DISABLED_MODEL_ID: &str = "__meta_auto_ocr_disabled__";

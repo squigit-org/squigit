@@ -62,10 +62,16 @@ fn attachment_display_name(path: &str, explicit: Option<&str>) -> String {
 
 fn classify_attachment(path: &str) -> Option<(ChatAttachmentKind, String)> {
     if is_text_like_path(path) {
-        return Some((ChatAttachmentKind::TextLocal, mime_from_extension(path).to_string()));
+        return Some((
+            ChatAttachmentKind::TextLocal,
+            mime_from_extension(path).to_string(),
+        ));
     }
     if is_image_path(path) {
-        return Some((ChatAttachmentKind::ImageUpload, mime_from_extension(path).to_string()));
+        return Some((
+            ChatAttachmentKind::ImageUpload,
+            mime_from_extension(path).to_string(),
+        ));
     }
     if is_gemini_document_path(path) {
         return Some((
@@ -318,7 +324,11 @@ async fn validate_uploaded_file_handle(api_key: &str, file_name: &str) -> bool {
     }
 
     match response.json::<GeminiFileObject>().await {
-        Ok(file_obj) => file_obj.state.as_deref().map(|state| state == "ACTIVE").unwrap_or(true),
+        Ok(file_obj) => file_obj
+            .state
+            .as_deref()
+            .map(|state| state == "ACTIVE")
+            .unwrap_or(true),
         Err(_) => true,
     }
 }
@@ -411,7 +421,8 @@ pub(crate) async fn prepare_turn_attachments(
         }
 
         let file_ref = if let Some((_, chat, changed)) = loaded_chat.as_mut() {
-            let (file_ref, was_changed, _) = ensure_live_file_ref(chat, &path, api_key, cache).await?;
+            let (file_ref, was_changed, _) =
+                ensure_live_file_ref(chat, &path, api_key, cache).await?;
             *changed |= was_changed;
             file_ref
         } else {
@@ -431,7 +442,9 @@ pub(crate) async fn prepare_turn_attachments(
     })
 }
 
-pub(crate) fn build_chat_attachment_catalog(chat_id: Option<&str>) -> Result<Option<String>, String> {
+pub(crate) fn build_chat_attachment_catalog(
+    chat_id: Option<&str>,
+) -> Result<Option<String>, String> {
     let Some(chat_id) = chat_id else {
         return Ok(None);
     };
@@ -439,7 +452,11 @@ pub(crate) fn build_chat_attachment_catalog(chat_id: Option<&str>) -> Result<Opt
         return Ok(None);
     };
 
-    let mut entries = chat.attachment_registry.values().cloned().collect::<Vec<_>>();
+    let mut entries = chat
+        .attachment_registry
+        .values()
+        .cloned()
+        .collect::<Vec<_>>();
 
     if entries.is_empty() {
         save_chat_if_needed(&storage, &chat, changed)?;
@@ -467,7 +484,10 @@ pub(crate) fn build_chat_attachment_catalog(chat_id: Option<&str>) -> Result<Opt
         .collect::<Vec<_>>();
 
     save_chat_if_needed(&storage, &chat, changed)?;
-    Ok(Some(format!("[Chat Attachment Catalog]\n{}", lines.join("\n"))))
+    Ok(Some(format!(
+        "[Chat Attachment Catalog]\n{}",
+        lines.join("\n")
+    )))
 }
 
 pub(crate) fn load_chat_attachment_display_names(
@@ -529,7 +549,8 @@ fn find_matching_records<'a>(
     chat.attachment_registry
         .values()
         .filter(|record| {
-            if !is_uploadable_kind(&record.kind) || !kind_matches_filter(&record.kind, kind_filter) {
+            if !is_uploadable_kind(&record.kind) || !kind_matches_filter(&record.kind, kind_filter)
+            {
                 return false;
             }
 

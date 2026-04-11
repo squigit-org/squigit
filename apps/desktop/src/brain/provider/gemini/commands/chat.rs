@@ -136,14 +136,19 @@ fn find_attachment_display_name<'a>(
     None
 }
 
-fn tool_attachment_lookup_value<'a>(
-    function_call: &'a crate::brain::provider::gemini::transport::types::GeminiFunctionCall,
-) -> Option<&'a str> {
+fn tool_attachment_lookup_value(
+    function_call: &crate::brain::provider::gemini::transport::types::GeminiFunctionCall,
+) -> Option<&str> {
     function_call
         .args
         .get("path")
         .and_then(|value| value.as_str())
-        .or_else(|| function_call.args.get("target").and_then(|value| value.as_str()))
+        .or_else(|| {
+            function_call
+                .args
+                .get("target")
+                .and_then(|value| value.as_str())
+        })
         .map(str::trim)
         .filter(|value| !value.is_empty())
 }

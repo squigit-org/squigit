@@ -21,8 +21,8 @@ use commands::chat::{
     append_chat_message, create_chat, delete_chat, detect_image_tone, get_image_path,
     get_imgbb_url, get_ocr_data, get_ocr_frame, init_ocr_frame, list_chats, load_chat,
     overwrite_chat_messages, read_attachment_text, resolve_attachment_path, reveal_in_file_manager,
-    save_imgbb_url, save_ocr_data, search_chats, store_file_from_path, store_image_bytes,
-    store_image_from_path, update_chat_metadata, save_image_brief, save_image_tone,
+    save_image_brief, save_image_tone, save_imgbb_url, save_ocr_data, search_chats,
+    store_file_from_path, store_image_bytes, store_image_from_path, update_chat_metadata,
 };
 use commands::clipboard::{
     copy_image_from_path_to_clipboard, copy_image_to_clipboard, read_clipboard_image,

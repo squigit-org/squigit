@@ -55,7 +55,9 @@ where
         "read_local_attachment_context" => {
             Ok(execute_local_attachment_context(function_call, context).await)
         }
-        "recall_chat_attachment" => Ok(execute_recall_chat_attachment(function_call, context).await),
+        "recall_chat_attachment" => {
+            Ok(execute_recall_chat_attachment(function_call, context).await)
+        }
         _ => Ok(ToolDispatchResult {
             response_value: json!({
                 "ok": false,
@@ -195,7 +197,10 @@ async fn execute_recall_chat_attachment(
         };
     };
 
-    let kind = function_call.args.get("kind").and_then(|value| value.as_str());
+    let kind = function_call
+        .args
+        .get("kind")
+        .and_then(|value| value.as_str());
     let reason = function_call
         .args
         .get("reason")
@@ -544,8 +549,7 @@ mod tests {
         let client = reqwest::Client::new();
         let request_control = GeminiRequestControl::new();
         let mut web_state = WebToolDispatchState::default();
-        let gemini_file_cache =
-            std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
+        let gemini_file_cache = std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
         let mut context = ToolDispatchContext {
             client: &client,
             api_key: "k",
@@ -580,8 +584,7 @@ mod tests {
         let client = reqwest::Client::new();
         let request_control = GeminiRequestControl::new();
         let mut web_state = WebToolDispatchState::default();
-        let gemini_file_cache =
-            std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
+        let gemini_file_cache = std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
         let mut context = ToolDispatchContext {
             client: &client,
             api_key: "k",
@@ -616,8 +619,7 @@ mod tests {
         let client = reqwest::Client::new();
         let request_control = GeminiRequestControl::new();
         let mut web_state = WebToolDispatchState::default();
-        let gemini_file_cache =
-            std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
+        let gemini_file_cache = std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
         let mut context = ToolDispatchContext {
             client: &client,
             api_key: "k",
