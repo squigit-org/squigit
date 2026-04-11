@@ -4,12 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { invoke } from "@tauri-apps/api/core";
-
 const LEGACY_ATTACHMENT_MENTION_RE = /\{\{([^}]+)\}\}/g;
 const LINK_ATTACHMENT_MENTION_RE = /\[([^\]\n]+)\]\((<[^>\n]+>|[^)\n]+)\)/g;
-const ATTACHMENT_MEMORY_TIMEOUT_MS = 1600;
-const ENABLE_ATTACHMENT_MEMORY_CONTEXT = false;
 
 type AttachmentMention = {
   path: string;
@@ -80,11 +76,7 @@ function extractAttachmentMentions(text: string): AttachmentMention[] {
   return out;
 }
 
-export function extractAttachmentPaths(text: string): string[] {
-  return extractAttachmentMentions(text).map((item) => item.path);
-}
-
-export function stripAttachmentMentionsForHistory(text: string): string {
+function stripAttachmentMentionsForHistory(text: string): string {
   const withoutLegacy = text.replace(LEGACY_ATTACHMENT_MENTION_RE, "");
   const withoutLinks = withoutLegacy.replace(
     LINK_ATTACHMENT_MENTION_RE,
@@ -104,7 +96,7 @@ function hasAttachmentContextBlock(text: string): boolean {
   );
 }
 
-export function formatAttachmentReferences(mentions: AttachmentMention[]): string {
+function formatAttachmentReferences(mentions: AttachmentMention[]): string {
   if (mentions.length === 0) return "";
   const lines = mentions.map((item) => {
     const name = item.label?.trim() || basename(item.path);
@@ -123,44 +115,4 @@ export function normalizeMessageForHistory(text: string): string {
   const refs = formatAttachmentReferences(mentions);
   if (!refs) return stripped || text;
   return stripped ? `${stripped}\n\n${refs}` : refs;
-}
-
-export async function buildRichUserHistoryContent(text: string): Promise<string> {
-  const mentions = extractAttachmentMentions(text);
-  if (mentions.length === 0 || hasAttachmentContextBlock(text)) {
-    return text;
-  }
-
-  const stripped = stripAttachmentMentionsForHistory(text);
-  const refs = formatAttachmentReferences(mentions);
-
-  if (!ENABLE_ATTACHMENT_MEMORY_CONTEXT) {
-    return stripped ? `${stripped}\n\n${refs}` : refs;
-  }
-
-  try {
-    const context = await Promise.race<string>([
-      invoke<string>("build_attachment_memory_context", {
-        attachments: mentions.map((item) => ({
-          path: item.path,
-          display_name: item.label ?? null,
-        })),
-      }),
-      new Promise<string>((_, reject) => {
-        setTimeout(
-          () => reject(new Error("attachment-memory-timeout")),
-          ATTACHMENT_MEMORY_TIMEOUT_MS,
-        );
-      }),
-    ]);
-    const normalizedContext = (context || "").trim();
-
-    if (normalizedContext) {
-      return stripped ? `${stripped}\n\n${normalizedContext}` : normalizedContext;
-    }
-  } catch (error) {
-    console.warn("[AttachmentMemory] Failed to build rich attachment context:", error);
-  }
-
-  return normalizeMessageForHistory(text);
 }

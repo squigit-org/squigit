@@ -79,13 +79,48 @@ fn attachment_lookup_aliases(path: &str) -> Vec<String> {
     aliases
 }
 
+fn is_unfriendly_attachment_name(value: &str) -> bool {
+    let file_name = Path::new(value)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(value)
+        .trim();
+    if file_name.is_empty() {
+        return true;
+    }
+
+    let stem = Path::new(file_name)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .unwrap_or(file_name)
+        .trim();
+
+    stem.len() >= 16 && stem.chars().all(|ch| ch.is_ascii_hexdigit())
+}
+
 fn insert_attachment_display_name(
     map: &mut HashMap<String, String>,
     path: &str,
     display_name: &str,
 ) {
+    let register_alias = |map: &mut HashMap<String, String>, alias: String, display_name: &str| {
+        if alias.is_empty() {
+            return;
+        }
+        match map.get(&alias) {
+            Some(existing) if !is_unfriendly_attachment_name(existing) => {}
+            _ => {
+                map.insert(alias, display_name.to_string());
+            }
+        }
+    };
+
     for alias in attachment_lookup_aliases(path) {
-        map.entry(alias).or_insert_with(|| display_name.to_string());
+        register_alias(map, alias, display_name);
+    }
+
+    for alias in attachment_lookup_aliases(display_name) {
+        register_alias(map, alias, display_name);
     }
 }
 
@@ -101,20 +136,18 @@ fn find_attachment_display_name<'a>(
     None
 }
 
-/// Brain-aware chat command (v2)
-///
-/// For initial turns (is_initial_turn=true):
-///   - Uses soul.yml + scenes.json to build system prompt (user content)
-///   - Requires image_path
-///   - user_instruction appended as one-time intent hook
-///
-/// For subsequent turns (is_initial_turn=false):
-///   - Uses frame.md template with context anchors
-///   - Requires image_description, user_first_msg, history_log
-///
-/// On ALL turns:
-///   - system.yml is sent via native system_instruction field
-///   - Contains: identity brief + OS + timezone + user profile + image_brief
+fn tool_attachment_lookup_value<'a>(
+    function_call: &'a crate::brain::provider::gemini::transport::types::GeminiFunctionCall,
+) -> Option<&'a str> {
+    function_call
+        .args
+        .get("path")
+        .and_then(|value| value.as_str())
+        .or_else(|| function_call.args.get("target").and_then(|value| value.as_str()))
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn stream_gemini_chat_v2(
@@ -222,6 +255,13 @@ pub async fn stream_gemini_chat_v2(
             );
 
             let mut composed_user_message = user_message.clone();
+            for (path, display_name) in crate::brain::provider::gemini::attachments::load_chat_attachment_display_names(chat_id.as_deref())? {
+                insert_attachment_display_name(
+                    &mut attachment_display_name_by_path,
+                    &path,
+                    &display_name,
+                );
+            }
             let attachment_mentions = extract_attachment_mentions(&user_message);
             for mention in &attachment_mentions {
                 if let Some(display_name) = mention
@@ -350,12 +390,9 @@ pub async fn stream_gemini_chat_v2(
                 return Ok(());
             };
 
-            let attachment_display_name = function_call
-                .args
-                .get("path")
-                .and_then(|value| value.as_str())
-                .and_then(|raw_path| {
-                    find_attachment_display_name(raw_path, &attachment_display_name_by_path)
+            let attachment_display_name = tool_attachment_lookup_value(&function_call)
+                .and_then(|raw_value| {
+                    find_attachment_display_name(raw_value, &attachment_display_name_by_path)
                 });
             let status_text = tool_status_text(&function_call, attachment_display_name);
             let call_id = tool_step_id(iter, &function_call.name);

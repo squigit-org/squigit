@@ -83,6 +83,26 @@ fn is_uploadable_kind(kind: &ChatAttachmentKind) -> bool {
     )
 }
 
+fn catalog_access_label(record: &ChatAttachmentRecord) -> &'static str {
+    match record.kind {
+        ChatAttachmentKind::TextLocal => "local",
+        ChatAttachmentKind::ImageUpload | ChatAttachmentKind::DocumentUpload => {
+            if record
+                .gemini_file
+                .as_ref()
+                .map(|handle| !is_handle_expired(handle))
+                .unwrap_or(false)
+            {
+                "live"
+            } else if record.gemini_file.is_some() {
+                "stale"
+            } else {
+                "needs_upload"
+            }
+        }
+    }
+}
+
 fn kind_matches_filter(kind: &ChatAttachmentKind, filter: Option<&ChatAttachmentKind>) -> bool {
     match filter {
         Some(expected) => kind == expected,
@@ -419,12 +439,7 @@ pub(crate) fn build_chat_attachment_catalog(chat_id: Option<&str>) -> Result<Opt
         return Ok(None);
     };
 
-    let mut entries = chat
-        .attachment_registry
-        .values()
-        .filter(|record| is_uploadable_kind(&record.kind))
-        .cloned()
-        .collect::<Vec<_>>();
+    let mut entries = chat.attachment_registry.values().cloned().collect::<Vec<_>>();
 
     if entries.is_empty() {
         save_chat_if_needed(&storage, &chat, changed)?;
@@ -437,27 +452,15 @@ pub(crate) fn build_chat_attachment_catalog(chat_id: Option<&str>) -> Result<Opt
     let lines = entries
         .into_iter()
         .map(|record| {
-            let availability = if record
-                .gemini_file
-                .as_ref()
-                .map(|handle| !is_handle_expired(handle))
-                .unwrap_or(false)
-            {
-                "live"
-            } else if record.gemini_file.is_some() {
-                "stale"
-            } else {
-                "needs_upload"
-            };
             format!(
-                "- `{}` (kind: {}, file: {}): `{}`",
+                "- `{}` (kind: {}, access: {}): `{}`",
                 record.display_name,
                 match record.kind {
                     ChatAttachmentKind::ImageUpload => "image_upload",
                     ChatAttachmentKind::DocumentUpload => "document_upload",
                     ChatAttachmentKind::TextLocal => "text_local",
                 },
-                availability,
+                catalog_access_label(&record),
                 record.cas_path
             )
         })
@@ -465,6 +468,26 @@ pub(crate) fn build_chat_attachment_catalog(chat_id: Option<&str>) -> Result<Opt
 
     save_chat_if_needed(&storage, &chat, changed)?;
     Ok(Some(format!("[Chat Attachment Catalog]\n{}", lines.join("\n"))))
+}
+
+pub(crate) fn load_chat_attachment_display_names(
+    chat_id: Option<&str>,
+) -> Result<Vec<(String, String)>, String> {
+    let Some(chat_id) = chat_id else {
+        return Ok(Vec::new());
+    };
+    let Some((storage, chat, changed)) = load_chat_for_registry(chat_id)? else {
+        return Ok(Vec::new());
+    };
+
+    let entries = chat
+        .attachment_registry
+        .values()
+        .map(|record| (record.cas_path.clone(), record.display_name.clone()))
+        .collect::<Vec<_>>();
+
+    save_chat_if_needed(&storage, &chat, changed)?;
+    Ok(entries)
 }
 
 fn find_matching_records<'a>(

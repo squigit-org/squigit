@@ -6,6 +6,28 @@ use std::collections::{HashMap, HashSet};
 use super::request_control::GeminiRequestControl;
 use crate::brain::provider::gemini::transport::types::GeminiFunctionCall;
 
+fn displayable_attachment_name(raw_value: &str) -> Option<String> {
+    let file_name = std::path::Path::new(raw_value)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(raw_value)
+        .trim();
+    if file_name.is_empty() {
+        return None;
+    }
+
+    let stem = std::path::Path::new(file_name)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or(file_name)
+        .trim();
+    if stem.len() >= 16 && stem.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        return None;
+    }
+
+    Some(file_name.to_string())
+}
+
 pub(crate) fn tool_step_id(iter: usize, tool_name: &str) -> String {
     let normalized_name = tool_name
         .chars()
@@ -33,16 +55,21 @@ pub(crate) fn tool_status_text(
             .map(str::trim)
             .filter(|v| !v.is_empty());
         if let Some(path_value) = path {
-            let file_name = std::path::Path::new(path_value)
-                .file_name()
-                .and_then(|value| value.to_str())
-                .unwrap_or(path_value);
-            return Some(format!("Reading local context from {}", file_name));
+            if let Some(file_name) = displayable_attachment_name(path_value) {
+                return Some(format!("Reading local context from {}", file_name));
+            }
         }
         return Some("Reading local attachment context".to_string());
     }
 
     if function_call.name == "recall_chat_attachment" {
+        if let Some(display_name) = attachment_display_name
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+        {
+            return Some(format!("Recalling {}", display_name));
+        }
+
         let target = function_call
             .args
             .get("target")
@@ -50,7 +77,9 @@ pub(crate) fn tool_status_text(
             .map(str::trim)
             .filter(|v| !v.is_empty());
         if let Some(target_value) = target {
-            return Some(format!("Recalling {}", target_value));
+            if let Some(file_name) = displayable_attachment_name(target_value) {
+                return Some(format!("Recalling {}", file_name));
+            }
         }
         return Some("Recalling a previous attachment".to_string());
     }
@@ -94,10 +123,12 @@ pub(crate) fn build_system_instruction_with_tool_policy(
             "\n\n## Tool Usage Policy\n\
              - If the user asks for current, time-sensitive, or uncertain facts, call `web_search`.\n\
              - If the user asks about attached local text or code content, call `read_local_attachment_context`.\n\
+             - If the user asks a complex, exact, or follow-up question about a prior local code/text attachment, call `read_local_attachment_context` again using the exact path from attachment references or the chat attachment catalog.\n\
              - Secondary uploaded files from this chat may only be used when the user attaches them in this turn or when you explicitly call `recall_chat_attachment`.\n\
-             - Use the chat attachment catalog in context to pick the right prior upload for `recall_chat_attachment`.\n\
+             - Use the chat attachment catalog in context to pick the right tool: `read_local_attachment_context` for `text_local`, `recall_chat_attachment` for `image_upload` or `document_upload`.\n\
              - If the user asks for page-specific, OCR, quote-exact, transcription, chart-reading, or slide/sheet/section-specific details from a prior uploaded image or document, you must call `recall_chat_attachment` before answering.\n\
              - Never answer exact file-grounded questions from `image_brief`, rolling summaries, or path references alone when a prior uploaded image/document is needed.\n\
+             - Never answer exact code/text questions from summaries alone when a local attachment can be re-read with `read_local_attachment_context`.\n\
              - For PDF, Word, spreadsheet, slide, and similar document attachments, rely on the attached Gemini file directly (do not call `read_local_attachment_context` for documents).\n\
              - If greeting/chit-chat, do not call tools.\n\
              - Never invent URLs or sources.\n\
@@ -291,5 +322,39 @@ mod tests {
             tool_status_text(&call, Some("Quarterly Report.pdf")),
             Some("Reading local context from Quarterly Report.pdf".to_string())
         );
+    }
+
+    #[test]
+    fn tool_status_text_prefers_display_name_for_recall() {
+        let call = GeminiFunctionCall {
+            name: "recall_chat_attachment".to_string(),
+            args: json!({ "target": "objects/ab/abcdef123.pdf" }),
+        };
+        assert_eq!(
+            tool_status_text(&call, Some("Quarterly Report.pdf")),
+            Some("Recalling Quarterly Report.pdf".to_string())
+        );
+    }
+
+    #[test]
+    fn tool_status_text_hides_hashy_attachment_names() {
+        let call = GeminiFunctionCall {
+            name: "read_local_attachment_context".to_string(),
+            args: json!({ "path": "objects/ab/00f8e1ec68a90d7d33ed18d6e44a4f36.rs" }),
+        };
+        assert_eq!(
+            tool_status_text(&call, None),
+            Some("Reading local attachment context".to_string())
+        );
+    }
+
+    #[test]
+    fn tool_policy_mentions_rereading_prior_local_attachments() {
+        let instruction =
+            build_system_instruction_with_tool_policy("", "", "", true).expect("policy");
+        assert!(instruction.contains("prior local code/text attachment"));
+        assert!(instruction.contains("`read_local_attachment_context` again"));
+        assert!(instruction.contains("`text_local`"));
+        assert!(instruction.contains("exact code/text questions"));
     }
 }

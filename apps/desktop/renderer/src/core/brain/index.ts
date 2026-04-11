@@ -60,11 +60,7 @@ export {
   setConversationSummary,
 } from "./session/summarizer";
 export {
-  buildRichUserHistoryContent,
-  extractAttachmentPaths,
-  formatAttachmentReferences,
   normalizeMessageForHistory,
-  stripAttachmentMentionsForHistory,
 } from "./session/attachmentMemory";
 
 export {

@@ -83,7 +83,6 @@ export interface BrainSessionSnapshot {
 
 export interface BrainLifecycleState {
   messages: Message[];
-  streamingText: string;
   firstResponseId: string | null;
 }
 

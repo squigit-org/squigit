@@ -28,7 +28,6 @@ export const useBrainLifecycle = (config: {
     messages,
     setMessages,
     setIsLoading,
-    setStreamingText,
     setFirstResponseId,
     setLastSentMessage,
     setError,
@@ -99,7 +98,6 @@ export const useBrainLifecycle = (config: {
   useEffect(() => {
     if (config.chatId === null) {
       setMessages([]);
-      setStreamingText("");
       setFirstResponseId(null);
       setLastSentMessage(null);
       setError(null);
@@ -110,14 +108,12 @@ export const useBrainLifecycle = (config: {
 
   const getCurrentState = () => ({
     messages: config.state.messages,
-    streamingText: config.state.streamingText,
     firstResponseId: config.state.firstResponseId,
   });
 
   const restoreState = async (
     state: {
       messages: Message[];
-      streamingText: string;
       firstResponseId: string | null;
     },
     image?: { path: string; mimeType: string; imageId: string },
@@ -125,7 +121,6 @@ export const useBrainLifecycle = (config: {
     imageBrief?: string | null,
   ) => {
     setMessages(state.messages);
-    setStreamingText(state.streamingText);
     setFirstResponseId(state.firstResponseId);
     setIsLoading(false);
     setIsStreaming(false);

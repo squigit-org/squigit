@@ -983,7 +983,6 @@ export const Chat: React.FC = () => {
   const isImageProgressVisible =
     !!app.system.startupImage &&
     app.chat.messages.length === 0 &&
-    !app.chat.streamingText &&
     app.chat.isAnalyzing;
   const imageProgressText = getVisibleImageProgressText(app.chat.toolStatus);
   const isInitialRetryTurn =

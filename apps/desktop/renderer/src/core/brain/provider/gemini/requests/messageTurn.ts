@@ -10,10 +10,7 @@ import type { ProviderStreamEvent } from "../../../engine/types";
 import { cancelCurrentRequest, clearActiveProviderTransport, createProviderChannelId, createStreamWatchdog } from "../transport";
 import { setUserFirstMsg, addToHistory } from "../../../session/context";
 import { buildContextWindow, maybeCompressHistory } from "../../../session/summarizer";
-import {
-  buildRichUserHistoryContent,
-  normalizeMessageForHistory,
-} from "../../../session/attachmentMemory";
+import { normalizeMessageForHistory } from "../../../session/attachmentMemory";
 import { streamGeminiChat } from "../commands";
 
 export const sendMessage = async (
@@ -31,10 +28,9 @@ export const sendMessage = async (
   }
 
   const myGenId = brainSessionStore.generationId;
-  const userModelText = normalizeMessageForHistory(text);
-  const userHistoryText = await buildRichUserHistoryContent(text);
-  setUserFirstMsg(userHistoryText);
-  addToHistory("User", userHistoryText);
+  const normalizedUserText = normalizeMessageForHistory(text);
+  setUserFirstMsg(normalizedUserText);
+  addToHistory("User", normalizedUserText);
 
   const channelId = createProviderChannelId();
   brainSessionStore.currentChannelId = channelId;
@@ -89,7 +85,7 @@ export const sendMessage = async (
         userFirstMsg: brainSessionStore.userFirstMsg,
         historyLog,
         rollingSummary,
-        userMessage: userModelText,
+        userMessage: normalizedUserText,
         channelId: channelId,
         chatId: chatId ?? null,
         userName: brainSessionStore.userName ?? undefined,

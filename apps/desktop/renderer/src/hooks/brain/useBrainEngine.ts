@@ -80,7 +80,6 @@ export const useBrainEngine = (config: {
     setIsLoading,
     setIsStreaming,
     setIsAiTyping,
-    setStreamingText,
     setFirstResponseId,
     setRetryingMessageId,
     setLastSentMessage,
@@ -146,8 +145,7 @@ export const useBrainEngine = (config: {
     setStreamingCitations([]);
   };
 
-  const resetLegacyStreamingState = () => {
-    setStreamingText("");
+  const resetTransientResponseState = () => {
     setToolStatus(null);
     setStreamingToolSteps([]);
     setStreamingCitations([]);
@@ -219,7 +217,7 @@ export const useBrainEngine = (config: {
       stopped: false,
       isWritingCode: false,
     } satisfies PendingAssistantTurn);
-    resetLegacyStreamingState();
+    resetTransientResponseState();
     setIsStreaming(true);
     setIsAiTyping(true);
   };
@@ -393,7 +391,7 @@ export const useBrainEngine = (config: {
     activePendingTurnIdRef.current = null;
     finalizedPendingTurnIdRef.current = null;
     setPendingAssistantTurn(null);
-    resetLegacyStreamingState();
+    resetTransientResponseState();
   };
 
   const buildCommittedAssistantMessage = (

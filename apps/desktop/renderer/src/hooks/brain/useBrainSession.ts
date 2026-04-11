@@ -88,7 +88,6 @@ export const useBrainSession = ({
     isAiTyping: state.isAiTyping,
     setIsAiTyping: state.setIsAiTyping,
     retryingMessageId: state.retryingMessageId,
-    streamingText: state.streamingText,
     toolStatus: state.toolStatus,
     streamingToolSteps: state.streamingToolSteps,
     streamingCitations: state.streamingCitations,

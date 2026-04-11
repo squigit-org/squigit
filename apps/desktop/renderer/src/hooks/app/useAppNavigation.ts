@@ -317,7 +317,6 @@ export const useAppNavigation = ({
           chat.restoreState(
             {
               messages: [],
-              streamingText: "",
               firstResponseId: null,
             },
             {
@@ -379,7 +378,6 @@ export const useAppNavigation = ({
         chat.restoreState(
           {
             messages,
-            streamingText: "",
             firstResponseId: null,
           },
           {

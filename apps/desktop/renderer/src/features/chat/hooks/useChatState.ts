@@ -12,7 +12,6 @@ export const useChatState = (enabled: boolean) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
-  const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(
@@ -55,7 +54,6 @@ export const useChatState = (enabled: boolean) => {
   const clearError = () => setError(null);
 
   const resetInitialUi = () => {
-    setStreamingText("");
     setError(null);
     setToolStatus(null);
     setStreamingToolSteps([]);
@@ -86,7 +84,6 @@ export const useChatState = (enabled: boolean) => {
     setIsLoading(false);
     setIsStreaming(false);
     setIsAiTyping(false);
-    setStreamingText("");
     setFirstResponseId(null);
     setRetryingMessageId(null);
     setToolStatus(null);
@@ -103,8 +100,6 @@ export const useChatState = (enabled: boolean) => {
     error,
     setError,
     clearError,
-    streamingText,
-    setStreamingText,
     isStreaming,
     setIsStreaming,
     isAiTyping,
