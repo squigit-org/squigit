@@ -4,31 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export {
-  AppLogo,
-  GoogleLensIcon,
-  CaptureCursorIcon,
-  CaptureSquiggleIcon,
-  CheckmarkIcon,
-  CircularSpinnerIcon,
-  CloseCrossIcon,
-  CollapseTextareaIcon,
-  CopyImageIcon,
-  DragDotsIcon,
-  ExpandTextareaIcon,
-  InlineChevronLeft,
-  InlineChevronRight,
-  OcrCircularArcIcon,
-  SaveFileIcon,
-  SidePanelNewThreadIcon,
-  SidePanelSquigitsIcon,
-  SidePanelToggleIcon,
-  TranslateIcon,
-  WindowCloseIcon,
-  WindowMaximizeIcon,
-  WindowMinimizeIcon,
-} from "./icons/squigit-kit";
-
 export { default as updateIcon } from "./icons/emoji_u1f4e6.png";
 
 export { default as noFocusSvg } from "./icons/traffic-lights/0-all-three-nofocus.svg";

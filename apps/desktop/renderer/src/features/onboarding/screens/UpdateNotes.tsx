@@ -5,14 +5,13 @@
  */
 
 import React, { useMemo, useState } from "react";
+import { clsx } from "clsx";
+import { updateIcon } from "@/assets";
 import { OnboardingLayout } from "../OnboardingLayout";
 import { useAppContext } from "@/providers/AppProvider";
-import { getPendingUpdate, markUpdateDone } from "@/hooks";
-import { updateIcon } from "@/assets";
+import { getPendingUpdate, markUpdateDone, usePlatform } from "@/hooks";
 import { ChevronRight, DownloadCloud } from "lucide-react";
-import { clsx } from "clsx";
-import { usePlatform } from "@/hooks/core/usePlatform";
-import { CodeBlock } from "@/components/code-block/CodeBlock";
+import { CodeBlock } from "@/components/ui";
 import styles from "./UpdateNotes.module.css";
 
 interface UpdateSectionProps {
@@ -114,13 +113,20 @@ export const UpdateNotes: React.FC = () => {
 
       <div className={styles.scrollableContent}>
         {!isTauri && (
-          <div className={styles.section} style={{ marginBottom: '1.5rem' }}>
-             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                The new version is available via {platform.pkgMgrName}. Copy the command below and execute it in your terminal.
-             </p>
-             <div style={{ borderRadius: '8px', overflow: 'hidden' }}>
-                <CodeBlock language="bash" value={getUpgradeCommand()} />
-             </div>
+          <div className={styles.section} style={{ marginBottom: "1.5rem" }}>
+            <p
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--text-secondary)",
+                marginBottom: "0.5rem",
+              }}
+            >
+              The new version is available via {platform.pkgMgrName}. Copy the
+              command below and execute it in your terminal.
+            </p>
+            <div style={{ borderRadius: "8px", overflow: "hidden" }}>
+              <CodeBlock language="bash" value={getUpgradeCommand()} />
+            </div>
           </div>
         )}
 
@@ -179,10 +185,7 @@ export const UpdateNotes: React.FC = () => {
           </div>
         </div>
         <div className={styles.footerRight}>
-          <button
-            className={styles.updateButton}
-            onClick={handleUpdate}
-          >
+          <button className={styles.updateButton} onClick={handleUpdate}>
             {isTauri ? "Update Now" : "I've Upgraded"}
           </button>
         </div>

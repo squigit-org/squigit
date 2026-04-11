@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { CodeBlock } from "@/components";
+import { CodeBlock } from "@/components/ui";
 import styles from "./MediaTextViewer.module.css";
 
 interface MediaTextViewerProps {

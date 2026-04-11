@@ -17,7 +17,7 @@ import {
   DropdownSectionTitle,
   DropdownAction,
   DropdownDivider,
-} from "@/components";
+} from "@/components/ui";
 import styles from "./SettingsPanel.module.css";
 import { SettingsSection } from "@/features";
 

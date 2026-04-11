@@ -40,8 +40,8 @@ import { keymap } from "prosemirror-keymap";
 import { Plugin, PluginKey, type Command } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { invoke } from "@tauri-apps/api/core";
-import { CollapseTextareaIcon, ExpandTextareaIcon } from "@/assets";
-import { CitationChip } from "@/components";
+import { CollapseTextareaIcon, ExpandTextareaIcon } from "@/components/icons";
+import { CitationChip } from "@/components/ui";
 import {
   attachmentFromPath,
   buildAttachmentMention,

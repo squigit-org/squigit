@@ -7,7 +7,7 @@
 import React, { useState } from "react";
 import styles from "./GeneralSection.module.css";
 import { CapturePreview } from "@/features";
-import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components";
+import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
 
 interface GeneralSectionProps {
   themePreference: "dark" | "light" | "system";

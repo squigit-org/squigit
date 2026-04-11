@@ -16,7 +16,7 @@ import {
 
 import { invoke } from "@tauri-apps/api/core";
 import { UserPreferences, github } from "@/core";
-import { WidgetOverlay, WidgetOverlayIconButton } from "@/components";
+import { WidgetOverlay, WidgetOverlayIconButton } from "@/components/ui";
 
 import {
   GeneralSection,

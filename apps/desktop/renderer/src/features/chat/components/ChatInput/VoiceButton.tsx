@@ -9,7 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { Mic, Square } from "lucide-react";
 import styles from "./ChatInput.module.css";
-import { Tooltip, Dialog } from "@/components";
+import { Tooltip, Dialog } from "@/components/ui";
 import { usePlatform } from "@/hooks/core/usePlatform";
 import { type DialogContent, getMissingPackageDialog } from "@/core";
 

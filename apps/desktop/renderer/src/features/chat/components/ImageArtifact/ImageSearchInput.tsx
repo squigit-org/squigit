@@ -6,7 +6,7 @@
 
 import React from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
-import { GoogleLensIcon, TranslateIcon } from "@/assets";
+import { GoogleLensIcon, TranslateIcon } from "@/components/icons";
 import { TextContextMenu } from "@/layout";
 import { useTextContextMenu, useTextEditor } from "@/hooks";
 import { OCRModelSwitcher, SettingsSection } from "@/features";

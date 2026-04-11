@@ -9,7 +9,7 @@ import {
   ContextMenu,
   ContextMenuItem,
   ContextMenuSeparator,
-} from "@/components";
+} from "@/components/ui";
 import { Pencil, CheckSquare, Trash2 } from "lucide-react";
 
 interface PanelContextMenuProps {

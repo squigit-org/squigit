@@ -13,7 +13,7 @@ import {
   CodeBlock,
   WidgetOverlay,
   WidgetOverlayIconButton,
-} from "@/components";
+} from "@/components/ui";
 import { ACCEPTED_EXTENSIONS, getExtension, isImageExtension } from "@/core";
 import styles from "./CodeEditor.module.css";
 

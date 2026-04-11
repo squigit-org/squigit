@@ -11,7 +11,7 @@ import {
   ContextMenu,
   ContextMenuItem,
   ContextMenuSeparator,
-} from "@/components";
+} from "@/components/ui";
 import { usePlatform } from "@/hooks";
 
 interface TitleBarContextMenuProps {

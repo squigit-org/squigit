@@ -13,7 +13,7 @@ import {
   DropdownItem,
   DropdownSectionTitle,
   Tooltip,
-} from "@/components";
+} from "@/components/ui";
 import { VoiceButton } from "./VoiceButton";
 import styles from "./ChatInput.module.css";
 

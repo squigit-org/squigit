@@ -6,7 +6,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import { Profile } from "@/core";
-import { Dialog } from "@/components";
+import { Dialog } from "@/components/ui";
 import { Avatar } from "./Avatar";
 import {
   ChevronDown,

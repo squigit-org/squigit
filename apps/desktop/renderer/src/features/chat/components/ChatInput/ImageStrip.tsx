@@ -13,7 +13,7 @@ import React, {
   useState,
 } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { CloseCrossIcon } from "@/assets";
+import { CloseCrossIcon } from "@/components/icons";
 import type { Attachment } from "@/core";
 import styles from "./ImageStrip.module.css";
 

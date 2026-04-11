@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { Dialog, TextShimmer } from "@/components";
+import { Dialog, TextShimmer } from "@/components/ui";
 import { API_STATUS_TEXT, type AttachmentAnalysisCounts } from "@/core";
 import { MessageList } from "@/features";
 import type {

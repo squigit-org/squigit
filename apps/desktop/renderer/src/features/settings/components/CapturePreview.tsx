@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { CaptureCursorIcon, CaptureSquiggleIcon } from "@/assets";
+import { CaptureCursorIcon, CaptureSquiggleIcon } from "@/components/icons";
 import styles from "./CapturePreview.module.css";
 
 interface CapturePreviewProps {

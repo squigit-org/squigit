@@ -17,7 +17,7 @@ interface ImageToolbarProps {
   isExpanded: boolean;
 }
 
-import { Tooltip } from "@/components";
+import { Tooltip } from "@/components/ui";
 import {
   CheckmarkIcon,
   CircularSpinnerIcon,
@@ -25,7 +25,7 @@ import {
   DragDotsIcon,
   GoogleLensIcon,
   SaveFileIcon,
-} from "@/assets";
+} from "@/components/icons";
 
 const ToolbarButton: React.FC<{
   icon: React.ReactNode;

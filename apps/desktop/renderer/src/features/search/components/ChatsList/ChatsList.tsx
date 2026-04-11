@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { LoadingSpinner } from "@/components";
+import { LoadingSpinner } from "@/components/ui";
 import type { ChatSearchResult } from "@/core";
 import {
   type ChatGroup,

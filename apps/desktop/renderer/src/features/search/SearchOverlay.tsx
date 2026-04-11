@@ -11,7 +11,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { WidgetOverlay } from "@/components";
+import { WidgetOverlay } from "@/components/ui";
 import type { ChatSearchResult } from "@/core";
 import { useAppContext } from "@/providers/AppProvider";
 import { ChatsList } from "./components/ChatsList/ChatsList";

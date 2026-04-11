@@ -13,7 +13,7 @@ import React, {
 } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import { CloseCrossIcon } from "@/assets";
+import { CloseCrossIcon } from "@/components/icons";
 import {
   ImageToolbar,
   ImageSearchInput,
@@ -25,7 +25,7 @@ import {
 } from "@/features";
 import { usePlatform } from "@/hooks/core/usePlatform";
 import styles from "./ImageArtifact.module.css";
-import { Dialog } from "@/components";
+import { Dialog } from "@/components/ui";
 import {
   type DialogContent,
   AUTO_OCR_DISABLED_MODEL_ID,

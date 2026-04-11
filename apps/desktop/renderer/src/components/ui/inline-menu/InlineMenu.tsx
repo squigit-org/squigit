@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { InlineChevronLeft, InlineChevronRight } from "@/assets";
+import { InlineChevronLeft, InlineChevronRight } from "@/components/icons";
 import styles from "./InlineMenu.module.css";
 
 interface InlineMenuProps {

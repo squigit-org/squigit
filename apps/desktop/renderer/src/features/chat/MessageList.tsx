@@ -11,7 +11,7 @@ import {
   PendingAssistantTurn,
 } from "./chat.types";
 import { ChatBubble } from "@/features";
-import { TextShimmer } from "@/components";
+import { TextShimmer } from "@/components/ui";
 import {
   API_STATUS_TEXT,
   ATTACHMENT_ANALYSIS_STATUS_DELAY_MS,

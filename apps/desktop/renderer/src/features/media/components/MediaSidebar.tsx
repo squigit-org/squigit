@@ -6,7 +6,7 @@
 
 import React from "react";
 import { FolderOpen, Copy, MessageSquare } from "lucide-react";
-import { WidgetOverlayIconButton } from "@/components";
+import { WidgetOverlayIconButton } from "@/components/ui";
 
 interface MediaSidebarProps {
   onReveal: () => void;

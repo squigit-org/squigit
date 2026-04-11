@@ -18,7 +18,7 @@ import {
   CitationTip,
   CodeBlock,
   TextShimmer,
-} from "@/components";
+} from "@/components/ui";
 import { useAppContext } from "@/providers/AppProvider";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";

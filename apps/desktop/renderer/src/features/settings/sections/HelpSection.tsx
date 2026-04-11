@@ -10,7 +10,7 @@ import { getVersion, getTauriVersion } from "@tauri-apps/api/app";
 import { github } from "@/core";
 import { prepareGitHubIssueReport, prepareMailReport } from "@/core";
 import { MarkGithubIcon, MailIcon, BugIcon } from "@primer/octicons-react";
-import { CodeBlock } from "@/components";
+import { CodeBlock } from "@/components/ui";
 import { useAppContext } from "@/providers/AppProvider";
 import styles from "./HelpSection.module.css";
 

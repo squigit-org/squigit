@@ -6,7 +6,7 @@
 
 import React, { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { WidgetOverlay } from "@/components";
+import { WidgetOverlay } from "@/components/ui";
 import { AppContextMenu } from "@/layout";
 import { GlobalWorkerOptions } from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";

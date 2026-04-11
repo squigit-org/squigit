@@ -8,7 +8,7 @@ import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Box, Pin } from "lucide-react";
-import { SidePanelToggleIcon } from "@/assets";
+import { SidePanelToggleIcon } from "@/components/icons";
 import { useAppContext } from "@/providers/AppProvider";
 import { usePlatform } from "@/hooks";
 import { SettingsPanel, SettingsOverlay } from "@/features";

@@ -14,7 +14,7 @@ import React, {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { generateSearchUrl, generateTranslateUrl } from "@/core";
-import { InlineMenu } from "@/components";
+import { InlineMenu } from "@/components/ui";
 
 interface OCRBox {
   text: string;

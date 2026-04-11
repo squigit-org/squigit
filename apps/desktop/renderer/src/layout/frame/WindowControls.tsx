@@ -6,7 +6,7 @@
 
 import React from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { WindowCloseIcon, WindowMaximizeIcon, WindowMinimizeIcon } from "@/assets";
+import { WindowCloseIcon, WindowMaximizeIcon, WindowMinimizeIcon } from "@/components/icons";
 import styles from "./WindowControls.module.css";
 
 export const WindowControls: React.FC = () => {

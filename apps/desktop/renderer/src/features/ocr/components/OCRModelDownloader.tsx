@@ -6,9 +6,9 @@
 
 import React, { useState } from "react";
 import { Download, Check, Loader2, X } from "lucide-react";
-import { OcrCircularArcIcon } from "@/assets";
+import { OcrCircularArcIcon } from "@/components/icons";
 import { useModelsStore } from "@/features";
-import { Dialog } from "@/components";
+import { Dialog } from "@/components/ui";
 import { getErrorDialog, DEFAULT_OCR_MODEL_ID } from "@/core";
 import styles from "./OCRModelDownloader.module.css";
 

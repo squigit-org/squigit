@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { AppLogo } from "@/assets";
+import { AppLogo } from "@/components/icons";
 import { TitleBar } from "@/layout";
 
 import styles from "./SplashScreen.module.css";

@@ -6,7 +6,7 @@
 
 import React, { useEffect } from "react";
 import { getDialogs, getUpdateAvailableDialog } from "@/core";
-import { Dialog } from "@/components";
+import { Dialog } from "@/components/ui";
 import { usePlatform } from "@/hooks";
 import {
   Welcome,

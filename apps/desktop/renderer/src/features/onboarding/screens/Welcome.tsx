@@ -12,7 +12,7 @@ import styles from "./Welcome.module.css";
 import { ImageResult, storeImageFromPath } from "@/core";
 import { useAppContext } from "@/providers/AppProvider";
 import { OnboardingLayout } from "../OnboardingLayout";
-import { AppLogo } from "@/assets";
+import { AppLogo } from "@/components/icons";
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 

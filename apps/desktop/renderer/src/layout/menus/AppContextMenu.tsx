@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { ContextMenu, ContextMenuItem } from "@/components";
+import { ContextMenu, ContextMenuItem } from "@/components/ui";
 import { usePlatform } from "@/hooks";
 
 interface AppContextMenuProps {
