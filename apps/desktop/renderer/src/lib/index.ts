@@ -25,11 +25,7 @@ export * from "./helpers/api-status";
 export * from "./helpers/error-parser.ts";
 export * from "./helpers/files.ts";
 export * from "./helpers/reporting.ts";
-
-// markdown
-export * from "./markdown/utils";
-export * from "./markdown/plugins";
-export * from "./markdown/code-highlighter";
+export * from "./helpers/code-highlighter.ts";
 
 // storage
 export * from "./storage/chat";

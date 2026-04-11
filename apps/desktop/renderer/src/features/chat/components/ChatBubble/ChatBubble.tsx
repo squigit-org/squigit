@@ -13,7 +13,12 @@ import React, {
   type ErrorInfo,
 } from "react";
 import { Check, Copy, RotateCcw, Pencil, ChevronRight } from "lucide-react";
-import { CitationChip, CitationTip, CodeBlock, TextShimmer } from "@/components";
+import {
+  CitationChip,
+  CitationTip,
+  CodeBlock,
+  TextShimmer,
+} from "@/components";
 import { useAppContext } from "@/providers/AppProvider";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";
@@ -27,17 +32,17 @@ import {
   isAttachmentPath,
   normalizeAttachmentMarkdownLinks,
   parseAttachmentPaths,
-  preprocessMarkdown,
-  splitMarkdownAfterLastClosedFence,
-  remarkDisableIndentedCode,
   stripImageAttachmentMentions,
   API_STATUS_TEXT,
 } from "@/lib";
 import {
   Message,
+  ToolStep,
   MessageCollapseMode,
   PendingAssistantTurn,
-  ToolStep,
+  preprocessMarkdown,
+  splitMarkdownAfterLastClosedFence,
+  remarkDisableIndentedCode,
 } from "@/features";
 import styles from "./ChatBubble.module.css";
 import mdStyles from "./BubbleMD.module.css";
@@ -68,7 +73,9 @@ interface MarkdownErrorBoundaryState {
   hasError: boolean;
 }
 
-type MarkdownComponents = React.ComponentProps<typeof ReactMarkdown>["components"];
+type MarkdownComponents = React.ComponentProps<
+  typeof ReactMarkdown
+>["components"];
 
 interface MarkdownRendererProps {
   markdown: string;
@@ -79,11 +86,7 @@ interface MarkdownRendererProps {
 const MarkdownRenderer = React.memo(
   ({ markdown, isUser, components }: MarkdownRendererProps) => (
     <ReactMarkdown
-      remarkPlugins={[
-        remarkGfm,
-        remarkMath,
-        remarkDisableIndentedCode,
-      ]}
+      remarkPlugins={[remarkGfm, remarkMath, remarkDisableIndentedCode]}
       rehypePlugins={isUser ? [rehypeKatex] : [rehypeKatex, rehypeRaw]}
       components={components}
     >
@@ -113,10 +116,7 @@ class MarkdownErrorBoundary extends React.Component<
   }
 
   componentDidUpdate(prevProps: MarkdownErrorBoundaryProps) {
-    if (
-      this.state.hasError &&
-      prevProps.resetKey !== this.props.resetKey
-    ) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
       this.setState({ hasError: false });
     }
   }
@@ -153,10 +153,7 @@ function getCitationDomain(url: string): string {
 }
 
 function toCitationPreview(summary: string): string {
-  const tokens = summary
-    .trim()
-    .split(/\s+/u)
-    .filter(Boolean);
+  const tokens = summary.trim().split(/\s+/u).filter(Boolean);
   if (tokens.length === 0) {
     return "No summary available...";
   }
@@ -440,7 +437,8 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
   const thoughtBadgeText = useMemo(() => {
     if (isUser || message.role !== "model") return null;
 
-    const explicitThoughtSeconds = pendingTurn?.thoughtSeconds ?? message.thoughtSeconds;
+    const explicitThoughtSeconds =
+      pendingTurn?.thoughtSeconds ?? message.thoughtSeconds;
     if (
       typeof explicitThoughtSeconds === "number" &&
       Number.isFinite(explicitThoughtSeconds) &&
@@ -452,7 +450,13 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     const combined = getCombinedThoughtSeconds(toolSteps);
     if (combined <= 0) return null;
     return `Thought for ${combined}s`;
-  }, [isUser, message.role, message.thoughtSeconds, pendingTurn?.thoughtSeconds, toolSteps]);
+  }, [
+    isUser,
+    message.role,
+    message.thoughtSeconds,
+    pendingTurn?.thoughtSeconds,
+    toolSteps,
+  ]);
 
   const isRichMarkdownUserMessage = useMemo(() => {
     if (!isUser) return false;
@@ -476,8 +480,7 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       pendingTurn?.phase === "complete" ||
       pendingTurn?.phase === "stopped");
   const hasDisplayText = displayText.trim().length > 0;
-  const isWritingCode =
-    isPendingStreaming && !!pendingTurn?.isWritingCode;
+  const isWritingCode = isPendingStreaming && !!pendingTurn?.isWritingCode;
   const hasImageAttachments = imageAttachments.length > 0;
   const hasPendingShellContent = isPendingAssistant && !hasDisplayText;
   const isImageOnlyEmptyCaption =
@@ -495,14 +498,13 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     displayText.length > COLLAPSE_ELIGIBLE_CHAR_THRESHOLD ||
     displayTextLineCount > COLLAPSE_ELIGIBLE_LINE_THRESHOLD;
   const effectiveCollapseMode: MessageCollapseMode =
-    !isPendingAssistant &&
-    message.role !== "system" &&
-    isCollapseEligible
+    !isPendingAssistant && message.role !== "system" && isCollapseEligible
       ? collapseMode
       : "none";
   const isCollapsed = effectiveCollapseMode === "collapsed";
   const shouldShowCollapseToggle =
-    effectiveCollapseMode === "collapsed" || effectiveCollapseMode === "expanded";
+    effectiveCollapseMode === "collapsed" ||
+    effectiveCollapseMode === "expanded";
   const collapsedPreview = useMemo(
     () => (isCollapsed ? buildCollapsedPreview(displayText) : null),
     [displayText, isCollapsed],
@@ -554,16 +556,13 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
     streamingMarkdownSegments.stable.length > 0 &&
     streamingMarkdownSegments.tail.length > 0;
   const markdownBoundaryFallback = useMemo(
-    () => (
-      <pre className={mdStyles.fallbackPlainText}>
-        {renderedText}
-      </pre>
-    ),
+    () => <pre className={mdStyles.fallbackPlainText}>{renderedText}</pre>,
     [renderedText],
   );
   const markdownBoundaryKey = `${message.id}-${message.role}-${renderedText.length}-${effectiveCollapseMode}`;
   const canCopy = !copyDisabled && hasDisplayText;
-  const shouldShowRetryButton = !isUser && message.role !== "system" && !!onRetry;
+  const shouldShowRetryButton =
+    !isUser && message.role !== "system" && !!onRetry;
   const shouldShowCopyButton = message.role !== "system";
   const isPendingEmpty = isPendingAssistant && !hasDisplayText;
   const animateCitations = isPendingAssistant;
@@ -631,12 +630,10 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
       const originalName =
         label || (sourcePath ? getBaseName(sourcePath) : attachment.name);
 
-      void openMediaViewer(
-        {
-          ...attachment,
-          name: originalName,
-        },
-      );
+      void openMediaViewer({
+        ...attachment,
+        name: originalName,
+      });
     },
     [getAttachmentSourcePath, openMediaViewer],
   );
@@ -772,9 +769,10 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
             undefined,
             sourcePath,
           );
-          const fileName = sourcePath ? getBaseName(sourcePath) : attachment.name;
-          const label =
-            getNodeText(children).trim() || fileName;
+          const fileName = sourcePath
+            ? getBaseName(sourcePath)
+            : attachment.name;
+          const label = getNodeText(children).trim() || fileName;
 
           return (
             <CitationChip
@@ -874,10 +872,10 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 images={imageAttachments}
                 onImageClick={handleImageClick}
                 className={`${styles.imageCollage} ${
-                  isUser ? styles.imageCollageUserFrame : styles.imageCollageBotFrame
-                } ${
-                  shouldRenderBubble ? styles.imageCollageWithBubble : ""
-                }`}
+                  isUser
+                    ? styles.imageCollageUserFrame
+                    : styles.imageCollageBotFrame
+                } ${shouldRenderBubble ? styles.imageCollageWithBubble : ""}`}
               />
             )}
 
@@ -887,7 +885,9 @@ const ChatBubbleComponent: React.FC<ChatBubbleProps> = ({
                 className={`${styles.bubble} ${
                   isUser ? styles.userBubble : styles.botBubble
                 } ${
-                  isUser && isRichMarkdownUserMessage ? styles.userRichBubble : ""
+                  isUser && isRichMarkdownUserMessage
+                    ? styles.userRichBubble
+                    : ""
                 } ${isPendingAssistant ? styles.pendingBubbleShell : ""} ${
                   isPendingEmpty ? styles.pendingBubbleEmpty : ""
                 } ${

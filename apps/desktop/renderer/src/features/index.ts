@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./chat/MessageList";
 export * from "./chat/components/ChatInput/ChatInput";
 export * from "./chat/components/ChatBubble/ChatBubble";
 export * from "./chat/components/ImageArtifact/ImageArtifact";
@@ -19,6 +18,9 @@ export * from "./chat/hooks/useChatError";
 export * from "./chat/hooks/useChatTitle";
 export * from "./chat/hooks/useChatHistory";
 export * from "./chat/hooks/useSmoothStream";
+export * from "./chat/utils/markdownUtils";
+export * from "./chat/utils/markdownPlugins";
+export * from "./chat/MessageList";
 export * from "./chat/chat.types";
 export * from "./chat/Chat";
 
