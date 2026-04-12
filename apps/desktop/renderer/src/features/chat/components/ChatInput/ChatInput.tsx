@@ -15,7 +15,7 @@ import {
   getExtension,
   isAcceptedExtension,
   isImageExtension,
-} from "@/core";
+} from "@/core/helpers";
 import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import { InputTextarea, type ChatInputEditorHandle } from "./InputTextarea";
 import { InputActions } from "./InputActions";

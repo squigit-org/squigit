@@ -29,7 +29,8 @@ import {
 } from "@/components/icons";
 import { Dialog, LoadingSpinner } from "@/components/ui";
 import { useKeyDown, usePlatform } from "@/hooks/shared";
-import { ChatMetadata, getDeleteMultipleChatsDialog } from "@/core";
+import { getDeleteMultipleChatsDialog } from "@/core/helpers";
+import type { ChatMetadata } from "@/core/storage";
 import { PanelContextMenu } from "../menus/PanelContextMenu";
 import { useAppContext } from "../../providers/AppProvider";
 import styles from "./SidePanel.module.css";

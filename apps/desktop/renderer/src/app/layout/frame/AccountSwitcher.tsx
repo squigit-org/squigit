@@ -5,7 +5,7 @@
  */
 
 import React, { useRef, useEffect, useState } from "react";
-import { Profile } from "@/core";
+import type { Profile } from "@/core/api/tauri";
 import { Dialog } from "@/components/ui";
 import { Avatar } from "./Avatar";
 import {

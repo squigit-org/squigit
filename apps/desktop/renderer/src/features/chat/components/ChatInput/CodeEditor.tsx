@@ -14,7 +14,11 @@ import {
   WidgetOverlay,
   WidgetOverlayIconButton,
 } from "@/components/ui";
-import { ACCEPTED_EXTENSIONS, getExtension, isImageExtension } from "@/core";
+import {
+  ACCEPTED_EXTENSIONS,
+  getExtension,
+  isImageExtension,
+} from "@/core/helpers";
 import styles from "./CodeEditor.module.css";
 
 const NON_CODE_IMPORT_EXTENSIONS = new Set([

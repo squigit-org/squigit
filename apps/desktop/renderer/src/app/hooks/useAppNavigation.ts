@@ -6,21 +6,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { resolveOcrModelId, SUPPORTED_OCR_MODEL_IDS } from "@/core/config";
 import {
   AUTO_OCR_DISABLED_MODEL_ID,
-  OcrFrame,
-  loadChat,
-  getImagePath,
-  updateChatMetadata,
   cancelOcrJob,
-  SUPPORTED_OCR_MODEL_IDS,
-  resolveOcrModelId,
-} from "@/core";
-import { type Citation, type Message, type ToolStep } from "@/features/chat";
-import type {
+  getImagePath,
+  loadChat,
+  updateChatMetadata,
+  type OcrFrame,
   ChatCitation,
   ChatToolStep,
-} from "@/core";
+} from "@/core/storage";
+import { type Citation, type Message, type ToolStep } from "@/features/chat";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";
 const isOnboardingId = (id: string) => id.startsWith("__system_");
@@ -250,7 +247,9 @@ export const useAppNavigation = ({
     async (id: string) => {
       const requestId = navigationRequestIdRef.current + 1;
       navigationRequestIdRef.current = requestId;
-      const metadata = chatHistory.chats.find((chatMeta: any) => chatMeta.id === id);
+      const metadata = chatHistory.chats.find(
+        (chatMeta: any) => chatMeta.id === id,
+      );
 
       flushSync(() => {
         setIsNavigating(true);

@@ -27,14 +27,14 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import {
+  API_STATUS_TEXT,
   attachmentFromPath,
-  unwrapMarkdownLinkDestination,
   isAttachmentPath,
   normalizeAttachmentMarkdownLinks,
   parseAttachmentPaths,
   stripImageAttachmentMentions,
-  API_STATUS_TEXT,
-} from "@/core";
+  unwrapMarkdownLinkDestination,
+} from "@/core/helpers";
 import {
   Message,
   ToolStep,

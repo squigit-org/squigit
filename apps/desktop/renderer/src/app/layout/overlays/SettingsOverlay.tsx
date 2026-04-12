@@ -14,7 +14,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import { UserPreferences, github } from "@/core";
+import { github } from "@/core/config";
+import type { UserPreferences } from "@/core/storage";
 import { WidgetOverlay, WidgetOverlayIconButton } from "@/components/ui";
 import {
   GeneralSettings,

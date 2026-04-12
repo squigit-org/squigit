@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { DEFAULT_MODEL_ID } from "@/core";
+import { DEFAULT_MODEL_ID } from "@/core/config";
 
 export const useAppDrafts = () => {
   const [input, setInput] = useState("");

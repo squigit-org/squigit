@@ -22,21 +22,21 @@ import type { SettingsSection } from "@/features/settings";
 import { usePlatform } from "@/hooks/shared";
 import styles from "./ImageArtifact.module.css";
 import { Dialog } from "@/components/ui";
+import { useGoogleLens, generateTranslateUrl } from "@/core/api/google";
+import { DEFAULT_OCR_MODEL_ID, resolveOcrModelId } from "@/core/config";
 import {
-  type DialogContent,
-  AUTO_OCR_DISABLED_MODEL_ID,
-  DEFAULT_OCR_MODEL_ID,
   getErrorDialog,
   getMissingPackageDialog,
   getOutdatedPackageDialog,
-  OcrFrame,
+  type DialogContent,
+} from "@/core/helpers";
+import {
+  AUTO_OCR_DISABLED_MODEL_ID,
   cancelOcrJob,
-  saveOcrData,
-  useGoogleLens,
-  generateTranslateUrl,
-  resolveOcrModelId,
+  type OcrFrame,
   saveImageTone,
-} from "@/core";
+  saveOcrData,
+} from "@/core/storage";
 
 interface OCRBox {
   text: string;

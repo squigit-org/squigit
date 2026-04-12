@@ -12,7 +12,7 @@ import React, {
   useState,
 } from "react";
 import { WidgetOverlay } from "@/components/ui";
-import type { ChatMetadata, ChatSearchResult } from "@/core";
+import type { ChatMetadata, ChatSearchResult } from "@/core/storage";
 import { useNavigationContext } from "@/app/context/AppNavigation";
 import {
   ChatsList,

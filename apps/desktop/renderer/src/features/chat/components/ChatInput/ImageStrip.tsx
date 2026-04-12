@@ -14,7 +14,7 @@ import React, {
 } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { CloseCrossIcon } from "@/components/icons";
-import type { Attachment } from "@/core";
+import type { Attachment } from "@/core/helpers";
 import styles from "./ImageStrip.module.css";
 
 const MIN_THUMB_WIDTH = 30;

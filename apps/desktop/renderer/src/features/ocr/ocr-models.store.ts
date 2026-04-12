@@ -9,7 +9,8 @@ import { OcrModelStatus, AVAILABLE_MODELS } from "./ocr-models.types";
 import { getInstalledModelIds } from "./services/modelRegistry";
 import { downloadModel } from "./services/modelDownloader";
 
-import { commands, DEFAULT_OCR_MODEL_ID, resolveOcrModelId } from "@/core";
+import { commands } from "@/core/api/tauri";
+import { DEFAULT_OCR_MODEL_ID, resolveOcrModelId } from "@/core/config";
 
 interface DownloadProgressPayload {
   id: string;

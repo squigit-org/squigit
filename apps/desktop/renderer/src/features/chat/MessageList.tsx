@@ -16,8 +16,8 @@ import {
   ATTACHMENT_ANALYSIS_STATUS_DELAY_MS,
   getAttachmentAnalysisStatusText,
   isQuickAnswerSuppressedProgressText,
-} from "@/core";
-import type { AttachmentAnalysisCounts } from "@/core";
+  type AttachmentAnalysisCounts,
+} from "@/core/helpers";
 import { ChatBubble } from "./components/ChatBubble/ChatBubble";
 import styles from "./MessageList.module.css";
 

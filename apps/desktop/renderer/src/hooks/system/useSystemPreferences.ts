@@ -5,14 +5,13 @@
  */
 
 import { useState, useEffect } from "react";
+import { commands } from "@/core/api/tauri";
+import { DEFAULT_OCR_MODEL_ID, resolveOcrModelId } from "@/core/config";
 import {
-  UserPreferences,
+  type UserPreferences,
   loadPreferences,
   savePreferences,
-  commands,
-  DEFAULT_OCR_MODEL_ID,
-  resolveOcrModelId,
-} from "@/core";
+} from "@/core/storage";
 import { useTheme } from "@/hooks/shared";
 
 export const useSystemPreferences = () => {

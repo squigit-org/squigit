@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { google } from "@/core";
+import { google } from "@/core/config";
 import { invoke } from "@tauri-apps/api/core";
 
 /**

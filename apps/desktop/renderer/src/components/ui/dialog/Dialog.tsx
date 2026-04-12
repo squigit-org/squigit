@@ -19,7 +19,8 @@ export interface DialogAction {
   disabled?: boolean;
 }
 
-import { getDialogs, DialogContent, commands } from "@/core";
+import { commands } from "@/core/api/tauri";
+import { getDialogs, type DialogContent } from "@/core/helpers";
 
 interface DialogProps {
   variant?: DialogVariant;

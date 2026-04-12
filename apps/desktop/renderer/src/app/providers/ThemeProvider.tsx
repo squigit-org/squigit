@@ -12,7 +12,7 @@ import React, {
   useContext,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { loadPreferences, savePreferences } from "@/core";
+import { loadPreferences, savePreferences } from "@/core/storage";
 
 export interface ThemeContextType {
   theme: "light" | "dark" | "system";

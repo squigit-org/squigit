@@ -5,7 +5,7 @@
  */
 
 import type { KeyboardEvent, RefObject } from "react";
-import type { Attachment } from "@/core";
+import type { Attachment } from "@/core/helpers";
 
 export type ChatSubmitHandler = () => void;
 

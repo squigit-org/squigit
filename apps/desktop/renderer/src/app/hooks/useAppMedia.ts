@@ -11,7 +11,7 @@ import {
   isImageExtension,
   type Attachment,
   unwrapMarkdownLinkDestination,
-} from "@/core";
+} from "@/core/helpers";
 import { type MediaGalleryItem, type MediaViewerItem } from "@/features/media";
 
 export type MediaViewerOpenOptions = {

@@ -47,7 +47,7 @@ import {
   buildAttachmentMention,
   isAttachmentPath,
   unwrapMarkdownLinkDestination,
-} from "@/core";
+} from "@/core/helpers";
 import { useMediaContext } from "@/app/context/AppMedia";
 import styles from "./ChatInput.module.css";
 

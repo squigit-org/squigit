@@ -7,7 +7,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useMediaContext } from "@/app/context/AppMedia";
-import { getImagePath, type Attachment, type ChatMetadata } from "@/core";
+import type { Attachment } from "@/core/helpers";
+import { getImagePath, type ChatMetadata } from "@/core/storage";
 import styles from "./GalleryRoute.module.css";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";

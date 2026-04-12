@@ -12,7 +12,8 @@ import {
   mkdir,
 } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-import { commands, resolveModelId, resolveOcrModelId } from "@/core";
+import { commands } from "@/core/api/tauri";
+import { resolveModelId, resolveOcrModelId } from "@/core/config";
 
 export interface UserPreferences {
   model: string;

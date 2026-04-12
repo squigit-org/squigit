@@ -6,13 +6,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  type ChatSearchResult,
-  ChatMetadata,
-  listChats,
-  searchChats as searchChatsApi,
   deleteChat,
+  listChats,
+  type ChatMetadata,
+  type ChatSearchResult,
+  searchChats as searchChatsApi,
   updateChatMetadata as updateChatMeta,
-} from "@/core";
+} from "@/core/storage";
 const SYSTEM_PREFIX = "__system_";
 const isOnboardingId = (id: string) => id.startsWith(SYSTEM_PREFIX);
 const TOUCH_THROTTLE_MS = 1200;
