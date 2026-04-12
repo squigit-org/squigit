@@ -5,6 +5,7 @@
  */
 
 export * from "./components/ChatBubble/ChatBubble";
+export * from "./components/ChatInput/ChatInput";
+export * from "./components/ImageArtifact/ImageArtifact";
 export * from "./MessageList";
 export * from "./chat.types";
-export * from "./Chat";

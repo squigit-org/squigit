@@ -5,10 +5,10 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { getImagePath, type ChatMetadata, type Attachment } from "@/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { useMediaContext } from "@/app/context/AppMedia";
-import { Thumbnail } from "./components/Thumbnail";
-import styles from "./Gallery.module.css";
+import { getImagePath, type Attachment, type ChatMetadata } from "@/core";
+import styles from "./GalleryRoute.module.css";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";
 
@@ -21,6 +21,18 @@ interface GalleryCandidate {
 
 interface GalleryImage extends GalleryCandidate {
   path: string;
+}
+
+interface GalleryRouteProps {
+  chats: ChatMetadata[];
+  activeSessionId: string | null;
+  refreshChats: () => Promise<void> | void;
+}
+
+interface GalleryThumbnailProps {
+  imagePath: string;
+  title: string;
+  onClick: () => void;
 }
 
 const toTimestamp = (value: string) => new Date(value || 0).getTime();
@@ -53,13 +65,24 @@ const selectLatestByHash = (chats: ChatMetadata[]): GalleryCandidate[] => {
   );
 };
 
-interface GalleryProps {
-  chats: ChatMetadata[];
-  activeSessionId: string | null;
-  refreshChats: () => Promise<void> | void;
-}
+const GalleryThumbnail: React.FC<GalleryThumbnailProps> = ({
+  imagePath,
+  title,
+  onClick,
+}) => {
+  const src = useMemo(() => convertFileSrc(imagePath), [imagePath]);
 
-export const Gallery: React.FC<GalleryProps> = ({
+  return (
+    <button type="button" className={styles.card} onClick={onClick}>
+      <img src={src} alt={title} className={styles.preview} loading="lazy" />
+      <div className={styles.cardMeta}>
+        <span className={styles.cardTitle}>{title}</span>
+      </div>
+    </button>
+  );
+};
+
+export const GalleryRoute: React.FC<GalleryRouteProps> = ({
   chats,
   activeSessionId,
   refreshChats,
@@ -142,7 +165,7 @@ export const Gallery: React.FC<GalleryProps> = ({
 
       <div className={styles.grid}>
         {items.map((item) => (
-          <Thumbnail
+          <GalleryThumbnail
             key={`${item.hash}-${item.chatId}`}
             imagePath={item.path}
             title={item.title}

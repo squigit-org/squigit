@@ -38,6 +38,45 @@
   gap: 10px;
 }
 
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--c-raw-038);
+  border-radius: 10px;
+  background: var(--c-raw-010);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  transition: border-color 0.15s ease;
+  contain: paint;
+}
+
+.card:hover {
+  border-color: var(--c-raw-073);
+}
+
+.preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--c-raw-038);
+}
+
+.cardMeta {
+  padding: 8px 10px;
+}
+
+.cardTitle {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--c-raw-106);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .state {
   height: calc(100% - 44px);
   display: flex;

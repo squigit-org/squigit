@@ -7,15 +7,15 @@
 import React from "react";
 import { Dialog, TextShimmer } from "@/components/ui";
 import { API_STATUS_TEXT, type AttachmentAnalysisCounts } from "@/core";
-import type {
-  Message,
-  MessageCollapseMode,
-  PendingAssistantTurn,
-} from "./chat.types";
-import { MessageList } from "./MessageList";
-import styles from "./Chat.module.css";
+import {
+  MessageList,
+  type Message,
+  type MessageCollapseMode,
+  type PendingAssistantTurn,
+} from "@/features/chat";
+import styles from "./ChatRoute.module.css";
 
-interface ChatContentProps {
+interface ChatRouteContentProps {
   activeChatId?: string | null;
   parsedError: { title: string; message: string } | null;
   isErrorOpen: boolean;
@@ -39,7 +39,7 @@ interface ChatContentProps {
   onSystemAction?: (actionId: string, value?: string) => void;
 }
 
-const ChatContentComponent: React.FC<ChatContentProps> = ({
+const ChatRouteContentComponent: React.FC<ChatRouteContentProps> = ({
   activeChatId,
   parsedError,
   isErrorOpen,
@@ -135,8 +135,8 @@ const ChatContentComponent: React.FC<ChatContentProps> = ({
   );
 };
 
-export const ChatContent = React.memo(
-  ChatContentComponent,
+export const ChatRouteContent = React.memo(
+  ChatRouteContentComponent,
   (prevProps, nextProps) => {
     const areErrorActionsStable =
       !prevProps.parsedError && !nextProps.parsedError

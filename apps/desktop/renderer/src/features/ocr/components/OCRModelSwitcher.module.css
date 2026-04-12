@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/components/dropdown/Dropdown.shared.module.css";
+@import "@/components/ui/dropdown/Dropdown.shared.module.css";
 
 .modelSwitcher {
   position: relative;
@@ -57,25 +57,25 @@
 }
 
 .dropdown {
-  composes: dropdown from "@/components/dropdown/Dropdown.shared.module.css";
+  composes: dropdown from "@/components/ui/dropdown/Dropdown.shared.module.css";
 }
 
 .open {
-  composes: open from "@/components/dropdown/Dropdown.shared.module.css";
+  composes: open from "@/components/ui/dropdown/Dropdown.shared.module.css";
 }
 
 .sectionTitle {
-  composes: sectionTitle from "@/components/dropdown/Dropdown.shared.module.css";
+  composes: sectionTitle from "@/components/ui/dropdown/Dropdown.shared.module.css";
 }
 
 .divider {
-  composes: divider from "@/components/dropdown/Dropdown.shared.module.css";
+  composes: divider from "@/components/ui/dropdown/Dropdown.shared.module.css";
 }
 
 .actions {
-  composes: actions from "@/components/dropdown/Dropdown.shared.module.css";
+  composes: actions from "@/components/ui/dropdown/Dropdown.shared.module.css";
 }
 
 .actionButton {
-  composes: actionButton from "@/components/dropdown/Dropdown.shared.module.css";
+  composes: actionButton from "@/components/ui/dropdown/Dropdown.shared.module.css";
 }

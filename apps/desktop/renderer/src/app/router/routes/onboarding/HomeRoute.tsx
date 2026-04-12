@@ -4,23 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
-import { usePlatform } from "@/hooks";
+import React, { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import styles from "./Welcome.module.css";
-import { ImageResult, storeImageFromPath } from "@/core";
-import { OnboardingLayout } from "../OnboardingLayout";
 import { AppLogo } from "@/components/icons";
+import { ImageResult, storeImageFromPath } from "@/core";
+import { usePlatform } from "@/hooks";
+import styles from "./HomeRoute.module.css";
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
-export interface CASImageData {
+interface CASImageData {
   imageId: string;
   path: string;
 }
 
-interface WelcomeProps {
+interface HomeRouteProps {
   appName: string;
   onImageReady: (data: CASImageData) => void;
   isActive?: boolean;
@@ -28,7 +27,7 @@ interface WelcomeProps {
   onLoginRequired?: () => void;
 }
 
-export const Welcome: React.FC<WelcomeProps> = ({
+export const HomeRoute: React.FC<HomeRouteProps> = ({
   appName,
   onImageReady,
   isActive = true,
@@ -38,7 +37,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const { isMac, isWin, modSymbol, shiftSymbol } = usePlatform();
 
-  const platformInfo = React.useMemo(() => {
+  const platformInfo = useMemo(() => {
     if (isMac) {
       return {
         screenshotKeys: (
@@ -58,7 +57,9 @@ export const Welcome: React.FC<WelcomeProps> = ({
           </>
         ),
       };
-    } else if (isWin) {
+    }
+
+    if (isWin) {
       return {
         screenshotKeys: (
           <>
@@ -77,26 +78,26 @@ export const Welcome: React.FC<WelcomeProps> = ({
           </>
         ),
       };
-    } else {
-      return {
-        screenshotKeys: (
-          <>
-            <span className={styles.key}>Super</span>
-            <span className={styles.keySep}>+</span>
-            <span className={styles.key}>Shift</span>
-            <span className={styles.keySep}>+</span>
-            <span className={styles.key}>A</span>
-          </>
-        ),
-        pasteKeys: (
-          <>
-            <span className={styles.key}>Ctrl</span>
-            <span className={styles.keySep}>+</span>
-            <span className={styles.key}>V</span>
-          </>
-        ),
-      };
     }
+
+    return {
+      screenshotKeys: (
+        <>
+          <span className={styles.key}>Super</span>
+          <span className={styles.keySep}>+</span>
+          <span className={styles.key}>Shift</span>
+          <span className={styles.keySep}>+</span>
+          <span className={styles.key}>A</span>
+        </>
+      ),
+      pasteKeys: (
+        <>
+          <span className={styles.key}>Ctrl</span>
+          <span className={styles.keySep}>+</span>
+          <span className={styles.key}>V</span>
+        </>
+      ),
+    };
   }, [isMac, isWin, modSymbol, shiftSymbol]);
 
   useEffect(() => {
@@ -108,6 +109,7 @@ export const Welcome: React.FC<WelcomeProps> = ({
           onLoginRequired?.();
           return;
         }
+
         try {
           const result = await invoke<ImageResult>("read_clipboard_image");
           if (result) {
@@ -123,11 +125,10 @@ export const Welcome: React.FC<WelcomeProps> = ({
     };
 
     window.addEventListener("keydown", handlePaste);
-
     return () => {
       window.removeEventListener("keydown", handlePaste);
     };
-  }, [onImageReady, isActive]);
+  }, [isActive, isGuest, onImageReady, onLoginRequired]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -151,7 +152,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
 
         if (paths && paths.length > 0) {
           const filePath = paths[0];
-
           const lowerPath = filePath.toLowerCase();
           const isAllowed = ALLOWED_EXTENSIONS.some((ext) =>
             lowerPath.endsWith(ext),
@@ -162,8 +162,8 @@ export const Welcome: React.FC<WelcomeProps> = ({
               onLoginRequired?.();
               return;
             }
+
             try {
-              console.log("Processing dropped file:", filePath);
               const result = await storeImageFromPath(filePath);
               onImageReady({
                 imageId: result.hash,
@@ -183,15 +183,15 @@ export const Welcome: React.FC<WelcomeProps> = ({
     );
 
     return () => {
-      unlistenHover.then((fn) => fn());
-      unlistenLeave.then((fn) => fn());
-      unlistenDrop.then((fn) => fn());
+      void unlistenHover.then((fn) => fn());
+      void unlistenLeave.then((fn) => fn());
+      void unlistenDrop.then((fn) => fn());
     };
-  }, [onImageReady, isActive]);
+  }, [isActive, isGuest, onImageReady, onLoginRequired]);
 
   return (
-    <OnboardingLayout
-      className={`${isDragging ? styles.dragging : ""}`}
+    <div
+      className={`${styles.container} ${isDragging ? styles.dragging : ""}`}
       tabIndex={-1}
     >
       <div className={styles.content}>
@@ -225,6 +225,6 @@ export const Welcome: React.FC<WelcomeProps> = ({
           </div>
         </div>
       </div>
-    </OnboardingLayout>
+    </div>
   );
 };

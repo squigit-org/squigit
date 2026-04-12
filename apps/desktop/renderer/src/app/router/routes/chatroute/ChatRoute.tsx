@@ -33,11 +33,11 @@ import {
   stripImageAttachmentMentions,
   type Attachment,
 } from "@/core";
+import type { MessageCollapseMode } from "@/features/chat";
 
-import { ChatLayout } from "./ChatLayout";
-import { ChatContent } from "./ChatContent";
-import type { MessageCollapseMode } from "./chat.types";
-import styles from "./Chat.module.css";
+import { ChatRouteLayout } from "./ChatRouteLayout";
+import { ChatRouteContent } from "./ChatRouteContent";
+import styles from "./ChatRoute.module.css";
 
 function getBaseName(path: string): string {
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
@@ -84,7 +84,7 @@ function areIdSetsEqual(left: Set<string>, right: Set<string>): boolean {
   return true;
 }
 
-export const Chat: React.FC = () => {
+export const ChatRoute: React.FC = () => {
   const app = useAppContext();
   const [pendingUndoMessageId, setPendingUndoMessageId] = useState<
     string | null
@@ -1119,7 +1119,7 @@ export const Chat: React.FC = () => {
   );
 
   return (
-    <ChatLayout
+    <ChatRouteLayout
       headerRef={headerRef}
       scrollContainerRef={scrollContainerRef}
       bottomAnchorRef={bottomAnchorRef}
@@ -1176,7 +1176,7 @@ export const Chat: React.FC = () => {
       onInlineMenuAction={handleAction}
       onInlineMenuSwitchPage={switchPage}
     >
-      <ChatContent
+      <ChatRouteContent
         activeChatId={app.chatHistory.activeSessionId}
         parsedError={parsedError}
         isErrorOpen={isErrorOpen}
@@ -1199,6 +1199,6 @@ export const Chat: React.FC = () => {
         onUndoMessage={handleRequestUndoMessage}
         onSystemAction={app.handleSystemAction}
       />
-    </ChatLayout>
+    </ChatRouteLayout>
   );
 };

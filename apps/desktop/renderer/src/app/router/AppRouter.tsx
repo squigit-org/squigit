@@ -6,9 +6,8 @@
 
 import React, { useEffect } from "react";
 import { usePlatform } from "@/hooks";
-import { AppProvider, useAppContext } from "../providers/AppProvider";
+import { useAppContext } from "../providers/AppProvider";
 import { MainScreen } from "../shell/screens/MainScreen";
-import { SplashScreen } from "../shell/screens/SplashScreen";
 import { AppRoutes } from "./routes";
 import { AppDialogs } from "./dialogs";
 
@@ -16,7 +15,7 @@ import "katex/dist/katex.min.css";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
-const AppRouterContent: React.FC = () => {
+export const AppRouter: React.FC = () => {
   const app = useAppContext();
   const { isMac } = usePlatform();
 
@@ -54,26 +53,14 @@ const AppRouterContent: React.FC = () => {
     hasActiveChatSession ||
     !app.isImageMissing;
 
-  if (app.isLoadingState) {
-    return <SplashScreen onContextMenu={app.handleContextMenu} />;
-  }
-
   return (
     <MainScreen
       onContextMenu={app.handleContextMenu}
       containerRef={shouldRenderChatShell ? app.containerRef : undefined}
       isSidePanelOpen={app.isSidePanelOpen}
       enablePanelAnimation={app.enablePanelAnimation}
-      content={<AppRoutes />}
+      content={<AppRoutes shouldRenderChatShell={shouldRenderChatShell} />}
       dialogs={<AppDialogs />}
     />
-  );
-};
-
-export const AppRouter: React.FC = () => {
-  return (
-    <AppProvider>
-      <AppRouterContent />
-    </AppProvider>
   );
 };

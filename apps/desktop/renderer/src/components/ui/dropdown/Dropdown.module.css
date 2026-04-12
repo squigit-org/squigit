@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/components/dropdown/Dropdown.shared.module.css";
+@import "@/components/ui/dropdown/Dropdown.shared.module.css";
 
 .trigger {
   font-size: 0.875rem;

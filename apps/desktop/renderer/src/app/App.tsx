@@ -7,7 +7,7 @@
 import { useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ThemeProvider } from "./providers/ThemeProvider";
-import { AppRouter } from "./router/AppRouter";
+import { AppHost } from "./router/AppHost";
 
 function App() {
   useEffect(() => {
@@ -25,7 +25,7 @@ function App() {
 
   return (
     <ThemeProvider>
-      <AppRouter />
+      <AppHost />
     </ThemeProvider>
   );
 }

@@ -5,27 +5,30 @@
  */
 
 import React from "react";
-import { Welcome, Agreement, UpdateNotes } from "@/features";
-import { Gallery } from "@/features/gallery";
-import { Chat } from "@/features/chat";
 import { useAppContext } from "../providers/AppProvider";
+import { ChatRoute } from "./routes/chatroute/ChatRoute";
+import { GalleryRoute } from "./routes/galleryroute/GalleryRoute";
+import { HomeRoute } from "./routes/onboarding/HomeRoute";
+import { UpdateNotesRoute } from "./routes/onboarding/UpdateNotesRoute";
+import { WelcomeRoute } from "./routes/onboarding/WelcomeRoute";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
-export const AppRoutes: React.FC = () => {
+interface AppRoutesProps {
+  shouldRenderChatShell: boolean;
+}
+
+export const AppRoutes: React.FC<AppRoutesProps> = ({
+  shouldRenderChatShell,
+}) => {
   const app = useAppContext();
 
   const activeId = app.chatHistory.activeSessionId;
-  const hasActiveChatSession = !!activeId && !isOnboardingId(activeId);
-  const shouldRenderChatShell =
-    app.showChatShellDuringNavigation ||
-    hasActiveChatSession ||
-    !app.isImageMissing;
 
   if (activeId && isOnboardingId(activeId)) {
     if (activeId === "__system_welcome") {
       return (
-        <Agreement
+        <WelcomeRoute
           onSystemAction={app.handleSystemAction}
           onOpenSettings={app.system.openSettings}
         />
@@ -33,7 +36,7 @@ export const AppRoutes: React.FC = () => {
     }
     if (activeId.startsWith("__system_update")) {
       return (
-        <UpdateNotes
+        <UpdateNotesRoute
           appName={app.system.appName}
           onSystemAction={app.handleSystemAction}
         />
@@ -41,7 +44,7 @@ export const AppRoutes: React.FC = () => {
     }
     if (activeId === "__system_gallery") {
       return (
-        <Gallery
+        <GalleryRoute
           chats={app.chatHistory.chats}
           activeSessionId={app.chatHistory.activeSessionId}
           refreshChats={app.chatHistory.refreshChats}
@@ -52,7 +55,7 @@ export const AppRoutes: React.FC = () => {
 
   if (!shouldRenderChatShell) {
     return (
-      <Welcome
+      <HomeRoute
         appName={app.system.appName}
         onImageReady={app.handleImageReady}
         isGuest={!app.system.activeProfile}
@@ -61,5 +64,5 @@ export const AppRoutes: React.FC = () => {
     );
   }
 
-  return <Chat />;
+  return <ChatRoute />;
 };

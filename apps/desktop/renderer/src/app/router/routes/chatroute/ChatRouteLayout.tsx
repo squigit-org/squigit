@@ -7,9 +7,8 @@
 import React, { type RefObject } from "react";
 import { InlineMenu, LoadingSpinner } from "@/components/ui";
 import type { Attachment, OcrFrame } from "@/core";
-import { ChatInput } from "./components/ChatInput/ChatInput";
-import { ImageArtifact } from "./components/ImageArtifact/ImageArtifact";
-import styles from "./Chat.module.css";
+import { ChatInput, ImageArtifact } from "@/features/chat";
+import styles from "./ChatRoute.module.css";
 
 type StartupImage = {
   path: string;
@@ -18,7 +17,7 @@ type StartupImage = {
   tone?: string;
 } | null;
 
-interface ChatLayoutProps {
+interface ChatRouteLayoutProps {
   headerRef: RefObject<HTMLDivElement | null>;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   bottomAnchorRef: RefObject<HTMLDivElement | null>;
@@ -84,7 +83,7 @@ interface ChatLayoutProps {
   children: React.ReactNode;
 }
 
-const ChatLayoutComponent: React.FC<ChatLayoutProps> = ({
+const ChatRouteLayoutComponent: React.FC<ChatRouteLayoutProps> = ({
   headerRef,
   scrollContainerRef,
   bottomAnchorRef,
@@ -289,4 +288,4 @@ const ChatLayoutComponent: React.FC<ChatLayoutProps> = ({
   );
 };
 
-export const ChatLayout = React.memo(ChatLayoutComponent);
+export const ChatRouteLayout = React.memo(ChatRouteLayoutComponent);

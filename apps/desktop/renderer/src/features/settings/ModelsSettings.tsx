@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react";
-import styles from "./ModelSettings.module.css";
+import styles from "./ModelsSettings.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
 import { UserPreferences, DEFAULT_OCR_MODEL_ID, MODELS } from "@/core";
 import {
