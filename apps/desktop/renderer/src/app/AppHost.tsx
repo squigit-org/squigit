@@ -6,7 +6,7 @@
 
 import React from "react";
 import { AppProvider, useAppContext } from "./providers/AppProvider";
-import { SplashScreen } from "./shell/screens/SplashScreen";
+import { SplashScreen } from "./layout/screens/SplashScreen";
 import { AppRouter } from "./router/AppRouter";
 
 const AppHostContent: React.FC = () => {

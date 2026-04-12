@@ -6,7 +6,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useHistoryState } from "./useHistoryState";
-import { useClipboard, useKeyDown } from "@/hooks";
+import { useClipboard, useKeyDown } from "@/hooks/shared";
 
 interface UseTextEditorProps {
   value: string;

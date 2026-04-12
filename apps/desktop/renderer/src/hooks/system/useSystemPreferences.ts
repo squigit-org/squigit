@@ -13,7 +13,7 @@ import {
   DEFAULT_OCR_MODEL_ID,
   resolveOcrModelId,
 } from "@/core";
-import { useTheme } from "@/hooks";
+import { useTheme } from "@/hooks/shared";
 
 export const useSystemPreferences = () => {
   const { theme, resolvedTheme, setTheme } = useTheme();

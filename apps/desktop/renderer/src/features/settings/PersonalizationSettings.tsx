@@ -5,9 +5,9 @@
  */
 
 import React from "react";
-import { useTextEditor, useTextContextMenu } from "@/hooks";
+import { useTextEditor, useTextContextMenu } from "@/hooks/editor";
 import { UserPreferences } from "@/core";
-import { TextContextMenu } from "@/app/shell/menus/TextContextMenu";
+import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import styles from "./PersonalizationSettings.module.css";
 
 interface PersonalizationSettingsProps {

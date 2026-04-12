@@ -5,7 +5,8 @@
  */
 
 import { useState } from "react";
-import { commands, initializeBrainProvider } from "@/core";
+import { commands } from "@/core/api/tauri";
+import { initializeBrainProvider } from "@/core/brain";
 
 export const useSystemApiKeys = (activeProfileId?: string) => {
   const [apiKey, setApiKey] = useState<string>("");

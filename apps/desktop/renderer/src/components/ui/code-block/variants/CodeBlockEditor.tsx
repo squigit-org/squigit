@@ -14,8 +14,9 @@ import React, {
   useState,
 } from "react";
 import { Terminal } from "lucide-react";
-import { useCodeHighlighter, useTextContextMenu, useKeyDown } from "@/hooks";
-import { TextContextMenu } from  "@/app/shell/menus/TextContextMenu";
+import { useKeyDown } from "@/hooks/shared";
+import { useCodeHighlighter, useTextContextMenu } from "@/hooks/editor";
+import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import styles from "./CodeBlock.shared.module.css";
 
 const INDENT = "  ";
@@ -154,7 +155,8 @@ const indentSelection = (
   start: number,
   end: number,
 ): EditResult => {
-  const hasMultilineSelection = start !== end && text.slice(start, end).includes("\n");
+  const hasMultilineSelection =
+    start !== end && text.slice(start, end).includes("\n");
 
   if (!hasMultilineSelection) {
     const nextValue = `${text.slice(0, start)}${INDENT}${text.slice(end)}`;
@@ -198,7 +200,8 @@ const outdentSelection = (
   start: number,
   end: number,
 ): EditResult | null => {
-  const hasMultilineSelection = start !== end && text.slice(start, end).includes("\n");
+  const hasMultilineSelection =
+    start !== end && text.slice(start, end).includes("\n");
 
   if (!hasMultilineSelection) {
     const lineStart = getLineStartOffset(text, start);
@@ -283,7 +286,9 @@ const toggleLineComments = (
 
     if (shouldUncomment) {
       if (start > lineStart + indentationLength) {
-        const uncommentedLength = line.slice(indentationLength).startsWith(`${token} `)
+        const uncommentedLength = line
+          .slice(indentationLength)
+          .startsWith(`${token} `)
           ? tokenLength
           : line.slice(indentationLength).startsWith(token)
             ? token.length
@@ -351,7 +356,10 @@ const toggleBlockComments = (
 
   if (start === end) {
     const nextPosition = shouldUncomment
-      ? Math.max(targetStart + leadingWhitespace.length, start - open.length - 1)
+      ? Math.max(
+          targetStart + leadingWhitespace.length,
+          start - open.length - 1,
+        )
       : start + open.length + (core.length > 0 ? 1 : 0);
 
     return {
@@ -378,7 +386,9 @@ const moveSelectedLines = (
   const lineStarts = getLineStartOffsets(lines);
   const { startLine, endLine } = getSelectedLineIndexes(text, start, end);
   const isCollapsed = start === end;
-  const lastMovableLineIndex = text.endsWith("\n") ? lines.length - 2 : lines.length - 1;
+  const lastMovableLineIndex = text.endsWith("\n")
+    ? lines.length - 2
+    : lines.length - 1;
 
   if (direction === -1) {
     if (startLine === 0) {
@@ -436,7 +446,8 @@ const moveSelectedLines = (
   if (isCollapsed) {
     const column = start - lineStarts[startLine];
     const nextPosition =
-      nextLineStarts[nextStartLine] + Math.min(column, nextLines[nextStartLine].length);
+      nextLineStarts[nextStartLine] +
+      Math.min(column, nextLines[nextStartLine].length);
 
     return {
       value: nextValue,
@@ -505,7 +516,10 @@ export const CodeBlockEditor = forwardRef<
     const [renameValue, setRenameValue] = useState(displayLanguage);
     const [activeLine, setActiveLine] = useState(1);
     const lineCount = getLineCount(value);
-    const lineNumbers = Array.from({ length: lineCount }, (_, index) => index + 1);
+    const lineNumbers = Array.from(
+      { length: lineCount },
+      (_, index) => index + 1,
+    );
     const lineNumberDigits = Math.max(String(lineCount).length, 2);
     const editorStyle = {
       ...style,
@@ -675,7 +689,8 @@ export const CodeBlockEditor = forwardRef<
         const text = await navigator.clipboard.readText();
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const newValue = value.substring(0, start) + text + value.substring(end);
+        const newValue =
+          value.substring(0, start) + text + value.substring(end);
         onChange(newValue);
 
         setTimeout(() => {
@@ -818,9 +833,7 @@ export const CodeBlockEditor = forwardRef<
           return;
         }
 
-        if (
-          Object.prototype.hasOwnProperty.call(AUTO_CLOSE_PAIRS, e.key)
-        ) {
+        if (Object.prototype.hasOwnProperty.call(AUTO_CLOSE_PAIRS, e.key)) {
           const closingCharacter = AUTO_CLOSE_PAIRS[e.key];
 
           if (!hasSelection && value[end] === e.key) {

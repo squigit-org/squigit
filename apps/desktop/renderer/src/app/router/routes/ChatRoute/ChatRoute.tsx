@@ -15,13 +15,13 @@ import React, {
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAppContext } from "@/app/providers/AppProvider";
+import { useInlineMenu } from "@/hooks/editor";
 import {
-  useInlineMenu,
   useChatScroll,
   useChatInputHeight,
   useChatWheel,
   useChatError,
-} from "@/hooks";
+} from "@/features/chat";
 import {
   API_STATUS_TEXT,
   ATTACHMENT_ANALYSIS_STATUS_DELAY_MS,
@@ -32,7 +32,7 @@ import {
   parseAttachmentPaths,
   stripImageAttachmentMentions,
   type Attachment,
-} from "@/core";
+} from "@/core/helpers";
 import type { MessageCollapseMode } from "@/features/chat";
 
 import { ChatRouteLayout } from "./ChatRouteLayout";

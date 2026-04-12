@@ -20,11 +20,8 @@ import {
   createProviderChannelId,
   createStreamWatchdog,
 } from "../transport";
-import {
-  generateGeminiImageBrief,
-  streamGeminiChat,
-} from "../commands";
-import { saveImageBrief } from "@/core/storage/chat";
+import { generateGeminiImageBrief, streamGeminiChat } from "../commands";
+import { saveImageBrief } from "@/core/storage/chat.storage";
 
 export const startNewThreadStream = async (
   modelId: string,
@@ -37,7 +34,8 @@ export const startNewThreadStream = async (
   onBriefReady?: (brief: string) => void,
   onEvent?: (event: ProviderStreamEvent) => void,
 ): Promise<string> => {
-  if (!brainSessionStore.storedApiKey) throw new Error("Gemini API Key not set");
+  if (!brainSessionStore.storedApiKey)
+    throw new Error("Gemini API Key not set");
 
   cancelCurrentRequest();
   brainSessionStore.currentAbortController = new AbortController();
@@ -82,12 +80,12 @@ export const startNewThreadStream = async (
       let lastError = null;
       while (attempt < 5) {
         try {
-            const providerApiKey = brainSessionStore.storedApiKey;
-            if (!providerApiKey) return "";
-            const brief = await generateGeminiImageBrief(
-              providerApiKey,
-              imagePath,
-            );
+          const providerApiKey = brainSessionStore.storedApiKey;
+          if (!providerApiKey) return "";
+          const brief = await generateGeminiImageBrief(
+            providerApiKey,
+            imagePath,
+          );
           if (brief) {
             if (chatId) {
               saveImageBrief(chatId, brief).catch(console.error);
@@ -149,7 +147,8 @@ export const startNewThreadStream = async (
     clearActiveProviderTransport(channelId, unlisten);
     brainSessionStore.currentAbortController = null;
 
-    if (brainSessionStore.generationId !== myGenId) throw new Error("CANCELLED");
+    if (brainSessionStore.generationId !== myGenId)
+      throw new Error("CANCELLED");
 
     setImageDescription(fullResponse);
     addToHistory("Assistant", fullResponse);

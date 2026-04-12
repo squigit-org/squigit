@@ -12,22 +12,23 @@ import {
   AUTO_OCR_DISABLED_MODEL_ID,
   OcrFrame,
   appendChatMessage,
-  github,
   overwriteChatMessages,
+} from "@/core/storage";
+import type { Attachment } from "@/core/helpers";
+import {
+  github,
   resolveOcrModelId,
   SUPPORTED_OCR_MODEL_IDS,
-  type Attachment,
-} from "@/core";
+} from "@/core/config";
 import {
   getPendingUpdate,
   useAuth,
-  useAttachments,
-  useBrainTitle,
   useSystemSync,
   useUpdateCheck,
-  useChat,
-  useChatHistory,
-} from "@/hooks";
+} from "@/hooks/system";
+import { useBrainTitle } from "@/core/brain";
+import { useAttachments } from "@/hooks/shared";
+import { useChat, useChatHistory } from "@/features/chat";
 import { useAppBusyGuard } from "./useAppBusyGuard";
 import { useAppCapture } from "./useAppCapture";
 import { useAppContextMenu } from "./useAppContextMenu";

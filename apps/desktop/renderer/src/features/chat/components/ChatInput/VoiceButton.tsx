@@ -10,7 +10,7 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { Mic, Square } from "lucide-react";
 import styles from "./ChatInput.module.css";
 import { Tooltip, Dialog } from "@/components/ui";
-import { usePlatform } from "@/hooks/core/usePlatform";
+import { usePlatform } from "@/hooks/shared/usePlatform";
 import { type DialogContent, getMissingPackageDialog } from "@/core";
 
 interface VoiceButtonProps {

@@ -9,7 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AppLogo } from "@/components/icons";
 import { ImageResult, storeImageFromPath } from "@/core";
-import { usePlatform } from "@/hooks";
+import { usePlatform } from "@/hooks/shared";
 import styles from "./HomeRoute.module.css";
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];

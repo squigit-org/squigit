@@ -5,9 +5,9 @@
  */
 
 import React, { useEffect } from "react";
-import { usePlatform } from "@/hooks";
+import { usePlatform } from "@/hooks/shared";
 import { useAppContext } from "../providers/AppProvider";
-import { MainScreen } from "../shell/screens/MainScreen";
+import { AppLayout } from "../layout/AppLayout";
 import { AppRoutes } from "./AppRoutes";
 import { AppDialogs } from "./dialogs";
 
@@ -54,7 +54,7 @@ export const AppRouter: React.FC = () => {
     !app.isImageMissing;
 
   return (
-    <MainScreen
+    <AppLayout
       onContextMenu={app.handleContextMenu}
       containerRef={shouldRenderChatShell ? app.containerRef : undefined}
       isSidePanelOpen={app.isSidePanelOpen}

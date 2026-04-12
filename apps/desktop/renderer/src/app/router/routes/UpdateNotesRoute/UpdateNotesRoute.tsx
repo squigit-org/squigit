@@ -9,7 +9,8 @@ import { clsx } from "clsx";
 import { ChevronRight, DownloadCloud } from "lucide-react";
 import { updateIcon } from "@/assets";
 import { CodeBlock } from "@/components/ui";
-import { getPendingUpdate, markUpdateDone, usePlatform } from "@/hooks";
+import { getPendingUpdate, markUpdateDone } from "@/hooks/system";
+import { usePlatform } from "@/hooks/shared";
 import styles from "./UpdateNotesRoute.module.css";
 
 interface UpdateSectionProps {
@@ -125,8 +126,8 @@ export const UpdateNotesRoute: React.FC<UpdateNotesRouteProps> = ({
                   marginBottom: "0.5rem",
                 }}
               >
-                The new version is available via {platform.pkgMgrName}. Copy
-                the command below and execute it in your terminal.
+                The new version is available via {platform.pkgMgrName}. Copy the
+                command below and execute it in your terminal.
               </p>
               <div style={{ borderRadius: "8px", overflow: "hidden" }}>
                 <CodeBlock language="bash" value={getUpgradeCommand()} />

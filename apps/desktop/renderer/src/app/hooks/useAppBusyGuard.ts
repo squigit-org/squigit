@@ -5,7 +5,9 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cancelOcrJob, DialogContent, getAppBusyDialog } from "@/core";
+import { cancelOcrJob } from "@/core/storage";
+import { getAppBusyDialog } from "@/core/helpers";
+import type { DialogContent } from "@/core/helpers";
 
 type GuardedAction = () => void | Promise<void>;
 

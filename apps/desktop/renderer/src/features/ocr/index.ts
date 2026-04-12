@@ -7,7 +7,12 @@
 export * from "./components/OCRModelDownloader";
 export * from "./components/OCRModelSwitcher";
 export * from "./components/OCRTextCanvas";
+
 export * from "./services/modelDownloader";
 export * from "./services/modelRegistry";
+
 export * from "./ocr-models.types";
 export * from "./ocr-models.store";
+
+export * from "./hooks/useOCRModels";
+export * from "./hooks/useOCRSelection";

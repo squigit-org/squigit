@@ -7,18 +7,14 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import {
-  loadPreferences,
-  initializeBrainProvider,
-  commands,
-  hasAgreedFlag,
-  setAgreedFlag,
-  resolveOcrModelId,
-} from "@/core";
+import { commands } from "@/core/api/tauri";
+import { loadPreferences, hasAgreedFlag, setAgreedFlag } from "@/core/storage";
+import { resolveOcrModelId } from "@/core/config";
+import { initializeBrainProvider } from "@/core/brain";
 import { useSystemPreferences } from "./useSystemPreferences";
 import { useSystemProfile } from "./useSystemProfile";
 import { useSystemState } from "./useSystemState";
-import { useSystemAuth } from "../auth/useSystemAuth";
+import { useSystemAuth } from "./useSystemAuth";
 import { useSystemApiKeys } from "./useSystemApiKeys";
 
 const ACTIVE_PROFILE_SET_RETRIES = 4;

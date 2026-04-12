@@ -5,10 +5,14 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { linuxInstruction as linux, macosInstruction as macos, windowsInstruction as windows } from "@/assets";
+import {
+  linuxInstruction as linux,
+  macosInstruction as macos,
+  windowsInstruction as windows,
+} from "@/assets";
 import { ChatBubble, type Message } from "@/features/chat";
 import { SettingsSection } from "@/features/settings";
-import { usePlatform } from "@/hooks";
+import { usePlatform } from "@/hooks/shared";
 import styles from "./WelcomeRoute.module.css";
 
 const INSTRUCTIONS: Record<string, string> = {

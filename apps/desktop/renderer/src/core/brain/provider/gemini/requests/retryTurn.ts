@@ -7,15 +7,21 @@
 import { listen } from "@tauri-apps/api/event";
 import { brainSessionStore } from "../../../session/store";
 import type { ProviderStreamEvent } from "../../../engine/types";
-import { cancelCurrentRequest, clearActiveProviderTransport, createProviderChannelId, createStreamWatchdog } from "../transport";
-import { setImageDescription, setImageBrief, addToHistory } from "../../../session/context";
+import {
+  cancelCurrentRequest,
+  clearActiveProviderTransport,
+  createProviderChannelId,
+  createStreamWatchdog,
+} from "../transport";
+import {
+  setImageDescription,
+  setImageBrief,
+  addToHistory,
+} from "../../../session/context";
 import { buildContextWindow } from "../../../session/summarizer";
 import { normalizeMessageForHistory } from "../../../session/attachmentMemory";
-import {
-  generateGeminiImageBrief,
-  streamGeminiChat,
-} from "../commands";
-import { saveImageBrief } from "@/core/storage/chat";
+import { generateGeminiImageBrief, streamGeminiChat } from "../commands";
+import { saveImageBrief } from "@/core/storage/chat.storage";
 
 export const retryFromMessage = async (
   messageIndex: number,
@@ -27,7 +33,8 @@ export const retryFromMessage = async (
   onBriefReady?: (brief: string) => void,
   onEvent?: (event: ProviderStreamEvent) => void,
 ): Promise<string> => {
-  if (!brainSessionStore.storedApiKey) throw new Error("Gemini API Key not set");
+  if (!brainSessionStore.storedApiKey)
+    throw new Error("Gemini API Key not set");
 
   brainSessionStore.currentModelId = modelId;
   const myGenId = brainSessionStore.generationId;
@@ -146,7 +153,8 @@ export const retryFromMessage = async (
 
       clearActiveProviderTransport(channelId, unlisten);
 
-      if (brainSessionStore.generationId !== myGenId) throw new Error("CANCELLED");
+      if (brainSessionStore.generationId !== myGenId)
+        throw new Error("CANCELLED");
 
       setImageDescription(fullResponse);
       brainSessionStore.conversationHistory = [
@@ -161,7 +169,8 @@ export const retryFromMessage = async (
     }
   }
 
-  const imgDesc = allMessages[0]?.text || brainSessionStore.imageDescription || "";
+  const imgDesc =
+    allMessages[0]?.text || brainSessionStore.imageDescription || "";
   brainSessionStore.imageDescription = imgDesc;
 
   const messagesBefore = allMessages.slice(0, messageIndex);
@@ -239,7 +248,8 @@ export const retryFromMessage = async (
 
     clearActiveProviderTransport(channelId, unlisten);
 
-    if (brainSessionStore.generationId !== myGenId) throw new Error("CANCELLED");
+    if (brainSessionStore.generationId !== myGenId)
+      throw new Error("CANCELLED");
 
     addToHistory("Assistant", fullResponse);
 

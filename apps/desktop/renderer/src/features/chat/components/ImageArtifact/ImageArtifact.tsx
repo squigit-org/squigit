@@ -17,9 +17,9 @@ import { CloseCrossIcon } from "@/components/icons";
 import { ImageToolbar } from "./ImageToolbar";
 import { ImageSearchInput } from "./ImageSearchInput";
 import { OCRMenu, type OCRMenuHandle } from "./ImageTextMenu";
-import { OCRTextCanvas } from "@/features/ocr";
+import { OCRTextCanvas, useOCRSelection } from "@/features/ocr";
 import type { SettingsSection } from "@/features/settings";
-import { usePlatform, useOCRSelection } from "@/hooks";
+import { usePlatform } from "@/hooks/shared";
 import styles from "./ImageArtifact.module.css";
 import { Dialog } from "@/components/ui";
 import {

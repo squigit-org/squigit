@@ -48,7 +48,10 @@ export {
   setUserFirstMsg,
   setUserInfo,
 } from "./session/context";
-export { getBrainSessionSnapshot, restoreBrainSession } from "./session/snapshot";
+export {
+  getBrainSessionSnapshot,
+  restoreBrainSession,
+} from "./session/snapshot";
 export {
   brainSessionStore,
   type BrainSessionStoreState,
@@ -59,9 +62,7 @@ export {
   maybeCompressHistory,
   setConversationSummary,
 } from "./session/summarizer";
-export {
-  normalizeMessageForHistory,
-} from "./session/attachmentMemory";
+export { normalizeMessageForHistory } from "./session/attachmentMemory";
 
 export {
   cancelActiveProviderRequest as cancelActiveBrainRequest,
@@ -81,3 +82,8 @@ export {
   startProviderSession as startBrainSession,
   startProviderSessionStream as startBrainSessionStream,
 } from "./provider";
+
+export * from "./hooks/useBrainEngine";
+export * from "./hooks/useBrainLifecycle";
+export * from "./hooks/useBrainSession";
+export * from "./hooks/useBrainTitle";
