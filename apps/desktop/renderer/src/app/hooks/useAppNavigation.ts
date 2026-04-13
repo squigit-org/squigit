@@ -16,7 +16,7 @@ import {
   type OcrFrame,
   ChatCitation,
   ChatToolStep,
-} from "@/core/storage";
+} from "@/core/config";
 import { type Citation, type Message, type ToolStep } from "@/features/chat";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";

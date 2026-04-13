@@ -5,7 +5,7 @@
  */
 
 import { Message } from "@/features/chat";
-import { useBrainSession } from "@/core/brain";
+import { useBrainSession } from "@/core/brain/hooks";
 
 export const useChat = ({
   apiKey,

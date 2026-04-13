@@ -17,4 +17,4 @@ export * from "./hooks/useChatHistory";
 export * from "./hooks/useChatState";
 
 export * from "./MessageList";
-export * from "./chat.types";
+export * from "../../core/config/chat-types";

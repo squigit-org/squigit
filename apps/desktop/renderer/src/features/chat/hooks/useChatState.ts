@@ -11,7 +11,7 @@ import {
   Citation,
   PendingAssistantTurn,
 } from "@/features/chat";
-import { appendChatMessage } from "@/core/storage";
+import { appendChatMessage } from "@/core/config";
 
 export const useChatState = (enabled: boolean) => {
   const [messages, setMessages] = useState<Message[]>([]);

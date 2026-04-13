@@ -4,5 +4,4 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./chat.storage.ts";
-export * from "./app.storage.ts";
+export { imgbb } from "./config.ts";

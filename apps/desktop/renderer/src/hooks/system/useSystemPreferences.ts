@@ -11,7 +11,7 @@ import {
   type UserPreferences,
   loadPreferences,
   savePreferences,
-} from "@/core/storage";
+} from "@/core/config";
 import { useTheme } from "@/hooks/shared";
 
 export const useSystemPreferences = () => {

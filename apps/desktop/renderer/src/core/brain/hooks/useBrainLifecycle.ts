@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from "react";
 import { Message } from "@/features/chat";
-import { restoreBrainSession } from "@/core/brain";
+import { restoreBrainSession } from "../session";
 
 export const useBrainLifecycle = (config: {
   enabled: boolean;

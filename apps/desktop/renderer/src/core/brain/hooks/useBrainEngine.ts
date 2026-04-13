@@ -13,29 +13,38 @@ import {
   ToolStep,
 } from "@/features/chat";
 import {
+  cancelActiveProviderRequest as cancelActiveBrainRequest,
+  DEFAULT_PROVIDER_FALLBACK_MODEL_ID as DEFAULT_BRAIN_FALLBACK_MODEL_ID,
+  requestProviderQuickAnswer as requestBrainQuickAnswer,
+  retryProviderMessage as retryBrainMessage,
+  sendProviderMessage as sendBrainMessage,
+  shouldFallbackToDefaultProviderModel as shouldFallbackToDefaultBrainModel,
+  startProviderSessionStream as startBrainSessionStream,
+} from "../provider";
+
+import {
   advanceStreamCursorByWords,
-  cancelActiveBrainRequest,
   countRemainingStreamWords,
-  DEFAULT_BRAIN_FALLBACK_MODEL_ID,
-  getBrainHighDemandExhaustedMessage,
-  getFriendlyBrainErrorMessage,
-  getImageDescription,
   getRenderableStreamingText,
   getStreamBatchSize,
-  isBrainHighDemandError,
-  replaceLastAssistantHistory,
-  requestBrainQuickAnswer,
-  restoreBrainSession,
-  retryBrainMessage,
-  sendBrainMessage,
-  setImageDescription,
-  shouldFallbackToDefaultBrainModel,
-  startBrainSessionStream,
   STREAM_PLAYBACK_INTERVAL_MS,
-  STREAM_PRIME_DELAY_MS,
   type BrainEngineHandle,
   type BrainStartupImage,
-} from "@/core/brain";
+  STREAM_PRIME_DELAY_MS,
+} from "../engine";
+
+import {
+  isBrainHighDemandError,
+  getBrainHighDemandExhaustedMessage,
+  getFriendlyBrainErrorMessage,
+} from "../provider";
+
+import {
+  replaceLastAssistantHistory,
+  restoreBrainSession,
+  setImageDescription,
+  getImageDescription,
+} from "../session";
 import {
   API_STATUS_TEXT,
   getHighDemandRetryStatusText,
@@ -896,7 +905,10 @@ export const useBrainEngine = (config: {
       }
 
       console.error(apiError);
-      if (!isRetry && shouldFallbackToDefaultBrainModel(config.currentModel, apiError)) {
+      if (
+        !isRetry &&
+        shouldFallbackToDefaultBrainModel(config.currentModel, apiError)
+      ) {
         if (config.currentModel !== DEFAULT_BRAIN_FALLBACK_MODEL_ID) {
           console.log("Model failed, trying lite version...");
           config.setCurrentModel(DEFAULT_BRAIN_FALLBACK_MODEL_ID);

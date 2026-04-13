@@ -7,10 +7,18 @@
 import { listen } from "@tauri-apps/api/event";
 import { brainSessionStore } from "../../../session/store";
 import type { ProviderStreamEvent } from "../../../engine/types";
-import { cancelCurrentRequest, clearActiveProviderTransport, createProviderChannelId, createStreamWatchdog } from "../transport";
+import {
+  cancelCurrentRequest,
+  clearActiveProviderTransport,
+  createProviderChannelId,
+  createStreamWatchdog,
+} from "../transport";
 import { setUserFirstMsg, addToHistory } from "../../../session/context";
-import { buildContextWindow, maybeCompressHistory } from "../../../session/summarizer";
-import { normalizeMessageForHistory } from "../../../session/attachmentMemory";
+import {
+  buildContextWindow,
+  maybeCompressHistory,
+} from "../../../session/summarizer";
+import { normalizeMessageForHistory } from "../../../session/attachments/memory";
 import { streamGeminiChat } from "../commands";
 
 export const sendMessage = async (
@@ -20,8 +28,10 @@ export const sendMessage = async (
   chatId?: string | null,
   onEvent?: (event: ProviderStreamEvent) => void,
 ): Promise<string> => {
-  if (!brainSessionStore.storedApiKey) throw new Error("Gemini API Key not set");
-  if (!brainSessionStore.imageDescription) throw new Error("No active chat session");
+  if (!brainSessionStore.storedApiKey)
+    throw new Error("Gemini API Key not set");
+  if (!brainSessionStore.imageDescription)
+    throw new Error("No active chat session");
 
   if (modelId) {
     brainSessionStore.currentModelId = modelId;
@@ -62,7 +72,9 @@ export const sendMessage = async (
 
   try {
     console.log(`[GeminiClient] Sending Message`);
-    console.log(`[GeminiClient] Target Model: ${brainSessionStore.currentModelId}`);
+    console.log(
+      `[GeminiClient] Target Model: ${brainSessionStore.currentModelId}`,
+    );
     console.log(`[GeminiClient] Prompt: "${text}"`);
     console.log(
       `[GeminiClient] Image Brief Present: ${Boolean(brainSessionStore.imageBrief)}`,
@@ -98,7 +110,8 @@ export const sendMessage = async (
     streamWatchdog.stop();
     clearActiveProviderTransport(channelId, unlisten);
 
-    if (brainSessionStore.generationId !== myGenId) throw new Error("CANCELLED");
+    if (brainSessionStore.generationId !== myGenId)
+      throw new Error("CANCELLED");
 
     addToHistory("Assistant", fullResponse);
 

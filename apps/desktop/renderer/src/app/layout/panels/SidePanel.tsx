@@ -30,7 +30,7 @@ import {
 import { Dialog, LoadingSpinner } from "@/components/ui";
 import { useKeyDown, usePlatform } from "@/hooks/shared";
 import { getDeleteMultipleChatsDialog } from "@/core/helpers";
-import type { ChatMetadata } from "@/core/storage";
+import type { ChatMetadata } from "@/core/config";
 import { PanelContextMenu } from "../menus/PanelContextMenu";
 import { useAppContext } from "../../providers/AppProvider";
 import styles from "./SidePanel.module.css";

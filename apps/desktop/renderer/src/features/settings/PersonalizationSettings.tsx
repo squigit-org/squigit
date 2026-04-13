@@ -6,7 +6,7 @@
 
 import React from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks/editor";
-import type { UserPreferences } from "@/core/storage";
+import type { UserPreferences } from "@/core/config";
 import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import styles from "./PersonalizationSettings.module.css";
 

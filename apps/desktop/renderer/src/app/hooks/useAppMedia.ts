@@ -7,11 +7,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
+  type Attachment,
   getExtension,
   isImageExtension,
-  type Attachment,
   unwrapMarkdownLinkDestination,
-} from "@/core/helpers";
+} from "@/core/brain/session/attachments";
 import { type MediaGalleryItem, type MediaViewerItem } from "@/features/media";
 
 export type MediaViewerOpenOptions = {

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { google } from "./provider";
+import { google } from "./config";
 
 /**
  * Generates a Google Search URL for the given query.

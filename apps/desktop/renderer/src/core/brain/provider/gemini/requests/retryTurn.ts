@@ -19,9 +19,9 @@ import {
   addToHistory,
 } from "../../../session/context";
 import { buildContextWindow } from "../../../session/summarizer";
-import { normalizeMessageForHistory } from "../../../session/attachmentMemory";
+import { normalizeMessageForHistory } from "../../../session/attachments/memory";
 import { generateGeminiImageBrief, streamGeminiChat } from "../commands";
-import { saveImageBrief } from "@/core/storage/chat.storage";
+import { saveImageBrief } from "@/core/config/chat-storage";
 
 export const retryFromMessage = async (
   messageIndex: number,

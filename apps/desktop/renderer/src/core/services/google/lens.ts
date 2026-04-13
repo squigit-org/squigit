@@ -5,11 +5,42 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { google } from "./config";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { uploadToImgBB, generateLensUrl } from "./lens.google";
 
-export const GoogleLensService = (
+/**
+ * Uploads an image file path to ImgBB and returns the hosted URL.
+ * Uses the native Tauri command for multipart file upload.
+ * @param imagePath - Absolute local image path
+ * @param apiKey - The ImgBB API key
+ * @returns The public URL of the uploaded image
+ */
+export async function uploadToImgBB(
+  imagePath: string,
+  apiKey: string,
+): Promise<string> {
+  return invoke<string>("upload_image_to_imgbb", { imagePath, apiKey });
+}
+
+/**
+ * Generates a Google Lens search URL for the given image URL.
+ * @param imageUrl - The public URL of the image
+ * @returns The full Google Lens URL
+ */
+export function generateLensUrl(imageUrl: string): string {
+  const params = new URLSearchParams();
+  params.append("url", imageUrl);
+  params.append("ep", "subb");
+  params.append("re", "df");
+  params.append("s", "4");
+  params.append("hl", "en");
+  params.append("gl", "US");
+
+  return `${google.lens}/uploadbyurl?${params.toString()}`;
+}
+
+export const ReverseImageSearch = (
   startupImage: {
     path: string;
     mimeType: string;
@@ -99,12 +130,12 @@ export const GoogleLensService = (
     try {
       setIsLensLoading(true);
       console.log(
-        "[GoogleLensService] triggerLens called with activeProfileId:",
+        "[ReverseImageSearch] triggerLens called with activeProfileId:",
         activeProfileId,
       );
 
       if (!activeProfileId) {
-        console.error("[GoogleLensService] No active profile ID!");
+        console.error("[ReverseImageSearch] No active profile ID!");
         setShowAuthDialog(true);
         setIsLensLoading(false);
         return;
@@ -116,7 +147,7 @@ export const GoogleLensService = (
       });
 
       console.log(
-        "[GoogleLensService] Retrieved API key for imgbb:",
+        "[ReverseImageSearch] Retrieved API key for imgbb:",
         apiKey ? "FOUND" : "EMPTY",
       );
 

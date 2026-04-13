@@ -16,7 +16,7 @@ import {
   getImagePath,
   hasAgreedFlag,
   saveOcrData,
-} from "@/core/storage";
+} from "@/core/config";
 
 export const useAppCapture = ({
   system,
@@ -122,7 +122,11 @@ export const useAppCapture = ({
   }, [handleImageReady, performSelectChat]);
 
   useEffect(() => {
-    if (!system.profileLoaded || !system.prefsLoaded || hasCheckedStartupImage) {
+    if (
+      !system.profileLoaded ||
+      !system.prefsLoaded ||
+      hasCheckedStartupImage
+    ) {
       return;
     }
 
@@ -145,7 +149,12 @@ export const useAppCapture = ({
     };
 
     initStartupImage();
-  }, [handleImageReady, hasCheckedStartupImage, system.prefsLoaded, system.profileLoaded]);
+  }, [
+    handleImageReady,
+    hasCheckedStartupImage,
+    system.prefsLoaded,
+    system.profileLoaded,
+  ]);
 
   useEffect(() => {
     const unlisten = listen<string>("image-path", async (event) => {
@@ -197,7 +206,9 @@ export const useAppCapture = ({
 
         try {
           if (!activeProfileRef.current) {
-            console.log("Capture upload attempted in guest mode - requiring login");
+            console.log(
+              "Capture upload attempted in guest mode - requiring login",
+            );
             dialogs.setShowLoginRequiredDialog(true);
             return;
           }

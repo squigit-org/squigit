@@ -16,7 +16,7 @@
  */
 
 import { brainSessionStore } from "./store";
-import { normalizeMessageForHistory } from "./attachmentMemory";
+import { normalizeMessageForHistory } from "./attachments/memory";
 import {
   compressConversationHistory,
   persistConversationSummary,
@@ -103,7 +103,8 @@ export function maybeCompressHistory(chatId: string | null): void {
   // Format the turns to compress
   const historyText = toCompress
     .map(
-      ({ role, content }) => `**${role}**: ${normalizeMessageForHistory(content)}`,
+      ({ role, content }) =>
+        `**${role}**: ${normalizeMessageForHistory(content)}`,
     )
     .join("\n\n");
 

@@ -6,7 +6,10 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { generateSearchUrl, generateTranslateUrl } from "@/core/services/google";
+import {
+  generateSearchUrl,
+  generateTranslateUrl,
+} from "@/core/services/google";
 
 const MENU_HEIGHT = 48;
 const NOTCH_OFFSET = 12;

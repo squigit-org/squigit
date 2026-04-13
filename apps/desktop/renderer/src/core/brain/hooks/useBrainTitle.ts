@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { generateBrainTitle } from "@/core/brain";
+import { generateBrainTitle } from "../provider";
 
 interface UseBrainTitleProps {
   apiKey: string;

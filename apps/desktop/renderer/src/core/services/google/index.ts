@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export { google } from "./provider.ts";
-export * from "./lens.google.ts";
-export * from "./googleLens.ts";
-export * from "./search.google.ts";
-export * from "./translate.google.ts";
+export { google } from "./config.ts";
+export { ReverseImageSearch } from "./lens.ts";
+export { generateSearchUrl } from "./search.ts";
+export { generateTranslateUrl } from "./translate.ts";

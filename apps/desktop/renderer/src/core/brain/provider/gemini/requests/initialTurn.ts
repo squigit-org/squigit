@@ -21,7 +21,7 @@ import {
   createStreamWatchdog,
 } from "../transport";
 import { generateGeminiImageBrief, streamGeminiChat } from "../commands";
-import { saveImageBrief } from "@/core/storage/chat.storage";
+import { saveImageBrief } from "@/core/config/chat-storage";
 
 export const startNewThreadStream = async (
   modelId: string,

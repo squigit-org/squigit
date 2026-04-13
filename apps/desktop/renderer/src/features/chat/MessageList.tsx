@@ -9,7 +9,7 @@ import {
   Message,
   MessageCollapseMode,
   PendingAssistantTurn,
-} from "./chat.types";
+} from "../../core/config/chat-types";
 import { TextShimmer } from "@/components/ui";
 import {
   API_STATUS_TEXT,

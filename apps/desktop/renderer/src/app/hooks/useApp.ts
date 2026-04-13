@@ -13,20 +13,17 @@ import {
   OcrFrame,
   appendChatMessage,
   overwriteChatMessages,
-} from "@/core/storage";
-import type { Attachment } from "@/core/helpers";
-import { github } from "@/core/services";
-import {
-  resolveOcrModelId,
-  SUPPORTED_OCR_MODEL_IDS,
 } from "@/core/config";
+import type { Attachment } from "@/core/brain/session/attachments";
+import { github } from "@/core/services/github";
+import { resolveOcrModelId, SUPPORTED_OCR_MODEL_IDS } from "@/core/config";
 import {
   getPendingUpdate,
   useAuth,
   useSystemSync,
   useUpdateCheck,
 } from "@/hooks/system";
-import { useBrainTitle } from "@/core/brain";
+import { useBrainTitle } from "@/core/brain/hooks";
 import { useAttachments } from "@/hooks/shared";
 import { useChat, useChatHistory } from "@/features/chat";
 import { useAppBusyGuard } from "./useAppBusyGuard";

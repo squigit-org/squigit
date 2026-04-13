@@ -6,8 +6,8 @@
 
 import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { Attachment } from "@/core/helpers";
-import { attachmentFromPath } from "@/core/helpers";
+import type { Attachment } from "../session/attachments";
+import { attachmentFromPath } from "../session/attachments";
 
 function filterImageAttachments(attachments: Attachment[]): Attachment[] {
   return attachments.filter((attachment) => attachment.type === "image");

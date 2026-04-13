@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { parseBrainError } from "@/core/brain";
+import { parseBrainError } from "@/core/brain/provider";
 import { invoke } from "@tauri-apps/api/core";
 
 export function useChatError(

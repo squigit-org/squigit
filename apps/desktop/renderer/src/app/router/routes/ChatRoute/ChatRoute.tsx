@@ -25,14 +25,18 @@ import {
 import {
   API_STATUS_TEXT,
   ATTACHMENT_ANALYSIS_STATUS_DELAY_MS,
-  attachmentFromPath,
-  buildAttachmentMention,
   getAttachmentAnalysisStatusText,
   isQuickAnswerSuppressedProgressText,
+} from "@/core/helpers";
+
+import {
   parseAttachmentPaths,
+  attachmentFromPath,
+  buildAttachmentMention,
   stripImageAttachmentMentions,
   type Attachment,
-} from "@/core/helpers";
+} from "@/core/brain/session/attachments";
+
 import type { MessageCollapseMode } from "@/features/chat";
 
 import { ChatRouteLayout } from "./ChatRouteLayout";

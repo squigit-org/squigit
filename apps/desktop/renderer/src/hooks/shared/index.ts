@@ -6,6 +6,6 @@
 
 export * from "./useTheme";
 export * from "./usePlatform";
-export * from "./useAttachments";
+export * from "../../core/brain/hooks/useAttachments";
 export * from "./useClipboard";
 export * from "./useKeyDown";

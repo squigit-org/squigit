@@ -22,7 +22,10 @@ import type { SettingsSection } from "@/features/settings";
 import { usePlatform } from "@/hooks/shared";
 import styles from "./ImageArtifact.module.css";
 import { Dialog } from "@/components/ui";
-import { GoogleLensService, generateTranslateUrl } from "@/core/services/google";
+import {
+  ReverseImageSearch,
+  generateTranslateUrl,
+} from "@/core/services/google";
 import { DEFAULT_OCR_MODEL_ID, resolveOcrModelId } from "@/core/config";
 import {
   getErrorDialog,
@@ -36,7 +39,7 @@ import {
   type OcrFrame,
   saveImageTone,
   saveOcrData,
-} from "@/core/storage";
+} from "@/core/config";
 
 interface OCRBox {
   text: string;
@@ -244,7 +247,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
   }, [displayedThumbPath, imageSrc, startupImage?.path]);
 
   const { isLensLoading, triggerLens, showAuthDialog, setShowAuthDialog } =
-    GoogleLensService(
+    ReverseImageSearch(
       startupImage,
       sessionLensUrl,
       setSessionLensUrl,

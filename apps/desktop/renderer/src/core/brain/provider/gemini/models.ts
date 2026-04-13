@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { DEFAULT_MODEL_ID } from "@/core/config/models";
+import { DEFAULT_MODEL_ID } from "@/core/config/models-config";
 
 export const GEMINI_FALLBACK_MODEL_ID = DEFAULT_MODEL_ID;
 export const GEMINI_TITLE_MODEL_PRIMARY = DEFAULT_MODEL_ID;

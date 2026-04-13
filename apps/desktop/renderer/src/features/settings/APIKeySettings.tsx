@@ -7,7 +7,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import { github, google } from "@/core/services";
+import { github } from "@/core/services/github";
+import { google } from "@/core/services/google";
 import { GlowCard } from "@/components/ui";
 import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import { useTextContextMenu, useTextEditor } from "@/hooks/editor";

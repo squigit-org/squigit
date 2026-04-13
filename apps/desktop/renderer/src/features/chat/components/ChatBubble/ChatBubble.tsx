@@ -26,21 +26,21 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
+import { API_STATUS_TEXT } from "@/core/helpers";
 import {
-  API_STATUS_TEXT,
   attachmentFromPath,
   isAttachmentPath,
   normalizeAttachmentMarkdownLinks,
   parseAttachmentPaths,
   stripImageAttachmentMentions,
   unwrapMarkdownLinkDestination,
-} from "@/core/helpers";
+} from "@/core/brain/session/attachments";
 import {
   Message,
   ToolStep,
   MessageCollapseMode,
   PendingAssistantTurn,
-} from "../../chat.types";
+} from "@/core/config";
 import {
   preprocessMarkdown,
   splitMarkdownAfterLastClosedFence,

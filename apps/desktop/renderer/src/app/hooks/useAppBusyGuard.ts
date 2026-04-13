@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cancelOcrJob } from "@/core/storage";
+import { cancelOcrJob } from "@/core/config";
 import { getAppBusyDialog } from "@/core/helpers";
 import type { DialogContent } from "@/core/helpers";
 
