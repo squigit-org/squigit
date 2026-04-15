@@ -79,6 +79,10 @@ export const retryFromMessage = async (
 
     try {
       const generateAndSaveBrief = async () => {
+        // Delay brief generation by 5000ms so it doesn't fire concurrently with the main stream
+        // during high-demand/cold-start situations, which prevents simultaneous 503s.
+        await new Promise(r => setTimeout(r, 5000));
+
         let attempt = 0;
         let lastError = null;
         const delays = [1000, 2000];
@@ -87,7 +91,7 @@ export const retryFromMessage = async (
             const providerApiKey = brainSessionStore.storedApiKey;
             const storedImagePath = brainSessionStore.storedImagePath;
             if (!providerApiKey || !storedImagePath) return "";
-            const modelToUse = attempt === 2 ? (await import("@/core/config/models-config")).MODEL_IDS.SECONDARY_FAST : (await import("@/core/config/models-config")).MODEL_IDS.PRIMARY_FAST;
+            const modelToUse = (await import("@/core/config/models-config")).MODEL_IDS.MICRO_TASKS;
             const brief = await generateGeminiImageBrief(
               providerApiKey,
               storedImagePath,
@@ -112,7 +116,8 @@ export const retryFromMessage = async (
             lastError = e;
             attempt++;
             if (attempt < 3) {
-              await new Promise((r) => setTimeout(r, delays[attempt - 1]));
+              const jitter = Math.floor(Math.random() * 500);
+              await new Promise((r) => setTimeout(r, delays[attempt - 1] + jitter));
             }
           }
         }

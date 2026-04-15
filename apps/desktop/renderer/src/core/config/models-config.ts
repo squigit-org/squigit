@@ -8,6 +8,7 @@ export const MODEL_IDS = {
   PRIMARY_FAST: "gemini-3.1-flash-lite-preview",
   SECONDARY_FAST: "gemini-3-flash-preview",
   PRIMARY_REASONING: "gemini-3.1-pro-preview",
+  MICRO_TASKS: "gemini-3-flash-preview",
 } as const;
 
 export const MODELS = [

@@ -51,6 +51,15 @@ export const addToHistory = (role: "User" | "Assistant", content: string) => {
   // No more slice(-6) — summarize.ts handles windowing via maybeCompressHistory()
 };
 
+export const popLastUserHistory = () => {
+  if (brainSessionStore.conversationHistory.length > 0) {
+    const last = brainSessionStore.conversationHistory[brainSessionStore.conversationHistory.length - 1];
+    if (last.role === "User") {
+      brainSessionStore.conversationHistory.pop();
+    }
+  }
+};
+
 export const replaceLastAssistantHistory = (content: string) => {
   for (let i = brainSessionStore.conversationHistory.length - 1; i >= 0; i--) {
     if (brainSessionStore.conversationHistory[i].role === "Assistant") {

@@ -11,6 +11,7 @@ export {
   getProviderHighDemandMessage,
   isProviderHighDemandError,
   parseProviderError,
+  isNetworkError,
 } from "./errors";
 export {
   GEMINI_FALLBACK_MODEL_ID,

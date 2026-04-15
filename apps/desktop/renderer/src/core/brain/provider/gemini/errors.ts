@@ -67,6 +67,18 @@ export function isProviderHighDemandError(error: any): boolean {
   );
 }
 
+export function isNetworkError(error: any): boolean {
+  const searchStr = getGeminiErrorSearchText(error);
+  return (
+    searchStr.includes("network") ||
+    searchStr.includes("internet") ||
+    searchStr.includes("fetch") ||
+    searchStr.includes("failed to fetch") ||
+    searchStr.includes("load failed") ||
+    searchStr.includes("dns")
+  );
+}
+
 export function getProviderHighDemandMessage(): string {
   return "The model is under high demand right now. Please wait a bit and try again.";
 }
@@ -101,13 +113,7 @@ export function getFriendlyProviderErrorMessage(
     return "You've reached your current Gemini usage limit. Please wait a bit, check your quota, or switch API keys.";
   }
 
-  if (
-    searchStr.includes("network") ||
-    searchStr.includes("internet") ||
-    searchStr.includes("fetch") ||
-    searchStr.includes("failed to fetch") ||
-    searchStr.includes("load failed")
-  ) {
+  if (isNetworkError(error)) {
     return "Something went wrong. Please check your internet connection and try again.";
   }
 
@@ -169,13 +175,7 @@ export function parseProviderError(error: any): BrainParsedError {
     };
   }
 
-  if (
-    searchStr.includes("network") ||
-    searchStr.includes("internet") ||
-    searchStr.includes("fetch") ||
-    searchStr.includes("failed to fetch") ||
-    searchStr.includes("load failed")
-  ) {
+  if (isNetworkError(error)) {
     return {
       title: "Connection Error",
       message:
