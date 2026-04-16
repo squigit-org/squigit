@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { PendingAssistantRequestKind, ToolStep } from "@/core/brain/engine";
-import { API_STATUS_TEXT } from "@/core/helpers/api-status";
+import type { PendingAssistantRequestKind, ToolStep } from "./types";
+import { API_STATUS_TEXT } from "../../helpers/api-status";
 
 const DEFAULT_THREAD_TITLE_NORMALIZED = "new thread";
 

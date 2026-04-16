@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import { Message } from "@/core/brain/engine";
+import type { Message } from "../engine/types";
 import { restoreBrainSession } from "../session";
 
 export const useBrainLifecycle = (config: {

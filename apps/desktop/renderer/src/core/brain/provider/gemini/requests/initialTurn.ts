@@ -21,7 +21,7 @@ import {
   createStreamWatchdog,
 } from "../transport";
 import { generateGeminiImageBrief, streamGeminiChat } from "../commands";
-import { saveImageBrief } from "@/core/config/chat-storage";
+import { saveImageBrief } from "../../../../config/chat-storage";
 
 export const startNewThreadStream = async (
   modelId: string,
@@ -87,7 +87,7 @@ export const startNewThreadStream = async (
         try {
           const providerApiKey = brainSessionStore.storedApiKey;
           if (!providerApiKey) return "";
-          const modelToUse = (await import("@/core/config/models-config")).MODEL_IDS.MICRO_TASKS;
+          const modelToUse = (await import("../../../../config/models-config")).MODEL_IDS.MICRO_TASKS;
           const brief = await generateGeminiImageBrief(
             providerApiKey,
             imagePath,

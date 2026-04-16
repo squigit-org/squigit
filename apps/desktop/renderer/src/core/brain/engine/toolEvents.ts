@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { Citation, PendingAssistantTurn, ToolStep } from "@/core/brain/engine";
+import type { Citation, PendingAssistantTurn, ToolStep } from "./types";
 import type { ProviderStreamEvent } from "./types";
 
 type ToolEventHandlerOptions = {

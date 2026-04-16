@@ -21,7 +21,7 @@ import {
 import { buildContextWindow } from "../../../session/summarizer";
 import { normalizeMessageForHistory } from "../../../session/attachments/memory";
 import { generateGeminiImageBrief, streamGeminiChat } from "../commands";
-import { saveImageBrief } from "@/core/config/chat-storage";
+import { saveImageBrief } from "../../../../config/chat-storage";
 
 export const retryFromMessage = async (
   messageIndex: number,
@@ -91,7 +91,7 @@ export const retryFromMessage = async (
             const providerApiKey = brainSessionStore.storedApiKey;
             const storedImagePath = brainSessionStore.storedImagePath;
             if (!providerApiKey || !storedImagePath) return "";
-            const modelToUse = (await import("@/core/config/models-config")).MODEL_IDS.MICRO_TASKS;
+            const modelToUse = (await import("../../../../config/models-config")).MODEL_IDS.MICRO_TASKS;
             const brief = await generateGeminiImageBrief(
               providerApiKey,
               storedImagePath,

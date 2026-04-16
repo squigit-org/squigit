@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { google } from "@/core/services/google";
+import { google } from "../../../services/google/config";
 
 export interface BrainParsedError {
   title: string;

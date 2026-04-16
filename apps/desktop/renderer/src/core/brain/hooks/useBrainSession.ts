@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useChatState } from "@/features/chat";
-import { Message } from "@/core/brain/engine";
+import { useChatState } from "@/features/chat/hooks/useChatState";
+import type { Message } from "../engine/types";
 import { useBrainEngine } from "./useBrainEngine";
 import { useBrainLifecycle } from "./useBrainLifecycle";
 

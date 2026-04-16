@@ -5,13 +5,15 @@
  */
 
 import { useEffect, useRef } from "react";
-import {
+import type {
   Citation,
   Message,
   PendingAssistantTurn,
   PendingAssistantRequestKind,
   ToolStep,
-} from "@/core/brain/engine";
+  BrainEngineHandle,
+  BrainStartupImage,
+} from "../engine/types";
 import {
   cancelActiveProviderRequest as cancelActiveBrainRequest,
   DEFAULT_PROVIDER_FALLBACK_MODEL_ID as DEFAULT_BRAIN_FALLBACK_MODEL_ID,
@@ -21,7 +23,7 @@ import {
   shouldFallbackToDefaultProviderModel as shouldFallbackToDefaultBrainModel,
   startProviderSessionStream as startBrainSessionStream,
 } from "../provider";
-import { MODEL_IDS } from "@/core/config/models-config";
+import { MODEL_IDS } from "../../config/models-config";
 
 import {
   advanceStreamCursorByWords,
@@ -29,11 +31,9 @@ import {
   getRenderableStreamingText,
   getStreamBatchSize,
   STREAM_PLAYBACK_INTERVAL_MS,
-  type BrainEngineHandle,
-  type BrainStartupImage,
   STREAM_PRIME_DELAY_MS,
-  runWithRetries,
-} from "../engine";
+} from "../engine/playback";
+import { runWithRetries } from "../engine/retryPolicy";
 
 import {
   isBrainHighDemandError,
@@ -48,7 +48,7 @@ import {
   getImageDescription,
   popLastUserHistory,
 } from "../session";
-import { API_STATUS_TEXT, mapToolStatusText } from "@/core/helpers";
+import { API_STATUS_TEXT, mapToolStatusText } from "../../helpers/api-status";
 
 const DEFAULT_THREAD_TITLE_NORMALIZED = "new thread";
 
