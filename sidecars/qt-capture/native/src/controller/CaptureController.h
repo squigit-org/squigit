@@ -51,6 +51,7 @@ public:
   int displayIndex() const { return m_displayIndex; }
   void setDisplayIndex(int index);
 
+  Q_INVOKABLE QString ensureBackgroundFileFallback();
   Q_INVOKABLE void cancel();
   Q_INVOKABLE void finishSquiggleCapture(const QVariantList &points);
   Q_INVOKABLE void finishRectCapture(QPointF start, QPointF end);

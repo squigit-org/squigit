@@ -7,8 +7,8 @@
 #include "CaptureController.h"
 #include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QGuiApplication>
-#include <QTemporaryFile>
 #include <cmath>
 #include <iostream>
 
@@ -18,14 +18,9 @@ void CaptureController::setBackgroundImage(const QImage &image,
                                            qreal devicePixelRatio) {
   m_backgroundImage = image;
   m_devicePixelRatio = devicePixelRatio > 0 ? devicePixelRatio : 1.0;
-
-  QString tempPath =
-      QDir::temp().filePath(QString("capture_bg_%1.png").arg(m_displayIndex));
-
-  if (m_backgroundImage.save(tempPath, "PNG")) {
-    m_backgroundSource = QUrl::fromLocalFile(tempPath);
-    emit backgroundSourceChanged();
-  }
+  m_backgroundSource =
+      QUrl(QString("image://backgrounds/%1").arg(m_displayIndex));
+  emit backgroundSourceChanged();
 }
 
 void CaptureController::setCaptureMode(const QString &mode) {
@@ -40,6 +35,22 @@ void CaptureController::setDisplayIndex(int index) {
     m_displayIndex = index;
     emit displayIndexChanged();
   }
+}
+
+QString CaptureController::ensureBackgroundFileFallback() {
+  if (m_backgroundImage.isNull()) {
+    return m_backgroundSource.toString();
+  }
+
+  const QString tempPath =
+      QDir::temp().filePath(QString("capture_bg_%1.png").arg(m_displayIndex));
+  if (!QFile::exists(tempPath) && !m_backgroundImage.save(tempPath, "PNG")) {
+    return QString();
+  }
+
+  m_backgroundSource = QUrl::fromLocalFile(tempPath);
+  emit backgroundSourceChanged();
+  return m_backgroundSource.toString();
 }
 
 void CaptureController::cancel() { emitFailure(); }

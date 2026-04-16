@@ -39,8 +39,17 @@ Window {
         anchors.fill: parent
         source: root.controller.backgroundSource
         fillMode: Image.Stretch
-        asynchronous: true
+        asynchronous: false
         cache: false
+
+        onStatusChanged: {
+            if (status === Image.Error) {
+                const fallbackSource = root.controller.ensureBackgroundFileFallback()
+                if (fallbackSource && source !== fallbackSource) {
+                    source = fallbackSource
+                }
+            }
+        }
     }
     
     Rectangle {

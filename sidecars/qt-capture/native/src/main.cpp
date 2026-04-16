@@ -9,9 +9,15 @@
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlContext>
+#include <QHash>
+#include <QQuickImageProvider>
 #include <QQuickWindow>
 #include <QScreen>
+#include <QString>
+#include <QByteArray>
 #include <iostream>
+#include <atomic>
+#include <chrono>
 #include <vector>
 
 #include "config.h"
@@ -31,6 +37,53 @@
 
 extern "C" ScreenGrabber *createWindowsEngine(QObject *parent);
 extern "C" ScreenGrabber *createUnixEngine(QObject *parent);
+
+class BackgroundImageProvider : public QQuickImageProvider {
+public:
+  BackgroundImageProvider() : QQuickImageProvider(QQuickImageProvider::Image) {}
+
+  void setImage(int displayIndex, const QImage &image) {
+    m_images.insert(QString::number(displayIndex), image);
+  }
+
+  QImage requestImage(const QString &id, QSize *size,
+                      const QSize &requestedSize) override {
+    Q_UNUSED(requestedSize);
+    const QImage image = m_images.value(id);
+    if (size) {
+      *size = image.size();
+    }
+    return image;
+  }
+
+private:
+  QHash<QString, QImage> m_images;
+};
+
+static bool isTimingEnabled() {
+  static const bool enabled = []() {
+    const QByteArray raw = qgetenv("SQUIGIT_CAPTURE_TIMING");
+    if (raw.isEmpty()) {
+      return false;
+    }
+    const QString normalized = QString::fromUtf8(raw).trimmed().toLower();
+    return normalized == "1" || normalized == "true" || normalized == "yes" ||
+           normalized == "on";
+  }();
+  return enabled;
+}
+
+static void logTimingStage(const char *stage,
+                           const std::chrono::steady_clock::time_point &start) {
+  if (!isTimingEnabled()) {
+    return;
+  }
+
+  const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::steady_clock::now() - start)
+                             .count();
+  std::cerr << "TIMING " << stage << " " << elapsedMs << "ms" << std::endl;
+}
 
 static void applyPlatformWindowHacks(QQuickWindow *window) {
 #ifdef Q_OS_WIN
@@ -59,6 +112,7 @@ static void applyPlatformWindowHacks(QQuickWindow *window) {
 }
 
 int main(int argc, char *argv[]) {
+  const auto timingStart = std::chrono::steady_clock::now();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -149,6 +203,7 @@ int main(int argc, char *argv[]) {
   }
 
   std::vector<CapturedFrame> frames = engine->captureAll();
+  logTimingStage("capture_all_done", timingStart);
 
   if (frames.empty()) {
     std::cerr << "CAPTURE_NATIVE_ERROR: no frames captured from display backend"
@@ -158,8 +213,24 @@ int main(int argc, char *argv[]) {
 
   QList<QScreen *> qtScreens = app.screens();
   QQmlApplicationEngine qmlEngine;
+  auto *backgroundProvider = new BackgroundImageProvider();
+  qmlEngine.addImageProvider("backgrounds", backgroundProvider);
+
+  QQmlComponent component(&qmlEngine,
+                          QUrl("qrc:/CaptureQml/qml/CaptureWindow.qml"));
+  if (component.isError()) {
+    const auto errors = component.errors();
+    for (const QQmlError &err : errors) {
+      std::cerr << "CAPTURE_NATIVE_ERROR: QML component error: "
+                << err.toString().toStdString() << std::endl;
+    }
+    return 1;
+  }
+  logTimingStage("qml_component_ready", timingStart);
+
   std::vector<CaptureController *> controllers;
   std::vector<QQuickWindow *> windows;
+  std::atomic<bool> firstFrameLogged{false};
 
   for (const auto &frame : frames) {
     QScreen *targetScreen = nullptr;
@@ -178,24 +249,14 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    backgroundProvider->setImage(frame.index, frame.image);
+
     auto *controller = new CaptureController(&app);
     controller->setDisplayIndex(frame.index);
     controller->setCaptureMode(captureMode);
     controller->setBackgroundImage(frame.image, frame.devicePixelRatio);
     controller->setDisplayGeometry(frame.geometry);
     controllers.push_back(controller);
-
-    QQmlComponent component(&qmlEngine,
-                            QUrl("qrc:/CaptureQml/qml/CaptureWindow.qml"));
-
-    if (component.isError()) {
-      const auto errors = component.errors();
-      for (const QQmlError &err : errors) {
-        std::cerr << "CAPTURE_NATIVE_ERROR: QML component error: "
-                  << err.toString().toStdString() << std::endl;
-      }
-      return 1;
-    }
 
     QVariantMap properties;
     properties["controller"] = QVariant::fromValue(controller);
@@ -219,8 +280,18 @@ int main(int argc, char *argv[]) {
     }
 
     applyPlatformWindowHacks(window);
+    QObject::connect(
+        window, &QQuickWindow::frameSwapped, window,
+        [timingStart, &firstFrameLogged]() {
+          bool expected = false;
+          if (firstFrameLogged.compare_exchange_strong(expected, true)) {
+            logTimingStage("first_frame_swapped", timingStart);
+          }
+        });
     window->showFullScreen();
   }
+
+  logTimingStage("windows_shown", timingStart);
 
   return app.exec();
 }
