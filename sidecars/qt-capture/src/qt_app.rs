@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{Context, Result};
+use crate::audio_guard::AudioGuard;
 use std::env;
 use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, ExitCode, Stdio};
 use sys_display_hotplug::DisplayWatcher;
-use sys_shutter_suppressor::AudioGuard;
 use sys_single_instance::InstanceLock;
 
 use ops_chat_storage::{ChatData, ChatMetadata, ChatStorage};

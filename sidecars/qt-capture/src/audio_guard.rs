@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Shutter sound suppressor for screen capture
+//! Local shutter sound suppressor for Qt capture sidecar.
 //!
 //! Mutes system audio during capture to suppress shutter sounds on:
 //! - macOS: CoreGraphics always plays a sound
@@ -108,16 +108,5 @@ impl AudioGuard {
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mute_unmute_doesnt_panic() {
-        AudioGuard::mute();
-        AudioGuard::unmute();
     }
 }

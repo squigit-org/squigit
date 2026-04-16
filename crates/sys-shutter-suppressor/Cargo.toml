@@ -1,9 +1,0 @@
-[package]
-name = "sys-shutter-suppressor"
-version = "0.1.0"
-edition = "2021"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = "0.10"
-
-[target.'cfg(target_os = "linux")'.dependencies]
