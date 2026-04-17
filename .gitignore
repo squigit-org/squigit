@@ -20,6 +20,7 @@ yarn-error.log*
 # -----------------------------------------------------------------------------
 venv/
 build/
+build-xtask-check/
 dist/
 __pycache__/
 *.py[cod]

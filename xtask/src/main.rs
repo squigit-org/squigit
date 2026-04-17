@@ -10,6 +10,8 @@
 //!   cargo xtask test apps auth login
 //!   cargo xtask test apps brain analyze
 //!   cargo xtask test crates --all
+//!   cargo xtask check sidecars qt-capture
+//!   cargo xtask check apps desktop renderer
 //!   cargo xtask report --strict
 //!   cargo xtask version 0.2.0
 //!   cargo xtask version --bump patch
@@ -23,7 +25,7 @@ pub mod tests;
 
 use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
-use commands::{build as cmd_build, clean, dev, report, setup, test, version};
+use commands::{build as cmd_build, check, clean, dev, report, setup, test, version};
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -92,6 +94,17 @@ enum Commands {
         path: Vec<String>,
     },
 
+    /// Run syntax/type checks with positional hierarchy (e.g. `cargo xtask check apps desktop renderer`)
+    Check {
+        /// Print available categories/suites/actions for the provided scope.
+        #[arg(long)]
+        list: bool,
+
+        /// Check scope path (category suite action args...)
+        #[arg(value_name = "PATH")]
+        path: Vec<String>,
+    },
+
     /// Sync project version across Cargo/JSON/CMake/changelog
     Version {
         /// Explicit target semver (x.y.z).
@@ -150,6 +163,7 @@ fn main() -> Result<()> {
         Commands::Test { list, all, path } => {
             test::run(test::TestCommandOptions { list, all, path })?
         }
+        Commands::Check { list, path } => check::run(check::CheckCommandOptions { list, path })?,
         Commands::Version {
             version: explicit,
             bump,

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod apps;
+pub mod check;
 pub mod crates;
 pub mod runner;
 pub mod sidecars;
