@@ -1,8 +1,12 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+fn resolve_attachment_path_internal(path: &str) -> Result<std::path::PathBuf, String> {
+    crate::provider::gemini::attachments::paths::resolve_attachment_path_internal(path)
+}
+
 pub fn resolve_attachment_path_buf(path: &str) -> Result<std::path::PathBuf, String> {
-    crate::brain::provider::gemini::attachments::paths::resolve_attachment_path_internal(path)
+    resolve_attachment_path_internal(path)
 }
 
 pub fn resolve_attachment_path(path: &str) -> Result<String, String> {
