@@ -34,11 +34,22 @@ async function createFixtureImage(): Promise<string> {
   return imagePath;
 }
 
+async function resolveAnalyzeImagePath(): Promise<string> {
+  const overridePath = process.env.SQUIGIT_BRAIN_ANALYZE_IMAGE_PATH?.trim();
+  if (!overridePath) {
+    return createFixtureImage();
+  }
+
+  const resolvedPath = path.resolve(overridePath);
+  await fs.access(resolvedPath);
+  return resolvedPath;
+}
+
 liveTest("analyze command creates a chat in the active profile store", async () => {
   const profileId = (await runHarness(["active-profile-id"])).trim();
   assert.ok(profileId, "No active profile found. Sign in first.");
 
-  const imagePath = await createFixtureImage();
+  const imagePath = await resolveAnalyzeImagePath();
   const stdout = await runBrainHarness(["analyze", imagePath]);
   const payload = parseLastJsonLine<AnalyzePayload>(stdout);
 
@@ -59,7 +70,7 @@ liveTest("prompt command appends to same chat and normalizes @/absolute/path", a
   assert.ok(profileId, "No active profile found. Sign in first.");
 
   if (!latestChatId) {
-    const imagePath = await createFixtureImage();
+    const imagePath = await resolveAnalyzeImagePath();
     const stdout = await runBrainHarness(["analyze", imagePath]);
     latestChatId = parseLastJsonLine<AnalyzePayload>(stdout).chat_id;
   }

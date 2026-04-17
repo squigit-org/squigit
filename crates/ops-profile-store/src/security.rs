@@ -84,6 +84,12 @@ fn derive_key(passphrase: &str, salt: &[u8]) -> Result<[u8; 32]> {
     Ok(key)
 }
 
+fn sha256_hex(value: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(value.as_bytes());
+    hex::encode(hasher.finalize())
+}
+
 pub fn get_decrypted_key(
     store: &ProfileStore,
     provider: ApiKeyProvider,
@@ -128,6 +134,15 @@ pub fn get_decrypted_key(
     let plaintext = String::from_utf8(plaintext_bytes)
         .map_err(|err| ProfileError::Security(format!("Stored API key is not valid UTF-8: {}", err)))?;
 
+    if let Some(expected_hash) = payload.get("sha256").and_then(|value| value.as_str()) {
+        let actual_hash = sha256_hex(&plaintext);
+        if expected_hash != actual_hash {
+            return Err(ProfileError::Security(
+                "Stored API key hash mismatch".to_string(),
+            ));
+        }
+    }
+
     Ok(Some(plaintext))
 }
 
@@ -160,9 +175,11 @@ pub fn encrypt_and_save_key(
         .map_err(|err| ProfileError::Security(format!("Encryption failed: {}", err)))?;
 
     let (ciphertext, tag) = encrypted_data.split_at(encrypted_data.len() - 16);
+    let plaintext_hash = sha256_hex(plaintext);
     let payload = serde_json::json!({
         "version": 1,
         "algo": "aes-256-gcm",
+        "sha256": plaintext_hash,
         "salt": general_purpose::STANDARD.encode(salt),
         "iv": general_purpose::STANDARD.encode(iv),
         "tag": general_purpose::STANDARD.encode(tag),
@@ -192,6 +209,7 @@ pub fn validate_api_key(provider: ApiKeyProvider, plaintext: &str) -> Result<()>
 mod tests {
     use super::*;
     use crate::types::Profile;
+    use std::fs;
     use tempfile::tempdir;
 
     fn temp_store() -> ProfileStore {
@@ -256,5 +274,56 @@ mod tests {
             err.to_string(),
             "Invalid Google AI Studio API key format. Expected a key that starts with 'AIzaS' and is 39 characters long."
         );
+    }
+
+    #[test]
+    fn saved_payload_includes_plaintext_hash() {
+        let store = temp_store();
+        let profile_id = store
+            .list_profiles()
+            .unwrap()
+            .into_iter()
+            .next()
+            .unwrap()
+            .id;
+        let key = valid_google_key();
+
+        encrypt_and_save_key(&store, &profile_id, ApiKeyProvider::GoogleAiStudio, &key).unwrap();
+
+        let payload_path = store.get_provider_key_path(&profile_id, "google ai studio");
+        let payload = fs::read_to_string(payload_path).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&payload).unwrap();
+        let expected_hash = sha256_hex(&key);
+        assert_eq!(json["sha256"].as_str(), Some(expected_hash.as_str()));
+    }
+
+    #[test]
+    fn tampered_hash_is_rejected() {
+        let store = temp_store();
+        let profile_id = store
+            .list_profiles()
+            .unwrap()
+            .into_iter()
+            .next()
+            .unwrap()
+            .id;
+
+        encrypt_and_save_key(
+            &store,
+            &profile_id,
+            ApiKeyProvider::GoogleAiStudio,
+            &valid_google_key(),
+        )
+        .unwrap();
+
+        let payload_path = store.get_provider_key_path(&profile_id, "google ai studio");
+        let payload = fs::read_to_string(&payload_path).unwrap();
+        let mut json: serde_json::Value = serde_json::from_str(&payload).unwrap();
+        json["sha256"] = serde_json::Value::String("deadbeef".to_string());
+        store.write_json_atomic(&payload_path, &json).unwrap();
+
+        let err = get_decrypted_key(&store, ApiKeyProvider::GoogleAiStudio, &profile_id)
+            .unwrap_err();
+        assert_eq!(err.to_string(), "Stored API key hash mismatch");
     }
 }

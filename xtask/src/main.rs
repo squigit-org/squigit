@@ -6,7 +6,9 @@
 //!   cargo xtask build all -ocr
 //!   cargo xtask build --all --measure-ocr-size
 //!   cargo xtask build ocr stt
-//!   cargo xtask test auth
+//!   cargo xtask test --list
+//!   cargo xtask test apps auth login
+//!   cargo xtask test apps brain analyze
 //!   cargo xtask report --strict
 //!   cargo xtask version 0.2.0
 //!   cargo xtask version --bump patch
@@ -16,8 +18,9 @@ pub mod commands;
 pub mod compile;
 pub mod console;
 pub mod packaging;
+pub mod tests;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 use commands::{build as cmd_build, clean, dev, report, setup, test, version};
 
@@ -25,10 +28,6 @@ use commands::{build as cmd_build, clean, dev, report, setup, test, version};
 #[command(name = "xtask")]
 #[command(about = "Build automation and contributor control panel")]
 struct Cli {
-    /// Run a focused test suite (shortcut for `cargo xtask test <target>`)
-    #[arg(long, value_name = "TARGET")]
-    test: Option<String>,
-
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -77,11 +76,15 @@ enum Commands {
         strict: bool,
     },
 
-    /// Run focused test suites
+    /// Run test suites with positional hierarchy (e.g. `cargo xtask test apps auth login`)
     Test {
-        /// Test target (auth, auth-live, all)
-        #[arg(default_value = "all")]
-        target: String,
+        /// Print available categories/suites/actions for the provided scope.
+        #[arg(long)]
+        list: bool,
+
+        /// Test scope path (category suite action args...)
+        #[arg(value_name = "PATH")]
+        path: Vec<String>,
     },
 
     /// Sync project version across Cargo/JSON/CMake/changelog
@@ -121,17 +124,8 @@ enum Commands {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    if cli.test.is_some() && cli.command.is_some() {
-        bail!("Use either `cargo xtask test <target>` or `cargo xtask --test <target>`, not both.");
-    }
-
-    if let Some(target) = cli.test {
-        test::run(test::TestTarget::parse(&target)?)?;
-        return Ok(());
-    }
-
     let Some(command) = cli.command else {
-        bail!("No command provided. Try `cargo xtask test auth` or `cargo xtask --test auth`.");
+        bail!("No command provided. Try `cargo xtask test --list` or `cargo xtask test apps auth --list`.");
     };
 
     match command {
@@ -148,7 +142,7 @@ fn main() -> Result<()> {
         Commands::Run { cmd, args } => dev::run(&cmd, false, &args)?,
         Commands::Dev { mode, args } => dev::run("dev", mode.as_deref() == Some("tray"), &args)?,
         Commands::Report { strict } => report::run(report::ReportOptions { strict })?,
-        Commands::Test { target } => test::run(test::TestTarget::parse(&target)?)?,
+        Commands::Test { list, path } => test::run(test::TestCommandOptions { list, path })?,
         Commands::Version {
             version: explicit,
             bump,

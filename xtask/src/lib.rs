@@ -113,13 +113,40 @@ fn windows_node_tool_fallback(cmd: &str) -> Option<PathBuf> {
 }
 
 pub fn run_cmd(cmd: &str, args: &[&str], cwd: &Path) -> Result<()> {
+    run_cmd_with_display(cmd, args, args, cwd)
+}
+
+pub fn run_cmd_with_display(
+    cmd: &str,
+    args: &[&str],
+    display_args: &[&str],
+    cwd: &Path,
+) -> Result<()> {
+    run_cmd_with_display_and_env(cmd, args, display_args, cwd, &[])
+}
+
+pub fn run_cmd_with_display_and_env(
+    cmd: &str,
+    args: &[&str],
+    display_args: &[&str],
+    cwd: &Path,
+    env_vars: &[(String, String)],
+) -> Result<()> {
     let command_path = resolve_command_path(cmd);
-    println!("  $ {} {}", command_path.display(), args.join(" "));
-    let status = Command::new(&command_path)
-        .args(args)
-        .current_dir(cwd)
-        .status()
-        .with_context(|| format!("Failed to run: {} {:?}", command_path.display(), args))?;
+    println!("  $ {} {}", command_path.display(), display_args.join(" "));
+    let mut command = Command::new(&command_path);
+    command.args(args).current_dir(cwd);
+    for (key, value) in env_vars {
+        command.env(key, value);
+    }
+
+    let status = command.status().with_context(|| {
+        format!(
+            "Failed to run: {} {:?}",
+            command_path.display(),
+            display_args
+        )
+    })?;
 
     if !status.success() {
         anyhow::bail!("Command failed with exit code: {:?}", status.code());
