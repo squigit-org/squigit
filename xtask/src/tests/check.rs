@@ -25,10 +25,23 @@ pub fn run_all() -> Result<()> {
     let crate_targets = discover_workspace_crates()?;
 
     let mut plan: Vec<(String, Vec<String>)> = vec![
-        ("apps".to_string(), vec!["desktop".to_string(), "renderer".to_string()]),
-        ("apps".to_string(), vec!["desktop".to_string(), "tauri".to_string()]),
+        (
+            "apps".to_string(),
+            vec!["desktop".to_string(), "renderer".to_string()],
+        ),
+        (
+            "apps".to_string(),
+            vec!["desktop".to_string(), "tauri".to_string()],
+        ),
         ("apps".to_string(), vec!["cli".to_string()]),
-        ("apps".to_string(), vec!["shared".to_string()]),
+        (
+            "apps".to_string(),
+            vec!["shared".to_string(), "core".to_string()],
+        ),
+        (
+            "apps".to_string(),
+            vec!["shared".to_string(), "react".to_string()],
+        ),
     ];
 
     for target in crate_targets {
@@ -100,7 +113,12 @@ fn run_crates(list: bool, path: &[String]) -> Result<()> {
     let target = crates
         .iter()
         .find(|candidate| candidate.alias == token || candidate.package == token)
-        .ok_or_else(|| anyhow::anyhow!("Unknown crate '{}'. Run `cargo xtask check crates --list`.", token))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Unknown crate '{}'. Run `cargo xtask check crates --list`.",
+                token
+            )
+        })?;
 
     run_cmd("cargo", &["check", "-p", target.package.as_str()], &root)
 }
@@ -175,7 +193,10 @@ fn run_sidecars(list: bool, path: &[String]) -> Result<()> {
     if list {
         match path {
             [] => {
-                print_group("check/sidecars", &["qt-capture", "paddle-ocr", "whisper-stt"]);
+                print_group(
+                    "check/sidecars",
+                    &["qt-capture", "paddle-ocr", "whisper-stt"],
+                );
                 return Ok(());
             }
             [suite] if suite == "qt-capture" => {
@@ -227,7 +248,10 @@ fn run_sidecars(list: bool, path: &[String]) -> Result<()> {
             }
 
             if path.len() == 2 && path[1].as_str() != "python" {
-                bail!("Unknown paddle-ocr check target '{}'. Use `python`.", path[1]);
+                bail!(
+                    "Unknown paddle-ocr check target '{}'. Use `python`.",
+                    path[1]
+                );
             }
 
             run_cmd(
@@ -279,7 +303,7 @@ fn run_apps(list: bool, path: &[String]) -> Result<()> {
                 print_group("check/apps/cli", &["(no args)"]);
             }
             [suite] if suite == "shared" => {
-                print_group("check/apps/shared", &["(no args)"]);
+                print_group("check/apps/shared", &["core", "react"]);
             }
             _ => bail!("Run `cargo xtask check apps --list` for supported paths."),
         }
@@ -295,7 +319,11 @@ fn run_apps(list: bool, path: &[String]) -> Result<()> {
     match path[0].as_str() {
         "desktop" => {
             if path.len() == 1 {
-                run_cmd("npm", &["--prefix", "apps/desktop/renderer", "run", "tsc"], &root)?;
+                run_cmd(
+                    "npm",
+                    &["--prefix", "apps/desktop/renderer", "run", "tsc"],
+                    &root,
+                )?;
                 return run_cmd(
                     "cargo",
                     &["check", "--manifest-path", "apps/desktop/Cargo.toml"],
@@ -308,7 +336,11 @@ fn run_apps(list: bool, path: &[String]) -> Result<()> {
             }
 
             match path[1].as_str() {
-                "renderer" => run_cmd("npm", &["--prefix", "apps/desktop/renderer", "run", "tsc"], &root),
+                "renderer" => run_cmd(
+                    "npm",
+                    &["--prefix", "apps/desktop/renderer", "run", "tsc"],
+                    &root,
+                ),
                 "tauri" => run_cmd(
                     "cargo",
                     &["check", "--manifest-path", "apps/desktop/Cargo.toml"],
@@ -327,14 +359,35 @@ fn run_apps(list: bool, path: &[String]) -> Result<()> {
 
             run_ts_check(&root, "apps/cli", "apps/cli/tsconfig.json")
         }
-        "shared" => {
-            if path.len() != 1 {
-                bail!("Usage: cargo xtask check apps shared");
+        "shared" => match path {
+            [_] => {
+                run_ts_check(
+                    &root,
+                    "apps/desktop/renderer",
+                    "apps/shared/packages/core/tsconfig.json",
+                )?;
+                run_ts_check(
+                    &root,
+                    "apps/desktop/renderer",
+                    "apps/shared/packages/react/tsconfig.json",
+                )
             }
-
-            run_ts_check(&root, "apps/desktop/renderer", "apps/shared/tsconfig.json")
-        }
-        other => bail!("Unknown apps check suite '{}'. Run `cargo xtask check apps --list`.", other),
+            [_, target] if target == "core" => run_ts_check(
+                &root,
+                "apps/desktop/renderer",
+                "apps/shared/packages/core/tsconfig.json",
+            ),
+            [_, target] if target == "react" => run_ts_check(
+                &root,
+                "apps/desktop/renderer",
+                "apps/shared/packages/react/tsconfig.json",
+            ),
+            _ => bail!("Usage: cargo xtask check apps shared [core|react]"),
+        },
+        other => bail!(
+            "Unknown apps check suite '{}'. Run `cargo xtask check apps --list`.",
+            other
+        ),
     }
 }
 
