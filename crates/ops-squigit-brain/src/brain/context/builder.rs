@@ -127,7 +127,6 @@ pub fn build_system_instruction(
     let datetime = now.format("%Y-%m-%d %H:%M:%S").to_string();
     let timezone = iana_time_zone::get_timezone().unwrap_or_else(|_| "Unknown".to_string());
 
-    // OS info via std (tauri_plugin_os requires AppHandle, so we use std::env::consts + sysinfo)
     let os_type = std::env::consts::OS; // "linux", "macos", "windows"
     let os_arch = std::env::consts::ARCH; // "x86_64", "aarch64"
     let platform = if cfg!(target_os = "linux") {
