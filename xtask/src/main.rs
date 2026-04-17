@@ -100,6 +100,10 @@ enum Commands {
         #[arg(long)]
         list: bool,
 
+        /// Run all supported syntax/type checks.
+        #[arg(long)]
+        all: bool,
+
         /// Check scope path (category suite action args...)
         #[arg(value_name = "PATH")]
         path: Vec<String>,
@@ -163,7 +167,9 @@ fn main() -> Result<()> {
         Commands::Test { list, all, path } => {
             test::run(test::TestCommandOptions { list, all, path })?
         }
-        Commands::Check { list, path } => check::run(check::CheckCommandOptions { list, path })?,
+        Commands::Check { list, all, path } => {
+            check::run(check::CheckCommandOptions { list, all, path })?
+        }
         Commands::Version {
             version: explicit,
             bump,

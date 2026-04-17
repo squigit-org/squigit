@@ -29,11 +29,22 @@ pub fn run(options: TestCommandOptions) -> Result<()> {
 }
 
 pub fn run_check(options: CheckCommandOptions) -> Result<()> {
+    if options.all {
+        if options.list {
+            bail!("`cargo xtask check --all` cannot be combined with `--list`.");
+        }
+        if !options.path.is_empty() {
+            bail!("`cargo xtask check --all` does not accept additional path segments.");
+        }
+
+        return super::check::run_all();
+    }
+
     run_internal(
         Operation::Check,
         InvocationOptions {
             list: options.list,
-            all: false,
+            all: options.all,
             path: options.path,
         },
     )
@@ -57,7 +68,7 @@ fn run_internal(operation: Operation, options: InvocationOptions) -> Result<()> 
         ParsedInvocation::ListRoot => {
             let (title, entries): (&str, &[&str]) = match operation {
                 Operation::Test => ("tests", &["apps", "crates", "sidecars"]),
-                Operation::Check => ("check", &["apps", "sidecars"]),
+                Operation::Check => ("check", &["apps", "crates", "sidecars"]),
             };
 
             print_group(title, entries);
@@ -79,7 +90,7 @@ fn run_internal(operation: Operation, options: InvocationOptions) -> Result<()> 
                 ),
             },
             Operation::Check => match category.as_str() {
-                "apps" | "sidecars" => super::check::run(list, &category, &tail),
+                "apps" | "crates" | "sidecars" => super::check::run(list, &category, &tail),
                 other => bail!(
                     "Unknown check category '{}'. Run `cargo xtask check --list`.",
                     other

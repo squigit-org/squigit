@@ -10,8 +10,165 @@ pub fn run(list: bool, category: &str, path: &[String]) -> Result<()> {
     match category {
         "sidecars" => run_sidecars(list, path),
         "apps" => run_apps(list, path),
+        "crates" => run_crates(list, path),
         other => bail!("Unknown check category '{}'.", other),
     }
+}
+
+#[derive(Debug, Clone)]
+struct CheckRunResult {
+    scope: String,
+    ok: bool,
+}
+
+pub fn run_all() -> Result<()> {
+    let crate_targets = discover_workspace_crates()?;
+
+    let mut plan: Vec<(String, Vec<String>)> = vec![
+        ("apps".to_string(), vec!["desktop".to_string(), "renderer".to_string()]),
+        ("apps".to_string(), vec!["desktop".to_string(), "tauri".to_string()]),
+        ("apps".to_string(), vec!["cli".to_string()]),
+        ("apps".to_string(), vec!["shared".to_string()]),
+    ];
+
+    for target in crate_targets {
+        plan.push(("crates".to_string(), vec![target.package]));
+    }
+
+    plan.extend([
+        (
+            "sidecars".to_string(),
+            vec!["qt-capture".to_string(), "wrapper".to_string()],
+        ),
+        (
+            "sidecars".to_string(),
+            vec!["qt-capture".to_string(), "native".to_string()],
+        ),
+        ("sidecars".to_string(), vec!["paddle-ocr".to_string()]),
+        ("sidecars".to_string(), vec!["whisper-stt".to_string()]),
+    ]);
+
+    let mut results = Vec::with_capacity(plan.len());
+
+    for (category, path) in plan {
+        let scope = format!("{}/{}", category, path.join("/"));
+        println!("\n[check:{}]", scope);
+
+        let ok = run(false, &category, &path).is_ok();
+        results.push(CheckRunResult { scope, ok });
+    }
+
+    print_report(&results);
+
+    if results.iter().any(|result| !result.ok) {
+        bail!("One or more checks failed.");
+    }
+
+    Ok(())
+}
+
+fn run_crates(list: bool, path: &[String]) -> Result<()> {
+    let crates = discover_workspace_crates()?;
+
+    if list {
+        if !path.is_empty() {
+            bail!("`cargo xtask check crates --list` does not accept extra path segments.");
+        }
+
+        let entries: Vec<&str> = crates.iter().map(|target| target.alias.as_str()).collect();
+        print_group("check/crates", &entries);
+        return Ok(());
+    }
+
+    if path.len() != 1 {
+        bail!("Usage: cargo xtask check crates <crate|all>");
+    }
+
+    let root = project_root();
+    let token = path[0].as_str();
+    if token == "all" {
+        let mut args = vec!["check".to_string()];
+        for target in &crates {
+            args.push("-p".to_string());
+            args.push(target.package.clone());
+        }
+
+        let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
+        return run_cmd("cargo", &arg_refs, &root);
+    }
+
+    let target = crates
+        .iter()
+        .find(|candidate| candidate.alias == token || candidate.package == token)
+        .ok_or_else(|| anyhow::anyhow!("Unknown crate '{}'. Run `cargo xtask check crates --list`.", token))?;
+
+    run_cmd("cargo", &["check", "-p", target.package.as_str()], &root)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CrateTarget {
+    alias: String,
+    package: String,
+}
+
+fn discover_workspace_crates() -> Result<Vec<CrateTarget>> {
+    let root = project_root().join("crates");
+    let mut crates = Vec::new();
+
+    for entry in std::fs::read_dir(&root)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+
+        let Some(dir_name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+
+        let cargo_toml = path.join("Cargo.toml");
+        if !cargo_toml.is_file() {
+            continue;
+        }
+
+        crates.push(CrateTarget {
+            alias: alias_from_dir_name(dir_name),
+            package: dir_name.to_string(),
+        });
+    }
+
+    crates.sort_by(|a, b| a.alias.cmp(&b.alias));
+    Ok(crates)
+}
+
+fn alias_from_dir_name(dir_name: &str) -> String {
+    for prefix in ["ops-", "svc-", "sys-"] {
+        if let Some(rest) = dir_name.strip_prefix(prefix) {
+            if !rest.is_empty() {
+                return rest.to_string();
+            }
+        }
+    }
+
+    dir_name.to_string()
+}
+
+fn print_report(results: &[CheckRunResult]) {
+    let passed = results.iter().filter(|result| result.ok).count();
+    let failed = results.len().saturating_sub(passed);
+
+    println!("\n============================================================");
+    println!("CHECK REPORT");
+    println!("------------------------------------------------------------");
+    for result in results {
+        let status = if result.ok { "PASS" } else { "FAIL" };
+        println!("[{}] {}", status, result.scope);
+    }
+    println!("------------------------------------------------------------");
+    println!("Passed: {}", passed);
+    println!("Failed: {}", failed);
+    println!("Total : {}", results.len());
+    println!("============================================================");
 }
 
 fn run_sidecars(list: bool, path: &[String]) -> Result<()> {

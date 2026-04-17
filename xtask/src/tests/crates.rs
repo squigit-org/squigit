@@ -102,7 +102,7 @@ fn print_all_report(results: &[CrateRunResult]) {
     let failed = results.len().saturating_sub(passed);
 
     println!("\n============================================================");
-    println!("CRATES TEST REPORT (--all)");
+    println!("CRATES TEST REPORT");
     println!("------------------------------------------------------------");
     for result in results {
         let status = if result.ok { "PASS" } else { "FAIL" };
