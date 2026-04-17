@@ -1,0 +1,21 @@
+{
+  "name": "@squigit/core",
+  "version": "0.1.0",
+  "type": "module",
+  "$schema": "https://json.schemastore.org/package.json",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./brain/engine": "./src/brain/engine/index.ts",
+    "./brain/provider": "./src/brain/provider/index.ts",
+    "./brain/session": "./src/brain/session/index.ts",
+    "./brain/attachments": "./src/brain/attachments/index.ts",
+    "./config": "./src/config/index.ts",
+    "./helpers": "./src/helpers/index.ts",
+    "./ports": "./src/ports/index.ts",
+    "./services/github": "./src/services/github/index.ts",
+    "./services/google": "./src/services/google/index.ts",
+    "./services/imgbb": "./src/services/imgbb/index.ts",
+    "./services/system": "./src/services/system/index.ts"
+  }
+}
