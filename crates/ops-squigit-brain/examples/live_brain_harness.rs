@@ -5,7 +5,7 @@ use ops_profile_store::security::{get_decrypted_key, ApiKeyProvider};
 use ops_profile_store::ProfileStore;
 use ops_squigit_brain::constants::DEFAULT_MODEL;
 use ops_squigit_brain::events::NoopEventSink;
-use ops_squigit_brain::image::get_active_storage;
+use ops_squigit_brain::context::media::get_active_storage;
 use ops_squigit_brain::service::{
     AnalyzeImageRequest, BrainService, PromptChatRequest,
 };

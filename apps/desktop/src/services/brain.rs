@@ -69,7 +69,7 @@ struct TauriEventSink {
 }
 
 impl BrainEventSink for TauriEventSink {
-    fn emit(&self, channel_id: &str, event: ops_squigit_brain::brain::provider::gemini::transport::types::GeminiEvent) {
+    fn emit(&self, channel_id: &str, event: ops_squigit_brain::provider::gemini::transport::types::GeminiEvent) {
         let _ = self.app.emit(channel_id, event);
     }
 }

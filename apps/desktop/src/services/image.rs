@@ -23,7 +23,7 @@ pub fn process_bytes_internal(
     }
 
     let explicit_tone = detect_image_tone_from_bytes(&buffer);
-    let stored = ops_squigit_brain::image::process_bytes_internal(buffer, explicit_tone)?;
+    let stored = ops_squigit_brain::context::media::process_bytes_internal(buffer, explicit_tone)?;
 
     let mut image_lock = state.image_data.lock();
     *image_lock = Some(stored.clone());
@@ -32,5 +32,5 @@ pub fn process_bytes_internal(
 }
 
 pub async fn upload_image_to_imgbb(image_path: &str, api_key: &str) -> Result<String, String> {
-    ops_squigit_brain::image::upload_image_to_imgbb(image_path, api_key).await
+    ops_squigit_brain::context::media::upload_image_to_imgbb(image_path, api_key).await
 }

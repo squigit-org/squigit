@@ -7,12 +7,12 @@ use crate::services::tone::detect_image_tone_from_bytes;
 use ops_chat_storage::{
     ChatData, ChatMessage, ChatMetadata, ChatStorage, OcrFrame, OcrRegion, StoredImage,
 };
-use ops_squigit_brain::attachments::resolve_attachment_path_buf;
-use ops_squigit_brain::search::{search_local_chats, ChatSearchResult};
+use ops_squigit_brain::provider::attachments::resolve_attachment_path_buf;
+use ops_squigit_brain::tools::chat_search::{search_local_chats, ChatSearchResult};
 
 /// Helper to get storage for the active profile.
 fn get_active_storage() -> Result<ChatStorage, String> {
-    ops_squigit_brain::image::get_active_storage()
+    ops_squigit_brain::context::media::get_active_storage()
 }
 
 // =============================================================================
@@ -23,7 +23,7 @@ fn get_active_storage() -> Result<ChatStorage, String> {
 #[tauri::command]
 pub fn store_image_bytes(bytes: Vec<u8>) -> Result<StoredImage, String> {
     let explicit_tone = detect_image_tone_from_bytes(&bytes);
-    ops_squigit_brain::image::process_bytes_internal(bytes, explicit_tone)
+    ops_squigit_brain::context::media::process_bytes_internal(bytes, explicit_tone)
 }
 
 /// Store image from file path and return hash + path.
@@ -31,7 +31,7 @@ pub fn store_image_bytes(bytes: Vec<u8>) -> Result<StoredImage, String> {
 pub fn store_image_from_path(path: String) -> Result<StoredImage, String> {
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     let explicit_tone = detect_image_tone_from_bytes(&bytes);
-    ops_squigit_brain::image::process_bytes_internal(bytes, explicit_tone)
+    ops_squigit_brain::context::media::process_bytes_internal(bytes, explicit_tone)
 }
 
 /// Store any file from path (preserving extension) and return hash + CAS path.
@@ -46,7 +46,7 @@ pub fn store_file_from_path(path: String) -> Result<StoredImage, String> {
 /// Validate if a file is safe text (valid UTF-8 and no null bytes).
 #[tauri::command]
 pub fn validate_text_file(path: String) -> Result<bool, String> {
-    ops_squigit_brain::attachments::validate_text_file(&path)
+    ops_squigit_brain::provider::attachments::validate_text_file(&path)
 }
 
 /// Get the path to a stored image by its hash.
@@ -59,7 +59,7 @@ pub fn get_image_path(hash: String) -> Result<String, String> {
 /// Resolve an attachment path (absolute or relative CAS path) to an absolute path.
 #[tauri::command]
 pub fn resolve_attachment_path(path: String) -> Result<String, String> {
-    ops_squigit_brain::attachments::resolve_attachment_path(&path)
+    ops_squigit_brain::provider::attachments::resolve_attachment_path(&path)
 }
 
 /// Detect image tone for a given attachment path.
@@ -79,7 +79,7 @@ pub fn detect_image_tone(path: String) -> Result<String, String> {
 /// Read UTF-8 text content from an attachment path.
 #[tauri::command]
 pub fn read_attachment_text(path: String) -> Result<String, String> {
-    ops_squigit_brain::attachments::read_attachment_text(&path)
+    ops_squigit_brain::provider::attachments::read_attachment_text(&path)
 }
 
 /// Reveal a file in the system file manager, selecting it when possible.

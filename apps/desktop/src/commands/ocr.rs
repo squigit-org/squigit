@@ -29,7 +29,7 @@ use std::io;
 
 use crate::services::models::ModelManager;
 use crate::state::{AppState, OcrJobHandle};
-use ops_squigit_brain::attachments::resolve_attachment_path_buf;
+use ops_squigit_brain::provider::attachments::resolve_attachment_path_buf;
 
 /// Maximum wall-clock time for a single OCR job (seconds).
 const OCR_TIMEOUT_SECS_DEFAULT: u64 = 120;
