@@ -11,7 +11,6 @@ import { openExternalUrl } from "../system";
 
 /**
  * Uploads an image file path to ImgBB and returns the hosted URL.
- * Uses the native Tauri command for multipart file upload.
  * @param imagePath - Absolute local image path
  * @param apiKey - The ImgBB API key
  * @returns The public URL of the uploaded image
