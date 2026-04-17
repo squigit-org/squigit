@@ -9,7 +9,7 @@ import {
   runHarness,
 } from "../harness.js";
 
-type AuthAction = "login" | "signup" | "logout" | "remove";
+type AuthAction = "login" | "signup" | "logout" | "remove" | "profiles";
 
 type ProfileRecord = {
   id: string;
@@ -27,12 +27,15 @@ type InfraSnapshot = {
   tempDir: string;
 };
 
+const LIST_SEPARATOR = "------------------------------------------------------------";
+
 function usage(): string {
   return [
     "Usage:",
     "  node dist/src/index.js auth login",
     "  node dist/src/index.js auth signup",
     "  node dist/src/index.js auth logout",
+    "  node dist/src/index.js auth profiles",
     "  node dist/src/index.js auth remove <id_or_email>",
   ].join("\n");
 }
@@ -43,7 +46,13 @@ function parseAction(args: string[]): { action: AuthAction; rest: string[] } {
     throw new Error(usage());
   }
 
-  if (action !== "login" && action !== "signup" && action !== "logout" && action !== "remove") {
+  if (
+    action !== "login" &&
+    action !== "signup" &&
+    action !== "logout" &&
+    action !== "remove" &&
+    action !== "profiles"
+  ) {
     throw new Error(`Unknown auth action '${action}'.\n\n${usage()}`);
   }
 
@@ -53,6 +62,37 @@ function parseAction(args: string[]): { action: AuthAction; rest: string[] } {
 function assertNoArgs(action: AuthAction, rest: string[]): void {
   if (rest.length > 0) {
     throw new Error(`Action '${action}' does not accept arguments.`);
+  }
+}
+
+async function withSpinner<T>(label: string, task: () => Promise<T>): Promise<T> {
+  if (!process.stderr.isTTY) {
+    console.error(`[auth] ${label}...`);
+    return task();
+  }
+
+  const frames = ["|", "/", "-", "\\"];
+  let frameIndex = 0;
+  const prefix = `[auth] ${label} `;
+  const render = (): void => {
+    process.stderr.write(`\r${prefix}${frames[frameIndex]}`);
+  };
+
+  render();
+  const timer = setInterval(() => {
+    frameIndex = (frameIndex + 1) % frames.length;
+    render();
+  }, 100);
+
+  try {
+    const result = await task();
+    clearInterval(timer);
+    process.stderr.write(`\r${prefix}done.\n`);
+    return result;
+  } catch (error) {
+    clearInterval(timer);
+    process.stderr.write(`\r${prefix}failed.\n`);
+    throw error;
   }
 }
 
@@ -228,6 +268,22 @@ async function runRemove(identifier: string): Promise<void> {
   console.log(`removed account ${profileId}`);
 }
 
+async function runProfiles(): Promise<void> {
+  const profiles = await withSpinner("fetching profiles", () => listProfiles());
+
+  console.log(LIST_SEPARATOR);
+  if (profiles.length === 0) {
+    console.log("(no profiles)");
+    console.log(LIST_SEPARATOR);
+    return;
+  }
+
+  for (const profile of profiles) {
+    console.log(`${profile.id} | ${profile.email}`);
+  }
+  console.log(LIST_SEPARATOR);
+}
+
 export async function runAuthCommand(args: string[]): Promise<void> {
   const { action, rest } = parseAction(args);
 
@@ -243,6 +299,10 @@ export async function runAuthCommand(args: string[]): Promise<void> {
     case "logout":
       assertNoArgs(action, rest);
       await runLogout();
+      return;
+    case "profiles":
+      assertNoArgs(action, rest);
+      await runProfiles();
       return;
     case "remove": {
       if (rest.length !== 1) {

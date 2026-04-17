@@ -5,6 +5,7 @@ use ops_profile_store::security::{get_decrypted_key, ApiKeyProvider};
 use ops_profile_store::ProfileStore;
 use ops_squigit_brain::constants::DEFAULT_MODEL;
 use ops_squigit_brain::events::NoopEventSink;
+use ops_squigit_brain::image::get_active_storage;
 use ops_squigit_brain::service::{
     AnalyzeImageRequest, BrainService, PromptChatRequest,
 };
@@ -23,7 +24,7 @@ async fn run() -> Result<(), String> {
     let mut args = std::env::args().skip(1);
     let Some(command) = args.next() else {
         return Err(
-            "usage: cargo run -p ops-squigit-brain --example live_brain_harness -- <analyze|prompt> ..."
+            "usage: cargo run -p ops-squigit-brain --example live_brain_harness -- <analyze|prompt|chats> ..."
                 .to_string(),
         );
     };
@@ -95,6 +96,24 @@ async fn run() -> Result<(), String> {
                     "assistant_message": result.assistant_message,
                 }))
                 .map_err(|e| e.to_string())?
+            );
+        }
+        "chats" => {
+            let storage = get_active_storage()?;
+            let chats = storage.list_chats().map_err(|e| e.to_string())?;
+            let summaries: Vec<_> = chats
+                .into_iter()
+                .map(|chat| {
+                    json!({
+                        "id": chat.id,
+                        "title": chat.title,
+                    })
+                })
+                .collect();
+
+            println!(
+                "{}",
+                serde_json::to_string(&summaries).map_err(|e| e.to_string())?
             );
         }
         other => return Err(format!("unknown command: {}", other)),

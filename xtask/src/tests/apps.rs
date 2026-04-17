@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
+use std::fs;
 use std::io::{self, IsTerminal};
+use std::path::Path;
+use std::time::{Duration, Instant, SystemTime};
 use xtask::{project_root, run_cmd, run_cmd_with_display};
 
 use super::runner::print_group;
@@ -36,6 +39,7 @@ fn run_brain(list: bool, path: &[String]) -> Result<()> {
                 &[
                     "analyze <image_path> [user_message...]",
                     "prompt <chat_id> <message...>",
+                    "chats",
                 ],
             );
             return Ok(());
@@ -87,6 +91,13 @@ fn run_brain(list: bool, path: &[String]) -> Result<()> {
                 action_args.push(arg.as_str());
             }
         }
+        "chats" => {
+            if path.len() != 1 {
+                bail!("Action 'chats' does not accept arguments.");
+            }
+
+            action_args.push("chats");
+        }
         other => {
             bail!(
                 "Unknown brain action '{}'. Run `cargo xtask test apps brain --list`.",
@@ -97,7 +108,7 @@ fn run_brain(list: bool, path: &[String]) -> Result<()> {
 
     run_cli_command(
         "apps/brain",
-        &format!("Running apps/brain action: {}", action),
+        action,
         "starting brain flow",
         "brain",
         &action_args,
@@ -159,7 +170,7 @@ fn run_apis(list: bool, path: &[String]) -> Result<()> {
 
     run_cli_command(
         "apps/apis",
-        &format!("Running apps/apis action: {}", action),
+        action,
         "starting API flow",
         "api",
         &action_args,
@@ -171,7 +182,13 @@ fn run_auth(list: bool, path: &[String]) -> Result<()> {
         if path.is_empty() {
             print_group(
                 "apps/auth",
-                &["login", "signup", "logout", "remove <id_or_email>"],
+                &[
+                    "login",
+                    "signup",
+                    "logout",
+                    "profiles",
+                    "remove <id_or_email>",
+                ],
             );
             return Ok(());
         }
@@ -187,7 +204,7 @@ fn run_auth(list: bool, path: &[String]) -> Result<()> {
     let mut action_args: Vec<&str> = Vec::new();
 
     match action {
-        "login" | "signup" | "logout" => {
+        "login" | "signup" | "logout" | "profiles" => {
             if path.len() != 1 {
                 bail!("Action '{}' does not accept arguments.", action);
             }
@@ -210,7 +227,7 @@ fn run_auth(list: bool, path: &[String]) -> Result<()> {
 
     run_cli_command(
         "apps/auth",
-        &format!("Running apps/auth action: {}", action),
+        action,
         "starting auth flow",
         "auth",
         &action_args,
@@ -282,15 +299,29 @@ fn should_emit_osc8_links() -> bool {
 
 fn run_cli_command(
     scope: &str,
-    run_label: &str,
+    action: &str,
     step_two_label: &str,
     category: &str,
     action_args: &[&str],
 ) -> Result<()> {
     let root = project_root();
-    println!("\n{}", run_label);
-    println!("[{}] Step 1/2: building apps/cli...", scope);
-    run_cmd("npm", &["--prefix", "apps/cli", "run", "build"], &root)?;
+    println!("\n[{}:{}]", scope, action);
+
+    let build_elapsed = if should_use_cached_cli_build(&root)? {
+        println!(
+            "[{}] Step 1/2: building apps/cli... (cached, {})",
+            scope,
+            format_elapsed(Duration::ZERO)
+        );
+        Duration::ZERO
+    } else {
+        println!("[{}] Step 1/2: building apps/cli...", scope);
+        let started = Instant::now();
+        run_cmd("npm", &["--prefix", "apps/cli", "run", "build"], &root)?;
+        let elapsed = started.elapsed();
+        println!("[{}] Step 1/2: done ({})", scope, format_elapsed(elapsed));
+        elapsed
+    };
 
     println!("[{}] Step 2/2: {}...", scope, step_two_label);
     let mut node_args = vec!["apps/cli/dist/src/index.js", category];
@@ -307,7 +338,73 @@ fn run_cli_command(
         }
     }
 
-    run_cmd_with_display("node", &node_args, &node_display_args, &root)
+    let flow_started = Instant::now();
+    let result = run_cmd_with_display("node", &node_args, &node_display_args, &root);
+    let flow_elapsed = flow_started.elapsed();
+    println!(
+        "[{}] Step 2/2: done ({})",
+        scope,
+        format_elapsed(flow_elapsed)
+    );
+    println!(
+        "[{}:{}] done in {}",
+        scope,
+        action,
+        format_elapsed(build_elapsed + flow_elapsed)
+    );
+
+    result
+}
+
+fn should_use_cached_cli_build(root: &Path) -> Result<bool> {
+    let cli_dir = root.join("apps").join("cli");
+    let marker = cli_dir.join("dist").join("src").join("index.js");
+    if !marker.is_file() {
+        return Ok(false);
+    }
+
+    let marker_mtime = fs::metadata(&marker)?.modified()?;
+    for rel in ["src", "test", "package.json", "tsconfig.json"] {
+        let input = cli_dir.join(rel);
+        let newest = newest_modified_recursive(&input)?;
+        let Some(newest) = newest else {
+            return Ok(false);
+        };
+
+        if newest > marker_mtime {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
+fn newest_modified_recursive(path: &Path) -> Result<Option<SystemTime>> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let metadata = fs::metadata(path)?;
+    let mut newest = Some(metadata.modified()?);
+
+    if metadata.is_dir() {
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let child_newest = newest_modified_recursive(&entry.path())?;
+            if let Some(child_time) = child_newest {
+                newest = Some(match newest {
+                    Some(current) if current >= child_time => current,
+                    _ => child_time,
+                });
+            }
+        }
+    }
+
+    Ok(newest)
+}
+
+fn format_elapsed(elapsed: Duration) -> String {
+    format!("{:.1}s", elapsed.as_secs_f64())
 }
 
 #[cfg(test)]
@@ -391,5 +488,23 @@ mod tests {
         assert!(err
             .to_string()
             .contains("requires `<chat_id> <message...>`"));
+    }
+
+    #[test]
+    fn brain_rejects_chats_extra_arguments() {
+        let err = run(false, &path(&["brain", "chats", "unexpected"]))
+            .expect_err("expected chats no-args validation error");
+        assert!(err
+            .to_string()
+            .contains("Action 'chats' does not accept arguments."));
+    }
+
+    #[test]
+    fn auth_rejects_profiles_extra_arguments() {
+        let err = run(false, &path(&["auth", "profiles", "unexpected"]))
+            .expect_err("expected profiles no-args validation error");
+        assert!(err
+            .to_string()
+            .contains("Action 'profiles' does not accept arguments."));
     }
 }

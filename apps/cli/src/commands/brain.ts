@@ -1,6 +1,6 @@
-import { parseLastJsonLine, runBrainHarness } from "../harness.js";
+import { parseLastJsonLine, runBrainHarness, runHarness } from "../harness.js";
 
-type BrainAction = "analyze" | "prompt";
+type BrainAction = "analyze" | "prompt" | "chats";
 
 type AnalyzePayload = {
   chat_id: string;
@@ -14,18 +14,30 @@ type PromptPayload = {
   assistant_message: string;
 };
 
+type ChatSummary = {
+  id: string;
+  title: string;
+};
+
+type ProfileRecord = {
+  id: string;
+  email: string;
+};
+
 const PREVIEW_TOKEN_LIMIT = 96;
+const LIST_SEPARATOR = "------------------------------------------------------------";
 
 function usage(): string {
   return [
     "Usage:",
     "  node dist/src/index.js brain analyze <image_path> [user_message...]",
     "  node dist/src/index.js brain prompt <chat_id> <message...>",
+    "  node dist/src/index.js brain chats",
   ].join("\n");
 }
 
 function parseAction(rawAction: string | undefined): BrainAction {
-  if (rawAction === "analyze" || rawAction === "prompt") {
+  if (rawAction === "analyze" || rawAction === "prompt" || rawAction === "chats") {
     return rawAction;
   }
 
@@ -150,6 +162,45 @@ async function runPrompt(args: string[]): Promise<void> {
   printResponsePreview(payload.assistant_message);
 }
 
+async function runChats(args: string[]): Promise<void> {
+  if (args.length > 0) {
+    throw new Error("Action 'chats' does not accept arguments.");
+  }
+
+  const { chats, activeEmail } = await withSpinner("fetching chats", async () => {
+    const [chatsStdout, activeProfileIdStdout, profilesStdout] = await Promise.all([
+      runBrainHarness(["chats"]),
+      runHarness(["active-profile-id"]),
+      runHarness(["list-profiles"]),
+    ]);
+
+    const chats = parseLastJsonLine<ChatSummary[]>(chatsStdout);
+    const activeProfileId = activeProfileIdStdout.trim();
+    const profiles = parseLastJsonLine<ProfileRecord[]>(profilesStdout);
+
+    const activeEmail = profiles.find((profile) => profile.id === activeProfileId)?.email;
+    if (!activeEmail) {
+      throw new Error("No active profile found. Run auth login first.");
+    }
+
+    return { chats, activeEmail };
+  });
+
+  console.log(LIST_SEPARATOR);
+  console.log(`listed chats for ${activeEmail}`);
+
+  if (chats.length === 0) {
+    console.log("(no chats)");
+    console.log(LIST_SEPARATOR);
+    return;
+  }
+
+  for (const chat of chats) {
+    console.log(`${chat.id} | ${chat.title}`);
+  }
+  console.log(LIST_SEPARATOR);
+}
+
 export async function runBrainCommand(args: string[]): Promise<void> {
   const action = parseAction(args[0]);
   const rest = args.slice(1);
@@ -160,6 +211,9 @@ export async function runBrainCommand(args: string[]): Promise<void> {
       return;
     case "prompt":
       await runPrompt(rest);
+      return;
+    case "chats":
+      await runChats(rest);
       return;
     default:
       throw new Error(usage());

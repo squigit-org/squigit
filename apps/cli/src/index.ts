@@ -13,6 +13,7 @@ function usage(): string {
     "  auth login",
     "  auth signup",
     "  auth logout",
+    "  auth profiles",
     "  auth remove <id_or_email>",
     "",
     "API actions:",
@@ -27,6 +28,7 @@ function usage(): string {
     "Brain actions:",
     "  brain analyze <image_path> [user_message...]",
     "  brain prompt <chat_id> <message...>",
+    "  brain chats",
   ].join("\n");
 }
 
