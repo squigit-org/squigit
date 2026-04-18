@@ -8,14 +8,15 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: "Package to release: ocr, stt, or both"
+        description: "Package to release: auto, ocr, stt, or both"
         required: true
         type: choice
         options:
+          - auto
           - ocr
           - stt
           - both
-        default: both
+        default: auto
       version:
         description: "Formula version (example: 1.2.0)"
         required: true
@@ -30,9 +31,98 @@ permissions:
   contents: write
 
 jobs:
+  resolve-release-scope:
+    name: Resolve Release Scope
+    runs-on: ubuntu-latest
+    outputs:
+      run_ocr: ${{ steps.scope.outputs.run_ocr }}
+      run_stt: ${{ steps.scope.outputs.run_stt }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Resolve package lanes
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          run_ocr=false
+          run_stt=false
+
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            case "${GITHUB_REF_NAME}" in
+              ocr-v*)
+                run_ocr=true
+                ;;
+              stt-v*)
+                run_stt=true
+                ;;
+              *)
+                echo "Unsupported release tag: ${GITHUB_REF_NAME}"
+                exit 1
+                ;;
+            esac
+          else
+            package="${{ inputs.package }}"
+            release_tag_override="${{ inputs.release_tag }}"
+
+            case "${package}" in
+              ocr)
+                run_ocr=true
+                ;;
+              stt)
+                run_stt=true
+                ;;
+              both)
+                if [ -n "${release_tag_override}" ]; then
+                  echo "release_tag override is not allowed when package=both."
+                  exit 1
+                fi
+                run_ocr=true
+                run_stt=true
+                ;;
+              auto)
+                if [ -n "${release_tag_override}" ]; then
+                  echo "release_tag override is not allowed when package=auto."
+                  exit 1
+                fi
+
+                changed_files="$(git diff-tree --no-commit-id --name-only -r HEAD || true)"
+
+                echo "Changed files on HEAD:"
+                echo "${changed_files}"
+
+                if echo "${changed_files}" | grep -Eq '^(sidecars/paddle-ocr/|\.github/actions/build-paddle-ocr/|xtask/src/compile/paddle_ocr/|xtask/src/packaging/paddle_ocr/|packaging/homebrew/squigit-ocr\.rb|\.github/workflows/homebrew-release\.yml)'; then
+                  run_ocr=true
+                fi
+
+                if echo "${changed_files}" | grep -Eq '^(sidecars/whisper-stt/|\.github/actions/build-whisper-stt/|xtask/src/compile/whisper_stt/|xtask/src/packaging/whisper_stt/|packaging/homebrew/squigit-stt\.rb|\.github/workflows/homebrew-release\.yml)'; then
+                  run_stt=true
+                fi
+
+                if [ "${run_ocr}" != "true" ] && [ "${run_stt}" != "true" ]; then
+                  echo "No OCR/STT release-relevant changes detected on HEAD for package=auto."
+                  exit 1
+                fi
+                ;;
+              *)
+                echo "Unknown package input: ${package}"
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "run_ocr=${run_ocr}" >> "$GITHUB_OUTPUT"
+          echo "run_stt=${run_stt}" >> "$GITHUB_OUTPUT"
+          echo "Resolved scope: run_ocr=${run_ocr}, run_stt=${run_stt}"
+
   build-release-ocr:
     name: Build OCR macOS Arm64 + Release Asset
-    if: startsWith(github.ref_name, 'ocr-v') || (github.event_name == 'workflow_dispatch' && (inputs.package == 'ocr' || inputs.package == 'both'))
+    needs: resolve-release-scope
+    if: needs.resolve-release-scope.outputs.run_ocr == 'true'
     runs-on: macos-14
     outputs:
       version: ${{ steps.meta.outputs.version }}
@@ -52,10 +142,6 @@ jobs:
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             VERSION="${{ inputs.version }}"
             RELEASE_TAG="${{ inputs.release_tag }}"
-            if [ "${{ inputs.package }}" = "both" ] && [ -n "${RELEASE_TAG}" ]; then
-              echo "release_tag override cannot be used when package=both."
-              exit 1
-            fi
             if [ -z "${RELEASE_TAG}" ]; then
               RELEASE_TAG="ocr-v${VERSION}"
             fi
@@ -162,8 +248,10 @@ jobs:
 
   update-homebrew-tap-ocr:
     name: Update Homebrew Tap Formula (OCR)
-    if: startsWith(github.ref_name, 'ocr-v') || (github.event_name == 'workflow_dispatch' && (inputs.package == 'ocr' || inputs.package == 'both'))
-    needs: build-release-ocr
+    if: needs.resolve-release-scope.outputs.run_ocr == 'true'
+    needs:
+      - resolve-release-scope
+      - build-release-ocr
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -183,8 +271,9 @@ jobs:
 
   test-homebrew-ocr:
     name: End-user Homebrew Install Smoke (OCR)
-    if: startsWith(github.ref_name, 'ocr-v') || (github.event_name == 'workflow_dispatch' && (inputs.package == 'ocr' || inputs.package == 'both'))
+    if: needs.resolve-release-scope.outputs.run_ocr == 'true'
     needs:
+      - resolve-release-scope
       - build-release-ocr
       - update-homebrew-tap-ocr
     runs-on: macos-14
@@ -262,7 +351,8 @@ jobs:
 
   build-release-stt:
     name: Build STT macOS Arm64 + Release Asset
-    if: startsWith(github.ref_name, 'stt-v') || (github.event_name == 'workflow_dispatch' && (inputs.package == 'stt' || inputs.package == 'both'))
+    needs: resolve-release-scope
+    if: needs.resolve-release-scope.outputs.run_stt == 'true'
     runs-on: macos-14
     outputs:
       version: ${{ steps.meta.outputs.version }}
@@ -282,10 +372,6 @@ jobs:
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             VERSION="${{ inputs.version }}"
             RELEASE_TAG="${{ inputs.release_tag }}"
-            if [ "${{ inputs.package }}" = "both" ] && [ -n "${RELEASE_TAG}" ]; then
-              echo "release_tag override cannot be used when package=both."
-              exit 1
-            fi
             if [ -z "${RELEASE_TAG}" ]; then
               RELEASE_TAG="stt-v${VERSION}"
             fi
@@ -360,8 +446,10 @@ jobs:
 
   update-homebrew-tap-stt:
     name: Update Homebrew Tap Formula (STT)
-    if: startsWith(github.ref_name, 'stt-v') || (github.event_name == 'workflow_dispatch' && (inputs.package == 'stt' || inputs.package == 'both'))
-    needs: build-release-stt
+    if: needs.resolve-release-scope.outputs.run_stt == 'true'
+    needs:
+      - resolve-release-scope
+      - build-release-stt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -381,8 +469,9 @@ jobs:
 
   test-homebrew-stt:
     name: End-user Homebrew Install Smoke (STT)
-    if: startsWith(github.ref_name, 'stt-v') || (github.event_name == 'workflow_dispatch' && (inputs.package == 'stt' || inputs.package == 'both'))
+    if: needs.resolve-release-scope.outputs.run_stt == 'true'
     needs:
+      - resolve-release-scope
       - build-release-stt
       - update-homebrew-tap-stt
     runs-on: macos-14
