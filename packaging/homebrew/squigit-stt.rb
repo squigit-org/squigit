@@ -1,22 +1,22 @@
 class SquigitStt < Formula
   desc "Standalone purely headless CLI STT engine for Squigit"
   homepage "https://github.com/a7mddra/squigit"
-  # URL and sha256 are to be auto-filled by the CI deployment pipeline
-  url "https://github.com/a7mddra/squigit/releases/download/v0.1.0/squigit-stt-mac-aarch64.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
-  version "0.1.0"
+  # URL, SHA256, and version should be populated by release automation.
+  url "INSERT_URL_HERE"
+  sha256 "INSERT_SHA256_HERE"
+  version "INSERT_VERSION_HERE"
 
   def install
+    unless OS.mac? && Hardware::CPU.arm?
+      odie "squigit-stt currently supports macOS arm64 (Apple Silicon) only."
+    end
+
     bin.install "squigit-stt" => "squigit-stt"
-    if Dir.exist?("models")
-      (share/"squigit-stt/models").install Dir["models/*"]
-    end
-    if Dir.exist?("_internal")
-      prefix.install "_internal"
-    end
+    (share/"squigit-stt/models").install Dir["models/*"] if Dir.exist?("models")
+    prefix.install "_internal" if Dir.exist?("_internal")
   end
 
   test do
-    system "echo '{\"command\": \"quit\"}' | #{bin}/squigit-stt"
+    system "#{bin}/squigit-stt", "--help"
   end
 end

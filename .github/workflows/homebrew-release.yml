@@ -1,0 +1,321 @@
+name: "Deploy & Test Homebrew"
+
+on:
+  push:
+    tags:
+      - "ocr-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "OCR formula version (example: 0.1.0)"
+        required: true
+        type: string
+      release_tag:
+        description: "Optional release tag override (example: ocr-v0.1.0). Leave empty to auto-use ocr-v<version>."
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-ocr:
+    name: Build OCR macOS Arm64 + Release Asset
+    runs-on: macos-14
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      asset_url: ${{ steps.meta.outputs.asset_url }}
+      sha256: ${{ steps.meta.outputs.sha256 }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Extract Version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            RELEASE_TAG="${{ inputs.release_tag }}"
+            if [ -z "${RELEASE_TAG}" ]; then
+              RELEASE_TAG="ocr-v${VERSION}"
+            fi
+          else
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+            VERSION="${RELEASE_TAG#ocr-v}"
+          fi
+
+          if [ -z "${VERSION}" ]; then
+            echo "Resolved VERSION is empty"
+            exit 1
+          fi
+
+          if [ -z "${RELEASE_TAG}" ]; then
+            echo "Resolved RELEASE_TAG is empty"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build PaddleOCR Sidecar (onefile)
+        uses: ./.github/actions/build-paddle-ocr
+        with:
+          python-version: "3.12"
+          pyi-mode: "onefile"
+
+      - name: Generate OCR Smoke Image
+        shell: bash
+        run: |
+          set -euo pipefail
+          sidecars/paddle-ocr/venv/bin/python sidecars/paddle-ocr/scripts/gen_test_image.py \
+            --output /tmp/ocr-smoke.png \
+            --text "SNAPLLM macOS-ARM OCR SMOKE"
+
+      - name: Run Sidecar CLI and Print JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x packaging/binaries/paddle-ocr-aarch64-apple-darwin/squigit-ocr || true
+          packaging/binaries/paddle-ocr-aarch64-apple-darwin/squigit-ocr /tmp/ocr-smoke.png | tee /tmp/ocr-smoke-output.json
+
+      - name: Validate OCR JSON Payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          sidecars/paddle-ocr/venv/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+
+          out = Path("/tmp/ocr-smoke-output.json")
+          payload = json.loads(out.read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list):
+              raise SystemExit(f"OCR payload type {type(payload).__name__}, expected list")
+          if not payload:
+              raise SystemExit("OCR payload list is empty")
+
+          text_values = [str(item.get("text", "")).strip() for item in payload if isinstance(item, dict)]
+          merged = " | ".join(t for t in text_values if t)
+          upper = merged.upper()
+          for token in ("SNAPLLM", "OCR", "CLI", "VALIDATION"):
+              if token not in upper:
+                  raise SystemExit(f"Expected token '{token}' in OCR text, got: {merged!r}")
+
+          print(f"Detected entries: {len(payload)}")
+          print(f"Detected text: {merged}")
+          PY
+
+      - name: Create Release Tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czvf squigit-ocr-mac-aarch64.tar.gz -C packaging/binaries/paddle-ocr-aarch64-apple-darwin .
+
+      - name: Upload OCR Asset to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.release_tag }}
+          name: OCR v${{ steps.version.outputs.version }}
+          files: squigit-ocr-mac-aarch64.tar.gz
+          overwrite_files: true
+          repository: squigit-org/squigit
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export Release Metadata
+        id: meta
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          SHA256="$(shasum -a 256 squigit-ocr-mac-aarch64.tar.gz | awk '{ print $1 }')"
+          ASSET_URL="https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/squigit-ocr-mac-aarch64.tar.gz"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          echo "asset_url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+
+  update-homebrew-tap:
+    name: Update Homebrew Tap Formula
+    needs: build-release-ocr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Release Asset Propagation
+        env:
+          ASSET_URL: ${{ needs.build-release-ocr.outputs.asset_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..12}; do
+            echo "Checking release asset availability (${attempt}/12)..."
+            if curl --fail --silent --show-error --location --head --max-time 20 "${ASSET_URL}" >/dev/null; then
+              echo "Release asset is reachable."
+              break
+            fi
+
+            if [ "${attempt}" -eq 12 ]; then
+              echo "Release asset did not become reachable in time: ${ASSET_URL}"
+              exit 1
+            fi
+
+            echo "Release asset is not reachable yet; waiting 15s before retrying..."
+            sleep 15
+          done
+
+      - name: Update Tap Repo Formula
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+          VERSION: ${{ needs.build-release-ocr.outputs.version }}
+          ASSET_URL: ${{ needs.build-release-ocr.outputs.asset_url }}
+          SHA256: ${{ needs.build-release-ocr.outputs.sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${TAP_TOKEN:-}" ]; then
+            echo "Missing TAP_GITHUB_TOKEN secret"
+            exit 1
+          fi
+
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/a7mddra/homebrew-tap.git"
+          cd homebrew-tap
+
+          if [ -f "pkg.rb" ]; then
+            if ! ruby pkg.rb \
+              --formula squigit-ocr.rb \
+              --version "${VERSION}" \
+              --url "${ASSET_URL}" \
+              --sha256 "${SHA256}"; then
+              echo "pkg.rb update failed; falling back to sed updater."
+              sed -i "s|url \".*\"|url \"${ASSET_URL}\"|" squigit-ocr.rb
+              sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" squigit-ocr.rb
+              sed -i "s|version \".*\"|version \"${VERSION}\"|" squigit-ocr.rb
+            fi
+          else
+            sed -i "s|url \".*\"|url \"${ASSET_URL}\"|" squigit-ocr.rb
+            sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" squigit-ocr.rb
+            sed -i "s|version \".*\"|version \"${VERSION}\"|" squigit-ocr.rb
+          fi
+
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add squigit-ocr.rb
+          if git diff --cached --quiet; then
+            echo "Tap formula already up to date."
+            exit 0
+          fi
+          git commit -m "Update squigit-ocr to v${VERSION}"
+          git push origin main
+
+  test-homebrew:
+    name: End-user Homebrew Install Smoke
+    needs:
+      - build-release-ocr
+      - update-homebrew-tap
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Smoke Image Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pillow
+
+      - name: Wait for Tap Propagation
+        shell: bash
+        run: sleep 60
+
+      - name: Tap and Install squigit-ocr
+        shell: bash
+        env:
+          HOMEBREW_CURL_RETRIES: 5
+        run: |
+          set -euo pipefail
+          brew tap a7mddra/tap
+
+          installed=0
+          for attempt in {1..6}; do
+            echo "brew install attempt ${attempt}/6..."
+            if brew install squigit-ocr; then
+              installed=1
+              break
+            fi
+
+            if [ "${attempt}" -eq 6 ]; then
+              echo "Failed to install squigit-ocr after 6 attempts."
+              exit 1
+            fi
+
+            brew uninstall --force squigit-ocr >/dev/null 2>&1 || true
+            brew cleanup squigit-ocr >/dev/null 2>&1 || true
+            echo "Install failed; waiting 20s before retrying..."
+            sleep 20
+          done
+
+          if [ "${installed}" -ne 1 ]; then
+            echo "squigit-ocr was not installed."
+            exit 1
+          fi
+
+      - name: Run Built-in Formula Test
+        shell: bash
+        run: brew test squigit-ocr
+
+      - name: Generate OCR Smoke Image
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 sidecars/paddle-ocr/scripts/gen_test_image.py \
+            --output /tmp/ocr-smoke.png \
+            --text "SNAPLLM macOS-ARM OCR SMOKE"
+
+      - name: Run Installed OCR CLI and Print JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          squigit-ocr /tmp/ocr-smoke.png | tee /tmp/ocr-smoke-output.json
+
+      - name: Validate Installed OCR JSON Payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          out = Path("/tmp/ocr-smoke-output.json")
+          payload = json.loads(out.read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list):
+              raise SystemExit(f"OCR payload type {type(payload).__name__}, expected list")
+          if not payload:
+              raise SystemExit("OCR payload list is empty")
+
+          text_values = [str(item.get("text", "")).strip() for item in payload if isinstance(item, dict)]
+          merged = " | ".join(t for t in text_values if t)
+          upper = merged.upper()
+          for token in ("SNAPLLM", "OCR", "CLI", "VALIDATION"):
+              if token not in upper:
+                  raise SystemExit(f"Expected token '{token}' in OCR text, got: {merged!r}")
+
+          print(f"Detected entries: {len(payload)}")
+          print(f"Detected text: {merged}")
+          PY

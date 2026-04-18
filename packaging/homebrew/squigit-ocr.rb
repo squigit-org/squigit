@@ -1,20 +1,22 @@
 class SquigitOcr < Formula
   desc "Standalone purely headless CLI OCR engine for Squigit"
-  homepage "https://github.com/a7mddra/squigit"
-  # URL and sha256 are to be auto-filled by the CI deployment pipeline
-  url "https://github.com/a7mddra/squigit/releases/download/v0.1.0/squigit-ocr-mac-aarch64.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
-  version "0.1.0"
+  homepage "https://github.com/squigit-org/squigit"
+  # URL, SHA256, and version are auto-filled into the tap formula by release CI.
+  url "INSERT_URL_HERE"
+  sha256 "INSERT_SHA256_HERE"
+  version "INSERT_VERSION_HERE"
 
   def install
-    # Bypassing gatekeeper natively through homebrew
-    bin.install "squigit-ocr" => "squigit-ocr"
-    if Dir.exist?("_internal")
-      prefix.install "_internal"
+    unless OS.mac? && Hardware::CPU.arm?
+      odie "squigit-ocr currently supports macOS arm64 (Apple Silicon) only."
     end
+
+    libexec.install Dir["*"]
+    bin.install_symlink libexec/"squigit-ocr"
   end
 
   test do
     system "#{bin}/squigit-ocr", "--help"
+    system "#{bin}/squigit-ocr", "--version"
   end
 end
