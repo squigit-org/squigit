@@ -462,6 +462,7 @@ jobs:
     needs:
       - resolve-channel-scope
       - build-release-ocr-windows
+      - validate-winget-manifest-ocr
     runs-on: windows-latest
     steps:
       - name: Checkout Code
@@ -534,6 +535,50 @@ jobs:
           Write-Host "Set submit_winget_pr=true on workflow_dispatch and configure WINGET_CREATE_GITHUB_TOKEN to open/update winget-pkgs PRs."
           Write-Host "This workflow auto-detects first publication vs update and will submit the generated manifest accordingly."
 
+  validate-winget-manifest-ocr:
+    name: Validate Winget Manifest (OCR)
+    if: needs.resolve-channel-scope.outputs.run_winget == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-ocr-windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Generate Winget Manifest (OCR Validate)
+        id: manifest
+        uses: ./.github/actions/generate-winget-portable-manifest
+        with:
+          package-identifier: SquigitOrg.SquigitOCR
+          package-version: ${{ needs.build-release-ocr-windows.outputs.version }}
+          package-name: Squigit OCR
+          publisher: Squigit Org
+          short-description: Standalone headless OCR CLI engine for Squigit
+          installer-url: ${{ needs.build-release-ocr-windows.outputs.asset_url }}
+          installer-sha256: ${{ needs.build-release-ocr-windows.outputs.sha256 }}
+          command-alias: squigit-ocr
+          nested-installer-path: squigit-ocr.exe
+          output-dir: ${{ github.workspace }}/target/winget-manifest-ocr-validate
+
+      - name: Validate Manifest with Winget CLI (OCR)
+        shell: pwsh
+        env:
+          MANIFEST_DIR: ${{ steps.manifest.outputs.manifest-dir }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          winget --version
+
+          $help = winget --help | Out-String
+          if ($help -notmatch "(?m)^\s*validate\s") {
+            throw "winget validate command is unavailable on this runner image."
+          }
+
+          & winget validate --manifest "$env:MANIFEST_DIR" --verbose
+          if ($LASTEXITCODE -ne 0) {
+            throw "winget validate failed with exit code $LASTEXITCODE"
+          }
+
   test-winget-ocr:
     name: End-user Winget Install Smoke (OCR)
     if: needs.resolve-channel-scope.outputs.run_winget == 'true'
@@ -541,6 +586,7 @@ jobs:
       - resolve-channel-scope
       - build-release-ocr-windows
       - publish-winget-ocr
+      - validate-winget-manifest-ocr
     runs-on: windows-latest
     steps:
       - name: Checkout Code

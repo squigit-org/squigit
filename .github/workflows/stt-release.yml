@@ -322,6 +322,7 @@ jobs:
     needs:
       - resolve-channel-scope
       - build-release-stt-windows
+      - validate-winget-manifest-stt
     runs-on: windows-latest
     steps:
       - name: Checkout Code
@@ -394,6 +395,50 @@ jobs:
           Write-Host "Set submit_winget_pr=true on workflow_dispatch and configure WINGET_CREATE_GITHUB_TOKEN to open/update winget-pkgs PRs."
           Write-Host "This workflow auto-detects first publication vs update and will submit the generated manifest accordingly."
 
+  validate-winget-manifest-stt:
+    name: Validate Winget Manifest (STT)
+    if: needs.resolve-channel-scope.outputs.run_winget == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt-windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Generate Winget Manifest (STT Validate)
+        id: manifest
+        uses: ./.github/actions/generate-winget-portable-manifest
+        with:
+          package-identifier: SquigitOrg.SquigitSTT
+          package-version: ${{ needs.build-release-stt-windows.outputs.version }}
+          package-name: Squigit STT
+          publisher: Squigit Org
+          short-description: Standalone headless speech-to-text CLI engine for Squigit
+          installer-url: ${{ needs.build-release-stt-windows.outputs.asset_url }}
+          installer-sha256: ${{ needs.build-release-stt-windows.outputs.sha256 }}
+          command-alias: squigit-stt
+          nested-installer-path: squigit-stt.exe
+          output-dir: ${{ github.workspace }}/target/winget-manifest-stt-validate
+
+      - name: Validate Manifest with Winget CLI (STT)
+        shell: pwsh
+        env:
+          MANIFEST_DIR: ${{ steps.manifest.outputs.manifest-dir }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          winget --version
+
+          $help = winget --help | Out-String
+          if ($help -notmatch "(?m)^\s*validate\s") {
+            throw "winget validate command is unavailable on this runner image."
+          }
+
+          & winget validate --manifest "$env:MANIFEST_DIR" --verbose
+          if ($LASTEXITCODE -ne 0) {
+            throw "winget validate failed with exit code $LASTEXITCODE"
+          }
+
   test-winget-stt:
     name: End-user Winget Install Smoke (STT)
     if: needs.resolve-channel-scope.outputs.run_winget == 'true'
@@ -401,6 +446,7 @@ jobs:
       - resolve-channel-scope
       - build-release-stt-windows
       - publish-winget-stt
+      - validate-winget-manifest-stt
     runs-on: windows-latest
     steps:
       - name: Checkout Code
