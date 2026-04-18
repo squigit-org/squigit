@@ -1,0 +1,329 @@
+name: "STT Pkg-First Release"
+
+on:
+  push:
+    tags:
+      - "stt-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "STT formula version (example: 1.2.0)"
+        required: true
+        type: string
+      release_tag:
+        description: "Optional release tag override (example: stt-v1.2.0). Leave empty to auto-use stt-v<version>."
+        required: false
+        default: ""
+        type: string
+      release_homebrew:
+        description: "Run Homebrew lane"
+        required: false
+        default: true
+        type: boolean
+      release_winget:
+        description: "Run Winget lane (mock)"
+        required: false
+        default: true
+        type: boolean
+      release_apt:
+        description: "Run APT lane (mock)"
+        required: false
+        default: true
+        type: boolean
+      release_dnf:
+        description: "Run DNF lane (mock)"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  resolve-channel-scope:
+    name: Resolve Channel Scope
+    runs-on: ubuntu-latest
+    outputs:
+      run_homebrew: ${{ steps.scope.outputs.run_homebrew }}
+      run_winget: ${{ steps.scope.outputs.run_winget }}
+      run_apt: ${{ steps.scope.outputs.run_apt }}
+      run_dnf: ${{ steps.scope.outputs.run_dnf }}
+    steps:
+      - name: Resolve channels
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            run_homebrew=true
+            run_winget=true
+            run_apt=true
+            run_dnf=true
+          else
+            run_homebrew="${{ inputs.release_homebrew }}"
+            run_winget="${{ inputs.release_winget }}"
+            run_apt="${{ inputs.release_apt }}"
+            run_dnf="${{ inputs.release_dnf }}"
+
+            if [ "${run_homebrew}" != "true" ] && [ "${run_winget}" != "true" ] && [ "${run_apt}" != "true" ] && [ "${run_dnf}" != "true" ]; then
+              echo "At least one channel must be enabled for workflow_dispatch."
+              exit 1
+            fi
+          fi
+
+          echo "run_homebrew=${run_homebrew}" >> "$GITHUB_OUTPUT"
+          echo "run_winget=${run_winget}" >> "$GITHUB_OUTPUT"
+          echo "run_apt=${run_apt}" >> "$GITHUB_OUTPUT"
+          echo "run_dnf=${run_dnf}" >> "$GITHUB_OUTPUT"
+          echo "Resolved channels: homebrew=${run_homebrew}, winget=${run_winget}, apt=${run_apt}, dnf=${run_dnf}"
+
+  build-release-stt:
+    name: Build STT macOS Arm64 + Release Asset
+    needs: resolve-channel-scope
+    runs-on: macos-14
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      asset_url: ${{ steps.meta.outputs.asset_url }}
+      sha256: ${{ steps.meta.outputs.sha256 }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Extract Version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            RELEASE_TAG="${{ inputs.release_tag }}"
+            if [ -z "${RELEASE_TAG}" ]; then
+              RELEASE_TAG="stt-v${VERSION}"
+            fi
+          else
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+            VERSION="${RELEASE_TAG#stt-v}"
+          fi
+
+          if [ -z "${VERSION}" ]; then
+            echo "Resolved VERSION is empty"
+            exit 1
+          fi
+
+          if [ -z "${RELEASE_TAG}" ]; then
+            echo "Resolved RELEASE_TAG is empty"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Whisper STT Sidecar
+        uses: ./.github/actions/build-whisper-stt
+        with:
+          python-version: "3.12"
+
+      - name: Run Sidecar Version Smoke Check
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x packaging/binaries/whisper-stt-aarch64-apple-darwin/squigit-stt || true
+          STT_VERSION="$(packaging/binaries/whisper-stt-aarch64-apple-darwin/squigit-stt --version | tr -d '\r' | tail -n 1)"
+          echo "Detected STT version: ${STT_VERSION}"
+          if ! [[ "${STT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid STT version output: ${STT_VERSION}"
+            exit 1
+          fi
+
+      - name: Create Release Tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czvf squigit-stt-mac-aarch64.tar.gz -C packaging/binaries/whisper-stt-aarch64-apple-darwin .
+
+      - name: Upload STT Asset to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.release_tag }}
+          name: STT v${{ steps.version.outputs.version }}
+          files: squigit-stt-mac-aarch64.tar.gz
+          overwrite_files: true
+          repository: squigit-org/squigit
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export Release Metadata
+        id: meta
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          SHA256="$(shasum -a 256 squigit-stt-mac-aarch64.tar.gz | awk '{ print $1 }')"
+          ASSET_URL="https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/squigit-stt-mac-aarch64.tar.gz"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          echo "asset_url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+
+  update-homebrew-tap-stt:
+    name: Update Homebrew Tap Formula (STT)
+    if: needs.resolve-channel-scope.outputs.run_homebrew == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Sync STT Formula to Tap
+        uses: ./.github/actions/update-homebrew-tap-formula
+        with:
+          tap-token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          tap-repo: squigit-org/homebrew-tap
+          version: ${{ needs.build-release-stt.outputs.version }}
+          asset-url: ${{ needs.build-release-stt.outputs.asset_url }}
+          sha256: ${{ needs.build-release-stt.outputs.sha256 }}
+          template-formula-path: ${{ github.workspace }}/packaging/homebrew/squigit-stt.rb
+          formula-file: squigit-stt.rb
+          commit-message: Update squigit-stt to v${{ needs.build-release-stt.outputs.version }}
+
+  test-homebrew-stt:
+    name: End-user Homebrew Install Smoke (STT)
+    if: needs.resolve-channel-scope.outputs.run_homebrew == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+      - update-homebrew-tap-stt
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Tap and Install squigit-stt
+        uses: ./.github/actions/homebrew-install-with-retry
+        with:
+          tap: squigit-org/tap
+          formula: squigit-stt
+          initial-wait-seconds: "60"
+          attempts: "6"
+          sleep-seconds: "20"
+          brew-curl-retries: "5"
+
+      - name: Run Built-in Formula Test
+        shell: bash
+        run: brew test squigit-stt
+
+      - name: Validate Installed STT Version
+        shell: bash
+        run: |
+          set -euo pipefail
+          STT_VERSION="$(squigit-stt --version | tr -d '\r' | tail -n 1)"
+          echo "Installed STT version: ${STT_VERSION}"
+          if ! [[ "${STT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Installed STT version is not semver: ${STT_VERSION}"
+            exit 1
+          fi
+
+  publish-winget-mock-stt:
+    name: Publish Winget Manifest (Mock STT)
+    if: needs.resolve-channel-scope.outputs.run_winget == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mock publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "MOCK winget publish for squigit-stt"
+          echo "version=${{ needs.build-release-stt.outputs.version }}"
+          echo "asset_url=${{ needs.build-release-stt.outputs.asset_url }}"
+          echo "sha256=${{ needs.build-release-stt.outputs.sha256 }}"
+
+  test-winget-mock-stt:
+    name: End-user Winget Install Smoke (Mock STT)
+    if: needs.resolve-channel-scope.outputs.run_winget == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+      - publish-winget-mock-stt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mock install smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "MOCK winget install squigit-stt --version ${{ needs.build-release-stt.outputs.version }}"
+
+  publish-apt-mock-stt:
+    name: Publish APT Package (Mock STT)
+    if: needs.resolve-channel-scope.outputs.run_apt == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mock publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "MOCK apt publish for squigit-stt"
+          echo "version=${{ needs.build-release-stt.outputs.version }}"
+          echo "asset_url=${{ needs.build-release-stt.outputs.asset_url }}"
+          echo "sha256=${{ needs.build-release-stt.outputs.sha256 }}"
+
+  test-apt-mock-stt:
+    name: End-user APT Install Smoke (Mock STT)
+    if: needs.resolve-channel-scope.outputs.run_apt == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+      - publish-apt-mock-stt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mock install smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "MOCK apt install squigit-stt=${{ needs.build-release-stt.outputs.version }}"
+
+  publish-dnf-mock-stt:
+    name: Publish DNF Package (Mock STT)
+    if: needs.resolve-channel-scope.outputs.run_dnf == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mock publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "MOCK dnf publish for squigit-stt"
+          echo "version=${{ needs.build-release-stt.outputs.version }}"
+          echo "asset_url=${{ needs.build-release-stt.outputs.asset_url }}"
+          echo "sha256=${{ needs.build-release-stt.outputs.sha256 }}"
+
+  test-dnf-mock-stt:
+    name: End-user DNF Install Smoke (Mock STT)
+    if: needs.resolve-channel-scope.outputs.run_dnf == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+      - publish-dnf-mock-stt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mock install smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "MOCK dnf install squigit-stt-${{ needs.build-release-stt.outputs.version }}"
