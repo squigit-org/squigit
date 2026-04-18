@@ -572,18 +572,29 @@ jobs:
           nested-installer-path: squigit-ocr.exe
           output-dir: ${{ github.workspace }}/target/winget-manifest-ocr-test
 
-      - name: Install via Winget Manifest
+      - name: Install via Winget (End-user First)
         id: install-winget
         shell: pwsh
         env:
+          PACKAGE_ID: SquigitOrg.SquigitOCR
+          MANIFEST_DIR: ${{ steps.manifest.outputs.manifest-dir }}
           ASSET_URL: ${{ needs.build-release-ocr-windows.outputs.asset_url }}
         run: |
-          $ErrorActionPreference = "Stop"
+          $ErrorActionPreference = "Continue"
 
-          winget uninstall --id SquigitOrg.SquigitOCR --scope user --silent --disable-interactivity --accept-source-agreements
+          winget uninstall --id $env:PACKAGE_ID --scope user --silent --disable-interactivity --accept-source-agreements
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "No previous SquigitOrg.SquigitOCR install found (winget uninstall exit code: $LASTEXITCODE)."
+            Write-Host "No previous $env:PACKAGE_ID install found (winget uninstall exit code: $LASTEXITCODE)."
           }
+
+          # True end-user path: install from public Winget source by package ID.
+          winget install --id $env:PACKAGE_ID --exact --scope user --silent --disable-interactivity --accept-source-agreements --accept-package-agreements
+          if ($LASTEXITCODE -eq 0) {
+            "install_mode=winget-source" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          Write-Host "Public source install failed (exit code: $LASTEXITCODE). Falling back to local manifest for pre-publication CI."
 
           $settingsDir = Join-Path $env:LOCALAPPDATA "Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState"
           $settingsPath = Join-Path $settingsDir "settings.json"
@@ -605,7 +616,7 @@ jobs:
           $settings.experimentalFeatures.LocalManifestFiles = $true
           $settings | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $settingsPath -Encoding utf8
 
-          winget install --manifest "${{ steps.manifest.outputs.manifest-dir }}" --scope user --silent --disable-interactivity --accept-source-agreements --accept-package-agreements --ignore-local-archive-malware-scan
+          winget install --manifest "$env:MANIFEST_DIR" --scope user --silent --disable-interactivity --accept-source-agreements --accept-package-agreements --ignore-local-archive-malware-scan
           if ($LASTEXITCODE -eq 0) {
             "install_mode=winget-manifest" >> $env:GITHUB_OUTPUT
             exit 0
