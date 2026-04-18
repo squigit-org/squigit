@@ -1,4 +1,4 @@
-name: "STT Pkg-First Release"
+name: "STT Release"
 
 on:
   push:
