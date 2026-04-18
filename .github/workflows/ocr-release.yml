@@ -557,27 +557,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pillow
 
-      - name: Generate Winget Manifest (OCR)
-        id: manifest
-        uses: ./.github/actions/generate-winget-portable-manifest
-        with:
-          package-identifier: SquigitOrg.SquigitOCR
-          package-version: ${{ needs.build-release-ocr-windows.outputs.version }}
-          package-name: Squigit OCR
-          publisher: Squigit Org
-          short-description: Standalone headless OCR CLI engine for Squigit
-          installer-url: ${{ needs.build-release-ocr-windows.outputs.asset_url }}
-          installer-sha256: ${{ needs.build-release-ocr-windows.outputs.sha256 }}
-          command-alias: squigit-ocr
-          nested-installer-path: squigit-ocr.exe
-          output-dir: ${{ github.workspace }}/target/winget-manifest-ocr-test
-
       - name: Install via Winget (End-user First)
         id: install-winget
         shell: pwsh
         env:
           PACKAGE_ID: SquigitOrg.SquigitOCR
-          MANIFEST_DIR: ${{ steps.manifest.outputs.manifest-dir }}
           ASSET_URL: ${{ needs.build-release-ocr-windows.outputs.asset_url }}
         run: |
           $ErrorActionPreference = "Continue"
@@ -588,49 +572,21 @@ jobs:
           }
 
           # True end-user path: install from public Winget source by package ID.
-          winget install --id $env:PACKAGE_ID --exact --scope user --silent --disable-interactivity --accept-source-agreements --accept-package-agreements
+          winget install --id $env:PACKAGE_ID --exact --source winget --scope user --silent --disable-interactivity --accept-source-agreements --accept-package-agreements
           if ($LASTEXITCODE -eq 0) {
             "install_mode=winget-source" >> $env:GITHUB_OUTPUT
             exit 0
           }
 
-          Write-Host "Public source install failed (exit code: $LASTEXITCODE). Falling back to local manifest for pre-publication CI."
-
-          $settingsDir = Join-Path $env:LOCALAPPDATA "Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState"
-          $settingsPath = Join-Path $settingsDir "settings.json"
-          New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
-
-          if (Test-Path -LiteralPath $settingsPath) {
-            try {
-              $settings = Get-Content -LiteralPath $settingsPath -Raw | ConvertFrom-Json -Depth 20
-            } catch {
-              $settings = [pscustomobject]@{}
-            }
-          } else {
-            $settings = [pscustomobject]@{}
-          }
-
-          if (-not ($settings.PSObject.Properties.Name -contains "experimentalFeatures")) {
-            $settings | Add-Member -NotePropertyName experimentalFeatures -NotePropertyValue ([pscustomobject]@{})
-          }
-          $settings.experimentalFeatures.LocalManifestFiles = $true
-          $settings | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $settingsPath -Encoding utf8
-
-          winget install --manifest "$env:MANIFEST_DIR" --scope user --silent --disable-interactivity --accept-source-agreements --accept-package-agreements --ignore-local-archive-malware-scan
-          if ($LASTEXITCODE -eq 0) {
-            "install_mode=winget-manifest" >> $env:GITHUB_OUTPUT
-            exit 0
-          }
-
-          Write-Host "Winget local-manifest install failed (exit code: $LASTEXITCODE). Falling back to direct asset extraction for CI smoke."
+          Write-Host "Public source install failed (exit code: $LASTEXITCODE). Falling back to direct asset extraction for pre-publication CI."
           $fallbackDir = Join-Path $env:RUNNER_TEMP "squigit-ocr-fallback"
           if (Test-Path -LiteralPath $fallbackDir) {
             Remove-Item -LiteralPath $fallbackDir -Recurse -Force
           }
           New-Item -ItemType Directory -Path $fallbackDir -Force | Out-Null
           $zipPath = Join-Path $fallbackDir "squigit-ocr-win-x64.zip"
-          Invoke-WebRequest $env:ASSET_URL -OutFile $zipPath
-          Expand-Archive -LiteralPath $zipPath -DestinationPath $fallbackDir -Force
+          Invoke-WebRequest $env:ASSET_URL -OutFile $zipPath -ErrorAction Stop
+          Expand-Archive -LiteralPath $zipPath -DestinationPath $fallbackDir -Force -ErrorAction Stop
 
           $fallbackExe = Join-Path $fallbackDir "squigit-ocr.exe"
           if (-not (Test-Path -LiteralPath $fallbackExe)) {
@@ -639,6 +595,7 @@ jobs:
 
           "install_mode=fallback-zip" >> $env:GITHUB_OUTPUT
           "fallback_exe=$fallbackExe" >> $env:GITHUB_OUTPUT
+          exit 0
 
       - name: Resolve Installed OCR Executable
         id: locate-ocr
