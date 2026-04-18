@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "OCR formula version (example: 0.2.0)"
+        description: "OCR formula version (e.g.:0.2.0)"
         required: true
         type: string
       release_tag:
-        description: "Optional release tag override\n(example: ocr-v0.2.0). Leave empty to auto-use ocr-v<version>."
+        description: "Optional release tag override (e.g.:ocr-v0.2.0). Leave empty to auto-use ocr-v<version>."
         required: false
         default: ""
         type: string

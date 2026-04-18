@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "STT formula version (example: 0.2.0)"
+        description: "STT formula version (e.g.:0.2.0)"
         required: true
         type: string
       release_tag:
-        description: "Optional release tag override\n(example: stt-v0.2.0). Leave empty to auto-use stt-v<version>."
+        description: "Optional release tag override (e.g.:stt-v0.2.0). Leave empty to auto-use stt-v<version>."
         required: false
         default: ""
         type: string
@@ -94,7 +94,7 @@ jobs:
       sha256: ${{ steps.meta.outputs.sha256 }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Extract Version
         id: version
@@ -198,7 +198,7 @@ jobs:
       sha256: ${{ steps.meta.outputs.sha256 }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -259,7 +259,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Sync STT Formula to Tap
         uses: ./.github/actions/update-homebrew-tap-formula
@@ -283,7 +283,7 @@ jobs:
     runs-on: macos-14
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Tap and Install squigit-stt
         uses: ./.github/actions/homebrew-install-with-retry
@@ -325,7 +325,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Generate Winget Manifest (STT)
         id: manifest
@@ -385,7 +385,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Generate Winget Manifest (STT)
         id: manifest
