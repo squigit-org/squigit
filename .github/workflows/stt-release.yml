@@ -26,7 +26,7 @@ on:
         default: true
         type: boolean
       submit_winget_pr:
-        description: "Submit/update winget-pkgs PR (manual mode only, requires WINGET_CREATE_GITHUB_PAT secret)"
+        description: "Submit/update winget-pkgs PR (manual mode only, requires WINGET_CREATE_GITHUB_TOKEN secret)"
         required: false
         default: false
         type: boolean
@@ -355,15 +355,15 @@ jobs:
           PACKAGE_IDENTIFIER: SquigitOrg.SquigitSTT
           PACKAGE_VERSION: ${{ needs.build-release-stt-windows.outputs.version }}
           INSTALLER_URL: ${{ needs.build-release-stt-windows.outputs.asset_url }}
-          WINGET_CREATE_GITHUB_PAT: ${{ secrets.WINGET_CREATE_GITHUB_PAT }}
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
-          if ([string]::IsNullOrWhiteSpace($env:WINGET_CREATE_GITHUB_PAT)) {
-            Write-Host "WINGET_CREATE_GITHUB_PAT is empty; skipping wingetcreate --submit."
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_CREATE_GITHUB_TOKEN)) {
+            Write-Host "WINGET_CREATE_GITHUB_TOKEN is empty; skipping wingetcreate --submit."
             exit 0
           }
           Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
-          .\wingetcreate.exe update $env:PACKAGE_IDENTIFIER -u $env:INSTALLER_URL -v $env:PACKAGE_VERSION -t $env:WINGET_CREATE_GITHUB_PAT --submit
+          .\wingetcreate.exe update $env:PACKAGE_IDENTIFIER -u $env:INSTALLER_URL -v $env:PACKAGE_VERSION -t $env:WINGET_CREATE_GITHUB_TOKEN --submit
 
       - name: Publish Notes
         shell: pwsh
@@ -372,7 +372,7 @@ jobs:
           Write-Host "version=${{ needs.build-release-stt-windows.outputs.version }}"
           Write-Host "asset_url=${{ needs.build-release-stt-windows.outputs.asset_url }}"
           Write-Host "sha256=${{ needs.build-release-stt-windows.outputs.sha256 }}"
-          Write-Host "Set submit_winget_pr=true on workflow_dispatch and configure WINGET_CREATE_GITHUB_PAT to open/update winget-pkgs PRs."
+          Write-Host "Set submit_winget_pr=true on workflow_dispatch and configure WINGET_CREATE_GITHUB_TOKEN to open/update winget-pkgs PRs."
           Write-Host "For first-ever package publication, wingetcreate new is typically a one-time manual step."
 
   test-winget-stt:
