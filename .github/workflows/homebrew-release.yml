@@ -150,6 +150,9 @@ jobs:
     needs: build-release-ocr
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
       - name: Wait for Release Asset Propagation
         env:
           ASSET_URL: ${{ needs.build-release-ocr.outputs.asset_url }}
@@ -178,6 +181,7 @@ jobs:
           VERSION: ${{ needs.build-release-ocr.outputs.version }}
           ASSET_URL: ${{ needs.build-release-ocr.outputs.asset_url }}
           SHA256: ${{ needs.build-release-ocr.outputs.sha256 }}
+          TEMPLATE_FORMULA_PATH: ${{ github.workspace }}/packaging/homebrew/squigit-ocr.rb
         shell: bash
         run: |
           set -euo pipefail
@@ -186,24 +190,30 @@ jobs:
             exit 1
           fi
 
-          git clone "https://x-access-token:${TAP_TOKEN}@github.com/a7mddra/homebrew-tap.git"
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/squigit-org/homebrew-tap.git"
           cd homebrew-tap
 
-          if [ -f "pkg.rb" ]; then
-            if ! ruby pkg.rb \
-              --formula squigit-ocr.rb \
-              --version "${VERSION}" \
-              --url "${ASSET_URL}" \
-              --sha256 "${SHA256}"; then
-              echo "pkg.rb update failed; falling back to sed updater."
-              sed -i "s|url \".*\"|url \"${ASSET_URL}\"|" squigit-ocr.rb
-              sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" squigit-ocr.rb
-              sed -i "s|version \".*\"|version \"${VERSION}\"|" squigit-ocr.rb
-            fi
-          else
-            sed -i "s|url \".*\"|url \"${ASSET_URL}\"|" squigit-ocr.rb
-            sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" squigit-ocr.rb
-            sed -i "s|version \".*\"|version \"${VERSION}\"|" squigit-ocr.rb
+          if [ ! -f "${TEMPLATE_FORMULA_PATH}" ]; then
+            echo "Template formula not found at ${TEMPLATE_FORMULA_PATH}"
+            exit 1
+          fi
+
+          if [ ! -f "pkg.rb" ]; then
+            echo "Required tap updater script missing: pkg.rb"
+            exit 1
+          fi
+
+          install -m 0644 "${TEMPLATE_FORMULA_PATH}" squigit-ocr.rb
+
+          ruby pkg.rb \
+            --formula squigit-ocr.rb \
+            --version "${VERSION}" \
+            --url "${ASSET_URL}" \
+            --sha256 "${SHA256}"
+
+          if grep -q "INSERT_.*_HERE" squigit-ocr.rb; then
+            echo "Template placeholders were not fully resolved."
+            exit 1
           fi
 
           git config user.name "GitHub Actions Bot"

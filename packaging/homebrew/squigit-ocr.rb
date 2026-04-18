@@ -1,7 +1,7 @@
 class SquigitOcr < Formula
   desc "Standalone purely headless CLI OCR engine for Squigit"
   homepage "https://github.com/squigit-org/squigit"
-  # URL, SHA256, and version are auto-filled into the tap formula by release CI.
+  # Source template: release CI copies this file into the tap repo, then fills metadata via pkg.rb.
   url "INSERT_URL_HERE"
   sha256 "INSERT_SHA256_HERE"
   version "INSERT_VERSION_HERE"
