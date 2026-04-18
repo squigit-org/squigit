@@ -94,7 +94,7 @@ jobs:
       sha256: ${{ steps.meta.outputs.sha256 }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract Version
         id: version
@@ -198,7 +198,7 @@ jobs:
       sha256: ${{ steps.meta.outputs.sha256 }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -259,7 +259,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Sync STT Formula to Tap
         uses: ./.github/actions/update-homebrew-tap-formula
@@ -283,7 +283,7 @@ jobs:
     runs-on: macos-14
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Tap and Install squigit-stt
         uses: ./.github/actions/homebrew-install-with-retry
@@ -325,7 +325,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate Winget Manifest (STT)
         id: manifest
@@ -385,7 +385,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate Winget Manifest (STT)
         id: manifest
