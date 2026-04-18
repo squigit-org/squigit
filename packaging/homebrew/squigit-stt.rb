@@ -1,7 +1,6 @@
 class SquigitStt < Formula
   desc "Standalone purely headless CLI STT engine for Squigit"
   homepage "https://github.com/squigit-org/squigit"
-  # Source template: release CI copies this file into the tap repo, then fills metadata via pkg.rb.
   url "INSERT_URL_HERE"
   sha256 "INSERT_SHA256_HERE"
   version "INSERT_VERSION_HERE"
