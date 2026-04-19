@@ -210,7 +210,7 @@ for component in ocr stt; do
       dpkg-scanpackages --multiversion "pool/${component}" /dev/null > "${repo_dir}/${packages_file}"
     )
 
-    deb_filename="/${SOURCE_RELEASE_REPO}/releases/download/${deb_tag}/${deb_name}"
+    deb_filename="../../../../${SOURCE_RELEASE_REPO}/releases/download/${deb_tag}/${deb_name}"
     sed -i "s|^Filename: .*|Filename: ${deb_filename}|" "${packages_file}"
   else
     : > "${packages_file}"
@@ -333,8 +333,11 @@ else
   git push origin "${PACKAGES_BRANCH}"
 fi
 
+packages_sha="$(git rev-parse HEAD)"
+
 {
   echo "repo_url=https://github.com/${PACKAGES_REPO}"
   echo "apt_source=deb [signed-by=/etc/apt/keyrings/squigit-packages.gpg] ${raw_base_url}/apt ${APT_SUITE} ocr stt"
   echo "dnf_repo_url=${raw_base_url}/rpm/squigit.repo"
+  echo "packages_sha=${packages_sha}"
 } >> "${GITHUB_OUTPUT}"

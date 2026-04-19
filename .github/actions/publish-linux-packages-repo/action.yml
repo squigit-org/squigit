@@ -58,6 +58,9 @@ outputs:
   dnf-repo-url:
     description: "DNF .repo file URL"
     value: ${{ steps.publish.outputs.dnf_repo_url }}
+  packages-sha:
+    description: "Commit SHA of the updated packages repository"
+    value: ${{ steps.publish.outputs.packages_sha }}
 runs:
   using: "composite"
   steps:

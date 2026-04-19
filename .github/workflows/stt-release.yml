@@ -663,6 +663,8 @@ jobs:
     concurrency:
       group: squigit-packages-publish
       cancel-in-progress: false
+    outputs:
+      packages_sha: ${{ steps.publish.outputs.packages-sha }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -716,6 +718,7 @@ jobs:
           echo "rpm_path=${asset_dir}/${RPM_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Publish Signed APT/DNF Metadata
+        id: publish
         uses: ./.github/actions/publish-linux-packages-repo
         with:
           packages-token: ${{ secrets.PACKAGES_GITHUB_TOKEN }}
@@ -745,7 +748,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REPO_BASE="https://github.com/squigit-org/squigit-packages/raw/main"
+          REPO_BASE="https://github.com/squigit-org/squigit-packages/raw/${{ needs.publish-linux-packages-stt.outputs.packages_sha || 'main' }}"
           sudo mkdir -p /etc/apt/keyrings
           curl -fsSL "${REPO_BASE}/keys/squigit-packages.asc" | gpg --dearmor | sudo tee /etc/apt/keyrings/squigit-packages.gpg >/dev/null
           echo "deb [signed-by=/etc/apt/keyrings/squigit-packages.gpg] ${REPO_BASE}/apt stable ocr stt" | sudo tee /etc/apt/sources.list.d/squigit-packages.list >/dev/null
@@ -809,7 +812,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REPO_BASE="https://github.com/squigit-org/squigit-packages/raw/main"
+          REPO_BASE="https://github.com/squigit-org/squigit-packages/raw/${{ needs.publish-linux-packages-stt.outputs.packages_sha || 'main' }}"
           cat > /etc/yum.repos.d/squigit.repo <<'EOF'
           [squigit-ocr]
           name=Squigit OCR Packages
