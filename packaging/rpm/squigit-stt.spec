@@ -1,17 +1,25 @@
-Name:           squigit-stt
-Version:        0.1.0
+Name:           __PACKAGE_NAME__
+Version:        __VERSION__
 Release:        1%{?dist}
-Summary:        Standalone CLI STT engine for Squigit
+Summary:        __SUMMARY__
 
 License:        Apache-2.0
-URL:            https://github.com/a7mddra/squigit
+URL:            https://github.com/squigit-org/squigit
+BuildArch:      x86_64
+Source0:        %{name}-%{version}.tar.gz
 
 %description
-A headless, offline speech to text whisper-based engine designed for Squigit.
+__DESCRIPTION__
+
+%prep
+%setup -q
+
+%build
 
 %install
-mkdir -p %{buildroot}/usr/bin
-cp -a squigit-stt/* %{buildroot}/usr/bin/
+mkdir -p %{buildroot}
+cp -a usr %{buildroot}/
 
 %files
-/usr/bin/*
+/usr/bin/__BINARY_NAME__
+/usr/lib/__PACKAGE_NAME__

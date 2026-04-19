@@ -1,0 +1,72 @@
+name: "Publish Linux Package Repositories"
+description: "Updates squigit-packages APT/DNF repos with signed metadata and latest packages"
+inputs:
+  packages-token:
+    description: "GitHub token with write access to squigit-packages"
+    required: true
+  packages-repo:
+    description: "Package repository repo slug"
+    required: false
+    default: "squigit-org/squigit-packages"
+  packages-branch:
+    description: "Branch to update in package repository repo"
+    required: false
+    default: "main"
+  package-name:
+    description: "Package name (squigit-ocr or squigit-stt)"
+    required: true
+  package-component:
+    description: "Component key (ocr or stt)"
+    required: true
+  package-version:
+    description: "Package version"
+    required: true
+  deb-path:
+    description: "Absolute path to .deb package"
+    required: true
+  rpm-path:
+    description: "Absolute path to .rpm package"
+    required: true
+  gpg-private-key:
+    description: "Armored GPG private key"
+    required: true
+  gpg-passphrase:
+    description: "Passphrase for the GPG private key"
+    required: true
+  pages-base-url:
+    description: "Public GitHub Pages base URL for squigit-packages"
+    required: false
+    default: "https://squigit-org.github.io/squigit-packages"
+  apt-suite:
+    description: "APT suite name"
+    required: false
+    default: "stable"
+outputs:
+  repo-url:
+    description: "Published package repo URL"
+    value: ${{ steps.publish.outputs.repo_url }}
+  apt-source:
+    description: "APT source line for docs"
+    value: ${{ steps.publish.outputs.apt_source }}
+runs:
+  using: "composite"
+  steps:
+    - name: Publish package repositories
+      id: publish
+      shell: bash
+      env:
+        PACKAGES_TOKEN: ${{ inputs.packages-token }}
+        PACKAGES_REPO: ${{ inputs.packages-repo }}
+        PACKAGES_BRANCH: ${{ inputs.packages-branch }}
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        PACKAGE_COMPONENT: ${{ inputs.package-component }}
+        PACKAGE_VERSION: ${{ inputs.package-version }}
+        DEB_PATH: ${{ inputs.deb-path }}
+        RPM_PATH: ${{ inputs.rpm-path }}
+        GPG_PRIVATE_KEY: ${{ inputs.gpg-private-key }}
+        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        PAGES_BASE_URL: ${{ inputs.pages-base-url }}
+        APT_SUITE: ${{ inputs.apt-suite }}
+      run: |
+        set -euo pipefail
+        "${{ github.action_path }}/publish.sh"

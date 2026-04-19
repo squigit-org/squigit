@@ -2,7 +2,42 @@
 
 Before you dive in, let's quickly go over how Squigit integrates with your system, how to get started, and how we protect your data.
 
-## 1. Global Shortcuts & System Tray
+## 1. Linux Package Setup (Required)
+
+Squigit on Linux expects `squigit-ocr` and `squigit-stt` to be installed from the Squigit package repository.
+
+### Debian/Ubuntu (APT)
+
+```bash
+# 1) add repo
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://squigit-org.github.io/squigit-packages/keys/squigit-packages.asc | \
+  gpg --dearmor | sudo tee /etc/apt/keyrings/squigit-packages.gpg >/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/squigit-packages.gpg] https://squigit-org.github.io/squigit-packages/apt stable ocr stt" | \
+  sudo tee /etc/apt/sources.list.d/squigit-packages.list >/dev/null
+
+# 2) update
+sudo apt update
+
+# 3) install
+sudo apt install squigit-ocr squigit-stt
+```
+
+### Fedora/RHEL (DNF)
+
+```bash
+# 1) add repo
+sudo curl -fsSL https://squigit-org.github.io/squigit-packages/rpm/squigit.repo \
+  -o /etc/yum.repos.d/squigit.repo
+
+# 2) update
+sudo dnf makecache
+
+# 3) install
+sudo dnf install squigit-ocr squigit-stt
+```
+
+## 2. Global Shortcuts & System Tray
 
 We've attempted to register `Super+Shift+A` with your desktop environment so you can trigger a capture from anywhere. Go ahead and press it to test it out!
 
@@ -26,7 +61,7 @@ Alternatively, you can bind this command using third-party tools like `sxhkd`, `
 
 </details>
 
-## 2. Quick Start
+## 3. Quick Start
 
 Once you agree to this guide, the login button will activate. Continue with Google to set up your local profile, and you're ready to go!
 
@@ -35,7 +70,7 @@ Once you agree to this guide, the login button will activate. Continue with Goog
 - **AI & Reverse Search:** To unlock AI overviews and reverse image search, configure your Bring Your Own Key (BYOK) setup in **Settings -> API Keys**.
 - **Make it Yours:** Tailor your AI's responses and behavior in **Settings -> Personalization**.
 
-## 3. Security & Privacy
+## 4. Security & Privacy
 
 Because Squigit analyzes your screen, your privacy is our absolute highest priority. We use a zero-trust architecture:
 
@@ -45,7 +80,7 @@ Because Squigit analyzes your screen, your privacy is our absolute highest prior
 - **Google OAuth:** We use Google sign-in purely for local profile isolation. We only fetch your account name and avatar to personalize your app experience.
 - **⚠️ Lens Feature Warning:** Reverse image search uses ImgBB as a temporary, free image host to process the search. **Do not use the Lens feature for images containing sensitive personal data.**
 
-## 4. Help & Support
+## 5. Help & Support
 
 Need assistance or want to report a bug? Head over to **Settings -> Help & Support**.
 

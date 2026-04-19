@@ -36,12 +36,44 @@ The required external dependencies must be installed prior to running the applic
 
 **For Debian/Ubuntu-based distributions (APT):**
 
+1. Add the Squigit package repository:
+
+```bash
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://squigit-org.github.io/squigit-packages/keys/squigit-packages.asc | \
+  gpg --dearmor | sudo tee /etc/apt/keyrings/squigit-packages.gpg >/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/squigit-packages.gpg] https://squigit-org.github.io/squigit-packages/apt stable ocr stt" | \
+  sudo tee /etc/apt/sources.list.d/squigit-packages.list >/dev/null
+```
+
+2. Update the package cache:
+
 ```bash
 sudo apt update
+```
+
+3. Install dependencies:
+
+```bash
 sudo apt install squigit-ocr squigit-stt
 ```
 
 **For Fedora/RHEL-based distributions (DNF):**
+
+1. Add the Squigit repository file:
+
+```bash
+sudo curl -fsSL https://squigit-org.github.io/squigit-packages/rpm/squigit.repo \
+  -o /etc/yum.repos.d/squigit.repo
+```
+
+2. Update the package cache:
+
+```bash
+sudo dnf makecache
+```
+
+3. Install dependencies:
 
 ```bash
 sudo dnf install squigit-ocr squigit-stt

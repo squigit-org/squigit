@@ -31,12 +31,12 @@ on:
         default: false
         type: boolean
       release_apt:
-        description: "Run APT lane (mock)"
+        description: "Run APT lane"
         required: false
         default: true
         type: boolean
       release_dnf:
-        description: "Run DNF lane (mock)"
+        description: "Run DNF lane"
         required: false
         default: true
         type: boolean
@@ -249,6 +249,297 @@ jobs:
           $assetUrl = "https://github.com/squigit-org/squigit/releases/download/$env:RELEASE_TAG/$env:ASSET_NAME"
           "asset_url=$assetUrl" >> $env:GITHUB_OUTPUT
           "sha256=$env:ASSET_SHA256" >> $env:GITHUB_OUTPUT
+
+  build-release-stt-linux:
+    name: Build STT Linux x64 + Release Package Assets
+    if: needs.resolve-channel-scope.outputs.run_apt == 'true' || needs.resolve-channel-scope.outputs.run_dnf == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ needs.build-release-stt.outputs.version }}
+      release_tag: ${{ needs.build-release-stt.outputs.release_tag }}
+      deb_name: ${{ steps.pkg.outputs.deb_name }}
+      deb_sha256: ${{ steps.pkg.outputs.deb_sha256 }}
+      deb_asset_url: ${{ steps.meta.outputs.deb_asset_url }}
+      rpm_name: ${{ steps.pkg.outputs.rpm_name }}
+      rpm_sha256: ${{ steps.pkg.outputs.rpm_sha256 }}
+      rpm_asset_url: ${{ steps.meta.outputs.rpm_asset_url }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux Packaging Toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y rpm createrepo-c dpkg-dev apt-utils
+
+      - name: Build Whisper STT Sidecar (Linux x64)
+        uses: ./.github/actions/build-whisper-stt
+        with:
+          python-version: "3.12"
+
+      - name: Validate STT Runtime Layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x packaging/binaries/whisper-stt-x86_64-unknown-linux-gnu/squigit-stt
+          test -f packaging/binaries/whisper-stt-x86_64-unknown-linux-gnu/_internal/models/ggml-tiny.en.bin
+
+      - name: Build Linux Package Files (.deb/.rpm)
+        id: pkg
+        uses: ./.github/actions/build-linux-packages
+        with:
+          package-name: squigit-stt
+          package-version: ${{ needs.build-release-stt.outputs.version }}
+          runtime-dir: packaging/binaries/whisper-stt-x86_64-unknown-linux-gnu
+          binary-name: squigit-stt
+          deb-control-template: ${{ github.workspace }}/packaging/debian/squigit-stt/DEBIAN/control
+          rpm-spec-template: ${{ github.workspace }}/packaging/rpm/squigit-stt.spec
+          summary: Standalone CLI STT engine for Squigit
+          description-line-1: A headless, offline speech to text whisper-based engine designed for Squigit.
+          description-line-2: Includes local runtime libraries and the ggml-tiny.en.bin model for Linux x86_64.
+
+      - name: Upload Linux Package Assets to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.build-release-stt.outputs.release_tag }}
+          name: STT v${{ needs.build-release-stt.outputs.version }}
+          files: |
+            ${{ steps.pkg.outputs.deb_path }}
+            ${{ steps.pkg.outputs.rpm_path }}
+          overwrite_files: true
+          repository: squigit-org/squigit
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export Linux Release Metadata
+        id: meta
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.build-release-stt.outputs.release_tag }}
+          DEB_NAME: ${{ steps.pkg.outputs.deb_name }}
+          RPM_NAME: ${{ steps.pkg.outputs.rpm_name }}
+        run: |
+          set -euo pipefail
+          echo "deb_asset_url=https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/${DEB_NAME}" >> "$GITHUB_OUTPUT"
+          echo "rpm_asset_url=https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/${RPM_NAME}" >> "$GITHUB_OUTPUT"
+
+  publish-linux-packages-stt:
+    name: Publish Signed Linux Package Metadata (STT)
+    if: needs.resolve-channel-scope.outputs.run_apt == 'true' || needs.resolve-channel-scope.outputs.run_dnf == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+      - build-release-stt-linux
+    runs-on: ubuntu-latest
+    concurrency:
+      group: squigit-packages-publish
+      cancel-in-progress: false
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Install Metadata Publishing Toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y rpm createrepo-c dpkg-dev apt-utils gnupg2
+
+      - name: Download Linux Package Assets
+        id: assets
+        shell: bash
+        env:
+          DEB_ASSET_URL: ${{ needs.build-release-stt-linux.outputs.deb_asset_url }}
+          DEB_NAME: ${{ needs.build-release-stt-linux.outputs.deb_name }}
+          DEB_SHA256: ${{ needs.build-release-stt-linux.outputs.deb_sha256 }}
+          RPM_ASSET_URL: ${{ needs.build-release-stt-linux.outputs.rpm_asset_url }}
+          RPM_NAME: ${{ needs.build-release-stt-linux.outputs.rpm_name }}
+          RPM_SHA256: ${{ needs.build-release-stt-linux.outputs.rpm_sha256 }}
+        run: |
+          set -euo pipefail
+
+          asset_dir="${RUNNER_TEMP}/linux-release-assets"
+          rm -rf "${asset_dir}"
+          mkdir -p "${asset_dir}"
+
+          for entry in \
+            "${DEB_ASSET_URL}|${DEB_NAME}" \
+            "${RPM_ASSET_URL}|${RPM_NAME}"; do
+            url="${entry%%|*}"
+            name="${entry##*|}"
+            for attempt in $(seq 1 12); do
+              if curl --fail --silent --show-error --location --head --max-time 30 "${url}" >/dev/null; then
+                break
+              fi
+              if [ "${attempt}" -eq 12 ]; then
+                echo "Release asset did not propagate in time: ${url}" >&2
+                exit 1
+              fi
+              sleep 10
+            done
+            curl --fail --silent --show-error --location "${url}" -o "${asset_dir}/${name}"
+          done
+
+          echo "${DEB_SHA256}  ${asset_dir}/${DEB_NAME}" | sha256sum -c -
+          echo "${RPM_SHA256}  ${asset_dir}/${RPM_NAME}" | sha256sum -c -
+
+          echo "deb_path=${asset_dir}/${DEB_NAME}" >> "$GITHUB_OUTPUT"
+          echo "rpm_path=${asset_dir}/${RPM_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Signed APT/DNF Metadata
+        uses: ./.github/actions/publish-linux-packages-repo
+        with:
+          packages-token: ${{ secrets.PACKAGES_GITHUB_TOKEN }}
+          packages-repo: squigit-org/squigit-packages
+          package-name: squigit-stt
+          package-component: stt
+          package-version: ${{ needs.build-release-stt.outputs.version }}
+          deb-path: ${{ steps.assets.outputs.deb_path }}
+          rpm-path: ${{ steps.assets.outputs.rpm_path }}
+          gpg-private-key: ${{ secrets.LINUX_PACKAGES_GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.LINUX_PACKAGES_GPG_PASSPHRASE }}
+          pages-base-url: https://squigit-org.github.io/squigit-packages
+          apt-suite: stable
+
+  test-apt-stt:
+    name: End-user APT Install Smoke (STT)
+    if: needs.resolve-channel-scope.outputs.run_apt == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+      - publish-linux-packages-stt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure Squigit APT Repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://squigit-org.github.io/squigit-packages/keys/squigit-packages.asc | gpg --dearmor | sudo tee /etc/apt/keyrings/squigit-packages.gpg >/dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/squigit-packages.gpg] https://squigit-org.github.io/squigit-packages/apt stable ocr stt" | sudo tee /etc/apt/sources.list.d/squigit-packages.list >/dev/null
+
+      - name: Refresh APT Cache (with retries)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if sudo apt-get update && apt-cache policy squigit-stt | awk '/Candidate:/ {print $2}' | grep -vq '(none)'; then
+              exit 0
+            fi
+            if [ "${attempt}" -eq 12 ]; then
+              echo "APT metadata did not propagate in time for squigit-stt" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Install squigit-stt
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y squigit-stt
+
+      - name: Validate Installed STT Version
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.build-release-stt.outputs.version }}
+        run: |
+          set -euo pipefail
+          STT_VERSION="$(squigit-stt --version | tr -d '\r' | tail -n 1)"
+          echo "Installed STT version: ${STT_VERSION}"
+          if ! [[ "${STT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Installed STT version is not semver: ${STT_VERSION}"
+            exit 1
+          fi
+          if [ "${STT_VERSION}" != "${EXPECTED_VERSION}" ]; then
+            echo "Installed STT version mismatch: installed=${STT_VERSION}, expected=${EXPECTED_VERSION}"
+            exit 1
+          fi
+          test -f /usr/lib/squigit-stt/_internal/models/ggml-tiny.en.bin
+
+  test-dnf-stt:
+    name: End-user DNF Install Smoke (STT)
+    if: needs.resolve-channel-scope.outputs.run_dnf == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-release-stt
+      - publish-linux-packages-stt
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: Install DNF Test Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          dnf install -y ca-certificates curl dnf-plugins-core gnupg2
+
+      - name: Configure Squigit DNF Repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /etc/yum.repos.d/squigit.repo <<'EOF'
+          [squigit-ocr]
+          name=Squigit OCR Packages
+          baseurl=https://squigit-org.github.io/squigit-packages/rpm/ocr
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=https://squigit-org.github.io/squigit-packages/keys/squigit-packages.asc
+
+          [squigit-stt]
+          name=Squigit STT Packages
+          baseurl=https://squigit-org.github.io/squigit-packages/rpm/stt
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=https://squigit-org.github.io/squigit-packages/keys/squigit-packages.asc
+          EOF
+
+      - name: Refresh DNF Cache (with retries)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if dnf makecache --refresh; then
+              exit 0
+            fi
+            if [ "${attempt}" -eq 12 ]; then
+              echo "DNF metadata did not propagate in time for squigit-stt" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Install squigit-stt
+        shell: bash
+        run: |
+          set -euo pipefail
+          dnf install -y squigit-stt
+
+      - name: Validate Installed STT Version
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.build-release-stt.outputs.version }}
+        run: |
+          set -euo pipefail
+          STT_VERSION="$(squigit-stt --version | tr -d '\r' | tail -n 1)"
+          echo "Installed STT version: ${STT_VERSION}"
+          if ! [[ "${STT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Installed STT version is not semver: ${STT_VERSION}"
+            exit 1
+          fi
+          if [ "${STT_VERSION}" != "${EXPECTED_VERSION}" ]; then
+            echo "Installed STT version mismatch: installed=${STT_VERSION}, expected=${EXPECTED_VERSION}"
+            exit 1
+          fi
+          test -f /usr/lib/squigit-stt/_internal/models/ggml-tiny.en.bin
 
   update-homebrew-tap-stt:
     name: Update Homebrew Tap Formula (STT)
@@ -531,67 +822,3 @@ jobs:
           if ($sttVersion -ne $env:EXPECTED_VERSION) {
             throw "Installed STT version mismatch: installed=$sttVersion expected=$env:EXPECTED_VERSION"
           }
-
-  publish-apt-mock-stt:
-    name: Publish APT Package (Mock STT)
-    if: needs.resolve-channel-scope.outputs.run_apt == 'true'
-    needs:
-      - resolve-channel-scope
-      - build-release-stt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mock publish
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "MOCK apt publish for squigit-stt"
-          echo "version=${{ needs.build-release-stt.outputs.version }}"
-          echo "asset_url=${{ needs.build-release-stt.outputs.asset_url }}"
-          echo "sha256=${{ needs.build-release-stt.outputs.sha256 }}"
-
-  test-apt-mock-stt:
-    name: End-user APT Install Smoke (Mock STT)
-    if: needs.resolve-channel-scope.outputs.run_apt == 'true'
-    needs:
-      - resolve-channel-scope
-      - build-release-stt
-      - publish-apt-mock-stt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mock install smoke
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "MOCK apt install squigit-stt=${{ needs.build-release-stt.outputs.version }}"
-
-  publish-dnf-mock-stt:
-    name: Publish DNF Package (Mock STT)
-    if: needs.resolve-channel-scope.outputs.run_dnf == 'true'
-    needs:
-      - resolve-channel-scope
-      - build-release-stt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mock publish
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "MOCK dnf publish for squigit-stt"
-          echo "version=${{ needs.build-release-stt.outputs.version }}"
-          echo "asset_url=${{ needs.build-release-stt.outputs.asset_url }}"
-          echo "sha256=${{ needs.build-release-stt.outputs.sha256 }}"
-
-  test-dnf-mock-stt:
-    name: End-user DNF Install Smoke (Mock STT)
-    if: needs.resolve-channel-scope.outputs.run_dnf == 'true'
-    needs:
-      - resolve-channel-scope
-      - build-release-stt
-      - publish-dnf-mock-stt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mock install smoke
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "MOCK dnf install squigit-stt-${{ needs.build-release-stt.outputs.version }}"

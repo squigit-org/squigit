@@ -1,9 +1,9 @@
-Package: squigit-ocr
-Version: 0.1.0
+Package: __PACKAGE_NAME__
+Version: __VERSION__
 Section: utils
 Priority: optional
-Architecture: amd64
+Architecture: __ARCH__
 Maintainer: a7mddra <a7mddra@github.com>
-Description: Standalone CLI OCR engine for Squigit
- A headless, offline optical character recognition pipeline designed for Squigit.
- No GUI overhead, pure CLI.
+Description: __SUMMARY__
+ __DESCRIPTION_LINE_1__
+ __DESCRIPTION_LINE_2__

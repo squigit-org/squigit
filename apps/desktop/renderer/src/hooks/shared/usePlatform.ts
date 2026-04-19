@@ -25,7 +25,10 @@ interface PlatformInfo {
 }
 
 export function usePlatform(): PlatformInfo {
-  const [linuxDistro, setLinuxDistro] = useState<"debian" | "rpm" | "unknown">("unknown");
+  const [linuxDistro, setLinuxDistro] = useState<
+    "debian" | "rpm" | "unknown"
+  >("unknown");
+  const linuxPackagesBaseUrl = "https://squigit-org.github.io/squigit-packages";
 
   const base = useMemo(() => {
     const ua = navigator.userAgent.toLowerCase();
@@ -59,21 +62,58 @@ export function usePlatform(): PlatformInfo {
     else if (isWin) pkgMgrName = "Winget";
     else if (linuxDistro === "debian") pkgMgrName = "APT";
     else if (linuxDistro === "rpm") pkgMgrName = "DNF";
-    
+
     const getPkgInstallCmd = (pkg: string) => {
-       if (isMac) return `brew install ${pkg}`;
-       if (isWin) return `winget install ${pkg}`;
-       if (linuxDistro === "debian") return `sudo apt install ${pkg}`;
-       if (linuxDistro === "rpm") return `sudo dnf install ${pkg}`;
-       return `# Debian/Ubuntu\nsudo apt install ${pkg}\n\n# Fedora/RHEL\nsudo dnf install ${pkg}`;
+      if (isMac) return `brew install ${pkg}`;
+      if (isWin) return `winget install ${pkg}`;
+      if (linuxDistro === "debian") {
+        return [
+          "# 1) add repo",
+          "sudo mkdir -p /etc/apt/keyrings",
+          `curl -fsSL ${linuxPackagesBaseUrl}/keys/squigit-packages.asc | gpg --dearmor | sudo tee /etc/apt/keyrings/squigit-packages.gpg >/dev/null`,
+          `echo "deb [signed-by=/etc/apt/keyrings/squigit-packages.gpg] ${linuxPackagesBaseUrl}/apt stable ocr stt" | sudo tee /etc/apt/sources.list.d/squigit-packages.list >/dev/null`,
+          "",
+          "# 2) update",
+          "sudo apt update",
+          "",
+          "# 3) install",
+          `sudo apt install ${pkg}`,
+        ].join("\n");
+      }
+      if (linuxDistro === "rpm") {
+        return [
+          "# 1) add repo",
+          `sudo curl -fsSL ${linuxPackagesBaseUrl}/rpm/squigit.repo -o /etc/yum.repos.d/squigit.repo`,
+          "",
+          "# 2) update",
+          "sudo dnf makecache",
+          "",
+          "# 3) install",
+          `sudo dnf install ${pkg}`,
+        ].join("\n");
+      }
+      return [
+        "# Debian/Ubuntu",
+        "sudo mkdir -p /etc/apt/keyrings",
+        `curl -fsSL ${linuxPackagesBaseUrl}/keys/squigit-packages.asc | gpg --dearmor | sudo tee /etc/apt/keyrings/squigit-packages.gpg >/dev/null`,
+        `echo "deb [signed-by=/etc/apt/keyrings/squigit-packages.gpg] ${linuxPackagesBaseUrl}/apt stable ocr stt" | sudo tee /etc/apt/sources.list.d/squigit-packages.list >/dev/null`,
+        "sudo apt update",
+        `sudo apt install ${pkg}`,
+        "",
+        "# Fedora/RHEL",
+        `sudo curl -fsSL ${linuxPackagesBaseUrl}/rpm/squigit.repo -o /etc/yum.repos.d/squigit.repo`,
+        "sudo dnf makecache",
+        `sudo dnf install ${pkg}`,
+      ].join("\n");
     };
 
     const getPkgUpgradeCmd = (pkg: string) => {
-       if (isMac) return `brew upgrade ${pkg}`;
-       if (isWin) return `winget upgrade ${pkg}`;
-       if (linuxDistro === "debian") return `sudo apt update && sudo apt install --only-upgrade ${pkg}`;
-       if (linuxDistro === "rpm") return `sudo dnf upgrade ${pkg}`;
-       return `# Ubuntu/Debian\nsudo apt update && sudo apt install --only-upgrade ${pkg}\n\n# Fedora/RHEL\nsudo dnf upgrade ${pkg}`;
+      if (isMac) return `brew upgrade ${pkg}`;
+      if (isWin) return `winget upgrade ${pkg}`;
+      if (linuxDistro === "debian")
+        return `sudo apt update && sudo apt install --only-upgrade ${pkg}`;
+      if (linuxDistro === "rpm") return `sudo dnf upgrade ${pkg}`;
+      return `# Ubuntu/Debian\nsudo apt update && sudo apt install --only-upgrade ${pkg}\n\n# Fedora/RHEL\nsudo dnf upgrade ${pkg}`;
     };
 
     return {

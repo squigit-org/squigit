@@ -1,0 +1,68 @@
+name: "Build Linux Sidecar Packages"
+description: "Builds .deb and .rpm artifacts from a packaged runtime directory"
+inputs:
+  package-name:
+    description: "Package name (e.g. squigit-ocr or squigit-stt)"
+    required: true
+  package-version:
+    description: "Semantic version used for package metadata"
+    required: true
+  runtime-dir:
+    description: "Packaged runtime directory path"
+    required: true
+  binary-name:
+    description: "Executable file name to expose on PATH"
+    required: true
+  deb-control-template:
+    description: "Path to Debian control template"
+    required: true
+  rpm-spec-template:
+    description: "Path to RPM spec template"
+    required: true
+  summary:
+    description: "Single-line package summary"
+    required: true
+  description-line-1:
+    description: "First description line"
+    required: true
+  description-line-2:
+    description: "Second description line"
+    required: true
+outputs:
+  deb-path:
+    description: "Absolute path to built .deb package"
+    value: ${{ steps.build.outputs.deb_path }}
+  deb-name:
+    description: "Debian package file name"
+    value: ${{ steps.build.outputs.deb_name }}
+  deb-sha256:
+    description: "Debian package SHA256"
+    value: ${{ steps.build.outputs.deb_sha256 }}
+  rpm-path:
+    description: "Absolute path to built .rpm package"
+    value: ${{ steps.build.outputs.rpm_path }}
+  rpm-name:
+    description: "RPM package file name"
+    value: ${{ steps.build.outputs.rpm_name }}
+  rpm-sha256:
+    description: "RPM package SHA256"
+    value: ${{ steps.build.outputs.rpm_sha256 }}
+runs:
+  using: "composite"
+  steps:
+    - name: Build Linux packages
+      id: build
+      shell: bash
+      env:
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        PACKAGE_VERSION: ${{ inputs.package-version }}
+        RUNTIME_DIR: ${{ inputs.runtime-dir }}
+        BINARY_NAME: ${{ inputs.binary-name }}
+        DEB_CONTROL_TEMPLATE: ${{ inputs.deb-control-template }}
+        RPM_SPEC_TEMPLATE: ${{ inputs.rpm-spec-template }}
+        SUMMARY: ${{ inputs.summary }}
+        DESCRIPTION_LINE_1: ${{ inputs.description-line-1 }}
+        DESCRIPTION_LINE_2: ${{ inputs.description-line-2 }}
+      run: |
+        set -euo pipefail
+        "${{ github.action_path }}/build.sh"
