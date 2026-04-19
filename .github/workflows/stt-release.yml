@@ -800,6 +800,7 @@ jobs:
     needs:
       - resolve-channel-scope
       - build-phase-complete
+      - build-release-stt-windows
       - publish-winget-stt
       - validate-winget-manifest-stt
     runs-on: windows-latest

@@ -1000,6 +1000,7 @@ jobs:
     needs:
       - resolve-channel-scope
       - build-phase-complete
+      - build-release-ocr-windows
       - publish-winget-ocr
       - validate-winget-manifest-ocr
     runs-on: windows-latest
