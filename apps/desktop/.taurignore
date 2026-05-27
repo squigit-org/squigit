@@ -1,0 +1,5 @@
+# Ignore the frontend renderer directory — Vite HMR handles these changes.
+# Without this, Tauri's file watcher sees CSS/TS saves and triggers a full
+# Rust rebuild + app restart (~5 s), even though Vite already hot-patched
+# the change into the running webview.
+renderer/

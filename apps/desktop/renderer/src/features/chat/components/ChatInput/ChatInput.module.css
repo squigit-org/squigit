@@ -332,7 +332,9 @@
   padding: 0;
   border: 1px solid var(--c-raw-043);
   border-radius: 999px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.461);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 4px 16px var(--c-raw-061);
   transform: translateX(-50%);
   z-index: 1;
