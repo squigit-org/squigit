@@ -4,9 +4,9 @@
   "identifier": "squigit",
   "$schema": "renderer/node_modules/@tauri-apps/cli/config.schema.json",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "cd desktop/renderer && npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "cd desktop/renderer && npm run build",
     "frontendDist": "renderer/dist"
   },
   "app": {
