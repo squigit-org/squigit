@@ -11,43 +11,34 @@ pub mod commands;
 pub mod constants;
 pub mod services;
 
-use commands::audio::play_ui_sound;
-use commands::auth::{cache_avatar, cancel_google_auth, get_api_key, logout, start_google_auth};
-use commands::brain::{
+use commands::ai::{
     cancel_request, compress_conversation, generate_chat_title, generate_image_brief,
-    quick_answer_request, stream_chat,
+    quick_answer_request, start_stt, stop_stt, stream_chat, SpeechState,
 };
-use commands::capture::{spawn_capture, spawn_capture_to_input};
-use commands::chat::{
+use commands::data::{
     append_chat_message, create_chat, delete_chat, detect_image_tone, get_image_path,
     get_imgbb_url, get_ocr_data, get_ocr_frame, init_ocr_frame, list_chats, load_chat,
     overwrite_chat_messages, read_attachment_text, resolve_attachment_path, reveal_in_file_manager,
-    save_image_brief, save_image_tone, save_imgbb_url, save_ocr_data, search_chats,
-    store_file_from_path, store_image_bytes, store_image_from_path, update_chat_metadata,
+    save_image_brief, save_image_tone, save_imgbb_url, save_ocr_data, save_rolling_summary,
+    search_chats, store_file_from_path, store_image_bytes, store_image_from_path,
+    update_chat_metadata, validate_text_file,
 };
-use commands::clipboard::{
-    copy_image_from_path_to_clipboard, copy_image_to_clipboard, read_clipboard_image,
-    read_clipboard_text,
+use commands::identity::{
+    cache_avatar, cancel_google_auth, check_file_exists, delete_profile, encrypt_and_save,
+    get_active_profile, get_active_profile_id, get_api_key, get_profile_count, has_agreed_flag,
+    has_profiles, list_profiles, logout, set_active_profile, set_agreed_flag, start_google_auth,
 };
-use commands::constants::get_app_constants;
-use commands::image::{
-    copy_image_to_path, get_initial_image, process_image_path, read_image_file,
-    upload_image_to_imgbb,
+use commands::media::{
+    cancel_download_ocr_model, cancel_ocr_job, copy_image_from_path_to_clipboard,
+    copy_image_to_clipboard, copy_image_to_path, download_ocr_model, get_initial_image,
+    get_model_path, list_downloaded_models, ocr_image, play_ui_sound, process_image_path,
+    read_clipboard_image, read_clipboard_text, read_image_file, upload_image_to_imgbb,
 };
-use commands::models::{download_ocr_model, get_model_path, list_downloaded_models};
-use commands::ocr::{cancel_ocr_job, ocr_image};
-use commands::profile::{
-    delete_profile, get_active_profile, get_active_profile_id, get_profile_count, has_profiles,
-    list_profiles, set_active_profile,
+use commands::platform::{
+    close_window, get_always_on_top, get_app_constants, get_linux_package_manager, get_system_theme,
+    maximize_window, minimize_window, open_external_url, reload_window, run_sidecar_version,
+    set_always_on_top, set_background_color, show_window, spawn_capture, spawn_capture_to_input,
 };
-use commands::security::{check_file_exists, encrypt_and_save, has_agreed_flag, set_agreed_flag};
-use commands::speech::SpeechState;
-use commands::system::{get_linux_package_manager, run_sidecar_version};
-use commands::window::{
-    close_window, get_always_on_top, maximize_window, minimize_window, open_external_url,
-    reload_window, set_always_on_top, set_background_color, show_window,
-};
-use services::image::process_and_store_image;
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -75,7 +66,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())
         .manage(services::brain::DesktopBrainService::new())
-        .manage(services::audio::UiSoundPlayer::new())
+        .manage(ops_host_runtime::audio::UiSoundPlayer::new())
         .manage(SpeechState::default())
         .manage(services::ocr::DesktopOcrService::new().expect("Failed to init OCR service"))
         .invoke_handler(tauri::generate_handler![
@@ -127,7 +118,7 @@ pub fn run() {
             get_linux_package_manager,
             // Model Management
             download_ocr_model,
-            commands::models::cancel_download_ocr_model,
+            cancel_download_ocr_model,
             list_downloaded_models,
             get_model_path,
             // CAS Image Storage
@@ -148,7 +139,7 @@ pub fn run() {
             update_chat_metadata,
             append_chat_message,
             overwrite_chat_messages,
-            commands::chat::validate_text_file,
+            validate_text_file,
             // OCR Storage
             save_ocr_data,
             get_ocr_data,
@@ -158,7 +149,7 @@ pub fn run() {
             save_imgbb_url,
             get_imgbb_url,
             // Rolling Summary Storage
-            commands::chat::save_rolling_summary,
+            save_rolling_summary,
             // Tone and Brief Storage
             save_image_brief,
             save_image_tone,
@@ -173,10 +164,10 @@ pub fn run() {
             has_profiles,
             get_profile_count,
             // Theme
-            commands::theme::get_system_theme,
+            get_system_theme,
             // Speech
-            commands::speech::start_stt,
-            commands::speech::stop_stt,
+            start_stt,
+            stop_stt,
             // Capture
             spawn_capture,
             spawn_capture_to_input,
@@ -196,7 +187,10 @@ pub fn run() {
             if let Some(path) = has_cli_image {
                 println!("CLI Image argument detected: {}", path);
                 let state = handle.state::<AppState>();
-                let _ = process_and_store_image(path.clone(), &state);
+                if let Ok(stored) = ops_host_runtime::media::process_and_store_image(path.clone()) {
+                    let mut lock = state.image_data.lock();
+                    *lock = Some(stored);
+                }
             }
 
             #[cfg(target_os = "linux")]

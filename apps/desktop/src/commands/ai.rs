@@ -1,12 +1,21 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+//! Brain streaming + speech-to-text.
+
+use std::sync::Arc;
 use crate::services::brain::DesktopBrainService;
 use ops_squigit_brain::service::{
     CompressConversationRequest, GenerateChatTitleRequest, GenerateImageBriefRequest,
     StreamChatRequest,
 };
-use tauri::{AppHandle, State};
+use ops_host_runtime::sidecar::SttEvent;
+use tauri::{AppHandle, Emitter, State};
+use tokio::sync::Mutex;
+
+// =============================================================================
+// Brain Streaming
+// =============================================================================
 
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
@@ -117,4 +126,88 @@ pub async fn quick_answer_request(
     channel_id: String,
 ) -> Result<(), String> {
     brain.quick_answer_request(channel_id).await
+}
+
+// =============================================================================
+// Speech-to-Text
+// =============================================================================
+
+pub struct SpeechState {
+    pub engine: Arc<Mutex<Option<ops_host_runtime::sidecar::SpeechEngine>>>,
+}
+
+impl Default for SpeechState {
+    fn default() -> Self {
+        Self {
+            engine: Arc::new(Mutex::new(None)),
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn start_stt(
+    app: AppHandle,
+    state: State<'_, SpeechState>,
+    model: Option<String>,
+    language: Option<String>,
+) -> Result<(), String> {
+    let mut engine_guard = state.engine.lock().await;
+
+    if engine_guard.is_some() {
+        return Err("STT already running".to_string());
+    }
+
+    let (binary_path, _) = ops_host_runtime::sidecar::resolve_stt_sidecar_path()?;
+
+    let (engine, mut rx) =
+        ops_host_runtime::sidecar::start_stt(binary_path, model, language).await?;
+    *engine_guard = Some(engine);
+
+    let app_handle = app.clone();
+    tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            let payload = match &event {
+                SttEvent::Transcription { text, is_final } => {
+                    serde_json::json!({
+                        "type": "transcription",
+                        "text": text,
+                        "is_final": is_final
+                    })
+                }
+                SttEvent::Status { status } => {
+                    serde_json::json!({
+                        "type": "status",
+                        "status": status
+                    })
+                }
+                SttEvent::Error { message } => {
+                    serde_json::json!({
+                        "type": "error",
+                        "message": message
+                    })
+                }
+            };
+
+            if let Err(e) = app_handle.emit("stt_event", payload) {
+                log::error!("Failed to emit stt_event: {}", e);
+                break;
+            }
+        }
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn stop_stt(state: State<'_, SpeechState>) -> Result<(), String> {
+    let mut engine_guard = state.engine.lock().await;
+
+    if let Some(mut engine) = engine_guard.take() {
+        engine
+            .stop()
+            .await
+            .map_err(|e| format!("Failed to stop engine: {}", e))?;
+    }
+
+    Ok(())
 }

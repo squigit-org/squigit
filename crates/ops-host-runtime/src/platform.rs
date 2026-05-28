@@ -1,11 +1,17 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+//! OS integration — system theme detection, package manager detection, file manager reveal.
+
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 use std::process::Command;
 
 #[cfg(target_os = "linux")]
 use zbus::blocking::Connection as BlockingConnection;
+
+// =============================================================================
+// System Theme Detection
+// =============================================================================
 
 /// Detects the current system theme using a robust cross-platform strategy.
 /// Returns "dark" or "light".
@@ -28,26 +34,17 @@ pub fn get_system_theme() -> String {
     }
 }
 
-// ==========================
-// Linux Implementation
-// ==========================
-
 #[cfg(target_os = "linux")]
 fn get_linux_theme() -> String {
-    // Priority 1: XDG Desktop Portal (Universal)
     if let Some(theme) = check_portal() {
         return theme;
     }
-
-    // Priority 2: DE-specific Fallbacks
     if let Some(theme) = check_gsettings() {
         return theme;
     }
     if let Some(theme) = check_kreadconfig() {
         return theme;
     }
-
-    // Default
     "light".to_string()
 }
 
@@ -156,10 +153,6 @@ fn is_dark_heuristic(theme_name: &str) -> bool {
         || lower.contains("shadow")
 }
 
-// ==========================
-// Windows Implementation
-// ==========================
-
 #[cfg(target_os = "windows")]
 fn get_windows_theme() -> String {
     use winreg::enums::*;
@@ -180,10 +173,6 @@ fn get_windows_theme() -> String {
     "light".to_string()
 }
 
-// ==========================
-// macOS Implementation
-// ==========================
-
 #[cfg(target_os = "macos")]
 fn get_macos_theme() -> String {
     let output = Command::new("defaults")
@@ -197,4 +186,117 @@ fn get_macos_theme() -> String {
         }
     }
     "light".to_string()
+}
+
+// =============================================================================
+// Linux Package Manager Detection
+// =============================================================================
+
+pub fn get_linux_package_manager() -> String {
+    #[cfg(target_os = "linux")]
+    {
+        let debian = std::path::Path::new("/etc/debian_version").exists()
+            || std::path::Path::new("/usr/bin/dpkg").exists()
+            || std::path::Path::new("/bin/dpkg").exists();
+        if debian {
+            return "debian".to_string();
+        }
+        let rpm = std::path::Path::new("/etc/redhat-release").exists()
+            || std::path::Path::new("/etc/fedora-release").exists()
+            || std::path::Path::new("/usr/bin/rpm").exists()
+            || std::path::Path::new("/bin/rpm").exists();
+        if rpm {
+            return "rpm".to_string();
+        }
+    }
+    "unknown".to_string()
+}
+
+// =============================================================================
+// File Manager Reveal
+// =============================================================================
+
+pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    let resolved = ops_squigit_brain::provider::attachments::resolve_attachment_path_buf(&path)?;
+
+    #[cfg(target_os = "windows")]
+    {
+        let target = resolved.to_string_lossy().to_string();
+        Command::new("explorer")
+            .arg(format!(r#"/select,"{}""#, target))
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg("-R")
+            .arg(&resolved)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let target = resolved.to_string_lossy().to_string();
+        let parent = resolved
+            .parent()
+            .ok_or_else(|| "No parent directory".to_string())?
+            .to_string_lossy()
+            .to_string();
+
+        let select_candidates: Vec<(&str, Vec<String>)> = vec![
+            ("nautilus", vec!["--select".into(), target.clone()]),
+            ("nemo", vec!["--select".into(), target.clone()]),
+            ("caja", vec!["--select".into(), target.clone()]),
+            ("dolphin", vec!["--select".into(), target.clone()]),
+            ("konqueror", vec![target.clone()]),
+            ("thunar", vec!["--select".into(), target.clone()]),
+            ("pcmanfm-qt", vec!["--select".into(), target.clone()]),
+            ("pcmanfm", vec!["--select".into(), target.clone()]),
+            ("spacefm", vec!["--select".into(), target.clone()]),
+            ("pantheon-files", vec![target.clone()]),
+            ("doublecmd", vec![target.clone()]),
+            ("krusader", vec![target.clone()]),
+            ("xfe", vec![target.clone()]),
+        ];
+
+        for (bin, args) in select_candidates {
+            if Command::new(bin).args(&args).spawn().is_ok() {
+                return Ok(());
+            }
+        }
+
+        let parent_candidates: Vec<(&str, Vec<String>)> = vec![
+            ("xdg-open", vec![parent.clone()]),
+            ("gio", vec!["open".into(), parent.clone()]),
+            ("exo-open", vec![parent.clone()]),
+            ("kde-open5", vec![parent.clone()]),
+            ("kde-open", vec![parent.clone()]),
+            ("gnome-open", vec![parent.clone()]),
+            ("pcmanfm", vec![parent.clone()]),
+            ("thunar", vec![parent.clone()]),
+            ("nemo", vec![parent.clone()]),
+            ("caja", vec![parent.clone()]),
+            ("dolphin", vec![parent.clone()]),
+            ("nautilus", vec![parent.clone()]),
+            ("pantheon-files", vec![parent.clone()]),
+        ];
+
+        for (bin, args) in parent_candidates {
+            if Command::new(bin).args(&args).spawn().is_ok() {
+                return Ok(());
+            }
+        }
+
+        return Err("Failed to open a file manager on this Linux environment".to_string());
+    }
+
+    #[allow(unreachable_code)]
+    Err("Unsupported platform".to_string())
 }

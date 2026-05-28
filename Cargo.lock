@@ -25,6 +25,7 @@ dependencies = [
  "objc",
  "opener",
  "ops-chat-storage",
+ "ops-host-runtime",
  "ops-profile-store",
  "ops-squigit-brain",
  "ops-squigit-ocr",
@@ -1745,6 +1746,7 @@ dependencies = [
  "napi-build",
  "napi-derive",
  "ops-chat-storage",
+ "ops-host-runtime",
  "ops-profile-store",
  "ops-squigit-brain",
  "serde",
@@ -4032,6 +4034,28 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "uuid",
+]
+
+[[package]]
+name = "ops-host-runtime"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "base64 0.22.1",
+ "dirs 5.0.1",
+ "image",
+ "log",
+ "ops-chat-storage",
+ "ops-profile-store",
+ "ops-squigit-brain",
+ "ops-squigit-ocr",
+ "rodio",
+ "serde",
+ "serde_json",
+ "svc-speech-engine",
+ "tokio",
+ "winreg 0.52.0",
+ "zbus",
 ]
 
 [[package]]

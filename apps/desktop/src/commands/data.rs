@@ -1,16 +1,14 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Chat storage Tauri commands.
+//! Chat storage, OCR storage, imgbb storage, rolling summaries.
+//! All pure data CRUD — zero Tauri API calls beyond #[tauri::command].
 
-use crate::services::tone::detect_image_tone_from_bytes;
 use ops_chat_storage::{
     ChatData, ChatMessage, ChatMetadata, ChatStorage, OcrFrame, OcrRegion, StoredImage,
 };
-use ops_squigit_brain::provider::attachments::resolve_attachment_path_buf;
 use ops_squigit_brain::tools::chat_search::{search_local_chats, ChatSearchResult};
 
-/// Helper to get storage for the active profile.
 fn get_active_storage() -> Result<ChatStorage, String> {
     ops_squigit_brain::context::media::get_active_storage()
 }
@@ -19,22 +17,19 @@ fn get_active_storage() -> Result<ChatStorage, String> {
 // Image Storage Commands
 // =============================================================================
 
-/// Store image bytes and return hash + path.
 #[tauri::command]
 pub fn store_image_bytes(bytes: Vec<u8>) -> Result<StoredImage, String> {
-    let explicit_tone = detect_image_tone_from_bytes(&bytes);
+    let explicit_tone = ops_host_runtime::media::detect_image_tone_from_bytes(&bytes);
     ops_squigit_brain::context::media::process_bytes_internal(bytes, explicit_tone)
 }
 
-/// Store image from file path and return hash + path.
 #[tauri::command]
 pub fn store_image_from_path(path: String) -> Result<StoredImage, String> {
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
-    let explicit_tone = detect_image_tone_from_bytes(&bytes);
+    let explicit_tone = ops_host_runtime::media::detect_image_tone_from_bytes(&bytes);
     ops_squigit_brain::context::media::process_bytes_internal(bytes, explicit_tone)
 }
 
-/// Store any file from path (preserving extension) and return hash + CAS path.
 #[tauri::command]
 pub fn store_file_from_path(path: String) -> Result<StoredImage, String> {
     let storage = get_active_storage()?;
@@ -43,32 +38,29 @@ pub fn store_file_from_path(path: String) -> Result<StoredImage, String> {
         .map_err(|e| e.to_string())
 }
 
-/// Validate if a file is safe text (valid UTF-8 and no null bytes).
 #[tauri::command]
 pub fn validate_text_file(path: String) -> Result<bool, String> {
     ops_squigit_brain::provider::attachments::validate_text_file(&path)
 }
 
-/// Get the path to a stored image by its hash.
 #[tauri::command]
 pub fn get_image_path(hash: String) -> Result<String, String> {
     let storage = get_active_storage()?;
     storage.get_image_path(&hash).map_err(|e| e.to_string())
 }
 
-/// Resolve an attachment path (absolute or relative CAS path) to an absolute path.
 #[tauri::command]
 pub fn resolve_attachment_path(path: String) -> Result<String, String> {
     ops_squigit_brain::provider::attachments::resolve_attachment_path(&path)
 }
 
-/// Detect image tone for a given attachment path.
 #[tauri::command]
 pub fn detect_image_tone(path: String) -> Result<String, String> {
-    let resolved = resolve_attachment_path_buf(&path)?;
+    let resolved =
+        ops_squigit_brain::provider::attachments::resolve_attachment_path_buf(&path)?;
     let bytes = std::fs::read(resolved).map_err(|e| e.to_string())?;
 
-    match detect_image_tone_from_bytes(&bytes).as_deref() {
+    match ops_host_runtime::media::detect_image_tone_from_bytes(&bytes).as_deref() {
         Some("l") => Ok("light".to_string()),
         Some("d") => Ok("dark".to_string()),
         Some(other) => Ok(other.to_string()),
@@ -76,104 +68,20 @@ pub fn detect_image_tone(path: String) -> Result<String, String> {
     }
 }
 
-/// Read UTF-8 text content from an attachment path.
 #[tauri::command]
 pub fn read_attachment_text(path: String) -> Result<String, String> {
     ops_squigit_brain::provider::attachments::read_attachment_text(&path)
 }
 
-/// Reveal a file in the system file manager, selecting it when possible.
 #[tauri::command]
 pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
-    use std::process::Command;
-
-    let resolved = resolve_attachment_path_buf(&path)?;
-
-    #[cfg(target_os = "windows")]
-    {
-        let target = resolved.to_string_lossy().to_string();
-        Command::new("explorer")
-            .arg(format!(r#"/select,"{}""#, target))
-            .spawn()
-            .map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        Command::new("open")
-            .arg("-R")
-            .arg(&resolved)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let target = resolved.to_string_lossy().to_string();
-        let parent = resolved
-            .parent()
-            .ok_or_else(|| "No parent directory".to_string())?
-            .to_string_lossy()
-            .to_string();
-
-        let select_candidates: Vec<(&str, Vec<String>)> = vec![
-            ("nautilus", vec!["--select".into(), target.clone()]),
-            ("nemo", vec!["--select".into(), target.clone()]),
-            ("caja", vec!["--select".into(), target.clone()]),
-            ("dolphin", vec!["--select".into(), target.clone()]),
-            ("konqueror", vec![target.clone()]),
-            ("thunar", vec!["--select".into(), target.clone()]),
-            ("pcmanfm-qt", vec!["--select".into(), target.clone()]),
-            ("pcmanfm", vec!["--select".into(), target.clone()]),
-            ("spacefm", vec!["--select".into(), target.clone()]),
-            ("pantheon-files", vec![target.clone()]),
-            ("doublecmd", vec![target.clone()]),
-            ("krusader", vec![target.clone()]),
-            ("xfe", vec![target.clone()]),
-        ];
-
-        for (bin, args) in select_candidates {
-            if Command::new(bin).args(&args).spawn().is_ok() {
-                return Ok(());
-            }
-        }
-
-        let parent_candidates: Vec<(&str, Vec<String>)> = vec![
-            ("xdg-open", vec![parent.clone()]),
-            ("gio", vec!["open".into(), parent.clone()]),
-            ("exo-open", vec![parent.clone()]),
-            ("kde-open5", vec![parent.clone()]),
-            ("kde-open", vec![parent.clone()]),
-            ("gnome-open", vec![parent.clone()]),
-            ("pcmanfm", vec![parent.clone()]),
-            ("thunar", vec![parent.clone()]),
-            ("nemo", vec![parent.clone()]),
-            ("caja", vec![parent.clone()]),
-            ("dolphin", vec![parent.clone()]),
-            ("nautilus", vec![parent.clone()]),
-            ("pantheon-files", vec![parent.clone()]),
-        ];
-
-        for (bin, args) in parent_candidates {
-            if Command::new(bin).args(&args).spawn().is_ok() {
-                return Ok(());
-            }
-        }
-
-        return Err("Failed to open a file manager on this Linux environment".to_string());
-    }
-
-    #[allow(unreachable_code)]
-    Err("Unsupported platform".to_string())
+    ops_host_runtime::platform::reveal_in_file_manager(path)
 }
 
 // =============================================================================
-// Chat Storage Commands
+// Chat CRUD
 // =============================================================================
 
-/// Create a new thread with the given image hash.
 #[tauri::command]
 pub fn create_chat(
     title: String,
@@ -188,21 +96,18 @@ pub fn create_chat(
     Ok(metadata)
 }
 
-/// Load a chat by ID.
 #[tauri::command]
 pub fn load_chat(chat_id: String) -> Result<ChatData, String> {
     let storage = get_active_storage()?;
     storage.load_chat(&chat_id).map_err(|e| e.to_string())
 }
 
-/// List all chats (metadata only).
 #[tauri::command]
 pub fn list_chats() -> Result<Vec<ChatMetadata>, String> {
     let storage = get_active_storage()?;
     storage.list_chats().map_err(|e| e.to_string())
 }
 
-/// Search chats and return ranked message hits.
 #[tauri::command]
 pub fn search_chats(query: String, limit: Option<usize>) -> Result<Vec<ChatSearchResult>, String> {
     let storage = get_active_storage()?;
@@ -210,14 +115,12 @@ pub fn search_chats(query: String, limit: Option<usize>) -> Result<Vec<ChatSearc
     search_local_chats(&storage, &query, max_results)
 }
 
-/// Delete a chat by ID.
 #[tauri::command]
 pub fn delete_chat(chat_id: String) -> Result<(), String> {
     let storage = get_active_storage()?;
     storage.delete_chat(&chat_id).map_err(|e| e.to_string())
 }
 
-/// Update chat metadata (rename, pin, star, etc.).
 #[tauri::command]
 pub fn update_chat_metadata(metadata: ChatMetadata) -> Result<(), String> {
     let storage = get_active_storage()?;
@@ -227,7 +130,7 @@ pub fn update_chat_metadata(metadata: ChatMetadata) -> Result<(), String> {
 }
 
 // =============================================================================
-// Message Commands
+// Messages
 // =============================================================================
 
 #[tauri::command]
@@ -243,7 +146,6 @@ pub fn append_chat_message(chat_id: String, role: String, content: String) -> Re
         .map_err(|e| e.to_string())
 }
 
-/// Overwrite all messages in a chat.
 #[tauri::command]
 pub fn overwrite_chat_messages(chat_id: String, messages: Vec<ChatMessage>) -> Result<(), String> {
     let storage = get_active_storage()?;
@@ -253,10 +155,9 @@ pub fn overwrite_chat_messages(chat_id: String, messages: Vec<ChatMessage>) -> R
 }
 
 // =============================================================================
-// OCR Commands
+// OCR Storage
 // =============================================================================
 
-/// Save OCR data for a specific model.
 #[tauri::command]
 pub fn save_ocr_data(
     chat_id: String,
@@ -269,7 +170,6 @@ pub fn save_ocr_data(
         .map_err(|e| e.to_string())
 }
 
-/// Get OCR data for a specific model.
 #[tauri::command]
 pub fn get_ocr_data(chat_id: String, model_id: String) -> Result<Option<Vec<OcrRegion>>, String> {
     let storage = get_active_storage()?;
@@ -278,14 +178,12 @@ pub fn get_ocr_data(chat_id: String, model_id: String) -> Result<Option<Vec<OcrR
         .map_err(|e| e.to_string())
 }
 
-/// Get the entire OCR frame for a chat.
 #[tauri::command]
 pub fn get_ocr_frame(chat_id: String) -> Result<OcrFrame, String> {
     let storage = get_active_storage()?;
     storage.get_ocr_frame(&chat_id).map_err(|e| e.to_string())
 }
 
-/// Initialize OCR frame with null values for given model IDs.
 #[tauri::command]
 pub fn init_ocr_frame(chat_id: String, model_ids: Vec<String>) -> Result<(), String> {
     let storage = get_active_storage()?;
@@ -295,10 +193,9 @@ pub fn init_ocr_frame(chat_id: String, model_ids: Vec<String>) -> Result<(), Str
 }
 
 // =============================================================================
-// ImgBB Commands
+// ImgBB + Summaries + Tone + Brief
 // =============================================================================
 
-/// Save imgbb URL for a chat.
 #[tauri::command]
 pub fn save_imgbb_url(chat_id: String, url: String) -> Result<(), String> {
     let storage = get_active_storage()?;
@@ -307,14 +204,12 @@ pub fn save_imgbb_url(chat_id: String, url: String) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-/// Get imgbb URL for a chat.
 #[tauri::command]
 pub fn get_imgbb_url(chat_id: String) -> Result<Option<String>, String> {
     let storage = get_active_storage()?;
     storage.get_imgbb_url(&chat_id).map_err(|e| e.to_string())
 }
 
-/// Save rolling summary for a chat.
 #[tauri::command]
 pub fn save_rolling_summary(chat_id: String, summary: String) -> Result<(), String> {
     let storage = get_active_storage()?;
@@ -323,7 +218,6 @@ pub fn save_rolling_summary(chat_id: String, summary: String) -> Result<(), Stri
         .map_err(|e| e.to_string())
 }
 
-/// Save detected image tone for a chat.
 #[tauri::command]
 pub fn save_image_tone(chat_id: String, tone: String) -> Result<(), String> {
     let storage = get_active_storage()?;
@@ -332,7 +226,6 @@ pub fn save_image_tone(chat_id: String, tone: String) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-/// Save image brief for a chat.
 #[tauri::command]
 pub fn save_image_brief(chat_id: String, brief: String) -> Result<(), String> {
     let storage = get_active_storage()?;

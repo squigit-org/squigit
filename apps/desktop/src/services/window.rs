@@ -9,8 +9,8 @@ fn initial_bg_color(app: &AppHandle) -> tauri::window::Color {
     let is_light = match resolve_saved_theme_preference(app).as_deref() {
         Some("light") => true,
         Some("dark") => false,
-        None => crate::services::theme::get_system_theme() == "light",
-        _ => crate::services::theme::get_system_theme() == "light",
+        None => ops_host_runtime::platform::get_system_theme() == "light",
+        _ => ops_host_runtime::platform::get_system_theme() == "light",
     };
 
     if is_light {
@@ -170,8 +170,11 @@ pub fn spawn_app_window(
                 let path_str = first_path.to_string_lossy().to_string();
                 let state = window_clone.state::<crate::state::AppState>();
 
-                match crate::services::image::process_and_store_image(path_str.clone(), &state) {
+                match ops_host_runtime::media::process_and_store_image(path_str.clone()) {
                     Ok(stored) => {
+                        let mut lock = state.image_data.lock();
+                        *lock = Some(stored.clone());
+                        drop(lock);
                         let mime = mime_guess::from_path(&stored.path)
                             .first_or_octet_stream()
                             .to_string();

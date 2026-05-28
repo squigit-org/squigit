@@ -1,6 +1,9 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+//! UI sound effects via rodio. Kept as its own module because it manages
+//! a persistent audio thread with stream state.
+
 use std::{
     io::Cursor,
     sync::mpsc::{self, Receiver, Sender},
@@ -9,7 +12,7 @@ use std::{
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
 
 const DIALOG_WARNING_SOUND: &[u8] =
-    include_bytes!("../../renderer/src/assets/sounds/dialog-warning.mp3");
+    include_bytes!("../assets/sounds/dialog-warning.mp3");
 
 #[derive(Debug, Clone, Copy)]
 pub enum UiSoundEffect {
