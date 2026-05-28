@@ -12,13 +12,16 @@
     ".": "./dist/src/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build:addon": "npx napi build --manifest-path ../../crates/ffi-napi-bridge/Cargo.toml --release --output-dir ./src/addon",
+    "build:ts": "tsc -p tsconfig.json",
+    "build": "npm run build:addon && npm run build:ts && cp -r src/addon dist/src/addon",
     "test:api": "npm run build && node dist/src/index.js api",
     "test:auth": "npm run build && node dist/src/index.js auth",
     "test": "npm run build && node --test --test-concurrency=1 dist/test/live-*.test.js",
     "test:live": "SQUIGIT_LIVE_STORE_TESTS=1 npm test"
   },
   "devDependencies": {
+    "@napi-rs/cli": "^3.0.0",
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
   }

@@ -361,7 +361,7 @@ fn should_use_cached_cli_build(root: &Path) -> Result<bool> {
     }
 
     let marker_mtime = fs::metadata(&marker)?.modified()?;
-    for rel in ["src", "test", "package.json", "tsconfig.json"] {
+    for rel in ["src", "test", "package.json", "tsconfig.json", "../../crates/ffi-napi-bridge/src"] {
         let input = cli_dir.join(rel);
         let newest = newest_modified_recursive(&input)?;
         let Some(newest) = newest else {

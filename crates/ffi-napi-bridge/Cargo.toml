@@ -1,0 +1,22 @@
+[package]
+name = "ffi-napi-bridge"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3", default-features = false, features = ["napi6", "async", "tokio_rt"] }
+napi-derive = "3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.37", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+ops-profile-store = { path = "../ops-profile-store" }
+ops-chat-storage = { path = "../ops-chat-storage" }
+ops-squigit-brain = { path = "../ops-squigit-brain" }
+webbrowser = "1.2.1"
+
+[build-dependencies]
+napi-build = "2"

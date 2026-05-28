@@ -3,24 +3,12 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { parseLastJsonLine, runBrainHarness, runHarness } from "../src/harness.js";
+import { analyzeImage, promptChat, getActiveProfileId, getStoreBaseDir } from "../src/harness.js";
 
 const liveStoreEnabled = process.env.SQUIGIT_LIVE_STORE_TESTS === "1";
 const liveTest = liveStoreEnabled ? test : test.skip;
 
 let latestChatId: string | null = null;
-
-type AnalyzePayload = {
-  chat_id: string;
-  title: string;
-  assistant_message: string;
-  image_path: string;
-};
-
-type PromptPayload = {
-  chat_id: string;
-  assistant_message: string;
-};
 
 async function createFixtureImage(): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "squigit-cli-"));
@@ -46,33 +34,37 @@ async function resolveAnalyzeImagePath(): Promise<string> {
 }
 
 liveTest("analyze command creates a chat in the active profile store", async () => {
-  const profileId = (await runHarness(["active-profile-id"])).trim();
+  const profileId = getActiveProfileId()?.trim();
   assert.ok(profileId, "No active profile found. Sign in first.");
 
   const imagePath = await resolveAnalyzeImagePath();
-  const stdout = await runBrainHarness(["analyze", imagePath]);
-  const payload = parseLastJsonLine<AnalyzePayload>(stdout);
+  let assistantMessage = "";
+  const payload = await analyzeImage(imagePath, undefined, (err, event) => {
+    if (event && event.eventType === "token" && event.token) {
+        assistantMessage += event.token;
+    }
+  });
 
-  assert.ok(payload.chat_id);
-  assert.ok(payload.assistant_message.trim().length > 0);
+  assert.ok(payload.chatId);
+  assert.ok(assistantMessage.trim().length > 0);
   assert.notEqual(payload.title.trim().toLowerCase(), "untitled");
-  latestChatId = payload.chat_id;
+  latestChatId = payload.chatId;
 
-  const baseDir = (await runHarness(["store-base-dir"])).trim();
-  const chatDir = path.join(baseDir, profileId, "chats", payload.chat_id);
+  const baseDir = (await getStoreBaseDir()).trim();
+  const chatDir = path.join(baseDir, profileId, "chats", payload.chatId);
 
   await fs.access(path.join(chatDir, "messages.json"));
   await fs.access(path.join(chatDir, "messages.md"));
 });
 
 liveTest("prompt command appends to same chat and normalizes @/absolute/path", async () => {
-  const profileId = (await runHarness(["active-profile-id"])).trim();
+  const profileId = getActiveProfileId()?.trim();
   assert.ok(profileId, "No active profile found. Sign in first.");
 
   if (!latestChatId) {
     const imagePath = await resolveAnalyzeImagePath();
-    const stdout = await runBrainHarness(["analyze", imagePath]);
-    latestChatId = parseLastJsonLine<AnalyzePayload>(stdout).chat_id;
+    const payload = await analyzeImage(imagePath, undefined, () => {});
+    latestChatId = payload.chatId;
   }
 
   assert.ok(latestChatId);
@@ -82,13 +74,17 @@ liveTest("prompt command appends to same chat and normalizes @/absolute/path", a
   await fs.writeFile(attachmentPath, "hello from cli attachment\n");
 
   const promptText = `please inspect @${attachmentPath}`;
-  const stdout = await runBrainHarness(["prompt", latestChatId, promptText]);
-  const payload = parseLastJsonLine<PromptPayload>(stdout);
+  let assistantMessage = "";
+  const payload = await promptChat(latestChatId, promptText, (err, event) => {
+    if (event && event.eventType === "token" && event.token) {
+        assistantMessage += event.token;
+    }
+  });
 
-  assert.equal(payload.chat_id, latestChatId);
-  assert.ok(payload.assistant_message.trim().length > 0);
+  assert.equal(payload.chatId, latestChatId);
+  assert.ok(assistantMessage.trim().length > 0);
 
-  const baseDir = (await runHarness(["store-base-dir"])).trim();
+  const baseDir = (await getStoreBaseDir()).trim();
   const chatDir = path.join(baseDir, profileId, "chats", latestChatId);
   const messagesJson = await fs.readFile(path.join(chatDir, "messages.json"), "utf8");
   const messagesMd = await fs.readFile(path.join(chatDir, "messages.md"), "utf8");

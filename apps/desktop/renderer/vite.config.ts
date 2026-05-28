@@ -13,6 +13,9 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    fs: {
+      allow: ["..", "../../shared"],
+    },
   },
   envPrefix: ["VITE_", "TAURI_"],
   resolve: {

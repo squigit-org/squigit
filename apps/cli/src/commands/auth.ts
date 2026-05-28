@@ -2,20 +2,16 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
-  AuthPayload,
+  type NapiAuthResult,
   getStoreBaseDir,
-  parseLastJsonLine,
-  runAuthHarnessWithCancellation,
-  runHarness,
+  startGoogleAuth,
+  listProfiles,
+  clearActiveProfile,
+  deleteProfile,
+  type NapiProfile,
 } from "../harness.js";
 
 type AuthAction = "login" | "signup" | "logout" | "remove" | "profiles";
-
-type ProfileRecord = {
-  id: string;
-  email: string;
-  name: string;
-};
 
 type InfraSnapshot = {
   baseDir: string;
@@ -105,15 +101,6 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-async function listProfiles(): Promise<ProfileRecord[]> {
-  const stdout = await runHarness(["list-profiles"]);
-  const trimmed = stdout.trim();
-  if (!trimmed) {
-    return [];
-  }
-  return parseLastJsonLine<ProfileRecord[]>(trimmed);
-}
-
 async function setActiveAccountPreference(value: string): Promise<void> {
   const storeBaseDir = await getStoreBaseDir();
   const preferencesPath = path.resolve(storeBaseDir, "..", "preferences.json");
@@ -197,9 +184,95 @@ async function rollbackWithMessage(snapshot: InfraSnapshot, message: string): Pr
   throw new Error(message);
 }
 
+const AUTH_TIMEOUT_SECONDS = 60;
+
+function formatAuthCountdown(secondsRemaining: number): string {
+  return `[auth] Esc to cancel (${secondsRemaining}s remaining)`;
+}
+
+export async function runAuthHarnessWithCancellation(
+  timeoutSeconds = AUTH_TIMEOUT_SECONDS,
+): Promise<NapiAuthResult> {
+  console.log("[auth] Starting browser sign-in flow...");
+
+  const useInlineCountdown = Boolean(process.stderr.isTTY);
+  const renderCountdown = (secondsRemaining: number, finalize = false): void => {
+    const line = formatAuthCountdown(secondsRemaining);
+    if (!useInlineCountdown) {
+      process.stderr.write(`${line}\n`);
+      return;
+    }
+
+    process.stderr.write(`\r${line.padEnd(64)}`);
+    if (finalize) {
+      process.stderr.write("\n");
+    }
+  };
+
+  const stdin = process.stdin;
+  const canReadEsc = Boolean(stdin.isTTY && typeof stdin.setRawMode === "function");
+  const stdinWasRaw = canReadEsc ? Boolean(stdin.isRaw) : false;
+
+  let cancelled = false;
+  
+  const onStdinData = (chunk: Buffer): void => {
+    for (const byte of chunk.values()) {
+      if (byte === 0x03 || byte === 0x1b) {
+        cancelled = true;
+        process.stderr.write(`\n[auth] cancellation requested.\n`);
+        return;
+      }
+    }
+  };
+
+  if (canReadEsc) {
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.on("data", onStdinData);
+  }
+
+  renderCountdown(timeoutSeconds);
+  let remainingSeconds = timeoutSeconds;
+  const countdownInterval = setInterval(() => {
+    remainingSeconds -= 1;
+    if (remainingSeconds <= 0) {
+      clearInterval(countdownInterval);
+      renderCountdown(0, true);
+      cancelled = true;
+      return;
+    }
+    renderCountdown(remainingSeconds);
+  }, 1000);
+
+  // We are running the blocking startGoogleAuth here
+  // Wait, startGoogleAuth blocking means we can't easily interrupt it via Esc in the JS thread 
+  // since Node.js thread is blocked in native code.
+  // We should really make startGoogleAuth async, but the NAPI wrapper is synchronous now.
+  // For Phase 1 we will just call it.
+  try {
+    const result = startGoogleAuth();
+    return result;
+  } finally {
+    clearInterval(countdownInterval);
+    if (useInlineCountdown) {
+      process.stderr.write("\r".concat(" ".repeat(80)).concat("\r"));
+    }
+
+    if (canReadEsc) {
+      stdin.off("data", onStdinData);
+      stdin.setRawMode(stdinWasRaw);
+      stdin.pause();
+    }
+    
+    if (cancelled) {
+        process.exit(1);
+    }
+  }
+}
+
 async function runAuthSemanticFlow(action: "login" | "signup"): Promise<void> {
   console.log("[auth] Preparing live profile snapshot...");
-  const beforeProfiles = await listProfiles();
+  const beforeProfiles = listProfiles();
   const existingIds = new Set(beforeProfiles.map((profile) => profile.id));
   const snapshot = await captureSnapshot();
 
@@ -222,7 +295,7 @@ async function runAuthSemanticFlow(action: "login" | "signup"): Promise<void> {
   }
 }
 
-function printAuthSuccess(action: "login" | "signup", payload: AuthPayload): void {
+function printAuthSuccess(action: "login" | "signup", payload: NapiAuthResult): void {
   if (action === "login") {
     console.log(`logged in as ${payload.email}`);
     return;
@@ -232,12 +305,12 @@ function printAuthSuccess(action: "login" | "signup", payload: AuthPayload): voi
 }
 
 async function runLogout(): Promise<void> {
-  await runHarness(["clear-active-profile"]);
+  clearActiveProfile();
   await setActiveAccountPreference("Guest");
   console.log("logged out");
 }
 
-function resolveProfileId(identifier: string, profiles: ProfileRecord[]): string {
+function resolveProfileId(identifier: string, profiles: NapiProfile[]): string {
   const trimmed = identifier.trim();
   if (!trimmed) {
     throw new Error("Action 'remove' requires `<id_or_email>`.");
@@ -258,18 +331,19 @@ function resolveProfileId(identifier: string, profiles: ProfileRecord[]): string
 }
 
 async function runRemove(identifier: string): Promise<void> {
-  const profiles = await listProfiles();
+  const profiles = listProfiles();
   const profileId = resolveProfileId(identifier, profiles);
 
-  await runHarness(["delete-profile", profileId]);
-  await runHarness(["clear-active-profile"]);
+  deleteProfile(profileId);
+  clearActiveProfile();
   await setActiveAccountPreference("Guest");
 
   console.log(`removed account ${profileId}`);
 }
 
 async function runProfiles(): Promise<void> {
-  const profiles = await withSpinner("fetching profiles", () => listProfiles());
+  // listProfiles is synchronous in NAPI now
+  const profiles = listProfiles();
 
   console.log(LIST_SEPARATOR);
   if (profiles.length === 0) {

@@ -1,4 +1,4 @@
-import { runHarness } from "../harness.js";
+import { getActiveProfileId, saveApiKey, getApiKey } from "../harness.js";
 
 type ProviderConfig = {
   cliName: "google-ai-studio" | "imgbb";
@@ -73,8 +73,8 @@ function assertValidKey(provider: ProviderConfig, key: string): void {
   throw new Error("Invalid ImgBB key. Expected exactly 32 characters.");
 }
 
-async function ensureActiveProfileId(): Promise<string> {
-  const activeProfileId = (await runHarness(["active-profile-id"])).trim();
+function ensureActiveProfileId(): string {
+  const activeProfileId = getActiveProfileId()?.trim();
   if (!activeProfileId) {
     throw new Error(
       "No active profile found. Run `cargo xtask test apps auth login` first.",
@@ -92,10 +92,10 @@ async function addKey(provider: ProviderConfig, rawKey: string | undefined): Pro
   assertValidKey(provider, key);
   console.log(`[api] Saving ${provider.displayName} key securely...`);
 
-  const activeProfileId = await ensureActiveProfileId();
-  await runHarness(["save-key", activeProfileId, provider.storageName, key]);
+  const activeProfileId = ensureActiveProfileId();
+  saveApiKey(activeProfileId, provider.storageName, key);
 
-  const savedKey = (await runHarness(["get-key", activeProfileId, provider.storageName])).trim();
+  const savedKey = getApiKey(activeProfileId, provider.storageName)?.trim();
   if (savedKey !== key) {
     throw new Error(`Saved ${provider.displayName} key could not be verified.`);
   }
@@ -111,11 +111,11 @@ function addKeyHint(provider: ProviderConfig): string {
 }
 
 async function removeKey(provider: ProviderConfig): Promise<void> {
-  const activeProfileId = await ensureActiveProfileId();
-  await runHarness(["save-key", activeProfileId, provider.storageName, ""]);
+  const activeProfileId = ensureActiveProfileId();
+  saveApiKey(activeProfileId, provider.storageName, "");
 
-  const savedKey = (await runHarness(["get-key", activeProfileId, provider.storageName])).trim();
-  if (savedKey !== "") {
+  const savedKey = getApiKey(activeProfileId, provider.storageName)?.trim();
+  if (savedKey) {
     throw new Error(`Failed to clear ${provider.displayName} key.`);
   }
 
@@ -123,8 +123,8 @@ async function removeKey(provider: ProviderConfig): Promise<void> {
 }
 
 async function showKey(provider: ProviderConfig): Promise<void> {
-  const activeProfileId = await ensureActiveProfileId();
-  const key = (await runHarness(["get-key", activeProfileId, provider.storageName])).trim();
+  const activeProfileId = ensureActiveProfileId();
+  const key = getApiKey(activeProfileId, provider.storageName)?.trim();
   console.log(key || "(empty)");
 }
 
