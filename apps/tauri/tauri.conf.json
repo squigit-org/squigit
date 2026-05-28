@@ -1,0 +1,58 @@
+{
+  "productName": "Squigit",
+  "version": "0.1.0",
+  "identifier": "squigit",
+  "$schema": "renderer/node_modules/@tauri-apps/cli/config.schema.json",
+  "build": {
+    "beforeDevCommand": "npm run dev --prefix renderer",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build --prefix renderer",
+    "frontendDist": "../renderer/dist"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPCONFIG/**", "$HOME/**"]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/a7mddra/squigit/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhBRkVGRUQxQ0Q3M0IxODUKUldTRnNYUE4wZjcraXBpNkgyS0ZnTVdzUFlTVjdwMk14dFNDRUZsUC9iM2FjSGxNbTlxaGoxa20K"
+    },
+    "cli": {
+      "description": "squigit",
+      "args": [
+        {
+          "name": "image",
+          "index": 1,
+          "takesValue": true,
+          "description": "Path to an image to load on startup."
+        },
+        {
+          "name": "background",
+          "short": "b",
+          "description": "Start in background/tray-only mode (used by OS autostart)."
+        }
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["appimage", "nsis", "dmg"],
+    "resources": ["binaries/qt-capture-*/**/*"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

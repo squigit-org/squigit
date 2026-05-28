@@ -42,11 +42,15 @@ pub fn venv_python() -> PathBuf {
 }
 
 pub fn ui_dir() -> PathBuf {
-    project_root().join("apps").join("desktop").join("renderer")
+    project_root().join("apps").join("renderer")
 }
 
 pub fn tauri_dir() -> PathBuf {
-    project_root().join("apps").join("desktop")
+    project_root().join("apps").join("tauri")
+}
+
+pub fn electron_dir() -> PathBuf {
+    project_root().join("apps").join("electron")
 }
 
 fn resolve_command_path(cmd: &str) -> PathBuf {

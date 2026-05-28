@@ -1,10 +1,10 @@
 [workspace]
 members = [
-    "apps/desktop",
-    "xtask",
+    "apps/tauri",
+
     "crates/*",
     "sidecars/qt-capture",
-    "crates/svc-speech-engine",
+    "xtask",
 ]
 resolver = "2"
 

@@ -4,6 +4,9 @@
   "type": "module",
   "$schema": "https://json.schemastore.org/package.json",
   "license": "Apache-2.0",
+  "scripts": {
+    "tsc": "tsc --noEmit"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./brain/engine": "./src/brain/engine/index.ts",

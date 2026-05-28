@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@platform/*": ["./src/platform/tauri/*"],
+      "@squigit/core": ["../shared/packages/core/src/index.ts"],
+      "@squigit/core/*": ["../shared/packages/core/src/*"],
+      "@squigit/react": ["../shared/packages/react/src/index.ts"],
+      "@squigit/react/*": ["../shared/packages/react/src/*"],
+      "react": ["./node_modules/@types/react/index.d.ts"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"],
+      "react-dom": ["./node_modules/@types/react-dom/index.d.ts"],
+      "react-dom/client": ["./node_modules/@types/react-dom/client.d.ts"]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.tsx", "vite-env.d.ts"],
+  "exclude": ["node_modules", "dist", "release"]
+}

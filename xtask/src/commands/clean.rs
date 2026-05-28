@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use std::fs;
-use xtask::{ocr_sidecar_dir, project_root, qt_native_dir, stt_sidecar_dir, tauri_dir};
+use xtask::{ocr_sidecar_dir, project_root, qt_native_dir, stt_sidecar_dir, tauri_dir, electron_dir};
 
 pub fn all() -> Result<()> {
     ocr()?;
@@ -64,10 +64,16 @@ pub fn stt() -> Result<()> {
 pub fn app() -> Result<()> {
     println!("\nCleaning Tauri app and packaging binaries...");
 
-    let desktop_binaries = tauri_dir().join("binaries");
-    if desktop_binaries.exists() {
-        println!("  Removing {}", desktop_binaries.display());
-        fs::remove_dir_all(&desktop_binaries)?;
+    let tauri_binaries = tauri_dir().join("binaries");
+    if tauri_binaries.exists() {
+        println!("  Removing {}", tauri_binaries.display());
+        fs::remove_dir_all(&tauri_binaries)?;
+    }
+
+    let electron_binaries = electron_dir().join("binaries");
+    if electron_binaries.exists() {
+        println!("  Removing {}", electron_binaries.display());
+        fs::remove_dir_all(&electron_binaries)?;
     }
 
     let pkg_binaries = project_root().join("packaging").join("binaries");

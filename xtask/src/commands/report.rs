@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use toml_edit::DocumentMut;
 use walkdir::WalkDir;
-use xtask::{get_host_target_triple, project_root, tauri_dir, ui_dir};
+use xtask::{get_host_target_triple, project_root, tauri_dir, ui_dir, electron_dir};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ReportOptions {
@@ -215,12 +215,13 @@ fn sidecar_checks() -> Result<Vec<CheckResult>> {
     let mut checks = Vec::new();
 
     let host = get_host_target_triple().context("Failed to resolve host target triple")?;
-    let app_binaries = tauri_dir().join("binaries");
+    let tauri_binaries = tauri_dir().join("binaries");
+    let electron_binaries = electron_dir().join("binaries");
     let debug_binaries = project_root().join("target").join("debug").join("binaries");
 
     let expected = expected_sidecar_artifacts(&host);
 
-    for base in [&app_binaries, &debug_binaries] {
+    for base in [&tauri_binaries, &electron_binaries, &debug_binaries] {
         for (label, rel_path) in &expected {
             let path = base.join(rel_path);
             let name = format!("artifact: {} ({})", label, base.display());
@@ -239,20 +240,30 @@ fn sidecar_checks() -> Result<Vec<CheckResult>> {
         }
     }
 
-    let total_app_size = if app_binaries.exists() {
-        let mut total = 0u64;
-        for entry in fs::read_dir(&app_binaries)? {
+    let mut total_tauri_size = 0u64;
+    if tauri_binaries.exists() {
+        for entry in fs::read_dir(&tauri_binaries)? {
             let entry = entry?;
-            total = total.saturating_add(path_size_bytes(&entry.path())?);
+            total_tauri_size = total_tauri_size.saturating_add(path_size_bytes(&entry.path())?);
         }
-        total
-    } else {
-        0
-    };
+    }
 
     checks.push(CheckResult::pass(
-        "binaries total size (apps/desktop/binaries)",
-        format_bytes(total_app_size),
+        "binaries total size (apps/tauri/binaries)",
+        format_bytes(total_tauri_size),
+    ));
+
+    let mut total_electron_size = 0u64;
+    if electron_binaries.exists() {
+        for entry in fs::read_dir(&electron_binaries)? {
+            let entry = entry?;
+            total_electron_size = total_electron_size.saturating_add(path_size_bytes(&entry.path())?);
+        }
+    }
+
+    checks.push(CheckResult::pass(
+        "binaries total size (apps/electron/binaries)",
+        format_bytes(total_electron_size),
     ));
 
     Ok(checks)
@@ -323,18 +334,18 @@ fn version_consistency_check() -> Result<CheckResult> {
 
     for (path, value) in [
         (
-            root.join("apps").join("desktop").join("tauri.conf.json"),
-            read_json_version(&root.join("apps").join("desktop").join("tauri.conf.json"))?,
+            root.join("apps")
+                .join("tauri")
+                .join("tauri.conf.json"),
+            read_json_version(&root.join("apps").join("tauri").join("tauri.conf.json"))?,
         ),
         (
             root.join("apps")
-                .join("desktop")
                 .join("renderer")
                 .join("package.json"),
             read_json_version(
                 &root
                     .join("apps")
-                    .join("desktop")
                     .join("renderer")
                     .join("package.json"),
             )?,

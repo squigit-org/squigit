@@ -27,13 +27,12 @@ pub fn run_all() -> Result<()> {
     let mut plan: Vec<(String, Vec<String>)> = vec![
         (
             "apps".to_string(),
-            vec!["desktop".to_string(), "renderer".to_string()],
+            vec!["renderer".to_string()],
         ),
         (
             "apps".to_string(),
-            vec!["desktop".to_string(), "tauri".to_string()],
+            vec!["tauri".to_string()],
         ),
-        ("apps".to_string(), vec!["cli".to_string()]),
         (
             "apps".to_string(),
             vec!["shared".to_string(), "core".to_string()],
@@ -294,13 +293,13 @@ fn run_apps(list: bool, path: &[String]) -> Result<()> {
     if list {
         match path {
             [] => {
-                print_group("check/apps", &["desktop", "cli", "shared"]);
+                print_group("check/apps", &["renderer", "tauri", "shared"]);
             }
-            [suite] if suite == "desktop" => {
-                print_group("check/apps/desktop", &["renderer", "tauri"]);
+            [suite] if suite == "renderer" => {
+                print_group("check/apps/renderer", &["(no args)"]);
             }
-            [suite] if suite == "cli" => {
-                print_group("check/apps/cli", &["(no args)"]);
+            [suite] if suite == "tauri" => {
+                print_group("check/apps/tauri", &["(no args)"]);
             }
             [suite] if suite == "shared" => {
                 print_group("check/apps/shared", &["core", "react"]);
@@ -317,69 +316,41 @@ fn run_apps(list: bool, path: &[String]) -> Result<()> {
 
     let root = project_root();
     match path[0].as_str() {
-        "desktop" => {
-            if path.len() == 1 {
-                run_cmd(
-                    "npm",
-                    &["--prefix", "apps/desktop/renderer", "run", "tsc"],
-                    &root,
-                )?;
-                return run_cmd(
-                    "cargo",
-                    &["check", "--manifest-path", "apps/desktop/Cargo.toml"],
-                    &root,
-                );
-            }
-
-            if path.len() != 2 {
-                bail!("Usage: cargo xtask check apps desktop [renderer|tauri]");
-            }
-
-            match path[1].as_str() {
-                "renderer" => run_cmd(
-                    "npm",
-                    &["--prefix", "apps/desktop/renderer", "run", "tsc"],
-                    &root,
-                ),
-                "tauri" => run_cmd(
-                    "cargo",
-                    &["check", "--manifest-path", "apps/desktop/Cargo.toml"],
-                    &root,
-                ),
-                other => bail!(
-                    "Unknown desktop check target '{}'. Use `renderer` or `tauri`.",
-                    other
-                ),
-            }
+        "renderer" => {
+            run_cmd(
+                "npm",
+                &["--prefix", "apps/renderer", "run", "tsc"],
+                &root,
+            )
         }
-        "cli" => {
-            if path.len() != 1 {
-                bail!("Usage: cargo xtask check apps cli");
-            }
-
-            run_ts_check(&root, "apps/cli", "apps/cli/tsconfig.json")
+        "tauri" => {
+            run_cmd(
+                "cargo",
+                &["check", "--manifest-path", "apps/tauri/Cargo.toml"],
+                &root,
+            )
         }
         "shared" => match path {
             [_] => {
                 run_ts_check(
                     &root,
-                    "apps/desktop/renderer",
+                    "apps/renderer",
                     "apps/shared/packages/core/tsconfig.json",
                 )?;
                 run_ts_check(
                     &root,
-                    "apps/desktop/renderer",
+                    "apps/renderer",
                     "apps/shared/packages/react/tsconfig.json",
                 )
             }
             [_, target] if target == "core" => run_ts_check(
                 &root,
-                "apps/desktop/renderer",
+                "apps/renderer",
                 "apps/shared/packages/core/tsconfig.json",
             ),
             [_, target] if target == "react" => run_ts_check(
                 &root,
-                "apps/desktop/renderer",
+                "apps/renderer",
                 "apps/shared/packages/react/tsconfig.json",
             ),
             _ => bail!("Usage: cargo xtask check apps shared [core|react]"),
