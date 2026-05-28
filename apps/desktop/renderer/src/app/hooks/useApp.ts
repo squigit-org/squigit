@@ -23,7 +23,7 @@ import {
   useSystemSync,
   useUpdateCheck,
 } from "@/hooks/system";
-import { useBrainTitle } from "@squigit/react/brain/hooks";
+import { useBrainTitle, useModelHandshake } from "@squigit/react/brain/hooks";
 import { useAttachments } from "@/hooks/shared";
 import { useChat, useChatHistory } from "@/features/chat";
 import { useAppBusyGuard } from "./useAppBusyGuard";
@@ -116,6 +116,7 @@ export const useApp = () => {
   }, [chatHistory]);
 
   useUpdateCheck();
+  useModelHandshake(system.apiKey);
 
   const performLogout = async () => {
     await system.handleLogout();

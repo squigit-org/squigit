@@ -45,6 +45,7 @@ async function runAnalyze(args: string[]): Promise<void> {
 
   const payload = await analyzeImage(
     imagePath,
+    "models/gemini-flash-latest",
     userMessage || undefined,
     (err, event) => {
       if (err) return;
@@ -87,6 +88,7 @@ async function runPrompt(args: string[]): Promise<void> {
 
   const payload = await promptChat(
     chatId,
+    "models/gemini-flash-latest",
     message,
     (err, event) => {
       if (err) return;

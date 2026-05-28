@@ -23,6 +23,7 @@ import {
   startProviderSessionStream as startBrainSessionStream,
 } from "@squigit/core/brain/provider";
 import { MODEL_IDS } from "@squigit/core/config";
+import { getFallbackQueues } from "@squigit/core/config/models-cache";
 
 import {
   advanceStreamCursorByWords,
@@ -322,23 +323,40 @@ export const useBrainEngine = (config: {
     signal?: AbortSignal,
   ): Promise<T> => {
     return runWithNetworkRetries(async () => {
-      try {
-        return await runWithModel(primaryModelId);
-      } catch (apiError: any) {
-        if (isRequestAborted(signal) || apiError?.message === "CANCELLED") {
+      let modelToTry = primaryModelId;
+      let fallbackQueue: string[] = [];
+
+      const queues = getFallbackQueues();
+      if (primaryModelId === MODEL_IDS.PRIMARY_FAST) {
+        fallbackQueue = [...queues.flash];
+      } else if (primaryModelId === MODEL_IDS.PRIMARY_REASONING) {
+        fallbackQueue = [...queues.pro];
+      } else if (primaryModelId === MODEL_IDS.MICRO_TASKS) {
+        fallbackQueue = [...queues.lite];
+      }
+
+      while (true) {
+        try {
+          return await runWithModel(modelToTry);
+        } catch (apiError: any) {
+          if (isRequestAborted(signal) || apiError?.message === "CANCELLED") {
+            throw apiError;
+          }
+          if (isBrainHighDemandError(apiError)) {
+            if (fallbackQueue.length > 0) {
+              const nextFallback = fallbackQueue.shift()!;
+              console.log(
+                `[Brain] 503 on ${modelToTry}, silently falling back to ${nextFallback}`,
+              );
+              if (modelToTry === primaryModelId) {
+                popLastUserHistory();
+              }
+              modelToTry = nextFallback;
+              continue;
+            }
+          }
           throw apiError;
         }
-        if (
-          isBrainHighDemandError(apiError) &&
-          primaryModelId !== MODEL_IDS.SECONDARY_FAST
-        ) {
-          console.log(
-            `[Brain] 503 on ${primaryModelId}, silently falling back to ${MODEL_IDS.SECONDARY_FAST}`,
-          );
-          popLastUserHistory();
-          return await runWithModel(MODEL_IDS.SECONDARY_FAST);
-        }
-        throw apiError;
       }
     }, signal);
   };

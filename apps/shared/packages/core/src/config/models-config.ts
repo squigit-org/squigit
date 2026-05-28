@@ -5,43 +5,30 @@
  */
 
 export const MODEL_IDS = {
-  PRIMARY_FAST: "gemini-3.1-flash-lite-preview",
-  SECONDARY_FAST: "gemini-3-flash-preview",
-  PRIMARY_REASONING: "gemini-3.1-pro-preview",
-  MICRO_TASKS: "gemini-3-flash-preview",
+  PRIMARY_FAST: "models/gemini-flash-latest",
+  SECONDARY_FAST: "models/gemini-flash-latest", // Deprecated, pointing to primary
+  PRIMARY_REASONING: "models/gemini-pro-latest",
+  MICRO_TASKS: "models/gemini-flash-lite-latest",
 } as const;
 
 export const MODELS = [
-  { id: MODEL_IDS.PRIMARY_FAST, name: "Gemini 3.1 Flash", provider: "gemini" },
-  {
-    id: MODEL_IDS.PRIMARY_REASONING,
-    name: "Gemini 3.1 Pro",
-    provider: "gemini",
-  },
+  { id: MODEL_IDS.PRIMARY_FAST, name: "Gemini Flash", provider: "gemini" },
+  { id: MODEL_IDS.PRIMARY_REASONING, name: "Gemini Pro", provider: "gemini" },
 ] as const;
 
 export const DEFAULT_MODEL_ID = MODELS[0].id;
 
-const SUPPORTED_MODEL_ID_SET = new Set<string>(MODELS.map((model) => model.id));
-
-const LEGACY_MODEL_ID_ALIASES: Record<string, string> = {
-  "gemini-3.1-pro": MODEL_IDS.PRIMARY_REASONING,
-};
-
 export const isSupportedModelId = (modelId?: string | null): boolean => {
   if (!modelId) return false;
-  return SUPPORTED_MODEL_ID_SET.has(modelId);
+  return modelId.includes("gemini") || modelId.includes("models/");
 };
 
 export const resolveModelId = (
   modelId?: string | null,
   fallback: string = DEFAULT_MODEL_ID,
 ): string => {
-  const aliasedModelId = modelId
-    ? (LEGACY_MODEL_ID_ALIASES[modelId] ?? modelId)
-    : modelId;
-  if (aliasedModelId && isSupportedModelId(aliasedModelId)) {
-    return aliasedModelId;
+  if (modelId && isSupportedModelId(modelId)) {
+    return modelId;
   }
   return isSupportedModelId(fallback) ? fallback : DEFAULT_MODEL_ID;
 };

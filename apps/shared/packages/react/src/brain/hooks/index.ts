@@ -10,3 +10,4 @@ export { useBrainSession } from "./useBrainSession";
 export { useBrainTitle } from "./useBrainTitle";
 export { useAttachments } from "./useAttachments";
 export { useChatState } from "./useChatState";
+export { useModelHandshake } from "./useModelHandshake";

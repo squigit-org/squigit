@@ -97,9 +97,10 @@ pub(crate) async fn suggest_fallback_urls(
     query: &str,
     max_urls: usize,
 ) -> Vec<String> {
+    let model_id = model.strip_prefix("models/").unwrap_or(model);
     let suggest_url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        model, api_key
+        model_id, api_key
     );
 
     let prompt = format!(

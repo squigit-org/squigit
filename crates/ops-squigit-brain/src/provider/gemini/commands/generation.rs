@@ -17,9 +17,10 @@ pub async fn generate_chat_title(
     println!("Generating Title using model: {}", model);
 
     let client = reqwest::Client::new();
+    let model_id = model.strip_prefix("models/").unwrap_or(&model);
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        model, api_key
+        model_id, api_key
     );
 
     let title_context: String = prompt_context
@@ -104,19 +105,20 @@ pub async fn generate_image_brief(
     runtime: &BrainRuntimeState,
     api_key: String,
     image_path: String,
-    model: Option<String>,
+    model: String,
 ) -> Result<String, String> {
     use crate::context::builder::get_image_brief_prompt;
 
     let brief_prompt = get_image_brief_prompt()?;
-    let lite_model = model.unwrap_or_else(|| crate::constants::DEFAULT_MODEL.to_string());
+    let lite_model = model;
 
     println!("[ImageBrief] Generating brief using model: {}", lite_model);
 
     let client = reqwest::Client::new();
+    let model_id = lite_model.strip_prefix("models/").unwrap_or(&lite_model);
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        lite_model, api_key
+        model_id, api_key
     );
 
     // Upload image via Files API (reuses cache)
@@ -206,10 +208,11 @@ pub async fn compress_conversation(
     api_key: String,
     image_brief: String,
     history_to_compress: String,
+    model: String,
 ) -> Result<String, String> {
     let summary_prompt =
         crate::context::compactor::build_summary_prompt(&image_brief, &history_to_compress);
-    let lite_model = crate::constants::DEFAULT_MODEL;
+    let lite_model = model;
 
     println!(
         "[Summarizer] Compressing conversation using model: {}",
@@ -217,9 +220,10 @@ pub async fn compress_conversation(
     );
 
     let client = reqwest::Client::new();
+    let model_id = lite_model.strip_prefix("models/").unwrap_or(&lite_model);
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        lite_model, api_key
+        model_id, api_key
     );
 
     let parts = vec![GeminiPart {

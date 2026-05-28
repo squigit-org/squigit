@@ -6,4 +6,4 @@ pub mod attachments;
 pub mod commands;
 pub mod transport;
 
-pub const DEFAULT_MODEL: &str = "gemini-3.1-flash-lite-preview";
+

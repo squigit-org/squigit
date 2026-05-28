@@ -58,6 +58,7 @@ fn active_google_api_key() -> Result<String> {
 #[napi]
 pub async fn analyze_image(
     image_path: String,
+    model: String,
     user_message: Option<String>,
     #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => void")]
     on_event: ThreadsafeFunction<NapiStreamEvent>,
@@ -68,7 +69,7 @@ pub async fn analyze_image(
 
     let request = AnalyzeImageRequest {
         api_key,
-        model: ops_squigit_brain::constants::DEFAULT_MODEL.to_string(),
+        model,
         image_path,
         user_message,
         channel_id: format!("cli-analyze-{}", chrono::Utc::now().timestamp_millis()),
@@ -93,6 +94,7 @@ pub async fn analyze_image(
 #[napi]
 pub async fn prompt_chat(
     chat_id: String,
+    model: String,
     user_message: String,
     #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => void")]
     on_event: ThreadsafeFunction<NapiStreamEvent>,
@@ -103,7 +105,7 @@ pub async fn prompt_chat(
 
     let request = PromptChatRequest {
         api_key,
-        model: ops_squigit_brain::constants::DEFAULT_MODEL.to_string(),
+        model,
         chat_id,
         user_message,
         channel_id: format!("cli-prompt-{}", chrono::Utc::now().timestamp_millis()),
@@ -183,7 +185,7 @@ pub async fn generate_chat_title(
 pub async fn generate_image_brief(
     api_key: String,
     image_path: String,
-    model: Option<String>,
+    model: String,
 ) -> Result<String> {
     let service = get_brain_service();
     let request = GenerateImageBriefRequest { api_key, image_path, model };
@@ -196,9 +198,10 @@ pub async fn compress_conversation(
     api_key: String,
     image_brief: String,
     history_to_compress: String,
+    model: String,
 ) -> Result<String> {
     let service = get_brain_service();
-    let request = CompressConversationRequest { api_key, image_brief, history_to_compress };
+    let request = CompressConversationRequest { api_key, image_brief, history_to_compress, model };
     service.compress_conversation(request).await
         .map_err(|e| Error::from_reason(e.to_string()))
 }

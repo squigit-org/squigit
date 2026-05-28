@@ -80,7 +80,7 @@ pub async fn generate_image_brief(
         .generate_image_brief(GenerateImageBriefRequest {
             api_key,
             image_path,
-            model,
+            model: model.unwrap_or_else(|| crate::constants::DEFAULT_MODEL.to_string()),
         })
         .await
 }
@@ -91,12 +91,14 @@ pub async fn compress_conversation(
     api_key: String,
     image_brief: String,
     history_to_compress: String,
+    model: Option<String>,
 ) -> Result<String, String> {
     brain
         .compress_conversation(CompressConversationRequest {
             api_key,
             image_brief,
             history_to_compress,
+            model: model.unwrap_or_else(|| crate::constants::DEFAULT_MODEL.to_string()),
         })
         .await
 }

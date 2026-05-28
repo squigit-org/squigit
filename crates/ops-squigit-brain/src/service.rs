@@ -38,7 +38,7 @@ pub struct GenerateChatTitleRequest {
 pub struct GenerateImageBriefRequest {
     pub api_key: String,
     pub image_path: String,
-    pub model: Option<String>,
+    pub model: String,
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +46,7 @@ pub struct CompressConversationRequest {
     pub api_key: String,
     pub image_brief: String,
     pub history_to_compress: String,
+    pub model: String,
 }
 
 #[derive(Debug, Clone)]
@@ -162,6 +163,7 @@ impl BrainService {
             request.api_key,
             request.image_brief,
             request.history_to_compress,
+            request.model,
         )
         .await
     }
@@ -242,7 +244,7 @@ impl BrainService {
             .generate_image_brief(GenerateImageBriefRequest {
                 api_key: api_key.clone(),
                 image_path: image.path.clone(),
-                model: Some(request.model.clone()),
+                model: request.model.clone(),
             })
             .await
             .ok()

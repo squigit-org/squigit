@@ -39,7 +39,7 @@ liveTest("analyze command creates a chat in the active profile store", async () 
 
   const imagePath = await resolveAnalyzeImagePath();
   let assistantMessage = "";
-  const payload = await analyzeImage(imagePath, undefined, (err, event) => {
+  const payload = await analyzeImage(imagePath, "models/gemini-flash-latest", undefined, (err: any, event: any) => {
     if (event && event.eventType === "token" && event.token) {
         assistantMessage += event.token;
     }
@@ -63,7 +63,7 @@ liveTest("prompt command appends to same chat and normalizes @/absolute/path", a
 
   if (!latestChatId) {
     const imagePath = await resolveAnalyzeImagePath();
-    const payload = await analyzeImage(imagePath, undefined, () => {});
+    const payload = await analyzeImage(imagePath, "models/gemini-flash-latest", undefined, () => {});
     latestChatId = payload.chatId;
   }
 
@@ -75,7 +75,7 @@ liveTest("prompt command appends to same chat and normalizes @/absolute/path", a
 
   const promptText = `please inspect @${attachmentPath}`;
   let assistantMessage = "";
-  const payload = await promptChat(latestChatId, promptText, (err, event) => {
+  const payload = await promptChat(latestChatId, "models/gemini-flash-latest", promptText, (err: any, event: any) => {
     if (event && event.eventType === "token" && event.token) {
         assistantMessage += event.token;
     }

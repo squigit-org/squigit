@@ -185,9 +185,10 @@ pub async fn stream_gemini_chat_v2(
 
     let result = async {
         let client = reqwest::Client::new();
+        let model_id = model.strip_prefix("models/").unwrap_or(&model);
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse&key={}",
-            model, api_key
+            model_id, api_key
         );
 
         let request_control = GeminiRequestControl::new();

@@ -14,7 +14,7 @@
   "scripts": {
     "build:addon": "npx napi build --manifest-path ../../crates/ffi-napi-bridge/Cargo.toml --release --output-dir ./src/addon",
     "build:ts": "tsc -p tsconfig.json",
-    "build": "npm run build:addon && npm run build:ts && cp -r src/addon dist/src/addon",
+    "build": "npm run build:addon && npm run build:ts && mkdir -p dist/src/addon && cp -a src/addon/. dist/src/addon/",
     "test:api": "npm run build && node dist/src/index.js api",
     "test:auth": "npm run build && node dist/src/index.js auth",
     "test": "npm run build && node --test --test-concurrency=1 dist/test/live-*.test.js",

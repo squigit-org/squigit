@@ -4,4 +4,4 @@
 pub mod attachments;
 pub mod gemini;
 
-pub const DEFAULT_MODEL: &str = gemini::DEFAULT_MODEL;
+
