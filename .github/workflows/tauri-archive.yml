@@ -1,7 +1,7 @@
 # Copyright 2026 a7mddra
 # SPDX-License-Identifier: Apache-2.0
 #
-# Builds the frozen Tauri v0.1.0 dependency archive and uploads it to
+# Builds the frozen Tauri v0.1.1 dependency archive and uploads it to
 # the squigit-org/tauri-v0-archive repository as a GitHub Release.
 #
 # This workflow runs in the MAIN repo but uploads to the ARCHIVE repo.

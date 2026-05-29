@@ -284,7 +284,6 @@ fn parse_bool_env(name: &str) -> bool {
 pub fn tauri(commit_id: &str) -> Result<()> {
     println!("\nBuilding Tauri desktop app...");
 
-    // Ensure frozen v0.1.0 dependencies are available
     crate::commands::deps::ensure_tauri_deps()?;
 
     let ui = ui_dir();

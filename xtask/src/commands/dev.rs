@@ -16,7 +16,6 @@ pub fn run(cmd: &str, tray_mode: bool, electron: bool, tauri: bool, extra_args: 
     let app = if electron { electron_dir() } else { tauri_dir() };
     let node_bin = if electron { app.join("node_modules").join(".bin") } else { ui.join("node_modules").join(".bin") };
 
-    // For Tauri: ensure frozen v0.1.0 dependencies are available
     if tauri {
         crate::commands::deps::ensure_tauri_deps()?;
     }

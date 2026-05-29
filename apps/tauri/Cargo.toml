@@ -2,7 +2,7 @@
 
 [package]
 name = "Squigit"
-version = "0.1.0"
+version = "0.1.1"
 description = "AI and contextual analysis module for screenshot data."
 authors = ["a7mddra"]
 license = "Apache-2.0"
