@@ -90,8 +90,23 @@ pub fn run(cmd: &str, tray_mode: bool, electron: bool, tauri: bool, extra_args: 
         args.extend(extra_args.iter().map(|s| s.as_str()));
     }
 
-    println!("\nRunning: tauri {}", args.join(" "));
-    run_cmd_with_node_bin("tauri", &args, &app, &node_bin)?;
+    if tauri {
+        println!("\nRunning Tauri using prebuilt archive renderer (bypassing Vite)");
+        let mut cargo_args: Vec<&str> = vec!["run"];
+        if tray_mode {
+            cargo_args.extend_from_slice(&["--", "--background"]);
+        }
+        if !extra_args.is_empty() {
+            if !tray_mode {
+                cargo_args.push("--");
+            }
+            cargo_args.extend(extra_args.iter().map(|s| s.as_str()));
+        }
+        run_cmd("cargo", &cargo_args, &app)?;
+    } else {
+        println!("\nRunning: tauri {}", args.join(" "));
+        run_cmd_with_node_bin("tauri", &args, &app, &node_bin)?;
+    }
 
     Ok(())
 }
