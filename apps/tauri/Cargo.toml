@@ -39,17 +39,17 @@ tauri-plugin-updater = "2.9.0"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-os = "2.0.0"
 webbrowser = "1.0.6"
-ops-chat-storage = { path = "../../crates/ops-chat-storage" }
-ops-profile-store = { path = "../../crates/ops-profile-store" }
-ops-squigit-brain = { path = "../../crates/ops-squigit-brain" }
-ops-squigit-ocr = { path = "../../crates/ops-squigit-ocr" }
+ops-chat-storage = { path = "../../target/tauri-archive/crates/ops-chat-storage" }
+ops-profile-store = { path = "../../target/tauri-archive/crates/ops-profile-store" }
+ops-squigit-brain = { path = "../../target/tauri-archive/crates/ops-squigit-brain" }
+ops-squigit-ocr = { path = "../../target/tauri-archive/crates/ops-squigit-ocr" }
 tauri-plugin-dialog = "2.6.0"
 clipboard-rs = "0.3.2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
-ops-host-runtime = { path = "../../crates/ops-host-runtime" }
+ops-host-runtime = { path = "../../target/tauri-archive/crates/ops-host-runtime" }
 
-ops-squigit-stt = { path = "../../crates/ops-squigit-stt" }
+ops-squigit-stt = { path = "../../target/tauri-archive/crates/ops-squigit-stt" }
 tokio = { version = "1.37", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
 log = "0.4"
@@ -57,7 +57,7 @@ lazy_static = "1.4.0"
 flate2 = "1.1.9"
 tar = "0.4.44"
 thiserror = "2.0.18"
-sys-global-shortcut = { path = "../../crates/sys-global-shortcut" }
+sys-global-shortcut = { path = "../../target/tauri-archive/crates/sys-global-shortcut" }
 regex = "1.12.3"
 rodio = { version = "0.20.1", features = ["mp3"] }
 which = "6.0"

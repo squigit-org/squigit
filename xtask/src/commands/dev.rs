@@ -16,11 +16,15 @@ pub fn run(cmd: &str, tray_mode: bool, electron: bool, tauri: bool, extra_args: 
     let app = if electron { electron_dir() } else { tauri_dir() };
     let node_bin = if electron { app.join("node_modules").join(".bin") } else { ui.join("node_modules").join(".bin") };
 
+    // For Tauri: ensure frozen v0.1.0 dependencies are available
+    if tauri {
+        crate::commands::deps::ensure_tauri_deps()?;
+    }
+
     let binaries_dir = app.join("binaries");
     if !binaries_dir.exists() || fs::read_dir(&binaries_dir)?.next().is_none() {
         anyhow::bail!(
-            "no sidecar binaries found in {}.\n    Run `cargo xtask build` (or build the
-appropriate sidecars) before running `cargo xtask dev`",
+            "No sidecar binaries found in {}.\nRun `cargo xtask build capture` before running `cargo xtask dev`.",
             binaries_dir.display()
         );
     }

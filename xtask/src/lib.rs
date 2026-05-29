@@ -53,6 +53,10 @@ pub fn electron_dir() -> PathBuf {
     project_root().join("apps").join("electron")
 }
 
+pub fn tauri_archive_dir() -> PathBuf {
+    project_root().join("target").join("tauri-archive")
+}
+
 fn resolve_command_path(cmd: &str) -> PathBuf {
     let cmd_path = Path::new(cmd);
     if cmd_path.components().count() > 1 || cmd_path.extension().is_some() {

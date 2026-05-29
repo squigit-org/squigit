@@ -1,0 +1,154 @@
+# Copyright 2026 a7mddra
+# SPDX-License-Identifier: Apache-2.0
+#
+# Builds the frozen Tauri v0.1.0 dependency archive and uploads it to
+# the squigit-org/tauri-v0-archive repository as a GitHub Release.
+#
+# This workflow runs in the MAIN repo but uploads to the ARCHIVE repo.
+# It requires a PAT (ARCHIVE_PAT) with `repo` scope on the archive repo.
+
+name: "Tauri Archive"
+
+on:
+  push:
+    tags:
+      - "v0.1.0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ARCHIVE_TAG: "v0.1.0"
+  ARCHIVE_REPO: "squigit-org/tauri-v0-archive"
+
+jobs:
+  build-archive:
+    name: Build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: v0.1.0
+
+      # ── Renderer Dist ──────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Renderer
+        shell: bash
+        run: |
+          cd apps/renderer
+          npm ci
+          npm run build
+
+      # ── Qt Capture ─────────────────────────────────────────────────
+      - name: Build Qt Capture
+        uses: ./.github/actions/build-qt-capture
+        with:
+          target: ${{ matrix.target }}
+
+      # ── Crate Sources Snapshot ─────────────────────────────────────
+      - name: Snapshot Crate Sources
+        shell: bash
+        run: |
+          mkdir -p staging/crates
+          for crate in crates/*/; do
+            crate_name=$(basename "$crate")
+            cp -r "$crate" "staging/crates/$crate_name"
+          done
+
+      # ── Assemble Archive ───────────────────────────────────────────
+      - name: Assemble Archive
+        shell: bash
+        run: |
+          TRIPLE="${{ matrix.target }}"
+          ASSET="tauri-deps-${TRIPLE}.tar.gz"
+
+          # Renderer dist
+          cp -r apps/renderer/dist staging/renderer-dist
+
+          # Qt capture sidecar (from tauri binaries dir)
+          SIDECAR="qt-capture-${TRIPLE}"
+          if [ -d "apps/tauri/binaries/${SIDECAR}" ]; then
+            cp -r "apps/tauri/binaries/${SIDECAR}" "staging/${SIDECAR}"
+          elif [ -d "apps/desktop/binaries/${SIDECAR}" ]; then
+            cp -r "apps/desktop/binaries/${SIDECAR}" "staging/${SIDECAR}"
+          else
+            echo "Warning: qt-capture sidecar not found for ${TRIPLE}"
+          fi
+
+          # Create tarball
+          cd staging
+          tar -czf "../${ASSET}" .
+          cd ..
+
+          echo "ASSET_NAME=${ASSET}" >> "$GITHUB_ENV"
+          echo "ASSET_PATH=${ASSET}" >> "$GITHUB_ENV"
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-deps-${{ matrix.target }}
+          path: ${{ env.ASSET_PATH }}
+
+  # ── Publish to Archive Repo ──────────────────────────────────────
+  publish:
+    name: Publish Release
+    needs: build-archive
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release on Archive Repo
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.ARCHIVE_PAT }}
+        run: |
+          REPO="${{ env.ARCHIVE_REPO }}"
+          TAG="${{ env.ARCHIVE_TAG }}"
+
+          # Collect all tarballs
+          ASSETS=()
+          for f in artifacts/tauri-deps-*/*.tar.gz; do
+            ASSETS+=("$f")
+          done
+
+          echo "Publishing ${#ASSETS[@]} assets to ${REPO} @ ${TAG}"
+          for a in "${ASSETS[@]}"; do
+            echo "  - $(basename "$a")"
+          done
+
+          # Delete existing release if it exists (idempotent re-runs)
+          gh release delete "$TAG" --repo "$REPO" --yes 2>/dev/null || true
+
+          # Create the release
+          gh release create "$TAG" \
+            --repo "$REPO" \
+            --title "Tauri v0.1.0 Dependencies" \
+            --notes "Frozen prebuilt dependencies for the Tauri v0.1.0 PoC shell.
+
+          Contains:
+          - \`renderer-dist/\` — Vite build output
+          - \`qt-capture-{triple}/\` — Capture Engine sidecar
+          - \`crates/\` — Rust crate sources snapshot" \
+            "${ASSETS[@]}"
+
+          echo "Release published: https://github.com/${REPO}/releases/tag/${TAG}"

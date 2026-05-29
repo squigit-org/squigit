@@ -283,6 +283,10 @@ fn parse_bool_env(name: &str) -> bool {
 
 pub fn tauri(commit_id: &str) -> Result<()> {
     println!("\nBuilding Tauri desktop app...");
+
+    // Ensure frozen v0.1.0 dependencies are available
+    crate::commands::deps::ensure_tauri_deps()?;
+
     let ui = ui_dir();
     let app = tauri_dir();
     let tauri_debug = parse_bool_env("SQUIGIT_TAURI_DEBUG") || parse_bool_env("CI");
@@ -372,7 +376,7 @@ mod tests {
                 BuildTarget::Ocr,
                 BuildTarget::Stt,
                 BuildTarget::Capture,
-                BuildTarget::Desktop,
+                BuildTarget::Tauri,
             ]
         );
     }
@@ -383,7 +387,7 @@ mod tests {
             resolve_targets(&selectors(&["all", "-ocr"]), false).expect("resolve all -ocr");
         assert_eq!(
             actual,
-            vec![BuildTarget::Stt, BuildTarget::Capture, BuildTarget::Desktop,]
+            vec![BuildTarget::Stt, BuildTarget::Capture, BuildTarget::Tauri,]
         );
     }
 }

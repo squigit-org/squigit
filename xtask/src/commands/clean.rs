@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use std::fs;
-use xtask::{ocr_sidecar_dir, project_root, qt_native_dir, stt_sidecar_dir, tauri_dir, electron_dir};
+use xtask::{ocr_sidecar_dir, project_root, qt_native_dir, stt_sidecar_dir, tauri_dir, electron_dir, tauri_archive_dir};
 
 pub fn all() -> Result<()> {
     ocr()?;
@@ -92,6 +92,12 @@ pub fn app() -> Result<()> {
     if tauri_target.exists() {
         println!("  Removing {}", tauri_target.display());
         fs::remove_dir_all(&tauri_target)?;
+    }
+
+    let tauri_archive = tauri_archive_dir();
+    if tauri_archive.exists() {
+        println!("  Removing {}", tauri_archive.display());
+        fs::remove_dir_all(&tauri_archive)?;
     }
 
     Ok(())

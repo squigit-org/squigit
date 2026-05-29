@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "apps/tauri",
+    # "apps/tauri",  # Frozen at v0.1.0 — built via xtask only
 
     "crates/*",
     "sidecars/qt-capture",
