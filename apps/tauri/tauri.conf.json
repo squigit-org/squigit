@@ -4,10 +4,7 @@
   "identifier": "squigit",
   "$schema": "renderer/node_modules/@tauri-apps/cli/config.schema.json",
   "build": {
-    "beforeDevCommand": "npm run dev --prefix renderer",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build --prefix renderer",
-    "frontendDist": "../renderer/dist"
+    "frontendDist": "../../target/tauri-archive/renderer-dist"
   },
   "app": {
     "windows": [],
