@@ -3828,7 +3828,7 @@ dependencies = [
 
 [[package]]
 name = "ops-chat-storage"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "blake3",
  "chrono",
@@ -3842,7 +3842,7 @@ dependencies = [
 
 [[package]]
 name = "ops-host-runtime"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arboard",
  "base64 0.22.1",
@@ -3864,7 +3864,7 @@ dependencies = [
 
 [[package]]
 name = "ops-profile-store"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
@@ -3888,7 +3888,7 @@ dependencies = [
 
 [[package]]
 name = "ops-squigit-brain"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "futures-util",
@@ -3912,7 +3912,7 @@ dependencies = [
 
 [[package]]
 name = "ops-squigit-ocr"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dirs 6.0.0",
  "flate2",
@@ -3932,7 +3932,7 @@ dependencies = [
 
 [[package]]
 name = "ops-squigit-stt"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "log",
@@ -5536,7 +5536,7 @@ dependencies = [
 
 [[package]]
 name = "sys-global-shortcut"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures-lite",
  "log",

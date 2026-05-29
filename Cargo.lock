@@ -544,7 +544,7 @@ checksum = "b35204fbdc0b3f4446b89fc1ac2cf84a8a68971995d0bf2e925ec7cd960f9cb3"
 
 [[package]]
 name = "capture-engine"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "dirs 5.0.1",
@@ -1125,7 +1125,7 @@ dependencies = [
 
 [[package]]
 name = "ffi-napi-bridge"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "napi",
@@ -2447,7 +2447,7 @@ dependencies = [
 
 [[package]]
 name = "ops-chat-storage"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "chrono",
@@ -2461,7 +2461,7 @@ dependencies = [
 
 [[package]]
 name = "ops-host-runtime"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arboard",
  "base64 0.22.1",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "ops-profile-store"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
@@ -2509,7 +2509,7 @@ dependencies = [
 
 [[package]]
 name = "ops-squigit-brain"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "futures-util",
@@ -2533,7 +2533,7 @@ dependencies = [
 
 [[package]]
 name = "ops-squigit-ocr"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dirs 6.0.0",
  "flate2",
@@ -2554,7 +2554,7 @@ dependencies = [
 
 [[package]]
 name = "ops-squigit-stt"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "log",
@@ -3548,7 +3548,7 @@ dependencies = [
 
 [[package]]
 name = "sys-display-hotplug"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "windows-sys 0.61.2",
@@ -3556,7 +3556,7 @@ dependencies = [
 
 [[package]]
 name = "sys-global-shortcut"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures-lite",
  "log",
@@ -3578,7 +3578,7 @@ dependencies = [
 
 [[package]]
 name = "sys-single-instance"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "dirs 5.0.1",
@@ -4732,7 +4732,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
