@@ -55,18 +55,21 @@ pub fn run(options: VersionOptions) -> Result<()> {
         }
     }
 
-    let tauri_json = root.join("apps").join("desktop").join("tauri.conf.json");
-    if update_json_version_line(&tauri_json, &target_version)? {
-        changed_files.push(tauri_json);
+    let electron_json = root.join("apps").join("electron").join("package.json");
+    if electron_json.exists() {
+        if update_json_version_line(&electron_json, &target_version)? {
+            changed_files.push(electron_json);
+        }
     }
 
     let renderer_json = root
         .join("apps")
-        .join("desktop")
         .join("renderer")
         .join("package.json");
-    if update_json_version_line(&renderer_json, &target_version)? {
-        changed_files.push(renderer_json);
+    if renderer_json.exists() {
+        if update_json_version_line(&renderer_json, &target_version)? {
+            changed_files.push(renderer_json);
+        }
     }
 
     let qt_cmake = root

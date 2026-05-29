@@ -92,8 +92,10 @@ pub fn capture() -> Result<()> {
     }
 
     let dst_binary_path = sidecar_dst.join(&src_binary_name);
+    let electron_binary_path = electron_sidecar_dst.join(&src_binary_name);
     println!("  Copying binary to Tauri and Electron binaries");
     fs::copy(&src_binary_path, &dst_binary_path)?;
+    fs::copy(&src_binary_path, &electron_binary_path)?;
     copy_capture_runtime_dir(&sidecar_dst, &electron_sidecar_dst)?;
 
     let debug_binaries = project_root().join("target").join("debug").join("binaries");

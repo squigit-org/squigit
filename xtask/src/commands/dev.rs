@@ -7,7 +7,11 @@ use std::net::TcpStream;
 use std::process::Command as StdCommand;
 use xtask::{run_cmd, run_cmd_with_node_bin, tauri_dir, ui_dir, electron_dir};
 
-pub fn run(cmd: &str, tray_mode: bool, electron: bool, extra_args: &[String]) -> Result<()> {
+pub fn run(cmd: &str, tray_mode: bool, electron: bool, tauri: bool, extra_args: &[String]) -> Result<()> {
+    if electron == tauri {
+        anyhow::bail!("You must explicitly specify either --tauri or --electron");
+    }
+
     let ui = ui_dir();
     let app = if electron { electron_dir() } else { tauri_dir() };
     let node_bin = if electron { app.join("node_modules").join(".bin") } else { ui.join("node_modules").join(".bin") };

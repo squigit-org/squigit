@@ -14,7 +14,8 @@ pub enum BuildTarget {
     Stt,
     Capture,
     CaptureQt,
-    Desktop,
+    Tauri,
+    Electron,
 }
 
 impl BuildTarget {
@@ -25,7 +26,8 @@ impl BuildTarget {
             Self::Stt => "stt",
             Self::Capture => "capture",
             Self::CaptureQt => "capture-qt",
-            Self::Desktop => "desktop",
+            Self::Tauri => "tauri",
+            Self::Electron => "electron",
         }
     }
 
@@ -36,7 +38,8 @@ impl BuildTarget {
             Self::Stt => "Whisper STT",
             Self::Capture => "Capture Engine",
             Self::CaptureQt => "Capture Qt",
-            Self::Desktop => "Desktop (Tauri)",
+            Self::Tauri => "Desktop (Tauri)",
+            Self::Electron => "Desktop (Electron)",
         }
     }
 }
@@ -65,6 +68,13 @@ pub fn run(options: BuildCommandOptions) -> Result<()> {
         anyhow::bail!("No build targets selected.");
     }
 
+    let commit_id = inline_flags.commit_id.or_else(|| std::env::var("VITE_GIT_COMMIT").ok());
+    let has_shell = targets.contains(&BuildTarget::Tauri) || targets.contains(&BuildTarget::Electron);
+
+    if has_shell && commit_id.is_none() {
+        anyhow::bail!("Missing required argument: COMMIT_SHA\nBuilding a shell target requires a commit hash to populate the Help Settings section.\nUsage: cargo xtask build <tauri|electron> [COMMIT_SHA]");
+    }
+
     let measure_ocr_size = options.measure_ocr_size || inline_flags.measure_ocr_size;
 
     println!("\nBuild plan:");
@@ -90,7 +100,8 @@ pub fn run(options: BuildCommandOptions) -> Result<()> {
             BuildTarget::Stt => crate::compile::whisper_stt::build(),
             BuildTarget::Capture => crate::compile::qt_capture::build_all(),
             BuildTarget::CaptureQt => crate::compile::qt_capture::qt_only(),
-            BuildTarget::Desktop => desktop(),
+            BuildTarget::Tauri => tauri(commit_id.as_deref().unwrap_or("")),
+            BuildTarget::Electron => electron(commit_id.as_deref().unwrap_or("")),
         };
 
         let elapsed = started.elapsed();
@@ -120,9 +131,10 @@ pub fn run(options: BuildCommandOptions) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 struct InlineBuildFlags {
     measure_ocr_size: bool,
+    commit_id: Option<String>,
 }
 
 fn extract_inline_flags(selectors: &mut Vec<String>) -> InlineBuildFlags {
@@ -134,6 +146,13 @@ fn extract_inline_flags(selectors: &mut Vec<String>) -> InlineBuildFlags {
             flags.measure_ocr_size = true;
             return false;
         }
+
+        let is_hex = token.chars().all(|c| c.is_ascii_hexdigit());
+        if is_hex && (token.len() == 7 || token.len() == 8 || token.len() == 40) {
+            flags.commit_id = Some(token.clone());
+            return false;
+        }
+
         true
     });
 
@@ -229,9 +248,10 @@ fn parse_target(token: &str) -> Result<BuildTarget> {
         "stt" => Ok(BuildTarget::Stt),
         "capture" => Ok(BuildTarget::Capture),
         "capture-qt" | "captureqt" | "qt" => Ok(BuildTarget::CaptureQt),
-        "desktop" | "tauri" | "app" => Ok(BuildTarget::Desktop),
+        "tauri" => Ok(BuildTarget::Tauri),
+        "electron" => Ok(BuildTarget::Electron),
         _ => anyhow::bail!(
-            "Unknown build target '{token}'. Supported targets: ocr, stt, capture, capture-qt, desktop, tauri, app, cli"
+            "Unknown build target '{token}'. Supported targets: ocr, stt, capture, capture-qt, tauri, electron, cli"
         ),
     }
 }
@@ -241,7 +261,7 @@ fn default_targets() -> Vec<BuildTarget> {
         BuildTarget::Ocr,
         BuildTarget::Stt,
         BuildTarget::Capture,
-        BuildTarget::Desktop,
+        BuildTarget::Tauri,
     ]
 }
 
@@ -261,7 +281,7 @@ fn parse_bool_env(name: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn desktop() -> Result<()> {
+pub fn tauri(commit_id: &str) -> Result<()> {
     println!("\nBuilding Tauri desktop app...");
     let ui = ui_dir();
     let app = tauri_dir();
@@ -293,6 +313,8 @@ pub fn desktop() -> Result<()> {
         }
     };
 
+    set_env("VITE_GIT_COMMIT", commit_id);
+
     if cfg!(target_os = "linux") {
         set_env("APPIMAGE_EXTRACT_AND_RUN", "1");
         set_env("NO_STRIP", "true");
@@ -318,6 +340,13 @@ pub fn desktop() -> Result<()> {
 
     println!("\nDesktop app build complete!");
     Ok(())
+}
+
+pub fn electron(commit_id: &str) -> Result<()> {
+    println!("\nBuilding Electron desktop app...");
+    // TODO: implement electron build command properly in the future
+    let _ = commit_id;
+    anyhow::bail!("Electron build pipeline is not yet implemented.");
 }
 
 fn cli_placeholder() -> Result<()> {

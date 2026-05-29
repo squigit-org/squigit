@@ -71,6 +71,9 @@ enum Commands {
         /// Run with Electron instead of Tauri
         #[arg(long)]
         electron: bool,
+        /// Run with Tauri
+        #[arg(long)]
+        tauri: bool,
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -164,8 +167,8 @@ fn main() -> Result<()> {
             measure_ocr_size,
         })?,
         Commands::Clean => clean::all()?,
-        Commands::Run { cmd, args } => dev::run(&cmd, false, false, &args)?,
-        Commands::Dev { mode, electron, args } => dev::run("dev", mode.as_deref() == Some("tray"), electron, &args)?,
+        Commands::Run { cmd, args } => dev::run(&cmd, false, false, true, &args)?,
+        Commands::Dev { mode, electron, tauri, args } => dev::run("dev", mode.as_deref() == Some("tray"), electron, tauri, &args)?,
         Commands::Report { strict } => report::run(report::ReportOptions { strict })?,
         Commands::Test { list, all, path } => {
             test::run(test::TestCommandOptions { list, all, path })?
