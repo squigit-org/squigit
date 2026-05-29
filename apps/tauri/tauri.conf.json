@@ -2,7 +2,7 @@
   "productName": "Squigit",
   "version": "0.1.0",
   "identifier": "squigit",
-  "$schema": "renderer/node_modules/@tauri-apps/cli/config.schema.json",
+  "$schema": "../renderer/node_modules/@tauri-apps/cli/config.schema.json",
   "build": {
     "frontendDist": "../../target/tauri-archive/renderer-dist"
   },

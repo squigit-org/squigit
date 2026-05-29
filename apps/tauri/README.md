@@ -16,17 +16,3 @@ cargo xtask build tauri <COMMIT_SHA>
 On first run, `xtask` will automatically download the frozen `v0.1.0` dependencies
 (renderer dist, Qt capture binary, Rust crate sources) from the
 [tauri-v0-archive](https://github.com/squigit-org/tauri-v0-archive) repository.
-
-## Architecture
-
-This shell's Rust dependencies point to `target/tauri-archive/crates/`,
-a local cache populated by `xtask`. The crate sources are a snapshot of the
-monorepo at `v0.1.0` and are completely decoupled from the active `crates/` directory.
-
-## Cleaning
-
-To wipe the cached dependencies and force a re-download:
-
-```bash
-cargo xtask clean
-```

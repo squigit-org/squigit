@@ -74,6 +74,7 @@ jobs:
 
       # ── Assemble Archive ───────────────────────────────────────────
       - name: Assemble Archive
+        id: assemble
         shell: bash
         run: |
           TRIPLE="${{ matrix.target }}"
@@ -97,14 +98,14 @@ jobs:
           tar -czf "../${ASSET}" .
           cd ..
 
-          echo "ASSET_NAME=${ASSET}" >> "$GITHUB_ENV"
-          echo "ASSET_PATH=${ASSET}" >> "$GITHUB_ENV"
+          echo "ASSET_NAME=${ASSET}" >> "$GITHUB_OUTPUT"
+          echo "ASSET_PATH=${ASSET}" >> "$GITHUB_OUTPUT"
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: tauri-deps-${{ matrix.target }}
-          path: ${{ env.ASSET_PATH }}
+          path: ${{ steps.assemble.outputs.ASSET_PATH }}
 
   # ── Publish to Archive Repo ──────────────────────────────────────
   publish:
