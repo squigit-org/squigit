@@ -1,5 +1,5 @@
 {
-  "name": "electron-app",
+  "name": "squigit",
   "version": "0.2.0",
   "main": "dist/main.js",
   "scripts": {
