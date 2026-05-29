@@ -23,6 +23,10 @@ export const commands = {
   
   // Sidecars
   runSidecarVersion: (command: string) => platform.invoke<string>("run_sidecar_version", { command }),
+  
+  // App Capture
+  getInitialImage: () => platform.invoke<{ hash: string; path: string } | null>("get_initial_image"),
+
   // Image Storage & Processing
   processImagePath: (path: string) =>
     platform.invoke<string>("process_image_path", { path }),
@@ -70,6 +74,22 @@ export const commands = {
   // Accounts
   listProfiles: () => platform.invoke<any[]>("list_profiles"),
   getActiveProfile: () => platform.invoke<any>("get_active_profile"),
-  setActiveProfile: (profileId: string | null) =>
-    platform.invoke("set_active_profile", { profileId }),
+  setActiveProfile: (profileId: string | null) => platform.invoke("set_active_profile", { profileId }),
+  cacheAvatar: (url: string, profileId?: string) => platform.invoke<string>("cache_avatar", { url, profileId }),
+  setApiKey: (provider: "google ai studio" | "imgbb", key: string, profileId: string) => platform.invoke("encrypt_and_save", { provider, plaintext: key, profileId }),
+  startGoogleAuth: () => platform.invoke("start_google_auth"),
+  cancelGoogleAuth: () => platform.invoke("cancel_google_auth"),
+  logout: () => platform.invoke("logout"),
+  getActiveProfileId: () => platform.invoke<string | null>("get_active_profile_id"),
+  hasProfiles: () => platform.invoke<boolean>("has_profiles"),
+  getProfileCount: () => platform.invoke<number>("get_profile_count"),
+  
+  // OCR Model Management
+  cancelDownloadOcrModel: (modelId: string) => platform.invoke("cancel_download_ocr_model", { modelId }),
+  
+  // AI Runtime Control
+  quickAnswerProviderRequest: (channelId: string) => platform.invoke("quick_answer_request", { channelId }),
+  
+  // UI audio
+  playUiSound: (effect: "dialog-warning" = "dialog-warning") => platform.invoke("play_ui_sound", { effect }),
 };

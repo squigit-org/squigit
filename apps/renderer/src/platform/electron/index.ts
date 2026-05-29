@@ -14,7 +14,7 @@ const api = (window as any).electronAPI || {
 
 export const platform: PlatformBridge = {
   invoke: (cmd, args) => api.invoke(cmd, args),
-  listen: (event, handler) => api.on(event, handler),
+  listen: async (event, handler) => api.on(event, handler),
   convertFileSrc: (path) => `squigit-asset://${encodeURIComponent(path)}`,
   fs: {
     exists: (path, options) => api.invoke("fs:exists", { path, ...options }),

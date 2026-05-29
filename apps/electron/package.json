@@ -1,0 +1,20 @@
+{
+  "name": "electron-app",
+  "version": "0.2.0",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "package": "electron-builder"
+  },
+  "dependencies": {
+    "ffi-napi-bridge": "file:../../crates/ffi-napi-bridge"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11"
+  }
+}
