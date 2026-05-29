@@ -6,7 +6,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use napi::{Error, Result};
 use napi_derive::napi;
-use ops_profile_store::auth::{start_google_auth_flow, AuthFlowSettings, CredentialsSource};
+use ops_profile_store::auth::{start_google_auth_flow, AuthFlowSettings};
 use ops_profile_store::security::{get_decrypted_key, encrypt_and_save_key, ApiKeyProvider};
 use ops_profile_store::ProfileStore;
 

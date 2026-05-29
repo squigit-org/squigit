@@ -113,23 +113,26 @@ fn center_in_monitor_work_area(
     (x.floor(), y.floor(), win_w, win_h)
 }
 
-fn compute_aspect_locked_size(area_w: f64, area_h: f64, base_w: f64, base_h: f64) -> (f64, f64) {
-    if area_w <= 1.0 || area_h <= 1.0 || base_w <= 1.0 || base_h <= 1.0 {
-        return (base_w.max(1.0).floor(), base_h.max(1.0).floor());
+fn compute_aspect_locked_size(area_w: f64, area_h: f64, _base_w: f64, _base_h: f64) -> (f64, f64) {
+    if area_w <= 1.0 || area_h <= 1.0 {
+        return (1024.0, 576.0);
     }
 
-    // Keep original relative sizing intent against a 1366x768 reference monitor.
-    let requested_w = (base_w / 1366.0) * area_w;
-    let requested_h = (base_h / 768.0) * area_h;
+    let aspect_ratio = 32.0 / 21.0;
+    let max_w = area_w * 0.85;
+    let max_h = area_h * 0.85;
 
-    // Use the dominant requested axis, then clamp so the locked aspect ratio fits the work area.
-    let requested_scale = (requested_w / base_w).max(requested_h / base_h);
-    let max_fit_scale = (area_w / base_w).min(area_h / base_h);
-    let scale = requested_scale.min(max_fit_scale).max(0.0);
+    // Start by fitting width
+    let mut win_w = max_w;
+    let mut win_h = win_w / aspect_ratio;
 
-    let win_w = (base_w * scale).floor().clamp(1.0, area_w.floor());
-    let win_h = (base_h * scale).floor().clamp(1.0, area_h.floor());
-    (win_w, win_h)
+    // If height exceeds 85% constraint, fit by height instead
+    if win_h > max_h {
+        win_h = max_h;
+        win_w = win_h * aspect_ratio;
+    }
+
+    (win_w.floor(), win_h.floor())
 }
 
 pub fn spawn_app_window(

@@ -42,6 +42,7 @@
   width: 100%;
   gap: 1rem;
   flex: 1;
+  justify-content: center;
 }
 
 .actionRow {
@@ -128,10 +129,6 @@
 }
 
 .aboutSection {
-  position: absolute;
-  bottom: 6px;
-  left: 0;
-  right: 0;
   margin-top: auto;
   padding-top: 0.5rem;
   padding-bottom: 0.25rem;

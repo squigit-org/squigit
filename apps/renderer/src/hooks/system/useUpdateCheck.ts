@@ -9,9 +9,9 @@ import { commands } from "@/platform";
 import { github } from "@squigit/core/services/github";
 import packageJson from "@/../package.json";
 
-const TAURI_CHANGELOG_URL = github.rawChangelog;
+const DESKTOP_CHANGELOG_URL = github.rawChangelog;
 
-export type UpdateComponent = "tauri" | "ocr" | "stt";
+export type UpdateComponent = "desktop" | "ocr" | "stt";
 
 export interface ReleaseInfo {
   component: UpdateComponent;
@@ -70,8 +70,11 @@ async function fetchReleaseNotes(
     const latestVersion = latestMatch[1];
 
     if (compareVersions(latestVersion, currentVersion) <= 0) {
+      console.log(`[Updater] No update needed for ${component}. Remote: ${latestVersion} | Local: ${currentVersion}`);
       return null;
     }
+    
+    console.log(`[Updater] Update found for ${component}! Remote: ${latestVersion} | Local: ${currentVersion}`);
 
     const startIdx = latestMatch.index! + latestMatch[0].length;
     const endIdx = matches.length > 1 ? matches[1].index! : text.length;
@@ -149,13 +152,13 @@ export function useUpdateCheck() {
     const checkAll = async () => {
       const queue: ReleaseInfo[] = [];
 
-      // 1. Tauri
-      const tauriUpdate = await fetchReleaseNotes(
-        TAURI_CHANGELOG_URL,
+      // 1. Desktop
+      const desktopUpdate = await fetchReleaseNotes(
+        DESKTOP_CHANGELOG_URL,
         packageJson.version,
-        "tauri",
+        "desktop",
       );
-      if (tauriUpdate?.hasUpdate) queue.push(tauriUpdate);
+      if (desktopUpdate?.hasUpdate) queue.push(desktopUpdate);
 
       // 2. OCR
       const installedOcrVersion = await getSidecarVersion(
@@ -188,6 +191,7 @@ export function useUpdateCheck() {
       } else {
         localStorage.removeItem(STORAGE_KEY);
       }
+      window.dispatchEvent(new Event("squigit-updates-changed"));
     };
 
     checkAll();
@@ -208,6 +212,7 @@ export function getPendingUpdate(): ReleaseInfo | null {
 
 export function clearPendingUpdate() {
   localStorage.removeItem(STORAGE_KEY);
+  window.dispatchEvent(new Event("squigit-updates-changed"));
 }
 
 export function markUpdateDone(component: UpdateComponent) {
@@ -223,7 +228,9 @@ export function markUpdateDone(component: UpdateComponent) {
     } else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
     }
+    window.dispatchEvent(new Event("squigit-updates-changed"));
   } catch {
     localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new Event("squigit-updates-changed"));
   }
 }

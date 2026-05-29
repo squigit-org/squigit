@@ -5,7 +5,7 @@ use semver::{Version, VersionReq};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-pub const DEFAULT_OCR_VERSION_REQUIREMENT: &str = ">=1.2.0";
+
 
 #[derive(Debug, Error)]
 pub enum SidecarError {

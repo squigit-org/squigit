@@ -7,35 +7,69 @@
 import React, { useState, useEffect } from "react";
 import { platform, commands } from "@/platform";
 import { github } from "@squigit/core/services/github";
-import { prepareGitHubIssueReport, prepareMailReport } from "@squigit/core/helpers";
+import {
+  prepareGitHubIssueReport,
+  prepareMailReport,
+} from "@squigit/core/helpers";
 import { MarkGithubIcon, MailIcon, BugIcon } from "@primer/octicons-react";
 import { CodeBlock } from "@/components/ui";
 import { useAppContext } from "@/app/providers/AppProvider";
+import packageJson from "@/../package.json";
 import styles from "./HelpSettings.module.css";
 
 export const HelpSettings: React.FC = () => {
   const app = useAppContext();
   const [sysInfo, setSysInfo] = useState<Record<string, string>>({
-    [app.system.appName]: "v0.1.0",
-    Tauri: "Loading...",
-    React: React.version,
-    PaddlePaddle: "v2.6.0",
-    Commit: "7a8657542180fb8440c8dcc20d83285fe11360ed",
-    Webview: "Loading...",
+    [app.system.appName]: `Squigit/${packageJson.version} (Loading...)`,
+    Runtime: "Loading...",
+    ...(import.meta.env.VITE_PLATFORM === "electron"
+      ? {}
+      : { Webview: "Loading..." }),
+    Commit: import.meta.env.VITE_GIT_COMMIT || "Development Mode",
   });
 
   useEffect(() => {
     const loadSystemData = async () => {
       try {
         const appVer = await platform.app.getVersion();
-        const tauriVer = await platform.app.getRuntimeVersion();
+        const runtimeVer = await platform.app.getRuntimeVersion();
 
-        setSysInfo((prev) => ({
-          ...prev,
-          [app.system.appName]: `v${appVer}`,
-          Tauri: `v${tauriVer}`,
-          Webview: navigator.userAgent,
-        }));
+        let ocrVersion = "None";
+        try {
+          const output = await commands.runSidecarVersion(
+            "squigit-ocr --version",
+          );
+          const match = output.match(/(\d+\.\d+\.\d+)/);
+          if (match) ocrVersion = match[1];
+        } catch {}
+
+        let sttVersion = "None";
+        try {
+          const output = await commands.runSidecarVersion(
+            "squigit-stt --version",
+          );
+          const match = output.match(/(\d+\.\d+\.\d+)/);
+          if (match) sttVersion = match[1];
+        } catch {}
+
+        setSysInfo(() => {
+          const shellName = import.meta.env.VITE_PLATFORM === "electron" ? "Electron" : "Tauri";
+          const squigitAgent = `Squigit/${packageJson.version} OCR/${ocrVersion} STT/${sttVersion}`;
+          const runtimeAgent = `Shell/${appVer} (${shellName}/${runtimeVer}) React/${React.version}`;
+          
+          const info: Record<string, string> = {
+            [app.system.appName]: squigitAgent,
+            Runtime: runtimeAgent,
+          };
+
+          if (import.meta.env.VITE_PLATFORM !== "electron") {
+            info.Webview = navigator.userAgent;
+          }
+
+          info.Commit = import.meta.env.VITE_GIT_COMMIT || "Development Mode";
+
+          return info;
+        });
       } catch (e) {
         console.error("Failed to load system specs", e);
       }
@@ -92,6 +126,7 @@ export const HelpSettings: React.FC = () => {
           language="json"
           value={JSON.stringify(sysInfo, null, 2)}
           stickyHeader={false}
+          style={{ maxHeight: "100px", overflowY: "auto" }}
         />
       </div>
       <div className={styles.group}>
@@ -127,7 +162,9 @@ export const HelpSettings: React.FC = () => {
             subject to our{" "}
             <button
               className={styles.legalLink}
-              onClick={() => commands.openExternalUrl(github.docs("06-policies/PRIVACY.md"))}
+              onClick={() =>
+                commands.openExternalUrl(github.docs("06-policies/PRIVACY.md"))
+              }
             >
               Privacy Policy and Terms.
             </button>{" "}

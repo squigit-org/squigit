@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { clsx } from "clsx";
 import { ChevronRight, DownloadCloud } from "lucide-react";
 import { updateIcon } from "@/assets";
-import { CodeBlock } from "@/components/ui";
+import { CodeBlock, Dialog } from "@/components/ui";
+import { getDialogs, type DialogContent } from "@squigit/core/helpers";
 import { getPendingUpdate, markUpdateDone } from "@/hooks/system";
 import { usePlatform } from "@/hooks/shared";
 import styles from "./UpdateNotesRoute.module.css";
@@ -67,8 +68,17 @@ export const UpdateNotesRoute: React.FC<UpdateNotesRouteProps> = ({
   appName,
   onSystemAction,
 }) => {
-  const update = useMemo(() => getPendingUpdate(), []);
+  const [update, setUpdate] = useState(() => getPendingUpdate());
+
+  useEffect(() => {
+    const handleUpdate = () => setUpdate(getPendingUpdate());
+    window.addEventListener("squigit-updates-changed", handleUpdate);
+    return () =>
+      window.removeEventListener("squigit-updates-changed", handleUpdate);
+  }, []);
   const platform = usePlatform();
+  const [deprecatedDialog, setDeprecatedDialog] =
+    useState<DialogContent | null>(null);
 
   const SECTION_ORDER = ["New Features", "Bug Fixes", "UI Improvements"];
 
@@ -79,10 +89,10 @@ export const UpdateNotesRoute: React.FC<UpdateNotesRouteProps> = ({
   const sections = update.sections || {};
   const hasSections = Object.keys(sections).length > 0;
 
-  const isTauri = update.component === "tauri";
+  const isDesktop = update.component === "desktop";
   const isOcr = update.component === "ocr";
 
-  const titleText = isTauri
+  const titleText = isDesktop
     ? appName
     : `Squigit ${update.component.toUpperCase()}`;
 
@@ -92,114 +102,134 @@ export const UpdateNotesRoute: React.FC<UpdateNotesRouteProps> = ({
   };
 
   const handleUpdate = () => {
-    if (isTauri) {
+    if (isDesktop) {
+      if (import.meta.env.VITE_PLATFORM !== "electron") {
+        setDeprecatedDialog(getDialogs(appName).DESKTOP_DEPRECATED);
+        return;
+      }
       void onSystemAction("update_now");
     } else {
       markUpdateDone(update.component);
-      void onSystemAction("dismiss_overlay");
+      if (!getPendingUpdate()) {
+        void onSystemAction("dismiss_overlay");
+      }
     }
   };
 
   return (
-    <div className={styles.screen}>
-      <div className={`${styles.container} ${styles.appOverride}`}>
-        <div className={styles.header}>
-          <div className={styles.title}>
-            <img
-              src={updateIcon}
-              alt=""
-              aria-hidden="true"
-              className={styles.titleIcon}
-            />
-            <span>{titleText}</span>
-          </div>
-          <div className={styles.subtitle}>v{update.version} is Here!</div>
-        </div>
-
-        <div className={styles.scrollableContent}>
-          {!isTauri && (
-            <div className={styles.section} style={{ marginBottom: "1.5rem" }}>
-              <p
-                style={{
-                  fontSize: "0.875rem",
-                  color: "var(--text-secondary)",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                The new version is available via {platform.pkgMgrName}. Copy the
-                command below and execute it in your terminal.
-              </p>
-              <div style={{ borderRadius: "8px", overflow: "hidden" }}>
-                <CodeBlock language="bash" value={getUpgradeCommand()} />
-              </div>
+    <>
+      <div className={styles.screen}>
+        <div className={`${styles.container} ${styles.appOverride}`}>
+          <div className={styles.header}>
+            <div className={styles.title}>
+              <img
+                src={updateIcon}
+                alt=""
+                aria-hidden="true"
+                className={styles.titleIcon}
+              />
+              <span>{titleText}</span>
             </div>
-          )}
+            <div className={styles.subtitle}>v{update.version} is Here!</div>
+          </div>
 
-          {hasSections ? (
-            <>
-              {SECTION_ORDER.map((sectionTitle) => (
-                <UpdateSection
-                  key={sectionTitle}
-                  title={sectionTitle}
-                  items={sections[sectionTitle]}
-                  defaultOpen={sectionTitle === "New Features"}
-                />
-              ))}
+          <div className={styles.scrollableContent}>
+            {!isDesktop && (
+              <div
+                className={styles.section}
+                style={{ marginBottom: "1.5rem" }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--text-secondary)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  The new version is available via {platform.pkgMgrName}. Copy
+                  the command below and execute it in your terminal.
+                </p>
+                <div style={{ borderRadius: "8px", overflow: "hidden" }}>
+                  <CodeBlock language="bash" value={getUpgradeCommand()} />
+                </div>
+              </div>
+            )}
 
-              {Object.keys(sections)
-                .filter((sectionTitle) => !SECTION_ORDER.includes(sectionTitle))
-                .map((sectionTitle) => (
+            {hasSections ? (
+              <>
+                {SECTION_ORDER.map((sectionTitle) => (
                   <UpdateSection
                     key={sectionTitle}
                     title={sectionTitle}
                     items={sections[sectionTitle]}
+                    defaultOpen={sectionTitle === "New Features"}
                   />
                 ))}
-            </>
-          ) : (
-            <div className={styles.section}>
-              <div className={styles.sectionHeader}>
-                <span className={styles.sectionTitle}>Release Notes</span>
-              </div>
-              <div className={styles.sectionContent}>
-                <pre
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    fontFamily: "inherit",
-                    margin: 0,
-                  }}
-                >
-                  {update.notes}
-                </pre>
-              </div>
-            </div>
-          )}
-        </div>
 
-        <div className={styles.footer}>
-          <div className={styles.footerLeft}>
-            <div className={styles.versionBadge}>
-              <DownloadCloud size={22} className={styles.downloadIcon} />
-              <div className={styles.versionInfo}>
-                <span className={styles.sizeLabel}>
-                  {update.size
-                    ? `${update.size} will be downloaded`
-                    : "Unknown Size"}
-                </span>
+                {Object.keys(sections)
+                  .filter(
+                    (sectionTitle) => !SECTION_ORDER.includes(sectionTitle),
+                  )
+                  .map((sectionTitle) => (
+                    <UpdateSection
+                      key={sectionTitle}
+                      title={sectionTitle}
+                      items={sections[sectionTitle]}
+                    />
+                  ))}
+              </>
+            ) : (
+              <div className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <span className={styles.sectionTitle}>Release Notes</span>
+                </div>
+                <div className={styles.sectionContent}>
+                  <pre
+                    style={{
+                      whiteSpace: "pre-wrap",
+                      fontFamily: "inherit",
+                      margin: 0,
+                    }}
+                  >
+                    {update.notes}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.footer}>
+            <div className={styles.footerLeft}>
+              <div className={styles.versionBadge}>
+                <DownloadCloud size={22} className={styles.downloadIcon} />
+                <div className={styles.versionInfo}>
+                  <span className={styles.sizeLabel}>
+                    {update.size
+                      ? `${update.size} will be downloaded`
+                      : "Unknown Size"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-          <div className={styles.footerRight}>
-            <button
-              type="button"
-              className={styles.updateButton}
-              onClick={handleUpdate}
-            >
-              {isTauri ? "Update Now" : "I've Upgraded"}
-            </button>
+            <div className={styles.footerRight}>
+              <button
+                type="button"
+                className={styles.updateButton}
+                onClick={handleUpdate}
+              >
+                {isDesktop ? "Update Now" : "I've Upgraded"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      {deprecatedDialog && (
+        <Dialog
+          isOpen={true}
+          type={deprecatedDialog}
+          onAction={() => setDeprecatedDialog(null)}
+        />
+      )}
+    </>
   );
 };

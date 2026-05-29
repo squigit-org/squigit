@@ -4,7 +4,7 @@
 use ops_squigit_ocr::models::{DownloadProgressPayload, ModelError, ModelManager};
 use ops_squigit_ocr::ocr::{OcrExecutionResult, OcrRequest, OcrRuntime, OcrRuntimeError};
 use ops_squigit_ocr::sidecar::{
-    DEFAULT_OCR_VERSION_REQUIREMENT, SidecarError, check_ocr_version_requirement,
+    SidecarError, check_ocr_version_requirement,
     read_sidecar_version, resolve_sidecar_path,
 };
 use std::path::{Path, PathBuf};
@@ -77,7 +77,7 @@ impl DesktopOcrService {
     }
 
     pub fn ensure_sidecar_version_compatible(&self, sidecar_path: &Path) -> Result<(), String> {
-        check_ocr_version_requirement(sidecar_path, DEFAULT_OCR_VERSION_REQUIREMENT)
+        check_ocr_version_requirement(sidecar_path, "=0.1.0")
             .map(|_| ())
             .map_err(map_sidecar_error)
     }

@@ -106,7 +106,13 @@ export const useApp = () => {
     systemRef.current = system;
   }, [system]);
 
-  const [pendingUpdate] = useState(() => getPendingUpdate());
+  const [pendingUpdate, setPendingUpdate] = useState(() => getPendingUpdate());
+  
+  useEffect(() => {
+    const handleUpdate = () => setPendingUpdate(getPendingUpdate());
+    window.addEventListener("squigit-updates-changed", handleUpdate);
+    return () => window.removeEventListener("squigit-updates-changed", handleUpdate);
+  }, []);
   const chatHistory = useChatHistory(system.activeProfile?.id || null);
 
   useEffect(() => {
@@ -374,6 +380,9 @@ export const useApp = () => {
         case "update_later":
           setShowUpdate(false);
           sessionStorage.setItem("update_dismissed", "true");
+          await navigation.performNewSession();
+          break;
+        case "dismiss_overlay":
           await navigation.performNewSession();
           break;
       }

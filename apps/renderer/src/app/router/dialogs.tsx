@@ -85,7 +85,7 @@ export const AppDialogs: React.FC = () => {
 
       {app.showUpdate &&
         app.pendingUpdate &&
-        app.pendingUpdate.component !== "tauri" && (
+        app.pendingUpdate.component !== "desktop" && (
           <Dialog
             isOpen={true}
             type={getUpdateAvailableDialog(

@@ -51,6 +51,13 @@ export const getDialogs = (appName: string): Record<string, DialogContent> => ({
     variant: "info",
     actions: [{ label: "Close", variant: "primary", actionKey: "close" }],
   },
+  DESKTOP_DEPRECATED: {
+    title: "Version Deprecated",
+    message:
+      "You are using a deprecated version of Squigit. The Tauri shell has been sunset in favor of Electron.",
+    variant: "warning",
+    actions: [{ label: "Close", variant: "primary", actionKey: "close" }],
+  },
   REMOVE_ACCOUNT: {
     title: "Confirm Account Removal",
     message:
@@ -130,22 +137,21 @@ export const getErrorDialog = (error: any): DialogContent => {
   };
 };
 
-export const getMissingPackageDialog = (pkgName: string, installCmd: string): DialogContent => ({
+export const getMissingPackageDialog = (
+  pkgName: string,
+  installCmd: string,
+): DialogContent => ({
   title: "Missing System Dependency",
   message: `A runtime dependency is missing for ${pkgName}. You can quickly install it using your terminal:\n\n${installCmd}`,
   variant: "warning",
-  actions: [
-    { label: "Dismiss", variant: "secondary", actionKey: "cancel" },
-  ],
+  actions: [{ label: "Dismiss", variant: "secondary", actionKey: "cancel" }],
 });
 
 export const getOutdatedPackageDialog = (pkgName: string): DialogContent => ({
   title: "Version Mismatch",
-  message: `Your installed version of ${pkgName} is incompatible with this application version. Please upgrade or downgrade it to match the required package lock specifications.`,
-  variant: "warning",
-  actions: [
-    { label: "Close", variant: "primary", actionKey: "cancel" },
-  ],
+  message: `Your installed version of ${pkgName} is incompatible with this application version.`,
+  variant: "error",
+  actions: [{ label: "Close", variant: "primary", actionKey: "cancel" }],
 });
 
 export const getUpdateAvailableDialog = (pkgName: string): DialogContent => ({
@@ -154,6 +160,10 @@ export const getUpdateAvailableDialog = (pkgName: string): DialogContent => ({
   variant: "info",
   actions: [
     { label: "Cancel", variant: "secondary", actionKey: "cancel" },
-    { label: "Show Changelog", variant: "primary", actionKey: "show_changelog" },
+    {
+      label: "Show Changelog",
+      variant: "primary",
+      actionKey: "show_changelog",
+    },
   ],
 });
