@@ -11,14 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Hardcoded workspace crate versions to prevent leakage from higher workspace versions when built as an archive
 
-## [1.0.1] - 2026-02-13
 
-### New Features
-
-- **System Chats**: Interactive chat bubbles for onboarding and updates.
-- **Update Notification**: Pinned chat for new updates.
-
-### Version Info
 
 - **Size**: 14.5MB
 
