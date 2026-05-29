@@ -1,3 +1,5 @@
+[workspace]
+
 [package]
 name = "Squigit"
 version = "0.1.0"
