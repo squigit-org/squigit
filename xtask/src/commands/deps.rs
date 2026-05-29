@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Frozen Tauri v0.1.0 dependency resolution.
+//! Frozen Tauri v0.1.1 dependency resolution.
 //!
 //! Downloads prebuilt artifacts (renderer dist, qt-capture binary, crate sources)
 //! from the `squigit-org/tauri-v0-archive` GitHub Releases repository on first run,
@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use xtask::{get_host_target_triple, tauri_archive_dir, tauri_dir};
 
 const ARCHIVE_REPO: &str = "squigit-org/tauri-v0-archive";
-const ARCHIVE_TAG: &str = "v0.1.0";
+const ARCHIVE_TAG: &str = "v0.1.1";
 
 /// Resolved paths to the frozen Tauri dependencies.
 pub struct TauriDeps {
@@ -35,7 +35,7 @@ impl TauriDeps {
     }
 }
 
-/// Ensures the frozen Tauri v0.1.0 dependencies are available locally.
+/// Ensures the frozen Tauri v0.1.1 dependencies are available locally.
 ///
 /// If `target/tauri-archive/` does not exist or is incomplete, downloads
 /// the platform-specific tarball from the archive repository and extracts it.
@@ -54,13 +54,13 @@ pub fn ensure_tauri_deps() -> Result<TauriDeps> {
             "https://github.com/{ARCHIVE_REPO}/releases/download/{ARCHIVE_TAG}/{asset}"
         );
 
-        println!("\nDownloading frozen Tauri v0.1.0 dependencies...");
+        println!("\nDownloading frozen Tauri v0.1.1 dependencies...");
         println!("  {url}");
 
         download_and_extract(&url, &archive)
-            .context("Failed to download Tauri v0.1.0 archive.\nEnsure you have internet access and the archive repo exists.")?;
+            .context("Failed to download Tauri v0.1.1 archive.\nEnsure you have internet access and the archive repo exists.")?;
 
-        fs::write(&sentinel, "v0.1.0")?;
+        fs::write(&sentinel, "v0.1.1")?;
         println!("  Dependencies cached in {}", archive.display());
     }
 

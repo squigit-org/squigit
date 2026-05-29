@@ -77,7 +77,7 @@ impl DesktopOcrService {
     }
 
     pub fn ensure_sidecar_version_compatible(&self, sidecar_path: &Path) -> Result<(), String> {
-        check_ocr_version_requirement(sidecar_path, "=0.1.0")
+        check_ocr_version_requirement(sidecar_path, "~0.1.0")
             .map(|_| ())
             .map_err(map_sidecar_error)
     }

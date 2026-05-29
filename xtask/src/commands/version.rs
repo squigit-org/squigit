@@ -179,10 +179,14 @@ fn bump_semver(current: &str, bump: BumpPart) -> Result<String> {
 
 fn find_cargo_manifests(root: &Path) -> Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
+    let tauri_dir = root.join("apps").join("tauri");
 
     for entry in WalkDir::new(root)
         .into_iter()
-        .filter_entry(|entry| !is_ignored_path(entry.path()))
+        .filter_entry(move |entry| {
+            let path = entry.path();
+            !is_ignored_path(path) && !path.starts_with(&tauri_dir)
+        })
     {
         let entry = entry?;
         if entry.file_type().is_file() && entry.file_name() == "Cargo.toml" {
