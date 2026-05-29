@@ -1,4 +1,4 @@
-# Squigit — Tauri Shell (Frozen at v0.1.0)
+# Squigit — Tauri Shell (Frozen at v0.1.1)
 
 > ⚠️ **This is a frozen Proof of Concept.**
 > Active development has moved to the Electron shell.
@@ -13,7 +13,7 @@ cargo xtask dev --tauri
 cargo xtask build tauri <COMMIT_SHA>
 ```
 
-On first run, `xtask` will automatically download the frozen `v0.1.0` dependencies
+On first run, `xtask` will automatically download the frozen `v0.1.1` dependencies
 (renderer dist, Qt capture binary, Rust crate sources) from the
 [tauri-v0-archive](https://github.com/squigit-org/tauri-v0-archive) repository.
 
@@ -21,7 +21,7 @@ On first run, `xtask` will automatically download the frozen `v0.1.0` dependenci
 
 This shell's Rust dependencies point to `target/tauri-archive/crates/`,
 a local cache populated by `xtask`. The crate sources are a snapshot of the
-monorepo at `v0.1.0` and are completely decoupled from the active `crates/` directory.
+monorepo at `v0.1.1` and are completely decoupled from the active `crates/` directory.
 
 ## Cleaning
 
