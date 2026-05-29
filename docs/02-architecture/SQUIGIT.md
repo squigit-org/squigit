@@ -30,7 +30,7 @@ graph TB
         OPS_OCR["ops-squigit-ocr"]
         OPS_CHAT["ops-chat-storage"]
         OPS_PROF["ops-profile-store"]
-        SVC_SPEECH["svc-speech-engine"]
+        OPS_STT["ops-squigit-stt"]
         SYS["sys-global-shortcut<br/>sys-display-hotplug<br/>sys-single-instance"]
     end
 
@@ -59,7 +59,7 @@ graph TB
 | [ops-squigit-ocr](file:///home/a7md/squigit.org/squigit/crates/ops-squigit-ocr)         | OCR model management, on-CPU text recognition pipeline                                  |
 | [ops-chat-storage](file:///home/a7md/squigit.org/squigit/crates/ops-chat-storage)       | Chat persistence — BLAKE3 image hashing, chat CRUD, OCR frame storage                   |
 | [ops-profile-store](file:///home/a7md/squigit.org/squigit/crates/ops-profile-store)     | Profile/auth management — Google OAuth, encrypted key storage, multi-profile            |
-| [svc-speech-engine](file:///home/a7md/squigit.org/squigit/crates/svc-speech-engine)     | Whisper integration — local speech-to-text via sidecar process                          |
+| [ops-squigit-stt](file:///home/a7md/squigit.org/squigit/crates/ops-squigit-stt)         | Whisper integration — local speech-to-text via sidecar process                          |
 | [sys-global-shortcut](file:///home/a7md/squigit.org/squigit/crates/sys-global-shortcut) | Cross-platform global hotkey listener                                                   |
 | [sys-display-hotplug](file:///home/a7md/squigit.org/squigit/crates/sys-display-hotplug) | Monitor connect/disconnect detection (Windows via `windows-sys`)                        |
 | [sys-single-instance](file:///home/a7md/squigit.org/squigit/crates/sys-single-instance) | Single-instance lock via `fs2` file locking                                             |
@@ -311,7 +311,7 @@ User runs: brain analyze ./screenshot.png "what is this?"
 | Chat persistence, image CAS          | `ops-chat-storage` (Rust) + `StoragePort` (TS)          |
 | User auth, profiles, encrypted keys  | `ops-profile-store` (Rust)                              |
 | OCR pipeline                         | `ops-squigit-ocr` (Rust)                                |
-| Speech-to-text                       | `svc-speech-engine` (Rust)                              |
+| Speech-to-text                       | `ops-squigit-stt` (Rust)                                |
 | Port contracts                       | `@squigit/core/ports/` — 4 interfaces                   |
 | Port binding (GUI)                   | `initCorePorts.ts` — wires ports → `invoke()`           |
 | Port binding (CLI)                   | `harness.ts` — shells out to Rust examples              |

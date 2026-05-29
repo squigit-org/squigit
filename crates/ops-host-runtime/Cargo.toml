@@ -17,7 +17,7 @@ ops-chat-storage = { path = "../ops-chat-storage" }
 ops-profile-store = { path = "../ops-profile-store" }
 ops-squigit-brain = { path = "../ops-squigit-brain" }
 ops-squigit-ocr = { path = "../ops-squigit-ocr" }
-svc-speech-engine = { path = "../svc-speech-engine" }
+ops-squigit-stt = { path = "../ops-squigit-stt" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "5", features = ["blocking"] }

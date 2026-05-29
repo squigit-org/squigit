@@ -49,7 +49,7 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 ops-host-runtime = { path = "../../crates/ops-host-runtime" }
 
-svc-speech-engine = { path = "../../crates/svc-speech-engine" }
+ops-squigit-stt = { path = "../../crates/ops-squigit-stt" }
 tokio = { version = "1.37", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
 log = "0.4"

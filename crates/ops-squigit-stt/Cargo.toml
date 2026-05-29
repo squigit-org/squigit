@@ -1,5 +1,5 @@
 [package]
-name = "svc-speech-engine"
+name = "ops-squigit-stt"
 version = "0.1.0"
 edition = "2021"
 

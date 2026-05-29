@@ -4,7 +4,7 @@
 //! Sidecar management — STT path resolution, version checking, engine lifecycle.
 
 use std::path::PathBuf;
-pub use svc_speech_engine::{SpeechEngine, SttEvent};
+pub use ops_squigit_stt::{SpeechEngine, SttEvent};
 use tokio::sync::mpsc::Receiver;
 
 // =============================================================================

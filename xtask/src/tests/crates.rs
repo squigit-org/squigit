@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn strips_known_prefixes_for_alias() {
         assert_eq!(alias_from_dir_name("ops-profile-store"), "profile-store");
-        assert_eq!(alias_from_dir_name("svc-speech-engine"), "speech-engine");
+        assert_eq!(alias_from_dir_name("ops-squigit-stt"), "squigit-stt");
         assert_eq!(alias_from_dir_name("sys-single-instance"), "single-instance");
     }
 

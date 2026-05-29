@@ -29,6 +29,7 @@ dependencies = [
  "ops-profile-store",
  "ops-squigit-brain",
  "ops-squigit-ocr",
+ "ops-squigit-stt",
  "parking_lot",
  "rand 0.8.5",
  "regex",
@@ -37,7 +38,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "svc-speech-engine",
  "sys-global-shortcut",
  "tar",
  "tauri",
@@ -4049,10 +4049,10 @@ dependencies = [
  "ops-profile-store",
  "ops-squigit-brain",
  "ops-squigit-ocr",
+ "ops-squigit-stt",
  "rodio",
  "serde",
  "serde_json",
- "svc-speech-engine",
  "tokio",
  "winreg 0.52.0",
  "zbus",
@@ -4127,6 +4127,18 @@ dependencies = [
  "tokio",
  "tokio-util",
  "which 6.0.3",
+]
+
+[[package]]
+name = "ops-squigit-stt"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]
@@ -5812,18 +5824,6 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
-
-[[package]]
-name = "svc-speech-engine"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
-]
 
 [[package]]
 name = "swift-rs"
