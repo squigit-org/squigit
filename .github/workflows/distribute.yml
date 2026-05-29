@@ -34,7 +34,7 @@ jobs:
         id: cache-capture
         uses: actions/cache@v5
         with:
-          path: apps/desktop/binaries/qt-capture-${{ matrix.target }}
+          path: apps/tauri/binaries/qt-capture-${{ matrix.target }}
           key: capture-engine-${{ matrix.target }}-${{ hashFiles('.github/actions/build-qt-capture/**', 'sidecars/qt-capture/**', 'sidecars/capture/**', 'crates/**', 'xtask/**', 'Cargo.lock') }}
 
       - name: Build Capture Sidecar
@@ -45,7 +45,7 @@ jobs:
 
       - name: Package for artifact upload (Unix)
         if: runner.os != 'Windows'
-        run: tar -cvzf capture-sidecar.tar.gz -C apps/desktop/binaries qt-capture-${{ matrix.target }}
+        run: tar -cvzf capture-sidecar.tar.gz -C apps/tauri/binaries qt-capture-${{ matrix.target }}
 
       - name: Upload Capture Sidecar
         uses: actions/upload-artifact@v7
@@ -53,7 +53,7 @@ jobs:
           name: qt-capture-${{ matrix.target }}
           path: |
             capture-sidecar.tar.gz
-            apps/desktop/binaries/qt-capture-${{ matrix.target }}/
+            apps/tauri/binaries/qt-capture-${{ matrix.target }}/
 
   build-tauri:
     name: Build Desktop ${{ matrix.name }}
@@ -84,7 +84,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: apps/desktop/renderer/package-lock.json
+          cache-dependency-path: apps/renderer/package-lock.json
 
       - name: Install Linux Dependencies
         if: runner.os == 'Linux'
@@ -110,12 +110,12 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: qt-capture-${{ matrix.target }}
-          path: apps/desktop/binaries/qt-capture-${{ matrix.target }}/
+          path: apps/tauri/binaries/qt-capture-${{ matrix.target }}/
 
       - name: Unpack sidecar symlinks (Unix)
         if: runner.os != 'Windows'
         run: |
-          cd apps/desktop/binaries
+          cd apps/tauri/binaries
           tar -xvzf qt-capture-${{ matrix.target }}/capture-sidecar.tar.gz
           rm qt-capture-${{ matrix.target }}/capture-sidecar.tar.gz
 
