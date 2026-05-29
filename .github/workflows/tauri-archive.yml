@@ -12,14 +12,14 @@ name: "Tauri Archive"
 on:
   push:
     tags:
-      - "v0.1.0"
+      - "v0.1.1"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
-  ARCHIVE_TAG: "v0.1.0"
+  ARCHIVE_TAG: "v0.1.1"
   ARCHIVE_REPO: "squigit-org/tauri-v0-archive"
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: v0.1.0
+          ref: v0.1.1
 
       # ── Renderer Dist ──────────────────────────────────────────────
       - name: Setup Node.js
@@ -142,8 +142,8 @@ jobs:
           # Create the release
           gh release create "$TAG" \
             --repo "$REPO" \
-            --title "Tauri v0.1.0 Dependencies" \
-            --notes "Frozen prebuilt dependencies for the Tauri v0.1.0 PoC shell.
+            --title "Tauri v0.1.1 Dependencies" \
+            --notes "Frozen prebuilt dependencies for the Tauri v0.1.1 PoC shell.
 
           Contains:
           - \`renderer-dist/\` — Vite build output
