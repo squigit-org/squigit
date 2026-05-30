@@ -35,7 +35,7 @@ impl InstanceLock {
 
         Ok(Self { file, path })
     }
-
+    #[allow(dead_code)]
     pub fn force_release(app_name: &str) -> Result<()> {
         let dir = Self::lock_dir()?;
         let path = dir.join(format!("{}.lock", app_name));

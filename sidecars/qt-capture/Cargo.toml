@@ -9,8 +9,10 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
-sys-display-hotplug = { path = "../../crates/sys-display-hotplug" }
-sys-single-instance = { path = "../../crates/sys-single-instance" }
-ops-chat-storage = { path = "../../crates/ops-chat-storage" }
-ops-profile-store = { path = "../../crates/ops-profile-store" }
+fs2 = "0.4"
+squigit-memory = { path = "../../crates/squigit-memory" }
+squigit-auth = { path = "../../crates/squigit-auth" }
 dirs = "5.0"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi"] }

@@ -6,6 +6,8 @@
 mod paths;
 mod qt_app;
 mod audio_guard;
+mod display_hotplug;
+mod single_instance;
 
 use anyhow::Result;
 use audio_guard::AudioGuard;

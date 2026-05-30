@@ -1,9 +1,0 @@
-[package]
-name = "sys-single-instance"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-anyhow = "1.0"
-fs2 = "0.4"
-dirs = "5.0"

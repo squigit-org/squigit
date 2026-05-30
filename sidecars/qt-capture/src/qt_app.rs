@@ -6,11 +6,11 @@ use anyhow::{Context, Result};
 use std::env;
 use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, ExitCode, Stdio};
-use sys_display_hotplug::DisplayWatcher;
-use sys_single_instance::InstanceLock;
+use crate::display_hotplug::DisplayWatcher;
+use crate::single_instance::InstanceLock;
 
-use ops_chat_storage::{ChatData, ChatMetadata, ChatStorage};
-use ops_profile_store::ProfileStore;
+use squigit_memory::{ChatData, ChatMetadata, ChatStorage};
+use squigit_auth::ProfileStore;
 
 use crate::paths::QtPaths;
 
