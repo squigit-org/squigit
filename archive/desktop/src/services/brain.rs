@@ -1,8 +1,8 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_brain::events::BrainEventSink;
-use squigit_brain::service::{
+use ops_squigit_brain::events::BrainEventSink;
+use ops_squigit_brain::service::{
     BrainService, CompressConversationRequest, GenerateChatTitleRequest,
     GenerateImageBriefRequest, StreamChatRequest,
 };
@@ -69,7 +69,7 @@ struct TauriEventSink {
 }
 
 impl BrainEventSink for TauriEventSink {
-    fn emit(&self, channel_id: &str, event: squigit_brain::provider::gemini::transport::types::GeminiEvent) {
+    fn emit(&self, channel_id: &str, event: ops_squigit_brain::provider::gemini::transport::types::GeminiEvent) {
         let _ = self.app.emit(channel_id, event);
     }
 }

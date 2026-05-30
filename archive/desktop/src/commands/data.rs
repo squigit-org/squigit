@@ -4,13 +4,13 @@
 //! Chat storage, OCR storage, imgbb storage, rolling summaries.
 //! All pure data CRUD — zero Tauri API calls beyond #[tauri::command].
 
-use squigit_memory::{
+use ops_chat_storage::{
     ChatData, ChatMessage, ChatMetadata, ChatStorage, OcrFrame, OcrRegion, StoredImage,
 };
-use squigit_brain::tools::chat_search::{search_local_chats, ChatSearchResult};
+use ops_squigit_brain::tools::chat_search::{search_local_chats, ChatSearchResult};
 
 fn get_active_storage() -> Result<ChatStorage, String> {
-    squigit_brain::context::media::get_active_storage()
+    ops_squigit_brain::context::media::get_active_storage()
 }
 
 // =============================================================================
@@ -19,15 +19,15 @@ fn get_active_storage() -> Result<ChatStorage, String> {
 
 #[tauri::command]
 pub fn store_image_bytes(bytes: Vec<u8>) -> Result<StoredImage, String> {
-    let explicit_tone = desktop_runtime::media::detect_image_tone_from_bytes(&bytes);
-    squigit_brain::context::media::process_bytes_internal(bytes, explicit_tone)
+    let explicit_tone = ops_host_runtime::media::detect_image_tone_from_bytes(&bytes);
+    ops_squigit_brain::context::media::process_bytes_internal(bytes, explicit_tone)
 }
 
 #[tauri::command]
 pub fn store_image_from_path(path: String) -> Result<StoredImage, String> {
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
-    let explicit_tone = desktop_runtime::media::detect_image_tone_from_bytes(&bytes);
-    squigit_brain::context::media::process_bytes_internal(bytes, explicit_tone)
+    let explicit_tone = ops_host_runtime::media::detect_image_tone_from_bytes(&bytes);
+    ops_squigit_brain::context::media::process_bytes_internal(bytes, explicit_tone)
 }
 
 #[tauri::command]
@@ -40,7 +40,7 @@ pub fn store_file_from_path(path: String) -> Result<StoredImage, String> {
 
 #[tauri::command]
 pub fn validate_text_file(path: String) -> Result<bool, String> {
-    squigit_brain::provider::attachments::validate_text_file(&path)
+    ops_squigit_brain::provider::attachments::validate_text_file(&path)
 }
 
 #[tauri::command]
@@ -51,16 +51,16 @@ pub fn get_image_path(hash: String) -> Result<String, String> {
 
 #[tauri::command]
 pub fn resolve_attachment_path(path: String) -> Result<String, String> {
-    squigit_brain::provider::attachments::resolve_attachment_path(&path)
+    ops_squigit_brain::provider::attachments::resolve_attachment_path(&path)
 }
 
 #[tauri::command]
 pub fn detect_image_tone(path: String) -> Result<String, String> {
     let resolved =
-        squigit_brain::provider::attachments::resolve_attachment_path_buf(&path)?;
+        ops_squigit_brain::provider::attachments::resolve_attachment_path_buf(&path)?;
     let bytes = std::fs::read(resolved).map_err(|e| e.to_string())?;
 
-    match desktop_runtime::media::detect_image_tone_from_bytes(&bytes).as_deref() {
+    match ops_host_runtime::media::detect_image_tone_from_bytes(&bytes).as_deref() {
         Some("l") => Ok("light".to_string()),
         Some("d") => Ok("dark".to_string()),
         Some(other) => Ok(other.to_string()),
@@ -70,12 +70,12 @@ pub fn detect_image_tone(path: String) -> Result<String, String> {
 
 #[tauri::command]
 pub fn read_attachment_text(path: String) -> Result<String, String> {
-    squigit_brain::provider::attachments::read_attachment_text(&path)
+    ops_squigit_brain::provider::attachments::read_attachment_text(&path)
 }
 
 #[tauri::command]
 pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
-    desktop_runtime::platform::reveal_in_file_manager(path)
+    ops_host_runtime::platform::reveal_in_file_manager(path)
 }
 
 // =============================================================================

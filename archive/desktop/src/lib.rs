@@ -66,7 +66,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())
         .manage(services::brain::DesktopBrainService::new())
-        .manage(desktop_runtime::audio::UiSoundPlayer::new())
+        .manage(ops_host_runtime::audio::UiSoundPlayer::new())
         .manage(SpeechState::default())
         .manage(services::ocr::DesktopOcrService::new().expect("Failed to init OCR service"))
         .invoke_handler(tauri::generate_handler![
@@ -187,7 +187,7 @@ pub fn run() {
             if let Some(path) = has_cli_image {
                 println!("CLI Image argument detected: {}", path);
                 let state = handle.state::<AppState>();
-                if let Ok(stored) = desktop_runtime::media::process_and_store_image(path.clone()) {
+                if let Ok(stored) = ops_host_runtime::media::process_and_store_image(path.clone()) {
                     let mut lock = state.image_data.lock();
                     *lock = Some(stored);
                 }
@@ -301,7 +301,7 @@ Categories=Utility;"#,
                     );
                     if let Ok(exe) = std::env::current_exe() {
                         let bin = exe.to_string_lossy();
-                        match global_shortcut::install_linux_shortcut(
+                        match sys_global_shortcut::install_linux_shortcut(
                             &bin,
                             "SUPER+SHIFT+a",
                             crate::constants::APP_NAME,
@@ -366,8 +366,8 @@ Categories=Utility;"#,
             .expect("Failed to spawn main window");
 
             let shortcut_handle = handle.clone();
-            let _shortcut = global_shortcut::ShortcutHandle::register(
-                global_shortcut::ShortcutConfig {
+            let _shortcut = sys_global_shortcut::ShortcutHandle::register(
+                sys_global_shortcut::ShortcutConfig {
                     linux_trigger: "SUPER+SHIFT+a".into(),
                     linux_description: format!("{} Capture", crate::constants::APP_NAME),
                     windows_modifiers: 0x0008 | 0x0004, // MOD_WIN | MOD_SHIFT

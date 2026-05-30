@@ -5,9 +5,9 @@
 
 use crate::services::ocr::DesktopOcrService;
 use crate::state::AppState;
-use squigit_memory::StoredImage;
-use squigit_brain::provider::attachments::resolve_attachment_path_buf;
-use squigit_ocr::ocr::{OcrBox, OcrRequest};
+use ops_chat_storage::StoredImage;
+use ops_squigit_brain::provider::attachments::resolve_attachment_path_buf;
+use ops_squigit_ocr::ocr::{OcrBox, OcrRequest};
 use tauri::{Emitter, Manager, State};
 
 // =============================================================================
@@ -22,7 +22,7 @@ pub fn get_initial_image(state: State<AppState>) -> Option<StoredImage> {
 
 #[tauri::command]
 pub fn process_image_path(path: String, state: State<AppState>) -> Result<StoredImage, String> {
-    let stored = desktop_runtime::media::process_and_store_image(path)?;
+    let stored = ops_host_runtime::media::process_and_store_image(path)?;
     let mut lock = state.image_data.lock();
     *lock = Some(stored.clone());
     Ok(stored)
@@ -30,7 +30,7 @@ pub fn process_image_path(path: String, state: State<AppState>) -> Result<Stored
 
 #[tauri::command]
 pub fn read_image_file(path: String, state: State<AppState>) -> Result<StoredImage, String> {
-    let stored = desktop_runtime::media::process_and_store_image(path)?;
+    let stored = ops_host_runtime::media::process_and_store_image(path)?;
     let mut lock = state.image_data.lock();
     *lock = Some(stored.clone());
     Ok(stored)
@@ -38,7 +38,7 @@ pub fn read_image_file(path: String, state: State<AppState>) -> Result<StoredIma
 
 #[tauri::command]
 pub async fn upload_image_to_imgbb(image_path: String, api_key: String) -> Result<String, String> {
-    desktop_runtime::media::upload_image_to_imgbb(&image_path, &api_key).await
+    ops_host_runtime::media::upload_image_to_imgbb(&image_path, &api_key).await
 }
 
 #[tauri::command]
@@ -53,22 +53,22 @@ pub fn copy_image_to_path(source_path: String, target_path: String) -> Result<()
 
 #[tauri::command]
 pub async fn read_clipboard_image() -> Result<StoredImage, String> {
-    desktop_runtime::media::read_and_store_clipboard_image()
+    ops_host_runtime::media::read_and_store_clipboard_image()
 }
 
 #[tauri::command]
 pub async fn read_clipboard_text() -> Result<String, String> {
-    desktop_runtime::media::read_clipboard_text()
+    ops_host_runtime::media::read_clipboard_text()
 }
 
 #[tauri::command]
 pub async fn copy_image_to_clipboard(image_base64: String) -> Result<(), String> {
-    desktop_runtime::media::copy_image_to_clipboard(image_base64)
+    ops_host_runtime::media::copy_image_to_clipboard(image_base64)
 }
 
 #[tauri::command]
 pub async fn copy_image_from_path_to_clipboard(path: String) -> Result<(), String> {
-    desktop_runtime::media::copy_image_from_path_to_clipboard(path)
+    ops_host_runtime::media::copy_image_from_path_to_clipboard(path)
 }
 
 // =============================================================================
@@ -182,8 +182,8 @@ pub fn get_model_path(
 #[tauri::command]
 pub fn play_ui_sound(
     effect: Option<String>,
-    sound_player: State<'_, desktop_runtime::audio::UiSoundPlayer>,
+    sound_player: State<'_, ops_host_runtime::audio::UiSoundPlayer>,
 ) -> Result<(), String> {
-    let parsed_effect = desktop_runtime::audio::UiSoundEffect::from_input(effect.as_deref())?;
+    let parsed_effect = ops_host_runtime::audio::UiSoundEffect::from_input(effect.as_deref())?;
     sound_player.play(parsed_effect)
 }

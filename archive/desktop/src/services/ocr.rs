@@ -1,9 +1,9 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_ocr::models::{DownloadProgressPayload, ModelError, ModelManager};
-use squigit_ocr::ocr::{OcrExecutionResult, OcrRequest, OcrRuntime, OcrRuntimeError};
-use squigit_ocr::sidecar::{
+use ops_squigit_ocr::models::{DownloadProgressPayload, ModelError, ModelManager};
+use ops_squigit_ocr::ocr::{OcrExecutionResult, OcrRequest, OcrRuntime, OcrRuntimeError};
+use ops_squigit_ocr::sidecar::{
     SidecarError, check_ocr_version_requirement,
     read_sidecar_version, resolve_sidecar_path,
 };

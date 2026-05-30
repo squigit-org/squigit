@@ -17,7 +17,7 @@ use crate::services::ocr::DesktopOcrService;
 #[tauri::command]
 pub async fn open_external_url(url: String) -> Result<(), String> {
     println!("Opening URL: {}", url);
-    tauri::async_runtime::spawn_blocking(move || squigit_brain::system::open_external_url(&url))
+    tauri::async_runtime::spawn_blocking(move || ops_squigit_brain::system::open_external_url(&url))
         .await
         .map_err(|e| e.to_string())?
 }
@@ -128,14 +128,14 @@ pub async fn run_sidecar_version(
     ocr: tauri::State<'_, DesktopOcrService>,
     command: String,
 ) -> Result<String, String> {
-    if command == "squigit-ocr --version" {
+    if command == "ops-squigit-ocr --version" {
         let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
         let (sidecar_path, _) = ocr.resolve_sidecar_path(&resource_dir);
         return ocr.read_sidecar_version(&sidecar_path);
     }
 
-    if command == "squigit-stt --version" {
-        let (sidecar_path, _) = desktop_runtime::sidecar::resolve_stt_sidecar_path()?;
+    if command == "ops-squigit-stt --version" {
+        let (sidecar_path, _) = ops_host_runtime::sidecar::resolve_stt_sidecar_path()?;
         let output = std::process::Command::new(sidecar_path)
             .arg("--version")
             .output()
@@ -151,7 +151,7 @@ pub async fn run_sidecar_version(
 
 #[tauri::command]
 pub async fn get_linux_package_manager() -> Result<String, String> {
-    Ok(desktop_runtime::platform::get_linux_package_manager())
+    Ok(ops_host_runtime::platform::get_linux_package_manager())
 }
 
 // =============================================================================
@@ -160,7 +160,7 @@ pub async fn get_linux_package_manager() -> Result<String, String> {
 
 #[tauri::command]
 pub fn get_system_theme() -> String {
-    desktop_runtime::platform::get_system_theme()
+    ops_host_runtime::platform::get_system_theme()
 }
 
 // =============================================================================
