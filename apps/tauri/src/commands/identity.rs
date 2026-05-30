@@ -5,8 +5,8 @@
 
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-use ops_profile_store::auth::{self, AuthFlowSettings};
-use ops_profile_store::{Profile, ProfileError, ProfileStore};
+use squigit_auth::auth::{self, AuthFlowSettings};
+use squigit_auth::{Profile, ProfileError, ProfileStore};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
@@ -121,8 +121,8 @@ pub async fn get_api_key(
     tauri::async_runtime::spawn_blocking(move || {
         let store = ProfileStore::new().map_err(|err| err.to_string())?;
         let provider = std::str::FromStr::from_str(&provider)
-            .map_err(|e: ops_profile_store::ProfileError| e.to_string())?;
-        let key = ops_profile_store::security::get_decrypted_key(&store, provider, &profile_id)
+            .map_err(|e: squigit_auth::ProfileError| e.to_string())?;
+        let key = squigit_auth::security::get_decrypted_key(&store, provider, &profile_id)
             .map_err(|err| err.to_string())?;
         Ok::<String, String>(key.unwrap_or_default())
     })
@@ -249,7 +249,7 @@ pub async fn get_profile_count() -> Result<usize, String> {
 
 #[tauri::command]
 pub fn check_file_exists(path: String) -> bool {
-    ops_host_runtime::security::check_file_exists(&path)
+    desktop_runtime::security::check_file_exists(&path)
 }
 
 #[tauri::command]
@@ -260,7 +260,7 @@ pub async fn encrypt_and_save(
     plaintext: String,
 ) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        ops_host_runtime::security::encrypt_and_save(&profile_id, &provider, &plaintext)
+        desktop_runtime::security::encrypt_and_save(&profile_id, &provider, &plaintext)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -268,10 +268,10 @@ pub async fn encrypt_and_save(
 
 #[tauri::command]
 pub fn set_agreed_flag(_app: AppHandle) -> Result<(), String> {
-    ops_host_runtime::security::set_agreed_flag()
+    desktop_runtime::security::set_agreed_flag()
 }
 
 #[tauri::command]
 pub fn has_agreed_flag(_app: AppHandle) -> bool {
-    ops_host_runtime::security::has_agreed_flag()
+    desktop_runtime::security::has_agreed_flag()
 }

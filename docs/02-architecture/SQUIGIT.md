@@ -33,13 +33,13 @@ To guarantee that the CLI, Electron, and Tauri shells all behave identically (an
 
 ### `crates/ops-*` (Business Logic & Core Operations)
 Instead of rewriting backend logic in Node.js for Electron/CLI and Rust for Tauri, Squigit shifts all fundamental application logic into a suite of Rust crates:
-- **`ops-squigit-brain`**: The Gemini integration and interaction logic.
-- **`ops-chat-storage`**: Database management and file storage operations.
-- **`ops-profile-store`**: Authentication and profile configurations.
-- **`ops-squigit-ocr` & `ops-squigit-stt`**: Media processing capabilities.
+- **`squigit-brain`**: The Gemini integration and interaction logic.
+- **`squigit-memory`**: Database management and file storage operations.
+- **`squigit-auth`**: Authentication and profile configurations.
+- **`squigit-ocr` & `squigit-stt`**: Media processing capabilities.
 
-### `crates/ops-host-runtime` (The Shared GUI Runtime)
-While the CLI focuses on headless data processing, Tauri and Electron share "GUI-adjacent" needs—like preparing an image before sending it to the frontend or computing local storage directories. `ops-host-runtime` encapsulates this hybrid logic in Rust so it only has to be written once, serving both GUI shells.
+### `crates/desktop-runtime` (The Shared GUI Runtime)
+While the CLI focuses on headless data processing, Tauri and Electron share "GUI-adjacent" needs—like preparing an image before sending it to the frontend or computing local storage directories. `desktop-runtime` encapsulates this hybrid logic in Rust so it only has to be written once, serving both GUI shells.
 
 ---
 
@@ -51,7 +51,7 @@ Because the Universal Backend is written in Rust, the different shells need ways
 Since Tauri is fundamentally a Rust framework, its backend resides in the same memory space as the `ops-*` crates. It uses Tauri's `#[tauri::command]` macros to expose the operations directly to the React frontend.
 
 ### For Electron & CLI (NAPI-RS Bridge)
-Since Electron's main process and the CLI run in a Node.js V8 environment, they cannot call Rust code directly. Squigit solves this via **`crates/ffi-napi-bridge`**.
+Since Electron's main process and the CLI run in a Node.js V8 environment, they cannot call Rust code directly. Squigit solves this via **`crates/napi-bridge`**.
 - This crate compiles the Rust backend into a native Node.js Addon (`addon/index.node`).
 - When the CLI or Electron requires backend functionality, they import this native bridge, accessing high-performance Rust execution with the convenience of asynchronous JavaScript functions.
 
@@ -68,7 +68,7 @@ Despite the aggressive sharing of UI components and Rust backend logic, a deskto
 Features like **System Tray Icons**, **Global Keyboard Shortcuts**, **Window Transparency**, and **Lifecycle Events** are explicitly duplicated and implemented natively in each respective shell folder. Attempting to manage an Electron Tray Icon via a Rust NAPI bridge is an anti-pattern. By intentionally allowing this thin layer of duplication, Squigit leverages the native strengths of both frameworks.
 
 ### The CLI (`apps/cli`)
-The CLI entirely bypasses the GUI, the `renderer`, and the `ports` architecture. It is a headless TypeScript application that directly imports the `ffi-napi-bridge` to perform operations like `analyzeImage` or `promptChat` straight from the terminal. 
+The CLI entirely bypasses the GUI, the `renderer`, and the `ports` architecture. It is a headless TypeScript application that directly imports the `napi-bridge` to perform operations like `analyzeImage` or `promptChat` straight from the terminal. 
 
 ---
 
@@ -79,7 +79,7 @@ The CLI entirely bypasses the GUI, the `renderer`, and the `ports` architecture.
 3. **IPC Bridge:** The core invokes a platform port, which Vite maps to either Electron's `ipcRenderer` or Tauri's `@tauri-apps/api`.
 4. **Backend Execution:** 
     - If Tauri: The Rust backend handles it natively.
-    - If Electron: `apps/electron/src/ipc.ts` catches the IPC event and forwards it through the `ffi-napi-bridge` down to the Rust engine.
+    - If Electron: `apps/electron/src/ipc.ts` catches the IPC event and forwards it through the `napi-bridge` down to the Rust engine.
 5. **Result:** The `ops-*` crate performs the native action and bubbles the result back up the chain.
 
 *(In the CLI, the process skips steps 1-3, executing step 4 directly via terminal arguments).*

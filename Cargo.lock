@@ -548,10 +548,10 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "dirs 5.0.1",
- "ops-chat-storage",
- "ops-profile-store",
- "sys-display-hotplug",
- "sys-single-instance",
+ "fs2",
+ "squigit-auth",
+ "squigit-memory",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -889,6 +889,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c87e182de0887fd5361989c677c4e8f5000cd9491d6d563161a8f3a5519fc7f"
 
 [[package]]
+name = "desktop-runtime"
+version = "0.2.0"
+dependencies = [
+ "arboard",
+ "base64 0.22.1",
+ "dirs 5.0.1",
+ "image",
+ "log",
+ "rodio",
+ "serde",
+ "serde_json",
+ "squigit-auth",
+ "squigit-brain",
+ "squigit-memory",
+ "squigit-ocr",
+ "squigit-stt",
+ "tokio",
+ "winreg 0.52.0",
+ "zbus",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1121,24 +1143,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
-]
-
-[[package]]
-name = "ffi-napi-bridge"
-version = "0.2.0"
-dependencies = [
- "chrono",
- "napi",
- "napi-build",
- "napi-derive",
- "ops-chat-storage",
- "ops-host-runtime",
- "ops-profile-store",
- "ops-squigit-brain",
- "serde",
- "serde_json",
- "tokio",
- "webbrowser",
 ]
 
 [[package]]
@@ -1379,6 +1383,18 @@ name = "glob"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
+
+[[package]]
+name = "global-shortcut"
+version = "0.2.0"
+dependencies = [
+ "futures-lite",
+ "log",
+ "tokio",
+ "windows 0.58.0",
+ "x11rb",
+ "zbus",
+]
 
 [[package]]
 name = "h2"
@@ -2082,6 +2098,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "napi-bridge"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "desktop-runtime",
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "serde",
+ "serde_json",
+ "squigit-auth",
+ "squigit-brain",
+ "squigit-memory",
+ "tokio",
+ "webbrowser",
+]
+
+[[package]]
 name = "napi-build"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2443,125 +2477,6 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
-]
-
-[[package]]
-name = "ops-chat-storage"
-version = "0.2.0"
-dependencies = [
- "blake3",
- "chrono",
- "dirs 6.0.0",
- "image",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
-name = "ops-host-runtime"
-version = "0.2.0"
-dependencies = [
- "arboard",
- "base64 0.22.1",
- "dirs 5.0.1",
- "image",
- "log",
- "ops-chat-storage",
- "ops-profile-store",
- "ops-squigit-brain",
- "ops-squigit-ocr",
- "ops-squigit-stt",
- "rodio",
- "serde",
- "serde_json",
- "tokio",
- "winreg 0.52.0",
- "zbus",
-]
-
-[[package]]
-name = "ops-profile-store"
-version = "0.2.0"
-dependencies = [
- "aes-gcm",
- "base64 0.22.1",
- "blake3",
- "chrono",
- "dirs 6.0.0",
- "hex",
- "hmac",
- "ops-chat-storage",
- "pbkdf2",
- "rand 0.8.5",
- "reqwest",
- "serde",
- "serde_json",
- "serial_test",
- "sha2",
- "signal-hook",
- "tempfile",
- "thiserror 2.0.18",
- "tiny_http",
- "url",
-]
-
-[[package]]
-name = "ops-squigit-brain"
-version = "0.2.0"
-dependencies = [
- "chrono",
- "futures-util",
- "iana-time-zone",
- "lazy_static",
- "log",
- "mime_guess",
- "ops-chat-storage",
- "ops-profile-store",
- "rand 0.8.5",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
- "tokio",
- "tokio-util",
- "url",
- "webbrowser",
-]
-
-[[package]]
-name = "ops-squigit-ocr"
-version = "0.2.0"
-dependencies = [
- "dirs 6.0.0",
- "flate2",
- "futures-util",
- "libc",
- "ops-chat-storage",
- "reqwest",
- "semver",
- "serde",
- "serde_json",
- "tar",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "which 6.0.3",
-]
-
-[[package]]
-name = "ops-squigit-stt"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "log",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
 ]
 
 [[package]]
@@ -3452,6 +3367,103 @@ dependencies = [
 ]
 
 [[package]]
+name = "squigit-auth"
+version = "0.2.0"
+dependencies = [
+ "aes-gcm",
+ "base64 0.22.1",
+ "blake3",
+ "chrono",
+ "dirs 6.0.0",
+ "hex",
+ "hmac",
+ "pbkdf2",
+ "rand 0.8.5",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sha2",
+ "signal-hook",
+ "squigit-memory",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tiny_http",
+ "url",
+]
+
+[[package]]
+name = "squigit-brain"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "futures-util",
+ "iana-time-zone",
+ "lazy_static",
+ "log",
+ "mime_guess",
+ "rand 0.8.5",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "squigit-auth",
+ "squigit-memory",
+ "tokio",
+ "tokio-util",
+ "url",
+ "webbrowser",
+]
+
+[[package]]
+name = "squigit-memory"
+version = "0.2.0"
+dependencies = [
+ "blake3",
+ "chrono",
+ "dirs 6.0.0",
+ "image",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
+name = "squigit-ocr"
+version = "0.2.0"
+dependencies = [
+ "dirs 6.0.0",
+ "flate2",
+ "futures-util",
+ "libc",
+ "reqwest",
+ "semver",
+ "serde",
+ "serde_json",
+ "squigit-memory",
+ "tar",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "which 6.0.3",
+]
+
+[[package]]
+name = "squigit-stt"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3547,26 +3559,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sys-display-hotplug"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "sys-global-shortcut"
-version = "0.2.0"
-dependencies = [
- "futures-lite",
- "log",
- "tokio",
- "windows 0.58.0",
- "x11rb",
- "zbus",
-]
-
-[[package]]
 name = "sys-info"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3574,15 +3566,6 @@ checksum = "0b3a0d0aba8bf96a0e1ddfdc352fc53b3df7f39318c71854910c3c4b024ae52c"
 dependencies = [
  "cc",
  "libc",
-]
-
-[[package]]
-name = "sys-single-instance"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "dirs 5.0.1",
- "fs2",
 ]
 
 [[package]]

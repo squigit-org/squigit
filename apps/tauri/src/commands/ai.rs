@@ -5,11 +5,11 @@
 
 use std::sync::Arc;
 use crate::services::brain::DesktopBrainService;
-use ops_squigit_brain::service::{
+use squigit_brain::service::{
     CompressConversationRequest, GenerateChatTitleRequest, GenerateImageBriefRequest,
     StreamChatRequest,
 };
-use ops_host_runtime::sidecar::SttEvent;
+use desktop_runtime::sidecar::SttEvent;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 
@@ -133,7 +133,7 @@ pub async fn quick_answer_request(
 // =============================================================================
 
 pub struct SpeechState {
-    pub engine: Arc<Mutex<Option<ops_host_runtime::sidecar::SpeechEngine>>>,
+    pub engine: Arc<Mutex<Option<desktop_runtime::sidecar::SpeechEngine>>>,
 }
 
 impl Default for SpeechState {
@@ -157,10 +157,10 @@ pub async fn start_stt(
         return Err("STT already running".to_string());
     }
 
-    let (binary_path, _) = ops_host_runtime::sidecar::resolve_stt_sidecar_path()?;
+    let (binary_path, _) = desktop_runtime::sidecar::resolve_stt_sidecar_path()?;
 
     let (engine, mut rx) =
-        ops_host_runtime::sidecar::start_stt(binary_path, model, language).await?;
+        desktop_runtime::sidecar::start_stt(binary_path, model, language).await?;
     *engine_guard = Some(engine);
 
     let app_handle = app.clone();
