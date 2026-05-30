@@ -12,7 +12,7 @@
     ".": "./dist/src/index.js"
   },
   "scripts": {
-    "build:addon": "npx napi build --manifest-path ../../crates/ffi-napi-bridge/Cargo.toml --release --output-dir ./src/addon",
+    "build:addon": "npx napi build --manifest-path ../../crates/napi-bridge/Cargo.toml --release --output-dir ./src/addon",
     "build:ts": "tsc -p tsconfig.json",
     "build": "npm run build:addon && npm run build:ts && mkdir -p dist/src/addon && cp -a src/addon/. dist/src/addon/",
     "test:api": "npm run build && node dist/src/index.js api",

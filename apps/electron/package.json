@@ -8,7 +8,7 @@
     "package": "electron-builder"
   },
   "dependencies": {
-    "ffi-napi-bridge": "file:../../crates/ffi-napi-bridge"
+    "napi-bridge": "file:../../crates/napi-bridge"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
