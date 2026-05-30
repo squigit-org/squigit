@@ -46,11 +46,11 @@ pub fn ui_dir() -> PathBuf {
 }
 
 pub fn tauri_dir() -> PathBuf {
-    project_root().join("apps").join("tauri")
+    project_root().join("archive").join("desktop")
 }
 
 pub fn electron_dir() -> PathBuf {
-    project_root().join("apps").join("electron")
+    project_root().join("apps").join("desktop")
 }
 
 pub fn tauri_archive_dir() -> PathBuf {

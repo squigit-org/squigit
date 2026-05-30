@@ -249,7 +249,7 @@ fn sidecar_checks() -> Result<Vec<CheckResult>> {
     }
 
     checks.push(CheckResult::pass(
-        "binaries total size (apps/tauri/binaries)",
+        "binaries total size (archive/desktop/binaries)",
         format_bytes(total_tauri_size),
     ));
 
@@ -262,7 +262,7 @@ fn sidecar_checks() -> Result<Vec<CheckResult>> {
     }
 
     checks.push(CheckResult::pass(
-        "binaries total size (apps/electron/binaries)",
+        "binaries total size (apps/desktop/binaries)",
         format_bytes(total_electron_size),
     ));
 

@@ -40,7 +40,7 @@ impl TauriDeps {
 /// If `target/tauri-archive/` does not exist or is incomplete, downloads
 /// the platform-specific tarball from the archive repository and extracts it.
 /// After successful extraction, copies the qt-capture sidecar into
-/// `apps/tauri/binaries/` so the Tauri CLI can locate it.
+/// `archive/desktop/binaries/` so the Tauri CLI can locate it.
 pub fn ensure_tauri_deps() -> Result<TauriDeps> {
     let archive = tauri_archive_dir();
     let sentinel = archive.join(".complete");
@@ -74,13 +74,13 @@ pub fn ensure_tauri_deps() -> Result<TauriDeps> {
         );
     }
 
-    // Copy qt-capture sidecar into apps/tauri/binaries/ if not already there
+    // Copy qt-capture sidecar into archive/desktop/binaries/ if not already there
     let tauri_binaries = tauri_dir().join("binaries");
     let sidecar_name = format!("qt-capture-{triple}");
     let sidecar_dst = tauri_binaries.join(&sidecar_name);
 
     if deps.qt_capture.exists() && !sidecar_dst.exists() {
-        println!("  Copying qt-capture sidecar to apps/tauri/binaries/");
+        println!("  Copying qt-capture sidecar to archive/desktop/binaries/");
         fs::create_dir_all(&tauri_binaries)?;
         xtask::copy_dir_all(&deps.qt_capture, &sidecar_dst)?;
     }

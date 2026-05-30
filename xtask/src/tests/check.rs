@@ -291,7 +291,7 @@ fn run_apps(list: bool, path: &[String]) -> Result<()> {
                 print_group("check/apps/renderer", &["(no args)"]);
             }
             [suite] if suite == "tauri" => {
-                print_group("check/apps/tauri", &["(no args)"]);
+                print_group("check/archive/desktop", &["(no args)"]);
             }
             [suite] if suite == "shared" => {
                 print_group("check/apps/shared", &["core", "react"]);
@@ -318,7 +318,7 @@ fn run_apps(list: bool, path: &[String]) -> Result<()> {
         "tauri" => {
             run_cmd(
                 "cargo",
-                &["check", "--manifest-path", "apps/tauri/Cargo.toml"],
+                &["check", "--manifest-path", "archive/desktop/Cargo.toml"],
                 &root,
             )
         }
