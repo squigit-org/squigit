@@ -155,14 +155,6 @@ fn discover_workspace_crates() -> Result<Vec<CrateTarget>> {
 }
 
 fn alias_from_dir_name(dir_name: &str) -> String {
-    for prefix in ["ops-", "svc-", "sys-"] {
-        if let Some(rest) = dir_name.strip_prefix(prefix) {
-            if !rest.is_empty() {
-                return rest.to_string();
-            }
-        }
-    }
-
     dir_name.to_string()
 }
 
@@ -171,14 +163,8 @@ mod tests {
     use super::alias_from_dir_name;
 
     #[test]
-    fn strips_known_prefixes_for_alias() {
-        assert_eq!(alias_from_dir_name("ops-profile-store"), "profile-store");
-        assert_eq!(alias_from_dir_name("ops-squigit-stt"), "squigit-stt");
-        assert_eq!(alias_from_dir_name("sys-single-instance"), "single-instance");
-    }
-
-    #[test]
     fn keeps_unprefixed_dir_name() {
+        assert_eq!(alias_from_dir_name("squigit-auth"), "squigit-auth");
         assert_eq!(alias_from_dir_name("my-crate"), "my-crate");
     }
 }

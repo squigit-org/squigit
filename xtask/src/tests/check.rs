@@ -159,14 +159,6 @@ fn discover_workspace_crates() -> Result<Vec<CrateTarget>> {
 }
 
 fn alias_from_dir_name(dir_name: &str) -> String {
-    for prefix in ["ops-", "svc-", "sys-"] {
-        if let Some(rest) = dir_name.strip_prefix(prefix) {
-            if !rest.is_empty() {
-                return rest.to_string();
-            }
-        }
-    }
-
     dir_name.to_string()
 }
 
