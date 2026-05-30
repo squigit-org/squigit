@@ -1,91 +1,93 @@
-# Squigit Architecture Overview
+# Squigit Architecture
 
-Squigit is designed as a highly decoupled, cross-platform application that spans across multiple environments: a graphical user interface (GUI) available in both **Tauri** (legacy/archived) and **Electron**, as well as a headless **Command Line Interface (CLI)**.
+Squigit is a cross-platform AI assistant built on a strict separation of concerns. The same core logic powers three distinct environments — a desktop GUI (Electron), a headless CLI, and a legacy Tauri build — without duplicating any of it.
 
-To achieve feature parity across all environments without duplicating complex logic, Squigit utilizes a **Clean Architecture** (specifically inspired by Hexagonal Architecture/Ports and Adapters). It separates concerns into three distinct layers:
+The design follows **Hexagonal Architecture** (Ports and Adapters): abstract interfaces define what the system _can_ do, and environment-specific adapters decide _how_ it gets done. This keeps the React frontend and Rust backend completely ignorant of which shell they're running inside.
 
-1. **The UI & Abstract Domain Layer** (TypeScript/React)
-2. **The Universal Native Backend** (Rust `squigit-*` crates)
-3. **The Shell Integration Layer** (Electron, CLI)
+---
 
-## Architecture Tree Snapshot
+## Layers at a Glance
 
 ```text
 └── squigit/
     ├── apps/
-    │   ├── cli/             (Headless Node.js App)
-    │   ├── desktop/         (Electron Shell)
-    │   ├── renderer/        (Pure React/Vite Frontend)
-    │   └── shared/          (TS Domain Logic & React Hooks)
+    │   ├── cli/             Headless Node.js app
+    │   ├── desktop/         Electron shell
+    │   ├── renderer/        Pure React/Vite frontend
+    │   └── shared/          TS domain logic & React hooks
     │
     └── crates/
-        ├── desktop-runtime/ (Shared GUI Runtime)
-        ├── global-shortcut/ (OS-level shortcuts)
-        ├── napi-bridge/     (FFI Node.js Bridge)
-        ├── squigit-auth/    (Profile & Security)
-        ├── squigit-brain/   (Gemini Engine)
-        ├── squigit-memory/  (Chat Storage)
-        ├── squigit-ocr/     (Media Parsing)
-        └── squigit-stt/     (Speech-to-Text)
+        ├── desktop-runtime/ Shared GUI runtime
+        ├── global-shortcut/ OS-level keyboard hooks
+        ├── napi-bridge/     Node.js ↔ Rust FFI bridge
+        ├── squigit-auth/    OAuth & credential storage
+        ├── squigit-brain/   Gemini AI engine
+        ├── squigit-memory/  Chat & file storage
+        ├── squigit-ocr/     OCR / media parsing
+        └── squigit-stt/     Speech-to-text
 ```
 
 ---
 
-## 1. The UI & Abstract Domain Layer
+## Layer 1 — UI & Domain (`apps/`)
 
-The uppermost layer represents the frontend codebase. Its primary responsibility is rendering the user interface and handling React state, remaining entirely oblivious to whether it runs in a browser or a desktop shell.
+### `apps/renderer` — The View
 
-### `apps/renderer` (The View)
-Written in React, TypeScript, and TailwindCSS. This is the pure UI layer. It contains components, animations, and CSS. Because it contains zero native OS calls (like file reading or window management), it can be securely sandboxed and injected into any shell.
+A pure React + TypeScript + Tailwind application. It renders UI, manages component state, and nothing else. It makes no direct OS calls — no file I/O, no window management — which means it can be securely sandboxed inside any shell without modification.
 
-### `apps/shared/packages/core` (The Domain & Ports)
-This is the platform-agnostic business logic. It handles complex AI conversational state, streaming mechanisms, and prompt generation. Because it is sandboxed TypeScript, it relies on the **"Ports" pattern**:
-- Inside `src/ports/`, it defines abstract interfaces (`ProviderPort`, `StoragePort`, `SystemPort`). 
-- When the React `renderer` boots up, it resolves an environment-specific alias (`@platform`) driven by Vite.
-- The renderer then maps these abstract ports to concrete Inter-Process Communication (IPC) calls. This allows the React app to command the host system to "save a file" or "open a window" without knowing if the host is Electron or Tauri.
+### `apps/shared/packages/core` — Domain & Ports
 
----
+This is where the platform-agnostic business logic lives: AI conversation state, streaming orchestration, and prompt construction. Because this code can't — and shouldn't — know whether it's running inside Electron, Tauri, or a browser, it communicates with the host through **Ports**: abstract TypeScript interfaces defined in `src/ports/`.
 
-## 2. The Universal Backend (The Rust Engine)
+| Port           | Responsibility                                  |
+| -------------- | ----------------------------------------------- |
+| `ProviderPort` | AI model communication                          |
+| `StoragePort`  | Reading and writing persistent data             |
+| `SystemPort`   | OS operations (opening files, spawning windows) |
 
-To guarantee that the CLI and Electron shells behave identically (and perform consistently), all heavy lifting is pushed into a shared Rust backend. 
-
-### `crates/squigit-*` (Business Logic & Core Operations)
-Instead of rewriting backend logic in Node.js, Squigit shifts all fundamental application logic into a suite of pure Rust crates:
-- **`squigit-brain`**: The core Gemini integration and orchestration logic.
-- **`squigit-memory`**: Database management and file storage operations.
-- **`squigit-auth`**: Authentication and profile configurations.
-- **`squigit-ocr` & `squigit-stt`**: Heavy media processing capabilities.
-
-### `crates/desktop-runtime` (The Shared GUI Runtime)
-While the CLI focuses on headless data processing, the GUI shells share "GUI-adjacent" needs—like preparing an image before sending it to the frontend or computing local storage directories. `desktop-runtime` encapsulates this hybrid logic in Rust so it only has to be written once.
+At build time, Vite resolves an `@platform` path alias to an environment-specific adapter. Those adapters translate each port method into the correct IPC call for the active shell. The domain layer never needs to know the difference.
 
 ---
 
-## 3. The Bridge & IPC Layer
+## Layer 2 — Universal Backend (`crates/squigit-*`)
 
-Because the Universal Backend is written in Rust, the Node.js shells need a way to invoke these operations.
+All heavy computation lives in Rust. Rather than rewriting backend logic per shell, Squigit centralises everything into a suite of pure Rust crates that any host can call.
 
-### `crates/napi-bridge` (Node.js <-> Rust)
-Since Electron's main process and the CLI run in a Node.js V8 environment, they cannot call Rust code directly natively. Squigit solves this via **`napi-bridge`**.
-- This crate compiles the Rust backend into a native Node.js Addon (`addon/index.node`).
-- When the CLI or Electron requires backend functionality, they import this native bridge, accessing high-performance Rust execution with the convenience of asynchronous JavaScript functions.
+| Crate            | Responsibility                                         |
+| ---------------- | ------------------------------------------------------ |
+| `squigit-brain`  | Gemini integration, agent orchestration, tool dispatch |
+| `squigit-memory` | SQLite storage, chat history, file management          |
+| `squigit-auth`   | OAuth flows, keychain integration, profile config      |
+| `squigit-ocr`    | OCR model management and inference                     |
+| `squigit-stt`    | Speech-to-text model management and inference          |
 
----
-
-## 4. The Shell Integration Layer (The Un-Sharable Native Code)
-
-Despite the aggressive sharing of UI components and Rust backend logic, a desktop application must integrate intimately with its host operating system (Windows, macOS, Linux). 
-
-### `apps/desktop` (Electron)
-The Electron app uses C++ backed Node APIs to handle OS-level features. Features like **System Tray Icons**, **Global Keyboard Shortcuts**, **Window Transparency**, and **Lifecycle Events** are explicitly implemented natively in the shell. Attempting to manage an Electron Tray Icon via a Rust NAPI bridge is an anti-pattern. By intentionally allowing this thin layer of duplication, Squigit leverages the native strengths of the framework.
-
-### `apps/cli` (Headless Terminal)
-The CLI entirely bypasses the GUI, the `renderer`, and the `ports` architecture. It is a headless TypeScript application that directly imports the `napi-bridge` to perform operations like `analyzeImage` or `promptChat` straight from the terminal. 
+`crates/desktop-runtime` is a smaller companion crate for logic that is GUI-specific but still shell-agnostic — preparing image buffers before they reach the renderer, resolving platform storage paths, and so on. It's shared between Electron and the archived Tauri shell so neither has to reimplement it.
 
 ---
 
-## Architecture Data Flow
+## Layer 3 — The Bridge (`crates/napi-bridge`)
+
+Electron's main process and the CLI both run in Node.js. They can't call Rust directly, so `napi-bridge` acts as the seam between the two runtimes.
+
+The crate compiles the Rust backend into a native Node.js addon (`addon/index.node`). When Electron or the CLI needs a backend operation — streaming a chat response, running OCR, loading a profile — they import this addon and call it like any async JavaScript function. The bridge handles data marshalling between V8 and Rust; the calling code stays clean.
+
+---
+
+## Layer 4 — Shell Integration (`apps/desktop`, `apps/cli`)
+
+Some things can't be abstracted away. A real desktop app needs to control its tray icon, respond to global keyboard shortcuts, and manage window transparency — all of which require direct integration with the host OS.
+
+### `apps/desktop` — Electron Shell
+
+The Electron app owns the OS-native surface: system tray, global shortcuts, window lifecycle, and transparency. These are not routed through `napi-bridge`, because wiring OS UI events through a Rust layer would be unnecessary indirection. The shell is intentionally thin: it sets up the native surface, loads the renderer, and forwards IPC calls to the Rust backend via the bridge.
+
+### `apps/cli` — Headless Terminal
+
+The CLI skips the renderer, the ports, and the IPC layer entirely. It's a TypeScript application that imports `napi-bridge` directly and invokes backend operations — `analyzeImage`, `promptChat` — straight from parsed terminal arguments. It's useful for scripting and for testing the backend in isolation.
+
+---
+
+## Data Flow
 
 ```mermaid
 sequenceDiagram
@@ -99,10 +101,10 @@ sequenceDiagram
     Renderer->>Core: processMessage()
     Core->>Shell: platform.invoke('stream_chat')
     Shell->>Backend: napi_bridge.streamChat()
-    Backend-->>Shell: Yield Streaming Tokens
-    Shell-->>Core: IPC Stream Event
-    Core-->>Renderer: Update React State
-    Renderer-->>User: Displays Text
+    Backend-->>Shell: Yield streaming tokens
+    Shell-->>Core: IPC stream event
+    Core-->>Renderer: Update React state
+    Renderer-->>User: Text appears on screen
 ```
 
-*(In the CLI, the process skips the Renderer and Core layers, directly invoking the `napi_bridge` from the terminal arguments).*
+In the CLI, the Renderer, Core, and Shell layers are all bypassed — terminal arguments map directly to `napi_bridge` calls.
