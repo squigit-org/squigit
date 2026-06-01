@@ -17,7 +17,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::network::{NetworkStatus, PeerNetworkMonitor};
 
-const APP_DIR_NAME: &str = "squigit";
+
 const DEFAULT_OCR_LANGUAGE: &str = "pp-ocr-v5-en";
 
 #[derive(Debug, Error)]
@@ -113,9 +113,8 @@ pub struct ModelManager {
 
 impl ModelManager {
     pub fn new() -> Result<Self> {
-        let config_dir = dirs::config_dir().ok_or(ModelError::NoConfigDir)?;
+        let config_dir = squigit_memory::paths::base_config_dir().ok_or(ModelError::NoConfigDir)?;
         let models_dir = config_dir
-            .join(APP_DIR_NAME)
             .join("Local Storage")
             .join("models");
 

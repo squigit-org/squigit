@@ -117,9 +117,8 @@ impl ChatStorage {
         note = "Use with_base_dir() for profile-aware storage"
     )]
     pub fn new() -> Result<Self> {
-        let base_dir = dirs::config_dir()
+        let base_dir = crate::paths::base_config_dir()
             .ok_or(StorageError::NoDataDir)?
-            .join("Squigit".to_lowercase())
             .join("chats");
 
         Self::with_base_dir(base_dir)

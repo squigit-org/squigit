@@ -25,8 +25,7 @@ pub fn encrypt_and_save(profile_id: &str, provider: &str, plaintext: &str) -> Re
 // =============================================================================
 
 fn get_config_dir() -> Result<std::path::PathBuf, String> {
-    dirs::config_dir()
-        .map(|p| p.join("Squigit"))
+    squigit_memory::paths::base_config_dir()
         .ok_or_else(|| "Could not resolve app config dir".to_string())
 }
 

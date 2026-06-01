@@ -13,7 +13,7 @@ use serde::Serialize;
 use crate::error::{ProfileError, Result};
 use crate::types::{Profile, ProfileIndex};
 
-const APP_DIR_NAME: &str = "squigit";
+
 
 /// Storage directory name under the app config.
 const STORAGE_DIR: &str = "Local Storage";
@@ -43,9 +43,8 @@ impl ProfileStore {
     /// - macOS: `~/Library/Application Support/squigit/Local Storage/`
     /// - Windows: `%APPDATA%/squigit/Local Storage/`
     pub fn new() -> Result<Self> {
-        let base_dir = dirs::config_dir()
+        let base_dir = squigit_memory::paths::base_config_dir()
             .ok_or(ProfileError::NoConfigDir)?
-            .join(APP_DIR_NAME)
             .join(STORAGE_DIR);
 
         Self::with_base_dir(base_dir)
