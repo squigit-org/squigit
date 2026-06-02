@@ -244,8 +244,41 @@ video {
   display: none;
 }
 
-* {
-  user-select: text !important;
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button,
+[role="button"],
+[role="menuitem"],
+[role="menu"],
+[role="menubar"],
+[role="tab"],
+[role="dialog"],
+nav,
+header,
+a {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+article,
+pre,
+code,
+blockquote,
+input,
+textarea,
+.selectable {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 body *::selection {

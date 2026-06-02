@@ -31,6 +31,15 @@
   pointer-events: auto;
 }
 
+.windowsButton:focus {
+  outline: none;
+}
+
+.windowsButton:focus-visible {
+  outline: 2px solid var(--c-raw-036);
+  outline-offset: -2px;
+}
+
 .windowsButton.winMinimize:hover,
 .windowsButton.winMaximize:hover {
   background-color: var(--c-raw-095);
