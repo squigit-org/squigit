@@ -284,6 +284,7 @@ fn parse_bool_env(name: &str) -> bool {
 pub fn tauri(commit_id: &str) -> Result<()> {
     println!("\nBuilding Tauri desktop app...");
 
+    xtask::check_tauri_disclaimer()?;
     crate::commands::deps::ensure_tauri_deps()?;
 
     let ui = ui_dir();

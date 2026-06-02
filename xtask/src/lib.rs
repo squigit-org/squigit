@@ -299,3 +299,52 @@ pub fn get_host_target_triple() -> Result<String> {
     }
     Ok("unknown-target".to_string())
 }
+
+pub fn check_tauri_disclaimer() -> Result<()> {
+    let flag_path = project_root().join("target").join(".tauri_disclaimer_accepted.flag");
+    if flag_path.exists() {
+        return Ok(());
+    }
+
+    println!();
+    println!("================================================================================");
+    println!("  !! WARNING: Tauri Build Pipeline — ARCHIVED");
+    println!("================================================================================");
+    println!();
+    println!("  The Tauri pipeline was the primary host through v0.1.x. Starting with");
+    println!("  v0.2.x, the project migrated to Electron. The Tauri target has not been");
+    println!("  removed from the repository or the xtask build commands, but it is no");
+    println!("  longer maintained and exists for legacy reference only.");
+    println!();
+    println!("  State      : Frozen — no further development or maintenance");
+    println!("  Features   : Not in parity with Electron; v0.2.x+ additions are absent");
+    println!("  Bug fixes  : Open PRs merged into Electron are not backported to Tauri");
+    println!("  Stability  : May be partially or fully non-functional");
+    println!();
+    println!("================================================================================");
+    println!();
+    println!("  squigit/tauri      Continue for this session only");
+    println!("  dont show again    Continue and suppress this warning permanently");
+    println!("  <Enter>            Abort");
+    println!();
+
+    use std::io::{self, Write};
+    print!("> ");
+    let _ = io::stdout().flush();
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let input = input.trim();
+
+    if input == "dont show again" {
+        if let Some(parent) = flag_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&flag_path, "")?;
+        return Ok(());
+    } else if input == "squigit/tauri" {
+        return Ok(());
+    }
+
+    anyhow::bail!("Aborted. Re-run and enter 'squigit/tauri' or 'dont show again' at the prompt to proceed with the Tauri pipeline.");
+}

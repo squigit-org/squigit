@@ -17,6 +17,7 @@ pub fn run(cmd: &str, tray_mode: bool, electron: bool, tauri: bool, extra_args: 
     let node_bin = if electron { app.join("node_modules").join(".bin") } else { ui.join("node_modules").join(".bin") };
 
     if tauri {
+        xtask::check_tauri_disclaimer()?;
         crate::commands::deps::ensure_tauri_deps()?;
     }
 
