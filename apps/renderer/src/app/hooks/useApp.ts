@@ -14,7 +14,10 @@ import {
 } from "@squigit/core/config";
 import type { Attachment } from "@squigit/core/brain/attachments";
 import { github } from "@squigit/core/services/github";
-import { resolveOcrModelId, SUPPORTED_OCR_MODEL_IDS } from "@squigit/core/config";
+import {
+  resolveOcrModelId,
+  SUPPORTED_OCR_MODEL_IDS,
+} from "@squigit/core/config";
 import {
   getPendingUpdate,
   useAuth,
@@ -107,11 +110,12 @@ export const useApp = () => {
   }, [system]);
 
   const [pendingUpdate, setPendingUpdate] = useState(() => getPendingUpdate());
-  
+
   useEffect(() => {
     const handleUpdate = () => setPendingUpdate(getPendingUpdate());
     window.addEventListener("squigit-updates-changed", handleUpdate);
-    return () => window.removeEventListener("squigit-updates-changed", handleUpdate);
+    return () =>
+      window.removeEventListener("squigit-updates-changed", handleUpdate);
   }, []);
   const chatHistory = useChatHistory(system.activeProfile?.id || null);
 
@@ -134,7 +138,7 @@ export const useApp = () => {
   const ocr = useAppOcr(chatHistory.activeSessionId);
   const [pendingPromptAttachmentAnalysis, setPendingPromptAttachmentAnalysis] =
     useState<ReturnType<typeof getAttachmentAnalysisCounts>>(null);
-  const [hasAutoSelectedWelcome, setHasAutoSelectedWelcome] = useState(false);
+  const [hasAutoSelectedWizard, setHasAutoSelectedWizard] = useState(false);
   const [showUpdate, setShowUpdate] = useState(() => {
     const wasDismissed = sessionStorage.getItem("update_dismissed");
     return !!pendingUpdate && !wasDismissed;
@@ -145,7 +149,7 @@ export const useApp = () => {
     agreedToTermsRef.current = agreedToTerms;
   }, [agreedToTerms]);
 
-  const shouldAutoClosePanelForWelcome =
+  const shouldAutoClosePanelForWizard =
     system.hasAgreed === false && !system.activeProfile;
 
   const hasActiveOnboarding = chatHistory.activeSessionId
@@ -153,18 +157,18 @@ export const useApp = () => {
     : false;
   const isImageMissing = !system.startupImage && !hasActiveOnboarding;
   const isAuthPending = auth.authStage === "LOGIN";
-  const isPendingAutoSelectWelcome =
+  const isPendingAutoSelectWizard =
     system.hasAgreed === false &&
     !system.activeProfile &&
-    chatHistory.activeSessionId !== "__system_welcome";
+    chatHistory.activeSessionId !== "__system_wizard";
   const isLoadingState =
     !system.profileLoaded ||
     !system.prefsLoaded ||
     system.hasAgreed === null ||
     auth.authStage === "LOADING" ||
-    isPendingAutoSelectWelcome;
+    isPendingAutoSelectWizard;
 
-  const panel = useAppPanel(isLoadingState, shouldAutoClosePanelForWelcome);
+  const panel = useAppPanel(isLoadingState, shouldAutoClosePanelForWizard);
 
   const { isGeneratingTitle, generateTitleForText } = useBrainTitle({
     apiKey: system.apiKey,
@@ -286,16 +290,16 @@ export const useApp = () => {
       !capture.isCheckingImage &&
       !system.activeProfile &&
       !chatHistory.activeSessionId &&
-      !hasAutoSelectedWelcome
+      !hasAutoSelectedWizard
     ) {
-      navigation.performSelectChat("__system_welcome");
-      setHasAutoSelectedWelcome(true);
+      navigation.performSelectChat("__system_wizard");
+      setHasAutoSelectedWizard(true);
     }
   }, [
     auth.authStage,
     capture.isCheckingImage,
     chatHistory.activeSessionId,
-    hasAutoSelectedWelcome,
+    hasAutoSelectedWizard,
     navigation,
     system.activeProfile,
     system.hasAgreed,
@@ -370,7 +374,9 @@ export const useApp = () => {
               await update.downloadAndInstall();
               await platform.app.relaunch();
             } else {
-              platform.invoke("open_external_url", { url: github.latestRelease });
+              platform.invoke("open_external_url", {
+                url: github.latestRelease,
+              });
             }
           } catch {
             platform.invoke("open_external_url", { url: github.latestRelease });

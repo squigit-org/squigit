@@ -5,28 +5,26 @@
  */
 
 import React, { useState } from "react";
+import { GoogleIcon } from "@/components/icons/brand-icons";
 import styles from "./AuthButton.module.css";
 
 interface AuthButtonProps {
   onLogin: () => void;
   onCancel?: () => void;
   isLoading?: boolean;
-  disabled?: boolean;
-  disabledTitle?: string;
+  wizard?: boolean;
 }
 
 export const AuthButton: React.FC<AuthButtonProps> = ({
   onLogin,
   onCancel,
   isLoading = false,
-  disabled = false,
-  disabledTitle,
+  wizard = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [hasLeftSinceLoading, setHasLeftSinceLoading] = useState(false);
 
   const handleClick = () => {
-    if (disabled) return;
     if (isLoading && onCancel && hasLeftSinceLoading && isHovered) {
       onCancel();
     } else if (!isLoading) {
@@ -58,9 +56,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`${styles.loginBtn} ${isLoading ? styles.loading : ""} ${disabled ? styles.disabled : ""}`}
-      aria-disabled={disabled}
-      title={disabled ? disabledTitle : undefined}
+      className={`${styles.loginBtn} ${wizard ? styles.wizardBtn : ""} ${isLoading ? styles.loading : ""}`}
     >
       {isLoading &&
         (showCancel ? (
@@ -77,10 +73,13 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
             </span>
           </>
         ))}
-      <span>
+      <span className={wizard ? styles.wizardContent : ""}>
         {!isLoading && (
           <>
-            Sign in with <span className={styles.google}>Google</span>
+            {wizard && <span className={styles.wizardIcon}><GoogleIcon size={18} /></span>}
+            {wizard ? "Continue with Google" : (
+              <>Sign in with <span className={styles.google}>Google</span></>
+            )}
           </>
         )}
       </span>

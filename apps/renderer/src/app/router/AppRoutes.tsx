@@ -10,7 +10,7 @@ import {
   GalleryRoute,
   HomeRoute,
   UpdateNotesRoute,
-  WelcomeRoute,
+  WizardRoute,
 } from "./routes";
 import { useAppContext } from "../providers/AppProvider";
 
@@ -28,9 +28,9 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
   const activeId = app.chatHistory.activeSessionId;
 
   if (activeId && isOnboardingId(activeId)) {
-    if (activeId === "__system_welcome") {
+    if (activeId === "__system_wizard") {
       return (
-        <WelcomeRoute
+        <WizardRoute
           onSystemAction={app.handleSystemAction}
           onOpenSettings={app.system.openSettings}
         />

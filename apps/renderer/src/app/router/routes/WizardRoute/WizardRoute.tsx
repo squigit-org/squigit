@@ -14,7 +14,10 @@ import { ChatBubble } from "@/features/chat";
 import { SettingsSection } from "@/features/settings";
 import { usePlatform } from "@/hooks/shared";
 import type { Message } from "@squigit/core/brain/engine";
-import styles from "./WelcomeRoute.module.css";
+import { useAppContext } from "../../../providers/AppProvider";
+import { AuthStep } from "./steps/AuthStep/AuthStep";
+import { FlowButton } from "./components/FlowButton/FlowButton";
+import styles from "./WizardRoute.module.css";
 
 const INSTRUCTIONS: Record<string, string> = {
   linux,
@@ -40,17 +43,22 @@ const linkifySettingsMentions = (raw: string): string => {
   return next;
 };
 
-interface WelcomeRouteProps {
+interface WizardRouteProps {
   onSystemAction: (actionId: string, value?: string) => void | Promise<void>;
   onOpenSettings: (section: SettingsSection) => void;
 }
 
-export const WelcomeRoute: React.FC<WelcomeRouteProps> = ({
+export const WizardRoute: React.FC<WizardRouteProps> = ({
   onSystemAction,
   onOpenSettings,
 }) => {
   const { isMac, isWin } = usePlatform();
+  const app = useAppContext();
   const [selected, setSelected] = useState("disagree");
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const steps = ["Auth", "Setup"]; // Dummy second step for dots
+  const isDone = !!app.system.activeProfile;
 
   const content = useMemo(() => {
     const raw = isMac
@@ -86,56 +94,32 @@ export const WelcomeRoute: React.FC<WelcomeRouteProps> = ({
     <div className={styles.container}>
       <div className={styles.content}>
         <div className={styles.inner}>
-          <div>
-            <ChatBubble
-              message={message}
-              enableInternalLinks={true}
-              onAction={handleAgreementAction}
+          {currentStep === 0 && <AuthStep onNext={() => setCurrentStep(1)} />}
+        </div>
+      </div>
+      
+      <div className={styles.footer}>
+        <div className={styles.footerLeft}>
+          {currentStep > 0 && (
+            <FlowButton variant="back" onClick={() => setCurrentStep(curr => curr - 1)} />
+          )}
+        </div>
+        
+        <div className={styles.footerCenter}>
+          {steps.map((_, index) => (
+            <div 
+              key={index} 
+              className={`${styles.stepDot} ${index === currentStep ? styles.stepDotActive : ""}`} 
             />
-          </div>
-          <div className={styles.actions}>
-            <label
-              className={`${styles.radioAction} ${
-                selected === "agree" ? styles.radioSelected : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name="agreement"
-                checked={selected === "agree"}
-                onChange={() => handleSelection("agree")}
-                className={styles.radioInput}
-              />
-              <span>I have read and understand the instructions</span>
-            </label>
-            <label
-              className={`${styles.radioAction} ${
-                selected === "disagree" ? styles.radioSelected : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name="agreement"
-                checked={selected === "disagree"}
-                onChange={() => handleSelection("disagree")}
-                className={styles.radioInput}
-              />
-              <span>I do not understand</span>
-            </label>
-          </div>
-          <div className={styles.licenseText}>
-            By installing this software, you agree to the{" "}
-            <strong>
-              <a
-                href="https://github.com/a7mddra/squigit?tab=Apache-2.0-1-ov-file#readme"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Apache 2.0 License
-              </a>
-            </strong>
-            .
-          </div>
+          ))}
+        </div>
+
+        <div className={styles.footerRight}>
+          <FlowButton 
+            variant="next" 
+            disabled={currentStep === 0 && !isDone}
+            onClick={() => setCurrentStep(curr => curr + 1)} 
+          />
         </div>
       </div>
     </div>

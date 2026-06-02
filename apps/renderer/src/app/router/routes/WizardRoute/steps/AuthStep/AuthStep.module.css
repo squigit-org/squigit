@@ -1,0 +1,31 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  gap: 3rem;
+  padding-top: 2rem;
+}
+
+.branding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--c-raw-050);
+  margin: 0;
+}
+
+.authWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: scale(1.1);
+}

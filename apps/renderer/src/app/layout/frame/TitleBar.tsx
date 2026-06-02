@@ -96,7 +96,7 @@ export const TitleBar: React.FC = () => {
       onMouseDown={handleMouseDown}
     >
       <h1 className={styles.chatTitle}>
-        {app.chatHistory.activeSessionId === "__system_welcome"
+        {app.chatHistory.activeSessionId === "__system_wizard"
           ? ""
           : app.chatTitle}
       </h1>
@@ -105,7 +105,7 @@ export const TitleBar: React.FC = () => {
         {isUnix && <TrafficLights />}
 
         {!app.isLoadingState &&
-          app.chatHistory.activeSessionId !== "__system_welcome" && (
+          app.chatHistory.activeSessionId !== "__system_wizard" && (
             <div className={styles.controlsWrapper}>
               <button
                 onClick={app.toggleSidePanel}
@@ -148,7 +148,7 @@ export const TitleBar: React.FC = () => {
               </button>
             )}
 
-            {app.chatHistory.activeSessionId !== "__system_welcome" && (
+            {app.chatHistory.activeSessionId !== "__system_wizard" && (
               <SettingsMenu
                 onOpenSettings={app.system.openSettings}
                 isSettingsOpen={app.system.isSettingsOpen}
@@ -189,15 +189,13 @@ export const TitleBar: React.FC = () => {
                   switchingProfileId={app.system.switchingProfileId}
                 />
               </>
-            ) : (
+            ) : app.chatHistory.activeSessionId !== "__system_wizard" ? (
               <AuthButton
                 onLogin={app.handleAddAccount}
                 onCancel={app.system.cancelAuth}
                 isLoading={app.system.switchingProfileId === "creating_account"}
-                disabled={app.isAgreementPending && !app.agreedToTerms}
-                disabledTitle="Please read and agree to the instructions first"
               />
-            )}
+            ) : null}
           </>
         )}
 

@@ -8,4 +8,4 @@ export { ChatRoute } from "./ChatRoute/ChatRoute";
 export { GalleryRoute } from "./GalleryRoute/GalleryRoute";
 export { HomeRoute } from "./HomeRoute/HomeRoute";
 export { UpdateNotesRoute } from "./UpdateNotesRoute/UpdateNotesRoute";
-export { WelcomeRoute } from "./WelcomeRoute/WelcomeRoute";
+export { WizardRoute } from "./WizardRoute/WizardRoute";

@@ -165,7 +165,7 @@
 }
 
 .chatLeading {
-  width: 22px; 
+  width: 22px;
   height: 22px;
   flex-shrink: 0;
   position: relative;
@@ -241,14 +241,6 @@
 
 .pinLeftBtn:hover svg {
   fill: currentColor;
-}
-
-.welcomeDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: #2f86ff;
-  box-shadow: 0 0 0 3px rgba(47, 134, 255, 0.22);
 }
 
 .rowSpinner {

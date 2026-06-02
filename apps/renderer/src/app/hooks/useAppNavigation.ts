@@ -6,7 +6,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { resolveOcrModelId, SUPPORTED_OCR_MODEL_IDS } from "@squigit/core/config";
+import {
+  resolveOcrModelId,
+  SUPPORTED_OCR_MODEL_IDS,
+} from "@squigit/core/config";
 import {
   AUTO_OCR_DISABLED_MODEL_ID,
   cancelOcrJob,
@@ -17,7 +20,11 @@ import {
   ChatCitation,
   ChatToolStep,
 } from "@squigit/core/config";
-import { type Citation, type Message, type ToolStep } from "@squigit/core/brain/engine";
+import {
+  type Citation,
+  type Message,
+  type ToolStep,
+} from "@squigit/core/brain/engine";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";
 const isOnboardingId = (id: string) => id.startsWith("__system_");
@@ -277,9 +284,7 @@ export const useAppNavigation = ({
 
       if (isOnboardingId(id)) {
         flushSync(() => {
-          if (id === "__system_welcome") {
-            system.setSessionChatTitle(`Welcome to ${system.appName}!`);
-          } else if (id.startsWith("__system_update")) {
+          if (id.startsWith("__system_update")) {
             system.setSessionChatTitle("Update Available");
           } else if (id === SYSTEM_GALLERY_ID) {
             system.setSessionChatTitle("Gallery");

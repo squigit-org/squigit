@@ -1,0 +1,33 @@
+.flowButton {
+  padding: 0.6rem 2rem;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.next {
+  background-color: var(--c-raw-050, #e0e0e0);
+  color: var(--c-raw-005, #121212);
+}
+
+.next:not(:disabled):hover {
+  background-color: var(--c-raw-036, #a0a0a0);
+}
+
+.back {
+  background-color: transparent;
+  color: var(--c-raw-050, #e0e0e0);
+  border: 1px solid var(--c-raw-050, #e0e0e0);
+}
+
+.back:not(:disabled):hover {
+  background-color: var(--c-raw-010, #333333);
+}
+
+.flowButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
