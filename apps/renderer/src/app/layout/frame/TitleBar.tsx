@@ -15,7 +15,6 @@ import { AuthButton } from "./AuthButton";
 import { TrafficLights } from "./TrafficLights";
 import { SettingsMenu } from "./SettingsMenu";
 import { useAppContext } from "../../providers/AppProvider";
-import { TitleBarContextMenu } from "../menus/TitleBarContextMenu";
 import { SettingsOverlay } from "../overlays/SettingsOverlay";
 import styles from "./TitleBar.module.css";
 
@@ -24,10 +23,6 @@ export const TitleBar: React.FC = () => {
   const { isMac, isLinux, isWin } = usePlatform();
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [hasSeenUpdateButton, setHasSeenUpdateButton] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
 
   const isUnix = isMac || isLinux;
   const startDragging = () => {
@@ -48,11 +43,6 @@ export const TitleBar: React.FC = () => {
     setHasSeenUpdateButton(false);
   }, [pendingUpdate?.version]);
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  };
-
   const handleToggleAlwaysOnTop = async () => {
     const newState = !isAlwaysOnTop;
     setIsAlwaysOnTop(newState);
@@ -66,14 +56,7 @@ export const TitleBar: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLElement>) => {
-    if (
-      contextMenu &&
-      !(e.target as Element).closest("[data-is-context-menu]")
-    ) {
-      setContextMenu(null);
-    }
-
-    if (!isWindows || e.button !== 0 || contextMenu) return;
+    if (!isWindows || e.button !== 0) return;
 
     const target = e.target as Element | null;
     if (!target) return;
@@ -110,7 +93,6 @@ export const TitleBar: React.FC = () => {
     <header
       className={`${styles.header} ${isWindows ? styles.headerWindows : ""}`}
       {...dragRegionProps}
-      onContextMenu={handleContextMenu}
       onMouseDown={handleMouseDown}
     >
       <h1 className={styles.chatTitle}>
@@ -236,19 +218,6 @@ export const TitleBar: React.FC = () => {
 
         {isWindows && <WindowControls />}
       </div>
-
-      {contextMenu && (
-        <TitleBarContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
-          onNewThread={app.handleNewSession}
-          onOpenSettings={() => app.system.openSettings("general")}
-          isAlwaysOnTop={isAlwaysOnTop}
-          onToggleAlwaysOnTop={handleToggleAlwaysOnTop}
-          isWelcome={app.chatHistory.activeSessionId === "__system_welcome"}
-        />
-      )}
     </header>
   );
 };
