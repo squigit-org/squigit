@@ -14,6 +14,10 @@
   overflow: hidden;
 }
 
+.transparentBg {
+  background: transparent !important;
+}
+
 .mainContent {
   display: flex;
   flex: 1;

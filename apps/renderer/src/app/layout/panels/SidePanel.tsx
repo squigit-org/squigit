@@ -19,7 +19,6 @@ import {
   X,
   Search,
   FolderOpen,
-  Milestone,
   ArrowUpRight,
 } from "lucide-react";
 
@@ -331,8 +330,6 @@ export const SidePanel: React.FC = () => {
     };
   }, [chats]);
 
-  const showWelcome =
-    !app.system.activeProfile && app.system.hasAgreed === false;
   const isChatBusy =
     app.chat.isAnalyzing ||
     app.chat.isGenerating ||
@@ -528,7 +525,7 @@ export const SidePanel: React.FC = () => {
       )}
 
       <div className={styles.scrollArea}>
-        {(pinnedChats.length > 0 || (showWelcome && !isSelectionMode)) && (
+        {pinnedChats.length > 0 && (
           <div className={styles.groupInner}>
             {pinnedChats.map((chat) => (
               <ChatItem
@@ -551,20 +548,6 @@ export const SidePanel: React.FC = () => {
                 onEnableSelectionMode={handleEnableSelectionMode}
               />
             ))}
-
-            {showWelcome && !isSelectionMode && (
-              <div
-                className={`${styles.chatRow} ${activeSessionId === "__system_welcome" ? styles.active : ""}`}
-                onClick={() => app.handleSelectChat("__system_welcome")}
-              >
-                <div className={styles.chatIconMain}>
-                  <Milestone size={20} />
-                </div>
-                <span className={styles.chatTitle}>
-                  Welcome to {app.system.appName}!
-                </span>
-              </div>
-            )}
           </div>
         )}
 

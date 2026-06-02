@@ -27,16 +27,19 @@ export const AppRouter: React.FC = () => {
       if (!modPressed) return;
 
       const key = e.key.toLowerCase();
+      const isWelcome = app.chatHistory.activeSessionId === "__system_welcome";
 
-      if (!e.shiftKey && !e.altKey && key === "k") {
-        e.preventDefault();
-        app.openSearchOverlay();
-        return;
-      }
+      if (!isWelcome) {
+        if (!e.shiftKey && !e.altKey && key === "k") {
+          e.preventDefault();
+          app.openSearchOverlay();
+          return;
+        }
 
-      if (e.shiftKey && !e.altKey && key === "o") {
-        e.preventDefault();
-        app.handleNewSession();
+        if (e.shiftKey && !e.altKey && key === "o") {
+          e.preventDefault();
+          app.handleNewSession();
+        }
       }
     };
 
@@ -48,6 +51,7 @@ export const AppRouter: React.FC = () => {
 
   const activeId = app.chatHistory.activeSessionId;
   const hasActiveChatSession = !!activeId && !isOnboardingId(activeId);
+  const isWelcomeRoute = activeId === "__system_welcome";
   const shouldRenderChatShell =
     app.showChatShellDuringNavigation ||
     hasActiveChatSession ||
@@ -59,6 +63,7 @@ export const AppRouter: React.FC = () => {
       containerRef={shouldRenderChatShell ? app.containerRef : undefined}
       isSidePanelOpen={app.isSidePanelOpen}
       enablePanelAnimation={app.enablePanelAnimation}
+      isWelcomeRoute={isWelcomeRoute}
       content={<AppRoutes shouldRenderChatShell={shouldRenderChatShell} />}
       dialogs={<AppDialogs />}
     />

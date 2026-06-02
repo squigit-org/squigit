@@ -156,8 +156,7 @@ export const useApp = () => {
   const isPendingAutoSelectWelcome =
     system.hasAgreed === false &&
     !system.activeProfile &&
-    !chatHistory.activeSessionId &&
-    !hasAutoSelectedWelcome;
+    chatHistory.activeSessionId !== "__system_welcome";
   const isLoadingState =
     !system.profileLoaded ||
     !system.prefsLoaded ||

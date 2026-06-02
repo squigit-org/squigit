@@ -16,6 +16,7 @@ type AppLayoutProps = {
   containerRef?: React.Ref<HTMLDivElement>;
   isSidePanelOpen: boolean;
   enablePanelAnimation: boolean;
+  isWelcomeRoute?: boolean;
 };
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
@@ -25,12 +26,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   containerRef,
   isSidePanelOpen,
   enablePanelAnimation,
+  isWelcomeRoute,
 }) => {
   return (
     <div
       ref={containerRef}
       onContextMenu={onContextMenu}
-      className={styles.chatContainer}
+      className={`${styles.chatContainer} ${isWelcomeRoute ? styles.transparentBg : ""}`}
     >
       <TitleBar />
       <div className={styles.mainContent}>

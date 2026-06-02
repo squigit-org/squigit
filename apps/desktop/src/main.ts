@@ -37,6 +37,12 @@ async function createWindow() {
     return { action: 'deny' };
   });
 
+  mainWindow.webContents.on('context-menu', (_, params) => {
+    if (params.y <= 46) {
+      mainWindow?.webContents.send('show-titlebar-context-menu', { x: params.x, y: params.y });
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });

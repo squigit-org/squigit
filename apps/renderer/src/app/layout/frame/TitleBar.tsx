@@ -113,25 +113,30 @@ export const TitleBar: React.FC = () => {
       onContextMenu={handleContextMenu}
       onMouseDown={handleMouseDown}
     >
-      <h1 className={styles.chatTitle}>{app.chatTitle}</h1>
+      <h1 className={styles.chatTitle}>
+        {app.chatHistory.activeSessionId === "__system_welcome"
+          ? ""
+          : app.chatTitle}
+      </h1>
 
       <div className={styles.leftSection}>
         {isUnix && <TrafficLights />}
 
-        {!app.isLoadingState && (
-          <div className={styles.controlsWrapper}>
-            <button
-              onClick={app.toggleSidePanel}
-              className={`${styles.iconButton} ${
-                app.isSidePanelOpen ? styles.active : ""
-              }`}
-              title="Recent Chats"
-              aria-label="Recent chats"
-            >
-              <SidePanelToggleIcon size={20} active={app.isSidePanelOpen} />
-            </button>
-          </div>
-        )}
+        {!app.isLoadingState &&
+          app.chatHistory.activeSessionId !== "__system_welcome" && (
+            <div className={styles.controlsWrapper}>
+              <button
+                onClick={app.toggleSidePanel}
+                className={`${styles.iconButton} ${
+                  app.isSidePanelOpen ? styles.active : ""
+                }`}
+                title="Recent Chats"
+                aria-label="Recent chats"
+              >
+                <SidePanelToggleIcon size={20} active={app.isSidePanelOpen} />
+              </button>
+            </div>
+          )}
       </div>
 
       <div
@@ -161,11 +166,13 @@ export const TitleBar: React.FC = () => {
               </button>
             )}
 
-            <SettingsMenu
-              onOpenSettings={app.system.openSettings}
-              isSettingsOpen={app.system.isSettingsOpen}
-              onCloseSettings={() => app.system.setSettingsOpen(false)}
-            />
+            {app.chatHistory.activeSessionId !== "__system_welcome" && (
+              <SettingsMenu
+                onOpenSettings={app.system.openSettings}
+                isSettingsOpen={app.system.isSettingsOpen}
+                onCloseSettings={() => app.system.setSettingsOpen(false)}
+              />
+            )}
             <SettingsOverlay
               isOpen={app.system.isSettingsOpen}
               onClose={() => app.system.setSettingsOpen(false)}
@@ -239,6 +246,7 @@ export const TitleBar: React.FC = () => {
           onOpenSettings={() => app.system.openSettings("general")}
           isAlwaysOnTop={isAlwaysOnTop}
           onToggleAlwaysOnTop={handleToggleAlwaysOnTop}
+          isWelcome={app.chatHistory.activeSessionId === "__system_welcome"}
         />
       )}
     </header>

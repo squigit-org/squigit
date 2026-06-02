@@ -22,6 +22,7 @@ interface TitleBarContextMenuProps {
   onOpenSettings: () => void;
   isAlwaysOnTop: boolean;
   onToggleAlwaysOnTop: () => void;
+  isWelcome?: boolean;
 }
 
 export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
@@ -32,6 +33,7 @@ export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
   onOpenSettings,
   isAlwaysOnTop,
   onToggleAlwaysOnTop,
+  isWelcome,
 }) => {
   const { isMac } = usePlatform();
 
@@ -82,11 +84,13 @@ export const TitleBarContextMenu: React.FC<TitleBarContextMenuProps> = ({
 
       <ContextMenuSeparator />
 
-      <ContextMenuItem onClick={handleNewThread}>New thread</ContextMenuItem>
-
-      <ContextMenuItem onClick={handleSettings}>Settings</ContextMenuItem>
-
-      <ContextMenuSeparator />
+      {!isWelcome && (
+        <>
+          <ContextMenuItem onClick={handleNewThread}>New thread</ContextMenuItem>
+          <ContextMenuItem onClick={handleSettings}>Settings</ContextMenuItem>
+          <ContextMenuSeparator />
+        </>
+      )}
 
       <ContextMenuItem onClick={handleReload}>Reload</ContextMenuItem>
 
