@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from "react";
 import { platform, commands } from "@/platform";
-import { loadPreferences, hasAgreedFlag, setAgreedFlag } from "@squigit/core/config";
+import { loadPreferences, getWizardState, setWizardState } from "@squigit/core/config";
 import { resolveOcrModelId } from "@squigit/core/config";
 import { initializeBrainProvider } from "@squigit/core/brain/session";
 import { useSystemPreferences } from "./useSystemPreferences";
@@ -40,14 +40,14 @@ export const useSystemSync = () => {
   const keys = useSystemApiKeys(profile.activeProfile?.id);
 
   const checkAgreement = async () => {
-    const agreed = await hasAgreedFlag();
-    state.setHasAgreed(agreed);
-    return agreed;
+    const wizardState = await getWizardState();
+    state.setWizardState(wizardState);
+    return wizardState;
   };
 
   const setAgreementCompleted = async () => {
-    await setAgreedFlag();
-    state.setHasAgreed(true);
+    await setWizardState({ step: 1, isFinished: true }); // Legacy wrapper fallback
+    state.setWizardState({ step: 1, isFinished: true });
   };
 
   useEffect(() => {
@@ -100,117 +100,72 @@ export const useSystemSync = () => {
       const appConstants = await commands.getAppConstants();
       if (cancelled) return;
 
-      const agreed = await hasAgreedFlag();
+      const wizardState = await getWizardState();
       if (cancelled) return;
 
-      state.setHasAgreed(agreed);
+      state.setWizardState(wizardState);
       state.setAppName(appConstants.appName || "Squigit");
 
-      if (agreed) {
-        const loadedPrefs = await loadPreferences();
-        if (cancelled) return;
+      const loadedPrefs = await loadPreferences();
+      if (cancelled) return;
 
-        console.log("[useSystemSync] Loaded prefs:", loadedPrefs);
+      console.log("[useSystemSync] Loaded prefs:", loadedPrefs);
 
-        const loadedPrompt = loadedPrefs.prompt || appConstants.defaultPrompt;
-        prefs.setActivePrompt(loadedPrompt);
-        prefs.setEditingPrompt(loadedPrompt);
+      const loadedPrompt = loadedPrefs.prompt || appConstants.defaultPrompt;
+      prefs.setActivePrompt(loadedPrompt);
+      prefs.setEditingPrompt(loadedPrompt);
 
-        const loadedModel = loadedPrefs.model || appConstants.defaultModel;
-        prefs.setStartupModel(loadedModel);
-        prefs.setEditingModel(loadedModel);
-        prefs.setSessionModel(loadedModel);
+      const loadedModel = loadedPrefs.model || appConstants.defaultModel;
+      prefs.setStartupModel(loadedModel);
+      prefs.setEditingModel(loadedModel);
+      prefs.setSessionModel(loadedModel);
 
-        prefs.setOcrEnabled(
-          loadedPrefs.ocrEnabled !== undefined ? loadedPrefs.ocrEnabled : true,
-        );
-        prefs.setAutoExpandOCR(
-          loadedPrefs.autoExpandOCR !== undefined
-            ? loadedPrefs.autoExpandOCR
-            : true,
-        );
-        prefs.setCaptureType(
-          loadedPrefs.captureType ||
-            (appConstants.defaultCaptureType as "rectangular" | "squiggle"),
-        );
+      prefs.setOcrEnabled(
+        loadedPrefs.ocrEnabled !== undefined ? loadedPrefs.ocrEnabled : true,
+      );
+      prefs.setAutoExpandOCR(
+        loadedPrefs.autoExpandOCR !== undefined
+          ? loadedPrefs.autoExpandOCR
+          : true,
+      );
+      prefs.setCaptureType(
+        loadedPrefs.captureType ||
+          (appConstants.defaultCaptureType as "rectangular" | "squiggle"),
+      );
 
-        const loadedOcrLanguage = resolveOcrModelId(
-          loadedPrefs.ocrLanguage,
-          appConstants.defaultOcrLanguage,
-        );
-        prefs.setStartupOcrLanguage(loadedOcrLanguage);
-        prefs.setSessionOcrLanguage(
-          loadedPrefs.ocrEnabled !== undefined
-            ? loadedPrefs.ocrEnabled
-              ? loadedOcrLanguage
-              : ""
-            : loadedOcrLanguage,
-        );
+      const loadedOcrLanguage = resolveOcrModelId(
+        loadedPrefs.ocrLanguage,
+        appConstants.defaultOcrLanguage,
+      );
+      prefs.setStartupOcrLanguage(loadedOcrLanguage);
+      prefs.setSessionOcrLanguage(
+        loadedPrefs.ocrEnabled !== undefined
+          ? loadedPrefs.ocrEnabled
+            ? loadedOcrLanguage
+            : ""
+          : loadedOcrLanguage,
+      );
 
-        if (loadedPrefs.theme) {
-          prefs.setTheme(loadedPrefs.theme);
-        }
-
-        const activeAccountId = loadedPrefs.activeAccount;
-        console.log(
-          "[useSystemSync] Checking active account preference:",
-          activeAccountId,
-        );
-
-        if (activeAccountId && activeAccountId !== "Guest") {
-          await setPreferredActiveProfile(activeAccountId);
-        } else {
-          try {
-            await platform.invoke("logout");
-          } catch (e) {
-            console.error("[useSystemSync] Failed to ensure guest mode:", e);
-          }
-        }
-      } else {
+      if (loadedPrefs.theme) {
+        prefs.setTheme(loadedPrefs.theme);
+      } else if (!wizardState.isFinished) {
         prefs.setTheme("system");
+      }
 
-        const loadedPrefs = await loadPreferences();
-        if (cancelled) return;
+      const activeAccountId = loadedPrefs.activeAccount;
+      console.log(
+        "[useSystemSync] Checking active account preference:",
+        activeAccountId,
+      );
 
-        console.log("[useSystemSync] Loaded prefs (not agreed):", loadedPrefs);
-
-        const loadedPrompt = loadedPrefs.prompt || appConstants.defaultPrompt;
-        prefs.setActivePrompt(loadedPrompt);
-        prefs.setEditingPrompt(loadedPrompt);
-        const loadedModel = loadedPrefs.model || appConstants.defaultModel;
-        prefs.setStartupModel(loadedModel);
-        prefs.setEditingModel(loadedModel);
-        prefs.setSessionModel(loadedModel);
-
-        prefs.setOcrEnabled(
-          loadedPrefs.ocrEnabled !== undefined ? loadedPrefs.ocrEnabled : true,
-        );
-        prefs.setAutoExpandOCR(
-          loadedPrefs.autoExpandOCR !== undefined
-            ? loadedPrefs.autoExpandOCR
-            : true,
-        );
-        prefs.setCaptureType(
-          loadedPrefs.captureType ||
-            (appConstants.defaultCaptureType as "rectangular" | "squiggle"),
-        );
-
-        const loadedOcrLanguage = resolveOcrModelId(
-          loadedPrefs.ocrLanguage,
-          appConstants.defaultOcrLanguage,
-        );
-        prefs.setStartupOcrLanguage(loadedOcrLanguage);
-        prefs.setSessionOcrLanguage(
-          loadedPrefs.ocrEnabled !== undefined
-            ? loadedPrefs.ocrEnabled
-              ? loadedOcrLanguage
-              : ""
-            : loadedOcrLanguage,
-        );
-
+      if (activeAccountId && activeAccountId !== "Guest") {
+        await setPreferredActiveProfile(activeAccountId);
+      } else {
         try {
           await platform.invoke("logout");
-        } catch (e) {}
+        } catch (e) {
+          console.error("[useSystemSync] Failed to ensure guest mode:", e);
+        }
       }
 
       if (!cancelled) {
@@ -442,8 +397,8 @@ export const useSystemSync = () => {
     clearSystemError: state.clearSystemError,
     updatePreferences: prefs.updatePreferences,
     handleLogout,
-    hasAgreed: state.hasAgreed,
-    setHasAgreed: state.setHasAgreed,
+    wizardState: state.wizardState,
+    setWizardState: state.setWizardState,
     setAgreementCompleted,
     updateUserData: profile.updateUserData,
     sessionChatTitle: state.sessionChatTitle,

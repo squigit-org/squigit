@@ -89,19 +89,7 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
         let mut settings = AuthFlowSettings::new(
             "Squigit",
             Arc::new(|url| {
-                #[cfg(target_os = "linux")]
-                {
-                    let _ = std::process::Command::new("xdg-open")
-                        .arg(url)
-                        .env_remove("LD_LIBRARY_PATH")
-                        .env_remove("ELECTRON_RUN_AS_NODE")
-                        .env_remove("GIO_EXTRA_MODULES")
-                        .spawn();
-                }
-                #[cfg(not(target_os = "linux"))]
-                {
-                    let _ = webbrowser::open(url);
-                }
+                webbrowser::open(url).map_err(|e| squigit_auth::error::ProfileError::Auth(e.to_string()))?;
                 Ok(())
             })
         );

@@ -91,6 +91,8 @@ export function initializeCorePorts(): void {
   setPreferencesPort({
     hasAgreedFlag: () => platform.invoke<boolean>("has_agreed_flag"),
     setAgreedFlag: () => platform.invoke("set_agreed_flag"),
+    getWizardState: () => platform.invoke<{ step: number; isFinished: boolean }>("get_wizard_state"),
+    setWizardState: (state) => platform.invoke("set_wizard_state", state),
     hasPreferencesFile: (fileName: string) =>
       platform.fs.exists(fileName, { baseDir: "AppConfig" }),
     readPreferencesFile: (fileName: string) =>

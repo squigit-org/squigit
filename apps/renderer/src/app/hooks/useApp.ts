@@ -150,7 +150,7 @@ export const useApp = () => {
   }, [agreedToTerms]);
 
   const shouldAutoClosePanelForWizard =
-    system.hasAgreed === false && !system.activeProfile;
+    system.wizardState?.isFinished === false;
 
   const hasActiveOnboarding = chatHistory.activeSessionId
     ? isOnboardingId(chatHistory.activeSessionId)
@@ -158,13 +158,12 @@ export const useApp = () => {
   const isImageMissing = !system.startupImage && !hasActiveOnboarding;
   const isAuthPending = auth.authStage === "LOGIN";
   const isPendingAutoSelectWizard =
-    system.hasAgreed === false &&
-    !system.activeProfile &&
+    system.wizardState?.isFinished === false &&
     chatHistory.activeSessionId !== "__system_wizard";
   const isLoadingState =
     !system.profileLoaded ||
     !system.prefsLoaded ||
-    system.hasAgreed === null ||
+    system.wizardState === null ||
     auth.authStage === "LOADING" ||
     isPendingAutoSelectWizard;
 
@@ -274,7 +273,7 @@ export const useApp = () => {
     hasShownCaptureTerminalHintRef,
   });
 
-  const isAgreementPending = system.hasAgreed === false;
+  const isAgreementPending = system.wizardState?.isFinished === false;
 
   useEffect(() => {
     const pendingTurn = chat.pendingAssistantTurn;
@@ -285,10 +284,9 @@ export const useApp = () => {
 
   useEffect(() => {
     if (
-      system.hasAgreed === false &&
+      system.wizardState?.isFinished === false &&
       auth.authStage !== "LOADING" &&
       !capture.isCheckingImage &&
-      !system.activeProfile &&
       !chatHistory.activeSessionId &&
       !hasAutoSelectedWizard
     ) {
@@ -301,8 +299,7 @@ export const useApp = () => {
     chatHistory.activeSessionId,
     hasAutoSelectedWizard,
     navigation,
-    system.activeProfile,
-    system.hasAgreed,
+    system.wizardState?.isFinished,
   ]);
 
   const handleUpdateLensUrl = useCallback(

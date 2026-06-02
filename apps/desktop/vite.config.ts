@@ -19,7 +19,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'electron',
-        'ffi-napi-bridge',
+        'napi-bridge',
         ...builtinModules,
         ...builtinModules.map((m) => `node:${m}`)
       ],

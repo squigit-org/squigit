@@ -9,6 +9,8 @@ export {
   getDefaultPreferences,
   hasAgreedFlag,
   setAgreedFlag,
+  getWizardState,
+  setWizardState,
   hasPreferencesFile,
   loadPreferences,
   savePreferences,

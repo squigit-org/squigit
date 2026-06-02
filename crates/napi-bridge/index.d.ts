@@ -132,7 +132,7 @@ export declare function saveRollingSummary(chatId: string, summary: string): voi
 
 export declare function setActiveProfile(profileId: string): void
 
-export declare function startGoogleAuth(): NapiAuthResult
+export declare function startGoogleAuth(): Promise<NapiAuthResult>
 
 export declare function storeImageFromPath(path: string): NapiStoredImage
 

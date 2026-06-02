@@ -26,7 +26,7 @@ export const useSystemState = () => {
   const clearSystemError = () => setSystemError(null);
 
   const [prefsLoaded, setPrefsLoaded] = useState(false);
-  const [hasAgreed, setHasAgreed] = useState<boolean | null>(null);
+  const [wizardState, setWizardState] = useState<{ step: number; isFinished: boolean } | null>(null);
 
   const openSettings = (section: SettingsSection) => {
     setSettingsSection(section);
@@ -49,8 +49,8 @@ export const useSystemState = () => {
     clearSystemError,
     prefsLoaded,
     setPrefsLoaded,
-    hasAgreed,
-    setHasAgreed,
+    wizardState,
+    setWizardState,
     openSettings,
   };
 };

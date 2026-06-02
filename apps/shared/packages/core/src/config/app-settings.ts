@@ -52,6 +52,23 @@ export async function setAgreedFlag(): Promise<void> {
   }
 }
 
+export async function getWizardState(): Promise<{ step: number; isFinished: boolean }> {
+  try {
+    return await getPreferencesPort().getWizardState();
+  } catch (error) {
+    console.warn("Wizard state check failed:", error);
+    return { step: 0, isFinished: false };
+  }
+}
+
+export async function setWizardState(state: { step: number; isFinished: boolean }): Promise<void> {
+  try {
+    await getPreferencesPort().setWizardState(state);
+  } catch (error) {
+    console.error("Failed to write wizard state via runtime port:", error);
+  }
+}
+
 export async function hasPreferencesFile(): Promise<boolean> {
   try {
     return await getPreferencesPort().hasPreferencesFile(PREFERENCES_FILE_NAME);

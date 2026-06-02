@@ -7,11 +7,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { stripAnimationQuotesPlugin } from "./plugins/strip-animation-quotes";
 
 const platform = process.env.VITE_PLATFORM || "tauri";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), stripAnimationQuotesPlugin()],
   server: {
     port: 1420,
     strictPort: true,

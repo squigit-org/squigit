@@ -7,6 +7,8 @@
 export interface PreferencesPort {
   hasAgreedFlag(): Promise<boolean>;
   setAgreedFlag(): Promise<void>;
+  getWizardState(): Promise<{ step: number; isFinished: boolean }>;
+  setWizardState(state: { step: number; isFinished: boolean }): Promise<void>;
   hasPreferencesFile(fileName: string): Promise<boolean>;
   readPreferencesFile(fileName: string): Promise<string>;
   writePreferencesFile(fileName: string, content: string): Promise<void>;
