@@ -588,6 +588,7 @@ if (!nativeBinding) {
 module.exports = nativeBinding
 module.exports.analyzeImage = nativeBinding.analyzeImage
 module.exports.appendChatMessage = nativeBinding.appendChatMessage
+module.exports.cancelGoogleAuth = nativeBinding.cancelGoogleAuth
 module.exports.cancelRequest = nativeBinding.cancelRequest
 module.exports.clearActiveProfile = nativeBinding.clearActiveProfile
 module.exports.compressConversation = nativeBinding.compressConversation

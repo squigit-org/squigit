@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use napi::{Error, Result};
 use napi_derive::napi;
 use squigit_auth::auth::{start_google_auth_flow, AuthFlowSettings};
@@ -11,6 +10,8 @@ use squigit_auth::security::{get_decrypted_key, encrypt_and_save_key, ApiKeyProv
 use squigit_auth::ProfileStore;
 
 use crate::types::{NapiAuthResult, NapiProfile};
+
+static ACTIVE_AUTH_CANCEL: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
 
 fn map_profile_err(err: squigit_auth::error::ProfileError) -> Error {
     Error::from_reason(err.to_string())
@@ -108,6 +109,10 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
         settings.redirect_port = 6062;
 
         let auth_cancelled = Arc::new(AtomicBool::new(false));
+        {
+            let mut lock = ACTIVE_AUTH_CANCEL.lock().unwrap();
+            *lock = Some(auth_cancelled.clone());
+        }
 
         let result = start_google_auth_flow(&store, &settings, auth_cancelled).map_err(map_profile_err)?;
         
@@ -119,6 +124,15 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
             original_picture: result.original_picture,
         })
     }).await.map_err(|e| Error::from_reason(e.to_string()))?
+}
+
+#[napi]
+pub fn cancel_google_auth() -> Result<()> {
+    let mut lock = ACTIVE_AUTH_CANCEL.lock().unwrap();
+    if let Some(flag) = lock.take() {
+        flag.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+    Ok(())
 }
 
 #[napi]

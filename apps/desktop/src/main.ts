@@ -7,9 +7,6 @@ let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
-// Override userData to isolate Electron's Chromium data (like Local Storage DBs)
-// from the main Squigit config directory used by the Rust backend.
-app.setPath('userData', path.join(app.getPath('appData'), 'squigit', 'electron-data'));
 
 async function createWindow() {
   mainWindow = new BrowserWindow({

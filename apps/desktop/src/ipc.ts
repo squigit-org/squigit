@@ -25,6 +25,7 @@ export function setupIpc() {
   );
   ipcMain.handle("has_profiles", () => addon.hasProfiles?.());
   ipcMain.handle("start_google_auth", () => addon.startGoogleAuth?.());
+  ipcMain.handle("cancel_google_auth", () => addon.cancelGoogleAuth?.());
   ipcMain.handle("save_api_key", (_, args) =>
     addon.saveApiKey?.(
       args.profileId || args.profile_id,
@@ -125,7 +126,27 @@ export function setupIpc() {
       );
       return JSON.parse(data);
     } catch {
-      return { step: 0, isFinished: false };
+      const defaultState = { 
+        step: 0, 
+        isFinished: false, 
+        data: { 
+          step_1: { agreed: false } 
+        } 
+      };
+      try {
+        const fs = require("fs/promises");
+        const path = require("path");
+        const { app } = require("electron");
+        const userData = app.getPath("userData");
+        await fs.writeFile(
+          path.join(userData, "wizard_state.json"),
+          JSON.stringify(defaultState, null, 2),
+          "utf-8"
+        );
+      } catch (err) {
+        console.error("Failed to pre-create wizard_state.json", err);
+      }
+      return defaultState;
     }
   });
   ipcMain.handle("set_wizard_state", async (_, state) => {
@@ -147,7 +168,6 @@ export function setupIpc() {
       args.plaintext,
     ),
   );
-  ipcMain.handle("cancel_google_auth", () => {});
   ipcMain.handle("get_profile_count", () => addon.profileCount?.());
   ipcMain.handle("cancel_download_ocr_model", () => {});
   ipcMain.handle("cancel_ocr_job", () => {});

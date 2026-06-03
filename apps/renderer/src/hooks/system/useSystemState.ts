@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import type { WizardState } from "@squigit/core/config";
 import { SettingsSection } from "@/features/settings";
 
 export const useSystemState = () => {
@@ -26,7 +27,7 @@ export const useSystemState = () => {
   const clearSystemError = () => setSystemError(null);
 
   const [prefsLoaded, setPrefsLoaded] = useState(false);
-  const [wizardState, setWizardState] = useState<{ step: number; isFinished: boolean } | null>(null);
+  const [wizardState, setWizardState] = useState<WizardState | null>(null);
 
   const openSettings = (section: SettingsSection) => {
     setSettingsSection(section);

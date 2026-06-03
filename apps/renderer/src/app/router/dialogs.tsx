@@ -15,7 +15,7 @@ import { useAppContext } from "../providers/AppProvider";
 export const AppDialogs: React.FC = () => {
   const app = useAppContext();
 
-  const isAgreed = app.system.hasAgreed || app.agreedToTerms;
+  const isAgreed = app.system.wizardState?.isFinished || app.agreedToTerms;
   const baseLoginDialog = getDialogs(app.system.appName).LOGIN_REQUIRED;
   const loginRequiredDialog = {
     ...baseLoginDialog,

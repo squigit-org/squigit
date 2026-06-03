@@ -4,6 +4,8 @@ export declare function analyzeImage(imagePath: string, model: string, userMessa
 
 export declare function appendChatMessage(chatId: string, role: string, content: string): void
 
+export declare function cancelGoogleAuth(): void
+
 export declare function cancelRequest(channelId?: string | undefined | null): Promise<void>
 
 export declare function clearActiveProfile(): void

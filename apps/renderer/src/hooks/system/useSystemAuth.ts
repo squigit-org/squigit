@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 
 type AuthStage = "LOADING" | "LOGIN" | "AUTHENTICATED";
 let hasLoggedMissingAuthConfig = false;
+let currentAuthAttempt = 0;
 
 type AuthFailurePayload = {
   error: string;
@@ -97,17 +98,31 @@ export const useSystemAuth = (
   }, [setSwitchingProfileId]);
 
   const addAccount = async () => {
+    currentAuthAttempt++;
+    const attemptId = currentAuthAttempt;
+
     setSwitchingProfileId("creating_account");
 
-    const performAuth = async () => {
+    if (attemptId > 1) {
+      // Proactively cancel any existing background flow so we don't hit "Address in use"
+      try {
+        await commands.cancelGoogleAuth();
+        // Give the backend a tiny fraction of a second to release the port
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      } catch (e) {}
+    }
+
+    const performAuth = async (): Promise<any> => {
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Auth Timeout")), 120000),
       );
-      await Promise.race([commands.startGoogleAuth(), timeoutPromise]);
+      return await Promise.race([commands.startGoogleAuth(), timeoutPromise]);
     };
 
+    let result: any = null;
+
     try {
-      await performAuth();
+      result = await performAuth();
     } catch (e: any) {
       const errorMsg = String(e);
       if (
@@ -119,10 +134,9 @@ export const useSystemAuth = (
         try {
           await commands.cancelGoogleAuth();
           await new Promise((resolve) => setTimeout(resolve, 500));
-          await performAuth();
+          result = await performAuth();
         } catch (retryErr) {
           console.error("Failed to restart auth:", retryErr);
-          setSwitchingProfileId(null);
         }
       } else {
         const missingConfig = errorMsg.includes(
@@ -138,18 +152,16 @@ export const useSystemAuth = (
         } else {
           console.error("Failed to start auth:", e);
         }
-
-        if (errorMsg.includes("Auth Timeout")) {
-          console.warn("Auth timed out, cancelling backend process...");
-          try {
-            await commands.cancelGoogleAuth();
-          } catch (cancelErr) {
-            console.error("Failed to cancel timed out auth:", cancelErr);
-          }
-        }
-        setSwitchingProfileId(null);
       }
     }
+
+    // Only reset the UI if this is still the active attempt!
+    // This prevents the "ugly flicker" when an older attempt gets cancelled by a newer rapid click.
+    if (currentAuthAttempt === attemptId) {
+      setSwitchingProfileId(null);
+    }
+    
+    return result;
   };
 
   const cancelAuth = async () => {

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type { UserPreferences } from "./app-settings.ts";
+export type { UserPreferences, WizardState } from "./app-settings.ts";
 export {
   getDefaultPreferences,
   hasAgreedFlag,

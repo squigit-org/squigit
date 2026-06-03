@@ -4,11 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+
+import type { WizardState } from "../config/app-settings";
+
 export interface PreferencesPort {
   hasAgreedFlag(): Promise<boolean>;
   setAgreedFlag(): Promise<void>;
-  getWizardState(): Promise<{ step: number; isFinished: boolean }>;
-  setWizardState(state: { step: number; isFinished: boolean }): Promise<void>;
+  getWizardState(): Promise<WizardState>;
+  setWizardState(state: WizardState): Promise<void>;
   hasPreferencesFile(fileName: string): Promise<boolean>;
   readPreferencesFile(fileName: string): Promise<string>;
   writePreferencesFile(fileName: string, content: string): Promise<void>;

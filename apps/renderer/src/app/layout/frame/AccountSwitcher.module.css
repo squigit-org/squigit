@@ -9,6 +9,7 @@
 .accountSwitcher {
   position: relative;
   pointer-events: auto;
+  -webkit-app-region: no-drag;
 }
 
 .cancelIcon {

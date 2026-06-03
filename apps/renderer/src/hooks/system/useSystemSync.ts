@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from "react";
 import { platform, commands } from "@/platform";
-import { loadPreferences, getWizardState, setWizardState } from "@squigit/core/config";
+import { loadPreferences, getWizardState, setWizardState, type WizardState } from "@squigit/core/config";
 import { resolveOcrModelId } from "@squigit/core/config";
 import { initializeBrainProvider } from "@squigit/core/brain/session";
 import { useSystemPreferences } from "./useSystemPreferences";
@@ -14,23 +14,6 @@ import { useSystemProfile } from "./useSystemProfile";
 import { useSystemState } from "./useSystemState";
 import { useSystemAuth } from "./useSystemAuth";
 import { useSystemApiKeys } from "./useSystemApiKeys";
-
-const ACTIVE_PROFILE_SET_RETRIES = 4;
-const ACTIVE_PROFILE_RETRY_DELAY_MS = 50;
-
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const isTransientProfileReadError = (error: unknown) => {
-  const message = String(error).toLowerCase();
-  return (
-    message.includes("json error") &&
-    (message.includes("eof while parsing") ||
-      message.includes("unexpected end"))
-  );
-};
-
-const isMissingProfileError = (error: unknown) =>
-  String(error).toLowerCase().includes("profile not found");
 
 export const useSystemSync = () => {
   const prefs = useSystemPreferences();
@@ -45,56 +28,21 @@ export const useSystemSync = () => {
     return wizardState;
   };
 
+  const handleSetWizardState = async (newState: WizardState) => {
+    state.setWizardState(newState);
+    await setWizardState(newState);
+  };
+
   const setAgreementCompleted = async () => {
-    await setWizardState({ step: 1, isFinished: true }); // Legacy wrapper fallback
-    state.setWizardState({ step: 1, isFinished: true });
+    if (state.wizardState) {
+      await handleSetWizardState({ ...state.wizardState, step: 1, isFinished: true });
+    } else {
+      await handleSetWizardState({ step: 1, isFinished: true });
+    }
   };
 
   useEffect(() => {
     let cancelled = false;
-
-    const setPreferredActiveProfile = async (profileId: string) => {
-      let lastError: unknown = null;
-
-      for (let attempt = 1; attempt <= ACTIVE_PROFILE_SET_RETRIES; attempt++) {
-        if (cancelled) return;
-
-        try {
-          await commands.setActiveProfile(profileId);
-          return;
-        } catch (e) {
-          lastError = e;
-
-          if (
-            !isTransientProfileReadError(e) ||
-            attempt === ACTIVE_PROFILE_SET_RETRIES
-          ) {
-            break;
-          }
-
-          console.warn(
-            `[useSystemSync] Transient profile read error restoring ${profileId}. Retry ${attempt}/${ACTIVE_PROFILE_SET_RETRIES}.`,
-            e,
-          );
-          await wait(ACTIVE_PROFILE_RETRY_DELAY_MS * attempt);
-        }
-      }
-
-      if (cancelled) return;
-
-      if (isMissingProfileError(lastError)) {
-        console.warn(
-          `[useSystemSync] Preferred profile ${profileId} no longer exists. Healing state back to Guest.`,
-        );
-        await prefs.updatePreferences({ activeAccount: "Guest" });
-        return;
-      }
-
-      console.error(
-        `[useSystemSync] Failed to restore preferred profile ${profileId}. Keeping saved preference to avoid unintended sign-out.`,
-        lastError,
-      );
-    };
 
     const init = async () => {
       const appConstants = await commands.getAppConstants();
@@ -150,22 +98,6 @@ export const useSystemSync = () => {
         prefs.setTheme(loadedPrefs.theme);
       } else if (!wizardState.isFinished) {
         prefs.setTheme("system");
-      }
-
-      const activeAccountId = loadedPrefs.activeAccount;
-      console.log(
-        "[useSystemSync] Checking active account preference:",
-        activeAccountId,
-      );
-
-      if (activeAccountId && activeAccountId !== "Guest") {
-        await setPreferredActiveProfile(activeAccountId);
-      } else {
-        try {
-          await platform.invoke("logout");
-        } catch (e) {
-          console.error("[useSystemSync] Failed to ensure guest mode:", e);
-        }
       }
 
       if (!cancelled) {
@@ -321,7 +253,6 @@ export const useSystemSync = () => {
       profile.setUserEmail("");
       profile.setAvatarSrc("");
       profile.setOriginalPicture(null);
-      await prefs.updatePreferences({ activeAccount: "Guest" });
     } catch (e) {
       console.error("Logout failed", e);
     }
@@ -335,7 +266,6 @@ export const useSystemSync = () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       await loadProfileData();
-      await prefs.updatePreferences({ activeAccount: profileId });
       await checkAgreement();
     } catch (e) {
       console.error("Failed to switch profile:", e);
@@ -398,7 +328,7 @@ export const useSystemSync = () => {
     updatePreferences: prefs.updatePreferences,
     handleLogout,
     wizardState: state.wizardState,
-    setWizardState: state.setWizardState,
+    setWizardState: handleSetWizardState,
     setAgreementCompleted,
     updateUserData: profile.updateUserData,
     sessionChatTitle: state.sessionChatTitle,

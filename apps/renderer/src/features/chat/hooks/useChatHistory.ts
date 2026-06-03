@@ -52,7 +52,7 @@ export const useChatHistory = (activeProfileId: string | null = null) => {
   }, [refreshChats]);
 
   useEffect(() => {
-    setActiveSessionId(null);
+    setActiveSessionId((prev) => (prev && isOnboardingId(prev) ? prev : null));
   }, [activeProfileId]);
 
   const handleDeleteChat = async (id: string) => {

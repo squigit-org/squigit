@@ -52,7 +52,13 @@ export async function setAgreedFlag(): Promise<void> {
   }
 }
 
-export async function getWizardState(): Promise<{ step: number; isFinished: boolean }> {
+export type WizardState = {
+  step: number;
+  isFinished: boolean;
+  data?: Record<string, any>;
+};
+
+export async function getWizardState(): Promise<WizardState> {
   try {
     return await getPreferencesPort().getWizardState();
   } catch (error) {
@@ -61,7 +67,7 @@ export async function getWizardState(): Promise<{ step: number; isFinished: bool
   }
 }
 
-export async function setWizardState(state: { step: number; isFinished: boolean }): Promise<void> {
+export async function setWizardState(state: WizardState): Promise<void> {
   try {
     await getPreferencesPort().setWizardState(state);
   } catch (error) {
@@ -83,6 +89,7 @@ export async function loadPreferences(): Promise<UserPreferences> {
     const fileExists = await hasPreferencesFile();
     const defaultPrefs = await getDefaultPreferences();
     if (!fileExists) {
+      await savePreferences(defaultPrefs);
       return defaultPrefs;
     }
 

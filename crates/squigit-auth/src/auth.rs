@@ -24,7 +24,7 @@ const FAILURE_TEMPLATE: &str = include_str!("../assets/oauth/failure.html");
 const FAVICON_BYTES: &[u8] = include_bytes!("../assets/oauth/favicon.png");
 const DEFAULT_USER_INFO_URL: &str =
     "https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses,photos";
-const CANCELLED_CALLBACK_GRACE: Duration = Duration::from_secs(10);
+const CANCELLED_CALLBACK_GRACE: Duration = Duration::from_secs(0);
 static AUTH_MISSING_CREDENTIALS_LOG_ONCE: Once = Once::new();
 
 pub type BrowserOpener = Arc<dyn Fn(&str) -> Result<()> + Send + Sync>;

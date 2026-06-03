@@ -14,7 +14,7 @@
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 0.83rem;
-  font-weight: 150;
+  font-weight: 500;
   font-family:
     "Inter",
     system-ui,
@@ -85,4 +85,57 @@
   height: 40px;
   padding: 8px 16px;
   font-size: 0.95rem;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.awaitingText, .successText, .errorText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.successBtn {
+  border: 1px solid var(--c-raw-017);
+  background-color: var(--c-raw-014);
+}
+.successBtn:hover {
+  background-color: var(--c-raw-014);
+  cursor: default;
+}
+
+.errorBtn {
+  border: 1px solid #d9302555;
+  background-color: #d9302522;
+}
+.errorBtn:hover {
+  background-color: #d9302544;
+}
+
+.disabledBtn {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.wizardBtn.loading, .wizardBtn.successBtn {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  pointer-events: auto;
+  cursor: default !important;
+}
+.wizardBtn.loading:hover, .wizardBtn.successBtn:hover {
+  background-color: transparent !important;
+  cursor: default !important;
+}
+
+.spin {
+  animation: rotate 1s linear infinite;
+  transform: translateZ(0);
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
 }

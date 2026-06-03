@@ -351,8 +351,11 @@ export const useApp = () => {
     await system.switchProfile(profileId);
   };
 
-  const handleAddAccount = () => {
-    system.addAccount();
+  const handleAddAccount = async () => {
+    const result = await system.addAccount();
+    if (result && result.id) {
+      await handleSwitchProfile(result.id);
+    }
   };
 
   const handleSystemAction = useCallback(
