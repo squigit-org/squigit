@@ -2,7 +2,7 @@ import React from "react";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { AuthButton } from "@/app/layout/frame/AuthButton";
 import { AppLogo } from "@/components/icons/brand-icons";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import styles from "./AuthStep.module.css";
 
 interface AuthStepProps {
@@ -19,44 +19,56 @@ export const AuthStep: React.FC<AuthStepProps> = ({ setCustomAction }) => {
   const [userName, setUserName] = React.useState<string | null>(
     () => app.system.activeProfile?.name || null,
   );
+  const [userEmail, setUserEmail] = React.useState<string | null>(
+    () => app.system.activeProfile?.email || null,
+  );
   const isCancelledRef = React.useRef(false);
+  const isAuthenticatingRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (isAuthenticatingRef.current) return;
     if (!app.system.activeProfile) {
       setAuthState("idle");
       setUserName(null);
+      setUserEmail(null);
     } else {
       setAuthState("success");
       setUserName(app.system.activeProfile.name);
+      setUserEmail(app.system.activeProfile.email);
     }
   }, [app.system.activeProfile]);
 
   const handleLogin = async () => {
     isCancelledRef.current = false;
+    isAuthenticatingRef.current = true;
     setAuthState("redirecting");
     const result = await app.system.addAccount();
 
     if (isCancelledRef.current) {
-      return; // Skip state updates if cancelled
+      isAuthenticatingRef.current = false;
+      return;
     }
     if (result) {
       setAuthState("awaiting");
 
-      // Crucial: Actually switch to the new profile so isAuthDone becomes true and the Next button is enabled
-      await app.system.switchProfile(result.id);
-
-      // Artificial delay for brand EGO (at least 2 seconds)
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      const delay = 1800 + Math.floor(Math.random() * 4) * 200;
+      await Promise.all([
+        app.system.switchProfile(result.id),
+        new Promise((resolve) => setTimeout(resolve, delay)),
+      ]);
 
       setUserName(result.name);
+      setUserEmail(result.email);
       setAuthState("success");
     } else {
       setAuthState("error");
     }
+    isAuthenticatingRef.current = false;
   };
 
   const handleCancel = async () => {
     isCancelledRef.current = true;
+    isAuthenticatingRef.current = false;
     await app.system.cancelAuth();
     setAuthState("idle");
   };
@@ -88,7 +100,7 @@ export const AuthStep: React.FC<AuthStepProps> = ({ setCustomAction }) => {
         )}
         {authState === "success" && (
           <div className={styles.standaloneState}>
-            Welcome back, {userName?.split(" ")[0]}
+            <CheckCircle2 size={14} /> Logged in as {userEmail}
           </div>
         )}
         {(authState === "idle" ||
