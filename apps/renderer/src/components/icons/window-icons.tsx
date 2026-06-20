@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { SizedIconProps } from "./shared";
+import type { IconProps } from "./shared";
 
-export const WindowMinimizeIcon = ({ size, className, style }: SizedIconProps) => (
+export const WindowMinimizeIcon = ({ size, className, style }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -21,7 +21,7 @@ export const WindowMinimizeIcon = ({ size, className, style }: SizedIconProps) =
   </svg>
 );
 
-export const WindowMaximizeIcon = ({ size, className, style }: SizedIconProps) => (
+export const WindowMaximizeIcon = ({ size, className, style }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -36,7 +36,7 @@ export const WindowMaximizeIcon = ({ size, className, style }: SizedIconProps) =
   </svg>
 );
 
-export const WindowCloseIcon = ({ size, className, style }: SizedIconProps) => (
+export const WindowCloseIcon = ({ size, className, style }: IconProps) => (
   <svg
     width={size}
     height={size}

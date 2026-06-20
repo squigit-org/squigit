@@ -6,7 +6,7 @@
 
 import type { CSSProperties } from "react";
 
-export interface SizedIconProps {
+export interface IconProps {
   size: number;
   className?: string;
   style?: CSSProperties;
@@ -18,12 +18,12 @@ export interface RequiredColorIconProps {
   color: string;
 }
 
-export interface CloseCrossIconProps extends SizedIconProps {
+export interface CloseCrossIconProps extends IconProps {
   strokeWidth?: number;
   ariaHidden?: boolean;
 }
 
-export interface SidePanelToggleIconProps extends SizedIconProps {
+export interface SidePanelToggleIconProps extends IconProps {
   active?: boolean;
 }
 
@@ -41,3 +41,16 @@ export interface OcrCircularArcIconProps {
 
 export const OCR_CIRCULAR_PATH =
   "M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831";
+
+export function getIconSizeStyle(
+  size?: number | string,
+): CSSProperties | undefined {
+  if (size === undefined) {
+    return undefined;
+  }
+
+  return {
+    width: typeof size === "number" ? `${size}px` : size,
+    height: typeof size === "number" ? `${size}px` : size,
+  };
+}

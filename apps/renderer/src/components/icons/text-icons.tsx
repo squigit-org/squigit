@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { SizedIconProps } from "./shared";
+import type { IconProps } from "./shared";
 
-export const TranslateIcon = ({ size, className, style }: SizedIconProps) => (
+export const TranslateIcon = ({ size, className, style }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -28,7 +28,7 @@ export const TranslateIcon = ({ size, className, style }: SizedIconProps) => (
   </svg>
 );
 
-export const ExpandTextareaIcon = ({ size, className, style }: SizedIconProps) => (
+export const ExpandTextareaIcon = ({ size, className, style }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -46,7 +46,7 @@ export const ExpandTextareaIcon = ({ size, className, style }: SizedIconProps) =
   </svg>
 );
 
-export const CollapseTextareaIcon = ({ size, className, style }: SizedIconProps) => (
+export const CollapseTextareaIcon = ({ size, className, style }: IconProps) => (
   <svg
     width={size}
     height={size}

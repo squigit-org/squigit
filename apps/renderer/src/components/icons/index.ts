@@ -11,3 +11,4 @@ export * from "./navigation-icons";
 export * from "./panel-icons";
 export * from "./text-icons";
 export * from "./window-icons";
+export * from "./platform_icons";

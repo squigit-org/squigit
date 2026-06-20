@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { SidePanelToggleIconProps, SizedIconProps } from "./shared";
+import type { SidePanelToggleIconProps, IconProps } from "./shared";
 
 export const SidePanelToggleIcon = ({
   size,
@@ -38,7 +38,7 @@ export const SidePanelNewThreadIcon = ({
   size,
   className,
   style,
-}: SizedIconProps) => (
+}: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -65,7 +65,7 @@ export const SidePanelSquigitsIcon = ({
   size,
   className,
   style,
-}: SizedIconProps) => (
+}: IconProps) => (
   <svg
     width={size}
     height={size}

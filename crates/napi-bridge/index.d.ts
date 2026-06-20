@@ -8,13 +8,25 @@ export declare function cancelGoogleAuth(): void
 
 export declare function cancelRequest(channelId?: string | undefined | null): Promise<void>
 
+export declare function checkFileExists(path: string): boolean
+
+export declare function checkSttVersion(): void
+
 export declare function clearActiveProfile(): void
 
 export declare function compressConversation(apiKey: string, imageBrief: string, historyToCompress: string, model: string): Promise<string>
 
+export declare function copyImageFromPathToClipboard(path: string): void
+
+export declare function copyImageToClipboard(imageBase64: string): void
+
 export declare function deleteChat(chatId: string): void
 
 export declare function deleteProfile(profileId: string): void
+
+export declare function detectImageTone(bytes: Buffer): string | null
+
+export declare function encryptAndSave(profileId: string, provider: string, plaintext: string): void
 
 export declare function findProfileByEmail(email: string): NapiProfile | null
 
@@ -30,11 +42,17 @@ export declare function getImagePath(hash: string): string
 
 export declare function getImgbbUrl(chatId: string): string | null
 
+export declare function getLinuxPackageManager(): string
+
 export declare function getProfile(profileId: string): NapiProfile | null
 
 export declare function getRollingSummary(chatId: string): string | null
 
 export declare function getStoreBaseDir(): string
+
+export declare function getSystemTheme(): string
+
+export declare function hasAgreedFlag(): boolean
 
 export declare function hasProfiles(): boolean
 
@@ -120,11 +138,23 @@ export interface NapiStreamEvent {
   result?: string
 }
 
+export declare function playUiSound(effect: string): void
+
+export declare function processImagePath(path: string): NapiStoredImage
+
 export declare function profileCount(): number
 
 export declare function promptChat(chatId: string, model: string, userMessage: string, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<NapiPromptResult>
 
+export declare function readClipboardImage(): NapiStoredImage
+
+export declare function readClipboardText(): string
+
 export declare function requestQuickAnswer(channelId: string): Promise<void>
+
+export declare function revealInFileManager(path: string): void
+
+export declare function runSidecarVersion(command: string): Promise<string>
 
 export declare function saveApiKey(profileId: string, provider: string, key: string): string
 
@@ -134,6 +164,8 @@ export declare function saveRollingSummary(chatId: string, summary: string): voi
 
 export declare function setActiveProfile(profileId: string): void
 
+export declare function setAgreedFlag(): void
+
 export declare function startGoogleAuth(): Promise<NapiAuthResult>
 
 export declare function storeImageFromPath(path: string): NapiStoredImage
@@ -141,5 +173,7 @@ export declare function storeImageFromPath(path: string): NapiStoredImage
 export declare function streamChat(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, rollingSummary: string | undefined | null, userMessage: string, channelId: string, chatId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, userInstruction: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
 
 export declare function updateChatMetadata(metadata: NapiChatMetadata): void
+
+export declare function uploadImageToImgbb(imagePath: string, apiKey: string): Promise<string>
 
 export declare function validateAuthCredentials(): void

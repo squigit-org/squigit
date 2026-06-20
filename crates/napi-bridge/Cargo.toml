@@ -7,8 +7,8 @@ edition.workspace = true
 crate-type = ["cdylib"]
 
 [features]
-default = []
-desktop = ["desktop-runtime"]
+default = ["desktop"]
+desktop = ["desktop-runtime", "squigit-ocr"]
 
 [dependencies]
 napi = { version = "3", default-features = false, features = ["napi6", "async", "tokio_rt"] }
@@ -21,6 +21,7 @@ squigit-auth = { path = "../squigit-auth" }
 squigit-memory = { path = "../squigit-memory" }
 squigit-brain = { path = "../squigit-brain" }
 desktop-runtime = { path = "../desktop-runtime", optional = true }
+squigit-ocr = { path = "../squigit-ocr", optional = true }
 webbrowser = "1.2.1"
 
 [build-dependencies]

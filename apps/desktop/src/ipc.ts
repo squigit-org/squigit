@@ -107,7 +107,7 @@ export function setupIpc() {
   ipcMain.handle("set_background_color", () => {});
   ipcMain.handle("get_app_constants", () => ({ appVersion: "0.2.0" }));
   ipcMain.handle("get_system_theme", () => "dark");
-  ipcMain.handle("run_sidecar_version", () => "0.2.0");
+  ipcMain.handle("run_sidecar_version", (_, args) => addon.runSidecarVersion?.(args.command));
   ipcMain.handle("updater:check", () => null);
   ipcMain.handle("get_initial_image", () => null);
   ipcMain.handle(

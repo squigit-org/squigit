@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { SettingsSection } from "@/features/settings";
 import { useAppContext } from "../../../providers/AppProvider";
 import { AuthStep } from "./steps/AuthStep/AuthStep";
@@ -34,6 +34,11 @@ export const WizardRoute: React.FC<WizardRouteProps> = ({
   const [currentStep, setCurrentStep] = useState(
     () => app.system.wizardState?.step ?? 0,
   );
+  const [isSetupChecksDone, setIsSetupChecksDone] = useState(false);
+
+  const handleSetupChecksDone = useCallback((done: boolean) => {
+    setIsSetupChecksDone(done);
+  }, []);
 
   useEffect(() => {
     if (!app.system.activeProfile) {
@@ -80,7 +85,9 @@ export const WizardRoute: React.FC<WizardRouteProps> = ({
         <div className={styles.inner}>
           {currentStep === 0 && <AuthStep setCustomAction={setCustomAction} />}
           {currentStep === 1 && <APIKeyStep />}
-          {currentStep === 2 && <SetupStep />}
+          {currentStep === 2 && (
+            <SetupStep onChecksDone={handleSetupChecksDone} />
+          )}
           {currentStep === 3 && <PreferencesStep />}
           {currentStep === 4 && (
             <LicenseStep
@@ -114,6 +121,7 @@ export const WizardRoute: React.FC<WizardRouteProps> = ({
               customAction?.disabled ||
               (!customAction && currentStep === 0 && !isAuthDone) ||
               (!customAction && currentStep === 1 && !isApiKeyDone) ||
+              (!customAction && currentStep === 2 && !isSetupChecksDone) ||
               (currentStep === steps.length - 1 && !isLicenseDone)
             }
             onClick={customAction ? customAction.onClick : handleNext}

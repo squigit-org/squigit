@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { SizedIconProps } from "./shared";
+import type { IconProps } from "./shared";
 
-export const InlineChevronRight = ({ size, className, style }: SizedIconProps) => (
+export const InlineChevronRight = ({ size, className, style }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -23,7 +23,7 @@ export const InlineChevronRight = ({ size, className, style }: SizedIconProps) =
   </svg>
 );
 
-export const InlineChevronLeft = ({ size, className, style }: SizedIconProps) => (
+export const InlineChevronLeft = ({ size, className, style }: IconProps) => (
   <svg
     width={size}
     height={size}

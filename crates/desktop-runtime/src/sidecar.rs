@@ -90,9 +90,16 @@ fn which_cmd(cmd: &str) -> bool {
 const REQUIRED_STT_VERSION: &str = "1.2.0";
 
 pub fn check_stt_version(sidecar_path: &std::path::Path) -> Result<(), String> {
-    let output = std::process::Command::new(sidecar_path)
-        .arg("--version")
-        .output()
+    let mut cmd = std::process::Command::new(sidecar_path);
+    cmd.arg("--version");
+    
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    
+    let output = cmd.output()
         .map_err(|_| "ERR_MISSING_STT_PACKAGE".to_string())?;
 
     if !output.status.success() {

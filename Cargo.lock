@@ -2111,6 +2111,7 @@ dependencies = [
  "squigit-auth",
  "squigit-brain",
  "squigit-memory",
+ "squigit-ocr",
  "tokio",
  "webbrowser",
 ]
