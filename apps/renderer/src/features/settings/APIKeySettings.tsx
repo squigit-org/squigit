@@ -32,6 +32,7 @@ const ProviderRow = ({
   currentKey,
   onSave,
   isGuest = false,
+  isWizard = false,
 }: {
   title: string;
   providerKeyName: string;
@@ -40,6 +41,7 @@ const ProviderRow = ({
   dashboardUrl: string;
   onSave: (key: string) => Promise<boolean>;
   isGuest?: boolean;
+  isWizard?: boolean;
 }) => {
   const [inputValue, setInputValue] = useState(currentKey);
   const [showKey, setShowKey] = useState(false);
@@ -47,6 +49,7 @@ const ProviderRow = ({
   const isFocusedRef = useRef(false);
 
   const saveIdRef = useRef(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isFocusedRef.current) {
@@ -54,6 +57,12 @@ const ProviderRow = ({
       setIsValid(true);
     }
   }, [currentKey]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const validate = (key: string): boolean => {
     if (!key) return true;
@@ -66,14 +75,42 @@ const ProviderRow = ({
     return true;
   };
 
+  const debouncedSave = useCallback(
+    (trimmed: string) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        if (isGuest || trimmed === currentKey) return;
+        const id = ++saveIdRef.current;
+        onSave(trimmed).then((success) => {
+          if (saveIdRef.current !== id) return;
+          if (!success) {
+            setIsValid(false);
+          }
+        });
+      }, 300);
+    },
+    [isGuest, currentKey, onSave],
+  );
+
   const handleInputChange = (newValue: string) => {
     setInputValue(newValue);
     const trimmed = newValue.trim();
-    setIsValid(validate(trimmed));
+    const valid = validate(trimmed);
+    setIsValid(valid);
+
+    if (!isWizard || isGuest) return;
+
+    if (valid && trimmed && trimmed !== currentKey) {
+      debouncedSave(trimmed);
+    } else if ((!valid || !trimmed) && currentKey) {
+      debouncedSave("");
+    }
   };
 
   const handleBlur = () => {
     isFocusedRef.current = false;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
     const trimmed = inputValue.trim();
     const valid = validate(trimmed);
 
@@ -259,6 +296,7 @@ export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
           dashboardUrl={google.aiStudio.key}
           onSave={(key) => onSetAPIKey("google ai studio", key)}
           isGuest={isGuest}
+          isWizard={isWizard}
         />
         {!isWizard && (
           <>
