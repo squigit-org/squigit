@@ -59,11 +59,11 @@ export const LicenseStep: React.FC<LicenseStepProps> = ({
     // Save to WizardState data object
     const currentData = app.system.wizardState?.data || {};
     app.system.setWizardState({
-      step: 1,
+      step: 4,
       isFinished: false,
       data: {
         ...currentData,
-        step_1: { agreed: value === "agree" },
+        step_4: { agreed: value === "agree" },
       },
     });
 
