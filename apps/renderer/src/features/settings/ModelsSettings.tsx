@@ -19,12 +19,14 @@ interface ModelSettingsProps {
   localModel: string;
   ocrLanguage: string;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
+  isWizard?: boolean;
 }
 
 export const ModelSettings: React.FC<ModelSettingsProps> = ({
   localModel,
   ocrLanguage,
   updatePreferences,
+  isWizard,
 }) => {
   const models = useModelsStore((s) => s.models);
   const installedModels = models.filter((m) => m.state === "downloaded");
@@ -58,19 +60,21 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
     MODELS.find((model) => model.id === id)?.name || id;
 
   return (
-    <section className={styles.container} aria-labelledby="models-heading">
-      <header className={styles.sectionHeader}>
-        <h2 id="models-heading" className={styles.sectionTitle}>
-          Models
-        </h2>
-      </header>
+    <section className={`${styles.container} ${isWizard ? styles.wizardContainer : ""}`} aria-labelledby="models-heading">
+      {!isWizard && (
+        <header className={styles.sectionHeader}>
+          <h2 id="models-heading" className={styles.sectionTitle}>
+            Models
+          </h2>
+        </header>
+      )}
 
-      <div className={styles.group}>
+      <div className={`${styles.group} ${isWizard ? styles.wizardGroup : ""}`}>
         <div className={styles.row}>
           <div className={styles.rowMeta}>
-            <span className={styles.label}>AI features</span>
+            <span className={styles.label}>{isWizard ? "Default model" : "AI features"}</span>
             <span className={styles.description}>
-              Choose your preferred model for future chats
+              Choose your preferred model for future squigits
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -79,6 +83,7 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
               width={180}
               isOpen={aiMenuOpen}
               onOpenChange={setAiMenuOpen}
+              direction={isWizard ? "up" : "down"}
             >
               <DropdownSectionTitle>Gemini Models</DropdownSectionTitle>
               <div className={styles.list}>
@@ -95,41 +100,48 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
           </div>
         </div>
 
-        <div className={styles.divider} />
+        {!isWizard && (
+          <>
+            <div className={styles.divider} />
 
-        <div className={styles.row}>
-          <div className={styles.rowMeta}>
-            <span className={styles.label}>OCR language</span>
-            <span className={styles.description}>
-              Set the default language for text recognition
-            </span>
-          </div>
-          <div className={styles.rowControl}>
-            <Dropdown
-              label={activeOcrModel?.name || "Select Model"}
-              width={230}
-              isOpen={ocrMenuOpen}
-              onOpenChange={setOcrMenuOpen}
-            >
-              <DropdownSectionTitle>Installed Models</DropdownSectionTitle>
-              <div className={`${styles.list} ${styles.ocr}`}>
-                {installedModels.map((m) => (
-                  <DropdownItem
-                    key={m.id}
-                    label={m.name}
-                    isActive={activeOcrModel?.id === m.id}
-                    onClick={() => handleOcrSelect(m.id)}
-                  />
-                ))}
+            <div className={styles.row}>
+              <div className={styles.rowMeta}>
+                <span className={styles.label}>OCR language</span>
+                <span className={styles.description}>
+                  Set the default language for text recognition
+                </span>
               </div>
-            </Dropdown>
-          </div>
-        </div>
+              <div className={styles.rowControl}>
+                <Dropdown
+                  label={activeOcrModel?.name || "Select Model"}
+                  width={230}
+                  isOpen={ocrMenuOpen}
+                  onOpenChange={setOcrMenuOpen}
+                >
+                  <DropdownSectionTitle>Installed Models</DropdownSectionTitle>
+                  <div className={`${styles.list} ${styles.ocr}`}>
+                    {installedModels.map((m) => (
+                      <DropdownItem
+                        key={m.id}
+                        label={m.name}
+                        isActive={activeOcrModel?.id === m.id}
+                        onClick={() => handleOcrSelect(m.id)}
+                      />
+                    ))}
+                  </div>
+                </Dropdown>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      <div className={styles.divider} />
-
-      <OCRModelDownloader />
+      {!isWizard && (
+        <>
+          <div className={styles.divider} />
+          <OCRModelDownloader />
+        </>
+      )}
     </section>
   );
 };

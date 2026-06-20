@@ -126,12 +126,12 @@ export function setupIpc() {
       );
       return JSON.parse(data);
     } catch {
-      const defaultState = { 
-        step: 0, 
-        isFinished: false, 
-        data: { 
-          step_1: { agreed: false } 
-        } 
+      const defaultState = {
+        step: 0,
+        isFinished: false,
+        data: {
+          step_4: { agreed: false },
+        },
       };
       try {
         const fs = require("fs/promises");
@@ -141,7 +141,7 @@ export function setupIpc() {
         await fs.writeFile(
           path.join(userData, "wizard_state.json"),
           JSON.stringify(defaultState, null, 2),
-          "utf-8"
+          "utf-8",
         );
       } catch (err) {
         console.error("Failed to pre-create wizard_state.json", err);

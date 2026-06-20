@@ -18,6 +18,7 @@ interface APIKeySettingsProps {
   providerApiKey: string;
   imgbbKey: string;
   isGuest?: boolean;
+  isWizard?: boolean;
   onSetAPIKey: (
     provider: "google ai studio" | "imgbb",
     key: string,
@@ -231,17 +232,25 @@ export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
   imgbbKey,
   onSetAPIKey,
   isGuest,
+  isWizard,
 }) => {
-  const handleOpenUrl = (url: string) =>
-    commands.openExternalUrl(url);
+  const handleOpenUrl = (url: string) => commands.openExternalUrl(url);
   return (
-    <section className={styles.container} aria-labelledby="apikeys-heading">
-      <header className={styles.sectionHeader}>
-        <h2 id="apikeys-heading" className={styles.sectionTitle}>
-          API Keys
+    <section
+      className={`${styles.container} ${isWizard ? styles.wizardContainer : ""}`}
+      aria-labelledby="apikeys-heading"
+    >
+      <header
+        className={`${styles.sectionHeader} ${isWizard ? styles.wizardHeader : ""}`}
+      >
+        <h2
+          id="apikeys-heading"
+          className={`${styles.sectionTitle} ${isWizard ? styles.wizardTitle : ""}`}
+        >
+          {isWizard ? "Let's give Squigit a brain" : "API Keys"}
         </h2>
       </header>
-      <div className={styles.group}>
+      <div className={`${styles.group} ${isWizard ? styles.wizardGroup : ""}`}>
         <ProviderRow
           title="Gemini"
           providerKeyName="Google AI Studio"
@@ -251,34 +260,40 @@ export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
           onSave={(key) => onSetAPIKey("google ai studio", key)}
           isGuest={isGuest}
         />
-        <ProviderRow
-          title="ImgBB"
-          providerKeyName="ImgBB"
-          description="Reverse Image Search"
-          currentKey={imgbbKey}
-          dashboardUrl={"https://api.imgbb.com/"}
-          onSave={(key) => onSetAPIKey("imgbb", key)}
-          isGuest={isGuest}
-        />
-        <div className={styles.legalNote}>
-          <span className={styles.legalNoteStar}>*</span>
-          <p className={styles.legalNoteText}>
-            ImgBB is a free image hosting service that generates public URLs via
-            API to enable reverse image search. We strongly recommend against
-            using this option for sensitive data.{" "}
-            <button
-              className={styles.privacyLink}
-              onClick={() =>
-                handleOpenUrl(github.docs("06-policies/SECURITY.md"))
-              }
-            >
-              Learn more.
-            </button>
-          </p>
-        </div>
+        {!isWizard && (
+          <>
+            <ProviderRow
+              title="ImgBB"
+              providerKeyName="ImgBB"
+              description="Reverse Image Search"
+              currentKey={imgbbKey}
+              dashboardUrl={"https://api.imgbb.com/"}
+              onSave={(key) => onSetAPIKey("imgbb", key)}
+              isGuest={isGuest}
+            />
+            <div className={styles.legalNote}>
+              <span className={styles.legalNoteStar}>*</span>
+              <p className={styles.legalNoteText}>
+                ImgBB is a free image hosting service that generates public URLs
+                via API to enable reverse image search. We strongly recommend
+                against using this option for sensitive data.{" "}
+                <button
+                  className={styles.privacyLink}
+                  onClick={() =>
+                    handleOpenUrl(github.docs("06-policies/SECURITY.md"))
+                  }
+                >
+                  Learn more.
+                </button>
+              </p>
+            </div>
+          </>
+        )}
       </div>
-      <div className={styles.aboutSection}>
-        <div className={styles.divider} />
+      <div
+        className={`${styles.aboutSection} ${isWizard ? styles.wizardAboutSection : ""}`}
+      >
+        {!isWizard && <div className={styles.divider} />}
         <div className={styles.legalRow}>
           <span>Your keys are stored locally — </span>
           <button

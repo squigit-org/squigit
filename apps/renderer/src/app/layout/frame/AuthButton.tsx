@@ -40,7 +40,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
     if (authState === "awaiting") {
       return; // Do nothing
     }
-    
+
     if (currentLoadingState && onCancel && hasLeftSinceLoading && isHovered) {
       onCancel();
     } else if (!currentLoadingState) {
@@ -65,13 +65,15 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
     }
   }, [currentLoadingState]);
 
-  const showCancel = currentLoadingState && isHovered && hasLeftSinceLoading && !wizard;
+  const showCancel =
+    currentLoadingState && isHovered && hasLeftSinceLoading && !wizard;
   const showRetry = authState === "error" && isHovered && !wizard;
 
   const getButtonClass = () => {
     let cls = styles.loginBtn;
     if (wizard) cls += ` ${styles.wizardBtn}`;
-    if (currentLoadingState || authState === "awaiting") cls += ` ${styles.loading}`;
+    if (currentLoadingState || authState === "awaiting")
+      cls += ` ${styles.loading}`;
     if (authState === "error") cls += ` ${styles.errorBtn}`;
     if (authState === "success") cls += ` ${styles.successBtn}`;
     if (authState === "awaiting") cls += ` ${styles.disabledBtn}`;
@@ -111,9 +113,17 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
       <span className={wizard ? styles.wizardContent : ""}>
         {!currentLoadingState && authState !== "error" && (
           <>
-            {wizard && <span className={styles.wizardIcon}><GoogleIcon size={18} /></span>}
-            {wizard ? "Continue with Google" : (
-              <>Sign in with <span className={styles.google}>Google</span></>
+            {wizard && (
+              <span className={styles.wizardIcon}>
+                <GoogleIcon size={15} />
+              </span>
+            )}
+            {wizard ? (
+              "Continue with Google"
+            ) : (
+              <>
+                Sign in with <span className={styles.google}>Google</span>
+              </>
             )}
           </>
         )}

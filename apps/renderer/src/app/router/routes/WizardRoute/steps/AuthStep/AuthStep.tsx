@@ -1,8 +1,10 @@
 import React from "react";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { AuthButton } from "@/app/layout/frame/AuthButton";
-import { AppLogo } from "@/components/icons/brand-icons";
+import { AppIcon } from "@/components/icons/brand-icons";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import "@fontsource/geist-sans/300.css";
+import "@fontsource/geist-sans/400.css";
 import styles from "./AuthStep.module.css";
 
 interface AuthStepProps {
@@ -88,18 +90,21 @@ export const AuthStep: React.FC<AuthStepProps> = ({ setCustomAction }) => {
   return (
     <div className={styles.container}>
       <div className={styles.branding}>
-        <AppLogo size={64} color="var(--c-raw-050)" />
+        <div className={styles.iconWrapper}>
+          <div className={styles.iconGlow} />
+          <AppIcon size={64} color="brand_color" />
+        </div>
         <h1 className={styles.title}>Welcome to Squigit</h1>
       </div>
       <div className={styles.authWrapper}>
         {authState === "awaiting" && (
-          <div className={styles.standaloneState}>
+          <div className={styles.authState}>
             <Loader2 size={18} className={styles.spin} /> Awaiting
             Authentication
           </div>
         )}
         {authState === "success" && (
-          <div className={styles.standaloneState}>
+          <div className={styles.authState}>
             <CheckCircle2 size={14} /> Logged in as {userEmail}
           </div>
         )}

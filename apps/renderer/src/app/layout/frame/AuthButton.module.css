@@ -82,15 +82,18 @@
 .wizardBtn {
   width: auto;
   min-width: 200px;
-  height: 40px;
+  height: 34px;
   padding: 8px 16px;
   font-size: 0.95rem;
+  background-color: #2e2e2e21;
   font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.awaitingText, .successText, .errorText {
+.awaitingText,
+.successText,
+.errorText {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -118,24 +121,20 @@
   cursor: wait;
 }
 
-.wizardBtn.loading, .wizardBtn.successBtn {
+.wizardBtn.loading,
+.wizardBtn.successBtn {
   background-color: transparent !important;
   border-color: transparent !important;
   pointer-events: auto;
   cursor: default !important;
 }
-.wizardBtn.loading:hover, .wizardBtn.successBtn:hover {
+.wizardBtn.loading:hover,
+.wizardBtn.successBtn:hover {
   background-color: transparent !important;
   cursor: default !important;
 }
 
 .spin {
-  animation: rotate 1s linear infinite;
+  animation: "rotate" 1s linear infinite;
   transform: translateZ(0);
-}
-
-@keyframes rotate {
-  100% {
-    transform: rotate(360deg);
-  }
 }

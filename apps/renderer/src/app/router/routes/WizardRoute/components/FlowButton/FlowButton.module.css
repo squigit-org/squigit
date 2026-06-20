@@ -1,30 +1,40 @@
 .flowButton {
-  padding: 0.6rem 2rem;
-  font-size: 1rem;
-  border-radius: 0.5rem;
+  padding: 0.4rem 1.25rem;
+  font-size: 0.875rem;
+  border-radius: 0.2rem;
   border: none;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 400;
   transition: all 0.2s ease;
+  font-family: "Geist Sans", sans-serif;
 }
 
 .next {
-  background-color: var(--c-raw-050, #e0e0e0);
-  color: var(--c-raw-005, #121212);
+  background-color: var(--c-raw-040);
+  color: var(--c-raw-050);
 }
 
 .next:not(:disabled):hover {
-  background-color: var(--c-raw-036, #a0a0a0);
+  background-color: var(--c-raw-041);
+}
+
+.cancel {
+  background-color: var(--c-raw-040);
+  color: var(--c-raw-050);
+}
+
+.cancel:not(:disabled):hover {
+  background-color: var(--c-raw-077);
 }
 
 .back {
   background-color: transparent;
-  color: var(--c-raw-050, #e0e0e0);
-  border: 1px solid var(--c-raw-050, #e0e0e0);
+  color: var(--c-raw-036);
 }
 
 .back:not(:disabled):hover {
-  background-color: var(--c-raw-010, #333333);
+  background-color: var(--c-raw-041);
+  color: var(--c-raw-050);
 }
 
 .flowButton:disabled {

@@ -8,6 +8,9 @@ import React, { useState, useEffect } from "react";
 import { SettingsSection } from "@/features/settings";
 import { useAppContext } from "../../../providers/AppProvider";
 import { AuthStep } from "./steps/AuthStep/AuthStep";
+import { APIKeyStep } from "./steps/APIKeyStep/APIKeyStep";
+import { SetupStep } from "./steps/SetupStep/SetupStep";
+import { PreferencesStep } from "./steps/PreferencesStep/PreferencesStep";
 import { LicenseStep } from "./steps/LicenseStep/LicenseStep";
 import { FlowButton } from "./components/FlowButton/FlowButton";
 import styles from "./WizardRoute.module.css";
@@ -28,26 +31,31 @@ export const WizardRoute: React.FC<WizardRouteProps> = ({
     disabled?: boolean;
   } | null>(null);
 
-  const [currentStep, setCurrentStep] = useState(() => app.system.wizardState?.step ?? 0);
+  const [currentStep, setCurrentStep] = useState(
+    () => app.system.wizardState?.step ?? 0,
+  );
 
-  // We don't need the initializedRef or useEffect anymore since we init synchronously
   useEffect(() => {
     if (!app.system.activeProfile) {
       setCurrentStep(0);
     }
   }, [app.system.activeProfile]);
 
-  // Auto-advance removed so the user can see the success state and click the AuthButton to advance.
-
-  const steps = ["Auth", "Setup"]; // Dummy second step for dots
+  const steps = ["Auth", "APIKey", "Setup", "Preferences", "License"];
   const isAuthDone = !!app.system.activeProfile;
-  const isSetupDone = app.system.wizardState?.data?.["step_1"]?.agreed === true;
+  const isApiKeyDone = !!app.system.apiKey;
+  const isLicenseDone =
+    app.system.wizardState?.data?.["step_4"]?.agreed === true;
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       const newStep = currentStep + 1;
       setCurrentStep(newStep);
-      app.system.setWizardState({ ...app.system.wizardState, step: newStep, isFinished: false });
+      app.system.setWizardState({
+        ...app.system.wizardState,
+        step: newStep,
+        isFinished: false,
+      });
     } else {
       app.system.setAgreementCompleted();
       app.handleNewSession();
@@ -58,7 +66,11 @@ export const WizardRoute: React.FC<WizardRouteProps> = ({
     if (currentStep > 0) {
       const newStep = currentStep - 1;
       setCurrentStep(newStep);
-      app.system.setWizardState({ ...app.system.wizardState, step: newStep, isFinished: false });
+      app.system.setWizardState({
+        ...app.system.wizardState,
+        step: newStep,
+        isFinished: false,
+      });
     }
   };
 
@@ -66,11 +78,12 @@ export const WizardRoute: React.FC<WizardRouteProps> = ({
     <div className={styles.container}>
       <div className={styles.content}>
         <div className={styles.inner}>
-          {currentStep === 0 && (
-            <AuthStep setCustomAction={setCustomAction} />
-          )}
-          {currentStep === 1 && (
-            <LicenseStep 
+          {currentStep === 0 && <AuthStep setCustomAction={setCustomAction} />}
+          {currentStep === 1 && <APIKeyStep />}
+          {currentStep === 2 && <SetupStep />}
+          {currentStep === 3 && <PreferencesStep />}
+          {currentStep === 4 && (
+            <LicenseStep
               onSystemAction={onSystemAction}
               onOpenSettings={onOpenSettings}
             />
@@ -96,11 +109,12 @@ export const WizardRoute: React.FC<WizardRouteProps> = ({
 
         <div className={styles.footerRight}>
           <FlowButton
-            variant="next"
+            variant={isAuthDone ? "next" : "cancel"}
             disabled={
               customAction?.disabled ||
               (!customAction && currentStep === 0 && !isAuthDone) ||
-              (currentStep === 1 && !isSetupDone)
+              (!customAction && currentStep === 1 && !isApiKeyDone) ||
+              (currentStep === steps.length - 1 && !isLicenseDone)
             }
             onClick={customAction ? customAction.onClick : handleNext}
           >

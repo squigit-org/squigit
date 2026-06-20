@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { AppLogo } from "@/components/icons";
+import { AppIcon } from "@/components/icons";
 import { TitleBar } from "@/app/layout/frame/TitleBar";
 
 import styles from "./SplashScreen.module.css";
@@ -23,7 +23,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       <div className={styles.mainContent}>
         <div className={styles.loadingContent}>
           <div className={styles.logoOffset}>
-            <AppLogo size={40} color="var(--c-raw-002)" />
+            <AppIcon size={40} color="var(--c-raw-002)" />
           </div>
         </div>
       </div>

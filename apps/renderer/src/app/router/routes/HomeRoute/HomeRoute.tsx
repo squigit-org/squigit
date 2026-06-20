@@ -6,7 +6,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { platform } from "@/platform";
-import { AppLogo } from "@/components/icons";
+import { AppIcon } from "@/components/icons";
 import { storeImageFromPath, type ImageResult } from "@squigit/core/config";
 import { usePlatform } from "@/hooks/shared";
 import styles from "./HomeRoute.module.css";
@@ -110,7 +110,9 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
         }
 
         try {
-          const result = await platform.invoke<ImageResult>("read_clipboard_image");
+          const result = await platform.invoke<ImageResult>(
+            "read_clipboard_image",
+          );
           if (result) {
             onImageReady({
               imageId: result.hash,
@@ -194,7 +196,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
       tabIndex={-1}
     >
       <div className={styles.content}>
-        <AppLogo size={80} color="var(--c-raw-000)" />
+        <AppIcon size={80} color="var(--c-raw-000)" />
         <h1 className={styles.title}>{appName}</h1>
 
         <div className={styles.actions}>
