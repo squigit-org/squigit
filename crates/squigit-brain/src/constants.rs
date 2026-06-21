@@ -4,4 +4,4 @@
 pub const APP_NAME: &str = "Squigit";
 
 pub const DEFAULT_PROMPT: &str =
-    "analyze this image and explain it or discuss fixes about the issue it discribes.";
+    "Analyze this image and explain it or discuss fixes about the issue it describes.";

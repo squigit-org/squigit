@@ -22,6 +22,11 @@
   height: 100%;
 }
 
+.wizardContainer {
+  padding: 0;
+  height: auto;
+}
+
 .sectionHeader {
   padding-bottom: 0.4rem;
   border-bottom: 1px solid var(--c-raw-043);
@@ -75,6 +80,12 @@
   border-radius: 0.75rem;
   padding: 0.75rem;
   transition: border-color 0.2s;
+}
+
+.wizardTextareaWrapper {
+  height: 110px;
+  min-height: 110px;
+  flex: none;
 }
 
 .textarea {

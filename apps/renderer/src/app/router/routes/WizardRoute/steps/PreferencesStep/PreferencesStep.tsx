@@ -10,6 +10,7 @@ import { useAppContext } from "@/app/providers/AppProvider";
 import { CapturePreview } from "@/features/settings/components/CapturePreview";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
 import { commands } from "@/platform";
+import { PersonalizationSettings } from "@/features/settings/PersonalizationSettings";
 import styles from "./PreferencesStep.module.css";
 
 export const PreferencesStep = () => {
@@ -51,6 +52,13 @@ export const PreferencesStep = () => {
     app.system.autoExpandOCR ??
     true;
 
+  // ── Prompt state ──
+  const savedPrompt =
+    app.system.wizardState?.data?.step_3?.prompt ??
+    app.system.prompt ??
+    "";
+  const [localPrompt, setLocalPrompt] = useState(savedPrompt);
+
   // ── Persist defaults on mount ──
   useEffect(() => {
     if (!app.system.wizardState?.data?.step_3) {
@@ -59,6 +67,7 @@ export const PreferencesStep = () => {
         captureType: savedCaptureType as "rectangular" | "squiggle",
         ocrEnabled: savedOcrEnabled,
         autoExpandOCR: savedAutoExpand,
+        prompt: savedPrompt,
       });
     }
   }, []);
@@ -77,6 +86,12 @@ export const PreferencesStep = () => {
   };
 
   // ── Handlers ──
+  const handlePromptChange = (updates: Partial<{ prompt: string }>) => {
+    app.system.updatePreferences(updates);
+    if (updates.prompt !== undefined) {
+      updateWizardStep3({ prompt: updates.prompt });
+    }
+  };
   const handleThemeChange = (theme: "dark" | "light") => {
     app.system.updatePreferences({ theme });
     updateWizardStep3({ theme });
@@ -128,13 +143,13 @@ export const PreferencesStep = () => {
               <div className={styles.captureDropdownRow}>
                 <Dropdown
                   label={
-                    savedCaptureType === "squiggle" ? "Circle to search" : "Default"
+                    savedCaptureType === "squiggle" ? "Squiggle" : "Traditional"
                   }
                   width={220}
                   isOpen={captureMenuOpen}
                   onOpenChange={setCaptureMenuOpen}
                   direction="up"
-                  align="left"
+                  align="right"
                 >
                   <DropdownSectionTitle>Capture Type</DropdownSectionTitle>
                   <div className={styles.previewContainer}>
@@ -146,12 +161,12 @@ export const PreferencesStep = () => {
                   </div>
                   <div className={styles.list}>
                     <DropdownItem
-                      label="Default"
+                      label="Traditional"
                       isActive={savedCaptureType === "rectangular"}
                       onClick={() => handleCaptureTypeChange("rectangular")}
                     />
                     <DropdownItem
-                      label="Circle to search"
+                      label="Squiggle"
                       isActive={savedCaptureType === "squiggle"}
                       onClick={() => handleCaptureTypeChange("squiggle")}
                     />
@@ -234,6 +249,17 @@ export const PreferencesStep = () => {
                 <span>squigit-ocr not installed</span>
               </div>
             )}
+          </div>
+
+          <div className={styles.section} style={{ marginTop: "1rem" }}>
+            <h2 className={styles.sectionTitle}>Tell Squigit how it can help</h2>
+            <PersonalizationSettings
+              localPrompt={localPrompt}
+              currentPrompt={savedPrompt}
+              setLocalPrompt={setLocalPrompt}
+              updatePreferences={handlePromptChange}
+              isWizard={true}
+            />
           </div>
         </div>
       </div>

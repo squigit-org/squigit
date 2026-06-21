@@ -20,8 +20,8 @@
 .content {
   width: 100%;
   flex: 1;
-  padding-top: 40px;
-  padding-bottom: 40px;
+  padding-top: 2rem;
+  padding-bottom: 0;
   padding-inline: clamp(12px, 2.2vw, 28px);
   margin-top: 0;
   display: flex;
@@ -46,7 +46,7 @@
   grid-template-rows: auto auto;
   row-gap: 2rem;
   align-items: center;
-  padding: 1rem 0 6rem;
+  padding: 1rem 0 5rem;
   width: 100%;
   box-sizing: border-box;
   margin-top: auto;

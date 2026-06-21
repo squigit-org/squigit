@@ -9,7 +9,7 @@ import { DEFAULT_MODEL_ID, DEFAULT_OCR_MODEL_ID } from "./models-config";
 export const APP_NAME = "Squigit";
 export const DEFAULT_THEME = "system" as const;
 export const DEFAULT_PROMPT =
-  "analyze this image and explain it or discuss fixes about the issue it discribes.";
+  "Analyze this image and explain it or discuss fixes about the issue it describes.";
 export const PREFERENCES_FILE_NAME = "preferences.json";
 export const DEFAULT_CAPTURE_TYPE = "rectangular" as const;
 export const DEFAULT_ACTIVE_ACCOUNT = "Guest";

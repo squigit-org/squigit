@@ -112,7 +112,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           <div className={styles.rowControl}>
             <Dropdown
               label={
-                captureType === "squiggle" ? "Circle to search" : "Default"
+                captureType === "squiggle" ? "Squiggle" : "Traditional"
               }
               width={220}
               isOpen={captureMenuOpen}
@@ -126,12 +126,12 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
               </div>
               <div className={styles.list}>
                 <DropdownItem
-                  label="Default"
+                  label="Traditional"
                   isActive={captureType === "rectangular"}
                   onClick={() => onCaptureTypeChange("rectangular")}
                 />
                 <DropdownItem
-                  label="Circle to search"
+                  label="Squiggle"
                   isActive={captureType === "squiggle"}
                   onClick={() => onCaptureTypeChange("squiggle")}
                 />

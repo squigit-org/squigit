@@ -15,10 +15,11 @@ interface PersonalizationSettingsProps {
   currentPrompt: string;
   setLocalPrompt: (prompt: string) => void;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
+  isWizard?: boolean;
 }
 export const PersonalizationSettings: React.FC<
   PersonalizationSettingsProps
-> = ({ localPrompt, currentPrompt, setLocalPrompt, updatePreferences }) => {
+> = ({ localPrompt, currentPrompt, setLocalPrompt, updatePreferences, isWizard }) => {
   React.useEffect(() => {
     if (localPrompt === currentPrompt) return;
     const handler = setTimeout(() => {
@@ -49,21 +50,25 @@ export const PersonalizationSettings: React.FC<
   });
   return (
     <section
-      className={styles.container}
+      className={`${styles.container} ${isWizard ? styles.wizardContainer : ""}`}
       aria-labelledby="personalization-heading"
     >
-      <header className={styles.sectionHeader}>
-        <h2 id="personalization-heading" className={styles.sectionTitle}>
-          Personalization
-        </h2>
-      </header>
+      {!isWizard && (
+        <header className={styles.sectionHeader}>
+          <h2 id="personalization-heading" className={styles.sectionTitle}>
+            Personalization
+          </h2>
+        </header>
+      )}
       <div className={styles.group}>
-        <div className={styles.controlsRow}>
-          <span className={styles.description}>
-            Customize how the AI responds to you
-          </span>
-        </div>
-        <div className={styles.textareaWrapper}>
+        {!isWizard && (
+          <div className={styles.controlsRow}>
+            <span className={styles.description}>
+              Customize how the AI responds to you
+            </span>
+          </div>
+        )}
+        <div className={`${styles.textareaWrapper} ${isWizard ? styles.wizardTextareaWrapper : ""}`}>
           <textarea
             ref={ref as React.RefObject<HTMLTextAreaElement>}
             className={styles.textarea}
@@ -71,7 +76,10 @@ export const PersonalizationSettings: React.FC<
             value={localPrompt}
             onChange={(e) => setLocalPrompt(e.target.value)}
             onContextMenu={handleContextMenu}
-            onKeyDown={handleKeyDown as any}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") return;
+              handleKeyDown(e as any);
+            }}
           />
         </div>
       </div>
