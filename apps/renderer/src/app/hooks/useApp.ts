@@ -347,14 +347,22 @@ export const useApp = () => {
   };
 
   const handleSwitchProfile = async (profileId: string) => {
-    await navigation.performNewSession();
+    const isInWizard = chatHistory.activeSessionId === "__system_wizard";
+    if (!isInWizard) {
+      await navigation.performNewSession();
+    }
     await system.switchProfile(profileId);
   };
 
   const handleAddAccount = async () => {
     const result = await system.addAccount();
     if (result && result.id) {
-      await handleSwitchProfile(result.id);
+      const isInWizard = chatHistory.activeSessionId === "__system_wizard";
+      if (isInWizard) {
+        await system.switchProfile(result.id);
+      } else {
+        await handleSwitchProfile(result.id);
+      }
     }
   };
 

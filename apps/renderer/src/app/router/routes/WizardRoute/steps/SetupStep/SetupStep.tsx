@@ -46,16 +46,19 @@ const PLATFORMS = [
     label: "HomeBrew",
     Icon: MacIcon,
     href: DOWNLOAD_URL,
+    size: 23,
   },
   {
     label: "APT/DNF",
     Icon: LinuxIcon,
     href: DOWNLOAD_URL,
+    size: 28,
   },
   {
     label: "Winget",
     Icon: WindowsIcon,
     href: DOWNLOAD_URL,
+    size: 26,
   },
 ];
 
@@ -183,20 +186,23 @@ export const SetupStep: React.FC<SetupStepProps> = ({ onChecksDone }) => {
       <div className={styles.availablePanel}>
         <span className={styles.availableLabel}>Available today on</span>
         <div className={styles.platformLinks}>
-          {PLATFORMS.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              className={styles.platformLink}
-              onClick={() => handleOpenLink(p.href)}
-            >
-              <span className={styles.platformIconSlot}>
-                <p.Icon size={16} />
-              </span>
-              {p.label}
-              <ExternalArrowIcon size={9} />
-            </button>
-          ))}
+          {PLATFORMS.map((p) => {
+            const Icon = p.Icon;
+            return (
+              <button
+                key={p.label}
+                type="button"
+                className={styles.platformLink}
+                onClick={() => handleOpenLink(p.href)}
+              >
+                <span className={styles.platformIconSlot}>
+                  <Icon size={p.size} />
+                </span>
+                {p.label}
+                <ExternalArrowIcon size={9} />
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

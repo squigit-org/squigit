@@ -63,7 +63,7 @@
   padding: 0.875rem 1rem;
   border-radius: 0.625rem;
   border: 1px solid var(--c-raw-010);
-  background: var(--c-raw-003);
+  background: var(--c-raw-043);
   transition: border-color 0.2s ease;
 }
 
@@ -142,19 +142,8 @@
   color: #ff9500;
 }
 
-/* ── Spinner ── */
-
-@keyframes setupSpin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .spinner {
-  animation: setupSpin 0.8s linear infinite;
+  animation: "rotate" 0.8s linear infinite;
   transform-origin: center;
 }
 
@@ -163,7 +152,8 @@
 .availablePanel {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  align-items: center;
+  gap: 0.9rem;
   width: 100%;
 }
 
@@ -178,7 +168,7 @@
 .platformLinks {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 3rem;
 }
 
 .platformLink {
@@ -206,7 +196,5 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
   flex-shrink: 0;
 }
