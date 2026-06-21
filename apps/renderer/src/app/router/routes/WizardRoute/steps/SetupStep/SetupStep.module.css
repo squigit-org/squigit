@@ -112,6 +112,14 @@
 
 /* ── Status Badge ── */
 
+.badgeContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 5.8rem;
+  flex-shrink: 0;
+}
+
 .badge {
   flex-shrink: 0;
   display: inline-flex;
