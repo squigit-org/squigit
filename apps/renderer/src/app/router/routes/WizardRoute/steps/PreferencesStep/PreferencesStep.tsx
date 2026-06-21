@@ -9,11 +9,25 @@ import ThemePicker from "../../components/ThemePicker/ThemePicker";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { CapturePreview } from "@/features/settings/components/CapturePreview";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
+import { commands } from "@/platform";
 import styles from "./PreferencesStep.module.css";
 
 export const PreferencesStep = () => {
   const app = useAppContext();
   const [captureMenuOpen, setCaptureMenuOpen] = useState(false);
+  const [isOcrInstalled, setIsOcrInstalled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkOcr = async () => {
+      try {
+        await commands.runSidecarVersion("squigit-ocr --version");
+        setIsOcrInstalled(true);
+      } catch {
+        setIsOcrInstalled(false);
+      }
+    };
+    checkOcr();
+  }, []);
 
   // ── Theme state ──
   const savedTheme =
@@ -153,7 +167,9 @@ export const PreferencesStep = () => {
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Text Recognition</h2>
             <div className={styles.optionsGroup}>
-              <div className={styles.optionRow}>
+              <div
+                className={`${styles.optionRow} ${isOcrInstalled === false ? styles.optionDisabled : ""}`}
+              >
                 <div className={styles.optionMeta}>
                   <span className={styles.optionLabel}>Image OCR</span>
                   <span className={styles.optionDescription}>
@@ -165,6 +181,7 @@ export const PreferencesStep = () => {
                     type="checkbox"
                     className={styles.toggleInput}
                     checked={savedOcrEnabled}
+                    disabled={isOcrInstalled === false}
                     onChange={(e) => handleOcrToggle(e.target.checked)}
                     aria-checked={savedOcrEnabled}
                     aria-label="Image OCR"
@@ -176,7 +193,7 @@ export const PreferencesStep = () => {
               <div className={styles.optionDivider} />
 
               <div
-                className={`${styles.optionRow} ${!savedOcrEnabled ? styles.optionDisabled : ""}`}
+                className={`${styles.optionRow} ${isOcrInstalled === false || !savedOcrEnabled ? styles.optionDisabled : ""}`}
               >
                 <div className={styles.optionMeta}>
                   <span className={styles.optionLabel}>Auto-extend Content</span>
@@ -189,7 +206,7 @@ export const PreferencesStep = () => {
                     type="checkbox"
                     className={styles.toggleInput}
                     checked={savedAutoExpand}
-                    disabled={!savedOcrEnabled}
+                    disabled={isOcrInstalled === false || !savedOcrEnabled}
                     onChange={(e) => handleAutoExpandToggle(e.target.checked)}
                     aria-checked={savedAutoExpand}
                     aria-label="Auto-extend Content"
@@ -198,6 +215,25 @@ export const PreferencesStep = () => {
                 </label>
               </div>
             </div>
+            {isOcrInstalled === false && (
+              <div className={styles.warningMessage}>
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span>squigit-ocr not installed</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
