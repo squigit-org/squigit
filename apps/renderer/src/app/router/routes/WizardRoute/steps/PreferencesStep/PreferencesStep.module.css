@@ -1,0 +1,52 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  flex: 1;
+  width: 100%;
+  gap: 3rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  text-align: center;
+}
+
+.title {
+  font-family: "Geist Sans", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--c-raw-050);
+  margin: 0;
+}
+
+.subtitle {
+  font-family: "Geist Sans", sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 350;
+  letter-spacing: -0.01em;
+  line-height: 1.55;
+  color: var(--c-raw-036);
+  margin: 0;
+  max-width: 400px;
+}
+
+.pickerContainer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}

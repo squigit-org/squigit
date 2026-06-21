@@ -130,6 +130,7 @@ export function setupIpc() {
         step: 0,
         isFinished: false,
         data: {
+          step_3: { theme: "dark" },
           step_4: { agreed: false },
         },
       };
