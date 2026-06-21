@@ -20,7 +20,6 @@
   margin: 0 auto;
   padding: 2rem 1rem;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 /* ── Left column ── */
@@ -97,6 +96,19 @@
 .captureDropdownRow {
   display: flex;
   align-items: center;
+  width: 180px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.captureDropdownRow > div {
+  width: 100%;
+}
+
+.captureDropdownRow > div > button {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 6px;
 }
 
 .previewContainer {

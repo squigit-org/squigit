@@ -160,68 +160,35 @@
   }
 }
 
-@keyframes boxWidth {
+@keyframes selectionBoxGrow {
   0% {
     width: 0;
+    height: 0;
+    opacity: 1;
+    border-width: 2px;
   }
   50% {
     width: 117px;
+    height: 117px;
+    opacity: 1;
+    border-width: 2px;
   }
   85% {
     width: 117px;
-  }
-  85.1% {
-    width: 0;
-  }
-  100% {
-    width: 0;
-  }
-}
-
-@keyframes boxHeight {
-  0% {
-    height: 0;
-  }
-  50% {
     height: 117px;
-  }
-  85% {
-    height: 117px;
-  }
-  85.1% {
-    height: 0;
-  }
-  100% {
-    height: 0;
-  }
-}
-
-@keyframes boxFade {
-  0% {
     opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  85.1% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes boxBorder {
-  0% {
-    border-width: 2px;
-  }
-  85% {
     border-width: 2px;
   }
   85.1% {
+    width: 0;
+    height: 0;
+    opacity: 0;
     border-width: 0px;
   }
   100% {
+    width: 0;
+    height: 0;
+    opacity: 0;
     border-width: 0px;
   }
 }

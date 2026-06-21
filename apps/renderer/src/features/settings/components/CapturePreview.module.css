@@ -38,15 +38,11 @@
   height: 0;
   z-index: 10;
   border-radius: 19px 19px 19px 0px;
-  border: 0px solid var(--c-raw-114);
+  border: 0px solid var(--c-raw-036);
   background-color: transparent;
   opacity: 0;
-  will-change: width, height, border-width;
-  animation:
-    "boxWidth" 3s infinite,
-    "boxHeight" 3s infinite,
-    "boxFade" 3s linear infinite,
-    "boxBorder" 3s linear infinite;
+  will-change: width, height, border-width, opacity;
+  animation: "selectionBoxGrow" 3s infinite;
 }
 
 .cursorRectWrapper {
