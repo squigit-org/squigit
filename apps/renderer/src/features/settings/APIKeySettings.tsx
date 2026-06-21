@@ -277,16 +277,13 @@ export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
       className={`${styles.container} ${isWizard ? styles.wizardContainer : ""}`}
       aria-labelledby="apikeys-heading"
     >
-      <header
-        className={`${styles.sectionHeader} ${isWizard ? styles.wizardHeader : ""}`}
-      >
-        <h2
-          id="apikeys-heading"
-          className={`${styles.sectionTitle} ${isWizard ? styles.wizardTitle : ""}`}
-        >
-          {isWizard ? "Let's give Squigit a brain" : "API Keys"}
-        </h2>
-      </header>
+      {!isWizard && (
+        <header className={styles.sectionHeader}>
+          <h2 id="apikeys-heading" className={styles.sectionTitle}>
+            API Keys
+          </h2>
+        </header>
+      )}
       <div className={`${styles.group} ${isWizard ? styles.wizardGroup : ""}`}>
         <ProviderRow
           title="Gemini"

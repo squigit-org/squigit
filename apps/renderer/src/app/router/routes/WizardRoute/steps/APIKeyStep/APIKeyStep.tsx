@@ -1,4 +1,3 @@
-import React from "react";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { APIKeySettings, ModelSettings } from "@/features/settings";
 import styles from "./APIKeyStep.module.css";
@@ -8,6 +7,9 @@ export const APIKeyStep = () => {
 
   return (
     <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Let's give Squigit a brain</h1>
+      </div>
       <APIKeySettings
         providerApiKey={app.system.apiKey}
         imgbbKey={app.system.imgbbKey}
