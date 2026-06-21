@@ -162,22 +162,23 @@ export const SetupStep: React.FC<SetupStepProps> = ({ onChecksDone }) => {
               <div className={styles.sidecarBody}>
                 <div className={styles.sidecarTitleRow}>
                   <span className={styles.sidecarName}>{sc.name}</span>
-                  <span
-                    className={`${styles.badge} ${
-                      status === "loading"
-                        ? styles.badgeLoading
-                        : status === "installed"
-                          ? styles.badgeInstalled
-                          : styles.badgeNotInstalled
-                    }`}
-                  >
-                    {status === "loading" && "Checking…"}
-                    {status === "installed" && `v${version}`}
-                    {status === "not_installed" && "Not Installed"}
-                  </span>
                 </div>
                 <p className={styles.sidecarDesc}>{sc.description}</p>
               </div>
+
+              <span
+                className={`${styles.badge} ${
+                  status === "loading"
+                    ? styles.badgeLoading
+                    : status === "installed"
+                      ? styles.badgeInstalled
+                      : styles.badgeNotInstalled
+                }`}
+              >
+                {status === "loading" && "Checking…"}
+                {status === "installed" && `v${version}`}
+                {status === "not_installed" && "Not Installed"}
+              </span>
             </div>
           );
         })}
