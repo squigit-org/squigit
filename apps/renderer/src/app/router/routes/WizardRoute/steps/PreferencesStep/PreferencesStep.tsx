@@ -58,6 +58,8 @@ export const PreferencesStep = () => {
   // ── Prompt state ──
   const savedPrompt =
     app.system.wizardState?.data?.step_3?.prompt ?? app.system.prompt ?? "";
+  const savedSoulMdName =
+    app.system.wizardState?.data?.step_3?.soulMdName ?? (app.system as any).soulMdName ?? null;
   const [localPrompt, setLocalPrompt] = useState(savedPrompt);
 
   // ── Persist defaults on mount ──
@@ -87,10 +89,13 @@ export const PreferencesStep = () => {
   };
 
   // ── Handlers ──
-  const handlePromptChange = (updates: Partial<{ prompt: string }>) => {
-    app.system.updatePreferences(updates);
+  const handlePromptChange = (updates: Partial<{ prompt: string; soulMdName: string | null }>) => {
+    app.system.updatePreferences(updates as any);
     if (updates.prompt !== undefined) {
       updateWizardStep3({ prompt: updates.prompt });
+    }
+    if (updates.soulMdName !== undefined) {
+      updateWizardStep3({ soulMdName: updates.soulMdName });
     }
   };
   const handleThemeChange = (theme: "dark" | "light") => {
@@ -295,6 +300,7 @@ export const PreferencesStep = () => {
               currentPrompt={savedPrompt}
               setLocalPrompt={setLocalPrompt}
               updatePreferences={handlePromptChange}
+              soulMdName={savedSoulMdName}
               isWizard={true}
             />
           </div>

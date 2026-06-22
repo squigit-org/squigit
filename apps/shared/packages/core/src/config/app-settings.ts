@@ -20,6 +20,7 @@ export interface UserPreferences {
   captureType: "rectangular" | "squiggle";
   ocrLanguage: string;
   activeAccount: string;
+  soulMdName: string | null;
 }
 
 export async function getDefaultPreferences(): Promise<UserPreferences> {
@@ -32,6 +33,7 @@ export async function getDefaultPreferences(): Promise<UserPreferences> {
     captureType: DEFAULT_PREFERENCES.captureType,
     ocrLanguage: DEFAULT_PREFERENCES.ocrLanguage,
     activeAccount: DEFAULT_PREFERENCES.activeAccount,
+    soulMdName: null,
   };
 }
 

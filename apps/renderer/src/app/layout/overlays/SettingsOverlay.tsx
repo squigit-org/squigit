@@ -37,6 +37,7 @@ interface SettingsOverlayProps {
   defaultModel: string;
   defaultOcrLanguage: string;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
+  soulMdName?: string | null;
   themePreference: "dark" | "light" | "system";
   onSetTheme: (theme: "dark" | "light" | "system") => void;
   autoExpandOCR: boolean;
@@ -60,6 +61,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   defaultModel,
   defaultOcrLanguage,
   updatePreferences,
+  soulMdName,
   themePreference,
   onSetTheme,
   autoExpandOCR,
@@ -162,9 +164,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
             <SidebarButtonWithTooltip
               icon={<Book size={22} />}
               label="Documentation"
-              onClick={() =>
-                commands.openExternalUrl(github.docs())
-              }
+              onClick={() => commands.openExternalUrl(github.docs())}
             />
           </>
         }
@@ -202,6 +202,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
             currentPrompt={currentPrompt}
             setLocalPrompt={setLocalPrompt}
             updatePreferences={updatePreferences}
+            soulMdName={soulMdName}
           />
         )}
         {activeSection === "help" && <HelpSettings />}

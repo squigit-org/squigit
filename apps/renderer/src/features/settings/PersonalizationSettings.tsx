@@ -16,6 +16,7 @@ interface PersonalizationSettingsProps {
   currentPrompt: string;
   setLocalPrompt: (prompt: string) => void;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
+  soulMdName?: string | null;
   isWizard?: boolean;
 }
 export const PersonalizationSettings: React.FC<
@@ -25,30 +26,9 @@ export const PersonalizationSettings: React.FC<
   currentPrompt,
   setLocalPrompt,
   updatePreferences,
+  soulMdName,
   isWizard,
 }) => {
-  const [soulMdFileName, setSoulMdFileName] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    const initSoulMd = async () => {
-      try {
-        const exists = await platform.fs.exists("soul.md", { baseDir: "AppConfig" });
-        if (exists) {
-          try {
-            const name = await platform.fs.readTextFile("soul.md.name", { baseDir: "AppConfig" });
-            setSoulMdFileName(name.trim() || "soul.md");
-          } catch {
-            setSoulMdFileName("soul.md");
-          }
-        } else {
-          setSoulMdFileName(null);
-        }
-      } catch {
-        setSoulMdFileName(null);
-      }
-    };
-    initSoulMd();
-  }, []);
 
   const handleAttachSoulMd = async () => {
     try {
@@ -63,12 +43,13 @@ export const PersonalizationSettings: React.FC<
         baseDir: "AppConfig",
       });
       
+      
       const originalName = selected.split(/[/\\]/).pop() || "soul.md";
       await platform.fs.writeTextFile("soul.md.name", originalName, {
         baseDir: "AppConfig",
       });
       
-      setSoulMdFileName(originalName);
+      updatePreferences({ soulMdName: originalName });
     } catch (err) {
       console.error("[PersonalizationSettings] Failed to attach soul.md:", err);
     }
@@ -82,7 +63,7 @@ export const PersonalizationSettings: React.FC<
     } catch (err) {
       console.warn("[PersonalizationSettings] Failed to delete soul.md files", err);
     }
-    setSoulMdFileName(null);
+    updatePreferences({ soulMdName: null });
   };
 
   React.useEffect(() => {
@@ -174,16 +155,16 @@ export const PersonalizationSettings: React.FC<
               </svg>
             </span>
             <span className={styles.soulMdLabel}>
-              {soulMdFileName ? (
-                soulMdFileName.length > 20 ? (
-                  `${soulMdFileName.substring(0, soulMdFileName.lastIndexOf(".")).substring(0, 15)}...${soulMdFileName.substring(soulMdFileName.lastIndexOf("."))}`
+              {soulMdName ? (
+                soulMdName.length > 20 ? (
+                  `${soulMdName.substring(0, soulMdName.lastIndexOf(".")).substring(0, 15)}...${soulMdName.substring(soulMdName.lastIndexOf("."))}`
                 ) : (
-                  soulMdFileName
+                  soulMdName
                 )
               ) : "Attach Soul.md"}
             </span>
           </div>
-          {soulMdFileName && (
+          {soulMdName && (
             <span
               className={styles.soulMdRemove}
               onClick={handleDetachSoulMd}
