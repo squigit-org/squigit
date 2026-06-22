@@ -121,7 +121,10 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
               <DropdownSectionTitle>Capture Type</DropdownSectionTitle>
               <div className={styles.previewContainer}>
                 <div className={styles.dropdownPreviewWrapper}>
-                  <CapturePreview type={captureType} />
+                  <CapturePreview 
+                    key={captureMenuOpen ? "open" : "closed"}
+                    type={captureType} 
+                  />
                 </div>
               </div>
               <div className={styles.list}>

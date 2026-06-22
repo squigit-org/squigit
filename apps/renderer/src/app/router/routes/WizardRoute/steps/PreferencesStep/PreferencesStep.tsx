@@ -4,19 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ThemePicker from "../../components/ThemePicker/ThemePicker";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { CapturePreview } from "@/features/settings/components/CapturePreview";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
 import { commands } from "@/platform";
 import { PersonalizationSettings } from "@/features/settings/PersonalizationSettings";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import styles from "./PreferencesStep.module.css";
 
 export const PreferencesStep = () => {
   const app = useAppContext();
   const [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   const [isOcrInstalled, setIsOcrInstalled] = useState<boolean | null>(null);
+  const [showInfoTip, setShowInfoTip] = useState(false);
+  const infoIconRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const checkOcr = async () => {
@@ -54,9 +57,7 @@ export const PreferencesStep = () => {
 
   // ── Prompt state ──
   const savedPrompt =
-    app.system.wizardState?.data?.step_3?.prompt ??
-    app.system.prompt ??
-    "";
+    app.system.wizardState?.data?.step_3?.prompt ?? app.system.prompt ?? "";
   const [localPrompt, setLocalPrompt] = useState(savedPrompt);
 
   // ── Persist defaults on mount ──
@@ -155,6 +156,7 @@ export const PreferencesStep = () => {
                   <div className={styles.previewContainer}>
                     <div className={styles.dropdownPreviewWrapper}>
                       <CapturePreview
+                        key={captureMenuOpen ? "open" : "closed"}
                         type={savedCaptureType as "rectangular" | "squiggle"}
                       />
                     </div>
@@ -232,7 +234,9 @@ export const PreferencesStep = () => {
                 className={`${styles.optionRow} ${isOcrInstalled === false || !savedOcrEnabled ? styles.optionDisabled : ""}`}
               >
                 <div className={styles.optionMeta}>
-                  <span className={styles.optionLabel}>Auto-extend Content</span>
+                  <span className={styles.optionLabel}>
+                    Auto-extend Content
+                  </span>
                   <span className={styles.optionDescription}>
                     Automatically expand image on finish
                   </span>
@@ -254,7 +258,38 @@ export const PreferencesStep = () => {
           </div>
 
           <div className={styles.section} style={{ marginTop: "1rem" }}>
-            <h2 className={styles.sectionTitle}>Tell Squigit how it can help</h2>
+            <div className={styles.sectionTitleWithInfo}>
+              <h2 className={styles.sectionTitle}>
+                Tell Squigit how it can help
+              </h2>
+              <span
+                ref={infoIconRef}
+                className={styles.infoIcon}
+                onMouseEnter={() => setShowInfoTip(true)}
+                onMouseLeave={() => setShowInfoTip(false)}
+              >
+                <svg
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </span>
+              <Tooltip
+                text={`Want Squigit to help the same way every time? This message is included with each squigit you make.\n\nTip: Attach a Soul.md file to shape Squigit's personality, tone, and expertise.`}
+                parentRef={infoIconRef}
+                show={showInfoTip}
+                vertical
+              />
+            </div>
             <PersonalizationSettings
               localPrompt={localPrompt}
               currentPrompt={savedPrompt}

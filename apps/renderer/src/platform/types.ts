@@ -30,6 +30,7 @@ export interface PlatformBridge {
       path: string,
       options?: { baseDir?: string; recursive?: boolean },
     ): Promise<void>;
+    removeFile(path: string, options?: { baseDir?: string }): Promise<void>;
   };
   dialog: {
     open(options?: OpenDialogOptions): Promise<string | string[] | null>;

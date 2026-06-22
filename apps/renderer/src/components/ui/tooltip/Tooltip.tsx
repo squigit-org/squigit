@@ -16,6 +16,7 @@ interface TooltipProps {
   show: boolean;
   offset?: number;
   above?: boolean;
+  vertical?: boolean;
 }
 
 export const Tooltip: React.FC<TooltipProps> = ({
@@ -24,6 +25,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   show,
   offset = 8,
   above = false,
+  vertical = false,
 }) => {
   const [style, setStyle] = useState<React.CSSProperties>({
     opacity: 0,
@@ -45,7 +47,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       let left: number;
       let top: number;
 
-      if (above) {
+      if (above || vertical) {
         left = parentRect.left + parentRect.width / 2 - tooltipRect.width / 2;
         top = parentRect.top - tooltipRect.height - offset;
       } else {
@@ -80,21 +82,23 @@ export const Tooltip: React.FC<TooltipProps> = ({
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [show, text, offset, above]);
+  }, [show, text, offset, above, vertical]);
+
+  const tooltipClass = vertical ? styles.tooltipVertical : styles.tooltip;
 
   if (!show)
     return createPortal(
-      <div ref={ref} className={styles.tooltip} style={{ opacity: 0 }}>
+      <div ref={ref} className={tooltipClass} style={{ opacity: 0 }}>
         {text}
-        {above && <div className={styles.arrow} />}
+        {(above || vertical) && <div className={styles.arrow} />}
       </div>,
       document.body,
     );
 
   return createPortal(
-    <div ref={ref} className={styles.tooltip} style={style}>
+    <div ref={ref} className={tooltipClass} style={style}>
       {text}
-      {above && <div className={styles.arrow} />}
+      {(above || vertical) && <div className={styles.arrow} />}
     </div>,
     document.body,
   );

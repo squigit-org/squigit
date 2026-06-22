@@ -3,7 +3,7 @@
 
 use squigit_auth::security::{get_decrypted_key, ApiKeyProvider};
 use squigit_auth::ProfileStore;
-use squigit_brain::constants::DEFAULT_MODEL;
+
 use squigit_brain::events::NoopEventSink;
 use squigit_brain::context::media::get_active_storage;
 use squigit_brain::service::{
@@ -41,7 +41,7 @@ async fn run() -> Result<(), String> {
                     &sink,
                     AnalyzeImageRequest {
                         api_key,
-                        model: DEFAULT_MODEL.to_string(),
+                        model: "gemini-1.5-flash-8b".to_string(),
                         image_path,
                         user_message,
                         channel_id: format!("cli-analyze-{}", chrono::Utc::now().timestamp_millis()),
@@ -79,7 +79,7 @@ async fn run() -> Result<(), String> {
                     &sink,
                     PromptChatRequest {
                         api_key,
-                        model: DEFAULT_MODEL.to_string(),
+                        model: "gemini-1.5-flash-8b".to_string(),
                         chat_id,
                         user_message: message,
                         channel_id: format!("cli-prompt-{}", chrono::Utc::now().timestamp_millis()),

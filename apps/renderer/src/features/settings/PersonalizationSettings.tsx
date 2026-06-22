@@ -8,6 +8,7 @@ import React from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks/editor";
 import type { UserPreferences } from "@squigit/core/config";
 import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
+import { platform } from "@/platform";
 import styles from "./PersonalizationSettings.module.css";
 
 interface PersonalizationSettingsProps {
@@ -19,7 +20,71 @@ interface PersonalizationSettingsProps {
 }
 export const PersonalizationSettings: React.FC<
   PersonalizationSettingsProps
-> = ({ localPrompt, currentPrompt, setLocalPrompt, updatePreferences, isWizard }) => {
+> = ({
+  localPrompt,
+  currentPrompt,
+  setLocalPrompt,
+  updatePreferences,
+  isWizard,
+}) => {
+  const [soulMdFileName, setSoulMdFileName] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const initSoulMd = async () => {
+      try {
+        const exists = await platform.fs.exists("soul.md", { baseDir: "AppConfig" });
+        if (exists) {
+          try {
+            const name = await platform.fs.readTextFile("soul.md.name", { baseDir: "AppConfig" });
+            setSoulMdFileName(name.trim() || "soul.md");
+          } catch {
+            setSoulMdFileName("soul.md");
+          }
+        } else {
+          setSoulMdFileName(null);
+        }
+      } catch {
+        setSoulMdFileName(null);
+      }
+    };
+    initSoulMd();
+  }, []);
+
+  const handleAttachSoulMd = async () => {
+    try {
+      const selected = await platform.dialog.open({
+        filters: [{ name: "Markdown", extensions: ["md"] }],
+      });
+      if (!selected || Array.isArray(selected)) return;
+
+      const content = await platform.fs.readTextFile(selected);
+      await platform.fs.mkdir("", { baseDir: "AppConfig", recursive: true });
+      await platform.fs.writeTextFile("soul.md", content, {
+        baseDir: "AppConfig",
+      });
+      
+      const originalName = selected.split(/[/\\]/).pop() || "soul.md";
+      await platform.fs.writeTextFile("soul.md.name", originalName, {
+        baseDir: "AppConfig",
+      });
+      
+      setSoulMdFileName(originalName);
+    } catch (err) {
+      console.error("[PersonalizationSettings] Failed to attach soul.md:", err);
+    }
+  };
+
+  const handleDetachSoulMd = async (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    try {
+      await platform.fs.removeFile("soul.md", { baseDir: "AppConfig" });
+      await platform.fs.removeFile("soul.md.name", { baseDir: "AppConfig" });
+    } catch (err) {
+      console.warn("[PersonalizationSettings] Failed to delete soul.md files", err);
+    }
+    setSoulMdFileName(null);
+  };
+
   React.useEffect(() => {
     if (localPrompt === currentPrompt) return;
     const handler = setTimeout(() => {
@@ -68,7 +133,9 @@ export const PersonalizationSettings: React.FC<
             </span>
           </div>
         )}
-        <div className={`${styles.textareaWrapper} ${isWizard ? styles.wizardTextareaWrapper : ""}`}>
+        <div
+          className={`${styles.textareaWrapper} ${isWizard ? styles.wizardTextareaWrapper : ""}`}
+        >
           <textarea
             ref={ref as React.RefObject<HTMLTextAreaElement>}
             className={styles.textarea}
@@ -81,6 +148,57 @@ export const PersonalizationSettings: React.FC<
               handleKeyDown(e as any);
             }}
           />
+        </div>
+        <div className={styles.soulMdRow}>
+          <div
+            className={styles.soulMdPicker}
+            onClick={handleAttachSoulMd}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") handleAttachSoulMd();
+            }}
+          >
+            <span className={styles.soulMdIcon}>
+              <svg
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </span>
+            <span className={styles.soulMdLabel}>
+              {soulMdFileName ? (
+                soulMdFileName.length > 20 ? (
+                  `${soulMdFileName.substring(0, soulMdFileName.lastIndexOf(".")).substring(0, 15)}...${soulMdFileName.substring(soulMdFileName.lastIndexOf("."))}`
+                ) : (
+                  soulMdFileName
+                )
+              ) : "Attach Soul.md"}
+            </span>
+          </div>
+          {soulMdFileName && (
+            <span
+              className={styles.soulMdRemove}
+              onClick={handleDetachSoulMd}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") handleDetachSoulMd(e);
+              }}
+            >
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </span>
+          )}
         </div>
       </div>
       {contextMenu.isOpen && (

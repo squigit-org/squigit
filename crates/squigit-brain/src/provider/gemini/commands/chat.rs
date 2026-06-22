@@ -239,6 +239,23 @@ pub async fn stream_gemini_chat_v2(
                 }
             }
 
+            // Attach user's soul.md if present (hardcoded path, shared with CLI)
+            if let Some(soul_path) = squigit_memory::paths::base_config_dir()
+                .map(|p| p.join("soul.md"))
+            {
+                if soul_path.is_file() {
+                    if let Ok(soul_content) = std::fs::read_to_string(&soul_path) {
+                        let trimmed = soul_content.trim();
+                        if !trimmed.is_empty() {
+                            parts.push(GeminiPart {
+                                text: Some(format!("\n## User's Soul.md\n{}", trimmed)),
+                                ..Default::default()
+                            });
+                        }
+                    }
+                }
+            }
+
             if !user_message.is_empty() {
                 let interleaved_parts =
                     build_interleaved_parts(&user_message, &api_key, &runtime.provider_file_cache)

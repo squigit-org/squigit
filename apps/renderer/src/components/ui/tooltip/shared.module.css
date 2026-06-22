@@ -78,3 +78,21 @@
   bottom: -5px;
   left: 50%;
 }
+
+.tooltipVertical {
+  position: fixed;
+  background-color: var(--c-raw-012);
+  color: var(--c-raw-050);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  white-space: pre-line;
+  max-width: 280px;
+  line-height: 1.4;
+  text-align: left;
+  pointer-events: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  font-weight: 400;
+  z-index: 9999;
+  border: 1px solid var(--c-raw-043);
+}

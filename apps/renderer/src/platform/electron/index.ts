@@ -23,6 +23,7 @@ export const platform: PlatformBridge = {
     writeTextFile: (path, content, options) =>
       api.invoke("fs:writeTextFile", { path, content, ...options }),
     mkdir: (path, options) => api.invoke("fs:mkdir", { path, ...options }),
+    removeFile: (path, options) => api.invoke("fs:removeFile", { path, ...options }),
   },
   dialog: {
     open: (options) => api.invoke("dialog:open", options),

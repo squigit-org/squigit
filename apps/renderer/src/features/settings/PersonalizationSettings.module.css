@@ -83,8 +83,8 @@
 }
 
 .wizardTextareaWrapper {
-  height: 110px;
-  min-height: 110px;
+  height: 72px;
+  min-height: 72px;
   flex: none;
 }
 
@@ -103,4 +103,54 @@
 
 .textarea::placeholder {
   color: var(--c-raw-005);
+}
+
+.soulMdRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+  user-select: none;
+}
+
+.soulMdPicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+}
+
+.soulMdPicker:hover .soulMdLabel {
+  text-decoration: underline;
+}
+
+.soulMdIcon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--c-raw-005);
+  flex-shrink: 0;
+}
+
+.soulMdLabel {
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--c-raw-005);
+  line-height: 1;
+}
+
+.soulMdRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--c-raw-036);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.soulMdRemove:hover {
+  color: var(--c-raw-050);
 }

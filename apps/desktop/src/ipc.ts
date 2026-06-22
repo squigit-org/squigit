@@ -90,6 +90,14 @@ export function setupIpc() {
     await fs.mkdir(resolveFsPath(args), { recursive: args.recursive });
   });
 
+  ipcMain.handle("fs:removeFile", async (_, args) => {
+    try {
+      await fs.unlink(resolveFsPath(args));
+    } catch {
+      // ignore error if file doesn't exist
+    }
+  });
+
   // App commands
   ipcMain.handle("app:getVersion", () => "0.1.0");
   ipcMain.handle("app:getRuntimeVersion", () => process.versions.electron);
@@ -216,4 +224,19 @@ export function setupIpc() {
   ipcMain.handle("open_external_url", (_, args) =>
     require("electron").shell.openExternal(args.url),
   );
+
+  // Dialog
+  ipcMain.handle("dialog:open", async (_, options) => {
+    const { dialog: electronDialog } = require("electron");
+    const filters = (options?.filters || []).map((f: any) => ({
+      name: f.name || "Files",
+      extensions: f.extensions || ["*"],
+    }));
+    const result = await electronDialog.showOpenDialog({
+      properties: options?.multiple ? ["openFile", "multiSelections"] : ["openFile"],
+      filters: filters.length > 0 ? filters : undefined,
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return options?.multiple ? result.filePaths : result.filePaths[0];
+  });
 }

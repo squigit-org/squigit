@@ -302,3 +302,22 @@
   font-weight: 400;
   color: #ff9500;
 }
+
+.sectionTitleWithInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.infoIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-raw-036);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.infoIcon:hover {
+  color: var(--c-raw-050);
+}

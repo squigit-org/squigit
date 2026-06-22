@@ -12,6 +12,7 @@ import {
   readTextFile,
   writeTextFile,
   mkdir,
+  remove,
   BaseDirectory,
 } from "@tauri-apps/plugin-fs";
 import { open, save } from "@tauri-apps/plugin-dialog";
@@ -41,6 +42,8 @@ export const platform: PlatformBridge = {
         baseDir: options?.baseDir === "AppConfig" ? BaseDirectory.AppConfig : undefined,
         recursive: options?.recursive,
       }),
+    removeFile: (path, options) =>
+      remove(path, { baseDir: options?.baseDir === "AppConfig" ? BaseDirectory.AppConfig : undefined }),
   },
   dialog: { open, save },
   app: { getVersion, getRuntimeVersion: getTauriVersion, exit, relaunch },
