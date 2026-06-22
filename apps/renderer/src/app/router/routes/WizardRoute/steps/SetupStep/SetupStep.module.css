@@ -61,7 +61,7 @@
   padding: 0.875rem 1rem;
   border-radius: 0.625rem;
   border: 1px solid var(--c-raw-010);
-  background: var(--c-raw-043);
+  background: var(--c-raw-152);
   transition: border-color 0.2s ease;
 }
 
@@ -133,18 +133,18 @@
 }
 
 .badgeLoading {
-  background: var(--c-raw-007);
+  background: transparent;
   color: var(--c-raw-036);
 }
 
 .badgeInstalled {
   background: rgba(52, 199, 89, 0.12);
-  color: #34c759;
+  color: var(--c-raw-153);
 }
 
 .badgeNotInstalled {
   background: rgba(255, 149, 0, 0.1);
-  color: #ff9500;
+  color: var(--c-raw-154);
 }
 
 .spinner {
@@ -194,7 +194,7 @@
 }
 
 .platformLink:hover {
-  color: var(--c-raw-050);
+  color: var(--c-raw-156);
 }
 
 .platformIconSlot {

@@ -13,6 +13,9 @@ interface AuthStepProps {
   ) => void;
 }
 
+// Track globally whether the startup animation has already played
+let hasAnimatedOnce = false;
+
 export const AuthStep: React.FC<AuthStepProps> = ({ setCustomAction }) => {
   const app = useAppContext();
   const [authState, setAuthState] = React.useState<
@@ -26,6 +29,13 @@ export const AuthStep: React.FC<AuthStepProps> = ({ setCustomAction }) => {
   );
   const isCancelledRef = React.useRef(false);
   const isAuthenticatingRef = React.useRef(false);
+
+  // Entrance animation: play only once per wizard session
+  const [shouldAnimate] = React.useState(() => {
+    if (hasAnimatedOnce) return false;
+    hasAnimatedOnce = true;
+    return true;
+  });
 
   React.useEffect(() => {
     if (isAuthenticatingRef.current) return;
@@ -88,11 +98,13 @@ export const AuthStep: React.FC<AuthStepProps> = ({ setCustomAction }) => {
   }, [authState, setCustomAction]);
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container}${shouldAnimate ? ` ${styles.animateIn}` : ""}`}>
       <div className={styles.branding}>
         <div className={styles.iconWrapper}>
           <div className={styles.iconGlow} />
-          <AppIcon size={64} color="brand_color" />
+          <span className={styles.iconImage}>
+            <AppIcon size={64} color="brand_color" />
+          </span>
         </div>
         <h1 className={styles.title}>Welcome to Squigit</h1>
       </div>

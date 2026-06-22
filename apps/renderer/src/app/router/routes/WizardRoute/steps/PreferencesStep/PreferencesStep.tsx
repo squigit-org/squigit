@@ -7,16 +7,14 @@
 import { useEffect, useRef, useState } from "react";
 import ThemePicker from "../../components/ThemePicker/ThemePicker";
 import { useAppContext } from "@/app/providers/AppProvider";
-import { CapturePreview } from "@/features/settings/components/CapturePreview";
-import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
 import { commands } from "@/platform";
+import { CapturePreview } from "@/app/router/routes/WizardRoute/components/CapturePreview/CapturePreview";
 import { PersonalizationSettings } from "@/features/settings/PersonalizationSettings";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import styles from "./PreferencesStep.module.css";
 
 export const PreferencesStep = () => {
   const app = useAppContext();
-  const [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   const [isOcrInstalled, setIsOcrInstalled] = useState<boolean | null>(null);
   const [showInfoTip, setShowInfoTip] = useState(false);
   const infoIconRef = useRef<HTMLSpanElement>(null);
@@ -59,7 +57,9 @@ export const PreferencesStep = () => {
   const savedPrompt =
     app.system.wizardState?.data?.step_3?.prompt ?? app.system.prompt ?? "";
   const savedSoulMdName =
-    app.system.wizardState?.data?.step_3?.soulMdName ?? (app.system as any).soulMdName ?? null;
+    app.system.wizardState?.data?.step_3?.soulMdName ??
+    (app.system as any).soulMdName ??
+    null;
   const [localPrompt, setLocalPrompt] = useState(savedPrompt);
 
   // ── Persist defaults on mount ──
@@ -89,7 +89,9 @@ export const PreferencesStep = () => {
   };
 
   // ── Handlers ──
-  const handlePromptChange = (updates: Partial<{ prompt: string; soulMdName: string | null }>) => {
+  const handlePromptChange = (
+    updates: Partial<{ prompt: string; soulMdName: string | null }>,
+  ) => {
     app.system.updatePreferences(updates as any);
     if (updates.prompt !== undefined) {
       updateWizardStep3({ prompt: updates.prompt });
@@ -147,38 +149,12 @@ export const PreferencesStep = () => {
                 </p>
               </div>
               <div className={styles.captureDropdownRow}>
-                <Dropdown
-                  label={
-                    savedCaptureType === "squiggle" ? "Squiggle" : "Traditional"
-                  }
-                  width={220}
-                  isOpen={captureMenuOpen}
-                  onOpenChange={setCaptureMenuOpen}
+                <CapturePreview
+                  captureType={savedCaptureType as "rectangular" | "squiggle"}
+                  onChange={handleCaptureTypeChange}
                   direction="up"
                   align="right"
-                >
-                  <DropdownSectionTitle>Capture Type</DropdownSectionTitle>
-                  <div className={styles.previewContainer}>
-                    <div className={styles.dropdownPreviewWrapper}>
-                      <CapturePreview
-                        key={captureMenuOpen ? "open" : "closed"}
-                        type={savedCaptureType as "rectangular" | "squiggle"}
-                      />
-                    </div>
-                  </div>
-                  <div className={styles.list}>
-                    <DropdownItem
-                      label="Traditional"
-                      isActive={savedCaptureType === "rectangular"}
-                      onClick={() => handleCaptureTypeChange("rectangular")}
-                    />
-                    <DropdownItem
-                      label="Squiggle"
-                      isActive={savedCaptureType === "squiggle"}
-                      onClick={() => handleCaptureTypeChange("squiggle")}
-                    />
-                  </div>
-                </Dropdown>
+                />
               </div>
             </div>
           </div>

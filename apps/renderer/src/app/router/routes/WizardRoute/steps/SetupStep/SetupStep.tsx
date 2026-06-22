@@ -141,7 +141,7 @@ export const SetupStep: React.FC<SetupStepProps> = ({ onChecksDone }) => {
                   />
                 )}
                 {status === "installed" && (
-                  <CheckmarkIcon size={18} color="#34c759" />
+                  <CheckmarkIcon size={18} color="var(--c-raw-153)" />
                 )}
                 {status === "not_installed" && (
                   <svg
@@ -149,7 +149,7 @@ export const SetupStep: React.FC<SetupStepProps> = ({ onChecksDone }) => {
                     height={18}
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#ff9500"
+                    stroke="var(--c-raw-154)"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"

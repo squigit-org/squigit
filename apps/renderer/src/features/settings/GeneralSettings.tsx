@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import styles from "./GeneralSettings.module.css";
-import { CapturePreview } from "./components/CapturePreview";
+import { CapturePreview } from "@/app/router/routes/WizardRoute/components/CapturePreview/CapturePreview";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
 
 interface GeneralSettingsProps {
@@ -31,7 +31,6 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   onCaptureTypeChange,
 }) => {
   const [appearanceMenuOpen, setAppearanceMenuOpen] = useState(false);
-  const [captureMenuOpen, setCaptureMenuOpen] = useState(false);
 
   const getThemeLabel = () => {
     switch (themePreference) {
@@ -110,36 +109,10 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
             </span>
           </div>
           <div className={styles.rowControl}>
-            <Dropdown
-              label={
-                captureType === "squiggle" ? "Squiggle" : "Traditional"
-              }
-              width={220}
-              isOpen={captureMenuOpen}
-              onOpenChange={setCaptureMenuOpen}
-            >
-              <DropdownSectionTitle>Capture Type</DropdownSectionTitle>
-              <div className={styles.previewContainer}>
-                <div className={styles.dropdownPreviewWrapper}>
-                  <CapturePreview 
-                    key={captureMenuOpen ? "open" : "closed"}
-                    type={captureType} 
-                  />
-                </div>
-              </div>
-              <div className={styles.list}>
-                <DropdownItem
-                  label="Traditional"
-                  isActive={captureType === "rectangular"}
-                  onClick={() => onCaptureTypeChange("rectangular")}
-                />
-                <DropdownItem
-                  label="Squiggle"
-                  isActive={captureType === "squiggle"}
-                  onClick={() => onCaptureTypeChange("squiggle")}
-                />
-              </div>
-            </Dropdown>
+            <CapturePreview
+              captureType={captureType}
+              onChange={onCaptureTypeChange}
+            />
           </div>
         </div>
 

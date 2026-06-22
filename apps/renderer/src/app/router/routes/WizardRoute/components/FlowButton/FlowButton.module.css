@@ -15,7 +15,7 @@
 }
 
 .next:not(:disabled):hover {
-  background-color: var(--c-raw-041);
+  background-color: var(--c-raw-155);
 }
 
 .cancel {
@@ -33,7 +33,7 @@
 }
 
 .back:not(:disabled):hover {
-  background-color: var(--c-raw-041);
+  background-color: var(--c-raw-155);
   color: var(--c-raw-050);
 }
 
