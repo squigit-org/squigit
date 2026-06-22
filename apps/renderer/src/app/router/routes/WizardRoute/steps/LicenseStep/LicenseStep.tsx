@@ -1,145 +1,158 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useAppContext } from "@/app/providers/AppProvider";
-import { usePlatform } from "@/hooks/shared";
-import { ChatBubble } from "@/features/chat";
-import {
-  linuxInstruction as linux,
-  macosInstruction as macos,
-  windowsInstruction as windows,
-} from "@/assets";
-import type { Message } from "@squigit/core/brain/engine";
+import { commands } from "@/platform";
+import { github } from "@squigit/core/services/github";
 import { SettingsSection } from "@/features/settings";
 import styles from "./LicenseStep.module.css";
-
-const INSTRUCTIONS: Record<string, string> = {
-  linux,
-  macos,
-  windows,
-};
-
-const SETTINGS_LINKS: Array<{ label: string; section: SettingsSection }> = [
-  { label: "Settings -> Models", section: "models" },
-  { label: "Settings -> API Keys", section: "apikeys" },
-  { label: "Settings -> Personalization", section: "personalization" },
-  { label: "Settings -> Help & Support", section: "help" },
-  { label: "Settings -> General", section: "general" },
-];
-
-const linkifySettingsMentions = (raw: string): string => {
-  let next = raw;
-  for (const item of SETTINGS_LINKS) {
-    const escaped = item.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(escaped, "g");
-    next = next.replace(regex, `[${item.label}](#settings-${item.section})`);
-  }
-  return next;
-};
 
 interface LicenseStepProps {
   onSystemAction: (actionId: string, value?: string) => void | Promise<void>;
   onOpenSettings: (section: SettingsSection) => void;
 }
 
-export const LicenseStep: React.FC<LicenseStepProps> = ({
-  onSystemAction,
-  onOpenSettings,
-}) => {
+export const LicenseStep: React.FC<LicenseStepProps> = () => {
   const app = useAppContext();
-  const { isMac, isWin } = usePlatform();
+  const currentData = app.system.wizardState?.data?.["step_4"] || {};
 
-  const initialSelection = app.system.wizardState?.data?.["step_1"]?.agreed
-    ? "agree"
-    : "disagree";
-  const [selected, setSelected] = useState(initialSelection);
+  const [termsAgreed, setTermsAgreed] = useState(!!currentData.termsAgreed);
+  const [reverseImageAgreed, setReverseImageAgreed] = useState(
+    !!currentData.reverseImageAgreed,
+  );
+  const [updatesAgreed, setUpdatesAgreed] = useState(
+    !!currentData.updatesAgreed,
+  );
 
-  // When selection changes, we enable/disable the Next button by updating WizardState data
-  const handleSelection = (value: string) => {
-    setSelected(value);
+  const updateState = (
+    terms: boolean,
+    reverseImage: boolean,
+    updates: boolean,
+  ) => {
+    const newData = {
+      ...app.system.wizardState?.data,
+      step_4: {
+        termsAgreed: terms,
+        reverseImageAgreed: reverseImage,
+        updatesAgreed: updates,
+      },
+    };
 
-    // Save to WizardState data object
-    const currentData = app.system.wizardState?.data || {};
     app.system.setWizardState({
+      ...app.system.wizardState,
       step: 4,
       isFinished: false,
-      data: {
-        ...currentData,
-        step_4: { agreed: value === "agree" },
-      },
+      data: newData,
     });
-
-    void onSystemAction(value, value);
   };
 
-  const content = useMemo(() => {
-    const raw = isMac
-      ? INSTRUCTIONS.macos
-      : isWin
-        ? INSTRUCTIONS.windows
-        : INSTRUCTIONS.linux;
-    return linkifySettingsMentions(raw);
-  }, [isMac, isWin]);
-
-  const message: Message = {
-    id: "welcome-intro",
-    role: "system",
-    text: content,
-    timestamp: Date.now(),
+  const handleTermsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.checked;
+    setTermsAgreed(val);
+    updateState(val, reverseImageAgreed, updatesAgreed);
   };
 
-  const handleAgreementAction = (actionId: string, value?: string) => {
-    if (actionId === "open_settings" && value) {
-      onOpenSettings(value as SettingsSection);
-    } else {
-      void onSystemAction(actionId, value);
-    }
+  const handleReverseImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.checked;
+    setReverseImageAgreed(val);
+    updateState(termsAgreed, val, updatesAgreed);
   };
 
-  // We rely on the WizardRoute to evaluate if this step is complete.
-  // WizardRoute checks `isSetupDone = app.system.wizardState?.data?.["step_1"]?.agreed === true`
+  const handleUpdatesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.checked;
+    setUpdatesAgreed(val);
+    updateState(termsAgreed, reverseImageAgreed, val);
+  };
 
   return (
-    <>
-      <ChatBubble message={message} onAction={handleAgreementAction} />
-      <div className={styles.authAction}>
-        <div className={styles.actions}>
-          <label
-            className={`${styles.radioAction} ${
-              selected === "disagree" ? styles.radioSelected : ""
-            }`}
-            onClick={() => handleSelection("disagree")}
-          >
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h2 className={styles.title}>Security Notice & Data Use</h2>
+      </div>
+
+      <div className={styles.contentWrapper}>
+        <p className={styles.topText}>
+          Squigit is designed to work locally first. Your captures, chats, API
+          keys, and settings stay on your device unless you explicitly use a
+          feature that requires an external provider. When AI features are
+          enabled, only the specific capture and prompt required to complete
+          your request are sent to your configured provider. Squigit does not
+          maintain a cloud copy of your conversations or personal data.
+        </p>
+
+        <div className={styles.checkboxGroup}>
+          <div className={styles.checkboxRow}>
             <input
-              type="radio"
-              className={styles.radioInput}
-              name="agreement"
-              value="disagree"
-              checked={selected === "disagree"}
-              readOnly
+              type="checkbox"
+              className={styles.checkboxInput}
+              checked={termsAgreed}
+              onChange={handleTermsChange}
             />
-            I do not agree.
-          </label>
-          <label
-            className={`${styles.radioAction} ${
-              selected === "agree" ? styles.radioSelected : ""
-            }`}
-            onClick={() => handleSelection("agree")}
-          >
+            <span className={styles.checkboxText}>
+              I agree to the{" "}
+              <a
+                href="https://squigit-org.github.io/legal/terms.html"
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Squigit Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://squigit-org.github.io/legal/privacy.html"
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Privacy Policy
+              </a>
+              . I understand that AI providers may process captures and prompts
+              that I explicitly send to them. I can change these settings at any
+              time.
+            </span>
+          </div>
+
+          <div className={styles.checkboxRow}>
             <input
-              type="radio"
-              className={styles.radioInput}
-              name="agreement"
-              value="agree"
-              checked={selected === "agree"}
-              readOnly
+              type="checkbox"
+              className={styles.checkboxInput}
+              checked={reverseImageAgreed}
+              onChange={handleReverseImageChange}
             />
-            I agree. Let&apos;s go.
-          </label>
-        </div>
-        <div className={styles.licenseText}>
-          By continuing, you agree to our Terms of Service and Privacy Policy.
-          You can withdraw consent at any time.
+            <span className={styles.checkboxText}>
+              I understand that the 'Reverse Image Search' feature uses a
+              temporary image host. I agree to avoid using this specific feature
+              on captures containing sensitive personal data.
+            </span>
+          </div>
+
+          <div className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              className={styles.checkboxInput}
+              checked={updatesAgreed}
+              onChange={handleUpdatesChange}
+            />
+            <span className={styles.checkboxText}>
+              I'd like to receive product updates, release notes, and occasional
+              announcements.
+            </span>
+          </div>
         </div>
       </div>
-    </>
+      <div className={styles.aboutSection}>
+        <div className={styles.legalRow}>
+          <span>Squigit © 2026</span>
+          <span className={styles.dot}>•</span>
+          <span>
+            <button
+              className={styles.legalLink}
+              onClick={() => commands.openExternalUrl(github.license)}
+            >
+              Licensed under Apache 2.0
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
   );
 };

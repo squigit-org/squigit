@@ -50,7 +50,8 @@ export const WizardRoute: React.FC<WizardRouteProps> = ({
   const isAuthDone = !!app.system.activeProfile;
   const isApiKeyDone = !!app.system.apiKey;
   const isLicenseDone =
-    app.system.wizardState?.data?.["step_4"]?.agreed === true;
+    app.system.wizardState?.data?.["step_4"]?.termsAgreed === true &&
+    app.system.wizardState?.data?.["step_4"]?.reverseImageAgreed === true;
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {

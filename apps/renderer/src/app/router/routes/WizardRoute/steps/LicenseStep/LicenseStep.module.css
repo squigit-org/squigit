@@ -1,95 +1,135 @@
-.authAction {
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.container {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin-top: 1.5rem;
   width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  height: 100%;
+  padding-top: 1rem;
 }
 
-.actions {
+.header {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  padding-left: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-family: "Geist Sans", sans-serif;
+  font-size: 1.225rem;
+  font-weight: 500;
+  color: var(--c-raw-050);
+  margin: 0;
+}
+
+.contentWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding-bottom: 2rem;
+}
+
+.topText {
+  font-family: "Geist Sans", sans-serif;
+  font-size: 0.9125rem;
+  font-weight: 350;
+  line-height: 1.6;
+  color: var(--c-raw-036);
+  margin: 0 0 2rem 0;
+  text-align: left;
+}
+
+.checkboxGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
   width: 100%;
 }
 
-.radioAction {
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.checkboxInput {
+  margin-top: 0.25rem;
+  position: relative;
+  top: -1px;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: #3b82f6;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.checkboxText {
+  position: relative;
+  top: 1px;
+  font-family: "Geist Sans", sans-serif;
+  font-size: 0.9125rem;
+  font-weight: 350;
+  line-height: 1.5;
+  color: var(--c-raw-050);
+}
+
+.checkboxText a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.checkboxText a:hover {
+  color: #60a5fa;
+}
+
+.aboutSection {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legalRow {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.8125rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  color: var(--c-raw-050);
-  border: 1px solid var(--c-raw-010);
-  user-select: none;
-  width: 100%;
-  max-width: 400px;
+  color: var(--c-raw-005);
+  font-size: 0.78rem;
+  font-family: "Geist Sans", sans-serif;
 }
 
-.radioAction:hover {
-  border-color: var(--c-raw-036);
+.dot {
+  opacity: 0.5;
 }
 
-.radioSelected {
-  border-color: var(--c-raw-005);
-  color: var(--c-raw-050);
-}
-
-.radioInput {
-  accent-color: var(--c-raw-050);
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-}
-
-.licenseText {
-  margin-top: 2rem;
-  padding-left: 1rem;
-  font-size: 0.8125rem;
-  color: var(--c-raw-050);
-}
-
-.licenseText a {
-  color: var(--c-raw-050);
-  font-weight: 600;
-  text-underline-offset: 4px;
-}
-
-.licenseText a:hover {
-  color: var(--c-raw-036);
-}
-
-:global([data-component="chat-bubble"] a),
-:global([data-component="chat-bubble"] a:visited) {
-  color: var(--c-raw-050) !important;
-}
-
-:global([data-component="chat-bubble"] a[href^="#settings-"]),
-:global([data-component="chat-bubble"] a[href^="#settings-"]:visited) {
-  color: var(--c-raw-002) !important;
-  font-weight: 700;
-}
-
-:global([data-component="chat-bubble"] a:hover) {
-  color: var(--c-raw-036) !important;
-}
-
-:global([data-component="chat-bubble"] a[href^="#settings-"]:hover) {
-  color: var(--c-raw-002) !important;
+.legalLink {
+  background: none;
+  border: none;
+  color: var(--c-raw-004);
+  font-size: inherit;
   text-decoration: underline;
-}
-
-:global([data-component="chat-bubble"] span[role="button"]) {
-  color: var(--c-raw-002) !important;
-  font-weight: 700;
+  text-decoration-color: var(--c-raw-036);
   cursor: pointer;
+  padding: 0;
+  font-family: inherit;
 }
 
-:global([data-component="chat-bubble"] span[role="button"]:hover) {
-  text-decoration: underline;
+.legalLink:hover {
+  color: var(--c-raw-002);
 }
