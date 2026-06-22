@@ -164,6 +164,7 @@ export const TitleBar: React.FC = () => {
               defaultModel={app.system.startupModel}
               defaultOcrLanguage={app.system.startupOcrLanguage}
               updatePreferences={app.system.updatePreferences}
+              soulMdName={app.system.soulMdName}
               themePreference={app.system.themePreference}
               onSetTheme={app.system.onSetTheme}
               autoExpandOCR={app.system.autoExpandOCR}

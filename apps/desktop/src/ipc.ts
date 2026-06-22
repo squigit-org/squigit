@@ -232,9 +232,24 @@ export function setupIpc() {
       name: f.name || "Files",
       extensions: f.extensions || ["*"],
     }));
+    let defaultPath: string | undefined;
+    if (options?.defaultPath) {
+      try {
+        const knownDirs: Record<string, string> = {
+          Documents: app.getPath("documents"),
+          Home: app.getPath("home"),
+          Desktop: app.getPath("desktop"),
+          Downloads: app.getPath("downloads"),
+        };
+        defaultPath = knownDirs[options.defaultPath] || options.defaultPath;
+      } catch {
+        // ignore — let the OS pick its own default
+      }
+    }
     const result = await electronDialog.showOpenDialog({
       properties: options?.multiple ? ["openFile", "multiSelections"] : ["openFile"],
       filters: filters.length > 0 ? filters : undefined,
+      defaultPath,
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     return options?.multiple ? result.filePaths : result.filePaths[0];

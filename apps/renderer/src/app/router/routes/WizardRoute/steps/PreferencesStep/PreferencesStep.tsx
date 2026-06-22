@@ -58,7 +58,7 @@ export const PreferencesStep = () => {
     app.system.wizardState?.data?.step_3?.prompt ?? app.system.prompt ?? "";
   const savedSoulMdName =
     app.system.wizardState?.data?.step_3?.soulMdName ??
-    (app.system as any).soulMdName ??
+    app.system.soulMdName ??
     null;
   const [localPrompt, setLocalPrompt] = useState(savedPrompt);
 

@@ -100,6 +100,8 @@ export const useSystemSync = () => {
         prefs.setTheme("system");
       }
 
+      prefs.setSoulMdName(loadedPrefs.soulMdName ?? null);
+
       if (!cancelled) {
         state.setPrefsLoaded(true);
       }
@@ -354,5 +356,6 @@ export const useSystemSync = () => {
     showExistingProfileDialog: profile.showExistingProfileDialog,
     setShowExistingProfileDialog: profile.setShowExistingProfileDialog,
     prefsLoaded: state.prefsLoaded,
+    soulMdName: prefs.soulMdName,
   };
 };

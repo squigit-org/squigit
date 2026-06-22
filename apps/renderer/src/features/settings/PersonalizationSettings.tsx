@@ -34,6 +34,7 @@ export const PersonalizationSettings: React.FC<
     try {
       const selected = await platform.dialog.open({
         filters: [{ name: "Markdown", extensions: ["md"] }],
+        defaultPath: "Documents",
       });
       if (!selected || Array.isArray(selected)) return;
 
@@ -42,13 +43,8 @@ export const PersonalizationSettings: React.FC<
       await platform.fs.writeTextFile("soul.md", content, {
         baseDir: "AppConfig",
       });
-      
-      
+
       const originalName = selected.split(/[/\\]/).pop() || "soul.md";
-      await platform.fs.writeTextFile("soul.md.name", originalName, {
-        baseDir: "AppConfig",
-      });
-      
       updatePreferences({ soulMdName: originalName });
     } catch (err) {
       console.error("[PersonalizationSettings] Failed to attach soul.md:", err);
@@ -59,9 +55,8 @@ export const PersonalizationSettings: React.FC<
     e.stopPropagation();
     try {
       await platform.fs.removeFile("soul.md", { baseDir: "AppConfig" });
-      await platform.fs.removeFile("soul.md.name", { baseDir: "AppConfig" });
     } catch (err) {
-      console.warn("[PersonalizationSettings] Failed to delete soul.md files", err);
+      console.warn("[PersonalizationSettings] Failed to delete soul.md", err);
     }
     updatePreferences({ soulMdName: null });
   };

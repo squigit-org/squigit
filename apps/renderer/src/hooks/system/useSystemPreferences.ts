@@ -43,6 +43,7 @@ export const useSystemPreferences = () => {
     useState<string>(DEFAULT_OCR_MODEL_ID);
   const [sessionOcrLanguage, setSessionOcrLanguage] =
     useState<string>(DEFAULT_OCR_MODEL_ID);
+  const [soulMdName, setSoulMdName] = useState<string | null>(null);
 
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     const normalizedUpdatedOcrLanguage =
@@ -84,6 +85,9 @@ export const useSystemPreferences = () => {
     if (updates.theme !== undefined) {
       setTheme(updates.theme);
     }
+    if (updates.soulMdName !== undefined) {
+      setSoulMdName(updates.soulMdName);
+    }
 
     try {
       const currentPrefs = await loadPreferences();
@@ -121,6 +125,9 @@ export const useSystemPreferences = () => {
     setStartupOcrLanguage,
     sessionOcrLanguage,
     setSessionOcrLanguage,
+
+    soulMdName,
+    setSoulMdName,
 
     updatePreferences,
   };
