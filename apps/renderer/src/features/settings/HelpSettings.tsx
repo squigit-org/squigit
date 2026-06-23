@@ -11,14 +11,105 @@ import {
   prepareGitHubIssueReport,
   prepareMailReport,
 } from "@squigit/core/helpers";
-import { MarkGithubIcon, MailIcon, BugIcon } from "@primer/octicons-react";
-import { CodeBlock } from "@/components/ui";
+import {
+  MarkGithubIcon,
+  MailIcon,
+  BugIcon,
+  CopyIcon,
+  CheckIcon,
+} from "@primer/octicons-react";
 import { useAppContext } from "@/app/providers/AppProvider";
 import packageJson from "@/../package.json";
 import styles from "./HelpSettings.module.css";
 
+/**
+ * The diagnostics object (`sysInfo`) keeps the compact agent-string syntax that
+ * the bug/support reports depend on. For display we filter that syntax into
+ * human-readable rows — e.g. "Squigit/0.1.0 OCR/1.2.3" -> { Squigit: v0.1.0 },
+ * { OCR Engine: v1.2.3 }. Parsing the strings here (instead of in the loader)
+ * keeps the report payload untouched.
+ */
+type Spec = { label: string; value: string; mono?: boolean; muted?: boolean };
+
+const ENGINE_LABELS: Record<string, string> = {
+  OCR: "OCR Engine",
+  STT: "STT Engine",
+  React: "React",
+  Shell: "Shell",
+};
+
+const DISPLAY_NAMES: Record<string, string> = {
+  wayland: "Wayland",
+  x11: "X11",
+  unknown: "Unknown",
+};
+
+// "{os}/{arch} ({display}) {pkg}" e.g. "macOS 15.2/aarch64 (Aqua) brew".
+const MACHINE_RE = /^(.+)\/(\S+)\s+\(([^)]+)\)\s+(\S+)$/;
+
+const formatToken = (name: string, version: string, appName: string): Spec => {
+  if (name === appName) return { label: appName, value: `v${version}` };
+  if (name === "Electron" || name === "Tauri")
+    return { label: "Runtime", value: `${name} v${version}` };
+
+  const isMissing = version === "None";
+  return {
+    label: ENGINE_LABELS[name] ?? name,
+    value: isMissing ? "Not installed" : `v${version}`,
+    muted: isMissing,
+  };
+};
+
+const parseSpecs = (info: Record<string, string>, appName: string): Spec[] => {
+  const specs: Spec[] = [];
+
+  for (const [key, raw] of Object.entries(info)) {
+    // App + Runtime carry space-separated "Name/Version" tokens.
+    if (key === appName || key === "Runtime") {
+      for (const [, name, version] of raw.matchAll(
+        /([A-Za-z][\w.-]*)\/([\w.\-+]+)/g,
+      )) {
+        specs.push(formatToken(name, version, appName));
+      }
+      continue;
+    }
+
+    if (key === "Machine") {
+      const match = raw.match(MACHINE_RE);
+      if (match) {
+        const [, os, arch, display, pkg] = match;
+        specs.push({ label: "OS", value: os });
+        specs.push({ label: "Architecture", value: arch });
+        specs.push({
+          label: "Display",
+          value: DISPLAY_NAMES[display.toLowerCase()] ?? display,
+        });
+        specs.push({ label: "Package Manager", value: pkg });
+        continue;
+      }
+    }
+
+    if (key === "Commit") {
+      const isDev = raw === "Development Mode";
+      specs.push({
+        label: "Commit",
+        value: isDev ? raw : raw.slice(0, 12),
+        mono: !isDev,
+        muted: isDev,
+      });
+      continue;
+    }
+
+    // Webview user-agent or any other unstructured value.
+    specs.push({ label: key, value: raw, mono: true });
+  }
+
+  return specs;
+};
+
 export const HelpSettings: React.FC = () => {
   const app = useAppContext();
+  const [copied, setCopied] = useState(false);
   const [sysInfo, setSysInfo] = useState<Record<string, string>>({
     [app.system.appName]: `Squigit/${packageJson.version} (Loading...)`,
     Runtime: "Loading...",
@@ -99,6 +190,12 @@ export const HelpSettings: React.FC = () => {
     }
   };
 
+  const handleCopyDiagnostics = async () => {
+    await copyToClipboard(JSON.stringify(sysInfo, null, 2));
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+
   const handleContactSupport = async () => {
     const diag = JSON.stringify(sysInfo, null, 2);
     const action = prepareMailReport(app.system.appName, {
@@ -125,6 +222,8 @@ export const HelpSettings: React.FC = () => {
     handleOpen(action.openUrl);
   };
 
+  const specs = parseSpecs(sysInfo, app.system.appName);
+
   return (
     <section className={styles.container} aria-labelledby="help-heading">
       <header className={styles.sectionHeader}>
@@ -132,14 +231,37 @@ export const HelpSettings: React.FC = () => {
           Help & Support
         </h2>
       </header>
-      <div className={styles.code}>
-        <span className={styles.subLabel}>System Diagnostics</span>
-        <CodeBlock
-          language="json"
-          value={JSON.stringify(sysInfo, null, 2)}
-          stickyHeader={false}
-          style={{ maxHeight: "100px", overflowY: "auto" }}
-        />
+      <div className={styles.specCard}>
+        <div className={styles.specHeader}>
+          <span className={styles.subLabel}>System Diagnostics</span>
+          <button
+            type="button"
+            className={styles.copyButton}
+            onClick={handleCopyDiagnostics}
+            aria-label="Copy diagnostics"
+            title={copied ? "Copied" : "Copy diagnostics"}
+          >
+            {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+          </button>
+        </div>
+        <dl className={styles.specList}>
+          {specs.map((spec, i) => (
+            <div className={styles.specRow} key={`${spec.label}-${i}`}>
+              <dt className={styles.specLabel}>{spec.label}</dt>
+              <dd
+                className={[
+                  styles.specValue,
+                  spec.mono ? styles.mono : "",
+                  spec.muted ? styles.muted : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {spec.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
       <div className={styles.actionRow}>
         <button

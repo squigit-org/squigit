@@ -129,20 +129,102 @@
   transform: translateX(2px);
 }
 
-.code {
-  margin-top: -13px;
+.specCard {
+  background-color: #121212;
+  border: 1px solid var(--c-raw-043);
+  border-radius: 10px;
+  padding: 0.5rem 0.875rem 0.625rem;
+}
+
+.specHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.125rem 0 0.375rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--c-raw-040);
 }
 
 .subLabel {
-  font-size: 0.75rem;
-  background-color: var(--c-raw-012);
-  position: absolute;
-  left: 35px;
-  top: 92px;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--c-raw-050);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+}
+
+.copyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.copyButton:hover {
+  color: #e8e8e8;
+  background-color: #1a1a1a;
+  border-color: var(--c-raw-043);
+}
+
+.specList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.specRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.235rem 0;
+}
+
+.specRow:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.specLabel {
+  flex-shrink: 0;
+  color: var(--c-raw-005);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.specValue {
+  min-width: 0;
+  color: #e8e8e8;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.mono {
+  font-family:
+    "SF Mono", "Fira Code", ui-monospace, "Cascadia Code", Menlo, Consolas,
+    monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+}
+
+.muted {
+  color: #666;
+  font-weight: 400;
 }
 
 .legalNote {
