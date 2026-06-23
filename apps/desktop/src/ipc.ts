@@ -45,6 +45,10 @@ export function setupIpc() {
   ipcMain.handle("storage_delete", (_, args) =>
     addon.storageDelete?.(args.key),
   );
+  ipcMain.handle("store_image_from_path", (_, args) =>
+    addon.storeImageFromPath?.(args.path),
+  );
+  ipcMain.handle("read_clipboard_image", () => addon.readClipboardImage?.());
 
   // Brain commands
   ipcMain.handle("ai_prompt", (_, args) =>
