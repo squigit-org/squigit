@@ -17,6 +17,7 @@ import {
   BugIcon,
   CopyIcon,
   CheckIcon,
+  ChevronRightIcon,
 } from "@primer/octicons-react";
 import { useAppContext } from "@/app/providers/AppProvider";
 import packageJson from "@/../package.json";
@@ -25,91 +26,111 @@ import styles from "./HelpSettings.module.css";
 /**
  * The diagnostics object (`sysInfo`) keeps the compact agent-string syntax that
  * the bug/support reports depend on. For display we filter that syntax into
- * human-readable rows — e.g. "Squigit/0.1.0 OCR/1.2.3" -> { Squigit: v0.1.0 },
- * { OCR Engine: v1.2.3 }. Parsing the strings here (instead of in the loader)
- * keeps the report payload untouched.
+ * human-readable rows, merging related fields (OS+arch, OCR+STT) so the card
+ * reads cleanly. Parsing the strings here (instead of in the loader) keeps the
+ * report payload untouched.
  */
 type Spec = { label: string; value: string; mono?: boolean; muted?: boolean };
 
-const ENGINE_LABELS: Record<string, string> = {
-  OCR: "OCR Engine",
-  STT: "STT Engine",
-  React: "React",
-  Shell: "Shell",
-};
+// "{os}/{arch} ({display}) {pkg}" e.g. "macOS 15.2/aarch64 (Aqua) brew". We
+// only surface os + arch; the display server and package manager stay in the
+// raw report but aren't worth a row in the card.
+const MACHINE_RE = /^(.+)\/(\S+)\s+\([^)]+\)\s+\S+$/;
+const VERSION_TOKEN = /([A-Za-z][\w.-]*)\/([\w.\-+]+)/g;
 
-const DISPLAY_NAMES: Record<string, string> = {
-  wayland: "Wayland",
-  x11: "X11",
-  unknown: "Unknown",
-};
-
-// "{os}/{arch} ({display}) {pkg}" e.g. "macOS 15.2/aarch64 (Aqua) brew".
-const MACHINE_RE = /^(.+)\/(\S+)\s+\(([^)]+)\)\s+(\S+)$/;
-
-const formatToken = (name: string, version: string, appName: string): Spec => {
-  if (name === appName) return { label: appName, value: `v${version}` };
-  if (name === "Electron" || name === "Tauri")
-    return { label: "Runtime", value: `${name} v${version}` };
-
-  const isMissing = version === "None";
-  return {
-    label: ENGINE_LABELS[name] ?? name,
-    value: isMissing ? "Not installed" : `v${version}`,
-    muted: isMissing,
-  };
-};
-
-const parseSpecs = (info: Record<string, string>, appName: string): Spec[] => {
-  const specs: Spec[] = [];
+/**
+ * Flatten the compact agent-string syntax into a name -> version map (plus the
+ * parsed machine fields) so rows can be recomposed and merged.
+ */
+const collectValues = (
+  info: Record<string, string>,
+  appName: string,
+): Record<string, string> => {
+  const v: Record<string, string> = {};
 
   for (const [key, raw] of Object.entries(info)) {
-    // App + Runtime carry space-separated "Name/Version" tokens.
     if (key === appName || key === "Runtime") {
-      for (const [, name, version] of raw.matchAll(
-        /([A-Za-z][\w.-]*)\/([\w.\-+]+)/g,
-      )) {
-        specs.push(formatToken(name, version, appName));
+      for (const [, name, version] of raw.matchAll(VERSION_TOKEN)) {
+        v[name] = version;
       }
-      continue;
-    }
-
-    if (key === "Machine") {
-      const match = raw.match(MACHINE_RE);
-      if (match) {
-        const [, os, arch, display, pkg] = match;
-        specs.push({ label: "OS", value: os });
-        specs.push({ label: "Architecture", value: arch });
-        specs.push({
-          label: "Display",
-          value: DISPLAY_NAMES[display.toLowerCase()] ?? display,
-        });
-        specs.push({ label: "Package Manager", value: pkg });
-        continue;
+    } else if (key === "Machine") {
+      const m = raw.match(MACHINE_RE);
+      if (m) {
+        v.OS = m[1];
+        v.Arch = m[2];
+      } else {
+        v.Machine = raw;
       }
+    } else {
+      v[key] = raw; // Commit, Webview user-agent, etc.
     }
-
-    if (key === "Commit") {
-      const isDev = raw === "Development Mode";
-      specs.push({
-        label: "Commit",
-        value: isDev ? raw : raw.slice(0, 12),
-        mono: !isDev,
-        muted: isDev,
-      });
-      continue;
-    }
-
-    // Webview user-agent or any other unstructured value.
-    specs.push({ label: key, value: raw, mono: true });
   }
 
-  return specs;
+  return v;
+};
+
+/** Split diagnostics into an always-visible summary and expandable details. */
+const buildSpecs = (
+  info: Record<string, string>,
+  appName: string,
+): { summary: Spec[]; details: Spec[] } => {
+  const v = collectValues(info, appName);
+  const ver = (x: string) => (x === "None" ? "—" : `v${x}`);
+
+  const summary: Spec[] = [];
+  if (v[appName]) summary.push({ label: appName, value: `v${v[appName]}` });
+  if (v.OS)
+    summary.push({
+      label: "System",
+      value: v.Arch ? `${v.OS} (${v.Arch})` : v.OS,
+    });
+  const runtime = v.Electron
+    ? `Electron v${v.Electron}`
+    : v.Tauri
+      ? `Tauri v${v.Tauri}`
+      : undefined;
+  if (runtime) summary.push({ label: "Runtime", value: runtime });
+
+  const details: Spec[] = [];
+
+  // Merge the OCR/STT sidecar versions into a single row.
+  if (v.OCR !== undefined || v.STT !== undefined) {
+    const installed = Boolean(
+      (v.OCR && v.OCR !== "None") || (v.STT && v.STT !== "None"),
+    );
+    const parts: string[] = [];
+    if (v.OCR !== undefined) parts.push(`OCR ${ver(v.OCR)}`);
+    if (v.STT !== undefined) parts.push(`STT ${ver(v.STT)}`);
+    details.push({
+      label: "Engines",
+      value: installed ? parts.join(" · ") : "Not installed",
+      muted: !installed,
+    });
+  }
+
+  if (v.React) details.push({ label: "React", value: `v${v.React}` });
+  if (v.Shell) details.push({ label: "Shell", value: `v${v.Shell}` });
+  if (v.Machine) details.push({ label: "Machine", value: v.Machine });
+  if (v.Webview)
+    details.push({ label: "Webview", value: v.Webview, mono: true });
+
+  if (v.Commit) {
+    const isDev = v.Commit === "Development Mode";
+    details.push({
+      label: "Commit",
+      value: isDev ? v.Commit : v.Commit.slice(0, 12),
+      mono: !isDev,
+      muted: isDev,
+    });
+  }
+
+  return { summary, details };
 };
 
 export const HelpSettings: React.FC = () => {
   const app = useAppContext();
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [sysInfo, setSysInfo] = useState<Record<string, string>>({
     [app.system.appName]: `Squigit/${packageJson.version} (Loading...)`,
     Runtime: "Loading...",
@@ -222,7 +243,24 @@ export const HelpSettings: React.FC = () => {
     handleOpen(action.openUrl);
   };
 
-  const specs = parseSpecs(sysInfo, app.system.appName);
+  const { summary, details } = buildSpecs(sysInfo, app.system.appName);
+
+  const renderRow = (spec: Spec) => (
+    <div className={styles.specRow} key={spec.label}>
+      <dt className={styles.specLabel}>{spec.label}</dt>
+      <dd
+        className={[
+          styles.specValue,
+          spec.mono ? styles.mono : "",
+          spec.muted ? styles.muted : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {spec.value}
+      </dd>
+    </div>
+  );
 
   return (
     <section className={styles.container} aria-labelledby="help-heading">
@@ -233,7 +271,19 @@ export const HelpSettings: React.FC = () => {
       </header>
       <div className={styles.specCard}>
         <div className={styles.specHeader}>
-          <span className={styles.subLabel}>System Diagnostics</span>
+          <button
+            type="button"
+            className={styles.expandToggle}
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-expanded={expanded}
+            aria-controls="diagnostics-list"
+          >
+            <span className={styles.subLabel}>System Diagnostics</span>
+            <ChevronRightIcon
+              size={14}
+              className={`${styles.chevron} ${expanded ? styles.chevronOpen : ""}`}
+            />
+          </button>
           <button
             type="button"
             className={styles.copyButton}
@@ -244,23 +294,9 @@ export const HelpSettings: React.FC = () => {
             {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
           </button>
         </div>
-        <dl className={styles.specList}>
-          {specs.map((spec, i) => (
-            <div className={styles.specRow} key={`${spec.label}-${i}`}>
-              <dt className={styles.specLabel}>{spec.label}</dt>
-              <dd
-                className={[
-                  styles.specValue,
-                  spec.mono ? styles.mono : "",
-                  spec.muted ? styles.muted : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {spec.value}
-              </dd>
-            </div>
-          ))}
+        <dl className={styles.specList} id="diagnostics-list">
+          {summary.map(renderRow)}
+          {expanded && details.map(renderRow)}
         </dl>
       </div>
       <div className={styles.actionRow}>
@@ -268,36 +304,18 @@ export const HelpSettings: React.FC = () => {
           className={styles.actionButton}
           onClick={() => handleOpen(github.repo)}
         >
-          <span className={styles.iconWrapper}>
-            <MarkGithubIcon size={18} className={styles.actionIcon} />
-          </span>
-          <span className={styles.textGroup}>
-            <span className={styles.actionLabel}>View Repository</span>
-            <span className={styles.actionSubtitle}>Explore on GitHub</span>
-          </span>
-          <span className={styles.chevron}>›</span>
+          <MarkGithubIcon size={16} className={styles.actionIcon} />
+          <span className={styles.actionLabel}>Repository</span>
         </button>
 
         <button className={styles.actionButton} onClick={handleContactSupport}>
-          <span className={styles.iconWrapper}>
-            <MailIcon size={18} className={styles.actionIcon} />
-          </span>
-          <span className={styles.textGroup}>
-            <span className={styles.actionLabel}>Contact Support</span>
-            <span className={styles.actionSubtitle}>Get in touch</span>
-          </span>
-          <span className={styles.chevron}>›</span>
+          <MailIcon size={16} className={styles.actionIcon} />
+          <span className={styles.actionLabel}>Support</span>
         </button>
 
         <button className={styles.actionButton} onClick={handleReportBug}>
-          <span className={styles.iconWrapper}>
-            <BugIcon size={18} className={styles.actionIcon} />
-          </span>
-          <span className={styles.textGroup}>
-            <span className={styles.actionLabel}>Report Bug</span>
-            <span className={styles.actionSubtitle}>Help us improve</span>
-          </span>
-          <span className={styles.chevron}>›</span>
+          <BugIcon size={16} className={styles.actionIcon} />
+          <span className={styles.actionLabel}>Report Bug</span>
         </button>
       </div>
       <div className={styles.aboutSection}>
