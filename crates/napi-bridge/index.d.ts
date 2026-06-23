@@ -20,6 +20,8 @@ export declare function copyImageFromPathToClipboard(path: string): void
 
 export declare function copyImageToClipboard(imageBase64: string): void
 
+export declare function createChat(title: string, imageHash: string, ocrLang?: string | undefined | null): NapiChatMetadata
+
 export declare function deleteChat(chatId: string): void
 
 export declare function deleteProfile(profileId: string): void

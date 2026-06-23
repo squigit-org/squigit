@@ -596,6 +596,7 @@ module.exports.clearActiveProfile = nativeBinding.clearActiveProfile
 module.exports.compressConversation = nativeBinding.compressConversation
 module.exports.copyImageFromPathToClipboard = nativeBinding.copyImageFromPathToClipboard
 module.exports.copyImageToClipboard = nativeBinding.copyImageToClipboard
+module.exports.createChat = nativeBinding.createChat
 module.exports.deleteChat = nativeBinding.deleteChat
 module.exports.deleteProfile = nativeBinding.deleteProfile
 module.exports.detectImageTone = nativeBinding.detectImageTone

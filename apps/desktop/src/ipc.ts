@@ -49,6 +49,186 @@ export function setupIpc() {
     addon.storeImageFromPath?.(args.path),
   );
   ipcMain.handle("read_clipboard_image", () => addon.readClipboardImage?.());
+  
+  ipcMain.handle("create_chat", (_, args) => 
+    addon.createChat?.(args.title, args.imageHash, args.ocrLang)
+  );
+
+  ipcMain.handle("cancel_request", (_, args) => addon.cancelRequest?.(args.channelId));
+  
+  ipcMain.handle("stream_chat", async (event, args) => {
+    return addon.streamChat?.(
+      args.apiKey, args.model, args.isInitialTurn, args.imagePath, args.imageDescription,
+      args.userFirstMsg, args.historyLog, args.rollingSummary, args.userMessage,
+      args.channelId, args.chatId, args.userName, args.userEmail, args.userInstruction,
+      args.imageBrief,
+      (err: any, streamEvent: any) => {
+        if (err) {
+          event.sender.send(args.channelId, { eventType: "error", message: err.message });
+        } else {
+          event.sender.send(args.channelId, streamEvent);
+        }
+      }
+    );
+  });
+
+  ipcMain.handle("append_chat_message", (_, args) => addon.appendChatMessage?.(args.chatId, args.role, args.content));
+  ipcMain.handle("update_chat_metadata", (_, args) => addon.updateChatMetadata?.(args.metadata));
+  ipcMain.handle("generate_image_brief", (_, args) => addon.generateImageBrief?.(args.apiKey, args.imagePath, args.model));
+  ipcMain.handle("load_chat", (_, args) => addon.loadChat?.(args.chatId));
+  ipcMain.handle("delete_chat", (_, args) => addon.deleteChat?.(args.chatId));
+  ipcMain.handle("get_imgbb_url", (_, args) => addon.getImgbbUrl?.(args.chatId));
+  ipcMain.handle("get_image_path", (_, args) => addon.getImagePath?.(args.hash));
+  ipcMain.handle("save_imgbb_url", (_, args) => addon.saveImgbbUrl?.(args.chatId, args.url));
+  ipcMain.handle("get_rolling_summary", (_, args) => addon.getRollingSummary?.(args.chatId));
+  ipcMain.handle("save_rolling_summary", (_, args) => addon.saveRollingSummary?.(args.chatId, args.summary));
+  ipcMain.handle("generate_chat_title", (_, args) => addon.generateChatTitle?.(args.apiKey, args.model, args.promptContext));
+  ipcMain.handle("compress_conversation", (_, args) => addon.compressConversation?.(args.apiKey, args.imageBrief, args.historyToCompress, args.model));
+  
+  ipcMain.handle("prompt_chat", async (event, args) => {
+    return addon.promptChat?.(args.chatId, args.model, args.userMessage, (err: any, streamEvent: any) => {
+        if (err) {
+            event.sender.send(args.channelId, { eventType: "error", message: err.message });
+        } else {
+            event.sender.send(args.channelId, streamEvent);
+        }
+    });
+  });
+
+  ipcMain.handle("analyze_image", async (event, args) => {
+    return addon.analyzeImage?.(args.imagePath, args.model, args.userMessage, (err: any, streamEvent: any) => {
+        if (err) {
+            event.sender.send(args.channelId, { eventType: "error", message: err.message });
+        } else {
+            event.sender.send(args.channelId, streamEvent);
+        }
+    });
+  });
+
+  ipcMain.handle("detect_image_tone", async (_, args) => {
+    try {
+      const fs = require("fs/promises");
+      const buf = await fs.readFile(args.path || args.imagePath);
+      return addon.detectImageTone?.(buf) || "dark";
+    } catch (e) {
+      console.error("detect_image_tone error:", e);
+      return "dark";
+    }
+  });
+
+  const getChatDir = (chatId: string) => {
+    const path = require("path");
+    const base = addon.getStoreBaseDir?.();
+    const active = addon.getActiveProfileId?.();
+    if (!base || !active) throw new Error("No active profile");
+    return path.join(base, active, "chats", chatId);
+  };
+
+  ipcMain.handle("store_image_bytes", async (_, args) => {
+    const fs = require("fs/promises");
+    const path = require("path");
+    const { app } = require("electron");
+    const tmpPath = path.join(app.getPath("temp"), `squigit_tmp_${Date.now()}.png`);
+    await fs.writeFile(tmpPath, Buffer.from(args.bytes));
+    const result = addon.storeImageFromPath?.(tmpPath);
+    await fs.unlink(tmpPath).catch(() => {});
+    return result;
+  });
+
+  ipcMain.handle("store_file_from_path", (_, args) => addon.storeImageFromPath?.(args.path));
+  ipcMain.handle("validate_text_file", () => true);
+  ipcMain.handle("resolve_attachment_path", (_, args) => args.path);
+  
+  ipcMain.handle("read_attachment_text", async (_, args) => {
+    const fs = require("fs/promises");
+    return await fs.readFile(args.path, "utf-8");
+  });
+
+  ipcMain.handle("search_chats", () => []);
+
+  ipcMain.handle("overwrite_chat_messages", async (_, args) => {
+    const fs = require("fs/promises");
+    try {
+      const msgPath = require("path").join(getChatDir(args.chatId), "messages.json");
+      await fs.writeFile(msgPath, JSON.stringify(args.messages, null, 2));
+    } catch (e) { console.error("overwrite_chat_messages error", e); }
+  });
+
+  ipcMain.handle("save_ocr_data", async (_, args) => {
+    const fs = require("fs/promises");
+    try {
+      const chatDir = getChatDir(args.chatId);
+      await fs.mkdir(chatDir, { recursive: true });
+      const framePath = require("path").join(chatDir, "ocr_frame.json");
+      let frame: any = {};
+      try { frame = JSON.parse(await fs.readFile(framePath, "utf-8")); } catch {}
+      frame[args.modelId || "eng"] = args.ocrData;
+      await fs.writeFile(framePath, JSON.stringify(frame, null, 2));
+    } catch (e) { console.error("save_ocr_data error", e); }
+  });
+
+  ipcMain.handle("get_ocr_data", async (_, args) => {
+    const fs = require("fs/promises");
+    try {
+      const framePath = require("path").join(getChatDir(args.chatId), "ocr_frame.json");
+      const frame = JSON.parse(await fs.readFile(framePath, "utf-8"));
+      return frame[args.modelId || "eng"] || null;
+    } catch { return null; }
+  });
+
+  ipcMain.handle("get_ocr_frame", async (_, args) => {
+    const fs = require("fs/promises");
+    try {
+      const framePath = require("path").join(getChatDir(args.chatId), "ocr_frame.json");
+      return JSON.parse(await fs.readFile(framePath, "utf-8"));
+    } catch { return {}; }
+  });
+
+  ipcMain.handle("init_ocr_frame", async (_, args) => {
+    const fs = require("fs/promises");
+    try {
+      const chatDir = getChatDir(args.chatId);
+      await fs.mkdir(chatDir, { recursive: true });
+      const framePath = require("path").join(chatDir, "ocr_frame.json");
+      let frame: any = {};
+      try { frame = JSON.parse(await fs.readFile(framePath, "utf-8")); } catch {}
+      for (const modelId of (args.modelIds || [])) {
+        if (!(modelId in frame)) frame[modelId] = null;
+      }
+      await fs.writeFile(framePath, JSON.stringify(frame, null, 2));
+    } catch (e) { console.error("init_ocr_frame error", e); }
+  });
+
+  ipcMain.handle("save_image_tone", async (_, args) => {
+    const fs = require("fs/promises");
+    try {
+      const metaPath = require("path").join(getChatDir(args.chatId), "meta.json");
+      const meta = JSON.parse(await fs.readFile(metaPath, "utf-8"));
+      meta.image_tone = args.tone;
+      meta.updated_at = new Date().toISOString();
+      await fs.writeFile(metaPath, JSON.stringify(meta, null, 2));
+    } catch (e) { console.error("save_image_tone error", e); }
+  });
+
+  ipcMain.handle("save_image_brief", async (_, args) => {
+    const fs = require("fs/promises");
+    try {
+      const chatDir = getChatDir(args.chatId);
+      await fs.mkdir(chatDir, { recursive: true });
+      const briefPath = require("path").join(chatDir, "image_brief.txt");
+      await fs.writeFile(briefPath, args.brief);
+    } catch (e) { console.error("save_image_brief error", e); }
+  });
+
+  ipcMain.handle("spawn_capture", () => {});
+  ipcMain.handle("process_image_path", (_, args) => addon.processImagePath?.(args.path));
+  ipcMain.handle("read_image_file", async (_, args) => {
+    const fs = require("fs/promises");
+    const buf = await fs.readFile(args.path);
+    return Array.from(buf);
+  });
+  ipcMain.handle("copy_image_to_clipboard", (_, args) => addon.copyImageToClipboard?.(args.base64Data));
+  ipcMain.handle("copy_image_from_path_to_clipboard", (_, args) => addon.copyImageFromPathToClipboard?.(args.path));
 
   // Brain commands
   ipcMain.handle("ai_prompt", (_, args) =>

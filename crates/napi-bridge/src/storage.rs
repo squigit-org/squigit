@@ -41,6 +41,16 @@ pub fn get_image_path(hash: String) -> Result<String> {
 }
 
 #[napi]
+pub fn create_chat(title: String, image_hash: String, ocr_lang: Option<String>) -> Result<NapiChatMetadata> {
+    let storage = active_storage()?;
+    let mut metadata = squigit_memory::ChatMetadata::new(title, image_hash.clone(), ocr_lang);
+    metadata.image_tone = storage.get_image_tone(&image_hash);
+    let chat = squigit_memory::ChatData::new(metadata.clone());
+    storage.save_chat(&chat).map_err(map_storage_err)?;
+    Ok(metadata.into())
+}
+
+#[napi]
 pub fn list_chats() -> Result<Vec<NapiChatMetadata>> {
     let storage = active_storage()?;
     let chats = storage.list_chats().map_err(map_storage_err)?;
