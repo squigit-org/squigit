@@ -15,6 +15,7 @@ export const commands = {
   
   // OS
   getLinuxPackageManager: () => platform.invoke<string>("get_linux_package_manager"),
+  getMachineInfo: () => platform.invoke<string>("get_machine_info"),
   
   // Storage
   revealInFileManager: (path: string) => platform.invoke("reveal_in_file_manager", { path }),

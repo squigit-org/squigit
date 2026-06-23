@@ -107,3 +107,8 @@ pub fn has_agreed_flag() -> bool {
 pub fn check_file_exists(path: String) -> bool {
     desktop_runtime::security::check_file_exists(&path)
 }
+
+#[napi]
+pub fn get_machine_info() -> String {
+    desktop_runtime::platform::get_machine_info()
+}

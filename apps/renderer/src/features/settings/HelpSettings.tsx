@@ -52,11 +52,21 @@ export const HelpSettings: React.FC = () => {
           if (match) sttVersion = match[1];
         } catch {}
 
+        let machineInfo: string | undefined = undefined;
+        if (import.meta.env.VITE_PLATFORM === "electron") {
+          try {
+            machineInfo = await commands.getMachineInfo();
+          } catch (e) {
+            console.error("Failed to get machine info", e);
+          }
+        }
+
         setSysInfo(() => {
-          const shellName = import.meta.env.VITE_PLATFORM === "electron" ? "Electron" : "Tauri";
+          const shellName =
+            import.meta.env.VITE_PLATFORM === "electron" ? "Electron" : "Tauri";
           const squigitAgent = `Squigit/${packageJson.version} OCR/${ocrVersion} STT/${sttVersion}`;
           const runtimeAgent = `Shell/${appVer} (${shellName}/${runtimeVer}) React/${React.version}`;
-          
+
           const info: Record<string, string> = {
             [app.system.appName]: squigitAgent,
             Runtime: runtimeAgent,
@@ -64,6 +74,8 @@ export const HelpSettings: React.FC = () => {
 
           if (import.meta.env.VITE_PLATFORM !== "electron") {
             info.Webview = navigator.userAgent;
+          } else if (machineInfo) {
+            info.Machine = machineInfo;
           }
 
           info.Commit = import.meta.env.VITE_GIT_COMMIT || "Development Mode";
@@ -129,61 +141,82 @@ export const HelpSettings: React.FC = () => {
           style={{ maxHeight: "100px", overflowY: "auto" }}
         />
       </div>
-      <div className={styles.group}>
-        <div className={styles.actionRow}>
-          <button
-            className={styles.actionButton}
-            onClick={() => handleOpen(github.repo)}
-          >
+      <div className={styles.actionRow}>
+        <button
+          className={styles.actionButton}
+          onClick={() => handleOpen(github.repo)}
+        >
+          <span className={styles.iconWrapper}>
             <MarkGithubIcon size={18} className={styles.actionIcon} />
+          </span>
+          <span className={styles.textGroup}>
             <span className={styles.actionLabel}>View Repository</span>
-          </button>
+            <span className={styles.actionSubtitle}>Explore on GitHub</span>
+          </span>
+          <span className={styles.chevron}>›</span>
+        </button>
 
-          <button
-            className={styles.actionButton}
-            onClick={handleContactSupport}
-          >
+        <button className={styles.actionButton} onClick={handleContactSupport}>
+          <span className={styles.iconWrapper}>
             <MailIcon size={18} className={styles.actionIcon} />
+          </span>
+          <span className={styles.textGroup}>
             <span className={styles.actionLabel}>Contact Support</span>
-          </button>
+            <span className={styles.actionSubtitle}>Get in touch</span>
+          </span>
+          <span className={styles.chevron}>›</span>
+        </button>
 
-          <button className={styles.actionButton} onClick={handleReportBug}>
+        <button className={styles.actionButton} onClick={handleReportBug}>
+          <span className={styles.iconWrapper}>
             <BugIcon size={18} className={styles.actionIcon} />
+          </span>
+          <span className={styles.textGroup}>
             <span className={styles.actionLabel}>Report Bug</span>
-          </button>
-        </div>
+            <span className={styles.actionSubtitle}>Help us improve</span>
+          </span>
+          <span className={styles.chevron}>›</span>
+        </button>
       </div>
       <div className={styles.aboutSection}>
-        <div className={styles.legalNote}>
-          <p className={styles.legalNoteText}>
-            Some system diagnostics information may be sent to{" "}
-            {app.system.appName} when you contact support or report an issue.
-            This information is used to help us troubleshoot problems and bugs,
-            subject to our{" "}
+        <div className={styles.divider} />
+        <div className={styles.legalRow}>
+          <div className={styles.legalText}>
+            Need help? Check our{" "}
             <button
               className={styles.legalLink}
               onClick={() =>
-                commands.openExternalUrl(github.docs("06-policies/PRIVACY.md"))
+                commands.openExternalUrl(
+                  "https://squigit-org.github.io/legal/terms.html",
+                )
               }
             >
-              Privacy Policy and Terms.
+              Terms of Service
             </button>{" "}
-            We may contact you for additional details or updates regarding your
-            report.
-          </p>
-        </div>
-        <div className={styles.divider} />
-        <div className={styles.legalRow}>
-          <span>{app.system.appName} © 2026</span>
-          <span className={styles.dot}>•</span>
-          <span>
+            and{" "}
             <button
-              className={`${styles.legalLink} ${styles.license}`}
-              onClick={() => handleOpen(github.license)}
+              className={styles.legalLink}
+              onClick={() =>
+                commands.openExternalUrl(
+                  "https://squigit-org.github.io/legal/privacy.html",
+                )
+              }
             >
-              Licensed under Apache 2.0
+              Privacy Policy
             </button>
-          </span>
+          </div>
+          <div className={styles.legalText}>
+            <span>© 2026 {app.system.appName}</span>
+            <span className={styles.dot}>•</span>
+            <span>
+              <button
+                className={`${styles.license}`}
+                onClick={() => handleOpen(github.license)}
+              >
+                Apache 2.0
+              </button>
+            </span>
+          </div>
         </div>
       </div>
     </section>

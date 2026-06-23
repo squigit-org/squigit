@@ -72,6 +72,7 @@ export const commands = {
   setAlwaysOnTop: (state: boolean) => invoke("set_always_on_top", { state }),
   getSystemTheme: () => invoke<"light" | "dark">("get_system_theme"),
   getLinuxPackageManager: () => invoke<string>("get_linux_package_manager"),
+  getMachineInfo: () => invoke<string>("get_machine_info"),
   revealInFileManager: (path: string) => invoke("reveal_in_file_manager", { path }),
   resolveAttachmentPath: (path: string) => invoke<string>("resolve_attachment_path", { path }),
   readAttachmentText: (path: string) => invoke<string>("read_attachment_text", { path }),

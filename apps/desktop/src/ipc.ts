@@ -112,6 +112,7 @@ export function setupIpc() {
   // Shims for missing Tauri handlers
   ipcMain.handle("list_downloaded_models", () => []);
   ipcMain.handle("get_linux_package_manager", () => "apt");
+  ipcMain.handle("get_machine_info", () => addon.getMachineInfo?.());
   ipcMain.handle("set_background_color", () => {});
   ipcMain.handle("get_app_constants", () => ({ appVersion: "0.2.0" }));
   ipcMain.handle("get_system_theme", () => "dark");

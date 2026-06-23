@@ -36,49 +36,49 @@
   letter-spacing: -0.01em;
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  gap: 1rem;
-  flex: 1;
-  justify-content: center;
-}
-
 .actionRow {
   display: flex;
-  gap: 0.75rem;
+  justify-content: space-between;
   width: 100%;
+  gap: 0.75rem;
 }
 
 .actionButton {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.625rem;
-  padding: 0.875rem 1.25rem;
-  background-color: var(--c-raw-040);
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background-color: #121212;
   border: 1px solid var(--c-raw-043);
-  border-radius: 6px;
+  border-radius: 10px;
   color: var(--c-raw-003);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease-in-out;
   font-family: inherit;
   letter-spacing: -0.01em;
 }
 
 .actionButton:hover {
-  background-color: var(--c-raw-047);
+  background-color: #1a1a1a;
   border-color: var(--c-raw-144);
-  transform: translateY(-1px) translateZ(0);
 }
 
 .actionButton:active {
-  transform: translateY(0) translateZ(0);
-  background-color: var(--c-raw-043);
+  background-color: #151515;
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background-color: #222;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .actionIcon {
@@ -91,8 +91,42 @@
   opacity: 1;
 }
 
+.textGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+
 .actionLabel {
   white-space: nowrap;
+  color: #e8e8e8;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+.actionSubtitle {
+  white-space: nowrap;
+  color: #666;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: #555;
+  font-size: 1.25rem;
+  line-height: 1;
+  margin-left: auto;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.actionButton:hover .chevron {
+  color: #888;
+  transform: translateX(2px);
 }
 
 .code {
@@ -131,10 +165,10 @@
 .aboutSection {
   margin-top: auto;
   padding-top: 0.5rem;
-  padding-bottom: 0.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
   gap: 0.5rem;
 }
 
@@ -146,14 +180,20 @@
 
 .legalRow {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  width: 100%;
   color: var(--c-raw-005);
   font-size: 0.78rem;
 }
 
+.legalText {
+  gap: 0.25rem;
+}
+
 .dot {
   opacity: 0.5;
+  margin-left: 0.2rem;
+  margin-right: 0.2rem;
 }
 
 .legalLink {
@@ -167,8 +207,9 @@
   padding: 0;
 }
 
-.license {
-  text-decoration: underline;
+.license:hover {
+  cursor: pointer;
+  color: var(--c-raw-002);
 }
 
 .legalLink:hover {

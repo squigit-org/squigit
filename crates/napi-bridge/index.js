@@ -608,6 +608,7 @@ module.exports.getApiKey = nativeBinding.getApiKey
 module.exports.getImagePath = nativeBinding.getImagePath
 module.exports.getImgbbUrl = nativeBinding.getImgbbUrl
 module.exports.getLinuxPackageManager = nativeBinding.getLinuxPackageManager
+module.exports.getMachineInfo = nativeBinding.getMachineInfo
 module.exports.getProfile = nativeBinding.getProfile
 module.exports.getRollingSummary = nativeBinding.getRollingSummary
 module.exports.getStoreBaseDir = nativeBinding.getStoreBaseDir

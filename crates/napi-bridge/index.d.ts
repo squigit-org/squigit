@@ -44,6 +44,8 @@ export declare function getImgbbUrl(chatId: string): string | null
 
 export declare function getLinuxPackageManager(): string
 
+export declare function getMachineInfo(): string
+
 export declare function getProfile(profileId: string): NapiProfile | null
 
 export declare function getRollingSummary(chatId: string): string | null

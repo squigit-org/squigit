@@ -300,3 +300,78 @@ pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
     #[allow(unreachable_code)]
     Err("Unsupported platform".to_string())
 }
+
+// =============================================================================
+// Machine Info
+// =============================================================================
+
+/// Returns a cleanly formatted diagnostic string: "{OS}/{Arch} ({Display})/ {Pkg}"
+pub fn get_machine_info() -> String {
+    let arch = std::env::consts::ARCH; // Safely returns "aarch64", "x86_64", etc.
+    
+    #[cfg(target_os = "linux")]
+    {
+        use std::path::Path;
+        use std::env;
+        
+        // 1. Probe Display Server (Wayland vs X11)
+        let display = env::var("XDG_SESSION_TYPE").unwrap_or_else(|_| "unknown".to_string());
+        
+        // 2. Probe Package Manager
+        let pkg = if Path::new("/usr/bin/apt").exists() {
+            "apt"
+        } else if Path::new("/usr/bin/dnf").exists() {
+            "dnf"
+        } else if Path::new("/usr/bin/pacman").exists() {
+            "pacman"
+        } else {
+            "custom"
+        };
+
+        // 3. Extract Pretty Name from os-release (e.g., "Ubuntu 26.04 LTS")
+        let os_name = std::fs::read_to_string("/etc/os-release")
+            .unwrap_or_default()
+            .lines()
+            .find(|line| line.starts_with("PRETTY_NAME="))
+            .and_then(|line| line.split('=').nth(1))
+            .map(|name| name.trim_matches('"').to_string())
+            .unwrap_or_else(|| "Linux".to_string());
+
+        format!("{}/{} ({}) {}", os_name, arch, display, pkg)
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        
+        // 1. Get exact macOS version (e.g., 15.2)
+        let os_name = Command::new("sw_vers")
+            .arg("-productVersion")
+            .output()
+            .ok()
+            .and_then(|out| String::from_utf8(out.stdout).ok())
+            .map(|s| format!("macOS {}", s.trim()))
+            .unwrap_or_else(|| "macOS".to_string());
+
+        // Squigit only supports Silicon, so Arch will be aarch64. 
+        // Display is safely Aqua, and Brew is the community standard.
+        format!("{}/{} (Aqua) brew", os_name, arch)
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        
+        // 1. Get Windows build version safely via cmd
+        let os_name = Command::new("cmd")
+            .args(&["/C", "ver"])
+            .output()
+            .ok()
+            .and_then(|out| String::from_utf8(out.stdout).ok())
+            .map(|s| s.replace("\r\n", "").trim().to_string())
+            .unwrap_or_else(|| "Windows".to_string());
+
+        // Display is DWM (Desktop Window Manager), and Winget is the modern native standard.
+        format!("{}/{} (DWM) winget", os_name, arch)
+    }
+}
