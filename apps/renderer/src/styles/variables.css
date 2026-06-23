@@ -185,6 +185,13 @@
   --c-raw-154: #ff9500;
   --c-raw-155: rgba(63, 63, 70, 0.5);
   --c-raw-156: #d1d1d1ed;
+
+  /* HelpSettings extras */
+  --c-raw-157: #151515;
+  --c-raw-158: #222222;
+  --c-raw-159: #e8e8e8;
+  --c-raw-160: #888888;
+  --c-raw-161: #1a1a1a;
 }
 
 body.light-mode,
@@ -350,4 +357,11 @@ html.light {
   --c-raw-154: #da8308;
   --c-raw-155: rgba(166, 166, 181, 0.151);
   --c-raw-156: #313131ed;
+
+  /* HelpSettings extras – light-mode mirrors */
+  --c-raw-157: #efefef;
+  --c-raw-158: #d8d8d8;
+  --c-raw-159: #1a1a1a;
+  --c-raw-160: #5a5a5a;
+  --c-raw-161: #d4d4d4;
 }

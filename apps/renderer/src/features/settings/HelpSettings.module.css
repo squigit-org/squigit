@@ -17,15 +17,16 @@
     Roboto,
     "Helvetica Neue",
     Arial;
-  padding: 2px 4px 8px 4px;
+  padding: 2px 4px 0px 4px;
   box-sizing: border-box;
   height: 100%;
+  flex: 1;
 }
 
 .sectionHeader {
   padding-bottom: 0.4rem;
   border-bottom: 1px solid var(--c-raw-043);
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .sectionTitle {
@@ -38,39 +39,49 @@
 
 .actionRow {
   display: flex;
+  justify-content: space-between;
   width: 100%;
-  gap: 0.5rem;
+  gap: 0.75rem;
+
+  margin-top: 1.5rem;
 }
 
 .actionButton {
   flex: 1;
-  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.5rem;
-  background-color: #121212;
+  text-align: left;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  background-color: var(--c-raw-157);
   border: 1px solid var(--c-raw-043);
   border-radius: 10px;
-  color: #e8e8e8;
-  font-size: 0.8rem;
+  color: var(--c-raw-003);
   font-weight: 500;
   cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease;
+  transition: all 0.2s ease-in-out;
   font-family: inherit;
   letter-spacing: -0.01em;
 }
 
 .actionButton:hover {
-  background-color: #1a1a1a;
+  background-color: var(--c-raw-161);
   border-color: var(--c-raw-144);
 }
 
 .actionButton:active {
-  background-color: #151515;
+  background-color: var(--c-raw-157);
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background-color: var(--c-raw-158);
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .actionIcon {
@@ -83,14 +94,48 @@
   opacity: 1;
 }
 
+.textGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+
 .actionLabel {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--c-raw-159);
+  font-weight: 500;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.actionSubtitle {
+  white-space: nowrap;
+  color: var(--c-raw-099);
+  font-size: 0.65rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.actionChevron {
+  flex-shrink: 0;
+  color: var(--c-raw-049);
+  font-size: 1.25rem;
+  line-height: 1;
+  margin-left: auto;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.actionButton:hover .actionChevron {
+  color: var(--c-raw-160);
+  transform: translateX(2px);
 }
 
 .specCard {
-  background-color: #121212;
+  background-color: var(--c-raw-157);
   border: 1px solid var(--c-raw-043);
   border-radius: 10px;
   padding: 0.5rem 0.875rem 0.625rem;
@@ -99,24 +144,10 @@
 .specHeader {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: space-between;
   padding: 0.125rem 0 0.375rem;
   margin-bottom: 0.25rem;
-  border-bottom: 1px solid var(--c-raw-040);
-}
-
-.expandToggle {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
+  border-bottom: 1px solid var(--c-raw-043);
 }
 
 .subLabel {
@@ -127,25 +158,21 @@
   letter-spacing: 0.06em;
 }
 
-.chevron {
-  flex-shrink: 0;
-  color: #666;
-  transform: rotate(0deg);
-  transition:
-    transform 0.2s ease,
-    color 0.2s ease;
-}
-
-.chevronOpen {
-  transform: rotate(90deg);
-}
-
-.expandToggle:hover .subLabel {
-  color: var(--c-raw-002);
-}
-
-.expandToggle:hover .chevron {
-  color: #e8e8e8;
+.shimmer {
+  display: inline-block;
+  height: 0.75em;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--c-raw-040) 25%,
+    var(--c-raw-043) 50%,
+    var(--c-raw-040) 75%
+  );
+  background-size: 200% 100%;
+  animation: "shimmerSlide" 1.4s ease-in-out infinite;
+  vertical-align: middle;
+  color: transparent;
+  user-select: none;
 }
 
 .copyButton {
@@ -157,7 +184,7 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  color: #888;
+  color: var(--c-raw-160);
   cursor: pointer;
   transition:
     color 0.2s ease,
@@ -166,8 +193,8 @@
 }
 
 .copyButton:hover {
-  color: #e8e8e8;
-  background-color: #1a1a1a;
+  color: var(--c-raw-159);
+  background-color: var(--c-raw-161);
   border-color: var(--c-raw-043);
 }
 
@@ -186,7 +213,7 @@
 }
 
 .specRow:not(:last-child) {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--c-raw-043);
 }
 
 .specLabel {
@@ -199,7 +226,7 @@
 
 .specValue {
   min-width: 0;
-  color: #e8e8e8;
+  color: var(--c-raw-159);
   font-size: 0.78rem;
   font-weight: 500;
   text-align: right;
@@ -218,47 +245,36 @@
 }
 
 .muted {
-  color: #666;
+  color: var(--c-raw-099);
   font-weight: 400;
 }
 
-.legalNote {
-  padding: 0 4px;
-  color: var(--c-raw-005);
-  padding-left: 1rem;
-  padding-bottom: 0.2rem;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-start;
-}
-
-.legalNoteText {
-  margin: 0;
-  line-height: 1.5;
-}
-
-.aboutSection {
+.footer {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
   margin-top: auto;
   padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
   gap: 0.5rem;
 }
 
 .divider {
   width: 100%;
   height: 1px;
-  background-color: var(--c-raw-040);
+  background-color: var(--c-raw-043);
 }
 
 .legalRow {
   display: flex;
   justify-content: space-between;
   width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
   color: var(--c-raw-005);
   font-size: 0.78rem;
 }
@@ -276,7 +292,7 @@
 .legalLink {
   background: none;
   border: none;
-  color: var(--c-raw-112);
+  color: var(--c-raw-004);
   font-size: inherit;
   text-decoration: underline;
   text-decoration-color: var(--c-raw-036);
