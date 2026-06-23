@@ -10,7 +10,7 @@ Squigit is an open-source "Circle to Search" desktop utility that brings the pow
 
 Explore detailed guides and architecture in our [documentation](https://github.com/a7mddra/squigit/tree/main/docs).
 
-## 🚀 Why Squigit?
+## 🚀 Why Squigit ?
 
 - **🎯 Native Performance**: Polyglot architecture with C++ capture, Rust orchestration, and Tauri UI.
 - **🔗 Bring Your Own Key (BYOK)**: No middleman. Plug your own Gemini and ImgBB API keys for direct, cost-effective access.
