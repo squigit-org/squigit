@@ -17,9 +17,6 @@
   pointer-events: none;
   -webkit-app-region: no-drag;
   visibility: hidden;
-  will-change: opacity;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 .overlay.open {
@@ -30,9 +27,7 @@
 .container {
   position: relative;
   pointer-events: none;
-  transform: translateZ(0) translateY(6px);
-  will-change: opacity, transform;
-  backface-visibility: hidden;
+  transform: translateY(6px);
   contain: layout style paint;
   right: 0;
   height: 550px;
@@ -59,7 +54,7 @@
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: translateZ(0) translateY(0);
+  transform: translateY(0);
 }
 
 .sidebar {
