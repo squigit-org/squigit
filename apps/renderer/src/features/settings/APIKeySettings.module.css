@@ -229,7 +229,7 @@
 .legalNote {
   padding: 0 4px;
   color: var(--c-raw-005);
-  margin-top: 2rem;
+  margin-top: 0.5rem;
   font-size: 0.75rem;
   line-height: 1.5;
   display: flex;
