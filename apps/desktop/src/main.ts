@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, session } from 'electron';
 import path from 'path';
 import { setupIpc } from './ipc';
 import { registerProtocols } from './protocol';
@@ -7,6 +7,9 @@ let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+if (isDev) {
+  process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
+}
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -50,6 +53,17 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': isDev
+          ? ["default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: http: https: squigit-asset:; connect-src 'self' ws: http: https: data: blob: squigit-asset:; img-src 'self' data: blob: https: squigit-asset:; media-src 'self' data: blob: squigit-asset:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"]
+          : ["default-src 'self' squigit-asset:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://generativelanguage.googleapis.com squigit-asset:; img-src 'self' data: blob: https: squigit-asset:; media-src 'self' data: blob: squigit-asset:; font-src 'self' data:"]
+      }
+    });
+  });
+
   registerProtocols();
   setupIpc();
   createWindow();
