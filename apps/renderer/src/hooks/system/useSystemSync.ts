@@ -232,7 +232,6 @@ export const useSystemSync = () => {
       profile.setSwitchingProfileId(null);
 
       if (data && data.id) {
-        await prefs.updatePreferences({ activeAccount: data.id });
         await checkAgreement();
       }
     });

@@ -12,7 +12,6 @@ export const DEFAULT_PROMPT =
   "Analyze this image and explain it or discuss fixes about the issue it describes.";
 export const PREFERENCES_FILE_NAME = "preferences.json";
 export const DEFAULT_CAPTURE_TYPE = "rectangular" as const;
-export const DEFAULT_ACTIVE_ACCOUNT = "Guest";
 
 export const DEFAULT_PREFERENCES = {
   model: DEFAULT_MODEL_ID,
@@ -22,5 +21,4 @@ export const DEFAULT_PREFERENCES = {
   autoExpandOCR: true,
   captureType: DEFAULT_CAPTURE_TYPE,
   ocrLanguage: DEFAULT_OCR_MODEL_ID,
-  activeAccount: DEFAULT_ACTIVE_ACCOUNT,
 } as const;

@@ -19,7 +19,6 @@ export interface UserPreferences {
   autoExpandOCR: boolean;
   captureType: "rectangular" | "squiggle";
   ocrLanguage: string;
-  activeAccount: string;
   soulMdName: string | null;
 }
 
@@ -32,7 +31,6 @@ export async function getDefaultPreferences(): Promise<UserPreferences> {
     autoExpandOCR: DEFAULT_PREFERENCES.autoExpandOCR,
     captureType: DEFAULT_PREFERENCES.captureType,
     ocrLanguage: DEFAULT_PREFERENCES.ocrLanguage,
-    activeAccount: DEFAULT_PREFERENCES.activeAccount,
     soulMdName: null,
   };
 }
@@ -99,6 +97,10 @@ export async function loadPreferences(): Promise<UserPreferences> {
       PREFERENCES_FILE_NAME,
     );
     const parsed = JSON.parse(content) as Partial<UserPreferences>;
+
+    if ("activeAccount" in parsed) {
+      delete (parsed as any).activeAccount;
+    }
 
     const normalizedModel = resolveModelId(parsed.model, defaultPrefs.model);
     const normalizedOcrLanguage = resolveOcrModelId(

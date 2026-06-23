@@ -101,25 +101,7 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-async function setActiveAccountPreference(value: string): Promise<void> {
-  const storeBaseDir = await getStoreBaseDir();
-  const preferencesPath = path.resolve(storeBaseDir, "..", "preferences.json");
 
-  let preferences: Record<string, unknown> = {};
-  try {
-    const existing = await fs.readFile(preferencesPath, "utf8");
-    preferences = JSON.parse(existing) as Record<string, unknown>;
-  } catch (error: unknown) {
-    const nodeError = error as NodeJS.ErrnoException;
-    if (nodeError.code !== "ENOENT") {
-      throw error;
-    }
-  }
-
-  preferences.activeAccount = value;
-  await fs.mkdir(path.dirname(preferencesPath), { recursive: true });
-  await fs.writeFile(preferencesPath, `${JSON.stringify(preferences, null, 2)}\n`);
-}
 
 async function captureSnapshot(): Promise<InfraSnapshot> {
   const baseDir = await getStoreBaseDir();
@@ -288,7 +270,6 @@ async function runAuthSemanticFlow(action: "login" | "signup"): Promise<void> {
       await rollbackWithMessage(snapshot, "account already exists");
     }
 
-    await setActiveAccountPreference(payload.id);
     printAuthSuccess(action, payload);
   } finally {
     await cleanupSnapshot(snapshot);
@@ -306,7 +287,6 @@ function printAuthSuccess(action: "login" | "signup", payload: NapiAuthResult): 
 
 async function runLogout(): Promise<void> {
   clearActiveProfile();
-  await setActiveAccountPreference("Guest");
   console.log("logged out");
 }
 
@@ -336,7 +316,6 @@ async function runRemove(identifier: string): Promise<void> {
 
   deleteProfile(profileId);
   clearActiveProfile();
-  await setActiveAccountPreference("Guest");
 
   console.log(`removed account ${profileId}`);
 }
