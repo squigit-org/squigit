@@ -30,6 +30,7 @@ export const platform: PlatformBridge = {
   listen: <T>(event: string, handler: (payload: T) => void) =>
     listen(event, (e) => handler(e.payload as unknown as T)),
   convertFileSrc,
+  getPathForFile: (file: any) => file.path,
   fs: {
     exists: (path, options) =>
       exists(path, { baseDir: options?.baseDir === "AppConfig" ? BaseDirectory.AppConfig : undefined }),

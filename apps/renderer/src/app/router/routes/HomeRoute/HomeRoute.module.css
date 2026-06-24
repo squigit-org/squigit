@@ -20,10 +20,6 @@
   outline: none;
 }
 
-.container.dragging {
-  background-color: var(--c-raw-055);
-}
-
 .content {
   display: flex;
   flex-direction: column;

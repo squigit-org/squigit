@@ -10,12 +10,14 @@ import type { PlatformBridge } from "../types";
 const api = (window as any).electronAPI || {
   invoke: async () => {},
   on: async () => () => {},
+  getPathForFile: (file: any) => file.path,
 };
 
 export const platform: PlatformBridge = {
   invoke: (cmd, args) => api.invoke(cmd, args),
   listen: async (event, handler) => api.on(event, handler),
   convertFileSrc: (path) => `squigit-asset://${encodeURIComponent(path)}`,
+  getPathForFile: (file: any) => api.getPathForFile(file),
   fs: {
     exists: (path, options) => api.invoke("fs:exists", { path, ...options }),
     readTextFile: (path, options) =>

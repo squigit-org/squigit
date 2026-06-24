@@ -238,20 +238,29 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(
       ],
     );
 
-    useEffect(() => {
-      const unlistenDrop = platform.listen<{ paths: string[] }>(
-        "tauri://drag-drop",
-        async (payload) => {
-          const paths = Array.from(payload.paths || []);
-          if (paths.length === 0) return;
-          await handleFilePaths(paths);
-        },
-      );
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }, []);
 
-      return () => {
-        unlistenDrop.then((unlisten) => unlisten());
-      };
-    }, [handleFilePaths]);
+    const handleDrop = useCallback(
+      async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const files = e.dataTransfer.files;
+        if (!files || files.length === 0) return;
+
+        const paths = Array.from(files)
+          .map((f) => platform.getPathForFile(f))
+          .filter(Boolean);
+
+        if (paths.length > 0) {
+          await handleFilePaths(paths);
+        }
+      },
+      [handleFilePaths],
+    );
 
     const containerContent = (
       <div
@@ -259,6 +268,8 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(
           variant === "transparent" ? styles.transparentVariant : ""
         }`}
         ref={containerRef}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
         <ImageStrip
           attachments={attachments}

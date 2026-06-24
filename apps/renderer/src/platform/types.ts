@@ -18,6 +18,7 @@ export interface PlatformBridge {
   invoke<T = void>(cmd: string, args?: Record<string, unknown>): Promise<T>;
   listen<T>(event: string, handler: (payload: T) => void): Promise<() => void>;
   convertFileSrc(path: string): string;
+  getPathForFile(file: File): string;
 
   fs: {
     exists(path: string, options?: { baseDir?: string }): Promise<boolean>;

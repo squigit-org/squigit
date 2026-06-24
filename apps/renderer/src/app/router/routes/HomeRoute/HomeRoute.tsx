@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { platform } from "@/platform";
 import { AppIcon } from "@/components/icons";
 import { storeImageFromPath, type ImageResult } from "@squigit/core/config";
@@ -50,7 +50,54 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
   isGuest = false,
   onLoginRequired,
 }) => {
-  const [isDragging, setIsDragging] = useState(false);
+  const handleDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDrop = React.useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isActive) return;
+
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        const filePath = platform.getPathForFile(file);
+
+        if (filePath) {
+          const lowerPath = filePath.toLowerCase();
+          const isAllowed = ALLOWED_EXTENSIONS.some((ext) =>
+            lowerPath.endsWith(ext),
+          );
+
+          if (isAllowed) {
+            if (isGuest) {
+              onLoginRequired?.();
+              return;
+            }
+
+            try {
+              const result = await storeImageFromPath(filePath);
+              onImageReady({
+                imageId: result.hash,
+                path: result.path,
+              });
+            } catch (error) {
+              console.error("Failed to process dropped file:", error);
+            }
+          } else {
+            console.warn(
+              "Dropped file is not an allowed image type:",
+              filePath,
+            );
+          }
+        }
+      }
+    },
+    [isActive, isGuest, onImageReady, onLoginRequired],
+  );
   const { isMac, isWin, modSymbol, shiftSymbol } = usePlatform();
 
   const platformInfo = useMemo(() => {
@@ -154,69 +201,14 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
     };
   }, [isActive, isGuest, onImageReady, onLoginRequired]);
 
-  useEffect(() => {
-    if (!isActive) return;
 
-    const unlistenHover = platform.listen<{ paths: string[] }>(
-      "tauri://drag-over",
-      () => {
-        setIsDragging(true);
-      },
-    );
-
-    const unlistenLeave = platform.listen("tauri://drag-leave", () => {
-      setIsDragging(false);
-    });
-
-    const unlistenDrop = platform.listen<{ paths: string[] }>(
-      "tauri://drag-drop",
-      async (payload) => {
-        setIsDragging(false);
-        const paths = payload.paths;
-
-        if (paths && paths.length > 0) {
-          const filePath = paths[0];
-          const lowerPath = filePath.toLowerCase();
-          const isAllowed = ALLOWED_EXTENSIONS.some((ext) =>
-            lowerPath.endsWith(ext),
-          );
-
-          if (isAllowed) {
-            if (isGuest) {
-              onLoginRequired?.();
-              return;
-            }
-
-            try {
-              const result = await storeImageFromPath(filePath);
-              onImageReady({
-                imageId: result.hash,
-                path: result.path,
-              });
-            } catch (error) {
-              console.error("Failed to process dropped file:", error);
-            }
-          } else {
-            console.warn(
-              "Dropped file is not an allowed image type:",
-              filePath,
-            );
-          }
-        }
-      },
-    );
-
-    return () => {
-      void unlistenHover.then((unlisten) => unlisten());
-      void unlistenLeave.then((unlisten) => unlisten());
-      void unlistenDrop.then((unlisten) => unlisten());
-    };
-  }, [isActive, isGuest, onImageReady, onLoginRequired]);
 
   return (
-    <div
-      className={`${styles.container} ${isDragging ? styles.dragging : ""}`}
+    <div 
+      className={`${styles.container}`} 
       tabIndex={-1}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       <div className={styles.content}>
         <AppIcon size={80} color="var(--c-raw-000)" />
