@@ -441,7 +441,6 @@ export function setupIpc() {
   });
 
   // Shims for missing Tauri handlers
-  ipcMain.handle("list_downloaded_models", () => []);
   ipcMain.handle("get_linux_package_manager", () => "apt");
   ipcMain.handle("get_machine_info", () => addon.getMachineInfo?.());
   ipcMain.handle("set_background_color", () => {});
@@ -512,10 +511,24 @@ export function setupIpc() {
   ipcMain.handle("get_profile_count", () => addon.profileCount?.());
   
   // OCR/Model
-  ipcMain.handle("cancel_download_ocr_model", () => {});
-  ipcMain.handle("download_ocr_model", () => "");
-  ipcMain.handle("get_model_path", () => "");
+  ipcMain.handle("cancel_download_ocr_model", (_, args) => addon.cancelDownloadOcrModel?.(args.modelId));
+  ipcMain.handle("download_ocr_model", async (event, args) => {
+    return addon.downloadOcrModel?.(args.modelId, args.url, (err: any, progressJson: string) => {
+      if (err) {
+        console.error("Download OCR Model error:", err);
+        return;
+      }
+      try {
+        const payload = JSON.parse(progressJson);
+        event.sender.send("download-progress", payload);
+      } catch (e) {
+        console.error("Failed to parse ocr download progress", e);
+      }
+    });
+  });
+  ipcMain.handle("get_model_path", (_, args) => addon.getModelPath?.(args.modelId) || "");
   ipcMain.handle("cancel_ocr_job", () => {});
+  ipcMain.handle("list_downloaded_models", () => addon.listDownloadedModels?.() || []);
   
   // Audio / STT
   ipcMain.handle("play_ui_sound", (_, args) => addon.playUiSound?.(args.effect));

@@ -50,13 +50,16 @@ export const OCRModelDownloader: React.FC = () => {
   const isLoading = useModelsStore((s) => s.isLoading);
   const [error, setError] = useState<string | null>(null);
   const [hoveredModelId, setHoveredModelId] = useState<string | null>(null);
-  const [justStartedDownload, setJustStartedDownload] = useState<string | null>(
-    null,
-  );
+  const [justStartedDownload, setJustStartedDownload] = useState<string | null>(null);
+  const [spinnerFor2s, setSpinnerFor2s] = useState<Record<string, boolean>>({});
 
   const handleDownload = async (id: string) => {
     try {
       setJustStartedDownload(id);
+      setSpinnerFor2s((prev) => ({ ...prev, [id]: true }));
+      setTimeout(() => {
+        setSpinnerFor2s((prev) => ({ ...prev, [id]: false }));
+      }, 2000);
       await startDownload(id);
     } catch (error: any) {
       const msg = error.message || error.toString();
@@ -133,7 +136,7 @@ export const OCRModelDownloader: React.FC = () => {
 
                 {model.state === "checking" &&
                   (hoveredModelId === model.id &&
-                  justStartedDownload !== model.id ? (
+                  justStartedDownload !== model.id && !spinnerFor2s[model.id] ? (
                     <X size={16} />
                   ) : (
                     <CircularSpinner progressHint={model.progress || 0} />
@@ -141,8 +144,10 @@ export const OCRModelDownloader: React.FC = () => {
 
                 {model.state === "downloading" &&
                   (hoveredModelId === model.id &&
-                  justStartedDownload !== model.id ? (
+                  justStartedDownload !== model.id && !spinnerFor2s[model.id] ? (
                     <X size={16} />
+                  ) : spinnerFor2s[model.id] ? (
+                    <CircularSpinner progressHint={0} />
                   ) : (model.progress || 0) <= 0 ? (
                     <CircularSpinner progressHint={model.progress || 0} />
                   ) : (

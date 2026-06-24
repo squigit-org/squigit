@@ -5,6 +5,7 @@
 //! Only compiled with --features desktop.
 
 use crate::types::NapiStoredImage;
+use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi::Result;
 use napi_derive::napi;
 
@@ -81,7 +82,7 @@ pub fn play_ui_sound(effect: String) -> Result<()> {
 }
 
 #[napi]
-pub async fn ocr_image(image_path: String, _is_base64: bool, model_name: String) -> Result<String> {
+pub async fn ocr_image(image_path: String, _is_base64: bool, _model_name: String) -> Result<String> {
     let current_exe = std::env::current_exe().unwrap_or_default();
     let resource_dir = current_exe.parent().unwrap_or(std::path::Path::new(""));
     let (sidecar_path, runtime_dir) = squigit_ocr::sidecar::resolve_sidecar_path(resource_dir);
@@ -100,4 +101,54 @@ pub async fn ocr_image(image_path: String, _is_base64: bool, model_name: String)
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     Ok(result.raw_json)
+}
+
+// =============================================================================
+// OCR Model Downloader
+// =============================================================================
+
+static MODEL_MANAGER: std::sync::OnceLock<squigit_ocr::models::ModelManager> = std::sync::OnceLock::new();
+
+fn get_model_manager() -> Result<&'static squigit_ocr::models::ModelManager> {
+    if MODEL_MANAGER.get().is_none() {
+        let m = squigit_ocr::models::ModelManager::new()
+            .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+        m.start_monitor();
+        let _ = MODEL_MANAGER.set(m);
+    }
+    Ok(MODEL_MANAGER.get().unwrap())
+}
+
+#[napi]
+pub async fn download_ocr_model(
+    model_id: String,
+    url: String,
+    #[napi(ts_arg_type = "(progressJson: string) => void")] progress_cb: ThreadsafeFunction<String>,
+) -> Result<String> {
+    let manager = get_model_manager()?;
+    let path = manager.download_and_extract(&url, &model_id, move |payload| {
+        let json_str = serde_json::to_string(&payload).unwrap_or_default();
+        progress_cb.call(Ok(json_str), ThreadsafeFunctionCallMode::NonBlocking);
+    }).await.map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[napi]
+pub fn cancel_download_ocr_model(model_id: String) -> Result<()> {
+    let manager = get_model_manager()?;
+    manager.cancel_download(&model_id);
+    Ok(())
+}
+
+#[napi]
+pub fn list_downloaded_models() -> Result<Vec<String>> {
+    let manager = get_model_manager()?;
+    manager.list_downloaded_models().map_err(|e| napi::Error::from_reason(e.to_string()))
+}
+
+#[napi]
+pub fn get_model_path(model_id: String) -> Result<String> {
+    let manager = get_model_manager()?;
+    Ok(manager.get_model_dir(&model_id).to_string_lossy().to_string())
 }

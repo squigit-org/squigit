@@ -112,7 +112,7 @@
 }
 
 .spin {
-  animation: rotate 1s linear infinite;
+  animation: "rotate" 1s linear infinite;
 }
 
 .circularProgress {
@@ -145,7 +145,7 @@
 
 .spinnerOrbit {
   transform-origin: center;
-  animation: ocrDownloaderSpinnerOrbit 1.2s linear infinite;
+  animation: "ocrDownloaderSpinnerOrbit" 1.2s linear infinite;
 }
 
 .spinnerArc {
@@ -153,7 +153,7 @@
   stroke-width: 3;
   stroke-linecap: round;
   stroke: var(--c-raw-036);
-  animation: ocrDownloaderSpinnerPingPong 0.95s ease-in-out infinite alternate;
+  animation: "ocrDownloaderSpinnerPingPong" 0.95s ease-in-out infinite alternate;
 }
 
 .spinnerPaused .spinnerOrbit {

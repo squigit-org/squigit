@@ -3,7 +3,6 @@
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::time::sleep;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NetworkStatus {
@@ -51,13 +50,14 @@ impl PeerNetworkMonitor {
     pub fn start_monitor(&self) {
         let state = self.state.clone();
 
-        tokio::spawn(async move {
+        std::thread::spawn(move || {
             loop {
                 let start = Instant::now();
                 // 8.8.8.8:53 is Google DNS, very reliable.
                 // Connect timeout of 2s.
                 // This is a "TCP Ping".
-                let status = match tokio::net::TcpStream::connect("8.8.8.8:53").await {
+                let addr = std::net::SocketAddr::from(([8, 8, 8, 8], 53));
+                let status = match std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(2)) {
                     Ok(_) => {
                         let latency = start.elapsed().as_millis() as u64;
                         let status = if latency > 300 {
@@ -77,7 +77,7 @@ impl PeerNetworkMonitor {
                 };
 
                 *state.lock().unwrap() = status;
-                sleep(Duration::from_secs(2)).await;
+                std::thread::sleep(Duration::from_secs(2));
             }
         });
     }

@@ -4,6 +4,8 @@ export declare function analyzeImage(imagePath: string, model: string, userMessa
 
 export declare function appendChatMessage(chatId: string, role: string, content: string): void
 
+export declare function cancelDownloadOcrModel(modelId: string): void
+
 export declare function cancelGoogleAuth(): void
 
 export declare function cancelRequest(channelId?: string | undefined | null): Promise<void>
@@ -30,6 +32,8 @@ export declare function deleteProfile(profileId: string): void
 
 export declare function detectImageTone(bytes: Buffer): string | null
 
+export declare function downloadOcrModel(modelId: string, url: string, progressCb: (progressJson: string) => void): Promise<string>
+
 export declare function encryptAndSave(profileId: string, provider: string, plaintext: string): void
 
 export declare function findProfileByEmail(email: string): NapiProfile | null
@@ -50,6 +54,8 @@ export declare function getLinuxPackageManager(): string
 
 export declare function getMachineInfo(): string
 
+export declare function getModelPath(modelId: string): string
+
 export declare function getProfile(profileId: string): NapiProfile | null
 
 export declare function getRollingSummary(chatId: string): string | null
@@ -65,6 +71,8 @@ export declare function hasProfiles(): boolean
 export declare function listChats(): Array<NapiChatMetadata>
 
 export declare function listChatsJson(): string
+
+export declare function listDownloadedModels(): Array<string>
 
 export declare function listProfiles(): Array<NapiProfile>
 
