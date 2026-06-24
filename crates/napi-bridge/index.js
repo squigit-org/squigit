@@ -622,6 +622,7 @@ module.exports.listChatsJson = nativeBinding.listChatsJson
 module.exports.listProfiles = nativeBinding.listProfiles
 module.exports.loadChat = nativeBinding.loadChat
 module.exports.loadChatJson = nativeBinding.loadChatJson
+module.exports.ocrImage = nativeBinding.ocrImage
 module.exports.playUiSound = nativeBinding.playUiSound
 module.exports.processImagePath = nativeBinding.processImagePath
 module.exports.profileCount = nativeBinding.profileCount

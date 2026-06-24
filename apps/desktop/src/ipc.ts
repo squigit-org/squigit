@@ -326,6 +326,20 @@ export function setupIpc() {
 
   ipcMain.handle("spawn_capture", () => {});
   ipcMain.handle("process_image_path", (_, args) => addon.processImagePath?.(args.path));
+  ipcMain.handle("ocr_image", async (_, args) => {
+    let absolutePath = args.imageData;
+    const path = require("path");
+    if (!path.isAbsolute(absolutePath)) {
+      const base = addon.getStoreBaseDir?.();
+      const active = addon.getActiveProfileId?.();
+      if (base && active) {
+        absolutePath = path.join(base, active, "chats", absolutePath);
+      }
+    }
+    const resultJson = await addon.ocrImage?.(absolutePath, args.isBase64 || false, args.modelName || "eng");
+    if (!resultJson) throw new Error("OCR returned no result");
+    return JSON.parse(resultJson);
+  });
   ipcMain.handle("read_image_file", async (_, args) => {
     const fs = require("fs/promises");
     const buf = await fs.readFile(args.path);
@@ -346,6 +360,13 @@ export function setupIpc() {
     const { clipboard, nativeImage } = require("electron");
     const image = nativeImage.createFromPath(args.path);
     clipboard.writeImage(image);
+  });
+  
+  ipcMain.handle("read_clipboard_text", () => {
+    if (addon.readClipboardText) {
+      return addon.readClipboardText();
+    }
+    return require("electron").clipboard.readText();
   });
 
   // Brain commands
@@ -481,12 +502,31 @@ export function setupIpc() {
     ),
   );
   ipcMain.handle("get_profile_count", () => addon.profileCount?.());
+  
+  // OCR/Model
   ipcMain.handle("cancel_download_ocr_model", () => {});
+  ipcMain.handle("download_ocr_model", () => "");
+  ipcMain.handle("get_model_path", () => "");
   ipcMain.handle("cancel_ocr_job", () => {});
+  
+  // Audio / STT
+  ipcMain.handle("play_ui_sound", () => {});
+  ipcMain.handle("start_stt", () => {});
+  ipcMain.handle("stop_stt", () => {});
+  
   ipcMain.handle("quick_answer_request", (_, args) =>
     addon.requestQuickAnswer?.(args.channelId),
   );
-  ipcMain.handle("play_ui_sound", () => {});
+
+  ipcMain.handle("upload_image_to_imgbb", (_, args) => 
+    addon.uploadImageToImgbb?.(args.imagePath, args.apiKey)
+  );
+  
+  ipcMain.handle("close_imgbb_window", () => 
+    require("electron").BrowserWindow.getFocusedWindow()?.close()
+  );
+
+  ipcMain.handle("spawn_capture_to_input", () => {});
 
   ipcMain.handle("list_chats", () => {
     const json = requireAddonFn("listChatsJson")();

@@ -148,6 +148,8 @@ export interface NapiStreamEvent {
   result?: string
 }
 
+export declare function ocrImage(imagePath: string, isBase64: boolean, modelName: string): Promise<string>
+
 export declare function playUiSound(effect: string): void
 
 export declare function processImagePath(path: string): NapiStoredImage

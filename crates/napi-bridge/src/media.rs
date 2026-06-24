@@ -75,3 +75,25 @@ pub fn play_ui_sound(effect: String) -> Result<()> {
     // For now this is a stub — Electron will implement audio differently.
     Ok(())
 }
+
+#[napi]
+pub async fn ocr_image(image_path: String, _is_base64: bool, model_name: String) -> Result<String> {
+    let current_exe = std::env::current_exe().unwrap_or_default();
+    let resource_dir = current_exe.parent().unwrap_or(std::path::Path::new(""));
+    let (sidecar_path, runtime_dir) = squigit_ocr::sidecar::resolve_sidecar_path(resource_dir);
+
+    // Let's prepare OcrRequest
+    let request = squigit_ocr::ocr::OcrRequest {
+        sidecar_path,
+        runtime_dir,
+        image_path: std::path::PathBuf::from(image_path),
+        rec_model_dir_override: None, // Or logic to map model_name if needed
+        timeout_secs: None,
+    };
+
+    let runtime = squigit_ocr::ocr::OcrRuntime::new();
+    let result = runtime.run(request).await
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    Ok(result.raw_json)
+}
