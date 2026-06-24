@@ -130,6 +130,7 @@ pub struct OcrRegion {
     /// Extracted text.
     pub text: String,
     /// Bounding box coordinates.
+    #[serde(default, alias = "box", alias = "box_coords")]
     pub bbox: Vec<Vec<i32>>,
 }
 

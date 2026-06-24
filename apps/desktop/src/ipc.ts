@@ -338,7 +338,15 @@ export function setupIpc() {
     }
     const resultJson = await addon.ocrImage?.(absolutePath, args.isBase64 || false, args.modelName || "eng");
     if (!resultJson) throw new Error("OCR returned no result");
-    return JSON.parse(resultJson);
+    const parsed = JSON.parse(resultJson);
+    if (Array.isArray(parsed)) {
+      return parsed.map((r: any) => ({
+        text: r.text,
+        box_coords: r.box || r.box_coords,
+        confidence: r.confidence || 1.0,
+      }));
+    }
+    return parsed;
   });
   ipcMain.handle("read_image_file", async (_, args) => {
     const fs = require("fs/promises");
