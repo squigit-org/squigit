@@ -331,8 +331,22 @@ export function setupIpc() {
     const buf = await fs.readFile(args.path);
     return Array.from(buf);
   });
-  ipcMain.handle("copy_image_to_clipboard", (_, args) => addon.copyImageToClipboard?.(args.base64Data));
-  ipcMain.handle("copy_image_from_path_to_clipboard", (_, args) => addon.copyImageFromPathToClipboard?.(args.path));
+  ipcMain.handle("copy_image_to_clipboard", (_, args) => {
+    if (addon.copyImageToClipboard) {
+      return addon.copyImageToClipboard(args.base64Data);
+    }
+    const { clipboard, nativeImage } = require("electron");
+    const image = nativeImage.createFromDataURL(`data:image/png;base64,${args.base64Data}`);
+    clipboard.writeImage(image);
+  });
+  ipcMain.handle("copy_image_from_path_to_clipboard", (_, args) => {
+    if (addon.copyImageFromPathToClipboard) {
+      return addon.copyImageFromPathToClipboard(args.path);
+    }
+    const { clipboard, nativeImage } = require("electron");
+    const image = nativeImage.createFromPath(args.path);
+    clipboard.writeImage(image);
+  });
 
   // Brain commands
   ipcMain.handle("ai_prompt", (_, args) =>
@@ -539,5 +553,38 @@ export function setupIpc() {
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     return options?.multiple ? result.filePaths : result.filePaths[0];
+  });
+
+  ipcMain.handle("dialog:save", async (_, options) => {
+    const { dialog: electronDialog } = require("electron");
+    const filters = (options?.filters || []).map((f: any) => ({
+      name: f.name || "Files",
+      extensions: f.extensions || ["*"],
+    }));
+    let defaultPath: string | undefined;
+    if (options?.defaultPath) {
+      try {
+        const knownDirs: Record<string, string> = {
+          Documents: app.getPath("documents"),
+          Home: app.getPath("home"),
+          Desktop: app.getPath("desktop"),
+          Downloads: app.getPath("downloads"),
+        };
+        defaultPath = knownDirs[options.defaultPath] || options.defaultPath;
+      } catch {
+        // ignore
+      }
+    }
+    const result = await electronDialog.showSaveDialog({
+      filters: filters.length > 0 ? filters : undefined,
+      defaultPath,
+    });
+    if (result.canceled || !result.filePath) return null;
+    return result.filePath;
+  });
+
+  ipcMain.handle("copy_image_to_path", async (_, args) => {
+    const fs = require("fs/promises");
+    await fs.copyFile(args.sourcePath, args.targetPath);
   });
 }
