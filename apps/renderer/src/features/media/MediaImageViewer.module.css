@@ -24,7 +24,7 @@
   height: 30px;
   border-radius: 8px;
   border: 1px solid var(--c-raw-048);
-  background: var(--c-raw-064);
+  background: var(--c-raw-012);
   color: var(--c-raw-002);
   display: inline-flex;
   align-items: center;
@@ -34,7 +34,7 @@
 
 .toolButton:hover {
   color: var(--c-raw-036);
-  border-color: var(--c-raw-145);
+  border-color: var(--c-raw-005);
 }
 
 .zoomLabel {
@@ -63,7 +63,7 @@
   overflow: auto;
   border-radius: 10px;
   border: 1px solid var(--c-raw-041);
-  background: var(--c-raw-064);
+  background: var(--c-raw-012);
   display: flex;
   align-items: center;
   justify-content: center;
