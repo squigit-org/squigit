@@ -252,7 +252,121 @@ export function setupIpc() {
     return await fs.readFile(args.path, "utf-8");
   });
 
-  ipcMain.handle("search_chats", () => []);
+  ipcMain.handle("search_chats", (_, args) => {
+    const query = (args.query || "").trim();
+    if (!query) return [];
+    const limit = args.limit || 60;
+    
+    let isRegex = false;
+    let regex: RegExp | null = null;
+    let tokens: string[] = [];
+    
+    if (query.startsWith("re:")) {
+      isRegex = true;
+      try { regex = new RegExp(query.substring(3), "i"); } catch {}
+    } else if (query.startsWith("/") && query.endsWith("/") && query.length > 2) {
+      isRegex = true;
+      try { regex = new RegExp(query.slice(1, -1), "i"); } catch {}
+    } else {
+      tokens = query
+        .split(/\s+/)
+        .map((s: string) => s.replace(/^[-+]/, "").toLowerCase().replace(/[^a-z0-9]/g, ""))
+        .filter((s: string) => s.length >= 2);
+      tokens = [...new Set(tokens)].sort((a, b) => b.length - a.length).slice(0, 8);
+    }
+    
+    const json = requireAddonFn("listChatsJson")();
+    const chats = parseAddonJson("list_chats", json);
+    const results: any[] = [];
+    
+    for (const chat of chats) {
+      try {
+        const chatJson = requireAddonFn("loadChatJson")(chat.id);
+        const chatData = parseAddonJson("load_chat", chatJson);
+        const messages = chatData.messages || [];
+        
+        for (let i = 0; i < messages.length; i++) {
+          const msg = messages[i];
+          const content = msg.content || "";
+          let matched = false;
+          let matchIndex = -1;
+          let score = 0;
+          
+          if (isRegex) {
+            if (regex) {
+              const match = regex.exec(content);
+              if (match) {
+                matched = true;
+                matchIndex = match.index;
+                score = 100;
+              }
+            }
+          } else if (tokens.length > 0) {
+            const lowerContent = content.toLowerCase();
+            let allMatched = true;
+            let firstMatchIndex = -1;
+            
+            for (const token of tokens) {
+              const idx = lowerContent.indexOf(token);
+              if (idx === -1) {
+                allMatched = false;
+                break;
+              }
+              if (firstMatchIndex === -1) {
+                firstMatchIndex = idx;
+              }
+            }
+            
+            if (allMatched) {
+              matched = true;
+              matchIndex = firstMatchIndex;
+              score = tokens.length * 10;
+            }
+          } else {
+            const lowerContent = content.toLowerCase();
+            const lowerQuery = query.toLowerCase();
+            matchIndex = lowerContent.indexOf(lowerQuery);
+            if (matchIndex !== -1) {
+              matched = true;
+              score = 50;
+            }
+          }
+          
+          if (matched) {
+            const padding = 40;
+            const start = Math.max(0, matchIndex - padding);
+            const end = Math.min(content.length, matchIndex + query.length + padding);
+            let snippet = content.substring(start, end).replace(/\n/g, " ");
+            if (start > 0) snippet = "..." + snippet;
+            if (end < content.length) snippet = snippet + "...";
+            
+            results.push({
+              chat_id: chat.id,
+              chat_title: chat.title,
+              chat_created_at: chat.created_at,
+              chat_updated_at: chat.updated_at,
+              message_index: i,
+              message_role: msg.role,
+              message_timestamp: msg.timestamp,
+              snippet,
+              score,
+            });
+          }
+        }
+      } catch (e) {
+        // ignore individual chat read errors
+      }
+    }
+    
+    results.sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      const timeA = new Date(a.chat_updated_at || a.chat_created_at).getTime();
+      const timeB = new Date(b.chat_updated_at || b.chat_created_at).getTime();
+      return timeB - timeA;
+    });
+    
+    return results.slice(0, limit);
+  });
 
   ipcMain.handle("overwrite_chat_messages", async (_, args) => {
     const fs = require("fs/promises");

@@ -86,6 +86,13 @@ export const retryFromMessage = async (
 
     try {
       const generateAndSaveBrief = async () => {
+        if (brainSessionStore.imageBrief) {
+          if (onBriefReady && brainSessionStore.generationId === myGenId) {
+            onBriefReady(brainSessionStore.imageBrief);
+          }
+          return brainSessionStore.imageBrief;
+        }
+
         // Delay brief generation by 5000ms so it doesn't fire concurrently with the main stream
         // during high-demand/cold-start situations, which prevents simultaneous 503s.
         await new Promise((r) => setTimeout(r, 5000));
@@ -108,8 +115,8 @@ export const retryFromMessage = async (
               if (chatId) {
                 saveImageBrief(chatId, brief).catch(console.error);
               }
+              setImageBrief(brief);
               if (brainSessionStore.generationId === myGenId) {
-                setImageBrief(brief);
                 if (onBriefReady) onBriefReady(brief);
               }
               return brief;

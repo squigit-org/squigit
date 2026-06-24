@@ -48,6 +48,7 @@ const ProviderRow = ({
   const [isValid, setIsValid] = useState(true);
   const isFocusedRef = useRef(false);
 
+  const isMountedRef = useRef(true);
   const saveIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -59,7 +60,9 @@ const ProviderRow = ({
   }, [currentKey]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
@@ -86,7 +89,7 @@ const ProviderRow = ({
         if (isGuest || trimmed === currentKey) return;
         const id = ++saveIdRef.current;
         onSave(trimmed).then((success) => {
-          if (saveIdRef.current !== id) return;
+          if (!isMountedRef.current || saveIdRef.current !== id) return;
           if (!success) {
             setIsValid(false);
           }
@@ -135,7 +138,7 @@ const ProviderRow = ({
     const id = ++saveIdRef.current;
     setTimeout(() => {
       onSave(trimmed).then((success) => {
-        if (saveIdRef.current !== id) return;
+        if (!isMountedRef.current || saveIdRef.current !== id) return;
         if (!success) {
           setIsValid(false);
           alert(
@@ -143,7 +146,7 @@ const ProviderRow = ({
           );
         }
       });
-    }, 0);
+    }, 500);
   };
   const {
     ref,
