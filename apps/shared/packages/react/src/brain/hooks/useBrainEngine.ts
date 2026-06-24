@@ -38,8 +38,10 @@ import { createToolEventHandler } from "@squigit/core/brain/engine";
 
 import {
   isBrainHighDemandError,
-  getFriendlyBrainErrorMessage,
+  isBrainQuotaZeroError,
+  parseBrainError,
   isBrainNetworkError,
+  getFriendlyBrainErrorMessage,
 } from "@squigit/core/brain/provider";
 
 import {
@@ -342,11 +344,11 @@ export const useBrainEngine = (config: {
           if (isRequestAborted(signal) || apiError?.message === "CANCELLED") {
             throw apiError;
           }
-          if (isBrainHighDemandError(apiError)) {
+          if (isBrainHighDemandError(apiError) || isBrainQuotaZeroError(apiError)) {
             if (fallbackQueue.length > 0) {
               const nextFallback = fallbackQueue.shift()!;
               console.log(
-                `[Brain] 503 on ${modelToTry}, silently falling back to ${nextFallback}`,
+                `[Brain] 503/429-0 on ${modelToTry}, silently falling back to ${nextFallback}`,
               );
               if (modelToTry === primaryModelId) {
                 popLastUserHistory();

@@ -52,6 +52,11 @@ function getGeminiErrorSearchText(error: any): string {
   return `${errString} ${message}`.toLowerCase();
 }
 
+export function isProviderQuotaZeroError(error: any): boolean {
+  const searchStr = getGeminiErrorSearchText(error);
+  return searchStr.includes("limit: 0");
+}
+
 export function isProviderHighDemandError(error: any): boolean {
   const searchStr = getGeminiErrorSearchText(error);
 
@@ -110,6 +115,9 @@ export function getFriendlyProviderErrorMessage(
     searchStr.includes("limit") ||
     searchStr.includes("resource_exhausted")
   ) {
+    if (isProviderQuotaZeroError(error)) {
+      return "This model is not available on your current plan. Please select a different model or use a billed API key.";
+    }
     return "You've reached your current Gemini usage limit. Please wait a bit, check your quota, or switch API keys.";
   }
 
@@ -139,6 +147,15 @@ export function parseProviderError(error: any): BrainParsedError {
     searchStr.includes("limit") ||
     searchStr.includes("resource_exhausted")
   ) {
+    if (isProviderQuotaZeroError(error)) {
+      return {
+        title: "Model Not Available",
+        message:
+          "This model is not available on your current plan (Quota Limit is 0). Please select a different model in Settings or provide a billed API key.",
+        code: "429",
+        actionType: "RETRY_OR_SETTINGS",
+      };
+    }
     return {
       title: "Usage Limit Reached",
       message:

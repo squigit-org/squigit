@@ -13,6 +13,7 @@ export {
   getProviderHighDemandExhaustedMessage,
   getProviderHighDemandMessage,
   isProviderHighDemandError,
+  isProviderQuotaZeroError,
   parseProviderError,
   isNetworkError,
   quickAnswerCurrentRequest as requestProviderQuickAnswer,
@@ -35,6 +36,7 @@ export {
   getProviderHighDemandExhaustedMessage as getBrainHighDemandExhaustedMessage,
   getProviderHighDemandMessage as getBrainHighDemandMessage,
   isProviderHighDemandError as isBrainHighDemandError,
+  isProviderQuotaZeroError as isBrainQuotaZeroError,
   parseProviderError as parseBrainError,
   isNetworkError as isBrainNetworkError,
 } from "./gemini";

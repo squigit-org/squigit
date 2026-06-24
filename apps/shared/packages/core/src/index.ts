@@ -46,6 +46,7 @@ export {
   getBrainHighDemandExhaustedMessage,
   getBrainHighDemandMessage,
   isBrainHighDemandError,
+  isBrainQuotaZeroError,
   parseBrainError,
   isBrainNetworkError,
 } from "./brain/provider";

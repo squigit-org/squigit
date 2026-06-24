@@ -28,10 +28,11 @@ export async function generateProviderTitle(
     console.log(`[BrainTitle] Selected Model: ${GEMINI_TITLE_MODEL_PRIMARY}`);
     console.log(`[BrainTitle] Generated Chat Title: "${title || "New thread"}"`);
     return title || "New thread";
-  } catch (primaryError) {
+  } catch (primaryError: any) {
     console.warn(
-      "Failed to generate text title with primary model, retrying fallback:",
-      primaryError,
+      `[BrainTitle] Failed with primary model: ${
+        primaryError?.message || primaryError
+      }`
     );
 
     try {
@@ -48,10 +49,11 @@ export async function generateProviderTitle(
         `[BrainTitle] Generated Chat Title: "${fallbackTitle || "New thread"}"`,
       );
       return fallbackTitle || "New thread";
-    } catch (fallbackError) {
-      console.error(
-        "Failed to generate text title with fallback model:",
-        fallbackError,
+    } catch (fallbackError: any) {
+      console.warn(
+        `[BrainTitle] Failed with fallback model: ${
+          fallbackError?.message || fallbackError
+        }`
       );
       return "New thread";
     }

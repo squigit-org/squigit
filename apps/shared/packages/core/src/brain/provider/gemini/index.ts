@@ -10,6 +10,7 @@ export {
   getProviderHighDemandExhaustedMessage,
   getProviderHighDemandMessage,
   isProviderHighDemandError,
+  isProviderQuotaZeroError,
   parseProviderError,
   isNetworkError,
 } from "./errors";
