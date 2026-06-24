@@ -316,8 +316,8 @@ impl BrainService {
         self.stream_chat(
             &collector,
             StreamChatRequest {
-                api_key: request.api_key,
-                model: request.model,
+                api_key: request.api_key.clone(),
+                model: request.model.clone(),
                 is_initial_turn: false,
                 image_path: Some(image_path),
                 image_description: Some(image_description),
@@ -349,6 +349,25 @@ impl BrainService {
                 &ChatMessage::assistant(assistant_message.clone()),
             )
             .map_err(|e| e.to_string())?;
+
+        let mut metadata = chat.metadata;
+        if metadata.title == "Untitled" || metadata.title == "New thread" || metadata.title.trim().is_empty() {
+            let title_context = format!("User: {}\nAssistant: {}", normalized_user_message, assistant_message);
+            if let Ok(title) = self
+                .generate_chat_title(GenerateChatTitleRequest {
+                    api_key: request.api_key.clone(),
+                    model: request.model.clone(),
+                    prompt_context: title_context,
+                })
+                .await
+            {
+                let trimmed = title.trim();
+                if !trimmed.is_empty() {
+                    metadata.title = trimmed.to_string();
+                    let _ = storage.update_chat_metadata(&metadata);
+                }
+            }
+        }
 
         Ok(PromptChatResult {
             chat_id: request.chat_id,

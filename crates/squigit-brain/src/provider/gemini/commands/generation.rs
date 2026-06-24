@@ -49,24 +49,49 @@ pub async fn generate_chat_title(
         tool_config: None,
     };
 
-    let response = client
-        .post(&url)
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
+    let mut attempts = 0;
+    let max_attempts = 3;
+    let mut last_error = String::new();
+    let mut body = String::new();
 
-    if !response.status().is_success() {
-        let error_text = response.text().await.unwrap_or_default();
-        println!("Title Gen Error Status: {}", error_text);
-        return Err(format!("Gemini API Error: {}", error_text));
+    while attempts < max_attempts {
+        attempts += 1;
+        let response = match client.post(&url).json(&request_body).send().await {
+            Ok(r) => r,
+            Err(e) => {
+                last_error = e.to_string();
+                if attempts < max_attempts {
+                    tokio::time::sleep(std::time::Duration::from_millis(1000 * attempts)).await;
+                }
+                continue;
+            }
+        };
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            println!("Title Gen Error Status (Attempt {}): {} - {}", attempts, status, error_text);
+            last_error = format!("Status {}: {}", status, error_text);
+            if status.as_u16() == 503 || status.as_u16() == 429 {
+                if attempts < max_attempts {
+                    tokio::time::sleep(std::time::Duration::from_millis(1000 * attempts)).await;
+                    continue;
+                }
+            }
+            return Err(format!("Gemini API Error: {}", last_error));
+        }
+
+        body = response
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
+        println!("Title Gen Success Body: {}", body);
+        break;
     }
 
-    let body = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
-    println!("Title Gen Success Body: {}", body);
+    if body.is_empty() {
+        return Err(format!("Failed to generate title after {} attempts. Last error: {}", max_attempts, last_error));
+    }
 
     // Parse single response
     let chunk: GeminiResponseChunk = serde_json::from_str(&body).map_err(|e| {

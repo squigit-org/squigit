@@ -239,15 +239,24 @@ const ProviderRow = ({
                 autoComplete="off"
               />
               <button
+                type="button"
                 className={styles.iconBtn}
                 disabled={isGuest}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowKey(!showKey);
+                  // Push caret to the end after React updates the DOM
+                  requestAnimationFrame(() => {
+                    if (inputRef.current) {
+                      const len = inputRef.current.value.length;
+                      inputRef.current.setSelectionRange(len, len);
+                    }
+                  });
                 }}
                 title={showKey ? "Hide key" : "Show key"}
               >
-                {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                {showKey ? <Eye size={14} /> : <EyeOff size={14} />}
               </button>
             </div>
           </div>
