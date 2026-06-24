@@ -1,13 +1,13 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use std::str::FromStr;
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use napi::{Error, Result};
 use napi_derive::napi;
 use squigit_auth::auth::{start_google_auth_flow, AuthFlowSettings};
-use squigit_auth::security::{get_decrypted_key, encrypt_and_save_key, ApiKeyProvider};
+use squigit_auth::security::{encrypt_and_save_key, get_decrypted_key, ApiKeyProvider};
 use squigit_auth::ProfileStore;
+use std::str::FromStr;
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
 
 use crate::types::{NapiAuthResult, NapiProfile};
 
@@ -32,7 +32,9 @@ pub fn get_active_profile_id() -> Result<Option<String>> {
 #[napi]
 pub fn set_active_profile(profile_id: String) -> Result<()> {
     let store = ProfileStore::new().map_err(map_profile_err)?;
-    store.set_active_profile_id(&profile_id).map_err(map_profile_err)
+    store
+        .set_active_profile_id(&profile_id)
+        .map_err(map_profile_err)
 }
 
 #[napi]
@@ -78,14 +80,17 @@ pub fn has_profiles() -> Result<bool> {
 #[napi]
 pub fn profile_count() -> Result<u32> {
     let store = ProfileStore::new().map_err(map_profile_err)?;
-    store.profile_count().map_err(map_profile_err).map(|count| count as u32)
+    store
+        .profile_count()
+        .map_err(map_profile_err)
+        .map(|count| count as u32)
 }
 
 #[napi]
 pub async fn start_google_auth() -> Result<NapiAuthResult> {
     tokio::task::spawn_blocking(|| {
         let store = ProfileStore::new().map_err(map_profile_err)?;
-        
+
         // We let the auth flow handle credentials resolution (via SQUIGIT_GOOGLE_CREDENTIALS_JSON etc)
         let mut settings = AuthFlowSettings::new(
             "Squigit",
@@ -104,7 +109,7 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
                     let _ = webbrowser::open(url);
                 }
                 Ok(())
-            })
+            }),
         );
         settings.redirect_port = 6062;
 
@@ -114,8 +119,9 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
             *lock = Some(auth_cancelled.clone());
         }
 
-        let result = start_google_auth_flow(&store, &settings, auth_cancelled).map_err(map_profile_err)?;
-        
+        let result =
+            start_google_auth_flow(&store, &settings, auth_cancelled).map_err(map_profile_err)?;
+
         Ok(NapiAuthResult {
             id: result.id,
             name: result.name,
@@ -123,7 +129,9 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
             avatar: result.avatar,
             original_picture: result.original_picture,
         })
-    }).await.map_err(|e| Error::from_reason(e.to_string()))?
+    })
+    .await
+    .map_err(|e| Error::from_reason(e.to_string()))?
 }
 
 #[napi]
@@ -138,7 +146,8 @@ pub fn cancel_google_auth() -> Result<()> {
 #[napi]
 pub fn save_api_key(profile_id: String, provider: String, key: String) -> Result<String> {
     let store = ProfileStore::new().map_err(map_profile_err)?;
-    let provider_enum = ApiKeyProvider::from_str(&provider).map_err(|e| Error::from_reason(e.to_string()))?;
+    let provider_enum =
+        ApiKeyProvider::from_str(&provider).map_err(|e| Error::from_reason(e.to_string()))?;
     encrypt_and_save_key(&store, &profile_id, provider_enum, &key).map_err(map_profile_err)?;
     Ok(key)
 }
@@ -146,15 +155,13 @@ pub fn save_api_key(profile_id: String, provider: String, key: String) -> Result
 #[napi]
 pub fn get_api_key(profile_id: String, provider: String) -> Result<Option<String>> {
     let store = ProfileStore::new().map_err(map_profile_err)?;
-    let provider_enum = ApiKeyProvider::from_str(&provider).map_err(|e| Error::from_reason(e.to_string()))?;
+    let provider_enum =
+        ApiKeyProvider::from_str(&provider).map_err(|e| Error::from_reason(e.to_string()))?;
     get_decrypted_key(&store, provider_enum, &profile_id).map_err(map_profile_err)
 }
 
 #[napi]
 pub fn validate_auth_credentials() -> Result<()> {
-    let settings = AuthFlowSettings::new(
-        "Squigit",
-        Arc::new(|_| Ok(()))
-    );
+    let settings = AuthFlowSettings::new("Squigit", Arc::new(|_| Ok(())));
     squigit_auth::auth::validate_google_credentials(&settings).map_err(map_profile_err)
 }

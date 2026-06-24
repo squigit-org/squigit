@@ -67,7 +67,11 @@ const ProviderRow = ({
   const validate = (key: string): boolean => {
     if (!key) return true;
     if (providerKeyName === "Google AI Studio") {
-      return key.startsWith("AIzaS") && key.length === 39;
+      const isLegacy = key.startsWith("AIzaSy");
+      const isNew = key.startsWith("AQ.");
+      if (isLegacy && key.length === 39) return true;
+      if (isNew && key.length >= 50 && key.length <= 60) return true;
+      return false;
     }
     if (providerKeyName === "ImgBB") {
       return key.length === 32;

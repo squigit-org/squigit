@@ -42,14 +42,18 @@ impl ApiKeyProvider {
         }
 
         match self {
-            Self::GoogleAiStudio => key.starts_with("AIzaS") && key.len() == 39,
+            Self::GoogleAiStudio => {
+                let is_legacy = key.starts_with("AIzaSy");
+                let is_new = key.starts_with("AQ.");
+                (is_legacy && key.len() == 39) || (is_new && key.len() >= 50 && key.len() <= 60)
+            }
             Self::ImgBb => key.len() == 32,
         }
     }
 
     pub fn validation_hint(self) -> &'static str {
         match self {
-            Self::GoogleAiStudio => "Expected a key that starts with 'AIzaS' and is 39 characters long.",
+            Self::GoogleAiStudio => "Expected a key that starts with 'AIzaSy' (39 chars) or 'AQ.' (50-60 chars).",
             Self::ImgBb => "Expected a 32-character API key.",
         }
     }
@@ -223,7 +227,7 @@ mod tests {
     }
 
     fn valid_google_key() -> String {
-        format!("AIzaS{}", "1".repeat(34))
+        format!("AIzaSy{}", "1".repeat(33))
     }
 
     #[test]
@@ -272,7 +276,7 @@ mod tests {
 
         assert_eq!(
             err.to_string(),
-            "Invalid Google AI Studio API key format. Expected a key that starts with 'AIzaS' and is 39 characters long."
+            "Invalid Google AI Studio API key format. Expected a key that starts with 'AIzaSy' (39 chars) or 'AQ.' (50-60 chars)."
         );
     }
 

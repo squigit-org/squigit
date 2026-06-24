@@ -14,7 +14,11 @@ const PROVIDERS: Record<ProviderConfig["cliName"], ProviderConfig> = {
     cliName: "google-ai-studio",
     storageName: "google ai studio",
     displayName: "Google AI Studio",
-    validate: (key) => key.startsWith("AIzaS") && key.length === 39,
+    validate: (key) => {
+      const isLegacy = key.startsWith("AIzaSy");
+      const isNew = key.startsWith("AQ.");
+      return (isLegacy && key.length === 39) || (isNew && key.length >= 50 && key.length <= 60);
+    },
   },
   imgbb: {
     cliName: "imgbb",
@@ -66,7 +70,7 @@ function assertValidKey(provider: ProviderConfig, key: string): void {
 
   if (provider.storageName === "google ai studio") {
     throw new Error(
-      "Invalid Google AI Studio key. Expected a key starting with 'AIzaS' and exactly 39 characters.",
+      "Invalid Google AI Studio key. Expected a key starting with 'AIzaSy' (39 chars) or 'AQ.' (50-60 chars).",
     );
   }
 

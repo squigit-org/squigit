@@ -23,8 +23,7 @@ pub fn get_linux_package_manager() -> String {
 
 #[napi]
 pub fn reveal_in_file_manager(path: String) -> Result<()> {
-    desktop_runtime::platform::reveal_in_file_manager(path)
-        .map_err(|e| napi::Error::from_reason(e))
+    desktop_runtime::platform::reveal_in_file_manager(path).map_err(|e| napi::Error::from_reason(e))
 }
 
 // =============================================================================
@@ -54,19 +53,20 @@ pub async fn run_sidecar_version(command: String) -> Result<String> {
         if command == "squigit-stt --version" {
             let (sidecar_path, _) = desktop_runtime::sidecar::resolve_stt_sidecar_path()
                 .map_err(|e| napi::Error::from_reason(e))?;
-                
+
             let mut cmd = std::process::Command::new(sidecar_path);
             cmd.arg("--version");
-            
+
             #[cfg(target_os = "windows")]
             {
                 use std::os::windows::process::CommandExt;
                 cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
             }
 
-            let output = cmd.output()
+            let output = cmd
+                .output()
                 .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-                
+
             if output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
                 // Try to extract just the version if there's noise
@@ -76,7 +76,9 @@ pub async fn run_sidecar_version(command: String) -> Result<String> {
             return Err(napi::Error::from_reason("Sidecar command failed"));
         }
 
-        Err(napi::Error::from_reason("Unknown or unsupported sidecar command"))
+        Err(napi::Error::from_reason(
+            "Unknown or unsupported sidecar command",
+        ))
     })
     .await
     .unwrap_or_else(|e| Err(napi::Error::from_reason(e.to_string())))
@@ -94,8 +96,7 @@ pub fn encrypt_and_save(profile_id: String, provider: String, plaintext: String)
 
 #[napi]
 pub fn set_agreed_flag() -> Result<()> {
-    desktop_runtime::security::set_agreed_flag()
-        .map_err(|e| napi::Error::from_reason(e))
+    desktop_runtime::security::set_agreed_flag().map_err(|e| napi::Error::from_reason(e))
 }
 
 #[napi]

@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain, type IpcMainInvokeEvent } from "electron";
 
 let addon: any;
 try {
@@ -7,6 +7,103 @@ try {
   console.error("Failed to load napi-bridge native addon:", e);
   addon = {};
 }
+
+type IpcArgs = Record<string, any> | undefined;
+
+const requireAddonFn = (name: string) => {
+  const fn = addon[name];
+  if (typeof fn !== "function") {
+    throw new Error(`Missing napi-bridge export '${name}'. Rebuild napi-bridge.`);
+  }
+  return fn;
+};
+
+const parseAddonJson = <T = any>(label: string, value: unknown): T => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${label} returned empty JSON from napi-bridge.`);
+  }
+  return JSON.parse(value) as T;
+};
+
+const pickArg = (args: IpcArgs, ...names: string[]) => {
+  for (const name of names) {
+    const value = args?.[name];
+    if (value !== undefined && value !== null) return value;
+  }
+  return undefined;
+};
+
+const requireStringArg = (
+  command: string,
+  args: IpcArgs,
+  ...names: string[]
+) => {
+  const value = pickArg(args, ...names);
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${command} requires ${names.join(" or ")}.`);
+  }
+  return value;
+};
+
+const optionalStringArg = (args: IpcArgs, ...names: string[]) => {
+  const value = pickArg(args, ...names);
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : null;
+};
+
+const parseMaybeJson = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeStreamEvent = (streamEvent: any) => {
+  if (!streamEvent || typeof streamEvent !== "object") {
+    return streamEvent;
+  }
+
+  const type =
+    streamEvent.type || streamEvent.eventType || streamEvent.event_type;
+  const normalized = {
+    ...streamEvent,
+    ...(type ? { type } : {}),
+  };
+
+  delete normalized.eventType;
+  delete normalized.event_type;
+
+  if ("args" in normalized) {
+    normalized.args = parseMaybeJson(normalized.args);
+  }
+  if ("result" in normalized) {
+    normalized.result = parseMaybeJson(normalized.result);
+  }
+
+  return normalized;
+};
+
+const sendStreamEvent = (
+  event: IpcMainInvokeEvent,
+  channelId: string,
+  err: any,
+  streamEvent: any,
+) => {
+  if (err) {
+    event.sender.send(channelId, {
+      type: "error",
+      message: err.message || String(err),
+    });
+    return;
+  }
+
+  event.sender.send(channelId, normalizeStreamEvent(streamEvent));
+};
 
 export function setupIpc() {
   // Profile commands
@@ -46,13 +143,20 @@ export function setupIpc() {
     addon.storageDelete?.(args.key),
   );
   ipcMain.handle("store_image_from_path", (_, args) =>
-    addon.storeImageFromPath?.(args.path),
+    addon.storeImageFromPath?.(
+      requireStringArg("store_image_from_path", args, "path"),
+    ),
   );
   ipcMain.handle("read_clipboard_image", () => addon.readClipboardImage?.());
   
-  ipcMain.handle("create_chat", (_, args) => 
-    addon.createChat?.(args.title, args.imageHash, args.ocrLang)
-  );
+  ipcMain.handle("create_chat", (_, args) => {
+    const json = requireAddonFn("createChatJson")(
+      requireStringArg("create_chat", args, "title"),
+      requireStringArg("create_chat", args, "imageHash", "image_hash"),
+      optionalStringArg(args, "ocrLang", "ocr_lang"),
+    );
+    return parseAddonJson("create_chat", json);
+  });
 
   ipcMain.handle("cancel_request", (_, args) => addon.cancelRequest?.(args.channelId));
   
@@ -63,22 +167,34 @@ export function setupIpc() {
       args.channelId, args.chatId, args.userName, args.userEmail, args.userInstruction,
       args.imageBrief,
       (err: any, streamEvent: any) => {
-        if (err) {
-          event.sender.send(args.channelId, { eventType: "error", message: err.message });
-        } else {
-          event.sender.send(args.channelId, streamEvent);
-        }
+        sendStreamEvent(event, args.channelId, err, streamEvent);
       }
     );
   });
 
   ipcMain.handle("append_chat_message", (_, args) => addon.appendChatMessage?.(args.chatId, args.role, args.content));
-  ipcMain.handle("update_chat_metadata", (_, args) => addon.updateChatMetadata?.(args.metadata));
+  ipcMain.handle("update_chat_metadata", (_, args) => {
+    if (!args?.metadata || typeof args.metadata !== "object") {
+      throw new Error("update_chat_metadata requires metadata.");
+    }
+    return requireAddonFn("updateChatMetadataJson")(
+      JSON.stringify(args.metadata),
+    );
+  });
   ipcMain.handle("generate_image_brief", (_, args) => addon.generateImageBrief?.(args.apiKey, args.imagePath, args.model));
-  ipcMain.handle("load_chat", (_, args) => addon.loadChat?.(args.chatId));
+  ipcMain.handle("load_chat", (_, args) => {
+    const json = requireAddonFn("loadChatJson")(
+      requireStringArg("load_chat", args, "chatId", "chat_id"),
+    );
+    return parseAddonJson("load_chat", json);
+  });
   ipcMain.handle("delete_chat", (_, args) => addon.deleteChat?.(args.chatId));
   ipcMain.handle("get_imgbb_url", (_, args) => addon.getImgbbUrl?.(args.chatId));
-  ipcMain.handle("get_image_path", (_, args) => addon.getImagePath?.(args.hash));
+  ipcMain.handle("get_image_path", (_, args) =>
+    addon.getImagePath?.(
+      requireStringArg("get_image_path", args, "hash", "imageHash", "image_hash"),
+    ),
+  );
   ipcMain.handle("save_imgbb_url", (_, args) => addon.saveImgbbUrl?.(args.chatId, args.url));
   ipcMain.handle("get_rolling_summary", (_, args) => addon.getRollingSummary?.(args.chatId));
   ipcMain.handle("save_rolling_summary", (_, args) => addon.saveRollingSummary?.(args.chatId, args.summary));
@@ -87,21 +203,13 @@ export function setupIpc() {
   
   ipcMain.handle("prompt_chat", async (event, args) => {
     return addon.promptChat?.(args.chatId, args.model, args.userMessage, (err: any, streamEvent: any) => {
-        if (err) {
-            event.sender.send(args.channelId, { eventType: "error", message: err.message });
-        } else {
-            event.sender.send(args.channelId, streamEvent);
-        }
+        sendStreamEvent(event, args.channelId, err, streamEvent);
     });
   });
 
   ipcMain.handle("analyze_image", async (event, args) => {
     return addon.analyzeImage?.(args.imagePath, args.model, args.userMessage, (err: any, streamEvent: any) => {
-        if (err) {
-            event.sender.send(args.channelId, { eventType: "error", message: err.message });
-        } else {
-            event.sender.send(args.channelId, streamEvent);
-        }
+        sendStreamEvent(event, args.channelId, err, streamEvent);
     });
   });
 
@@ -199,16 +307,12 @@ export function setupIpc() {
     } catch (e) { console.error("init_ocr_frame error", e); }
   });
 
-  ipcMain.handle("save_image_tone", async (_, args) => {
-    const fs = require("fs/promises");
-    try {
-      const metaPath = require("path").join(getChatDir(args.chatId), "meta.json");
-      const meta = JSON.parse(await fs.readFile(metaPath, "utf-8"));
-      meta.image_tone = args.tone;
-      meta.updated_at = new Date().toISOString();
-      await fs.writeFile(metaPath, JSON.stringify(meta, null, 2));
-    } catch (e) { console.error("save_image_tone error", e); }
-  });
+  ipcMain.handle("save_image_tone", (_, args) =>
+    requireAddonFn("saveImageTone")(
+      requireStringArg("save_image_tone", args, "chatId", "chat_id"),
+      requireStringArg("save_image_tone", args, "tone"),
+    ),
+  );
 
   ipcMain.handle("save_image_brief", async (_, args) => {
     const fs = require("fs/promises");
@@ -371,11 +475,8 @@ export function setupIpc() {
   ipcMain.handle("play_ui_sound", () => {});
 
   ipcMain.handle("list_chats", () => {
-    try {
-      return addon.listChats?.() || [];
-    } catch {
-      return [];
-    }
+    const json = requireAddonFn("listChatsJson")();
+    return parseAddonJson("list_chats", json);
   });
   ipcMain.handle("get_active_profile", () => {
     try {

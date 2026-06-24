@@ -22,6 +22,8 @@ export declare function copyImageToClipboard(imageBase64: string): void
 
 export declare function createChat(title: string, imageHash: string, ocrLang?: string | undefined | null): NapiChatMetadata
 
+export declare function createChatJson(title: string, imageHash: string, ocrLang?: string | undefined | null): string
+
 export declare function deleteChat(chatId: string): void
 
 export declare function deleteProfile(profileId: string): void
@@ -62,9 +64,13 @@ export declare function hasProfiles(): boolean
 
 export declare function listChats(): Array<NapiChatMetadata>
 
+export declare function listChatsJson(): string
+
 export declare function listProfiles(): Array<NapiProfile>
 
 export declare function loadChat(chatId: string): NapiChatData
+
+export declare function loadChatJson(chatId: string): string
 
 export interface NapiAnalyzeResult {
   chatId: string
@@ -162,6 +168,8 @@ export declare function runSidecarVersion(command: string): Promise<string>
 
 export declare function saveApiKey(profileId: string, provider: string, key: string): string
 
+export declare function saveImageTone(chatId: string, tone: string): void
+
 export declare function saveImgbbUrl(chatId: string, url: string): void
 
 export declare function saveRollingSummary(chatId: string, summary: string): void
@@ -177,6 +185,8 @@ export declare function storeImageFromPath(path: string): NapiStoredImage
 export declare function streamChat(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, rollingSummary: string | undefined | null, userMessage: string, channelId: string, chatId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, userInstruction: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
 
 export declare function updateChatMetadata(metadata: NapiChatMetadata): void
+
+export declare function updateChatMetadataJson(metadataJson: string): void
 
 export declare function uploadImageToImgbb(imagePath: string, apiKey: string): Promise<string>
 

@@ -13,6 +13,23 @@ import styles from "./HomeRoute.module.css";
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
+const isEditableTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return Boolean(
+    target.closest(
+      'input, textarea, select, [contenteditable="true"], [role="textbox"]',
+    ),
+  );
+};
+
+const isExpectedClipboardImageMiss = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  return /clipboard.*(empty|not available|requested format|image)/i.test(
+    message,
+  );
+};
+
 interface CASImageData {
   imageId: string;
   path: string;
@@ -104,6 +121,10 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
 
     const handlePaste = async (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        if (isEditableTarget(e.target)) {
+          return;
+        }
+
         if (isGuest) {
           onLoginRequired?.();
           return;
@@ -120,7 +141,9 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
             });
           }
         } catch (error) {
-          console.error("Failed to read clipboard image:", error);
+          if (!isExpectedClipboardImageMiss(error)) {
+            console.error("Failed to read clipboard image:", error);
+          }
         }
       }
     };

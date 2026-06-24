@@ -1,19 +1,19 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use std::str::FromStr;
-use std::sync::OnceLock;
-use napi::{Error, Result};
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
+use napi::{Error, Result};
 use napi_derive::napi;
-use squigit_auth::ProfileStore;
 use squigit_auth::security::{get_decrypted_key, ApiKeyProvider};
+use squigit_auth::ProfileStore;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
 use squigit_brain::service::{
     AnalyzeImageRequest, BrainService, CompressConversationRequest, GenerateChatTitleRequest,
     GenerateImageBriefRequest, PromptChatRequest, StreamChatRequest,
 };
+use std::str::FromStr;
+use std::sync::OnceLock;
 
 use crate::types::{NapiAnalyzeResult, NapiPromptResult, NapiStreamEvent};
 
@@ -30,7 +30,8 @@ struct NapiEventSink {
 impl BrainEventSink for NapiEventSink {
     fn emit(&self, _channel_id: &str, event: GeminiEvent) {
         let napi_event: NapiStreamEvent = event.into();
-        self.tsfn.call(Ok(napi_event), ThreadsafeFunctionCallMode::NonBlocking);
+        self.tsfn
+            .call(Ok(napi_event), ThreadsafeFunctionCallMode::NonBlocking);
     }
 }
 
@@ -43,13 +44,15 @@ fn active_google_api_key() -> Result<String> {
 
     let provider = ApiKeyProvider::from_str("google ai studio")
         .map_err(|e| Error::from_reason(e.to_string()))?;
-    
+
     let key = get_decrypted_key(&store, provider, &active_id)
         .map_err(|e| Error::from_reason(e.to_string()))?
         .unwrap_or_default();
 
     if key.trim().is_empty() {
-        return Err(Error::from_reason("Missing Google AI Studio API key for active profile."));
+        return Err(Error::from_reason(
+            "Missing Google AI Studio API key for active profile.",
+        ));
     }
 
     Ok(key)
@@ -79,7 +82,9 @@ pub async fn analyze_image(
         ocr_lang: None,
     };
 
-    let result = service.analyze_image(&sink, request).await
+    let result = service
+        .analyze_image(&sink, request)
+        .await
         .map_err(|e| Error::from_reason(e.to_string()))?;
 
     Ok(NapiAnalyzeResult {
@@ -113,7 +118,9 @@ pub async fn prompt_chat(
         user_email: None,
     };
 
-    let result = service.prompt_chat(&sink, request).await
+    let result = service
+        .prompt_chat(&sink, request)
+        .await
         .map_err(|e| Error::from_reason(e.to_string()))?;
 
     Ok(NapiPromptResult {
@@ -165,7 +172,9 @@ pub async fn stream_chat(
         image_brief,
     };
 
-    service.stream_chat(&sink, request).await
+    service
+        .stream_chat(&sink, request)
+        .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
@@ -176,8 +185,14 @@ pub async fn generate_chat_title(
     prompt_context: String,
 ) -> Result<String> {
     let service = get_brain_service();
-    let request = GenerateChatTitleRequest { api_key, model, prompt_context };
-    service.generate_chat_title(request).await
+    let request = GenerateChatTitleRequest {
+        api_key,
+        model,
+        prompt_context,
+    };
+    service
+        .generate_chat_title(request)
+        .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
@@ -188,8 +203,14 @@ pub async fn generate_image_brief(
     model: String,
 ) -> Result<String> {
     let service = get_brain_service();
-    let request = GenerateImageBriefRequest { api_key, image_path, model };
-    service.generate_image_brief(request).await
+    let request = GenerateImageBriefRequest {
+        api_key,
+        image_path,
+        model,
+    };
+    service
+        .generate_image_brief(request)
+        .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
@@ -201,21 +222,32 @@ pub async fn compress_conversation(
     model: String,
 ) -> Result<String> {
     let service = get_brain_service();
-    let request = CompressConversationRequest { api_key, image_brief, history_to_compress, model };
-    service.compress_conversation(request).await
+    let request = CompressConversationRequest {
+        api_key,
+        image_brief,
+        history_to_compress,
+        model,
+    };
+    service
+        .compress_conversation(request)
+        .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
 #[napi]
 pub async fn cancel_request(channel_id: Option<String>) -> Result<()> {
     let service = get_brain_service();
-    service.cancel_request(channel_id).await
+    service
+        .cancel_request(channel_id)
+        .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
 #[napi]
 pub async fn request_quick_answer(channel_id: String) -> Result<()> {
     let service = get_brain_service();
-    service.request_quick_answer(channel_id).await
+    service
+        .request_quick_answer(channel_id)
+        .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }

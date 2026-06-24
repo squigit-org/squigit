@@ -178,6 +178,9 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
           }
         }
       }
+      if (cancelled) {
+        return;
+      }
       console.warn(
         `[ToneDetector] All retries failed for image=${startupImage.imageId}`,
       );

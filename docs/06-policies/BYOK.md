@@ -67,4 +67,4 @@ To get started, generate keys from the supported providers below:
 
 3. Generate your API key on the provider's site and simply **copy it to your clipboard**.
 
-4. The application will automatically detect the key pattern (e.g., `AIzaS...` for Google), stop the watcher, and securely encrypt/save the key. You do not need to paste it manually.
+4. The application will automatically detect the key pattern (e.g., `AIzaSy...` or `AQ.` for Google), stop the watcher, and securely encrypt/save the key. You do not need to paste it manually.

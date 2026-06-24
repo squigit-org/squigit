@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use napi_derive::napi;
-use squigit_memory::{ChatData, ChatMessage, ChatMetadata, StoredImage};
 use squigit_auth::types::Profile as UserProfile;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
+use squigit_memory::{ChatData, ChatMessage, ChatMetadata, StoredImage};
 
 #[napi(object)]
 pub struct NapiProfile {
@@ -186,7 +186,12 @@ impl From<GeminiEvent> for NapiStreamEvent {
                 args: None,
                 result: None,
             },
-            GeminiEvent::ToolStart { id, name, args, message } => Self {
+            GeminiEvent::ToolStart {
+                id,
+                name,
+                args,
+                message,
+            } => Self {
                 event_type: "tool_start".to_string(),
                 token: None,
                 message: Some(message),
@@ -196,7 +201,13 @@ impl From<GeminiEvent> for NapiStreamEvent {
                 args: Some(serde_json::to_string(&args).unwrap_or_default()),
                 result: None,
             },
-            GeminiEvent::ToolEnd { id, name, status, result, message } => Self {
+            GeminiEvent::ToolEnd {
+                id,
+                name,
+                status,
+                result,
+                message,
+            } => Self {
                 event_type: "tool_end".to_string(),
                 token: None,
                 message: Some(message),

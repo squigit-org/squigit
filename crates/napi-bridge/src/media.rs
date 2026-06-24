@@ -4,9 +4,9 @@
 //! Desktop media NAPI wrappers — clipboard, image processing, tone detection, audio.
 //! Only compiled with --features desktop.
 
+use crate::types::NapiStoredImage;
 use napi::Result;
 use napi_derive::napi;
-use crate::types::NapiStoredImage;
 
 // =============================================================================
 // Image Processing
@@ -48,8 +48,7 @@ pub fn read_clipboard_image() -> Result<NapiStoredImage> {
 
 #[napi]
 pub fn read_clipboard_text() -> Result<String> {
-    desktop_runtime::media::read_clipboard_text()
-        .map_err(|e| napi::Error::from_reason(e))
+    desktop_runtime::media::read_clipboard_text().map_err(|e| napi::Error::from_reason(e))
 }
 
 #[napi]
