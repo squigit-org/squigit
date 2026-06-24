@@ -125,9 +125,6 @@
     background-color 0.16s ease,
     color 0.16s ease;
   min-width: 0;
-  will-change: background-color, color;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 .chatRow:hover {
@@ -173,8 +170,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 .chatBubbleIcon {
@@ -187,8 +182,6 @@
   transition:
     opacity 0.15s ease,
     color 0.15s ease;
-  will-change: opacity;
-  transform: translateZ(0);
 }
 
 .pinLeftBtn {
@@ -208,8 +201,6 @@
     opacity 0.15s ease,
     color 0.15s ease,
     visibility 0s linear 0.15s;
-  will-change: opacity;
-  transform: translateZ(0);
 }
 
 .chatRow:hover .pinLeftBtn,
@@ -316,9 +307,6 @@
     transform 0.15s ease,
     color 0.15s ease;
   pointer-events: none;
-  transform: translate3d(0, 0, 0) scale(1);
-  will-change: opacity, transform;
-  backface-visibility: hidden;
 }
 
 .rowShortcut {
@@ -335,7 +323,6 @@
     opacity 0.15s ease,
     color 0.15s ease,
     visibility 0s linear 0.15s;
-  will-change: opacity;
 }
 
 .rowShortcutText {
@@ -380,9 +367,6 @@
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transform: translate3d(0, 2px, 0) scale(0.96);
-  will-change: opacity, transform;
-  backface-visibility: hidden;
 }
 
 .chatRow:hover .menuBtn,

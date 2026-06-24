@@ -20,9 +20,6 @@
   margin-bottom: 8px;
   width: 100%;
   height: 100%;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
   contain: paint layout;
 }
 
@@ -121,8 +118,6 @@
   );
   offset-rotate: 0deg;
   will-change: offset-distance;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
   filter: drop-shadow(0 2px 3px var(--c-raw-044));
   animation: "moveCursorFree" 3s infinite;
 }

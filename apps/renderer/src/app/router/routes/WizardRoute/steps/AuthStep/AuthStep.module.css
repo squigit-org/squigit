@@ -134,5 +134,4 @@
 
 .spin {
   animation: "rotate" 1s linear infinite;
-  transform: translateZ(0);
 }

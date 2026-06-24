@@ -371,3 +371,9 @@ html.light body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--c-raw-008);
 }
+
+body.is-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}

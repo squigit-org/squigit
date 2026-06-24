@@ -66,6 +66,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 }) => {
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const isDraggingRef = useRef(false);
+  const positionRef = useRef<{ left?: string; top?: string }>({});
   const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -134,11 +135,15 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
         minTop + constraintRect.height - toolbarRect.height,
       );
 
-      let currentLeft: number;
-      let currentTop: number;
+      let currentLeft = toolbarRect.left - parentRect.left;
+      let currentTop = toolbarRect.top - parentRect.top;
 
-      currentLeft = toolbarRect.left - parentRect.left;
-      currentTop = toolbarRect.top - parentRect.top;
+      if (positionRef.current.left !== undefined) {
+        currentLeft = parseFloat(positionRef.current.left);
+      }
+      if (positionRef.current.top !== undefined) {
+        currentTop = parseFloat(positionRef.current.top);
+      }
 
       const newLeft = Math.max(minLeft, Math.min(currentLeft, maxLeft));
       const newTop = Math.max(minTop, Math.min(currentTop, maxTop));
@@ -190,6 +195,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     dragStartRef.current.left = currentLeft;
     dragStartRef.current.top = currentTop;
 
+    document.body.classList.add("is-dragging");
     document.addEventListener("mousemove", handleDrag);
     document.addEventListener("mouseup", stopDrag);
   };
@@ -232,10 +238,12 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
 
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
+    positionRef.current = { left: `${newLeft}px`, top: `${newTop}px` };
   };
 
   const stopDrag = () => {
     isDraggingRef.current = false;
+    document.body.classList.remove("is-dragging");
     document.removeEventListener("mousemove", handleDrag);
     document.removeEventListener("mouseup", stopDrag);
   };
@@ -245,6 +253,7 @@ export const ImageToolbar: React.FC<ImageToolbarProps> = ({
     visibility: isExpanded ? "visible" : "hidden",
     pointerEvents: isExpanded ? "auto" : "none",
     transition: "opacity 0.3s ease, visibility 0.3s",
+    ...positionRef.current,
   };
 
   const tabIndex = isExpanded ? 0 : -1;

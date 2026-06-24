@@ -86,12 +86,10 @@
   border-radius: 8px;
   padding: 6px 4px;
   gap: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 100;
   user-select: none;
-  will-change: opacity, transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+  cursor: default;
 }
 
 .toolbarDrag {
@@ -102,6 +100,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.toolbarDrag svg {
+  pointer-events: none;
 }
 
 .toolbarDrag:active {
@@ -162,9 +164,6 @@
   flex-direction: column;
   transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  will-change: height;
-  transform: translateZ(0);
-  backface-visibility: hidden;
   contain: layout style;
 }
 
@@ -278,9 +277,6 @@
   height: 32px;
   border-radius: 6px;
   object-fit: cover;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
   transition:
     filter 0.2s ease,
     opacity 0.3s ease;
@@ -332,7 +328,6 @@
   overflow: hidden;
   position: relative;
   contain: layout style paint;
-  transform: translateZ(0);
 }
 
 .floatingContainer .imageToolbar {
@@ -354,7 +349,6 @@
 .floatingContainer [data-text-layer] {
   opacity: 0;
   transition: opacity 0.18s ease;
-  will-change: opacity, transform;
 }
 
 .floatingContainer.expanded [data-text-layer] {
@@ -373,9 +367,6 @@
   align-items: flex-start;
   justify-content: center;
   overflow: hidden;
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 .bigImageBox.showScrollbar {
@@ -416,9 +407,6 @@
   display: block;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: high-quality;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
 }
 
 .floatingContainer.expanded .bigImage {

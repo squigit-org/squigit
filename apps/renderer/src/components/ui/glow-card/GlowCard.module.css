@@ -27,7 +27,6 @@
   padding: 1px;
   border-radius: 0.75rem;
   overflow: hidden;
-  transform: translateZ(0);
 }
 
 .inner::before {

@@ -5,6 +5,7 @@
  */
 
 import React from "react";
+import { createPortal } from "react-dom";
 import { InlineChevronLeft, InlineChevronRight } from "@/components/icons";
 import styles from "./InlineMenu.module.css";
 
@@ -31,7 +32,7 @@ export const InlineMenu: React.FC<
   id,
   className,
 }) => {
-  return (
+  const menuContent = (
     <div
       id={id}
       className={`${styles.menu} ${className || ""}`}
@@ -146,4 +147,10 @@ export const InlineMenu: React.FC<
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") {
+    return menuContent;
+  }
+
+  return createPortal(menuContent, document.body);
 };

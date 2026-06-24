@@ -90,7 +90,6 @@
     transform 0.1s ease-out,
     box-shadow 0.1s ease-out;
 
-  backface-visibility: hidden;
   transform: translate3d(0, 0, 0);
   will-change: transform;
 }

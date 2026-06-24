@@ -518,8 +518,8 @@ export function setupIpc() {
   ipcMain.handle("cancel_ocr_job", () => {});
   
   // Audio / STT
-  ipcMain.handle("play_ui_sound", () => {});
-  ipcMain.handle("start_stt", () => {});
+  ipcMain.handle("play_ui_sound", (_, args) => addon.playUiSound?.(args.effect));
+  ipcMain.handle("start_stt", () => { throw new Error("ERR_MISSING_STT_PACKAGE"); });
   ipcMain.handle("stop_stt", () => {});
   
   ipcMain.handle("quick_answer_request", (_, args) =>

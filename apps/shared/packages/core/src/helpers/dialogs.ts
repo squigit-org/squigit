@@ -142,7 +142,7 @@ export const getMissingPackageDialog = (
   installCmd: string,
 ): DialogContent => ({
   title: "Missing System Dependency",
-  message: `A runtime dependency is missing for ${pkgName}. You can quickly install it using your terminal:\n\n${installCmd}`,
+  message: `${pkgName} not installed. Run the following command in your terminal to install it:\n\n${installCmd}`,
   variant: "warning",
   actions: [{ label: "Dismiss", variant: "secondary", actionKey: "cancel" }],
 });

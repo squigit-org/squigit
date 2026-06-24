@@ -100,9 +100,6 @@
   align-items: center;
   flex-shrink: 0;
   pointer-events: none;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
 }
 
 .headerContainer::before {
@@ -212,8 +209,6 @@
   background: var(--c-raw-013);
   isolation: isolate;
   contain: strict;
-  transform: translateZ(0);
-  will-change: opacity;
   transition:
     opacity 0.14s ease,
     visibility 0s linear 0.14s;

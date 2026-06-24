@@ -69,10 +69,14 @@ pub fn copy_image_from_path_to_clipboard(path: String) -> Result<()> {
 
 #[napi]
 pub fn play_ui_sound(effect: String) -> Result<()> {
-    let _effect = desktop_runtime::audio::UiSoundEffect::from_input(Some(&effect))
+    static PLAYER: std::sync::OnceLock<desktop_runtime::audio::UiSoundPlayer> = std::sync::OnceLock::new();
+    
+    let effect = desktop_runtime::audio::UiSoundEffect::from_input(Some(&effect))
         .map_err(|e| napi::Error::from_reason(e))?;
-    // TODO: Use a static OnceCell<UiSoundPlayer> to persist the rodio stream.
-    // For now this is a stub — Electron will implement audio differently.
+        
+    let player = PLAYER.get_or_init(|| desktop_runtime::audio::UiSoundPlayer::new());
+    
+    player.play(effect).map_err(|e| napi::Error::from_reason(e))?;
     Ok(())
 }
 
