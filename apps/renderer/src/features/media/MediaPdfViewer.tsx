@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { platform } from "@/platform";
-import { getDocument } from "pdfjs-dist";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import styles from "./MediaPdfViewer.module.css";
 
 interface MediaPdfViewerProps {

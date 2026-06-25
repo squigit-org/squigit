@@ -8,8 +8,8 @@ import React, { useMemo, useState } from "react";
 import { commands } from "@/platform";
 import { WidgetOverlay } from "@/components/ui";
 import { AppContextMenu } from "@/app/layout/menus/AppContextMenu";
-import { GlobalWorkerOptions } from "pdfjs-dist";
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import {
   MediaSidebar,
   MediaImageViewer,
