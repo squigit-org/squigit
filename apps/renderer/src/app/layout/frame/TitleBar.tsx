@@ -95,7 +95,7 @@ export const TitleBar: React.FC = () => {
       {...dragRegionProps}
       onMouseDown={handleMouseDown}
     >
-      <h1 className={styles.chatTitle}>
+      <h1 className={styles.chatTitle} {...dragRegionProps}>
         {app.chatHistory.activeSessionId === "__system_wizard"
           ? ""
           : app.chatTitle}
