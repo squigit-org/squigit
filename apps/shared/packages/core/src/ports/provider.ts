@@ -42,6 +42,7 @@ export interface ProviderPort {
     apiKey: string,
     imageBrief: string,
     historyToCompress: string,
+    model: string,
   ): Promise<string>;
   persistRollingSummary(chatId: string, summary: string): Promise<void>;
   cancelRequest(channelId: string | null): Promise<void>;

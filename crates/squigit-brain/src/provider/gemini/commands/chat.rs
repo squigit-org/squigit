@@ -5,6 +5,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::events::BrainEventSink;
 use crate::provider::gemini::agent::request_control::{
     register_request, remove_request, GeminiRequestControl,
 };
@@ -18,11 +19,12 @@ use crate::provider::gemini::attachments::{
     build_attachment_preview_context, build_chat_attachment_catalog, build_interleaved_parts,
     extract_attachment_mentions, prepare_turn_attachments,
 };
-use crate::provider::gemini::transport::streaming::{emit_event, stream_request_iteration};
+use crate::provider::gemini::transport::streaming::{
+    emit_event, stream_request_iteration, StreamIterationResult,
+};
 use crate::provider::gemini::transport::types::{
     GeminiContent, GeminiEvent, GeminiFileData, GeminiFunctionResponse, GeminiPart, GeminiRequest,
 };
-use crate::events::BrainEventSink;
 use crate::runtime::BrainRuntimeState;
 
 fn normalize_attachment_lookup_key(path: &str) -> String {
@@ -61,9 +63,7 @@ fn attachment_lookup_aliases(path: &str) -> Vec<String> {
     }
 
     if let Ok(canonical) =
-        crate::provider::gemini::attachments::paths::resolve_attachment_path_internal(
-            &normalized,
-        )
+        crate::provider::gemini::attachments::paths::resolve_attachment_path_internal(&normalized)
     {
         let canonical_str = canonical.to_string_lossy().to_string();
         push_unique(canonical_str.clone());
@@ -154,6 +154,122 @@ fn tool_attachment_lookup_value(
         .filter(|value| !value.is_empty())
 }
 
+fn append_final_tool_answer_instruction(contents: &mut Vec<GeminiContent>, reason: &str) {
+    let mut instruction =
+        "Use the tool result(s) above to answer the user's latest message now.\n\
+         - Start with the direct answer in a human-friendly way.\n\
+         - Use the sources/tool data as evidence, but do not return only source chips or tool metadata.\n\
+         - If the tool result is incomplete or conflicting, say that clearly and answer with the available evidence."
+            .to_string();
+
+    let trimmed_reason = reason.trim();
+    if !trimmed_reason.is_empty() {
+        instruction.push_str("\n\nReason for this final pass: ");
+        instruction.push_str(trimmed_reason);
+    }
+
+    contents.push(GeminiContent {
+        role: "user".to_string(),
+        parts: vec![GeminiPart {
+            text: Some(instruction),
+            ..Default::default()
+        }],
+    });
+}
+
+/// Extracts the retry delay (in seconds) from a Gemini 429 rate-limit error.
+/// Returns `None` if the error is not a rate-limit error.
+fn parse_rate_limit_retry_secs(error: &str) -> Option<f64> {
+    if !error.contains("429") && !error.contains("RESOURCE_EXHAUSTED") {
+        return None;
+    }
+
+    // Try to extract retryDelay from the JSON error body.
+    // Error format: "Gemini API Error: {\"error\":{...\"details\":[{...\"retryDelay\":\"7s\"...}]}}"
+    if let Some(json_str) = error.strip_prefix("Gemini API Error: ") {
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json_str) {
+            if let Some(details) = parsed
+                .get("error")
+                .and_then(|e| e.get("details"))
+                .and_then(|d| d.as_array())
+            {
+                for detail in details {
+                    if let Some(delay_str) = detail.get("retryDelay").and_then(|v| v.as_str()) {
+                        if let Some(secs_str) = delay_str.strip_suffix('s') {
+                            if let Ok(secs) = secs_str.parse::<f64>() {
+                                return Some(secs);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // We know it's a 429 but can't parse the delay — use a conservative default.
+    Some(10.0)
+}
+
+/// Wraps [`stream_request_iteration`] with automatic retry on 429 rate-limit errors.
+///
+/// When a rate-limit error is received, the function waits for the duration specified
+/// by the API's `retryDelay` field (or a 10 s default) and retries up to two more
+/// times. A `ToolStatus` event is emitted so the user sees feedback during the wait.
+async fn stream_iteration_with_rate_limit_retry(
+    sink: &dyn BrainEventSink,
+    client: &reqwest::Client,
+    url: &str,
+    request_body: &GeminiRequest,
+    channel_id: &str,
+    cancel_token: &tokio_util::sync::CancellationToken,
+) -> Result<StreamIterationResult, String> {
+    const MAX_RATE_LIMIT_RETRIES: usize = 2;
+
+    let mut last_error = String::new();
+
+    for attempt in 0..=MAX_RATE_LIMIT_RETRIES {
+        match stream_request_iteration(
+            sink, client, url, request_body, channel_id, cancel_token,
+        )
+        .await
+        {
+            Ok(result) => return Ok(result),
+            Err(err) => {
+                if attempt < MAX_RATE_LIMIT_RETRIES {
+                    if let Some(secs) = parse_rate_limit_retry_secs(&err) {
+                        let wait_secs = (secs.ceil() as u64).clamp(2, 30);
+                        emit_event(
+                            sink,
+                            channel_id,
+                            GeminiEvent::ToolStatus {
+                                message: format!(
+                                    "Rate limited, retrying in {}s...",
+                                    wait_secs
+                                ),
+                            },
+                        );
+
+                        tokio::select! {
+                            _ = tokio::time::sleep(std::time::Duration::from_secs(wait_secs)) => {},
+                            _ = cancel_token.cancelled() => return Err("CANCELLED".to_string()),
+                        }
+
+                        // Clear any partial tokens from the failed attempt.
+                        emit_event(sink, channel_id, GeminiEvent::Reset);
+
+                        last_error = err;
+                        continue;
+                    }
+                }
+
+                return Err(err);
+            }
+        }
+    }
+
+    Err(last_error)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn stream_gemini_chat_v2(
     runtime: &BrainRuntimeState,
@@ -197,6 +313,7 @@ pub async fn stream_gemini_chat_v2(
         let mut allow_tools = !is_initial_turn;
         let mut tool_calls = 0usize;
         let mut consecutive_tool_failures = 0usize;
+        let mut final_tool_answer_prompt_added = false;
         let mut attachment_display_name_by_path = HashMap::<String, String>::new();
         let tool_declarations = if allow_tools {
             Some(crate::context::loader::load_gemini_tool_declarations()?)
@@ -395,7 +512,12 @@ pub async fn stream_gemini_chat_v2(
                 },
             };
 
-            let iteration = stream_request_iteration(
+            // Clear any stale streamed text before the answer-synthesis pass.
+            if !allow_tools && tool_calls > 0 {
+                emit_event(sink, &channel_id, GeminiEvent::Reset);
+            }
+
+            let iteration = stream_iteration_with_rate_limit_retry(
                 sink,
                 &client,
                 &url,
@@ -406,10 +528,41 @@ pub async fn stream_gemini_chat_v2(
             .await?;
 
             if !allow_tools {
+                if iteration.text.trim().is_empty() {
+                    return Err(if tool_calls > 0 {
+                        "Gemini returned an empty answer after tool results.".to_string()
+                    } else {
+                        "Gemini returned an empty response.".to_string()
+                    });
+                }
                 return Ok(());
             }
 
             let Some(function_call) = iteration.function_call else {
+                if iteration.text.trim().is_empty() {
+                    if tool_calls > 0 && !final_tool_answer_prompt_added {
+                        allow_tools = false;
+                        final_tool_answer_prompt_added = true;
+                        append_final_tool_answer_instruction(
+                            &mut contents,
+                            "The model ended the tool loop without producing user-facing answer text.",
+                        );
+                        emit_event(
+                            sink,
+                            &channel_id,
+                            GeminiEvent::ToolStatus {
+                                message: "Wrapping up with the search results".to_string(),
+                            },
+                        );
+                        continue;
+                    }
+
+                    return Err(if tool_calls > 0 {
+                        "Gemini returned an empty answer after tool results.".to_string()
+                    } else {
+                        "Gemini returned an empty response.".to_string()
+                    });
+                }
                 return Ok(());
             };
 
@@ -530,6 +683,11 @@ pub async fn stream_gemini_chat_v2(
                     role: "user".to_string(),
                     parts: dispatch_result.follow_up_parts,
                 });
+            }
+
+            if !allow_tools && !final_tool_answer_prompt_added {
+                final_tool_answer_prompt_added = true;
+                append_final_tool_answer_instruction(&mut contents, "");
             }
         }
 

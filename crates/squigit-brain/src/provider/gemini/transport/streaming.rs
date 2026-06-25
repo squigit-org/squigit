@@ -1,8 +1,8 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use futures_util::StreamExt;
 use crate::events::BrainEventSink;
+use futures_util::StreamExt;
 
 use super::types::{GeminiEvent, GeminiFunctionCall, GeminiRequest, GeminiResponseChunk};
 
@@ -13,6 +13,7 @@ pub(crate) fn emit_event(sink: &dyn BrainEventSink, channel_id: &str, event: Gem
 pub(crate) struct StreamIterationResult {
     pub(crate) function_call: Option<GeminiFunctionCall>,
     pub(crate) function_call_thought_signature: Option<String>,
+    pub(crate) text: String,
 }
 
 pub(crate) async fn stream_request_iteration(
@@ -113,5 +114,6 @@ pub(crate) async fn stream_request_iteration(
     Ok(StreamIterationResult {
         function_call,
         function_call_thought_signature,
+        text: full_text,
     })
 }

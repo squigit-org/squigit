@@ -6,6 +6,7 @@
 
 import { getProviderPort, type StreamGeminiChatInput } from "../../../ports/provider";
 import type { ProviderStreamEvent } from "../../engine/types";
+import { MODEL_IDS } from "../../../config/models-config";
 
 export type { StreamGeminiChatInput };
 
@@ -38,6 +39,7 @@ export function compressGeminiConversation(
     apiKey,
     imageBrief,
     historyToCompress,
+    MODEL_IDS.MICRO_TASKS,
   );
 }
 

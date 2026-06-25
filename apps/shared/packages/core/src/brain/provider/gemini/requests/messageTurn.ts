@@ -19,6 +19,7 @@ import {
 } from "../../../session/summarizer";
 import { normalizeMessageForHistory } from "../../../attachments/memory";
 import { listenGeminiStream, streamGeminiChat } from "../commands";
+import { requireNonEmptyProviderResponse } from "./responseGuard";
 
 export const sendMessage = async (
   text: string,
@@ -115,15 +116,16 @@ export const sendMessage = async (
     if (brainSessionStore.generationId !== myGenId)
       throw new Error("CANCELLED");
 
-    addToHistory("Assistant", fullResponse);
+    const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+    addToHistory("Assistant", finalResponse);
 
     // Fire-and-forget: compress older turns if threshold reached
     maybeCompressHistory(chatId ?? null);
 
     console.log(
-      `[GeminiClient] Stream Completed. Final Response: "${fullResponse}"`,
+      `[GeminiClient] Stream Completed. Final Response: "${finalResponse}"`,
     );
-    return fullResponse;
+    return finalResponse;
   } catch (error) {
     streamWatchdog.stop();
     clearActiveProviderTransport(channelId, unlisten);

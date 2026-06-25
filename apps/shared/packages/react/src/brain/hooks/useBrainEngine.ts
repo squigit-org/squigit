@@ -39,7 +39,6 @@ import { createToolEventHandler } from "@squigit/core/brain/engine";
 import {
   isBrainHighDemandError,
   isBrainQuotaZeroError,
-  parseBrainError,
   isBrainNetworkError,
   getFriendlyBrainErrorMessage,
 } from "@squigit/core/brain/provider";
@@ -345,6 +344,13 @@ export const useBrainEngine = (config: {
             throw apiError;
           }
           if (isBrainHighDemandError(apiError) || isBrainQuotaZeroError(apiError)) {
+            // If tools already executed in this turn, don't silently fall back.
+            // Fallback would restart the request from scratch, losing all tool
+            // results (search citations, etc.) and producing an empty answer.
+            const activeTurn = pendingAssistantTurnRef.current;
+            if (activeTurn && activeTurn.toolSteps.length > 0) {
+              throw apiError;
+            }
             if (fallbackQueue.length > 0) {
               const nextFallback = fallbackQueue.shift()!;
               console.log(

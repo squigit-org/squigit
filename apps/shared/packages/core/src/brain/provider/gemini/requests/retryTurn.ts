@@ -26,6 +26,7 @@ import {
 } from "../commands";
 import { saveImageBrief } from "../../../../config/chat-storage";
 import { MODEL_IDS } from "../../../../config/models-config";
+import { requireNonEmptyProviderResponse } from "./responseGuard";
 
 export const retryFromMessage = async (
   messageIndex: number,
@@ -178,12 +179,13 @@ export const retryFromMessage = async (
       if (brainSessionStore.generationId !== myGenId)
         throw new Error("CANCELLED");
 
-      setImageDescription(fullResponse);
+      const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+      setImageDescription(finalResponse);
       brainSessionStore.conversationHistory = [
-        { role: "Assistant", content: fullResponse },
+        { role: "Assistant", content: finalResponse },
       ];
 
-      return fullResponse;
+      return finalResponse;
     } catch (error) {
       streamWatchdog.stop();
       clearActiveProviderTransport(channelId, unlisten);
@@ -276,9 +278,10 @@ export const retryFromMessage = async (
     if (brainSessionStore.generationId !== myGenId)
       throw new Error("CANCELLED");
 
-    addToHistory("Assistant", fullResponse);
+    const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+    addToHistory("Assistant", finalResponse);
 
-    return fullResponse;
+    return finalResponse;
   } catch (error) {
     streamWatchdog.stop();
     clearActiveProviderTransport(channelId, unlisten);

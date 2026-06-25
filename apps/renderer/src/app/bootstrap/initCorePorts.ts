@@ -29,11 +29,13 @@ export function initializeCorePorts(): void {
       apiKey: string,
       imageBrief: string,
       historyToCompress: string,
+      model: string,
     ) =>
       platform.invoke<string>("compress_conversation", {
         apiKey,
         imageBrief,
         historyToCompress,
+        model,
       }),
     persistRollingSummary: (chatId: string, summary: string) =>
       platform.invoke("save_rolling_summary", { chatId, summary }),

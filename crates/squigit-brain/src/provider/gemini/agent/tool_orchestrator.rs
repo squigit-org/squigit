@@ -112,11 +112,8 @@ pub(crate) fn build_system_instruction_with_tool_policy(
     image_brief: &str,
     tools_enabled: bool,
 ) -> Result<String, String> {
-    let mut instruction = crate::context::builder::build_system_instruction(
-        user_name,
-        user_email,
-        image_brief,
-    )?;
+    let mut instruction =
+        crate::context::builder::build_system_instruction(user_name, user_email, image_brief)?;
 
     if tools_enabled {
         instruction.push_str(
@@ -134,6 +131,7 @@ pub(crate) fn build_system_instruction_with_tool_policy(
              - Never invent URLs or sources.\n\
              - When using `url`, only fetch URLs from prior search results in this turn.\n\
              - If one search pass is too shallow, call `web_search` again with a refined query.\n\
+             - After tool results contain enough relevant information, write a direct human-facing answer from those results; never finish with only sources or tool metadata.\n\
              - For local attachments, use paths exactly as provided by the user/tool context.\n\
              - If web search fails repeatedly, answer from model knowledge and clearly state web search was unavailable.",
         );

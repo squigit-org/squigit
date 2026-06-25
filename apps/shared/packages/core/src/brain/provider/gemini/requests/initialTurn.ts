@@ -26,6 +26,7 @@ import {
 } from "../commands";
 import { saveImageBrief } from "../../../../config/chat-storage";
 import { MODEL_IDS } from "../../../../config/models-config";
+import { requireNonEmptyProviderResponse } from "./responseGuard";
 
 export const startNewThreadStream = async (
   modelId: string,
@@ -172,13 +173,14 @@ export const startNewThreadStream = async (
     if (brainSessionStore.generationId !== myGenId)
       throw new Error("CANCELLED");
 
-    setImageDescription(fullResponse);
-    addToHistory("Assistant", fullResponse);
+    const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+    setImageDescription(finalResponse);
+    addToHistory("Assistant", finalResponse);
 
     console.log(
-      `[GeminiClient] Stream Completed successfully. Length: ${fullResponse.length} chars.`,
+      `[GeminiClient] Stream Completed successfully. Length: ${finalResponse.length} chars.`,
     );
-    return fullResponse.trim();
+    return finalResponse;
   } catch (error) {
     streamWatchdog.stop();
     clearActiveProviderTransport(channelId, unlisten);
