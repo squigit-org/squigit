@@ -1,7 +1,21 @@
-import { app, BrowserWindow, shell, session } from 'electron';
+import { app, BrowserWindow, shell, session, protocol } from 'electron';
 import path from 'path';
 import { setupIpc } from './ipc';
 import { registerProtocols } from './protocol';
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'squigit-asset',
+    privileges: {
+      standard: false,
+      secure: true,
+      supportFetchAPI: true,
+      bypassCSP: true,
+      corsEnabled: true,
+      stream: true,
+    }
+  }
+]);
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -23,6 +37,28 @@ async function createWindow() {
     },
     transparent: true,
     frame: false,
+  });
+
+  mainWindow.webContents.on('did-start-navigation', () => {
+    // Polyfill Uint8Array.prototype.toHex/fromHex for pdfjs-dist v5.x
+    // Electron 33 ships Chromium ~130, but these APIs landed in Chrome 133.
+    // Must run in the main world (not preload's isolated context).
+    mainWindow?.webContents.executeJavaScript(`
+      if (typeof Uint8Array.prototype.toHex !== 'function') {
+        Uint8Array.prototype.toHex = function() {
+          let h = '';
+          for (let i = 0; i < this.length; i++) h += this[i].toString(16).padStart(2, '0');
+          return h;
+        };
+      }
+      if (typeof Uint8Array.fromHex !== 'function') {
+        Uint8Array.fromHex = function(s) {
+          const b = new Uint8Array(s.length / 2);
+          for (let i = 0; i < s.length; i += 2) b[i/2] = parseInt(s.substring(i, i+2), 16);
+          return b;
+        };
+      }
+    `).catch(() => {});
   });
 
   if (isDev) {

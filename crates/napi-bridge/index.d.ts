@@ -190,6 +190,8 @@ export declare function setAgreedFlag(): void
 
 export declare function startGoogleAuth(): Promise<NapiAuthResult>
 
+export declare function storeFileFromPath(path: string): NapiStoredImage
+
 export declare function storeImageFromPath(path: string): NapiStoredImage
 
 export declare function streamChat(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, rollingSummary: string | undefined | null, userMessage: string, channelId: string, chatId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, userInstruction: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>

@@ -243,7 +243,7 @@ export function setupIpc() {
     return result;
   });
 
-  ipcMain.handle("store_file_from_path", (_, args) => addon.storeImageFromPath?.(args.path));
+  ipcMain.handle("store_file_from_path", (_, args) => addon.storeFileFromPath?.(args.path));
   ipcMain.handle("validate_text_file", () => true);
   ipcMain.handle("resolve_attachment_path", (_, args) => args.path);
   

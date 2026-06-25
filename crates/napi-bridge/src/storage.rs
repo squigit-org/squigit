@@ -60,6 +60,15 @@ pub fn store_image_from_path(path: String) -> Result<NapiStoredImage> {
 }
 
 #[napi]
+pub fn store_file_from_path(path: String) -> Result<NapiStoredImage> {
+    let storage = active_storage()?;
+    let stored = storage
+        .store_file_from_path(&path, None)
+        .map_err(map_storage_err)?;
+    Ok(stored.into())
+}
+
+#[napi]
 pub fn get_image_path(hash: String) -> Result<String> {
     let storage = active_storage()?;
     storage.get_image_path(&hash).map_err(map_storage_err)

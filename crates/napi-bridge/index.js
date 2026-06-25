@@ -643,6 +643,7 @@ module.exports.saveRollingSummary = nativeBinding.saveRollingSummary
 module.exports.setActiveProfile = nativeBinding.setActiveProfile
 module.exports.setAgreedFlag = nativeBinding.setAgreedFlag
 module.exports.startGoogleAuth = nativeBinding.startGoogleAuth
+module.exports.storeFileFromPath = nativeBinding.storeFileFromPath
 module.exports.storeImageFromPath = nativeBinding.storeImageFromPath
 module.exports.streamChat = nativeBinding.streamChat
 module.exports.updateChatMetadata = nativeBinding.updateChatMetadata
