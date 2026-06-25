@@ -238,20 +238,22 @@ async fn stream_iteration_with_rate_limit_retry(
                 if attempt < MAX_RATE_LIMIT_RETRIES {
                     if let Some(secs) = parse_rate_limit_retry_secs(&err) {
                         let wait_secs = (secs.ceil() as u64).clamp(2, 30);
-                        emit_event(
-                            sink,
-                            channel_id,
-                            GeminiEvent::ToolStatus {
-                                message: format!(
-                                    "Rate limited, retrying in {}s...",
-                                    wait_secs
-                                ),
-                            },
-                        );
+                        for remaining_secs in (1..=wait_secs).rev() {
+                            emit_event(
+                                sink,
+                                channel_id,
+                                GeminiEvent::ToolStatus {
+                                    message: format!(
+                                        "Rate limited, retrying in {}s...",
+                                        remaining_secs
+                                    ),
+                                },
+                            );
 
-                        tokio::select! {
-                            _ = tokio::time::sleep(std::time::Duration::from_secs(wait_secs)) => {},
-                            _ = cancel_token.cancelled() => return Err("CANCELLED".to_string()),
+                            tokio::select! {
+                                _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {},
+                                _ = cancel_token.cancelled() => return Err("CANCELLED".to_string()),
+                            }
                         }
 
                         // Clear any partial tokens from the failed attempt.
