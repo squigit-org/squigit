@@ -544,7 +544,7 @@ export function setupIpc() {
   });
 
   // App commands
-  ipcMain.handle("app:getVersion", () => "0.1.0");
+  ipcMain.handle("app:getVersion", () => require("electron").app.getVersion());
   ipcMain.handle("app:getRuntimeVersion", () => process.versions.electron);
   ipcMain.handle("app:exit", (_, args) =>
     require("electron").app.exit(args?.code || 0),
@@ -558,7 +558,9 @@ export function setupIpc() {
   ipcMain.handle("get_linux_package_manager", () => "apt");
   ipcMain.handle("get_machine_info", () => addon.getMachineInfo?.());
   ipcMain.handle("set_background_color", () => {});
-  ipcMain.handle("get_app_constants", () => ({ appVersion: "0.2.0" }));
+  ipcMain.handle("get_app_constants", () => ({
+    appVersion: require("electron").app.getVersion(),
+  }));
   ipcMain.handle("get_system_theme", () => "dark");
   ipcMain.handle("run_sidecar_version", (_, args) => addon.runSidecarVersion?.(args.command));
   ipcMain.handle("updater:check", () => null);

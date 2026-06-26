@@ -6,11 +6,15 @@
 
 const GITHUB_BASE = (sub: string = "github") =>
   `https://${sub}.com/a7mddra/squigit`;
+const usercontent = "raw.githubusercontent";
 
 export const github = {
   repo: GITHUB_BASE(),
   latestRelease: `${GITHUB_BASE()}/releases/latest`,
-  rawChangelog: `${GITHUB_BASE("raw.githubusercontent")}/main/CHANGELOG.md`,
+  shellChangelog: `${GITHUB_BASE(usercontent)}/main/apps/desktop/CHANGELOG.md`,
+  rendererChangelog: `${GITHUB_BASE(usercontent)}/main/apps/renderer/CHANGELOG.md`,
+  ocrChangelog: `${GITHUB_BASE(usercontent)}/main/sidecars/paddle-ocr/CHANGELOG.md`,
+  sttChangelog: `${GITHUB_BASE(usercontent)}/main/sidecars/whisper-stt/CHANGELOG.md`,
   issues: {
     base: `${GITHUB_BASE()}/issues`,
     new: (template: string = "bug_report.md") =>

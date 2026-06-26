@@ -5,11 +5,12 @@
  */
 
 import { useEffect } from "react";
-import { commands } from "@/platform";
+import { commands, platform } from "@/platform";
 import { github } from "@squigit/core/services/github";
-import packageJson from "@/../package.json";
 
-const DESKTOP_CHANGELOG_URL = github.rawChangelog;
+const DESKTOP_CHANGELOG_URL = github.shellChangelog;
+const OCR_CHANGELOG_URL = github.ocrChangelog;
+const STT_CHANGELOG_URL = github.sttChangelog;
 
 export type UpdateComponent = "desktop" | "ocr" | "stt";
 
@@ -70,11 +71,15 @@ async function fetchReleaseNotes(
     const latestVersion = latestMatch[1];
 
     if (compareVersions(latestVersion, currentVersion) <= 0) {
-      console.log(`[Updater] No update needed for ${component}. Remote: ${latestVersion} | Local: ${currentVersion}`);
+      console.log(
+        `[Updater] No update needed for ${component}. Remote: ${latestVersion} | Local: ${currentVersion}`,
+      );
       return null;
     }
-    
-    console.log(`[Updater] Update found for ${component}! Remote: ${latestVersion} | Local: ${currentVersion}`);
+
+    console.log(
+      `[Updater] Update found for ${component}! Remote: ${latestVersion} | Local: ${currentVersion}`,
+    );
 
     const startIdx = latestMatch.index! + latestMatch[0].length;
     const endIdx = matches.length > 1 ? matches[1].index! : text.length;
@@ -153,12 +158,17 @@ export function useUpdateCheck() {
       const queue: ReleaseInfo[] = [];
 
       // 1. Desktop
-      const desktopUpdate = await fetchReleaseNotes(
-        DESKTOP_CHANGELOG_URL,
-        packageJson.version,
-        "desktop",
-      );
-      if (desktopUpdate?.hasUpdate) queue.push(desktopUpdate);
+      try {
+        const shellVersion = await platform.app.getVersion();
+        const desktopUpdate = await fetchReleaseNotes(
+          DESKTOP_CHANGELOG_URL,
+          shellVersion,
+          "desktop",
+        );
+        if (desktopUpdate?.hasUpdate) queue.push(desktopUpdate);
+      } catch (error) {
+        console.error("Error resolving desktop version:", error);
+      }
 
       // 2. OCR
       const installedOcrVersion = await getSidecarVersion(
@@ -166,7 +176,7 @@ export function useUpdateCheck() {
       );
       if (installedOcrVersion) {
         const ocrUpdate = await fetchReleaseNotes(
-          "https://raw.githubusercontent.com/a7mddra/squigit/main/sidecars/paddle-ocr/CHANGELOG.md",
+          OCR_CHANGELOG_URL,
           installedOcrVersion,
           "ocr",
         );
@@ -179,7 +189,7 @@ export function useUpdateCheck() {
       );
       if (installedSttVersion) {
         const sttUpdate = await fetchReleaseNotes(
-          "https://raw.githubusercontent.com/a7mddra/squigit/main/sidecars/whisper-stt/CHANGELOG.md",
+          STT_CHANGELOG_URL,
           installedSttVersion,
           "stt",
         );

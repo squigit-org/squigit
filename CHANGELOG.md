@@ -2,28 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+This log tracks repo-level changes using CalVer (`YY.MM.DD`).
 
-## [0.2.1] - 2026-06-25
+## [26.06.26] - 2026-06-26
 
 ### Changed
 
-- Test update check feature
+- Reworked `cargo xtask version` around split shell, renderer, repo, OCR, and STT version pumping.
 
-## [0.2.0] - 2026-05-29
+## [26.05.29] - 2026-05-29
 
 ### Changed
 
 - Migrated desktop shell architecture from Tauri to Electron
 
-## [0.1.1] - 2026-05-29
-
 ### Fixed
 
 - Hardcoded workspace crate versions to prevent leakage from higher workspace versions when built as an archive
 
-## [0.1.0] - 2025-10-02
+## [25.10.02] - 2025-10-02
 
 ### Added
 

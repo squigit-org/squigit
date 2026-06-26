@@ -1,6 +1,6 @@
 {
   "name": "@squigit/renderer",
-  "version": "0.2.0",
+  "version": "26.06.26",
   "type": "module",
   "$schema": "https://json.schemastore.org/package.json",
   "homepage": "https://github.com/squigit-org/squigit#readme",

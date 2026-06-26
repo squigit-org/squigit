@@ -292,20 +292,20 @@ fn version_consistency_check() -> Result<CheckResult> {
     let root = project_root();
     let version_file = root.join("VERSION");
 
-    let canonical = match fs::read_to_string(&version_file) {
+    let root_version = match fs::read_to_string(&version_file) {
         Ok(content) => content.trim().to_string(),
         Err(_) => {
             return Ok(CheckResult::fail(
                 "version consistency",
                 format!(
-                    "VERSION file missing at {}. Use `cargo xtask version <x.y.z>` to create/sync it.",
+                    "VERSION file missing at {}. Use `cargo xtask version --repo` to create/sync it.",
                     version_file.display()
                 ),
             ));
         }
     };
 
-    if canonical.is_empty() {
+    if root_version.is_empty() {
         return Ok(CheckResult::fail(
             "version consistency",
             "VERSION file is empty",
@@ -314,149 +314,142 @@ fn version_consistency_check() -> Result<CheckResult> {
 
     let mut mismatches = Vec::new();
 
-    let workspace_version = read_workspace_version(&root.join("Cargo.toml"))?;
-    if workspace_version.as_deref() != Some(canonical.as_str()) {
+    if !is_calver(&root_version) {
         mismatches.push(format!(
-            "Cargo workspace version mismatch: expected {canonical}, got {}",
-            workspace_version.unwrap_or_else(|| "<missing>".to_string())
+            "VERSION should use CalVer YY.MM.DD, got {root_version}"
         ));
     }
 
-    for (path, value) in collect_package_versions(&root)? {
-        if value != canonical {
-            mismatches.push(format!(
-                "{} -> {}",
-                path.strip_prefix(&root).unwrap_or(path.as_path()).display(),
-                value
-            ));
-        }
+    let root_changelog_version = read_first_changelog_version(&root.join("CHANGELOG.md"))?;
+    if root_changelog_version.as_deref() != Some(root_version.as_str()) {
+        mismatches.push(format!(
+            "root repo metadata mismatch: VERSION={} | CHANGELOG={}",
+            root_version,
+            root_changelog_version.unwrap_or_else(|| "<missing>".to_string())
+        ));
     }
 
-    for (path, value) in [
+    let shell_version = expect_json_version(&root.join("apps").join("desktop").join("package.json"))?;
+    if !is_semver(&shell_version) {
+        mismatches.push(format!("shell version should use SemVer, got {shell_version}"));
+    }
+    for (label, value) in [
         (
-            root.join("apps")
-                .join("tauri")
-                .join("tauri.conf.json"),
-            read_json_version(&root.join("apps").join("tauri").join("tauri.conf.json"))?,
+            "desktop changelog",
+            read_first_changelog_version(&root.join("apps").join("desktop").join("CHANGELOG.md"))?
+                .unwrap_or_else(|| "<missing>".to_string()),
         ),
         (
-            root.join("apps")
-                .join("renderer")
-                .join("package.json"),
-            read_json_version(
+            "qt-capture Cargo",
+            expect_cargo_package_version(&root.join("sidecars").join("qt-capture").join("Cargo.toml"))?,
+        ),
+        (
+            "qt-capture CMake",
+            expect_cmake_version(
                 &root
-                    .join("apps")
-                    .join("renderer")
-                    .join("package.json"),
+                    .join("sidecars")
+                    .join("qt-capture")
+                    .join("native")
+                    .join("CMakeLists.txt"),
             )?,
         ),
+        (
+            "napi package",
+            expect_json_version(&root.join("crates").join("napi-bridge").join("package.json"))?,
+        ),
+        (
+            "napi Cargo",
+            expect_cargo_package_version(&root.join("crates").join("napi-bridge").join("Cargo.toml"))?,
+        ),
+        (
+            "napi index.js",
+            expect_napi_index_version(&root.join("crates").join("napi-bridge").join("index.js"))?,
+        ),
     ] {
-        if value.as_deref() != Some(canonical.as_str()) {
-            mismatches.push(format!(
-                "{} -> {}",
-                path.strip_prefix(&root).unwrap_or(path.as_path()).display(),
-                value.unwrap_or_else(|| "<missing>".to_string())
-            ));
+        if value != shell_version {
+            mismatches.push(format!("shell mismatch: {label}={value} | expected {shell_version}"));
         }
     }
 
-    for cmake_path in [
-        root.join("sidecars")
-            .join("qt-capture")
-            .join("native")
-            .join("CMakeLists.txt"),
-        root.join("sidecars")
-            .join("whisper-stt")
-            .join("CMakeLists.txt"),
-    ] {
-        let versions = read_cmake_project_versions(&cmake_path)?;
-        if versions.is_empty() {
-            mismatches.push(format!(
-                "{} -> missing project VERSION",
-                cmake_path
-                    .strip_prefix(&root)
-                    .unwrap_or(cmake_path.as_path())
-                    .display()
-            ));
-        } else if versions.iter().any(|value| value != &canonical) {
-            mismatches.push(format!(
-                "{} -> {}",
-                cmake_path
-                    .strip_prefix(&root)
-                    .unwrap_or(cmake_path.as_path())
-                    .display(),
-                versions.join(", ")
-            ));
-        }
+    let renderer_version =
+        expect_json_version(&root.join("apps").join("renderer").join("package.json"))?;
+    if !is_calver(&renderer_version) {
+        mismatches.push(format!(
+            "renderer package version should use CalVer YY.MM.DD, got {renderer_version}"
+        ));
+    }
+    let renderer_changelog =
+        read_first_changelog_version(&root.join("apps").join("renderer").join("CHANGELOG.md"))?;
+    if renderer_changelog.as_deref() != Some(renderer_version.as_str()) {
+        mismatches.push(format!(
+            "renderer mismatch: package={} | changelog={}",
+            renderer_version,
+            renderer_changelog.unwrap_or_else(|| "<missing>".to_string())
+        ));
+    }
+
+    let ocr_version = expect_python_version(
+        &root
+            .join("sidecars")
+            .join("paddle-ocr")
+            .join("src")
+            .join("__init__.py"),
+    )?;
+    let ocr_changelog =
+        read_first_changelog_version(&root.join("sidecars").join("paddle-ocr").join("CHANGELOG.md"))?;
+    if ocr_changelog.as_deref() != Some(ocr_version.as_str()) {
+        mismatches.push(format!(
+            "ocr mismatch: package={} | changelog={}",
+            ocr_version,
+            ocr_changelog.unwrap_or_else(|| "<missing>".to_string())
+        ));
+    }
+
+    let stt_version =
+        expect_cmake_version(&root.join("sidecars").join("whisper-stt").join("CMakeLists.txt"))?;
+    let stt_changelog =
+        read_first_changelog_version(&root.join("sidecars").join("whisper-stt").join("CHANGELOG.md"))?;
+    if stt_changelog.as_deref() != Some(stt_version.as_str()) {
+        mismatches.push(format!(
+            "stt mismatch: package={} | changelog={}",
+            stt_version,
+            stt_changelog.unwrap_or_else(|| "<missing>".to_string())
+        ));
     }
 
     if mismatches.is_empty() {
         Ok(CheckResult::pass(
             "version consistency",
-            format!("all tracked versions match canonical {canonical}"),
+            format!(
+                "repo={}, shell={}, renderer={}, ocr={}, stt={}",
+                root_version, shell_version, renderer_version, ocr_version, stt_version
+            ),
         ))
     } else {
         Ok(CheckResult::fail(
             "version consistency",
-            format!("canonical VERSION={canonical}\n{}", mismatches.join("\n")),
+            mismatches.join("\n"),
         ))
     }
 }
 
-fn read_workspace_version(path: &Path) -> Result<Option<String>> {
+fn expect_json_version(path: &Path) -> Result<String> {
+    read_json_version(path)?.ok_or_else(|| anyhow::anyhow!("Missing version in {}", path.display()))
+}
+
+fn expect_cargo_package_version(path: &Path) -> Result<String> {
     let text = fs::read_to_string(path)
-        .with_context(|| format!("Failed to read workspace Cargo file: {}", path.display()))?;
+        .with_context(|| format!("Failed to read Cargo file: {}", path.display()))?;
     let doc = text
         .parse::<DocumentMut>()
         .with_context(|| format!("Failed to parse TOML at {}", path.display()))?;
 
-    let version = doc
-        .get("workspace")
-        .and_then(|item| item.as_table_like())
-        .and_then(|workspace| workspace.get("package"))
+    doc.get("package")
         .and_then(|item| item.as_table_like())
         .and_then(|pkg| pkg.get("version"))
         .and_then(|item| item.as_str())
-        .map(ToString::to_string);
-
-    Ok(version)
-}
-
-fn collect_package_versions(root: &Path) -> Result<Vec<(PathBuf, String)>> {
-    let mut out = Vec::new();
-
-    for entry in WalkDir::new(root)
-        .into_iter()
-        .filter_entry(|entry| !is_ignored_path(entry.path()))
-    {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(_) => continue,
-        };
-
-        if !entry.file_type().is_file() || entry.file_name() != "Cargo.toml" {
-            continue;
-        }
-
-        let path = entry.path().to_path_buf();
-        let text = fs::read_to_string(&path)
-            .with_context(|| format!("Failed to read Cargo file: {}", path.display()))?;
-        let doc = match text.parse::<DocumentMut>() {
-            Ok(doc) => doc,
-            Err(_) => continue,
-        };
-
-        if let Some(version) = doc
-            .get("package")
-            .and_then(|item| item.as_table_like())
-            .and_then(|pkg| pkg.get("version"))
-            .and_then(|item| item.as_str())
-        {
-            out.push((path, version.to_string()));
-        }
-    }
-
-    Ok(out)
+        .map(ToString::to_string)
+        .ok_or_else(|| anyhow::anyhow!("Missing explicit package.version in {}", path.display()))
 }
 
 fn read_json_version(path: &Path) -> Result<Option<String>> {
@@ -471,17 +464,61 @@ fn read_json_version(path: &Path) -> Result<Option<String>> {
         .map(ToString::to_string))
 }
 
-fn read_cmake_project_versions(path: &Path) -> Result<Vec<String>> {
+fn expect_cmake_version(path: &Path) -> Result<String> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read CMake file: {}", path.display()))?;
 
     let re = Regex::new(r"(?i)project\([^\)]*\bVERSION\s+([0-9]+\.[0-9]+\.[0-9]+)")
         .expect("valid regex");
 
-    Ok(re
+    let version = re
         .captures_iter(&content)
-        .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-        .collect())
+        .find_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+        .ok_or_else(|| anyhow::anyhow!("Missing project VERSION in {}", path.display()))?;
+
+    Ok(version)
+}
+
+fn expect_python_version(path: &Path) -> Result<String> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read Python file: {}", path.display()))?;
+    let re = Regex::new(r#"__version__\s*=\s*"([^"]+)""#).expect("valid regex");
+    re.captures(&content)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+        .ok_or_else(|| anyhow::anyhow!("Missing __version__ in {}", path.display()))
+}
+
+fn read_first_changelog_version(path: &Path) -> Result<Option<String>> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read changelog: {}", path.display()))?;
+    let re = Regex::new(r"(?m)^## \[([0-9]+\.[0-9]+\.[0-9]+|[0-9]{2}\.[0-9]{2}\.[0-9]{2})\]")
+        .expect("valid changelog regex");
+    let version = re
+        .captures_iter(&content)
+        .find_map(|caps| caps.get(1).map(|m| m.as_str().to_string()));
+    Ok(version)
+}
+
+fn expect_napi_index_version(path: &Path) -> Result<String> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read NAPI wrapper: {}", path.display()))?;
+    let re = Regex::new(r"bindingPackageVersion !== '([0-9]+\.[0-9]+\.[0-9]+)'")
+        .expect("valid napi regex");
+    re.captures(&content)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+        .ok_or_else(|| anyhow::anyhow!("Missing NAPI version guard in {}", path.display()))
+}
+
+fn is_semver(version: &str) -> bool {
+    Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+        .expect("valid regex")
+        .is_match(version)
+}
+
+fn is_calver(version: &str) -> bool {
+    Regex::new(r"^[0-9]{2}\.[0-9]{2}\.[0-9]{2}$")
+        .expect("valid regex")
+        .is_match(version)
 }
 
 fn path_size_bytes(path: &Path) -> Result<u64> {
@@ -521,14 +558,4 @@ fn format_bytes(bytes: u64) -> String {
     } else {
         format!("{} B", bytes)
     }
-}
-
-fn is_ignored_path(path: &Path) -> bool {
-    path.components().any(|component| {
-        let value = component.as_os_str().to_string_lossy();
-        matches!(
-            value.as_ref(),
-            ".git" | "target" | "node_modules" | "venv" | "build" | "dist"
-        )
-    })
 }

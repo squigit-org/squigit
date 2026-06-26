@@ -1,132 +1,173 @@
 # Release and Update Strategy
 
-Squigit is distributed as three distinct components, divided into two primary layers (the application shell and OS-level CLI dependencies):
+Squigit is distributed as four independently versioned components:
 
-1. **Desktop App**: The main application shell and UI. This includes `electron`, the `renderer` React app, and the lightweight `qt-capture` screen capture sidecar (which is baked directly into the Electron bundle since it's <50 MiB).
-2. **Squigit OCR Engine**: A standalone OS-level CLI tool (`squigit-ocr`) distributed via package managers.
-3. **Squigit STT Engine**: A standalone OS-level CLI tool (`squigit-stt`) distributed via package managers.
+1. **Shell**: The rare-update desktop shell. This is Electron, Chromium, `qt-capture`, and the `napi-bridge` native layer.
+2. **Renderer**: The daily-update React UI bundle. This is the app surface shipped as JavaScript, CSS, and static assets.
+3. **Squigit OCR Engine**: The standalone `squigit-ocr` CLI distributed through OS package managers.
+4. **Squigit STT Engine**: The standalone `squigit-stt` CLI distributed through OS package managers.
 
-Because the components are distinct and have different sizes and update lifecycles, they are released and updated independently. However, the Desktop App enforces strict version guards (similar to a `package-lock.json` or `requirements.txt`) to ensure it only runs with compatible versions of the OCR and STT engines.
+These components have different release costs and update channels, so they are versioned separately. The root repo also has its own CalVer metadata in `VERSION` and `CHANGELOG.md`; it represents repo-level work, not a shipped runtime component.
 
 ## 1. Releases
 
-*(TBD: Documentation on DMG, EXE, and APT/DNF release packaging)*
+_(TBD: Documentation on DMG, EXE, APT, DNF, Homebrew, and Winget release packaging.)_
 
 ## 2. Version Pumping
 
-To manage the versioning of the repository, Squigit uses a centralized "version pumping" pipeline via a custom Cargo `xtask`.
+Squigit uses `cargo xtask version` to update component versions and scaffold changelogs. The command supports exactly one target at a time:
 
-### How it Works
-
-You can bump versions by specifying the component you want to target (`--app`, `--renderer`, `--ocr`, `--stt`) alongside a bump strategy:
 ```bash
-cargo xtask version --app --bump patch
-cargo xtask version --renderer --bump minor
-cargo xtask version --stt 1.2.3
-# You can also bump multiple components at once:
-cargo xtask version --app --renderer --bump patch
+cargo xtask version --shell 0.2.0
+cargo xtask version --renderer
+cargo xtask version --ocr 0.1.1
+cargo xtask version --stt 0.2.1
+cargo xtask version --repo
 ```
 
-This pipeline automatically touches all the necessary files across the monorepo depending on the targeted components:
+There is no `--bump` mode. Shell, OCR, and STT require an explicit SemVer argument. Renderer and repo use today's CalVer in `YY.MM.DD` format.
 
-**1. Desktop App Shell (`--app`)**
-- **Canonical Source**: Updates the root `VERSION` file.
-- **Rust Crates**: Traverses the workspace and updates the `workspace.package.version` and `package.version` in every `Cargo.toml` (including the `qt-capture` Cargo manifest).
-- **Node/Electron**: Updates the top-level `"version"` field in `apps/electron/package.json`.
-- **C++/CMake Projects**: Updates the `project(... VERSION ...)` declaration in `sidecars/qt-capture/native/CMakeLists.txt`.
-- **Changelog**: Automatically scaffolds a new version section in the root `CHANGELOG.md`.
+### Shell (`--shell <semver>`)
 
-**2. UI/Renderer (`--renderer`)**
-- **Canonical Source**: Updates the `"version"` field in `apps/renderer/package.json`.
-- **Changelog**: Automatically scaffolds a new version section in `apps/renderer/CHANGELOG.md`. *Note: Unlike other components, this changelog does not generate `TBD` placeholders for features/fixes, as it is designed solely to be read by the background OTA update checker without presenting UI alerts.*
+The shell is SemVer. Pumping it updates:
 
-**3. OCR Engine (`--ocr`)**
-- **Canonical Source**: Updates `__version__ = "..."` and `@version` in `sidecars/paddle-ocr/src/__init__.py`.
-- **Changelog**: Automatically scaffolds a new version section in `sidecars/paddle-ocr/CHANGELOG.md`.
+- `apps/desktop/package.json`
+- `apps/desktop/CHANGELOG.md`
+- `sidecars/qt-capture/Cargo.toml`
+- `sidecars/qt-capture/native/CMakeLists.txt`
+- `crates/napi-bridge/Cargo.toml`
+- `crates/napi-bridge/package.json`
+- `crates/napi-bridge/index.js`
 
-**4. STT Engine (`--stt`)**
-- **Canonical Source**: Updates the `project(... VERSION ...)` declaration in `sidecars/whisper-stt/CMakeLists.txt`.
-- **Changelog**: Automatically scaffolds a new version section in `sidecars/whisper-stt/CHANGELOG.md`.
+Because shell work is also repo work, `--shell` also updates root `VERSION` and `CHANGELOG.md` using today's CalVer.
 
+### Renderer (`--renderer`)
 
+The renderer is CalVer. Pumping it updates:
 
-### Dependency Version Guards
+- `apps/renderer/package.json`
+- `apps/renderer/CHANGELOG.md`
 
-While the pumper currently bumps everything simultaneously, the runtime enforces specific constraints on the standalone engines (OCR/STT). In `crates/desktop-runtime/src/sidecar.rs` and `crates/squigit-ocr/src/sidecar.rs`, the shell defines requirements (e.g., `>=1.2.0` or strict `1.2.0`). When the app launches, it invokes the standalone engines with the `--version` flag. If the installed CLI doesn't satisfy the lockfile guard, the user is prompted to upgrade it.
+The renderer changelog is ping-only. It intentionally does not scaffold `TBD` sections because daily UI/CSS changes should not force a full documented release note entry.
+
+### OCR (`--ocr <semver>`)
+
+The OCR engine is SemVer. Pumping it updates:
+
+- `sidecars/paddle-ocr/src/__init__.py`
+- `sidecars/paddle-ocr/CHANGELOG.md`
+
+Because sidecar work is also repo work, `--ocr` also updates root `VERSION` and `CHANGELOG.md` using today's CalVer.
+
+### STT (`--stt <semver>`)
+
+The STT engine is SemVer. Pumping it updates:
+
+- `sidecars/whisper-stt/CMakeLists.txt`
+- `sidecars/whisper-stt/CHANGELOG.md`
+
+Because sidecar work is also repo work, `--stt` also updates root `VERSION` and `CHANGELOG.md` using today's CalVer.
+
+### Repo (`--repo`)
+
+The root repo version is CalVer. Pumping it updates:
+
+- `VERSION`
+- `CHANGELOG.md`
+
+Use this for repo-only work such as restructuring, docs, workflows, or shared maintenance that does not belong to a shipped component changelog.
+
+If multiple commands touch the root changelog on the same day, xtask reuses the existing top CalVer section and ensures the documented scaffold exists. It does not create duplicate same-day root headings.
 
 ## 3. Update Strategy
 
-The application includes a built-in mechanism to detect, parse, and present updates for all three components directly within the user interface (`UpdateNotesRoute.tsx`).
+Squigit has three update layers.
 
-### Update Detection Pipeline
+### Rare Shell Updates
 
-The update detection is handled by the `useUpdateCheck` hook (`apps/renderer/src/hooks/system/useUpdateCheck.ts`).
+Shell updates require reinstalling the app through the platform installer or package manager, such as NSIS, DMG, APT, or DNF.
 
-1. **Version Resolution**:
-   - **Desktop**: The local version is read from `apps/renderer/package.json`.
-   - **Sidecars (OCR/STT)**: The local version is determined by invoking the sidecar executable with the `--version` flag. This resolution is managed by `crates/desktop-runtime/src/sidecar.rs` and `crates/squigit-ocr/src/sidecar.rs`.
+The shell contains Electron, Chromium, `qt-capture`, and `napi-bridge`. The app checks shell release notes from `apps/desktop/CHANGELOG.md`. The local shell version comes from `platform.app.getVersion()`.
 
-2. **Fetching Changelogs**:
-   - The app fetches the raw `CHANGELOG.md` files directly from the GitHub repository for each component:
-     - Desktop: Main `CHANGELOG.md`.
-     - OCR: `sidecars/paddle-ocr/CHANGELOG.md`.
-     - STT: `sidecars/whisper-stt/CHANGELOG.md`.
+### Daily Renderer Updates
 
-3. **Comparison and Queuing**:
-   - The latest version is extracted from the `## [VERSION]` header in the remote changelog.
-   - If the remote version is greater than the local version, the update notes are parsed.
-   - The parsed release information is queued in `localStorage` under `pending_updates_queue` and a `squigit-updates-changed` event is dispatched to trigger the UI.
+Renderer updates are intended to be handled inside the app. The renderer is versioned with CalVer and checked against `apps/renderer/CHANGELOG.md`.
 
-### Formatting Changelogs for the UI
+The future OTA flow is:
 
-The `UpdateNotesRoute.tsx` component is designed to render release notes attractively using sections and accordions. To ensure your release notes are parsed and displayed correctly in the app, you **must** follow these formatting rules when updating any `CHANGELOG.md`:
+1. Check `apps/renderer/CHANGELOG.md`.
+2. If a newer renderer version exists, download the new JS/CSS bundle into user data.
+3. Rewrite the local renderer `index.html` reference to point at the downloaded bundle.
+4. Apply the new bundle on the next app launch.
+5. Fall back to the bundled renderer if the downloaded bundle is removed or invalid.
 
-#### 1. Version Header
-Start the release notes with a level 2 header containing the version in brackets.
+This OTA implementation is not built yet.
+
+### OS-Managed Sidecar Updates
+
+OCR and STT are heavy standalone CLIs. They are upgraded through OS package managers such as APT, DNF, Homebrew, and Winget.
+
+The app checks installed versions by running:
+
+```bash
+squigit-ocr --version
+squigit-stt --version
+```
+
+It compares those versions against:
+
+- `sidecars/paddle-ocr/CHANGELOG.md`
+- `sidecars/whisper-stt/CHANGELOG.md`
+
+When a sidecar update is available, `UpdateNotesRoute.tsx` shows release notes and an OS-specific package-manager command. The app does not install sidecar updates itself.
+
+## 4. Changelog Format
+
+All component changelogs use level-two version headings:
+
 ```markdown
 ## [0.2.0] - 2026-05-29
 ```
 
-#### 2. Version Info (Size)
-To display the download size in the UI's footer, include a `### Version Info` section with a `**Size**:` property.
-```markdown
-### Version Info
+Renderer and root repo CalVer entries use the same shape:
 
-**Size**: ~203 MiB
+```markdown
+## [26.06.26] - 2026-06-26
 ```
 
-#### 3. Categorized Sections
-Group your bullet points under specific level 3 headers. The UI explicitly looks for and orders these sections:
-- `### New Features` (Defaults to being open in the UI)
+Documented changelogs use `TBD` scaffolding:
+
+```markdown
+### Added
+
+- TBD
+
+### Changed
+
+- TBD
+
+### Fixed
+
+- TBD
+```
+
+Ping-only changelogs only add the version heading.
+
+For update notes rendered in the app, prefer these sections:
+
+- `### Version Info`
+- `### New Features`
 - `### Bug Fixes`
 - `### UI Improvements`
 
-You can include other custom section headers as well; they will be parsed and rendered below the standard ones.
+Include `**Size**: ...` under `### Version Info` when the UI should display a download size.
 
-#### 4. Bullet Points
-List the changes using standard Markdown bullet points (`-` or `*`). The parser automatically strips out Markdown formatting like bold (`**`), italic (`*`, `_`), and inline code (`` ` ``) to keep the UI clean.
+## 5. Help and About Versions
 
-**Example of a perfect Changelog entry:**
+`HelpSettings.tsx` shows different sources intentionally:
 
-```markdown
-## [0.1.0] - 2026-04-18
-
-### Version Info
-
-**Size**: ~196 MiB
-
-### New Features
-
-- Initial release of standalone local Whisper C++ STT engine
-- Added support for 12 new languages
-
-### Bug Fixes
-
-- Fixed an issue with audio device disconnection crashes
-```
-
-### Presentation and Upgrading
-
-When an update is pending:
-- **Desktop Updates**: The UI presents an "Update Now" button (if running in Electron) which triggers the built-in updater.
-- **Sidecar Updates**: Because the OCR and STT engines are heavy and distributed as OS-level packages (via Homebrew, APT, DNF, Winget, etc.), they are upgraded purely through external terminal commands (e.g., `apt upgrade squigit-ocr`). The application shell does not execute or manage these engine updates itself. Instead, the UI simply generates the appropriate terminal command using the `usePlatform` hook and displays it for the user to copy, run, and manually confirm by clicking "I've Upgraded".
+- **Squigit**: Renderer version from `apps/renderer/package.json` in CalVer form, such as `v26.06.26`.
+- **Shell**: Shell version from `await platform.app.getVersion()` in SemVer form.
+- **Runtime**: Electron or Tauri runtime version.
+- **Engines**: OCR/STT versions read from their `--version` output.
+- **Commit**: `VITE_GIT_COMMIT`, or `Development Mode` locally.

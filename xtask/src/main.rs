@@ -13,8 +13,9 @@
 //!   cargo xtask check sidecars qt-capture
 //!   cargo xtask check apps desktop renderer
 //!   cargo xtask report --strict
-//!   cargo xtask version 0.2.0
-//!   cargo xtask version --bump patch
+//!   cargo xtask version --shell 0.2.0
+//!   cargo xtask version --renderer
+//!   cargo xtask version --repo
 //!   cargo xtask setup --all
 
 pub mod commands;
@@ -115,20 +116,16 @@ enum Commands {
         path: Vec<String>,
     },
 
-    /// Sync project version across Cargo/JSON/CMake/changelog
+    /// Sync project versions across shell, renderer, sidecars, and repo metadata
     Version {
-        /// Explicit target semver (x.y.z).
+        /// Explicit semver for shell, OCR, or STT targets.
         version: Option<String>,
 
-        /// Semantic bump mode.
-        #[arg(long, value_enum)]
-        bump: Option<version::BumpPart>,
-
-        /// Target the desktop app shell (Electron, Renderer, Rust crates, Qt-capture).
+        /// Target the desktop shell (Electron, Qt capture, and NAPI bridge).
         #[arg(long)]
-        app: bool,
+        shell: bool,
 
-        /// Target the frontend UI bundle (OTA updates).
+        /// Target the frontend renderer bundle using today's CalVer.
         #[arg(long)]
         renderer: bool,
 
@@ -139,6 +136,10 @@ enum Commands {
         /// Target the standalone STT engine (C++).
         #[arg(long)]
         stt: bool,
+
+        /// Target repo metadata using today's CalVer.
+        #[arg(long)]
+        repo: bool,
     },
 
     /// Contributor environment setup (safe checks by default)
@@ -194,12 +195,19 @@ fn main() -> Result<()> {
         }
         Commands::Version {
             version: explicit,
-            bump,
-            app,
+            shell,
             renderer,
             ocr,
             stt,
-        } => version::run(version::VersionOptions { explicit, bump, app, renderer, ocr, stt })?,
+            repo,
+        } => version::run(version::VersionOptions {
+            explicit,
+            shell,
+            renderer,
+            ocr,
+            stt,
+            repo,
+        })?,
         Commands::Setup {
             all,
             qt,
