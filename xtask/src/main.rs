@@ -123,6 +123,22 @@ enum Commands {
         /// Semantic bump mode.
         #[arg(long, value_enum)]
         bump: Option<version::BumpPart>,
+
+        /// Target the desktop app shell (Electron, Renderer, Rust crates, Qt-capture).
+        #[arg(long)]
+        app: bool,
+
+        /// Target the frontend UI bundle (OTA updates).
+        #[arg(long)]
+        renderer: bool,
+
+        /// Target the standalone OCR engine (Python).
+        #[arg(long)]
+        ocr: bool,
+
+        /// Target the standalone STT engine (C++).
+        #[arg(long)]
+        stt: bool,
     },
 
     /// Contributor environment setup (safe checks by default)
@@ -179,7 +195,11 @@ fn main() -> Result<()> {
         Commands::Version {
             version: explicit,
             bump,
-        } => version::run(version::VersionOptions { explicit, bump })?,
+            app,
+            renderer,
+            ocr,
+            stt,
+        } => version::run(version::VersionOptions { explicit, bump, app, renderer, ocr, stt })?,
         Commands::Setup {
             all,
             qt,

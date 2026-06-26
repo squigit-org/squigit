@@ -22,9 +22,17 @@ pub enum BumpPart {
 pub struct VersionOptions {
     pub explicit: Option<String>,
     pub bump: Option<BumpPart>,
+    pub app: bool,
+    pub renderer: bool,
+    pub ocr: bool,
+    pub stt: bool,
 }
 
 pub fn run(options: VersionOptions) -> Result<()> {
+    if !options.app && !options.renderer && !options.ocr && !options.stt {
+        anyhow::bail!("You must specify at least one target flag: --app, --renderer, --ocr, or --stt");
+    }
+
     if options.explicit.is_some() == options.bump.is_some() {
         anyhow::bail!(
             "Provide exactly one of: explicit version argument OR --bump patch|minor|major"
@@ -32,70 +40,148 @@ pub fn run(options: VersionOptions) -> Result<()> {
     }
 
     let root = project_root();
-    let version_path = root.join("VERSION");
+    let mut changed_files = Vec::new();
 
-    let target_version = if let Some(explicit) = options.explicit {
-        parse_semver(&explicit)?;
-        explicit
-    } else {
-        let current = read_canonical_version(&root, &version_path)?;
-        bump_semver(&current, options.bump.expect("validated above"))?
-    };
+    if options.app {
+        let version_path = root.join("VERSION");
+        let target_version = if let Some(ref explicit) = options.explicit {
+            parse_semver(explicit)?;
+            explicit.clone()
+        } else {
+            let current = read_canonical_version(&root, &version_path)?;
+            bump_semver(&current, options.bump.expect("validated above"))?
+        };
 
-    parse_semver(&target_version)?;
+        parse_semver(&target_version)?;
 
-    fs::write(&version_path, format!("{}\n", target_version))?;
+        fs::write(&version_path, format!("{}\n", target_version))?;
+        changed_files.push(version_path);
 
-    let mut changed_files = vec![version_path.clone()];
-
-    let cargo_files = find_cargo_manifests(&root)?;
-    for cargo_path in cargo_files {
-        if update_cargo_manifest(&cargo_path, &target_version)? {
-            changed_files.push(cargo_path);
+        let cargo_files = find_cargo_manifests(&root)?;
+        for cargo_path in cargo_files {
+            if update_cargo_manifest(&cargo_path, &target_version)? {
+                changed_files.push(cargo_path);
+            }
         }
-    }
 
-    let electron_json = root.join("apps").join("electron").join("package.json");
-    if electron_json.exists() {
-        if update_json_version_line(&electron_json, &target_version)? {
-            changed_files.push(electron_json);
+        let electron_json = root.join("apps").join("electron").join("package.json");
+        if electron_json.exists() {
+            if update_json_version_line(&electron_json, &target_version)? {
+                changed_files.push(electron_json);
+            }
         }
-    }
 
-    let renderer_json = root
-        .join("apps")
-        .join("renderer")
-        .join("package.json");
-    if renderer_json.exists() {
-        if update_json_version_line(&renderer_json, &target_version)? {
-            changed_files.push(renderer_json);
+        let qt_cmake = root
+            .join("sidecars")
+            .join("qt-capture")
+            .join("native")
+            .join("CMakeLists.txt");
+        if qt_cmake.exists() {
+            if update_cmake_project_versions_file(&qt_cmake, &target_version)? {
+                changed_files.push(qt_cmake);
+            }
         }
+
+        let changelog = root.join("CHANGELOG.md");
+        if ensure_changelog_version_section(&changelog, &target_version, true)? {
+            changed_files.push(changelog);
+        }
+
+        println!("App version updated to {}", target_version);
     }
 
-    let qt_cmake = root
-        .join("sidecars")
-        .join("qt-capture")
-        .join("native")
-        .join("CMakeLists.txt");
-    if update_cmake_project_versions_file(&qt_cmake, &target_version)? {
-        changed_files.push(qt_cmake);
+    if options.renderer {
+        let renderer_pkg = root.join("apps").join("renderer").join("package.json");
+        let target_version = if let Some(ref explicit) = options.explicit {
+            parse_semver(explicit)?;
+            explicit.clone()
+        } else {
+            let current = read_json_version(&renderer_pkg)?;
+            bump_semver(&current, options.bump.expect("validated above"))?
+        };
+
+        parse_semver(&target_version)?;
+
+        if renderer_pkg.exists() {
+            if update_json_version_line(&renderer_pkg, &target_version)? {
+                changed_files.push(renderer_pkg.clone());
+            }
+        }
+        
+        let changelog = root.join("apps").join("renderer").join("CHANGELOG.md");
+        if ensure_changelog_version_section(&changelog, &target_version, false)? {
+            changed_files.push(changelog);
+        }
+
+        println!("Renderer version updated to {}", target_version);
     }
 
-    let whisper_cmake = root
-        .join("sidecars")
-        .join("whisper-stt")
-        .join("CMakeLists.txt");
-    if update_cmake_project_versions_file(&whisper_cmake, &target_version)? {
-        changed_files.push(whisper_cmake);
+    if options.ocr {
+        let init_path = root
+            .join("sidecars")
+            .join("paddle-ocr")
+            .join("src")
+            .join("__init__.py");
+        let target_version = if let Some(ref explicit) = options.explicit {
+            parse_semver(explicit)?;
+            explicit.clone()
+        } else {
+            let current = read_python_version(&init_path)?;
+            bump_semver(&current, options.bump.expect("validated above"))?
+        };
+
+        parse_semver(&target_version)?;
+
+        if init_path.exists() {
+            if update_python_version_file(&init_path, &target_version)? {
+                changed_files.push(init_path.clone());
+            }
+        }
+
+        let changelog = root
+            .join("sidecars")
+            .join("paddle-ocr")
+            .join("CHANGELOG.md");
+        if ensure_changelog_version_section(&changelog, &target_version, true)? {
+            changed_files.push(changelog);
+        }
+
+        println!("OCR version updated to {}", target_version);
     }
 
-    let changelog = root.join("CHANGELOG.md");
-    if ensure_changelog_version_section(&changelog, &target_version)? {
-        changed_files.push(changelog);
+    if options.stt {
+        let cmake_path = root
+            .join("sidecars")
+            .join("whisper-stt")
+            .join("CMakeLists.txt");
+        let target_version = if let Some(ref explicit) = options.explicit {
+            parse_semver(explicit)?;
+            explicit.clone()
+        } else {
+            let current = read_cmake_version(&cmake_path)?;
+            bump_semver(&current, options.bump.expect("validated above"))?
+        };
+
+        parse_semver(&target_version)?;
+
+        if cmake_path.exists() {
+            if update_cmake_project_versions_file(&cmake_path, &target_version)? {
+                changed_files.push(cmake_path.clone());
+            }
+        }
+
+        let changelog = root
+            .join("sidecars")
+            .join("whisper-stt")
+            .join("CHANGELOG.md");
+        if ensure_changelog_version_section(&changelog, &target_version, true)? {
+            changed_files.push(changelog);
+        }
+
+        println!("STT version updated to {}", target_version);
     }
 
-    println!("\nUpdated version -> {}", target_version);
-    println!("Changed files:");
+    println!("\nChanged files:");
     for path in changed_files {
         println!(
             "  - {}",
@@ -144,6 +230,42 @@ fn read_canonical_version(root: &Path, version_file: &Path) -> Result<String> {
 
     parse_semver(&fallback)?;
     Ok(fallback)
+}
+
+fn read_json_version(path: &Path) -> Result<String> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read JSON file: {}", path.display()))?;
+    let re = Regex::new(r#"(?m)^\s*"version"\s*:\s*"([^"]+)"\s*,?\s*$"#).expect("valid regex");
+    if let Some(caps) = re.captures(&content) {
+        let version = caps.get(1).unwrap().as_str().to_string();
+        parse_semver(&version)?;
+        return Ok(version);
+    }
+    anyhow::bail!("Could not find \"version\" in {}", path.display());
+}
+
+fn read_python_version(path: &Path) -> Result<String> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read Python file: {}", path.display()))?;
+    let re = Regex::new(r#"__version__\s*=\s*"([^"]+)""#).expect("valid regex");
+    if let Some(caps) = re.captures(&content) {
+        let version = caps.get(1).unwrap().as_str().to_string();
+        parse_semver(&version)?;
+        return Ok(version);
+    }
+    anyhow::bail!("Could not find __version__ in {}", path.display());
+}
+
+fn read_cmake_version(path: &Path) -> Result<String> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read CMake file: {}", path.display()))?;
+    let re = Regex::new(r"(?i)\s+VERSION\s+([^\s\)]+)").expect("valid regex");
+    if let Some(caps) = re.captures(&content) {
+        let version = caps.get(1).unwrap().as_str().to_string();
+        parse_semver(&version)?;
+        return Ok(version);
+    }
+    anyhow::bail!("Could not find VERSION in {}", path.display());
 }
 
 fn parse_semver(version: &str) -> Result<(u64, u64, u64)> {
@@ -255,6 +377,28 @@ fn update_json_version_line(path: &Path, version: &str) -> Result<bool> {
     Ok(true)
 }
 
+fn update_python_version_file(path: &Path, version: &str) -> Result<bool> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read Python file: {}", path.display()))?;
+
+    let re_var = Regex::new(r#"__version__\s*=\s*"[^"]+""#).expect("valid regex");
+    let re_doc = Regex::new(r#"@version\s+[^\s\n]+"#).expect("valid regex");
+
+    let mut updated = re_var
+        .replace_all(&content, format!("__version__ = \"{}\"", version))
+        .to_string();
+    updated = re_doc
+        .replace_all(&updated, format!("@version {}", version))
+        .to_string();
+
+    if updated != content {
+        fs::write(path, updated)?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
 fn update_cmake_project_versions_file(path: &Path, version: &str) -> Result<bool> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read CMake file: {}", path.display()))?;
@@ -299,12 +443,19 @@ fn update_cmake_project_versions_text(content: &str, version: &str) -> (String, 
     (out, changed)
 }
 
-fn ensure_changelog_version_section(path: &Path, version: &str) -> Result<bool> {
+fn ensure_changelog_version_section(path: &Path, version: &str, include_tbd: bool) -> Result<bool> {
+    if !path.exists() {
+        fs::write(
+            path,
+            "# Changelog\n\nAll notable changes...\n\n",
+        )?;
+    }
+    
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read changelog: {}", path.display()))?;
 
     let today = Local::now().format("%Y-%m-%d").to_string();
-    let (updated, changed) = insert_changelog_section(&content, version, &today);
+    let (updated, changed) = insert_changelog_section(&content, version, &today, include_tbd);
     if changed {
         fs::write(path, updated)?;
     }
@@ -312,7 +463,7 @@ fn ensure_changelog_version_section(path: &Path, version: &str) -> Result<bool> 
     Ok(changed)
 }
 
-fn insert_changelog_section(content: &str, version: &str, date: &str) -> (String, bool) {
+fn insert_changelog_section(content: &str, version: &str, date: &str, include_tbd: bool) -> (String, bool) {
     let version_heading_re = Regex::new(&format!(r"(?m)^## \[{}\]", regex::escape(version)))
         .expect("valid heading regex");
 
@@ -326,9 +477,11 @@ fn insert_changelog_section(content: &str, version: &str, date: &str) -> (String
         .map(|m| m.start())
         .unwrap_or(content.len());
 
-    let section = format!(
-        "## [{version}] - {date}\n\n### Added\n\n- TBD\n\n### Changed\n\n- TBD\n\n### Fixed\n\n- TBD\n\n"
-    );
+    let section = if include_tbd {
+        format!("## [{version}] - {date}\n\n### Added\n\n- TBD\n\n### Changed\n\n- TBD\n\n### Fixed\n\n- TBD\n\n")
+    } else {
+        format!("## [{version}] - {date}\n\n")
+    };
 
     let (head, tail) = content.split_at(insert_at);
 
@@ -380,14 +533,19 @@ mod tests {
     fn changelog_section_is_inserted_once() {
         let base =
             "# Changelog\n\nAll notable changes...\n\n## [0.1.0] - 2025-10-02\n\n### Added\n";
-        let (updated, changed) = insert_changelog_section(base, "0.2.0", "2026-03-07");
+        let (updated, changed) = insert_changelog_section(base, "0.2.0", "2026-03-07", true);
         assert!(changed);
         assert!(updated.contains("## [0.2.0] - 2026-03-07"));
+        assert!(updated.contains("TBD"));
 
         let (updated_again, changed_again) =
-            insert_changelog_section(&updated, "0.2.0", "2026-03-07");
+            insert_changelog_section(&updated, "0.2.0", "2026-03-07", true);
         assert!(!changed_again);
         assert_eq!(updated_again, updated);
+        
+        let (updated_no_tbd, changed_no_tbd) = insert_changelog_section(base, "0.2.0", "2026-03-07", false);
+        assert!(changed_no_tbd);
+        assert!(!updated_no_tbd.contains("TBD"));
     }
 
     #[test]

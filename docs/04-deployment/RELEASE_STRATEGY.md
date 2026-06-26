@@ -1,11 +1,60 @@
 # Release and Update Strategy
 
-## Update Strategy
+Squigit is distributed as three distinct components, divided into two primary layers (the application shell and OS-level CLI dependencies):
 
-Squigit is distributed as three distinct components, divided into two primary layers (the application shell and OS-level CLI dependencies), each with its own update lifecycle:
-1. **Desktop App**: The main application shell and UI.
+1. **Desktop App**: The main application shell and UI. This includes `electron`, the `renderer` React app, and the lightweight `qt-capture` screen capture sidecar (which is baked directly into the Electron bundle since it's <50 MiB).
 2. **Squigit OCR Engine**: A standalone OS-level CLI tool (`squigit-ocr`) distributed via package managers.
 3. **Squigit STT Engine**: A standalone OS-level CLI tool (`squigit-stt`) distributed via package managers.
+
+Because the components are distinct and have different sizes and update lifecycles, they are released and updated independently. However, the Desktop App enforces strict version guards (similar to a `package-lock.json` or `requirements.txt`) to ensure it only runs with compatible versions of the OCR and STT engines.
+
+## 1. Releases
+
+*(TBD: Documentation on DMG, EXE, and APT/DNF release packaging)*
+
+## 2. Version Pumping
+
+To manage the versioning of the repository, Squigit uses a centralized "version pumping" pipeline via a custom Cargo `xtask`.
+
+### How it Works
+
+You can bump versions by specifying the component you want to target (`--app`, `--renderer`, `--ocr`, `--stt`) alongside a bump strategy:
+```bash
+cargo xtask version --app --bump patch
+cargo xtask version --renderer --bump minor
+cargo xtask version --stt 1.2.3
+# You can also bump multiple components at once:
+cargo xtask version --app --renderer --bump patch
+```
+
+This pipeline automatically touches all the necessary files across the monorepo depending on the targeted components:
+
+**1. Desktop App Shell (`--app`)**
+- **Canonical Source**: Updates the root `VERSION` file.
+- **Rust Crates**: Traverses the workspace and updates the `workspace.package.version` and `package.version` in every `Cargo.toml` (including the `qt-capture` Cargo manifest).
+- **Node/Electron**: Updates the top-level `"version"` field in `apps/electron/package.json`.
+- **C++/CMake Projects**: Updates the `project(... VERSION ...)` declaration in `sidecars/qt-capture/native/CMakeLists.txt`.
+- **Changelog**: Automatically scaffolds a new version section in the root `CHANGELOG.md`.
+
+**2. UI/Renderer (`--renderer`)**
+- **Canonical Source**: Updates the `"version"` field in `apps/renderer/package.json`.
+- **Changelog**: Automatically scaffolds a new version section in `apps/renderer/CHANGELOG.md`. *Note: Unlike other components, this changelog does not generate `TBD` placeholders for features/fixes, as it is designed solely to be read by the background OTA update checker without presenting UI alerts.*
+
+**3. OCR Engine (`--ocr`)**
+- **Canonical Source**: Updates `__version__ = "..."` and `@version` in `sidecars/paddle-ocr/src/__init__.py`.
+- **Changelog**: Automatically scaffolds a new version section in `sidecars/paddle-ocr/CHANGELOG.md`.
+
+**4. STT Engine (`--stt`)**
+- **Canonical Source**: Updates the `project(... VERSION ...)` declaration in `sidecars/whisper-stt/CMakeLists.txt`.
+- **Changelog**: Automatically scaffolds a new version section in `sidecars/whisper-stt/CHANGELOG.md`.
+
+
+
+### Dependency Version Guards
+
+While the pumper currently bumps everything simultaneously, the runtime enforces specific constraints on the standalone engines (OCR/STT). In `crates/desktop-runtime/src/sidecar.rs` and `crates/squigit-ocr/src/sidecar.rs`, the shell defines requirements (e.g., `>=1.2.0` or strict `1.2.0`). When the app launches, it invokes the standalone engines with the `--version` flag. If the installed CLI doesn't satisfy the lockfile guard, the user is prompted to upgrade it.
+
+## 3. Update Strategy
 
 The application includes a built-in mechanism to detect, parse, and present updates for all three components directly within the user interface (`UpdateNotesRoute.tsx`).
 
