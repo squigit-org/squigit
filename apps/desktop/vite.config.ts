@@ -11,7 +11,7 @@ export default defineConfig({
       entry: {
         main: path.resolve(__dirname, 'src/main.ts'),
         preload: path.resolve(__dirname, 'src/preload.ts'),
-        ipc: path.resolve(__dirname, 'src/ipc.ts'),
+        ipc: path.resolve(__dirname, 'src/ipc/index.ts'),
         protocol: path.resolve(__dirname, 'src/protocol.ts')
       },
       formats: ['cjs']
