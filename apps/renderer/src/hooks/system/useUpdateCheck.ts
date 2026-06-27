@@ -98,7 +98,6 @@ async function fetchReleaseNotes(
     const sections: Record<string, string[]> = {
       "New Features": [],
       "Bug Fixes": [],
-      "UI Improvements": [],
     };
 
     const sectionRegex = /###\s+(.*?)\n([\s\S]*?)(?=\n###\s+|$)/g;

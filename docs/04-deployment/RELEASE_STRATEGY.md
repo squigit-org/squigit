@@ -2,10 +2,10 @@
 
 Squigit is distributed as four independently versioned components:
 
-1. **Shell**: The rare-update desktop shell. This is Electron, Chromium, `qt-capture`, and the `napi-bridge` native layer.
-2. **Renderer**: The daily-update React UI bundle. This is the app surface shipped as JavaScript, CSS, and static assets.
-3. **Squigit OCR Engine**: The standalone `squigit-ocr` CLI distributed through OS package managers.
-4. **Squigit STT Engine**: The standalone `squigit-stt` CLI distributed through OS package managers.
+1. **Shell**: The Electron shell: Chromium, `qt-capture` sidecar, and `napi-bridge` crate.
+2. **Renderer**: The React UI bundle: HTML, CSS, and JavaScript.
+3. **Squigit OCR Engine**: The standalone `squigit-ocr` CLI.
+4. **Squigit STT Engine**: The standalone `squigit-stt` CLI.
 
 These components have different release costs and update channels, so they are versioned separately. The root repo also has its own CalVer metadata in `VERSION` and `CHANGELOG.md`; it represents repo-level work, not a shipped runtime component.
 
@@ -25,7 +25,8 @@ cargo xtask version --stt 0.2.1
 cargo xtask version --repo
 ```
 
-There is no `--bump` mode. Shell, OCR, and STT require an explicit SemVer argument. Renderer and repo use today's CalVer in `YY.MM.DD` format.
+Shell, OCR, and STT require an explicit SemVer argument.
+Renderer and repo use today's CalVer in `YY.MM.DD` format.
 
 ### Shell (`--shell <semver>`)
 
@@ -83,25 +84,23 @@ If multiple commands touch the root changelog on the same day, xtask reuses the 
 
 Squigit has three update layers.
 
-### Rare Shell Updates
+### Shell Updates
 
 Shell updates require reinstalling the app through the platform installer or package manager, such as NSIS, DMG, APT, or DNF.
 
 The shell contains Electron, Chromium, `qt-capture`, and `napi-bridge`. The app checks shell release notes from `apps/desktop/CHANGELOG.md`. The local shell version comes from `platform.app.getVersion()`.
 
-### Daily Renderer Updates
+### Renderer Updates
 
 Renderer updates are intended to be handled inside the app. The renderer is versioned with CalVer and checked against `apps/renderer/CHANGELOG.md`.
 
-The future OTA flow is:
+The OTA flow is:
 
 1. Check `apps/renderer/CHANGELOG.md`.
 2. If a newer renderer version exists, download the new JS/CSS bundle into user data.
 3. Rewrite the local renderer `index.html` reference to point at the downloaded bundle.
 4. Apply the new bundle on the next app launch.
 5. Fall back to the bundled renderer if the downloaded bundle is removed or invalid.
-
-This OTA implementation is not built yet.
 
 ### OS-Managed Sidecar Updates
 
@@ -123,7 +122,7 @@ When a sidecar update is available, `UpdateNotesRoute.tsx` shows release notes a
 
 ## 4. Changelog Format
 
-All component changelogs use level-two version headings:
+All component changelogs use SemVer headings:
 
 ```markdown
 ## [0.2.0] - 2026-05-29
@@ -158,7 +157,6 @@ For update notes rendered in the app, prefer these sections:
 - `### Version Info`
 - `### New Features`
 - `### Bug Fixes`
-- `### UI Improvements`
 
 Include `**Size**: ...` under `### Version Info` when the UI should display a download size.
 
@@ -166,8 +164,9 @@ Include `**Size**: ...` under `### Version Info` when the UI should display a do
 
 `HelpSettings.tsx` shows different sources intentionally:
 
-- **Squigit**: Renderer version from `apps/renderer/package.json` in CalVer form, such as `v26.06.26`.
+- **Squigit**: Renderer version from `apps/renderer/package.json` in CalVer form.
 - **Shell**: Shell version from `await platform.app.getVersion()` in SemVer form.
 - **Runtime**: Electron or Tauri runtime version.
+- **React**: React version from `@types/react/index.d.ts`.
 - **Engines**: OCR/STT versions read from their `--version` output.
 - **Commit**: `VITE_GIT_COMMIT`, or `Development Mode` locally.

@@ -80,7 +80,7 @@ export const UpdateNotesRoute: React.FC<UpdateNotesRouteProps> = ({
   const [deprecatedDialog, setDeprecatedDialog] =
     useState<DialogContent | null>(null);
 
-  const SECTION_ORDER = ["New Features", "Bug Fixes", "UI Improvements"];
+  const SECTION_ORDER = ["New Features", "Bug Fixes"];
 
   if (!update) {
     return null;
