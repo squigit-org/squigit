@@ -110,14 +110,37 @@ pub fn run(options: VersionOptions) -> Result<()> {
         }
 
         let renderer_pkg = root.join("apps").join("renderer").join("package.json");
-        if update_json_version_line(&renderer_pkg, &calver)? {
+        
+        let content = fs::read_to_string(&renderer_pkg)
+            .with_context(|| format!("Failed to read JSON file: {}", renderer_pkg.display()))?;
+        let json: Value = serde_json::from_str(&content)
+            .with_context(|| format!("Failed to parse JSON file: {}", renderer_pkg.display()))?;
+        let current_version = json
+            .get("version")
+            .and_then(|item| item.as_str())
+            .unwrap_or("");
+
+        let mut actual_calver = calver.clone();
+        if current_version.starts_with(&calver) {
+            if current_version == calver {
+                actual_calver = format!("{}.1", calver);
+            } else if let Some(suffix) = current_version.strip_prefix(&format!("{}.", calver)) {
+                if let Ok(n) = suffix.parse::<u64>() {
+                    actual_calver = format!("{}.{}", calver, n + 1);
+                } else {
+                    actual_calver = format!("{}.1", calver);
+                }
+            }
+        }
+
+        if update_json_version_line(&renderer_pkg, &actual_calver)? {
             changed_files.push(renderer_pkg);
         }
 
         let renderer_changelog = root.join("apps").join("renderer").join("CHANGELOG.md");
         if ensure_changelog_version_section(
             &renderer_changelog,
-            &calver,
+            &actual_calver,
             &iso_date,
             false,
             false,
@@ -125,7 +148,7 @@ pub fn run(options: VersionOptions) -> Result<()> {
             changed_files.push(renderer_changelog);
         }
 
-        println!("Renderer version updated to {calver}");
+        println!("Renderer version updated to {actual_calver}");
     }
 
     if options.ocr {
