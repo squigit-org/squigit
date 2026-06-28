@@ -13,7 +13,7 @@ These components have different release costs and update channels, so they are v
 
 _(TBD: Documentation on DMG, EXE, APT, DNF, Homebrew, and Winget release packaging.)_
 
-## 2. Version Pumping
+## 2. Version Bumping
 
 Squigit uses `cargo xtask version` to update component versions and scaffold changelogs. The command supports exactly one target at a time:
 
@@ -30,7 +30,7 @@ Renderer and repo use today's CalVer in `YY.MM.DD` format.
 
 ### Shell (`--shell <semver>`)
 
-The shell is SemVer. Pumping it updates:
+The shell is SemVer. Bumping it updates:
 
 - `apps/desktop/package.json`
 - `apps/desktop/CHANGELOG.md`
@@ -44,7 +44,7 @@ Because shell work is also repo work, `--shell` also updates root `VERSION` and 
 
 ### Renderer (`--renderer`)
 
-The renderer is CalVer. Pumping it updates:
+The renderer is CalVer. Bumping it updates:
 
 - `apps/renderer/package.json`
 - `apps/renderer/CHANGELOG.md`
@@ -53,7 +53,7 @@ The renderer changelog is ping-only. It intentionally does not scaffold `TBD` se
 
 ### OCR (`--ocr <semver>`)
 
-The OCR engine is SemVer. Pumping it updates:
+The OCR engine is SemVer. Bumping it updates:
 
 - `sidecars/paddle-ocr/src/__init__.py`
 - `sidecars/paddle-ocr/CHANGELOG.md`
@@ -62,7 +62,7 @@ Because sidecar work is also repo work, `--ocr` also updates root `VERSION` and 
 
 ### STT (`--stt <semver>`)
 
-The STT engine is SemVer. Pumping it updates:
+The STT engine is SemVer. Bumping it updates:
 
 - `sidecars/whisper-stt/CMakeLists.txt`
 - `sidecars/whisper-stt/CHANGELOG.md`
@@ -71,7 +71,7 @@ Because sidecar work is also repo work, `--stt` also updates root `VERSION` and 
 
 ### Repo (`--repo`)
 
-The root repo version is CalVer. Pumping it updates:
+The root repo version is CalVer. Bumping it updates:
 
 - `VERSION`
 - `CHANGELOG.md`
@@ -169,4 +169,4 @@ Include `**Size**: ...` under `### Version Info` when the UI should display a do
 - **Runtime**: Electron or Tauri runtime version.
 - **React**: React version from `@types/react/index.d.ts`.
 - **Engines**: OCR/STT versions read from their `--version` output.
-- **Commit**: `VITE_GIT_COMMIT`, or `Development Mode` locally.
+- **Commit**: `COMMIT_SHA`, or `Development Mode` locally.

@@ -68,7 +68,7 @@ pub fn run(options: BuildCommandOptions) -> Result<()> {
         anyhow::bail!("No build targets selected.");
     }
 
-    let commit_id = inline_flags.commit_id.or_else(|| std::env::var("VITE_GIT_COMMIT").ok());
+    let commit_id = inline_flags.commit_id.or_else(|| std::env::var("COMMIT_SHA").ok());
     let has_shell = targets.contains(&BuildTarget::Tauri) || targets.contains(&BuildTarget::Electron);
 
     if has_shell && commit_id.is_none() {
@@ -317,7 +317,7 @@ pub fn tauri(commit_id: &str) -> Result<()> {
         }
     };
 
-    set_env("VITE_GIT_COMMIT", commit_id);
+    set_env("COMMIT_SHA", commit_id);
 
     if cfg!(target_os = "linux") {
         set_env("APPIMAGE_EXTRACT_AND_RUN", "1");
