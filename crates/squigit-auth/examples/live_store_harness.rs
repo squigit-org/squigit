@@ -11,13 +11,11 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-use squigit_auth::auth::{
-    start_google_auth_flow, validate_google_credentials, AuthFlowSettings,
-};
-use squigit_auth::security::{encrypt_and_save_key, get_decrypted_key, ApiKeyProvider};
-use squigit_auth::{ProfileError, ProfileStore};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook::flag;
+use squigit_auth::auth::{start_google_auth_flow, validate_google_credentials, AuthFlowSettings};
+use squigit_auth::security::{encrypt_and_save_key, get_decrypted_key, ApiKeyProvider};
+use squigit_auth::{ProfileError, ProfileStore};
 
 fn main() {
     if let Err(err) = run() {

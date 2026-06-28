@@ -1,8 +1,6 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Type definitions for profile storage.
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -116,45 +114,5 @@ impl ProfileIndex {
         if self.active_profile_id.as_deref() == Some(id) {
             self.active_profile_id = self.profile_ids.first().cloned();
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_profile_id_from_email() {
-        let id1 = Profile::id_from_email("user@gmail.com");
-        let id2 = Profile::id_from_email("USER@gmail.com");
-        let id3 = Profile::id_from_email("  user@gmail.com  ");
-
-        // Same email (case-insensitive, trimmed) should produce same ID
-        assert_eq!(id1, id2);
-        assert_eq!(id1, id3);
-
-        // ID should be 16 characters (hex)
-        assert_eq!(id1.len(), 16);
-
-        // Different email should produce different ID
-        let id4 = Profile::id_from_email("other@gmail.com");
-        assert_ne!(id1, id4);
-    }
-
-    #[test]
-    fn test_profile_index_operations() {
-        let mut index = ProfileIndex::default();
-
-        index.add("profile1".to_string());
-        assert!(index.contains("profile1"));
-        assert!(!index.contains("profile2"));
-
-        index.add("profile2".to_string());
-        index.active_profile_id = Some("profile1".to_string());
-
-        // Remove active profile should switch to next
-        index.remove("profile1");
-        assert!(!index.contains("profile1"));
-        assert_eq!(index.active_profile_id, Some("profile2".to_string()));
     }
 }

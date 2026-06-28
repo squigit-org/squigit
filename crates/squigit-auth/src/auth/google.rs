@@ -1,16 +1,12 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use base64::{engine::general_purpose, Engine as _};
-use squigit_memory::ChatStorage;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::fs;
-use std::path::PathBuf;
+use squigit_memory::ChatStorage;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Once,
+    Arc,
 };
 use std::time::{Duration, Instant};
 use tiny_http::{Header, Response, Server, StatusCode};
@@ -18,73 +14,10 @@ use url::Url;
 
 use crate::{Profile, ProfileError, ProfileStore, Result};
 
-const EMBEDDED_SECRETS_JSON: &str = include_str!(env!("SQUIGIT_GOOGLE_CREDENTIALS_EMBEDDED_FILE"));
-const SUCCESS_TEMPLATE: &str = include_str!("../assets/oauth/success.html");
-const FAILURE_TEMPLATE: &str = include_str!("../assets/oauth/failure.html");
-const FAVICON_BYTES: &[u8] = include_bytes!("../assets/oauth/favicon.png");
-const DEFAULT_USER_INFO_URL: &str =
-    "https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses,photos";
-const CANCELLED_CALLBACK_GRACE: Duration = Duration::from_secs(0);
-static AUTH_MISSING_CREDENTIALS_LOG_ONCE: Once = Once::new();
-
-pub type BrowserOpener = Arc<dyn Fn(&str) -> Result<()> + Send + Sync>;
-
-#[derive(Clone, Debug)]
-pub enum CredentialsSource {
-    Auto,
-    RawJson(String),
-    File(PathBuf),
-}
-
-#[derive(Clone)]
-pub struct AuthFlowSettings {
-    pub app_name: String,
-    pub redirect_host: String,
-    pub redirect_port: u16,
-    pub user_info_url: String,
-    pub timeout: Duration,
-    pub credentials_source: CredentialsSource,
-    pub open_browser: BrowserOpener,
-}
-
-impl fmt::Debug for AuthFlowSettings {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("AuthFlowSettings")
-            .field("app_name", &self.app_name)
-            .field("redirect_host", &self.redirect_host)
-            .field("redirect_port", &self.redirect_port)
-            .field("user_info_url", &self.user_info_url)
-            .field("timeout", &self.timeout)
-            .field("credentials_source", &self.credentials_source)
-            .finish()
-    }
-}
-
-impl AuthFlowSettings {
-    pub fn new(app_name: impl Into<String>, open_browser: BrowserOpener) -> Self {
-        Self {
-            app_name: app_name.into(),
-            redirect_host: "127.0.0.1".to_string(),
-            redirect_port: 3000,
-            user_info_url: DEFAULT_USER_INFO_URL.to_string(),
-            timeout: Duration::from_secs(120),
-            credentials_source: CredentialsSource::Auto,
-            open_browser,
-        }
-    }
-
-    pub fn redirect_uri(&self) -> String {
-        format!("http://{}:{}", self.redirect_host, self.redirect_port)
-    }
-
-    pub fn cancel_path(&self) -> String {
-        format!("/{}-cancel", self.app_name.to_lowercase())
-    }
-
-    pub fn cancel_url(&self) -> String {
-        format!("{}{}", self.redirect_uri(), self.cancel_path())
-    }
-}
+use super::callback_server::CANCELLED_CALLBACK_GRACE;
+use super::credentials::load_google_oauth_config;
+use super::templates::{respond_failure, respond_success, FAVICON_BYTES};
+use super::AuthFlowSettings;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthSuccessData {
@@ -93,20 +26,6 @@ pub struct AuthSuccessData {
     pub email: String,
     pub avatar: String,
     pub original_picture: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-struct GoogleCredentials {
-    installed: Option<OAuthConfig>,
-    web: Option<OAuthConfig>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct OAuthConfig {
-    client_id: String,
-    client_secret: String,
-    auth_uri: String,
-    token_uri: String,
 }
 
 #[derive(Deserialize)]
@@ -138,81 +57,6 @@ struct Photo {
     url: Option<String>,
 }
 
-fn missing_credentials_message() -> String {
-    "Google authentication is not configured in this build. The app can run normally, but sign-in is disabled.\n\nTo enable Google auth, provide credentials using one of:\n- copy crates/squigit-auth/assets/oauth/credentials.example.json to crates/squigit-auth/assets/oauth/credentials.json (gitignored)\n- SQUIGIT_GOOGLE_CREDENTIALS_PATH=<absolute path to credentials.json>\n- SQUIGIT_GOOGLE_CREDENTIALS_JSON=<raw credentials json>".to_string()
-}
-
-fn load_google_credentials_raw(source: &CredentialsSource) -> Result<String> {
-    match source {
-        CredentialsSource::RawJson(raw) => Ok(raw.clone()),
-        CredentialsSource::File(path) => Ok(fs::read_to_string(path)?),
-        CredentialsSource::Auto => {
-            if let Ok(raw) = std::env::var("SQUIGIT_GOOGLE_CREDENTIALS_JSON") {
-                if !raw.trim().is_empty() {
-                    return Ok(raw);
-                }
-            }
-
-            if let Ok(path) = std::env::var("SQUIGIT_GOOGLE_CREDENTIALS_PATH") {
-                let trimmed = path.trim();
-                if !trimmed.is_empty() {
-                    return fs::read_to_string(trimmed).map_err(|err| {
-                        ProfileError::Auth(format!(
-                            "Failed reading SQUIGIT_GOOGLE_CREDENTIALS_PATH: {}",
-                            err
-                        ))
-                    });
-                }
-            }
-
-            Ok(EMBEDDED_SECRETS_JSON.to_string())
-        }
-    }
-}
-
-fn is_placeholder_config(config: &OAuthConfig) -> bool {
-    config.client_id.contains("replace-me")
-        || config.client_secret.contains("replace-me")
-        || config.client_id.trim().is_empty()
-        || config.client_secret.trim().is_empty()
-}
-
-fn load_google_oauth_config(settings: &AuthFlowSettings) -> Result<OAuthConfig> {
-    let raw = load_google_credentials_raw(&settings.credentials_source)?;
-    let raw = raw.trim();
-    if raw.is_empty() {
-        let message = missing_credentials_message();
-        AUTH_MISSING_CREDENTIALS_LOG_ONCE.call_once(|| {
-            eprintln!("[auth] {}", message.replace('\n', "\n[auth] "));
-        });
-        return Err(ProfileError::MissingCredentials(message));
-    }
-
-    let wrapper: GoogleCredentials = serde_json::from_str(raw).map_err(|err| {
-        ProfileError::Auth(format!("Failed to parse Google OAuth credentials: {}", err))
-    })?;
-
-    let config = wrapper.installed.or(wrapper.web).ok_or_else(|| {
-        ProfileError::Auth(
-            "Invalid credentials.json: missing 'installed' or 'web' object".to_string(),
-        )
-    })?;
-
-    if is_placeholder_config(&config) {
-        let message = missing_credentials_message();
-        AUTH_MISSING_CREDENTIALS_LOG_ONCE.call_once(|| {
-            eprintln!("[auth] {}", message.replace('\n', "\n[auth] "));
-        });
-        return Err(ProfileError::MissingCredentials(message));
-    }
-
-    Ok(config)
-}
-
-pub fn validate_google_credentials(settings: &AuthFlowSettings) -> Result<()> {
-    load_google_oauth_config(settings).map(|_| ())
-}
-
 fn generate_state_token() -> String {
     use rand::{rngs::OsRng, RngCore};
 
@@ -221,16 +65,12 @@ fn generate_state_token() -> String {
     hex::encode(bytes)
 }
 
-pub fn cache_avatar(
-    store: &ProfileStore,
-    url: &str,
-    profile_id: Option<&str>,
-) -> Result<String> {
+pub fn cache_avatar(store: &ProfileStore, url: &str, profile_id: Option<&str>) -> Result<String> {
     let target_id = match profile_id {
         Some(id) => id.to_string(),
-        None => store
-            .get_active_profile_id()?
-            .ok_or_else(|| ProfileError::Auth("No active profile and no profile ID provided.".to_string()))?,
+        None => store.get_active_profile_id()?.ok_or_else(|| {
+            ProfileError::Auth("No active profile and no profile ID provided.".to_string())
+        })?,
     };
 
     let client = Client::new();
@@ -319,9 +159,8 @@ pub fn start_google_auth_flow(
 
         let request_url = request.url().to_string();
         if request_url == "/favicon.ico" || request_url == "/favicon.png" {
-            let response = Response::from_data(FAVICON_BYTES.to_vec()).with_header(
-                Header::from_bytes(&b"Content-Type"[..], &b"image/png"[..]).unwrap(),
-            );
+            let response = Response::from_data(FAVICON_BYTES.to_vec())
+                .with_header(Header::from_bytes(&b"Content-Type"[..], &b"image/png"[..]).unwrap());
             let _ = request.respond(response);
             continue;
         }
@@ -411,7 +250,10 @@ pub fn start_google_auth_flow(
                     "Authentication Failed",
                     "<p>Token exchange with Google failed.</p><p>Please close this tab and try again.</p>",
                 );
-                return Err(ProfileError::Auth(format!("Token exchange failed: {}", err)));
+                return Err(ProfileError::Auth(format!(
+                    "Token exchange failed: {}",
+                    err
+                )));
             }
         };
 
@@ -580,47 +422,4 @@ pub fn start_google_auth_flow(
 
         return Ok(user_data);
     }
-}
-
-fn respond_success(request: tiny_http::Request, title: &str, content: &str) -> Result<()> {
-    respond_html(
-        request,
-        SUCCESS_TEMPLATE,
-        title,
-        content,
-        "Confirmation",
-        false,
-    )
-}
-
-fn respond_failure(request: tiny_http::Request, title: &str, content: &str) -> Result<()> {
-    respond_html(request, FAILURE_TEMPLATE, title, content, "Error", true)
-}
-
-fn respond_html(
-    request: tiny_http::Request,
-    template: &str,
-    title: &str,
-    content: &str,
-    breadcrumb: &str,
-    is_error: bool,
-) -> Result<()> {
-    let title_color = if is_error { "#d93025" } else { "#202124" };
-    let dynamic_style = format!("<style>:root {{ --title-color: {}; }}</style>", title_color);
-    let favicon_href = format!(
-        "data:image/png;base64,{}",
-        general_purpose::STANDARD.encode(FAVICON_BYTES)
-    );
-    let html = template
-        .replace("${title}", title)
-        .replace("${dynamicStyle}", &dynamic_style)
-        .replace("${faviconHref}", &favicon_href)
-        .replace("${breadcrumb}", breadcrumb)
-        .replace("${bodyContent}", content);
-
-    let response = Response::from_string(html).with_header(
-        Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap(),
-    );
-    request.respond(response)?;
-    Ok(())
 }

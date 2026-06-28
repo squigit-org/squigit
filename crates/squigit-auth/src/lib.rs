@@ -46,8 +46,8 @@ pub mod security;
 pub mod store;
 pub mod types;
 
+pub use auth::{AuthFlowSettings, AuthSuccessData, BrowserOpener, CredentialsSource};
 pub use error::{ProfileError, Result};
+pub use security::{validate_api_key, ApiKeyProvider};
 pub use store::ProfileStore;
 pub use types::{Profile, ProfileIndex};
-pub use auth::{AuthFlowSettings, AuthSuccessData, BrowserOpener, CredentialsSource};
-pub use security::{ApiKeyProvider, validate_api_key};

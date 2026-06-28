@@ -78,7 +78,7 @@ squigit/
     desktop-runtime/    GUI-specific runtime utilities
     global-shortcut/    OS-level keyboard hooks
     napi-bridge/        Node.js <-> Rust FFI boundary
-    squigit-auth/       OAuth, keychain, credentials
+    squigit-auth/       Google OAuth, profiles, encrypted BYOK credentials
     squigit-brain/      Gemini AI engine, agent orchestration
     squigit-memory/     SQLite storage, chat history, files
     squigit-ocr/        OCR model management and inference
@@ -99,7 +99,7 @@ All heavy computation lives in Rust. Authentication, AI inference, persistent st
 ```mermaid
 graph LR
     subgraph "Universal Backend"
-        AUTH["squigit-auth\nOAuth flows\nKeychain integration\nProfile management"]
+        AUTH["squigit-auth\nGoogle OAuth flow\nEncrypted BYOK files\nProfile management"]
         BRAIN["squigit-brain\nGemini integration\nAgent orchestration\nTool dispatch"]
         MEMORY["squigit-memory\nSQLite storage\nChat history\nFile management"]
         OCR["squigit-ocr\nModel management\nInference pipeline"]
@@ -118,7 +118,7 @@ graph LR
 
 | Crate             | What It Owns                                                                                   |
 | ----------------- | ---------------------------------------------------------------------------------------------- |
-| `squigit-auth`    | OAuth flows, keychain read/write, token refresh, profiles                                      |
+| `squigit-auth`    | Google OAuth sign-in, local profile management, avatar caching, and encrypted per-profile BYOK files |
 | `squigit-brain`   | Gemini integration, agent orchestration, tool dispatch                                         |
 | `squigit-memory`  | SQLite storage, chat history, file management                                                  |
 | `squigit-ocr`     | OCR model management and inference                                                             |

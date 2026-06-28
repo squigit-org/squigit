@@ -6,11 +6,11 @@ use std::path::Path;
 use std::sync::{atomic::AtomicBool, Arc};
 use std::thread;
 
+use serial_test::serial;
 use squigit_auth::auth::{
     cache_avatar, start_google_auth_flow, AuthFlowSettings, CredentialsSource,
 };
 use squigit_auth::{Profile, ProfileError, ProfileStore};
-use serial_test::serial;
 use tempfile::tempdir;
 use tiny_http::{Header, Response, Server, StatusCode};
 use url::Url;
@@ -72,9 +72,8 @@ fn cache_avatar_stores_bytes_in_profile_cas() {
         ready_tx.send(()).unwrap();
         let request = server.recv().unwrap();
         assert_eq!(request.url(), "/avatar.png");
-        let response = Response::from_data(vec![1u8, 2, 3, 4]).with_header(
-            Header::from_bytes(&b"Content-Type"[..], &b"image/png"[..]).unwrap(),
-        );
+        let response = Response::from_data(vec![1u8, 2, 3, 4])
+            .with_header(Header::from_bytes(&b"Content-Type"[..], &b"image/png"[..]).unwrap());
         request.respond(response).unwrap();
     });
     ready_rx.recv().unwrap();
@@ -87,12 +86,7 @@ fn cache_avatar_stores_bytes_in_profile_cas() {
     .unwrap();
 
     assert!(Path::new(&local_path).exists());
-    assert!(local_path.starts_with(
-        store
-            .get_chats_dir(&profile.id)
-            .to_string_lossy()
-            .as_ref()
-    ));
+    assert!(local_path.starts_with(store.get_chats_dir(&profile.id).to_string_lossy().as_ref()));
 
     let stored_profile = store.get_profile(&profile.id).unwrap().unwrap();
     assert_eq!(stored_profile.avatar.as_deref(), Some(local_path.as_str()));
@@ -116,8 +110,8 @@ fn placeholder_credentials_are_rejected() {
         .to_string(),
     );
 
-    let err = start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false)))
-        .unwrap_err();
+    let err =
+        start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap_err();
     assert!(matches!(err, ProfileError::MissingCredentials(_)));
 }
 
@@ -152,8 +146,8 @@ fn auto_credentials_source_prefers_raw_env_over_path_env() {
     settings.credentials_source = CredentialsSource::Auto;
     settings.redirect_port = free_port();
 
-    let err = start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false)))
-        .unwrap_err();
+    let err =
+        start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap_err();
     assert_eq!(err.to_string(), "browser-opened");
 }
 
@@ -189,8 +183,8 @@ fn auto_credentials_source_can_use_path_env() {
     settings.credentials_source = CredentialsSource::Auto;
     settings.redirect_port = free_port();
 
-    let err = start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false)))
-        .unwrap_err();
+    let err =
+        start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap_err();
     assert_eq!(err.to_string(), "browser-opened");
 }
 
@@ -212,8 +206,9 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
             ready_tx.send(()).unwrap();
             for _ in 0..4 {
                 let request = server.recv().unwrap();
-                let parsed = Url::parse(&format!("http://127.0.0.1:{}{}", oauth_port, request.url()))
-                    .unwrap();
+                let parsed =
+                    Url::parse(&format!("http://127.0.0.1:{}{}", oauth_port, request.url()))
+                        .unwrap();
 
                 match parsed.path() {
                     "/auth" => {
@@ -238,11 +233,8 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
                     "/token" => {
                         let response = Response::from_string(r#"{"access_token":"test-access"}"#)
                             .with_header(
-                                Header::from_bytes(
-                                    &b"Content-Type"[..],
-                                    &b"application/json"[..],
-                                )
-                                .unwrap(),
+                                Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
+                                    .unwrap(),
                             );
                         request.respond(response).unwrap();
                     }
@@ -256,11 +248,8 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
                             original_avatar
                         ))
                         .with_header(
-                            Header::from_bytes(
-                                &b"Content-Type"[..],
-                                &b"application/json"[..],
-                            )
-                            .unwrap(),
+                            Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
+                                .unwrap(),
                         );
                         request.respond(response).unwrap();
                     }
@@ -289,46 +278,54 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
         oauth_port, oauth_port
     );
 
-    let mut settings = AuthFlowSettings::new("Squigit", Arc::new(|url| {
-        let client = reqwest::blocking::Client::builder()
-            .no_proxy()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(ProfileError::Network)?;
-        let response = client.get(url).send()?;
-        if response.status() != reqwest::StatusCode::FOUND {
-            return Err(ProfileError::Auth(format!(
-                "Unexpected browser status: {}",
-                response.status()
-            )));
-        }
-
-        let location = response
-            .headers()
-            .get(reqwest::header::LOCATION)
-            .and_then(|value| value.to_str().ok())
-            .ok_or_else(|| ProfileError::Auth("OAuth stub redirect did not include Location".to_string()))?
-            .to_string();
-
-        thread::spawn(move || {
-            let callback_client = reqwest::blocking::Client::builder()
+    let mut settings = AuthFlowSettings::new(
+        "Squigit",
+        Arc::new(|url| {
+            let client = reqwest::blocking::Client::builder()
                 .no_proxy()
+                .redirect(reqwest::redirect::Policy::none())
                 .build()
-                .unwrap();
-            let _ = callback_client.get(location).send();
-        });
+                .map_err(ProfileError::Network)?;
+            let response = client.get(url).send()?;
+            if response.status() != reqwest::StatusCode::FOUND {
+                return Err(ProfileError::Auth(format!(
+                    "Unexpected browser status: {}",
+                    response.status()
+                )));
+            }
 
-        Ok(())
-    }));
+            let location = response
+                .headers()
+                .get(reqwest::header::LOCATION)
+                .and_then(|value| value.to_str().ok())
+                .ok_or_else(|| {
+                    ProfileError::Auth("OAuth stub redirect did not include Location".to_string())
+                })?
+                .to_string();
+
+            thread::spawn(move || {
+                let callback_client = reqwest::blocking::Client::builder()
+                    .no_proxy()
+                    .build()
+                    .unwrap();
+                let _ = callback_client.get(location).send();
+            });
+
+            Ok(())
+        }),
+    );
     settings.redirect_port = callback_port;
     settings.user_info_url = format!("http://127.0.0.1:{}/userinfo", oauth_port);
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
 
-    let result = start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false)))
-        .unwrap();
+    let result =
+        start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap();
     assert_eq!(result.name, "Integration User");
     assert_eq!(result.email, "integration@example.com");
-    assert_eq!(result.original_picture.as_deref(), Some(original_avatar.as_str()));
+    assert_eq!(
+        result.original_picture.as_deref(),
+        Some(original_avatar.as_str())
+    );
     assert!(!result.avatar.is_empty());
     assert!(Path::new(&result.avatar).exists());
 
@@ -341,7 +338,10 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
         stored_profile.original_avatar.as_deref(),
         Some(original_avatar.as_str())
     );
-    assert_eq!(stored_profile.avatar.as_deref(), Some(result.avatar.as_str()));
+    assert_eq!(
+        stored_profile.avatar.as_deref(),
+        Some(result.avatar.as_str())
+    );
 
     server_handle.join().unwrap();
 }
@@ -360,8 +360,8 @@ fn cancelled_auth_serves_failure_page_for_late_callback() {
         let server = Server::http(("127.0.0.1", oauth_port)).unwrap();
         ready_tx.send(()).unwrap();
         let request = server.recv().unwrap();
-        let parsed = Url::parse(&format!("http://127.0.0.1:{}{}", oauth_port, request.url()))
-            .unwrap();
+        let parsed =
+            Url::parse(&format!("http://127.0.0.1:{}{}", oauth_port, request.url())).unwrap();
         assert_eq!(parsed.path(), "/auth");
 
         let redirect_uri = parsed
@@ -395,22 +395,27 @@ fn cancelled_auth_serves_failure_page_for_late_callback() {
     );
 
     let (location_tx, location_rx) = std::sync::mpsc::channel();
-    let mut settings = AuthFlowSettings::new("Squigit", Arc::new(move |url| {
-        let client = reqwest::blocking::Client::builder()
-            .no_proxy()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(ProfileError::Network)?;
-        let response = client.get(url).send()?;
-        let location = response
-            .headers()
-            .get(reqwest::header::LOCATION)
-            .and_then(|value| value.to_str().ok())
-            .ok_or_else(|| ProfileError::Auth("OAuth stub redirect did not include Location".to_string()))?
-            .to_string();
-        location_tx.send(location).unwrap();
-        Ok(())
-    }));
+    let mut settings = AuthFlowSettings::new(
+        "Squigit",
+        Arc::new(move |url| {
+            let client = reqwest::blocking::Client::builder()
+                .no_proxy()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .map_err(ProfileError::Network)?;
+            let response = client.get(url).send()?;
+            let location = response
+                .headers()
+                .get(reqwest::header::LOCATION)
+                .and_then(|value| value.to_str().ok())
+                .ok_or_else(|| {
+                    ProfileError::Auth("OAuth stub redirect did not include Location".to_string())
+                })?
+                .to_string();
+            location_tx.send(location).unwrap();
+            Ok(())
+        }),
+    );
     settings.redirect_port = callback_port;
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
 
@@ -419,9 +424,7 @@ fn cancelled_auth_serves_failure_page_for_late_callback() {
     let cancel_url = settings.cancel_url();
     let store_base_dir = store.base_dir().clone();
 
-    let auth_thread = thread::spawn(move || {
-        start_google_auth_flow(&store, &settings, cancel_flag)
-    });
+    let auth_thread = thread::spawn(move || start_google_auth_flow(&store, &settings, cancel_flag));
 
     let callback_location = location_rx.recv().unwrap();
     auth_cancelled.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -439,7 +442,9 @@ fn cancelled_auth_serves_failure_page_for_late_callback() {
     assert!(callback_body.contains("Please close this tab and try again from Squigit."));
 
     let result = auth_thread.join().unwrap();
-    assert!(matches!(result, Err(ProfileError::Auth(message)) if message == "Authentication expired"));
+    assert!(
+        matches!(result, Err(ProfileError::Auth(message)) if message == "Authentication expired")
+    );
 
     let check_store = ProfileStore::with_base_dir(store_base_dir).unwrap();
     assert!(check_store.get_active_profile_id().unwrap().is_none());
