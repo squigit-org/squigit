@@ -97,13 +97,63 @@ The shell contains Electron, Chromium, `qt-capture`, and `napi-bridge`. The app 
 
 Renderer updates are intended to be handled inside the app. The renderer is versioned with CalVer and checked against `apps/renderer/CHANGELOG.md`.
 
-The OTA flow is:
+#### Signing setup — once per publisher key
 
-1. Check `apps/renderer/CHANGELOG.md`.
-2. If a newer renderer version exists, download the new JS/CSS bundle into user data.
-3. Rewrite the local renderer `index.html` reference to point at the downloaded bundle.
-4. Apply the new bundle on the next app launch.
-5. Fall back to the bundled renderer if the downloaded bundle is removed or invalid.
+Generate the signing pair from the repository root:
+
+```bash
+cargo xtask crypto keygen --yes
+```
+
+This creates:
+
+- `priv.pem` at the repository root. Move it to secure storage and never commit it.
+- `crates/squigit-auth/assets/crypto/pub.pem`. The app receives this public key when it is built.
+
+Both generated files are gitignored. Keep a secure backup of the pair and do not generate a new pair for every release: existing app builds trust the public key they were built with.
+
+For GitHub Actions, store the PEM contents as two secrets:
+
+```bash
+gh secret set SQUIGIT_OTA_PRIVATE_KEY_PEM < /secure/path/priv.pem
+gh secret set SQUIGIT_OTA_PUBLIC_KEY_PEM < crates/squigit-auth/assets/crypto/pub.pem
+```
+
+The public key is not confidential, but keeping it in a separate build secret matches the uncommitted local asset. Desktop CI supplies `SQUIGIT_OTA_PUBLIC_KEY_PEM` while building the app. CI must never run `crypto keygen`.
+
+#### Publishing a renderer update
+
+The publisher or release job must:
+
+1. Build `apps/renderer/dist` and package it as a ZIP.
+2. Sign the finished ZIP. Do not rebuild or modify it after signing.
+3. Upload both the ZIP and its sibling `.sig` file to the renderer release.
+
+For a local release:
+
+```bash
+export YOUR_PRIV_KEY="$(cat /secure/path/priv.pem)"
+cargo xtask crypto sign renderer.zip
+```
+
+PowerShell uses `$env:YOUR_PRIV_KEY = Get-Content C:\secure\priv.pem -Raw`. `renderer.zip` produces `renderer.sig`.
+
+For GitHub Actions, expose the private key only to the signing step:
+
+```yaml
+- name: Sign renderer update
+  env:
+    YOUR_PRIV_KEY: ${{ secrets.SQUIGIT_OTA_PRIVATE_KEY_PEM }}
+  run: cargo xtask crypto sign renderer.zip
+```
+
+The later upload job uses `PACKAGES_GITHUB_TOKEN` to publish both files to `squigit-org/squigit-packages`. The PAT and signing key have separate jobs: the PAT uploads, while the PEM proves the ZIP came from Squigit.
+
+#### Installing an update
+
+The app downloads the renderer ZIP and `.sig`, then calls `verify_artifact_signature`. It extracts and activates the ZIP only when verification returns `true`; invalid downloads are removed and the bundled renderer remains active. A missing build-time public key is a configuration error, not a valid unsigned update.
+
+The format uses an Ed25519 detached signature, SHA-256 for the ZIP digest, PKCS#8 PEM for the private key, and public-key PEM for the app trust anchor.
 
 ### OS-Managed Sidecar Updates
 

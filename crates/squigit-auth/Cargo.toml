@@ -11,6 +11,7 @@ thiserror = "2.0"
 dirs = "6.0"
 chrono = { version = "0.4", features = ["serde"] }
 blake3 = "1.5"
+ed25519-dalek = { version = "2.2", features = ["pkcs8", "pem", "rand_core"] }
 squigit-memory = { path = "../squigit-memory" }
 reqwest = { version = "0.11", features = ["blocking", "json", "rustls-tls"] }
 tiny_http = "0.12"

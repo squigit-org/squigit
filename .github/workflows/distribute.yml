@@ -125,6 +125,7 @@ jobs:
           NO_STRIP: "true"
           SQUIGIT_TAURI_DEBUG: "1"
           SQUIGIT_GOOGLE_CREDENTIALS_JSON: ${{ secrets['CREDENTIALS_JSON'] || '' }}
+          SQUIGIT_OTA_PUBLIC_KEY_PEM: ${{ secrets['SQUIGIT_OTA_PUBLIC_KEY_PEM'] || '' }}
         run: |
           echo "Build debug flags:"
           echo "  APPIMAGE_EXTRACT_AND_RUN=${APPIMAGE_EXTRACT_AND_RUN}"

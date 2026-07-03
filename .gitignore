@@ -41,6 +41,8 @@ _internal/
 credentials.json
 *.key
 *.key.pub
+/priv.pem
+/crates/squigit-auth/assets/crypto/pub.pem
 .env
 .env.*
 !.env.example

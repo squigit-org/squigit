@@ -1,6 +1,7 @@
 use crate::registry::Registry;
 use crate::{console, workspace, Runtime};
 use std::path::Path;
+use zeroize::Zeroizing;
 
 pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
     if let Err(code) = super::root_only(runtime, registry, "crypto") {
@@ -43,7 +44,7 @@ pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
         }
         [action, artifact] if action == "sign" => {
             let private_key = match std::env::var("YOUR_PRIV_KEY") {
-                Ok(value) if !value.trim().is_empty() => value,
+                Ok(value) if !value.trim().is_empty() => Zeroizing::new(value),
                 _ => {
                     return super::fail(
                         runtime,
@@ -51,7 +52,7 @@ pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
                     )
                 }
             };
-            workspace::crypto::sign(runtime, Path::new(artifact), &private_key)
+            workspace::crypto::sign(runtime, Path::new(artifact), private_key.as_str())
         }
         [action, ..] => {
             if !matches!(action.as_str(), "keygen" | "sign") {

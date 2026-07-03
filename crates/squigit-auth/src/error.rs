@@ -44,6 +44,10 @@ pub enum ProfileError {
     #[error("{0}")]
     Security(String),
 
+    /// OTA verification public key is absent or invalid.
+    #[error("{0}")]
+    MissingVerificationKey(String),
+
     /// IO error during file operations.
     #[error("IO error: {0}")]
     Io(#[from] io::Error),

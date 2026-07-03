@@ -182,17 +182,21 @@ usage = "cargo xtask crypto [operation] [options]"
 [ui.screens.crypto.section]
 title = "Operations:"
 entries = [
-    { label = "keygen", description = "Generate an RSA signing pair" },
+    { label = "keygen", description = "Generate an Ed25519 signing pair" },
     { label = "sign", description = "Sign an OTA update artifact" },
 ]
 
 [ui.screens."crypto.sign"]
 title = "Crypto sign"
 usage = "cargo xtask crypto sign <artifact.zip>"
-requirements = [{ text = "$env/export YOUR_PRIV_KEY ; private.pem" }]
-description = "Sign an OTA update artifact."
+requirements = [
+    { text = "Bash: export YOUR_PRIV_KEY=\"$(cat priv.pem)\"" },
+    { text = "PowerShell: $env:YOUR_PRIV_KEY = Get-Content priv.pem -Raw" },
+    { text = "GitHub Actions: YOUR_PRIV_KEY: ${{ secrets.SQUIGIT_OTA_PRIVATE_KEY_PEM }}" },
+]
+description = "Sign an OTA update artifact. In CI, map the multiline PEM secret to YOUR_PRIV_KEY only for the signing step."
 
 [ui.prompts."crypto.keygen"]
 title = "Crypto keygen"
-question = "Generate a new RSA signing key pair? [y/N]"
+question = "Generate a new Ed25519 signing key pair? [y/N]"
 declined = "Key generation cancelled."
