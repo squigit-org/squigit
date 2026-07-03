@@ -1,6 +1,6 @@
 [package]
 name = "squigit-auth"
-version.workspace = true
+version = "0.2.0"
 edition.workspace = true
 build = "build.rs"
 
