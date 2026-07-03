@@ -1,5 +1,5 @@
 [alias]
-xtask = "run --package xtask --"
+xtask = "run -q --package xtask --"
 
 [target.x86_64-unknown-linux-musl]
 linker = "musl-gcc"
