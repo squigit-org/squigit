@@ -17,14 +17,14 @@ use napi_derive::napi;
 pub fn process_image_path(path: String) -> Result<NapiStoredImage> {
     desktop_runtime::media::process_and_store_image(path)
         .map(Into::into)
-        .map_err(|e| napi::Error::from_reason(e))
+        .map_err(napi::Error::from_reason)
 }
 
 #[napi]
 pub async fn upload_image_to_imgbb(image_path: String, api_key: String) -> Result<String> {
     desktop_runtime::media::upload_image_to_imgbb(&image_path, &api_key)
         .await
-        .map_err(|e| napi::Error::from_reason(e))
+        .map_err(napi::Error::from_reason)
 }
 
 // =============================================================================
@@ -44,24 +44,24 @@ pub fn detect_image_tone(bytes: napi::bindgen_prelude::Buffer) -> Option<String>
 pub fn read_clipboard_image() -> Result<NapiStoredImage> {
     desktop_runtime::media::read_and_store_clipboard_image()
         .map(Into::into)
-        .map_err(|e| napi::Error::from_reason(e))
+        .map_err(napi::Error::from_reason)
 }
 
 #[napi]
 pub fn read_clipboard_text() -> Result<String> {
-    desktop_runtime::media::read_clipboard_text().map_err(|e| napi::Error::from_reason(e))
+    desktop_runtime::media::read_clipboard_text().map_err(napi::Error::from_reason)
 }
 
 #[napi]
 pub fn copy_image_to_clipboard(image_base64: String) -> Result<()> {
     desktop_runtime::media::copy_image_to_clipboard(image_base64)
-        .map_err(|e| napi::Error::from_reason(e))
+        .map_err(napi::Error::from_reason)
 }
 
 #[napi]
 pub fn copy_image_from_path_to_clipboard(path: String) -> Result<()> {
     desktop_runtime::media::copy_image_from_path_to_clipboard(path)
-        .map_err(|e| napi::Error::from_reason(e))
+        .map_err(napi::Error::from_reason)
 }
 
 // =============================================================================
@@ -73,11 +73,11 @@ pub fn play_ui_sound(effect: String) -> Result<()> {
     static PLAYER: std::sync::OnceLock<desktop_runtime::audio::UiSoundPlayer> = std::sync::OnceLock::new();
     
     let effect = desktop_runtime::audio::UiSoundEffect::from_input(Some(&effect))
-        .map_err(|e| napi::Error::from_reason(e))?;
+        .map_err(napi::Error::from_reason)?;
         
-    let player = PLAYER.get_or_init(|| desktop_runtime::audio::UiSoundPlayer::new());
+    let player = PLAYER.get_or_init(desktop_runtime::audio::UiSoundPlayer::new);
     
-    player.play(effect).map_err(|e| napi::Error::from_reason(e))?;
+    player.play(effect).map_err(napi::Error::from_reason)?;
     Ok(())
 }
 

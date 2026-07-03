@@ -23,7 +23,7 @@ pub fn get_linux_package_manager() -> String {
 
 #[napi]
 pub fn reveal_in_file_manager(path: String) -> Result<()> {
-    desktop_runtime::platform::reveal_in_file_manager(path).map_err(|e| napi::Error::from_reason(e))
+    desktop_runtime::platform::reveal_in_file_manager(path).map_err(napi::Error::from_reason)
 }
 
 // =============================================================================
@@ -33,10 +33,10 @@ pub fn reveal_in_file_manager(path: String) -> Result<()> {
 #[napi]
 pub fn check_stt_version() -> Result<()> {
     let (binary_path, _) = desktop_runtime::sidecar::resolve_stt_sidecar_path()
-        .map_err(|e| napi::Error::from_reason(e))?;
+        .map_err(napi::Error::from_reason)?;
 
     desktop_runtime::sidecar::check_stt_version(&binary_path)
-        .map_err(|e| napi::Error::from_reason(e))
+        .map_err(napi::Error::from_reason)
 }
 
 #[napi]
@@ -52,7 +52,7 @@ pub async fn run_sidecar_version(command: String) -> Result<String> {
 
         if command == "squigit-stt --version" {
             let (sidecar_path, _) = desktop_runtime::sidecar::resolve_stt_sidecar_path()
-                .map_err(|e| napi::Error::from_reason(e))?;
+                .map_err(napi::Error::from_reason)?;
 
             let mut cmd = std::process::Command::new(sidecar_path);
             cmd.arg("--version");
@@ -91,12 +91,12 @@ pub async fn run_sidecar_version(command: String) -> Result<String> {
 #[napi]
 pub fn encrypt_and_save(profile_id: String, provider: String, plaintext: String) -> Result<()> {
     desktop_runtime::security::encrypt_and_save(&profile_id, &provider, &plaintext)
-        .map_err(|e| napi::Error::from_reason(e))
+        .map_err(napi::Error::from_reason)
 }
 
 #[napi]
 pub fn set_agreed_flag() -> Result<()> {
-    desktop_runtime::security::set_agreed_flag().map_err(|e| napi::Error::from_reason(e))
+    desktop_runtime::security::set_agreed_flag().map_err(napi::Error::from_reason)
 }
 
 #[napi]

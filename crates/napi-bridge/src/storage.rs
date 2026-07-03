@@ -43,9 +43,9 @@ fn from_json<T: DeserializeOwned>(value: &str) -> Result<T> {
 pub fn store_image_from_path(path: String) -> Result<NapiStoredImage> {
     #[cfg(feature = "desktop")]
     {
-        return desktop_runtime::media::process_and_store_image(path)
+        desktop_runtime::media::process_and_store_image(path)
             .map(Into::into)
-            .map_err(Error::from_reason);
+            .map_err(Error::from_reason)
     }
 
     #[cfg(not(feature = "desktop"))]

@@ -72,11 +72,9 @@ pub async fn generate_chat_title(
             let error_text = response.text().await.unwrap_or_default();
             println!("Title Gen Error Status (Attempt {}): {} - {}", attempts, status, error_text);
             last_error = format!("Status {}: {}", status, error_text);
-            if status.as_u16() == 503 || status.as_u16() == 429 {
-                if attempts < max_attempts {
-                    tokio::time::sleep(std::time::Duration::from_millis(1000 * attempts)).await;
-                    continue;
-                }
+            if (status.as_u16() == 503 || status.as_u16() == 429) && attempts < max_attempts {
+                tokio::time::sleep(std::time::Duration::from_millis(1000 * attempts)).await;
+                continue;
             }
             return Err(format!("Gemini API Error: {}", last_error));
         }
