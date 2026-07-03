@@ -1,0 +1,51 @@
+schema = 2
+
+[context]
+kind = "component"
+name = "whisper-stt"
+display_name = "Whisper STT"
+category = "sidecars"
+order = 30
+archived = false
+
+[requirements]
+node = false
+rust = false
+python = false
+cmake = true
+qt = false
+
+[version]
+scheme = "semver"
+files = ["CMakeLists.txt", "CHANGELOG.md"]
+include_root = true
+source = { path = "CMakeLists.txt", format = "regex", pattern = 'project\(squigit-stt VERSION\s+(?P<version>[0-9.]+)\)' }
+
+[release]
+tag = "stt-v{version}"
+
+[tests]
+root = "tests"
+include = ["tests/*.cpp", "tests/**/*.cpp"]
+
+[operations]
+setup = { enabled = true, handler = "setup", description = "Set up Whisper STT toolchains" }
+dev = { enabled = false, handler = "none", description = "Development mode is not enabled for the native Whisper STT sidecar." }
+doctor = { enabled = true, handler = "whisper-stt", description = "Check Whisper STT sources" }
+build = { enabled = true, handler = "whisper-stt", requires_commit_sha = false, description = "Build the Whisper STT sidecar" }
+test = { enabled = true, handler = "whisper-stt", description = "Run Whisper STT test suites" }
+clean = { enabled = true, handler = "whisper-stt", description = "Remove Whisper STT artifacts" }
+bump = { enabled = true, handler = "whisper-stt", description = "Prepare a SemVer update" }
+release = { enabled = true, handler = "whisper-release", description = "Prepare the package release" }
+
+[ui.menu]
+title = "Whisper STT xtask"
+usage = "cargo xtask <command> [options]"
+
+[ui.setup]
+title = "Whisper STT Setup"
+checking = "Checking required toolchains:"
+install_notice = "Xtask will install missing tools required by Whisper STT."
+empty_notice = "No additional tools are required."
+prompt = "Continue? [y/N]"
+declined = "Setup cancelled."

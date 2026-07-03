@@ -1,0 +1,57 @@
+schema = 2
+
+[context]
+kind = "component"
+name = "legacy-tauri"
+display_name = "Archived Tauri Desktop"
+category = "apps"
+order = 40
+archived = true
+
+[requirements]
+node = true
+rust = true
+python = false
+cmake = false
+qt = false
+
+[version]
+scheme = "none"
+files = []
+include_root = false
+
+[tests]
+root = "tests"
+include = ["tests/*.rs", "tests/**/*.rs"]
+
+[operations]
+setup = { enabled = true, handler = "setup", description = "Set up Tauri tools" }
+dev = { enabled = true, handler = "node-app", description = "Start Tauri locally" }
+doctor = { enabled = false, handler = "none", description = "Doctor review is disabled for the Tauri application." }
+build = { enabled = true, handler = "node-app", requires_commit_sha = true, description = "Build Tauri installer" }
+test = { enabled = false, handler = "none", description = "Tests are disabled for the Tauri application." }
+clean = { enabled = false, handler = "none", description = "Clean is disabled for the Tauri application." }
+bump = { enabled = false, handler = "none", description = "Tauri is frozen at 0.1.1." }
+release = { enabled = false, handler = "none", description = "Release is disabled for archived apps." }
+
+[ui.menu]
+title = "Archived Tauri Desktop xtask"
+usage = "cargo xtask <command> [options]"
+
+[ui.setup]
+title = "Archived Tauri Desktop Setup"
+checking = "Checking required toolchains:"
+install_notice = "Xtask will install missing tools required by Archived Tauri Desktop."
+empty_notice = "No additional tools are required."
+prompt = "Continue? [y/N]"
+declined = "Setup cancelled."
+
+[ui.prompts.archived]
+title = "Archived Tauri Desktop"
+description = """
+This component is archived.
+It may be broken, stale, or missing current features.
+Use Desktop unless you are debugging the old Tauri shell.
+"""
+question = "Do you want to continue? [y/N]"
+declined = "Archived action cancelled."

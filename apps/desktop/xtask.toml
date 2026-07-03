@@ -1,0 +1,51 @@
+schema = 2
+
+[context]
+kind = "component"
+name = "desktop"
+display_name = "Desktop"
+category = "apps"
+order = 30
+archived = false
+
+[requirements]
+node = true
+rust = false
+python = false
+cmake = false
+qt = false
+
+[version]
+scheme = "semver"
+files = ["package.json", "CHANGELOG.md"]
+include_root = true
+source = { path = "package.json", format = "json", key = "version" }
+
+[release]
+tag = "desktop-v{version}"
+
+[tests]
+root = "tests"
+include = ["tests/*.test.ts", "tests/**/*.test.ts"]
+
+[operations]
+setup = { enabled = true, handler = "setup", description = "Set up Desktop toolchains" }
+dev = { enabled = true, handler = "node-app", description = "Start Desktop locally" }
+doctor = { enabled = true, handler = "node-app", description = "Check Desktop type safety" }
+build = { enabled = true, handler = "node-app", requires_commit_sha = true, description = "Build the Desktop installer" }
+test = { enabled = true, handler = "node-app", description = "Run Desktop test suites" }
+clean = { enabled = true, handler = "node-app", description = "Remove build artifacts" }
+bump = { enabled = true, handler = "node-app", description = "Prepare a SemVer update" }
+release = { enabled = true, handler = "desktop-release", description = "Prepare the Desktop release" }
+
+[ui.menu]
+title = "Desktop xtask"
+usage = "cargo xtask <command> [options]"
+
+[ui.setup]
+title = "Desktop Setup"
+checking = "Checking required toolchains:"
+install_notice = "Xtask will install missing tools required by Desktop."
+empty_notice = "No additional tools are required."
+prompt = "Continue? [y/N]"
+declined = "Setup cancelled."

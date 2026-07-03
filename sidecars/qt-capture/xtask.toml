@@ -1,0 +1,48 @@
+schema = 2
+
+[context]
+kind = "component"
+name = "qt-capture"
+display_name = "Qt Capture"
+category = "sidecars"
+order = 20
+archived = false
+
+[requirements]
+node = false
+rust = true
+python = false
+cmake = true
+qt = true
+
+[version]
+scheme = "semver"
+files = ["Cargo.toml", "native/CMakeLists.txt"]
+include_root = true
+source = { path = "Cargo.toml", format = "toml", key = "package.version" }
+
+[tests]
+root = "tests"
+include = ["tests/*.rs", "tests/**/*.rs", "tests/*.cpp", "tests/**/*.cpp"]
+
+[operations]
+setup = { enabled = true, handler = "setup", description = "Set up Qt Capture toolchains" }
+dev = { enabled = false, handler = "none", description = "Use build --native for the native Qt debugging." }
+doctor = { enabled = true, handler = "qt-capture", description = "Check Qt Capture sources" }
+build = { enabled = true, handler = "qt-capture", requires_commit_sha = false, description = "Build the Qt Capture sidecar" }
+test = { enabled = true, handler = "qt-capture", description = "Run Qt Capture test suites" }
+clean = { enabled = true, handler = "qt-capture", description = "Remove Qt Capture artifacts" }
+bump = { enabled = true, handler = "qt-capture", description = "Prepare a SemVer update" }
+release = { enabled = false, handler = "none", description = "Qt Capture is bundled with the Desktop installer." }
+
+[ui.menu]
+title = "Qt Capture xtask"
+usage = "cargo xtask <command> [options]"
+
+[ui.setup]
+title = "Qt Capture Setup"
+checking = "Checking required toolchains:"
+install_notice = "Xtask will install missing tools required by Qt Capture."
+empty_notice = "No additional tools are required."
+prompt = "Continue? [y/N]"
+declined = "Setup cancelled."

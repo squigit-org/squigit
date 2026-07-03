@@ -1,0 +1,55 @@
+schema = 2
+
+[context]
+kind = "component"
+name = "paddle-ocr"
+display_name = "Paddle OCR"
+category = "sidecars"
+order = 10
+archived = false
+
+[requirements]
+node = false
+rust = false
+python = true
+cmake = false
+qt = false
+
+[version]
+scheme = "semver"
+files = ["src/__init__.py", "CHANGELOG.md"]
+include_root = true
+source = { path = "src/__init__.py", format = "regex", pattern = '(?m)^__version__\s*=\s*"(?P<version>[^"]+)"' }
+
+[release]
+tag = "ocr-v{version}"
+
+[tests]
+root = "tests"
+include = ["tests/test_*.py", "tests/**/test_*.py"]
+
+[operations]
+setup = { enabled = true, handler = "setup", description = "Set up Paddle OCR toolchains" }
+dev = { enabled = false, handler = "none", description = "Development mode is not enabled for the packaged Paddle OCR sidecar." }
+doctor = { enabled = true, handler = "paddle-ocr", description = "Check Paddle OCR sources" }
+build = { enabled = true, handler = "paddle-ocr", requires_commit_sha = false, description = "Build the Paddle OCR sidecar" }
+test = { enabled = true, handler = "paddle-ocr", description = "Run Paddle OCR test suites" }
+clean = { enabled = true, handler = "paddle-ocr", description = "Remove Paddle OCR artifacts" }
+bump = { enabled = true, handler = "paddle-ocr", description = "Prepare a SemVer update" }
+release = { enabled = true, handler = "paddle-release", description = "Prepare the package release" }
+
+[ui.menu]
+title = "Paddle OCR xtask"
+usage = "cargo xtask <command> [options]"
+
+[ui.setup]
+title = "Paddle OCR Setup"
+checking = "Checking required toolchains:"
+install_notice = "Xtask will install missing tools required by Paddle OCR."
+empty_notice = "No additional tools are required."
+prompt = "Continue? [y/N]"
+declined = "Setup cancelled."
+
+[ui.prompts.build]
+title = "Paddle OCR Build"
+question = "Calculate the packaged payload size? [y/N]"

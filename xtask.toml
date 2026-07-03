@@ -1,0 +1,198 @@
+schema = 2
+
+[context]
+kind = "repository"
+name = "Squigit"
+temp_namespace = "squigit-xtask"
+
+[discovery]
+roots = ["apps", "archive", "crates", "sidecars"]
+
+[version]
+scheme = "calver"
+files = ["VERSION", "CHANGELOG.md"]
+include_root = false
+source = { path = "VERSION", format = "plain" }
+
+[operations]
+setup = { enabled = true, handler = "setup", description = "Set up development tools" }
+dev = { enabled = true, handler = "component", description = "Start a component locally" }
+doctor = { enabled = true, handler = "doctor", description = "Check the environment" }
+build = { enabled = true, handler = "component", description = "Build project components" }
+test = { enabled = true, handler = "workspace", description = "Run workspace test suites" }
+clean = { enabled = true, handler = "workspace", description = "Remove build artifacts" }
+bump = { enabled = true, handler = "root-bump", description = "Prepare version updates" }
+release = { enabled = true, handler = "component", description = "Run the release workflow" }
+live = { enabled = true, handler = "live", description = "Run isolated workflows" }
+crypto = { enabled = true, handler = "crypto", description = "Sign OTA update artifacts" }
+
+[[setup.stages]]
+name = "node"
+order = 10
+handler = "node"
+requirement = "node"
+description = "Prepare Node.js and pnpm for application and package builds."
+steps = ["Check for Node.js.", "Check for pnpm.", "Verify the JavaScript workspace toolchain."]
+
+[[setup.stages]]
+name = "python"
+order = 20
+handler = "python"
+requirement = "python"
+description = "Prepare Python and pip for Python sidecars."
+steps = ["Check for Python 3.", "Check for pip3.", "Verify the Python packaging toolchain."]
+
+[[setup.stages]]
+name = "cmake"
+order = 30
+handler = "cmake"
+requirement = "cmake"
+description = "Prepare CMake for native component builds."
+steps = ["Check for CMake.", "Verify the native build generator."]
+
+[[setup.stages]]
+name = "qt"
+order = 40
+handler = "qt"
+requirement = "qt"
+description = "Prepare Qt and qmake for capture builds."
+steps = ["Check for qmake6.", "Verify the Qt toolchain."]
+
+[ui.vocabulary]
+usage = "Usage:"
+requires = "Requires:"
+commands = "Commands:"
+
+[ui.menu]
+title = "Squigit xtask"
+usage = "cargo xtask <command> [path/to/component] [options]"
+
+[ui.setup]
+title = "Squigit Setup"
+checking = "Checking toolchains:"
+install_notice = "Xtask will install missing tools for your OS."
+scope_notice = "[!] Need fewer tools? Run setup inside a component."
+empty_notice = "No additional tools are required."
+prompt = "Continue? [y/N]"
+declined = "Setup cancelled."
+
+[ui.screens.dev]
+title = "Squigit Dev"
+usage = "cargo xtask dev [relative/path/to/component]"
+description = "Start a component in development mode."
+
+[ui.screens.build]
+title = "Squigit Build"
+usage = "cargo xtask build [target] [options]"
+
+[ui.screens.build.section]
+title = "Targets:"
+entries = [
+    { label = "path/to/", description = "Build a component at path" },
+    { label = "Desktop", description = "Build the Desktop installer" },
+    { label = "CLI", description = "Build the CLI application" },
+    { label = "OCR", description = "Build the OCR OS Package" },
+    { label = "STT", description = "Build the STT OS Package" },
+]
+
+[ui.screens.release]
+title = "Squigit Release"
+usage = "cargo xtask release [target]"
+
+[ui.screens.release.section]
+title = "Targets:"
+entries = [
+    { label = "Desktop", description = "Tag the Desktop release" },
+    { label = "Renderer", description = "Tag the Renderer release" },
+    { label = "CLI", description = "Tag the CLI package release" },
+    { label = "OCR", description = "Tag the OCR package release" },
+    { label = "STT", description = "Tag the STT package release" },
+]
+
+[ui.screens.live]
+title = "Squigit Live"
+usage = "cargo xtask live [workflow] [options]"
+
+[ui.screens.live.section]
+title = "Workflows:"
+entries = [
+    { label = "auth", description = "Login, signup, logout, list, or remove isolated profiles" },
+    { label = "brain", description = "Analyze images, send a prompt, or continue isolated threads" },
+    { label = "ocr", description = "Run OCR, download models, or list the temporary model cache" },
+    { label = "capture", description = "Run smoke tests in both: traditional, or squiggle captures" },
+]
+
+[ui.screens."live.auth"]
+title = "Live auth"
+usage = "cargo xtask live auth [operation] [options]"
+requirements = [{ text = "crates/squigit-auth/assets/oauth/credentials.json" }]
+
+[ui.screens."live.auth".section]
+title = "Operations:"
+entries = [
+    { label = "login", description = "Login with your Google account into an existing profile" },
+    { label = "signup", description = "Create a new isolated profile with your Google account" },
+    { label = "logout", description = "Logout from the active profile, login is mandatory" },
+    { label = "profiles", description = "List your isolated profiles IDs, emails, and usernames" },
+    { label = "remove", description = "Remove an existing profile using its id or email" },
+]
+
+[ui.screens."live.brain"]
+title = "Live brain"
+usage = "cargo xtask live brain [operation] [options]"
+requirements = [
+    { text = "$env/export YOUR_PROVIDER_API_KEY ;", link = { label = "aistudio.google.com/app/api-keys", url = "https://aistudio.google.com/app/api-keys" } },
+]
+
+[ui.screens."live.brain".section]
+title = "Operations:"
+entries = [
+    { label = "analyze", description = "Start an isolated thread with [path/to/image] <message...>" },
+    { label = "prompt", description = "Continue an isolated thread using <thread-id> <message...>" },
+    { label = "threads", description = "List your isolated threads IDs, titles, and creation dates" },
+]
+
+[ui.screens."live.ocr"]
+title = "Live OCR"
+usage = "cargo xtask live ocr [operation] [options]"
+
+[ui.screens."live.ocr".section]
+title = "Operations:"
+entries = [
+    { label = "analyze", description = "Extract text from [IMAGE] using [MODEL]" },
+    { label = "download", description = "Download isolated PaddleOCR models" },
+    { label = "models", description = "List your isolated model IDs and names" },
+]
+
+[ui.screens."live.capture"]
+title = "Live capture"
+usage = "cargo xtask live capture [mode]"
+
+[ui.screens."live.capture".section]
+title = "Modes:"
+entries = [
+    { label = "traditional", description = "Capture your screen using a selection box" },
+    { label = "squiggle", description = "Grab the area you scribble using a brush" },
+]
+
+[ui.screens.crypto]
+title = "Squigit crypto"
+usage = "cargo xtask crypto [operation] [options]"
+
+[ui.screens.crypto.section]
+title = "Operations:"
+entries = [
+    { label = "keygen", description = "Generate an RSA signing pair" },
+    { label = "sign", description = "Sign an OTA update artifact" },
+]
+
+[ui.screens."crypto.sign"]
+title = "Crypto sign"
+usage = "cargo xtask crypto sign <artifact.zip>"
+requirements = [{ text = "$env/export YOUR_PRIV_KEY ; private.pem" }]
+description = "Sign an OTA update artifact."
+
+[ui.prompts."crypto.keygen"]
+title = "Crypto keygen"
+question = "Generate a new RSA signing key pair? [y/N]"
+declined = "Key generation cancelled."

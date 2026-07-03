@@ -1,0 +1,48 @@
+schema = 2
+
+[context]
+kind = "component"
+name = "squigit-ocr"
+display_name = "Squigit OCR"
+category = "crates"
+order = 70
+archived = false
+
+[requirements]
+node = false
+rust = true
+python = false
+cmake = false
+qt = false
+
+[version]
+scheme = "semver"
+files = ["Cargo.toml"]
+include_root = true
+source = { path = "Cargo.toml", format = "toml", key = "package.version" }
+
+[tests]
+root = "tests"
+include = ["tests/*.rs", "tests/**/*.rs"]
+
+[operations]
+setup = { enabled = true, handler = "setup", description = "Set up Crate toolchains" }
+dev = { enabled = false, handler = "none", description = "Development mode is not enabled." }
+doctor = { enabled = true, handler = "cargo-crate", description = "Cargo Check this Crate" }
+build = { enabled = true, handler = "cargo-crate", requires_commit_sha = false, description = "Build Squigit OCR" }
+test = { enabled = true, handler = "cargo-crate", description = "Run Crate test suites" }
+clean = { enabled = true, handler = "cargo-crate", description = "Remove Build artifacts" }
+bump = { enabled = true, handler = "cargo-crate", description = "Prepare a SemVer update" }
+release = { enabled = false, handler = "none", description = "Release is not enabled." }
+
+[ui.menu]
+title = "Squigit OCR xtask"
+usage = "cargo xtask <command> [options]"
+
+[ui.setup]
+title = "Squigit OCR Setup"
+checking = "Checking required toolchains:"
+install_notice = "Xtask will install missing tools required by Squigit OCR."
+empty_notice = "No additional tools are required."
+prompt = "Continue? [y/N]"
+declined = "Setup cancelled."

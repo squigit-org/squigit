@@ -1,0 +1,48 @@
+schema = 2
+
+[context]
+kind = "component"
+name = "react"
+display_name = "React Package"
+category = "packages"
+order = 20
+archived = false
+
+[requirements]
+node = true
+rust = false
+python = false
+cmake = false
+qt = false
+
+[version]
+scheme = "semver"
+files = ["package.json", "package-lock.json"]
+include_root = true
+source = { path = "package.json", format = "json", key = "version" }
+
+[tests]
+root = "tests"
+include = ["tests/*.test.ts", "tests/**/*.test.ts", "tests/*.test.tsx", "tests/**/*.test.tsx"]
+
+[operations]
+setup = { enabled = true, handler = "setup", description = "Set up Package toolchains" }
+dev = { enabled = false, handler = "none", description = "Development mode is not enabled." }
+doctor = { enabled = true, handler = "node-package", description = "Check Package type safety" }
+build = { enabled = false, handler = "none", requires_commit_sha = false, description = "Standalone build is not enabled." }
+test = { enabled = true, handler = "node-package", description = "Run Package test suites" }
+clean = { enabled = false, handler = "none", description = "Standalone clean is not enabled." }
+bump = { enabled = true, handler = "node-package", description = "Prepare a SemVer update" }
+release = { enabled = false, handler = "none", description = "React is released as part of its consuming end-user application." }
+
+[ui.menu]
+title = "React Package xtask"
+usage = "cargo xtask <command> [options]"
+
+[ui.setup]
+title = "React Package Setup"
+checking = "Checking required toolchains:"
+install_notice = "Xtask will install missing tools required by React Package."
+empty_notice = "No additional tools are required."
+prompt = "Continue? [y/N]"
+declined = "Setup cancelled."
