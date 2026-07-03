@@ -30,7 +30,7 @@ include = ["tests/*.test.ts", "tests/**/*.test.ts"]
 
 [operations]
 setup = { enabled = true, handler = "setup", description = "Set up Desktop toolchains" }
-dev = { enabled = true, handler = "node-app", description = "Start Desktop locally" }
+dev = { enabled = true, handler = "desktop-dev", description = "Start Desktop locally" }
 doctor = { enabled = true, handler = "node-app", description = "Check Desktop type safety" }
 build = { enabled = true, handler = "node-app", requires_commit_sha = true, description = "Build the Desktop installer" }
 test = { enabled = true, handler = "node-app", description = "Run Desktop test suites" }

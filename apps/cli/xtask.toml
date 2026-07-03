@@ -30,7 +30,7 @@ include = ["tests/*.test.ts", "tests/**/*.test.ts"]
 
 [operations]
 setup = { enabled = true, handler = "setup", description = "Set up CLI toolchains" }
-dev = { enabled = true, handler = "node-app", description = "Start the CLI locally" }
+dev = { enabled = true, handler = "cli-dev", description = "Start the CLI locally" }
 doctor = { enabled = true, handler = "node-app", description = "Check CLI type safety" }
 build = { enabled = true, handler = "node-app", requires_commit_sha = false, description = "Build the CLI package" }
 test = { enabled = true, handler = "node-app", description = "Run CLI test suites" }

@@ -30,7 +30,7 @@ include = ["tests/*.test.ts", "tests/**/*.test.ts", "tests/*.test.tsx", "tests/*
 
 [operations]
 setup = { enabled = true, handler = "setup", description = "Set up Renderer toolchains" }
-dev = { enabled = true, handler = "node-app", description = "Start Renderer locally" }
+dev = { enabled = true, handler = "renderer-dev", description = "Start Renderer locally" }
 doctor = { enabled = true, handler = "node-app", description = "Check Renderer type safety" }
 build = { enabled = true, handler = "node-app", requires_commit_sha = false, description = "Build the Renderer package" }
 test = { enabled = true, handler = "node-app", description = "Run Renderer test suites" }

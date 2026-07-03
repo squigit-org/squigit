@@ -9,7 +9,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { stripAnimationQuotesPlugin } from "./plugins/strip-animation-quotes";
 
-const platform = process.env.VITE_PLATFORM || "tauri";
+const platform = process.env.VITE_PLATFORM || "electron";
 
 export default defineConfig({
   plugins: [react(), stripAnimationQuotesPlugin()],

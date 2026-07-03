@@ -26,7 +26,7 @@ include = ["tests/*.rs", "tests/**/*.rs"]
 
 [operations]
 setup = { enabled = true, handler = "setup", description = "Set up Tauri tools" }
-dev = { enabled = true, handler = "node-app", description = "Start Tauri locally" }
+dev = { enabled = true, handler = "tauri-dev", description = "Start Tauri locally" }
 doctor = { enabled = false, handler = "none", description = "Doctor review is disabled for the Tauri application." }
 build = { enabled = true, handler = "node-app", requires_commit_sha = true, description = "Build Tauri installer" }
 test = { enabled = false, handler = "none", description = "Tests are disabled for the Tauri application." }

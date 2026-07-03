@@ -404,7 +404,7 @@ pub fn validate_component_handler(
     }
     let allowed: &[&str] = match operation {
         Operation::Setup => &["setup"],
-        Operation::Dev => &["node-app"],
+        Operation::Dev => &["cli-dev", "desktop-dev", "renderer-dev", "tauri-dev"],
         Operation::Doctor
         | Operation::Build
         | Operation::Test

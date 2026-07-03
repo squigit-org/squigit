@@ -4,13 +4,13 @@
 > Active development has moved to the Electron shell.
 > Any attempt to build this shell without `xtask` will fail.
 
-## Building
+## Running
 
-All Tauri operations must go through the monorepo build system:
+Run the frozen application through its component xtask context:
 
 ```bash
-cargo xtask dev --tauri
-cargo xtask build tauri <COMMIT_SHA>
+cd archive/desktop
+cargo xtask dev
 ```
 
 On first run, `xtask` will automatically download the frozen `v0.1.1` dependencies
