@@ -22,7 +22,7 @@ include_root = true
 source = { path = "package.json", format = "json", key = "version" }
 
 [release]
-tag = "desktop-v{version}"
+tag = "v{version}"
 
 [tests]
 root = "tests"

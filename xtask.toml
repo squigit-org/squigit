@@ -102,11 +102,11 @@ usage = "cargo xtask release [target]"
 [ui.screens.release.section]
 title = "Targets:"
 entries = [
-    { label = "Desktop", description = "Tag the Desktop release" },
     { label = "Renderer", description = "Tag the Renderer release" },
-    { label = "CLI", description = "Tag the CLI package release" },
+    { label = "Squigit", description = "Tag the desktop release" },
     { label = "OCR", description = "Tag the OCR package release" },
     { label = "STT", description = "Tag the STT package release" },
+    { label = "CLI", description = "Tag the CLI package release" },
 ]
 
 [ui.screens.live]

@@ -218,6 +218,43 @@ impl Registry {
         })
     }
 
+    pub fn target_for_command(&self, command: &str, value: &str) -> Option<&Component> {
+        self.target_by_relative_path(value).or_else(|| {
+            (command == "release")
+                .then(|| self.target_by_release_alias(value))
+                .flatten()
+        })
+    }
+
+    fn target_by_release_alias(&self, value: &str) -> Option<&Component> {
+        let alias = value.trim();
+        self.components.iter().find(|component| {
+            if component.archived() || !component.supports(Operation::Release) {
+                return false;
+            }
+            if component.name().eq_ignore_ascii_case(alias)
+                || component.display_name().eq_ignore_ascii_case(alias)
+            {
+                return true;
+            }
+            let handler = component.operation(Operation::Release).handler.as_str();
+            match handler {
+                "cli-release" => alias.eq_ignore_ascii_case("cli"),
+                "desktop-release" => {
+                    alias.eq_ignore_ascii_case("desktop") || alias.eq_ignore_ascii_case("squigit")
+                }
+                "renderer-release" => alias.eq_ignore_ascii_case("renderer"),
+                "paddle-release" => {
+                    alias.eq_ignore_ascii_case("ocr") || alias.eq_ignore_ascii_case("paddle")
+                }
+                "whisper-release" => {
+                    alias.eq_ignore_ascii_case("stt") || alias.eq_ignore_ascii_case("whisper")
+                }
+                _ => false,
+            }
+        })
+    }
+
     pub fn context_name(&self) -> &str {
         self.current_target()
             .map_or(&self.root.context.name, Component::display_name)

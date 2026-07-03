@@ -11,7 +11,16 @@ Every registered app, package, crate, and sidecar owns its version independently
 
 ## 1. Releases
 
-_(TBD: Documentation on DMG, EXE, APT, DNF, Homebrew, and Winget release packaging.)_
+Run `cargo xtask release` inside a releasable component, or pass its path from the repository root. Root invocations also accept case-insensitive target names such as `Squigit`, `Renderer`, `OCR`, and `STT`. The command accepts no version: it reads the component version automatically. Release requires a clean Git tree and a local version strictly newer than the latest matching tag on `origin`, then creates an annotated tag and pushes it.
+
+- Squigit: `v<version>`
+- Renderer: `renderer-v<calver>`
+- Paddle OCR: `ocr-v<version>`
+- Whisper STT: `stt-v<version>`
+
+CLI release is listed in its component context but currently reports `coming soon` without creating a tag.
+
+Renderer follows the same local contract as every other component: xtask pushes its source tag to this repository. Its CI lane must build the renderer ZIP from that tag, then use `PACKAGES_GITHUB_TOKEN` to create the matching release in `squigit-org/squigit-packages`. The PAT belongs only in GitHub Actions; local release commands never need it.
 
 ## 2. Version Bumping
 

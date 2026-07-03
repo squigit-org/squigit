@@ -36,7 +36,7 @@ build = { enabled = true, handler = "node-app", requires_commit_sha = false, des
 test = { enabled = true, handler = "node-app", description = "Run CLI test suites" }
 clean = { enabled = true, handler = "node-app", description = "Remove build artifacts" }
 bump = { enabled = true, handler = "node-app", description = "Prepare a SemVer update" }
-release = { enabled = true, handler = "cli-release", description = "Prepare the CLI release" }
+release = { enabled = true, handler = "cli-release", description = "CLI release is coming soon" }
 
 [ui.menu]
 title = "CLI xtask"

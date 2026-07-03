@@ -78,11 +78,3 @@ pub fn bump(
         Category::Sidecars => sidecars::bump::run(runtime, component, version, files),
     }
 }
-
-pub fn release(runtime: &Runtime, component: &Component, version: &str, tag: &str) -> XtaskResult {
-    match component.category() {
-        Category::Apps => apps::release::run(runtime, component, version, tag),
-        Category::Sidecars => sidecars::release::run(runtime, component, version, tag),
-        Category::Packages | Category::Crates => error::unsupported(component, Operation::Release),
-    }
-}

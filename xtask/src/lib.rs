@@ -58,23 +58,32 @@ pub fn run(args: &[String]) -> i32 {
     };
     let mut forwarded_args = args.to_vec();
     if registry.is_repository() {
-        let component_index = forwarded_args
+        let selected_component = forwarded_args
             .first()
-            .and_then(|value| registry.target_by_relative_path(value).map(|_| 0))
+            .and_then(|value| {
+                registry
+                    .target_by_relative_path(value)
+                    .map(|component| (0, component.directory.clone()))
+            })
             .or_else(|| {
-                (forwarded_args.len() >= 2
-                    && commands::accepts_component_path(&forwarded_args[0])
-                    && registry
-                        .target_by_relative_path(&forwarded_args[1])
-                        .is_some())
-                .then_some(1)
+                if forwarded_args.len() < 2 || !commands::accepts_component_path(&forwarded_args[0])
+                {
+                    return None;
+                }
+                registry
+                    .target_for_command(&forwarded_args[0], &forwarded_args[1])
+                    .map(|component| (1, component.directory.clone()))
+            })
+            .or_else(|| {
+                if forwarded_args.len() < 2 || !commands::accepts_component_path(&forwarded_args[1])
+                {
+                    return None;
+                }
+                registry
+                    .target_for_command(&forwarded_args[1], &forwarded_args[0])
+                    .map(|component| (0, component.directory.clone()))
             });
-        let component_directory = component_index.and_then(|index| {
-            registry
-                .target_by_relative_path(&forwarded_args[index])
-                .map(|component| component.directory.clone())
-        });
-        if let Some(component_directory) = component_directory {
+        if let Some((component_index, component_directory)) = selected_component {
             if let Err(error) = env::set_current_dir(&component_directory) {
                 eprintln!(
                     "{}",
@@ -85,7 +94,7 @@ pub fn run(args: &[String]) -> i32 {
                 );
                 return 1;
             }
-            forwarded_args.remove(component_index.expect("component index exists"));
+            forwarded_args.remove(component_index);
             registry = match Registry::load_from_current_dir() {
                 Ok(registry) => registry,
                 Err(error) => {

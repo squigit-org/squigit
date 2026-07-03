@@ -126,9 +126,7 @@ pub(crate) fn apply(
     if matches!(changelog_mode, ChangelogMode::RootTbd) {
         let label = runtime.relative_path(&root_changelog);
         let link = runtime.console.link(&label, &file_url(&root_changelog));
-        runtime.note(&format!(
-            "  [!] Replace TBD with what changed @ {link}."
-        ));
+        runtime.note(&format!("  [!] Replace TBD with what changed @ {link}."));
     }
     Ok(())
 }
