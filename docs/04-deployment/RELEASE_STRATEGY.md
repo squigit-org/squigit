@@ -1,13 +1,13 @@
 # Release and Update Strategy
 
-Squigit is distributed as four independently versioned components:
+Squigit is distributed through four update surfaces:
 
 1. **Shell**: The Electron shell: Chromium, `qt-capture` sidecar, and `napi-bridge` crate.
 2. **Renderer**: The React UI bundle: HTML, CSS, and JavaScript.
 3. **Squigit OCR Engine**: The standalone `squigit-ocr` CLI.
 4. **Squigit STT Engine**: The standalone `squigit-stt` CLI.
 
-These components have different release costs and update channels, so they are versioned separately. The root repo also has its own CalVer metadata in `VERSION` and `CHANGELOG.md`; it represents repo-level work, not a shipped runtime component.
+Every registered app, package, crate, and sidecar owns its version independently. The root repo also has CalVer metadata in `VERSION` and `CHANGELOG.md`; it represents the day's repository work, not a shipped runtime component.
 
 ## 1. Releases
 
@@ -15,70 +15,64 @@ _(TBD: Documentation on DMG, EXE, APT, DNF, Homebrew, and Winget release packagi
 
 ## 2. Version Bumping
 
-Squigit uses `cargo xtask version` to update component versions and scaffold changelogs. The command supports exactly one target at a time:
+Run `bump` inside the context whose version should change:
 
 ```bash
-cargo xtask version --shell 0.2.0
-cargo xtask version --renderer
-cargo xtask version --ocr 0.1.1
-cargo xtask version --stt 0.2.1
-cargo xtask version --repo
+cargo xtask bump
+
+cd apps/renderer
+cargo xtask bump
+
+cd apps/desktop
+cargo xtask bump 0.3.0
 ```
 
-Shell, OCR, and STT require an explicit SemVer argument.
-Renderer and repo use today's CalVer in `YY.MM.DD` format.
+The repository root and Renderer accept no version argument. Every SemVer component requires one explicit version. From the repository root, a component path can replace `cd`, for example `cargo xtask bump apps/desktop 0.3.0`.
 
-### Shell (`--shell <semver>`)
+### Repository
 
-The shell is SemVer. Bumping it updates:
+The root bump updates `VERSION` and `CHANGELOG.md` to today's `YY.MM.DD` CalVer and adds the documented `TBD` scaffold. Repeating it on the same day reuses the existing section.
+
+### Renderer
+
+Renderer uses an independent daily sequence:
+
+- First bump of the day: `YY.MM.DD`
+- Later bumps: `YY.MM.DD.1`, `YY.MM.DD.2`, and so on
+
+It updates `apps/renderer/package.json` and adds a heading to `apps/renderer/CHANGELOG.md` without `TBD` sections. Renderer bumps do not touch root version metadata.
+
+### Applications
+
+Desktop uses explicit SemVer and updates:
 
 - `apps/desktop/package.json`
 - `apps/desktop/CHANGELOG.md`
-- `sidecars/qt-capture/Cargo.toml`
-- `sidecars/qt-capture/native/CMakeLists.txt`
-- `crates/napi-bridge/Cargo.toml`
+
+CLI uses explicit SemVer and updates its `package.json` and `package-lock.json`. It has no component changelog yet.
+
+### Packages and Crates
+
+Packages and crates use explicit SemVer and update their internal package or Cargo manifest. N-API Bridge additionally synchronizes:
+
 - `crates/napi-bridge/package.json`
-- `crates/napi-bridge/index.js`
+- Generated version guards in `crates/napi-bridge/index.js`
 
-Because shell work is also repo work, `--shell` also updates root `VERSION` and `CHANGELOG.md` using today's CalVer.
+### Sidecars
 
-### Renderer (`--renderer`)
-
-The renderer is CalVer. Bumping it updates:
-
-- `apps/renderer/package.json`
-- `apps/renderer/CHANGELOG.md`
-
-The renderer changelog is ping-only. It intentionally does not scaffold `TBD` sections because daily UI/CSS changes should not force a full documented release note entry.
-
-### OCR (`--ocr <semver>`)
-
-The OCR engine is SemVer. Bumping it updates:
+Paddle OCR uses explicit SemVer and updates:
 
 - `sidecars/paddle-ocr/src/__init__.py`
 - `sidecars/paddle-ocr/CHANGELOG.md`
 
-Because sidecar work is also repo work, `--ocr` also updates root `VERSION` and `CHANGELOG.md` using today's CalVer.
-
-### STT (`--stt <semver>`)
-
-The STT engine is SemVer. Bumping it updates:
+Whisper STT uses explicit SemVer and updates:
 
 - `sidecars/whisper-stt/CMakeLists.txt`
 - `sidecars/whisper-stt/CHANGELOG.md`
 
-Because sidecar work is also repo work, `--stt` also updates root `VERSION` and `CHANGELOG.md` using today's CalVer.
+Qt Capture uses explicit SemVer and updates its Cargo and native CMake project versions. It has no changelog.
 
-### Repo (`--repo`)
-
-The root repo version is CalVer. Bumping it updates:
-
-- `VERSION`
-- `CHANGELOG.md`
-
-Use this for repo-only work such as restructuring, docs, workflows, or shared maintenance that does not belong to a shipped component changelog.
-
-If multiple commands touch the root changelog on the same day, xtask reuses the existing top CalVer section and ensures the documented scaffold exists. It does not create duplicate same-day root headings.
+Every component bump except Renderer also updates root `VERSION` and `CHANGELOG.md` for today's repository CalVer. If several components are bumped on one day, xtask reuses one root heading and one documented scaffold.
 
 ## 3. Update Strategy
 
@@ -122,7 +116,7 @@ When a sidecar update is available, `UpdateNotesRoute.tsx` shows release notes a
 
 ## 4. Changelog Format
 
-All component changelogs use SemVer headings:
+SemVer component changelogs use headings such as:
 
 ```markdown
 ## [0.2.0] - 2026-05-29

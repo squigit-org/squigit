@@ -282,25 +282,13 @@ impl Registry {
                 .iter()
                 .map(|path| self.repo_root.join(path))
                 .collect(),
-            Some(component) => {
-                let mut files = component
-                    .manifest
-                    .version
-                    .files
-                    .iter()
-                    .map(|path| component.directory.join(path))
-                    .collect::<Vec<_>>();
-                if component.manifest.version.include_root {
-                    files.extend(
-                        self.root
-                            .version
-                            .files
-                            .iter()
-                            .map(|path| self.repo_root.join(path)),
-                    );
-                }
-                files
-            }
+            Some(component) => component
+                .manifest
+                .version
+                .files
+                .iter()
+                .map(|path| component.directory.join(path))
+                .collect(),
         }
     }
 }

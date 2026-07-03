@@ -3095,6 +3095,7 @@ version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
 dependencies = [
+ "indexmap",
  "itoa",
  "memchr",
  "serde",
@@ -4606,7 +4607,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "globset",
@@ -4615,6 +4616,7 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
+ "toml_edit 0.22.27",
 ]
 
 [[package]]

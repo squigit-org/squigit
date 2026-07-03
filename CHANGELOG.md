@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This log tracks repo-level changes using CalVer (`YY.MM.DD`).
 
+## [26.07.03] - 2026-07-03
+
+### Changed
+
+- Rebuilt xtask around component-local manifests with production `dev` and `bump` workflows.
+
 ## [26.06.26] - 2026-06-26
 
 ### Changed

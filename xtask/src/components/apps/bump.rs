@@ -1,3 +1,5 @@
+use crate::commands::bump::{apply, ChangelogMode};
+use crate::registry::manifest::VersionScheme;
 use crate::registry::Component;
 use crate::{Runtime, XtaskResult};
 use std::path::PathBuf;
@@ -8,16 +10,16 @@ pub fn run(
     version: &str,
     files: &[PathBuf],
 ) -> XtaskResult {
-    /**************************
-    TYPE REAL LOGIC HERE
-
-    Update application manifests and changelogs to the requested version.
-    **************************/
-
-    runtime.success(&format!("[mock] bumping {} to {version}", component.name()));
-    println!("  date: {}", runtime.today_date());
-    for file in files {
-        println!("  would update: {}", runtime.relative_path(file));
-    }
-    Ok(())
+    let changelog_mode = match component.manifest.version.scheme {
+        VersionScheme::Calver => ChangelogMode::Heading,
+        VersionScheme::Semver => ChangelogMode::Tbd,
+        VersionScheme::None => ChangelogMode::None,
+    };
+    apply(
+        runtime,
+        component.display_name(),
+        version,
+        files,
+        changelog_mode,
+    )
 }

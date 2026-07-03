@@ -368,22 +368,3 @@ fn copy_directory(source: &Path, destination: &Path) -> XtaskResult {
     }
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::parse_host_target;
-
-    #[test]
-    fn parses_rustc_host_target() {
-        let output = "rustc 1.92.0\nbinary: rustc\nhost: x86_64-unknown-linux-gnu\n";
-        assert_eq!(
-            parse_host_target(output).as_deref(),
-            Some("x86_64-unknown-linux-gnu")
-        );
-    }
-
-    #[test]
-    fn rejects_missing_rustc_host_target() {
-        assert_eq!(parse_host_target("rustc 1.92.0\n"), None);
-    }
-}

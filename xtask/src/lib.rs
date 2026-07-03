@@ -29,7 +29,7 @@ impl Runtime {
     }
 
     pub fn today_calver(&self) -> String {
-        format!("{}.1", Local::now().format("%y.%m.%d"))
+        Local::now().format("%y.%m.%d").to_string()
     }
 
     pub fn today_date(&self) -> String {

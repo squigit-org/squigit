@@ -17,7 +17,7 @@ qt = false
 
 [version]
 scheme = "semver"
-files = ["Cargo.toml"]
+files = ["Cargo.toml", "package.json", "index.js"]
 include_root = true
 source = { path = "Cargo.toml", format = "toml", key = "package.version" }
 

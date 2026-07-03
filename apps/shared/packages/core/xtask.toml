@@ -17,7 +17,7 @@ qt = false
 
 [version]
 scheme = "semver"
-files = ["package.json", "package-lock.json"]
+files = ["package.json"]
 include_root = true
 source = { path = "package.json", format = "json", key = "version" }
 
