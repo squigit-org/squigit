@@ -86,7 +86,7 @@ void CaptureController::finishSquiggleCapture(const QVariantList &points) {
   cropAndSave(boundingRect);
 }
 
-void CaptureController::finishRectCapture(QPointF start, QPointF end) {
+void CaptureController::finishTraditionalCapture(QPointF start, QPointF end) {
   QRectF selectionRect = QRectF(start, end).normalized();
 
   if (selectionRect.width() < 1 || selectionRect.height() < 1) {

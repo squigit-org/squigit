@@ -44,7 +44,7 @@ export function registerAppHandlers() {
         step: 0,
         isFinished: false,
         data: {
-          step_3: { theme: "dark", captureType: "rectangular", ocrEnabled: true, autoExpandOCR: true },
+          step_3: { theme: "dark", captureType: "traditional", ocrEnabled: true, autoExpandOCR: true },
           step_4: { agreed: false },
         },
       };

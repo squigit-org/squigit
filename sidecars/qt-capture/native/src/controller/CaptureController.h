@@ -54,7 +54,7 @@ public:
   Q_INVOKABLE QString ensureBackgroundFileFallback();
   Q_INVOKABLE void cancel();
   Q_INVOKABLE void finishSquiggleCapture(const QVariantList &points);
-  Q_INVOKABLE void finishRectCapture(QPointF start, QPointF end);
+  Q_INVOKABLE void finishTraditionalCapture(QPointF start, QPointF end);
 
 signals:
   void backgroundSourceChanged();
@@ -71,7 +71,7 @@ private:
   QImage m_backgroundImage;
   QUrl m_backgroundSource;
   qreal m_devicePixelRatio = 1.0;
-  QString m_captureMode = "freeshape";
+  QString m_captureMode = "squiggle";
   int m_displayIndex = 0;
   QRect m_displayGeometry;
 };

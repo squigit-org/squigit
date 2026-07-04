@@ -22,7 +22,6 @@
 
 #include "config.h"
 #include "controller/CaptureController.h"
-#include "core/CaptureMode.h"
 #include "core/ScreenGrabber.h"
 
 #ifdef Q_OS_WIN
@@ -171,23 +170,25 @@ int main(int argc, char *argv[]) {
   parser.addHelpOption();
   parser.addVersionOption();
 
-  QCommandLineOption freeshapeOption(
-      QStringList() << "f"
-                    << "freeshape",
-      "Use freeshape (squiggle) selection mode (default)");
-  parser.addOption(freeshapeOption);
+  QCommandLineOption squiggleOption("squiggle",
+                                    "Use squiggle selection mode (default)");
+  parser.addOption(squiggleOption);
 
-  QCommandLineOption rectangleOption(QStringList() << "r"
-                                                   << "rectangle",
-                                     "Use rectangle selection mode");
-  parser.addOption(rectangleOption);
+  QCommandLineOption traditionalOption("traditional",
+                                       "Use traditional selection mode");
+  parser.addOption(traditionalOption);
 
   parser.process(app);
 
-  QString captureMode = "freeshape";
-  if (parser.isSet(rectangleOption)) {
-    captureMode = "rectangle";
+  if (parser.isSet(squiggleOption) && parser.isSet(traditionalOption)) {
+    std::cerr << "CAPTURE_NATIVE_ERROR: --traditional and --squiggle are "
+                 "mutually exclusive"
+              << std::endl;
+    return 1;
   }
+
+  const QString captureMode =
+      parser.isSet(traditionalOption) ? "traditional" : "squiggle";
 
   ScreenGrabber *engine = nullptr;
 #ifdef Q_OS_WIN

@@ -42,7 +42,7 @@ interface SettingsOverlayProps {
   onSetTheme: (theme: "dark" | "light" | "system") => void;
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
-  captureType: "rectangular" | "squiggle";
+  captureType: "traditional" | "squiggle";
   providerApiKey: string;
   imgbbKey: string;
   onSetAPIKey: (
@@ -114,7 +114,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
     updatePreferences({ ocrEnabled: checked });
   };
 
-  const handleCaptureTypeChange = (type: "rectangular" | "squiggle") => {
+  const handleCaptureTypeChange = (type: "traditional" | "squiggle") => {
     updatePreferences({ captureType: type });
   };
 

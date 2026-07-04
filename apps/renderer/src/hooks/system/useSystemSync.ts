@@ -78,7 +78,7 @@ export const useSystemSync = () => {
       );
       prefs.setCaptureType(
         loadedPrefs.captureType ||
-          (appConstants.defaultCaptureType as "rectangular" | "squiggle"),
+          (appConstants.defaultCaptureType as "traditional" | "squiggle"),
       );
 
       const loadedOcrLanguage = resolveOcrModelId(

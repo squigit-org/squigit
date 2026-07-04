@@ -33,7 +33,6 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(SOURCES 
     src/main.cpp 
     src/core/ScreenGrabber.h
-    src/core/CaptureMode.h
     src/controller/CaptureController.cpp
     src/controller/CaptureController.h
 )
@@ -66,7 +65,7 @@ qt_add_qml_module(capture
     QML_FILES
         qml/CaptureWindow.qml
         qml/SquiggleCanvas.qml
-        qml/RectangleCanvas.qml
+        qml/TraditionalCanvas.qml
 )
 
 target_include_directories(capture PRIVATE 

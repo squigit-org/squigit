@@ -8,7 +8,7 @@ import QtQuick.Window
  * Main capture overlay window.
  * 
  * This window displays fullscreen over a single monitor, showing the frozen
- * screenshot as background with either squiggle or rectangle selection mode.
+ * screenshot as background with either squiggle or traditional selection mode.
  * 
  * Critical window flags ensure instant appearance without OS animations:
  * - Qt.FramelessWindowHint: No title bar or borders
@@ -56,7 +56,7 @@ Window {
         id: dimOverlay
         anchors.fill: parent
         opacity: 0
-        visible: root.controller.captureMode !== "rectangle"
+        visible: root.controller.captureMode !== "traditional"
         
         gradient: Gradient {
             GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.5) }
@@ -76,8 +76,8 @@ Window {
         anchors.fill: parent
         focus: true
         
-        source: root.controller.captureMode === "rectangle" 
-            ? "RectangleCanvas.qml" 
+        source: root.controller.captureMode === "traditional"
+            ? "TraditionalCanvas.qml"
             : "SquiggleCanvas.qml"
         
         onLoaded: {

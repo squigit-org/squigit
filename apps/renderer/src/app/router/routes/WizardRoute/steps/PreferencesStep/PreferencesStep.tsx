@@ -38,10 +38,11 @@ export const PreferencesStep = () => {
     "dark";
 
   // ── Capture type state ──
-  const savedCaptureType =
+  const storedCaptureType =
     app.system.wizardState?.data?.step_3?.captureType ||
-    app.system.captureType ||
-    "rectangular";
+    app.system.captureType;
+  const savedCaptureType =
+    storedCaptureType === "squiggle" ? "squiggle" : "traditional";
 
   // ── OCR state ──
   const savedOcrEnabled =
@@ -64,10 +65,13 @@ export const PreferencesStep = () => {
 
   // ── Persist defaults on mount ──
   useEffect(() => {
-    if (!app.system.wizardState?.data?.step_3) {
+    if (
+      !app.system.wizardState?.data?.step_3 ||
+      app.system.wizardState.data.step_3.captureType !== savedCaptureType
+    ) {
       updateWizardStep3({
         theme: savedTheme as "dark" | "light",
-        captureType: savedCaptureType as "rectangular" | "squiggle",
+        captureType: savedCaptureType as "traditional" | "squiggle",
         ocrEnabled: savedOcrEnabled,
         autoExpandOCR: savedAutoExpand,
         prompt: savedPrompt,
@@ -105,7 +109,7 @@ export const PreferencesStep = () => {
     updateWizardStep3({ theme });
   };
 
-  const handleCaptureTypeChange = (type: "rectangular" | "squiggle") => {
+  const handleCaptureTypeChange = (type: "traditional" | "squiggle") => {
     app.system.updatePreferences({ captureType: type });
     updateWizardStep3({ captureType: type });
   };
@@ -150,7 +154,7 @@ export const PreferencesStep = () => {
               </div>
               <div className={styles.captureDropdownRow}>
                 <CapturePreview
-                  captureType={savedCaptureType as "rectangular" | "squiggle"}
+                  captureType={savedCaptureType as "traditional" | "squiggle"}
                   onChange={handleCaptureTypeChange}
                   direction="up"
                   align="right"

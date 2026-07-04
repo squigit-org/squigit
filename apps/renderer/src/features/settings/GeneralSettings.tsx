@@ -16,8 +16,8 @@ interface GeneralSettingsProps {
   onToggleAutoExpand: (checked: boolean) => void;
   ocrEnabled: boolean;
   onToggleOcrEnabled: (checked: boolean) => void;
-  captureType: "rectangular" | "squiggle";
-  onCaptureTypeChange: (type: "rectangular" | "squiggle") => void;
+  captureType: "traditional" | "squiggle";
+  onCaptureTypeChange: (type: "traditional" | "squiggle") => void;
 }
 
 export const GeneralSettings: React.FC<GeneralSettingsProps> = ({

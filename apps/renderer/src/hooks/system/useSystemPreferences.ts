@@ -36,8 +36,8 @@ export const useSystemPreferences = () => {
   const [sessionModel, setSessionModel] = useState<string>("");
   const [autoExpandOCR, setAutoExpandOCR] = useState<boolean>(true);
   const [ocrEnabled, setOcrEnabled] = useState<boolean>(true);
-  const [captureType, setCaptureType] = useState<"rectangular" | "squiggle">(
-    "rectangular",
+  const [captureType, setCaptureType] = useState<"traditional" | "squiggle">(
+    "traditional",
   );
   const [startupOcrLanguage, setStartupOcrLanguage] =
     useState<string>(DEFAULT_OCR_MODEL_ID);

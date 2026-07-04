@@ -5,7 +5,7 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 
 /**
- * Rectangle selection canvas.
+ * Traditional selection canvas.
  * 
  * Features:
  * - Sharp corner at cursor position, rounded elsewhere
@@ -332,7 +332,7 @@ Item {
                 root.isDrawing = false
                 root.hasSelection = true
                 root.queueRepaint()
-                root.controller.finishRectCapture(root.startPoint, finalPoint)
+                root.controller.finishTraditionalCapture(root.startPoint, finalPoint)
             }
         }
     }

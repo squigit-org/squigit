@@ -10,8 +10,8 @@ import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
 import styles from "./CapturePreview.module.css";
 
 interface CapturePreviewProps {
-  captureType: "rectangular" | "squiggle";
-  onChange: (type: "rectangular" | "squiggle") => void;
+  captureType: "traditional" | "squiggle";
+  onChange: (type: "traditional" | "squiggle") => void;
   direction?: "up" | "down";
   align?: "left" | "right";
 }
@@ -38,7 +38,7 @@ export const CapturePreview: React.FC<CapturePreviewProps> = ({
       <div key={isOpen ? "open" : "closed"} className={styles.previewContainer}>
         <div className={styles.dropdownPreviewWrapper}>
           <div className={styles.wrapper}>
-            {captureType === "rectangular" ? (
+            {captureType === "traditional" ? (
               <>
                 <div className={styles.selectionBox} />
                 <div className={styles.cursorRectWrapper}>
@@ -65,8 +65,8 @@ export const CapturePreview: React.FC<CapturePreviewProps> = ({
       <div className={styles.list}>
         <DropdownItem
           label="Traditional"
-          isActive={captureType === "rectangular"}
-          onClick={() => onChange("rectangular")}
+          isActive={captureType === "traditional"}
+          onClick={() => onChange("traditional")}
         />
         <DropdownItem
           label="Squiggle"

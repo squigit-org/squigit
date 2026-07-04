@@ -17,7 +17,7 @@ export interface UserPreferences {
   prompt: string;
   ocrEnabled: boolean;
   autoExpandOCR: boolean;
-  captureType: "rectangular" | "squiggle";
+  captureType: "traditional" | "squiggle";
   ocrLanguage: string;
   soulMdName: string | null;
 }
@@ -107,16 +107,22 @@ export async function loadPreferences(): Promise<UserPreferences> {
       parsed.ocrLanguage,
       defaultPrefs.ocrLanguage,
     );
+    const normalizedCaptureType =
+      parsed.captureType === "traditional" || parsed.captureType === "squiggle"
+        ? parsed.captureType
+        : defaultPrefs.captureType;
     const merged = {
       ...defaultPrefs,
       ...parsed,
       model: normalizedModel,
       ocrLanguage: normalizedOcrLanguage,
+      captureType: normalizedCaptureType,
     };
 
     if (
       parsed.model !== normalizedModel ||
-      parsed.ocrLanguage !== normalizedOcrLanguage
+      parsed.ocrLanguage !== normalizedOcrLanguage ||
+      parsed.captureType !== normalizedCaptureType
     ) {
       await savePreferences(merged);
     }
