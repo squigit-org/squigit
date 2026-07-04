@@ -291,8 +291,8 @@ fn print_test_inventory(
 
 fn print_running(runtime: &Runtime, label: &str) {
     println!(
-        "\nRunning:\n  {label:<24} {}",
-        runtime.console.green("ready")
+        "\nRunning:\n {}",
+        runtime.console.green(label)
     );
 }
 
