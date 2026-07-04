@@ -99,13 +99,13 @@ entries = [
 title = "Live brain"
 usage = "cargo xtask live brain [operation] [options]"
 requirements = [
-    { text = "$env/export YOUR_PROVIDER_API_KEY ;", link = { label = "aistudio.google.com/app/api-keys", url = "https://aistudio.google.com/app/api-keys" } },
+    { text = "GEMINI_API_KEY (required for analyze and prompt)", link = { label = "aistudio.google.com/app/api-keys", url = "https://aistudio.google.com/app/api-keys" } },
 ]
 
 [ui.screens."live.brain".section]
 title = "Operations:"
 entries = [
-    { label = "analyze", description = "Start an isolated thread with [path/to/image] <message...>" },
+    { label = "analyze", description = "Start an isolated thread with <path/to/image> [message...]" },
     { label = "prompt", description = "Continue an isolated thread using <thread-id> <message...>" },
     { label = "threads", description = "List your isolated threads IDs, titles, and creation dates" },
 ]

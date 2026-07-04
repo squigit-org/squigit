@@ -42,7 +42,7 @@ fn brain(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
         return 0;
     }
     let result = match args[0].as_str() {
-        "analyze" if args.len() >= 3 => {
+        "analyze" if args.len() >= 2 => {
             workspace::live::brain::analyze(runtime, &args[1], &args[2..])
         }
         "prompt" if args.len() >= 3 => {

@@ -3438,6 +3438,7 @@ dependencies = [
  "serde_yaml",
  "squigit-auth",
  "squigit-memory",
+ "tempfile",
  "tokio",
  "tokio-util",
  "url",
