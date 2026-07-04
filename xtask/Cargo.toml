@@ -4,8 +4,10 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1"
 base64 = "0.22.1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+dirs = "5"
 ed25519-dalek = { version = "2.2", features = ["pkcs8", "pem", "rand_core", "zeroize"] }
 globset = "0.4"
 hex = "0.4"
@@ -17,6 +19,7 @@ serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.10"
 toml = "0.8"
 toml_edit = "0.22"
+which = "6"
 zeroize = "1"
 
 [target.'cfg(unix)'.dependencies]

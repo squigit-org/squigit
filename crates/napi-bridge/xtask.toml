@@ -9,7 +9,7 @@ order = 20
 archived = false
 
 [requirements]
-node = false
+node = true
 rust = true
 python = false
 cmake = false

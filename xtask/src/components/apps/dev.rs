@@ -107,7 +107,7 @@ fn run_tauri(runtime: &Runtime, component: &Component) -> XtaskResult {
     run_foreground(&mut command, "cargo run")
 }
 
-fn ensure_node_dependencies(runtime: &Runtime, directory: &Path) -> XtaskResult {
+pub(super) fn ensure_node_dependencies(runtime: &Runtime, directory: &Path) -> XtaskResult {
     if directory.join("node_modules").is_dir() {
         return Ok(());
     }
@@ -121,7 +121,7 @@ fn ensure_node_dependencies(runtime: &Runtime, directory: &Path) -> XtaskResult 
     run_foreground(&mut command, "npm install")
 }
 
-fn npm_command() -> Command {
+pub(super) fn npm_command() -> Command {
     #[cfg(windows)]
     {
         Command::new("npm.cmd")
@@ -132,7 +132,7 @@ fn npm_command() -> Command {
     }
 }
 
-fn run_foreground(command: &mut Command, display: &str) -> XtaskResult {
+pub(super) fn run_foreground(command: &mut Command, display: &str) -> XtaskResult {
     println!("  $ {display}");
     let status = command
         .stdin(Stdio::inherit())
@@ -221,7 +221,7 @@ impl Drop for ManagedChild {
     }
 }
 
-fn ensure_tauri_dependencies(runtime: &Runtime, component: &Component) -> XtaskResult {
+pub(super) fn ensure_tauri_dependencies(runtime: &Runtime, component: &Component) -> XtaskResult {
     let host = host_target_triple()?;
     let cache = runtime.repo_root.join("target/tauri-archive");
     let sentinel = cache.join(".complete");
