@@ -26,7 +26,6 @@ root = "tests"
 include = ["tests/*.rs", "tests/**/*.rs"]
 
 [operations]
-setup = { enabled = true, handler = "setup", description = "Set up Crate toolchains" }
 dev = { enabled = false, handler = "none", description = "Development mode is not enabled." }
 doctor = { enabled = true, handler = "cargo-crate", description = "Cargo Check this Crate" }
 build = { enabled = true, handler = "cargo-crate", requires_commit_sha = false, description = "Build Squigit Memory" }
@@ -39,10 +38,3 @@ release = { enabled = false, handler = "none", description = "Release is not ena
 title = "Squigit Memory xtask"
 usage = "cargo xtask <command> [options]"
 
-[ui.setup]
-title = "Squigit Memory Setup"
-checking = "Checking required toolchains:"
-install_notice = "Xtask will install missing tools required by Squigit Memory."
-empty_notice = "No additional tools are required."
-prompt = "Continue? [y/N]"
-declined = "Setup cancelled."

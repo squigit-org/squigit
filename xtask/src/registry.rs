@@ -8,7 +8,7 @@ use crate::registry::discovery::{
     MANIFEST_NAME,
 };
 use crate::registry::manifest::{
-    Category, ComponentManifest, Operation, OperationConfig, RootManifest, SetupStage,
+    Category, ComponentManifest, Operation, OperationConfig, RootManifest,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -265,34 +265,6 @@ impl Registry {
             .iter()
             .filter(|component| !component.archived() && component.supports(operation))
             .collect()
-    }
-
-    pub fn setup_stages(&self) -> Vec<&SetupStage> {
-        let active_targets = if self.is_repository() {
-            self.components
-                .iter()
-                .filter(|component| !component.archived())
-                .collect::<Vec<_>>()
-        } else {
-            self.current_target().into_iter().collect::<Vec<_>>()
-        };
-        let mut stages = self
-            .root
-            .setup
-            .stages
-            .iter()
-            .filter(|stage| {
-                active_targets.iter().any(|component| {
-                    component
-                        .manifest
-                        .requirements
-                        .contains(&stage.requirement)
-                        .unwrap_or(false)
-                })
-            })
-            .collect::<Vec<_>>();
-        stages.sort_by_key(|stage| stage.order);
-        stages
     }
 
     pub fn root_operation(&self, command: &str) -> Option<&OperationConfig> {

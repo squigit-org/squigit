@@ -1,13 +1,13 @@
 use super::discovery::{validate_relative_path, MANIFEST_NAME};
 use super::manifest::{
-    Category, ComponentManifest, ContextKind, Operation, OperationConfig, RootManifest, SetupUi,
+    Category, ComponentManifest, ContextKind, Operation, OperationConfig, RootManifest,
     UiMenu, UiPrompt, UiScreen, UiVocabulary, VersionConfig, VersionFormat, VersionScheme,
     SCHEMA_VERSION,
 };
 use super::Component;
 use regex::Regex;
 use semver::Version;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -47,56 +47,6 @@ pub fn validate_root(repo_root: &Path, manifest: &RootManifest, errors: &mut Vec
     }
     validate_root_ui(&owner, manifest, errors);
 
-    let mut names = HashSet::new();
-    let mut orders = HashSet::new();
-    for stage in &manifest.setup.stages {
-        validate_nonempty("setup stage name", &stage.name, &owner, errors);
-        validate_nonempty(
-            "setup stage description",
-            &stage.description,
-            &owner,
-            errors,
-        );
-        if stage.steps.is_empty() {
-            errors.push(format!(
-                "{}: setup stage '{}' must define at least one step",
-                owner.display(),
-                stage.name
-            ));
-        }
-        if !names.insert(stage.name.as_str()) {
-            errors.push(format!(
-                "{}: duplicate setup stage name '{}'",
-                owner.display(),
-                stage.name
-            ));
-        }
-        if !orders.insert(stage.order) {
-            errors.push(format!(
-                "{}: duplicate setup stage order {}",
-                owner.display(),
-                stage.order
-            ));
-        }
-        if !matches!(
-            stage.requirement.as_str(),
-            "node" | "rust" | "python" | "cmake" | "qt"
-        ) {
-            errors.push(format!(
-                "{}: unknown setup requirement '{}'",
-                owner.display(),
-                stage.requirement
-            ));
-        }
-        if stage.handler != stage.requirement {
-            errors.push(format!(
-                "{}: setup stage '{}' must use its stable '{}' handler",
-                owner.display(),
-                stage.name,
-                stage.requirement
-            ));
-        }
-    }
 }
 
 pub fn validate_component(
@@ -375,7 +325,6 @@ pub fn validate_operation(
     }
     if root {
         let expected = match name {
-            "setup" => "setup",
             "doctor" => "doctor",
             "dev" | "build" | "release" => "component",
             "test" | "clean" => "workspace",
@@ -403,7 +352,6 @@ pub fn validate_component_handler(
         return;
     }
     let allowed: &[&str] = match operation {
-        Operation::Setup => &["setup"],
         Operation::Dev => &["cli-dev", "desktop-dev", "renderer-dev", "tauri-dev"],
         Operation::Doctor
         | Operation::Build
@@ -438,7 +386,6 @@ pub fn validate_component_handler(
 fn validate_root_ui(owner: &Path, manifest: &RootManifest, errors: &mut Vec<String>) {
     validate_vocabulary(owner, &manifest.ui.vocabulary, errors);
     validate_menu(owner, "ui.menu", &manifest.ui.menu, errors);
-    validate_setup_ui(owner, "ui.setup", &manifest.ui.setup, errors);
 
     let required_screens = [
         "dev",
@@ -475,7 +422,6 @@ fn validate_root_ui(owner: &Path, manifest: &RootManifest, errors: &mut Vec<Stri
 
 fn validate_component_ui(owner: &Path, manifest: &ComponentManifest, errors: &mut Vec<String>) {
     validate_menu(owner, "ui.menu", &manifest.ui.menu, errors);
-    validate_setup_ui(owner, "ui.setup", &manifest.ui.setup, errors);
 
     let mut required = Vec::new();
     if manifest.context.archived {
@@ -508,21 +454,6 @@ fn validate_menu(owner: &Path, name: &str, menu: &UiMenu, errors: &mut Vec<Strin
     validate_nonempty(&format!("{name}.usage"), &menu.usage, owner, errors);
 }
 
-fn validate_setup_ui(owner: &Path, name: &str, ui: &SetupUi, errors: &mut Vec<String>) {
-    for (field, value) in [
-        ("title", ui.title.as_str()),
-        ("checking", ui.checking.as_str()),
-        ("install_notice", ui.install_notice.as_str()),
-        ("empty_notice", ui.empty_notice.as_str()),
-        ("prompt", ui.prompt.as_str()),
-        ("declined", ui.declined.as_str()),
-    ] {
-        validate_nonempty(&format!("{name}.{field}"), value, owner, errors);
-    }
-    if let Some(scope_notice) = &ui.scope_notice {
-        validate_nonempty(&format!("{name}.scope_notice"), scope_notice, owner, errors);
-    }
-}
 
 fn validate_screen(owner: &Path, name: &str, screen: &UiScreen, errors: &mut Vec<String>) {
     validate_nonempty(&format!("{name}.title"), &screen.title, owner, errors);

@@ -29,7 +29,6 @@ root = "tests"
 include = ["tests/*.cpp", "tests/**/*.cpp"]
 
 [operations]
-setup = { enabled = true, handler = "setup", description = "Set up Whisper STT toolchains" }
 dev = { enabled = false, handler = "none", description = "Development mode is not enabled for the native Whisper STT sidecar." }
 doctor = { enabled = true, handler = "whisper-stt", description = "Check Whisper STT sources" }
 build = { enabled = true, handler = "whisper-stt", requires_commit_sha = false, description = "Build the Whisper STT sidecar" }
@@ -42,10 +41,3 @@ release = { enabled = true, handler = "whisper-release", description = "Prepare 
 title = "Whisper STT xtask"
 usage = "cargo xtask <command> [options]"
 
-[ui.setup]
-title = "Whisper STT Setup"
-checking = "Checking required toolchains:"
-install_notice = "Xtask will install missing tools required by Whisper STT."
-empty_notice = "No additional tools are required."
-prompt = "Continue? [y/N]"
-declined = "Setup cancelled."

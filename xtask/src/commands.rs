@@ -6,7 +6,6 @@ pub mod dev;
 pub mod doctor;
 pub mod live;
 pub mod release;
-pub mod setup;
 pub mod test;
 
 use crate::registry::manifest::Operation;
@@ -21,7 +20,6 @@ pub fn dispatch(runtime: &mut Runtime, registry: &Registry, args: &[String]) -> 
 
     let tail = &args[1..];
     match args[0].as_str() {
-        "setup" => setup::run(runtime, registry, tail),
         "dev" => dev::run(runtime, registry, tail),
         "doctor" => doctor::run(runtime, registry, tail),
         "build" => build::run(runtime, registry, tail),
@@ -38,8 +36,7 @@ pub fn dispatch(runtime: &mut Runtime, registry: &Registry, args: &[String]) -> 
 pub fn accepts_component_path(command: &str) -> bool {
     matches!(
         command,
-        "setup"
-            | "dev"
+        "dev"
             | "doctor"
             | "build"
             | "test"

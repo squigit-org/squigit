@@ -29,7 +29,6 @@ pub struct RootManifest {
     pub discovery: DiscoveryConfig,
     pub version: VersionConfig,
     pub operations: RootOperations,
-    pub setup: SetupConfig,
     pub ui: RootUi,
 }
 
@@ -185,7 +184,6 @@ pub struct OperationConfig {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ComponentOperations {
-    pub setup: OperationConfig,
     pub dev: OperationConfig,
     pub doctor: OperationConfig,
     pub build: OperationConfig,
@@ -197,7 +195,6 @@ pub struct ComponentOperations {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Operation {
-    Setup,
     Dev,
     Doctor,
     Build,
@@ -208,8 +205,7 @@ pub enum Operation {
 }
 
 impl Operation {
-    pub const ALL: [Self; 8] = [
-        Self::Setup,
+    pub const ALL: [Self; 7] = [
         Self::Dev,
         Self::Doctor,
         Self::Build,
@@ -221,7 +217,6 @@ impl Operation {
 
     pub const fn name(self) -> &'static str {
         match self {
-            Self::Setup => "setup",
             Self::Dev => "dev",
             Self::Doctor => "doctor",
             Self::Build => "build",
@@ -242,7 +237,6 @@ impl Operation {
 impl ComponentOperations {
     pub const fn get(&self, operation: Operation) -> &OperationConfig {
         match operation {
-            Operation::Setup => &self.setup,
             Operation::Dev => &self.dev,
             Operation::Doctor => &self.doctor,
             Operation::Build => &self.build,
@@ -257,7 +251,6 @@ impl ComponentOperations {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RootOperations {
-    pub setup: OperationConfig,
     pub dev: OperationConfig,
     pub doctor: OperationConfig,
     pub build: OperationConfig,
@@ -272,7 +265,6 @@ pub struct RootOperations {
 impl RootOperations {
     pub fn get(&self, command: &str) -> Option<&OperationConfig> {
         match command {
-            "setup" => Some(&self.setup),
             "dev" => Some(&self.dev),
             "doctor" => Some(&self.doctor),
             "build" => Some(&self.build),
@@ -288,7 +280,6 @@ impl RootOperations {
 
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, &OperationConfig)> {
         [
-            ("setup", &self.setup),
             ("dev", &self.dev),
             ("doctor", &self.doctor),
             ("build", &self.build),
@@ -303,22 +294,6 @@ impl RootOperations {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SetupConfig {
-    pub stages: Vec<SetupStage>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SetupStage {
-    pub name: String,
-    pub order: u32,
-    pub handler: String,
-    pub requirement: String,
-    pub description: String,
-    pub steps: Vec<String>,
-}
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -383,24 +358,12 @@ pub struct UiPrompt {
     pub declined: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SetupUi {
-    pub title: String,
-    pub checking: String,
-    pub install_notice: String,
-    pub scope_notice: Option<String>,
-    pub empty_notice: String,
-    pub prompt: String,
-    pub declined: String,
-}
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RootUi {
     pub vocabulary: UiVocabulary,
     pub menu: UiMenu,
-    pub setup: SetupUi,
     #[serde(default)]
     pub screens: BTreeMap<String, UiScreen>,
     #[serde(default)]
@@ -411,7 +374,6 @@ pub struct RootUi {
 #[serde(deny_unknown_fields)]
 pub struct ComponentUi {
     pub menu: UiMenu,
-    pub setup: SetupUi,
     #[serde(default)]
     pub prompts: BTreeMap<String, UiPrompt>,
 }

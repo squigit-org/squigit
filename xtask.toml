@@ -15,7 +15,6 @@ include_root = false
 source = { path = "VERSION", format = "plain" }
 
 [operations]
-setup = { enabled = true, handler = "setup", description = "Set up development tools" }
 dev = { enabled = true, handler = "component", description = "Start a component locally" }
 doctor = { enabled = true, handler = "doctor", description = "Check the environment" }
 build = { enabled = true, handler = "component", description = "Build project components" }
@@ -26,38 +25,6 @@ release = { enabled = true, handler = "component", description = "Run the releas
 live = { enabled = true, handler = "live", description = "Run isolated workflows" }
 crypto = { enabled = true, handler = "crypto", description = "Sign OTA update artifacts" }
 
-[[setup.stages]]
-name = "node"
-order = 10
-handler = "node"
-requirement = "node"
-description = "Prepare Node.js and pnpm for application and package builds."
-steps = ["Check for Node.js.", "Check for pnpm.", "Verify the JavaScript workspace toolchain."]
-
-[[setup.stages]]
-name = "python"
-order = 20
-handler = "python"
-requirement = "python"
-description = "Prepare Python and pip for Python sidecars."
-steps = ["Check for Python 3.", "Check for pip3.", "Verify the Python packaging toolchain."]
-
-[[setup.stages]]
-name = "cmake"
-order = 30
-handler = "cmake"
-requirement = "cmake"
-description = "Prepare CMake for native component builds."
-steps = ["Check for CMake.", "Verify the native build generator."]
-
-[[setup.stages]]
-name = "qt"
-order = 40
-handler = "qt"
-requirement = "qt"
-description = "Prepare Qt and qmake for capture builds."
-steps = ["Check for qmake6.", "Verify the Qt toolchain."]
-
 [ui.vocabulary]
 usage = "Usage:"
 requires = "Requires:"
@@ -66,15 +33,6 @@ commands = "Commands:"
 [ui.menu]
 title = "Squigit xtask"
 usage = "cargo xtask <command> [path/to/component] [options]"
-
-[ui.setup]
-title = "Squigit Setup"
-checking = "Checking toolchains:"
-install_notice = "Xtask will install missing tools for your OS."
-scope_notice = "[!] Need fewer tools? Run setup inside a component."
-empty_notice = "No additional tools are required."
-prompt = "Continue? [y/N]"
-declined = "Setup cancelled."
 
 [ui.screens.dev]
 title = "Squigit Dev"
