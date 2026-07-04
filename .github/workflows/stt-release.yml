@@ -732,7 +732,7 @@ jobs:
         id: publish
         uses: ./.github/actions/publish-linux-packages-repo
         with:
-          packages-token: ${{ secrets.PACKAGES_GITHUB_TOKEN }}
+          packages-token: ${{ secrets.DISTRIBUTION_GITHUB_TOKEN }}
           packages-repo: squigit-org/squigit-packages
           package-name: squigit-stt
           package-component: stt

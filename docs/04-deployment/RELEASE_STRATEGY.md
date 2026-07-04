@@ -20,7 +20,7 @@ Run `cargo xtask release` inside a releasable component, or pass its path from t
 
 CLI release is listed in its component context but currently reports `coming soon` without creating a tag.
 
-Renderer follows the same local contract as every other component: xtask pushes its source tag to this repository. Its CI lane must build the renderer ZIP from that tag, then use `PACKAGES_GITHUB_TOKEN` to create the matching release in `squigit-org/squigit-packages`. The PAT belongs only in GitHub Actions; local release commands never need it.
+Renderer follows the same local contract as every other component: xtask pushes its source tag to this repository. Its CI lane must build the renderer ZIP from that tag, then use `DISTRIBUTION_GITHUB_TOKEN` to create the matching release in `squigit-org/squigit-packages`. The PAT belongs only in GitHub Actions; local release commands never need it.
 
 ## 2. Version Bumping
 
@@ -147,7 +147,7 @@ For GitHub Actions, expose the private key only to the signing step:
   run: cargo xtask crypto sign renderer.zip
 ```
 
-The later upload job uses `PACKAGES_GITHUB_TOKEN` to publish both files to `squigit-org/squigit-packages`. The PAT and signing key have separate jobs: the PAT uploads, while the PEM proves the ZIP came from Squigit.
+The later upload job uses `DISTRIBUTION_GITHUB_TOKEN` to publish both files to `squigit-org/squigit-distribution`. The PAT and signing key have separate jobs: the PAT uploads, while the PEM proves the ZIP came from Squigit.
 
 #### Installing an update
 
