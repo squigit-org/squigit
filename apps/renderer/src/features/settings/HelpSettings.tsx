@@ -183,7 +183,7 @@ export const HelpSettings: React.FC = () => {
     [app.system.appName]: `Squigit/${packageJson.version} Loading`,
     Runtime: "Loading",
     ...(!isElectron ? { Webview: "Loading" } : {}),
-    Commit: import.meta.env.COMMIT_SHA || "Development Mode",
+    Commit: import.meta.env.VITE_COMMIT_SHA || "Development Mode",
   });
 
   useEffect(() => {
@@ -235,7 +235,7 @@ export const HelpSettings: React.FC = () => {
             info.Machine = machineInfo;
           }
 
-          info.Commit = import.meta.env.COMMIT_SHA || "Development Mode";
+          info.Commit = import.meta.env.VITE_COMMIT_SHA || "Development Mode";
 
           return info;
         });

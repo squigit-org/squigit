@@ -1,5 +1,4 @@
-use crate::{Runtime, XtaskResult};
-use std::ffi::OsStr;
+use crate::{environment, Runtime, XtaskResult};
 use std::process::{Command, Stdio};
 
 const API_KEY_ENV: &str = "GEMINI_API_KEY";
@@ -28,20 +27,31 @@ pub fn threads(runtime: &Runtime) -> XtaskResult {
 }
 
 fn run_harness(runtime: &Runtime, operation: &str, arguments: &[String]) -> XtaskResult {
-    if operation_requires_api_key(operation) {
-        require_api_key(std::env::var_os(API_KEY_ENV).as_deref())?;
-    }
+    let api_key = operation_requires_api_key(operation)
+        .then(|| {
+            environment::required_variable(
+                runtime,
+                API_KEY_ENV,
+                &format!("{API_KEY_ENV} is required for live brain analyze and prompt."),
+            )
+        })
+        .transpose()?;
 
     let cargo_arguments = cargo_arguments(operation, arguments);
     let config_dir = runtime.temp_root.join("live/userData");
     println!("  $ cargo run -p squigit-brain --example live_brain_harness -- {operation} ...");
-    let status = Command::new("cargo")
+    let mut command = Command::new("cargo");
+    command
         .args(&cargo_arguments)
         .current_dir(&runtime.repo_root)
         .env(CONFIG_DIR_ENV, &config_dir)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    if let Some(api_key) = api_key {
+        command.env(API_KEY_ENV, api_key);
+    }
+    let status = command
         .status()
         .map_err(|error| format!("Could not start the live brain harness: {error}"))?;
 
@@ -56,19 +66,6 @@ fn run_harness(runtime: &Runtime, operation: &str, arguments: &[String]) -> Xtas
 
 fn operation_requires_api_key(operation: &str) -> bool {
     matches!(operation, "analyze" | "prompt")
-}
-
-fn require_api_key(value: Option<&OsStr>) -> XtaskResult {
-    let present = value
-        .map(|value| !value.to_string_lossy().trim().is_empty())
-        .unwrap_or(false);
-    if present {
-        Ok(())
-    } else {
-        Err(format!(
-            "{API_KEY_ENV} is required for live brain analyze and prompt."
-        ))
-    }
 }
 
 fn cargo_arguments(operation: &str, arguments: &[String]) -> Vec<String> {
@@ -119,13 +116,6 @@ mod tests {
                 "brain".to_string(),
             ]
         );
-    }
-
-    #[test]
-    fn api_key_validation_rejects_missing_and_empty_values() {
-        assert!(require_api_key(None).is_err());
-        assert!(require_api_key(Some(OsStr::new("  "))).is_err());
-        assert!(require_api_key(Some(OsStr::new("AIzaSy-example"))).is_ok());
     }
 
     #[test]

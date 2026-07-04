@@ -8,6 +8,7 @@ anyhow = "1"
 base64 = "0.22.1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 dirs = "5"
+dotenvy = "0.15.7"
 ed25519-dalek = { version = "2.2", features = ["pkcs8", "pem", "rand_core", "zeroize"] }
 globset = "0.4"
 hex = "0.4"

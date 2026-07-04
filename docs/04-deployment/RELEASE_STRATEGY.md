@@ -129,21 +129,65 @@ The publisher or release job must:
 2. Sign the finished ZIP. Do not rebuild or modify it after signing.
 3. Upload both the ZIP and its sibling `.sig` file to the renderer release.
 
-For a local release:
+For a local release, `xtask` checks a non-empty process environment variable first, then the repository-root `.env` file. If neither contains `SQUIGIT_OTA_PRIVATE_KEY_PEM`, signing stops with a missing-variable error.
+
+To load the PEM from a file for the current Bash or Zsh session:
 
 ```bash
-export YOUR_PRIV_KEY="$(cat /secure/path/priv.pem)"
+export SQUIGIT_OTA_PRIVATE_KEY_PEM="$(cat /secure/path/priv.pem)"
 cargo xtask crypto sign renderer.zip
 ```
 
-PowerShell uses `$env:YOUR_PRIV_KEY = Get-Content C:\secure\priv.pem -Raw`. `renderer.zip` produces `renderer.sig`.
+To expose it for only one command instead of exporting it for the session:
+
+```bash
+SQUIGIT_OTA_PRIVATE_KEY_PEM="$(cat /secure/path/priv.pem)" \
+  cargo xtask crypto sign renderer.zip
+```
+
+A literal multiline paste also works. Single quotes prevent the shell from interpreting the PEM contents:
+
+```bash
+export SQUIGIT_OTA_PRIVATE_KEY_PEM='-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----'
+cargo xtask crypto sign renderer.zip
+```
+
+PowerShell can read the file without losing its line breaks:
+
+```powershell
+$env:SQUIGIT_OTA_PRIVATE_KEY_PEM = Get-Content C:\secure\priv.pem -Raw
+cargo xtask crypto sign renderer.zip
+```
+
+Or accept a literal multiline paste through a here-string:
+
+```powershell
+$env:SQUIGIT_OTA_PRIVATE_KEY_PEM = @'
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+'@
+cargo xtask crypto sign renderer.zip
+```
+
+For repeated local use, copy `.env.example` to the repository-root `.env` file and quote the multiline value:
+
+```dotenv
+SQUIGIT_OTA_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----"
+```
+
+Then run `cargo xtask crypto sign renderer.zip` normally. The real `.env` file is gitignored and must never be committed; `.env.example` contains names only. Bash command substitution may remove the PEM's final newline, which is harmless because the signing parser trims surrounding whitespace. A successful command writes `renderer.sig` beside `renderer.zip`.
 
 For GitHub Actions, expose the private key only to the signing step:
 
 ```yaml
 - name: Sign renderer update
   env:
-    YOUR_PRIV_KEY: ${{ secrets.SQUIGIT_OTA_PRIVATE_KEY_PEM }}
+    SQUIGIT_OTA_PRIVATE_KEY_PEM: ${{ secrets.SQUIGIT_OTA_PRIVATE_KEY_PEM }}
   run: cargo xtask crypto sign renderer.zip
 ```
 
@@ -222,4 +266,4 @@ Include `**Size**: ...` under `### Version Info` when the UI should display a do
 - **Runtime**: Electron or Tauri runtime version.
 - **React**: React version from `@types/react/index.d.ts`.
 - **Engines**: OCR/STT versions read from their `--version` output.
-- **Commit**: `COMMIT_SHA`, or `Development Mode` locally.
+- **Commit**: build-time `VITE_COMMIT_SHA`, or `Development Mode` in the local dev server.

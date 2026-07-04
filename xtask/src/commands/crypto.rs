@@ -1,7 +1,9 @@
 use crate::registry::Registry;
-use crate::{console, workspace, Runtime};
+use crate::{console, environment, workspace, Runtime};
 use std::path::Path;
 use zeroize::Zeroizing;
+
+const PRIVATE_KEY_ENV: &str = "SQUIGIT_OTA_PRIVATE_KEY_PEM";
 
 pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
     if let Err(code) = super::root_only(runtime, registry, "crypto") {
@@ -43,14 +45,13 @@ pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
             return 0;
         }
         [action, artifact] if action == "sign" => {
-            let private_key = match std::env::var("YOUR_PRIV_KEY") {
-                Ok(value) if !value.trim().is_empty() => Zeroizing::new(value),
-                _ => {
-                    return super::fail(
-                        runtime,
-                        "crypto sign requires non-empty PEM contents in YOUR_PRIV_KEY.",
-                    )
-                }
+            let private_key = match environment::required_variable(
+                runtime,
+                PRIVATE_KEY_ENV,
+                &format!("crypto sign requires non-empty PEM contents in {PRIVATE_KEY_ENV}."),
+            ) {
+                Ok(value) => Zeroizing::new(value),
+                Err(error) => return super::fail(runtime, &error),
             };
             workspace::crypto::sign(runtime, Path::new(artifact), private_key.as_str())
         }

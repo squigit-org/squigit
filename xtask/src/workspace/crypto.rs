@@ -74,11 +74,12 @@ pub fn keygen(runtime: &Runtime) -> XtaskResult {
 
 pub fn sign(runtime: &Runtime, artifact: &Path, private_key_pem: &str) -> XtaskResult {
     if private_key_pem.trim().is_empty() {
-        return Err("YOUR_PRIV_KEY contains an empty private key.".to_string());
+        return Err("SQUIGIT_OTA_PRIVATE_KEY_PEM contains an empty private key.".to_string());
     }
 
-    let signing_key = SigningKey::from_pkcs8_pem(private_key_pem.trim())
-        .map_err(|error| format!("YOUR_PRIV_KEY is not a valid Ed25519 PKCS#8 PEM: {error}"))?;
+    let signing_key = SigningKey::from_pkcs8_pem(private_key_pem.trim()).map_err(|error| {
+        format!("SQUIGIT_OTA_PRIVATE_KEY_PEM is not a valid Ed25519 PKCS#8 PEM: {error}")
+    })?;
     let (artifact_length, artifact_digest) = hash_artifact(artifact)?;
     let key_id = key_id(&signing_key.verifying_key().to_bytes());
     let artifact_sha256 = hex::encode(artifact_digest);

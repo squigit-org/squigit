@@ -147,11 +147,11 @@ entries = [
 title = "Crypto sign"
 usage = "cargo xtask crypto sign <artifact.zip>"
 requirements = [
-    { text = "Bash: export YOUR_PRIV_KEY=\"$(cat priv.pem)\"" },
-    { text = "PowerShell: $env:YOUR_PRIV_KEY = Get-Content priv.pem -Raw" },
-    { text = "GitHub Actions: YOUR_PRIV_KEY: ${{ secrets.SQUIGIT_OTA_PRIVATE_KEY_PEM }}" },
+    { text = "Bash: export SQUIGIT_OTA_PRIVATE_KEY_PEM=\"$(cat priv.pem)\"" },
+    { text = "PowerShell: $env:SQUIGIT_OTA_PRIVATE_KEY_PEM = Get-Content priv.pem -Raw" },
+    { text = "GitHub Actions: SQUIGIT_OTA_PRIVATE_KEY_PEM: ${{ secrets.SQUIGIT_OTA_PRIVATE_KEY_PEM }}" },
 ]
-description = "Sign an OTA update artifact. In CI, map the multiline PEM secret to YOUR_PRIV_KEY only for the signing step."
+description = "Sign an OTA update artifact. In CI, expose the multiline PEM secret only for the signing step."
 
 [ui.prompts."crypto.keygen"]
 title = "Crypto keygen"

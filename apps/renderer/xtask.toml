@@ -31,7 +31,7 @@ include = ["tests/*.test.ts", "tests/**/*.test.ts", "tests/*.test.tsx", "tests/*
 [operations]
 dev = { enabled = true, handler = "renderer-dev", description = "Start Renderer locally" }
 doctor = { enabled = true, handler = "node-app", description = "Check Renderer type safety" }
-build = { enabled = true, handler = "node-app", requires_commit_sha = false, description = "Build the Renderer package" }
+build = { enabled = true, handler = "node-app", requires_commit_sha = true, description = "Build the Renderer package" }
 test = { enabled = true, handler = "node-app", description = "Run Renderer test suites" }
 clean = { enabled = true, handler = "node-app", description = "Remove build artifacts" }
 bump = { enabled = true, handler = "node-app", description = "Prepare a CalVer update" }
@@ -40,4 +40,3 @@ release = { enabled = true, handler = "renderer-release", description = "Prepare
 [ui.menu]
 title = "Renderer xtask"
 usage = "cargo xtask <command> [options]"
-

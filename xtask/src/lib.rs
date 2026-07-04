@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod components;
 pub mod console;
+pub mod environment;
 pub mod error;
 pub mod registry;
 pub mod workspace;
