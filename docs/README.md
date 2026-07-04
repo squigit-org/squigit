@@ -4,6 +4,7 @@
 
 - [User Quick Start](01-getting-started/QUICKSTART.md)
 - [Developer Guide](03-development/DEVELOPMENT.md)
+- [Developer Tests](03-development/TESTING.md)
 - [Build Architecture](02-architecture/BUILD.md)
 - [How it works ?](02-architecture/ARCHITECTURE.md)
 

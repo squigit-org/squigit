@@ -4734,6 +4734,7 @@ dependencies = [
  "ed25519-dalek",
  "globset",
  "hex",
+ "libc",
  "rand 0.8.5",
  "regex",
  "semver",

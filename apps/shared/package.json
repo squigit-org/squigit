@@ -4,5 +4,8 @@
   "$schema": "https://json.schemastore.org/package.json",
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "devDependencies": {
+    "tsx": "^4.23.0"
+  }
 }

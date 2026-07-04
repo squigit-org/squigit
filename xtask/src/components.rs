@@ -17,9 +17,35 @@ pub struct BuildOptions<'a> {
     pub measure_payload: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TestBackend {
+    Cargo,
+    Node,
+    LiveOnly,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TestTarget {
+    pub path: PathBuf,
+    pub runner_name: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TestInventory {
+    pub inline: bool,
+    pub targets: Vec<TestTarget>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TestSelection {
-    pub paths: Vec<PathBuf>,
-    pub label: String,
+    pub inline: bool,
+    pub targets: Vec<TestTarget>,
+}
+
+impl TestSelection {
+    pub fn is_empty(&self) -> bool {
+        !self.inline && self.targets.is_empty()
+    }
 }
 
 pub fn dev(runtime: &Runtime, component: &Component) -> XtaskResult {
