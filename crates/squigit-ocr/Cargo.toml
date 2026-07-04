@@ -23,5 +23,9 @@ squigit-memory = { path = "../squigit-memory" }
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[[example]]
+name = "live_ocr_harness"
+path = "examples/live_ocr_harness.rs"
+
 [dev-dependencies]
 tempfile = "3.12"

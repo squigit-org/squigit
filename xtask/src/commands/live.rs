@@ -64,14 +64,18 @@ fn ocr(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
     }
     let result = match args {
         [action] if action == "analyze" => workspace::live::ocr::analyze(runtime, None, None),
-        [action, image] if action == "analyze" => {
-            workspace::live::ocr::analyze(runtime, Some(image), None)
+        [action, arg] if action == "analyze" => {
+            if workspace::live::ocr::is_known_model(arg) {
+                workspace::live::ocr::analyze(runtime, None, Some(arg))
+            } else {
+                workspace::live::ocr::analyze(runtime, Some(arg), None)
+            }
         }
         [action, image, model] if action == "analyze" => {
             workspace::live::ocr::analyze(runtime, Some(image), Some(model))
         }
         [action, model] if action == "download" => {
-            if !workspace::live::ocr::MODELS.contains(&model.as_str()) {
+            if !workspace::live::ocr::is_known_model(model) {
                 return super::fail(runtime, &format!("Unknown OCR model '{model}'."));
             }
             workspace::live::ocr::download(runtime, model)
