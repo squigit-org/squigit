@@ -55,15 +55,6 @@ pub fn dev(runtime: &Runtime, component: &Component) -> XtaskResult {
     }
 }
 
-pub fn doctor(runtime: &Runtime, component: &Component) -> XtaskResult {
-    match component.category() {
-        Category::Apps => apps::doctor::run(runtime, component),
-        Category::Crates => crates::doctor::run(runtime, component),
-        Category::Sidecars => sidecars::doctor::run(runtime, component),
-        Category::Packages => packages::doctor::run(runtime, component),
-    }
-}
-
 pub fn build(runtime: &Runtime, component: &Component, options: &BuildOptions<'_>) -> XtaskResult {
     match component.category() {
         Category::Apps => apps::build::run(runtime, component, options),
