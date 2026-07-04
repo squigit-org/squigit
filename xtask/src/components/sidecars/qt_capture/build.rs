@@ -1,6 +1,7 @@
 use crate::{Runtime, XtaskResult};
 use anyhow::{Context, Result};
 use std::fs;
+#[allow(unused_imports)]
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -63,7 +64,7 @@ fn build_native(native_dir: &Path) -> Result<()> {
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 fn build_native(_native_dir: &Path) -> Result<()> {
-    anyhow::bail!("Qt Capture builds are unsupported on this operating system")
+    Err(anyhow::anyhow!("Qt Capture builds are unsupported on this operating system"))
 }
 
 #[cfg(target_os = "linux")]
@@ -83,7 +84,7 @@ fn deploy(native_dir: &Path) -> Result<()> {
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 fn deploy(_native_dir: &Path) -> Result<()> {
-    anyhow::bail!("Qt Capture deployment is unsupported on this operating system")
+    Err(anyhow::anyhow!("Qt Capture deployment is unsupported on this operating system"))
 }
 
 fn package(runtime: &Runtime, native_dir: &Path) -> Result<()> {
@@ -207,16 +208,19 @@ fn remove_existing_path(path: &Path) -> Result<()> {
 }
 
 #[cfg(all(not(target_os = "linux"), windows))]
+#[allow(dead_code)]
 fn copy_capture_runtime(source: &Path, destination: &Path) -> Result<()> {
     copy_directory(source, destination, false)
 }
 
 #[cfg(all(not(target_os = "linux"), not(windows)))]
+#[allow(dead_code)]
 fn copy_capture_runtime(source: &Path, destination: &Path) -> Result<()> {
     copy_directory(source, destination, true)
 }
 
 #[cfg(not(target_os = "linux"))]
+#[allow(dead_code)]
 fn copy_directory(source: &Path, destination: &Path, preserve_symlinks: bool) -> Result<()> {
     fs::create_dir_all(destination)
         .with_context(|| format!("Could not create {}", destination.display()))?;
