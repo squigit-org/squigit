@@ -6,6 +6,6 @@ mod credentials;
 mod google;
 mod templates;
 
-pub use callback_server::{AuthFlowSettings, BrowserOpener};
+pub use callback_server::{AuthAccountPolicy, AuthFlowSettings, BrowserOpener};
 pub use credentials::{validate_google_credentials, CredentialsSource};
 pub use google::{cache_avatar, start_google_auth_flow, AuthSuccessData};

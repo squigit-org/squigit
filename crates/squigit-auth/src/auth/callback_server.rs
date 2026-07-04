@@ -12,9 +12,21 @@ use super::CredentialsSource;
 const DEFAULT_USER_INFO_URL: &str =
     "https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses,photos";
 
-pub(super) const CANCELLED_CALLBACK_GRACE: Duration = Duration::from_secs(0);
+pub(super) const CANCELLED_CALLBACK_GRACE: Duration = Duration::from_secs(2);
 
 pub type BrowserOpener = Arc<dyn Fn(&str) -> Result<()> + Send + Sync>;
+
+/// Controls whether an OAuth identity may create or refresh a stored profile.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum AuthAccountPolicy {
+    /// Accept both new and previously stored accounts.
+    #[default]
+    Any,
+    /// Accept only an account that already exists in the selected profile store.
+    ExistingOnly,
+    /// Accept only an account that does not yet exist in the selected profile store.
+    NewOnly,
+}
 
 #[derive(Clone)]
 pub struct AuthFlowSettings {
@@ -24,6 +36,8 @@ pub struct AuthFlowSettings {
     pub user_info_url: String,
     pub timeout: Duration,
     pub credentials_source: CredentialsSource,
+    /// Account classification applied before avatar caching or profile persistence.
+    pub account_policy: AuthAccountPolicy,
     pub open_browser: BrowserOpener,
 }
 
@@ -36,6 +50,7 @@ impl fmt::Debug for AuthFlowSettings {
             .field("user_info_url", &self.user_info_url)
             .field("timeout", &self.timeout)
             .field("credentials_source", &self.credentials_source)
+            .field("account_policy", &self.account_policy)
             .finish()
     }
 }
@@ -49,6 +64,7 @@ impl AuthFlowSettings {
             user_info_url: DEFAULT_USER_INFO_URL.to_string(),
             timeout: Duration::from_secs(120),
             credentials_source: CredentialsSource::Auto,
+            account_policy: AuthAccountPolicy::Any,
             open_browser,
         }
     }

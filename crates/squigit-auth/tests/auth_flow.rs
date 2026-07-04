@@ -8,7 +8,8 @@ use std::thread;
 
 use serial_test::serial;
 use squigit_auth::auth::{
-    cache_avatar, start_google_auth_flow, AuthFlowSettings, CredentialsSource,
+    cache_avatar, start_google_auth_flow, AuthAccountPolicy, AuthFlowSettings, AuthSuccessData,
+    CredentialsSource,
 };
 use squigit_auth::{Profile, ProfileError, ProfileStore};
 use tempfile::tempdir;
@@ -57,6 +58,123 @@ impl Drop for EnvGuard {
             env::remove_var(self.key);
         }
     }
+}
+
+fn run_policy_flow(
+    store: &ProfileStore,
+    policy: AuthAccountPolicy,
+    email: &str,
+    name: &str,
+) -> (Result<AuthSuccessData, ProfileError>, String) {
+    let oauth_port = free_port();
+    let callback_port = free_port();
+    let _no_proxy_guard = EnvGuard::set("NO_PROXY", "127.0.0.1,localhost");
+    let _no_proxy_lower_guard = EnvGuard::set("no_proxy", "127.0.0.1,localhost");
+    let email = email.to_string();
+    let name = name.to_string();
+
+    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+    let server_handle = thread::spawn({
+        let email = email.clone();
+        let name = name.clone();
+        move || {
+            let server = Server::http(("127.0.0.1", oauth_port)).unwrap();
+            ready_tx.send(()).unwrap();
+            for _ in 0..2 {
+                let request = server.recv().unwrap();
+                match request.url() {
+                    "/token" => {
+                        request
+                            .respond(
+                                Response::from_string(r#"{"access_token":"test-access"}"#)
+                                    .with_header(
+                                        Header::from_bytes(
+                                            &b"Content-Type"[..],
+                                            &b"application/json"[..],
+                                        )
+                                        .unwrap(),
+                                    ),
+                            )
+                            .unwrap();
+                    }
+                    "/userinfo" => {
+                        request
+                            .respond(
+                                Response::from_string(format!(
+                                    r#"{{
+                                        "names": [{{ "displayName": "{}" }}],
+                                        "emailAddresses": [{{ "value": "{}" }}]
+                                    }}"#,
+                                    name, email
+                                ))
+                                .with_header(
+                                    Header::from_bytes(
+                                        &b"Content-Type"[..],
+                                        &b"application/json"[..],
+                                    )
+                                    .unwrap(),
+                                ),
+                            )
+                            .unwrap();
+                    }
+                    path => panic!("unexpected policy stub path: {path}"),
+                }
+            }
+        }
+    });
+    ready_rx.recv().unwrap();
+
+    let credentials = format!(
+        r#"{{
+            "installed": {{
+                "client_id": "test-client.apps.googleusercontent.com",
+                "client_secret": "test-secret",
+                "auth_uri": "https://accounts.example.test/auth",
+                "token_uri": "http://127.0.0.1:{oauth_port}/token"
+            }}
+        }}"#
+    );
+    let (body_tx, body_rx) = std::sync::mpsc::channel();
+    let mut settings = AuthFlowSettings::new(
+        "Squigit",
+        Arc::new(move |auth_url| {
+            let auth_url = Url::parse(auth_url)?;
+            let query = |key: &str| {
+                auth_url
+                    .query_pairs()
+                    .find(|(candidate, _)| candidate == key)
+                    .map(|(_, value)| value.into_owned())
+                    .unwrap()
+            };
+            assert_eq!(query("prompt"), "select_account consent");
+            let callback_url = format!(
+                "{}/?code=test-code&state={}",
+                query("redirect_uri"),
+                query("state")
+            );
+            let body_tx = body_tx.clone();
+            thread::spawn(move || {
+                let client = reqwest::blocking::Client::builder()
+                    .no_proxy()
+                    .build()
+                    .unwrap();
+                let body = client.get(callback_url).send().unwrap().text().unwrap();
+                body_tx.send(body).unwrap();
+            });
+            Ok(())
+        }),
+    );
+    settings.redirect_port = callback_port;
+    settings.user_info_url = format!("http://127.0.0.1:{oauth_port}/userinfo");
+    settings.credentials_source = CredentialsSource::RawJson(credentials);
+    settings.account_policy = policy;
+
+    let result = start_google_auth_flow(store, &settings, Arc::new(AtomicBool::new(false)));
+    let body = body_rx
+        .recv_timeout(std::time::Duration::from_secs(2))
+        .unwrap();
+    server_handle.join().unwrap();
+    (result, body)
 }
 
 #[test]
@@ -344,6 +462,77 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
     );
 
     server_handle.join().unwrap();
+}
+
+#[test]
+#[serial]
+fn new_only_policy_accepts_new_accounts_and_rejects_existing_accounts_in_browser() {
+    let store = temp_store();
+
+    let (created, success_page) = run_policy_flow(
+        &store,
+        AuthAccountPolicy::NewOnly,
+        "new@example.com",
+        "New User",
+    );
+    let created = created.unwrap();
+    assert_eq!(created.email, "new@example.com");
+    assert!(success_page.contains("Authentication Successful"));
+
+    let (rejected, failure_page) = run_policy_flow(
+        &store,
+        AuthAccountPolicy::NewOnly,
+        "new@example.com",
+        "Changed Name",
+    );
+    assert!(
+        matches!(rejected, Err(ProfileError::Auth(message)) if message == "Account already exists")
+    );
+    assert!(failure_page.contains("Account Already Added"));
+    assert!(failure_page.contains("already connected to Squigit"));
+    assert_eq!(store.profile_count().unwrap(), 1);
+    assert_eq!(
+        store.get_profile(&created.id).unwrap().unwrap().name,
+        "New User"
+    );
+}
+
+#[test]
+#[serial]
+fn existing_only_policy_accepts_saved_accounts_and_rejects_unknown_accounts_in_browser() {
+    let store = temp_store();
+    let existing = Profile::new("saved@example.com", "Saved User", None, None);
+    store.upsert_profile(&existing).unwrap();
+
+    let (logged_in, success_page) = run_policy_flow(
+        &store,
+        AuthAccountPolicy::ExistingOnly,
+        "saved@example.com",
+        "Refreshed User",
+    );
+    assert_eq!(logged_in.unwrap().id, existing.id);
+    assert!(success_page.contains("Authentication Successful"));
+    assert_eq!(
+        store.get_profile(&existing.id).unwrap().unwrap().name,
+        "Refreshed User"
+    );
+
+    let (rejected, failure_page) = run_policy_flow(
+        &store,
+        AuthAccountPolicy::ExistingOnly,
+        "unknown@example.com",
+        "Unknown User",
+    );
+    assert!(
+        matches!(rejected, Err(ProfileError::Auth(message)) if message == "Account has not been added yet")
+    );
+    assert!(failure_page.contains("Account Not Found"));
+    assert!(failure_page.contains("has not been added to Squigit"));
+    assert_eq!(store.profile_count().unwrap(), 1);
+    assert!(store
+        .find_profile_by_email("unknown@example.com")
+        .unwrap()
+        .is_none());
 }
 
 #[test]

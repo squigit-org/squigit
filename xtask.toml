@@ -83,16 +83,15 @@ entries = [
 [ui.screens."live.auth"]
 title = "Live auth"
 usage = "cargo xtask live auth [operation] [options]"
-requirements = [{ text = "crates/squigit-auth/assets/oauth/credentials.json" }]
 
 [ui.screens."live.auth".section]
 title = "Operations:"
 entries = [
-    { label = "login", description = "Login with your Google account into an existing profile" },
-    { label = "signup", description = "Create a new isolated profile with your Google account" },
-    { label = "logout", description = "Logout from the active profile, login is mandatory" },
-    { label = "profiles", description = "List your isolated profiles IDs, emails, and usernames" },
-    { label = "remove", description = "Remove an existing profile using its id or email" },
+    { label = "login", description = "Login with an account already saved in temporary profiles" },
+    { label = "signup", description = "Add a new Google account to temporary profiles" },
+    { label = "logout", description = "Clear the active session while preserving temporary profiles" },
+    { label = "profiles", description = "List temporary profile IDs, emails, names, and status" },
+    { label = "remove", description = "Remove an inactive temporary profile using its id or email" },
 ]
 
 [ui.screens."live.brain"]

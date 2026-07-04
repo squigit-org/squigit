@@ -17,7 +17,7 @@ use crate::{Profile, ProfileError, ProfileStore, Result};
 use super::callback_server::CANCELLED_CALLBACK_GRACE;
 use super::credentials::load_google_oauth_config;
 use super::templates::{respond_failure, respond_success, FAVICON_BYTES};
-use super::AuthFlowSettings;
+use super::{AuthAccountPolicy, AuthFlowSettings};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthSuccessData {
@@ -124,7 +124,7 @@ pub fn start_google_auth_flow(
         .append_pair("response_type", "code")
         .append_pair("scope", "profile email")
         .append_pair("access_type", "offline")
-        .append_pair("prompt", "consent")
+        .append_pair("prompt", "select_account consent")
         .append_pair("state", &expected_state);
 
     (settings.open_browser)(auth_url.as_str())?;
@@ -347,6 +347,27 @@ pub fn start_google_auth_flow(
             ));
         }
 
+        let profile_id = Profile::id_from_email(&email);
+        let profile_exists = store.get_profile(&profile_id)?.is_some();
+        let policy_failure = match settings.account_policy {
+            AuthAccountPolicy::Any => None,
+            AuthAccountPolicy::ExistingOnly if !profile_exists => Some((
+                "Account Not Found",
+                "<p>This Google Account has not been added to Squigit yet.</p><p>Please close this tab and use signup first.</p>",
+                "Account has not been added yet",
+            )),
+            AuthAccountPolicy::NewOnly if profile_exists => Some((
+                "Account Already Added",
+                "<p>This Google Account is already connected to Squigit.</p><p>Please close this tab and use login instead.</p>",
+                "Account already exists",
+            )),
+            _ => None,
+        };
+        if let Some((title, content, error)) = policy_failure {
+            respond_failure(request, title, content)?;
+            return Err(ProfileError::Auth(error.to_string()));
+        }
+
         let mut avatar_url = profile
             .photos
             .and_then(|items| items.first().and_then(|item| item.url.clone()))
@@ -364,7 +385,6 @@ pub fn start_google_auth_flow(
             Some(avatar_url.clone())
         };
 
-        let profile_id = Profile::id_from_email(&email);
         let local_avatar = if let Some(url) = original_picture.as_deref() {
             cache_avatar(store, url, Some(&profile_id)).unwrap_or_default()
         } else {
