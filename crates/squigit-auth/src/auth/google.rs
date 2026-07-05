@@ -3,7 +3,7 @@
 
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use squigit_memory::ChatStorage;
+use squigit_memory::ThreadStorage;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -83,8 +83,8 @@ pub fn cache_avatar(store: &ProfileStore, url: &str, profile_id: Option<&str>) -
     }
 
     let bytes = response.bytes()?;
-    let chats_dir = store.get_chats_dir(&target_id);
-    let storage = ChatStorage::with_base_dir(chats_dir)
+    let threads_dir = store.get_threads_dir(&target_id);
+    let storage = ThreadStorage::with_base_dir(threads_dir)
         .map_err(|err| ProfileError::Auth(format!("Failed to initialize storage: {}", err)))?;
     let stored_image = storage
         .store_image(&bytes, None)

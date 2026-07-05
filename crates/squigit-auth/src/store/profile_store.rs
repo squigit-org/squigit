@@ -68,11 +68,11 @@ impl ProfileStore {
         self.base_dir.join(profile_id)
     }
 
-    /// Get the chats directory for a specific profile.
+    /// Get the threads directory for a specific profile.
     ///
-    /// Returns `{base_dir}/{profile_id}/chats/`
-    pub fn get_chats_dir(&self, profile_id: &str) -> PathBuf {
-        self.get_profile_dir(profile_id).join("chats")
+    /// Returns `{base_dir}/{profile_id}/threads/`
+    pub fn get_threads_dir(&self, profile_id: &str) -> PathBuf {
+        self.get_profile_dir(profile_id).join("threads")
     }
 
     /// Get the provider key file path for a profile.

@@ -204,7 +204,7 @@ fn cache_avatar_stores_bytes_in_profile_cas() {
     .unwrap();
 
     assert!(Path::new(&local_path).exists());
-    assert!(local_path.starts_with(store.get_chats_dir(&profile.id).to_string_lossy().as_ref()));
+    assert!(local_path.starts_with(store.get_threads_dir(&profile.id).to_string_lossy().as_ref()));
 
     let stored_profile = store.get_profile(&profile.id).unwrap().unwrap();
     assert_eq!(stored_profile.avatar.as_deref(), Some(local_path.as_str()));

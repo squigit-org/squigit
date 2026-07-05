@@ -5,7 +5,7 @@
 //!
 //! This crate provides multi-account profile management where each profile
 //! is tied to a Google account. Profiles store user identity, BYOK keys,
-//! and chat data in isolated directories.
+//! and thread data in isolated directories.
 //!
 //! # Directory Structure
 //!
@@ -18,7 +18,7 @@
 //!         ├── profile.json          # Google profile data
 //!         ├── {provider}_key.json   # Per-profile BYOK
 //!         ├── imgbb_key.json        # Per-profile BYOK
-//!         └── chats/                # Per-profile chat storage
+//!         └── threads/                # Per-profile thread storage
 //! ```
 //!
 //! # Example

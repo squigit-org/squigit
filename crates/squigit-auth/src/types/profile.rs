@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Each profile represents a Google-authenticated user account,
 /// containing identity information and serving as a container
-/// for chats and BYOK keys.
+/// for threads and BYOK keys.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Profile {
     /// Unique ID derived from Google email (blake3 hash, first 16 chars).
