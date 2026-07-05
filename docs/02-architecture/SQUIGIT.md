@@ -80,7 +80,7 @@ squigit/
     napi-bridge/        Node.js <-> Rust FFI boundary
     squigit-auth/       Google OAuth, profiles, encrypted BYOK credentials
     squigit-brain/      Gemini AI engine, agent orchestration
-    squigit-memory/     SQLite storage, chat history, files
+    squigit-memory/     SQLite storage, thread history, files
     squigit-ocr/        OCR model management and inference
     squigit-stt/        Speech-to-text engine
 
@@ -101,7 +101,7 @@ graph LR
     subgraph "Universal Backend"
         AUTH["squigit-auth\nGoogle OAuth flow\nEncrypted BYOK files\nProfile management"]
         BRAIN["squigit-brain\nGemini integration\nAgent orchestration\nTool dispatch"]
-        MEMORY["squigit-memory\nSQLite storage\nChat history\nFile management"]
+        MEMORY["squigit-memory\nSQLite storage\nThread history\nFile management"]
         OCR["squigit-ocr\nModel management\nInference pipeline"]
         STT["squigit-stt\nModel management\nInference pipeline"]
     end
@@ -116,15 +116,15 @@ graph LR
     RUNTIME ~~~ SHORTCUT
 ```
 
-| Crate             | What It Owns                                                                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------- |
+| Crate             | What It Owns                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
 | `squigit-auth`    | Google OAuth sign-in, local profile management, avatar caching, and encrypted per-profile BYOK files |
-| `squigit-brain`   | Gemini integration, agent orchestration, tool dispatch                                         |
-| `squigit-memory`  | SQLite storage, chat history, file management                                                  |
-| `squigit-ocr`     | OCR model management and inference                                                             |
-| `squigit-stt`     | Speech-to-text model management and inference                                                  |
-| `desktop-runtime` | GUI-specific but shell-agnostic utilities shared between Electron and the archived Tauri shell |
-| `global-shortcut` | OS-level keyboard hooks for desktop shells                                                     |
+| `squigit-brain`   | Gemini integration, agent orchestration, tool dispatch                                               |
+| `squigit-memory`  | SQLite storage, thread history, file management                                                      |
+| `squigit-ocr`     | OCR model management and inference                                                                   |
+| `squigit-stt`     | Speech-to-text model management and inference                                                        |
+| `desktop-runtime` | GUI-specific but shell-agnostic utilities shared between Electron and the archived Tauri shell       |
+| `global-shortcut` | OS-level keyboard hooks for desktop shells                                                           |
 
 No crate knows which shell called it. None of them should.
 
@@ -134,7 +134,7 @@ No crate knows which shell called it. None of them should.
 
 Electron and the CLI both run in Node.js. They cannot call Rust directly. `napi-bridge` compiles the entire Rust backend into a native Node.js addon (`addon/index.node`).
 
-When any Node.js host needs a backend operation — streaming a chat response, running OCR, loading a profile — it imports the addon and calls it like any async JavaScript function. The bridge marshals data between V8 and Rust. The calling code stays clean.
+When any Node.js host needs a backend operation — streaming a thread response, running OCR, loading a profile — it imports the addon and calls it like any async JavaScript function. The bridge marshals data between V8 and Rust. The calling code stays clean.
 
 ```mermaid
 graph LR
@@ -171,7 +171,7 @@ It communicates with the host through **Ports**: abstract TypeScript interfaces 
 | Port              | Contract                                                                 |
 | ----------------- | ------------------------------------------------------------------------ |
 | `ProviderPort`    | AI model streaming, title generation, conversation compression           |
-| `StoragePort`     | Chat CRUD, image storage, OCR data, rolling summaries                    |
+| `StoragePort`     | Thread CRUD, image storage, OCR data, rolling summaries                  |
 | `SystemPort`      | External URL opening, temp file cleanup, API key retrieval, ImgBB upload |
 | `PreferencesPort` | User preferences persistence (theme, model, capture settings)            |
 
@@ -180,7 +180,7 @@ It communicates with the host through **Ports**: abstract TypeScript interfaces 
 Hooks that wrap the core state machine for any React-based renderer:
 
 - `useBrainEngine` / `useBrainSession` / `useBrainLifecycle` — conversation state and streaming
-- `useAttachments` / `useChatState` — media and chat data management
+- `useAttachments` / `useThreadState` — media and thread data management
 - `useReverseImageSearch` — Google Lens integration
 
 These hooks are framework-agnostic within the React ecosystem. They work identically inside a Vite-bundled browser app and inside an INK terminal process, because both environments are React.
@@ -192,12 +192,12 @@ graph TD
         ENGINE["Brain Engine\nStreaming orchestration\nRetry logic\nWord playback"]
         SESSION["Brain Session\nHistory management\nContext window\nRolling compression"]
         SERVICES["Services\nGoogle Search/Translate\nGitHub integration\nImgBB upload"]
-        CONFIG["Config\nModel definitions\nUser preferences\nChat types"]
+        CONFIG["Config\nModel definitions\nUser preferences\nThread types"]
         HELPERS["Helpers\nDialog definitions\nError parsing\nAPI status"]
     end
 
     subgraph "shared/packages/react"
-        HOOKS["React Hooks\nuseBrainEngine\nuseBrainSession\nuseBrainLifecycle\nuseAttachments\nuseChatState"]
+        HOOKS["React Hooks\nuseBrainEngine\nuseBrainSession\nuseBrainLifecycle\nuseAttachments\nuseThreadState"]
     end
 
     HOOKS --> ENGINE
@@ -228,7 +228,7 @@ renderer/src/
     types.ts     PlatformBridge interface
     index.ts     @platform alias resolution
   features/
-    chat/        Conversation UI
+    thread/        Conversation UI
     media/       Image handling
     ocr/         OCR overlays
     search/      Search interface
@@ -241,12 +241,12 @@ renderer/src/
 
 An INK + React application. It consumes the same `@squigit/core` domain logic and `@squigit/react` hooks as the desktop GUI, but renders them as terminal components — text boxes, scrollable lists, status bars — instead of browser DOM.
 
-The CLI registers its own Port adapters that call `napi-bridge` directly (no IPC layer needed, since the CLI already runs inside Node.js). From the core's perspective, there is no difference between a chat message sent from a graphical button and one sent from a terminal prompt.
+The CLI registers its own Port adapters that call `napi-bridge` directly (no IPC layer needed, since the CLI already runs inside Node.js). From the core's perspective, there is no difference between a thread message sent from a graphical button and one sent from a terminal prompt.
 
 ```text
 cli/src/
   adapters/      Port implementations (direct napi-bridge calls)
-  screens/       INK components (chat, auth, settings)
+  screens/       INK components (thread, auth, settings)
   commands/      CLI entry points and argument parsing
   addon/         Native napi-bridge binary
 ```
@@ -284,8 +284,8 @@ sequenceDiagram
     Renderer->>Hooks: useBrainEngine().send()
     Hooks->>Core: sendProviderMessage()
     Core->>Core: Build context window
-    Core->>Shell: providerPort.streamChat()
-    Shell->>Backend: napi_bridge.streamChat()
+    Core->>Shell: providerPort.streamThread()
+    Shell->>Backend: napi_bridge.streamThread()
     Backend-->>Shell: Yield streaming tokens
     Shell-->>Core: Stream event callback
     Core-->>Hooks: Update session state
@@ -308,8 +308,8 @@ sequenceDiagram
     Screen->>Hooks: useBrainEngine().send()
     Hooks->>Core: sendProviderMessage()
     Core->>Core: Build context window
-    Core->>Adapter: providerPort.streamChat()
-    Adapter->>Backend: napi_bridge.streamChat()
+    Core->>Adapter: providerPort.streamThread()
+    Adapter->>Backend: napi_bridge.streamThread()
     Backend-->>Adapter: Yield streaming tokens
     Adapter-->>Core: Stream event callback
     Core-->>Hooks: Update session state
@@ -354,7 +354,7 @@ graph TD
     C_PROV --> REG
 ```
 
-The core calls `getProviderPort().streamChat()`. It has no idea whether that call crosses an IPC boundary or stays in-process. That is the point.
+The core calls `getProviderPort().streamThread()`. It has no idea whether that call crosses an IPC boundary or stays in-process. That is the point.
 
 ---
 

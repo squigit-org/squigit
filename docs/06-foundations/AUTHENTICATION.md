@@ -10,7 +10,7 @@ Squigit uses **federated identity to bootstrap a local identity**.
 
 Google is the external Identity Provider. Squigit is an Electron public client and OpenID Connect relying party. Google authenticates the person; Squigit receives an authorization code through the system browser, protects the exchange with PKCE, validates Google's OIDC identity assertion, and keys the local profile by the stable provider subject.
 
-After that proof is validated, normal Squigit operation is local: the selected profile, settings, chats, and BYOK credentials are managed on the device. Squigit is not a cloud account system and does not currently require Google to participate in each app launch or local profile switch.
+After that proof is validated, normal Squigit operation is local: the selected profile, settings, threads, and BYOK credentials are managed on the device. Squigit is not a cloud account system and does not currently require Google to participate in each app launch or local profile switch.
 
 This is the same broad desktop pattern as tools that delegate sign-in to GitHub or Microsoft, with one Squigit-specific choice: the post-verification workspace/session remains local unless a future feature explicitly requires an online provider session.
 
@@ -81,6 +81,6 @@ The distinctions are deliberate:
 
 ## Decision log
 
-| Date | Decision | Status |
-| --- | --- | --- |
-| TBD | Ratify federated bootstrap followed by a local profile/session model | Proposed |
+| Date | Decision                                                             | Status   |
+| ---- | -------------------------------------------------------------------- | -------- |
+| TBD  | Ratify federated bootstrap followed by a local profile/session model | Proposed |

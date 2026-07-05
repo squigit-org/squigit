@@ -34,4 +34,4 @@ Objects are immutable BLAKE3-addressed files. Accounts and threads only referenc
 
 Manifest, session, persona, and account writes use cross-process locking, atomic replacement, validated UUID paths, and restrictive permissions. Object writes are bounded, magic-validated for images, immutable, and deduplicated.
 
-There is no storage-domain `workspace/`, `chats/`, `profiles/`, or `identities/`, and there is no compatibility storage branch.
+There is no storage-domain `workspace/`, `threads/`, `profiles/`, or `identities/`, and there is no compatibility storage branch.
