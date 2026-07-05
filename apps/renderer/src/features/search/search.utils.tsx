@@ -5,14 +5,14 @@
  */
 
 import React from "react";
-import type { ChatMetadata } from "@squigit/core/config";
+import type { ThreadMetadata } from "@squigit/core/config";
 
 const SYSTEM_PREFIX = "__system_";
 
-export type ChatGroup = {
+export type ThreadGroup = {
   key: number;
   label: string;
-  chats: ChatMetadata[];
+  threads: ThreadMetadata[];
 };
 
 const isOnboardingId = (id: string) => id.startsWith(SYSTEM_PREFIX);
@@ -69,9 +69,9 @@ export const formatSearchRowDate = (isoDate: string): string => {
   return parsed.toLocaleDateString(undefined, options).toLowerCase();
 };
 
-export const buildChatGroups = (chats: ChatMetadata[]): ChatGroup[] => {
-  const sorted = chats
-    .filter((chat) => !isOnboardingId(chat.id))
+export const buildThreadGroups = (threads: ThreadMetadata[]): ThreadGroup[] => {
+  const sorted = threads
+    .filter((thread) => !isOnboardingId(thread.id))
     .slice()
     .sort(
       (a, b) =>
@@ -79,18 +79,18 @@ export const buildChatGroups = (chats: ChatMetadata[]): ChatGroup[] => {
         new Date(a.updated_at || a.created_at).getTime(),
     );
 
-  const groups: ChatGroup[] = [];
-  for (const chat of sorted) {
-    const anchor = chat.updated_at || chat.created_at;
+  const groups: ThreadGroup[] = [];
+  for (const thread of sorted) {
+    const anchor = thread.updated_at || thread.created_at;
     const parsed = new Date(anchor);
     const key = Number.isNaN(parsed.getTime()) ? -1 : startOfDay(parsed);
     const label = formatGroupHeader(anchor);
     const last = groups[groups.length - 1];
 
     if (!last || last.key !== key) {
-      groups.push({ key, label, chats: [chat] });
+      groups.push({ key, label, threads: [thread] });
     } else {
-      last.chats.push(chat);
+      last.threads.push(thread);
     }
   }
 

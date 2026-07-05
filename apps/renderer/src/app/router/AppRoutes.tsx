@@ -6,7 +6,7 @@
 
 import React from "react";
 import {
-  ChatRoute,
+  ThreadRoute,
   GalleryRoute,
   HomeRoute,
   UpdateNotesRoute,
@@ -17,15 +17,15 @@ import { useAppContext } from "../providers/AppProvider";
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 interface AppRoutesProps {
-  shouldRenderChatShell: boolean;
+  shouldRenderThreadShell: boolean;
 }
 
 export const AppRoutes: React.FC<AppRoutesProps> = ({
-  shouldRenderChatShell,
+  shouldRenderThreadShell,
 }) => {
   const app = useAppContext();
 
-  const activeId = app.chatHistory.activeSessionId;
+  const activeId = app.threadHistory.activeSessionId;
 
   if (activeId && isOnboardingId(activeId)) {
     if (activeId === "__system_wizard") {
@@ -47,15 +47,15 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
     if (activeId === "__system_gallery") {
       return (
         <GalleryRoute
-          chats={app.chatHistory.chats}
-          activeSessionId={app.chatHistory.activeSessionId}
-          refreshChats={app.chatHistory.refreshChats}
+          threads={app.threadHistory.threads}
+          activeSessionId={app.threadHistory.activeSessionId}
+          refreshThreads={app.threadHistory.refreshThreads}
         />
       );
     }
   }
 
-  if (!shouldRenderChatShell) {
+  if (!shouldRenderThreadShell) {
     return (
       <HomeRoute
         appName={app.system.appName}
@@ -66,5 +66,5 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
     );
   }
 
-  return <ChatRoute />;
+  return <ThreadRoute />;
 };

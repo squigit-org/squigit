@@ -27,7 +27,7 @@ export const AppRouter: React.FC = () => {
       if (!modPressed) return;
 
       const key = e.key.toLowerCase();
-      const isWizard = app.chatHistory.activeSessionId === "__system_wizard";
+      const isWizard = app.threadHistory.activeSessionId === "__system_wizard";
 
       if (!isWizard) {
         if (!e.shiftKey && !e.altKey && key === "k") {
@@ -49,22 +49,22 @@ export const AppRouter: React.FC = () => {
     };
   }, [app, isMac]);
 
-  const activeId = app.chatHistory.activeSessionId;
-  const hasActiveChatSession = !!activeId && !isOnboardingId(activeId);
+  const activeId = app.threadHistory.activeSessionId;
+  const hasActiveThreadSession = !!activeId && !isOnboardingId(activeId);
   const isWizardRoute = activeId === "__system_wizard";
-  const shouldRenderChatShell =
-    app.showChatShellDuringNavigation ||
-    hasActiveChatSession ||
+  const shouldRenderThreadShell =
+    app.showThreadShellDuringNavigation ||
+    hasActiveThreadSession ||
     !app.isImageMissing;
 
   return (
     <AppLayout
       onContextMenu={app.handleContextMenu}
-      containerRef={shouldRenderChatShell ? app.containerRef : undefined}
+      containerRef={shouldRenderThreadShell ? app.containerRef : undefined}
       isSidePanelOpen={app.isSidePanelOpen}
       enablePanelAnimation={app.enablePanelAnimation}
       isWizardRoute={isWizardRoute}
-      content={<AppRoutes shouldRenderChatShell={shouldRenderChatShell} />}
+      content={<AppRoutes shouldRenderThreadShell={shouldRenderThreadShell} />}
       dialogs={<AppDialogs />}
     />
   );

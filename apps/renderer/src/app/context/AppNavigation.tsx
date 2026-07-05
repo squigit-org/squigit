@@ -12,13 +12,13 @@ export type AppNavigationContextValue = Pick<
   | "searchOverlay"
   | "openSearchOverlay"
   | "closeSearchOverlay"
-  | "handleSelectChat"
+  | "handleSelectThread"
   | "handleNewSession"
   | "revealSearchMatch"
   | "clearSearchReveal"
   | "isNavigating"
-  | "isChatContentReady"
-  | "showChatShellDuringNavigation"
+  | "isThreadContentReady"
+  | "showThreadShellDuringNavigation"
 >;
 
 const AppNavigationContext = createContext<AppNavigationContextValue | null>(

@@ -10,7 +10,10 @@ import React, {
   useMemo,
   type ReactNode,
 } from "react";
-import { AppMediaProvider, type AppMediaContextValue } from "../context/AppMedia";
+import {
+  AppMediaProvider,
+  type AppMediaContextValue,
+} from "../context/AppMedia";
 import {
   AppNavigationProvider,
   type AppNavigationContextValue,
@@ -54,25 +57,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       searchOverlay: app.searchOverlay,
       openSearchOverlay: app.openSearchOverlay,
       closeSearchOverlay: app.closeSearchOverlay,
-      handleSelectChat: app.handleSelectChat,
+      handleSelectThread: app.handleSelectThread,
       handleNewSession: app.handleNewSession,
       revealSearchMatch: app.revealSearchMatch,
       clearSearchReveal: app.clearSearchReveal,
       isNavigating: app.isNavigating,
-      isChatContentReady: app.isChatContentReady,
-      showChatShellDuringNavigation: app.showChatShellDuringNavigation,
+      isThreadContentReady: app.isThreadContentReady,
+      showThreadShellDuringNavigation: app.showThreadShellDuringNavigation,
     }),
     [
       app.clearSearchReveal,
       app.closeSearchOverlay,
       app.handleNewSession,
-      app.handleSelectChat,
-      app.isChatContentReady,
+      app.handleSelectThread,
+      app.isThreadContentReady,
       app.isNavigating,
       app.openSearchOverlay,
       app.revealSearchMatch,
       app.searchOverlay,
-      app.showChatShellDuringNavigation,
+      app.showThreadShellDuringNavigation,
     ],
   );
 

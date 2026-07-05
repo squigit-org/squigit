@@ -6,7 +6,12 @@
 
 import { useEffect, useRef } from "react";
 import { platform, commands } from "@/platform";
-import { loadPreferences, getWizardState, setWizardState, type WizardState } from "@squigit/core/config";
+import {
+  loadPreferences,
+  getWizardState,
+  setWizardState,
+  type WizardState,
+} from "@squigit/core/config";
 import { resolveOcrModelId } from "@squigit/core/config";
 import { initializeBrainProvider } from "@squigit/core/brain/session";
 import { useSystemPreferences } from "./useSystemPreferences";
@@ -35,7 +40,11 @@ export const useSystemSync = () => {
 
   const setAgreementCompleted = async () => {
     if (state.wizardState) {
-      await handleSetWizardState({ ...state.wizardState, step: 1, isFinished: true });
+      await handleSetWizardState({
+        ...state.wizardState,
+        step: 1,
+        isFinished: true,
+      });
     } else {
       await handleSetWizardState({ step: 1, isFinished: true });
     }
@@ -212,7 +221,7 @@ export const useSystemSync = () => {
 
       console.log("[useSystemSync] Auth Success: Resetting Session & Keys");
       state.setStartupImage(null);
-      state.setSessionChatTitle(null);
+      state.setSessionThreadTitle(null);
       keys.setApiKey("");
       keys.setImgbbKey("");
       profile.setActiveProfile(null);
@@ -249,7 +258,7 @@ export const useSystemSync = () => {
       keys.setApiKey("");
       keys.setImgbbKey("");
       state.setStartupImage(null);
-      state.setSessionChatTitle(null);
+      state.setSessionThreadTitle(null);
       profile.setUserName("");
       profile.setUserEmail("");
       profile.setAvatarSrc("");
@@ -292,7 +301,7 @@ export const useSystemSync = () => {
 
   const resetSession = () => {
     state.setStartupImage(null);
-    state.setSessionChatTitle(null);
+    state.setSessionThreadTitle(null);
     prefs.setSessionOcrLanguage(
       prefs.ocrEnabled ? resolveOcrModelId(prefs.startupOcrLanguage) : "",
     );
@@ -332,8 +341,8 @@ export const useSystemSync = () => {
     setWizardState: handleSetWizardState,
     setAgreementCompleted,
     updateUserData: profile.updateUserData,
-    sessionChatTitle: state.sessionChatTitle,
-    setSessionChatTitle: state.setSessionChatTitle,
+    sessionThreadTitle: state.sessionThreadTitle,
+    setSessionThreadTitle: state.setSessionThreadTitle,
     resetSession,
     autoExpandOCR: prefs.autoExpandOCR,
     ocrEnabled: prefs.ocrEnabled,

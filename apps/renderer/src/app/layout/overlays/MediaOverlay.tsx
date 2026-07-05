@@ -25,22 +25,22 @@ interface MediaOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   item: MediaViewerItem | null;
-  onRevealInChat?: (chatId: string) => void;
+  onRevealInThread?: (threadId: string) => void;
 }
 
 export const MediaOverlay: React.FC<MediaOverlayProps> = ({
   isOpen,
   onClose,
   item,
-  onRevealInChat,
+  onRevealInThread,
 }) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     hasSelection: boolean;
   } | null>(null);
-  const isChatOpenedImage =
-    item?.kind === "image" && item?.openedFromChat === true;
+  const isThreadOpenedImage =
+    item?.kind === "image" && item?.openedFromThread === true;
 
   const activePath = useMemo(
     () => item?.sourcePath || item?.path || "",
@@ -87,10 +87,10 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     }
   };
 
-  const handleRevealInChat = () => {
-    const chatId = item?.galleryChatId;
-    if (!chatId || !onRevealInChat) return;
-    onRevealInChat(chatId);
+  const handleRevealInThread = () => {
+    const threadId = item?.galleryThreadId;
+    if (!threadId || !onRevealInThread) return;
+    onRevealInThread(threadId);
   };
 
   const renderViewer = () => {
@@ -131,16 +131,16 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
           <MediaSidebar
             onReveal={handleReveal}
             onCopyPath={handleCopyPath}
-            onRevealInChat={
-              item?.isGallery && item.galleryChatId && !isChatOpenedImage
-                ? handleRevealInChat
+            onRevealInThread={
+              item?.isGallery && item.galleryThreadId && !isThreadOpenedImage
+                ? handleRevealInThread
                 : undefined
             }
           />
         }
       >
         <div className={styles.viewerRoot}>
-          {!isChatOpenedImage && (
+          {!isThreadOpenedImage && (
             <div className={styles.viewerHeader}>
               <h3 className={styles.viewerTitle}>{item?.name || "Viewer"}</h3>
             </div>

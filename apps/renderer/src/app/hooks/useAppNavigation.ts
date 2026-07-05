@@ -14,11 +14,11 @@ import {
   AUTO_OCR_DISABLED_MODEL_ID,
   cancelOcrJob,
   getImagePath,
-  loadChat,
-  updateChatMetadata,
+  loadThread,
+  updateThreadMetadata,
   type OcrFrame,
-  ChatCitation,
-  ChatToolStep,
+  ThreadCitation,
+  ThreadToolStep,
 } from "@squigit/core/config";
 import {
   type Citation,
@@ -30,12 +30,12 @@ const SYSTEM_GALLERY_ID = "__system_gallery";
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 type SearchRevealTarget = {
-  chatId: string;
+  threadId: string;
   messageIndex: number;
   requestedAt: number;
 };
 
-const getChatOcrModel = (
+const getThreadOcrModel = (
   frame: OcrFrame,
   metadataOcrLanguage?: string,
 ): string => {
@@ -83,13 +83,13 @@ const withNavigationOcrGuard = (frame: OcrFrame): OcrFrame => ({
 });
 
 function normalizeStoredCitations(
-  citations: ChatCitation[] | undefined,
+  citations: ThreadCitation[] | undefined,
 ): Citation[] {
   return Array.isArray(citations) ? citations : [];
 }
 
 function normalizeStoredToolSteps(
-  toolSteps: ChatToolStep[] | undefined,
+  toolSteps: ThreadToolStep[] | undefined,
 ): ToolStep[] {
   if (!Array.isArray(toolSteps)) {
     return [];
@@ -113,8 +113,8 @@ function mapStoredMessage(message: {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
-  citations?: ChatCitation[];
-  tool_steps?: ChatToolStep[];
+  citations?: ThreadCitation[];
+  tool_steps?: ThreadToolStep[];
 }): Message {
   return {
     id: "",
@@ -136,35 +136,38 @@ function waitForNextPaint(): Promise<void> {
 }
 
 export const useAppNavigation = ({
-  chat,
-  chatHistory,
+  thread,
+  threadHistory,
   ocr,
   system,
-  chatTitle,
-  isActiveChatBusy,
+  threadTitle,
+  isActiveThreadBusy,
   closeMediaViewer,
   runWithBusyGuard,
 }: {
-  chat: any;
-  chatHistory: any;
+  thread: any;
+  threadHistory: any;
   ocr: any;
   system: any;
-  chatTitle: string;
-  isActiveChatBusy: boolean;
+  threadTitle: string;
+  isActiveThreadBusy: boolean;
   closeMediaViewer: () => void;
   runWithBusyGuard: (action: () => void | Promise<void>) => void;
 }) => {
   const [isNavigating, setIsNavigating] = useState(false);
-  const [isChatContentReady, setIsChatContentReady] = useState(true);
-  const [showChatShellDuringNavigation, setShowChatShellDuringNavigation] =
+  const [isThreadContentReady, setIsThreadContentReady] = useState(true);
+  const [showThreadShellDuringNavigation, setShowThreadShellDuringNavigation] =
     useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [pendingSearchReveal, setPendingSearchReveal] =
     useState<SearchRevealTarget | null>(null);
 
   const navigationRequestIdRef = useRef(0);
-  const busyTouchStateRef = useRef<{ chatId: string | null; isBusy: boolean }>({
-    chatId: null,
+  const busyTouchStateRef = useRef<{
+    threadId: string | null;
+    isBusy: boolean;
+  }>({
+    threadId: null,
     isBusy: false,
   });
 
@@ -175,68 +178,78 @@ export const useAppNavigation = ({
 
     flushSync(() => {
       setIsNavigating(false);
-      setShowChatShellDuringNavigation(false);
-      setIsChatContentReady(true);
+      setShowThreadShellDuringNavigation(false);
+      setIsThreadContentReady(true);
     });
   }, []);
 
   useEffect(() => {
-    const activeId = chatHistory.activeSessionId;
-    const isBusy = !!activeId && !isOnboardingId(activeId) && isActiveChatBusy;
+    const activeId = threadHistory.activeSessionId;
+    const isBusy =
+      !!activeId && !isOnboardingId(activeId) && isActiveThreadBusy;
     const lastState = busyTouchStateRef.current;
-    const wasBusyForSameChat =
-      lastState.chatId === activeId && lastState.isBusy;
+    const wasBusyForSameThread =
+      lastState.threadId === activeId && lastState.isBusy;
 
-    if (isBusy && !wasBusyForSameChat && activeId) {
-      chatHistory.touchChat(activeId).catch(console.error);
+    if (isBusy && !wasBusyForSameThread && activeId) {
+      threadHistory.touchThread(activeId).catch(console.error);
     }
 
     busyTouchStateRef.current = {
-      chatId: activeId,
+      threadId: activeId,
       isBusy,
     };
-  }, [chatHistory, isActiveChatBusy]);
+  }, [threadHistory, isActiveThreadBusy]);
 
   useEffect(() => {
     if (isNavigating) return;
 
-    const activeId = chatHistory.activeSessionId;
-    if (activeId && chatTitle && chatTitle !== "New thread") {
-      const currentChat = chatHistory.chats.find((c: any) => c.id === activeId);
-      if (currentChat && currentChat.title !== chatTitle) {
-        updateChatMetadata({
-          ...currentChat,
-          title: chatTitle,
+    const activeId = threadHistory.activeSessionId;
+    if (activeId && threadTitle && threadTitle !== "New thread") {
+      const currentThread = threadHistory.threads.find(
+        (c: any) => c.id === activeId,
+      );
+      if (currentThread && currentThread.title !== threadTitle) {
+        updateThreadMetadata({
+          ...currentThread,
+          title: threadTitle,
         }).then(() => {
-          chatHistory.handleRenameChat(activeId, chatTitle);
+          threadHistory.handleRenameThread(activeId, threadTitle);
         });
       }
     }
-  }, [chatHistory, chatTitle, isNavigating]);
+  }, [threadHistory, threadTitle, isNavigating]);
 
   useEffect(() => {
     if (isNavigating) return;
 
-    const activeId = chatHistory.activeSessionId;
+    const activeId = threadHistory.activeSessionId;
     if (!activeId || isOnboardingId(activeId)) return;
 
-    const currentChat = chatHistory.chats.find((c: any) => c.id === activeId);
-    if (!currentChat) return;
+    const currentThread = threadHistory.threads.find(
+      (c: any) => c.id === activeId,
+    );
+    if (!currentThread) return;
 
     const targetOcrLang = system.sessionOcrLanguage || undefined;
-    const currentOcrLang = currentChat.ocr_lang || undefined;
+    const currentOcrLang = currentThread.ocr_lang || undefined;
     if (currentOcrLang === targetOcrLang) return;
 
-    updateChatMetadata({
-      ...currentChat,
+    updateThreadMetadata({
+      ...currentThread,
       ocr_lang: targetOcrLang,
     }).then(() => {
       console.log(
-        "Automatically saved OCR language to chat metadata:",
+        "Automatically saved OCR language to thread metadata:",
         targetOcrLang,
       );
     });
-  }, [chatHistory, isNavigating, system.sessionOcrLanguage, system.ocrEnabled]);
+  }, [
+    threadHistory,
+    isNavigating,
+    system.sessionOcrLanguage,
+    system.ocrEnabled,
+  ]);
 
   const openSearchOverlay = useCallback(() => {
     setIsSearchOverlayOpen(true);
@@ -250,24 +263,24 @@ export const useAppNavigation = ({
     setPendingSearchReveal(null);
   }, []);
 
-  const performSelectChat = useCallback(
+  const performSelectThread = useCallback(
     async (id: string) => {
       const requestId = navigationRequestIdRef.current + 1;
       navigationRequestIdRef.current = requestId;
-      const metadata = chatHistory.chats.find(
-        (chatMeta: any) => chatMeta.id === id,
+      const metadata = threadHistory.threads.find(
+        (threadMeta: any) => threadMeta.id === id,
       );
 
       flushSync(() => {
         setIsNavigating(true);
-        setIsChatContentReady(false);
-        setShowChatShellDuringNavigation(!isOnboardingId(id));
+        setIsThreadContentReady(false);
+        setShowThreadShellDuringNavigation(!isOnboardingId(id));
         setPendingSearchReveal(null);
         closeMediaViewer();
         ocr.setSessionLensUrl(null);
 
         if (!isOnboardingId(id) && metadata?.title) {
-          system.setSessionChatTitle(metadata.title);
+          system.setSessionThreadTitle(metadata.title);
         }
       });
 
@@ -285,11 +298,11 @@ export const useAppNavigation = ({
       if (isOnboardingId(id)) {
         flushSync(() => {
           if (id.startsWith("__system_update")) {
-            system.setSessionChatTitle("Update Available");
+            system.setSessionThreadTitle("Update Available");
           } else if (id === SYSTEM_GALLERY_ID) {
-            system.setSessionChatTitle("Gallery");
+            system.setSessionThreadTitle("Gallery");
           }
-          chatHistory.setActiveSessionId(id);
+          threadHistory.setActiveSessionId(id);
         });
         finalizeNavigationState(requestId);
         return;
@@ -299,7 +312,7 @@ export const useAppNavigation = ({
         const imagePathPromise = metadata?.image_hash
           ? getImagePath(metadata.image_hash)
           : null;
-        const chatDataPromise = loadChat(id);
+        const threadDataPromise = loadThread(id);
 
         if (imagePathPromise && metadata?.image_hash) {
           const imagePath = await imagePathPromise;
@@ -315,10 +328,10 @@ export const useAppNavigation = ({
               fromHistory: true,
               tone: metadata.image_tone ?? undefined,
             });
-            chatHistory.setActiveSessionId(id);
+            threadHistory.setActiveSessionId(id);
           });
 
-          chat.restoreState(
+          thread.restoreState(
             {
               messages: [],
               firstResponseId: null,
@@ -337,49 +350,49 @@ export const useAppNavigation = ({
           }
         }
 
-        const chatData = await chatDataPromise;
+        const threadData = await threadDataPromise;
         if (navigationRequestIdRef.current !== requestId) {
           return;
         }
 
         const imagePath = imagePathPromise
           ? await imagePathPromise
-          : await getImagePath(chatData.metadata.image_hash);
+          : await getImagePath(threadData.metadata.image_hash);
         if (navigationRequestIdRef.current !== requestId) {
           return;
         }
 
-        const loadedOcrData = chatData.ocr_data || {};
+        const loadedOcrData = threadData.ocr_data || {};
         const navigationSafeOcrData = withNavigationOcrGuard(loadedOcrData);
-        const chatOcrModel = getChatOcrModel(
+        const threadOcrModel = getThreadOcrModel(
           loadedOcrData,
-          chatData.metadata.ocr_lang,
+          threadData.metadata.ocr_lang,
         );
         flushSync(() => {
-          system.setSessionChatTitle(chatData.metadata.title);
-          system.setSessionOcrLanguage(system.ocrEnabled ? chatOcrModel : "");
+          system.setSessionThreadTitle(threadData.metadata.title);
+          system.setSessionOcrLanguage(system.ocrEnabled ? threadOcrModel : "");
           ocr.setOcrData(navigationSafeOcrData);
-          ocr.setSessionLensUrl(chatData.imgbb_url || null);
+          ocr.setSessionLensUrl(threadData.imgbb_url || null);
           system.setStartupImage({
             path: imagePath,
             mimeType: "image/png",
-            imageId: chatData.metadata.image_hash,
+            imageId: threadData.metadata.image_hash,
             fromHistory: true,
-            tone: chatData.metadata.image_tone ?? undefined,
+            tone: threadData.metadata.image_tone ?? undefined,
           });
-          chatHistory.setActiveSessionId(id);
+          threadHistory.setActiveSessionId(id);
         });
         await waitForNextPaint();
         if (navigationRequestIdRef.current !== requestId) {
           return;
         }
 
-        const messages = chatData.messages.map((message, idx) => ({
+        const messages = threadData.messages.map((message, idx) => ({
           ...mapStoredMessage(message),
           id: idx.toString(),
         }));
 
-        chat.restoreState(
+        thread.restoreState(
           {
             messages,
             firstResponseId: null,
@@ -387,18 +400,25 @@ export const useAppNavigation = ({
           {
             path: imagePath,
             mimeType: "image/png",
-            imageId: chatData.metadata.image_hash,
+            imageId: threadData.metadata.image_hash,
           },
-          chatData.rolling_summary,
-          chatData.image_brief,
+          threadData.rolling_summary,
+          threadData.image_brief,
         );
       } catch (e) {
-        console.error("Failed to load chat:", e);
+        console.error("Failed to load thread:", e);
       } finally {
         finalizeNavigationState(requestId);
       }
     },
-    [chat, chatHistory, closeMediaViewer, finalizeNavigationState, ocr, system],
+    [
+      thread,
+      threadHistory,
+      closeMediaViewer,
+      finalizeNavigationState,
+      ocr,
+      system,
+    ],
   );
 
   const performNewSession = useCallback(async () => {
@@ -407,40 +427,40 @@ export const useAppNavigation = ({
 
     flushSync(() => {
       setIsNavigating(true);
-      setIsChatContentReady(false);
-      setShowChatShellDuringNavigation(false);
+      setIsThreadContentReady(false);
+      setShowThreadShellDuringNavigation(false);
       setPendingSearchReveal(null);
       closeMediaViewer();
     });
 
     system.resetSession();
-    chatHistory.setActiveSessionId(null);
-    chatHistory.setActiveSessionId(null);
+    threadHistory.setActiveSessionId(null);
+    threadHistory.setActiveSessionId(null);
     ocr.setOcrData({});
     ocr.setSessionLensUrl(null);
     finalizeNavigationState(requestId);
-  }, [chatHistory, closeMediaViewer, finalizeNavigationState, ocr, system]);
+  }, [threadHistory, closeMediaViewer, finalizeNavigationState, ocr, system]);
 
-  const handleSelectChat = useCallback(
+  const handleSelectThread = useCallback(
     (id: string) => {
-      runWithBusyGuard(() => performSelectChat(id));
+      runWithBusyGuard(() => performSelectThread(id));
     },
-    [performSelectChat, runWithBusyGuard],
+    [performSelectThread, runWithBusyGuard],
   );
 
   const revealSearchMatch = useCallback(
-    (payload: { chatId: string; messageIndex: number }) => {
+    (payload: { threadId: string; messageIndex: number }) => {
       runWithBusyGuard(async () => {
         closeSearchOverlay();
-        await performSelectChat(payload.chatId);
+        await performSelectThread(payload.threadId);
         setPendingSearchReveal({
-          chatId: payload.chatId,
+          threadId: payload.threadId,
           messageIndex: payload.messageIndex,
           requestedAt: Date.now(),
         });
       });
     },
-    [closeSearchOverlay, performSelectChat, runWithBusyGuard],
+    [closeSearchOverlay, performSelectThread, runWithBusyGuard],
   );
 
   const handleNewSession = useCallback(() => {
@@ -449,8 +469,8 @@ export const useAppNavigation = ({
 
   return {
     isNavigating,
-    isChatContentReady,
-    showChatShellDuringNavigation,
+    isThreadContentReady,
+    showThreadShellDuringNavigation,
     searchOverlay: {
       isOpen: isSearchOverlayOpen,
       pendingReveal: pendingSearchReveal,
@@ -458,9 +478,9 @@ export const useAppNavigation = ({
     openSearchOverlay,
     closeSearchOverlay,
     clearSearchReveal,
-    performSelectChat,
+    performSelectThread,
     performNewSession,
-    handleSelectChat,
+    handleSelectThread,
     revealSearchMatch,
     handleNewSession,
   };

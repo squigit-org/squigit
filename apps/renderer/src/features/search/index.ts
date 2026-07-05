@@ -5,6 +5,6 @@
  */
 
 export * from "./search.utils";
-export * from "./components/ChatRow";
-export * from "./components/ChatsList";
+export * from "./components/ThreadRow";
+export * from "./components/ThreadsList";
 export * from "./components/SearchBar";

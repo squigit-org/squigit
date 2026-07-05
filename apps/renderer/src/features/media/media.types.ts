@@ -21,8 +21,8 @@ export interface MediaViewerItem {
   extension: string;
   textContent?: string;
   isGallery?: boolean;
-  galleryChatId?: string;
+  galleryThreadId?: string;
   galleryItems?: MediaGalleryItem[];
   galleryIndex?: number;
-  openedFromChat?: boolean;
+  openedFromThread?: boolean;
 }

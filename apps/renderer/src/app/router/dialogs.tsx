@@ -48,7 +48,7 @@ export const AppDialogs: React.FC = () => {
           } else {
             msg = "Please configure your AI provider API key to continue.";
           }
-          app.chat.appendErrorMessage(msg, app.chatHistory.activeSessionId);
+          app.thread.appendErrorMessage(msg, app.threadHistory.activeSessionId);
           app.setShowProviderAuthDialog(false);
         }}
       />
@@ -93,7 +93,7 @@ export const AppDialogs: React.FC = () => {
             )}
             onAction={(key) => {
               if (key === "show_changelog" && app.pendingUpdate) {
-                app.handleSelectChat(
+                app.handleSelectThread(
                   `__system_update_${app.pendingUpdate.version}`,
                 );
               }
@@ -107,17 +107,17 @@ export const AppDialogs: React.FC = () => {
         isOpen={app.mediaViewer.isOpen}
         onClose={app.closeMediaViewer}
         item={app.mediaViewer.item}
-        onRevealInChat={(chatId) => {
+        onRevealInThread={(threadId) => {
           app.closeMediaViewer();
-          app.handleSelectChat(chatId);
+          app.handleSelectThread(threadId);
         }}
       />
 
       <SearchOverlay
         isOpen={app.searchOverlay.isOpen}
         onClose={app.closeSearchOverlay}
-        chats={app.chatHistory.chats}
-        searchChats={app.chatHistory.searchChats}
+        threads={app.threadHistory.threads}
+        searchThreads={app.threadHistory.searchThreads}
       />
     </>
   );

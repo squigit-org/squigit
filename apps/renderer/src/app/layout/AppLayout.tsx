@@ -32,7 +32,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     <div
       ref={containerRef}
       onContextMenu={onContextMenu}
-      className={`${styles.chatContainer} ${isWizardRoute ? styles.transparentBg : ""}`}
+      className={`${styles.threadContainer} ${isWizardRoute ? styles.transparentBg : ""}`}
     >
       <TitleBar />
       <div className={styles.mainContent}>

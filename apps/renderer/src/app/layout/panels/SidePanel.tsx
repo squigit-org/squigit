@@ -28,8 +28,8 @@ import {
 } from "@/components/icons";
 import { Dialog, LoadingSpinner } from "@/components/ui";
 import { useKeyDown, usePlatform } from "@/hooks/shared";
-import { getDeleteMultipleChatsDialog } from "@squigit/core/helpers";
-import type { ChatMetadata } from "@squigit/core/config";
+import { getDeleteMultipleThreadsDialog } from "@squigit/core/helpers";
+import type { ThreadMetadata } from "@squigit/core/config";
 import { PanelContextMenu } from "../menus/PanelContextMenu";
 import { useAppContext } from "../../providers/AppProvider";
 import styles from "./SidePanel.module.css";
@@ -71,42 +71,42 @@ const formatThreadAge = (isoDate: string): string => {
   return `${Math.max(1, Math.floor(elapsedMs / minute))}m`;
 };
 
-interface ChatItemProps {
-  chat: ChatMetadata;
+interface ThreadItemProps {
+  thread: ThreadMetadata;
   isActive: boolean;
   isBusy: boolean;
   isSelectionMode: boolean;
   isSelected: boolean;
   menuState: { x: number; y: number } | null;
-  onSelectChat: (chatId: string) => void;
-  onToggleSelectionChat: (chatId: string) => void;
-  onDeleteChat: (chatId: string) => void;
-  onRenameChat: (chatId: string, newTitle: string) => void;
-  onTogglePinChat: (chatId: string) => void;
+  onSelectThread: (threadId: string) => void;
+  onToggleSelectionThread: (threadId: string) => void;
+  onDeleteThread: (threadId: string) => void;
+  onRenameThread: (threadId: string, newTitle: string) => void;
+  onTogglePinThread: (threadId: string) => void;
   onOpenContextMenu: (id: string, x: number, y: number) => void;
   onCloseContextMenu: () => void;
   onEnableSelectionMode: () => void;
 }
 
-const ChatItem: React.FC<ChatItemProps> = React.memo(
+const ThreadItem: React.FC<ThreadItemProps> = React.memo(
   ({
-    chat,
+    thread,
     isActive,
     isBusy,
     isSelectionMode,
     isSelected,
     menuState,
-    onSelectChat,
-    onToggleSelectionChat,
-    onDeleteChat,
-    onRenameChat,
-    onTogglePinChat,
+    onSelectThread,
+    onToggleSelectionThread,
+    onDeleteThread,
+    onRenameThread,
+    onTogglePinThread,
     onOpenContextMenu,
     onCloseContextMenu,
     onEnableSelectionMode,
   }) => {
     const [isRenaming, setIsRenaming] = useState(false);
-    const [renameValue, setRenameValue] = useState(chat.title);
+    const [renameValue, setRenameValue] = useState(thread.title);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const showMenu = !!menuState;
@@ -120,9 +120,9 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
 
     useEffect(() => {
       if (!isRenaming) {
-        setRenameValue(chat.title);
+        setRenameValue(thread.title);
       }
-    }, [chat.title, isRenaming]);
+    }, [thread.title, isRenaming]);
 
     const handleMenuClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -131,12 +131,12 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
         onCloseContextMenu();
         return;
       }
-      onOpenContextMenu(chat.id, e.clientX, e.clientY);
+      onOpenContextMenu(thread.id, e.clientX, e.clientY);
     };
 
     const handleRenameSubmit = () => {
-      if (renameValue.trim() && renameValue !== chat.title) {
-        onRenameChat(chat.id, renameValue.trim());
+      if (renameValue.trim() && renameValue !== thread.title) {
+        onRenameThread(thread.id, renameValue.trim());
       }
       setIsRenaming(false);
     };
@@ -144,12 +144,12 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
     const handleRenameKeyDown = useKeyDown({
       Enter: handleRenameSubmit,
       Escape: () => {
-        setRenameValue(chat.title);
+        setRenameValue(thread.title);
         setIsRenaming(false);
       },
     });
 
-    const lastActivityAt = chat.updated_at || chat.created_at;
+    const lastActivityAt = thread.updated_at || thread.created_at;
     const lastActivityLabel = formatThreadAge(lastActivityAt);
     const lastActivityTitle = useMemo(
       () => new Date(lastActivityAt).toLocaleString(),
@@ -159,27 +159,30 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
     return (
       <>
         <div
-          className={`${styles.chatRow} ${chat.is_pinned ? styles.pinnedRow : ""} ${isActive ? styles.active : ""} ${showMenu ? styles.menuOpen : ""}`}
+          className={`${styles.threadRow} ${thread.is_pinned ? styles.pinnedRow : ""} ${isActive ? styles.active : ""} ${showMenu ? styles.menuOpen : ""}`}
           onClick={
             isSelectionMode
-              ? () => onToggleSelectionChat(chat.id)
-              : () => onSelectChat(chat.id)
+              ? () => onToggleSelectionThread(thread.id)
+              : () => onSelectThread(thread.id)
           }
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onOpenContextMenu(chat.id, e.clientX, e.clientY);
+            onOpenContextMenu(thread.id, e.clientX, e.clientY);
           }}
         >
           {isSelectionMode && (
             <Checkbox
               checked={isSelected}
-              onChange={() => onToggleSelectionChat(chat.id)}
+              onChange={() => onToggleSelectionThread(thread.id)}
             />
           )}
 
           {!isSelectionMode && (
-            <div className={styles.chatLeading} style={{ paddingLeft: "2px" }}>
+            <div
+              className={styles.threadLeading}
+              style={{ paddingLeft: "2px" }}
+            >
               {isBusy ? (
                 <span className={styles.rowSpinner} aria-hidden="true">
                   <span className={styles.rowSpinnerInner}>
@@ -191,17 +194,17 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
                   <FolderOpen
                     size={20}
                     strokeWidth={1.5}
-                    className={styles.chatBubbleIcon}
+                    className={styles.threadBubbleIcon}
                   />
                   <button
                     type="button"
-                    className={`${styles.pinLeftBtn} ${chat.is_pinned ? styles.pinActive : ""}`}
+                    className={`${styles.pinLeftBtn} ${thread.is_pinned ? styles.pinActive : ""}`}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      onTogglePinChat(chat.id);
+                      onTogglePinThread(thread.id);
                     }}
-                    title={chat.is_pinned ? "Unpin" : "Pin"}
+                    title={thread.is_pinned ? "Unpin" : "Pin"}
                   >
                     <Pin size={17} style={{ transform: "rotate(45deg)" }} />
                   </button>
@@ -213,7 +216,7 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
           {isRenaming ? (
             <input
               ref={inputRef}
-              className={styles.chatTitleInput}
+              className={styles.threadTitleInput}
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onBlur={handleRenameSubmit}
@@ -222,28 +225,28 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
             />
           ) : (
             <span
-              className={styles.chatTitle}
+              className={styles.threadTitle}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 setIsRenaming(true);
               }}
             >
-              {chat.title}
+              {thread.title}
             </span>
           )}
 
           {!isSelectionMode && (
-            <div className={styles.chatActions}>
-              {chat.is_pinned && (
-                <span className={styles.chatDate} title={lastActivityTitle}>
+            <div className={styles.threadActions}>
+              {thread.is_pinned && (
+                <span className={styles.threadDate} title={lastActivityTitle}>
                   {lastActivityLabel}
                 </span>
               )}
 
               <button
                 type="button"
-                className={`${styles.menuBtn} ${chat.is_pinned ? styles.pinnedMenuBtn : ""}`}
+                className={`${styles.menuBtn} ${thread.is_pinned ? styles.pinnedMenuBtn : ""}`}
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -267,11 +270,11 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
             onToggleSelection={() => {
               onEnableSelectionMode();
               if (!isSelected) {
-                onToggleSelectionChat(chat.id);
+                onToggleSelectionThread(thread.id);
               }
             }}
             onDelete={() => {
-              onDeleteChat(chat.id);
+              onDeleteThread(thread.id);
             }}
             isSelected={isSelected}
           />
@@ -284,8 +287,8 @@ const ChatItem: React.FC<ChatItemProps> = React.memo(
 export const SidePanel: React.FC = () => {
   const app = useAppContext();
   const platform = usePlatform();
-  const chats = app.chatHistory.chats;
-  const activeSessionId = app.chatHistory.activeSessionId;
+  const threads = app.threadHistory.threads;
+  const activeSessionId = app.threadHistory.activeSessionId;
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -299,22 +302,22 @@ export const SidePanel: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const pinToggleLockRef = useRef<Set<string>>(new Set());
-  const selectChatRef = useRef(app.handleSelectChat);
-  const renameChatRef = useRef(app.chatHistory.handleRenameChat);
-  const togglePinRef = useRef(app.chatHistory.handleTogglePinChat);
+  const selectThreadRef = useRef(app.handleSelectThread);
+  const renameThreadRef = useRef(app.threadHistory.handleRenameThread);
+  const togglePinRef = useRef(app.threadHistory.handleTogglePinThread);
 
   useEffect(() => {
-    selectChatRef.current = app.handleSelectChat;
-    renameChatRef.current = app.chatHistory.handleRenameChat;
-    togglePinRef.current = app.chatHistory.handleTogglePinChat;
+    selectThreadRef.current = app.handleSelectThread;
+    renameThreadRef.current = app.threadHistory.handleRenameThread;
+    togglePinRef.current = app.threadHistory.handleTogglePinThread;
   }, [
-    app.handleSelectChat,
-    app.chatHistory.handleRenameChat,
-    app.chatHistory.handleTogglePinChat,
+    app.handleSelectThread,
+    app.threadHistory.handleRenameThread,
+    app.threadHistory.handleTogglePinThread,
   ]);
 
-  const { pinnedChats, threadChats, allChats } = useMemo(() => {
-    const sortedChats = chats
+  const { pinnedThreads, threadThreads, allThreads } = useMemo(() => {
+    const sortedThreads = threads
       .filter((c: any) => !c.id.startsWith(SYSTEM_PREFIX))
       .slice()
       .sort(
@@ -324,18 +327,18 @@ export const SidePanel: React.FC = () => {
       );
 
     return {
-      pinnedChats: sortedChats.filter((chat) => chat.is_pinned),
-      threadChats: sortedChats.filter((chat) => !chat.is_pinned),
-      allChats: sortedChats,
+      pinnedThreads: sortedThreads.filter((thread) => thread.is_pinned),
+      threadThreads: sortedThreads.filter((thread) => !thread.is_pinned),
+      allThreads: sortedThreads,
     };
-  }, [chats]);
+  }, [threads]);
 
-  const isChatBusy =
-    app.chat.isAnalyzing ||
-    app.chat.isGenerating ||
-    app.chat.isAiTyping ||
+  const isThreadBusy =
+    app.thread.isAnalyzing ||
+    app.thread.isGenerating ||
+    app.thread.isAiTyping ||
     app.isOcrScanning;
-  const busyChatId = isChatBusy ? activeSessionId : null;
+  const busyThreadId = isThreadBusy ? activeSessionId : null;
 
   const searchShortcutLabel = useMemo(() => {
     if (platform.isMac) {
@@ -368,30 +371,33 @@ export const SidePanel: React.FC = () => {
     setActiveContextMenu((prev) => (prev === null ? prev : null));
   }, []);
 
-  const handleTogglePin = useCallback(async (chatId: string) => {
-    if (pinToggleLockRef.current.has(chatId)) return;
+  const handleTogglePin = useCallback(async (threadId: string) => {
+    if (pinToggleLockRef.current.has(threadId)) return;
 
-    pinToggleLockRef.current.add(chatId);
+    pinToggleLockRef.current.add(threadId);
     try {
-      await togglePinRef.current(chatId);
+      await togglePinRef.current(threadId);
     } finally {
       setTimeout(() => {
-        pinToggleLockRef.current.delete(chatId);
+        pinToggleLockRef.current.delete(threadId);
       }, 220);
     }
   }, []);
 
-  const handleSelectChat = useCallback(
-    (chatId: string) => {
-      if (chatId === activeSessionId) return;
-      selectChatRef.current(chatId);
+  const handleSelectThread = useCallback(
+    (threadId: string) => {
+      if (threadId === activeSessionId) return;
+      selectThreadRef.current(threadId);
     },
     [activeSessionId],
   );
 
-  const handleRenameChat = useCallback((chatId: string, newTitle: string) => {
-    renameChatRef.current(chatId, newTitle);
-  }, []);
+  const handleRenameThread = useCallback(
+    (threadId: string, newTitle: string) => {
+      renameThreadRef.current(threadId, newTitle);
+    },
+    [],
+  );
 
   const handleEnableSelectionMode = useCallback(() => {
     setIsSelectionMode(true);
@@ -402,31 +408,33 @@ export const SidePanel: React.FC = () => {
     setSelectedIds([]);
   }, []);
 
-  const toggleChatSelection = useCallback((id: string) => {
+  const toggleThreadSelection = useCallback((id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   }, []);
 
-  const handleQueueDeleteChat = useCallback((chatId: string) => {
-    setDeleteId(chatId);
+  const handleQueueDeleteThread = useCallback((threadId: string) => {
+    setDeleteId(threadId);
   }, []);
 
   const selectAll = () => {
     setSelectedIds(
-      selectedIds.length === allChats.length ? [] : allChats.map((c) => c.id),
+      selectedIds.length === allThreads.length
+        ? []
+        : allThreads.map((c) => c.id),
     );
   };
 
-  const handleDeleteChat = () => {
+  const handleDeleteThread = () => {
     if (deleteId) {
-      app.handleDeleteChatWrapper(deleteId);
+      app.handleDeleteThreadWrapper(deleteId);
       setDeleteId(null);
     }
   };
 
   const handleBulkDelete = () => {
-    app.handleDeleteChatsWrapper(selectedIds);
+    app.handleDeleteThreadsWrapper(selectedIds);
     setSelectedIds([]);
     setIsSelectionMode(false);
     setShowBulkDelete(false);
@@ -439,7 +447,8 @@ export const SidePanel: React.FC = () => {
           <div className={styles.selectionLeft}>
             <Checkbox
               checked={
-                selectedIds.length === allChats.length && allChats.length > 0
+                selectedIds.length === allThreads.length &&
+                allThreads.length > 0
               }
               onChange={selectAll}
             />
@@ -474,14 +483,14 @@ export const SidePanel: React.FC = () => {
         <div className={styles.headerArea}>
           <div className={styles.groupContent}>
             <div className={styles.groupInner}>
-              <div className={styles.chatRow} onClick={app.handleNewSession}>
+              <div className={styles.threadRow} onClick={app.handleNewSession}>
                 <div
-                  className={styles.chatIconMain}
+                  className={styles.threadIconMain}
                   style={{ paddingLeft: "2px" }}
                 >
                   <SidePanelNewThreadIcon size={18} />
                 </div>
-                <span className={styles.chatTitle}>New thread</span>
+                <span className={styles.threadTitle}>New thread</span>
                 <div className={styles.rowShortcut} aria-hidden="true">
                   <span className={styles.rowShortcutText}>
                     {newThreadShortcutLabel}
@@ -490,16 +499,16 @@ export const SidePanel: React.FC = () => {
               </div>
 
               <div
-                className={`${styles.chatRow} ${app.searchOverlay.isOpen ? styles.active : ""}`}
+                className={`${styles.threadRow} ${app.searchOverlay.isOpen ? styles.active : ""}`}
                 onClick={app.openSearchOverlay}
               >
                 <div
-                  className={styles.chatIconMain}
+                  className={styles.threadIconMain}
                   style={{ paddingLeft: "1px" }}
                 >
                   <Search size={19} />
                 </div>
-                <span className={styles.chatTitle}>Search chats</span>
+                <span className={styles.threadTitle}>Search threads</span>
                 <div className={styles.rowShortcut} aria-hidden="true">
                   <span className={styles.rowShortcutText}>
                     {searchShortcutLabel}
@@ -508,13 +517,13 @@ export const SidePanel: React.FC = () => {
               </div>
 
               <div
-                className={`${styles.chatRow} ${activeSessionId === "__system_gallery" ? styles.active : ""}`}
-                onClick={() => app.handleSelectChat("__system_gallery")}
+                className={`${styles.threadRow} ${activeSessionId === "__system_gallery" ? styles.active : ""}`}
+                onClick={() => app.handleSelectThread("__system_gallery")}
               >
-                <div className={styles.chatIconMain}>
+                <div className={styles.threadIconMain}>
                   <SidePanelSquigitsIcon size={22} />
                 </div>
-                <span className={styles.chatTitle}>Your squigits</span>
+                <span className={styles.threadTitle}>Your squigits</span>
                 <div className={styles.rowShortcut} aria-hidden="true">
                   <ArrowUpRight size={14} className={styles.rowShortcutIcon} />
                 </div>
@@ -525,24 +534,24 @@ export const SidePanel: React.FC = () => {
       )}
 
       <div className={styles.scrollArea}>
-        {pinnedChats.length > 0 && (
+        {pinnedThreads.length > 0 && (
           <div className={styles.groupInner}>
-            {pinnedChats.map((chat) => (
-              <ChatItem
-                key={chat.id}
-                chat={chat}
-                isActive={chat.id === activeSessionId}
-                isBusy={busyChatId === chat.id}
+            {pinnedThreads.map((thread) => (
+              <ThreadItem
+                key={thread.id}
+                thread={thread}
+                isActive={thread.id === activeSessionId}
+                isBusy={busyThreadId === thread.id}
                 isSelectionMode={isSelectionMode}
-                isSelected={selectedIdSet.has(chat.id)}
+                isSelected={selectedIdSet.has(thread.id)}
                 menuState={
-                  activeContextMenu?.id === chat.id ? activeContextMenu : null
+                  activeContextMenu?.id === thread.id ? activeContextMenu : null
                 }
-                onSelectChat={handleSelectChat}
-                onToggleSelectionChat={toggleChatSelection}
-                onDeleteChat={handleQueueDeleteChat}
-                onRenameChat={handleRenameChat}
-                onTogglePinChat={handleTogglePin}
+                onSelectThread={handleSelectThread}
+                onToggleSelectionThread={toggleThreadSelection}
+                onDeleteThread={handleQueueDeleteThread}
+                onRenameThread={handleRenameThread}
+                onTogglePinThread={handleTogglePin}
                 onOpenContextMenu={handleOpenContextMenu}
                 onCloseContextMenu={handleCloseContextMenu}
                 onEnableSelectionMode={handleEnableSelectionMode}
@@ -556,29 +565,29 @@ export const SidePanel: React.FC = () => {
         </div>
 
         <div className={styles.groupInner}>
-          {threadChats.map((chat) => (
-            <ChatItem
-              key={chat.id}
-              chat={chat}
-              isActive={chat.id === activeSessionId}
-              isBusy={busyChatId === chat.id}
+          {threadThreads.map((thread) => (
+            <ThreadItem
+              key={thread.id}
+              thread={thread}
+              isActive={thread.id === activeSessionId}
+              isBusy={busyThreadId === thread.id}
               isSelectionMode={isSelectionMode}
-              isSelected={selectedIdSet.has(chat.id)}
+              isSelected={selectedIdSet.has(thread.id)}
               menuState={
-                activeContextMenu?.id === chat.id ? activeContextMenu : null
+                activeContextMenu?.id === thread.id ? activeContextMenu : null
               }
-              onSelectChat={handleSelectChat}
-              onToggleSelectionChat={toggleChatSelection}
-              onDeleteChat={handleQueueDeleteChat}
-              onRenameChat={handleRenameChat}
-              onTogglePinChat={handleTogglePin}
+              onSelectThread={handleSelectThread}
+              onToggleSelectionThread={toggleThreadSelection}
+              onDeleteThread={handleQueueDeleteThread}
+              onRenameThread={handleRenameThread}
+              onTogglePinThread={handleTogglePin}
               onOpenContextMenu={handleOpenContextMenu}
               onCloseContextMenu={handleCloseContextMenu}
               onEnableSelectionMode={handleEnableSelectionMode}
             />
           ))}
 
-          {threadChats.length === 0 && (
+          {threadThreads.length === 0 && (
             <div className={styles.emptyState}>No threads yet.</div>
           )}
         </div>
@@ -586,17 +595,17 @@ export const SidePanel: React.FC = () => {
 
       <Dialog
         isOpen={!!deleteId}
-        type="DELETE_CHAT"
+        type="DELETE_THREAD"
         appName={app.system.appName}
         onAction={(key) => {
-          if (key === "confirm") handleDeleteChat();
+          if (key === "confirm") handleDeleteThread();
           else setDeleteId(null);
         }}
       />
 
       <Dialog
         isOpen={showBulkDelete}
-        type={getDeleteMultipleChatsDialog(selectedIds.length)}
+        type={getDeleteMultipleThreadsDialog(selectedIds.length)}
         appName={app.system.appName}
         onAction={(key) => {
           if (key === "confirm") handleBulkDelete();

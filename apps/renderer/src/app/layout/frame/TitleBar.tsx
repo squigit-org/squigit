@@ -86,7 +86,7 @@ export const TitleBar: React.FC = () => {
   const handleOpenUpdate = () => {
     if (!pendingUpdate) return;
     setHasSeenUpdateButton(true);
-    app.handleSelectChat(`__system_update_${pendingUpdate.version}`);
+    app.handleSelectThread(`__system_update_${pendingUpdate.version}`);
   };
 
   return (
@@ -95,25 +95,25 @@ export const TitleBar: React.FC = () => {
       {...dragRegionProps}
       onMouseDown={handleMouseDown}
     >
-      <h1 className={styles.chatTitle} {...dragRegionProps}>
-        {app.chatHistory.activeSessionId === "__system_wizard"
+      <h1 className={styles.threadTitle} {...dragRegionProps}>
+        {app.threadHistory.activeSessionId === "__system_wizard"
           ? ""
-          : app.chatTitle}
+          : app.threadTitle}
       </h1>
 
       <div className={styles.leftSection}>
         {isUnix && <TrafficLights />}
 
         {!app.isLoadingState &&
-          app.chatHistory.activeSessionId !== "__system_wizard" && (
+          app.threadHistory.activeSessionId !== "__system_wizard" && (
             <div className={styles.controlsWrapper}>
               <button
                 onClick={app.toggleSidePanel}
                 className={`${styles.iconButton} ${
                   app.isSidePanelOpen ? styles.active : ""
                 }`}
-                title="Recent Chats"
-                aria-label="Recent chats"
+                title="Recent Threads"
+                aria-label="Recent threads"
               >
                 <SidePanelToggleIcon size={20} active={app.isSidePanelOpen} />
               </button>
@@ -132,7 +132,9 @@ export const TitleBar: React.FC = () => {
               <button
                 onClick={handleOpenUpdate}
                 className={`${styles.iconButton} ${styles.updateButton} ${
-                  app.chatHistory.activeSessionId?.startsWith("__system_update")
+                  app.threadHistory.activeSessionId?.startsWith(
+                    "__system_update",
+                  )
                     ? styles.active
                     : ""
                 }`}
@@ -148,7 +150,7 @@ export const TitleBar: React.FC = () => {
               </button>
             )}
 
-            {app.chatHistory.activeSessionId !== "__system_wizard" && (
+            {app.threadHistory.activeSessionId !== "__system_wizard" && (
               <SettingsMenu
                 onOpenSettings={app.system.openSettings}
                 isSettingsOpen={app.system.isSettingsOpen}
@@ -190,7 +192,7 @@ export const TitleBar: React.FC = () => {
                   switchingProfileId={app.system.switchingProfileId}
                 />
               </>
-            ) : app.chatHistory.activeSessionId !== "__system_wizard" ? (
+            ) : app.threadHistory.activeSessionId !== "__system_wizard" ? (
               <AuthButton
                 onLogin={app.handleAddAccount}
                 onCancel={app.system.cancelAuth}

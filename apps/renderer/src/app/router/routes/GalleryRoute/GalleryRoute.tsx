@@ -8,14 +8,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { platform } from "@/platform";
 import { useMediaContext } from "@/app/context/AppMedia";
 import type { Attachment } from "@squigit/core/brain/attachments";
-import { getImagePath, type ChatMetadata } from "@squigit/core/config";
+import { getImagePath, type ThreadMetadata } from "@squigit/core/config";
 import styles from "./GalleryRoute.module.css";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";
 
 interface GalleryCandidate {
   hash: string;
-  chatId: string;
+  threadId: string;
   title: string;
   updatedAt: string;
 }
@@ -25,9 +25,9 @@ interface GalleryImage extends GalleryCandidate {
 }
 
 interface GalleryRouteProps {
-  chats: ChatMetadata[];
+  threads: ThreadMetadata[];
   activeSessionId: string | null;
-  refreshChats: () => Promise<void> | void;
+  refreshThreads: () => Promise<void> | void;
 }
 
 interface GalleryThumbnailProps {
@@ -38,18 +38,18 @@ interface GalleryThumbnailProps {
 
 const toTimestamp = (value: string) => new Date(value || 0).getTime();
 
-const selectLatestByHash = (chats: ChatMetadata[]): GalleryCandidate[] => {
+const selectLatestByHash = (threads: ThreadMetadata[]): GalleryCandidate[] => {
   const byHash = new Map<string, GalleryCandidate>();
 
-  for (const chat of chats) {
-    const hash = chat.image_hash?.trim();
+  for (const thread of threads) {
+    const hash = thread.image_hash?.trim();
     if (!hash) continue;
 
     const candidate: GalleryCandidate = {
       hash,
-      chatId: chat.id,
-      title: chat.title || "Untitled",
-      updatedAt: chat.updated_at || chat.created_at,
+      threadId: thread.id,
+      title: thread.title || "Untitled",
+      updatedAt: thread.updated_at || thread.created_at,
     };
 
     const existing = byHash.get(hash);
@@ -84,20 +84,20 @@ const GalleryThumbnail: React.FC<GalleryThumbnailProps> = ({
 };
 
 export const GalleryRoute: React.FC<GalleryRouteProps> = ({
-  chats,
+  threads,
   activeSessionId,
-  refreshChats,
+  refreshThreads,
 }) => {
   const { openMediaViewer } = useMediaContext();
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<GalleryImage[]>([]);
 
-  const candidates = useMemo(() => selectLatestByHash(chats), [chats]);
+  const candidates = useMemo(() => selectLatestByHash(threads), [threads]);
 
   useEffect(() => {
     if (activeSessionId !== SYSTEM_GALLERY_ID) return;
-    void refreshChats();
-  }, [activeSessionId, refreshChats]);
+    void refreshThreads();
+  }, [activeSessionId, refreshThreads]);
 
   useEffect(() => {
     let cancelled = false;
@@ -143,7 +143,7 @@ export const GalleryRoute: React.FC<GalleryRouteProps> = ({
 
       void openMediaViewer(attachment, {
         isGallery: true,
-        chatId: item.chatId,
+        threadId: item.threadId,
       });
     },
     [openMediaViewer],
@@ -167,7 +167,7 @@ export const GalleryRoute: React.FC<GalleryRouteProps> = ({
       <div className={styles.grid}>
         {items.map((item) => (
           <GalleryThumbnail
-            key={`${item.hash}-${item.chatId}`}
+            key={`${item.hash}-${item.threadId}`}
             imagePath={item.path}
             title={item.title}
             onClick={() => handleOpenImage(item)}

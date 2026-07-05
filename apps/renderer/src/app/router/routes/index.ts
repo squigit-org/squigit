@@ -4,7 +4,7 @@
  * spdx-license-identifier: apache-2.0
  */
 
-export { ChatRoute } from "./ChatRoute/ChatRoute";
+export { ThreadRoute } from "./ThreadRoute/ThreadRoute";
 export { GalleryRoute } from "./GalleryRoute/GalleryRoute";
 export { HomeRoute } from "./HomeRoute/HomeRoute";
 export { UpdateNotesRoute } from "./UpdateNotesRoute/UpdateNotesRoute";

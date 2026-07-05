@@ -31,7 +31,7 @@ export const useAppOcr = (activeSessionId: string | null) => {
 
   const handleUpdateOCRData = useCallback(
     (
-      targetChatId: string | null,
+      targetThreadId: string | null,
       modelId: string,
       data: { text: string; box: number[][] }[],
     ) => {
@@ -39,17 +39,17 @@ export const useAppOcr = (activeSessionId: string | null) => {
         text: d.text,
         bbox: d.box,
       }));
-      const chatIdForWrite = targetChatId || activeSessionIdRef.current;
+      const threadIdForWrite = targetThreadId || activeSessionIdRef.current;
 
-      if (chatIdForWrite && modelId) {
-        saveOcrData(chatIdForWrite, modelId, regions).catch((e) =>
+      if (threadIdForWrite && modelId) {
+        saveOcrData(threadIdForWrite, modelId, regions).catch((e) =>
           console.error("Failed to save OCR", e),
         );
       }
 
       if (
-        !chatIdForWrite ||
-        chatIdForWrite !== activeSessionIdRef.current ||
+        !threadIdForWrite ||
+        threadIdForWrite !== activeSessionIdRef.current ||
         !modelId
       ) {
         return;

@@ -45,7 +45,7 @@
   align-self: stretch;
 }
 
-.chatTitle {
+.threadTitle {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--c-raw-050);

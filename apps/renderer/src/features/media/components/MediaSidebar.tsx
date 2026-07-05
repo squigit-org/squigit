@@ -11,21 +11,21 @@ import { WidgetOverlayIconButton } from "@/components/ui";
 interface MediaSidebarProps {
   onReveal: () => void;
   onCopyPath: () => void;
-  onRevealInChat?: () => void;
+  onRevealInThread?: () => void;
 }
 
 export const MediaSidebar: React.FC<MediaSidebarProps> = ({
   onReveal,
   onCopyPath,
-  onRevealInChat,
+  onRevealInThread,
 }) => {
   return (
     <>
-      {onRevealInChat && (
+      {onRevealInThread && (
         <WidgetOverlayIconButton
           icon={<MessageSquare size={22} />}
-          label="Reveal in chat"
-          onClick={onRevealInChat}
+          label="Reveal in thread"
+          onClick={onRevealInThread}
         />
       )}
       <WidgetOverlayIconButton

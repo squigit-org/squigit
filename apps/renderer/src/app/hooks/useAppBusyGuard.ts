@@ -12,12 +12,12 @@ import type { DialogContent } from "@squigit/core/helpers";
 type GuardedAction = () => void | Promise<void>;
 
 export const useAppBusyGuard = ({
-  chat,
+  thread,
   ocr,
   system,
   getSafeOcrModel,
 }: {
-  chat: any;
+  thread: any;
   ocr: any;
   system: any;
   getSafeOcrModel: () => string;
@@ -35,9 +35,9 @@ export const useAppBusyGuard = ({
   const getBusyReason = useCallback((): string | null => {
     const activeStates: string[] = [];
 
-    if (chat.isAnalyzing) activeStates.push("analyzing an image");
-    if (chat.isGenerating) activeStates.push("generating a response");
-    if (chat.isAiTyping) activeStates.push("typing a response");
+    if (thread.isAnalyzing) activeStates.push("analyzing an image");
+    if (thread.isGenerating) activeStates.push("generating a response");
+    if (thread.isAiTyping) activeStates.push("typing a response");
     if (ocr.isOcrScanning) activeStates.push("scanning an image");
 
     if (activeStates.length === 0) return null;
@@ -45,7 +45,12 @@ export const useAppBusyGuard = ({
 
     const last = activeStates.pop();
     return `${activeStates.join(", ")} and ${last}`;
-  }, [chat.isAiTyping, chat.isAnalyzing, chat.isGenerating, ocr.isOcrScanning]);
+  }, [
+    thread.isAiTyping,
+    thread.isAnalyzing,
+    thread.isGenerating,
+    ocr.isOcrScanning,
+  ]);
 
   const runWithBusyGuard = useCallback(
     (action: GuardedAction) => {
@@ -66,14 +71,14 @@ export const useAppBusyGuard = ({
     ocr.setIsOcrScanning(false);
     system.setSessionOcrLanguage(getSafeOcrModel());
 
-    if (chat.isAnalyzing || chat.isGenerating || chat.isAiTyping) {
-      chat.handleStopGeneration();
+    if (thread.isAnalyzing || thread.isGenerating || thread.isAiTyping) {
+      thread.handleStopGeneration();
     }
   }, [
-    chat.handleStopGeneration,
-    chat.isAiTyping,
-    chat.isAnalyzing,
-    chat.isGenerating,
+    thread.handleStopGeneration,
+    thread.isAiTyping,
+    thread.isAnalyzing,
+    thread.isGenerating,
     getSafeOcrModel,
     ocr,
     system,

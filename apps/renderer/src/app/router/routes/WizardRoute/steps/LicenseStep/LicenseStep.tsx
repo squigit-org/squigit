@@ -70,7 +70,7 @@ export const LicenseStep: React.FC<LicenseStepProps> = () => {
 
       <div className={styles.contentWrapper}>
         <p className={styles.topText}>
-          Squigit is designed to work locally first. Your captures, chats, API
+          Squigit is designed to work locally first. Your captures, threads, API
           keys, and settings stay on your device unless you explicitly use a
           feature that requires an external provider. When AI features are
           enabled, only the specific capture and prompt required to complete

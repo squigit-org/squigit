@@ -12,12 +12,12 @@ import React, {
   useState,
 } from "react";
 import { WidgetOverlay } from "@/components/ui";
-import type { ChatMetadata, ChatSearchResult } from "@squigit/core/config";
+import type { ThreadMetadata, ThreadSearchResult } from "@squigit/core/config";
 import { useNavigationContext } from "@/app/context/AppNavigation";
 import {
-  ChatsList,
+  ThreadsList,
   SearchBar,
-  buildChatGroups,
+  buildThreadGroups,
   highlightTokensFromQuery,
 } from "@/features/search";
 import styles from "./SearchOverlay.module.css";
@@ -28,19 +28,22 @@ const SEARCH_DEBOUNCE_MS = 120;
 interface SearchOverlayProps {
   isOpen: boolean;
   onClose: () => void;
-  chats: ChatMetadata[];
-  searchChats: (query: string, limit: number) => Promise<ChatSearchResult[]>;
+  threads: ThreadMetadata[];
+  searchThreads: (
+    query: string,
+    limit: number,
+  ) => Promise<ThreadSearchResult[]>;
 }
 
 export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   isOpen,
   onClose,
-  chats,
-  searchChats,
+  threads,
+  searchThreads,
 }) => {
   const navigation = useNavigationContext();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<ChatSearchResult[]>([]);
+  const [results, setResults] = useState<ThreadSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(0);
@@ -53,9 +56,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     [normalizedQuery],
   );
 
-  const chatGroups = useMemo(() => buildChatGroups(chats), [chats]);
+  const threadGroups = useMemo(() => buildThreadGroups(threads), [threads]);
 
-  const firstChatId = chatGroups[0]?.chats[0]?.id ?? null;
+  const firstThreadId = threadGroups[0]?.threads[0]?.id ?? null;
 
   useEffect(() => {
     if (!isOpen) {
@@ -87,7 +90,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     const currentRequestId = ++requestIdRef.current;
     const timer = window.setTimeout(async () => {
       setIsLoading(true);
-      const hits = await searchChats(normalizedQuery, SEARCH_LIMIT);
+      const hits = await searchThreads(normalizedQuery, SEARCH_LIMIT);
       if (currentRequestId !== requestIdRef.current) return;
       setResults(hits);
       setIsLoading(false);
@@ -96,22 +99,22 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [hasQuery, isOpen, normalizedQuery, searchChats]);
+  }, [hasQuery, isOpen, normalizedQuery, searchThreads]);
 
   const handleSelectResult = useCallback(
-    (result: ChatSearchResult) => {
+    (result: ThreadSearchResult) => {
       navigation.revealSearchMatch({
-        chatId: result.chat_id,
+        threadId: result.thread_id,
         messageIndex: result.message_index,
       });
     },
     [navigation],
   );
 
-  const handleSelectChat = useCallback(
-    (chatId: string) => {
+  const handleSelectThread = useCallback(
+    (threadId: string) => {
       onClose();
-      navigation.handleSelectChat(chatId);
+      navigation.handleSelectThread(threadId);
     },
     [navigation, onClose],
   );
@@ -134,13 +137,13 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
         return;
       }
 
-      if (firstChatId) {
-        handleSelectChat(firstChatId);
+      if (firstThreadId) {
+        handleSelectThread(firstThreadId);
       }
     },
     [
-      firstChatId,
-      handleSelectChat,
+      firstThreadId,
+      handleSelectThread,
       handleSelectResult,
       hasQuery,
       onClose,
@@ -163,14 +166,14 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
           inputRef={inputRef}
         />
 
-        <ChatsList
+        <ThreadsList
           hasQuery={hasQuery}
           isLoading={isLoading}
           results={results}
-          groups={chatGroups}
+          groups={threadGroups}
           highlightTokens={highlightTokens}
           onSelectResult={handleSelectResult}
-          onSelectChat={handleSelectChat}
+          onSelectThread={handleSelectThread}
         />
       </div>
     </WidgetOverlay>

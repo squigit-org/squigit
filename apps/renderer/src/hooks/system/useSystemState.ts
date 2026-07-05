@@ -18,7 +18,9 @@ export const useSystemState = () => {
     tone?: string;
   } | null>(null);
 
-  const [sessionChatTitle, setSessionChatTitle] = useState<string | null>(null);
+  const [sessionThreadTitle, setSessionThreadTitle] = useState<string | null>(
+    null,
+  );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] =
     useState<SettingsSection>("general");
@@ -39,8 +41,8 @@ export const useSystemState = () => {
     setAppName,
     startupImage,
     setStartupImage,
-    sessionChatTitle,
-    setSessionChatTitle,
+    sessionThreadTitle,
+    setSessionThreadTitle,
     isSettingsOpen,
     setIsSettingsOpen,
     settingsSection,

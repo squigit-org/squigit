@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { commands } from "@/platform";import {
+import { commands } from "@/platform";
+import {
   type Attachment,
   getExtension,
   isImageExtension,
@@ -15,10 +16,10 @@ import { type MediaGalleryItem, type MediaViewerItem } from "@/features/media";
 
 export type MediaViewerOpenOptions = {
   isGallery?: boolean;
-  chatId?: string;
+  threadId?: string;
   galleryAttachments?: Attachment[];
   initialIndex?: number;
-  openedFromChat?: boolean;
+  openedFromThread?: boolean;
 };
 
 const UNSUPPORTED_PREVIEW_EXTENSIONS = new Set([
@@ -173,7 +174,9 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
 
       let resolvedPath = normalizedAttachmentPath;
       try {
-        resolvedPath = await commands.resolveAttachmentPath(normalizedAttachmentPath);
+        resolvedPath = await commands.resolveAttachmentPath(
+          normalizedAttachmentPath,
+        );
       } catch (error) {
         console.warn("[media] Could not resolve attachment path:", error);
       }
@@ -210,7 +213,9 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
 
               let galleryResolvedPath = galleryAttachment.path;
               try {
-                galleryResolvedPath = await commands.resolveAttachmentPath(galleryAttachment.path);
+                galleryResolvedPath = await commands.resolveAttachmentPath(
+                  galleryAttachment.path,
+                );
               } catch (error) {
                 console.warn("[media] Could not resolve gallery path:", error);
               }
@@ -258,10 +263,10 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
             extension: activeGalleryItem?.extension || extension,
             isGallery:
               options?.isGallery === true || (galleryItems?.length ?? 0) > 1,
-            galleryChatId: options?.chatId,
+            galleryThreadId: options?.threadId,
             galleryItems,
             galleryIndex,
-            openedFromChat: options?.openedFromChat === true,
+            openedFromThread: options?.openedFromThread === true,
           },
         });
         return;

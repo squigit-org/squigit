@@ -9,8 +9,8 @@ import { platform } from "@/platform";
 import {
   AUTO_OCR_DISABLED_MODEL_ID,
   OcrFrame,
-  appendChatMessage,
-  overwriteChatMessages,
+  appendThreadMessage,
+  overwriteThreadMessages,
 } from "@squigit/core/config";
 import type { Attachment } from "@squigit/core/brain/attachments";
 import { github } from "@squigit/core/services/github";
@@ -26,7 +26,7 @@ import {
 } from "@/hooks/system";
 import { useBrainTitle, useModelHandshake } from "@squigit/react/brain/hooks";
 import { useAttachments } from "@/hooks/shared";
-import { useChat, useChatHistory } from "@/features/chat";
+import { useThread, useThreadHistory } from "@/features/thread";
 import { useAppBusyGuard } from "./useAppBusyGuard";
 import { useAppCapture } from "./useAppCapture";
 import { useAppContextMenu } from "./useAppContextMenu";
@@ -39,7 +39,7 @@ import { useAppPanel } from "./useAppPanel";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
-const getChatOcrModel = (
+const getThreadOcrModel = (
   frame: OcrFrame,
   metadataOcrLanguage?: string,
 ): string => {
@@ -100,7 +100,7 @@ export const useApp = () => {
 
   const activeProfileRef = useRef<any>(null);
   const systemRef = useRef(system);
-  const chatHistoryRef = useRef<any>(null);
+  const threadHistoryRef = useRef<any>(null);
   const agreedToTermsRef = useRef(false);
   const hasShownCaptureTerminalHintRef = useRef(false);
 
@@ -117,11 +117,11 @@ export const useApp = () => {
     return () =>
       window.removeEventListener("squigit-updates-changed", handleUpdate);
   }, []);
-  const chatHistory = useChatHistory(system.activeProfile?.id || null);
+  const threadHistory = useThreadHistory(system.activeProfile?.id || null);
 
   useEffect(() => {
-    chatHistoryRef.current = chatHistory;
-  }, [chatHistory]);
+    threadHistoryRef.current = threadHistory;
+  }, [threadHistory]);
 
   useUpdateCheck();
   useModelHandshake(system.apiKey);
@@ -135,7 +135,7 @@ export const useApp = () => {
   const drafts = useAppDrafts();
   const attachments = useAttachments();
   const contextMenuState = useAppContextMenu();
-  const ocr = useAppOcr(chatHistory.activeSessionId);
+  const ocr = useAppOcr(threadHistory.activeSessionId);
   const [pendingPromptAttachmentAnalysis, setPendingPromptAttachmentAnalysis] =
     useState<ReturnType<typeof getAttachmentAnalysisCounts>>(null);
   const [hasAutoSelectedWizard, setHasAutoSelectedWizard] = useState(false);
@@ -152,14 +152,14 @@ export const useApp = () => {
   const shouldAutoClosePanelForWizard =
     system.wizardState?.isFinished === false;
 
-  const hasActiveOnboarding = chatHistory.activeSessionId
-    ? isOnboardingId(chatHistory.activeSessionId)
+  const hasActiveOnboarding = threadHistory.activeSessionId
+    ? isOnboardingId(threadHistory.activeSessionId)
     : false;
   const isImageMissing = !system.startupImage && !hasActiveOnboarding;
   const isAuthPending = auth.authStage === "LOGIN";
   const isPendingAutoSelectWizard =
     system.wizardState?.isFinished === false &&
-    chatHistory.activeSessionId !== "__system_wizard";
+    threadHistory.activeSessionId !== "__system_wizard";
   const isLoadingState =
     !system.profileLoaded ||
     !system.prefsLoaded ||
@@ -174,19 +174,19 @@ export const useApp = () => {
   });
 
   const handleMessageAdded = useCallback(
-    (msg: any, targetChatId?: string) => {
-      const activeId = targetChatId || chatHistory.activeSessionId;
+    (msg: any, targetThreadId?: string) => {
+      const activeId = targetThreadId || threadHistory.activeSessionId;
       if (activeId && !isOnboardingId(activeId)) {
         const role = msg.role === "user" ? "user" : "assistant";
-        appendChatMessage(activeId, role, msg.text).catch(console.error);
+        appendThreadMessage(activeId, role, msg.text).catch(console.error);
       }
     },
-    [chatHistory.activeSessionId],
+    [threadHistory.activeSessionId],
   );
 
   const handleOverwriteMessages = useCallback(
     (msgs: any[]) => {
-      const activeId = chatHistory.activeSessionId;
+      const activeId = threadHistory.activeSessionId;
       if (!activeId) return;
 
       const formatted = msgs.map((message: any) => ({
@@ -199,73 +199,73 @@ export const useApp = () => {
         tool_steps: Array.isArray(message.toolSteps) ? message.toolSteps : [],
       }));
 
-      overwriteChatMessages(activeId, formatted).catch(console.error);
+      overwriteThreadMessages(activeId, formatted).catch(console.error);
     },
-    [chatHistory.activeSessionId],
+    [threadHistory.activeSessionId],
   );
 
-  const chatTitle = isImageMissing
+  const threadTitle = isImageMissing
     ? system.appName
     : isGeneratingTitle
       ? "New thread"
-      : system.sessionChatTitle || "New thread";
+      : system.sessionThreadTitle || "New thread";
 
-  const isChatActive = !isLoadingState && !isImageMissing && !isAuthPending;
-  const chat = useChat({
+  const isThreadActive = !isLoadingState && !isImageMissing && !isAuthPending;
+  const thread = useThread({
     apiKey: system.apiKey,
     currentModel: system.sessionModel,
     startupImage: system.startupImage,
     prompt: system.prompt,
     setCurrentModel: system.setSessionModel,
-    enabled: isChatActive,
+    enabled: isThreadActive,
     onMessage: handleMessageAdded,
     onOverwriteMessages: handleOverwriteMessages,
-    chatId: chatHistory.activeSessionId,
-    chatTitle,
+    threadId: threadHistory.activeSessionId,
+    threadTitle,
     onMissingApiKey: () => {
       dialogs.setShowProviderAuthDialog(true);
     },
     onTitleGenerated: (title: string) => {
-      system.setSessionChatTitle(title);
+      system.setSessionThreadTitle(title);
     },
     generateTitle: generateTitleForText,
     userName: system.userName,
     userEmail: system.userEmail,
   });
 
-  const isActiveChatBusy =
-    chat.isAnalyzing ||
-    chat.isGenerating ||
-    chat.isAiTyping ||
+  const isActiveThreadBusy =
+    thread.isAnalyzing ||
+    thread.isGenerating ||
+    thread.isAiTyping ||
     ocr.isOcrScanning;
 
   const media = useAppMedia({ attachments: attachments.attachments });
   const busyGuard = useAppBusyGuard({
-    chat,
+    thread,
     ocr,
     system,
-    getSafeOcrModel: () => getChatOcrModel(ocr.ocrData, undefined),
+    getSafeOcrModel: () => getThreadOcrModel(ocr.ocrData, undefined),
   });
   const navigation = useAppNavigation({
-    chat,
-    chatHistory,
+    thread,
+    threadHistory,
     ocr,
     system,
-    chatTitle,
-    isActiveChatBusy,
+    threadTitle,
+    isActiveThreadBusy,
     closeMediaViewer: media.closeMediaViewer,
     runWithBusyGuard: busyGuard.runWithBusyGuard,
   });
   const capture = useAppCapture({
     system,
     auth,
-    chatHistory,
+    threadHistory,
     ocr,
     dialogs,
     activeProfileRef,
     systemRef,
-    chatHistoryRef,
-    performSelectChat: navigation.performSelectChat,
+    threadHistoryRef,
+    performSelectThread: navigation.performSelectThread,
     performNewSession: navigation.performNewSession,
     closeMediaViewer: media.closeMediaViewer,
     runWithBusyGuardRef: busyGuard.runWithBusyGuardRef,
@@ -276,27 +276,27 @@ export const useApp = () => {
   const isAgreementPending = system.wizardState?.isFinished === false;
 
   useEffect(() => {
-    const pendingTurn = chat.pendingAssistantTurn;
+    const pendingTurn = thread.pendingAssistantTurn;
     if (!pendingTurn || pendingTurn.phase !== "thinking") {
       setPendingPromptAttachmentAnalysis(null);
     }
-  }, [chat.pendingAssistantTurn]);
+  }, [thread.pendingAssistantTurn]);
 
   useEffect(() => {
     if (
       system.wizardState?.isFinished === false &&
       auth.authStage !== "LOADING" &&
       !capture.isCheckingImage &&
-      !chatHistory.activeSessionId &&
+      !threadHistory.activeSessionId &&
       !hasAutoSelectedWizard
     ) {
-      navigation.performSelectChat("__system_wizard");
+      navigation.performSelectThread("__system_wizard");
       setHasAutoSelectedWizard(true);
     }
   }, [
     auth.authStage,
     capture.isCheckingImage,
-    chatHistory.activeSessionId,
+    threadHistory.activeSessionId,
     hasAutoSelectedWizard,
     navigation,
     system.wizardState?.isFinished,
@@ -311,11 +311,11 @@ export const useApp = () => {
 
   const handleUpdateOCRData = useCallback(
     (
-      chatId: string | null,
+      threadId: string | null,
       modelId: string,
       data: { text: string; box: number[][] }[],
     ) => {
-      ocr.handleUpdateOCRData(chatId, modelId, data);
+      ocr.handleUpdateOCRData(threadId, modelId, data);
     },
     [ocr],
   );
@@ -329,25 +329,26 @@ export const useApp = () => {
     [],
   );
 
-  const handleDeleteChatWrapper = async (id: string) => {
-    const isActive = chatHistory.activeSessionId === id;
-    await chatHistory.handleDeleteChat(id);
+  const handleDeleteThreadWrapper = async (id: string) => {
+    const isActive = threadHistory.activeSessionId === id;
+    await threadHistory.handleDeleteThread(id);
     if (isActive) {
       await navigation.performNewSession();
     }
   };
 
-  const handleDeleteChatsWrapper = async (ids: string[]) => {
+  const handleDeleteThreadsWrapper = async (ids: string[]) => {
     const isActiveIncluded =
-      chatHistory.activeSessionId && ids.includes(chatHistory.activeSessionId);
-    await chatHistory.handleDeleteChats(ids);
+      threadHistory.activeSessionId &&
+      ids.includes(threadHistory.activeSessionId);
+    await threadHistory.handleDeleteThreads(ids);
     if (isActiveIncluded) {
       await navigation.performNewSession();
     }
   };
 
   const handleSwitchProfile = async (profileId: string) => {
-    const isInWizard = chatHistory.activeSessionId === "__system_wizard";
+    const isInWizard = threadHistory.activeSessionId === "__system_wizard";
     if (!isInWizard) {
       await navigation.performNewSession();
     }
@@ -357,7 +358,7 @@ export const useApp = () => {
   const handleAddAccount = async () => {
     const result = await system.addAccount();
     if (result && result.id) {
-      const isInWizard = chatHistory.activeSessionId === "__system_wizard";
+      const isInWizard = threadHistory.activeSessionId === "__system_wizard";
       if (isInWizard) {
         await system.switchProfile(result.id);
       } else {
@@ -408,8 +409,8 @@ export const useApp = () => {
   return {
     system,
     auth,
-    chat,
-    chatHistory,
+    thread,
+    threadHistory,
     isSidePanelOpen: panel.isSidePanelOpen,
     enablePanelAnimation: panel.enablePanelAnimation,
     showProviderAuthDialog: dialogs.showProviderAuthDialog,
@@ -429,15 +430,15 @@ export const useApp = () => {
     isLoadingState,
     isAgreementPending,
     isImageMissing,
-    chatTitle,
+    threadTitle,
     agreedToTerms,
     busyDialog: busyGuard.busyDialog,
     mediaViewer: media.mediaViewer,
     searchOverlay: navigation.searchOverlay,
     toggleSidePanel: panel.toggleSidePanel,
     isNavigating: navigation.isNavigating,
-    isChatContentReady: navigation.isChatContentReady,
-    showChatShellDuringNavigation: navigation.showChatShellDuringNavigation,
+    isThreadContentReady: navigation.isThreadContentReady,
+    showThreadShellDuringNavigation: navigation.showThreadShellDuringNavigation,
     setShowProviderAuthDialog: dialogs.setShowProviderAuthDialog,
     setShowLoginRequiredDialog: dialogs.setShowLoginRequiredDialog,
     setShowCaptureDeniedDialog: dialogs.setShowCaptureDeniedDialog,
@@ -445,7 +446,7 @@ export const useApp = () => {
     handleUpdateLensUrl,
     handleUpdateOCRData,
     handleImageReady: capture.handleImageReady,
-    handleSelectChat: navigation.handleSelectChat,
+    handleSelectThread: navigation.handleSelectThread,
     handleNewSession: navigation.handleNewSession,
     handleAddAccount,
     setInput: drafts.setInput,
@@ -459,9 +460,9 @@ export const useApp = () => {
     handleContextMenu: contextMenuState.handleContextMenu,
     handleCloseContextMenu: contextMenuState.handleCloseContextMenu,
     handleCopy: contextMenuState.handleCopy,
-    handleDeleteChatWrapper,
-    handleDeleteChatsWrapper,
-    handleToggleStarChat: chatHistory.handleToggleStarChat,
+    handleDeleteThreadWrapper,
+    handleDeleteThreadsWrapper,
+    handleToggleStarThread: threadHistory.handleToggleStarThread,
     handleExit: () => platform.app.exit(0),
     handleSwitchProfile,
     handleSystemAction,

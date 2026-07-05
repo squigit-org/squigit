@@ -11,7 +11,7 @@ import {
   setProviderPort,
   setStoragePort,
   setSystemPort,
-  type StreamGeminiChatInput,
+  type StreamGeminiThreadInput,
 } from "@squigit/core/ports";
 
 let initialized = false;
@@ -20,11 +20,24 @@ export function initializeCorePorts(): void {
   if (initialized) return;
 
   setProviderPort({
-    streamChat: (input: StreamGeminiChatInput) => platform.invoke("stream_chat", input),
+    streamThread: (input: StreamGeminiThreadInput) =>
+      platform.invoke("stream_thread", input),
     generateImageBrief: (apiKey: string, imagePath: string, model?: string) =>
-      platform.invoke<string>("generate_image_brief", { apiKey, imagePath, model }),
-    generateChatTitle: (apiKey: string, model: string, promptContext: string) =>
-      platform.invoke<string>("generate_chat_title", { apiKey, model, promptContext }),
+      platform.invoke<string>("generate_image_brief", {
+        apiKey,
+        imagePath,
+        model,
+      }),
+    generateThreadTitle: (
+      apiKey: string,
+      model: string,
+      promptContext: string,
+    ) =>
+      platform.invoke<string>("generate_thread_title", {
+        apiKey,
+        model,
+        promptContext,
+      }),
     compressConversation: (
       apiKey: string,
       imageBrief: string,
@@ -37,8 +50,8 @@ export function initializeCorePorts(): void {
         historyToCompress,
         model,
       }),
-    persistRollingSummary: (chatId: string, summary: string) =>
-      platform.invoke("save_rolling_summary", { chatId, summary }),
+    persistRollingSummary: (threadId: string, summary: string) =>
+      platform.invoke("save_rolling_summary", { threadId, summary }),
     cancelRequest: (channelId: string | null) =>
       platform.invoke("cancel_request", { channelId }),
     requestQuickAnswer: (channelId: string) =>
@@ -47,9 +60,12 @@ export function initializeCorePorts(): void {
       channelId: string,
       onEvent: (event: ProviderStreamEvent) => void,
     ) => {
-      const unlisten = await platform.listen<ProviderStreamEvent>(channelId, (payload) => {
-        onEvent(payload);
-      });
+      const unlisten = await platform.listen<ProviderStreamEvent>(
+        channelId,
+        (payload) => {
+          onEvent(payload);
+        },
+      );
       return () => {
         unlisten();
       };
@@ -57,43 +73,55 @@ export function initializeCorePorts(): void {
   });
 
   setStoragePort({
-    storeImageBytes: (bytes: number[]) => platform.invoke("store_image_bytes", { bytes }),
-    storeImageFromPath: (path: string) => platform.invoke("store_image_from_path", { path }),
+    storeImageBytes: (bytes: number[]) =>
+      platform.invoke("store_image_bytes", { bytes }),
+    storeImageFromPath: (path: string) =>
+      platform.invoke("store_image_from_path", { path }),
     getImagePath: (hash: string) => platform.invoke("get_image_path", { hash }),
-    createChat: (title: string, imageHash: string, ocrLang?: string | null) =>
-      platform.invoke("create_chat", { title, imageHash, ocrLang }),
-    loadChat: (chatId: string) => platform.invoke("load_chat", { chatId }),
-    listChats: () => platform.invoke("list_chats"),
-    searchChats: (query: string, limit: number) =>
-      platform.invoke("search_chats", { query, limit }),
-    deleteChat: (chatId: string) => platform.invoke("delete_chat", { chatId }),
-    updateChatMetadata: (metadata) => platform.invoke("update_chat_metadata", { metadata }),
-    appendChatMessage: (
-      chatId: string,
+    createThread: (title: string, imageHash: string, ocrLang?: string | null) =>
+      platform.invoke("create_thread", { title, imageHash, ocrLang }),
+    loadThread: (threadId: string) =>
+      platform.invoke("load_thread", { threadId }),
+    listThreads: () => platform.invoke("list_threads"),
+    searchThreads: (query: string, limit: number) =>
+      platform.invoke("search_threads", { query, limit }),
+    deleteThread: (threadId: string) =>
+      platform.invoke("delete_thread", { threadId }),
+    updateThreadMetadata: (metadata) =>
+      platform.invoke("update_thread_metadata", { metadata }),
+    appendThreadMessage: (
+      threadId: string,
       role: "user" | "assistant",
       content: string,
-    ) => platform.invoke("append_chat_message", { chatId, role, content }),
-    overwriteChatMessages: (chatId, messages) =>
-      platform.invoke("overwrite_chat_messages", { chatId, messages }),
-    saveOcrData: (chatId, modelId, ocrData) =>
-      platform.invoke("save_ocr_data", { chatId, modelId, ocrData }),
-    getOcrData: (chatId, modelId) => platform.invoke("get_ocr_data", { chatId, modelId }),
-    getOcrFrame: (chatId) => platform.invoke("get_ocr_frame", { chatId }),
-    initOcrFrame: (chatId, modelIds) =>
-      platform.invoke("init_ocr_frame", { chatId, modelIds }),
+    ) => platform.invoke("append_thread_message", { threadId, role, content }),
+    overwriteThreadMessages: (threadId, messages) =>
+      platform.invoke("overwrite_thread_messages", { threadId, messages }),
+    saveOcrData: (threadId, modelId, ocrData) =>
+      platform.invoke("save_ocr_data", { threadId, modelId, ocrData }),
+    getOcrData: (threadId, modelId) =>
+      platform.invoke("get_ocr_data", { threadId, modelId }),
+    getOcrFrame: (threadId) => platform.invoke("get_ocr_frame", { threadId }),
+    initOcrFrame: (threadId, modelIds) =>
+      platform.invoke("init_ocr_frame", { threadId, modelIds }),
     cancelOcrJob: () => platform.invoke("cancel_ocr_job"),
-    saveImgbbUrl: (chatId, url) => platform.invoke("save_imgbb_url", { chatId, url }),
-    getImgbbUrl: (chatId) => platform.invoke("get_imgbb_url", { chatId }),
-    saveRollingSummary: (chatId, summary) =>
-      platform.invoke("save_rolling_summary", { chatId, summary }),
-    saveImageTone: (chatId, tone) => platform.invoke("save_image_tone", { chatId, tone }),
-    saveImageBrief: (chatId, brief) => platform.invoke("save_image_brief", { chatId, brief }),
+    saveImgbbUrl: (threadId, url) =>
+      platform.invoke("save_imgbb_url", { threadId, url }),
+    getImgbbUrl: (threadId) => platform.invoke("get_imgbb_url", { threadId }),
+    saveRollingSummary: (threadId, summary) =>
+      platform.invoke("save_rolling_summary", { threadId, summary }),
+    saveImageTone: (threadId, tone) =>
+      platform.invoke("save_image_tone", { threadId, tone }),
+    saveImageBrief: (threadId, brief) =>
+      platform.invoke("save_image_brief", { threadId, brief }),
   });
 
   setPreferencesPort({
     hasAgreedFlag: () => platform.invoke<boolean>("has_agreed_flag"),
     setAgreedFlag: () => platform.invoke("set_agreed_flag"),
-    getWizardState: () => platform.invoke<{ step: number; isFinished: boolean }>("get_wizard_state"),
+    getWizardState: () =>
+      platform.invoke<{ step: number; isFinished: boolean }>(
+        "get_wizard_state",
+      ),
     setWizardState: (state) => platform.invoke("set_wizard_state", state),
     hasPreferencesFile: (fileName: string) =>
       platform.fs.exists(fileName, { baseDir: "AppConfig" }),
@@ -101,13 +129,17 @@ export function initializeCorePorts(): void {
       platform.fs.readTextFile(fileName, { baseDir: "AppConfig" }),
     writePreferencesFile: async (fileName: string, content: string) => {
       await platform.fs.mkdir("", { baseDir: "AppConfig", recursive: true });
-      await platform.fs.writeTextFile(fileName, content, { baseDir: "AppConfig" });
+      await platform.fs.writeTextFile(fileName, content, {
+        baseDir: "AppConfig",
+      });
     },
   });
 
   setSystemPort({
-    openExternalUrl: (url: string) => platform.invoke("open_external_url", { url }),
-    deleteTempFile: (path: string) => platform.invoke("delete_temp_file", { path }),
+    openExternalUrl: (url: string) =>
+      platform.invoke("open_external_url", { url }),
+    deleteTempFile: (path: string) =>
+      platform.invoke("delete_temp_file", { path }),
     getApiKey: (provider, profileId) =>
       platform.invoke<string>("get_api_key", { provider, profileId }),
     uploadImageToImgBB: (imagePath: string, apiKey: string) =>

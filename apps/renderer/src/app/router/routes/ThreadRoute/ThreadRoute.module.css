@@ -1,0 +1,328 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.container {
+  --thread-code-block-sticky-top: calc(
+    var(--image-artifact-top-gap) + var(--image-artifact-height)
+  );
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  margin-left: 0.75rem;
+  margin-right: 0.5rem;
+}
+
+.container::-webkit-scrollbar {
+  width: 10px;
+}
+
+.container::-webkit-scrollbar-track {
+  background: transparent;
+  margin-top: 40px;
+  margin-bottom: var(--input-height, 0px);
+  border-left: 1px solid transparent;
+}
+
+.container::-webkit-scrollbar-thumb {
+  background-color: var(--c-raw-058);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--c-raw-049);
+}
+
+.container.noImage {
+  --thread-code-block-sticky-top: 0px;
+}
+
+.scrollContent {
+  flex: 0 0 auto;
+  position: relative;
+  width: 100%;
+  padding-top: var(--thread-image-offset);
+  overflow-anchor: none;
+}
+
+.historyLoadSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-raw-000);
+  padding: 0.35rem 0 0.55rem;
+}
+
+.container.noImage .scrollContent {
+  padding-top: 0;
+}
+
+.container.noImage::-webkit-scrollbar-track {
+  background-color: transparent;
+  margin-top: 0;
+}
+
+.overlayLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.inputOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1;
+  background: linear-gradient(to top, var(--c-raw-013) 80%, transparent);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.headerContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.headerContainer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--image-artifact-width);
+  max-width: 43.5rem;
+  height: var(--image-artifact-cover-height);
+  transform: translateX(-50%);
+  background-color: var(--c-raw-013);
+  pointer-events: none;
+}
+
+.headerContainer > * {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.artifactPlaceholder {
+  position: relative;
+  width: var(--image-artifact-width);
+  max-width: 43.5rem;
+  height: var(--image-artifact-height);
+  margin: var(--image-artifact-shell-margin);
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--c-raw-010) 65%, transparent);
+  background-color: color-mix(in srgb, var(--c-raw-012) 96%, transparent);
+  box-shadow: 0 3px 12px #0000001a;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.threadContainer {
+  --thread-image-offset: 80px;
+  --image-artifact-width: 95%;
+  --thread-content-rail-width: min(var(--image-artifact-width), 41.5rem);
+  --image-artifact-height: 57px;
+  --image-artifact-top-gap: 10px;
+  --image-artifact-shell-margin: var(--image-artifact-top-gap) auto 1rem auto;
+  --image-artifact-cover-height: 38.5px;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  background-color: transparent;
+  color: var(--c-raw-000);
+  position: relative;
+}
+
+.threadContainer::selection {
+  background-color: var(--c-raw-037);
+  color: var(--c-raw-000);
+}
+
+.contentColumn {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.contentInner {
+  margin-left: auto;
+  margin-right: auto;
+  width: var(--thread-content-rail-width);
+  max-width: var(--thread-content-rail-width);
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+.contentViewport {
+  position: relative;
+}
+
+.contentStage {
+  position: relative;
+}
+
+.scrollBottomSpacer {
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+.scrollBottomAnchor {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 1px;
+  pointer-events: none;
+  overflow-anchor: auto;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: none;
+  padding-top: calc(
+    var(--image-artifact-top-gap) + var(--image-artifact-height) + 1.75rem
+  );
+  background: var(--c-raw-013);
+  isolation: isolate;
+  contain: strict;
+  transition:
+    opacity 0.14s ease,
+    visibility 0s linear 0.14s;
+}
+
+.loadingOverlay::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  background: var(--c-raw-013);
+  pointer-events: none;
+}
+
+.loadingOverlaySpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-raw-000);
+}
+
+.contentVisible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.contentHidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.contentOffsetUp {
+  margin-top: -0.5rem;
+}
+
+.contentOffsetDown {
+  padding-top: 0.75rem;
+}
+
+.loadingVisible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.loadingHidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.imagePendingProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.imageProgressRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.imageProgressShimmer {
+  flex: 1;
+  min-width: 0;
+}
+
+.imageProgressText {
+  max-width: min(100%, var(--thread-content-rail-width));
+  color: var(--c-raw-057);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  opacity: 0;
+  animation: "imageProgressReveal" 180ms ease-out forwards;
+}
+
+.quickAnswerButton {
+  border: none;
+  background: transparent;
+  color: var(--c-raw-004);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.quickAnswerButton:hover {
+  color: var(--c-raw-003);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imageProgressText {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.revealFlash {
+  animation: "revealFlashPulse" 1.2s ease-out;
+  box-shadow:
+    0 0 0 1px var(--c-raw-037),
+    0 0 0 5px color-mix(in srgb, var(--c-raw-037) 18%, transparent);
+  border-radius: 0.9rem;
+}

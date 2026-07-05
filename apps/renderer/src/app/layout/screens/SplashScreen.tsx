@@ -18,7 +18,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   onContextMenu,
 }) => {
   return (
-    <div className={styles.chatContainer} onContextMenu={onContextMenu}>
+    <div className={styles.threadContainer} onContextMenu={onContextMenu}>
       <TitleBar />
       <div className={styles.mainContent}>
         <div className={styles.loadingContent}>

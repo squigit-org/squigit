@@ -30,7 +30,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         onChange={(event) => onQueryChange(event.target.value)}
         onKeyDown={onInputKeyDown}
         className={styles.input}
-        placeholder="Search chats..."
+        placeholder="Search threads..."
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}

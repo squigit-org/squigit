@@ -11,7 +11,7 @@ import { resolveOcrModelId } from "@squigit/core/config";
 import {
   AUTO_OCR_DISABLED_MODEL_ID,
   cancelOcrJob,
-  createChat,
+  createThread,
   getImagePath,
   hasAgreedFlag,
   saveOcrData,
@@ -20,13 +20,13 @@ import {
 export const useAppCapture = ({
   system,
   auth,
-  chatHistory,
+  threadHistory,
   ocr,
   dialogs,
   activeProfileRef,
   systemRef,
-  chatHistoryRef,
-  performSelectChat,
+  threadHistoryRef,
+  performSelectThread,
   performNewSession,
   closeMediaViewer,
   runWithBusyGuardRef,
@@ -35,13 +35,13 @@ export const useAppCapture = ({
 }: {
   system: any;
   auth: any;
-  chatHistory: any;
+  threadHistory: any;
   ocr: any;
   dialogs: any;
   activeProfileRef: React.MutableRefObject<any>;
   systemRef: React.MutableRefObject<any>;
-  chatHistoryRef: React.MutableRefObject<any>;
-  performSelectChat: (id: string) => Promise<void>;
+  threadHistoryRef: React.MutableRefObject<any>;
+  performSelectThread: (id: string) => Promise<void>;
   performNewSession: () => Promise<void>;
   closeMediaViewer: () => void;
   runWithBusyGuardRef: React.MutableRefObject<
@@ -64,8 +64,8 @@ export const useAppCapture = ({
       console.log("Raw image path:", imageData.path);
       closeMediaViewer();
 
-      chatHistory.setActiveSessionId(null);
-      chatHistory.setActiveSessionId(null);
+      threadHistory.setActiveSessionId(null);
+      threadHistory.setActiveSessionId(null);
       ocr.setOcrData({});
       ocr.setSessionLensUrl(null);
 
@@ -84,7 +84,7 @@ export const useAppCapture = ({
       });
 
       try {
-        const newThread = await createChat(
+        const newThread = await createThread(
           "New thread",
           imageData.imageId,
           systemRef.current.ocrEnabled
@@ -94,16 +94,16 @@ export const useAppCapture = ({
         if (!systemRef.current.ocrEnabled) {
           await saveOcrData(newThread.id, AUTO_OCR_DISABLED_MODEL_ID, []);
         }
-        chatHistory.setActiveSessionId(newThread.id);
-        chatHistory.refreshChats();
+        threadHistory.setActiveSessionId(newThread.id);
+        threadHistory.refreshThreads();
         console.log("Created new thread:", newThread.id);
       } catch (e) {
-        console.error("Failed to create chat:", e);
+        console.error("Failed to create thread:", e);
       }
     },
     [
       activeProfileRef,
-      chatHistory,
+      threadHistory,
       closeMediaViewer,
       dialogs,
       ocr,
@@ -113,12 +113,12 @@ export const useAppCapture = ({
   );
 
   const handleImageReadyRef = useRef(handleImageReady);
-  const handleSelectChatRef = useRef(performSelectChat);
+  const handleSelectThreadRef = useRef(performSelectThread);
 
   useEffect(() => {
     handleImageReadyRef.current = handleImageReady;
-    handleSelectChatRef.current = performSelectChat;
-  }, [handleImageReady, performSelectChat]);
+    handleSelectThreadRef.current = performSelectThread;
+  }, [handleImageReady, performSelectThread]);
 
   useEffect(() => {
     if (
@@ -180,71 +180,77 @@ export const useAppCapture = ({
       }
     });
 
-    const unlistenLoadChat = platform.listen<string>("load-chat", async (payload) => {
-      const chatId = payload;
-      if (!chatId) return;
-
-      console.log("Triggering frontend transition to new capture:", chatId);
-      await handleSelectChatRef.current(chatId);
-    });
-
-    const unlistenCaptureRequested = platform.listen("capture-requested", () => {
-      runWithBusyGuardRef.current(() => platform.invoke("spawn_capture"));
-    });
-
-    const unlistenCapture = platform.listen<{ chatId: string; imageHash: string }>(
-      "capture-complete",
+    const unlistenLoadThread = platform.listen<string>(
+      "load-thread",
       async (payload) => {
-        const { chatId, imageHash } = payload;
-        console.log(
-          "[capture-complete] chatId:",
-          chatId,
-          "imageHash:",
-          imageHash,
-        );
+        const threadId = payload;
+        if (!threadId) return;
 
-        try {
-          if (!activeProfileRef.current) {
-            console.log(
-              "Capture upload attempted in guest mode - requiring login",
-            );
-            dialogs.setShowLoginRequiredDialog(true);
-            return;
-          }
-
-          const imagePath = await getImagePath(imageHash);
-
-          systemRef.current.setSessionChatTitle(null);
-          systemRef.current.setSessionOcrLanguage(
-            systemRef.current.ocrEnabled
-              ? resolveOcrModelId(systemRef.current.startupOcrLanguage)
-              : "",
-          );
-          ocr.setOcrData({});
-          ocr.setSessionLensUrl(null);
-          ocr.setIsOcrScanning(false);
-          cancelOcrJob();
-
-          systemRef.current.setStartupImage({
-            path: imagePath,
-            mimeType: "image/png",
-            imageId: imageHash,
-          });
-
-          chatHistoryRef.current.setActiveSessionId(null);
-
-          await new Promise((resolve) => setTimeout(resolve, 10));
-
-          chatHistoryRef.current.setActiveSessionId(chatId);
-          if (!systemRef.current.ocrEnabled) {
-            await saveOcrData(chatId, AUTO_OCR_DISABLED_MODEL_ID, []);
-          }
-          chatHistoryRef.current.refreshChats();
-        } catch (error) {
-          console.error("[capture-complete] Failed:", error);
-        }
+        console.log("Triggering frontend transition to new capture:", threadId);
+        await handleSelectThreadRef.current(threadId);
       },
     );
+
+    const unlistenCaptureRequested = platform.listen(
+      "capture-requested",
+      () => {
+        runWithBusyGuardRef.current(() => platform.invoke("spawn_capture"));
+      },
+    );
+
+    const unlistenCapture = platform.listen<{
+      threadId: string;
+      imageHash: string;
+    }>("capture-complete", async (payload) => {
+      const { threadId, imageHash } = payload;
+      console.log(
+        "[capture-complete] threadId:",
+        threadId,
+        "imageHash:",
+        imageHash,
+      );
+
+      try {
+        if (!activeProfileRef.current) {
+          console.log(
+            "Capture upload attempted in guest mode - requiring login",
+          );
+          dialogs.setShowLoginRequiredDialog(true);
+          return;
+        }
+
+        const imagePath = await getImagePath(imageHash);
+
+        systemRef.current.setSessionThreadTitle(null);
+        systemRef.current.setSessionOcrLanguage(
+          systemRef.current.ocrEnabled
+            ? resolveOcrModelId(systemRef.current.startupOcrLanguage)
+            : "",
+        );
+        ocr.setOcrData({});
+        ocr.setSessionLensUrl(null);
+        ocr.setIsOcrScanning(false);
+        cancelOcrJob();
+
+        systemRef.current.setStartupImage({
+          path: imagePath,
+          mimeType: "image/png",
+          imageId: imageHash,
+        });
+
+        threadHistoryRef.current.setActiveSessionId(null);
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        threadHistoryRef.current.setActiveSessionId(threadId);
+        if (!systemRef.current.ocrEnabled) {
+          await saveOcrData(threadId, AUTO_OCR_DISABLED_MODEL_ID, []);
+        }
+        threadHistoryRef.current.refreshThreads();
+      } catch (error) {
+        console.error("[capture-complete] Failed:", error);
+      }
+    });
 
     const unlistenCaptureFailed = platform.listen<{ reason: string }>(
       "capture-failed",
@@ -264,27 +270,30 @@ export const useAppCapture = ({
       },
     );
 
-    const unlistenAuthSuccess = platform.listen<any>("auth-success", async (payload) => {
-      if (
-        activeProfileRef.current &&
-        payload &&
-        activeProfileRef.current.id === payload.id
-      ) {
-        return;
-      }
+    const unlistenAuthSuccess = platform.listen<any>(
+      "auth-success",
+      async (payload) => {
+        if (
+          activeProfileRef.current &&
+          payload &&
+          activeProfileRef.current.id === payload.id
+        ) {
+          return;
+        }
 
-      const alreadyAgreed = await hasAgreedFlag();
-      if (!alreadyAgreed && agreedToTermsRef.current) {
-        system.setAgreementCompleted();
-      }
+        const alreadyAgreed = await hasAgreedFlag();
+        if (!alreadyAgreed && agreedToTermsRef.current) {
+          system.setAgreementCompleted();
+        }
 
-      await performNewSession();
-      auth.login();
-    });
+        await performNewSession();
+        auth.login();
+      },
+    );
 
     return () => {
       unlisten.then((f) => f());
-      unlistenLoadChat.then((f) => f());
+      unlistenLoadThread.then((f) => f());
       unlistenCaptureRequested.then((f) => f());
       unlistenCapture.then((f) => f());
       unlistenCaptureFailed.then((f) => f());
@@ -294,7 +303,7 @@ export const useAppCapture = ({
     activeProfileRef,
     agreedToTermsRef,
     auth,
-    chatHistoryRef,
+    threadHistoryRef,
     dialogs,
     hasShownCaptureTerminalHintRef,
     ocr,

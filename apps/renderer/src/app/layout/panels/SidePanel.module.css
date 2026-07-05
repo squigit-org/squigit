@@ -109,7 +109,7 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.chatRow {
+.threadRow {
   position: relative;
   display: flex;
   align-items: center;
@@ -127,17 +127,17 @@
   min-width: 0;
 }
 
-.chatRow:hover {
+.threadRow:hover {
   background-color: var(--c-raw-067);
   color: var(--c-raw-050);
 }
 
-.chatRow.menuOpen {
+.threadRow.menuOpen {
   background-color: var(--c-raw-067);
   color: var(--c-raw-050);
 }
 
-.chatRow.active {
+.threadRow.active {
   background-color: var(--c-raw-067);
   color: var(--c-raw-050);
 }
@@ -146,7 +146,7 @@
   background-color: transparent;
 }
 
-.chatIconMain {
+.threadIconMain {
   color: var(--c-raw-106);
   flex-shrink: 0;
   width: 22px;
@@ -156,12 +156,12 @@
   justify-content: center;
 }
 
-.chatRow:hover .chatIconMain,
-.chatRow.active .chatIconMain {
+.threadRow:hover .threadIconMain,
+.threadRow.active .threadIconMain {
   color: var(--c-raw-050);
 }
 
-.chatLeading {
+.threadLeading {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
@@ -172,7 +172,7 @@
   justify-content: center;
 }
 
-.chatBubbleIcon {
+.threadBubbleIcon {
   position: absolute;
   inset: 0;
   display: inline-flex;
@@ -203,8 +203,8 @@
     visibility 0s linear 0.15s;
 }
 
-.chatRow:hover .pinLeftBtn,
-.chatRow.menuOpen .pinLeftBtn {
+.threadRow:hover .pinLeftBtn,
+.threadRow.menuOpen .pinLeftBtn {
   opacity: 1;
   visibility: visible;
   transition-delay: 0s;
@@ -215,14 +215,14 @@
   visibility: visible;
 }
 
-.chatRow:hover .chatBubbleIcon,
-.chatRow.menuOpen .chatBubbleIcon,
-.pinnedRow .chatBubbleIcon {
+.threadRow:hover .threadBubbleIcon,
+.threadRow.menuOpen .threadBubbleIcon,
+.pinnedRow .threadBubbleIcon {
   opacity: 0;
 }
 
-.chatRow.active .chatBubbleIcon,
-.chatRow.active .pinLeftBtn {
+.threadRow.active .threadBubbleIcon,
+.threadRow.active .pinLeftBtn {
   color: var(--c-raw-050);
 }
 
@@ -247,7 +247,7 @@
   display: inline-flex;
 }
 
-.chatTitleInput {
+.threadTitleInput {
   flex: 1 1 auto;
   background: transparent;
   color: var(--c-raw-050);
@@ -259,7 +259,7 @@
   min-width: 0;
 }
 
-.chatTitle {
+.threadTitle {
   flex: 1 1 auto;
   font-size: 0.85rem;
   white-space: nowrap;
@@ -270,13 +270,13 @@
   min-width: 0;
 }
 
-.chatRow.menuOpen .chatTitle,
-.chatRow:hover .chatTitle,
-.chatRow.active .chatTitle {
+.threadRow.menuOpen .threadTitle,
+.threadRow:hover .threadTitle,
+.threadRow.active .threadTitle {
   color: var(--c-raw-050);
 }
 
-.chatActions {
+.threadActions {
   margin-left: auto;
   position: relative;
   flex: 0 0 24px;
@@ -288,7 +288,7 @@
   isolation: isolate;
 }
 
-.chatDate {
+.threadDate {
   position: absolute;
   inset: 0;
   display: flex;
@@ -336,14 +336,14 @@
   display: inline-flex;
 }
 
-.chatRow:hover .rowShortcut {
+.threadRow:hover .rowShortcut {
   opacity: 1;
   visibility: visible;
   transition-delay: 0s;
 }
 
-.chatRow:hover .chatDate,
-.chatRow.menuOpen .chatDate {
+.threadRow:hover .threadDate,
+.threadRow.menuOpen .threadDate {
   opacity: 0;
   transform: translate3d(0, -2px, 0) scale(0.96);
 }
@@ -369,8 +369,8 @@
   pointer-events: none;
 }
 
-.chatRow:hover .menuBtn,
-.chatRow.menuOpen .menuBtn {
+.threadRow:hover .menuBtn,
+.threadRow.menuOpen .menuBtn {
   opacity: 1;
   pointer-events: auto;
   transform: translate3d(0, 0, 0) scale(1);
@@ -381,8 +381,8 @@
   pointer-events: none;
 }
 
-.chatRow:hover .pinnedMenuBtn,
-.chatRow.menuOpen .pinnedMenuBtn {
+.threadRow:hover .pinnedMenuBtn,
+.threadRow.menuOpen .pinnedMenuBtn {
   opacity: 1;
   pointer-events: auto;
 }
@@ -392,8 +392,8 @@
   color: inherit;
 }
 
-.chatRow.active .chatDate,
-.chatRow.active .menuBtn {
+.threadRow.active .threadDate,
+.threadRow.active .menuBtn {
   color: var(--c-raw-050);
 }
 
