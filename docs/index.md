@@ -15,12 +15,19 @@ Squigit lets you capture anything on screen and ask AI about it instantly—with
 - 🔍 One-click Google Lens handoff
 - 🔐 BYOK + local-first architecture
 
+## Security foundations
+
+- [Authentication](./06-foundations/AUTHENTICATION.md)
+- [Cryptography](./06-foundations/CRYPTOGRAPHY.md)
+- [IPC Security](./06-foundations/IPC_SECURITY.md)
+- [Trust Boundaries](./06-foundations/TRUST_BOUNDARIES.md)
+
 ## Legal & policies
 
-- [Privacy Policy](./06-policies/PRIVACY.md)
-- [Terms of Service](./06-policies/TERMS.md)
-- [Security Policy](./06-policies/SECURITY.md)
-- [BYOK Policy](./06-policies/BYOK.md)
+- [Privacy Policy](./07-policies/PRIVACY.md)
+- [Terms of Service](./07-policies/TERMS.md)
+- [Security Policy](./07-policies/SECURITY.md)
+- [BYOK Policy](./07-policies/BYOK.md)
 
 ## Contact
 

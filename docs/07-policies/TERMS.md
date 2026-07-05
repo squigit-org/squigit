@@ -19,7 +19,7 @@ Squigit integrates with third-party services to provide certain functionalities:
 
 ## 3. Acceptable Use
 
-You agree to use Squigit in compliance with all applicable local, state, national, and international laws. You also agree to adhere to our [Code of Conduct](./docs/06-policies/CODE_OF_CONDUCT.md) when interacting with the Squigit community and repository.
+You agree to use Squigit in compliance with all applicable local, state, national, and international laws. You also agree to adhere to our [Code of Conduct](./CODE_OF_CONDUCT.md) when interacting with the Squigit community and repository.
 
 ## 4. License and Disclaimer of Warranties
 

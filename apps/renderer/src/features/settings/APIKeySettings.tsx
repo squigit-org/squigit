@@ -331,7 +331,7 @@ export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
                 <button
                   className={styles.privacyLink}
                   onClick={() =>
-                    handleOpenUrl(github.docs("06-policies/SECURITY.md"))
+                    handleOpenUrl(github.docs("07-policies/SECURITY.md"))
                   }
                 >
                   Learn more.
@@ -349,7 +349,7 @@ export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
           <span>Your keys are stored locally — </span>
           <button
             className={styles.privacyLink}
-            onClick={() => handleOpenUrl(github.docs("06-policies/BYOK.md"))}
+            onClick={() => handleOpenUrl(github.docs("07-policies/BYOK.md"))}
           >
             We never see them.
           </button>

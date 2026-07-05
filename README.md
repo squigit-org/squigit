@@ -105,7 +105,7 @@ _Note: Squigit is distributed as an AppImage to ensure maximum compatibility acr
 - **Multi-Monitor Support**: Captures and manages all displays simultaneously
 - **Platform-Optimized Capture**: Different strategies for X11, Wayland, Windows, and macOS
 
-## 🔐 Authentication: Bring Your Own Key ([BYOK](docs/06-policies/BYOK.md))
+## 🔐 Authentication: Bring Your Own Key ([BYOK](docs/07-policies/BYOK.md))
 
 Squigit operates on a zero-trust, local-first model where you provide your own API keys.
 
@@ -178,7 +178,7 @@ Squigit operates on a zero-trust, local-first model where you provide your own A
 
 - [**Quick Start Guide**](docs/01-getting-started/QUICKSTART.md) - First-time setup and basic usage
 - [**Installation Guide**](docs/01-getting-started/INSTALLATION.md) - Detailed installation instructions
-- [**BYOK Model**](docs/06-policies/BYOK.md) - Understanding Bring Your Own Key
+- [**BYOK Model**](docs/07-policies/BYOK.md) - Understanding Bring Your Own Key
 
 ### Architecture & Development
 
@@ -187,6 +187,13 @@ Squigit operates on a zero-trust, local-first model where you provide your own A
 - [**CaptureKit**](docs/02-architecture/CAPTUREKIT.md) - Screen capture engine (C++/Qt6)
 - [**Orchestrator**](docs/02-architecture/ORCHESTRATOR.md) - Core lifecycle manager (Rust)
 - [**Squigit App**](docs/02-architecture/SQUIGIT.md) - Electron/React application
+
+### Security Foundations
+
+- [**Authentication**](docs/06-foundations/AUTHENTICATION.md) - Federated identity and local profiles
+- [**Cryptography**](docs/06-foundations/CRYPTOGRAPHY.md) - BYOK and OTA cryptographic foundations
+- [**IPC Security**](docs/06-foundations/IPC_SECURITY.md) - Electron, N-API, and Rust capabilities
+- [**Trust Boundaries**](docs/06-foundations/TRUST_BOUNDARIES.md) - App, sidecar, filesystem, and provider boundaries
 
 ### Development & Contribution
 
@@ -207,8 +214,8 @@ Squigit operates on a zero-trust, local-first model where you provide your own A
 
 ### Policies
 
-- [**Code of Conduct**](docs/06-policies/CODE_OF_CONDUCT.md) - Community guidelines
-- [**Security Policy**](docs/06-policies/SECURITY.md) - Vulnerability reporting and practices
+- [**Code of Conduct**](docs/07-policies/CODE_OF_CONDUCT.md) - Community guidelines
+- [**Security Policy**](docs/07-policies/SECURITY.md) - Vulnerability reporting and practices
 
 ## 🤝 Contributing
 
@@ -227,14 +234,14 @@ Check our [TODO List](TODO.md) for planned features and priorities.
 
 - **[Documentation](https://github.com/a7mddra/squigit/tree/main/docs)** - Complete documentation hub
 - **[GitHub Issues](https://github.com/a7mddra/squigit/issues)** - Report bugs or request features
-- **[Security Policy](docs/06-policies/SECURITY.md)** - Security updates and reporting
+- **[Security Policy](docs/07-policies/SECURITY.md)** - Security updates and reporting
 
 ## 📄 Legal
 
 - **License**: [Apache License 2.0](LICENSE)
-- **Security**: [Security Policy](docs/06-policies/SECURITY.md)
-- **Privacy Policy**: [Privacy Policy](docs/06-policies/PRIVACY.md)
-- **Terms of Service**: [Terms](docs/06-policies/TERMS.md)
+- **Security**: [Security Policy](docs/07-policies/SECURITY.md)
+- **Privacy Policy**: [Privacy Policy](docs/07-policies/PRIVACY.md)
+- **Terms of Service**: [Terms](docs/07-policies/TERMS.md)
 - **Privacy**: No data collection, local-only operation
 
 ---
