@@ -205,8 +205,8 @@ async fn analyze(
     model_arg: Option<&str>,
 ) -> Result<(), String> {
     let model_def = model_arg
-        .map(|spec| resolve_model(spec))
-        .unwrap_or_else(|| Some(default_model()));
+        .and_then(resolve_model)
+        .or_else(|| Some(default_model()));
 
     // Determine if model_arg is a filesystem path (not a known ID/alias).
     let model_path_override = model_arg.and_then(|spec| {
