@@ -14,23 +14,8 @@ pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
         Ok(component) => component,
         Err(code) => return code,
     };
-    let yes = if component.archived() {
-        match super::parse_optional_yes(args, "archived dev accepts only --yes.") {
-            Ok(yes) => yes,
-            Err(error) => return super::fail(runtime, &error),
-        }
-    } else if args.is_empty() {
-        false
-    } else {
+    if !args.is_empty() {
         return super::fail(runtime, "dev does not accept arguments.");
-    };
-    match super::confirm_archived(runtime, registry, component, yes) {
-        Ok(true) => {}
-        Ok(false) => {
-            console::declined(runtime, console::component_prompt(registry, "archived"));
-            return 0;
-        }
-        Err(code) => return code,
     }
     match components::dev(runtime, component) {
         Ok(()) => 0,

@@ -34,10 +34,6 @@ impl Component {
         self.manifest.context.category
     }
 
-    pub fn archived(&self) -> bool {
-        self.manifest.context.archived
-    }
-
     pub fn operation(&self, operation: Operation) -> &OperationConfig {
         self.manifest.operations.get(operation)
     }
@@ -229,7 +225,7 @@ impl Registry {
     fn target_by_release_alias(&self, value: &str) -> Option<&Component> {
         let alias = value.trim();
         self.components.iter().find(|component| {
-            if component.archived() || !component.supports(Operation::Release) {
+            if !component.supports(Operation::Release) {
                 return false;
             }
             if component.name().eq_ignore_ascii_case(alias)
@@ -263,7 +259,7 @@ impl Registry {
     pub fn targets_for(&self, operation: Operation) -> Vec<&Component> {
         self.components
             .iter()
-            .filter(|component| !component.archived() && component.supports(operation))
+            .filter(|component| component.supports(operation))
             .collect()
     }
 

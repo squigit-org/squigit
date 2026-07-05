@@ -89,22 +89,7 @@ pub fn root_only(runtime: &Runtime, registry: &Registry, command: &str) -> Resul
     }
 }
 
-pub fn confirm_archived(
-    runtime: &Runtime,
-    registry: &Registry,
-    component: &Component,
-    yes: bool,
-) -> Result<bool, i32> {
-    if !component.archived() {
-        return Ok(true);
-    }
-    if yes {
-        return Ok(true);
-    }
-    let prompt = console::component_prompt(registry, "archived");
-    console::render_prompt(runtime, prompt, &[])
-        .map_err(|err| fail(runtime, &error::read_confirmation(err)))
-}
+
 
 pub fn print_summary(label: &str, succeeded: usize, failed: usize) {
     println!("\n{label} summary: {succeeded} succeeded, {failed} failed");

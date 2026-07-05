@@ -352,7 +352,7 @@ pub fn validate_component_handler(
         return;
     }
     let allowed: &[&str] = match operation {
-        Operation::Dev => &["cli-dev", "desktop-dev", "renderer-dev", "tauri-dev"],
+        Operation::Dev => &["cli-dev", "desktop-dev", "renderer-dev"],
         Operation::Doctor
         | Operation::Build
         | Operation::Test
@@ -424,9 +424,6 @@ fn validate_component_ui(owner: &Path, manifest: &ComponentManifest, errors: &mu
     validate_menu(owner, "ui.menu", &manifest.ui.menu, errors);
 
     let mut required = Vec::new();
-    if manifest.context.archived {
-        required.push("archived");
-    }
     if manifest.operations.build.handler == "paddle-ocr" {
         required.push("build");
     }

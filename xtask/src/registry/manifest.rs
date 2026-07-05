@@ -67,7 +67,6 @@ pub struct ComponentContext {
     pub display_name: String,
     pub category: Category,
     pub order: u32,
-    pub archived: bool,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]

@@ -19,24 +19,15 @@ pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
         Err(code) => return code,
     };
     let handler = component.manifest.operations.build.handler.as_str();
-    let archived_yes = if component.archived() {
-        match super::parse_optional_yes(args, "archived build accepts only --yes.") {
-            Ok(yes) => yes,
-            Err(error) => return super::fail(runtime, &error),
-        }
-    } else {
-        false
-    };
-    let operation_args = if component.archived() { &[][..] } else { args };
     let (native, measure_payload) = match handler {
-        "qt-capture" => match operation_args {
+        "qt-capture" => match args {
             [] => (false, false),
             [value] if value == "--native" => (true, false),
             _ => return super::fail(runtime, "Qt Capture build accepts only --native."),
         },
         "paddle-ocr" => {
             let yes = match super::parse_optional_yes(
-                operation_args,
+                args,
                 "Paddle OCR build accepts only --yes.",
             ) {
                 Ok(yes) => yes,
@@ -58,17 +49,9 @@ pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
             };
             (false, measure)
         }
-        _ if operation_args.is_empty() => (false, false),
+        _ if args.is_empty() => (false, false),
         _ => return super::fail(runtime, "build does not accept arguments in this context."),
     };
-    match super::confirm_archived(runtime, registry, component, archived_yes) {
-        Ok(true) => {}
-        Ok(false) => {
-            console::declined(runtime, console::component_prompt(registry, "archived"));
-            return 0;
-        }
-        Err(code) => return code,
-    }
     let sha = if component.manifest.operations.build.requires_commit_sha {
         match git_head(&registry.repo_root) {
             Ok(sha) => Some(sha),
