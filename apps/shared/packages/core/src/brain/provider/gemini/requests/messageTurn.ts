@@ -18,20 +18,20 @@ import {
   maybeCompressHistory,
 } from "../../../session/summarizer";
 import { normalizeMessageForHistory } from "../../../attachments/memory";
-import { listenGeminiStream, streamGeminiChat } from "../commands";
+import { listenGeminiStream, streamGeminiThread } from "../commands";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
 
 export const sendMessage = async (
   text: string,
   modelId?: string,
   onToken?: (token: string) => void,
-  chatId?: string | null,
+  threadId?: string | null,
   onEvent?: (event: ProviderStreamEvent) => void,
 ): Promise<string> => {
   if (!brainSessionStore.storedApiKey)
     throw new Error("Gemini API Key not set");
   if (!brainSessionStore.imageDescription)
-    throw new Error("No active chat session");
+    throw new Error("No active thread session");
 
   if (modelId) {
     brainSessionStore.currentModelId = modelId;
@@ -91,7 +91,7 @@ export const sendMessage = async (
 
     streamWatchdog.touch();
     await Promise.race([
-      streamGeminiChat({
+      streamGeminiThread({
         apiKey: providerApiKey,
         model: brainSessionStore.currentModelId,
         isInitialTurn: false,
@@ -102,7 +102,7 @@ export const sendMessage = async (
         rollingSummary,
         userMessage: normalizedUserText,
         channelId: channelId,
-        chatId: chatId ?? null,
+        threadId: threadId ?? null,
         userName: brainSessionStore.userName ?? undefined,
         userEmail: brainSessionStore.userEmail ?? undefined,
         userInstruction: null, // One-time intent hook only sent on initial turn
@@ -120,7 +120,7 @@ export const sendMessage = async (
     addToHistory("Assistant", finalResponse);
 
     // Fire-and-forget: compress older turns if threshold reached
-    maybeCompressHistory(chatId ?? null);
+    maybeCompressHistory(threadId ?? null);
 
     console.log(
       `[GeminiClient] Stream Completed. Final Response: "${finalResponse}"`,

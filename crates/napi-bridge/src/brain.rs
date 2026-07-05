@@ -9,8 +9,8 @@ use squigit_auth::ProfileStore;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
 use squigit_brain::service::{
-    AnalyzeImageRequest, BrainService, CompressConversationRequest, GenerateChatTitleRequest,
-    GenerateImageBriefRequest, PromptChatRequest, StreamChatRequest,
+    AnalyzeImageRequest, BrainService, CompressConversationRequest, GenerateThreadTitleRequest,
+    GenerateImageBriefRequest, PromptThreadRequest, StreamThreadRequest,
 };
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -88,7 +88,7 @@ pub async fn analyze_image(
         .map_err(|e| Error::from_reason(e.to_string()))?;
 
     Ok(NapiAnalyzeResult {
-        chat_id: result.metadata.id,
+        thread_id: result.metadata.id,
         title: result.metadata.title,
         assistant_message: result.assistant_message,
         image_path: result.image.path,
@@ -97,8 +97,8 @@ pub async fn analyze_image(
 }
 
 #[napi]
-pub async fn prompt_chat(
-    chat_id: String,
+pub async fn prompt_thread(
+    thread_id: String,
     model: String,
     user_message: String,
     #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => void")]
@@ -108,10 +108,10 @@ pub async fn prompt_chat(
     let service = get_brain_service();
     let sink = NapiEventSink { tsfn: on_event };
 
-    let request = PromptChatRequest {
+    let request = PromptThreadRequest {
         api_key,
         model,
-        chat_id,
+        thread_id,
         user_message,
         channel_id: format!("cli-prompt-{}", chrono::Utc::now().timestamp_millis()),
         user_name: None,
@@ -119,12 +119,12 @@ pub async fn prompt_chat(
     };
 
     let result = service
-        .prompt_chat(&sink, request)
+        .prompt_thread(&sink, request)
         .await
         .map_err(|e| Error::from_reason(e.to_string()))?;
 
     Ok(NapiPromptResult {
-        chat_id: result.chat_id,
+        thread_id: result.thread_id,
         assistant_message: result.assistant_message,
         normalized_user_message: result.normalized_user_message,
     })
@@ -132,7 +132,7 @@ pub async fn prompt_chat(
 
 #[napi]
 #[allow(clippy::too_many_arguments)]
-pub async fn stream_chat(
+pub async fn stream_thread(
     api_key: String,
     model: String,
     is_initial_turn: bool,
@@ -143,7 +143,7 @@ pub async fn stream_chat(
     rolling_summary: Option<String>,
     user_message: String,
     channel_id: String,
-    chat_id: Option<String>,
+    thread_id: Option<String>,
     user_name: Option<String>,
     user_email: Option<String>,
     user_instruction: Option<String>,
@@ -154,7 +154,7 @@ pub async fn stream_chat(
     let service = get_brain_service();
     let sink = NapiEventSink { tsfn: on_event };
 
-    let request = StreamChatRequest {
+    let request = StreamThreadRequest {
         api_key,
         model,
         is_initial_turn,
@@ -165,7 +165,7 @@ pub async fn stream_chat(
         rolling_summary,
         user_message,
         channel_id,
-        chat_id,
+        thread_id,
         user_name,
         user_email,
         user_instruction,
@@ -173,25 +173,25 @@ pub async fn stream_chat(
     };
 
     service
-        .stream_chat(&sink, request)
+        .stream_thread(&sink, request)
         .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
 #[napi]
-pub async fn generate_chat_title(
+pub async fn generate_thread_title(
     api_key: String,
     model: String,
     prompt_context: String,
 ) -> Result<String> {
     let service = get_brain_service();
-    let request = GenerateChatTitleRequest {
+    let request = GenerateThreadTitleRequest {
         api_key,
         model,
         prompt_context,
     };
     service
-        .generate_chat_title(request)
+        .generate_thread_title(request)
         .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }

@@ -10,7 +10,7 @@ export {
   useBrainSession,
   useBrainTitle,
   useAttachments,
-  useChatState,
+  useThreadState,
 } from "./brain/hooks/index.ts";
 
 export {

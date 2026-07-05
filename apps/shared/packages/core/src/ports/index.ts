@@ -5,7 +5,7 @@
  */
 
 export type {
-  StreamGeminiChatInput,
+  StreamGeminiThreadInput,
   ProviderUnlisten,
   ProviderPort,
 } from "./provider";

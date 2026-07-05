@@ -6,7 +6,7 @@
 
 import type { ProviderStreamEvent } from "../brain/engine/types";
 
-export interface StreamGeminiChatInput extends Record<string, unknown> {
+export interface StreamGeminiThreadInput extends Record<string, unknown> {
   apiKey: string;
   model: string;
   isInitialTurn: boolean;
@@ -17,7 +17,7 @@ export interface StreamGeminiChatInput extends Record<string, unknown> {
   rollingSummary: string | null;
   userMessage: string;
   channelId: string;
-  chatId: string | null;
+  threadId: string | null;
   userName?: string | null;
   userEmail?: string | null;
   userInstruction?: string | null;
@@ -27,13 +27,13 @@ export interface StreamGeminiChatInput extends Record<string, unknown> {
 export type ProviderUnlisten = () => void;
 
 export interface ProviderPort {
-  streamChat(input: StreamGeminiChatInput): Promise<void>;
+  streamThread(input: StreamGeminiThreadInput): Promise<void>;
   generateImageBrief(
     apiKey: string,
     imagePath: string,
     model?: string,
   ): Promise<string>;
-  generateChatTitle(
+  generateThreadTitle(
     apiKey: string,
     model: string,
     promptContext: string,
@@ -44,7 +44,7 @@ export interface ProviderPort {
     historyToCompress: string,
     model: string,
   ): Promise<string>;
-  persistRollingSummary(chatId: string, summary: string): Promise<void>;
+  persistRollingSummary(threadId: string, summary: string): Promise<void>;
   cancelRequest(channelId: string | null): Promise<void>;
   requestQuickAnswer(channelId: string): Promise<void>;
   listenToStream(

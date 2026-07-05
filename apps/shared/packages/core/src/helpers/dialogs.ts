@@ -68,7 +68,7 @@ export const getDialogs = (appName: string): Record<string, DialogContent> => ({
       { label: "Remove Account", variant: "danger", actionKey: "confirm" },
     ],
   },
-  DELETE_CHAT: {
+  DELETE_THREAD: {
     title: "Delete Conversation",
     message:
       "Are you sure you want to delete this conversation?\nThis action is irreversible.",
@@ -100,7 +100,9 @@ export const getDialogs = (appName: string): Record<string, DialogContent> => ({
 });
 
 // Helper for dynamic messages
-export const getDeleteMultipleChatsDialog = (count: number): DialogContent => ({
+export const getDeleteMultipleThreadsDialog = (
+  count: number,
+): DialogContent => ({
   title: "Delete Multiple Conversations",
   message: `Are you sure you want to delete ${count} conversations?\nThis action is irreversible.`,
   variant: "error",

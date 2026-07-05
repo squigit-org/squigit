@@ -9,5 +9,5 @@ export { useBrainLifecycle } from "./useBrainLifecycle";
 export { useBrainSession } from "./useBrainSession";
 export { useBrainTitle } from "./useBrainTitle";
 export { useAttachments } from "./useAttachments";
-export { useChatState } from "./useChatState";
+export { useThreadState } from "./useThreadState";
 export { useModelHandshake } from "./useModelHandshake";

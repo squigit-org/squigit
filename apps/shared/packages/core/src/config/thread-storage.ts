@@ -10,8 +10,8 @@ import { getStoragePort } from "../ports/storage";
 // Types
 // =============================================================================
 
-/** Metadata for a chat session (matches Rust ChatMetadata). */
-export interface ChatMetadata {
+/** Metadata for a thread session (matches Rust ThreadMetadata). */
+export interface ThreadMetadata {
   id: string;
   title: string;
   created_at: string;
@@ -24,8 +24,8 @@ export interface ChatMetadata {
   image_tone?: string | null;
 }
 
-/** A single chat message (matches Rust ChatMessage). */
-export interface ChatCitation {
+/** A single thread message (matches Rust ThreadMessage). */
+export interface ThreadCitation {
   title: string;
   url: string;
   summary: string;
@@ -33,7 +33,7 @@ export interface ChatCitation {
 }
 
 /** Tool timeline step metadata persisted with assistant messages. */
-export interface ChatToolStep {
+export interface ThreadToolStep {
   id: string;
   name: string;
   status: string;
@@ -43,13 +43,13 @@ export interface ChatToolStep {
   endedAtMs?: number;
 }
 
-/** A single chat message (matches Rust ChatMessage). */
-export interface ChatMessage {
+/** A single thread message (matches Rust ThreadMessage). */
+export interface ThreadMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
-  citations?: ChatCitation[];
-  tool_steps?: ChatToolStep[];
+  citations?: ThreadCitation[];
+  tool_steps?: ThreadToolStep[];
 }
 
 /** OCR data for an image region (matches Rust OcrRegion). */
@@ -62,27 +62,27 @@ export interface OcrRegion {
 export type OcrFrame = Record<string, OcrRegion[] | null>;
 
 /**
- * Special OCR frame key used to persist "do not auto-run OCR for this chat".
+ * Special OCR frame key used to persist "do not auto-run OCR for this thread".
  * Manual OCR model selection still works.
  */
 export const AUTO_OCR_DISABLED_MODEL_ID = "__meta_auto_ocr_disabled__";
 
-/** Complete chat data (matches Rust ChatData). */
-export interface ChatData {
-  metadata: ChatMetadata;
-  messages: ChatMessage[];
+/** Complete thread data (matches Rust ThreadData). */
+export interface ThreadData {
+  metadata: ThreadMetadata;
+  messages: ThreadMessage[];
   ocr_data: OcrFrame;
   imgbb_url: string | null;
   rolling_summary: string | null;
   image_brief?: string | null;
 }
 
-/** Ranked chat search hit returned by the local search engine. */
-export interface ChatSearchResult {
-  chat_id: string;
-  chat_title: string;
-  chat_created_at: string;
-  chat_updated_at: string;
+/** Ranked thread search hit returned by the local search engine. */
+export interface ThreadSearchResult {
+  thread_id: string;
+  thread_title: string;
+  thread_created_at: string;
+  thread_updated_at: string;
   message_index: number;
   message_role: "user" | "assistant";
   message_timestamp: string;
@@ -122,63 +122,63 @@ export async function getImagePath(hash: string): Promise<string> {
 }
 
 // =============================================================================
-// Chat Commands
+// Thread Commands
 // =============================================================================
 
 /** Create a new thread with the given image hash. */
-export async function createChat(
+export async function createThread(
   title: string,
   imageHash: string,
   ocrLang?: string | null,
-): Promise<ChatMetadata> {
-  return getStoragePort().createChat(title, imageHash, ocrLang);
+): Promise<ThreadMetadata> {
+  return getStoragePort().createThread(title, imageHash, ocrLang);
 }
 
-/** Load a chat by ID (full data including messages). */
-export async function loadChat(chatId: string): Promise<ChatData> {
-  return getStoragePort().loadChat(chatId);
+/** Load a thread by ID (full data including messages). */
+export async function loadThread(threadId: string): Promise<ThreadData> {
+  return getStoragePort().loadThread(threadId);
 }
 
-/** List all chats (metadata only). */
-export async function listChats(): Promise<ChatMetadata[]> {
-  return getStoragePort().listChats();
+/** List all threads (metadata only). */
+export async function listThreads(): Promise<ThreadMetadata[]> {
+  return getStoragePort().listThreads();
 }
 
-/** Search local chats with ranking, fuzzy matching, and regex filtering. */
-export async function searchChats(
+/** Search local threads with ranking, fuzzy matching, and regex filtering. */
+export async function searchThreads(
   query: string,
   limit = 60,
-): Promise<ChatSearchResult[]> {
-  return getStoragePort().searchChats(query, limit);
+): Promise<ThreadSearchResult[]> {
+  return getStoragePort().searchThreads(query, limit);
 }
 
-/** Delete a chat by ID. */
-export async function deleteChat(chatId: string): Promise<void> {
-  return getStoragePort().deleteChat(chatId);
+/** Delete a thread by ID. */
+export async function deleteThread(threadId: string): Promise<void> {
+  return getStoragePort().deleteThread(threadId);
 }
 
-/** Update chat metadata (rename, pin, star, etc.). */
-export async function updateChatMetadata(
-  metadata: ChatMetadata,
+/** Update thread metadata (rename, pin, star, etc.). */
+export async function updateThreadMetadata(
+  metadata: ThreadMetadata,
 ): Promise<void> {
-  return getStoragePort().updateChatMetadata(metadata);
+  return getStoragePort().updateThreadMetadata(metadata);
 }
 
-/** Append a message to a chat. */
-export async function appendChatMessage(
-  chatId: string,
+/** Append a message to a thread. */
+export async function appendThreadMessage(
+  threadId: string,
   role: "user" | "assistant",
   content: string,
 ): Promise<void> {
-  return getStoragePort().appendChatMessage(chatId, role, content);
+  return getStoragePort().appendThreadMessage(threadId, role, content);
 }
 
-/** Overwrite all messages in a chat. */
-export async function overwriteChatMessages(
-  chatId: string,
-  messages: ChatMessage[],
+/** Overwrite all messages in a thread. */
+export async function overwriteThreadMessages(
+  threadId: string,
+  messages: ThreadMessage[],
 ): Promise<void> {
-  return getStoragePort().overwriteChatMessages(chatId, messages);
+  return getStoragePort().overwriteThreadMessages(threadId, messages);
 }
 
 // =============================================================================
@@ -187,32 +187,32 @@ export async function overwriteChatMessages(
 
 /** Save OCR data for a specific model. */
 export async function saveOcrData(
-  chatId: string,
+  threadId: string,
   modelId: string,
   ocrData: OcrRegion[],
 ): Promise<void> {
-  return getStoragePort().saveOcrData(chatId, modelId, ocrData);
+  return getStoragePort().saveOcrData(threadId, modelId, ocrData);
 }
 
 /** Get OCR data for a specific model. */
 export async function getOcrData(
-  chatId: string,
+  threadId: string,
   modelId: string,
 ): Promise<OcrRegion[] | null> {
-  return getStoragePort().getOcrData(chatId, modelId);
+  return getStoragePort().getOcrData(threadId, modelId);
 }
 
-/** Get the entire OCR frame for a chat. */
-export async function getOcrFrame(chatId: string): Promise<OcrFrame> {
-  return getStoragePort().getOcrFrame(chatId);
+/** Get the entire OCR frame for a thread. */
+export async function getOcrFrame(threadId: string): Promise<OcrFrame> {
+  return getStoragePort().getOcrFrame(threadId);
 }
 
 /** Initialize OCR frame with null values for given model IDs. */
 export async function initOcrFrame(
-  chatId: string,
+  threadId: string,
   modelIds: string[],
 ): Promise<void> {
-  return getStoragePort().initOcrFrame(chatId, modelIds);
+  return getStoragePort().initOcrFrame(threadId, modelIds);
 }
 
 /** Cancel the currently running OCR job. */
@@ -228,77 +228,80 @@ export async function cancelOcrJob(): Promise<void> {
 // ImgBB Commands
 // =============================================================================
 
-/** Save imgbb URL for a chat. */
-export async function saveImgbbUrl(chatId: string, url: string): Promise<void> {
-  return getStoragePort().saveImgbbUrl(chatId, url);
+/** Save imgbb URL for a thread. */
+export async function saveImgbbUrl(
+  threadId: string,
+  url: string,
+): Promise<void> {
+  return getStoragePort().saveImgbbUrl(threadId, url);
 }
 
-/** Get imgbb URL for a chat. */
-export async function getImgbbUrl(chatId: string): Promise<string | null> {
-  return getStoragePort().getImgbbUrl(chatId);
+/** Get imgbb URL for a thread. */
+export async function getImgbbUrl(threadId: string): Promise<string | null> {
+  return getStoragePort().getImgbbUrl(threadId);
 }
 
 // =============================================================================
 // Rolling Summary Commands
 // =============================================================================
 
-/** Save rolling summary for a chat. */
+/** Save rolling summary for a thread. */
 export async function saveRollingSummary(
-  chatId: string,
+  threadId: string,
   summary: string,
 ): Promise<void> {
-  return getStoragePort().saveRollingSummary(chatId, summary);
+  return getStoragePort().saveRollingSummary(threadId, summary);
 }
 
 // =============================================================================
 // Tone and Brief Commands
 // =============================================================================
 
-/** Save detected image tone for a chat. */
+/** Save detected image tone for a thread. */
 export async function saveImageTone(
-  chatId: string,
+  threadId: string,
   tone: string,
 ): Promise<void> {
-  return getStoragePort().saveImageTone(chatId, tone);
+  return getStoragePort().saveImageTone(threadId, tone);
 }
 
-/** Save image brief for a chat. */
+/** Save image brief for a thread. */
 export async function saveImageBrief(
-  chatId: string,
+  threadId: string,
   brief: string,
 ): Promise<void> {
-  return getStoragePort().saveImageBrief(chatId, brief);
+  return getStoragePort().saveImageBrief(threadId, brief);
 }
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
-type ChatGroupKey = "Starred" | "Recents";
+type ThreadGroupKey = "Starred" | "Recents";
 
-/** Group chats by Starred and Recents. */
-export function groupChatsByDate(
-  chats: ChatMetadata[],
-): Map<ChatGroupKey, ChatMetadata[]> {
-  const groups = new Map<ChatGroupKey, ChatMetadata[]>();
+/** Group threads by Starred and Recents. */
+export function groupThreadsByDate(
+  threads: ThreadMetadata[],
+): Map<ThreadGroupKey, ThreadMetadata[]> {
+  const groups = new Map<ThreadGroupKey, ThreadMetadata[]>();
 
   // Initialize group arrays
   groups.set("Starred", []);
   groups.set("Recents", []);
 
-  for (const chat of chats) {
-    let targetGroup: ChatGroupKey = "Recents";
+  for (const thread of threads) {
+    let targetGroup: ThreadGroupKey = "Recents";
 
     // 1. Starred takes precedence
-    if (chat.is_starred) {
+    if (thread.is_starred) {
       targetGroup = "Starred";
     }
 
-    groups.get(targetGroup)?.push(chat);
+    groups.get(targetGroup)?.push(thread);
   }
 
-  groups.forEach((groupChats) => {
-    groupChats.sort((a, b) => {
+  groups.forEach((groupThreads) => {
+    groupThreads.sort((a, b) => {
       // 1. Pinned check
       if (a.is_pinned && !b.is_pinned) return -1;
       if (!a.is_pinned && b.is_pinned) return 1;

@@ -10,7 +10,7 @@ import { restoreBrainSession } from "@squigit/core/brain/session";
 
 export const useBrainLifecycle = (config: {
   enabled: boolean;
-  chatId: string | null;
+  threadId: string | null;
   startupImage: {
     path: string;
     mimeType: string;
@@ -21,7 +21,7 @@ export const useBrainLifecycle = (config: {
   apiKey: string;
   currentModel: string;
   onMissingApiKey?: () => void;
-  state: any; // from useChatState
+  state: any; // from useThreadState
   engine: any; // from useBrainEngine
 }) => {
   const {
@@ -53,10 +53,10 @@ export const useBrainLifecycle = (config: {
       config.startupImage &&
       config.prompt &&
       !config.startupImage.fromHistory &&
-      config.chatId
+      config.threadId
     ) {
       const imageKey =
-        config.startupImage.path?.substring(0, 50) ?? config.chatId;
+        config.startupImage.path?.substring(0, 50) ?? config.threadId;
       if (sessionStartedForImageRef.current === imageKey) {
         return;
       }
@@ -68,10 +68,10 @@ export const useBrainLifecycle = (config: {
       sessionStartedForImageRef.current = imageKey;
 
       console.log(
-        "[useChatLifecycle] startSession triggered for imageKey:",
+        "[useThreadLifecycle] startSession triggered for imageKey:",
         imageKey,
-        "chatId:",
-        config.chatId,
+        "threadId:",
+        config.threadId,
       );
 
       if (config.apiKey) {
@@ -91,12 +91,12 @@ export const useBrainLifecycle = (config: {
     config.startupImage,
     config.currentModel,
     config.enabled,
-    config.chatId,
+    config.threadId,
     messages.length,
   ]);
 
   useEffect(() => {
-    if (config.chatId === null) {
+    if (config.threadId === null) {
       setMessages([]);
       setFirstResponseId(null);
       setLastSentMessage(null);
@@ -104,7 +104,7 @@ export const useBrainLifecycle = (config: {
       setPendingAssistantTurn(null);
       sessionStartedForImageRef.current = null;
     }
-  }, [config.chatId]);
+  }, [config.threadId]);
 
   const getCurrentState = () => ({
     messages: config.state.messages,

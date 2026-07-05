@@ -11,9 +11,9 @@ import type {
   PendingAssistantTurn,
   ToolStep,
 } from "@squigit/core/brain/engine";
-import { appendChatMessage } from "@squigit/core/config";
+import { appendThreadMessage } from "@squigit/core/config";
 
-export const useChatState = (enabled: boolean) => {
+export const useThreadState = (enabled: boolean) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export const useChatState = (enabled: boolean) => {
 
   const appendErrorMessage = (
     errorMsg: string,
-    targetChatId?: string | null,
+    targetThreadId?: string | null,
   ) => {
     const errorBubble: Message = {
       id: Date.now().toString(),
@@ -80,8 +80,8 @@ export const useChatState = (enabled: boolean) => {
 
     setMessages((prev) => [...prev, errorBubble]);
 
-    if (targetChatId) {
-      appendChatMessage(targetChatId, "assistant", errorMsg).catch(
+    if (targetThreadId) {
+      appendThreadMessage(targetThreadId, "assistant", errorMsg).catch(
         console.error,
       );
     }

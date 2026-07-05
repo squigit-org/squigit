@@ -76,7 +76,7 @@ export interface AppConfig {
   };
 }
 
-export interface ChatSession {
+export interface ThreadSession {
   id: string;
   title: string;
   messages: Message[];

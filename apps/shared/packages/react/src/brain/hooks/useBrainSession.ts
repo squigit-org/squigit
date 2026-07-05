@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useChatState } from "./useChatState";
+import { useThreadState } from "./useThreadState";
 import type { Message } from "@squigit/core/brain/engine";
 import { useBrainEngine } from "./useBrainEngine";
 import { useBrainLifecycle } from "./useBrainLifecycle";
@@ -18,8 +18,8 @@ export const useBrainSession = ({
   enabled,
   onMessage,
   onOverwriteMessages,
-  chatId,
-  chatTitle,
+  threadId,
+  threadTitle,
   onMissingApiKey,
   onTitleGenerated,
   generateTitle,
@@ -37,24 +37,24 @@ export const useBrainSession = ({
   prompt: string;
   setCurrentModel: (model: string) => void;
   enabled: boolean;
-  onMessage?: (message: Message, chatId: string) => void;
+  onMessage?: (message: Message, threadId: string) => void;
   onOverwriteMessages?: (messages: Message[]) => void;
-  chatId: string | null;
-  chatTitle: string;
+  threadId: string | null;
+  threadTitle: string;
   onMissingApiKey?: () => void;
   onTitleGenerated?: (title: string) => void;
   generateTitle?: (text: string) => Promise<string>;
   userName?: string;
   userEmail?: string;
 }) => {
-  const state = useChatState(enabled);
+  const state = useThreadState(enabled);
 
   const engine = useBrainEngine({
     apiKey,
     currentModel,
     setCurrentModel,
-    chatId,
-    chatTitle,
+    threadId,
+    threadTitle,
     startupImage,
     onMissingApiKey,
     onMessage,
@@ -69,7 +69,7 @@ export const useBrainSession = ({
 
   const lifecycle = useBrainLifecycle({
     enabled,
-    chatId,
+    threadId,
     startupImage,
     prompt,
     apiKey,

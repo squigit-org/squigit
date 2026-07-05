@@ -71,15 +71,15 @@ export const useBrainEngine = (config: {
   apiKey: string;
   currentModel: string;
   setCurrentModel: (model: string) => void;
-  chatId: string | null;
-  chatTitle: string;
+  threadId: string | null;
+  threadTitle: string;
   startupImage: BrainStartupImage | null;
   onMissingApiKey?: () => void;
-  onMessage?: (message: Message, chatId: string) => void;
+  onMessage?: (message: Message, threadId: string) => void;
   onOverwriteMessages?: (messages: Message[]) => void;
   onTitleGenerated?: (title: string) => void;
   generateTitle?: (text: string) => Promise<string>;
-  state: any; // from useChatState
+  state: any; // from useThreadState
   userName?: string;
   userEmail?: string;
   userInstruction?: string;
@@ -104,7 +104,7 @@ export const useBrainEngine = (config: {
     setPendingAssistantTurn,
   } = config.state;
 
-  const sessionChatIdRef = useRef<string | null>(null);
+  const sessionThreadIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isRequestCancelledRef = useRef(false);
   const preRetryMessagesRef = useRef<Message[]>([]);
@@ -343,7 +343,10 @@ export const useBrainEngine = (config: {
           if (isRequestAborted(signal) || apiError?.message === "CANCELLED") {
             throw apiError;
           }
-          if (isBrainHighDemandError(apiError) || isBrainQuotaZeroError(apiError)) {
+          if (
+            isBrainHighDemandError(apiError) ||
+            isBrainQuotaZeroError(apiError)
+          ) {
             // If tools already executed in this turn, don't silently fall back.
             // Fallback would restart the request from scratch, losing all tool
             // results (search citations, etc.) and producing an empty answer.
@@ -670,7 +673,7 @@ export const useBrainEngine = (config: {
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
-    sessionChatIdRef.current = config.chatId;
+    sessionThreadIdRef.current = config.threadId;
     isRequestCancelledRef.current = false;
 
     setIsLoading(true);
@@ -685,11 +688,6 @@ export const useBrainEngine = (config: {
       resetInitialUi();
       setMessages([]);
       setLastSentMessage(null);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      if (signal.aborted) {
-        clearPendingGenerationState();
-        return;
-      }
     }
 
     if (!imgData) {
@@ -701,6 +699,14 @@ export const useBrainEngine = (config: {
     const requestStartedAtMs = Date.now();
     const responseId = Date.now().toString();
     beginPendingAssistantTurn(responseId, "initial", requestStartedAtMs);
+
+    if (!isRetry) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      if (signal.aborted) {
+        clearPendingGenerationState();
+        return;
+      }
+    }
     let hasGeneratedTitleFromBrief = false;
 
     try {
@@ -725,7 +731,7 @@ export const useBrainEngine = (config: {
               if (signal.aborted) return;
               appendPendingRawText(token);
             },
-            config.chatId,
+            config.threadId,
             config.userName,
             config.userEmail,
             config.userInstruction,
@@ -801,7 +807,10 @@ export const useBrainEngine = (config: {
       const errorMsg = getFriendlyBrainErrorMessage(apiError);
 
       clearPendingAssistantTurn();
-      appendErrorMessage(errorMsg, sessionChatIdRef.current || config.chatId);
+      appendErrorMessage(
+        errorMsg,
+        sessionThreadIdRef.current || config.threadId,
+      );
     } finally {
       if (abortControllerRef.current?.signal === signal) {
         abortControllerRef.current = null;
@@ -817,12 +826,12 @@ export const useBrainEngine = (config: {
       }
       appendErrorMessage(
         "Cannot start session. Missing required data.",
-        config.chatId,
+        config.threadId,
       );
       return;
     }
-    const targetChatId = config.chatId;
-    sessionChatIdRef.current = targetChatId;
+    const targetThreadId = config.threadId;
+    sessionThreadIdRef.current = targetThreadId;
     isRequestCancelledRef.current = false;
 
     setIsLoading(true);
@@ -852,7 +861,7 @@ export const useBrainEngine = (config: {
             (token: string) => {
               appendPendingRawText(token);
             },
-            config.chatId,
+            config.threadId,
             undefined,
             undefined,
             undefined,
@@ -871,17 +880,17 @@ export const useBrainEngine = (config: {
       const errorMsg = getFriendlyBrainErrorMessage(apiError);
 
       clearPendingAssistantTurn();
-      appendErrorMessage(errorMsg, targetChatId);
+      appendErrorMessage(errorMsg, targetThreadId);
     }
   };
 
   const handleRetrySend = async () => {
     if (!lastSentMessage) return;
-    sessionChatIdRef.current = config.chatId;
+    sessionThreadIdRef.current = config.threadId;
     setIsLoading(true);
     isRequestCancelledRef.current = false;
     setMessages((prev: Message[]) => [...prev, lastSentMessage]);
-    const targetChatId = config.chatId;
+    const targetThreadId = config.threadId;
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
     const responseId = (Date.now() + 1).toString();
@@ -898,7 +907,7 @@ export const useBrainEngine = (config: {
             (token: string) => {
               appendPendingRawText(token);
             },
-            config.chatId,
+            config.threadId,
             toolTracker.onEvent,
           ),
       );
@@ -910,14 +919,17 @@ export const useBrainEngine = (config: {
         return;
       }
       clearPendingAssistantTurn();
-      appendErrorMessage(getFriendlyBrainErrorMessage(apiError), targetChatId);
+      appendErrorMessage(
+        getFriendlyBrainErrorMessage(apiError),
+        targetThreadId,
+      );
     }
   };
 
   const handleSend = async (userText: string, modelId?: string) => {
     if (!userText.trim() || config.state.isLoading) return;
-    const targetChatId = config.chatId;
-    sessionChatIdRef.current = targetChatId;
+    const targetThreadId = config.threadId;
+    sessionThreadIdRef.current = targetThreadId;
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -928,8 +940,8 @@ export const useBrainEngine = (config: {
 
     setLastSentMessage(userMsg);
     setMessages((prev: Message[]) => [...prev, userMsg]);
-    if (config.onMessage && targetChatId)
-      config.onMessage(userMsg, targetChatId);
+    if (config.onMessage && targetThreadId)
+      config.onMessage(userMsg, targetThreadId);
     setIsLoading(true);
     isRequestCancelledRef.current = false;
     resetToolStreamingState();
@@ -948,7 +960,7 @@ export const useBrainEngine = (config: {
             (token: string) => {
               appendPendingRawText(token);
             },
-            config.chatId,
+            config.threadId,
             toolTracker.onEvent,
           ),
       );
@@ -960,14 +972,17 @@ export const useBrainEngine = (config: {
         return;
       }
       clearPendingAssistantTurn();
-      appendErrorMessage(getFriendlyBrainErrorMessage(apiError), targetChatId);
+      appendErrorMessage(
+        getFriendlyBrainErrorMessage(apiError),
+        targetThreadId,
+      );
     }
   };
 
   const handleRetryMessage = async (messageId: string, modelId?: string) => {
     const msgIndex = messages.findIndex((m: Message) => m.id === messageId);
     if (msgIndex === -1) return;
-    sessionChatIdRef.current = config.chatId;
+    sessionThreadIdRef.current = config.threadId;
 
     const truncatedMessages = messages.slice(0, msgIndex);
     const retryModelId = modelId || config.currentModel;
@@ -1007,7 +1022,7 @@ export const useBrainEngine = (config: {
             msgIndex,
             messages,
             targetModel,
-            config.chatId,
+            config.threadId,
             (token: string) => {
               appendPendingRawText(token);
             },
@@ -1019,7 +1034,7 @@ export const useBrainEngine = (config: {
 
       if (
         msgIndex === 0 &&
-        isUntitledThreadTitle(config.chatTitle) &&
+        isUntitledThreadTitle(config.threadTitle) &&
         responseText.trim().length > 0 &&
         config.generateTitle &&
         config.onTitleGenerated
@@ -1040,7 +1055,7 @@ export const useBrainEngine = (config: {
       const errorMsg = getFriendlyBrainErrorMessage(apiError);
       clearPendingAssistantTurn();
       setRetryingMessageId(null);
-      appendErrorMessage(errorMsg, config.chatId);
+      appendErrorMessage(errorMsg, config.threadId);
     }
   };
 
@@ -1116,9 +1131,9 @@ export const useBrainEngine = (config: {
         stopped: true,
       };
       setMessages((prev: Message[]) => [...prev, stoppedMsg]);
-      const targetChatId = sessionChatIdRef.current || config.chatId;
-      if (config.onMessage && targetChatId) {
-        config.onMessage(stoppedMsg, targetChatId);
+      const targetThreadId = sessionThreadIdRef.current || config.threadId;
+      if (config.onMessage && targetThreadId) {
+        config.onMessage(stoppedMsg, targetThreadId);
       }
     }
 

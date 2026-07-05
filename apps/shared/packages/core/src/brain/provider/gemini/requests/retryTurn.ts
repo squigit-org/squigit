@@ -22,9 +22,9 @@ import { normalizeMessageForHistory } from "../../../attachments/memory";
 import {
   generateGeminiImageBrief,
   listenGeminiStream,
-  streamGeminiChat,
+  streamGeminiThread,
 } from "../commands";
-import { saveImageBrief } from "../../../../config/chat-storage";
+import { saveImageBrief } from "../../../../config/thread-storage";
 import { MODEL_IDS } from "../../../../config/models-config";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
 
@@ -32,7 +32,7 @@ export const retryFromMessage = async (
   messageIndex: number,
   allMessages: Array<{ role: string; text: string }>,
   modelId: string,
-  chatId?: string | null,
+  threadId?: string | null,
   onToken?: (token: string) => void,
   fallbackImagePath?: string,
   onBriefReady?: (brief: string) => void,
@@ -113,8 +113,8 @@ export const retryFromMessage = async (
               modelToUse,
             );
             if (brief) {
-              if (chatId) {
-                saveImageBrief(chatId, brief).catch(console.error);
+              if (threadId) {
+                saveImageBrief(threadId, brief).catch(console.error);
               }
               setImageBrief(brief);
               if (brainSessionStore.generationId === myGenId) {
@@ -153,7 +153,7 @@ export const retryFromMessage = async (
         throw new Error("Gemini API Key not set");
       }
       await Promise.race([
-        streamGeminiChat({
+        streamGeminiThread({
           apiKey: providerApiKey,
           model: brainSessionStore.currentModelId,
           isInitialTurn: true,
@@ -164,7 +164,7 @@ export const retryFromMessage = async (
           rollingSummary: null,
           userMessage: "",
           channelId,
-          chatId: chatId ?? null,
+          threadId: threadId ?? null,
           userName: brainSessionStore.userName ?? undefined,
           userEmail: brainSessionStore.userEmail ?? undefined,
           userInstruction: brainSessionStore.userInstruction,
@@ -252,7 +252,7 @@ export const retryFromMessage = async (
 
     streamWatchdog.touch();
     await Promise.race([
-      streamGeminiChat({
+      streamGeminiThread({
         apiKey: providerApiKey,
         model: brainSessionStore.currentModelId,
         isInitialTurn: false,
@@ -263,7 +263,7 @@ export const retryFromMessage = async (
         rollingSummary,
         userMessage: retryUserMessage,
         channelId,
-        chatId: chatId ?? null,
+        threadId: threadId ?? null,
         userName: brainSessionStore.userName ?? undefined,
         userEmail: brainSessionStore.userEmail ?? undefined,
         userInstruction: null, // One-time intent hook not needed on retries

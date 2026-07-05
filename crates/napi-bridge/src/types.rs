@@ -4,7 +4,7 @@
 use napi_derive::napi;
 use squigit_auth::types::Profile as UserProfile;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
-use squigit_memory::{ChatData, ChatMessage, ChatMetadata, StoredImage};
+use squigit_memory::{ThreadData, ThreadMessage, ThreadMetadata, StoredImage};
 
 #[napi(object)]
 pub struct NapiProfile {
@@ -58,7 +58,7 @@ impl From<StoredImage> for NapiStoredImage {
 }
 
 #[napi(object)]
-pub struct NapiChatMetadata {
+pub struct NapiThreadMetadata {
     pub id: String,
     pub title: String,
     pub image_hash: String,
@@ -70,8 +70,8 @@ pub struct NapiChatMetadata {
     pub image_tone: Option<String>,
 }
 
-impl From<ChatMetadata> for NapiChatMetadata {
-    fn from(meta: ChatMetadata) -> Self {
+impl From<ThreadMetadata> for NapiThreadMetadata {
+    fn from(meta: ThreadMetadata) -> Self {
         Self {
             id: meta.id,
             title: meta.title,
@@ -87,14 +87,14 @@ impl From<ChatMetadata> for NapiChatMetadata {
 }
 
 #[napi(object)]
-pub struct NapiChatMessage {
+pub struct NapiThreadMessage {
     pub role: String,
     pub content: String,
     pub timestamp: String,
 }
 
-impl From<ChatMessage> for NapiChatMessage {
-    fn from(msg: ChatMessage) -> Self {
+impl From<ThreadMessage> for NapiThreadMessage {
+    fn from(msg: ThreadMessage) -> Self {
         Self {
             role: msg.role,
             content: msg.content,
@@ -104,16 +104,16 @@ impl From<ChatMessage> for NapiChatMessage {
 }
 
 #[napi(object)]
-pub struct NapiChatData {
-    pub metadata: NapiChatMetadata,
-    pub messages: Vec<NapiChatMessage>,
+pub struct NapiThreadData {
+    pub metadata: NapiThreadMetadata,
+    pub messages: Vec<NapiThreadMessage>,
     pub rolling_summary: Option<String>,
     pub image_brief: Option<String>,
     pub imgbb_url: Option<String>,
 }
 
-impl From<ChatData> for NapiChatData {
-    fn from(data: ChatData) -> Self {
+impl From<ThreadData> for NapiThreadData {
+    fn from(data: ThreadData) -> Self {
         Self {
             metadata: data.metadata.into(),
             messages: data.messages.into_iter().map(|m| m.into()).collect(),
@@ -126,7 +126,7 @@ impl From<ChatData> for NapiChatData {
 
 #[napi(object)]
 pub struct NapiAnalyzeResult {
-    pub chat_id: String,
+    pub thread_id: String,
     pub title: String,
     pub assistant_message: String,
     pub image_path: String,
@@ -135,7 +135,7 @@ pub struct NapiAnalyzeResult {
 
 #[napi(object)]
 pub struct NapiPromptResult {
-    pub chat_id: String,
+    pub thread_id: String,
     pub assistant_message: String,
     pub normalized_user_message: String,
 }

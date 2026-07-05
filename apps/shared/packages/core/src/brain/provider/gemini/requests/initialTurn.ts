@@ -22,9 +22,9 @@ import {
 import {
   generateGeminiImageBrief,
   listenGeminiStream,
-  streamGeminiChat,
+  streamGeminiThread,
 } from "../commands";
-import { saveImageBrief } from "../../../../config/chat-storage";
+import { saveImageBrief } from "../../../../config/thread-storage";
 import { MODEL_IDS } from "../../../../config/models-config";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
 
@@ -32,7 +32,7 @@ export const startNewThreadStream = async (
   modelId: string,
   imagePath: string,
   onToken: (token: string) => void,
-  chatId?: string | null,
+  threadId?: string | null,
   userName?: string,
   userEmail?: string,
   userInstruction?: string,
@@ -109,8 +109,8 @@ export const startNewThreadStream = async (
             modelToUse,
           );
           if (brief) {
-            if (chatId) {
-              saveImageBrief(chatId, brief).catch(console.error);
+            if (threadId) {
+              saveImageBrief(threadId, brief).catch(console.error);
             }
             setImageBrief(brief);
             if (brainSessionStore.generationId === myGenId) {
@@ -146,7 +146,7 @@ export const startNewThreadStream = async (
       throw new Error("Gemini API Key not set");
     }
     await Promise.race([
-      streamGeminiChat({
+      streamGeminiThread({
         apiKey: providerApiKey,
         model: modelId,
         isInitialTurn: true,
@@ -157,7 +157,7 @@ export const startNewThreadStream = async (
         rollingSummary: null,
         userMessage: "",
         channelId: channelId,
-        chatId: chatId ?? null,
+        threadId: threadId ?? null,
         userName,
         userEmail,
         userInstruction,
@@ -194,7 +194,7 @@ export const startNewThreadStream = async (
 export const startNewThread = async (
   modelId: string,
   imagePath: string,
-  chatId?: string | null,
+  threadId?: string | null,
 ): Promise<string> => {
   let fullText = "";
   await startNewThreadStream(
@@ -203,7 +203,7 @@ export const startNewThread = async (
     (token) => {
       fullText += token;
     },
-    chatId,
+    threadId,
   );
   return fullText;
 };

@@ -7,7 +7,7 @@
 export type { DialogVariant, DialogContent } from "./dialogs.ts";
 export {
   getDialogs,
-  getDeleteMultipleChatsDialog,
+  getDeleteMultipleThreadsDialog,
   getAppBusyDialog,
   getErrorDialog,
   getMissingPackageDialog,

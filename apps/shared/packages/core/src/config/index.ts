@@ -17,31 +17,31 @@ export {
 } from "./app-settings.ts";
 
 export type {
-  ChatMetadata,
-  ChatCitation,
-  ChatToolStep,
-  ChatMessage,
+  ThreadMetadata,
+  ThreadCitation,
+  ThreadToolStep,
+  ThreadMessage,
   OcrRegion,
   OcrFrame,
-  ChatData,
-  ChatSearchResult,
+  ThreadData,
+  ThreadSearchResult,
   StoredImage,
   ImageResult,
-} from "./chat-storage.ts";
+} from "./thread-storage.ts";
 
 export {
   AUTO_OCR_DISABLED_MODEL_ID,
   storeImageBytes,
   storeImageFromPath,
   getImagePath,
-  createChat,
-  loadChat,
-  listChats,
-  searchChats,
-  deleteChat,
-  updateChatMetadata,
-  appendChatMessage,
-  overwriteChatMessages,
+  createThread,
+  loadThread,
+  listThreads,
+  searchThreads,
+  deleteThread,
+  updateThreadMetadata,
+  appendThreadMessage,
+  overwriteThreadMessages,
   saveOcrData,
   getOcrData,
   getOcrFrame,
@@ -52,8 +52,8 @@ export {
   saveRollingSummary,
   saveImageTone,
   saveImageBrief,
-  groupChatsByDate,
-} from "./chat-storage.ts";
+  groupThreadsByDate,
+} from "./thread-storage.ts";
 
 export {
   MODEL_IDS,

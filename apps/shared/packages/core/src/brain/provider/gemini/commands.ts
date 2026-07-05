@@ -4,14 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { getProviderPort, type StreamGeminiChatInput } from "../../../ports/provider";
+import {
+  getProviderPort,
+  type StreamGeminiThreadInput,
+} from "../../../ports/provider";
 import type { ProviderStreamEvent } from "../../engine/types";
 import { MODEL_IDS } from "../../../config/models-config";
 
-export type { StreamGeminiChatInput };
+export type { StreamGeminiThreadInput };
 
-export function streamGeminiChat(input: StreamGeminiChatInput): Promise<void> {
-  return getProviderPort().streamChat(input);
+export function streamGeminiThread(
+  input: StreamGeminiThreadInput,
+): Promise<void> {
+  return getProviderPort().streamThread(input);
 }
 
 export function generateGeminiImageBrief(
@@ -22,12 +27,12 @@ export function generateGeminiImageBrief(
   return getProviderPort().generateImageBrief(apiKey, imagePath, model);
 }
 
-export function generateGeminiChatTitle(
+export function generateGeminiThreadTitle(
   apiKey: string,
   model: string,
   promptContext: string,
 ): Promise<string> {
-  return getProviderPort().generateChatTitle(apiKey, model, promptContext);
+  return getProviderPort().generateThreadTitle(apiKey, model, promptContext);
 }
 
 export function compressGeminiConversation(
@@ -44,10 +49,10 @@ export function compressGeminiConversation(
 }
 
 export function persistRollingSummary(
-  chatId: string,
+  threadId: string,
   summary: string,
 ): Promise<void> {
-  return getProviderPort().persistRollingSummary(chatId, summary);
+  return getProviderPort().persistRollingSummary(threadId, summary);
 }
 
 export function cancelGeminiRequest(channelId: string | null): Promise<void> {
