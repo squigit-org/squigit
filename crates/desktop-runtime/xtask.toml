@@ -6,7 +6,6 @@ name = "desktop-runtime"
 display_name = "Desktop Runtime"
 category = "crates"
 order = 10
-archived = false
 
 [requirements]
 node = false

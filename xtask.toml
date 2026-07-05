@@ -6,7 +6,7 @@ name = "Squigit"
 temp_namespace = "squigit-xtask"
 
 [discovery]
-roots = ["apps", "archive", "crates", "sidecars"]
+roots = ["apps", "crates", "sidecars"]
 
 [version]
 scheme = "calver"

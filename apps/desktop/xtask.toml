@@ -6,7 +6,6 @@ name = "desktop"
 display_name = "Desktop"
 category = "apps"
 order = 30
-archived = false
 
 [requirements]
 node = true

@@ -6,7 +6,6 @@ name = "paddle-ocr"
 display_name = "Paddle OCR"
 category = "sidecars"
 order = 10
-archived = false
 
 [requirements]
 node = false

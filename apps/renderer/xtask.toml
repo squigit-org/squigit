@@ -6,7 +6,6 @@ name = "renderer"
 display_name = "Renderer"
 category = "apps"
 order = 20
-archived = false
 
 [requirements]
 node = true

@@ -6,7 +6,6 @@ name = "global-shortcut"
 display_name = "Global Shortcut"
 category = "crates"
 order = 30
-archived = false
 
 [requirements]
 node = false

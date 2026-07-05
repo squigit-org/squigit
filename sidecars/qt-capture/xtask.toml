@@ -6,7 +6,6 @@ name = "qt-capture"
 display_name = "Qt Capture"
 category = "sidecars"
 order = 20
-archived = false
 
 [requirements]
 node = false

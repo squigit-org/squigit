@@ -6,7 +6,6 @@ name = "cli"
 display_name = "CLI"
 category = "apps"
 order = 10
-archived = false
 
 [requirements]
 node = true

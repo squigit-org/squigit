@@ -6,7 +6,6 @@ name = "react"
 display_name = "React Package"
 category = "packages"
 order = 20
-archived = false
 
 [requirements]
 node = true

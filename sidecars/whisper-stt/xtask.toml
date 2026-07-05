@@ -6,7 +6,6 @@ name = "whisper-stt"
 display_name = "Whisper STT"
 category = "sidecars"
 order = 30
-archived = false
 
 [requirements]
 node = false

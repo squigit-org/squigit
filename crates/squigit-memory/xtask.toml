@@ -6,7 +6,6 @@ name = "squigit-memory"
 display_name = "Squigit Memory"
 category = "crates"
 order = 60
-archived = false
 
 [requirements]
 node = false

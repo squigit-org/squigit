@@ -6,7 +6,6 @@ name = "squigit-auth"
 display_name = "Squigit Auth"
 category = "crates"
 order = 40
-archived = false
 
 [requirements]
 node = false

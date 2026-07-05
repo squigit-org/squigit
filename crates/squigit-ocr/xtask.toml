@@ -6,7 +6,6 @@ name = "squigit-ocr"
 display_name = "Squigit OCR"
 category = "crates"
 order = 70
-archived = false
 
 [requirements]
 node = false

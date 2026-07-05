@@ -6,7 +6,6 @@ name = "core"
 display_name = "Core Package"
 category = "packages"
 order = 10
-archived = false
 
 [requirements]
 node = true

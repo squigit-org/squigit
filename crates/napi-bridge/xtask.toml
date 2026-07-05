@@ -6,7 +6,6 @@ name = "napi-bridge"
 display_name = "N-API Bridge"
 category = "crates"
 order = 20
-archived = false
 
 [requirements]
 node = true

@@ -6,7 +6,6 @@ name = "squigit-brain"
 display_name = "Squigit Brain"
 category = "crates"
 order = 50
-archived = false
 
 [requirements]
 node = false

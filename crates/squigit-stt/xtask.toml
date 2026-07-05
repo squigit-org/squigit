@@ -6,7 +6,6 @@ name = "squigit-stt"
 display_name = "Squigit STT"
 category = "crates"
 order = 80
-archived = false
 
 [requirements]
 node = false
