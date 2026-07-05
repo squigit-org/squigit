@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This log tracks repo-level changes using CalVer (`YY.MM.DD`).
 
+## [26.07.05] - 2026-07-05
+
+### Changed
+
+- Reverted workspace crates to baseline version `0.1.0`, rolling back the `0.2.0` release workflow smoke test.
+
 ## [26.07.03] - 2026-07-03
 
 ### Changed

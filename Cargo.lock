@@ -854,7 +854,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-runtime"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "arboard",
  "base64 0.22.1",
@@ -1381,7 +1381,7 @@ checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "global-shortcut"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "futures-lite",
  "log",
@@ -2095,7 +2095,7 @@ dependencies = [
 
 [[package]]
 name = "napi-bridge"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "desktop-runtime",
@@ -3401,7 +3401,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-auth"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
@@ -3428,7 +3428,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-brain"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "futures-util",
@@ -3453,7 +3453,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-memory"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "blake3",
  "chrono",
@@ -3467,7 +3467,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-ocr"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "dirs 6.0.0",
  "flate2",
@@ -3488,7 +3488,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-stt"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "log",
