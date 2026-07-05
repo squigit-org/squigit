@@ -1,18 +1,18 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_memory::{ChatMessage, ChatMetadata, ChatStorage};
+use squigit_memory::{ThreadMessage, ThreadMetadata, ThreadStorage};
 use regex::{Regex, RegexBuilder};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Serialize)]
-pub struct ChatSearchResult {
-    pub chat_id: String,
-    pub chat_title: String,
-    pub chat_created_at: String,
-    pub chat_updated_at: String,
+pub struct ThreadSearchResult {
+    pub thread_id: String,
+    pub thread_title: String,
+    pub thread_created_at: String,
+    pub thread_updated_at: String,
     pub message_index: usize,
     pub message_role: String,
     pub message_timestamp: String,
@@ -118,37 +118,37 @@ struct ScoredMessage {
     score: f64,
 }
 
-pub fn search_local_chats(
-    storage: &ChatStorage,
+pub fn search_local_threads(
+    storage: &ThreadStorage,
     query: &str,
     limit: usize,
-) -> Result<Vec<ChatSearchResult>, String> {
+) -> Result<Vec<ThreadSearchResult>, String> {
     let max_results = limit.clamp(1, 200);
     let parsed = ParsedQuery::from_raw(query);
     let now_unix = now_unix_seconds();
 
     let mut rows = Vec::new();
-    let mut chats = storage.list_chats().map_err(|e| e.to_string())?;
-    chats.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    let mut threads = storage.list_threads().map_err(|e| e.to_string())?;
+    threads.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
 
-    for metadata in chats
+    for metadata in threads
         .into_iter()
-        .filter(|chat| !chat.id.starts_with("__system_"))
+        .filter(|thread| !thread.id.starts_with("__system_"))
     {
-        let chat = match storage.load_chat(&metadata.id) {
-            Ok(chat) => chat,
+        let thread = match storage.load_thread(&metadata.id) {
+            Ok(thread) => thread,
             Err(_) => continue,
         };
 
-        if chat.messages.is_empty() {
+        if thread.messages.is_empty() {
             continue;
         }
 
         let title_normalized = normalize_text(&metadata.title);
         let mut best: Option<ScoredMessage> = None;
-        let total_messages = chat.messages.len();
+        let total_messages = thread.messages.len();
 
-        for (message_index, message) in chat.messages.iter().enumerate() {
+        for (message_index, message) in thread.messages.iter().enumerate() {
             let candidate = score_message(
                 &parsed,
                 &metadata,
@@ -171,11 +171,11 @@ pub fn search_local_chats(
         }
 
         if let Some(best) = best {
-            rows.push(ChatSearchResult {
-                chat_id: metadata.id.clone(),
-                chat_title: metadata.title.clone(),
-                chat_created_at: metadata.created_at.to_rfc3339(),
-                chat_updated_at: metadata.updated_at.to_rfc3339(),
+            rows.push(ThreadSearchResult {
+                thread_id: metadata.id.clone(),
+                thread_title: metadata.title.clone(),
+                thread_created_at: metadata.created_at.to_rfc3339(),
+                thread_updated_at: metadata.updated_at.to_rfc3339(),
                 message_index: best.message_index,
                 message_role: best.message_role,
                 message_timestamp: best.message_timestamp,
@@ -188,8 +188,8 @@ pub fn search_local_chats(
     rows.sort_by(|a, b| {
         b.score
             .total_cmp(&a.score)
-            .then_with(|| b.chat_updated_at.cmp(&a.chat_updated_at))
-            .then_with(|| a.chat_id.cmp(&b.chat_id))
+            .then_with(|| b.thread_updated_at.cmp(&a.thread_updated_at))
+            .then_with(|| a.thread_id.cmp(&b.thread_id))
     });
     rows.truncate(max_results);
 
@@ -198,9 +198,9 @@ pub fn search_local_chats(
 
 fn score_message(
     parsed: &ParsedQuery,
-    metadata: &ChatMetadata,
+    metadata: &ThreadMetadata,
     title_normalized: &str,
-    message: &ChatMessage,
+    message: &ThreadMessage,
     message_index: usize,
     total_messages: usize,
     now_unix: i64,
@@ -579,7 +579,7 @@ fn build_snippet(content: &str, bounds: Option<(usize, usize)>) -> String {
 
 fn recency_score(now_unix: i64, updated_at_unix: i64) -> f64 {
     let age_seconds = (now_unix - updated_at_unix).max(0) as f64;
-    // 48-hour decay constant keeps fresh chats at the top without hard cutoffs.
+    // 48-hour decay constant keeps fresh threads at the top without hard cutoffs.
     (1.0 / (1.0 + age_seconds / (48.0 * 3600.0))).clamp(0.0, 1.0)
 }
 

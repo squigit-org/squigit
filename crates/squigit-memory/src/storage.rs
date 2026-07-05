@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Content Addressable Storage (CAS) implementation for images and chat data.
+//! Content Addressable Storage (CAS) implementation for images and thread data.
 
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use crate::error::{Result, StorageError};
 use crate::types::{
-    AttachmentRegistry, ChatData, ChatMessage, ChatMetadata, OcrFrame, OcrRegion, StoredImage,
+    AttachmentRegistry, ThreadData, ThreadMessage, ThreadMetadata, OcrFrame, OcrRegion, StoredImage,
 };
 
 const DEFAULT_OCR_MODEL_ID: &str = "pp-ocr-v5-en";
@@ -67,30 +67,30 @@ fn retain_supported_ocr_frame_ids(frame: &mut OcrFrame) -> bool {
     changed
 }
 
-/// Main storage manager for chats and images.
-pub struct ChatStorage {
+/// Main storage manager for threads and images.
+pub struct ThreadStorage {
     /// Base directory for all storage.
     base_dir: PathBuf,
     /// Directory for CAS objects (images).
     objects_dir: PathBuf,
-    /// Path to the chat index file.
+    /// Path to the thread index file.
     index_path: PathBuf,
 }
 
-impl ChatStorage {
+impl ThreadStorage {
     /// Create a new storage manager with a custom base directory.
     ///
     /// This is the primary constructor for profile-aware storage.
-    /// Use this with a profile's chats directory.
+    /// Use this with a profile's threads directory.
     ///
     /// # Example
     ///
     /// ```no_run
-    /// use squigit_memory::ChatStorage;
+    /// use squigit_memory::ThreadStorage;
     /// use std::path::PathBuf;
     ///
-    /// let profile_chats_dir = PathBuf::from("/path/to/profile/chats");
-    /// let storage = ChatStorage::with_base_dir(profile_chats_dir).unwrap();
+    /// let profile_threads_dir = PathBuf::from("/path/to/profile/threads");
+    /// let storage = ThreadStorage::with_base_dir(profile_threads_dir).unwrap();
     /// ```
     pub fn with_base_dir(base_dir: PathBuf) -> Result<Self> {
         let objects_dir = base_dir.join("objects");
@@ -108,7 +108,7 @@ impl ChatStorage {
 
     /// Create a new storage manager using the default location.
     ///
-    /// Uses `~/.config/squigit/chats/` on Linux (and appropriate config dirs on other OSs).
+    /// Uses `~/.config/squigit/threads/` on Linux (and appropriate config dirs on other OSs).
     ///
     /// **Note**: This constructor is provided for backward compatibility.
     /// New code should use `with_base_dir()` with a profile-specific path.
@@ -119,7 +119,7 @@ impl ChatStorage {
     pub fn new() -> Result<Self> {
         let base_dir = crate::paths::base_config_dir()
             .ok_or(StorageError::NoDataDir)?
-            .join("chats");
+            .join("threads");
 
         Self::with_base_dir(base_dir)
     }
@@ -323,38 +323,38 @@ impl ChatStorage {
     }
 
     // =========================================================================
-    // Chat Storage
+    // Thread Storage
     // =========================================================================
 
-    /// Get the directory for a specific chat.
-    fn chat_dir(&self, chat_id: &str) -> PathBuf {
-        self.base_dir.join(chat_id)
+    /// Get the directory for a specific thread.
+    fn thread_dir(&self, thread_id: &str) -> PathBuf {
+        self.base_dir.join(thread_id)
     }
 
     /// Save a new thread or update an existing one.
-    pub fn save_chat(&self, chat: &ChatData) -> Result<()> {
-        let chat_dir = self.chat_dir(&chat.metadata.id);
-        fs::create_dir_all(&chat_dir)?;
+    pub fn save_thread(&self, thread: &ThreadData) -> Result<()> {
+        let thread_dir = self.thread_dir(&thread.metadata.id);
+        fs::create_dir_all(&thread_dir)?;
 
         // Save metadata
-        let meta_path = chat_dir.join("meta.json");
-        let meta_json = serde_json::to_string_pretty(&chat.metadata)?;
+        let meta_path = thread_dir.join("meta.json");
+        let meta_json = serde_json::to_string_pretty(&thread.metadata)?;
         fs::write(&meta_path, meta_json)?;
 
         // Always save OCR frame file
-        let ocr_path = chat_dir.join("ocr_frame.json");
-        let ocr_json = serde_json::to_string_pretty(&chat.ocr_data)?;
+        let ocr_path = thread_dir.join("ocr_frame.json");
+        let ocr_json = serde_json::to_string_pretty(&thread.ocr_data)?;
         fs::write(&ocr_path, ocr_json)?;
 
         // Save messages files.
         // - messages.json: canonical structured source for metadata-aware rendering
         // - messages.md: backward-compatible human-readable transcript
-        let messages_json_path = chat_dir.join("messages.json");
-        let messages_path = chat_dir.join("messages.md");
-        if !chat.messages.is_empty() {
-            let json_content = serde_json::to_string_pretty(&chat.messages)?;
+        let messages_json_path = thread_dir.join("messages.json");
+        let messages_path = thread_dir.join("messages.md");
+        if !thread.messages.is_empty() {
+            let json_content = serde_json::to_string_pretty(&thread.messages)?;
             fs::write(&messages_json_path, json_content)?;
-            let md_content = self.messages_to_markdown(&chat.messages);
+            let md_content = self.messages_to_markdown(&thread.messages);
             fs::write(&messages_path, md_content)?;
         } else if messages_path.exists() {
             fs::remove_file(&messages_path)?;
@@ -364,42 +364,42 @@ impl ChatStorage {
         }
 
         // Save imgbb URL if present
-        if let Some(ref url) = chat.imgbb_url {
-            let url_path = chat_dir.join("imgbb_url.txt");
+        if let Some(ref url) = thread.imgbb_url {
+            let url_path = thread_dir.join("imgbb_url.txt");
             fs::write(&url_path, url)?;
         } else {
-            let url_path = chat_dir.join("imgbb_url.txt");
+            let url_path = thread_dir.join("imgbb_url.txt");
             if url_path.exists() {
                 fs::remove_file(url_path)?;
             }
         }
 
-        let attachment_registry_path = chat_dir.join("attachment_registry.json");
-        if !chat.attachment_registry.is_empty() {
-            let registry_json = serde_json::to_string_pretty(&chat.attachment_registry)?;
+        let attachment_registry_path = thread_dir.join("attachment_registry.json");
+        if !thread.attachment_registry.is_empty() {
+            let registry_json = serde_json::to_string_pretty(&thread.attachment_registry)?;
             fs::write(&attachment_registry_path, registry_json)?;
         } else if attachment_registry_path.exists() {
             fs::remove_file(&attachment_registry_path)?;
         }
 
         // Update the index
-        self.update_index(&chat.metadata)?;
+        self.update_index(&thread.metadata)?;
 
         Ok(())
     }
 
-    /// Load a chat by ID.
-    pub fn load_chat(&self, chat_id: &str) -> Result<ChatData> {
-        let chat_dir = self.chat_dir(chat_id);
+    /// Load a thread by ID.
+    pub fn load_thread(&self, thread_id: &str) -> Result<ThreadData> {
+        let thread_dir = self.thread_dir(thread_id);
 
-        if !chat_dir.exists() {
-            return Err(StorageError::ChatNotFound(chat_id.to_string()));
+        if !thread_dir.exists() {
+            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
 
         // Load metadata
-        let meta_path = chat_dir.join("meta.json");
+        let meta_path = thread_dir.join("meta.json");
         let meta_json = fs::read_to_string(&meta_path)?;
-        let mut metadata: ChatMetadata = serde_json::from_str(&meta_json)?;
+        let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
         let mut metadata_changed = false;
         if let Some(lang) = metadata.ocr_lang.clone() {
             let normalized_lang = normalize_ocr_model_id(&lang).to_string();
@@ -410,8 +410,8 @@ impl ChatStorage {
         }
 
         // Load OCR frame (supports one-time conversion from old ocr.json).
-        let frame_path = chat_dir.join("ocr_frame.json");
-        let old_frame_path = chat_dir.join("ocr.json");
+        let frame_path = thread_dir.join("ocr_frame.json");
+        let old_frame_path = thread_dir.join("ocr.json");
         let mut frame_changed = false;
         let mut ocr_data: OcrFrame = if frame_path.exists() {
             let json = fs::read_to_string(&frame_path)?;
@@ -445,11 +445,11 @@ impl ChatStorage {
         }
 
         // Load messages (prefer structured JSON, fallback to legacy markdown)
-        let messages_json_path = chat_dir.join("messages.json");
-        let messages_path = chat_dir.join("messages.md");
+        let messages_json_path = thread_dir.join("messages.json");
+        let messages_path = thread_dir.join("messages.md");
         let messages = if messages_json_path.exists() {
             let json_content = fs::read_to_string(&messages_json_path)?;
-            serde_json::from_str::<Vec<ChatMessage>>(&json_content)?
+            serde_json::from_str::<Vec<ThreadMessage>>(&json_content)?
         } else if messages_path.exists() {
             let md_content = fs::read_to_string(&messages_path)?;
             self.markdown_to_messages(&md_content)
@@ -458,7 +458,7 @@ impl ChatStorage {
         };
 
         // Load imgbb URL
-        let url_path = chat_dir.join("imgbb_url.txt");
+        let url_path = thread_dir.join("imgbb_url.txt");
         let imgbb_url = if url_path.exists() {
             Some(fs::read_to_string(&url_path)?)
         } else {
@@ -466,7 +466,7 @@ impl ChatStorage {
         };
 
         // Load rolling summary
-        let summary_path = chat_dir.join("rolling_summary.txt");
+        let summary_path = thread_dir.join("rolling_summary.txt");
         let rolling_summary = if summary_path.exists() {
             Some(fs::read_to_string(&summary_path)?)
         } else {
@@ -474,14 +474,14 @@ impl ChatStorage {
         };
 
         // Load image brief
-        let brief_path = chat_dir.join("image_brief.txt");
+        let brief_path = thread_dir.join("image_brief.txt");
         let image_brief = if brief_path.exists() {
             Some(fs::read_to_string(&brief_path)?)
         } else {
             None
         };
 
-        let attachment_registry_path = chat_dir.join("attachment_registry.json");
+        let attachment_registry_path = thread_dir.join("attachment_registry.json");
         let attachment_registry = if attachment_registry_path.exists() {
             let json = fs::read_to_string(&attachment_registry_path)?;
             serde_json::from_str::<AttachmentRegistry>(&json)?
@@ -489,7 +489,7 @@ impl ChatStorage {
             AttachmentRegistry::new()
         };
 
-        Ok(ChatData {
+        Ok(ThreadData {
             metadata,
             messages,
             ocr_data,
@@ -500,15 +500,15 @@ impl ChatStorage {
         })
     }
 
-    /// Save the detected tone for a chat to its metadata directly.
-    pub fn save_image_tone(&self, chat_id: &str, tone: &str) -> Result<()> {
-        let chat_dir = self.chat_dir(chat_id);
-        if !chat_dir.exists() {
-            return Err(StorageError::ChatNotFound(chat_id.to_string()));
+    /// Save the detected tone for a thread to its metadata directly.
+    pub fn save_image_tone(&self, thread_id: &str, tone: &str) -> Result<()> {
+        let thread_dir = self.thread_dir(thread_id);
+        if !thread_dir.exists() {
+            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
-        let meta_path = chat_dir.join("meta.json");
+        let meta_path = thread_dir.join("meta.json");
         let meta_json = fs::read_to_string(&meta_path)?;
-        let mut metadata: ChatMetadata = serde_json::from_str(&meta_json)?;
+        let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
 
         metadata.image_tone = Some(tone.to_string());
         metadata.updated_at = chrono::Utc::now();
@@ -520,52 +520,52 @@ impl ChatStorage {
         Ok(())
     }
 
-    /// Save image brief for a chat.
-    pub fn save_image_brief(&self, chat_id: &str, brief: &str) -> Result<()> {
-        let chat_dir = self.chat_dir(chat_id);
-        if !chat_dir.exists() {
-            return Err(StorageError::ChatNotFound(chat_id.to_string()));
+    /// Save image brief for a thread.
+    pub fn save_image_brief(&self, thread_id: &str, brief: &str) -> Result<()> {
+        let thread_dir = self.thread_dir(thread_id);
+        if !thread_dir.exists() {
+            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
-        let brief_path = chat_dir.join("image_brief.txt");
+        let brief_path = thread_dir.join("image_brief.txt");
         fs::write(&brief_path, brief)?;
         Ok(())
     }
 
-    /// List all chats (metadata only).
-    pub fn list_chats(&self) -> Result<Vec<ChatMetadata>> {
+    /// List all threads (metadata only).
+    pub fn list_threads(&self) -> Result<Vec<ThreadMetadata>> {
         if !self.index_path.exists() {
             return Ok(Vec::new());
         }
 
         let index_json = fs::read_to_string(&self.index_path)?;
-        let chats: Vec<ChatMetadata> = serde_json::from_str(&index_json)?;
-        Ok(chats)
+        let threads: Vec<ThreadMetadata> = serde_json::from_str(&index_json)?;
+        Ok(threads)
     }
 
-    /// Delete a chat by ID.
-    pub fn delete_chat(&self, chat_id: &str) -> Result<()> {
-        let chat_dir = self.chat_dir(chat_id);
+    /// Delete a thread by ID.
+    pub fn delete_thread(&self, thread_id: &str) -> Result<()> {
+        let thread_dir = self.thread_dir(thread_id);
 
-        if chat_dir.exists() {
-            fs::remove_dir_all(&chat_dir)?;
+        if thread_dir.exists() {
+            fs::remove_dir_all(&thread_dir)?;
         }
 
-        // Update index to remove the chat
-        self.remove_from_index(chat_id)?;
+        // Update index to remove the thread
+        self.remove_from_index(thread_id)?;
 
         Ok(())
     }
 
-    /// Update chat metadata (for rename, pin, star, etc.).
-    pub fn update_chat_metadata(&self, metadata: &ChatMetadata) -> Result<()> {
-        let chat_dir = self.chat_dir(&metadata.id);
+    /// Update thread metadata (for rename, pin, star, etc.).
+    pub fn update_thread_metadata(&self, metadata: &ThreadMetadata) -> Result<()> {
+        let thread_dir = self.thread_dir(&metadata.id);
 
-        if !chat_dir.exists() {
-            return Err(StorageError::ChatNotFound(metadata.id.clone()));
+        if !thread_dir.exists() {
+            return Err(StorageError::ThreadNotFound(metadata.id.clone()));
         }
 
         // Save updated metadata
-        let meta_path = chat_dir.join("meta.json");
+        let meta_path = thread_dir.join("meta.json");
         let meta_json = serde_json::to_string_pretty(metadata)?;
         fs::write(&meta_path, meta_json)?;
 
@@ -579,20 +579,20 @@ impl ChatStorage {
     // OCR and ImgBB
     // =========================================================================
 
-    /// Save OCR data for a specific model into the chat's OCR frame.
+    /// Save OCR data for a specific model into the thread's OCR frame.
     /// Merges the data into the existing frame (read-modify-write).
     pub fn save_ocr_data(
         &self,
-        chat_id: &str,
+        thread_id: &str,
         model_id: &str,
         ocr_data: &[OcrRegion],
     ) -> Result<()> {
-        let chat_dir = self.chat_dir(chat_id);
-        fs::create_dir_all(&chat_dir)?;
+        let thread_dir = self.thread_dir(thread_id);
+        fs::create_dir_all(&thread_dir)?;
         let canonical_model_id = canonicalize_ocr_frame_id(model_id)
             .ok_or_else(|| StorageError::InvalidOcrModel(model_id.to_string()))?;
 
-        let frame_path = chat_dir.join("ocr_frame.json");
+        let frame_path = thread_dir.join("ocr_frame.json");
         let mut frame: OcrFrame = if frame_path.exists() {
             let json = fs::read_to_string(&frame_path)?;
             serde_json::from_str(&json)?
@@ -609,10 +609,10 @@ impl ChatStorage {
         Ok(())
     }
 
-    /// Get OCR data for a specific model from the chat's frame.
+    /// Get OCR data for a specific model from the thread's frame.
     /// Returns None if the model hasn't scanned yet, or empty vec if no frame exists.
-    pub fn get_ocr_data(&self, chat_id: &str, model_id: &str) -> Result<Option<Vec<OcrRegion>>> {
-        let frame_path = self.chat_dir(chat_id).join("ocr_frame.json");
+    pub fn get_ocr_data(&self, thread_id: &str, model_id: &str) -> Result<Option<Vec<OcrRegion>>> {
+        let frame_path = self.thread_dir(thread_id).join("ocr_frame.json");
         let canonical_model_id = canonicalize_ocr_frame_id(model_id)
             .ok_or_else(|| StorageError::InvalidOcrModel(model_id.to_string()))?;
 
@@ -629,9 +629,9 @@ impl ChatStorage {
         Ok(frame.get(canonical_model_id).cloned().unwrap_or(None))
     }
 
-    /// Get the entire OCR frame for a chat.
-    pub fn get_ocr_frame(&self, chat_id: &str) -> Result<OcrFrame> {
-        let frame_path = self.chat_dir(chat_id).join("ocr_frame.json");
+    /// Get the entire OCR frame for a thread.
+    pub fn get_ocr_frame(&self, thread_id: &str) -> Result<OcrFrame> {
+        let frame_path = self.thread_dir(thread_id).join("ocr_frame.json");
 
         if !frame_path.exists() {
             return Ok(OcrFrame::new());
@@ -648,11 +648,11 @@ impl ChatStorage {
 
     /// Initialize an OCR frame with null values for all given model IDs.
     /// Only adds keys that don't already exist (won't overwrite cached data).
-    pub fn init_ocr_frame(&self, chat_id: &str, model_ids: &[String]) -> Result<()> {
-        let chat_dir = self.chat_dir(chat_id);
-        fs::create_dir_all(&chat_dir)?;
+    pub fn init_ocr_frame(&self, thread_id: &str, model_ids: &[String]) -> Result<()> {
+        let thread_dir = self.thread_dir(thread_id);
+        fs::create_dir_all(&thread_dir)?;
 
-        let frame_path = chat_dir.join("ocr_frame.json");
+        let frame_path = thread_dir.join("ocr_frame.json");
         let mut frame: OcrFrame = if frame_path.exists() {
             let json = fs::read_to_string(&frame_path)?;
             serde_json::from_str(&json)?
@@ -673,20 +673,20 @@ impl ChatStorage {
         Ok(())
     }
 
-    /// Save imgbb URL for a chat.
-    pub fn save_imgbb_url(&self, chat_id: &str, url: &str) -> Result<()> {
-        let chat_dir = self.chat_dir(chat_id);
-        fs::create_dir_all(&chat_dir)?;
+    /// Save imgbb URL for a thread.
+    pub fn save_imgbb_url(&self, thread_id: &str, url: &str) -> Result<()> {
+        let thread_dir = self.thread_dir(thread_id);
+        fs::create_dir_all(&thread_dir)?;
 
-        let url_path = chat_dir.join("imgbb_url.txt");
+        let url_path = thread_dir.join("imgbb_url.txt");
         fs::write(&url_path, url)?;
 
         Ok(())
     }
 
-    /// Get imgbb URL for a chat.
-    pub fn get_imgbb_url(&self, chat_id: &str) -> Result<Option<String>> {
-        let url_path = self.chat_dir(chat_id).join("imgbb_url.txt");
+    /// Get imgbb URL for a thread.
+    pub fn get_imgbb_url(&self, thread_id: &str) -> Result<Option<String>> {
+        let url_path = self.thread_dir(thread_id).join("imgbb_url.txt");
 
         if !url_path.exists() {
             return Ok(None);
@@ -696,20 +696,20 @@ impl ChatStorage {
         Ok(Some(url))
     }
 
-    /// Save rolling summary for a chat.
-    pub fn save_rolling_summary(&self, chat_id: &str, summary: &str) -> Result<()> {
-        let chat_dir = self.chat_dir(chat_id);
-        fs::create_dir_all(&chat_dir)?;
+    /// Save rolling summary for a thread.
+    pub fn save_rolling_summary(&self, thread_id: &str, summary: &str) -> Result<()> {
+        let thread_dir = self.thread_dir(thread_id);
+        fs::create_dir_all(&thread_dir)?;
 
-        let summary_path = chat_dir.join("rolling_summary.txt");
+        let summary_path = thread_dir.join("rolling_summary.txt");
         fs::write(&summary_path, summary)?;
 
         Ok(())
     }
 
-    /// Get rolling summary for a chat.
-    pub fn get_rolling_summary(&self, chat_id: &str) -> Result<Option<String>> {
-        let summary_path = self.chat_dir(chat_id).join("rolling_summary.txt");
+    /// Get rolling summary for a thread.
+    pub fn get_rolling_summary(&self, thread_id: &str) -> Result<Option<String>> {
+        let summary_path = self.thread_dir(thread_id).join("rolling_summary.txt");
 
         if !summary_path.exists() {
             return Ok(None);
@@ -719,20 +719,20 @@ impl ChatStorage {
         Ok(Some(summary))
     }
 
-    /// Append a message to a chat.
-    pub fn append_message(&self, chat_id: &str, message: &ChatMessage) -> Result<()> {
-        let chat_dir = self.chat_dir(chat_id);
-        fs::create_dir_all(&chat_dir)?;
+    /// Append a message to a thread.
+    pub fn append_message(&self, thread_id: &str, message: &ThreadMessage) -> Result<()> {
+        let thread_dir = self.thread_dir(thread_id);
+        fs::create_dir_all(&thread_dir)?;
 
-        let messages_json_path = chat_dir.join("messages.json");
-        let messages_path = chat_dir.join("messages.md");
+        let messages_json_path = thread_dir.join("messages.json");
+        let messages_path = thread_dir.join("messages.md");
 
         // Keep a structured JSON transcript for metadata-aware rendering.
-        let mut json_messages: Vec<ChatMessage> = if messages_json_path.exists() {
+        let mut json_messages: Vec<ThreadMessage> = if messages_json_path.exists() {
             let json = fs::read_to_string(&messages_json_path)?;
             serde_json::from_str(&json)?
         } else if messages_path.exists() {
-            // One-time migration path for older chats that only have markdown.
+            // One-time migration path for older threads that only have markdown.
             let md_content = fs::read_to_string(&messages_path)?;
             self.markdown_to_messages(&md_content)
         } else {
@@ -752,11 +752,11 @@ impl ChatStorage {
         let md_entry = self.message_to_markdown(message);
         md_file.write_all(md_entry.as_bytes())?;
 
-        // Update the chat's updated_at timestamp
-        let meta_path = chat_dir.join("meta.json");
+        // Update the thread's updated_at timestamp
+        let meta_path = thread_dir.join("meta.json");
         if meta_path.exists() {
             let meta_json = fs::read_to_string(&meta_path)?;
-            let mut metadata: ChatMetadata = serde_json::from_str(&meta_json)?;
+            let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
             metadata.updated_at = chrono::Utc::now();
             let updated_json = serde_json::to_string_pretty(&metadata)?;
             fs::write(&meta_path, updated_json)?;
@@ -770,38 +770,38 @@ impl ChatStorage {
     // Internal Helpers
     // =========================================================================
 
-    /// Update the index with chat metadata.
-    fn update_index(&self, metadata: &ChatMetadata) -> Result<()> {
-        let mut chats = self.list_chats().unwrap_or_default();
+    /// Update the index with thread metadata.
+    fn update_index(&self, metadata: &ThreadMetadata) -> Result<()> {
+        let mut threads = self.list_threads().unwrap_or_default();
 
         // Remove existing entry if present
-        chats.retain(|c| c.id != metadata.id);
+        threads.retain(|c| c.id != metadata.id);
 
         // Add updated entry
-        chats.push(metadata.clone());
+        threads.push(metadata.clone());
 
         // Sort by updated_at descending
-        chats.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        threads.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
 
-        let json = serde_json::to_string_pretty(&chats)?;
+        let json = serde_json::to_string_pretty(&threads)?;
         fs::write(&self.index_path, json)?;
 
         Ok(())
     }
 
-    /// Remove a chat from the index.
-    fn remove_from_index(&self, chat_id: &str) -> Result<()> {
-        let mut chats = self.list_chats().unwrap_or_default();
-        chats.retain(|c| c.id != chat_id);
+    /// Remove a thread from the index.
+    fn remove_from_index(&self, thread_id: &str) -> Result<()> {
+        let mut threads = self.list_threads().unwrap_or_default();
+        threads.retain(|c| c.id != thread_id);
 
-        let json = serde_json::to_string_pretty(&chats)?;
+        let json = serde_json::to_string_pretty(&threads)?;
         fs::write(&self.index_path, json)?;
 
         Ok(())
     }
 
     /// Convert messages to markdown format.
-    fn messages_to_markdown(&self, messages: &[ChatMessage]) -> String {
+    fn messages_to_markdown(&self, messages: &[ThreadMessage]) -> String {
         messages
             .iter()
             .map(|m| self.message_to_markdown(m))
@@ -810,7 +810,7 @@ impl ChatStorage {
     }
 
     /// Convert a single message to markdown.
-    fn message_to_markdown(&self, message: &ChatMessage) -> String {
+    fn message_to_markdown(&self, message: &ThreadMessage) -> String {
         let role_label = if message.role == "user" {
             "## User"
         } else {
@@ -826,7 +826,7 @@ impl ChatStorage {
     }
 
     /// Parse markdown back to messages.
-    fn markdown_to_messages(&self, content: &str) -> Vec<ChatMessage> {
+    fn markdown_to_messages(&self, content: &str) -> Vec<ThreadMessage> {
         let mut messages = Vec::new();
         let mut current_role: Option<String> = None;
         let mut current_timestamp: Option<chrono::DateTime<chrono::Utc>> = None;
@@ -836,7 +836,7 @@ impl ChatStorage {
             if line.starts_with("## User") {
                 // Save previous message if any
                 if let Some(role) = current_role.take() {
-                    messages.push(ChatMessage {
+                    messages.push(ThreadMessage {
                         role,
                         content: current_content.trim().to_string(),
                         timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
@@ -850,7 +850,7 @@ impl ChatStorage {
             } else if line.starts_with("## Assistant") {
                 // Save previous message if any
                 if let Some(role) = current_role.take() {
-                    messages.push(ChatMessage {
+                    messages.push(ThreadMessage {
                         role,
                         content: current_content.trim().to_string(),
                         timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
@@ -875,7 +875,7 @@ impl ChatStorage {
 
         // Save last message
         if let Some(role) = current_role {
-            messages.push(ChatMessage {
+            messages.push(ThreadMessage {
                 role,
                 content: current_content.trim().to_string(),
                 timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
@@ -892,21 +892,21 @@ impl ChatStorage {
 mod tests {
     use super::*;
     #[allow(unused_imports)]
-    use crate::types::{ChatAttachmentKind, ChatAttachmentRecord};
+    use crate::types::{ThreadAttachmentKind, ThreadAttachmentRecord};
 
-    fn make_test_storage() -> (ChatStorage, PathBuf) {
+    fn make_test_storage() -> (ThreadStorage, PathBuf) {
         let base_dir =
             std::env::temp_dir().join(format!("squigit-ocr-storage-test-{}", uuid::Uuid::new_v4()));
-        let storage = ChatStorage::with_base_dir(base_dir.clone()).expect("storage init");
+        let storage = ThreadStorage::with_base_dir(base_dir.clone()).expect("storage init");
         (storage, base_dir)
     }
 
     #[test]
     fn auto_ocr_disabled_key_is_preserved_and_does_not_overwrite_english() {
         let (storage, base_dir) = make_test_storage();
-        let metadata = ChatMetadata::new("Test".to_string(), "0".repeat(64), None);
-        let chat = ChatData::new(metadata.clone());
-        storage.save_chat(&chat).expect("save chat");
+        let metadata = ThreadMetadata::new("Test".to_string(), "0".repeat(64), None);
+        let thread = ThreadData::new(metadata.clone());
+        storage.save_thread(&thread).expect("save thread");
 
         let en_regions = vec![OcrRegion {
             text: "hello".to_string(),
@@ -939,7 +939,7 @@ mod tests {
     #[test]
     fn invalid_ocr_model_id_returns_error() {
         let (storage, base_dir) = make_test_storage();
-        let result = storage.save_ocr_data("chat-1", "bogus-model", &[]);
+        let result = storage.save_ocr_data("thread-1", "bogus-model", &[]);
 
         assert!(matches!(result, Err(StorageError::InvalidOcrModel(_))));
 
@@ -949,14 +949,14 @@ mod tests {
     #[test]
     fn attachment_registry_round_trips_via_sidecar() {
         let (storage, base_dir) = make_test_storage();
-        let metadata = ChatMetadata::new("Registry".to_string(), "0".repeat(64), None);
-        let mut chat = ChatData::new(metadata.clone());
-        chat.attachment_registry.insert(
-            "/tmp/chats/objects/ab/file.pdf".to_string(),
-            ChatAttachmentRecord {
-                cas_path: "/tmp/chats/objects/ab/file.pdf".to_string(),
+        let metadata = ThreadMetadata::new("Registry".to_string(), "0".repeat(64), None);
+        let mut thread = ThreadData::new(metadata.clone());
+        thread.attachment_registry.insert(
+            "/tmp/threads/objects/ab/file.pdf".to_string(),
+            ThreadAttachmentRecord {
+                cas_path: "/tmp/threads/objects/ab/file.pdf".to_string(),
                 display_name: "file.pdf".to_string(),
-                kind: ChatAttachmentKind::DocumentUpload,
+                kind: ThreadAttachmentKind::DocumentUpload,
                 mime_type: "application/pdf".to_string(),
                 source_path: None,
                 provider_file: None,
@@ -965,13 +965,13 @@ mod tests {
             },
         );
 
-        storage.save_chat(&chat).expect("save chat with registry");
+        storage.save_thread(&thread).expect("save thread with registry");
 
-        let loaded = storage.load_chat(&metadata.id).expect("load chat");
+        let loaded = storage.load_thread(&metadata.id).expect("load thread");
         assert_eq!(loaded.attachment_registry.len(), 1);
         assert!(loaded
             .attachment_registry
-            .contains_key("/tmp/chats/objects/ab/file.pdf"));
+            .contains_key("/tmp/threads/objects/ab/file.pdf"));
 
         let _ = std::fs::remove_dir_all(base_dir);
     }

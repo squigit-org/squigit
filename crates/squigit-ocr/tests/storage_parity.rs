@@ -1,23 +1,23 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_memory::{ChatData, ChatMetadata, ChatStorage};
-use squigit_ocr::ocr::{boxes_to_storage_regions, persist_boxes_to_chat_storage, OcrBox};
+use squigit_memory::{ThreadData, ThreadMetadata, ThreadStorage};
+use squigit_ocr::ocr::{boxes_to_storage_regions, persist_boxes_to_thread_storage, OcrBox};
 
 #[test]
-fn cli_style_ocr_write_is_renderable_through_shared_chat_storage_frame() {
+fn cli_style_ocr_write_is_renderable_through_shared_thread_storage_frame() {
     let temp = tempfile::tempdir().expect("tempdir");
-    let storage_root = temp.path().join("chats");
-    let storage = ChatStorage::with_base_dir(storage_root).expect("chat storage");
+    let storage_root = temp.path().join("threads");
+    let storage = ThreadStorage::with_base_dir(storage_root).expect("thread storage");
 
-    let metadata = ChatMetadata::new(
-        "Parity Chat".to_string(),
+    let metadata = ThreadMetadata::new(
+        "Parity Thread".to_string(),
         "deadbeef".to_string(),
         Some("pp-ocr-v5-en".to_string()),
     );
     storage
-        .save_chat(&ChatData::new(metadata.clone()))
-        .expect("save chat");
+        .save_thread(&ThreadData::new(metadata.clone()))
+        .expect("save thread");
 
     let boxes = vec![OcrBox {
         text: "Hello from cli renderer".to_string(),
@@ -29,7 +29,7 @@ fn cli_style_ocr_write_is_renderable_through_shared_chat_storage_frame() {
         ],
         confidence: 0.99,
     }];
-    persist_boxes_to_chat_storage(&storage, &metadata.id, "pp-ocr-v5-en", &boxes)
+    persist_boxes_to_thread_storage(&storage, &metadata.id, "pp-ocr-v5-en", &boxes)
         .expect("save ocr frame");
     let regions = boxes_to_storage_regions(&boxes);
 
@@ -47,8 +47,8 @@ fn cli_style_ocr_write_is_renderable_through_shared_chat_storage_frame() {
 #[test]
 fn invalid_model_id_is_still_rejected_by_shared_storage_contract() {
     let temp = tempfile::tempdir().expect("tempdir");
-    let storage = ChatStorage::with_base_dir(temp.path().join("chats")).expect("chat storage");
+    let storage = ThreadStorage::with_base_dir(temp.path().join("threads")).expect("thread storage");
 
-    let result = storage.save_ocr_data("chat-1", "unsupported-model", &[]);
+    let result = storage.save_ocr_data("thread-1", "unsupported-model", &[]);
     assert!(result.is_err(), "invalid model IDs must keep failing");
 }

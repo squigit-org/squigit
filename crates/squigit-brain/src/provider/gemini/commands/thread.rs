@@ -16,7 +16,7 @@ use crate::provider::gemini::agent::tool_orchestrator::{
     build_system_instruction_with_tool_policy, tool_status_text, tool_step_id,
 };
 use crate::provider::gemini::attachments::{
-    build_attachment_preview_context, build_chat_attachment_catalog, build_interleaved_parts,
+    build_attachment_preview_context, build_thread_attachment_catalog, build_interleaved_parts,
     extract_attachment_mentions, prepare_turn_attachments,
 };
 use crate::provider::gemini::transport::streaming::{
@@ -273,7 +273,7 @@ async fn stream_iteration_with_rate_limit_retry(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn stream_gemini_chat_v2(
+pub async fn stream_gemini_thread_v2(
     runtime: &BrainRuntimeState,
     sink: &dyn BrainEventSink,
     api_key: String,
@@ -290,7 +290,7 @@ pub async fn stream_gemini_chat_v2(
     // Current user message (empty on first turn for image-only analysis)
     user_message: String,
     channel_id: String,
-    chat_id: Option<String>,
+    thread_id: Option<String>,
     // Runtime context params (NEW)
     user_name: Option<String>,
     user_email: Option<String>,
@@ -397,7 +397,7 @@ pub async fn stream_gemini_chat_v2(
             );
 
             let mut composed_user_message = user_message.clone();
-            for (path, display_name) in crate::provider::gemini::attachments::load_chat_attachment_display_names(chat_id.as_deref())? {
+            for (path, display_name) in crate::provider::gemini::attachments::load_thread_attachment_display_names(thread_id.as_deref())? {
                 insert_attachment_display_name(
                     &mut attachment_display_name_by_path,
                     &path,
@@ -420,7 +420,7 @@ pub async fn stream_gemini_chat_v2(
                 }
             }
             let prepared_attachments = prepare_turn_attachments(
-                chat_id.as_deref(),
+                thread_id.as_deref(),
                 &attachment_mentions,
                 &api_key,
                 &runtime.provider_file_cache,
@@ -436,7 +436,7 @@ pub async fn stream_gemini_chat_v2(
                 composed_user_message.push_str(&preview_block);
             }
 
-            if let Some(attachment_catalog) = build_chat_attachment_catalog(chat_id.as_deref())? {
+            if let Some(attachment_catalog) = build_thread_attachment_catalog(thread_id.as_deref())? {
                 context_prompt.push_str("\n\n");
                 context_prompt.push_str(&attachment_catalog);
             }
@@ -599,7 +599,7 @@ pub async fn stream_gemini_chat_v2(
                 client: &client,
                 api_key: &api_key,
                 model: &model,
-                chat_id: chat_id.as_deref(),
+                thread_id: thread_id.as_deref(),
                 gemini_file_cache: &runtime.provider_file_cache,
                 request_control: &request_control,
                 web_state: &mut web_tool_state,

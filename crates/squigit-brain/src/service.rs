@@ -5,11 +5,11 @@ use crate::context::builder::format_history_log;
 use crate::provider::gemini::transport::types::GeminiEvent;
 use crate::events::BrainEventSink;
 use crate::runtime::BrainRuntimeState;
-use squigit_memory::{ChatData, ChatMessage, ChatMetadata, StoredImage};
+use squigit_memory::{ThreadData, ThreadMessage, ThreadMetadata, StoredImage};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
-pub struct StreamChatRequest {
+pub struct StreamThreadRequest {
     pub api_key: String,
     pub model: String,
     pub is_initial_turn: bool,
@@ -20,7 +20,7 @@ pub struct StreamChatRequest {
     pub rolling_summary: Option<String>,
     pub user_message: String,
     pub channel_id: String,
-    pub chat_id: Option<String>,
+    pub thread_id: Option<String>,
     pub user_name: Option<String>,
     pub user_email: Option<String>,
     pub user_instruction: Option<String>,
@@ -28,7 +28,7 @@ pub struct StreamChatRequest {
 }
 
 #[derive(Debug, Clone)]
-pub struct GenerateChatTitleRequest {
+pub struct GenerateThreadTitleRequest {
     pub api_key: String,
     pub model: String,
     pub prompt_context: String,
@@ -64,17 +64,17 @@ pub struct AnalyzeImageRequest {
 
 #[derive(Debug, Clone)]
 pub struct AnalyzeImageResult {
-    pub metadata: ChatMetadata,
+    pub metadata: ThreadMetadata,
     pub image: StoredImage,
     pub assistant_message: String,
     pub image_brief: Option<String>,
 }
 
 #[derive(Debug, Clone)]
-pub struct PromptChatRequest {
+pub struct PromptThreadRequest {
     pub api_key: String,
     pub model: String,
-    pub chat_id: String,
+    pub thread_id: String,
     pub user_message: String,
     pub channel_id: String,
     pub user_name: Option<String>,
@@ -82,8 +82,8 @@ pub struct PromptChatRequest {
 }
 
 #[derive(Debug, Clone)]
-pub struct PromptChatResult {
-    pub chat_id: String,
+pub struct PromptThreadResult {
+    pub thread_id: String,
     pub assistant_message: String,
     pub normalized_user_message: String,
 }
@@ -103,12 +103,12 @@ impl BrainService {
         &self.runtime
     }
 
-    pub async fn stream_chat(
+    pub async fn stream_thread(
         &self,
         sink: &dyn BrainEventSink,
-        request: StreamChatRequest,
+        request: StreamThreadRequest,
     ) -> Result<(), String> {
-        crate::provider::gemini::commands::chat::stream_gemini_chat_v2(
+        crate::provider::gemini::commands::thread::stream_gemini_thread_v2(
             &self.runtime,
             sink,
             request.api_key,
@@ -121,7 +121,7 @@ impl BrainService {
             request.rolling_summary,
             request.user_message,
             request.channel_id,
-            request.chat_id,
+            request.thread_id,
             request.user_name,
             request.user_email,
             request.user_instruction,
@@ -130,11 +130,11 @@ impl BrainService {
         .await
     }
 
-    pub async fn generate_chat_title(
+    pub async fn generate_thread_title(
         &self,
-        request: GenerateChatTitleRequest,
+        request: GenerateThreadTitleRequest,
     ) -> Result<String, String> {
-        crate::provider::gemini::commands::generation::generate_chat_title(
+        crate::provider::gemini::commands::generation::generate_thread_title(
             request.api_key,
             request.model,
             request.prompt_context,
@@ -192,20 +192,20 @@ impl BrainService {
         let image = crate::context::media::process_and_store_image(&request.image_path, None)?;
         let storage = crate::context::media::get_active_storage()?;
 
-        let mut metadata = ChatMetadata::new(
+        let mut metadata = ThreadMetadata::new(
             "Untitled".to_string(),
             image.hash.clone(),
             request.ocr_lang.clone(),
         );
         metadata.image_tone = storage.get_image_tone(&image.hash);
-        let chat = ChatData::new(metadata.clone());
-        storage.save_chat(&chat).map_err(|e| e.to_string())?;
+        let thread = ThreadData::new(metadata.clone());
+        storage.save_thread(&thread).map_err(|e| e.to_string())?;
 
         let text = request.user_message.unwrap_or_default();
         let collector = CollectingEventSink::new(Some(sink));
-        self.stream_chat(
+        self.stream_thread(
             &collector,
-            StreamChatRequest {
+            StreamThreadRequest {
                 api_key: request.api_key.clone(),
                 model: request.model.clone(),
                 is_initial_turn: true,
@@ -216,7 +216,7 @@ impl BrainService {
                 rolling_summary: None,
                 user_message: text.clone(),
                 channel_id: request.channel_id,
-                chat_id: Some(metadata.id.clone()),
+                thread_id: Some(metadata.id.clone()),
                 user_name: request.user_name,
                 user_email: request.user_email,
                 user_instruction: request.user_instruction,
@@ -229,12 +229,12 @@ impl BrainService {
 
         if !text.trim().is_empty() {
             storage
-                .append_message(&metadata.id, &ChatMessage::user(text.clone()))
+                .append_message(&metadata.id, &ThreadMessage::user(text.clone()))
                 .map_err(|e| e.to_string())?;
         }
         if !assistant_message.trim().is_empty() {
             storage
-                .append_message(&metadata.id, &ChatMessage::assistant(assistant_message.clone()))
+                .append_message(&metadata.id, &ThreadMessage::assistant(assistant_message.clone()))
                 .map_err(|e| e.to_string())?;
         }
 
@@ -256,7 +256,7 @@ impl BrainService {
 
         let title_context = format!("User: {}\nAssistant: {}", text, assistant_message);
         if let Ok(title) = self
-            .generate_chat_title(GenerateChatTitleRequest {
+            .generate_thread_title(GenerateThreadTitleRequest {
                 api_key,
                 model: request.model,
                 prompt_context: title_context,
@@ -266,7 +266,7 @@ impl BrainService {
             let trimmed = title.trim();
             if !trimmed.is_empty() {
                 metadata.title = trimmed.to_string();
-                let _ = storage.update_chat_metadata(&metadata);
+                let _ = storage.update_thread_metadata(&metadata);
             }
         }
 
@@ -278,34 +278,34 @@ impl BrainService {
         })
     }
 
-    pub async fn prompt_chat(
+    pub async fn prompt_thread(
         &self,
         sink: &dyn BrainEventSink,
-        request: PromptChatRequest,
-    ) -> Result<PromptChatResult, String> {
+        request: PromptThreadRequest,
+    ) -> Result<PromptThreadResult, String> {
         let storage = crate::context::media::get_active_storage()?;
-        let chat = storage
-            .load_chat(&request.chat_id)
+        let thread = storage
+            .load_thread(&request.thread_id)
             .map_err(|e| e.to_string())?;
         let normalized_user_message =
             normalize_prompt_message_with_at_paths(&storage, &request.user_message)?;
 
         let image_path = storage
-            .get_image_path(&chat.metadata.image_hash)
+            .get_image_path(&thread.metadata.image_hash)
             .map_err(|e| e.to_string())?;
 
         let mut history_pairs = Vec::new();
-        for message in &chat.messages {
+        for message in &thread.messages {
             history_pairs.push((message.role.clone(), message.content.clone()));
         }
 
-        let image_description = chat
+        let image_description = thread
             .messages
             .iter()
             .find(|message| message.role == "assistant")
             .map(|message| message.content.clone())
             .unwrap_or_default();
-        let user_first_msg = chat
+        let user_first_msg = thread
             .messages
             .iter()
             .find(|message| message.role == "user")
@@ -313,9 +313,9 @@ impl BrainService {
             .unwrap_or_default();
 
         let collector = CollectingEventSink::new(Some(sink));
-        self.stream_chat(
+        self.stream_thread(
             &collector,
-            StreamChatRequest {
+            StreamThreadRequest {
                 api_key: request.api_key.clone(),
                 model: request.model.clone(),
                 is_initial_turn: false,
@@ -323,14 +323,14 @@ impl BrainService {
                 image_description: Some(image_description),
                 user_first_msg: Some(user_first_msg),
                 history_log: Some(format_history_log(&history_pairs, 12)),
-                rolling_summary: chat.rolling_summary.clone(),
+                rolling_summary: thread.rolling_summary.clone(),
                 user_message: normalized_user_message.clone(),
                 channel_id: request.channel_id,
-                chat_id: Some(request.chat_id.clone()),
+                thread_id: Some(request.thread_id.clone()),
                 user_name: request.user_name,
                 user_email: request.user_email,
                 user_instruction: None,
-                image_brief: chat.image_brief.clone(),
+                image_brief: thread.image_brief.clone(),
             },
         )
         .await?;
@@ -339,22 +339,22 @@ impl BrainService {
 
         storage
             .append_message(
-                &request.chat_id,
-                &ChatMessage::user(normalized_user_message.clone()),
+                &request.thread_id,
+                &ThreadMessage::user(normalized_user_message.clone()),
             )
             .map_err(|e| e.to_string())?;
         storage
             .append_message(
-                &request.chat_id,
-                &ChatMessage::assistant(assistant_message.clone()),
+                &request.thread_id,
+                &ThreadMessage::assistant(assistant_message.clone()),
             )
             .map_err(|e| e.to_string())?;
 
-        let mut metadata = chat.metadata;
+        let mut metadata = thread.metadata;
         if metadata.title == "Untitled" || metadata.title == "New thread" || metadata.title.trim().is_empty() {
             let title_context = format!("User: {}\nAssistant: {}", normalized_user_message, assistant_message);
             if let Ok(title) = self
-                .generate_chat_title(GenerateChatTitleRequest {
+                .generate_thread_title(GenerateThreadTitleRequest {
                     api_key: request.api_key.clone(),
                     model: request.model.clone(),
                     prompt_context: title_context,
@@ -364,13 +364,13 @@ impl BrainService {
                 let trimmed = title.trim();
                 if !trimmed.is_empty() {
                     metadata.title = trimmed.to_string();
-                    let _ = storage.update_chat_metadata(&metadata);
+                    let _ = storage.update_thread_metadata(&metadata);
                 }
             }
         }
 
-        Ok(PromptChatResult {
-            chat_id: request.chat_id,
+        Ok(PromptThreadResult {
+            thread_id: request.thread_id,
             assistant_message,
             normalized_user_message,
         })
@@ -421,7 +421,7 @@ impl BrainEventSink for CollectingEventSink<'_> {
 }
 
 fn normalize_prompt_message_with_at_paths(
-    storage: &squigit_memory::ChatStorage,
+    storage: &squigit_memory::ThreadStorage,
     input: &str,
 ) -> Result<String, String> {
     let mut changed = false;

@@ -103,7 +103,7 @@ fn parse_kind(path: &Path) -> Result<&'static str, String> {
 }
 
 fn resolution_error_code(message: &str) -> &'static str {
-    if message.contains("outside active chat storage scope") {
+    if message.contains("outside active thread storage scope") {
         return "path_out_of_scope";
     }
     if message.contains("Attachment not found") {
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn resolution_errors_map_to_codes() {
         assert_eq!(
-            resolution_error_code("Attachment path is outside active chat storage scope"),
+            resolution_error_code("Attachment path is outside active thread storage scope"),
             "path_out_of_scope"
         );
         assert_eq!(

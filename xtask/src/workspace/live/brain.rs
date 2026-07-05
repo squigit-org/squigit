@@ -21,7 +21,7 @@ pub fn prompt(runtime: &Runtime, thread: &str, message: &[String]) -> XtaskResul
 }
 
 pub fn threads(runtime: &Runtime) -> XtaskResult {
-    run_harness(runtime, "chats", &[])?;
+    run_harness(runtime, "threads", &[])?;
     runtime.success("Temporary brain threads listed.");
     Ok(())
 }
@@ -122,6 +122,6 @@ mod tests {
     fn listing_threads_does_not_require_an_api_key() {
         assert!(operation_requires_api_key("analyze"));
         assert!(operation_requires_api_key("prompt"));
-        assert!(!operation_requires_api_key("chats"));
+        assert!(!operation_requires_api_key("threads"));
     }
 }

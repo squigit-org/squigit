@@ -1,19 +1,19 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_memory::{ChatStorage, StoredImage};
+use squigit_memory::{ThreadStorage, StoredImage};
 use squigit_auth::ProfileStore;
 use serde::Deserialize;
 use std::path::Path;
 
-pub fn get_active_storage() -> Result<ChatStorage, String> {
+pub fn get_active_storage() -> Result<ThreadStorage, String> {
     let profile_store = ProfileStore::new().map_err(|e| e.to_string())?;
     let active_id = profile_store
         .get_active_profile_id()
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "No active profile. Please log in first.".to_string())?;
-    let chats_dir = profile_store.get_chats_dir(&active_id);
-    ChatStorage::with_base_dir(chats_dir).map_err(|e| e.to_string())
+    let threads_dir = profile_store.get_threads_dir(&active_id);
+    ThreadStorage::with_base_dir(threads_dir).map_err(|e| e.to_string())
 }
 
 pub fn process_bytes_internal(

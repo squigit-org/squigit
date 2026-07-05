@@ -1,33 +1,33 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Type definitions for chat storage.
+//! Type definitions for thread storage.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use uuid::Uuid;
 
-/// Metadata for a chat session.
+/// Metadata for a thread session.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChatMetadata {
-    /// Unique identifier for the chat.
+pub struct ThreadMetadata {
+    /// Unique identifier for the thread.
     pub id: String,
-    /// Display title for the chat.
+    /// Display title for the thread.
     pub title: String,
-    /// When the chat was created.
+    /// When the thread was created.
     pub created_at: DateTime<Utc>,
-    /// When the chat was last updated.
+    /// When the thread was last updated.
     pub updated_at: DateTime<Utc>,
     /// BLAKE3 hash of the associated image.
     pub image_hash: String,
-    /// Whether the chat is pinned.
+    /// Whether the thread is pinned.
     #[serde(default)]
     pub is_pinned: bool,
-    /// Whether the chat is starred (favorite).
+    /// Whether the thread is starred (favorite).
     #[serde(default)]
     pub is_starred: bool,
-    /// When the chat was pinned.
+    /// When the thread was pinned.
     #[serde(default)]
     pub pinned_at: Option<DateTime<Utc>>,
     pub ocr_lang: Option<String>,
@@ -36,7 +36,7 @@ pub struct ChatMetadata {
     pub image_tone: Option<String>,
 }
 
-impl ChatMetadata {
+impl ThreadMetadata {
     /// Create new thread metadata with a generated ID.
     pub fn new(title: String, image_hash: String, ocr_lang: Option<String>) -> Self {
         let now = Utc::now();
@@ -61,9 +61,9 @@ impl ChatMetadata {
     }
 }
 
-/// A single chat message.
+/// A single thread message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChatMessage {
+pub struct ThreadMessage {
     /// Role: "user" or "assistant".
     pub role: String,
     /// Message content (markdown).
@@ -100,7 +100,7 @@ pub struct ToolStep {
     pub message: Option<String>,
 }
 
-impl ChatMessage {
+impl ThreadMessage {
     /// Create a new user message.
     pub fn user(content: String) -> Self {
         Self {
@@ -143,10 +143,10 @@ fn now_utc() -> DateTime<Utc> {
     Utc::now()
 }
 
-/// Attachment kinds tracked per chat.
+/// Attachment kinds tracked per thread.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum ChatAttachmentKind {
+pub enum ThreadAttachmentKind {
     TextLocal,
     ImageUpload,
     DocumentUpload,
@@ -154,7 +154,7 @@ pub enum ChatAttachmentKind {
 
 /// Persisted provider-hosted file handle for a tracked attachment.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ChatAttachmentProviderFile {
+pub struct ThreadAttachmentProviderFile {
     pub file_uri: String,
     pub file_name: String,
     pub mime_type: String,
@@ -164,34 +164,34 @@ pub struct ChatAttachmentProviderFile {
     pub last_validated_at: Option<DateTime<Utc>>,
 }
 
-/// Per-chat tracked attachment metadata keyed by CAS path.
+/// Per-thread tracked attachment metadata keyed by CAS path.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ChatAttachmentRecord {
+pub struct ThreadAttachmentRecord {
     pub cas_path: String,
     pub display_name: String,
-    pub kind: ChatAttachmentKind,
+    pub kind: ThreadAttachmentKind,
     pub mime_type: String,
     #[serde(default)]
     pub source_path: Option<String>,
     #[serde(default)]
-    pub provider_file: Option<ChatAttachmentProviderFile>,
+    pub provider_file: Option<ThreadAttachmentProviderFile>,
     #[serde(default = "now_utc")]
     pub last_seen_at: DateTime<Utc>,
     #[serde(default)]
     pub last_recalled_at: Option<DateTime<Utc>>,
 }
 
-/// Attachment registry persisted alongside chat data.
-pub type AttachmentRegistry = BTreeMap<String, ChatAttachmentRecord>;
+/// Attachment registry persisted alongside thread data.
+pub type AttachmentRegistry = BTreeMap<String, ThreadAttachmentRecord>;
 
-/// Complete chat data including messages and OCR.
+/// Complete thread data including messages and OCR.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChatData {
-    /// Chat metadata.
-    pub metadata: ChatMetadata,
-    /// Chat messages.
+pub struct ThreadData {
+    /// Thread metadata.
+    pub metadata: ThreadMetadata,
+    /// Thread messages.
     #[serde(default)]
-    pub messages: Vec<ChatMessage>,
+    pub messages: Vec<ThreadMessage>,
     /// OCR frame: keyed by model_id, each value is cached results or null.
     #[serde(default)]
     pub ocr_data: OcrFrame,
@@ -202,7 +202,7 @@ pub struct ChatData {
     /// Persisted so summaries survive app restarts and session switches.
     #[serde(default)]
     pub rolling_summary: Option<String>,
-    /// Per-chat tracked attachments keyed by CAS path.
+    /// Per-thread tracked attachments keyed by CAS path.
     #[serde(default)]
     pub attachment_registry: AttachmentRegistry,
     /// Generated concise text description of the session's startup image.
@@ -210,9 +210,9 @@ pub struct ChatData {
     pub image_brief: Option<String>,
 }
 
-impl ChatData {
+impl ThreadData {
     /// Create new thread data with metadata.
-    pub fn new(metadata: ChatMetadata) -> Self {
+    pub fn new(metadata: ThreadMetadata) -> Self {
         Self {
             metadata,
             messages: Vec::new(),

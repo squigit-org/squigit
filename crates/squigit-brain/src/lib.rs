@@ -12,6 +12,6 @@ pub mod system;
 pub mod tools;
 
 pub use service::{
-    AnalyzeImageRequest, BrainService, CompressConversationRequest, GenerateChatTitleRequest,
-    GenerateImageBriefRequest, PromptChatRequest, StreamChatRequest,
+    AnalyzeImageRequest, BrainService, CompressConversationRequest, GenerateThreadTitleRequest,
+    GenerateImageBriefRequest, PromptThreadRequest, StreamThreadRequest,
 };

@@ -24,7 +24,7 @@ pub(crate) struct ToolDispatchContext<'a> {
     pub(crate) client: &'a reqwest::Client,
     pub(crate) api_key: &'a str,
     pub(crate) model: &'a str,
-    pub(crate) chat_id: Option<&'a str>,
+    pub(crate) thread_id: Option<&'a str>,
     pub(crate) gemini_file_cache: &'a std::sync::Arc<
         tokio::sync::Mutex<
             HashMap<String, crate::provider::gemini::attachments::GeminiFileRef>,
@@ -55,8 +55,8 @@ where
         "read_local_attachment_context" => {
             Ok(execute_local_attachment_context(function_call, context).await)
         }
-        "recall_chat_attachment" => {
-            Ok(execute_recall_chat_attachment(function_call, context).await)
+        "recall_thread_attachment" => {
+            Ok(execute_recall_thread_attachment(function_call, context).await)
         }
         _ => Ok(ToolDispatchResult {
             response_value: json!({
@@ -159,20 +159,20 @@ async fn execute_local_attachment_context(
     }
 }
 
-async fn execute_recall_chat_attachment(
+async fn execute_recall_thread_attachment(
     function_call: &GeminiFunctionCall,
     context: &mut ToolDispatchContext<'_>,
 ) -> ToolDispatchResult {
-    let Some(chat_id) = context.chat_id else {
+    let Some(thread_id) = context.thread_id else {
         return ToolDispatchResult {
             response_value: json!({
                 "ok": false,
-                "error_code": "missing_chat_context",
-                "error_message": "Attachment recall requires an active chat session."
+                "error_code": "missing_thread_context",
+                "error_message": "Attachment recall requires an active thread session."
             }),
             follow_up_parts: Vec::new(),
             status: "error".to_string(),
-            message: "Attachment recall failed: missing active chat context.".to_string(),
+            message: "Attachment recall failed: missing active thread context.".to_string(),
             is_failure: true,
         };
     };
@@ -206,8 +206,8 @@ async fn execute_recall_chat_attachment(
         .get("reason")
         .and_then(|value| value.as_str());
 
-    match crate::provider::gemini::attachments::recall_chat_attachment(
-        chat_id,
+    match crate::provider::gemini::attachments::recall_thread_attachment(
+        thread_id,
         target,
         kind,
         reason,
@@ -554,7 +554,7 @@ mod tests {
             client: &client,
             api_key: "k",
             model: "m",
-            chat_id: None,
+            thread_id: None,
             gemini_file_cache: &gemini_file_cache,
             request_control: &request_control,
             web_state: &mut web_state,
@@ -589,7 +589,7 @@ mod tests {
             client: &client,
             api_key: "k",
             model: "m",
-            chat_id: None,
+            thread_id: None,
             gemini_file_cache: &gemini_file_cache,
             request_control: &request_control,
             web_state: &mut web_state,
@@ -624,7 +624,7 @@ mod tests {
             client: &client,
             api_key: "k",
             model: "m",
-            chat_id: None,
+            thread_id: None,
             gemini_file_cache: &gemini_file_cache,
             request_control: &request_control,
             web_state: &mut web_state,

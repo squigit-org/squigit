@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_memory::{ChatStorage, OcrRegion, StorageError};
+use squigit_memory::{ThreadStorage, OcrRegion, StorageError};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
@@ -329,14 +329,14 @@ pub fn boxes_to_storage_regions(boxes: &[OcrBox]) -> Vec<OcrRegion> {
         .collect()
 }
 
-pub fn persist_boxes_to_chat_storage(
-    storage: &ChatStorage,
-    chat_id: &str,
+pub fn persist_boxes_to_thread_storage(
+    storage: &ThreadStorage,
+    thread_id: &str,
     model_id: &str,
     boxes: &[OcrBox],
 ) -> Result<(), StorageError> {
     let regions = boxes_to_storage_regions(boxes);
-    storage.save_ocr_data(chat_id, model_id, &regions)
+    storage.save_ocr_data(thread_id, model_id, &regions)
 }
 
 fn get_ocr_timeout_secs() -> u64 {

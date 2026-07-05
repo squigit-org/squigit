@@ -100,7 +100,7 @@
     "action": "Identify the product. Compare the price/specs if multiple items are visible. Assess value or check for fake listing signals (typos, bad images, suspicious pricing)."
   },
   {
-    "scene": "Chat / Messaging App",
+    "scene": "Thread / Messaging App",
     "triggers": [
       "Discord",
       "Slack",
@@ -108,7 +108,7 @@
       "Telegram",
       "Messenger",
       "Teams",
-      "chat window",
+      "thread window",
       "DM"
     ],
     "action": "Summarize the conversation flow. Identify who is asking/answering. Detect the tone (Casual, Professional, Urgent). Highlight specific tasks or requests mentioned."

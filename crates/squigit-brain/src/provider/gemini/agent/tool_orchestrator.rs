@@ -62,7 +62,7 @@ pub(crate) fn tool_status_text(
         return Some("Reading local attachment context".to_string());
     }
 
-    if function_call.name == "recall_chat_attachment" {
+    if function_call.name == "recall_thread_attachment" {
         if let Some(display_name) = attachment_display_name
             .map(str::trim)
             .filter(|v| !v.is_empty())
@@ -120,14 +120,14 @@ pub(crate) fn build_system_instruction_with_tool_policy(
             "\n\n## Tool Usage Policy\n\
              - If the user asks for current, time-sensitive, or uncertain facts, call `web_search`.\n\
              - If the user asks about attached local text or code content, call `read_local_attachment_context`.\n\
-             - If the user asks a complex, exact, or follow-up question about a prior local code/text attachment, call `read_local_attachment_context` again using the exact path from attachment references or the chat attachment catalog.\n\
-             - Secondary uploaded files from this chat may only be used when the user attaches them in this turn or when you explicitly call `recall_chat_attachment`.\n\
-             - Use the chat attachment catalog in context to pick the right tool: `read_local_attachment_context` for `text_local`, `recall_chat_attachment` for `image_upload` or `document_upload`.\n\
-             - If the user asks for page-specific, OCR, quote-exact, transcription, chart-reading, or slide/sheet/section-specific details from a prior uploaded image or document, you must call `recall_chat_attachment` before answering.\n\
+             - If the user asks a complex, exact, or follow-up question about a prior local code/text attachment, call `read_local_attachment_context` again using the exact path from attachment references or the thread attachment catalog.\n\
+             - Secondary uploaded files from this thread may only be used when the user attaches them in this turn or when you explicitly call `recall_thread_attachment`.\n\
+             - Use the thread attachment catalog in context to pick the right tool: `read_local_attachment_context` for `text_local`, `recall_thread_attachment` for `image_upload` or `document_upload`.\n\
+             - If the user asks for page-specific, OCR, quote-exact, transcription, chart-reading, or slide/sheet/section-specific details from a prior uploaded image or document, you must call `recall_thread_attachment` before answering.\n\
              - Never answer exact file-grounded questions from `image_brief`, rolling summaries, or path references alone when a prior uploaded image/document is needed.\n\
              - Never answer exact code/text questions from summaries alone when a local attachment can be re-read with `read_local_attachment_context`.\n\
              - For PDF, Word, spreadsheet, slide, and similar document attachments, rely on the attached Gemini file directly (do not call `read_local_attachment_context` for documents).\n\
-             - If greeting/chit-chat, do not call tools.\n\
+             - If greeting/chit-thread, do not call tools.\n\
              - Never invent URLs or sources.\n\
              - When using `url`, only fetch URLs from prior search results in this turn.\n\
              - If one search pass is too shallow, call `web_search` again with a refined query.\n\
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn tool_status_text_prefers_display_name_for_recall() {
         let call = GeminiFunctionCall {
-            name: "recall_chat_attachment".to_string(),
+            name: "recall_thread_attachment".to_string(),
             args: json!({ "target": "objects/ab/abcdef123.pdf" }),
         };
         assert_eq!(

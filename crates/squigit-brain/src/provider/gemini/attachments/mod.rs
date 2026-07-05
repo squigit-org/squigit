@@ -24,8 +24,8 @@ pub(crate) use parser::{
 pub(crate) use parts::build_interleaved_parts;
 #[allow(unused_imports)]
 pub(crate) use registry::{
-    build_chat_attachment_catalog, load_chat_attachment_display_names, prepare_turn_attachments,
-    recall_chat_attachment, RecallChatAttachmentOutcome,
+    build_thread_attachment_catalog, load_thread_attachment_display_names, prepare_turn_attachments,
+    recall_thread_attachment, RecallThreadAttachmentOutcome,
 };
 pub use types::GeminiFileRef;
 pub use upload::{poll_file_status, upload_file_to_gemini};

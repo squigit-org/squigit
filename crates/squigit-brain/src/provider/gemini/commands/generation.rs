@@ -6,9 +6,9 @@ use crate::provider::gemini::transport::types::{
 };
 use crate::runtime::BrainRuntimeState;
 
-/// Generate a chat title for the chat using the brain's title prompt and the text context.
+/// Generate a thread title for the thread using the brain's title prompt and the text context.
 /// Returns the generated title text directly.
-pub async fn generate_chat_title(
+pub async fn generate_thread_title(
     api_key: String,
     model: String,
     prompt_context: String,

@@ -4,7 +4,7 @@
 //! Memory module — Builds summarization prompts for context compaction.
 //!
 //! Inspired by OpenAI Codex's compaction architecture but adapted for
-//! Squigit's chat UX: rolling summary + verbatim window instead of
+//! Squigit's thread UX: rolling summary + verbatim window instead of
 //! full-history replacement.
 
 /// Approximate bytes per token (same heuristic as OpenAI Codex).

@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! Error types for chat storage.
+//! Error types for thread storage.
 
 use thiserror::Error;
 
@@ -32,9 +32,9 @@ pub enum StorageError {
     #[error("Image not found: {0}")]
     ImageNotFound(String),
 
-    /// Chat not found.
-    #[error("Chat not found: {0}")]
-    ChatNotFound(String),
+    /// Thread not found.
+    #[error("Thread not found: {0}")]
+    ThreadNotFound(String),
 
     /// Unsupported OCR model/frame key.
     #[error("Unsupported OCR model id: {0}")]

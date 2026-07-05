@@ -8,7 +8,7 @@ use squigit_auth::{Profile, ProfileStore};
 use squigit_brain::context::media::get_active_storage;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
-use squigit_brain::service::{AnalyzeImageRequest, BrainService, PromptChatRequest};
+use squigit_brain::service::{AnalyzeImageRequest, BrainService, PromptThreadRequest};
 use std::env;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -33,7 +33,7 @@ async fn run() -> Result<(), String> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
         return Err(
-            "usage: cargo run -p squigit-brain --example live_brain_harness -- <analyze|prompt|chats> ..."
+            "usage: cargo run -p squigit-brain --example live_brain_harness -- <analyze|prompt|threads> ..."
                 .to_string(),
         );
     };
@@ -75,7 +75,7 @@ async fn run() -> Result<(), String> {
             println!("config: {}", config_dir.display());
         }
         "prompt" => {
-            let chat_id = args
+            let thread_id = args
                 .next()
                 .ok_or_else(|| "prompt requires <thread_id> <message...>".to_string())?;
             let message = args.collect::<Vec<_>>().join(" ");
@@ -88,12 +88,12 @@ async fn run() -> Result<(), String> {
             println!("[brain] handshaking with Gemini...");
             let sink = TerminalEventSink::default();
             let result = BrainService::new()
-                .prompt_chat(
+                .prompt_thread(
                     &sink,
-                    PromptChatRequest {
+                    PromptThreadRequest {
                         api_key,
                         model: MODEL.to_string(),
-                        chat_id,
+                        thread_id,
                         user_message: message,
                         channel_id: format!(
                             "live-brain-prompt-{}",
@@ -105,10 +105,10 @@ async fn run() -> Result<(), String> {
                 )
                 .await?;
 
-            println!("\n\nthread id: {}", result.chat_id);
+            println!("\n\nthread id: {}", result.thread_id);
             println!("config: {}", config_dir.display());
         }
-        "chats" => {
+        "threads" => {
             prepare_live_profile(None)?;
             print_threads(&config_dir)?;
         }
@@ -195,20 +195,20 @@ fn active_google_api_key() -> Result<String, String> {
 
 fn print_threads(config_dir: &Path) -> Result<(), String> {
     let storage = get_active_storage()?;
-    let mut chats = storage.list_chats().map_err(|error| error.to_string())?;
-    chats.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+    let mut threads = storage.list_threads().map_err(|error| error.to_string())?;
+    threads.sort_by(|left, right| right.created_at.cmp(&left.created_at));
 
     println!("Temporary Threads");
-    if chats.is_empty() {
+    if threads.is_empty() {
         println!("\n  No temporary threads found.");
     } else {
         println!("\n{:<34} {:<20} Title", "ID", "Created (UTC)");
-        for chat in chats {
+        for thread in threads {
             println!(
                 "{:<34} {:<20} {}",
-                chat.id,
-                chat.created_at.format("%Y-%m-%d %H:%M:%S"),
-                chat.title
+                thread.id,
+                thread.created_at.format("%Y-%m-%d %H:%M:%S"),
+                thread.title
             );
         }
     }

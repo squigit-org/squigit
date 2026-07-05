@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, Utc};
 use squigit_memory::{
-    ChatAttachmentKind, ChatAttachmentProviderFile, ChatAttachmentRecord, ChatData, ChatStorage,
+    ThreadAttachmentKind, ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadStorage,
     StorageError,
 };
 use std::collections::HashMap;
@@ -30,7 +30,7 @@ pub(crate) struct PreparedTurnAttachments {
     pub(crate) uploaded_parts: Vec<GeminiPart>,
 }
 
-pub(crate) struct RecallChatAttachmentOutcome {
+pub(crate) struct RecallThreadAttachmentOutcome {
     pub(crate) response_value: serde_json::Value,
     pub(crate) follow_up_parts: Vec<GeminiPart>,
     pub(crate) message: String,
@@ -60,39 +60,39 @@ fn attachment_display_name(path: &str, explicit: Option<&str>) -> String {
         .to_string()
 }
 
-fn classify_attachment(path: &str) -> Option<(ChatAttachmentKind, String)> {
+fn classify_attachment(path: &str) -> Option<(ThreadAttachmentKind, String)> {
     if is_text_like_path(path) {
         return Some((
-            ChatAttachmentKind::TextLocal,
+            ThreadAttachmentKind::TextLocal,
             mime_from_extension(path).to_string(),
         ));
     }
     if is_image_path(path) {
         return Some((
-            ChatAttachmentKind::ImageUpload,
+            ThreadAttachmentKind::ImageUpload,
             mime_from_extension(path).to_string(),
         ));
     }
     if is_gemini_document_path(path) {
         return Some((
-            ChatAttachmentKind::DocumentUpload,
+            ThreadAttachmentKind::DocumentUpload,
             mime_from_extension(path).to_string(),
         ));
     }
     None
 }
 
-fn is_uploadable_kind(kind: &ChatAttachmentKind) -> bool {
+fn is_uploadable_kind(kind: &ThreadAttachmentKind) -> bool {
     matches!(
         kind,
-        ChatAttachmentKind::ImageUpload | ChatAttachmentKind::DocumentUpload
+        ThreadAttachmentKind::ImageUpload | ThreadAttachmentKind::DocumentUpload
     )
 }
 
-fn catalog_access_label(record: &ChatAttachmentRecord) -> &'static str {
+fn catalog_access_label(record: &ThreadAttachmentRecord) -> &'static str {
     match record.kind {
-        ChatAttachmentKind::TextLocal => "local",
-        ChatAttachmentKind::ImageUpload | ChatAttachmentKind::DocumentUpload => {
+        ThreadAttachmentKind::TextLocal => "local",
+        ThreadAttachmentKind::ImageUpload | ThreadAttachmentKind::DocumentUpload => {
             if record
                 .provider_file
                 .as_ref()
@@ -109,55 +109,55 @@ fn catalog_access_label(record: &ChatAttachmentRecord) -> &'static str {
     }
 }
 
-fn kind_matches_filter(kind: &ChatAttachmentKind, filter: Option<&ChatAttachmentKind>) -> bool {
+fn kind_matches_filter(kind: &ThreadAttachmentKind, filter: Option<&ThreadAttachmentKind>) -> bool {
     match filter {
         Some(expected) => kind == expected,
         None => true,
     }
 }
 
-fn parse_kind_filter(kind: Option<&str>) -> Option<ChatAttachmentKind> {
+fn parse_kind_filter(kind: Option<&str>) -> Option<ThreadAttachmentKind> {
     match kind
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(|value| value.to_ascii_lowercase())
         .as_deref()
     {
-        Some("image") | Some("image_upload") => Some(ChatAttachmentKind::ImageUpload),
-        Some("document") | Some("document_upload") => Some(ChatAttachmentKind::DocumentUpload),
+        Some("image") | Some("image_upload") => Some(ThreadAttachmentKind::ImageUpload),
+        Some("document") | Some("document_upload") => Some(ThreadAttachmentKind::DocumentUpload),
         _ => None,
     }
 }
 
-fn get_active_storage() -> Result<ChatStorage, String> {
+fn get_active_storage() -> Result<ThreadStorage, String> {
     super::paths::get_active_storage()
 }
 
-fn load_chat_for_registry(chat_id: &str) -> Result<Option<(ChatStorage, ChatData, bool)>, String> {
+fn load_thread_for_registry(thread_id: &str) -> Result<Option<(ThreadStorage, ThreadData, bool)>, String> {
     let storage = get_active_storage()?;
-    match storage.load_chat(chat_id) {
-        Ok(mut chat) => {
-            let changed = backfill_attachment_registry(&mut chat);
-            Ok(Some((storage, chat, changed)))
+    match storage.load_thread(thread_id) {
+        Ok(mut thread) => {
+            let changed = backfill_attachment_registry(&mut thread);
+            Ok(Some((storage, thread, changed)))
         }
-        Err(StorageError::ChatNotFound(_)) => Ok(None),
+        Err(StorageError::ThreadNotFound(_)) => Ok(None),
         Err(error) => Err(error.to_string()),
     }
 }
 
-fn save_chat_if_needed(
-    storage: &ChatStorage,
-    chat: &ChatData,
+fn save_thread_if_needed(
+    storage: &ThreadStorage,
+    thread: &ThreadData,
     changed: bool,
 ) -> Result<(), String> {
     if changed {
-        storage.save_chat(chat).map_err(|error| error.to_string())?;
+        storage.save_thread(thread).map_err(|error| error.to_string())?;
     }
     Ok(())
 }
 
-fn file_ref_to_handle(file_ref: &GeminiFileRef) -> ChatAttachmentProviderFile {
-    ChatAttachmentProviderFile {
+fn file_ref_to_handle(file_ref: &GeminiFileRef) -> ThreadAttachmentProviderFile {
+    ThreadAttachmentProviderFile {
         file_uri: file_ref.file_uri.clone(),
         file_name: file_ref.file_name.clone(),
         mime_type: file_ref.mime_type.clone(),
@@ -167,7 +167,7 @@ fn file_ref_to_handle(file_ref: &GeminiFileRef) -> ChatAttachmentProviderFile {
     }
 }
 
-fn handle_to_file_ref(handle: &ChatAttachmentProviderFile, display_name: &str) -> GeminiFileRef {
+fn handle_to_file_ref(handle: &ThreadAttachmentProviderFile, display_name: &str) -> GeminiFileRef {
     GeminiFileRef {
         file_uri: handle.file_uri.clone(),
         file_name: handle.file_name.clone(),
@@ -179,7 +179,7 @@ fn handle_to_file_ref(handle: &ChatAttachmentProviderFile, display_name: &str) -
 }
 
 fn upsert_record(
-    chat: &mut ChatData,
+    thread: &mut ThreadData,
     path: &str,
     display_name: Option<&str>,
     seen_at: DateTime<Utc>,
@@ -191,7 +191,7 @@ fn upsert_record(
     let key = normalized_lookup_key(path);
     let fallback_display_name = attachment_display_name(&key, display_name);
 
-    match chat.attachment_registry.get_mut(&key) {
+    match thread.attachment_registry.get_mut(&key) {
         Some(existing) => {
             let mut changed = false;
             if display_name
@@ -218,9 +218,9 @@ fn upsert_record(
             changed
         }
         None => {
-            chat.attachment_registry.insert(
+            thread.attachment_registry.insert(
                 key.clone(),
-                ChatAttachmentRecord {
+                ThreadAttachmentRecord {
                     cas_path: key,
                     display_name: fallback_display_name,
                     kind,
@@ -236,9 +236,9 @@ fn upsert_record(
     }
 }
 
-fn backfill_attachment_registry(chat: &mut ChatData) -> bool {
+fn backfill_attachment_registry(thread: &mut ThreadData) -> bool {
     let mut changed = false;
-    let saved_messages = chat
+    let saved_messages = thread
         .messages
         .iter()
         .filter(|message| message.role == "user")
@@ -248,7 +248,7 @@ fn backfill_attachment_registry(chat: &mut ChatData) -> bool {
     for (timestamp, content) in saved_messages {
         for mention in extract_attachment_mentions(&content) {
             changed |= upsert_record(
-                chat,
+                thread,
                 &mention.path,
                 mention.display_name.as_deref(),
                 timestamp,
@@ -295,7 +295,7 @@ async fn remove_cached_file_ref(path: &str, cache: &GeminiFileCache) -> Result<(
     Ok(())
 }
 
-fn is_handle_expired(handle: &ChatAttachmentProviderFile) -> bool {
+fn is_handle_expired(handle: &ThreadAttachmentProviderFile) -> bool {
     Utc::now() >= handle.expires_at
 }
 
@@ -334,16 +334,16 @@ async fn validate_uploaded_file_handle(api_key: &str, file_name: &str) -> bool {
 }
 
 async fn ensure_live_file_ref(
-    chat: &mut ChatData,
+    thread: &mut ThreadData,
     path: &str,
     api_key: &str,
     cache: &GeminiFileCache,
 ) -> Result<(GeminiFileRef, bool, &'static str), String> {
     let key = normalized_lookup_key(path);
-    let record = chat
+    let record = thread
         .attachment_registry
         .get_mut(&key)
-        .ok_or_else(|| format!("Attachment is not tracked in this chat: {}", key))?;
+        .ok_or_else(|| format!("Attachment is not tracked in this thread: {}", key))?;
 
     if !is_uploadable_kind(&record.kind) {
         return Err(format!(
@@ -392,13 +392,13 @@ fn to_file_part(file_ref: &GeminiFileRef) -> GeminiPart {
 }
 
 pub(crate) async fn prepare_turn_attachments(
-    chat_id: Option<&str>,
+    thread_id: Option<&str>,
     mentions: &[AttachmentMention],
     api_key: &str,
     cache: &GeminiFileCache,
 ) -> Result<PreparedTurnAttachments, String> {
-    let mut loaded_chat = match chat_id {
-        Some(id) => load_chat_for_registry(id)?,
+    let mut loaded_thread = match thread_id {
+        Some(id) => load_thread_for_registry(id)?,
         None => None,
     };
     let mut preview_attachment_paths = Vec::new();
@@ -407,8 +407,8 @@ pub(crate) async fn prepare_turn_attachments(
     for mention in mentions {
         let path = normalized_lookup_key(&mention.path);
 
-        if let Some((_, chat, changed)) = loaded_chat.as_mut() {
-            *changed |= upsert_record(chat, &path, mention.display_name.as_deref(), Utc::now());
+        if let Some((_, thread, changed)) = loaded_thread.as_mut() {
+            *changed |= upsert_record(thread, &path, mention.display_name.as_deref(), Utc::now());
         }
 
         if is_text_like_path(&path) {
@@ -420,9 +420,9 @@ pub(crate) async fn prepare_turn_attachments(
             continue;
         }
 
-        let file_ref = if let Some((_, chat, changed)) = loaded_chat.as_mut() {
+        let file_ref = if let Some((_, thread, changed)) = loaded_thread.as_mut() {
             let (file_ref, was_changed, _) =
-                ensure_live_file_ref(chat, &path, api_key, cache).await?;
+                ensure_live_file_ref(thread, &path, api_key, cache).await?;
             *changed |= was_changed;
             file_ref
         } else {
@@ -432,8 +432,8 @@ pub(crate) async fn prepare_turn_attachments(
         uploaded_parts.push(to_file_part(&file_ref));
     }
 
-    if let Some((storage, chat, changed)) = loaded_chat.as_ref() {
-        save_chat_if_needed(storage, chat, *changed)?;
+    if let Some((storage, thread, changed)) = loaded_thread.as_ref() {
+        save_thread_if_needed(storage, thread, *changed)?;
     }
 
     Ok(PreparedTurnAttachments {
@@ -442,24 +442,24 @@ pub(crate) async fn prepare_turn_attachments(
     })
 }
 
-pub(crate) fn build_chat_attachment_catalog(
-    chat_id: Option<&str>,
+pub(crate) fn build_thread_attachment_catalog(
+    thread_id: Option<&str>,
 ) -> Result<Option<String>, String> {
-    let Some(chat_id) = chat_id else {
+    let Some(thread_id) = thread_id else {
         return Ok(None);
     };
-    let Some((storage, chat, changed)) = load_chat_for_registry(chat_id)? else {
+    let Some((storage, thread, changed)) = load_thread_for_registry(thread_id)? else {
         return Ok(None);
     };
 
-    let mut entries = chat
+    let mut entries = thread
         .attachment_registry
         .values()
         .cloned()
         .collect::<Vec<_>>();
 
     if entries.is_empty() {
-        save_chat_if_needed(&storage, &chat, changed)?;
+        save_thread_if_needed(&storage, &thread, changed)?;
         return Ok(None);
     }
 
@@ -473,9 +473,9 @@ pub(crate) fn build_chat_attachment_catalog(
                 "- `{}` (kind: {}, access: {}): `{}`",
                 record.display_name,
                 match record.kind {
-                    ChatAttachmentKind::ImageUpload => "image_upload",
-                    ChatAttachmentKind::DocumentUpload => "document_upload",
-                    ChatAttachmentKind::TextLocal => "text_local",
+                    ThreadAttachmentKind::ImageUpload => "image_upload",
+                    ThreadAttachmentKind::DocumentUpload => "document_upload",
+                    ThreadAttachmentKind::TextLocal => "text_local",
                 },
                 catalog_access_label(&record),
                 record.cas_path
@@ -483,44 +483,44 @@ pub(crate) fn build_chat_attachment_catalog(
         })
         .collect::<Vec<_>>();
 
-    save_chat_if_needed(&storage, &chat, changed)?;
+    save_thread_if_needed(&storage, &thread, changed)?;
     Ok(Some(format!(
-        "[Chat Attachment Catalog]\n{}",
+        "[Thread Attachment Catalog]\n{}",
         lines.join("\n")
     )))
 }
 
-pub(crate) fn load_chat_attachment_display_names(
-    chat_id: Option<&str>,
+pub(crate) fn load_thread_attachment_display_names(
+    thread_id: Option<&str>,
 ) -> Result<Vec<(String, String)>, String> {
-    let Some(chat_id) = chat_id else {
+    let Some(thread_id) = thread_id else {
         return Ok(Vec::new());
     };
-    let Some((storage, chat, changed)) = load_chat_for_registry(chat_id)? else {
+    let Some((storage, thread, changed)) = load_thread_for_registry(thread_id)? else {
         return Ok(Vec::new());
     };
 
-    let entries = chat
+    let entries = thread
         .attachment_registry
         .values()
         .map(|record| (record.cas_path.clone(), record.display_name.clone()))
         .collect::<Vec<_>>();
 
-    save_chat_if_needed(&storage, &chat, changed)?;
+    save_thread_if_needed(&storage, &thread, changed)?;
     Ok(entries)
 }
 
 fn find_matching_records<'a>(
-    chat: &'a ChatData,
+    thread: &'a ThreadData,
     target: &str,
-    kind_filter: Option<&ChatAttachmentKind>,
-) -> Vec<&'a ChatAttachmentRecord> {
+    kind_filter: Option<&ThreadAttachmentKind>,
+) -> Vec<&'a ThreadAttachmentRecord> {
     let target = normalized_lookup_key(target);
     if target.is_empty() {
         return Vec::new();
     }
 
-    let exact_path_matches = chat
+    let exact_path_matches = thread
         .attachment_registry
         .values()
         .filter(|record| {
@@ -533,7 +533,7 @@ fn find_matching_records<'a>(
         return exact_path_matches;
     }
 
-    let exact_display_matches = chat
+    let exact_display_matches = thread
         .attachment_registry
         .values()
         .filter(|record| {
@@ -546,7 +546,7 @@ fn find_matching_records<'a>(
         return exact_display_matches;
     }
 
-    chat.attachment_registry
+    thread.attachment_registry
         .values()
         .filter(|record| {
             if !is_uploadable_kind(&record.kind) || !kind_matches_filter(&record.kind, kind_filter)
@@ -568,31 +568,31 @@ fn find_matching_records<'a>(
         .collect::<Vec<_>>()
 }
 
-pub(crate) async fn recall_chat_attachment(
-    chat_id: &str,
+pub(crate) async fn recall_thread_attachment(
+    thread_id: &str,
     target: &str,
     kind: Option<&str>,
     _reason: Option<&str>,
     api_key: &str,
     cache: &GeminiFileCache,
-) -> Result<RecallChatAttachmentOutcome, String> {
-    let Some((storage, mut chat, mut changed)) = load_chat_for_registry(chat_id)? else {
-        return Ok(RecallChatAttachmentOutcome {
+) -> Result<RecallThreadAttachmentOutcome, String> {
+    let Some((storage, mut thread, mut changed)) = load_thread_for_registry(thread_id)? else {
+        return Ok(RecallThreadAttachmentOutcome {
             response_value: serde_json::json!({
                 "ok": false,
-                "error_code": "chat_not_found",
-                "error_message": "The active chat could not be loaded for attachment recall."
+                "error_code": "thread_not_found",
+                "error_message": "The active thread could not be loaded for attachment recall."
             }),
             follow_up_parts: Vec::new(),
-            message: "Attachment recall failed: active chat not found.".to_string(),
+            message: "Attachment recall failed: active thread not found.".to_string(),
             is_failure: true,
         });
     };
 
     let kind_filter = parse_kind_filter(kind);
-    let mut matches = find_matching_records(&chat, target, kind_filter.as_ref());
+    let mut matches = find_matching_records(&thread, target, kind_filter.as_ref());
     if matches.is_empty() {
-        let uploadable = chat
+        let uploadable = thread
             .attachment_registry
             .values()
             .filter(|record| {
@@ -606,8 +606,8 @@ pub(crate) async fn recall_chat_attachment(
     }
 
     if matches.is_empty() {
-        save_chat_if_needed(&storage, &chat, changed)?;
-        return Ok(RecallChatAttachmentOutcome {
+        save_thread_if_needed(&storage, &thread, changed)?;
+        return Ok(RecallThreadAttachmentOutcome {
             response_value: serde_json::json!({
                 "ok": false,
                 "error_code": "attachment_not_found",
@@ -627,15 +627,15 @@ pub(crate) async fn recall_chat_attachment(
                     "display_name": record.display_name,
                     "cas_path": record.cas_path,
                     "kind": match record.kind {
-                        ChatAttachmentKind::ImageUpload => "image_upload",
-                        ChatAttachmentKind::DocumentUpload => "document_upload",
-                        ChatAttachmentKind::TextLocal => "text_local",
+                        ThreadAttachmentKind::ImageUpload => "image_upload",
+                        ThreadAttachmentKind::DocumentUpload => "document_upload",
+                        ThreadAttachmentKind::TextLocal => "text_local",
                     }
                 })
             })
             .collect::<Vec<_>>();
-        save_chat_if_needed(&storage, &chat, changed)?;
-        return Ok(RecallChatAttachmentOutcome {
+        save_thread_if_needed(&storage, &thread, changed)?;
+        return Ok(RecallThreadAttachmentOutcome {
             response_value: serde_json::json!({
                 "ok": false,
                 "error_code": "ambiguous_target",
@@ -662,27 +662,27 @@ pub(crate) async fn recall_chat_attachment(
     let selected_kind = matches
         .first()
         .map(|record| record.kind.clone())
-        .unwrap_or(ChatAttachmentKind::DocumentUpload);
+        .unwrap_or(ThreadAttachmentKind::DocumentUpload);
     drop(matches);
 
     let (file_ref, file_changed, strategy) =
-        ensure_live_file_ref(&mut chat, &selected_path, api_key, cache).await?;
-    if let Some(record) = chat.attachment_registry.get_mut(&selected_path) {
+        ensure_live_file_ref(&mut thread, &selected_path, api_key, cache).await?;
+    if let Some(record) = thread.attachment_registry.get_mut(&selected_path) {
         record.last_recalled_at = Some(Utc::now());
     }
     changed |= file_changed;
 
-    save_chat_if_needed(&storage, &chat, changed)?;
+    save_thread_if_needed(&storage, &thread, changed)?;
 
-    Ok(RecallChatAttachmentOutcome {
+    Ok(RecallThreadAttachmentOutcome {
         response_value: serde_json::json!({
             "ok": true,
             "display_name": selected_display_name,
             "cas_path": selected_path,
             "kind": match selected_kind {
-                ChatAttachmentKind::ImageUpload => "image_upload",
-                ChatAttachmentKind::DocumentUpload => "document_upload",
-                ChatAttachmentKind::TextLocal => "text_local",
+                ThreadAttachmentKind::ImageUpload => "image_upload",
+                ThreadAttachmentKind::DocumentUpload => "document_upload",
+                ThreadAttachmentKind::TextLocal => "text_local",
             },
             "recall_strategy": strategy,
             "file_uri": file_ref.file_uri,

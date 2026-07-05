@@ -1,14 +1,14 @@
 {
   "functionDeclarations": [
     {
-      "name": "recall_chat_attachment",
-      "description": "Recall a previously uploaded image or document from this chat by reusing its Gemini Files handle or silently re-uploading it from local CAS storage when needed.",
+      "name": "recall_thread_attachment",
+      "description": "Recall a previously uploaded image or document from this thread by reusing its Gemini Files handle or silently re-uploading it from local CAS storage when needed.",
       "parameters": {
         "type": "object",
         "properties": {
           "target": {
             "type": "string",
-            "description": "The prior attachment to recall. Prefer the exact CAS path, display name, basename, or stem from the chat attachment catalog."
+            "description": "The prior attachment to recall. Prefer the exact CAS path, display name, basename, or stem from the thread attachment catalog."
           },
           "kind": {
             "type": "string",
