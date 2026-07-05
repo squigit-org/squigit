@@ -1,26 +1,31 @@
 import {
   analyzeImage,
-  promptChat,
-  listChats,
+  promptThread,
+  listThreads,
   getActiveProfileId,
   listProfiles,
 } from "../harness.js";
 
-type BrainAction = "analyze" | "prompt" | "chats";
+type BrainAction = "analyze" | "prompt" | "threads";
 
-const LIST_SEPARATOR = "------------------------------------------------------------";
+const LIST_SEPARATOR =
+  "------------------------------------------------------------";
 
 function usage(): string {
   return [
     "Usage:",
     "  node dist/src/index.js brain analyze <image_path> [user_message...]",
-    "  node dist/src/index.js brain prompt <chat_id> <message...>",
-    "  node dist/src/index.js brain chats",
+    "  node dist/src/index.js brain prompt <thread_id> <message...>",
+    "  node dist/src/index.js brain threads",
   ].join("\n");
 }
 
 function parseAction(rawAction: string | undefined): BrainAction {
-  if (rawAction === "analyze" || rawAction === "prompt" || rawAction === "chats") {
+  if (
+    rawAction === "analyze" ||
+    rawAction === "prompt" ||
+    rawAction === "threads"
+  ) {
     return rawAction;
   }
 
@@ -59,22 +64,22 @@ async function runAnalyze(args: string[]): Promise<void> {
       if (event.eventType === "tool_start") {
         console.log(`\n🔧 ${event.name}: ${event.message}`);
       }
-    }
+    },
   );
 
   console.log("\n");
-  console.log(`chat title: ${payload.title}`);
-  console.log(`chat id: ${payload.chatId}`);
+  console.log(`thread title: ${payload.title}`);
+  console.log(`thread id: ${payload.threadId}`);
 }
 
 async function runPrompt(args: string[]): Promise<void> {
   if (args.length < 2) {
-    throw new Error("Action 'prompt' requires `<chat_id> <message...>`.");
+    throw new Error("Action 'prompt' requires `<thread_id> <message...>`.");
   }
 
-  const chatId = args[0].trim();
-  if (!chatId) {
-    throw new Error("Action 'prompt' requires a non-empty `<chat_id>`.");
+  const threadId = args[0].trim();
+  if (!threadId) {
+    throw new Error("Action 'prompt' requires a non-empty `<thread_id>`.");
   }
 
   const message = args.slice(1).join(" ").trim();
@@ -83,11 +88,11 @@ async function runPrompt(args: string[]): Promise<void> {
   }
 
   let firstTokenReceived = false;
-  
+
   console.log(`[brain] handshaking with Gemini...`);
 
-  const payload = await promptChat(
-    chatId,
+  const payload = await promptThread(
+    threadId,
     "models/gemini-flash-latest",
     message,
     (err, event) => {
@@ -102,38 +107,40 @@ async function runPrompt(args: string[]): Promise<void> {
       if (event.eventType === "tool_start") {
         console.log(`\n🔧 ${event.name}: ${event.message}`);
       }
-    }
+    },
   );
 
   console.log("\n");
-  console.log(`chat id: ${payload.chatId}`);
+  console.log(`thread id: ${payload.threadId}`);
 }
 
-async function runChats(args: string[]): Promise<void> {
+async function runThreads(args: string[]): Promise<void> {
   if (args.length > 0) {
-    throw new Error("Action 'chats' does not accept arguments.");
+    throw new Error("Action 'threads' does not accept arguments.");
   }
 
-  const chats = listChats();
+  const threads = listThreads();
   const activeProfileId = getActiveProfileId()?.trim();
   const profiles = listProfiles();
 
-  const activeEmail = profiles.find((profile) => profile.id === activeProfileId)?.email;
+  const activeEmail = profiles.find(
+    (profile) => profile.id === activeProfileId,
+  )?.email;
   if (!activeEmail) {
     throw new Error("No active profile found. Run auth login first.");
   }
 
   console.log(LIST_SEPARATOR);
-  console.log(`listed chats for ${activeEmail}`);
+  console.log(`listed threads for ${activeEmail}`);
 
-  if (chats.length === 0) {
-    console.log("(no chats)");
+  if (threads.length === 0) {
+    console.log("(no threads)");
     console.log(LIST_SEPARATOR);
     return;
   }
 
-  for (const chat of chats) {
-    console.log(`${chat.id} | ${chat.title}`);
+  for (const thread of threads) {
+    console.log(`${thread.id} | ${thread.title}`);
   }
   console.log(LIST_SEPARATOR);
 }
@@ -149,8 +156,8 @@ export async function runBrainCommand(args: string[]): Promise<void> {
     case "prompt":
       await runPrompt(rest);
       return;
-    case "chats":
-      await runChats(rest);
+    case "threads":
+      await runThreads(rest);
       return;
     default:
       throw new Error(usage());

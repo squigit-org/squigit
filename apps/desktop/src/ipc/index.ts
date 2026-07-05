@@ -1,4 +1,4 @@
-import { registerChatHandlers } from "./features/chat";
+import { registerThreadHandlers } from "./features/thread";
 import { registerMediaHandlers } from "./features/media";
 import { registerProfileHandlers } from "./features/profiles";
 import { registerStorageHandlers } from "./features/storage";
@@ -8,7 +8,7 @@ import { registerFilesystemHandlers } from "./system/filesystem";
 export function setupIpc() {
   registerProfileHandlers();
   registerStorageHandlers();
-  registerChatHandlers();
+  registerThreadHandlers();
   registerMediaHandlers();
   registerFilesystemHandlers();
   registerAppHandlers();

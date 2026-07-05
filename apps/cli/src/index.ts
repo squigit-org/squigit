@@ -27,8 +27,8 @@ function usage(): string {
     "",
     "Brain actions:",
     "  brain analyze <image_path> [user_message...]",
-    "  brain prompt <chat_id> <message...>",
-    "  brain chats",
+    "  brain prompt <thread_id> <message...>",
+    "  brain threads",
   ].join("\n");
 }
 

@@ -9,7 +9,7 @@ use std::process::{Child, Command, ExitCode, Stdio};
 use crate::display_hotplug::DisplayWatcher;
 use crate::single_instance::InstanceLock;
 
-use squigit_memory::{ChatData, ChatMetadata, ChatStorage};
+use squigit_memory::{ThreadData, ThreadMetadata, ThreadStorage};
 use squigit_auth::ProfileStore;
 
 use crate::paths::QtPaths;
@@ -162,7 +162,7 @@ impl QtApp {
                 if self.input_only {
                     println!("CAS_PATH:{}", res);
                 } else {
-                    println!("CHAT_ID:{}", res);
+                    println!("THREAD_ID:{}", res);
                     if let Some(hash) = image_hash {
                         println!("IMAGE_HASH:{}", hash);
                     }
@@ -196,8 +196,8 @@ This usually indicates a native crash during startup/capture."
                     .map(|active_id| (profile_store, active_id))
             })
             .and_then(|(profile_store, active_id)| {
-                let chats_dir = profile_store.get_chats_dir(&active_id);
-                ChatStorage::with_base_dir(chats_dir).ok()
+                let threads_dir = profile_store.get_threads_dir(&active_id);
+                ThreadStorage::with_base_dir(threads_dir).ok()
             })
             .and_then(|storage| {
                 storage
@@ -207,9 +207,9 @@ This usually indicates a native crash during startup/capture."
             })
             .map(|(storage, stored)| {
                 let metadata =
-                    ChatMetadata::new("New thread".to_string(), stored.hash.clone(), None);
-                let chat = ChatData::new(metadata.clone());
-                let _ = storage.save_chat(&chat);
+                    ThreadMetadata::new("New thread".to_string(), stored.hash.clone(), None);
+                let thread = ThreadData::new(metadata.clone());
+                let _ = storage.save_thread(&thread);
                 let _ = std::fs::remove_file(path);
                 (Some(metadata.id), Some(stored.hash))
             })
@@ -227,8 +227,8 @@ This usually indicates a native crash during startup/capture."
                     .map(|active_id| (profile_store, active_id))
             })
             .and_then(|(profile_store, active_id)| {
-                let chats_dir = profile_store.get_chats_dir(&active_id);
-                ChatStorage::with_base_dir(chats_dir).ok()
+                let threads_dir = profile_store.get_threads_dir(&active_id);
+                ThreadStorage::with_base_dir(threads_dir).ok()
             })
             .and_then(|storage| storage.store_image_from_path(path, None).ok())
             .map(|stored| {

@@ -31,8 +31,8 @@
   { "find": "--red-500-60", "replace": "--c-raw-026" },
 
   { "find": "--dialog-warning-icon-color", "replace": "--c-raw-027" },
-  { "find": "--chat-input-border", "replace": "--c-raw-028" },
-  { "find": "--chat-input-focus-shadow", "replace": "--c-raw-029" },
+  { "find": "--thread-input-border", "replace": "--c-raw-028" },
+  { "find": "--thread-input-focus-shadow", "replace": "--c-raw-029" },
 
   { "find": "--brand-primary", "replace": "--c-raw-030" },
   { "find": "--lens-svg-color", "replace": "--c-raw-031" },
