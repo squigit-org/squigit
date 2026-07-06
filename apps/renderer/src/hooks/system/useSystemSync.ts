@@ -61,16 +61,12 @@ export const useSystemSync = () => {
       if (cancelled) return;
 
       state.setWizardState(wizardState);
-      state.setAppName(appConstants.appName || "Squigit");
+
 
       const loadedPrefs = await loadPreferences();
       if (cancelled) return;
 
       console.log("[useSystemSync] Loaded prefs:", loadedPrefs);
-
-      const loadedPrompt = loadedPrefs.prompt || appConstants.defaultPrompt;
-      prefs.setActivePrompt(loadedPrompt);
-      prefs.setEditingPrompt(loadedPrompt);
 
       const loadedModel = loadedPrefs.model || appConstants.defaultModel;
       prefs.setStartupModel(loadedModel);
@@ -108,8 +104,6 @@ export const useSystemSync = () => {
       } else if (!wizardState.isFinished) {
         prefs.setTheme("system");
       }
-
-      prefs.setSoulMdName(loadedPrefs.soulMdName ?? null);
 
       if (!cancelled) {
         state.setPrefsLoaded(true);
@@ -308,12 +302,8 @@ export const useSystemSync = () => {
   };
 
   return {
-    appName: state.appName,
     switchingProfileId: profile.switchingProfileId,
     apiKey: keys.apiKey,
-    prompt: prefs.prompt,
-    editingPrompt: prefs.editingPrompt,
-    setEditingPrompt: prefs.setEditingPrompt,
     startupModel: prefs.startupModel,
     editingModel: prefs.editingModel,
     setEditingModel: prefs.setEditingModel,
@@ -364,6 +354,5 @@ export const useSystemSync = () => {
     showExistingProfileDialog: profile.showExistingProfileDialog,
     setShowExistingProfileDialog: profile.setShowExistingProfileDialog,
     prefsLoaded: state.prefsLoaded,
-    soulMdName: prefs.soulMdName,
   };
 };

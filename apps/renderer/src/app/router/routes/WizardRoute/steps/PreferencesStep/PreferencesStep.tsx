@@ -9,7 +9,7 @@ import ThemePicker from "../../components/ThemePicker/ThemePicker";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { commands } from "@/platform";
 import { CapturePreview } from "@/app/router/routes/WizardRoute/components/CapturePreview/CapturePreview";
-import { PersonalizationSettings } from "@/features/settings/PersonalizationSettings";
+import { IdentitySettings } from "@/features/settings/IdentitySettings";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import styles from "./PreferencesStep.module.css";
 
@@ -54,15 +54,6 @@ export const PreferencesStep = () => {
     app.system.autoExpandOCR ??
     true;
 
-  // ── Prompt state ──
-  const savedPrompt =
-    app.system.wizardState?.data?.step_3?.prompt ?? app.system.prompt ?? "";
-  const savedSoulMdName =
-    app.system.wizardState?.data?.step_3?.soulMdName ??
-    app.system.soulMdName ??
-    null;
-  const [localPrompt, setLocalPrompt] = useState(savedPrompt);
-
   // ── Persist defaults on mount ──
   useEffect(() => {
     if (
@@ -74,7 +65,6 @@ export const PreferencesStep = () => {
         captureType: savedCaptureType as "traditional" | "squiggle",
         ocrEnabled: savedOcrEnabled,
         autoExpandOCR: savedAutoExpand,
-        prompt: savedPrompt,
       });
     }
   }, []);
@@ -92,18 +82,6 @@ export const PreferencesStep = () => {
     });
   };
 
-  // ── Handlers ──
-  const handlePromptChange = (
-    updates: Partial<{ prompt: string; soulMdName: string | null }>,
-  ) => {
-    app.system.updatePreferences(updates as any);
-    if (updates.prompt !== undefined) {
-      updateWizardStep3({ prompt: updates.prompt });
-    }
-    if (updates.soulMdName !== undefined) {
-      updateWizardStep3({ soulMdName: updates.soulMdName });
-    }
-  };
   const handleThemeChange = (theme: "dark" | "light") => {
     app.system.updatePreferences({ theme });
     updateWizardStep3({ theme });
@@ -275,14 +253,7 @@ export const PreferencesStep = () => {
                 vertical
               />
             </div>
-            <PersonalizationSettings
-              localPrompt={localPrompt}
-              currentPrompt={savedPrompt}
-              setLocalPrompt={setLocalPrompt}
-              updatePreferences={handlePromptChange}
-              soulMdName={savedSoulMdName}
-              isWizard={true}
-            />
+            <IdentitySettings isWizard={true} />
           </div>
         </div>
       </div>

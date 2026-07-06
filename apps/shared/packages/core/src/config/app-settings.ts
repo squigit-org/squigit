@@ -14,24 +14,20 @@ import { getPreferencesPort } from "../ports/preferences";
 export interface UserPreferences {
   model: string;
   theme: "dark" | "light" | "system";
-  prompt: string;
   ocrEnabled: boolean;
   autoExpandOCR: boolean;
   captureType: "traditional" | "squiggle";
   ocrLanguage: string;
-  soulMdName: string | null;
 }
 
 export async function getDefaultPreferences(): Promise<UserPreferences> {
   return {
     model: DEFAULT_PREFERENCES.model,
     theme: DEFAULT_PREFERENCES.theme,
-    prompt: DEFAULT_PREFERENCES.prompt,
     ocrEnabled: DEFAULT_PREFERENCES.ocrEnabled,
     autoExpandOCR: DEFAULT_PREFERENCES.autoExpandOCR,
     captureType: DEFAULT_PREFERENCES.captureType,
     ocrLanguage: DEFAULT_PREFERENCES.ocrLanguage,
-    soulMdName: null,
   };
 }
 

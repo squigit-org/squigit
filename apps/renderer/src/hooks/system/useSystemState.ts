@@ -9,7 +9,7 @@ import type { WizardState } from "@squigit/core/config";
 import { SettingsSection } from "@/features/settings";
 
 export const useSystemState = () => {
-  const [appName, setAppName] = useState<string>("Squigit");
+
   const [startupImage, setStartupImage] = useState<{
     path: string;
     mimeType: string;
@@ -37,8 +37,6 @@ export const useSystemState = () => {
   };
 
   return {
-    appName,
-    setAppName,
     startupImage,
     setStartupImage,
     sessionThreadTitle,

@@ -148,6 +148,7 @@
   border-radius: 0.75rem;
   border: 1px solid var(--c-raw-010);
   overflow: hidden;
+  transition: border-color 0.3s ease-in-out;
 }
 
 .optionRow {
@@ -163,6 +164,7 @@
 .optionDivider {
   height: 1px;
   background-color: var(--c-raw-010);
+  transition: background-color 0.3s ease-in-out;
 }
 
 .optionMeta {

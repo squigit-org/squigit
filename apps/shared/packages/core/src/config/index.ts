@@ -66,9 +66,7 @@ export {
 } from "./models-config.ts";
 
 export {
-  APP_NAME,
   DEFAULT_THEME,
-  DEFAULT_PROMPT,
   PREFERENCES_FILE_NAME,
   DEFAULT_CAPTURE_TYPE,
   DEFAULT_PREFERENCES,

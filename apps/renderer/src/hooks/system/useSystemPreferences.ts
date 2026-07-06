@@ -29,8 +29,6 @@ export const useSystemPreferences = () => {
     updateNativeBg();
   }, [resolvedTheme]);
 
-  const [activePrompt, setActivePrompt] = useState<string>("");
-  const [editingPrompt, setEditingPrompt] = useState<string>("");
   const [startupModel, setStartupModel] = useState<string>("");
   const [editingModel, setEditingModel] = useState<string>("");
   const [sessionModel, setSessionModel] = useState<string>("");
@@ -43,7 +41,6 @@ export const useSystemPreferences = () => {
     useState<string>(DEFAULT_OCR_MODEL_ID);
   const [sessionOcrLanguage, setSessionOcrLanguage] =
     useState<string>(DEFAULT_OCR_MODEL_ID);
-  const [soulMdName, setSoulMdName] = useState<string | null>(null);
 
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     const normalizedUpdatedOcrLanguage =
@@ -55,10 +52,6 @@ export const useSystemPreferences = () => {
       setStartupModel(updates.model);
       setEditingModel(updates.model);
       setSessionModel(updates.model);
-    }
-    if (updates.prompt !== undefined) {
-      setActivePrompt(updates.prompt);
-      setEditingPrompt(updates.prompt);
     }
     if (updates.autoExpandOCR !== undefined) {
       setAutoExpandOCR(updates.autoExpandOCR);
@@ -85,9 +78,6 @@ export const useSystemPreferences = () => {
     if (updates.theme !== undefined) {
       setTheme(updates.theme);
     }
-    if (updates.soulMdName !== undefined) {
-      setSoulMdName(updates.soulMdName);
-    }
 
     try {
       const currentPrefs = await loadPreferences();
@@ -102,11 +92,6 @@ export const useSystemPreferences = () => {
     resolvedTheme,
     setTheme,
     isDarkMode: resolvedTheme === "dark",
-
-    prompt: activePrompt,
-    setActivePrompt,
-    editingPrompt,
-    setEditingPrompt,
 
     startupModel,
     setStartupModel,
@@ -125,9 +110,6 @@ export const useSystemPreferences = () => {
     setStartupOcrLanguage,
     sessionOcrLanguage,
     setSessionOcrLanguage,
-
-    soulMdName,
-    setSoulMdName,
 
     updatePreferences,
   };
