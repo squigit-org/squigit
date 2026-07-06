@@ -23,3 +23,4 @@ export type {
   SystemPort,
 } from "./system";
 export { setSystemPort, getSystemPort } from "./system";
+export * from "./identity";

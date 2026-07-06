@@ -11,6 +11,7 @@ import {
   setProviderPort,
   setStoragePort,
   setSystemPort,
+  setIdentityPort,
   type StreamGeminiThreadInput,
 } from "@squigit/core/ports";
 
@@ -154,6 +155,15 @@ export function initializeCorePorts(): void {
         unlisten();
       };
     },
+  });
+
+  setIdentityPort({
+    getIdentityConfig: () => platform.invoke("get_identity_config"),
+    setIdentityPrompt: (prompt: string) =>
+      platform.invoke("set_identity_prompt", { prompt }),
+    setIdentitySoul: (name: string, markdown: string) =>
+      platform.invoke("set_identity_soul", { name, markdown }),
+    removeIdentitySoul: () => platform.invoke("remove_identity_soul"),
   });
 
   initialized = true;

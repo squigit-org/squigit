@@ -27,6 +27,7 @@
 //! ```
 
 pub mod error;
+pub mod identity;
 pub mod paths;
 pub mod storage;
 pub mod types;

@@ -10,8 +10,6 @@ export declare function cancelGoogleAuth(): void
 
 export declare function cancelRequest(channelId?: string | undefined | null): Promise<void>
 
-
-
 export declare function checkSttVersion(): void
 
 export declare function clearActiveProfile(): void
@@ -46,6 +44,8 @@ export declare function getActiveProfileId(): string | null
 
 export declare function getApiKey(profileId: string, provider: string): string | null
 
+export declare function getIdentityConfig(): NapiIdentityConfig
+
 export declare function getImagePath(hash: string): string
 
 export declare function getImgbbUrl(threadId: string): string | null
@@ -63,8 +63,6 @@ export declare function getRollingSummary(threadId: string): string | null
 export declare function getStoreBaseDir(): string
 
 export declare function getSystemTheme(): string
-
-
 
 export declare function hasProfiles(): boolean
 
@@ -96,6 +94,11 @@ export interface NapiAuthResult {
   originalPicture?: string
 }
 
+export interface NapiIdentityConfig {
+  prompt: string
+  soul?: NapiSoul
+}
+
 export interface NapiProfile {
   id: string
   name: string
@@ -110,6 +113,10 @@ export interface NapiPromptResult {
   threadId: string
   assistantMessage: string
   normalizedUserMessage: string
+}
+
+export interface NapiSoul {
+  name: string
 }
 
 export interface NapiStoredImage {
@@ -170,6 +177,8 @@ export declare function readClipboardImage(): NapiStoredImage
 
 export declare function readClipboardText(): string
 
+export declare function removeIdentitySoul(): void
+
 export declare function requestQuickAnswer(channelId: string): Promise<void>
 
 export declare function revealInFileManager(path: string): void
@@ -186,7 +195,9 @@ export declare function saveRollingSummary(threadId: string, summary: string): v
 
 export declare function setActiveProfile(profileId: string): void
 
+export declare function setIdentityPrompt(prompt: string): void
 
+export declare function setIdentitySoul(name: string, markdown: string): void
 
 export declare function startGoogleAuth(): Promise<NapiAuthResult>
 
@@ -194,7 +205,7 @@ export declare function storeFileFromPath(path: string): NapiStoredImage
 
 export declare function storeImageFromPath(path: string): NapiStoredImage
 
-export declare function streamThread(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, rollingSummary: string | undefined | null, userMessage: string, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, userInstruction: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
+export declare function streamThread(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, rollingSummary: string | undefined | null, userMessage: string, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
 
 export declare function updateThreadMetadata(metadata: NapiThreadMetadata): void
 

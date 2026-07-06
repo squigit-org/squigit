@@ -1,0 +1,157 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
+  padding: 2px 4px 8px 4px;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.wizardContainer {
+  padding: 0;
+  height: auto;
+}
+
+.sectionHeader {
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--c-raw-043);
+  margin-bottom: 0.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--c-raw-050);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.controlsRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  color: var(--c-raw-000);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.description {
+  font-size: 0.78rem;
+  color: var(--c-raw-004);
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.textareaWrapper {
+  display: flex;
+  height: 320px;
+  flex: 1;
+  flex-direction: column;
+  background-color: var(--c-raw-053);
+  border: 1px solid var(--c-raw-041);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  transition: border-color 0.2s;
+}
+
+.wizardTextareaWrapper {
+  height: 72px;
+  min-height: 72px;
+  flex: none;
+}
+
+.textarea {
+  width: 100%;
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--c-raw-050);
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+
+.textarea::placeholder {
+  color: var(--c-raw-005);
+}
+
+.soulMdRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+  user-select: none;
+}
+
+.soulMdPicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  min-height: 20px;
+}
+
+.soulMdPicker:hover .soulMdLabel {
+  text-decoration: underline;
+}
+
+.soulMdIcon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--c-raw-005);
+  flex-shrink: 0;
+}
+
+.soulMdLabel {
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--c-raw-005);
+  line-height: 1;
+}
+
+.soulMdRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--c-raw-036);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.soulMdRemove:hover {
+  color: var(--c-raw-050);
+}

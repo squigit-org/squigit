@@ -18,7 +18,7 @@ import {
   CopyIcon,
   CheckIcon,
 } from "@primer/octicons-react";
-import { useAppContext } from "@/app/providers/AppProvider";
+
 import packageJson from "@/../package.json";
 import styles from "./HelpSettings.module.css";
 
@@ -44,11 +44,10 @@ const VERSION_TOKEN = /([A-Za-z][\w.-]*)\/([\w.\-+]+)/g;
 
 const collectValues = (
   info: Record<string, string>,
-  appName: string,
 ): Record<string, string> => {
   const v: Record<string, string> = {};
   for (const [key, raw] of Object.entries(info)) {
-    if (key === appName || key === "Runtime") {
+    if (key === "Squigit" || key === "Runtime") {
       for (const [, name, version] of raw.matchAll(VERSION_TOKEN)) {
         v[name] = version;
       }
@@ -74,10 +73,9 @@ const collectValues = (
  */
 const buildSpecs = (
   info: Record<string, string>,
-  appName: string,
   isElectron: boolean,
 ): Spec[] => {
-  const v = collectValues(info, appName);
+  const v = collectValues(info);
   const isLoading = (val: string | undefined) =>
     !val || val.includes("Loading");
   const ver = (x: string) => (x === "None" ? "—" : `v${x}`);
@@ -86,9 +84,9 @@ const buildSpecs = (
 
   // App version — 1x
   specs.push({
-    label: appName,
-    value: v[appName] ? `v${v[appName]}` : "—",
-    loading: isLoading(v[appName]),
+    label: "Squigit",
+    value: v["Squigit"] ? `v${v["Squigit"]}` : "—",
+    loading: isLoading(v["Squigit"]),
     shimmerWidth: "80px",
   });
 
@@ -175,12 +173,11 @@ const buildSpecs = (
 };
 
 export const HelpSettings: React.FC = () => {
-  const app = useAppContext();
   const isElectron = import.meta.env.VITE_PLATFORM === "electron";
   const [copied, setCopied] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [sysInfo, setSysInfo] = useState<Record<string, string>>({
-    [app.system.appName]: `Squigit/${packageJson.version} Loading`,
+    Squigit: `Squigit/${packageJson.version} Loading`,
     Runtime: "Loading",
     ...(!isElectron ? { Webview: "Loading" } : {}),
     Commit: import.meta.env.VITE_COMMIT_SHA || "Development Mode",
@@ -225,7 +222,7 @@ export const HelpSettings: React.FC = () => {
           const runtimeAgent = `Shell/${appVer} (${shellName}/${runtimeVer}) React/${React.version}`;
 
           const info: Record<string, string> = {
-            [app.system.appName]: squigitAgent,
+            Squigit: squigitAgent,
             Runtime: runtimeAgent,
           };
 
@@ -265,7 +262,7 @@ export const HelpSettings: React.FC = () => {
 
   const handleContactSupport = async () => {
     const diag = JSON.stringify(sysInfo, null, 2);
-    const action = prepareMailReport(app.system.appName, {
+    const action = prepareMailReport({
       diagnostics: diag,
     });
 
@@ -278,7 +275,7 @@ export const HelpSettings: React.FC = () => {
 
   const handleReportBug = async () => {
     const diag = JSON.stringify(sysInfo, null, 2);
-    const action = prepareGitHubIssueReport(app.system.appName, {
+    const action = prepareGitHubIssueReport({
       diagnostics: diag,
     });
 
@@ -289,7 +286,7 @@ export const HelpSettings: React.FC = () => {
     handleOpen(action.openUrl);
   };
 
-  const specs = buildSpecs(sysInfo, app.system.appName, isElectron);
+  const specs = buildSpecs(sysInfo, isElectron);
 
   const renderRow = (spec: Spec) => (
     <div className={styles.specRow} key={spec.label}>
@@ -407,7 +404,7 @@ export const HelpSettings: React.FC = () => {
             </button>
           </div>
           <div className={styles.legalText}>
-            <span>© 2026 {app.system.appName}</span>
+            <span>© 2026 Squigit</span>
             <span className={styles.dot}>•</span>
             <span>
               <button

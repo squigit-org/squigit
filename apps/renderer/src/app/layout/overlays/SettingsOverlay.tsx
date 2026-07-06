@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Book,
   SettingsIcon,
@@ -21,7 +21,7 @@ import {
   GeneralSettings,
   ModelSettings,
   APIKeySettings,
-  PersonalizationSettings,
+  IdentitySettings,
   HelpSettings,
   SettingsSection,
 } from "@/features/settings";
@@ -33,11 +33,9 @@ interface SettingsOverlayProps {
   onClose: () => void;
   activeSection: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
-  currentPrompt: string;
   defaultModel: string;
   defaultOcrLanguage: string;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
-  soulMdName?: string | null;
   themePreference: "dark" | "light" | "system";
   onSetTheme: (theme: "dark" | "light" | "system") => void;
   autoExpandOCR: boolean;
@@ -57,11 +55,9 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   onClose,
   activeSection,
   onSectionChange,
-  currentPrompt,
   defaultModel,
   defaultOcrLanguage,
   updatePreferences,
-  soulMdName,
   themePreference,
   onSetTheme,
   autoExpandOCR,
@@ -72,17 +68,11 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   onSetAPIKey,
   isGuest = false,
 }) => {
-  const [localPrompt, setLocalPrompt] = useState(currentPrompt);
-
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     hasSelection: boolean;
   } | null>(null);
-
-  useEffect(() => {
-    setLocalPrompt(currentPrompt);
-  }, [currentPrompt]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -196,15 +186,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
             isGuest={isGuest}
           />
         )}
-        {activeSection === "personalization" && (
-          <PersonalizationSettings
-            localPrompt={localPrompt}
-            currentPrompt={currentPrompt}
-            setLocalPrompt={setLocalPrompt}
-            updatePreferences={updatePreferences}
-            soulMdName={soulMdName}
-          />
-        )}
+        {activeSection === "personalization" && <IdentitySettings />}
         {activeSection === "help" && <HelpSettings />}
       </WidgetOverlay>
       {contextMenu && (

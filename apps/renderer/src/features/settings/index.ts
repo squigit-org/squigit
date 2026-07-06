@@ -10,4 +10,4 @@ export * from "./APIKeySettings";
 export * from "./GeneralSettings";
 export * from "./HelpSettings";
 export * from "./ModelsSettings";
-export * from "./PersonalizationSettings";
+export * from "./IdentitySettings";
