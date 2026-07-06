@@ -46,7 +46,7 @@ impl QtApp {
     }
 
     pub fn run(&mut self) -> Result<ExitCode> {
-        let _lock = InstanceLock::try_acquire("qt-capture")
+        let _lock = InstanceLock::try_acquire()
             .context("Failed to acquire instance lock - is another capture running?")?;
 
         let mut child = self.spawn_process()?;
