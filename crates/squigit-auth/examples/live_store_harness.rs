@@ -93,10 +93,8 @@ fn run() -> Result<(), String> {
         }
         "auth-google" => {
             let store = ProfileStore::new().map_err(|err| err.to_string())?;
-            let settings = AuthFlowSettings::new(
-                "Squigit",
-                Arc::new(|url| open_url(url).map_err(ProfileError::Auth)),
-            );
+            let settings =
+                AuthFlowSettings::new(Arc::new(|url| open_url(url).map_err(ProfileError::Auth)));
             let auth_cancelled = Arc::new(AtomicBool::new(false));
             install_cancel_signal_handlers(auth_cancelled.clone())?;
             let cancel_notifier =
@@ -117,7 +115,7 @@ fn run() -> Result<(), String> {
             }
         }
         "auth-credentials-ok" => {
-            let settings = AuthFlowSettings::new("Squigit", Arc::new(|_| Ok(())));
+            let settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
             validate_google_credentials(&settings).map_err(|err| err.to_string())?;
             println!("ok");
         }

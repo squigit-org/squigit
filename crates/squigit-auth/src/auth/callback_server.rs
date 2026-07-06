@@ -72,7 +72,7 @@ impl AuthFlowSettings {
     }
 
     pub fn cancel_path(&self) -> String {
-        format!("/squigit-cancel")
+        "/squigit-cancel".to_string()
     }
 
     pub fn cancel_url(&self) -> String {

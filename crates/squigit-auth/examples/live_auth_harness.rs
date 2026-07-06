@@ -97,10 +97,8 @@ fn isolated_config_dir() -> Result<PathBuf, String> {
 
 fn run_google_auth(policy: AuthAccountPolicy) -> Result<(), String> {
     let store = ProfileStore::new().map_err(|error| error.to_string())?;
-    let mut settings = AuthFlowSettings::new(
-        "Squigit",
-        Arc::new(|url| open_system_browser(url).map_err(ProfileError::Auth)),
-    );
+    let mut settings =
+        AuthFlowSettings::new(Arc::new(|url| open_system_browser(url).map_err(ProfileError::Auth)));
     settings.redirect_port = DESKTOP_AUTH_PORT;
     settings.account_policy = policy;
 

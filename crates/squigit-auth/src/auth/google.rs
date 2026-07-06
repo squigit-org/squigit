@@ -330,7 +330,7 @@ pub fn start_google_auth_flow(
         let name = profile
             .names
             .and_then(|items| items.first().and_then(|item| item.display_name.clone()))
-            .unwrap_or_else(|| format!("Squigit User"));
+            .unwrap_or_else(|| "Squigit User".to_string());
         let email = profile
             .email_addresses
             .and_then(|items| items.first().and_then(|item| item.value.clone()))

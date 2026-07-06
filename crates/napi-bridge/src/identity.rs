@@ -29,19 +29,19 @@ pub fn get_identity_config() -> Result<NapiIdentityConfig> {
 pub fn set_identity_prompt(prompt: String) -> Result<()> {
     let mut config = Config::load();
     config.prompt = prompt;
-    config.save().map_err(|e| Error::from_reason(e))
+    config.save().map_err(Error::from_reason)
 }
 
 #[napi]
 pub fn set_identity_soul(name: String, markdown: String) -> Result<()> {
     let mut config = Config::load();
     config.soul = Some(Soul { name, markdown });
-    config.save().map_err(|e| Error::from_reason(e))
+    config.save().map_err(Error::from_reason)
 }
 
 #[napi]
 pub fn remove_identity_soul() -> Result<()> {
     let mut config = Config::load();
     config.soul = None;
-    config.save().map_err(|e| Error::from_reason(e))
+    config.save().map_err(Error::from_reason)
 }

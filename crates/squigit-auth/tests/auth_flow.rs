@@ -135,9 +135,7 @@ fn run_policy_flow(
         }}"#
     );
     let (body_tx, body_rx) = std::sync::mpsc::channel();
-    let mut settings = AuthFlowSettings::new(
-        "Squigit",
-        Arc::new(move |auth_url| {
+    let mut settings = AuthFlowSettings::new(Arc::new(move |auth_url| {
             let auth_url = Url::parse(auth_url)?;
             let query = |key: &str| {
                 auth_url
@@ -162,8 +160,7 @@ fn run_policy_flow(
                 body_tx.send(body).unwrap();
             });
             Ok(())
-        }),
-    );
+        }));
     settings.redirect_port = callback_port;
     settings.user_info_url = format!("http://127.0.0.1:{oauth_port}/userinfo");
     settings.credentials_source = CredentialsSource::RawJson(credentials);
@@ -215,7 +212,7 @@ fn cache_avatar_stores_bytes_in_profile_cas() {
 #[test]
 fn placeholder_credentials_are_rejected() {
     let store = temp_store();
-    let mut settings = AuthFlowSettings::new("Squigit", Arc::new(|_| Ok(())));
+    let mut settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
     settings.credentials_source = CredentialsSource::RawJson(
         r#"{
             "installed": {
@@ -257,10 +254,9 @@ fn auto_credentials_source_prefers_raw_env_over_path_env() {
         }"#,
     );
 
-    let mut settings = AuthFlowSettings::new(
-        "Squigit",
-        Arc::new(|_| Err(ProfileError::Auth("browser-opened".to_string()))),
-    );
+    let mut settings = AuthFlowSettings::new(Arc::new(|_| {
+        Err(ProfileError::Auth("browser-opened".to_string()))
+    }));
     settings.credentials_source = CredentialsSource::Auto;
     settings.redirect_port = free_port();
 
@@ -294,10 +290,9 @@ fn auto_credentials_source_can_use_path_env() {
         path.to_string_lossy().to_string(),
     );
 
-    let mut settings = AuthFlowSettings::new(
-        "Squigit",
-        Arc::new(|_| Err(ProfileError::Auth("browser-opened".to_string()))),
-    );
+    let mut settings = AuthFlowSettings::new(Arc::new(|_| {
+        Err(ProfileError::Auth("browser-opened".to_string()))
+    }));
     settings.credentials_source = CredentialsSource::Auto;
     settings.redirect_port = free_port();
 
@@ -396,9 +391,7 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
         oauth_port, oauth_port
     );
 
-    let mut settings = AuthFlowSettings::new(
-        "Squigit",
-        Arc::new(|url| {
+    let mut settings = AuthFlowSettings::new(Arc::new(|url| {
             let client = reqwest::blocking::Client::builder()
                 .no_proxy()
                 .redirect(reqwest::redirect::Policy::none())
@@ -430,8 +423,7 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
             });
 
             Ok(())
-        }),
-    );
+        }));
     settings.redirect_port = callback_port;
     settings.user_info_url = format!("http://127.0.0.1:{}/userinfo", oauth_port);
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
@@ -584,9 +576,7 @@ fn cancelled_auth_serves_failure_page_for_late_callback() {
     );
 
     let (location_tx, location_rx) = std::sync::mpsc::channel();
-    let mut settings = AuthFlowSettings::new(
-        "Squigit",
-        Arc::new(move |url| {
+    let mut settings = AuthFlowSettings::new(Arc::new(move |url| {
             let client = reqwest::blocking::Client::builder()
                 .no_proxy()
                 .redirect(reqwest::redirect::Policy::none())
@@ -603,8 +593,7 @@ fn cancelled_auth_serves_failure_page_for_late_callback() {
                 .to_string();
             location_tx.send(location).unwrap();
             Ok(())
-        }),
-    );
+        }));
     settings.redirect_port = callback_port;
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
 
