@@ -7,7 +7,7 @@
 import { DEFAULT_MODEL_ID, DEFAULT_OCR_MODEL_ID } from "./models-config";
 
 export const DEFAULT_THEME = "system" as const;
-export const PREFERENCES_FILE_NAME = "preferences.json";
+export const CONFIG_FILE_NAME = "config.toml";
 export const DEFAULT_CAPTURE_TYPE = "traditional" as const;
 
 export const DEFAULT_PREFERENCES = {

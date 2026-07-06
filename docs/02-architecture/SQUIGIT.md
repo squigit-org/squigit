@@ -173,7 +173,7 @@ It communicates with the host through **Ports**: abstract TypeScript interfaces 
 | `ProviderPort`    | AI model streaming, title generation, conversation compression           |
 | `StoragePort`     | Thread CRUD, image storage, OCR data, rolling summaries                  |
 | `SystemPort`      | External URL opening, temp file cleanup, API key retrieval, ImgBB upload |
-| `PreferencesPort` | User preferences persistence (theme, model, capture settings)            |
+| `ConfigPort`      | User config persistence (theme, model, capture settings)                 |
 
 #### `shared/packages/react` — React Bindings
 
@@ -188,7 +188,7 @@ These hooks are framework-agnostic within the React ecosystem. They work identic
 ```mermaid
 graph TD
     subgraph "shared/packages/core"
-        PORTS["Ports\nProviderPort\nStoragePort\nSystemPort\nPreferencesPort"]
+        PORTS["Ports\nProviderPort\nStoragePort\nSystemPort\nConfigPort"]
         ENGINE["Brain Engine\nStreaming orchestration\nRetry logic\nWord playback"]
         SESSION["Brain Session\nHistory management\nContext window\nRolling compression"]
         SERVICES["Services\nGoogle Search/Translate\nGitHub integration\nImgBB upload"]
@@ -329,7 +329,7 @@ Each shell boots by registering its Port implementations before any domain code 
 graph TD
     subgraph "Boot Sequence"
         direction TB
-        REG["Register Ports\nsetProviderPort()\nsetStoragePort()\nsetSystemPort()\nsetPreferencesPort()"]
+        REG["Register Ports\nsetProviderPort()\nsetStoragePort()\nsetSystemPort()\nsetConfigPort()"]
         INIT["Initialize Domain\nStart session\nLoad preferences"]
         RENDER["Mount UI\nReact DOM or INK"]
     end
@@ -340,14 +340,14 @@ graph TD
         E_PROV["ProviderPort\nIPC invoke → main process → napi"]
         E_STOR["StoragePort\nIPC invoke → main process → napi"]
         E_SYS["SystemPort\nIPC invoke → shell.openExternal"]
-        E_PREF["PreferencesPort\nIPC invoke → fs operations"]
+        E_PREF["ConfigPort\nIPC invoke → fs operations"]
     end
 
     subgraph "CLI Adapter"
         C_PROV["ProviderPort\nDirect napi-bridge call"]
         C_STOR["StoragePort\nDirect napi-bridge call"]
         C_SYS["SystemPort\nchild_process.exec / xdg-open"]
-        C_PREF["PreferencesPort\nDirect fs read/write"]
+        C_PREF["ConfigPort\nDirect fs read/write"]
     end
 
     E_PROV --> REG

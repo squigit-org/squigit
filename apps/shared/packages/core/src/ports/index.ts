@@ -14,8 +14,8 @@ export { setProviderPort, getProviderPort } from "./provider";
 export type { StoragePort } from "./storage";
 export { setStoragePort, getStoragePort } from "./storage";
 
-export type { PreferencesPort } from "./preferences";
-export { setPreferencesPort, getPreferencesPort } from "./preferences";
+export type { ConfigPort } from "./config";
+export { setConfigPort, getConfigPort } from "./config";
 
 export type {
   SystemApiKeyProvider,

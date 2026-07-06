@@ -9,7 +9,7 @@ export {
   getDefaultPreferences,
   getWizardState,
   setWizardState,
-  hasPreferencesFile,
+  hasConfigFile,
   loadPreferences,
   savePreferences,
 } from "./app-settings.ts";
@@ -67,7 +67,7 @@ export {
 
 export {
   DEFAULT_THEME,
-  PREFERENCES_FILE_NAME,
+  CONFIG_FILE_NAME,
   DEFAULT_CAPTURE_TYPE,
   DEFAULT_PREFERENCES,
 } from "./defaults.ts";

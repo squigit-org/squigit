@@ -15,11 +15,11 @@ type AuthAction = "login" | "signup" | "logout" | "remove" | "profiles";
 
 type InfraSnapshot = {
   baseDir: string;
-  preferencesPath: string;
+  configPath: string;
   snapshotBaseDir: string;
-  snapshotPreferencesPath: string;
+  snapshotConfigPath: string;
   hadBaseDir: boolean;
-  hadPreferences: boolean;
+  hadConfig: boolean;
   tempDir: string;
 };
 
@@ -105,28 +105,28 @@ async function pathExists(targetPath: string): Promise<boolean> {
 
 async function captureSnapshot(): Promise<InfraSnapshot> {
   const baseDir = await getStoreBaseDir();
-  const preferencesPath = path.resolve(baseDir, "..", "preferences.json");
+  const configPath = path.resolve(baseDir, "..", "config.toml");
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "squigit-auth-snapshot-"));
   const snapshotBaseDir = path.join(tempDir, "Local Storage");
-  const snapshotPreferencesPath = path.join(tempDir, "preferences.json");
+  const snapshotConfigPath = path.join(tempDir, "config.toml");
 
   const hadBaseDir = await pathExists(baseDir);
   if (hadBaseDir) {
     await fs.cp(baseDir, snapshotBaseDir, { recursive: true, force: true });
   }
 
-  const hadPreferences = await pathExists(preferencesPath);
-  if (hadPreferences) {
-    await fs.copyFile(preferencesPath, snapshotPreferencesPath);
+  const hadConfig = await pathExists(configPath);
+  if (hadConfig) {
+    await fs.copyFile(configPath, snapshotConfigPath);
   }
 
   return {
     baseDir,
-    preferencesPath,
+    configPath,
     snapshotBaseDir,
-    snapshotPreferencesPath,
+    snapshotConfigPath,
     hadBaseDir,
-    hadPreferences,
+    hadConfig,
     tempDir,
   };
 }
@@ -143,11 +143,11 @@ async function restoreSnapshot(snapshot: InfraSnapshot): Promise<void> {
     await fs.mkdir(snapshot.baseDir, { recursive: true });
   }
 
-  if (snapshot.hadPreferences) {
-    await fs.mkdir(path.dirname(snapshot.preferencesPath), { recursive: true });
-    await fs.copyFile(snapshot.snapshotPreferencesPath, snapshot.preferencesPath);
+  if (snapshot.hadConfig) {
+    await fs.mkdir(path.dirname(snapshot.configPath), { recursive: true });
+    await fs.copyFile(snapshot.snapshotConfigPath, snapshot.configPath);
   } else {
-    await fs.rm(snapshot.preferencesPath, { force: true });
+    await fs.rm(snapshot.configPath, { force: true });
   }
 }
 

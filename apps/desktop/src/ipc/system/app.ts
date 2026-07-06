@@ -30,8 +30,9 @@ export function registerAppHandlers() {
       const path = require("path");
       const { app } = require("electron");
       const userData = app.getPath("userData");
+      const rootDir = path.join(userData, "..");
       const data = await fs.readFile(
-        path.join(userData, ".squigit-wizard-state.json"),
+        path.join(rootDir, ".squigit-wizard-state.json"),
         "utf-8",
       );
       return JSON.parse(data);
@@ -49,8 +50,9 @@ export function registerAppHandlers() {
         const path = require("path");
         const { app } = require("electron");
         const userData = app.getPath("userData");
+        const rootDir = path.join(userData, "..");
         await fs.writeFile(
-          path.join(userData, ".squigit-wizard-state.json"),
+          path.join(rootDir, ".squigit-wizard-state.json"),
           JSON.stringify(defaultState, null, 2),
           "utf-8",
         );
@@ -65,8 +67,9 @@ export function registerAppHandlers() {
     const path = require("path");
     const { app } = require("electron");
     const userData = app.getPath("userData");
+    const rootDir = path.join(userData, "..");
     await fs.writeFile(
-      path.join(userData, ".squigit-wizard-state.json"),
+      path.join(rootDir, ".squigit-wizard-state.json"),
       JSON.stringify(state),
     );
   });

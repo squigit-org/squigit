@@ -7,7 +7,7 @@
 import { platform } from "@/platform";
 import type { ProviderStreamEvent } from "@squigit/core/brain/engine";
 import {
-  setPreferencesPort,
+  setConfigPort,
   setProviderPort,
   setStoragePort,
   setSystemPort,
@@ -116,17 +116,17 @@ export function initializeCorePorts(): void {
       platform.invoke("save_image_brief", { threadId, brief }),
   });
 
-  setPreferencesPort({
+  setConfigPort({
     getWizardState: () =>
       platform.invoke<{ step: number; isFinished: boolean }>(
         "get_wizard_state",
       ),
     setWizardState: (state) => platform.invoke("set_wizard_state", state),
-    hasPreferencesFile: (fileName: string) =>
+    hasConfigFile: (fileName: string) =>
       platform.fs.exists(fileName, { baseDir: "AppConfig" }),
-    readPreferencesFile: (fileName: string) =>
+    readConfigFile: (fileName: string) =>
       platform.fs.readTextFile(fileName, { baseDir: "AppConfig" }),
-    writePreferencesFile: async (fileName: string, content: string) => {
+    writeConfigFile: async (fileName: string, content: string) => {
       await platform.fs.mkdir("", { baseDir: "AppConfig", recursive: true });
       await platform.fs.writeTextFile(fileName, content, {
         baseDir: "AppConfig",
