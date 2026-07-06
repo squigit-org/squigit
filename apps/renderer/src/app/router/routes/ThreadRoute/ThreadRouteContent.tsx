@@ -107,15 +107,36 @@ const ThreadRouteContentComponent: React.FC<ThreadRouteContentProps> = ({
             )}
           </div>
 
-          {visibleImageProgressText && (
-            <p
-              key={visibleImageProgressText}
-              className={styles.imageProgressText}
-              aria-live="polite"
-            >
-              {visibleImageProgressText}
-            </p>
-          )}
+          {visibleImageProgressText && (() => {
+            const countdownMatch = visibleImageProgressText.match(
+              /^(.+?)(\d+s(?:\.\.\.)?)$/,
+            );
+            if (countdownMatch) {
+              return (
+                <p
+                  className={`${styles.imageProgressText} ${styles.imageProgressTextStatic}`}
+                  aria-live="polite"
+                >
+                  {countdownMatch[1]}
+                  <span
+                    key={countdownMatch[2]}
+                    className={styles.imageProgressCountdown}
+                  >
+                    {countdownMatch[2]}
+                  </span>
+                </p>
+              );
+            }
+            return (
+              <p
+                key={visibleImageProgressText}
+                className={styles.imageProgressText}
+                aria-live="polite"
+              >
+                {visibleImageProgressText}
+              </p>
+            );
+          })()}
         </div>
       )}
 

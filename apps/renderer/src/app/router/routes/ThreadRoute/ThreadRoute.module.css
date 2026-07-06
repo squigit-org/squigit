@@ -294,6 +294,17 @@
   animation: "imageProgressReveal" 180ms ease-out forwards;
 }
 
+.imageProgressTextStatic {
+  opacity: 1;
+  animation: none;
+}
+
+.imageProgressCountdown {
+  display: inline-block;
+  opacity: 0;
+  animation: "imageProgressReveal" 180ms ease-out forwards;
+}
+
 .quickAnswerButton {
   border: none;
   background: transparent;
@@ -312,7 +323,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .imageProgressText {
+  .imageProgressText,
+  .imageProgressCountdown {
     animation: none;
     opacity: 1;
     transform: none;

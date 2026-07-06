@@ -13,7 +13,6 @@ export const useBrainSession = ({
   apiKey,
   currentModel,
   startupImage,
-  prompt,
   setCurrentModel,
   enabled,
   onMessage,
@@ -34,7 +33,6 @@ export const useBrainSession = ({
     imageId: string;
     fromHistory?: boolean;
   } | null;
-  prompt: string;
   setCurrentModel: (model: string) => void;
   enabled: boolean;
   onMessage?: (message: Message, threadId: string) => void;
@@ -64,14 +62,12 @@ export const useBrainSession = ({
     state,
     userName,
     userEmail,
-    userInstruction: prompt,
   });
 
   const lifecycle = useBrainLifecycle({
     enabled,
     threadId,
     startupImage,
-    prompt,
     apiKey,
     currentModel,
     onMissingApiKey,

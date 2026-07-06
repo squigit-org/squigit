@@ -11,7 +11,6 @@ export const useThread = ({
   apiKey,
   currentModel,
   startupImage,
-  prompt,
   setCurrentModel,
   enabled,
   onMessage,
@@ -32,7 +31,6 @@ export const useThread = ({
     imageId: string;
     fromHistory?: boolean;
   } | null;
-  prompt: string;
   setCurrentModel: (model: string) => void;
   enabled: boolean;
   onMessage?: (message: Message, threadId: string) => void;
@@ -49,7 +47,6 @@ export const useThread = ({
     apiKey,
     currentModel,
     startupImage,
-    prompt,
     setCurrentModel,
     enabled,
     onMissingApiKey,

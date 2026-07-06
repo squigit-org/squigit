@@ -20,7 +20,6 @@ export interface BrainSessionStoreState {
   imageBrief: string | null;
   userName: string | null;
   userEmail: string | null;
-  userInstruction: string | null;
   conversationSummary: string | null;
 }
 
@@ -38,6 +37,5 @@ export const brainSessionStore: BrainSessionStoreState = {
   imageBrief: null as string | null,
   userName: null as string | null,
   userEmail: null as string | null,
-  userInstruction: null as string | null,
   conversationSummary: null as string | null,
 };

@@ -26,6 +26,7 @@ use crate::provider::gemini::transport::types::{
     GeminiContent, GeminiEvent, GeminiFileData, GeminiFunctionResponse, GeminiPart, GeminiRequest,
 };
 use crate::runtime::BrainRuntimeState;
+use squigit_memory::identity::Config;
 
 fn normalize_attachment_lookup_key(path: &str) -> String {
     let trimmed = path.trim();
@@ -244,7 +245,7 @@ async fn stream_iteration_with_rate_limit_retry(
                                 channel_id,
                                 GeminiEvent::ToolStatus {
                                     message: format!(
-                                        "Rate limited, retrying in {}s...",
+                                        "Rate limited, retrying in {}s",
                                         remaining_secs
                                     ),
                                 },
@@ -256,7 +257,6 @@ async fn stream_iteration_with_rate_limit_retry(
                             }
                         }
 
-                        // Clear any partial tokens from the failed attempt.
                         emit_event(sink, channel_id, GeminiEvent::Reset);
 
                         last_error = err;
@@ -294,7 +294,6 @@ pub async fn stream_gemini_thread_v2(
     // Runtime context params (NEW)
     user_name: Option<String>,
     user_email: Option<String>,
-    user_instruction: Option<String>,
     image_brief: Option<String>,
 ) -> Result<(), String> {
     const MAX_TOOL_CALLS_PER_TURN: usize = 3;
@@ -349,29 +348,22 @@ pub async fn stream_gemini_thread_v2(
                 ..Default::default()
             });
 
-            if let Some(ref instruction) = user_instruction {
-                if !instruction.trim().is_empty() {
-                    parts.push(GeminiPart {
-                        text: Some(format!("\n## User's Default Instruction\n{}", instruction)),
-                        ..Default::default()
-                    });
-                }
+            let identity_config = Config::load();
+
+            if !identity_config.prompt.trim().is_empty() {
+                parts.push(GeminiPart {
+                    text: Some(format!("\n## User's Default Instruction\n{}", identity_config.prompt.trim())),
+                    ..Default::default()
+                });
             }
 
-            // Attach user's soul.md if present (hardcoded path, shared with CLI)
-            if let Some(soul_path) = squigit_memory::paths::base_config_dir()
-                .map(|p| p.join("soul.md"))
-            {
-                if soul_path.is_file() {
-                    if let Ok(soul_content) = std::fs::read_to_string(&soul_path) {
-                        let trimmed = soul_content.trim();
-                        if !trimmed.is_empty() {
-                            parts.push(GeminiPart {
-                                text: Some(format!("\n## User's Soul.md\n{}", trimmed)),
-                                ..Default::default()
-                            });
-                        }
-                    }
+            if let Some(soul) = identity_config.soul {
+                let trimmed = soul.markdown.trim();
+                if !trimmed.is_empty() {
+                    parts.push(GeminiPart {
+                        text: Some(format!("\n## User's Soul.md\n{}", trimmed)),
+                        ..Default::default()
+                    });
                 }
             }
 

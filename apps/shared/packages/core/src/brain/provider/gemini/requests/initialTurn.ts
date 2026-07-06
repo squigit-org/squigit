@@ -8,7 +8,6 @@ import { brainSessionStore } from "../../../session/store";
 import type { ProviderStreamEvent } from "../../../engine/types";
 import {
   resetBrainContext,
-  setUserInfo,
   setImageDescription,
   setImageBrief,
   addToHistory,
@@ -35,7 +34,6 @@ export const startNewThreadStream = async (
   threadId?: string | null,
   userName?: string,
   userEmail?: string,
-  userInstruction?: string,
   onBriefReady?: (brief: string) => void,
   onEvent?: (event: ProviderStreamEvent) => void,
 ): Promise<string> => {
@@ -48,7 +46,6 @@ export const startNewThreadStream = async (
   const myGenId = brainSessionStore.generationId;
 
   resetBrainContext();
-  setUserInfo(userName, userEmail, userInstruction);
   brainSessionStore.storedImagePath = imagePath;
 
   const channelId = createProviderChannelId();
@@ -160,7 +157,6 @@ export const startNewThreadStream = async (
         threadId: threadId ?? null,
         userName,
         userEmail,
-        userInstruction,
         imageBrief: "", // Empty on initial turn
       }),
       streamWatchdog.stallPromise,

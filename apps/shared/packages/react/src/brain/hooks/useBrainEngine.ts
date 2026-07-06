@@ -82,7 +82,6 @@ export const useBrainEngine = (config: {
   state: any; // from useThreadState
   userName?: string;
   userEmail?: string;
-  userInstruction?: string;
 }): BrainEngineHandle => {
   const {
     messages,
@@ -734,7 +733,6 @@ export const useBrainEngine = (config: {
             config.threadId,
             config.userName,
             config.userEmail,
-            config.userInstruction,
             (brief: string) => {
               if (
                 hasGeneratedTitleFromBrief ||
@@ -862,7 +860,6 @@ export const useBrainEngine = (config: {
               appendPendingRawText(token);
             },
             config.threadId,
-            undefined,
             undefined,
             undefined,
             undefined,

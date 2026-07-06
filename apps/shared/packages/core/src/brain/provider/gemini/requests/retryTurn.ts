@@ -167,7 +167,6 @@ export const retryFromMessage = async (
           threadId: threadId ?? null,
           userName: brainSessionStore.userName ?? undefined,
           userEmail: brainSessionStore.userEmail ?? undefined,
-          userInstruction: brainSessionStore.userInstruction,
           imageBrief: "",
         }),
         streamWatchdog.stallPromise,
@@ -266,7 +265,6 @@ export const retryFromMessage = async (
         threadId: threadId ?? null,
         userName: brainSessionStore.userName ?? undefined,
         userEmail: brainSessionStore.userEmail ?? undefined,
-        userInstruction: null, // One-time intent hook not needed on retries
         imageBrief: brainSessionStore.imageBrief,
       }),
       streamWatchdog.stallPromise,

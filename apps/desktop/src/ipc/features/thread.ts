@@ -40,7 +40,6 @@ export function registerThreadHandlers() {
       args.threadId,
       args.userName,
       args.userEmail,
-      args.userInstruction,
       args.imageBrief,
       (err: any, streamEvent: any) => {
         sendStreamEvent(event, args.channelId, err, streamEvent);

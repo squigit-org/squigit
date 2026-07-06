@@ -105,7 +105,6 @@ export const sendMessage = async (
         threadId: threadId ?? null,
         userName: brainSessionStore.userName ?? undefined,
         userEmail: brainSessionStore.userEmail ?? undefined,
-        userInstruction: null, // One-time intent hook only sent on initial turn
         imageBrief: brainSessionStore.imageBrief,
       }),
       streamWatchdog.stallPromise,

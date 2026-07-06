@@ -18,7 +18,6 @@ export const resetBrainContext = () => {
   brainSessionStore.imageBrief = null;
   brainSessionStore.userName = null;
   brainSessionStore.userEmail = null;
-  brainSessionStore.userInstruction = null;
   brainSessionStore.conversationSummary = null;
 };
 
@@ -28,10 +27,9 @@ export const setImageDescription = (description: string) => {
 
 export const getImageDescription = () => brainSessionStore.imageDescription;
 
-export const setUserInfo = (name?: string, email?: string, instruction?: string) => {
+export const setUserInfo = (name?: string, email?: string) => {
   if (name) brainSessionStore.userName = name;
   if (email) brainSessionStore.userEmail = email;
-  if (instruction) brainSessionStore.userInstruction = instruction;
 };
 
 export const setImageBrief = (brief: string) => {

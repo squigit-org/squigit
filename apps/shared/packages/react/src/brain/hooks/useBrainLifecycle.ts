@@ -17,7 +17,6 @@ export const useBrainLifecycle = (config: {
     imageId: string;
     fromHistory?: boolean;
   } | null;
-  prompt: string;
   apiKey: string;
   currentModel: string;
   onMissingApiKey?: () => void;
@@ -51,7 +50,6 @@ export const useBrainLifecycle = (config: {
     if (
       config.enabled &&
       config.startupImage &&
-      config.prompt &&
       !config.startupImage.fromHistory &&
       config.threadId
     ) {
@@ -87,7 +85,6 @@ export const useBrainLifecycle = (config: {
     }
   }, [
     config.apiKey,
-    config.prompt,
     config.startupImage,
     config.currentModel,
     config.enabled,
