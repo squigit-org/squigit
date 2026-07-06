@@ -5,7 +5,7 @@ Squigit has one machine-wide store shared by every shell. Electron and the CLI a
 ```text
 {squigit application root}/
 ├── preferences.json
-├── wizard_state.json
+├── .squigit-wizard-state.json
 ├── Local Storage/
 │   ├── index.json
 │   ├── session.json

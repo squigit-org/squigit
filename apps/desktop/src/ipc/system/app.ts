@@ -31,7 +31,7 @@ export function registerAppHandlers() {
       const { app } = require("electron");
       const userData = app.getPath("userData");
       const data = await fs.readFile(
-        path.join(userData, "wizard_state.json"),
+        path.join(userData, ".squigit-wizard-state.json"),
         "utf-8",
       );
       return JSON.parse(data);
@@ -50,12 +50,12 @@ export function registerAppHandlers() {
         const { app } = require("electron");
         const userData = app.getPath("userData");
         await fs.writeFile(
-          path.join(userData, "wizard_state.json"),
+          path.join(userData, ".squigit-wizard-state.json"),
           JSON.stringify(defaultState, null, 2),
           "utf-8",
         );
       } catch (err) {
-        console.error("Failed to pre-create wizard_state.json", err);
+        console.error("Failed to pre-create .squigit-wizard-state.json", err);
       }
       return defaultState;
     }
@@ -66,7 +66,7 @@ export function registerAppHandlers() {
     const { app } = require("electron");
     const userData = app.getPath("userData");
     await fs.writeFile(
-      path.join(userData, "wizard_state.json"),
+      path.join(userData, ".squigit-wizard-state.json"),
       JSON.stringify(state),
     );
   });
