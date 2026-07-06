@@ -5,6 +5,23 @@
  */
 
 import { platform } from "./index";
+import type { Profile } from "../tauri/tauri.types";
+
+type NativeProfile = Profile & {
+  originalAvatar?: string | null;
+};
+
+const normalizeProfile = (profile: NativeProfile | null): Profile | null => {
+  if (!profile) return null;
+
+  return {
+    ...profile,
+    original_avatar: profile.original_avatar ?? profile.originalAvatar ?? null,
+  };
+};
+
+const normalizeProfiles = (profiles: NativeProfile[]) =>
+  profiles.map((profile) => normalizeProfile(profile) as Profile);
 
 export const commands = {
   // Window
@@ -73,8 +90,14 @@ export const commands = {
     platform.invoke<{ appVersion: string }>("get_app_constants"),
 
   // Accounts
-  listProfiles: () => platform.invoke<any[]>("list_profiles"),
-  getActiveProfile: () => platform.invoke<any>("get_active_profile"),
+  listProfiles: async () =>
+    normalizeProfiles(await platform.invoke<NativeProfile[]>("list_profiles")),
+  getActiveProfile: async () =>
+    normalizeProfile(await platform.invoke<NativeProfile | null>("get_active_profile")),
+  getProfile: async (profileId: string) =>
+    normalizeProfile(
+      await platform.invoke<NativeProfile | null>("get_profile", { profileId }),
+    ),
   setActiveProfile: (profileId: string | null) => platform.invoke("set_active_profile", { profileId }),
   cacheAvatar: (url: string, profileId?: string) => platform.invoke<string>("cache_avatar", { url, profileId }),
   setApiKey: (provider: "google ai studio" | "imgbb", key: string, profileId: string) => platform.invoke("encrypt_and_save", { provider, plaintext: key, profileId }),

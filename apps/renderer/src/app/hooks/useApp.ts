@@ -156,7 +156,10 @@ export const useApp = () => {
     ? isOnboardingId(threadHistory.activeSessionId)
     : false;
   const isImageMissing = !system.startupImage && !hasActiveOnboarding;
-  const isAuthPending = auth.authStage === "LOGIN";
+  // The hydrated profile is authoritative. During first-run auth, useAuth can
+  // briefly remain on LOGIN after the profile and API key are already ready.
+  const isAuthPending =
+    auth.authStage === "LOGIN" && !system.activeProfile;
   const isPendingAutoSelectWizard =
     system.wizardState?.isFinished === false &&
     threadHistory.activeSessionId !== "__system_wizard";

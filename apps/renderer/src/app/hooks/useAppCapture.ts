@@ -272,6 +272,10 @@ export const useAppCapture = ({
     const unlistenAuthSuccess = platform.listen<any>(
       "auth-success",
       async (payload) => {
+        // Do this before the same-profile guard: profile hydration may win the
+        // race, but useAuth still needs to leave LOGIN.
+        auth.login();
+
         if (
           activeProfileRef.current &&
           payload &&
@@ -281,7 +285,6 @@ export const useAppCapture = ({
         }
 
         await performNewSession();
-        auth.login();
       },
     );
 

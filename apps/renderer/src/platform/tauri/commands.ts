@@ -36,6 +36,7 @@ export const commands = {
 
   // Profile Management
   getActiveProfile: () => invoke<Profile | null>("get_active_profile"),
+  getProfile: (profileId: string) => invoke<Profile | null>("get_profile", { profileId }),
   getActiveProfileId: () => invoke<string | null>("get_active_profile_id"),
   listProfiles: () => invoke<Profile[]>("list_profiles"),
   setActiveProfile: (profileId: string) =>

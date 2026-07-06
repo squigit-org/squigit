@@ -31,7 +31,9 @@ export function registerProfileHandlers() {
   );
 
   ipcMain.handle("logout", () => addon.clearActiveProfile?.());
-  ipcMain.handle("cache_avatar", () => null);
+  ipcMain.handle("cache_avatar", (_, args) =>
+    addon.cacheAvatar?.(args.url, args.profileId || args.profile_id),
+  );
   ipcMain.handle("encrypt_and_save", (_, args) =>
     addon.saveApiKey?.(
       args.profileId || args.profile_id,
@@ -49,4 +51,3 @@ export function registerProfileHandlers() {
     return null;
   });
 }
-

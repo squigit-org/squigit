@@ -4,6 +4,8 @@ export declare function analyzeImage(imagePath: string, model: string, userMessa
 
 export declare function appendThreadMessage(threadId: string, role: string, content: string): void
 
+export declare function cacheAvatar(url: string, profileId?: string | undefined | null): Promise<string>
+
 export declare function cancelDownloadOcrModel(modelId: string): void
 
 export declare function cancelGoogleAuth(): void

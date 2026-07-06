@@ -588,6 +588,7 @@ if (!nativeBinding) {
 module.exports = nativeBinding
 module.exports.analyzeImage = nativeBinding.analyzeImage
 module.exports.appendThreadMessage = nativeBinding.appendThreadMessage
+module.exports.cacheAvatar = nativeBinding.cacheAvatar
 module.exports.cancelDownloadOcrModel = nativeBinding.cancelDownloadOcrModel
 module.exports.cancelGoogleAuth = nativeBinding.cancelGoogleAuth
 module.exports.cancelRequest = nativeBinding.cancelRequest
