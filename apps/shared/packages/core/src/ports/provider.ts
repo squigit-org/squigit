@@ -20,7 +20,6 @@ export interface StreamGeminiThreadInput extends Record<string, unknown> {
   threadId: string | null;
   userName?: string | null;
   userEmail?: string | null;
-  userInstruction?: string | null;
   imageBrief?: string | null;
 }
 

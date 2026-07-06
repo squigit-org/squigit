@@ -21,7 +21,6 @@ interface UpdateSectionProps {
 }
 
 interface UpdateNotesRouteProps {
-  appName: string;
   onSystemAction: (actionId: string, value?: string) => void | Promise<void>;
 }
 
@@ -65,7 +64,6 @@ const UpdateSection: React.FC<UpdateSectionProps> = ({
 };
 
 export const UpdateNotesRoute: React.FC<UpdateNotesRouteProps> = ({
-  appName,
   onSystemAction,
 }) => {
   const [update, setUpdate] = useState(() => getPendingUpdate());
@@ -93,7 +91,7 @@ export const UpdateNotesRoute: React.FC<UpdateNotesRouteProps> = ({
   const isOcr = update.component === "ocr";
 
   const titleText = isDesktop
-    ? appName
+    ? "Squigit"
     : `Squigit ${update.component.toUpperCase()}`;
 
   const getUpgradeCommand = () => {
@@ -104,7 +102,7 @@ export const UpdateNotesRoute: React.FC<UpdateNotesRouteProps> = ({
   const handleUpdate = () => {
     if (isDesktop) {
       if (import.meta.env.VITE_PLATFORM !== "electron") {
-        setDeprecatedDialog(getDialogs(appName).DESKTOP_DEPRECATED);
+        setDeprecatedDialog(getDialogs().DESKTOP_DEPRECATED);
         return;
       }
       void onSystemAction("update_now");

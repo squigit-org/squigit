@@ -36,7 +36,6 @@ interface CASImageData {
 }
 
 interface HomeRouteProps {
-  appName: string;
   onImageReady: (data: CASImageData) => void;
   isActive?: boolean;
   isGuest?: boolean;
@@ -44,7 +43,6 @@ interface HomeRouteProps {
 }
 
 export const HomeRoute: React.FC<HomeRouteProps> = ({
-  appName,
   onImageReady,
   isActive = true,
   isGuest = false,
@@ -212,7 +210,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
     >
       <div className={styles.content}>
         <AppIcon size={80} color="var(--c-raw-000)" />
-        <h1 className={styles.title}>{appName}</h1>
+        <h1 className={styles.title}>Squigit</h1>
 
         <div className={styles.actions}>
           <div className={styles.actionRow}>

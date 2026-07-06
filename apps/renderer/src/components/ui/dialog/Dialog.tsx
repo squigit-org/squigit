@@ -31,7 +31,6 @@ interface DialogProps {
   actions?: DialogAction[];
   isOpen: boolean;
   type?: string | DialogContent;
-  appName?: string;
   onAction?: (actionKey: string) => void;
 }
 
@@ -43,12 +42,11 @@ export const Dialog: React.FC<DialogProps> = ({
   isOpen,
   type,
   onAction,
-  appName = "Squigit",
 }) => {
   let activeContent: Partial<DialogContent> = {};
 
   if (typeof type === "string") {
-    const dialogs = getDialogs(appName);
+    const dialogs = getDialogs();
     if (dialogs[type]) {
       activeContent = dialogs[type];
     }

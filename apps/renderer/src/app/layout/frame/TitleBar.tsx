@@ -162,11 +162,9 @@ export const TitleBar: React.FC = () => {
               onClose={() => app.system.setSettingsOpen(false)}
               activeSection={app.system.settingsSection}
               onSectionChange={app.system.setSettingsSection}
-              currentPrompt={app.system.prompt}
               defaultModel={app.system.startupModel}
               defaultOcrLanguage={app.system.startupOcrLanguage}
               updatePreferences={app.system.updatePreferences}
-              soulMdName={app.system.soulMdName}
               themePreference={app.system.themePreference}
               onSetTheme={app.system.onSetTheme}
               autoExpandOCR={app.system.autoExpandOCR}

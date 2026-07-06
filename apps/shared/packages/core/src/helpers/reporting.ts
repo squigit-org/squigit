@@ -43,10 +43,9 @@ export type ReportAction = {
 };
 
 export function prepareMailReport(
-  appName: string,
   {
     email = "a7mddra@gmail.com",
-    subject = `This is a bug report from ${appName}`,
+    subject = `This is a bug report from Squigit`,
     diagnostics = "",
   }: {
     email?: string;
@@ -84,7 +83,6 @@ export function prepareMailReport(
 }
 
 export function prepareGitHubIssueReport(
-  appName: string,
   {
     title = "[BUG] ",
     diagnostics = "",
@@ -97,7 +95,7 @@ export function prepareGitHubIssueReport(
 ): ReportAction {
   const body = [
     "**Describe the bug**",
-    "A clear and concise description of what happened in " + appName + ".",
+    "A clear and concise description of what happened in Squigit.",
     "",
     "**System diagnostics (auto-paste below)**",
     "```json\n" + diagnostics + "\n```",

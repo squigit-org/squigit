@@ -596,7 +596,6 @@ export const SidePanel: React.FC = () => {
       <Dialog
         isOpen={!!deleteId}
         type="DELETE_THREAD"
-        appName={app.system.appName}
         onAction={(key) => {
           if (key === "confirm") handleDeleteThread();
           else setDeleteId(null);
@@ -606,7 +605,6 @@ export const SidePanel: React.FC = () => {
       <Dialog
         isOpen={showBulkDelete}
         type={getDeleteMultipleThreadsDialog(selectedIds.length)}
-        appName={app.system.appName}
         onAction={(key) => {
           if (key === "confirm") handleBulkDelete();
           else setShowBulkDelete(false);

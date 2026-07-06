@@ -205,7 +205,7 @@ export const useApp = () => {
   );
 
   const threadTitle = isImageMissing
-    ? system.appName
+    ? "Squigit"
     : isGeneratingTitle
       ? "New thread"
       : system.sessionThreadTitle || "New thread";
@@ -215,7 +215,6 @@ export const useApp = () => {
     apiKey: system.apiKey,
     currentModel: system.sessionModel,
     startupImage: system.startupImage,
-    prompt: system.prompt,
     setCurrentModel: system.setSessionModel,
     enabled: isThreadActive,
     onMessage: handleMessageAdded,

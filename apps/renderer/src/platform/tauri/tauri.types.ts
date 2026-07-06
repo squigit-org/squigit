@@ -18,7 +18,7 @@ export interface Profile {
 }
 
 export interface AppConstants {
-  appName: string;
+
   defaultModel: string;
   defaultTheme: string;
   defaultPrompt: string;

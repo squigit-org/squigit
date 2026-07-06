@@ -39,7 +39,6 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
     if (activeId.startsWith("__system_update")) {
       return (
         <UpdateNotesRoute
-          appName={app.system.appName}
           onSystemAction={app.handleSystemAction}
         />
       );
@@ -58,7 +57,6 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
   if (!shouldRenderThreadShell) {
     return (
       <HomeRoute
-        appName={app.system.appName}
         onImageReady={app.handleImageReady}
         isGuest={!app.system.activeProfile}
         onLoginRequired={() => app.setShowLoginRequiredDialog(true)}

@@ -16,7 +16,7 @@ export const AppDialogs: React.FC = () => {
   const app = useAppContext();
 
   const isAgreed = app.system.wizardState?.isFinished || app.agreedToTerms;
-  const baseLoginDialog = getDialogs(app.system.appName).LOGIN_REQUIRED;
+  const baseLoginDialog = getDialogs().LOGIN_REQUIRED;
   const loginRequiredDialog = {
     ...baseLoginDialog,
     actions: baseLoginDialog.actions.map((action) => ({
@@ -79,7 +79,7 @@ export const AppDialogs: React.FC = () => {
       <Dialog
         isOpen={!!app.busyDialog}
         type={app.busyDialog || undefined}
-        appName={app.system.appName}
+
         onAction={app.handleBusyDialogAction}
       />
 

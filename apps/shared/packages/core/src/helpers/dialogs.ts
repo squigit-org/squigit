@@ -18,10 +18,10 @@ export interface DialogContent {
   }[];
 }
 
-export const getDialogs = (appName: string): Record<string, DialogContent> => ({
+export const getDialogs = (): Record<string, DialogContent> => ({
   CAPTURE_PERMISSION_DENIED: {
     title: "Screen Capture Denied",
-    message: `${appName} needs permission to record your screen.\n\nPlease enable Screen Recording for ${appName} (or your terminal) in your OS Privacy/Security Settings, then try again.`,
+    message: `Squigit needs permission to record your screen.\n\nPlease enable Screen Recording for Squigit (or your terminal) in your OS Privacy/Security Settings, then try again.`,
     variant: "warning",
     actions: [{ label: "Understood", variant: "primary", actionKey: "close" }],
   },
@@ -90,7 +90,7 @@ export const getDialogs = (appName: string): Record<string, DialogContent> => ({
   },
   LOGIN_REQUIRED: {
     title: "Login Required",
-    message: `You need to sign in first to use ${appName}.`,
+    message: `You need to sign in first to use Squigit.`,
     variant: "info",
     actions: [
       { label: "Cancel", variant: "secondary", actionKey: "cancel" },
