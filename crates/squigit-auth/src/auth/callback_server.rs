@@ -30,7 +30,7 @@ pub enum AuthAccountPolicy {
 
 #[derive(Clone)]
 pub struct AuthFlowSettings {
-    pub app_name: String,
+
     pub redirect_host: String,
     pub redirect_port: u16,
     pub user_info_url: String,
@@ -44,7 +44,6 @@ pub struct AuthFlowSettings {
 impl fmt::Debug for AuthFlowSettings {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AuthFlowSettings")
-            .field("app_name", &self.app_name)
             .field("redirect_host", &self.redirect_host)
             .field("redirect_port", &self.redirect_port)
             .field("user_info_url", &self.user_info_url)
@@ -56,9 +55,8 @@ impl fmt::Debug for AuthFlowSettings {
 }
 
 impl AuthFlowSettings {
-    pub fn new(app_name: impl Into<String>, open_browser: BrowserOpener) -> Self {
+    pub fn new(open_browser: BrowserOpener) -> Self {
         Self {
-            app_name: app_name.into(),
             redirect_host: "127.0.0.1".to_string(),
             redirect_port: 3000,
             user_info_url: DEFAULT_USER_INFO_URL.to_string(),
@@ -74,7 +72,7 @@ impl AuthFlowSettings {
     }
 
     pub fn cancel_path(&self) -> String {
-        format!("/{}-cancel", self.app_name.to_lowercase())
+        format!("/squigit-cancel")
     }
 
     pub fn cancel_url(&self) -> String {

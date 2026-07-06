@@ -23,7 +23,6 @@ pub struct StreamThreadRequest {
     pub thread_id: Option<String>,
     pub user_name: Option<String>,
     pub user_email: Option<String>,
-    pub user_instruction: Option<String>,
     pub image_brief: Option<String>,
 }
 
@@ -58,7 +57,6 @@ pub struct AnalyzeImageRequest {
     pub channel_id: String,
     pub user_name: Option<String>,
     pub user_email: Option<String>,
-    pub user_instruction: Option<String>,
     pub ocr_lang: Option<String>,
 }
 
@@ -124,7 +122,6 @@ impl BrainService {
             request.thread_id,
             request.user_name,
             request.user_email,
-            request.user_instruction,
             request.image_brief,
         )
         .await
@@ -219,7 +216,6 @@ impl BrainService {
                 thread_id: Some(metadata.id.clone()),
                 user_name: request.user_name,
                 user_email: request.user_email,
-                user_instruction: request.user_instruction,
                 image_brief: None,
             },
         )
@@ -329,7 +325,6 @@ impl BrainService {
                 thread_id: Some(request.thread_id.clone()),
                 user_name: request.user_name,
                 user_email: request.user_email,
-                user_instruction: None,
                 image_brief: thread.image_brief.clone(),
             },
         )

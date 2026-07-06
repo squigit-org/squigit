@@ -93,7 +93,6 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
 
         // We let the auth flow handle credentials resolution (via SQUIGIT_GOOGLE_CREDENTIALS_JSON etc)
         let mut settings = AuthFlowSettings::new(
-            "Squigit",
             Arc::new(|url| {
                 #[cfg(target_os = "linux")]
                 {
@@ -162,6 +161,6 @@ pub fn get_api_key(profile_id: String, provider: String) -> Result<Option<String
 
 #[napi]
 pub fn validate_auth_credentials() -> Result<()> {
-    let settings = AuthFlowSettings::new("Squigit", Arc::new(|_| Ok(())));
+    let settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
     squigit_auth::auth::validate_google_credentials(&settings).map_err(map_profile_err)
 }

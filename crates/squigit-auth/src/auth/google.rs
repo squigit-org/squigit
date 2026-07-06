@@ -330,7 +330,7 @@ pub fn start_google_auth_flow(
         let name = profile
             .names
             .and_then(|items| items.first().and_then(|item| item.display_name.clone()))
-            .unwrap_or_else(|| format!("{} User", settings.app_name));
+            .unwrap_or_else(|| format!("Squigit User"));
         let email = profile
             .email_addresses
             .and_then(|items| items.first().and_then(|item| item.value.clone()))
@@ -436,7 +436,7 @@ pub fn start_google_auth_flow(
             "Authentication Successful",
             &format!(
                 "<p>{} is now connected to your Google Account.</p><p>You can close this tab.</p>",
-                settings.app_name
+                "Squigit"
             ),
         )?;
 

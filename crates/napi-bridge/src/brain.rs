@@ -78,7 +78,6 @@ pub async fn analyze_image(
         channel_id: format!("cli-analyze-{}", chrono::Utc::now().timestamp_millis()),
         user_name: None,
         user_email: None,
-        user_instruction: None,
         ocr_lang: None,
     };
 
@@ -146,7 +145,6 @@ pub async fn stream_thread(
     thread_id: Option<String>,
     user_name: Option<String>,
     user_email: Option<String>,
-    user_instruction: Option<String>,
     image_brief: Option<String>,
     #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => void")]
     on_event: ThreadsafeFunction<NapiStreamEvent>,
@@ -168,7 +166,6 @@ pub async fn stream_thread(
         thread_id,
         user_name,
         user_email,
-        user_instruction,
         image_brief,
     };
 

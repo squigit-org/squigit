@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod assets;
-pub mod constants;
 pub mod context;
 pub mod events;
 pub mod provider;
