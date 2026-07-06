@@ -7,8 +7,6 @@
 export type { UserPreferences, WizardState } from "./app-settings.ts";
 export {
   getDefaultPreferences,
-  hasAgreedFlag,
-  setAgreedFlag,
   getWizardState,
   setWizardState,
   hasPreferencesFile,

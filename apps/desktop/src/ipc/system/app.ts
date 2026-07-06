@@ -24,10 +24,6 @@ export function registerAppHandlers() {
   ipcMain.handle("run_sidecar_version", (_, args) => addon.runSidecarVersion?.(args.command));
   ipcMain.handle("updater:check", () => null);
   ipcMain.handle("get_initial_image", () => null);
-  ipcMain.handle(
-    "has_agreed_flag",
-    () => addon.storageGet?.("agreed_flag") === "true",
-  );
   ipcMain.handle("get_wizard_state", async () => {
     try {
       const fs = require("fs/promises");

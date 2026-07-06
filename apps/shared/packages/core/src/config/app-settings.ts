@@ -35,23 +35,6 @@ export async function getDefaultPreferences(): Promise<UserPreferences> {
   };
 }
 
-export async function hasAgreedFlag(): Promise<boolean> {
-  try {
-    return await getPreferencesPort().hasAgreedFlag();
-  } catch (error) {
-    console.warn("Agreed flag check failed:", error);
-    return false;
-  }
-}
-
-export async function setAgreedFlag(): Promise<void> {
-  try {
-    await getPreferencesPort().setAgreedFlag();
-  } catch (error) {
-    console.error("Failed to write agreed flag via runtime port:", error);
-  }
-}
-
 export type WizardState = {
   step: number;
   isFinished: boolean;

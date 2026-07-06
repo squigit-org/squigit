@@ -8,8 +8,6 @@
 import type { WizardState } from "../config/app-settings";
 
 export interface PreferencesPort {
-  hasAgreedFlag(): Promise<boolean>;
-  setAgreedFlag(): Promise<void>;
   getWizardState(): Promise<WizardState>;
   setWizardState(state: WizardState): Promise<void>;
   hasPreferencesFile(fileName: string): Promise<boolean>;

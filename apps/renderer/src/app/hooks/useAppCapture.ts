@@ -13,7 +13,6 @@ import {
   cancelOcrJob,
   createThread,
   getImagePath,
-  hasAgreedFlag,
   saveOcrData,
 } from "@squigit/core/config";
 
@@ -279,11 +278,6 @@ export const useAppCapture = ({
           activeProfileRef.current.id === payload.id
         ) {
           return;
-        }
-
-        const alreadyAgreed = await hasAgreedFlag();
-        if (!alreadyAgreed && agreedToTermsRef.current) {
-          system.setAgreementCompleted();
         }
 
         await performNewSession();

@@ -116,8 +116,6 @@ export function initializeCorePorts(): void {
   });
 
   setPreferencesPort({
-    hasAgreedFlag: () => platform.invoke<boolean>("has_agreed_flag"),
-    setAgreedFlag: () => platform.invoke("set_agreed_flag"),
     getWizardState: () =>
       platform.invoke<{ step: number; isFinished: boolean }>(
         "get_wizard_state",

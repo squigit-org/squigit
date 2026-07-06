@@ -94,20 +94,7 @@ pub fn encrypt_and_save(profile_id: String, provider: String, plaintext: String)
         .map_err(napi::Error::from_reason)
 }
 
-#[napi]
-pub fn set_agreed_flag() -> Result<()> {
-    desktop_runtime::security::set_agreed_flag().map_err(napi::Error::from_reason)
-}
 
-#[napi]
-pub fn has_agreed_flag() -> bool {
-    desktop_runtime::security::has_agreed_flag()
-}
-
-#[napi]
-pub fn check_file_exists(path: String) -> bool {
-    desktop_runtime::security::check_file_exists(&path)
-}
 
 #[napi]
 pub fn get_machine_info() -> String {

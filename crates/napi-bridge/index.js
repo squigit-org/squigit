@@ -591,7 +591,7 @@ module.exports.appendThreadMessage = nativeBinding.appendThreadMessage
 module.exports.cancelDownloadOcrModel = nativeBinding.cancelDownloadOcrModel
 module.exports.cancelGoogleAuth = nativeBinding.cancelGoogleAuth
 module.exports.cancelRequest = nativeBinding.cancelRequest
-module.exports.checkFileExists = nativeBinding.checkFileExists
+
 module.exports.checkSttVersion = nativeBinding.checkSttVersion
 module.exports.clearActiveProfile = nativeBinding.clearActiveProfile
 module.exports.compressConversation = nativeBinding.compressConversation
@@ -618,7 +618,7 @@ module.exports.getProfile = nativeBinding.getProfile
 module.exports.getRollingSummary = nativeBinding.getRollingSummary
 module.exports.getStoreBaseDir = nativeBinding.getStoreBaseDir
 module.exports.getSystemTheme = nativeBinding.getSystemTheme
-module.exports.hasAgreedFlag = nativeBinding.hasAgreedFlag
+
 module.exports.hasProfiles = nativeBinding.hasProfiles
 module.exports.listDownloadedModels = nativeBinding.listDownloadedModels
 module.exports.listProfiles = nativeBinding.listProfiles
@@ -641,7 +641,7 @@ module.exports.saveImageTone = nativeBinding.saveImageTone
 module.exports.saveImgbbUrl = nativeBinding.saveImgbbUrl
 module.exports.saveRollingSummary = nativeBinding.saveRollingSummary
 module.exports.setActiveProfile = nativeBinding.setActiveProfile
-module.exports.setAgreedFlag = nativeBinding.setAgreedFlag
+
 module.exports.startGoogleAuth = nativeBinding.startGoogleAuth
 module.exports.storeFileFromPath = nativeBinding.storeFileFromPath
 module.exports.storeImageFromPath = nativeBinding.storeImageFromPath

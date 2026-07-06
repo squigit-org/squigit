@@ -10,7 +10,7 @@ export declare function cancelGoogleAuth(): void
 
 export declare function cancelRequest(channelId?: string | undefined | null): Promise<void>
 
-export declare function checkFileExists(path: string): boolean
+
 
 export declare function checkSttVersion(): void
 
@@ -64,7 +64,7 @@ export declare function getStoreBaseDir(): string
 
 export declare function getSystemTheme(): string
 
-export declare function hasAgreedFlag(): boolean
+
 
 export declare function hasProfiles(): boolean
 
@@ -186,7 +186,7 @@ export declare function saveRollingSummary(threadId: string, summary: string): v
 
 export declare function setActiveProfile(profileId: string): void
 
-export declare function setAgreedFlag(): void
+
 
 export declare function startGoogleAuth(): Promise<NapiAuthResult>
 
