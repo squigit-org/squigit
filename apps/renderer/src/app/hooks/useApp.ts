@@ -464,7 +464,6 @@ export const useApp = () => {
     handleCopy: contextMenuState.handleCopy,
     handleDeleteThreadWrapper,
     handleDeleteThreadsWrapper,
-    handleToggleStarThread: threadHistory.handleToggleStarThread,
     handleExit: () => platform.app.exit(0),
     handleSwitchProfile,
     handleSystemAction,

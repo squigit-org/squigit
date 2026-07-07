@@ -74,7 +74,9 @@ pub(crate) fn resolve_attachment_path_for_local_context(
         )
     })?;
 
-    if is_path_within_base(&resolved, &base_dir) {
+    let objects_dir = std::fs::canonicalize(storage.objects_dir()).unwrap_or_default();
+
+    if is_path_within_base(&resolved, &base_dir) || (!objects_dir.as_os_str().is_empty() && is_path_within_base(&resolved, &objects_dir)) {
         return Ok(resolved);
     }
 

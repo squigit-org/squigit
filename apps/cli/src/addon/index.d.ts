@@ -106,7 +106,6 @@ export interface NapiThreadMetadata {
   createdAt: string;
   updatedAt: string;
   isPinned: boolean;
-  isStarred: boolean;
   ocrLang?: string;
   imageTone?: string;
 }

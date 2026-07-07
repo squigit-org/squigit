@@ -93,7 +93,9 @@ impl ThreadStorage {
     /// let storage = ThreadStorage::with_base_dir(profile_threads_dir).unwrap();
     /// ```
     pub fn with_base_dir(base_dir: PathBuf) -> Result<Self> {
-        let objects_dir = base_dir.join("objects");
+        let objects_dir = crate::paths::base_config_dir()
+            .ok_or(StorageError::NoDataDir)?
+            .join("objects");
         let index_path = base_dir.join("index.json");
 
         // Create directories if they don't exist
@@ -338,7 +340,11 @@ impl ThreadStorage {
 
         // Save metadata
         let meta_path = thread_dir.join("meta.json");
-        let meta_json = serde_json::to_string_pretty(&thread.metadata)?;
+        let mut metadata = thread.metadata.clone();
+        if metadata.image_brief.is_none() {
+            metadata.image_brief = thread.image_brief.clone();
+        }
+        let meta_json = serde_json::to_string_pretty(&metadata)?;
         fs::write(&meta_path, meta_json)?;
 
         // Always save OCR frame file
@@ -346,21 +352,13 @@ impl ThreadStorage {
         let ocr_json = serde_json::to_string_pretty(&thread.ocr_data)?;
         fs::write(&ocr_path, ocr_json)?;
 
-        // Save messages files.
-        // - messages.json: canonical structured source for metadata-aware rendering
-        // - messages.md: backward-compatible human-readable transcript
+        // Save messages as JSON only
         let messages_json_path = thread_dir.join("messages.json");
-        let messages_path = thread_dir.join("messages.md");
         if !thread.messages.is_empty() {
             let json_content = serde_json::to_string_pretty(&thread.messages)?;
             fs::write(&messages_json_path, json_content)?;
-            let md_content = self.messages_to_markdown(&thread.messages);
-            fs::write(&messages_path, md_content)?;
-        } else if messages_path.exists() {
-            fs::remove_file(&messages_path)?;
-            if messages_json_path.exists() {
-                fs::remove_file(&messages_json_path)?;
-            }
+        } else if messages_json_path.exists() {
+            fs::remove_file(&messages_json_path)?
         }
 
         // Save imgbb URL if present
@@ -383,7 +381,7 @@ impl ThreadStorage {
         }
 
         // Update the index
-        self.update_index(&thread.metadata)?;
+        self.update_index(&metadata)?;
 
         Ok(())
     }
@@ -444,15 +442,11 @@ impl ThreadStorage {
             self.update_index(&metadata)?;
         }
 
-        // Load messages (prefer structured JSON, fallback to legacy markdown)
+        // Load messages from JSON
         let messages_json_path = thread_dir.join("messages.json");
-        let messages_path = thread_dir.join("messages.md");
         let messages = if messages_json_path.exists() {
             let json_content = fs::read_to_string(&messages_json_path)?;
             serde_json::from_str::<Vec<ThreadMessage>>(&json_content)?
-        } else if messages_path.exists() {
-            let md_content = fs::read_to_string(&messages_path)?;
-            self.markdown_to_messages(&md_content)
         } else {
             Vec::new()
         };
@@ -473,13 +467,7 @@ impl ThreadStorage {
             None
         };
 
-        // Load image brief
-        let brief_path = thread_dir.join("image_brief.txt");
-        let image_brief = if brief_path.exists() {
-            Some(fs::read_to_string(&brief_path)?)
-        } else {
-            None
-        };
+        let image_brief = metadata.image_brief.clone();
 
         let attachment_registry_path = thread_dir.join("attachment_registry.json");
         let attachment_registry = if attachment_registry_path.exists() {
@@ -526,8 +514,14 @@ impl ThreadStorage {
         if !thread_dir.exists() {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
-        let brief_path = thread_dir.join("image_brief.txt");
-        fs::write(&brief_path, brief)?;
+        let meta_path = thread_dir.join("meta.json");
+        let meta_json = fs::read_to_string(&meta_path)?;
+        let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
+        metadata.image_brief = Some(brief.to_string());
+
+        let new_meta = serde_json::to_string_pretty(&metadata)?;
+        fs::write(&meta_path, new_meta)?;
+        self.update_index(&metadata)?;
         Ok(())
     }
 
@@ -564,13 +558,22 @@ impl ThreadStorage {
             return Err(StorageError::ThreadNotFound(metadata.id.clone()));
         }
 
-        // Save updated metadata
         let meta_path = thread_dir.join("meta.json");
-        let meta_json = serde_json::to_string_pretty(metadata)?;
+        let mut metadata_to_save = metadata.clone();
+        if meta_path.exists() {
+            let current_json = fs::read_to_string(&meta_path)?;
+            let current: ThreadMetadata = serde_json::from_str(&current_json)?;
+            if metadata_to_save.image_brief.is_none() {
+                metadata_to_save.image_brief = current.image_brief;
+            }
+        }
+
+        // Save updated metadata
+        let meta_json = serde_json::to_string_pretty(&metadata_to_save)?;
         fs::write(&meta_path, meta_json)?;
 
         // Update index
-        self.update_index(metadata)?;
+        self.update_index(&metadata_to_save)?;
 
         Ok(())
     }
@@ -725,16 +728,11 @@ impl ThreadStorage {
         fs::create_dir_all(&thread_dir)?;
 
         let messages_json_path = thread_dir.join("messages.json");
-        let messages_path = thread_dir.join("messages.md");
 
-        // Keep a structured JSON transcript for metadata-aware rendering.
+        // Load existing messages or start fresh
         let mut json_messages: Vec<ThreadMessage> = if messages_json_path.exists() {
             let json = fs::read_to_string(&messages_json_path)?;
             serde_json::from_str(&json)?
-        } else if messages_path.exists() {
-            // One-time migration path for older threads that only have markdown.
-            let md_content = fs::read_to_string(&messages_path)?;
-            self.markdown_to_messages(&md_content)
         } else {
             Vec::new()
         };
@@ -743,14 +741,6 @@ impl ThreadStorage {
             &messages_json_path,
             serde_json::to_string_pretty(&json_messages)?,
         )?;
-
-        // Keep markdown transcript for compatibility and quick inspection.
-        let mut md_file = fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&messages_path)?;
-        let md_entry = self.message_to_markdown(message);
-        md_file.write_all(md_entry.as_bytes())?;
 
         // Update the thread's updated_at timestamp
         let meta_path = thread_dir.join("meta.json");
@@ -800,92 +790,7 @@ impl ThreadStorage {
         Ok(())
     }
 
-    /// Convert messages to markdown format.
-    fn messages_to_markdown(&self, messages: &[ThreadMessage]) -> String {
-        messages
-            .iter()
-            .map(|m| self.message_to_markdown(m))
-            .collect::<Vec<_>>()
-            .join("")
-    }
 
-    /// Convert a single message to markdown.
-    fn message_to_markdown(&self, message: &ThreadMessage) -> String {
-        let role_label = if message.role == "user" {
-            "## User"
-        } else {
-            "## Assistant"
-        };
-
-        format!(
-            "{}\n<!-- {} -->\n\n{}\n\n",
-            role_label,
-            message.timestamp.to_rfc3339(),
-            message.content
-        )
-    }
-
-    /// Parse markdown back to messages.
-    fn markdown_to_messages(&self, content: &str) -> Vec<ThreadMessage> {
-        let mut messages = Vec::new();
-        let mut current_role: Option<String> = None;
-        let mut current_timestamp: Option<chrono::DateTime<chrono::Utc>> = None;
-        let mut current_content = String::new();
-
-        for line in content.lines() {
-            if line.starts_with("## User") {
-                // Save previous message if any
-                if let Some(role) = current_role.take() {
-                    messages.push(ThreadMessage {
-                        role,
-                        content: current_content.trim().to_string(),
-                        timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
-                        citations: Vec::new(),
-                        tool_steps: Vec::new(),
-                    });
-                }
-                current_role = Some("user".to_string());
-                current_content.clear();
-                current_timestamp = None;
-            } else if line.starts_with("## Assistant") {
-                // Save previous message if any
-                if let Some(role) = current_role.take() {
-                    messages.push(ThreadMessage {
-                        role,
-                        content: current_content.trim().to_string(),
-                        timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
-                        citations: Vec::new(),
-                        tool_steps: Vec::new(),
-                    });
-                }
-                current_role = Some("assistant".to_string());
-                current_content.clear();
-                current_timestamp = None;
-            } else if line.starts_with("<!-- ") && line.ends_with(" -->") {
-                // Parse timestamp from comment
-                let ts_str = &line[5..line.len() - 4];
-                if let Ok(ts) = chrono::DateTime::parse_from_rfc3339(ts_str) {
-                    current_timestamp = Some(ts.with_timezone(&chrono::Utc));
-                }
-            } else if current_role.is_some() {
-                current_content.push_str(line);
-                current_content.push('\n');
-            }
-        }
-
-        // Save last message
-        if let Some(role) = current_role {
-            messages.push(ThreadMessage {
-                role,
-                content: current_content.trim().to_string(),
-                timestamp: current_timestamp.unwrap_or_else(chrono::Utc::now),
-                citations: Vec::new(),
-                tool_steps: Vec::new(),
-            });
-        }
-
-        messages
-    }
 }
 
 #[cfg(test)]
@@ -975,4 +880,5 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(base_dir);
     }
+
 }

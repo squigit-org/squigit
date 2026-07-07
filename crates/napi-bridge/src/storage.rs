@@ -140,15 +140,15 @@ pub fn delete_thread(thread_id: String) -> Result<()> {
 pub fn update_thread_metadata(metadata: NapiThreadMetadata) -> Result<()> {
     let storage = active_storage()?;
 
-    // We need to fetch the existing one to merge because NapiThreadMetadata doesn't have all fields
-    // Wait, NapiThreadMetadata has all fields. Let's convert back.
+    // Merge with the on-disk metadata because the N-API shape omits some fields.
     let mut current = storage
         .load_thread(&metadata.id)
         .map_err(map_storage_err)?
         .metadata;
     current.title = metadata.title;
     current.is_pinned = metadata.is_pinned;
-    current.is_starred = metadata.is_starred;
+    current.ocr_lang = metadata.ocr_lang;
+    current.image_tone = metadata.image_tone;
 
     storage
         .update_thread_metadata(&current)

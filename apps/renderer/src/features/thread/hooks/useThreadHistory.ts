@@ -109,7 +109,6 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     const updated = {
       ...thread,
       is_pinned: newPinnedState,
-      pinned_at: newPinnedState ? new Date().toISOString() : null,
     };
 
     setThreads((prev) => prev.map((c) => (c.id === id ? updated : c)));
@@ -117,33 +116,6 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
       await updateThreadMeta(updated);
     } catch (e) {
       console.error("Failed to toggle pin:", e);
-      setThreads((prev) => prev.map((c) => (c.id === id ? thread : c)));
-    }
-  };
-
-  const handleToggleStarThread = async (
-    id: string,
-    overrides?: Partial<ThreadMetadata>,
-  ) => {
-    if (isOnboardingId(id)) return;
-    const thread = threads.find((c) => c.id === id);
-    if (!thread) return;
-
-    const newStarredState = !thread.is_starred;
-    const updated = {
-      ...thread,
-      is_starred: newStarredState,
-
-      is_pinned: false,
-      pinned_at: null,
-      ...overrides,
-    };
-
-    setThreads((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    try {
-      await updateThreadMeta(updated);
-    } catch (e) {
-      console.error("Failed to toggle star:", e);
       setThreads((prev) => prev.map((c) => (c.id === id ? thread : c)));
     }
   };
@@ -198,7 +170,6 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     handleDeleteThreads,
     handleRenameThread,
     handleTogglePinThread,
-    handleToggleStarThread,
     touchThread,
     searchThreads,
   };

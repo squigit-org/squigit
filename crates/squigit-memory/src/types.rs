@@ -24,16 +24,13 @@ pub struct ThreadMetadata {
     /// Whether the thread is pinned.
     #[serde(default)]
     pub is_pinned: bool,
-    /// Whether the thread is starred (favorite).
-    #[serde(default)]
-    pub is_starred: bool,
-    /// When the thread was pinned.
-    #[serde(default)]
-    pub pinned_at: Option<DateTime<Utc>>,
     pub ocr_lang: Option<String>,
     /// Image tone detected upon upload (light/dark).
     #[serde(default)]
     pub image_tone: Option<String>,
+    /// Generated concise text description of the session's startup image.
+    #[serde(default)]
+    pub image_brief: Option<String>,
 }
 
 impl ThreadMetadata {
@@ -53,10 +50,9 @@ impl ThreadMetadata {
             updated_at: now,
             image_hash,
             is_pinned: false,
-            is_starred: false,
-            pinned_at: None,
             ocr_lang,
             image_tone: None,
+            image_brief: None,
         }
     }
 }

@@ -278,9 +278,10 @@ export function registerThreadHandlers() {
     const fs = require("fs/promises");
     try {
       const threadDir = getThreadDir(args.threadId);
-      await fs.mkdir(threadDir, { recursive: true });
-      const briefPath = require("path").join(threadDir, "image_brief.txt");
-      await fs.writeFile(briefPath, args.brief);
+      const metaPath = require("path").join(threadDir, "meta.json");
+      const meta = JSON.parse(await fs.readFile(metaPath, "utf8"));
+      meta.image_brief = args.brief;
+      await fs.writeFile(metaPath, JSON.stringify(meta, null, 2));
     } catch (e) {
       console.error("save_image_brief error", e);
     }

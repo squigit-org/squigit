@@ -5,7 +5,7 @@
  */
 
 export const ABSOLUTE_CAS_PATH_RE =
-  /(?:^|[\\/])threads[\\/]objects[\\/][0-9a-f]{2}[\\/][0-9a-f]{64}\.[^/\\>\n]+$/iu;
+  /(?:^|[\\/])objects[\\/][0-9a-f]{2}[\\/][0-9a-f]{64}\.[^/\\>\n]+$/iu;
 
 export function getBaseName(path: string): string {
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));

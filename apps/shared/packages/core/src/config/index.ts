@@ -50,7 +50,6 @@ export {
   saveRollingSummary,
   saveImageTone,
   saveImageBrief,
-  groupThreadsByDate,
 } from "./thread-storage.ts";
 
 export {

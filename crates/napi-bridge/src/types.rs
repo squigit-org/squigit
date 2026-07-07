@@ -65,7 +65,6 @@ pub struct NapiThreadMetadata {
     pub created_at: String,
     pub updated_at: String,
     pub is_pinned: bool,
-    pub is_starred: bool,
     pub ocr_lang: Option<String>,
     pub image_tone: Option<String>,
 }
@@ -79,7 +78,6 @@ impl From<ThreadMetadata> for NapiThreadMetadata {
             created_at: meta.created_at.to_rfc3339(),
             updated_at: meta.updated_at.to_rfc3339(),
             is_pinned: meta.is_pinned,
-            is_starred: meta.is_starred,
             ocr_lang: meta.ocr_lang,
             image_tone: meta.image_tone,
         }

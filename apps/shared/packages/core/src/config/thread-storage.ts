@@ -18,8 +18,6 @@ export interface ThreadMetadata {
   updated_at: string;
   image_hash: string;
   is_pinned: boolean;
-  is_starred: boolean;
-  pinned_at: string | null;
   ocr_lang?: string;
   image_tone?: string | null;
 }
@@ -157,7 +155,7 @@ export async function deleteThread(threadId: string): Promise<void> {
   return getStoragePort().deleteThread(threadId);
 }
 
-/** Update thread metadata (rename, pin, star, etc.). */
+/** Update thread metadata (rename, pin, etc.). */
 export async function updateThreadMetadata(
   metadata: ThreadMetadata,
 ): Promise<void> {
@@ -271,54 +269,4 @@ export async function saveImageBrief(
   brief: string,
 ): Promise<void> {
   return getStoragePort().saveImageBrief(threadId, brief);
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-type ThreadGroupKey = "Starred" | "Recents";
-
-/** Group threads by Starred and Recents. */
-export function groupThreadsByDate(
-  threads: ThreadMetadata[],
-): Map<ThreadGroupKey, ThreadMetadata[]> {
-  const groups = new Map<ThreadGroupKey, ThreadMetadata[]>();
-
-  // Initialize group arrays
-  groups.set("Starred", []);
-  groups.set("Recents", []);
-
-  for (const thread of threads) {
-    let targetGroup: ThreadGroupKey = "Recents";
-
-    // 1. Starred takes precedence
-    if (thread.is_starred) {
-      targetGroup = "Starred";
-    }
-
-    groups.get(targetGroup)?.push(thread);
-  }
-
-  groups.forEach((groupThreads) => {
-    groupThreads.sort((a, b) => {
-      // 1. Pinned check
-      if (a.is_pinned && !b.is_pinned) return -1;
-      if (!a.is_pinned && b.is_pinned) return 1;
-
-      // 2. If both pinned, sort by pinned_at desc
-      if (a.is_pinned && b.is_pinned) {
-        const pinnedA = a.pinned_at ? new Date(a.pinned_at).getTime() : 0;
-        const pinnedB = b.pinned_at ? new Date(b.pinned_at).getTime() : 0;
-        return pinnedB - pinnedA;
-      }
-
-      // 3. Recent activity check (updated_at descending), fallback to created_at
-      const aTime = new Date(a.updated_at || a.created_at).getTime();
-      const bTime = new Date(b.updated_at || b.created_at).getTime();
-      return bTime - aTime;
-    });
-  });
-
-  return groups;
 }
