@@ -105,9 +105,10 @@ export function initializeCorePorts(): void {
     initOcrFrame: (threadId, modelIds) =>
       platform.invoke("init_ocr_frame", { threadId, modelIds }),
     cancelOcrJob: () => platform.invoke("cancel_ocr_job"),
-    saveImgbbUrl: (threadId, url) =>
-      platform.invoke("save_imgbb_url", { threadId, url }),
-    getImgbbUrl: (threadId) => platform.invoke("get_imgbb_url", { threadId }),
+    saveReverseImageSearchUrl: (threadId, url) =>
+      platform.invoke("save_reverse_image_search_url", { threadId, url }),
+    getReverseImageSearchUrl: (threadId) =>
+      platform.invoke("get_reverse_image_search_url", { threadId }),
     saveRollingSummary: (threadId, summary) =>
       platform.invoke("save_rolling_summary", { threadId, summary }),
     saveImageTone: (threadId, tone) =>

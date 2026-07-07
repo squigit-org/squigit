@@ -67,6 +67,7 @@ pub struct NapiThreadMetadata {
     pub is_pinned: bool,
     pub ocr_lang: Option<String>,
     pub image_tone: Option<String>,
+    pub reverse_image_search_url: Option<String>,
 }
 
 impl From<ThreadMetadata> for NapiThreadMetadata {
@@ -80,6 +81,7 @@ impl From<ThreadMetadata> for NapiThreadMetadata {
             is_pinned: meta.is_pinned,
             ocr_lang: meta.ocr_lang,
             image_tone: meta.image_tone,
+            reverse_image_search_url: meta.reverse_image_search_url,
         }
     }
 }
@@ -107,7 +109,6 @@ pub struct NapiThreadData {
     pub messages: Vec<NapiThreadMessage>,
     pub rolling_summary: Option<String>,
     pub image_brief: Option<String>,
-    pub imgbb_url: Option<String>,
 }
 
 impl From<ThreadData> for NapiThreadData {
@@ -117,7 +118,6 @@ impl From<ThreadData> for NapiThreadData {
             messages: data.messages.into_iter().map(|m| m.into()).collect(),
             rolling_summary: data.rolling_summary,
             image_brief: data.image_brief,
-            imgbb_url: data.imgbb_url,
         }
     }
 }

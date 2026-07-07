@@ -361,17 +361,6 @@ impl ThreadStorage {
             fs::remove_file(&messages_json_path)?
         }
 
-        // Save imgbb URL if present
-        if let Some(ref url) = thread.imgbb_url {
-            let url_path = thread_dir.join("imgbb_url.txt");
-            fs::write(&url_path, url)?;
-        } else {
-            let url_path = thread_dir.join("imgbb_url.txt");
-            if url_path.exists() {
-                fs::remove_file(url_path)?;
-            }
-        }
-
         let attachment_registry_path = thread_dir.join("attachment_registry.json");
         if !thread.attachment_registry.is_empty() {
             let registry_json = serde_json::to_string_pretty(&thread.attachment_registry)?;
@@ -451,14 +440,6 @@ impl ThreadStorage {
             Vec::new()
         };
 
-        // Load imgbb URL
-        let url_path = thread_dir.join("imgbb_url.txt");
-        let imgbb_url = if url_path.exists() {
-            Some(fs::read_to_string(&url_path)?)
-        } else {
-            None
-        };
-
         // Load rolling summary
         let summary_path = thread_dir.join("rolling_summary.txt");
         let rolling_summary = if summary_path.exists() {
@@ -481,7 +462,6 @@ impl ThreadStorage {
             metadata,
             messages,
             ocr_data,
-            imgbb_url,
             rolling_summary,
             attachment_registry,
             image_brief,
@@ -579,7 +559,7 @@ impl ThreadStorage {
     }
 
     // =========================================================================
-    // OCR and ImgBB
+    // OCR and Thread Metadata
     // =========================================================================
 
     /// Save OCR data for a specific model into the thread's OCR frame.
@@ -676,27 +656,29 @@ impl ThreadStorage {
         Ok(())
     }
 
-    /// Save imgbb URL for a thread.
-    pub fn save_imgbb_url(&self, thread_id: &str, url: &str) -> Result<()> {
+    /// Save the reverse image search URL for a thread.
+    pub fn save_reverse_image_search_url(&self, thread_id: &str, url: &str) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
-        fs::create_dir_all(&thread_dir)?;
+        if !thread_dir.exists() {
+            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
+        }
 
-        let url_path = thread_dir.join("imgbb_url.txt");
-        fs::write(&url_path, url)?;
+        let meta_path = thread_dir.join("meta.json");
+        let meta_json = fs::read_to_string(&meta_path)?;
+        let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
+        metadata.reverse_image_search_url = Some(url.to_string());
+        fs::write(&meta_path, serde_json::to_string_pretty(&metadata)?)?;
+        self.update_index(&metadata)?;
 
         Ok(())
     }
 
-    /// Get imgbb URL for a thread.
-    pub fn get_imgbb_url(&self, thread_id: &str) -> Result<Option<String>> {
-        let url_path = self.thread_dir(thread_id).join("imgbb_url.txt");
-
-        if !url_path.exists() {
-            return Ok(None);
-        }
-
-        let url = fs::read_to_string(&url_path)?;
-        Ok(Some(url))
+    /// Get the reverse image search URL for a thread.
+    pub fn get_reverse_image_search_url(&self, thread_id: &str) -> Result<Option<String>> {
+        let meta_path = self.thread_dir(thread_id).join("meta.json");
+        let meta_json = fs::read_to_string(&meta_path)?;
+        let metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
+        Ok(metadata.reverse_image_search_url)
     }
 
     /// Save rolling summary for a thread.

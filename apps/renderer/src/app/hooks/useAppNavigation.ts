@@ -372,7 +372,9 @@ export const useAppNavigation = ({
           system.setSessionThreadTitle(threadData.metadata.title);
           system.setSessionOcrLanguage(system.ocrEnabled ? threadOcrModel : "");
           ocr.setOcrData(navigationSafeOcrData);
-          ocr.setSessionLensUrl(threadData.imgbb_url || null);
+          ocr.setSessionLensUrl(
+            threadData.metadata.reverse_image_search_url || null,
+          );
           system.setStartupImage({
             path: imagePath,
             mimeType: "image/png",

@@ -70,8 +70,8 @@ export function registerThreadHandlers() {
   ipcMain.handle("delete_thread", (_, args) =>
     addon.deleteThread?.(args.threadId),
   );
-  ipcMain.handle("get_imgbb_url", (_, args) =>
-    addon.getImgbbUrl?.(args.threadId),
+  ipcMain.handle("get_reverse_image_search_url", (_, args) =>
+    addon.getReverseImageSearchUrl?.(args.threadId),
   );
   ipcMain.handle("get_image_path", (_, args) =>
     addon.getImagePath?.(
@@ -84,8 +84,8 @@ export function registerThreadHandlers() {
       ),
     ),
   );
-  ipcMain.handle("save_imgbb_url", (_, args) =>
-    addon.saveImgbbUrl?.(args.threadId, args.url),
+  ipcMain.handle("save_reverse_image_search_url", (_, args) =>
+    addon.saveReverseImageSearchUrl?.(args.threadId, args.url),
   );
   ipcMain.handle("get_rolling_summary", (_, args) =>
     addon.getRollingSummary?.(args.threadId),

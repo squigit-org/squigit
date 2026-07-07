@@ -20,6 +20,7 @@ export interface ThreadMetadata {
   is_pinned: boolean;
   ocr_lang?: string;
   image_tone?: string | null;
+  reverse_image_search_url?: string | null;
 }
 
 /** A single thread message (matches Rust ThreadMessage). */
@@ -70,7 +71,6 @@ export interface ThreadData {
   metadata: ThreadMetadata;
   messages: ThreadMessage[];
   ocr_data: OcrFrame;
-  imgbb_url: string | null;
   rolling_summary: string | null;
   image_brief?: string | null;
 }
@@ -223,20 +223,22 @@ export async function cancelOcrJob(): Promise<void> {
 }
 
 // =============================================================================
-// ImgBB Commands
+// Reverse Image Search Commands
 // =============================================================================
 
-/** Save imgbb URL for a thread. */
-export async function saveImgbbUrl(
+/** Save the reverse image search URL for a thread. */
+export async function saveReverseImageSearchUrl(
   threadId: string,
   url: string,
 ): Promise<void> {
-  return getStoragePort().saveImgbbUrl(threadId, url);
+  return getStoragePort().saveReverseImageSearchUrl(threadId, url);
 }
 
-/** Get imgbb URL for a thread. */
-export async function getImgbbUrl(threadId: string): Promise<string | null> {
-  return getStoragePort().getImgbbUrl(threadId);
+/** Get the reverse image search URL for a thread. */
+export async function getReverseImageSearchUrl(
+  threadId: string,
+): Promise<string | null> {
+  return getStoragePort().getReverseImageSearchUrl(threadId);
 }
 
 // =============================================================================

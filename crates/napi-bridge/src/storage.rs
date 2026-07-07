@@ -149,6 +149,7 @@ pub fn update_thread_metadata(metadata: NapiThreadMetadata) -> Result<()> {
     current.is_pinned = metadata.is_pinned;
     current.ocr_lang = metadata.ocr_lang;
     current.image_tone = metadata.image_tone;
+    current.reverse_image_search_url = metadata.reverse_image_search_url;
 
     storage
         .update_thread_metadata(&current)
@@ -193,18 +194,19 @@ pub fn get_rolling_summary(thread_id: String) -> Result<Option<String>> {
 }
 
 #[napi]
-pub fn save_imgbb_url(thread_id: String, url: String) -> Result<()> {
+pub fn save_reverse_image_search_url(thread_id: String, url: String) -> Result<()> {
     let storage = active_storage()?;
     storage
-        .save_imgbb_url(&thread_id, &url)
+        .save_reverse_image_search_url(&thread_id, &url)
         .map_err(map_storage_err)
 }
 
 #[napi]
-pub fn get_imgbb_url(thread_id: String) -> Result<Option<String>> {
+pub fn get_reverse_image_search_url(thread_id: String) -> Result<Option<String>> {
     let storage = active_storage()?;
-    let thread = storage.load_thread(&thread_id).map_err(map_storage_err)?;
-    Ok(thread.imgbb_url)
+    storage
+        .get_reverse_image_search_url(&thread_id)
+        .map_err(map_storage_err)
 }
 
 #[napi]

@@ -53,7 +53,9 @@ export declare function getApiKey(
 
 export declare function getImagePath(hash: string): string;
 
-export declare function getImgbbUrl(threadId: string): string | null;
+export declare function getReverseImageSearchUrl(
+  threadId: string,
+): string | null;
 
 export declare function getProfile(profileId: string): NapiProfile | null;
 
@@ -90,7 +92,6 @@ export interface NapiThreadData {
   messages: Array<NapiThreadMessage>;
   rollingSummary?: string;
   imageBrief?: string;
-  imgbbUrl?: string;
 }
 
 export interface NapiThreadMessage {
@@ -108,6 +109,7 @@ export interface NapiThreadMetadata {
   isPinned: boolean;
   ocrLang?: string;
   imageTone?: string;
+  reverseImageSearchUrl?: string;
 }
 
 export interface NapiProfile {
@@ -161,7 +163,10 @@ export declare function saveApiKey(
   key: string,
 ): string;
 
-export declare function saveImgbbUrl(threadId: string, url: string): void;
+export declare function saveReverseImageSearchUrl(
+  threadId: string,
+  url: string,
+): void;
 
 export declare function saveRollingSummary(
   threadId: string,

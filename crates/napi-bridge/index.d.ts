@@ -50,7 +50,7 @@ export declare function getIdentityConfig(): NapiIdentityConfig
 
 export declare function getImagePath(hash: string): string
 
-export declare function getImgbbUrl(threadId: string): string | null
+export declare function getReverseImageSearchUrl(threadId: string): string | null
 
 export declare function getLinuxPackageManager(): string
 
@@ -144,7 +144,6 @@ export interface NapiThreadData {
   messages: Array<NapiThreadMessage>
   rollingSummary?: string
   imageBrief?: string
-  imgbbUrl?: string
 }
 
 export interface NapiThreadMessage {
@@ -162,6 +161,7 @@ export interface NapiThreadMetadata {
   isPinned: boolean
   ocrLang?: string
   imageTone?: string
+  reverseImageSearchUrl?: string
 }
 
 export declare function ocrImage(imagePath: string, isBase64: boolean, modelName: string): Promise<string>
@@ -190,7 +190,7 @@ export declare function saveApiKey(profileId: string, provider: string, key: str
 
 export declare function saveImageTone(threadId: string, tone: string): void
 
-export declare function saveImgbbUrl(threadId: string, url: string): void
+export declare function saveReverseImageSearchUrl(threadId: string, url: string): void
 
 export declare function saveRollingSummary(threadId: string, summary: string): void
 

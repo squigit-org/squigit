@@ -31,6 +31,9 @@ pub struct ThreadMetadata {
     /// Generated concise text description of the session's startup image.
     #[serde(default)]
     pub image_brief: Option<String>,
+    /// Reverse image search URL for the session's startup image.
+    #[serde(default)]
+    pub reverse_image_search_url: Option<String>,
 }
 
 impl ThreadMetadata {
@@ -53,6 +56,7 @@ impl ThreadMetadata {
             ocr_lang,
             image_tone: None,
             image_brief: None,
+            reverse_image_search_url: None,
         }
     }
 }
@@ -191,9 +195,6 @@ pub struct ThreadData {
     /// OCR frame: keyed by model_id, each value is cached results or null.
     #[serde(default)]
     pub ocr_data: OcrFrame,
-    /// Optional imgbb upload URL.
-    #[serde(default)]
-    pub imgbb_url: Option<String>,
     /// Rolling summary of compressed older conversation turns.
     /// Persisted so summaries survive app restarts and session switches.
     #[serde(default)]
@@ -213,7 +214,6 @@ impl ThreadData {
             metadata,
             messages: Vec::new(),
             ocr_data: HashMap::new(),
-            imgbb_url: None,
             rolling_summary: None,
             attachment_registry: BTreeMap::new(),
             image_brief: None,

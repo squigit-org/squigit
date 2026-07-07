@@ -5,7 +5,11 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { type OcrFrame, saveImgbbUrl, saveOcrData } from "@squigit/core/config";
+import {
+  type OcrFrame,
+  saveOcrData,
+  saveReverseImageSearchUrl,
+} from "@squigit/core/config";
 
 export const useAppOcr = (activeSessionId: string | null) => {
   const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
@@ -21,8 +25,8 @@ export const useAppOcr = (activeSessionId: string | null) => {
     (url: string | null) => {
       setSessionLensUrl(url);
       if (activeSessionId && url) {
-        saveImgbbUrl(activeSessionId, url).catch((e) =>
-          console.error("Failed to save ImgBB URL", e),
+        saveReverseImageSearchUrl(activeSessionId, url).catch((e) =>
+          console.error("Failed to save reverse image search URL", e),
         );
       }
     },
