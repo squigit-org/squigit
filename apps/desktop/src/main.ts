@@ -4,7 +4,7 @@ import { setupIpc } from "./ipc";
 import { registerProtocols } from "./protocol";
 
 const originalUserData = app.getPath("userData");
-app.setPath("userData", path.join(originalUserData, "chromuim"));
+app.setPath("userData", path.join(originalUserData, "chromium"));
 
 protocol.registerSchemesAsPrivileged([
   {
