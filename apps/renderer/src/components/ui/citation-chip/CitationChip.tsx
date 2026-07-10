@@ -5,6 +5,7 @@
  */
 
 import React, { forwardRef, useMemo, useState } from "react";
+import { CircleAlert, Loader2 } from "lucide-react";
 import { getIcon } from "material-file-icons";
 import styles from "./CitationChip.module.css";
 
@@ -17,6 +18,12 @@ type CitationChipVisual =
   | {
       kind: "file";
       fileName: string;
+    }
+  | {
+      kind: "loading";
+    }
+  | {
+      kind: "error";
     };
 
 export type CitationChipVariant = "site" | "file";
@@ -70,7 +77,7 @@ export const CitationChip = forwardRef<HTMLAnchorElement, CitationChipProps>(
     ref,
   ) => {
     const [hideFavicon, setHideFavicon] = useState(false);
-    const resolvedVariant = variant || (visual.kind === "file" ? "file" : "site");
+    const resolvedVariant = variant || (visual.kind === "favicon" ? "site" : "file");
 
     return (
       <a
@@ -95,6 +102,14 @@ export const CitationChip = forwardRef<HTMLAnchorElement, CitationChipProps>(
               onError={() => setHideFavicon(true)}
             />
           )
+        ) : visual.kind === "loading" ? (
+          <span className={styles.stateIcon} aria-hidden="true">
+            <Loader2 size={14} className={styles.spinner} />
+          </span>
+        ) : visual.kind === "error" ? (
+          <span className={styles.stateIcon} aria-hidden="true">
+            <CircleAlert size={14} className={styles.errorIcon} />
+          </span>
         ) : (
           <LocalFileIcon fileName={visual.fileName} />
         )}

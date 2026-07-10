@@ -12,6 +12,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { CircleAlert, Loader2 } from "lucide-react";
 import { platform } from "@/platform";
 import { CloseCrossIcon } from "@/components/icons";
 import type { Attachment } from "@squigit/core/brain/attachments";
@@ -65,6 +66,16 @@ const ImageThumbnail: React.FC<{ attachment: Attachment }> = ({
   return (
     <div className={styles.imageThumb}>
       <img src={src} alt={attachment.name} draggable={false} />
+      {attachment.status === "pending" && (
+        <div className={styles.statusOverlay} aria-hidden="true">
+          <Loader2 size={20} className={styles.spinner} />
+        </div>
+      )}
+      {attachment.status === "failed" && (
+        <div className={styles.statusOverlay} aria-hidden="true">
+          <CircleAlert size={20} className={styles.errorIcon} />
+        </div>
+      )}
     </div>
   );
 };

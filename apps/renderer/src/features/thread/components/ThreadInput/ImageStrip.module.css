@@ -83,6 +83,7 @@
 }
 
 .imageThumb {
+  position: relative;
   width: 60px;
   height: 60px;
 }
@@ -94,6 +95,26 @@
   display: block;
   border-radius: 9px;
   pointer-events: none;
+}
+
+.statusOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--c-raw-012) 52%, transparent);
+  color: var(--c-raw-003);
+  pointer-events: none;
+}
+
+.spinner {
+  animation: "rotate" 0.9s linear infinite;
+}
+
+.errorIcon {
+  color: var(--c-raw-059);
 }
 
 .removeBtn {

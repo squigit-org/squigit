@@ -14,8 +14,24 @@ export const IMAGE_EXTENSION_VALUES = [
   "svg",
 ] as const;
 
-export const ACCEPTED_EXTENSION_VALUES = [
-  ...IMAGE_EXTENSION_VALUES,
+export const DOCUMENT_EXTENSION_VALUES = [
+  "pdf",
+  "docx",
+  "doc",
+  "docm",
+  "xlsx",
+  "xls",
+  "xlsm",
+  "pptx",
+  "ppt",
+  "pptm",
+  "rtf",
+  "odt",
+  "ods",
+  "odp",
+] as const;
+
+export const TEXT_EXTENSION_VALUES = [
   "txt",
   "md",
   "csv",
@@ -47,29 +63,40 @@ export const ACCEPTED_EXTENSION_VALUES = [
   "hpp",
   "sql",
   "log",
-  "pdf",
-  "docx",
-  "doc",
-  "xlsx",
-  "xls",
-  "pptx",
-  "ppt",
-  "rtf",
+]
+
+export const ACCEPTED_EXTENSION_VALUES = [
+  ...IMAGE_EXTENSION_VALUES,
+  ...TEXT_EXTENSION_VALUES,
+  ...DOCUMENT_EXTENSION_VALUES,
 ] as const;
 
 export type ImageExtension = (typeof IMAGE_EXTENSION_VALUES)[number];
+export type DocumentExtension = (typeof DOCUMENT_EXTENSION_VALUES)[number];
 export type AcceptedExtension = (typeof ACCEPTED_EXTENSION_VALUES)[number];
 
 export const IMAGE_EXTENSIONS: ImageExtension[] = [...IMAGE_EXTENSION_VALUES];
+export const DOCUMENT_EXTENSIONS: DocumentExtension[] = [
+  ...DOCUMENT_EXTENSION_VALUES,
+];
 export const ACCEPTED_EXTENSIONS: AcceptedExtension[] = [
   ...ACCEPTED_EXTENSION_VALUES,
 ];
 
 const IMAGE_EXTENSION_SET = new Set<string>(IMAGE_EXTENSION_VALUES);
+const DOCUMENT_EXTENSION_SET = new Set<string>(DOCUMENT_EXTENSION_VALUES);
 const ACCEPTED_EXTENSION_SET = new Set<string>(ACCEPTED_EXTENSION_VALUES);
 
 export function isImageExtension(ext: string): boolean {
   return IMAGE_EXTENSION_SET.has(ext.toLowerCase());
+}
+
+export function isDocumentExtension(ext: string): boolean {
+  return DOCUMENT_EXTENSION_SET.has(ext.toLowerCase());
+}
+
+export function isCloudUploadExtension(ext: string): boolean {
+  return isImageExtension(ext) || isDocumentExtension(ext);
 }
 
 export function isAcceptedExtension(ext: string): ext is AcceptedExtension {
