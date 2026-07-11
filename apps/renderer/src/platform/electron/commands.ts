@@ -12,6 +12,14 @@ type NativeProfile = Profile & {
   avatarUrl?: string | null;
 };
 
+type NativeProfileSnapshot = {
+  active_profile_id?: string | null;
+  activeProfileId?: string | null;
+  active_profile?: NativeProfile | null;
+  activeProfile?: NativeProfile | null;
+  profiles: NativeProfile[];
+};
+
 const normalizeProfile = (profile: NativeProfile | null): Profile | null => {
   if (!profile) return null;
 
@@ -24,6 +32,14 @@ const normalizeProfile = (profile: NativeProfile | null): Profile | null => {
 
 const normalizeProfiles = (profiles: NativeProfile[]) =>
   profiles.map((profile) => normalizeProfile(profile) as Profile);
+
+const normalizeProfileSnapshot = (snapshot?: NativeProfileSnapshot | null) => ({
+  activeProfileId: snapshot?.active_profile_id ?? snapshot?.activeProfileId ?? null,
+  activeProfile: normalizeProfile(
+    snapshot?.active_profile ?? snapshot?.activeProfile ?? null,
+  ),
+  profiles: normalizeProfiles(snapshot?.profiles ?? []),
+});
 
 export const commands = {
   // Window
@@ -94,6 +110,10 @@ export const commands = {
   // Accounts
   listProfiles: async () =>
     normalizeProfiles(await platform.invoke<NativeProfile[]>("list_profiles")),
+  getProfileSnapshot: async () =>
+    normalizeProfileSnapshot(
+      await platform.invoke<NativeProfileSnapshot>("get_profile_snapshot"),
+    ),
   getActiveProfile: async () =>
     normalizeProfile(await platform.invoke<NativeProfile | null>("get_active_profile")),
   getProfile: async (profileId: string) =>

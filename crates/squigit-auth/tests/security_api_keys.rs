@@ -96,7 +96,10 @@ fn saved_payload_includes_plaintext_hash() {
     let payload = fs::read_to_string(payload_path).unwrap();
     let json: serde_json::Value = serde_json::from_str(&payload).unwrap();
     let expected_hash = sha256_hex(&key);
-    assert_eq!(json["sha256"].as_str(), Some(expected_hash.as_str()));
+    assert_eq!(
+        json[&profile_id]["google ai studio"]["sha256"].as_str(),
+        Some(expected_hash.as_str())
+    );
 }
 
 #[test]
@@ -121,7 +124,8 @@ fn tampered_hash_is_rejected() {
     let payload_path = store.get_provider_key_path(&profile_id, "google ai studio");
     let payload = fs::read_to_string(&payload_path).unwrap();
     let mut json: serde_json::Value = serde_json::from_str(&payload).unwrap();
-    json["sha256"] = serde_json::Value::String("deadbeef".to_string());
+    json[&profile_id]["google ai studio"]["sha256"] =
+        serde_json::Value::String("deadbeef".to_string());
     fs::write(&payload_path, serde_json::to_vec_pretty(&json).unwrap()).unwrap();
 
     let err = get_decrypted_key(&store, ApiKeyProvider::GoogleAiStudio, &profile_id).unwrap_err();

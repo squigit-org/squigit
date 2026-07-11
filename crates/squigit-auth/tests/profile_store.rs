@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_auth::{Profile, ProfileIndex, ProfileStore};
+use squigit_auth::{Profile, ProfileAuth, ProfileStore};
 use tempfile::tempdir;
 
 fn temp_store() -> ProfileStore {
@@ -32,7 +32,7 @@ fn profile_crud() {
 fn provider_key_path() {
     let store = temp_store();
     let path = store.get_provider_key_path("profile1", "imgbb");
-    assert!(path.ends_with("profile1/imgbb_key.json"));
+    assert!(path.ends_with("keys.json"));
 }
 
 #[test]
@@ -50,17 +50,10 @@ fn profile_id_from_email() {
 }
 
 #[test]
-fn profile_index_operations() {
-    let mut index = ProfileIndex::default();
+fn profile_auth_tracks_active_profile() {
+    let auth = ProfileAuth {
+        active_profile_id: Some("profile1".to_string()),
+    };
 
-    index.add("profile1".to_string());
-    assert!(index.contains("profile1"));
-    assert!(!index.contains("profile2"));
-
-    index.add("profile2".to_string());
-    index.active_profile_id = Some("profile1".to_string());
-
-    index.remove("profile1");
-    assert!(!index.contains("profile1"));
-    assert_eq!(index.active_profile_id, Some("profile2".to_string()));
+    assert_eq!(auth.active_profile_id.as_deref(), Some("profile1"));
 }

@@ -59,16 +59,14 @@ export const useSystemSync = () => {
   };
 
   const refreshProfileSnapshot = async () => {
-    const [activeProf, allProfiles] = await Promise.all([
-      commands.getActiveProfile(),
-      commands.listProfiles(),
-    ]);
+    const snapshot = await commands.getProfileSnapshot();
+    const activeProf = snapshot.activeProfile;
 
     applyActiveProfile(activeProf);
 
     return {
       activeProf,
-      profiles: applyProfiles(allProfiles),
+      profiles: applyProfiles(snapshot.profiles),
     };
   };
 
@@ -217,7 +215,8 @@ export const useSystemSync = () => {
 
   const loadProfileData = async () => {
     try {
-      const activeProf = await commands.getActiveProfile();
+      const snapshot = await commands.getProfileSnapshot();
+      const activeProf = snapshot.activeProfile;
       applyActiveProfile(activeProf);
       checkAndHydrateActiveAvatar(activeProf);
 
@@ -228,8 +227,7 @@ export const useSystemSync = () => {
         await loadApiKeys(activeProf.id);
       }
 
-      const allProfiles = await commands.listProfiles();
-      const sortedProfiles = applyProfiles(allProfiles);
+      const sortedProfiles = applyProfiles(snapshot.profiles);
       hydrateMissingAvatars(sortedProfiles);
     } catch (e) {
       console.error("Config load error", e);

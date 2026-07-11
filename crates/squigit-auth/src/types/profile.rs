@@ -4,7 +4,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// Profile metadata stored in profile.json.
+/// Profile metadata stored in profiles.json.
 ///
 /// Each profile represents a Google-authenticated user account,
 /// containing identity information and serving as a container
@@ -80,39 +80,18 @@ impl Profile {
     }
 }
 
-/// Index file tracking all profiles and the active profile.
-///
-/// Stored at `{config_dir}/squigit/index.json`.
+/// Authentication state stored in auth.json.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ProfileIndex {
+pub struct ProfileAuth {
     /// ID of the currently active profile, if any.
     #[serde(default)]
     pub active_profile_id: Option<String>,
-
-    /// List of all profile IDs for quick enumeration.
-    #[serde(default)]
-    pub profile_ids: Vec<String>,
 }
 
-impl ProfileIndex {
-    /// Check if a profile ID exists in the index.
-    pub fn contains(&self, id: &str) -> bool {
-        self.profile_ids.iter().any(|p| p == id)
-    }
-
-    /// Add a profile ID to the index if not already present.
-    pub fn add(&mut self, id: String) {
-        if !self.contains(&id) {
-            self.profile_ids.push(id);
-        }
-    }
-
-    /// Remove a profile ID from the index.
-    pub fn remove(&mut self, id: &str) {
-        self.profile_ids.retain(|p| p != id);
-        // Clear active if it was the removed profile
-        if self.active_profile_id.as_deref() == Some(id) {
-            self.active_profile_id = self.profile_ids.first().cloned();
-        }
-    }
+/// In-memory profile snapshot used by UI callers that need account state.
+#[derive(Debug, Clone, Default)]
+pub struct ProfileSnapshot {
+    pub active_profile_id: Option<String>,
+    pub active_profile: Option<Profile>,
+    pub profiles: Vec<Profile>,
 }

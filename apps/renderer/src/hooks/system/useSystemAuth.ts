@@ -23,17 +23,8 @@ export const useAuth = () => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const activeProfile = await platform.invoke<any>("get_active_profile");
-        if (activeProfile) {
-          setAuthStage("AUTHENTICATED");
-        } else {
-          const hasProfiles = await platform.invoke<boolean>("has_profiles");
-          if (hasProfiles) {
-            setAuthStage("LOGIN");
-          } else {
-            setAuthStage("LOGIN");
-          }
-        }
+        const snapshot = await commands.getProfileSnapshot();
+        setAuthStage(snapshot.activeProfile ? "AUTHENTICATED" : "LOGIN");
       } catch (e) {
         console.error("Auth check failed:", e);
         setAuthStage("LOGIN");

@@ -36,6 +36,15 @@ export const commands = {
 
   // Profile Management
   getActiveProfile: () => invoke<Profile | null>("get_active_profile"),
+  getProfileSnapshot: async () => {
+    const [activeProfileId, activeProfile, profiles] = await Promise.all([
+      invoke<string | null>("get_active_profile_id"),
+      invoke<Profile | null>("get_active_profile"),
+      invoke<Profile[]>("list_profiles"),
+    ]);
+
+    return { activeProfileId, activeProfile, profiles };
+  },
   getProfile: (profileId: string) => invoke<Profile | null>("get_profile", { profileId }),
   getActiveProfileId: () => invoke<string | null>("get_active_profile_id"),
   listProfiles: () => invoke<Profile[]>("list_profiles"),

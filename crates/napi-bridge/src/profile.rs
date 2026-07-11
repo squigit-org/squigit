@@ -3,13 +3,15 @@
 
 use napi::{Error, Result};
 use napi_derive::napi;
-use squigit_auth::auth::{hydrate_avatar as hydrate_profile_avatar, start_google_auth_flow, AuthFlowSettings};
+use squigit_auth::auth::{
+    hydrate_avatar as hydrate_profile_avatar, start_google_auth_flow, AuthFlowSettings,
+};
 use squigit_auth::security::{encrypt_and_save_key, get_decrypted_key, ApiKeyProvider};
 use squigit_auth::ProfileStore;
 use std::str::FromStr;
 use std::sync::{atomic::AtomicBool, Arc, Mutex};
 
-use crate::types::{NapiAuthResult, NapiProfile};
+use crate::types::{NapiAuthResult, NapiProfile, NapiProfileSnapshot};
 
 static ACTIVE_AUTH_CANCEL: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
 
@@ -51,6 +53,13 @@ pub fn list_profiles() -> Result<Vec<NapiProfile>> {
 }
 
 #[napi]
+pub fn get_profile_snapshot() -> Result<NapiProfileSnapshot> {
+    let store = ProfileStore::new().map_err(map_profile_err)?;
+    let snapshot = store.profile_snapshot().map_err(map_profile_err)?;
+    Ok(snapshot.into())
+}
+
+#[napi]
 pub fn get_profile(profile_id: String) -> Result<Option<NapiProfile>> {
     let store = ProfileStore::new().map_err(map_profile_err)?;
     let profile = store.get_profile(&profile_id).map_err(map_profile_err)?;
@@ -58,10 +67,18 @@ pub fn get_profile(profile_id: String) -> Result<Option<NapiProfile>> {
 }
 
 #[napi]
+pub fn get_active_profile() -> Result<Option<NapiProfile>> {
+    let store = ProfileStore::new().map_err(map_profile_err)?;
+    let profile = store.get_active_profile().map_err(map_profile_err)?;
+    Ok(profile.map(Into::into))
+}
+
+#[napi]
 pub fn find_profile_by_email(email: String) -> Result<Option<NapiProfile>> {
     let store = ProfileStore::new().map_err(map_profile_err)?;
-    let profiles = store.list_profiles().map_err(map_profile_err)?;
-    let profile = profiles.into_iter().find(|p| p.email == email);
+    let profile = store
+        .find_profile_by_email(&email)
+        .map_err(map_profile_err)?;
     Ok(profile.map(Into::into))
 }
 
@@ -92,24 +109,22 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
         let store = ProfileStore::new().map_err(map_profile_err)?;
 
         // We let the auth flow handle credentials resolution (via SQUIGIT_GOOGLE_CREDENTIALS_JSON etc)
-        let mut settings = AuthFlowSettings::new(
-            Arc::new(|url| {
-                #[cfg(target_os = "linux")]
-                {
-                    let _ = std::process::Command::new("xdg-open")
-                        .arg(url)
-                        .env_remove("LD_LIBRARY_PATH")
-                        .env_remove("ELECTRON_RUN_AS_NODE")
-                        .env_remove("GIO_EXTRA_MODULES")
-                        .spawn();
-                }
-                #[cfg(not(target_os = "linux"))]
-                {
-                    let _ = webbrowser::open(url);
-                }
-                Ok(())
-            }),
-        );
+        let mut settings = AuthFlowSettings::new(Arc::new(|url| {
+            #[cfg(target_os = "linux")]
+            {
+                let _ = std::process::Command::new("xdg-open")
+                    .arg(url)
+                    .env_remove("LD_LIBRARY_PATH")
+                    .env_remove("ELECTRON_RUN_AS_NODE")
+                    .env_remove("GIO_EXTRA_MODULES")
+                    .spawn();
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                let _ = webbrowser::open(url);
+            }
+            Ok(())
+        }));
         settings.redirect_port = 6062;
 
         let auth_cancelled = Arc::new(AtomicBool::new(false));

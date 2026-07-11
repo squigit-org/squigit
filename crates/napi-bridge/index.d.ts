@@ -40,6 +40,8 @@ export declare function generateImageBrief(apiKey: string, imagePath: string, mo
 
 export declare function generateThreadTitle(apiKey: string, model: string, promptContext: string): Promise<string>
 
+export declare function getActiveProfile(): NapiProfile | null
+
 export declare function getActiveProfileId(): string | null
 
 export declare function getApiKey(profileId: string, provider: string): string | null
@@ -53,6 +55,8 @@ export declare function getMachineInfo(): string
 export declare function getModelPath(modelId: string): string
 
 export declare function getProfile(profileId: string): NapiProfile | null
+
+export declare function getProfileSnapshot(): NapiProfileSnapshot
 
 export declare function getReverseImageSearchUrl(threadId: string): string | null
 
@@ -102,6 +106,12 @@ export interface NapiProfile {
   avatarUrl?: string
   createdAt: string
   lastUsedAt: string
+}
+
+export interface NapiProfileSnapshot {
+  activeProfileId?: string
+  activeProfile?: NapiProfile
+  profiles: Array<NapiProfile>
 }
 
 export interface NapiPromptResult {

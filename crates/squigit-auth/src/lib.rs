@@ -13,4 +13,4 @@ pub use auth::{
 pub use error::{ProfileError, Result};
 pub use security::{validate_api_key, verify_artifact_signature, ApiKeyProvider};
 pub use store::ProfileStore;
-pub use types::{Profile, ProfileIndex};
+pub use types::{Profile, ProfileAuth, ProfileSnapshot};

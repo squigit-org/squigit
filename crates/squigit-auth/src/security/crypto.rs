@@ -10,11 +10,14 @@ use pbkdf2::pbkdf2;
 use rand::{rngs::OsRng, RngCore};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use std::fs;
 
 use crate::{ProfileError, ProfileStore, Result};
 
 use super::{validate_api_key, ApiKeyProvider};
+
+type KeyFile = BTreeMap<String, BTreeMap<String, Value>>;
 
 fn get_stable_passphrase() -> Result<String> {
     let home_dir = dirs::home_dir().ok_or(ProfileError::NoConfigDir)?;
@@ -42,13 +45,19 @@ pub fn get_decrypted_key(
     provider: ApiKeyProvider,
     profile_id: &str,
 ) -> Result<Option<String>> {
-    let file_path = store.get_provider_key_path(profile_id, provider.storage_key_name());
+    let file_path = store.get_keys_path();
     if !file_path.exists() {
         return Ok(None);
     }
 
     let file_content = fs::read_to_string(file_path)?;
-    let payload: Value = serde_json::from_str(&file_content)?;
+    let key_file: KeyFile = serde_json::from_str(&file_content)?;
+    let Some(payload) = key_file
+        .get(profile_id)
+        .and_then(|profile_keys| profile_keys.get(provider.storage_key_name()))
+    else {
+        return Ok(None);
+    };
 
     let decode = |field: &str| -> Result<Vec<u8>> {
         let value = payload
@@ -136,8 +145,19 @@ pub fn encrypt_and_save_key(
         "ciphertext": general_purpose::STANDARD.encode(ciphertext)
     });
 
-    let file_path = store.get_provider_key_path(profile_id, provider.storage_key_name());
-    store.write_json_atomic(&file_path, &payload)?;
+    let file_path = store.get_keys_path();
+    let mut key_file: KeyFile = if file_path.exists() {
+        let file_content = fs::read_to_string(&file_path)?;
+        serde_json::from_str(&file_content)?
+    } else {
+        KeyFile::default()
+    };
+
+    key_file
+        .entry(profile_id.to_string())
+        .or_default()
+        .insert(provider.storage_key_name().to_string(), payload);
+    store.write_json_atomic(&file_path, &key_file)?;
 
     Ok(file_path.to_string_lossy().to_string())
 }

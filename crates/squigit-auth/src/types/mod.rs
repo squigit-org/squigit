@@ -5,4 +5,4 @@
 
 mod profile;
 
-pub use profile::{Profile, ProfileIndex};
+pub use profile::{Profile, ProfileAuth, ProfileSnapshot};

@@ -4,7 +4,7 @@
 use napi_derive::napi;
 use squigit_auth::types::Profile as UserProfile;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
-use squigit_memory::{ThreadData, ThreadMessage, ThreadMetadata, StoredImage};
+use squigit_memory::{StoredImage, ThreadData, ThreadMessage, ThreadMetadata};
 
 #[napi(object)]
 pub struct NapiProfile {
@@ -27,6 +27,23 @@ impl From<UserProfile> for NapiProfile {
             avatar_url: profile.avatar_url,
             created_at: profile.created_at.to_rfc3339(),
             last_used_at: profile.last_used_at.to_rfc3339(),
+        }
+    }
+}
+
+#[napi(object)]
+pub struct NapiProfileSnapshot {
+    pub active_profile_id: Option<String>,
+    pub active_profile: Option<NapiProfile>,
+    pub profiles: Vec<NapiProfile>,
+}
+
+impl From<squigit_auth::types::ProfileSnapshot> for NapiProfileSnapshot {
+    fn from(snapshot: squigit_auth::types::ProfileSnapshot) -> Self {
+        Self {
+            active_profile_id: snapshot.active_profile_id,
+            active_profile: snapshot.active_profile.map(Into::into),
+            profiles: snapshot.profiles.into_iter().map(Into::into).collect(),
         }
     }
 }

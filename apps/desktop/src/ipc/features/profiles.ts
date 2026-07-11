@@ -10,6 +10,7 @@ export function registerProfileHandlers() {
   );
   ipcMain.handle("clear_active_profile", () => addon.clearActiveProfile?.());
   ipcMain.handle("list_profiles", () => addon.listProfiles?.());
+  ipcMain.handle("get_profile_snapshot", () => addon.getProfileSnapshot?.());
   ipcMain.handle("get_profile", (_, args) =>
     addon.getProfile?.(args.profileId || args.profile_id),
   );
@@ -43,11 +44,5 @@ export function registerProfileHandlers() {
   );
   ipcMain.handle("get_profile_count", () => addon.profileCount?.());
 
-  ipcMain.handle("get_active_profile", () => {
-    try {
-      const id = addon.getActiveProfileId?.();
-      if (id) return addon.getProfile?.(id) || null;
-    } catch {}
-    return null;
-  });
+  ipcMain.handle("get_active_profile", () => addon.getActiveProfile?.() || null);
 }
