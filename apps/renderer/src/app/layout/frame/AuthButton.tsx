@@ -29,23 +29,27 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
 
   const currentLoadingState = authState === "redirecting" || isLoading;
 
+  const showCancel =
+    currentLoadingState && isHovered && hasLeftSinceLoading && !wizard;
+  const showRetry = authState === "error" && isHovered && !wizard;
+
   const handleClick = () => {
     if (authState === "error") {
-      onLogin(); // Retry
+      if (showRetry) onLogin();
       return;
     }
-    if (authState === "success") {
+    if (authState === "success" || authState === "awaiting") {
       return;
-    }
-    if (authState === "awaiting") {
-      return; // Do nothing
     }
 
-    if (currentLoadingState && onCancel && hasLeftSinceLoading && isHovered) {
-      onCancel();
-    } else if (!currentLoadingState) {
-      onLogin();
+    if (currentLoadingState) {
+      if (showCancel && onCancel) {
+        onCancel();
+      }
+      return;
     }
+
+    onLogin();
   };
 
   const handleMouseEnter = () => {
@@ -64,10 +68,6 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
       setHasLeftSinceLoading(false);
     }
   }, [currentLoadingState]);
-
-  const showCancel =
-    currentLoadingState && isHovered && hasLeftSinceLoading && !wizard;
-  const showRetry = authState === "error" && isHovered && !wizard;
 
   const getButtonClass = () => {
     let cls = styles.loginBtn;
@@ -106,7 +106,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
 
       {authState === "error" && (
         <span className={styles.errorText}>
-          {showRetry ? "Retry ↻" : "An Error occured"}
+          {showRetry ? "Retry ↻" : "An error occurred"}
         </span>
       )}
 

@@ -122,14 +122,16 @@
 }
 
 .wizardBtn.loading,
-.wizardBtn.successBtn {
+.wizardBtn.successBtn,
+.wizardBtn.errorBtn {
   background-color: transparent !important;
   border-color: transparent !important;
   pointer-events: auto;
   cursor: default !important;
 }
 .wizardBtn.loading:hover,
-.wizardBtn.successBtn:hover {
+.wizardBtn.successBtn:hover,
+.wizardBtn.errorBtn:hover {
   background-color: transparent !important;
   cursor: default !important;
 }

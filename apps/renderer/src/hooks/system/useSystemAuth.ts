@@ -113,10 +113,7 @@ export const useSystemAuth = (
     }
 
     const performAuth = async (): Promise<any> => {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Auth Timeout")), 120000),
-      );
-      return await Promise.race([commands.startGoogleAuth(), timeoutPromise]);
+      return await commands.startGoogleAuth();
     };
 
     let result: any = null;

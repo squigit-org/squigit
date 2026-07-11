@@ -349,3 +349,34 @@
     background-position: -200% 0;
   }
 }
+
+@keyframes glowFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.2;
+  }
+}
+
+@keyframes riseIn {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes riseInAuth {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+}

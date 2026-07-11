@@ -36,66 +36,29 @@
   transform: scale(3.1);
 }
 
-/* ── Entrance animations (wizard startup only) ── */
-
-@keyframes glowFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.2;
-  }
-}
-
-@keyframes riseIn {
-  0% {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes riseInAuth {
-  0% {
-    opacity: 0;
-    transform: translateY(14px) scale(1.1);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1.1);
-  }
-}
-
-/* Glow fades in alongside icon rise */
 .animateIn .iconGlow {
   opacity: 0;
-  animation: glowFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+  animation: "glowFadeIn" 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
 }
 
-/* Icon rises up */
 .animateIn .iconImage {
   opacity: 0;
-  animation: riseIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+  animation: "riseIn" 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
 }
 
-/* Welcome title rises up after icon */
 .animateIn .title {
   opacity: 0;
-  animation: riseIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+  animation: "riseIn" 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
 }
 
-/* Auth button rises up shortly after title */
 .animateIn .authWrapper {
   opacity: 0;
-  animation: riseInAuth 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+  animation: "riseInAuth" 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
 }
 
 .title {
   font-family: "Geist Sans", sans-serif;
-  font-size: 2rem;
+  font-size: 1.7rem;
   font-weight: 400;
   letter-spacing: -0.02em;
   color: var(--c-raw-050);
