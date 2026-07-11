@@ -13,8 +13,8 @@ export interface Profile {
   id: string;
   name: string;
   email: string;
-  avatar: string | null;
-  original_avatar?: string | null;
+  avatar_base64: string | null;
+  avatar_url?: string | null;
 }
 
 export interface AppConstants {

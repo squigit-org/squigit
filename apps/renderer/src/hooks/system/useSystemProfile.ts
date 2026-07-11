@@ -20,20 +20,18 @@ export const useSystemProfile = () => {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [avatarSrc, setAvatarSrc] = useState("");
-  const [originalPicture, setOriginalPicture] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const updateUserData = (data: {
     name: string;
     email: string;
-    avatar: string;
-    original_picture?: string;
+    avatar_base64?: string | null;
+    avatar_url?: string | null;
   }) => {
     setUserName(data.name);
     setUserEmail(data.email);
-    setAvatarSrc(data.avatar);
-    if (data.original_picture) {
-      setOriginalPicture(data.original_picture);
-    }
+    setAvatarSrc(data.avatar_base64 || data.avatar_url || "");
+    setAvatarUrl(data.avatar_url ?? null);
   };
 
   const deleteProfile = async (profileId: string) => {
@@ -58,8 +56,8 @@ export const useSystemProfile = () => {
     setUserEmail,
     avatarSrc,
     setAvatarSrc,
-    originalPicture,
-    setOriginalPicture,
+    avatarUrl,
+    setAvatarUrl,
     updateUserData,
 
     deleteProfile,

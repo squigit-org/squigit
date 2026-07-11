@@ -1,14 +1,18 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use base64::{engine::general_purpose, Engine as _};
+use image::ImageFormat;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use squigit_memory::ThreadStorage;
+use std::fs;
+use std::io::Cursor;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-use std::time::{Duration, Instant};
+use std::thread;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tiny_http::{Header, Response, Server, StatusCode};
 use url::Url;
 
@@ -24,8 +28,8 @@ pub struct AuthSuccessData {
     pub id: String,
     pub name: String,
     pub email: String,
-    pub avatar: String,
-    pub original_picture: Option<String>,
+    pub avatar_base64: Option<String>,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -65,15 +69,29 @@ fn generate_state_token() -> String {
     hex::encode(bytes)
 }
 
-pub fn cache_avatar(store: &ProfileStore, url: &str, profile_id: Option<&str>) -> Result<String> {
-    let target_id = match profile_id {
-        Some(id) => id.to_string(),
+fn avatar_target_id(store: &ProfileStore, profile_id: Option<&str>) -> Result<String> {
+    match profile_id {
+        Some(id) => Ok(id.to_string()),
         None => store.get_active_profile_id()?.ok_or_else(|| {
             ProfileError::Auth("No active profile and no profile ID provided.".to_string())
-        })?,
-    };
+        }),
+    }
+}
 
-    let client = Client::new();
+fn avatar_temp_path(profile_id: &str) -> std::path::PathBuf {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+
+    std::env::temp_dir().join(format!("squigit-avatar-{}-{}.download", profile_id, nonce))
+}
+
+fn download_avatar_data_url(client: &Client, url: &str, profile_id: &str) -> Result<String> {
+    if url.trim().is_empty() {
+        return Err(ProfileError::Auth("Avatar URL is empty.".to_string()));
+    }
+
     let response = client.get(url).send()?;
     if !response.status().is_success() {
         return Err(ProfileError::Auth(format!(
@@ -83,20 +101,81 @@ pub fn cache_avatar(store: &ProfileStore, url: &str, profile_id: Option<&str>) -
     }
 
     let bytes = response.bytes()?;
-    let threads_dir = store.get_threads_dir(&target_id);
-    let storage = ThreadStorage::with_base_dir(threads_dir)
-        .map_err(|err| ProfileError::Auth(format!("Failed to initialize storage: {}", err)))?;
-    let stored_image = storage
-        .store_image(&bytes, None)
-        .map_err(|err| ProfileError::Auth(format!("Failed to store avatar: {}", err)))?;
-
-    let local_path = stored_image.path.clone();
-    if let Some(mut profile) = store.get_profile(&target_id)? {
-        profile.avatar = Some(local_path.clone());
-        store.upsert_profile(&profile)?;
+    if bytes.is_empty() {
+        return Err(ProfileError::Auth("Downloaded avatar is empty.".to_string()));
     }
 
-    Ok(local_path)
+    let temp_path = avatar_temp_path(profile_id);
+    fs::write(&temp_path, bytes.as_ref())?;
+
+    let image = image::load_from_memory(bytes.as_ref());
+    let _ = fs::remove_file(&temp_path);
+    let image = image
+        .map_err(|err| ProfileError::Auth(format!("Failed to decode avatar image: {}", err)))?;
+
+    let mut cursor = Cursor::new(Vec::new());
+    image
+        .write_to(&mut cursor, ImageFormat::Png)
+        .map_err(|err| ProfileError::Auth(format!("Failed to encode avatar as PNG: {}", err)))?;
+    let encoded = general_purpose::STANDARD.encode(cursor.into_inner());
+
+    Ok(format!("data:image/png;base64,{}", encoded))
+}
+
+fn hydrate_avatar_once(store: &ProfileStore, url: &str, profile_id: &str) -> Result<String> {
+    let client = Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()?;
+    let avatar_base64 = download_avatar_data_url(&client, url, profile_id)?;
+
+    let mut profile = store
+        .get_profile(profile_id)?
+        .ok_or_else(|| ProfileError::ProfileNotFound(profile_id.to_string()))?;
+    profile.avatar_base64 = Some(avatar_base64.clone());
+    profile.avatar_url = Some(url.to_string());
+    store.upsert_profile(&profile)?;
+
+    Ok(avatar_base64)
+}
+
+fn should_retry_avatar_hydration(err: &ProfileError) -> bool {
+    matches!(
+        err,
+        ProfileError::Auth(_) | ProfileError::Io(_) | ProfileError::Network(_)
+    )
+}
+
+pub fn hydrate_avatar(store: &ProfileStore, url: &str, profile_id: Option<&str>) -> Result<String> {
+    let url = url.trim();
+    if url.is_empty() {
+        return Err(ProfileError::Auth("Avatar URL is empty.".to_string()));
+    }
+
+    let target_id = match profile_id {
+        Some(id) => id.to_string(),
+        None => avatar_target_id(store, None)?,
+    };
+    let retry_delays = [1, 2, 4, 8, 16, 30, 60];
+    let mut attempt = 0usize;
+
+    loop {
+        match hydrate_avatar_once(store, url, &target_id) {
+            Ok(avatar_base64) => return Ok(avatar_base64),
+            Err(err) if should_retry_avatar_hydration(&err) => {
+                let delay = retry_delays
+                    .get(attempt)
+                    .copied()
+                    .unwrap_or(60);
+                attempt = attempt.saturating_add(1);
+                eprintln!(
+                    "[auth] Avatar hydration failed for profile {}: {}. Retrying in {}s.",
+                    target_id, err, delay
+                );
+                thread::sleep(Duration::from_secs(delay));
+            }
+            Err(err) => return Err(err),
+        }
+    }
 }
 
 pub fn start_google_auth_flow(
@@ -373,7 +452,7 @@ pub fn start_google_auth_flow(
             .and_then(|items| items.first().and_then(|item| item.url.clone()))
             .unwrap_or_default();
 
-        let original_picture = if avatar_url.trim().is_empty() {
+        let avatar_url = if avatar_url.trim().is_empty() {
             None
         } else {
             if avatar_url.starts_with("http://")
@@ -385,22 +464,7 @@ pub fn start_google_auth_flow(
             Some(avatar_url.clone())
         };
 
-        let local_avatar = if let Some(url) = original_picture.as_deref() {
-            cache_avatar(store, url, Some(&profile_id)).unwrap_or_default()
-        } else {
-            String::new()
-        };
-
-        let mut profile = Profile::new(
-            &email,
-            &name,
-            if local_avatar.is_empty() {
-                None
-            } else {
-                Some(local_avatar.clone())
-            },
-            original_picture.clone(),
-        );
+        let mut profile = Profile::new(&email, &name, None, avatar_url.clone());
         if let Some(existing_profile) = store.get_profile(&profile.id)? {
             profile.created_at = existing_profile.created_at;
         }
@@ -427,8 +491,8 @@ pub fn start_google_auth_flow(
             id: profile.id.clone(),
             name: profile.name.clone(),
             email: profile.email.clone(),
-            avatar: local_avatar,
-            original_picture,
+            avatar_base64: profile.avatar_base64.clone(),
+            avatar_url,
         };
 
         respond_success(

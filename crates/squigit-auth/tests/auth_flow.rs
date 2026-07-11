@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::env;
-use std::path::Path;
 use std::sync::{atomic::AtomicBool, Arc};
 use std::thread;
 
 use serial_test::serial;
 use squigit_auth::auth::{
-    cache_avatar, start_google_auth_flow, AuthAccountPolicy, AuthFlowSettings, AuthSuccessData,
-    CredentialsSource,
+    start_google_auth_flow, AuthAccountPolicy, AuthFlowSettings, AuthSuccessData, CredentialsSource,
 };
 use squigit_auth::{Profile, ProfileError, ProfileStore};
 use tempfile::tempdir;
@@ -175,43 +173,6 @@ fn run_policy_flow(
 }
 
 #[test]
-fn cache_avatar_stores_bytes_in_profile_cas() {
-    let store = temp_store();
-    let profile = Profile::new("avatar@example.com", "Avatar User", None, None);
-    store.upsert_profile(&profile).unwrap();
-
-    let port = free_port();
-    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
-    let handle = thread::spawn(move || {
-        let server = Server::http(("127.0.0.1", port)).unwrap();
-        ready_tx.send(()).unwrap();
-        let request = server.recv().unwrap();
-        assert_eq!(request.url(), "/avatar.png");
-        let response = Response::from_data(vec![1u8, 2, 3, 4])
-            .with_header(Header::from_bytes(&b"Content-Type"[..], &b"image/png"[..]).unwrap());
-        request.respond(response).unwrap();
-    });
-    ready_rx.recv().unwrap();
-
-    let local_path = cache_avatar(
-        &store,
-        &format!("http://127.0.0.1:{}/avatar.png", port),
-        Some(&profile.id),
-    )
-    .unwrap();
-
-    assert!(Path::new(&local_path).exists());
-    println!("local_path: {}", local_path);
-    println!("threads_dir: {}", store.get_threads_dir(&profile.id).to_string_lossy());
-    assert!(local_path.starts_with(store.get_threads_dir(&profile.id).to_string_lossy().as_ref()));
-
-    let stored_profile = store.get_profile(&profile.id).unwrap().unwrap();
-    assert_eq!(stored_profile.avatar.as_deref(), Some(local_path.as_str()));
-
-    handle.join().unwrap();
-}
-
-#[test]
 fn placeholder_credentials_are_rejected() {
     let store = temp_store();
     let mut settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
@@ -309,13 +270,13 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
     let store = temp_store();
     let oauth_port = free_port();
     let callback_port = free_port();
-    let original_avatar = format!("http://127.0.0.1:{}/avatar", oauth_port);
+    let avatar_url = format!("http://127.0.0.1:{}/avatar", oauth_port);
     let _no_proxy_guard = EnvGuard::set("NO_PROXY", "127.0.0.1,localhost");
     let _no_proxy_lower_guard = EnvGuard::set("no_proxy", "127.0.0.1,localhost");
 
     let (ready_tx, ready_rx) = std::sync::mpsc::channel();
     let server_handle = thread::spawn({
-        let original_avatar = original_avatar.clone();
+        let avatar_url = avatar_url.clone();
         move || {
             let server = Server::http(("127.0.0.1", oauth_port)).unwrap();
             ready_tx.send(()).unwrap();
@@ -360,7 +321,7 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
                                 "emailAddresses": [{{ "value": "integration@example.com" }}],
                                 "photos": [{{ "url": "{}" }}]
                             }}"#,
-                            original_avatar
+                            avatar_url
                         ))
                         .with_header(
                             Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
@@ -435,11 +396,10 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
     assert_eq!(result.name, "Integration User");
     assert_eq!(result.email, "integration@example.com");
     assert_eq!(
-        result.original_picture.as_deref(),
-        Some(original_avatar.as_str())
+        result.avatar_url.as_deref(),
+        Some(avatar_url.as_str())
     );
-    assert!(!result.avatar.is_empty());
-    assert!(Path::new(&result.avatar).exists());
+    assert!(result.avatar_base64.is_none());
 
     let active_id = store.get_active_profile_id().unwrap().unwrap();
     assert_eq!(active_id, result.id);
@@ -447,13 +407,10 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
     let stored_profile = store.get_profile(&result.id).unwrap().unwrap();
     assert_eq!(stored_profile.email, "integration@example.com");
     assert_eq!(
-        stored_profile.original_avatar.as_deref(),
-        Some(original_avatar.as_str())
+        stored_profile.avatar_url.as_deref(),
+        Some(avatar_url.as_str())
     );
-    assert_eq!(
-        stored_profile.avatar.as_deref(),
-        Some(result.avatar.as_str())
-    );
+    assert!(stored_profile.avatar_base64.is_none());
 
     server_handle.join().unwrap();
 }

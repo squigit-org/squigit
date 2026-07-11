@@ -4,8 +4,6 @@ export declare function analyzeImage(imagePath: string, model: string, userMessa
 
 export declare function appendThreadMessage(threadId: string, role: string, content: string): void
 
-export declare function cacheAvatar(url: string, profileId?: string | undefined | null): Promise<string>
-
 export declare function cancelDownloadOcrModel(modelId: string): void
 
 export declare function cancelGoogleAuth(): void
@@ -66,6 +64,8 @@ export declare function getSystemTheme(): string
 
 export declare function hasProfiles(): boolean
 
+export declare function hydrateAvatar(url: string, profileId?: string | undefined | null): Promise<string>
+
 export declare function listDownloadedModels(): Array<string>
 
 export declare function listProfiles(): Array<NapiProfile>
@@ -90,16 +90,16 @@ export interface NapiAuthResult {
   id: string
   name: string
   email: string
-  avatar: string
-  originalPicture?: string
+  avatarBase64?: string
+  avatarUrl?: string
 }
 
 export interface NapiProfile {
   id: string
   name: string
   email: string
-  avatar?: string
-  originalAvatar?: string
+  avatarBase64?: string
+  avatarUrl?: string
   createdAt: string
   lastUsedAt: string
 }

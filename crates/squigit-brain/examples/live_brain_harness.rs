@@ -311,8 +311,8 @@ mod tests {
         let stored_profile = store.get_profile(&first.id).unwrap().unwrap();
         assert_eq!(stored_profile.email, LIVE_EMAIL);
         assert_eq!(stored_profile.name, LIVE_NAME);
-        assert!(stored_profile.avatar.is_none());
-        assert!(stored_profile.original_avatar.is_none());
+        assert!(stored_profile.avatar_base64.is_none());
+        assert!(stored_profile.avatar_url.is_none());
 
         let encrypted_path = store
             .get_provider_key_path(&first.id, ApiKeyProvider::GoogleAiStudio.storage_key_name());

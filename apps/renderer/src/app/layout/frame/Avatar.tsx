@@ -4,9 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { platform } from "@/platform";
-import { commands } from "@/platform";
+import React, { useState, useEffect, useMemo } from "react";
 import styles from "./AccountSwitcher.module.css";
 
 interface AvatarProps {
@@ -16,7 +14,6 @@ interface AvatarProps {
   size?: number | string;
   className?: string;
   onClick?: () => void;
-  profileId?: string;
 }
 
 const getInitials = (name: string) => {
@@ -38,55 +35,18 @@ export const Avatar: React.FC<AvatarProps> = ({
   size,
   className = "",
   onClick,
-  profileId,
 }) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
-  const isDownloadingRef = useRef(false);
 
   useEffect(() => {
     setHasError(false);
-
-    if (src) {
-      if (src.startsWith("http")) {
-        setImageSrc(src);
-      } else {
-        setImageSrc(platform.convertFileSrc(src));
-      }
-    } else if (fallbackSrc) {
-      setImageSrc(fallbackSrc);
-
-      handleCacheRequest(fallbackSrc);
-    } else {
-      setImageSrc(null);
-    }
-  }, [src, fallbackSrc, profileId]);
-
-  const handleCacheRequest = async (url: string) => {
-    if (isDownloadingRef.current) return;
-
-    try {
-      isDownloadingRef.current = true;
-
-      const localPath = await commands.cacheAvatar(url, profileId);
-
-      if (localPath) {
-        setImageSrc(platform.convertFileSrc(localPath));
-      }
-    } catch (e) {
-      console.error("Failed to cache avatar:", e);
-    } finally {
-      isDownloadingRef.current = false;
-    }
-  };
+    setImageSrc(src || fallbackSrc || null);
+  }, [src, fallbackSrc]);
 
   const handleError = () => {
-    if (imageSrc === fallbackSrc) {
-      setHasError(true);
-    } else if (fallbackSrc) {
+    if (imageSrc === src && fallbackSrc && fallbackSrc !== src) {
       setImageSrc(fallbackSrc);
-
-      handleCacheRequest(fallbackSrc);
     } else {
       setHasError(true);
     }

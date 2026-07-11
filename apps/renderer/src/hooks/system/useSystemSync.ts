@@ -19,8 +19,6 @@ import { useSystemProfile } from "./useSystemProfile";
 import { useSystemState } from "./useSystemState";
 import { useSystemAuth } from "./useSystemAuth";
 
-const AVATAR_RECOVERY_RETRY_MS = 60_000;
-
 const sortProfilesByName = (profiles: Profile[]) =>
   [...profiles].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -35,25 +33,7 @@ export const useSystemSync = () => {
   const loadApiKeys = useSettingsStore((s) => s.loadApiKeys);
   const saveApiKey = useSettingsStore((s) => s.saveApiKey);
   const setImgbbKey = useSettingsStore((s) => s.setImgbbKey);
-  const avatarRecoveryTimersRef = useRef(
-    new Map<string, ReturnType<typeof setTimeout>>(),
-  );
-  const avatarRecoveryInFlightRef = useRef(new Set<string>());
-
-  const clearAvatarRecoveryTimer = (profileId: string) => {
-    const timer = avatarRecoveryTimersRef.current.get(profileId);
-    if (!timer) return;
-
-    clearTimeout(timer);
-    avatarRecoveryTimersRef.current.delete(profileId);
-  };
-
-  const clearAllAvatarRecoveryTimers = () => {
-    avatarRecoveryTimersRef.current.forEach((timer) => clearTimeout(timer));
-    avatarRecoveryTimersRef.current.clear();
-  };
-
-  useEffect(() => () => clearAllAvatarRecoveryTimers(), []);
+  const avatarHydrationInFlightRef = useRef(new Set<string>());
 
   const applyActiveProfile = (activeProf: Profile | null) => {
     profile.setActiveProfile(activeProf);
@@ -62,14 +42,14 @@ export const useSystemSync = () => {
       profile.setUserName("");
       profile.setUserEmail("");
       profile.setAvatarSrc("");
-      profile.setOriginalPicture(null);
+      profile.setAvatarUrl(null);
       return;
     }
 
     profile.setUserName(activeProf.name);
     profile.setUserEmail(activeProf.email);
-    profile.setAvatarSrc(activeProf.avatar || "");
-    profile.setOriginalPicture(activeProf.original_avatar ?? null);
+    profile.setAvatarSrc(activeProf.avatar_base64 || activeProf.avatar_url || "");
+    profile.setAvatarUrl(activeProf.avatar_url ?? null);
   };
 
   const applyProfiles = (profilesToApply: Profile[]) => {
@@ -92,63 +72,41 @@ export const useSystemSync = () => {
     };
   };
 
-  const scheduleAvatarRecovery = (candidate: Profile) => {
-    if (candidate.avatar || !candidate.original_avatar) return;
-    if (avatarRecoveryInFlightRef.current.has(candidate.id)) return;
-    if (avatarRecoveryTimersRef.current.has(candidate.id)) return;
-
-    console.log("[Auth] Avatar recovery failed. Retrying in 60s...");
-    const timer = setTimeout(() => {
-      avatarRecoveryTimersRef.current.delete(candidate.id);
-      void recoverAvatar(candidate);
-    }, AVATAR_RECOVERY_RETRY_MS);
-
-    avatarRecoveryTimersRef.current.set(candidate.id, timer);
-  };
-
-  const recoverAvatar = async (candidate: Profile) => {
-    if (candidate.avatar || !candidate.original_avatar) {
-      clearAvatarRecoveryTimer(candidate.id);
+  const hydrateAvatar = async (candidate: Profile) => {
+    if (candidate.avatar_base64 || !candidate.avatar_url) {
       return false;
     }
 
-    if (avatarRecoveryInFlightRef.current.has(candidate.id)) {
+    if (avatarHydrationInFlightRef.current.has(candidate.id)) {
       return false;
     }
 
-    if (avatarRecoveryTimersRef.current.has(candidate.id)) {
-      return false;
-    }
-
-    avatarRecoveryInFlightRef.current.add(candidate.id);
+    avatarHydrationInFlightRef.current.add(candidate.id);
 
     try {
       const latestProfile = await commands.getProfile(candidate.id);
       const targetProfile = latestProfile ?? candidate;
 
-      if (targetProfile.avatar || !targetProfile.original_avatar) {
-        clearAvatarRecoveryTimer(candidate.id);
+      if (targetProfile.avatar_base64 || !targetProfile.avatar_url) {
         return false;
       }
 
-      const localPath = await commands.cacheAvatar(
-        targetProfile.original_avatar,
+      const avatarBase64 = await commands.hydrateAvatar(
+        targetProfile.avatar_url,
         targetProfile.id,
       );
 
-      if (!localPath) {
-        scheduleAvatarRecovery(candidate);
+      if (!avatarBase64) {
         return false;
       }
 
-      console.log("[Auth] Avatar recovered successfully.");
-      clearAvatarRecoveryTimer(candidate.id);
+      console.log("[Auth] Avatar hydrated successfully.");
 
       try {
         await refreshProfileSnapshot();
       } catch (refreshError) {
         console.error(
-          `[useSystemSync] Avatar recovered for ${candidate.id}, but refreshing profile state failed:`,
+          `[useSystemSync] Avatar hydrated for ${candidate.id}, but refreshing profile state failed:`,
           refreshError,
         );
       }
@@ -156,46 +114,45 @@ export const useSystemSync = () => {
       return true;
     } catch (error) {
       console.error(
-        `[useSystemSync] Failed to recover avatar for ${candidate.id}:`,
+        `[useSystemSync] Failed to hydrate avatar for ${candidate.id}:`,
         error,
       );
-      scheduleAvatarRecovery(candidate);
       return false;
     } finally {
-      avatarRecoveryInFlightRef.current.delete(candidate.id);
+      avatarHydrationInFlightRef.current.delete(candidate.id);
     }
   };
 
-  const recoverMissingAvatars = (profilesToCheck: Profile[]) => {
+  const hydrateMissingAvatars = (profilesToCheck: Profile[]) => {
     const missingProfiles = profilesToCheck.filter(
-      (candidate) => !candidate.avatar && candidate.original_avatar,
+      (candidate) => !candidate.avatar_base64 && candidate.avatar_url,
     );
 
     if (missingProfiles.length === 0) return;
 
     void Promise.allSettled(
-      missingProfiles.map((candidate) => recoverAvatar(candidate)),
+      missingProfiles.map((candidate) => hydrateAvatar(candidate)),
     );
   };
 
-  const checkAndHealActiveAvatar = (activeProf: Profile | null) => {
+  const checkAndHydrateActiveAvatar = (activeProf: Profile | null) => {
     if (!activeProf) {
       console.log("[Auth] Avatar check skipped: no active profile");
       return;
     }
 
-    if (activeProf.avatar) {
+    if (activeProf.avatar_base64) {
       console.log("[Auth] Avatar check: FOUND");
       return;
     }
 
-    if (!activeProf.original_avatar) {
-      console.log("[Auth] Avatar check: NOT_FOUND and no original avatar available");
+    if (!activeProf.avatar_url) {
+      console.log("[Auth] Avatar check: NOT_FOUND and no avatar URL available");
       return;
     }
 
-    console.log("[Auth] Avatar check: NOT_FOUND. Starting recovery...");
-    void recoverAvatar(activeProf);
+    console.log("[Auth] Avatar check: NOT_FOUND. Starting hydration...");
+    void hydrateAvatar(activeProf);
   };
 
   const checkAgreement = async () => {
@@ -262,7 +219,7 @@ export const useSystemSync = () => {
     try {
       const activeProf = await commands.getActiveProfile();
       applyActiveProfile(activeProf);
-      checkAndHealActiveAvatar(activeProf);
+      checkAndHydrateActiveAvatar(activeProf);
 
       if (!activeProf) {
         console.log("No active profile found");
@@ -273,7 +230,7 @@ export const useSystemSync = () => {
 
       const allProfiles = await commands.listProfiles();
       const sortedProfiles = applyProfiles(allProfiles);
-      recoverMissingAvatars(sortedProfiles);
+      hydrateMissingAvatars(sortedProfiles);
     } catch (e) {
       console.error("Config load error", e);
       state.setSystemError("Failed to load configuration.");
@@ -314,7 +271,7 @@ export const useSystemSync = () => {
       profile.setUserName("");
       profile.setUserEmail("");
       profile.setAvatarSrc("");
-      profile.setOriginalPicture(null);
+      profile.setAvatarUrl(null);
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -406,7 +363,7 @@ export const useSystemSync = () => {
     userName: profile.userName,
     userEmail: profile.userEmail,
     avatarSrc: profile.avatarSrc,
-    originalPicture: profile.originalPicture,
+    avatarUrl: profile.avatarUrl,
     isDarkMode: prefs.isDarkMode,
     themePreference: prefs.theme,
     onSetTheme: prefs.setTheme,

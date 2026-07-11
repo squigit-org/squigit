@@ -10,8 +10,8 @@ export * from "./tauri.types";
 
 export const commands = {
   // Image Processing
-  cacheAvatar: (url: string, profileId?: string) =>
-    invoke<string>("cache_avatar", { url, profileId }),
+  hydrateAvatar: (url: string, profileId?: string) =>
+    invoke<string>("hydrate_avatar", { url, profileId }),
   processImagePath: (path: string) =>
     invoke<{ hash: string; path: string }>("process_image_path", { path }),
   getInitialImage: () =>

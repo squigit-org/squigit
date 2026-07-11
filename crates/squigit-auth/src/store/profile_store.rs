@@ -144,11 +144,13 @@ impl ProfileStore {
         let mut stored_profile = profile.clone();
         if let Some(existing_profile) = existing {
             stored_profile.created_at = existing_profile.created_at;
-            if stored_profile.avatar.is_none() {
-                stored_profile.avatar = existing_profile.avatar;
+            if stored_profile.avatar_url.is_none() {
+                stored_profile.avatar_url = existing_profile.avatar_url.clone();
             }
-            if stored_profile.original_avatar.is_none() {
-                stored_profile.original_avatar = existing_profile.original_avatar;
+            if stored_profile.avatar_base64.is_none()
+                && stored_profile.avatar_url == existing_profile.avatar_url
+            {
+                stored_profile.avatar_base64 = existing_profile.avatar_base64;
             }
         }
 

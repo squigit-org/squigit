@@ -3411,6 +3411,7 @@ dependencies = [
  "ed25519-dalek",
  "hex",
  "hmac",
+ "image",
  "pbkdf2",
  "rand 0.8.5",
  "reqwest",

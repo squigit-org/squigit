@@ -588,7 +588,6 @@ if (!nativeBinding) {
 module.exports = nativeBinding
 module.exports.analyzeImage = nativeBinding.analyzeImage
 module.exports.appendThreadMessage = nativeBinding.appendThreadMessage
-module.exports.cacheAvatar = nativeBinding.cacheAvatar
 module.exports.cancelDownloadOcrModel = nativeBinding.cancelDownloadOcrModel
 module.exports.cancelGoogleAuth = nativeBinding.cancelGoogleAuth
 module.exports.cancelRequest = nativeBinding.cancelRequest
@@ -619,6 +618,7 @@ module.exports.getRollingSummary = nativeBinding.getRollingSummary
 module.exports.getStoreBaseDir = nativeBinding.getStoreBaseDir
 module.exports.getSystemTheme = nativeBinding.getSystemTheme
 module.exports.hasProfiles = nativeBinding.hasProfiles
+module.exports.hydrateAvatar = nativeBinding.hydrateAvatar
 module.exports.listDownloadedModels = nativeBinding.listDownloadedModels
 module.exports.listProfiles = nativeBinding.listProfiles
 module.exports.listThreads = nativeBinding.listThreads

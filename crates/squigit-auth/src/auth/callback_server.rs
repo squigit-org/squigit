@@ -36,7 +36,7 @@ pub struct AuthFlowSettings {
     pub user_info_url: String,
     pub timeout: Duration,
     pub credentials_source: CredentialsSource,
-    /// Account classification applied before avatar caching or profile persistence.
+    /// Account classification applied before avatar hydration or profile persistence.
     pub account_policy: AuthAccountPolicy,
     pub open_browser: BrowserOpener,
 }

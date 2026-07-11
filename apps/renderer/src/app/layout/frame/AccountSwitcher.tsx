@@ -112,11 +112,10 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
       >
         <div className={styles.avatar}>
           <Avatar
-            src={activeProfile?.avatar}
-            fallbackSrc={activeProfile?.original_avatar}
+            src={activeProfile?.avatar_base64}
+            fallbackSrc={activeProfile?.avatar_url}
             name={activeProfile?.name ?? "User"}
             size="100%"
-            profileId={activeProfile?.id}
           />
         </div>
         {isAddingAccount ? (
@@ -172,11 +171,10 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
               >
                 <div className={styles.itemAvatar}>
                   <Avatar
-                    src={profile.avatar}
-                    fallbackSrc={profile.original_avatar}
+                    src={profile.avatar_base64}
+                    fallbackSrc={profile.avatar_url}
                     name={profile.name}
                     size="100%"
-                    profileId={profile.id}
                   />
                 </div>
                 <div className={styles.accountInfo}>

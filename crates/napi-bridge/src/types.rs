@@ -11,8 +11,8 @@ pub struct NapiProfile {
     pub id: String,
     pub name: String,
     pub email: String,
-    pub avatar: Option<String>,
-    pub original_avatar: Option<String>,
+    pub avatar_base64: Option<String>,
+    pub avatar_url: Option<String>,
     pub created_at: String,
     pub last_used_at: String,
 }
@@ -23,8 +23,8 @@ impl From<UserProfile> for NapiProfile {
             id: profile.id,
             name: profile.name,
             email: profile.email,
-            avatar: profile.avatar,
-            original_avatar: profile.original_avatar,
+            avatar_base64: profile.avatar_base64,
+            avatar_url: profile.avatar_url,
             created_at: profile.created_at.to_rfc3339(),
             last_used_at: profile.last_used_at.to_rfc3339(),
         }
@@ -36,8 +36,8 @@ pub struct NapiAuthResult {
     pub id: String,
     pub name: String,
     pub email: String,
-    pub avatar: String,
-    pub original_picture: Option<String>,
+    pub avatar_base64: Option<String>,
+    pub avatar_url: Option<String>,
 }
 
 #[napi(object)]

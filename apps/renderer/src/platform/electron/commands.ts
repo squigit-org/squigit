@@ -8,7 +8,8 @@ import { platform } from "./index";
 import type { Profile } from "../tauri/tauri.types";
 
 type NativeProfile = Profile & {
-  originalAvatar?: string | null;
+  avatarBase64?: string | null;
+  avatarUrl?: string | null;
 };
 
 const normalizeProfile = (profile: NativeProfile | null): Profile | null => {
@@ -16,7 +17,8 @@ const normalizeProfile = (profile: NativeProfile | null): Profile | null => {
 
   return {
     ...profile,
-    original_avatar: profile.original_avatar ?? profile.originalAvatar ?? null,
+    avatar_base64: profile.avatar_base64 ?? profile.avatarBase64 ?? null,
+    avatar_url: profile.avatar_url ?? profile.avatarUrl ?? null,
   };
 };
 
@@ -99,7 +101,7 @@ export const commands = {
       await platform.invoke<NativeProfile | null>("get_profile", { profileId }),
     ),
   setActiveProfile: (profileId: string | null) => platform.invoke("set_active_profile", { profileId }),
-  cacheAvatar: (url: string, profileId?: string) => platform.invoke<string>("cache_avatar", { url, profileId }),
+  hydrateAvatar: (url: string, profileId?: string) => platform.invoke<string>("hydrate_avatar", { url, profileId }),
   setApiKey: (provider: "google ai studio" | "imgbb", key: string, profileId: string) => platform.invoke("encrypt_and_save", { provider, plaintext: key, profileId }),
   startGoogleAuth: () => platform.invoke("start_google_auth"),
   cancelGoogleAuth: () => platform.invoke("cancel_google_auth"),

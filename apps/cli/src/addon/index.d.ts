@@ -83,8 +83,8 @@ export interface NapiAuthResult {
   id: string;
   name: string;
   email: string;
-  avatar: string;
-  originalPicture?: string;
+  avatarBase64?: string;
+  avatarUrl?: string;
 }
 
 export interface NapiThreadData {
@@ -116,8 +116,8 @@ export interface NapiProfile {
   id: string;
   name: string;
   email: string;
-  avatar?: string;
-  originalAvatar?: string;
+  avatarBase64?: string;
+  avatarUrl?: string;
   createdAt: string;
   lastUsedAt: string;
 }

@@ -3,7 +3,7 @@
 
 use napi::{Error, Result};
 use napi_derive::napi;
-use squigit_auth::auth::{cache_avatar as cache_profile_avatar, start_google_auth_flow, AuthFlowSettings};
+use squigit_auth::auth::{hydrate_avatar as hydrate_profile_avatar, start_google_auth_flow, AuthFlowSettings};
 use squigit_auth::security::{encrypt_and_save_key, get_decrypted_key, ApiKeyProvider};
 use squigit_auth::ProfileStore;
 use std::str::FromStr;
@@ -125,8 +125,8 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
             id: result.id,
             name: result.name,
             email: result.email,
-            avatar: result.avatar,
-            original_picture: result.original_picture,
+            avatar_base64: result.avatar_base64,
+            avatar_url: result.avatar_url,
         })
     })
     .await
@@ -134,10 +134,10 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
 }
 
 #[napi]
-pub async fn cache_avatar(url: String, profile_id: Option<String>) -> Result<String> {
+pub async fn hydrate_avatar(url: String, profile_id: Option<String>) -> Result<String> {
     tokio::task::spawn_blocking(move || {
         let store = ProfileStore::new().map_err(map_profile_err)?;
-        cache_profile_avatar(&store, &url, profile_id.as_deref()).map_err(map_profile_err)
+        hydrate_profile_avatar(&store, &url, profile_id.as_deref()).map_err(map_profile_err)
     })
     .await
     .map_err(|e| Error::from_reason(e.to_string()))?

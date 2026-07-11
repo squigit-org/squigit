@@ -157,7 +157,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
 
       return true;
     } catch (error) {
-      console.error("[settings.store] Failed to save RULES.md:", error);
+      console.error("[Settings] Failed to save RULES.md:", error);
 
       if (get().rulesPrompt === prompt) {
         set({ rulesPrompt: get().rulesPersistedPrompt });
@@ -190,7 +190,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
           isRulesLoaded: true,
         });
       } catch (error) {
-        console.error("[settings.store] Failed to load RULES.md:", error);
+        console.error("[Settings] Failed to load RULES.md:", error);
         set({ rulesPrompt: "", rulesPersistedPrompt: "", isRulesLoaded: true });
       }
     },
@@ -242,12 +242,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
       if (providerResult.status === "fulfilled") {
         nextApiKey = providerResult.value || "";
         console.log(
-          "[settings.store] AI provider key retrieved:",
+          "[Settings] AI provider key retrieved:",
           nextApiKey ? "FOUND" : "EMPTY",
         );
       } else {
         console.error(
-          "[settings.store] Failed to retrieve AI provider key:",
+          "[Settings] Failed to retrieve AI provider key:",
           providerResult.reason,
         );
       }
@@ -255,12 +255,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
       if (imgbbResult.status === "fulfilled") {
         nextImgbbKey = imgbbResult.value || "";
         console.log(
-          "[settings.store] ImgBB key retrieved:",
+          "[Settings] ImgBB key retrieved:",
           nextImgbbKey ? "FOUND" : "EMPTY",
         );
       } else {
         console.error(
-          "[settings.store] Failed to retrieve ImgBB key:",
+          "[Settings] Failed to retrieve ImgBB key:",
           imgbbResult.reason,
         );
       }
@@ -277,14 +277,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
 
       if (!activeProfileId) {
         console.error(
-          "[settings.store] No active profile - cannot save API key.",
+          "[Settings] No active profile - cannot save API key.",
         );
         return false;
       }
 
       try {
         console.log(
-          `[settings.store] Saving ${provider} key for profile ${activeProfileId}`,
+          `[Settings] Saving ${provider} key for profile ${activeProfileId}`,
         );
         await commands.setApiKey(provider, key, activeProfileId);
 
@@ -298,7 +298,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
         return true;
       } catch (error) {
         console.error(
-          `[settings.store] Failed to set ${provider} API key:`,
+          `[Settings] Failed to set ${provider} API key:`,
           error,
         );
         return false;
@@ -356,7 +356,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
         const currentPrefs = await loadPreferences();
         await savePreferences({ ...currentPrefs, ...normalizedUpdates });
       } catch (error) {
-        console.error("[settings.store] Failed to save preferences:", error);
+        console.error("[Settings] Failed to save preferences:", error);
       }
     },
 

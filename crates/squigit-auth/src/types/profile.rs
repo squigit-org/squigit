@@ -20,13 +20,13 @@ pub struct Profile {
     /// Email address from Google account.
     pub email: String,
 
-    /// Local path to cached avatar image (CAS path).
+    /// Base64 PNG data URL for the cached avatar image.
     #[serde(default)]
-    pub avatar: Option<String>,
+    pub avatar_base64: Option<String>,
 
-    /// Original Google avatar URL for refresh.
+    /// Original Google avatar URL for online fallback and refresh.
     #[serde(default)]
-    pub original_avatar: Option<String>,
+    pub avatar_url: Option<String>,
 
     /// When the profile was first created.
     pub created_at: DateTime<Utc>,
@@ -45,21 +45,21 @@ impl Profile {
     ///
     /// * `email` - Google account email address
     /// * `name` - Display name from Google
-    /// * `avatar` - Optional local path to cached avatar
-    /// * `original_avatar` - Optional original Google avatar URL
+    /// * `avatar_base64` - Optional base64 PNG data URL for the avatar
+    /// * `avatar_url` - Optional original Google avatar URL
     pub fn new(
         email: &str,
         name: &str,
-        avatar: Option<String>,
-        original_avatar: Option<String>,
+        avatar_base64: Option<String>,
+        avatar_url: Option<String>,
     ) -> Self {
         let now = Utc::now();
         Self {
             id: Self::id_from_email(email),
             name: name.to_string(),
             email: email.to_string(),
-            avatar,
-            original_avatar,
+            avatar_base64,
+            avatar_url,
             created_at: now,
             last_used_at: now,
         }
