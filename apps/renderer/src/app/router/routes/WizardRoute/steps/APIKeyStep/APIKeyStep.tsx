@@ -11,13 +11,7 @@ export const APIKeyStep = () => {
         <h1 className={styles.title}>Let's give Squigit a brain</h1>
       </div>
       <div className={styles.contentWrapper}>
-        <APIKeySettings
-          providerApiKey={app.system.apiKey}
-          imgbbKey={app.system.imgbbKey}
-          onSetAPIKey={app.system.handleSetAPIKey}
-          isGuest={!app.system.activeProfile}
-          isWizard={true}
-        />
+        <APIKeySettings isWizard={true} />
         <div className={styles.modelSection}>
           <ModelSettings
             localModel={app.system.startupModel}

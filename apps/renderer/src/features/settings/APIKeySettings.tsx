@@ -12,17 +12,11 @@ import { google } from "@squigit/core/services/google";
 import { GlowCard } from "@/components/ui";
 import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import { useTextContextMenu, useTextEditor } from "@/hooks/editor";
+import { useSettingsStore } from "./settings.store";
 import styles from "./APIKeySettings.module.css";
 
 interface APIKeySettingsProps {
-  providerApiKey: string;
-  imgbbKey: string;
-  isGuest?: boolean;
   isWizard?: boolean;
-  onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
-    key: string,
-  ) => Promise<boolean>;
 }
 const ProviderRow = ({
   title,
@@ -281,12 +275,14 @@ const ProviderRow = ({
   );
 };
 export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
-  providerApiKey,
-  imgbbKey,
-  onSetAPIKey,
-  isGuest,
   isWizard,
 }) => {
+  const providerApiKey = useSettingsStore((s) => s.apiKey);
+  const imgbbKey = useSettingsStore((s) => s.imgbbKey);
+  const activeProfileId = useSettingsStore((s) => s.activeProfileId);
+  const saveApiKey = useSettingsStore((s) => s.saveApiKey);
+  const isGuest = !activeProfileId;
+
   const handleOpenUrl = (url: string) => commands.openExternalUrl(url);
   return (
     <section
@@ -307,7 +303,7 @@ export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
           description="Required for AI features"
           currentKey={providerApiKey}
           dashboardUrl={google.aiStudio.key}
-          onSave={(key) => onSetAPIKey("google ai studio", key)}
+          onSave={(key) => saveApiKey("google ai studio", key)}
           isGuest={isGuest}
           isWizard={isWizard}
         />
@@ -319,7 +315,7 @@ export const APIKeySettings: React.FC<APIKeySettingsProps> = ({
               description="Reverse Image Search"
               currentKey={imgbbKey}
               dashboardUrl={"https://api.imgbb.com/"}
-              onSave={(key) => onSetAPIKey("imgbb", key)}
+              onSave={(key) => saveApiKey("imgbb", key)}
               isGuest={isGuest}
             />
             <div className={styles.legalNote}>

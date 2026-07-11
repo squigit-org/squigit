@@ -13,12 +13,11 @@ import {
   type WizardState,
 } from "@squigit/core/config";
 import { resolveOcrModelId } from "@squigit/core/config";
-import { initializeBrainProvider } from "@squigit/core/brain/session";
+import { useSettingsStore } from "@/features/settings/settings.store";
 import { useSystemPreferences } from "./useSystemPreferences";
 import { useSystemProfile } from "./useSystemProfile";
 import { useSystemState } from "./useSystemState";
 import { useSystemAuth } from "./useSystemAuth";
-import { useSystemApiKeys } from "./useSystemApiKeys";
 
 const AVATAR_RECOVERY_RETRY_MS = 60_000;
 
@@ -30,7 +29,12 @@ export const useSystemSync = () => {
   const profile = useSystemProfile();
   const state = useSystemState();
   const auth = useSystemAuth(profile.setSwitchingProfileId);
-  const keys = useSystemApiKeys(profile.activeProfile?.id);
+  const apiKey = useSettingsStore((s) => s.apiKey);
+  const imgbbKey = useSettingsStore((s) => s.imgbbKey);
+  const clearApiKeys = useSettingsStore((s) => s.clearApiKeys);
+  const loadApiKeys = useSettingsStore((s) => s.loadApiKeys);
+  const saveApiKey = useSettingsStore((s) => s.saveApiKey);
+  const setImgbbKey = useSettingsStore((s) => s.setImgbbKey);
   const avatarRecoveryTimersRef = useRef(
     new Map<string, ReturnType<typeof setTimeout>>(),
   );
@@ -235,42 +239,13 @@ export const useSystemSync = () => {
 
       console.log("[useSystemSync] Loaded prefs:", loadedPrefs);
 
-      const loadedModel = loadedPrefs.model || appConstants.defaultModel;
-      prefs.setStartupModel(loadedModel);
-      prefs.setEditingModel(loadedModel);
-      prefs.setSessionModel(loadedModel);
-
-      prefs.setOcrEnabled(
-        loadedPrefs.ocrEnabled !== undefined ? loadedPrefs.ocrEnabled : true,
-      );
-      prefs.setAutoExpandOCR(
-        loadedPrefs.autoExpandOCR !== undefined
-          ? loadedPrefs.autoExpandOCR
-          : true,
-      );
-      prefs.setCaptureType(
-        loadedPrefs.captureType ||
-          (appConstants.defaultCaptureType as "traditional" | "squiggle"),
-      );
-
-      const loadedOcrLanguage = resolveOcrModelId(
-        loadedPrefs.ocrLanguage,
-        appConstants.defaultOcrLanguage,
-      );
-      prefs.setStartupOcrLanguage(loadedOcrLanguage);
-      prefs.setSessionOcrLanguage(
-        loadedPrefs.ocrEnabled !== undefined
-          ? loadedPrefs.ocrEnabled
-            ? loadedOcrLanguage
-            : ""
-          : loadedOcrLanguage,
-      );
-
-      if (loadedPrefs.theme) {
-        prefs.setTheme(loadedPrefs.theme);
-      } else if (!wizardState.isFinished) {
-        prefs.setTheme("system");
-      }
+      prefs.hydratePreferences(loadedPrefs, {
+        defaultModel: appConstants.defaultModel,
+        defaultCaptureType: appConstants.defaultCaptureType as
+          | "traditional"
+          | "squiggle",
+        defaultOcrLanguage: appConstants.defaultOcrLanguage,
+      });
 
       if (!cancelled) {
         state.setPrefsLoaded(true);
@@ -291,47 +266,9 @@ export const useSystemSync = () => {
 
       if (!activeProf) {
         console.log("No active profile found");
-        keys.setApiKey("");
-        keys.setImgbbKey("");
+        clearApiKeys();
       } else {
-        try {
-          const apiKey = await platform.invoke<string>("get_api_key", {
-            provider: "google ai studio",
-            profileId: activeProf.id,
-          });
-          console.log(
-            "[useSystemSync] AI provider key retrieved:",
-            apiKey ? "FOUND" : "EMPTY",
-          );
-          if (apiKey) {
-            keys.setApiKey(apiKey);
-            initializeBrainProvider(apiKey);
-          } else {
-            keys.setApiKey("");
-          }
-        } catch (e) {
-          console.error("[useSystemSync] Failed to retrieve AI provider key:", e);
-          keys.setApiKey("");
-        }
-
-        try {
-          const imgbbApiKey = await platform.invoke<string>("get_api_key", {
-            provider: "imgbb",
-            profileId: activeProf.id,
-          });
-          console.log(
-            "[useSystemSync] ImgBB key retrieved:",
-            imgbbApiKey ? "FOUND" : "EMPTY",
-          );
-          if (imgbbApiKey) {
-            keys.setImgbbKey(imgbbApiKey);
-          } else {
-            keys.setImgbbKey("");
-          }
-        } catch (e) {
-          console.error("[useSystemSync] Failed to retrieve ImgBB key:", e);
-          keys.setImgbbKey("");
-        }
+        await loadApiKeys(activeProf.id);
       }
 
       const allProfiles = await commands.listProfiles();
@@ -372,8 +309,7 @@ export const useSystemSync = () => {
       console.log("[useSystemSync] Auth Success: Resetting Session & Keys");
       state.setStartupImage(null);
       state.setSessionThreadTitle(null);
-      keys.setApiKey("");
-      keys.setImgbbKey("");
+      clearApiKeys();
       profile.setActiveProfile(null);
       profile.setUserName("");
       profile.setUserEmail("");
@@ -405,8 +341,7 @@ export const useSystemSync = () => {
     try {
       await platform.invoke("logout");
       applyActiveProfile(null);
-      keys.setApiKey("");
-      keys.setImgbbKey("");
+      clearApiKeys();
       state.setStartupImage(null);
       state.setSessionThreadTitle(null);
     } catch (e) {
@@ -455,7 +390,7 @@ export const useSystemSync = () => {
 
   return {
     switchingProfileId: profile.switchingProfileId,
-    apiKey: keys.apiKey,
+    apiKey,
     startupModel: prefs.startupModel,
     editingModel: prefs.editingModel,
     setEditingModel: prefs.setEditingModel,
@@ -492,9 +427,9 @@ export const useSystemSync = () => {
     startupOcrLanguage: prefs.startupOcrLanguage,
     sessionOcrLanguage: prefs.sessionOcrLanguage,
     setSessionOcrLanguage: prefs.setSessionOcrLanguage,
-    imgbbKey: keys.imgbbKey,
-    setImgbbKey: keys.setImgbbKey,
-    handleSetAPIKey: keys.handleSetAPIKey,
+    imgbbKey,
+    setImgbbKey,
+    handleSetAPIKey: saveApiKey,
     setAvatarSrc: profile.setAvatarSrc,
     activeProfile: profile.activeProfile,
     profileLoaded: profile.profileLoaded,

@@ -10,11 +10,17 @@ import { useAppContext } from "@/app/providers/AppProvider";
 import { commands } from "@/platform";
 import { CapturePreview } from "@/app/router/routes/WizardRoute/components/CapturePreview/CapturePreview";
 import { PersonaSettings } from "@/features/settings/PersonaSettings";
+import { useSettingsStore } from "@/features/settings/settings.store";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import styles from "./PreferencesStep.module.css";
 
 export const PreferencesStep = () => {
   const app = useAppContext();
+  const themePreference = useSettingsStore((s) => s.themePreference);
+  const captureType = useSettingsStore((s) => s.captureType);
+  const ocrEnabled = useSettingsStore((s) => s.ocrEnabled);
+  const autoExpandOCR = useSettingsStore((s) => s.autoExpandOCR);
+  const updatePreferences = useSettingsStore((s) => s.updatePreferences);
   const [isOcrInstalled, setIsOcrInstalled] = useState<boolean | null>(null);
   const [showInfoTip, setShowInfoTip] = useState(false);
   const infoIconRef = useRef<HTMLSpanElement>(null);
@@ -32,27 +38,25 @@ export const PreferencesStep = () => {
   }, []);
 
   // ── Theme state ──
+  const wizardStep3 = app.system.wizardState?.data?.step_3;
   const savedTheme =
-    app.system.wizardState?.data?.step_3?.theme ||
-    app.system.themePreference ||
-    "dark";
+    wizardStep3?.theme === "light" || wizardStep3?.theme === "dark"
+      ? wizardStep3.theme
+      : themePreference === "light"
+        ? "light"
+        : "dark";
 
   // ── Capture type state ──
   const storedCaptureType =
-    app.system.wizardState?.data?.step_3?.captureType ||
-    app.system.captureType;
+    wizardStep3?.captureType || captureType;
   const savedCaptureType =
     storedCaptureType === "squiggle" ? "squiggle" : "traditional";
 
   // ── OCR state ──
   const savedOcrEnabled =
-    app.system.wizardState?.data?.step_3?.ocrEnabled ??
-    app.system.ocrEnabled ??
-    true;
+    wizardStep3?.ocrEnabled ?? ocrEnabled ?? true;
   const savedAutoExpand =
-    app.system.wizardState?.data?.step_3?.autoExpandOCR ??
-    app.system.autoExpandOCR ??
-    true;
+    wizardStep3?.autoExpandOCR ?? autoExpandOCR ?? true;
 
   // ── Persist defaults on mount ──
   useEffect(() => {
@@ -83,22 +87,22 @@ export const PreferencesStep = () => {
   };
 
   const handleThemeChange = (theme: "dark" | "light") => {
-    app.system.updatePreferences({ theme });
+    void updatePreferences({ theme });
     updateWizardStep3({ theme });
   };
 
   const handleCaptureTypeChange = (type: "traditional" | "squiggle") => {
-    app.system.updatePreferences({ captureType: type });
+    void updatePreferences({ captureType: type });
     updateWizardStep3({ captureType: type });
   };
 
   const handleOcrToggle = (checked: boolean) => {
-    app.system.updatePreferences({ ocrEnabled: checked });
+    void updatePreferences({ ocrEnabled: checked });
     updateWizardStep3({ ocrEnabled: checked });
   };
 
   const handleAutoExpandToggle = (checked: boolean) => {
-    app.system.updatePreferences({ autoExpandOCR: checked });
+    void updatePreferences({ autoExpandOCR: checked });
     updateWizardStep3({ autoExpandOCR: checked });
   };
 

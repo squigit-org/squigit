@@ -5,6 +5,7 @@
  */
 
 import { platform } from "@/platform";
+import { useSettingsStore } from "@/features/settings/settings.store";
 import type { ProviderStreamEvent } from "@squigit/core/brain/engine";
 import {
   setConfigPort,
@@ -140,12 +141,13 @@ export function initializeCorePorts(): void {
       const exists = await platform.fs.exists(RULES_FILE_NAME, {
         baseDir: "AppConfig",
       });
-      if (exists) return;
-
-      await platform.fs.mkdir("", { baseDir: "AppConfig", recursive: true });
-      await platform.fs.writeTextFile(RULES_FILE_NAME, "", {
-        baseDir: "AppConfig",
-      });
+      if (!exists) {
+        await platform.fs.mkdir("", { baseDir: "AppConfig", recursive: true });
+        await platform.fs.writeTextFile(RULES_FILE_NAME, "", {
+          baseDir: "AppConfig",
+        });
+      }
+      await useSettingsStore.getState().initRules();
     } catch (error) {
       console.error("Failed to initialize RULES.md:", error);
     }

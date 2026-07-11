@@ -41,13 +41,6 @@ interface SettingsOverlayProps {
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
   captureType: "traditional" | "squiggle";
-  providerApiKey: string;
-  imgbbKey: string;
-  onSetAPIKey: (
-    provider: "google ai studio" | "imgbb",
-    key: string,
-  ) => Promise<boolean>;
-  isGuest?: boolean;
 }
 
 export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
@@ -63,10 +56,6 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   autoExpandOCR,
   ocrEnabled,
   captureType,
-  providerApiKey,
-  imgbbKey,
-  onSetAPIKey,
-  isGuest = false,
 }) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -179,12 +168,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
           />
         )}
         {activeSection === "apikeys" && (
-          <APIKeySettings
-            providerApiKey={providerApiKey}
-            imgbbKey={imgbbKey}
-            onSetAPIKey={onSetAPIKey}
-            isGuest={isGuest}
-          />
+          <APIKeySettings />
         )}
         {activeSection === "personalization" && <PersonaSettings />}
         {activeSection === "help" && <HelpSettings />}

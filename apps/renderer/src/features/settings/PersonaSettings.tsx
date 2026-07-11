@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks/editor";
 import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import { platform } from "@/platform";
-import { useSystemPreferences } from "@/hooks/system/useSystemPreferences";
+import { useSettingsStore } from "./settings.store";
 import styles from "./PersonaSettings.module.css";
 
 interface PersonaSettingsProps {
@@ -30,20 +30,9 @@ function appendRulesContent(current: string, content: string): string {
 export const PersonaSettings: React.FC<PersonaSettingsProps> = ({
   isWizard,
 }) => {
-  const { prompt, updatePrompt } = useSystemPreferences();
-  const [localPrompt, setLocalPrompt] = useState("");
-
-  useEffect(() => {
-    setLocalPrompt(prompt);
-  }, [prompt]);
-
-  useEffect(() => {
-    if (localPrompt === prompt) return;
-    const handler = setTimeout(() => {
-      updatePrompt(localPrompt);
-    }, 1000);
-    return () => clearTimeout(handler);
-  }, [localPrompt, prompt, updatePrompt]);
+  const rulesPrompt = useSettingsStore((s) => s.rulesPrompt);
+  const setRulesPrompt = useSettingsStore((s) => s.setRulesPrompt);
+  const flushRulesPrompt = useSettingsStore((s) => s.flushRulesPrompt);
 
   const handleImportRulesMd = async () => {
     try {
@@ -54,17 +43,16 @@ export const PersonaSettings: React.FC<PersonaSettingsProps> = ({
       if (!selected || Array.isArray(selected)) return;
 
       const content = await platform.fs.readTextFile(selected);
-      const nextPrompt = appendRulesContent(localPrompt, content);
-      setLocalPrompt(nextPrompt);
-      await updatePrompt(nextPrompt);
+      const nextPrompt = appendRulesContent(rulesPrompt, content);
+      setRulesPrompt(nextPrompt);
+      await flushRulesPrompt();
     } catch (err) {
       console.error("[PersonaSettings] Failed to import rules.md:", err);
     }
   };
 
   const handleBlur = () => {
-    if (localPrompt === prompt) return;
-    void updatePrompt(localPrompt);
+    void flushRulesPrompt();
   };
 
   const {
@@ -76,8 +64,8 @@ export const PersonaSettings: React.FC<PersonaSettingsProps> = ({
     handleSelectAll,
     handleKeyDown,
   } = useTextEditor({
-    value: localPrompt,
-    onChange: setLocalPrompt,
+    value: rulesPrompt,
+    onChange: setRulesPrompt,
   });
 
   const {
@@ -116,8 +104,8 @@ export const PersonaSettings: React.FC<PersonaSettingsProps> = ({
             ref={ref as React.RefObject<HTMLTextAreaElement>}
             className={`${styles.textarea} ${isWizard ? styles.wizardTextarea : ""}`}
             placeholder="Add your custom instructions..."
-            value={localPrompt}
-            onChange={(e) => setLocalPrompt(e.target.value)}
+            value={rulesPrompt}
+            onChange={(e) => setRulesPrompt(e.target.value)}
             onBlur={handleBlur}
             onContextMenu={handleContextMenu}
             onKeyDown={(e) => {
