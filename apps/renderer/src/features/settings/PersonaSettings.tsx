@@ -8,10 +8,10 @@ import React, { useState, useEffect } from "react";
 import { useTextEditor, useTextContextMenu } from "@/hooks/editor";
 import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import { platform } from "@/platform";
-import { useIdentityConfig } from "@/hooks/system/useIdentityConfig";
-import styles from "./IdentitySettings.module.css";
+import { useSystemPreferences } from "@/hooks/system/useSystemPreferences";
+import styles from "./PersonaSettings.module.css";
 
-interface IdentitySettingsProps {
+interface PersonaSettingsProps {
   isWizard?: boolean;
 }
 
@@ -27,10 +27,10 @@ function appendRulesContent(current: string, content: string): string {
   return `${current}\n\n${content}`;
 }
 
-export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
+export const PersonaSettings: React.FC<PersonaSettingsProps> = ({
   isWizard,
 }) => {
-  const { prompt, loading, updatePrompt } = useIdentityConfig();
+  const { prompt, updatePrompt } = useSystemPreferences();
   const [localPrompt, setLocalPrompt] = useState("");
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
       setLocalPrompt(nextPrompt);
       await updatePrompt(nextPrompt);
     } catch (err) {
-      console.error("[IdentitySettings] Failed to import rules.md:", err);
+      console.error("[PersonaSettings] Failed to import rules.md:", err);
     }
   };
 
@@ -88,9 +88,6 @@ export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
     hasSelection,
   });
 
-  if (loading) {
-    return <div className={styles.container}>Loading personalization settings...</div>;
-  }
 
   return (
     <section

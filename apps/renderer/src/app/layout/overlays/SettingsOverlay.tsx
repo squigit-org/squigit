@@ -21,7 +21,7 @@ import {
   GeneralSettings,
   ModelSettings,
   APIKeySettings,
-  IdentitySettings,
+  PersonaSettings,
   HelpSettings,
   SettingsSection,
 } from "@/features/settings";
@@ -186,7 +186,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
             isGuest={isGuest}
           />
         )}
-        {activeSection === "personalization" && <IdentitySettings />}
+        {activeSection === "personalization" && <PersonaSettings />}
         {activeSection === "help" && <HelpSettings />}
       </WidgetOverlay>
       {contextMenu && (

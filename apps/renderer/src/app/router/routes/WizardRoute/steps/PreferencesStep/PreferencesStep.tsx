@@ -9,7 +9,7 @@ import ThemePicker from "../../components/ThemePicker/ThemePicker";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { commands } from "@/platform";
 import { CapturePreview } from "@/app/router/routes/WizardRoute/components/CapturePreview/CapturePreview";
-import { IdentitySettings } from "@/features/settings/IdentitySettings";
+import { PersonaSettings } from "@/features/settings/PersonaSettings";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import styles from "./PreferencesStep.module.css";
 
@@ -253,7 +253,7 @@ export const PreferencesStep = () => {
                 vertical
               />
             </div>
-            <IdentitySettings isWizard={true} />
+            <PersonaSettings isWizard={true} />
           </div>
         </div>
       </div>

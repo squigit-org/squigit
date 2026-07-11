@@ -13,7 +13,6 @@ export function registerAppHandlers() {
     require("electron").app.exit(0);
   });
 
-  // Shims for missing Tauri handlers
   ipcMain.handle("get_linux_package_manager", () => "apt");
   ipcMain.handle("get_machine_info", () => addon.getMachineInfo?.());
   ipcMain.handle("set_background_color", () => {});
@@ -21,7 +20,9 @@ export function registerAppHandlers() {
     appVersion: require("electron").app.getVersion(),
   }));
   ipcMain.handle("get_system_theme", () => "dark");
-  ipcMain.handle("run_sidecar_version", (_, args) => addon.runSidecarVersion?.(args.command));
+  ipcMain.handle("run_sidecar_version", (_, args) =>
+    addon.runSidecarVersion?.(args.command),
+  );
   ipcMain.handle("updater:check", () => null);
   ipcMain.handle("get_initial_image", () => null);
   ipcMain.handle("get_wizard_state", async () => {
@@ -32,7 +33,7 @@ export function registerAppHandlers() {
       const userData = app.getPath("userData");
       const rootDir = path.join(userData, "..");
       const data = await fs.readFile(
-        path.join(rootDir, ".squigit-wizard-state.json"),
+        path.join(rootDir, "First Run"),
         "utf-8",
       );
       return JSON.parse(data);
@@ -52,12 +53,12 @@ export function registerAppHandlers() {
         const userData = app.getPath("userData");
         const rootDir = path.join(userData, "..");
         await fs.writeFile(
-          path.join(rootDir, ".squigit-wizard-state.json"),
+          path.join(rootDir, "First Run"),
           JSON.stringify(defaultState, null, 2),
           "utf-8",
         );
       } catch (err) {
-        console.error("Failed to pre-create .squigit-wizard-state.json", err);
+        console.error("Failed to pre-create First Run", err);
       }
       return defaultState;
     }
@@ -69,7 +70,7 @@ export function registerAppHandlers() {
     const userData = app.getPath("userData");
     const rootDir = path.join(userData, "..");
     await fs.writeFile(
-      path.join(rootDir, ".squigit-wizard-state.json"),
+      path.join(rootDir, "First Run"),
       JSON.stringify(state),
     );
   });
@@ -93,5 +94,7 @@ export function registerAppHandlers() {
   );
   ipcMain.handle("window:startDragging", () => {});
   // UI dialog audio
-  ipcMain.handle("play_ui_sound", (_, args) => addon.playUiSound?.(args.effect));
+  ipcMain.handle("play_ui_sound", (_, args) =>
+    addon.playUiSound?.(args.effect),
+  );
 }

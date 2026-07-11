@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { commands } from "@/platform";
 import { DEFAULT_OCR_MODEL_ID, resolveOcrModelId } from "@squigit/core/config";
 import {
@@ -13,8 +13,37 @@ import {
   savePreferences,
 } from "@squigit/core/config";
 import { useTheme } from "@/hooks/shared";
+import { getConfigPort } from "@squigit/core/ports";
+
+const RULES_FILE_NAME = "RULES.md";
 
 export const useSystemPreferences = () => {
+  const [prompt, setPrompt] = useState("");
+
+  const ensureRulesFileExists = useCallback(async () => {
+    const configPort = getConfigPort();
+    const exists = await configPort.hasConfigFile(RULES_FILE_NAME);
+    if (!exists) {
+      await configPort.writeConfigFile(RULES_FILE_NAME, "");
+    }
+    return configPort;
+  }, []);
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      const configPort = await ensureRulesFileExists();
+      const nextPrompt = await configPort.readConfigFile(RULES_FILE_NAME);
+      setPrompt(nextPrompt);
+    } catch (e) {
+      console.error("Failed to fetch RULES.md:", e);
+      setPrompt("");
+    }
+  }, [ensureRulesFileExists]);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
+
   const { theme, resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -87,6 +116,16 @@ export const useSystemPreferences = () => {
     }
   };
 
+  const updatePrompt = useCallback(async (prompt: string) => {
+    try {
+      const configPort = await ensureRulesFileExists();
+      await configPort.writeConfigFile(RULES_FILE_NAME, prompt);
+      setPrompt(prompt);
+    } catch (e) {
+      console.error("Failed to update RULES.md:", e);
+    }
+  }, [ensureRulesFileExists]);
+
   return {
     theme,
     resolvedTheme,
@@ -112,5 +151,9 @@ export const useSystemPreferences = () => {
     setSessionOcrLanguage,
 
     updatePreferences,
+
+    prompt,
+    updatePrompt,
+    refresh: fetchConfig,
   };
 };
