@@ -28,7 +28,7 @@ fn temp_store() -> ProfileStore {
     let dir = tempdir().unwrap();
     let root = dir.path().to_path_buf();
     std::mem::forget(dir);
-    ProfileStore::with_base_dir(root.join("Local Storage")).unwrap()
+    ProfileStore::with_base_dir(root.to_path_buf()).unwrap()
 }
 
 struct EnvGuard {
@@ -201,6 +201,8 @@ fn cache_avatar_stores_bytes_in_profile_cas() {
     .unwrap();
 
     assert!(Path::new(&local_path).exists());
+    println!("local_path: {}", local_path);
+    println!("threads_dir: {}", store.get_threads_dir(&profile.id).to_string_lossy());
     assert!(local_path.starts_with(store.get_threads_dir(&profile.id).to_string_lossy().as_ref()));
 
     let stored_profile = store.get_profile(&profile.id).unwrap().unwrap();

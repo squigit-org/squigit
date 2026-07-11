@@ -7,9 +7,6 @@ use std::path::PathBuf;
 use crate::error::{ProfileError, Result};
 use crate::types::{Profile, ProfileIndex};
 
-/// Storage directory name under the app config.
-const STORAGE_DIR: &str = "Local Storage";
-
 /// Profile index filename.
 const INDEX_FILE: &str = "index.json";
 
@@ -21,7 +18,7 @@ const PROFILE_FILE: &str = "profile.json";
 /// Handles CRUD operations for profiles, maintaining an index
 /// of all profiles and tracking the active profile.
 pub struct ProfileStore {
-    /// Base directory: `{config_dir}/squigit/Local Storage/`
+    /// Base directory: `{config_dir}/squigit/`
     pub(super) base_dir: PathBuf,
     /// Path to the index file.
     pub(super) index_path: PathBuf,
@@ -31,13 +28,12 @@ impl ProfileStore {
     /// Create a new profile store.
     ///
     /// Uses the OS-appropriate config directory:
-    /// - Linux: `~/.config/squigit/Local Storage/`
-    /// - macOS: `~/Library/Application Support/squigit/Local Storage/`
-    /// - Windows: `%APPDATA%/squigit/Local Storage/`
+    /// - Linux: `~/.config/squigit/`
+    /// - macOS: `~/Library/Application Support/squigit/`
+    /// - Windows: `%APPDATA%/squigit/`
     pub fn new() -> Result<Self> {
         let base_dir = squigit_memory::paths::base_config_dir()
-            .ok_or(ProfileError::NoConfigDir)?
-            .join(STORAGE_DIR);
+            .ok_or(ProfileError::NoConfigDir)?;
 
         Self::with_base_dir(base_dir)
     }

@@ -82,7 +82,7 @@ impl Profile {
 
 /// Index file tracking all profiles and the active profile.
 ///
-/// Stored at `{config_dir}/squigit/Local Storage/index.json`.
+/// Stored at `{config_dir}/squigit/index.json`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProfileIndex {
     /// ID of the currently active profile, if any.

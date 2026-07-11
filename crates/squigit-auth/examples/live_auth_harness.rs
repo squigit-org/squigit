@@ -257,7 +257,7 @@ mod tests {
 
     fn store_with_profiles() -> (tempfile::TempDir, ProfileStore, Profile, Profile) {
         let directory = tempfile::tempdir().unwrap();
-        let store = ProfileStore::with_base_dir(directory.path().join("Local Storage")).unwrap();
+        let store = ProfileStore::with_base_dir(directory.path().to_path_buf()).unwrap();
         let first = Profile::new("first@example.com", "First User", None, None);
         let second = Profile::new("second@example.com", "Second User", None, None);
         store.upsert_profile(&first).unwrap();
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn removal_preserves_the_final_profile_invariant() {
         let directory = tempfile::tempdir().unwrap();
-        let store = ProfileStore::with_base_dir(directory.path().join("Local Storage")).unwrap();
+        let store = ProfileStore::with_base_dir(directory.path().to_path_buf()).unwrap();
         let profile = Profile::new("only@example.com", "Only User", None, None);
         store.upsert_profile(&profile).unwrap();
         logout(&store).unwrap();

@@ -16,8 +16,11 @@ use crate::provider::gemini::agent::tool_orchestrator::{
     build_system_instruction_with_tool_policy, tool_status_text, tool_step_id,
 };
 use crate::provider::gemini::attachments::{
-    build_attachment_preview_context, build_thread_attachment_catalog, build_interleaved_parts,
+    build_attachment_preview_context, build_interleaved_parts, build_thread_attachment_catalog,
     extract_attachment_mentions, prepare_turn_attachments,
+};
+use crate::provider::gemini::request_log::{
+    write_request_log, GeminiRequestLogContext,
 };
 use crate::provider::gemini::transport::streaming::{
     emit_event, stream_request_iteration, StreamIterationResult,
@@ -26,7 +29,9 @@ use crate::provider::gemini::transport::types::{
     GeminiContent, GeminiEvent, GeminiFileData, GeminiFunctionResponse, GeminiPart, GeminiRequest,
 };
 use crate::runtime::BrainRuntimeState;
-use squigit_memory::identity::Config;
+
+const DEFAULT_INITIAL_USER_PROMPT: &str =
+    "Analyze this image and explain it or discuss fixes about the issue it describes.";
 
 fn normalize_attachment_lookup_key(path: &str) -> String {
     let trimmed = path.trim();
@@ -229,10 +234,8 @@ async fn stream_iteration_with_rate_limit_retry(
     let mut last_error = String::new();
 
     for attempt in 0..=MAX_RATE_LIMIT_RETRIES {
-        match stream_request_iteration(
-            sink, client, url, request_body, channel_id, cancel_token,
-        )
-        .await
+        match stream_request_iteration(sink, client, url, request_body, channel_id, cancel_token)
+            .await
         {
             Ok(result) => return Ok(result),
             Err(err) => {
@@ -348,31 +351,15 @@ pub async fn stream_gemini_thread_v2(
                 ..Default::default()
             });
 
-            let identity_config = Config::load();
-
-            if !identity_config.prompt.trim().is_empty() {
-                parts.push(GeminiPart {
-                    text: Some(format!("\n## User's Default Instruction\n{}", identity_config.prompt.trim())),
-                    ..Default::default()
-                });
-            }
-
-            if let Some(soul) = identity_config.soul {
-                let trimmed = soul.markdown.trim();
-                if !trimmed.is_empty() {
-                    parts.push(GeminiPart {
-                        text: Some(format!("\n## User's Soul.md\n{}", trimmed)),
-                        ..Default::default()
-                    });
-                }
-            }
-
-            if !user_message.is_empty() {
-                let interleaved_parts =
-                    build_interleaved_parts(&user_message, &api_key, &runtime.provider_file_cache)
-                        .await?;
-                parts.extend(interleaved_parts);
-            }
+            let initial_user_message = if user_message.trim().is_empty() {
+                DEFAULT_INITIAL_USER_PROMPT.to_string()
+            } else {
+                user_message.clone()
+            };
+            let interleaved_parts =
+                build_interleaved_parts(&initial_user_message, &api_key, &runtime.provider_file_cache)
+                    .await?;
+            parts.extend(interleaved_parts);
 
             vec![GeminiContent {
                 role: "user".to_string(),
@@ -505,6 +492,16 @@ pub async fn stream_gemini_thread_v2(
                     None
                 },
             };
+
+            write_request_log(
+                &GeminiRequestLogContext {
+                    kind: "thread_stream",
+                    channel_id: Some(&channel_id),
+                    thread_id: thread_id.as_deref(),
+                    iteration: Some(iter + 1),
+                },
+                &request_body,
+            );
 
             // Clear any stale streamed text before the answer-synthesis pass.
             if !allow_tools && tool_calls > 0 {

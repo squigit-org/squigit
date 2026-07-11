@@ -5,6 +5,7 @@ use crate::provider::gemini::transport::types::{
     GeminiContent, GeminiFileData, GeminiPart, GeminiRequest, GeminiResponseChunk,
 };
 use crate::runtime::BrainRuntimeState;
+use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
 
 /// Generate a thread title for the thread using the brain's title prompt and the text context.
 /// Returns the generated title text directly.
@@ -48,6 +49,16 @@ pub async fn generate_thread_title(
         tools: None,
         tool_config: None,
     };
+
+    write_request_log(
+        &GeminiRequestLogContext {
+            kind: "title_generation",
+            channel_id: None,
+            thread_id: None,
+            iteration: None,
+        },
+        &request_body,
+    );
 
     let mut attempts = 0;
     let max_attempts = 3;
@@ -179,6 +190,16 @@ pub async fn generate_image_brief(
         tool_config: None,
     };
 
+    write_request_log(
+        &GeminiRequestLogContext {
+            kind: "image_brief",
+            channel_id: None,
+            thread_id: None,
+            iteration: None,
+        },
+        &request_body,
+    );
+
     let response = client
         .post(&url)
         .json(&request_body)
@@ -266,6 +287,16 @@ pub async fn compress_conversation(
         tools: None,
         tool_config: None,
     };
+
+    write_request_log(
+        &GeminiRequestLogContext {
+            kind: "conversation_summary",
+            channel_id: None,
+            thread_id: None,
+            iteration: None,
+        },
+        &request_body,
+    );
 
     let response = client
         .post(&url)

@@ -247,7 +247,7 @@ export const PreferencesStep = () => {
                 </svg>
               </span>
               <Tooltip
-                text={`Want Squigit to help the same way every time? This message is included with each squigit you make.\n\nTip: Attach a Soul.md file to shape Squigit's personality, tone, and expertise.`}
+                text={`Want Squigit to help the same way every time? This message is included with every squigit you make.\n\nTip: Import RULES.md to append reusable instructions into your RULES editor.`}
                 parentRef={infoIconRef}
                 show={showInfoTip}
                 vertical

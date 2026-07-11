@@ -15,28 +15,37 @@ interface IdentitySettingsProps {
   isWizard?: boolean;
 }
 
+function appendRulesContent(current: string, content: string): string {
+  if (!content) return current;
+  if (!current) return content;
+  if (current.endsWith("\n\n") || content.startsWith("\n")) {
+    return `${current}${content}`;
+  }
+  if (current.endsWith("\n")) {
+    return `${current}\n${content}`;
+  }
+  return `${current}\n\n${content}`;
+}
+
 export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
   isWizard,
 }) => {
-  const { config, loading, updatePrompt, attachSoul, detachSoul } = useIdentityConfig();
+  const { prompt, loading, updatePrompt } = useIdentityConfig();
   const [localPrompt, setLocalPrompt] = useState("");
 
   useEffect(() => {
-    if (config?.prompt !== undefined) {
-      setLocalPrompt(config.prompt);
-    }
-  }, [config?.prompt]);
+    setLocalPrompt(prompt);
+  }, [prompt]);
 
   useEffect(() => {
-    if (config === null) return;
-    if (localPrompt === config?.prompt) return;
+    if (localPrompt === prompt) return;
     const handler = setTimeout(() => {
       updatePrompt(localPrompt);
     }, 1000);
     return () => clearTimeout(handler);
-  }, [localPrompt, config?.prompt, updatePrompt]);
+  }, [localPrompt, prompt, updatePrompt]);
 
-  const handleAttachSoulMd = async () => {
+  const handleImportRulesMd = async () => {
     try {
       const selected = await platform.dialog.open({
         filters: [{ name: "Markdown", extensions: ["md"] }],
@@ -45,16 +54,17 @@ export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
       if (!selected || Array.isArray(selected)) return;
 
       const content = await platform.fs.readTextFile(selected);
-      const originalName = selected.split(/[/\\]/).pop() || "soul.md";
-      await attachSoul(originalName, content);
+      const nextPrompt = appendRulesContent(localPrompt, content);
+      setLocalPrompt(nextPrompt);
+      await updatePrompt(nextPrompt);
     } catch (err) {
-      console.error("[IdentitySettings] Failed to attach soul.md:", err);
+      console.error("[IdentitySettings] Failed to import rules.md:", err);
     }
   };
 
-  const handleDetachSoulMd = async (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation();
-    await detachSoul();
+  const handleBlur = () => {
+    if (localPrompt === prompt) return;
+    void updatePrompt(localPrompt);
   };
 
   const {
@@ -82,8 +92,6 @@ export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
     return <div className={styles.container}>Loading personalization settings...</div>;
   }
 
-  const soulMdName = config?.soul?.name;
-
   return (
     <section
       className={`${styles.container} ${isWizard ? styles.wizardContainer : ""}`}
@@ -100,7 +108,7 @@ export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
         {!isWizard && (
           <div className={styles.controlsRow}>
             <span className={styles.description}>
-              Customize how the AI responds to you
+              Want Squigit to help the same way every time?
             </span>
           </div>
         )}
@@ -109,10 +117,11 @@ export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
         >
           <textarea
             ref={ref as React.RefObject<HTMLTextAreaElement>}
-            className={styles.textarea}
-            placeholder="Add context about yourself, your preferences, or specific instructions for the AI."
+            className={`${styles.textarea} ${isWizard ? styles.wizardTextarea : ""}`}
+            placeholder="Add your custom instructions..."
             value={localPrompt}
             onChange={(e) => setLocalPrompt(e.target.value)}
+            onBlur={handleBlur}
             onContextMenu={handleContextMenu}
             onKeyDown={(e) => {
               if (e.key === "Enter") return;
@@ -120,17 +129,20 @@ export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
             }}
           />
         </div>
-        <div className={styles.soulMdRow}>
+        <div className={styles.rulesMdRow}>
           <div
-            className={styles.soulMdPicker}
-            onClick={handleAttachSoulMd}
+            className={styles.rulesMdPicker}
+            onClick={handleImportRulesMd}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") handleAttachSoulMd();
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                void handleImportRulesMd();
+              }
             }}
           >
-            <span className={styles.soulMdIcon}>
+            <span className={styles.rulesMdIcon}>
               <svg
                 width={16}
                 height={16}
@@ -144,32 +156,8 @@ export const IdentitySettings: React.FC<IdentitySettingsProps> = ({
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
               </svg>
             </span>
-            <span className={styles.soulMdLabel}>
-              {soulMdName ? (
-                soulMdName.length > 20 ? (
-                  `${soulMdName.substring(0, soulMdName.lastIndexOf(".")).substring(0, 15)}...${soulMdName.substring(soulMdName.lastIndexOf("."))}`
-                ) : (
-                  soulMdName
-                )
-              ) : "Attach Soul.md"}
-            </span>
+            <span className={styles.rulesMdLabel}>Import RULES.md</span>
           </div>
-          {soulMdName && (
-            <span
-              className={styles.soulMdRemove}
-              onClick={handleDetachSoulMd}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") handleDetachSoulMd(e);
-              }}
-            >
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </span>
-          )}
         </div>
       </div>
       {contextMenu.isOpen && (

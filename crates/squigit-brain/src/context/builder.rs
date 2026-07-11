@@ -7,6 +7,7 @@ use crate::context::loader::{
     interpolate, load_frame, load_image_brief_prompt, load_scenes, load_soul, load_system,
     load_title_prompt,
 };
+use squigit_memory::identity::load_rules;
 use std::collections::HashMap;
 
 /// Build the system prompt for the initial turn (with image).
@@ -175,11 +176,17 @@ pub fn build_system_instruction(
     );
 
     let runtime_section = interpolate(&system_config.runtime_template, &vars);
-    let full_instruction = format!(
+    let mut full_instruction = format!(
         "{}\n{}",
         system_config.identity_brief.trim(),
         runtime_section
     );
+
+    let user_rules = load_rules();
+    if !user_rules.trim().is_empty() {
+        full_instruction.push_str("\n\n## User RULES.md\n");
+        full_instruction.push_str(user_rules.trim());
+    }
 
     Ok(full_instruction)
 }

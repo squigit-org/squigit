@@ -8,7 +8,7 @@ fn temp_store() -> ProfileStore {
     let temp_dir = tempdir().unwrap();
     let root = temp_dir.path().to_path_buf();
     std::mem::forget(temp_dir);
-    ProfileStore::with_base_dir(root.join("Local Storage")).unwrap()
+    ProfileStore::with_base_dir(root.to_path_buf()).unwrap()
 }
 
 #[test]

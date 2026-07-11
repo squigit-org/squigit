@@ -46,11 +46,7 @@ export declare function getActiveProfileId(): string | null
 
 export declare function getApiKey(profileId: string, provider: string): string | null
 
-export declare function getIdentityConfig(): NapiIdentityConfig
-
 export declare function getImagePath(hash: string): string
-
-export declare function getReverseImageSearchUrl(threadId: string): string | null
 
 export declare function getLinuxPackageManager(): string
 
@@ -59,6 +55,8 @@ export declare function getMachineInfo(): string
 export declare function getModelPath(modelId: string): string
 
 export declare function getProfile(profileId: string): NapiProfile | null
+
+export declare function getReverseImageSearchUrl(threadId: string): string | null
 
 export declare function getRollingSummary(threadId: string): string | null
 
@@ -96,11 +94,6 @@ export interface NapiAuthResult {
   originalPicture?: string
 }
 
-export interface NapiIdentityConfig {
-  prompt: string
-  soul?: NapiSoul
-}
-
 export interface NapiProfile {
   id: string
   name: string
@@ -115,10 +108,6 @@ export interface NapiPromptResult {
   threadId: string
   assistantMessage: string
   normalizedUserMessage: string
-}
-
-export interface NapiSoul {
-  name: string
 }
 
 export interface NapiStoredImage {
@@ -178,8 +167,6 @@ export declare function readClipboardImage(): NapiStoredImage
 
 export declare function readClipboardText(): string
 
-export declare function removeIdentitySoul(): void
-
 export declare function requestQuickAnswer(channelId: string): Promise<void>
 
 export declare function revealInFileManager(path: string): void
@@ -195,10 +182,6 @@ export declare function saveReverseImageSearchUrl(threadId: string, url: string)
 export declare function saveRollingSummary(threadId: string, summary: string): void
 
 export declare function setActiveProfile(profileId: string): void
-
-export declare function setIdentityPrompt(prompt: string): void
-
-export declare function setIdentitySoul(name: string, markdown: string): void
 
 export declare function startGoogleAuth(): Promise<NapiAuthResult>
 

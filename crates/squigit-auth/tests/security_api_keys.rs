@@ -12,7 +12,7 @@ fn temp_store() -> ProfileStore {
     let temp_dir = tempdir().unwrap();
     let root = temp_dir.path().to_path_buf();
     std::mem::forget(temp_dir);
-    let store = ProfileStore::with_base_dir(root.join("Local Storage")).unwrap();
+    let store = ProfileStore::with_base_dir(root.to_path_buf()).unwrap();
     let profile = Profile::new("auth@example.com", "Auth User", None, None);
     store.upsert_profile(&profile).unwrap();
     store

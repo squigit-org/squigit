@@ -11,11 +11,11 @@ import {
   setProviderPort,
   setStoragePort,
   setSystemPort,
-  setIdentityPort,
   type StreamGeminiThreadInput,
 } from "@squigit/core/ports";
 
 let initialized = false;
+const RULES_FILE_NAME = "RULES.md";
 
 export function initializeCorePorts(): void {
   if (initialized) return;
@@ -135,6 +135,22 @@ export function initializeCorePorts(): void {
     },
   });
 
+  void (async () => {
+    try {
+      const exists = await platform.fs.exists(RULES_FILE_NAME, {
+        baseDir: "AppConfig",
+      });
+      if (exists) return;
+
+      await platform.fs.mkdir("", { baseDir: "AppConfig", recursive: true });
+      await platform.fs.writeTextFile(RULES_FILE_NAME, "", {
+        baseDir: "AppConfig",
+      });
+    } catch (error) {
+      console.error("Failed to initialize RULES.md:", error);
+    }
+  })();
+
   setSystemPort({
     openExternalUrl: (url: string) =>
       platform.invoke("open_external_url", { url }),
@@ -157,15 +173,5 @@ export function initializeCorePorts(): void {
       };
     },
   });
-
-  setIdentityPort({
-    getIdentityConfig: () => platform.invoke("get_identity_config"),
-    setIdentityPrompt: (prompt: string) =>
-      platform.invoke("set_identity_prompt", { prompt }),
-    setIdentitySoul: (name: string, markdown: string) =>
-      platform.invoke("set_identity_soul", { name, markdown }),
-    removeIdentitySoul: () => platform.invoke("remove_identity_soul"),
-  });
-
   initialized = true;
 }

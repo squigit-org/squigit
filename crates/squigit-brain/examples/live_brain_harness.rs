@@ -296,7 +296,7 @@ mod tests {
     #[test]
     fn profile_bootstrap_is_idempotent_and_encrypts_the_key() {
         let directory = tempfile::tempdir().unwrap();
-        let store = ProfileStore::with_base_dir(directory.path().join("Local Storage")).unwrap();
+        let store = ProfileStore::with_base_dir(directory.path().to_path_buf()).unwrap();
         let key = valid_test_key();
 
         let first = bootstrap_live_profile(&store, Some(&key)).unwrap();

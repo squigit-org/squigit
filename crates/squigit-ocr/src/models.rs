@@ -115,7 +115,6 @@ impl ModelManager {
     pub fn new() -> Result<Self> {
         let config_dir = squigit_memory::paths::base_config_dir().ok_or(ModelError::NoConfigDir)?;
         let models_dir = config_dir
-            .join("Local Storage")
             .join("models");
 
         fs::create_dir_all(&models_dir)?;

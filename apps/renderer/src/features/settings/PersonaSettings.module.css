@@ -83,9 +83,11 @@
 }
 
 .wizardTextareaWrapper {
-  height: 72px;
+  display: block;
+  height: auto;
   min-height: 72px;
   flex: none;
+  overflow: visible;
 }
 
 .textarea {
@@ -101,11 +103,23 @@
   outline: none;
 }
 
+.wizardTextarea {
+  resize: vertical;
+  min-height: 48px;
+  height: 72px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.wizardTextarea::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
 .textarea::placeholder {
   color: var(--c-raw-005);
 }
 
-.soulMdRow {
+.rulesMdRow {
   display: flex;
   align-items: center;
   gap: 0.375rem;
@@ -113,7 +127,7 @@
   user-select: none;
 }
 
-.soulMdPicker {
+.rulesMdPicker {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -121,18 +135,18 @@
   min-height: 20px;
 }
 
-.soulMdPicker:hover .soulMdLabel {
+.rulesMdPicker:hover .rulesMdLabel {
   text-decoration: underline;
 }
 
-.soulMdIcon {
+.rulesMdIcon {
   display: inline-flex;
   align-items: center;
   color: var(--c-raw-005);
   flex-shrink: 0;
 }
 
-.soulMdLabel {
+.rulesMdLabel {
   font-family: inherit;
   font-size: 0.8rem;
   font-weight: 500;
@@ -140,7 +154,7 @@
   line-height: 1;
 }
 
-.soulMdRemove {
+.rulesMdRemove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -152,6 +166,6 @@
   transition: all 0.15s ease;
 }
 
-.soulMdRemove:hover {
+.rulesMdRemove:hover {
   color: var(--c-raw-050);
 }

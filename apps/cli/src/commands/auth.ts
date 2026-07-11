@@ -107,7 +107,7 @@ async function captureSnapshot(): Promise<InfraSnapshot> {
   const baseDir = await getStoreBaseDir();
   const configPath = path.resolve(baseDir, "..", "config.toml");
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "squigit-auth-snapshot-"));
-  const snapshotBaseDir = path.join(tempDir, "Local Storage");
+  const snapshotBaseDir = tempDir;
   const snapshotConfigPath = path.join(tempDir, "config.toml");
 
   const hadBaseDir = await pathExists(baseDir);

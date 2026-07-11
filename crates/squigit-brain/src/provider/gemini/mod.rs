@@ -4,6 +4,6 @@
 pub mod agent;
 pub mod attachments;
 pub mod commands;
+pub mod request_log;
 pub mod transport;
-
 
