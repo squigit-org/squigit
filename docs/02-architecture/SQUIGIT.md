@@ -39,8 +39,8 @@ block-beta
     columns 5
     I["squigit-auth"]
     J["squigit-brain"]
-    K["squigit-memory"]
-    L["squigit-ocr"]
+    K["squigit-storage"]
+    L["ocr-runtime"]
     M["squigit-stt"]
   end
 
@@ -80,8 +80,8 @@ squigit/
     napi-bridge/        Node.js <-> Rust FFI boundary
     squigit-auth/       Google OAuth, profiles, encrypted BYOK credentials
     squigit-brain/      Gemini AI engine, agent orchestration
-    squigit-memory/     SQLite storage, thread history, files
-    squigit-ocr/        OCR model management and inference
+    squigit-storage/     SQLite storage, thread history, files
+    ocr-runtime/        OCR model management and inference
     squigit-stt/        Speech-to-text engine
 
   archive/
@@ -101,8 +101,8 @@ graph LR
     subgraph "Universal Backend"
         AUTH["squigit-auth\nGoogle OAuth flow\nEncrypted BYOK files\nProfile management"]
         BRAIN["squigit-brain\nGemini integration\nAgent orchestration\nTool dispatch"]
-        MEMORY["squigit-memory\nSQLite storage\nThread history\nFile management"]
-        OCR["squigit-ocr\nModel management\nInference pipeline"]
+        MEMORY["squigit-storage\nSQLite storage\nThread history\nFile management"]
+        OCR["ocr-runtime\nModel management\nInference pipeline"]
         STT["squigit-stt\nModel management\nInference pipeline"]
     end
 
@@ -120,8 +120,8 @@ graph LR
 | ----------------- | ---------------------------------------------------------------------------------------------------- |
 | `squigit-auth`    | Google OAuth sign-in, local profile management, avatar caching, and encrypted per-profile BYOK files |
 | `squigit-brain`   | Gemini integration, agent orchestration, tool dispatch                                               |
-| `squigit-memory`  | SQLite storage, thread history, file management                                                      |
-| `squigit-ocr`     | OCR model management and inference                                                                   |
+| `squigit-storage`  | SQLite storage, thread history, file management                                                      |
+| `ocr-runtime`     | OCR model management and inference                                                                   |
 | `squigit-stt`     | Speech-to-text model management and inference                                                        |
 | `desktop-runtime` | GUI-specific but shell-agnostic utilities shared between Electron and the archived Tauri shell       |
 | `global-shortcut` | OS-level keyboard hooks for desktop shells                                                           |
@@ -148,7 +148,7 @@ graph LR
     end
 
     subgraph "Rust Runtime"
-        CRATES["squigit-auth\nsquigit-brain\nsquigit-memory\nsquigit-ocr\nsquigit-stt"]
+        CRATES["squigit-auth\nsquigit-brain\nsquigit-storage\nocr-runtime\nsquigit-stt"]
     end
 
     ELECTRON -- "import + call" --> NAPI

@@ -516,7 +516,7 @@ dependencies = [
  "dirs 5.0.1",
  "fs2",
  "squigit-auth",
- "squigit-memory",
+ "squigit-storage",
  "windows-sys 0.61.2",
 ]
 
@@ -861,13 +861,13 @@ dependencies = [
  "dirs 5.0.1",
  "image",
  "log",
+ "ocr-runtime",
  "rodio",
  "serde",
  "serde_json",
  "squigit-auth",
  "squigit-brain",
- "squigit-memory",
- "squigit-ocr",
+ "squigit-storage",
  "tokio",
  "winreg 0.52.0",
  "zbus",
@@ -2101,12 +2101,12 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "ocr-runtime",
  "serde",
  "serde_json",
  "squigit-auth",
  "squigit-brain",
- "squigit-memory",
- "squigit-ocr",
+ "squigit-storage",
  "tokio",
  "webbrowser",
 ]
@@ -2402,6 +2402,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c8bb09a4a2b1d668170cfe0a7d5bc103f8999fb316c98099b6a9939c9f2e79d"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "ocr-runtime"
+version = "0.1.0"
+dependencies = [
+ "dirs 6.0.0",
+ "flate2",
+ "futures-util",
+ "libc",
+ "reqwest",
+ "semver",
+ "serde",
+ "serde_json",
+ "squigit-storage",
+ "tar",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "which",
 ]
 
 [[package]]
@@ -3419,12 +3440,16 @@ dependencies = [
  "serial_test",
  "sha2",
  "signal-hook",
- "squigit-memory",
+ "squigit-storage",
  "tempfile",
  "thiserror 2.0.18",
  "tiny_http",
  "url",
 ]
+
+[[package]]
+name = "squigit-billing"
+version = "0.1.0"
 
 [[package]]
 name = "squigit-brain"
@@ -3444,7 +3469,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "squigit-auth",
- "squigit-memory",
+ "squigit-storage",
  "tempfile",
  "tokio",
  "tokio-util",
@@ -3453,7 +3478,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "squigit-memory"
+name = "squigit-harness"
+version = "0.1.0"
+
+[[package]]
+name = "squigit-storage"
 version = "0.1.0"
 dependencies = [
  "blake3",
@@ -3464,27 +3493,6 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "uuid",
-]
-
-[[package]]
-name = "squigit-ocr"
-version = "0.1.0"
-dependencies = [
- "dirs 6.0.0",
- "flate2",
- "futures-util",
- "libc",
- "reqwest",
- "semver",
- "serde",
- "serde_json",
- "squigit-memory",
- "tar",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "which",
 ]
 
 [[package]]
