@@ -17,5 +17,6 @@ export * from "./loading-spinner/LoadingSpinner";
 export * from "./text-shimmer/TextShimmer";
 export * from "./tooltip/Tooltip";
 export * from "./tooltip/CitationTip";
+export * from "./toggle-switch/ToggleSwitch";
 export * from "./widget-overlay/WidgetOverlay";
 export * from "./widget-overlay/WidgetOverlayIconButton";
