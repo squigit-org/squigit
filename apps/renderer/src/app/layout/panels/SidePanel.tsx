@@ -606,7 +606,7 @@ export const SidePanel: React.FC = () => {
             />
           ))}
 
-          {threadThreads.length === 0 && (
+          {allThreads.length === 0 && (
             <div className={styles.emptyState}>No threads yet.</div>
           )}
         </div>

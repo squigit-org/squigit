@@ -29,11 +29,6 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
   }, [threads]);
 
   const refreshThreads = useCallback(async () => {
-    if (!activeProfileId) {
-      setThreads([]);
-      return;
-    }
-
     setIsLoading(true);
     try {
       const threadList = await listThreads();
@@ -149,7 +144,6 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
 
   const searchThreads = useCallback(
     async (query: string, limit = 60): Promise<ThreadSearchResult[]> => {
-      if (!activeProfileId) return [];
       try {
         return await searchThreadsApi(query, limit);
       } catch (e) {
@@ -157,7 +151,7 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
         return [];
       }
     },
-    [activeProfileId],
+    [],
   );
 
   return {
