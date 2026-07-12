@@ -40,20 +40,6 @@ export function initializeCorePorts(): void {
         model,
         promptContext,
       }),
-    compressConversation: (
-      apiKey: string,
-      imageBrief: string,
-      historyToCompress: string,
-      model: string,
-    ) =>
-      platform.invoke<string>("compress_conversation", {
-        apiKey,
-        imageBrief,
-        historyToCompress,
-        model,
-      }),
-    persistRollingSummary: (threadId: string, summary: string) =>
-      platform.invoke("save_rolling_summary", { threadId, summary }),
     cancelRequest: (channelId: string | null) =>
       platform.invoke("cancel_request", { channelId }),
     requestQuickAnswer: (channelId: string) =>
@@ -110,8 +96,6 @@ export function initializeCorePorts(): void {
       platform.invoke("save_reverse_image_search_url", { threadId, url }),
     getReverseImageSearchUrl: (threadId) =>
       platform.invoke("get_reverse_image_search_url", { threadId }),
-    saveRollingSummary: (threadId, summary) =>
-      platform.invoke("save_rolling_summary", { threadId, summary }),
     saveImageTone: (threadId, tone) =>
       platform.invoke("save_image_tone", { threadId, tone }),
     saveImageBrief: (threadId, brief) =>

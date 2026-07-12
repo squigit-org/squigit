@@ -18,7 +18,6 @@ export const resetBrainContext = () => {
   brainSessionStore.imageBrief = null;
   brainSessionStore.userName = null;
   brainSessionStore.userEmail = null;
-  brainSessionStore.conversationSummary = null;
 };
 
 export const setImageDescription = (description: string) => {
@@ -46,7 +45,6 @@ export const setUserFirstMsg = (msg: string) => {
 
 export const addToHistory = (role: "User" | "Assistant", content: string) => {
   brainSessionStore.conversationHistory.push({ role, content });
-  // No more slice(-6) — summarize.ts handles windowing via maybeCompressHistory()
 };
 
 export const popLastUserHistory = () => {

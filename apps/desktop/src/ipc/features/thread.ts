@@ -86,19 +86,8 @@ export function registerThreadHandlers() {
   ipcMain.handle("save_reverse_image_search_url", (_, args) =>
     addon.save_reverse_image_search_url?.(args.threadId, args.url),
   );
-  ipcMain.handle("save_rolling_summary", (_, args) =>
-    addon.save_rolling_summary?.(args.threadId, args.summary),
-  );
   ipcMain.handle("generate_thread_title", (_, args) =>
     addon.generate_thread_title?.(args.apiKey, args.model, args.promptContext),
-  );
-  ipcMain.handle("compress_conversation", (_, args) =>
-    addon.compress_conversation?.(
-      args.apiKey,
-      args.imageBrief,
-      args.historyToCompress,
-      args.model,
-    ),
   );
 
   ipcMain.handle("search_threads", (_, args) => {

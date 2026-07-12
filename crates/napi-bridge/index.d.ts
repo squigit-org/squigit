@@ -11,8 +11,6 @@ export declare function cancel_request(channelId?: string | undefined | null): P
 
 export declare function clear_active_profile(): void
 
-export declare function compress_conversation(apiKey: string, imageBrief: string, historyToCompress: string, model: string): Promise<string>
-
 export declare function copy_image_from_path_to_clipboard(path: string): void
 
 export declare function copy_image_to_clipboard(imageBase64: string): void
@@ -142,8 +140,6 @@ export declare function run_sidecar_version(command: string): Promise<string>
 export declare function save_image_tone(threadId: string, tone: string): void
 
 export declare function save_reverse_image_search_url(threadId: string, url: string): void
-
-export declare function save_rolling_summary(threadId: string, summary: string): void
 
 export declare function set_active_profile(profileId: string): void
 

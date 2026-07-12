@@ -114,7 +114,6 @@ export const useBrainLifecycle = (config: {
       firstResponseId: string | null;
     },
     image?: { path: string; mimeType: string; imageId: string },
-    rollingSummary?: string | null,
     imageBrief?: string | null,
   ) => {
     setMessages(state.messages);
@@ -149,7 +148,6 @@ export const useBrainLifecycle = (config: {
           savedHistory,
           imagePath,
           imageBrief ?? firstMsg.text, // fallback for older sessions
-          rollingSummary ?? null,
         );
       } catch (e) {
         console.error("Failed to restore brain session:", e);

@@ -39,8 +39,6 @@ export {
   startProviderSessionStream,
   shouldFallbackToDefaultProviderModel,
   DEFAULT_PROVIDER_FALLBACK_MODEL_ID,
-  compressConversationHistory,
-  persistConversationSummary,
   generateBrainTitle,
   getFriendlyBrainErrorMessage,
   getBrainHighDemandExhaustedMessage,
@@ -67,9 +65,6 @@ export {
   restoreBrainSession,
   brainSessionStore,
   buildContextWindow,
-  getConversationSummary,
-  maybeCompressHistory,
-  setConversationSummary,
 } from "./brain/session";
 
 export {

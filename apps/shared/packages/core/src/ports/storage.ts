@@ -48,7 +48,6 @@ export interface StoragePort {
   cancelOcrJob(): Promise<void>;
   saveReverseImageSearchUrl(threadId: string, url: string): Promise<void>;
   getReverseImageSearchUrl(threadId: string): Promise<string | null>;
-  saveRollingSummary(threadId: string, summary: string): Promise<void>;
   saveImageTone(threadId: string, tone: string): Promise<void>;
   saveImageBrief(threadId: string, brief: string): Promise<void>;
 }

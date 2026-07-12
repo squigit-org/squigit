@@ -243,18 +243,6 @@ export async function getReverseImageSearchUrl(
 }
 
 // =============================================================================
-// Rolling Summary Commands
-// =============================================================================
-
-/** Save rolling summary for a thread. */
-export async function saveRollingSummary(
-  threadId: string,
-  summary: string,
-): Promise<void> {
-  return getStoragePort().saveRollingSummary(threadId, summary);
-}
-
-// =============================================================================
 // Tone and Brief Commands
 // =============================================================================
 

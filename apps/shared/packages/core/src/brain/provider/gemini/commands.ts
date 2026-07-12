@@ -9,7 +9,6 @@ import {
   type StreamGeminiThreadInput,
 } from "../../../ports/provider";
 import type { ProviderStreamEvent } from "../../engine/types";
-import { MODEL_IDS } from "../../../config/models-config";
 
 export type { StreamGeminiThreadInput };
 
@@ -33,26 +32,6 @@ export function generateGeminiThreadTitle(
   promptContext: string,
 ): Promise<string> {
   return getProviderPort().generateThreadTitle(apiKey, model, promptContext);
-}
-
-export function compressGeminiConversation(
-  apiKey: string,
-  imageBrief: string,
-  historyToCompress: string,
-): Promise<string> {
-  return getProviderPort().compressConversation(
-    apiKey,
-    imageBrief,
-    historyToCompress,
-    MODEL_IDS.MICRO_TASKS,
-  );
-}
-
-export function persistRollingSummary(
-  threadId: string,
-  summary: string,
-): Promise<void> {
-  return getProviderPort().persistRollingSummary(threadId, summary);
 }
 
 export function cancelGeminiRequest(channelId: string | null): Promise<void> {

@@ -126,14 +126,6 @@ pub fn append_thread_message(thread_id: String, role: String, content: String) -
         .map_err(map_storage_err)
 }
 
-#[napi(js_name = "save_rolling_summary")]
-pub fn save_rolling_summary(thread_id: String, summary: String) -> Result<()> {
-    let storage = active_storage()?;
-    storage
-        .save_rolling_summary(&thread_id, &summary)
-        .map_err(map_storage_err)
-}
-
 #[napi(js_name = "save_reverse_image_search_url")]
 pub fn save_reverse_image_search_url(thread_id: String, url: String) -> Result<()> {
     let storage = active_storage()?;

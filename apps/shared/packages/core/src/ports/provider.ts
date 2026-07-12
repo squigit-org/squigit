@@ -37,13 +37,6 @@ export interface ProviderPort {
     model: string,
     promptContext: string,
   ): Promise<string>;
-  compressConversation(
-    apiKey: string,
-    imageBrief: string,
-    historyToCompress: string,
-    model: string,
-  ): Promise<string>;
-  persistRollingSummary(threadId: string, summary: string): Promise<void>;
   cancelRequest(channelId: string | null): Promise<void>;
   requestQuickAnswer(channelId: string): Promise<void>;
   listenToStream(

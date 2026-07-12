@@ -47,7 +47,6 @@ export {
   cancelOcrJob,
   saveReverseImageSearchUrl,
   getReverseImageSearchUrl,
-  saveRollingSummary,
   saveImageTone,
   saveImageBrief,
 } from "./thread-storage.ts";

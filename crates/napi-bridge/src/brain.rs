@@ -7,8 +7,7 @@ use napi_derive::napi;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
 use squigit_brain::service::{
-    BrainService, CompressConversationRequest, GenerateImageBriefRequest,
-    GenerateThreadTitleRequest, StreamThreadRequest,
+    BrainService, GenerateImageBriefRequest, GenerateThreadTitleRequest, StreamThreadRequest,
 };
 use std::sync::OnceLock;
 
@@ -110,26 +109,6 @@ pub async fn generate_image_brief(
     };
     service
         .generate_image_brief(request)
-        .await
-        .map_err(|e| Error::from_reason(e.to_string()))
-}
-
-#[napi(js_name = "compress_conversation")]
-pub async fn compress_conversation(
-    api_key: String,
-    image_brief: String,
-    history_to_compress: String,
-    model: String,
-) -> Result<String> {
-    let service = get_brain_service();
-    let request = CompressConversationRequest {
-        api_key,
-        image_brief,
-        history_to_compress,
-        model,
-    };
-    service
-        .compress_conversation(request)
         .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }

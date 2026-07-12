@@ -13,10 +13,7 @@ import {
   createStreamWatchdog,
 } from "../transport";
 import { setUserFirstMsg, addToHistory } from "../../../session/context";
-import {
-  buildContextWindow,
-  maybeCompressHistory,
-} from "../../../session/summarizer";
+import { buildContextWindow } from "../../../session/summarizer";
 import { normalizeMessageForHistory } from "../../../attachments/memory";
 import { listenGeminiStream, streamGeminiThread } from "../commands";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
@@ -117,9 +114,6 @@ export const sendMessage = async (
 
     const finalResponse = requireNonEmptyProviderResponse(fullResponse);
     addToHistory("Assistant", finalResponse);
-
-    // Fire-and-forget: compress older turns if threshold reached
-    maybeCompressHistory(threadId ?? null);
 
     console.log(
       `[GeminiClient] Stream Completed. Final Response: "${finalResponse}"`,

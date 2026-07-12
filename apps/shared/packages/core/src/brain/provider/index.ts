@@ -26,11 +26,6 @@ export {
 } from "./gemini";
 
 export {
-  compressGeminiConversation as compressConversationHistory,
-  persistRollingSummary as persistConversationSummary,
-} from "./gemini/commands";
-
-export {
   generateProviderTitle as generateBrainTitle,
   getFriendlyProviderErrorMessage as getFriendlyBrainErrorMessage,
   getProviderHighDemandExhaustedMessage as getBrainHighDemandExhaustedMessage,

@@ -404,7 +404,6 @@ export const useAppNavigation = ({
             mimeType: "image/png",
             imageId: threadData.metadata.image_hash,
           },
-          threadData.rolling_summary,
           threadData.image_brief,
         );
       } catch (e) {
