@@ -65,7 +65,7 @@ impl From<RawSttEvent> for NapiSttEvent {
     }
 }
 
-#[napi]
+#[napi(js_name = "start_stt")]
 pub async fn start_stt(
     options: Option<NapiSttOptions>,
     #[napi(ts_arg_type = "(err: null | Error, event: NapiSttEvent) => void")]
@@ -143,7 +143,7 @@ pub async fn start_stt(
     .unwrap_or_else(|error| Err(Error::from_reason(error.to_string())))
 }
 
-#[napi]
+#[napi(js_name = "stop_stt")]
 pub async fn stop_stt() -> Result<()> {
     tokio::task::spawn_blocking(move || {
         let session = session_slot()
@@ -186,10 +186,6 @@ pub fn read_stt_version() -> Result<String> {
         .unwrap_or("")
         .trim()
         .to_string())
-}
-
-pub fn check_stt_version() -> Result<()> {
-    read_stt_version().map(|_| ())
 }
 
 fn session_slot() -> &'static Mutex<Option<SttSession>> {

@@ -7,7 +7,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use squigit_auth::ProfileStore;
 use squigit_storage::{ThreadMessage, ThreadStorage};
 
-use crate::types::{NapiStoredImage, NapiThreadData, NapiThreadMetadata};
+use crate::types::NapiStoredImage;
 
 fn map_storage_err(err: squigit_storage::StorageError) -> Error {
     Error::from_reason(err.to_string())
@@ -35,7 +35,7 @@ fn from_json<T: DeserializeOwned>(value: &str) -> Result<T> {
     serde_json::from_str(value).map_err(map_json_err)
 }
 
-#[napi]
+#[napi(js_name = "store_image_from_path")]
 pub fn store_image_from_path(path: String) -> Result<NapiStoredImage> {
     #[cfg(feature = "desktop")]
     {
@@ -55,7 +55,7 @@ pub fn store_image_from_path(path: String) -> Result<NapiStoredImage> {
     }
 }
 
-#[napi]
+#[napi(js_name = "store_file_from_path")]
 pub fn store_file_from_path(path: String) -> Result<NapiStoredImage> {
     let storage = active_storage()?;
     let stored = storage
@@ -64,28 +64,14 @@ pub fn store_file_from_path(path: String) -> Result<NapiStoredImage> {
     Ok(stored.into())
 }
 
-#[napi]
+#[napi(js_name = "get_image_path")]
 pub fn get_image_path(hash: String) -> Result<String> {
     let storage = active_storage()?;
     storage.get_image_path(&hash).map_err(map_storage_err)
 }
 
-#[napi]
+#[napi(js_name = "create_thread")]
 pub fn create_thread(
-    title: String,
-    image_hash: String,
-    ocr_lang: Option<String>,
-) -> Result<NapiThreadMetadata> {
-    let storage = active_storage()?;
-    let mut metadata = squigit_storage::ThreadMetadata::new(title, image_hash.clone(), ocr_lang);
-    metadata.image_tone = storage.get_image_tone(&image_hash);
-    let thread = squigit_storage::ThreadData::new(metadata.clone());
-    storage.save_thread(&thread).map_err(map_storage_err)?;
-    Ok(metadata.into())
-}
-
-#[napi]
-pub fn create_thread_json(
     title: String,
     image_hash: String,
     ocr_lang: Option<String>,
@@ -98,62 +84,28 @@ pub fn create_thread_json(
     to_json(&metadata)
 }
 
-#[napi]
-pub fn list_threads() -> Result<Vec<NapiThreadMetadata>> {
-    let storage = active_storage()?;
-    let threads = storage.list_threads().map_err(map_storage_err)?;
-    Ok(threads.into_iter().map(Into::into).collect())
-}
-
-#[napi]
-pub fn list_threads_json() -> Result<String> {
+#[napi(js_name = "list_threads")]
+pub fn list_threads() -> Result<String> {
     let storage = active_storage()?;
     let threads = storage.list_threads().map_err(map_storage_err)?;
     to_json(&threads)
 }
 
-#[napi]
-pub fn load_thread(thread_id: String) -> Result<NapiThreadData> {
-    let storage = active_storage()?;
-    let thread = storage.load_thread(&thread_id).map_err(map_storage_err)?;
-    Ok(thread.into())
-}
-
-#[napi]
-pub fn load_thread_json(thread_id: String) -> Result<String> {
+#[napi(js_name = "load_thread")]
+pub fn load_thread(thread_id: String) -> Result<String> {
     let storage = active_storage()?;
     let thread = storage.load_thread(&thread_id).map_err(map_storage_err)?;
     to_json(&thread)
 }
 
-#[napi]
+#[napi(js_name = "delete_thread")]
 pub fn delete_thread(thread_id: String) -> Result<()> {
     let storage = active_storage()?;
     storage.delete_thread(&thread_id).map_err(map_storage_err)
 }
 
-#[napi]
-pub fn update_thread_metadata(metadata: NapiThreadMetadata) -> Result<()> {
-    let storage = active_storage()?;
-
-    // Merge with the on-disk metadata because the N-API shape omits some fields.
-    let mut current = storage
-        .load_thread(&metadata.id)
-        .map_err(map_storage_err)?
-        .metadata;
-    current.title = metadata.title;
-    current.is_pinned = metadata.is_pinned;
-    current.ocr_lang = metadata.ocr_lang;
-    current.image_tone = metadata.image_tone;
-    current.reverse_image_search_url = metadata.reverse_image_search_url;
-
-    storage
-        .update_thread_metadata(&current)
-        .map_err(map_storage_err)
-}
-
-#[napi]
-pub fn update_thread_metadata_json(metadata_json: String) -> Result<()> {
+#[napi(js_name = "update_thread_metadata")]
+pub fn update_thread_metadata(metadata_json: String) -> Result<()> {
     let storage = active_storage()?;
     let metadata = from_json::<squigit_storage::ThreadMetadata>(&metadata_json)?;
     storage
@@ -161,7 +113,7 @@ pub fn update_thread_metadata_json(metadata_json: String) -> Result<()> {
         .map_err(map_storage_err)
 }
 
-#[napi]
+#[napi(js_name = "append_thread_message")]
 pub fn append_thread_message(thread_id: String, role: String, content: String) -> Result<()> {
     let storage = active_storage()?;
     let msg = if role == "assistant" {
@@ -174,7 +126,7 @@ pub fn append_thread_message(thread_id: String, role: String, content: String) -
         .map_err(map_storage_err)
 }
 
-#[napi]
+#[napi(js_name = "save_rolling_summary")]
 pub fn save_rolling_summary(thread_id: String, summary: String) -> Result<()> {
     let storage = active_storage()?;
     storage
@@ -182,14 +134,7 @@ pub fn save_rolling_summary(thread_id: String, summary: String) -> Result<()> {
         .map_err(map_storage_err)
 }
 
-#[napi]
-pub fn get_rolling_summary(thread_id: String) -> Result<Option<String>> {
-    let storage = active_storage()?;
-    let thread = storage.load_thread(&thread_id).map_err(map_storage_err)?;
-    Ok(thread.rolling_summary)
-}
-
-#[napi]
+#[napi(js_name = "save_reverse_image_search_url")]
 pub fn save_reverse_image_search_url(thread_id: String, url: String) -> Result<()> {
     let storage = active_storage()?;
     storage
@@ -197,7 +142,7 @@ pub fn save_reverse_image_search_url(thread_id: String, url: String) -> Result<(
         .map_err(map_storage_err)
 }
 
-#[napi]
+#[napi(js_name = "get_reverse_image_search_url")]
 pub fn get_reverse_image_search_url(thread_id: String) -> Result<Option<String>> {
     let storage = active_storage()?;
     storage
@@ -205,7 +150,7 @@ pub fn get_reverse_image_search_url(thread_id: String) -> Result<Option<String>>
         .map_err(map_storage_err)
 }
 
-#[napi]
+#[napi(js_name = "save_image_tone")]
 pub fn save_image_tone(thread_id: String, tone: String) -> Result<()> {
     let storage = active_storage()?;
     storage

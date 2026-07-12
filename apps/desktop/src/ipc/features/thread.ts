@@ -5,14 +5,14 @@ import { sendStreamEvent } from "./stream";
 
 export const getThreadDir = (threadId: string) => {
   const path = require("path");
-  const base = addon.getStoreBaseDir?.();
+  const base = addon.get_store_base_dir?.();
   if (!base) throw new Error("Store base directory is unavailable");
   return path.join(base, "threads", threadId);
 };
 
 export function registerThreadHandlers() {
   ipcMain.handle("create_thread", (_, args) => {
-    const json = requireAddonFn("createThreadJson")(
+    const json = requireAddonFn("create_thread")(
       requireStringArg("create_thread", args, "title"),
       requireStringArg("create_thread", args, "imageHash", "image_hash"),
       optionalStringArg(args, "ocrLang", "ocr_lang"),
@@ -21,11 +21,11 @@ export function registerThreadHandlers() {
   });
 
   ipcMain.handle("cancel_request", (_, args) =>
-    addon.cancelRequest?.(args.channelId),
+    addon.cancel_request?.(args.channelId),
   );
 
   ipcMain.handle("stream_thread", async (event, args) => {
-    return addon.streamThread?.(
+    return addon.stream_thread?.(
       args.apiKey,
       args.model,
       args.isInitialTurn,
@@ -47,33 +47,33 @@ export function registerThreadHandlers() {
   });
 
   ipcMain.handle("append_thread_message", (_, args) =>
-    addon.appendThreadMessage?.(args.threadId, args.role, args.content),
+    addon.append_thread_message?.(args.threadId, args.role, args.content),
   );
   ipcMain.handle("update_thread_metadata", (_, args) => {
     if (!args?.metadata || typeof args.metadata !== "object") {
       throw new Error("update_thread_metadata requires metadata.");
     }
-    return requireAddonFn("updateThreadMetadataJson")(
+    return requireAddonFn("update_thread_metadata")(
       JSON.stringify(args.metadata),
     );
   });
   ipcMain.handle("generate_image_brief", (_, args) =>
-    addon.generateImageBrief?.(args.apiKey, args.imagePath, args.model),
+    addon.generate_image_brief?.(args.apiKey, args.imagePath, args.model),
   );
   ipcMain.handle("load_thread", (_, args) => {
-    const json = requireAddonFn("loadThreadJson")(
+    const json = requireAddonFn("load_thread")(
       requireStringArg("load_thread", args, "threadId", "thread_id"),
     );
     return parseAddonJson("load_thread", json);
   });
   ipcMain.handle("delete_thread", (_, args) =>
-    addon.deleteThread?.(args.threadId),
+    addon.delete_thread?.(args.threadId),
   );
   ipcMain.handle("get_reverse_image_search_url", (_, args) =>
-    addon.getReverseImageSearchUrl?.(args.threadId),
+    addon.get_reverse_image_search_url?.(args.threadId),
   );
   ipcMain.handle("get_image_path", (_, args) =>
-    addon.getImagePath?.(
+    addon.get_image_path?.(
       requireStringArg(
         "get_image_path",
         args,
@@ -84,36 +84,22 @@ export function registerThreadHandlers() {
     ),
   );
   ipcMain.handle("save_reverse_image_search_url", (_, args) =>
-    addon.saveReverseImageSearchUrl?.(args.threadId, args.url),
-  );
-  ipcMain.handle("get_rolling_summary", (_, args) =>
-    addon.getRollingSummary?.(args.threadId),
+    addon.save_reverse_image_search_url?.(args.threadId, args.url),
   );
   ipcMain.handle("save_rolling_summary", (_, args) =>
-    addon.saveRollingSummary?.(args.threadId, args.summary),
+    addon.save_rolling_summary?.(args.threadId, args.summary),
   );
   ipcMain.handle("generate_thread_title", (_, args) =>
-    addon.generateThreadTitle?.(args.apiKey, args.model, args.promptContext),
+    addon.generate_thread_title?.(args.apiKey, args.model, args.promptContext),
   );
   ipcMain.handle("compress_conversation", (_, args) =>
-    addon.compressConversation?.(
+    addon.compress_conversation?.(
       args.apiKey,
       args.imageBrief,
       args.historyToCompress,
       args.model,
     ),
   );
-
-  ipcMain.handle("prompt_thread", async (event, args) => {
-    return addon.promptThread?.(
-      args.threadId,
-      args.model,
-      args.userMessage,
-      (err: any, streamEvent: any) => {
-        sendStreamEvent(event, args.channelId, err, streamEvent);
-      },
-    );
-  });
 
   ipcMain.handle("search_threads", (_, args) => {
     const query = (args.query || "").trim();
@@ -153,13 +139,13 @@ export function registerThreadHandlers() {
         .slice(0, 8);
     }
 
-    const json = requireAddonFn("listThreadsJson")();
+    const json = requireAddonFn("list_threads")();
     const threads = parseAddonJson("list_threads", json);
     const results: any[] = [];
 
     for (const thread of threads) {
       try {
-        const threadJson = requireAddonFn("loadThreadJson")(thread.id);
+        const threadJson = requireAddonFn("load_thread")(thread.id);
         const threadData = parseAddonJson("load_thread", threadJson);
         const messages = threadData.messages || [];
 
@@ -267,7 +253,7 @@ export function registerThreadHandlers() {
   });
 
   ipcMain.handle("save_image_tone", (_, args) =>
-    requireAddonFn("saveImageTone")(
+    requireAddonFn("save_image_tone")(
       requireStringArg("save_image_tone", args, "threadId", "thread_id"),
       requireStringArg("save_image_tone", args, "tone"),
     ),
@@ -287,23 +273,18 @@ export function registerThreadHandlers() {
   });
 
   ipcMain.handle("list_threads", () => {
-    const json = requireAddonFn("listThreadsJson")();
+    const json = requireAddonFn("list_threads")();
     return parseAddonJson("list_threads", json);
   });
-  // Brain commands
-  ipcMain.handle("ai_prompt", (_, args) =>
-    addon.aiPrompt?.(args.messages, args.settings, args.image_path),
-  );
-  ipcMain.handle("ai_title", (_, args) =>
-    addon.aiTitle?.(args.messages, args.settings),
-  );
+
   ipcMain.handle("quick_answer_request", (_, args) =>
-    addon.requestQuickAnswer?.(args.channelId),
+    addon.request_quick_answer?.(args.channelId),
   );
 
-  // Thread input / STT
-  ipcMain.handle("start_stt", () => {
-    throw new Error("ERR_MISSING_STT_PACKAGE");
+  ipcMain.handle("start_stt", async (event, args) => {
+    return addon.start_stt?.(args, (err: any, sttEvent: any) => {
+      sendStreamEvent(event, "stt_event", err, sttEvent);
+    });
   });
-  ipcMain.handle("stop_stt", () => {});
+  ipcMain.handle("stop_stt", () => addon.stop_stt?.());
 }

@@ -15,14 +15,14 @@ use std::path::{Path, PathBuf};
 // Image Processing
 // =============================================================================
 
-#[napi]
+#[napi(js_name = "process_image_path")]
 pub fn process_image_path(path: String) -> Result<NapiStoredImage> {
     desktop_runtime::media::process_and_store_image(path)
         .map(Into::into)
         .map_err(napi::Error::from_reason)
 }
 
-#[napi]
+#[napi(js_name = "upload_image_to_imgbb")]
 pub async fn upload_image_to_imgbb(image_path: String, api_key: String) -> Result<String> {
     desktop_runtime::media::upload_image_to_imgbb(&image_path, &api_key)
         .await
@@ -33,7 +33,7 @@ pub async fn upload_image_to_imgbb(image_path: String, api_key: String) -> Resul
 // Tone Detection
 // =============================================================================
 
-#[napi]
+#[napi(js_name = "detect_image_tone")]
 pub fn detect_image_tone(bytes: napi::bindgen_prelude::Buffer) -> Option<String> {
     desktop_runtime::media::detect_image_tone_from_bytes(bytes.as_ref())
 }
@@ -42,24 +42,24 @@ pub fn detect_image_tone(bytes: napi::bindgen_prelude::Buffer) -> Option<String>
 // Clipboard
 // =============================================================================
 
-#[napi]
+#[napi(js_name = "read_clipboard_image")]
 pub fn read_clipboard_image() -> Result<NapiStoredImage> {
     desktop_runtime::media::read_and_store_clipboard_image()
         .map(Into::into)
         .map_err(napi::Error::from_reason)
 }
 
-#[napi]
+#[napi(js_name = "read_clipboard_text")]
 pub fn read_clipboard_text() -> Result<String> {
     desktop_runtime::media::read_clipboard_text().map_err(napi::Error::from_reason)
 }
 
-#[napi]
+#[napi(js_name = "copy_image_to_clipboard")]
 pub fn copy_image_to_clipboard(image_base64: String) -> Result<()> {
     desktop_runtime::media::copy_image_to_clipboard(image_base64).map_err(napi::Error::from_reason)
 }
 
-#[napi]
+#[napi(js_name = "copy_image_from_path_to_clipboard")]
 pub fn copy_image_from_path_to_clipboard(path: String) -> Result<()> {
     desktop_runtime::media::copy_image_from_path_to_clipboard(path)
         .map_err(napi::Error::from_reason)
@@ -69,7 +69,7 @@ pub fn copy_image_from_path_to_clipboard(path: String) -> Result<()> {
 // Audio (placeholder — real impl needs rodio OnceCell for persistent player)
 // =============================================================================
 
-#[napi]
+#[napi(js_name = "play_ui_sound")]
 pub fn play_ui_sound(effect: String) -> Result<()> {
     static PLAYER: std::sync::OnceLock<desktop_runtime::audio::UiSoundPlayer> =
         std::sync::OnceLock::new();
@@ -129,7 +129,7 @@ fn resolve_ocr_image_path(image_path: String) -> PathBuf {
     path
 }
 
-#[napi]
+#[napi(js_name = "ocr_image")]
 pub async fn ocr_image(
     image_path: String,
     _is_base64: bool,
@@ -174,7 +174,7 @@ fn get_model_manager() -> Result<&'static ocr_runtime::models::ModelManager> {
     Ok(MODEL_MANAGER.get().unwrap())
 }
 
-#[napi]
+#[napi(js_name = "download_ocr_model")]
 pub async fn download_ocr_model(
     model_id: String,
     url: String,
@@ -192,14 +192,14 @@ pub async fn download_ocr_model(
     Ok(path.to_string_lossy().to_string())
 }
 
-#[napi]
+#[napi(js_name = "cancel_download_ocr_model")]
 pub fn cancel_download_ocr_model(model_id: String) -> Result<()> {
     let manager = get_model_manager()?;
     manager.cancel_download(&model_id);
     Ok(())
 }
 
-#[napi]
+#[napi(js_name = "list_downloaded_models")]
 pub fn list_downloaded_models() -> Result<Vec<String>> {
     let manager = get_model_manager()?;
     manager
@@ -207,7 +207,7 @@ pub fn list_downloaded_models() -> Result<Vec<String>> {
         .map_err(|e| napi::Error::from_reason(e.to_string()))
 }
 
-#[napi]
+#[napi(js_name = "get_model_path")]
 pub fn get_model_path(model_id: String) -> Result<String> {
     let manager = get_model_manager()?;
     Ok(manager

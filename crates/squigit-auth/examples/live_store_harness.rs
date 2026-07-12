@@ -14,7 +14,7 @@ use std::time::Duration;
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook::flag;
 use squigit_auth::auth::{start_google_auth_flow, validate_google_credentials, AuthFlowSettings};
-use squigit_auth::security::{encrypt_and_save_key, get_decrypted_key, ApiKeyProvider};
+use squigit_auth::security::{encrypt_and_save_api_key, get_decrypted_key, ApiKeyProvider};
 use squigit_auth::{ProfileError, ProfileStore};
 
 fn main() {
@@ -127,7 +127,7 @@ fn run() -> Result<(), String> {
             let plaintext = args.next().ok_or_else(|| "missing plaintext".to_string())?;
             let store = ProfileStore::new().map_err(|err| err.to_string())?;
             let provider = ApiKeyProvider::from_str(&provider).map_err(|err| err.to_string())?;
-            let path = encrypt_and_save_key(&store, &profile_id, provider, &plaintext)
+            let path = encrypt_and_save_api_key(&store, &profile_id, provider, &plaintext)
                 .map_err(|err| err.to_string())?;
             println!("{}", path);
         }

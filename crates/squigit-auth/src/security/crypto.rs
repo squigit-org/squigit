@@ -105,7 +105,7 @@ pub fn get_decrypted_key(
     Ok(Some(plaintext))
 }
 
-pub fn encrypt_and_save_key(
+pub fn encrypt_and_save_api_key(
     store: &ProfileStore,
     profile_id: &str,
     provider: ApiKeyProvider,

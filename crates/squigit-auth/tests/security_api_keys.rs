@@ -4,7 +4,7 @@
 use std::fs;
 
 use sha2::{Digest, Sha256};
-use squigit_auth::security::{encrypt_and_save_key, get_decrypted_key, ApiKeyProvider};
+use squigit_auth::security::{encrypt_and_save_api_key, get_decrypted_key, ApiKeyProvider};
 use squigit_auth::{Profile, ProfileStore};
 use tempfile::tempdir;
 
@@ -39,7 +39,7 @@ fn round_trip_encrypted_api_key() {
         .unwrap()
         .id;
 
-    encrypt_and_save_key(
+    encrypt_and_save_api_key(
         &store,
         &profile_id,
         ApiKeyProvider::GoogleAiStudio,
@@ -64,7 +64,7 @@ fn invalid_google_key_is_rejected() {
         .unwrap()
         .id;
 
-    let err = encrypt_and_save_key(
+    let err = encrypt_and_save_api_key(
         &store,
         &profile_id,
         ApiKeyProvider::GoogleAiStudio,
@@ -90,7 +90,7 @@ fn saved_payload_includes_plaintext_hash() {
         .id;
     let key = valid_google_key();
 
-    encrypt_and_save_key(&store, &profile_id, ApiKeyProvider::GoogleAiStudio, &key).unwrap();
+    encrypt_and_save_api_key(&store, &profile_id, ApiKeyProvider::GoogleAiStudio, &key).unwrap();
 
     let payload_path = store.get_provider_key_path(&profile_id, "google ai studio");
     let payload = fs::read_to_string(payload_path).unwrap();
@@ -113,7 +113,7 @@ fn tampered_hash_is_rejected() {
         .unwrap()
         .id;
 
-    encrypt_and_save_key(
+    encrypt_and_save_api_key(
         &store,
         &profile_id,
         ApiKeyProvider::GoogleAiStudio,

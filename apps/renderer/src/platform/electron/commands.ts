@@ -120,6 +120,8 @@ export const commands = {
     normalizeProfile(
       await platform.invoke<NativeProfile | null>("get_profile", { profileId }),
     ),
+  deleteProfile: (profileId: string) =>
+    platform.invoke("delete_profile", { profileId }),
   setActiveProfile: (profileId: string | null) => platform.invoke("set_active_profile", { profileId }),
   hydrateAvatar: (url: string, profileId?: string) => platform.invoke<string>("hydrate_avatar", { url, profileId }),
   setApiKey: (provider: "google ai studio" | "imgbb", key: string, profileId: string) => platform.invoke("encrypt_and_save", { provider, plaintext: key, profileId }),

@@ -4,18 +4,15 @@
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi::{Error, Result};
 use napi_derive::napi;
-use squigit_auth::security::{get_decrypted_key, ApiKeyProvider};
-use squigit_auth::ProfileStore;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
 use squigit_brain::service::{
-    AnalyzeImageRequest, BrainService, CompressConversationRequest, GenerateThreadTitleRequest,
-    GenerateImageBriefRequest, PromptThreadRequest, StreamThreadRequest,
+    BrainService, CompressConversationRequest, GenerateImageBriefRequest,
+    GenerateThreadTitleRequest, StreamThreadRequest,
 };
-use std::str::FromStr;
 use std::sync::OnceLock;
 
-use crate::types::{NapiAnalyzeResult, NapiPromptResult, NapiStreamEvent};
+use crate::types::NapiStreamEvent;
 
 static BRAIN_SERVICE: OnceLock<BrainService> = OnceLock::new();
 
@@ -35,101 +32,7 @@ impl BrainEventSink for NapiEventSink {
     }
 }
 
-fn active_google_api_key() -> Result<String> {
-    let store = ProfileStore::new().map_err(|e| Error::from_reason(e.to_string()))?;
-    let active_id = store
-        .get_active_profile_id()
-        .map_err(|e| Error::from_reason(e.to_string()))?
-        .ok_or_else(|| Error::from_reason("No active profile. Sign in first."))?;
-
-    let provider = ApiKeyProvider::from_str("google ai studio")
-        .map_err(|e| Error::from_reason(e.to_string()))?;
-
-    let key = get_decrypted_key(&store, provider, &active_id)
-        .map_err(|e| Error::from_reason(e.to_string()))?
-        .unwrap_or_default();
-
-    if key.trim().is_empty() {
-        return Err(Error::from_reason(
-            "Missing Google AI Studio API key for active profile.",
-        ));
-    }
-
-    Ok(key)
-}
-
-#[napi]
-pub async fn analyze_image(
-    image_path: String,
-    model: String,
-    user_message: Option<String>,
-    #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => void")]
-    on_event: ThreadsafeFunction<NapiStreamEvent>,
-) -> Result<NapiAnalyzeResult> {
-    let api_key = active_google_api_key()?;
-    let service = get_brain_service();
-    let sink = NapiEventSink { tsfn: on_event };
-
-    let request = AnalyzeImageRequest {
-        api_key,
-        model,
-        image_path,
-        user_message,
-        channel_id: format!("cli-analyze-{}", chrono::Utc::now().timestamp_millis()),
-        user_name: None,
-        user_email: None,
-        ocr_lang: None,
-    };
-
-    let result = service
-        .analyze_image(&sink, request)
-        .await
-        .map_err(|e| Error::from_reason(e.to_string()))?;
-
-    Ok(NapiAnalyzeResult {
-        thread_id: result.metadata.id,
-        title: result.metadata.title,
-        assistant_message: result.assistant_message,
-        image_path: result.image.path,
-        image_brief: result.image_brief,
-    })
-}
-
-#[napi]
-pub async fn prompt_thread(
-    thread_id: String,
-    model: String,
-    user_message: String,
-    #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => void")]
-    on_event: ThreadsafeFunction<NapiStreamEvent>,
-) -> Result<NapiPromptResult> {
-    let api_key = active_google_api_key()?;
-    let service = get_brain_service();
-    let sink = NapiEventSink { tsfn: on_event };
-
-    let request = PromptThreadRequest {
-        api_key,
-        model,
-        thread_id,
-        user_message,
-        channel_id: format!("cli-prompt-{}", chrono::Utc::now().timestamp_millis()),
-        user_name: None,
-        user_email: None,
-    };
-
-    let result = service
-        .prompt_thread(&sink, request)
-        .await
-        .map_err(|e| Error::from_reason(e.to_string()))?;
-
-    Ok(NapiPromptResult {
-        thread_id: result.thread_id,
-        assistant_message: result.assistant_message,
-        normalized_user_message: result.normalized_user_message,
-    })
-}
-
-#[napi]
+#[napi(js_name = "stream_thread")]
 #[allow(clippy::too_many_arguments)]
 pub async fn stream_thread(
     api_key: String,
@@ -175,7 +78,7 @@ pub async fn stream_thread(
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
-#[napi]
+#[napi(js_name = "generate_thread_title")]
 pub async fn generate_thread_title(
     api_key: String,
     model: String,
@@ -193,7 +96,7 @@ pub async fn generate_thread_title(
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
-#[napi]
+#[napi(js_name = "generate_image_brief")]
 pub async fn generate_image_brief(
     api_key: String,
     image_path: String,
@@ -211,7 +114,7 @@ pub async fn generate_image_brief(
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
-#[napi]
+#[napi(js_name = "compress_conversation")]
 pub async fn compress_conversation(
     api_key: String,
     image_brief: String,
@@ -231,7 +134,7 @@ pub async fn compress_conversation(
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
-#[napi]
+#[napi(js_name = "cancel_request")]
 pub async fn cancel_request(channel_id: Option<String>) -> Result<()> {
     let service = get_brain_service();
     service
@@ -240,7 +143,7 @@ pub async fn cancel_request(channel_id: Option<String>) -> Result<()> {
         .map_err(|e| Error::from_reason(e.to_string()))
 }
 
-#[napi]
+#[napi(js_name = "request_quick_answer")]
 pub async fn request_quick_answer(channel_id: String) -> Result<()> {
     let service = get_brain_service();
     service

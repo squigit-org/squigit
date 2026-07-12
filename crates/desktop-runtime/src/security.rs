@@ -14,7 +14,7 @@ use squigit_auth::ProfileStore;
 pub fn encrypt_and_save(profile_id: &str, provider: &str, plaintext: &str) -> Result<(), String> {
     let store = ProfileStore::new().map_err(|err| err.to_string())?;
     let provider = ApiKeyProvider::from_str(provider).map_err(|err| err.to_string())?;
-    squigit_auth::security::encrypt_and_save_key(&store, profile_id, provider, plaintext)
+    squigit_auth::security::encrypt_and_save_api_key(&store, profile_id, provider, plaintext)
         .map(|_| ())
         .map_err(|err| err.to_string())
 }

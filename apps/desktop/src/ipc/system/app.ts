@@ -13,15 +13,17 @@ export function registerAppHandlers() {
     require("electron").app.exit(0);
   });
 
-  ipcMain.handle("get_linux_package_manager", () => "apt");
-  ipcMain.handle("get_machine_info", () => addon.getMachineInfo?.());
+  ipcMain.handle("get_linux_package_manager", () =>
+    addon.get_linux_package_manager?.(),
+  );
+  ipcMain.handle("get_machine_info", () => addon.get_machine_info?.());
   ipcMain.handle("set_background_color", () => {});
   ipcMain.handle("get_app_constants", () => ({
     appVersion: require("electron").app.getVersion(),
   }));
-  ipcMain.handle("get_system_theme", () => "dark");
+  ipcMain.handle("get_system_theme", () => addon.get_system_theme?.());
   ipcMain.handle("run_sidecar_version", (_, args) =>
-    addon.runSidecarVersion?.(args.command),
+    addon.run_sidecar_version?.(args.command),
   );
   ipcMain.handle("updater:check", () => null);
   ipcMain.handle("get_initial_image", () => null);
@@ -95,6 +97,6 @@ export function registerAppHandlers() {
   ipcMain.handle("window:startDragging", () => {});
   // UI dialog audio
   ipcMain.handle("play_ui_sound", (_, args) =>
-    addon.playUiSound?.(args.effect),
+    addon.play_ui_sound?.(args.effect),
   );
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use squigit_auth::security::{
-    encrypt_and_save_key, get_decrypted_key, validate_api_key, ApiKeyProvider,
+    encrypt_and_save_api_key, get_decrypted_key, validate_api_key, ApiKeyProvider,
 };
 use squigit_auth::{Profile, ProfileStore};
 use squigit_brain::context::media::get_active_storage;
@@ -203,7 +203,7 @@ fn bootstrap_live_profile(store: &ProfileStore, api_key: Option<&str>) -> Result
         .map_err(|error| error.to_string())?;
 
     if let Some(api_key) = api_key {
-        encrypt_and_save_key(store, &profile.id, ApiKeyProvider::GoogleAiStudio, api_key)
+        encrypt_and_save_api_key(store, &profile.id, ApiKeyProvider::GoogleAiStudio, api_key)
             .map_err(|error| error.to_string())?;
     }
 

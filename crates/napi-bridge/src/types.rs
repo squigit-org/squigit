@@ -4,7 +4,7 @@
 use napi_derive::napi;
 use squigit_auth::types::Profile as UserProfile;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
-use squigit_storage::{StoredImage, ThreadData, ThreadMessage, ThreadMetadata};
+use squigit_storage::StoredImage;
 
 #[napi(object)]
 pub struct NapiProfile {
@@ -72,87 +72,6 @@ impl From<StoredImage> for NapiStoredImage {
             tone: image.tone,
         }
     }
-}
-
-#[napi(object)]
-pub struct NapiThreadMetadata {
-    pub id: String,
-    pub title: String,
-    pub image_hash: String,
-    pub created_at: String,
-    pub updated_at: String,
-    pub is_pinned: bool,
-    pub ocr_lang: Option<String>,
-    pub image_tone: Option<String>,
-    pub reverse_image_search_url: Option<String>,
-}
-
-impl From<ThreadMetadata> for NapiThreadMetadata {
-    fn from(meta: ThreadMetadata) -> Self {
-        Self {
-            id: meta.id,
-            title: meta.title,
-            image_hash: meta.image_hash,
-            created_at: meta.created_at.to_rfc3339(),
-            updated_at: meta.updated_at.to_rfc3339(),
-            is_pinned: meta.is_pinned,
-            ocr_lang: meta.ocr_lang,
-            image_tone: meta.image_tone,
-            reverse_image_search_url: meta.reverse_image_search_url,
-        }
-    }
-}
-
-#[napi(object)]
-pub struct NapiThreadMessage {
-    pub role: String,
-    pub content: String,
-    pub timestamp: String,
-}
-
-impl From<ThreadMessage> for NapiThreadMessage {
-    fn from(msg: ThreadMessage) -> Self {
-        Self {
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp.to_rfc3339(),
-        }
-    }
-}
-
-#[napi(object)]
-pub struct NapiThreadData {
-    pub metadata: NapiThreadMetadata,
-    pub messages: Vec<NapiThreadMessage>,
-    pub rolling_summary: Option<String>,
-    pub image_brief: Option<String>,
-}
-
-impl From<ThreadData> for NapiThreadData {
-    fn from(data: ThreadData) -> Self {
-        Self {
-            metadata: data.metadata.into(),
-            messages: data.messages.into_iter().map(|m| m.into()).collect(),
-            rolling_summary: data.rolling_summary,
-            image_brief: data.image_brief,
-        }
-    }
-}
-
-#[napi(object)]
-pub struct NapiAnalyzeResult {
-    pub thread_id: String,
-    pub title: String,
-    pub assistant_message: String,
-    pub image_path: String,
-    pub image_brief: Option<String>,
-}
-
-#[napi(object)]
-pub struct NapiPromptResult {
-    pub thread_id: String,
-    pub assistant_message: String,
-    pub normalized_user_message: String,
 }
 
 /// Stream event sent via ThreadsafeFunction callback.

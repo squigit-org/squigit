@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! OS integration — system theme detection, package manager detection, file manager reveal.
+//! OS integration — system theme detection and package manager detection.
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 use std::process::Command;
@@ -213,110 +213,21 @@ pub fn get_linux_package_manager() -> String {
 }
 
 // =============================================================================
-// File Manager Reveal
-// =============================================================================
-
-pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
-    use std::process::Command;
-
-    let resolved = squigit_brain::provider::attachments::resolve_attachment_path_buf(&path)?;
-
-    #[cfg(target_os = "windows")]
-    {
-        let target = resolved.to_string_lossy().to_string();
-        Command::new("explorer")
-            .arg(format!(r#"/select,"{}""#, target))
-            .spawn()
-            .map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        Command::new("open")
-            .arg("-R")
-            .arg(&resolved)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let target = resolved.to_string_lossy().to_string();
-        let parent = resolved
-            .parent()
-            .ok_or_else(|| "No parent directory".to_string())?
-            .to_string_lossy()
-            .to_string();
-
-        let select_candidates: Vec<(&str, Vec<String>)> = vec![
-            ("nautilus", vec!["--select".into(), target.clone()]),
-            ("nemo", vec!["--select".into(), target.clone()]),
-            ("caja", vec!["--select".into(), target.clone()]),
-            ("dolphin", vec!["--select".into(), target.clone()]),
-            ("konqueror", vec![target.clone()]),
-            ("thunar", vec!["--select".into(), target.clone()]),
-            ("pcmanfm-qt", vec!["--select".into(), target.clone()]),
-            ("pcmanfm", vec!["--select".into(), target.clone()]),
-            ("spacefm", vec!["--select".into(), target.clone()]),
-            ("pantheon-files", vec![target.clone()]),
-            ("doublecmd", vec![target.clone()]),
-            ("krusader", vec![target.clone()]),
-            ("xfe", vec![target.clone()]),
-        ];
-
-        for (bin, args) in select_candidates {
-            if Command::new(bin).args(&args).spawn().is_ok() {
-                return Ok(());
-            }
-        }
-
-        let parent_candidates: Vec<(&str, Vec<String>)> = vec![
-            ("xdg-open", vec![parent.clone()]),
-            ("gio", vec!["open".into(), parent.clone()]),
-            ("exo-open", vec![parent.clone()]),
-            ("kde-open5", vec![parent.clone()]),
-            ("kde-open", vec![parent.clone()]),
-            ("gnome-open", vec![parent.clone()]),
-            ("pcmanfm", vec![parent.clone()]),
-            ("thunar", vec![parent.clone()]),
-            ("nemo", vec![parent.clone()]),
-            ("caja", vec![parent.clone()]),
-            ("dolphin", vec![parent.clone()]),
-            ("nautilus", vec![parent.clone()]),
-            ("pantheon-files", vec![parent.clone()]),
-        ];
-
-        for (bin, args) in parent_candidates {
-            if Command::new(bin).args(&args).spawn().is_ok() {
-                return Ok(());
-            }
-        }
-
-        return Err("Failed to open a file manager on this Linux environment".to_string());
-    }
-
-    #[allow(unreachable_code)]
-    Err("Unsupported platform".to_string())
-}
-
-// =============================================================================
 // Machine Info
 // =============================================================================
 
 /// Returns a cleanly formatted diagnostic string: "{OS}/{Arch} ({Display})/ {Pkg}"
 pub fn get_machine_info() -> String {
     let arch = std::env::consts::ARCH; // Safely returns "aarch64", "x86_64", etc.
-    
+
     #[cfg(target_os = "linux")]
     {
-        use std::path::Path;
         use std::env;
-        
+        use std::path::Path;
+
         // 1. Probe Display Server (Wayland vs X11)
         let display = env::var("XDG_SESSION_TYPE").unwrap_or_else(|_| "unknown".to_string());
-        
+
         // 2. Probe Package Manager
         let pkg = if Path::new("/usr/bin/apt").exists() {
             "apt"
@@ -343,7 +254,7 @@ pub fn get_machine_info() -> String {
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
-        
+
         // 1. Get exact macOS version (e.g., 15.2)
         let os_name = Command::new("sw_vers")
             .arg("-productVersion")
@@ -353,7 +264,7 @@ pub fn get_machine_info() -> String {
             .map(|s| format!("macOS {}", s.trim()))
             .unwrap_or_else(|| "macOS".to_string());
 
-        // Squigit only supports Silicon, so Arch will be aarch64. 
+        // Squigit only supports Silicon, so Arch will be aarch64.
         // Display is safely Aqua, and Brew is the community standard.
         format!("{}/{} (Aqua) brew", os_name, arch)
     }
@@ -361,7 +272,7 @@ pub fn get_machine_info() -> String {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
-        
+
         // 1. Get Windows build version safely via cmd
         let os_name = Command::new("cmd")
             .args(&["/C", "ver"])

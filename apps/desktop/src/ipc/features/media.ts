@@ -1,13 +1,12 @@
 import { ipcMain } from "electron";
-import { addon, requireAddonFn } from "../system/addon";
+import { addon } from "../system/addon";
 import { requireStringArg } from "../system/arguments";
 import { getThreadDir } from "./thread";
-import { sendStreamEvent } from "./stream";
 
 const resolveOcrImagePath = (rawImagePath: string) => {
   const path = require("path");
   const fs = require("fs");
-  const base = addon.getStoreBaseDir?.();
+  const base = addon.get_store_base_dir?.();
 
   if (!base) return rawImagePath;
 
@@ -34,22 +33,11 @@ const resolveOcrImagePath = (rawImagePath: string) => {
 };
 
 export function registerMediaHandlers() {
-  ipcMain.handle("analyze_image", async (event, args) => {
-    return addon.analyzeImage?.(
-      args.imagePath,
-      args.model,
-      args.userMessage,
-      (err: any, streamEvent: any) => {
-        sendStreamEvent(event, args.channelId, err, streamEvent);
-      },
-    );
-  });
-
   ipcMain.handle("detect_image_tone", async (_, args) => {
     try {
       const fs = require("fs/promises");
       const buf = await fs.readFile(args.path || args.imagePath);
-      return addon.detectImageTone?.(buf) || "dark";
+      return addon.detect_image_tone?.(buf) || "dark";
     } catch (e) {
       console.error("detect_image_tone error:", e);
       return "dark";
@@ -121,13 +109,13 @@ export function registerMediaHandlers() {
 
   ipcMain.handle("spawn_capture", () => {});
   ipcMain.handle("process_image_path", (_, args) =>
-    addon.processImagePath?.(args.path),
+    addon.process_image_path?.(args.path),
   );
   ipcMain.handle("ocr_image", async (_, args) => {
     const absolutePath = resolveOcrImagePath(
       requireStringArg("ocr_image", args, "imageData", "imagePath", "path"),
     );
-    const resultJson = await addon.ocrImage?.(
+    const resultJson = await addon.ocr_image?.(
       absolutePath,
       args.isBase64 || false,
       args.modelName || "eng",
@@ -149,8 +137,8 @@ export function registerMediaHandlers() {
     return Array.from(buf);
   });
   ipcMain.handle("copy_image_to_clipboard", (_, args) => {
-    if (addon.copyImageToClipboard) {
-      return addon.copyImageToClipboard(args.base64Data);
+    if (addon.copy_image_to_clipboard) {
+      return addon.copy_image_to_clipboard(args.base64Data);
     }
     const { clipboard, nativeImage } = require("electron");
     const image = nativeImage.createFromDataURL(
@@ -159,8 +147,8 @@ export function registerMediaHandlers() {
     clipboard.writeImage(image);
   });
   ipcMain.handle("copy_image_from_path_to_clipboard", (_, args) => {
-    if (addon.copyImageFromPathToClipboard) {
-      return addon.copyImageFromPathToClipboard(args.path);
+    if (addon.copy_image_from_path_to_clipboard) {
+      return addon.copy_image_from_path_to_clipboard(args.path);
     }
     const { clipboard, nativeImage } = require("electron");
     const image = nativeImage.createFromPath(args.path);
@@ -168,17 +156,17 @@ export function registerMediaHandlers() {
   });
 
   ipcMain.handle("read_clipboard_text", () => {
-    if (addon.readClipboardText) {
-      return addon.readClipboardText();
+    if (addon.read_clipboard_text) {
+      return addon.read_clipboard_text();
     }
     return require("electron").clipboard.readText();
   });
 
   ipcMain.handle("cancel_download_ocr_model", (_, args) =>
-    addon.cancelDownloadOcrModel?.(args.modelId),
+    addon.cancel_download_ocr_model?.(args.modelId),
   );
   ipcMain.handle("download_ocr_model", async (event, args) => {
-    return addon.downloadOcrModel?.(
+    return addon.download_ocr_model?.(
       args.modelId,
       args.url,
       (err: any, progressJson: string) => {
@@ -197,16 +185,16 @@ export function registerMediaHandlers() {
   });
   ipcMain.handle(
     "get_model_path",
-    (_, args) => addon.getModelPath?.(args.modelId) || "",
+    (_, args) => addon.get_model_path?.(args.modelId) || "",
   );
   ipcMain.handle("cancel_ocr_job", () => {});
   ipcMain.handle(
     "list_downloaded_models",
-    () => addon.listDownloadedModels?.() || [],
+    () => addon.list_downloaded_models?.() || [],
   );
 
   ipcMain.handle("upload_image_to_imgbb", (_, args) =>
-    addon.uploadImageToImgbb?.(args.imagePath, args.apiKey),
+    addon.upload_image_to_imgbb?.(args.imagePath, args.apiKey),
   );
 
   ipcMain.handle("close_imgbb_window", () =>
