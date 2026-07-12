@@ -10,3 +10,5 @@ pub mod types;
 pub mod media;
 #[cfg(feature = "desktop")]
 pub mod platform;
+#[cfg(feature = "desktop")]
+pub mod sidecar;

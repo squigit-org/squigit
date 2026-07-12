@@ -168,6 +168,21 @@ pub struct NapiStreamEvent {
     pub result: Option<String>,
 }
 
+#[napi(object)]
+pub struct NapiSttOptions {
+    pub model: Option<String>,
+    pub language: Option<String>,
+}
+
+#[napi(object)]
+pub struct NapiSttEvent {
+    pub event_type: String,
+    pub text: Option<String>,
+    pub is_final: Option<bool>,
+    pub status: Option<String>,
+    pub message: Option<String>,
+}
+
 impl From<GeminiEvent> for NapiStreamEvent {
     fn from(event: GeminiEvent) -> Self {
         match event {

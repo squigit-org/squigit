@@ -163,6 +163,19 @@ export interface NapiThreadMetadata {
   reverseImageSearchUrl?: string
 }
 
+export interface NapiSttOptions {
+  model?: string
+  language?: string
+}
+
+export interface NapiSttEvent {
+  eventType: string
+  text?: string
+  isFinal?: boolean
+  status?: string
+  message?: string
+}
+
 export declare function ocrImage(imagePath: string, isBase64: boolean, modelName: string): Promise<string>
 
 export declare function playUiSound(effect: string): void
@@ -194,6 +207,10 @@ export declare function saveRollingSummary(threadId: string, summary: string): v
 export declare function setActiveProfile(profileId: string): void
 
 export declare function startGoogleAuth(): Promise<NapiAuthResult>
+
+export declare function startStt(options: NapiSttOptions | undefined | null, onEvent: (err: null | Error, event: NapiSttEvent) => void): Promise<void>
+
+export declare function stopStt(): Promise<void>
 
 export declare function storeFileFromPath(path: string): NapiStoredImage
 

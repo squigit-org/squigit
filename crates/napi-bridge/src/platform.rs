@@ -32,11 +32,7 @@ pub fn reveal_in_file_manager(path: String) -> Result<()> {
 
 #[napi]
 pub fn check_stt_version() -> Result<()> {
-    let (binary_path, _) = desktop_runtime::sidecar::resolve_stt_sidecar_path()
-        .map_err(napi::Error::from_reason)?;
-
-    desktop_runtime::sidecar::check_stt_version(&binary_path)
-        .map_err(napi::Error::from_reason)
+    crate::sidecar::check_stt_version()
 }
 
 #[napi]
@@ -51,29 +47,7 @@ pub async fn run_sidecar_version(command: String) -> Result<String> {
         }
 
         if command == "squigit-stt --version" {
-            let (sidecar_path, _) = desktop_runtime::sidecar::resolve_stt_sidecar_path()
-                .map_err(napi::Error::from_reason)?;
-
-            let mut cmd = std::process::Command::new(sidecar_path);
-            cmd.arg("--version");
-
-            #[cfg(target_os = "windows")]
-            {
-                use std::os::windows::process::CommandExt;
-                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-            }
-
-            let output = cmd
-                .output()
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            if output.status.success() {
-                let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                // Try to extract just the version if there's noise
-                let version = stdout.lines().last().unwrap_or("").trim().to_string();
-                return Ok(version);
-            }
-            return Err(napi::Error::from_reason("Sidecar command failed"));
+            return crate::sidecar::read_stt_version();
         }
 
         Err(napi::Error::from_reason(
@@ -93,8 +67,6 @@ pub fn encrypt_and_save(profile_id: String, provider: String, plaintext: String)
     desktop_runtime::security::encrypt_and_save(&profile_id, &provider, &plaintext)
         .map_err(napi::Error::from_reason)
 }
-
-
 
 #[napi]
 pub fn get_machine_info() -> String {
