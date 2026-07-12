@@ -35,6 +35,8 @@ export const {
   saveRollingSummary,
   setActiveProfile,
   startGoogleAuth,
+  startStt,
+  stopStt,
   storeImageFromPath,
   streamThread,
   updateThreadMetadata,
@@ -49,6 +51,8 @@ export type {
   NapiThreadMetadata,
   NapiProfile,
   NapiPromptResult,
+  NapiSttEvent,
+  NapiSttOptions,
   NapiStoredImage,
   NapiStreamEvent,
 } from "./addon/index.js";

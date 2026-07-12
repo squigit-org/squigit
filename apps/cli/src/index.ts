@@ -1,6 +1,7 @@
 import { runAuthCommand } from "./commands/auth.js";
 import { runApiCommand } from "./commands/apikey.js";
 import { runBrainCommand } from "./commands/brain.js";
+import { runSttCommand } from "./commands/stt.js";
 
 function usage(): string {
   return [
@@ -8,6 +9,7 @@ function usage(): string {
     "  node dist/src/index.js auth <action> [args]",
     "  node dist/src/index.js api <action> [args]",
     "  node dist/src/index.js brain <action> [args]",
+    "  node dist/src/index.js stt <action> [args]",
     "",
     "Auth actions:",
     "  auth login",
@@ -29,6 +31,9 @@ function usage(): string {
     "  brain analyze <image_path> [user_message...]",
     "  brain prompt <thread_id> <message...>",
     "  brain threads",
+    "",
+    "STT actions:",
+    "  stt dictate [--model <name>] [--language <lang>]",
   ].join("\n");
 }
 
@@ -48,6 +53,9 @@ async function main(): Promise<void> {
       return;
     case "brain":
       await runBrainCommand(rest);
+      return;
+    case "stt":
+      await runSttCommand(rest);
       return;
     default:
       throw new Error(`Unknown category '${category}'.\n\n${usage()}`);
