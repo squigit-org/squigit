@@ -25,6 +25,11 @@ pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
             [value] if value == "--native" => (true, false),
             _ => return super::fail(runtime, "Qt Capture build accepts only --native."),
         },
+        "whisper-stt" => match args {
+            [] => (false, false),
+            [value] if value == "--native" => (true, false),
+            _ => return super::fail(runtime, "Whisper STT build accepts only --native."),
+        },
         "paddle-ocr" => {
             let yes = match super::parse_optional_yes(
                 args,

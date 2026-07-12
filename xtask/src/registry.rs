@@ -215,10 +215,33 @@ impl Registry {
     }
 
     pub fn target_for_command(&self, command: &str, value: &str) -> Option<&Component> {
-        self.target_by_relative_path(value).or_else(|| {
-            (command == "release")
-                .then(|| self.target_by_release_alias(value))
-                .flatten()
+        self.target_by_relative_path(value)
+            .or_else(|| match command {
+                "build" => self.target_by_build_alias(value),
+                "release" => self.target_by_release_alias(value),
+                _ => None,
+            })
+    }
+
+    fn target_by_build_alias(&self, value: &str) -> Option<&Component> {
+        let alias = value.trim();
+        self.components.iter().find(|component| {
+            if !component.supports(Operation::Build) {
+                return false;
+            }
+            if component_matches_alias(component, alias) {
+                return true;
+            }
+            let handler = component.operation(Operation::Build).handler.as_str();
+            match handler {
+                "paddle-ocr" => {
+                    alias.eq_ignore_ascii_case("ocr") || alias.eq_ignore_ascii_case("paddle")
+                }
+                "whisper-stt" => {
+                    alias.eq_ignore_ascii_case("stt") || alias.eq_ignore_ascii_case("whisper")
+                }
+                _ => false,
+            }
         })
     }
 
@@ -228,9 +251,7 @@ impl Registry {
             if !component.supports(Operation::Release) {
                 return false;
             }
-            if component.name().eq_ignore_ascii_case(alias)
-                || component.display_name().eq_ignore_ascii_case(alias)
-            {
+            if component_matches_alias(component, alias) {
                 return true;
             }
             let handler = component.operation(Operation::Release).handler.as_str();
@@ -296,4 +317,9 @@ impl Registry {
                 .collect(),
         }
     }
+}
+
+fn component_matches_alias(component: &Component, alias: &str) -> bool {
+    component.name().eq_ignore_ascii_case(alias)
+        || component.display_name().eq_ignore_ascii_case(alias)
 }

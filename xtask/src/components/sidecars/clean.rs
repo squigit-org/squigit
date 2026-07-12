@@ -43,8 +43,18 @@ fn clean_paddle(runtime: &Runtime, component: &Component) -> XtaskResult {
 
 fn clean_whisper(runtime: &Runtime, component: &Component) -> XtaskResult {
     for name in ["build", "build-xtask-check", "dist"] {
+        remove(runtime, &component.directory.join("native").join(name))?;
+    }
+    for name in ["build", "build-xtask-check", "dist"] {
         remove(runtime, &component.directory.join(name))?;
     }
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
+    let mut command = Command::new(cargo);
+    command
+        .args(["clean", "-p", "squigit-stt"])
+        .current_dir(&runtime.repo_root);
+    run_command(&mut command, "cargo clean -p squigit-stt")?;
+
     let host = host_target_triple()?;
     remove(
         runtime,

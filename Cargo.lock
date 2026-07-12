@@ -868,7 +868,6 @@ dependencies = [
  "squigit-brain",
  "squigit-memory",
  "squigit-ocr",
- "squigit-stt",
  "tokio",
  "winreg 0.52.0",
  "zbus",
@@ -3490,14 +3489,11 @@ dependencies = [
 
 [[package]]
 name = "squigit-stt"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
- "anyhow",
- "log",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
- "tokio",
 ]
 
 [[package]]

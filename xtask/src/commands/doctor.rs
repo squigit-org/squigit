@@ -420,18 +420,26 @@ fn check_qt_capture(component: &Component, tools: &Toolchain) -> XtaskResult {
 }
 
 fn check_whisper(component: &Component, tools: &Toolchain) -> XtaskResult {
-    let source = component.directory.clone();
+    let mut errors = Vec::new();
+    if let Err(error) = check_cargo(component) {
+        errors.push(error);
+    }
+    let source = component.directory.join("native");
     let build = source.join("build-xtask-check");
-    preflight_whisper(&source, &build)?;
-    check_cmake_configure(tools, &source, &build, None)
+    if let Err(error) = preflight_whisper(&component.directory, &build) {
+        errors.push(error);
+    } else if let Err(error) = check_cmake_configure(tools, &source, &build, None) {
+        errors.push(error);
+    }
+    combine_check_errors(errors)
 }
 
-fn preflight_whisper(source: &Path, build: &Path) -> XtaskResult {
+fn preflight_whisper(sidecar: &Path, build: &Path) -> XtaskResult {
     let required = [
         build.join("_deps/whisper_cpp-src/CMakeLists.txt"),
         build.join("_deps/json-src/CMakeLists.txt"),
         build.join("_deps/miniaudio/miniaudio.h"),
-        source.join("models/ggml-tiny.en.bin"),
+        sidecar.join("models/ggml-tiny.en.bin"),
     ];
     let missing = required
         .iter()

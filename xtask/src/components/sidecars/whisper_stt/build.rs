@@ -4,14 +4,37 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-pub fn run(runtime: &Runtime) -> XtaskResult {
+pub fn run(runtime: &Runtime, native_only: bool) -> XtaskResult {
     runtime.heading("Building Whisper STT sidecar");
 
     let sidecar = runtime.repo_root.join("sidecars/whisper-stt");
-    let build_dir = sidecar.join("build");
+    let native = sidecar.join("native");
+    let build_dir = native.join("build");
 
-    refresh_cmake_cache_if_stale(&sidecar, &build_dir)?;
-    fs::create_dir_all(&build_dir).map_err(|error| {
+    if native_only {
+        println!("\nBuilding Whisper native engine (CMake only)...");
+        build_native(runtime, &native, &build_dir)?;
+        runtime.success("Whisper native engine build complete.");
+        return Ok(());
+    }
+
+    build_native(runtime, &native, &build_dir)?;
+
+    println!("\nBuilding Rust STT wrapper...");
+    let mut cargo = Command::new("cargo");
+    cargo
+        .args(["build", "--release", "-p", "squigit-stt"])
+        .current_dir(&runtime.repo_root);
+    run_command(&mut cargo, "cargo build --release -p squigit-stt")?;
+
+    package(runtime, &sidecar, &build_dir)?;
+    runtime.success("Whisper STT build and packaging complete.");
+    Ok(())
+}
+
+fn build_native(runtime: &Runtime, native: &Path, build_dir: &Path) -> XtaskResult {
+    refresh_cmake_cache_if_stale(native, build_dir)?;
+    fs::create_dir_all(build_dir).map_err(|error| {
         format!(
             "Could not create Whisper build directory {}: {error}",
             build_dir.display()
@@ -22,30 +45,27 @@ pub fn run(runtime: &Runtime) -> XtaskResult {
     let mut configure = Command::new("cmake");
     configure
         .arg("-S")
-        .arg(&sidecar)
+        .arg(native)
         .arg("-B")
-        .arg(&build_dir)
+        .arg(build_dir)
         .arg("-DCMAKE_BUILD_TYPE=Release")
         .current_dir(&runtime.repo_root);
     run_command(
         &mut configure,
-        "cmake -S sidecars/whisper-stt -B sidecars/whisper-stt/build -DCMAKE_BUILD_TYPE=Release",
+        "cmake -S sidecars/whisper-stt/native -B sidecars/whisper-stt/native/build -DCMAKE_BUILD_TYPE=Release",
     )?;
 
     println!("\nCompiling Whisper STT...");
     let mut build = Command::new("cmake");
     build
         .arg("--build")
-        .arg(&build_dir)
+        .arg(build_dir)
         .args(["--config", "Release"])
         .current_dir(&runtime.repo_root);
     run_command(
         &mut build,
-        "cmake --build sidecars/whisper-stt/build --config Release",
+        "cmake --build sidecars/whisper-stt/native/build --config Release",
     )?;
-
-    package(runtime, &sidecar, &build_dir)?;
-    runtime.success("Whisper STT build and packaging complete.");
     Ok(())
 }
 
@@ -114,7 +134,7 @@ fn package(runtime: &Runtime, sidecar: &Path, build_dir: &Path) -> XtaskResult {
     println!("\nPackaging Whisper STT sidecar artifacts for distribution...");
 
     let models_dir = ensure_models(sidecar)?;
-    let binary = find_binary(build_dir)?;
+    let engine = find_engine_binary(build_dir)?;
     let runtime_libs = collect_runtime_libs(build_dir)?;
     let host = host_target_triple()?;
     let destination = whisper_package_destination(&runtime.repo_root, &host);
@@ -127,9 +147,21 @@ fn package(runtime: &Runtime, sidecar: &Path, build_dir: &Path) -> XtaskResult {
         )
     })?;
 
-    let destination_binary = destination.join(binary_name());
-    println!("  Copying binary to {}", destination_binary.display());
-    copy_file(&binary, &destination_binary)?;
+    let wrapper_source = runtime
+        .repo_root
+        .join("target")
+        .join("release")
+        .join(public_binary_name());
+    if !wrapper_source.is_file() {
+        return Err(format!(
+            "Rust STT wrapper was not found: {}",
+            wrapper_source.display()
+        ));
+    }
+
+    let destination_binary = destination.join(public_binary_name());
+    println!("  Copying Rust wrapper to {}", destination_binary.display());
+    copy_file(&wrapper_source, &destination_binary)?;
 
     let internal = destination.join("_internal");
     fs::create_dir_all(&internal).map_err(|error| {
@@ -139,9 +171,21 @@ fn package(runtime: &Runtime, sidecar: &Path, build_dir: &Path) -> XtaskResult {
         )
     })?;
 
-    #[cfg(windows)]
-    let runtime_lib_destination = &destination;
-    #[cfg(not(windows))]
+    let engine_dir = internal.join("bin");
+    fs::create_dir_all(&engine_dir).map_err(|error| {
+        format!(
+            "Could not create Whisper engine directory {}: {error}",
+            engine_dir.display()
+        )
+    })?;
+
+    let destination_engine = engine_dir.join(engine_binary_name());
+    println!(
+        "  Copying native engine to {}",
+        destination_engine.display()
+    );
+    copy_file(&engine, &destination_engine)?;
+
     let runtime_lib_destination = &internal;
 
     for library in runtime_libs {
@@ -169,11 +213,19 @@ fn whisper_package_destination(repo_root: &Path, host: &str) -> PathBuf {
         .join(format!("whisper-stt-{host}"))
 }
 
-fn binary_name() -> &'static str {
+fn public_binary_name() -> &'static str {
     if cfg!(windows) {
         "squigit-stt.exe"
     } else {
         "squigit-stt"
+    }
+}
+
+fn engine_binary_name() -> &'static str {
+    if cfg!(windows) {
+        "whisper-stt-engine.exe"
+    } else {
+        "whisper-stt-engine"
     }
 }
 
@@ -189,8 +241,8 @@ fn ensure_models(sidecar: &Path) -> XtaskResult<PathBuf> {
     Ok(models_dir)
 }
 
-fn find_binary(build_dir: &Path) -> XtaskResult<PathBuf> {
-    let name = binary_name();
+fn find_engine_binary(build_dir: &Path) -> XtaskResult<PathBuf> {
+    let name = engine_binary_name();
     let mut candidates = vec![
         build_dir.join("Release").join(name),
         build_dir.join(name),
@@ -204,7 +256,7 @@ fn find_binary(build_dir: &Path) -> XtaskResult<PathBuf> {
     }
 
     Err(format!(
-        "Whisper binary was not found. Expected one of:\n  - {}",
+        "Whisper native engine was not found. Expected one of:\n  - {}",
         candidates
             .iter()
             .map(|candidate| candidate.display().to_string())
