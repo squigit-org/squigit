@@ -151,7 +151,6 @@ export const startNewThreadStream = async (
         imageDescription: null,
         userFirstMsg: null,
         historyLog: null,
-        rollingSummary: null,
         userMessage: "",
         channelId: channelId,
         threadId: threadId ?? null,

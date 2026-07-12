@@ -6,11 +6,32 @@ use std::collections::{HashMap, HashSet};
 
 fn unwrap_link_destination(path: &str) -> &str {
     let trimmed = path.trim();
-    trimmed
+    let unwrapped = trimmed
         .strip_prefix('<')
         .and_then(|value| value.strip_suffix('>'))
         .map(str::trim)
-        .unwrap_or(trimmed)
+        .unwrap_or(trimmed);
+
+    if let Some(rest) = unwrapped.strip_prefix("file://") {
+        if let Some(path) = rest.strip_prefix('/') {
+            if path.as_bytes().get(1) == Some(&b':') {
+                return path;
+            }
+        }
+        return rest;
+    }
+
+    unwrapped
+}
+
+fn is_file_link_destination(path: &str) -> bool {
+    let trimmed = path.trim();
+    let unwrapped = trimmed
+        .strip_prefix('<')
+        .and_then(|value| value.strip_suffix('>'))
+        .map(str::trim)
+        .unwrap_or(trimmed);
+    unwrapped.starts_with("file://")
 }
 
 fn is_attachment_link_path(path: &str) -> bool {
@@ -62,8 +83,8 @@ fn normalize_display_name(raw: &str) -> Option<String> {
     Some(value.to_string())
 }
 
-/// Extract attachment-like local mentions from markdown links, legacy `{{path}}` tokens,
-/// and `[Attachment References]` blocks (`` - `name`: `path` ``).
+/// Extract attachment-like local mentions from markdown links and
+/// `[Attachment References]` blocks (`` - `name`: `path` ``).
 /// Returns deduplicated mentions while preserving first-seen order.
 pub(crate) fn extract_attachment_mentions(text: &str) -> Vec<AttachmentMention> {
     if text.trim().is_empty() {
@@ -72,8 +93,6 @@ pub(crate) fn extract_attachment_mentions(text: &str) -> Vec<AttachmentMention> 
 
     let re = Regex::new(
         r"(?x)
-        (\{\{(?P<legacy_path>[^}]+)\}\})
-        |
         (\[(?P<link_label>[^\]\n]+)\]\((?P<link_path><[^>\n]+>|[^)\n]+)\))
         |
         (-\s+`(?P<ref_label>[^`]+)`:\s+`(?P<ref_path>[^`]+)`)
@@ -85,27 +104,21 @@ pub(crate) fn extract_attachment_mentions(text: &str) -> Vec<AttachmentMention> 
     let mut path_to_index = HashMap::<String, usize>::new();
 
     for cap in re.captures_iter(text) {
-        let mention = if let Some(legacy) = cap.name("legacy_path") {
-            let path = legacy.as_str().trim().to_string();
-            if path.is_empty() {
+        let mention = if let Some(link_path) = cap.name("link_path") {
+            if !is_file_link_destination(link_path.as_str()) {
                 None
             } else {
-                Some(AttachmentMention {
-                    path,
-                    display_name: None,
-                })
-            }
-        } else if let Some(link_path) = cap.name("link_path") {
-            let path = unwrap_link_destination(link_path.as_str())
-                .trim()
-                .to_string();
-            if !is_attachment_link_path(&path) || path.is_empty() {
-                None
-            } else {
-                let display_name = cap
-                    .name("link_label")
-                    .and_then(|label| normalize_display_name(label.as_str()));
-                Some(AttachmentMention { path, display_name })
+                let path = unwrap_link_destination(link_path.as_str())
+                    .trim()
+                    .to_string();
+                if !is_attachment_link_path(&path) || path.is_empty() {
+                    None
+                } else {
+                    let display_name = cap
+                        .name("link_label")
+                        .and_then(|label| normalize_display_name(label.as_str()));
+                    Some(AttachmentMention { path, display_name })
+                }
             }
         } else if let Some(ref_path) = cap.name("ref_path") {
             let path = ref_path.as_str().trim().to_string();
@@ -140,7 +153,7 @@ pub(crate) fn extract_attachment_mentions(text: &str) -> Vec<AttachmentMention> 
     mentions
 }
 
-/// Extract attachment-like local paths from markdown links and legacy `{{path}}` tokens.
+/// Extract attachment-like local paths from markdown links.
 /// Returns deduplicated paths while preserving first-seen order.
 #[allow(dead_code)]
 pub(crate) fn extract_attachment_paths(text: &str) -> Vec<String> {
@@ -161,23 +174,16 @@ mod tests {
 
     #[test]
     fn extracts_markdown_attachment_links() {
-        let text = "Please check [file](objects/ab/hash.md) and [pdf](/tmp/a.pdf).";
+        let text = "Please check [file](file:///objects/ab/hash.md) and [pdf](file:///tmp/a.pdf).";
         let out = extract_attachment_paths(text);
-        assert_eq!(out, vec!["objects/ab/hash.md", "/tmp/a.pdf"]);
-    }
-
-    #[test]
-    fn extracts_legacy_tokens() {
-        let text = "Analyze {{objects/aa/abcdef1234.rs}} now";
-        let out = extract_attachment_paths(text);
-        assert_eq!(out, vec!["objects/aa/abcdef1234.rs"]);
+        assert_eq!(out, vec!["/objects/ab/hash.md", "/tmp/a.pdf"]);
     }
 
     #[test]
     fn dedupes_and_preserves_order() {
-        let text = "[a](objects/a/file.txt) [b](objects/b/file.txt) [c](objects/a/file.txt)";
+        let text = "[a](file:///objects/a/file.txt) [b](file:///objects/b/file.txt) [c](file:///objects/a/file.txt)";
         let out = extract_attachment_paths(text);
-        assert_eq!(out, vec!["objects/a/file.txt", "objects/b/file.txt"]);
+        assert_eq!(out, vec!["/objects/a/file.txt", "/objects/b/file.txt"]);
     }
 
     #[test]
@@ -189,17 +195,17 @@ mod tests {
 
     #[test]
     fn unwraps_angle_brackets_in_links() {
-        let text = "[doc](<objects/ab/hash.docx>)";
+        let text = "[doc](<file:///objects/ab/hash.docx>)";
         let out = extract_attachment_paths(text);
-        assert_eq!(out, vec!["objects/ab/hash.docx"]);
+        assert_eq!(out, vec!["/objects/ab/hash.docx"]);
     }
 
     #[test]
     fn extracts_display_name_from_markdown_label() {
-        let text = "[Quarterly Report.pdf](objects/ab/hash.pdf)";
+        let text = "[Quarterly Report.pdf](file:///objects/ab/hash.pdf)";
         let mentions = extract_attachment_mentions(text);
         assert_eq!(mentions.len(), 1);
-        assert_eq!(mentions[0].path, "objects/ab/hash.pdf");
+        assert_eq!(mentions[0].path, "/objects/ab/hash.pdf");
         assert_eq!(
             mentions[0].display_name.as_deref(),
             Some("Quarterly Report.pdf")
@@ -208,10 +214,10 @@ mod tests {
 
     #[test]
     fn dedupe_keeps_first_available_display_name() {
-        let text = "{{objects/ab/hash.pdf}} [Human Name](objects/ab/hash.pdf)";
+        let text = "[Human Name](file:///objects/ab/hash.pdf) [Other](file:///objects/ab/hash.pdf)";
         let mentions = extract_attachment_mentions(text);
         assert_eq!(mentions.len(), 1);
-        assert_eq!(mentions[0].path, "objects/ab/hash.pdf");
+        assert_eq!(mentions[0].path, "/objects/ab/hash.pdf");
         assert_eq!(mentions[0].display_name.as_deref(), Some("Human Name"));
     }
 
@@ -237,10 +243,10 @@ mod tests {
 
     #[test]
     fn dedupe_across_link_and_reference_formats() {
-        let text = "[build.rs](objects/ab/hash.rs)\n\n[Attachment References]\n- `build.rs`: `objects/ab/hash.rs`";
+        let text = "[build.rs](file:///objects/ab/hash.rs)\n\n[Attachment References]\n- `build.rs`: `/objects/ab/hash.rs`";
         let mentions = extract_attachment_mentions(text);
         assert_eq!(mentions.len(), 1);
-        assert_eq!(mentions[0].path, "objects/ab/hash.rs");
+        assert_eq!(mentions[0].path, "/objects/ab/hash.rs");
         assert_eq!(mentions[0].display_name.as_deref(), Some("build.rs"));
     }
 }

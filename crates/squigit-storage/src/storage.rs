@@ -435,14 +435,6 @@ impl ThreadStorage {
             Vec::new()
         };
 
-        // Load rolling summary
-        let summary_path = thread_dir.join("rolling_summary.txt");
-        let rolling_summary = if summary_path.exists() {
-            Some(fs::read_to_string(&summary_path)?)
-        } else {
-            None
-        };
-
         let image_brief = metadata.image_brief.clone();
 
         let attachment_registry_path = thread_dir.join("attachment_registry.json");
@@ -457,7 +449,6 @@ impl ThreadStorage {
             metadata,
             messages,
             ocr_data,
-            rolling_summary,
             attachment_registry,
             image_brief,
         })
@@ -676,28 +667,6 @@ impl ThreadStorage {
         Ok(metadata.reverse_image_search_url)
     }
 
-    /// Save rolling summary for a thread.
-    pub fn save_rolling_summary(&self, thread_id: &str, summary: &str) -> Result<()> {
-        let thread_dir = self.thread_dir(thread_id);
-        fs::create_dir_all(&thread_dir)?;
-
-        let summary_path = thread_dir.join("rolling_summary.txt");
-        fs::write(&summary_path, summary)?;
-
-        Ok(())
-    }
-
-    /// Get rolling summary for a thread.
-    pub fn get_rolling_summary(&self, thread_id: &str) -> Result<Option<String>> {
-        let summary_path = self.thread_dir(thread_id).join("rolling_summary.txt");
-
-        if !summary_path.exists() {
-            return Ok(None);
-        }
-
-        let summary = fs::read_to_string(&summary_path)?;
-        Ok(Some(summary))
-    }
 
     /// Append a message to a thread.
     pub fn append_message(&self, thread_id: &str, message: &ThreadMessage) -> Result<()> {

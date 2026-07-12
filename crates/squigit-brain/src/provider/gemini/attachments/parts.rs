@@ -10,11 +10,32 @@ use crate::provider::gemini::transport::types::{GeminiFileData, GeminiPart};
 
 fn unwrap_link_destination(path: &str) -> &str {
     let trimmed = path.trim();
-    trimmed
+    let unwrapped = trimmed
         .strip_prefix('<')
         .and_then(|value| value.strip_suffix('>'))
         .map(str::trim)
-        .unwrap_or(trimmed)
+        .unwrap_or(trimmed);
+
+    if let Some(rest) = unwrapped.strip_prefix("file://") {
+        if let Some(path) = rest.strip_prefix('/') {
+            if path.as_bytes().get(1) == Some(&b':') {
+                return path;
+            }
+        }
+        return rest;
+    }
+
+    unwrapped
+}
+
+fn is_file_link_destination(path: &str) -> bool {
+    let trimmed = path.trim();
+    let unwrapped = trimmed
+        .strip_prefix('<')
+        .and_then(|value| value.strip_suffix('>'))
+        .map(str::trim)
+        .unwrap_or(trimmed);
+    unwrapped.starts_with("file://")
 }
 
 fn is_attachment_link_path(path: &str) -> bool {
@@ -63,8 +84,6 @@ pub(crate) async fn build_interleaved_parts(
 ) -> Result<Vec<GeminiPart>, String> {
     let re = Regex::new(
         r"(?x)
-        (\{\{(?P<legacy_path>[^}]+)\}\})
-        |
         (\[(?P<link_label>[^\]\n]+)\]\((?P<link_path><[^>\n]+>|[^)\n]+)\))
     ",
     )
@@ -82,14 +101,16 @@ pub(crate) async fn build_interleaved_parts(
             text_chunks.push((false, before.to_string()));
         }
 
-        let maybe_path = if let Some(legacy) = cap.name("legacy_path") {
-            Some(legacy.as_str().trim().to_string())
-        } else if let Some(link_path) = cap.name("link_path") {
-            let path = unwrap_link_destination(link_path.as_str());
-            if is_attachment_link_path(path) {
-                Some(path.to_string())
-            } else {
+        let maybe_path = if let Some(link_path) = cap.name("link_path") {
+            if !is_file_link_destination(link_path.as_str()) {
                 None
+            } else {
+                let path = unwrap_link_destination(link_path.as_str());
+                if is_attachment_link_path(path) {
+                    Some(path.to_string())
+                } else {
+                    None
+                }
             }
         } else {
             None

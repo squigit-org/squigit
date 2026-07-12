@@ -14,10 +14,24 @@ export function getBaseName(path: string): string {
 
 export function unwrapMarkdownLinkDestination(destination: string): string {
   const value = destination.trim();
-  if (value.startsWith("<") && value.endsWith(">")) {
-    return value.slice(1, -1).trim();
+  const unwrapped =
+    value.startsWith("<") && value.endsWith(">")
+      ? value.slice(1, -1).trim()
+      : value;
+
+  if (unwrapped.toLowerCase().startsWith("file://")) {
+    try {
+      const url = new URL(unwrapped);
+      const pathname = decodeURIComponent(url.pathname);
+      if (url.hostname) return `//${url.hostname}${pathname}`;
+      if (/^\/[a-zA-Z]:\//.test(pathname)) return pathname.slice(1);
+      return pathname;
+    } catch {
+      return unwrapped;
+    }
   }
-  return value;
+
+  return unwrapped;
 }
 
 export function isAttachmentPath(path: string): boolean {

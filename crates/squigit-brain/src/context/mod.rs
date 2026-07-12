@@ -2,6 +2,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod builder;
-pub mod compactor;
 pub mod loader;
 pub mod media;

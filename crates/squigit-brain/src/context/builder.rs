@@ -81,7 +81,6 @@ pub fn build_turn_context(
     image_description: &str,
     user_first_msg: &str,
     history_log: &str,
-    rolling_summary: &str,
 ) -> String {
     let frame_template = load_frame();
 
@@ -92,14 +91,6 @@ pub fn build_turn_context(
     );
     vars.insert("USER_FIRST_MSG".to_string(), user_first_msg.to_string());
     vars.insert("HISTORY_LOG".to_string(), history_log.to_string());
-    vars.insert(
-        "ROLLING_SUMMARY".to_string(),
-        if rolling_summary.is_empty() {
-            "(No prior summary — this is early in the conversation)".to_string()
-        } else {
-            rolling_summary.to_string()
-        },
-    );
 
     interpolate(&frame_template, &vars)
 }
@@ -208,13 +199,10 @@ fn get_os_version() -> String {
 }
 
 /// Format conversation history for the frame template.
-/// Takes the last N message pairs and formats them as markdown.
-pub fn format_history_log(messages: &[(String, String)], max_turns: usize) -> String {
-    let start = messages.len().saturating_sub(max_turns);
-    let recent = &messages[start..];
-
+/// Formats every message pair as markdown.
+pub fn format_history_log(messages: &[(String, String)]) -> String {
     let mut log = String::new();
-    for (i, (role, content)) in recent.iter().enumerate() {
+    for (i, (role, content)) in messages.iter().enumerate() {
         if i > 0 {
             log.push_str("\n\n");
         }
@@ -246,23 +234,9 @@ mod tests {
             "A VS Code window with Rust code",
             "Fix this bug",
             "**User**: Fix this bug\n**Assistant**: I can see the issue...",
-            "",
         );
         assert!(context.contains("VS Code"));
         assert!(context.contains("Fix this bug"));
-        assert!(context.contains("No prior summary"));
-    }
-
-    #[test]
-    fn test_build_turn_context_with_summary() {
-        let context = build_turn_context(
-            "A VS Code window with Rust code",
-            "Fix this bug",
-            "**User**: What next?\n**Assistant**: Let's continue...",
-            "- User found a lifetime error in main.rs\n- Fixed by adding 'static bound",
-        );
-        assert!(context.contains("lifetime error"));
-        assert!(context.contains("What next?"));
     }
 
     #[test]
@@ -272,7 +246,7 @@ mod tests {
             ("Assistant".to_string(), "Hi there!".to_string()),
             ("User".to_string(), "Help me".to_string()),
         ];
-        let log = format_history_log(&messages, 2);
+        let log = format_history_log(&messages);
         assert!(log.contains("Hi there!"));
         assert!(log.contains("Help me"));
     }

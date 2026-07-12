@@ -153,7 +153,7 @@ export declare function store_file_from_path(path: string): NapiStoredImage
 
 export declare function store_image_from_path(path: string): NapiStoredImage
 
-export declare function stream_thread(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, rollingSummary: string | undefined | null, userMessage: string, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
+export declare function stream_thread(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, userMessage: string, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
 
 export declare function update_thread_metadata(metadataJson: string): void
 

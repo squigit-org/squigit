@@ -12,16 +12,28 @@ import {
   isAbsoluteCasPath,
 } from "./paths.ts";
 
-export const LEGACY_ATTACHMENT_MENTION_RE = /\{\{([^}]+)\}\}/g;
 export const LINK_ATTACHMENT_MENTION_RE = /\[([^\]\n]+)\]\((<[^>\n]+>|[^)\n]+)\)/g;
 
 function sanitizeAttachmentLabel(label: string): string {
   return label.replace(/[\[\]\n\r]/g, " ").trim();
 }
 
+function isFileLinkDestination(destination: string): boolean {
+  const value = destination.trim();
+  const unwrapped =
+    value.startsWith("<") && value.endsWith(">")
+      ? value.slice(1, -1).trim()
+      : value;
+  return unwrapped.toLowerCase().startsWith("file://");
+}
+
 export function formatAttachmentLinkDestination(path: string): string {
   const value = unwrapMarkdownLinkDestination(path);
-  return isAttachmentPath(value) ? `<${value}>` : value;
+  const normalized = value.replace(/\\/g, "/");
+  const encoded = encodeURI(normalized);
+  if (/^[a-zA-Z]:\//.test(normalized)) return `file:///${encoded}`;
+  if (normalized.startsWith("//")) return `file:${encoded}`;
+  return `file://${normalized.startsWith("/") ? "" : "/"}${encoded}`;
 }
 
 export function isAbsoluteCasAttachmentMarkdownLink(
@@ -36,7 +48,7 @@ export function normalizeAttachmentMarkdownLinks(text: string): string {
     LINK_ATTACHMENT_MENTION_RE,
     (full, label: string, rawDestination: string) => {
       const path = unwrapMarkdownLinkDestination(rawDestination);
-      if (!isAttachmentPath(path)) {
+      if (!isFileLinkDestination(rawDestination) || !isAttachmentPath(path)) {
         return full;
       }
       return buildAttachmentMention(path, label);
@@ -48,14 +60,8 @@ export function parseAttachmentPaths(text: string): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
 
-  for (const match of text.matchAll(LEGACY_ATTACHMENT_MENTION_RE)) {
-    const path = (match[1] || "").trim();
-    if (!path || seen.has(path)) continue;
-    seen.add(path);
-    out.push(path);
-  }
-
   for (const match of text.matchAll(LINK_ATTACHMENT_MENTION_RE)) {
+    if (!isFileLinkDestination(String(match[2] || ""))) continue;
     const path = unwrapMarkdownLinkDestination(String(match[2] || ""));
     if (!isAttachmentPath(path) || seen.has(path)) continue;
     seen.add(path);
@@ -66,38 +72,22 @@ export function parseAttachmentPaths(text: string): string[] {
 }
 
 export function stripAttachmentMentions(text: string): string {
-  const withoutLegacy = text.replace(LEGACY_ATTACHMENT_MENTION_RE, "");
-  const withoutLinks = withoutLegacy.replace(
+  const withoutLinks = text.replace(
     LINK_ATTACHMENT_MENTION_RE,
     (full, _label, rawPath: string) => {
       const path = unwrapMarkdownLinkDestination(rawPath);
-      return isAttachmentPath(path) ? "" : full;
+      return isFileLinkDestination(rawPath) && isAttachmentPath(path) ? "" : full;
     },
   );
   return withoutLinks.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 export function stripImageAttachmentMentions(text: string): string {
-  const withoutLegacyImages = text.replace(
-    LEGACY_ATTACHMENT_MENTION_RE,
-    (full, rawPath: string) => {
-      const path = rawPath.trim();
-      if (!path) return full;
-
-      const attachment = attachmentFromPath(path);
-      if (attachment.type === "image") {
-        return "";
-      }
-
-      return buildAttachmentMention(path, attachment.name);
-    },
-  );
-
-  const withoutImageLinks = withoutLegacyImages.replace(
+  const withoutImageLinks = text.replace(
     LINK_ATTACHMENT_MENTION_RE,
     (full, label: string, rawPath: string) => {
       const path = unwrapMarkdownLinkDestination(rawPath);
-      if (!isAttachmentPath(path)) {
+      if (!isFileLinkDestination(rawPath) || !isAttachmentPath(path)) {
         return full;
       }
 

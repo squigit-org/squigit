@@ -197,10 +197,6 @@ pub struct ThreadData {
     /// OCR frame: keyed by model_id, each value is cached results or null.
     #[serde(default)]
     pub ocr_data: OcrFrame,
-    /// Rolling summary of compressed older conversation turns.
-    /// Persisted so summaries survive app restarts and session switches.
-    #[serde(default)]
-    pub rolling_summary: Option<String>,
     /// Per-thread tracked attachments keyed by CAS path.
     #[serde(default)]
     pub attachment_registry: AttachmentRegistry,
@@ -216,7 +212,6 @@ impl ThreadData {
             metadata,
             messages: Vec::new(),
             ocr_data: HashMap::new(),
-            rolling_summary: None,
             attachment_registry: BTreeMap::new(),
             image_brief: None,
         }

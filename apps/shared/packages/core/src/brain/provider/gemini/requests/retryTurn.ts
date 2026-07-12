@@ -161,7 +161,6 @@ export const retryFromMessage = async (
           imageDescription: null,
           userFirstMsg: null,
           historyLog: null,
-          rollingSummary: null,
           userMessage: "",
           channelId,
           threadId: threadId ?? null,
@@ -243,7 +242,7 @@ export const retryFromMessage = async (
   brainSessionStore.currentUnlisten = unlisten;
 
   try {
-    const { historyLog, rollingSummary } = buildContextWindow();
+    const { historyLog } = buildContextWindow();
     const providerApiKey = brainSessionStore.storedApiKey;
     if (!providerApiKey) {
       throw new Error("Gemini API Key not set");
@@ -259,7 +258,6 @@ export const retryFromMessage = async (
         imageDescription: imgDesc,
         userFirstMsg: brainSessionStore.userFirstMsg,
         historyLog,
-        rollingSummary,
         userMessage: retryUserMessage,
         channelId,
         threadId: threadId ?? null,

@@ -20,7 +20,6 @@ export function approxTokenCount(text: string): number {
  */
 export function buildContextWindow(): {
   historyLog: string;
-  rollingSummary: null;
 } {
   const history = brainSessionStore.conversationHistory;
 
@@ -34,5 +33,5 @@ export function buildContextWindow(): {
           )
           .join("\n\n");
 
-  return { historyLog, rollingSummary: null };
+  return { historyLog };
 }

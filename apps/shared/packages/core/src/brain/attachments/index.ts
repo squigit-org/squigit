@@ -24,7 +24,6 @@ export {
 } from "./paths.ts";
 
 export {
-  LEGACY_ATTACHMENT_MENTION_RE,
   LINK_ATTACHMENT_MENTION_RE,
   formatAttachmentLinkDestination,
   isAbsoluteCasAttachmentMarkdownLink,

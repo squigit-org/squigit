@@ -17,7 +17,6 @@ pub struct StreamThreadRequest {
     pub image_description: Option<String>,
     pub user_first_msg: Option<String>,
     pub history_log: Option<String>,
-    pub rolling_summary: Option<String>,
     pub user_message: String,
     pub channel_id: String,
     pub thread_id: Option<String>,
@@ -37,14 +36,6 @@ pub struct GenerateThreadTitleRequest {
 pub struct GenerateImageBriefRequest {
     pub api_key: String,
     pub image_path: String,
-    pub model: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct CompressConversationRequest {
-    pub api_key: String,
-    pub image_brief: String,
-    pub history_to_compress: String,
     pub model: String,
 }
 
@@ -116,7 +107,6 @@ impl BrainService {
             request.image_description,
             request.user_first_msg,
             request.history_log,
-            request.rolling_summary,
             request.user_message,
             request.channel_id,
             request.thread_id,
@@ -147,19 +137,6 @@ impl BrainService {
             &self.runtime,
             request.api_key,
             request.image_path,
-            request.model,
-        )
-        .await
-    }
-
-    pub async fn compress_conversation(
-        &self,
-        request: CompressConversationRequest,
-    ) -> Result<String, String> {
-        crate::provider::gemini::commands::generation::compress_conversation(
-            request.api_key,
-            request.image_brief,
-            request.history_to_compress,
             request.model,
         )
         .await
@@ -210,7 +187,6 @@ impl BrainService {
                 image_description: None,
                 user_first_msg: None,
                 history_log: None,
-                rolling_summary: None,
                 user_message: text.clone(),
                 channel_id: request.channel_id,
                 thread_id: Some(metadata.id.clone()),
@@ -318,8 +294,7 @@ impl BrainService {
                 image_path: Some(image_path),
                 image_description: Some(image_description),
                 user_first_msg: Some(user_first_msg),
-                history_log: Some(format_history_log(&history_pairs, 12)),
-                rolling_summary: thread.rolling_summary.clone(),
+                history_log: Some(format_history_log(&history_pairs)),
                 user_message: normalized_user_message.clone(),
                 channel_id: request.channel_id,
                 thread_id: Some(request.thread_id.clone()),

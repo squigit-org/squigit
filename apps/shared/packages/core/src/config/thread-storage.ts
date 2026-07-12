@@ -72,7 +72,6 @@ export interface ThreadData {
   metadata: ThreadMetadata;
   messages: ThreadMessage[];
   ocr_data: OcrFrame;
-  rolling_summary: string | null;
   image_brief?: string | null;
 }
 

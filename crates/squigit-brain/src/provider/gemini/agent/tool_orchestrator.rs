@@ -124,7 +124,7 @@ pub(crate) fn build_system_instruction_with_tool_policy(
              - Secondary uploaded files from this thread may only be used when the user attaches them in this turn or when you explicitly call `recall_thread_attachment`.\n\
              - Use the thread attachment catalog in context to pick the right tool: `read_local_attachment_context` for `text_local`, `recall_thread_attachment` for `image_upload` or `document_upload`.\n\
              - If the user asks for page-specific, OCR, quote-exact, transcription, chart-reading, or slide/sheet/section-specific details from a prior uploaded image or document, you must call `recall_thread_attachment` before answering.\n\
-             - Never answer exact file-grounded questions from `image_brief`, rolling summaries, or path references alone when a prior uploaded image/document is needed.\n\
+             - Never answer exact file-grounded questions from `image_brief` or path references alone when a prior uploaded image/document is needed.\n\
              - Never answer exact code/text questions from summaries alone when a local attachment can be re-read with `read_local_attachment_context`.\n\
              - For PDF, Word, spreadsheet, slide, and similar document attachments, rely on the attached Gemini file directly (do not call `read_local_attachment_context` for documents).\n\
              - If greeting/chit-thread, do not call tools.\n\

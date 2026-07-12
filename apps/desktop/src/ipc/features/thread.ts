@@ -33,7 +33,6 @@ export function registerThreadHandlers() {
       args.imageDescription,
       args.userFirstMsg,
       args.historyLog,
-      args.rollingSummary,
       args.userMessage,
       args.channelId,
       args.threadId,

@@ -80,7 +80,7 @@ export const sendMessage = async (
       `[GeminiClient] Image Brief Present: ${Boolean(brainSessionStore.imageBrief)}`,
     );
 
-    const { historyLog, rollingSummary } = buildContextWindow();
+    const { historyLog } = buildContextWindow();
     const providerApiKey = brainSessionStore.storedApiKey;
     if (!providerApiKey) {
       throw new Error("Gemini API Key not set");
@@ -96,7 +96,6 @@ export const sendMessage = async (
         imageDescription: brainSessionStore.imageDescription,
         userFirstMsg: brainSessionStore.userFirstMsg,
         historyLog,
-        rollingSummary,
         userMessage: normalizedUserText,
         channelId: channelId,
         threadId: threadId ?? null,

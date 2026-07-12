@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const LEGACY_ATTACHMENT_MENTION_RE = /\{\{([^}]+)\}\}/g;
 const LINK_ATTACHMENT_MENTION_RE = /\[([^\]\n]+)\]\((<[^>\n]+>|[^)\n]+)\)/g;
 
 type AttachmentMention = {
@@ -17,12 +16,35 @@ function basename(path: string): string {
   return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
 }
 
+function isFileLinkDestination(destination: string): boolean {
+  const value = destination.trim();
+  const unwrapped =
+    value.startsWith("<") && value.endsWith(">")
+      ? value.slice(1, -1).trim()
+      : value;
+  return unwrapped.toLowerCase().startsWith("file://");
+}
+
 function unwrapMarkdownLinkDestination(destination: string): string {
   const value = destination.trim();
-  if (value.startsWith("<") && value.endsWith(">")) {
-    return value.slice(1, -1).trim();
+  const unwrapped =
+    value.startsWith("<") && value.endsWith(">")
+      ? value.slice(1, -1).trim()
+      : value;
+
+  if (unwrapped.toLowerCase().startsWith("file://")) {
+    try {
+      const url = new URL(unwrapped);
+      const pathname = decodeURIComponent(url.pathname);
+      if (url.hostname) return `//${url.hostname}${pathname}`;
+      if (/^\/[a-zA-Z]:\//.test(pathname)) return pathname.slice(1);
+      return pathname;
+    } catch {
+      return unwrapped;
+    }
   }
-  return value;
+
+  return unwrapped;
 }
 
 function isLikelyAttachmentPath(path: string): boolean {
@@ -55,15 +77,9 @@ function extractAttachmentMentions(text: string): AttachmentMention[] {
   const seen = new Set<string>();
   const out: AttachmentMention[] = [];
 
-  for (const match of text.matchAll(LEGACY_ATTACHMENT_MENTION_RE)) {
-    const path = (match[1] || "").trim();
-    if (!path || seen.has(path)) continue;
-    seen.add(path);
-    out.push({ path });
-  }
-
   for (const match of text.matchAll(LINK_ATTACHMENT_MENTION_RE)) {
     const label = (match[1] || "").trim();
+    if (!isFileLinkDestination(String(match[2] || ""))) continue;
     const path = unwrapMarkdownLinkDestination(String(match[2] || ""));
     if (!isLikelyAttachmentPath(path) || seen.has(path)) continue;
     seen.add(path);
@@ -77,13 +93,15 @@ function extractAttachmentMentions(text: string): AttachmentMention[] {
 }
 
 function stripAttachmentMentionsForHistory(text: string): string {
-  const withoutLegacy = text.replace(LEGACY_ATTACHMENT_MENTION_RE, "");
-  const withoutLinks = withoutLegacy.replace(
+  const withoutLinks = text.replace(
     LINK_ATTACHMENT_MENTION_RE,
     (...args: unknown[]) => {
       const full = String(args[0] || "");
-      const path = unwrapMarkdownLinkDestination(String(args[2] || ""));
-      return isLikelyAttachmentPath(path) ? "" : full;
+      const rawPath = String(args[2] || "");
+      const path = unwrapMarkdownLinkDestination(rawPath);
+      return isFileLinkDestination(rawPath) && isLikelyAttachmentPath(path)
+        ? ""
+        : full;
     },
   );
   return withoutLinks.replace(/\n{3,}/g, "\n\n").trim();

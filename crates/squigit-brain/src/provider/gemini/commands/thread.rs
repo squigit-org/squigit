@@ -312,8 +312,6 @@ pub async fn stream_gemini_thread_v2(
     image_description: Option<String>,
     user_first_msg: Option<String>,
     history_log: Option<String>,
-    // Rolling summary of compressed older turns
-    rolling_summary: Option<String>,
     // Current user message (empty on first turn for image-only analysis)
     user_message: String,
     channel_id: String,
@@ -394,9 +392,8 @@ pub async fn stream_gemini_thread_v2(
                 image_description.ok_or("image_description required for subsequent turns")?;
             let first_msg = user_first_msg.unwrap_or_default();
             let history = history_log.unwrap_or_default();
-            let summary = rolling_summary.clone().unwrap_or_default();
             let mut context_prompt = crate::context::builder::build_turn_context(
-                &img_desc, &first_msg, &history, &summary,
+                &img_desc, &first_msg, &history,
             );
 
             let mut composed_user_message = user_message.clone();
