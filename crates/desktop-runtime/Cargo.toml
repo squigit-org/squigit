@@ -17,7 +17,6 @@ squigit-memory = { path = "../squigit-memory" }
 squigit-auth = { path = "../squigit-auth" }
 squigit-brain = { path = "../squigit-brain" }
 squigit-ocr = { path = "../squigit-ocr" }
-squigit-stt = { path = "../squigit-stt" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "5", features = ["blocking"] }

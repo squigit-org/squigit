@@ -7,5 +7,4 @@
 pub mod audio;
 pub mod media;
 pub mod platform;
-pub mod sidecar;
 pub mod security;
