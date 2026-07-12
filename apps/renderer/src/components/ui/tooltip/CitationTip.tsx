@@ -6,6 +6,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { getBuiltInFavIconForUrl } from "@/components/icons";
 import styles from "./shared.module.css";
 
 const EDGE_PADDING = 8;
@@ -85,10 +86,14 @@ export const CitationTip: React.FC<CitationTipProps> = ({
 
   if (!show) return null;
 
+  const BuiltInHeaderIcon = getBuiltInFavIconForUrl(headerUrl);
+
   return createPortal(
     <div ref={ref} className={styles.citationTip} style={style}>
       <div className={styles.citationHeader}>
-        {headerIconUrl && (
+        {BuiltInHeaderIcon ? (
+          <BuiltInHeaderIcon className={styles.citationHeaderIcon} />
+        ) : headerIconUrl ? (
           <img
             src={headerIconUrl}
             alt=""
@@ -97,7 +102,7 @@ export const CitationTip: React.FC<CitationTipProps> = ({
               e.currentTarget.style.display = "none";
             }}
           />
-        )}
+        ) : null}
         <span className={styles.citationHeaderUrl}>{headerUrl}</span>
       </div>
       <div className={styles.citationBody}>{body}</div>

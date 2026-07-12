@@ -192,6 +192,7 @@
   --c-raw-159: #e8e8e8;
   --c-raw-160: #888888;
   --c-raw-161: #1a1a1a;
+  --fav-icon-github-fill: var(--c-raw-060);
 }
 
 body.light-mode,
@@ -364,4 +365,5 @@ html.light {
   --c-raw-159: #1a1a1a;
   --c-raw-160: #5a5a5a;
   --c-raw-161: #d4d4d4;
+  --fav-icon-github-fill: var(--c-raw-042);
 }

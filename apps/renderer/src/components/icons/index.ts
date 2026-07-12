@@ -6,6 +6,7 @@
 
 export * from "./action-icons";
 export * from "./brand-icons";
+export * from "./fav-icons";
 export * from "./capture-icons";
 export * from "./navigation-icons";
 export * from "./panel-icons";

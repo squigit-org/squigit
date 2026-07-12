@@ -7,6 +7,7 @@
 import React, { forwardRef, useMemo, useState } from "react";
 import { CircleAlert, Loader2 } from "lucide-react";
 import { getIcon } from "material-file-icons";
+import { getBuiltInFavIconForUrl } from "@/components/icons";
 import styles from "./CitationChip.module.css";
 
 type CitationChipVisual =
@@ -82,6 +83,10 @@ export const CitationChip = forwardRef<HTMLAnchorElement, CitationChipProps>(
     );
     const [hideFavicon, setHideFavicon] = useState(false);
     const resolvedVariant = variant || (visual.kind === "favicon" ? "site" : "file");
+    const BuiltInFavicon =
+      visual.kind === "favicon" && typeof anchorProps.href === "string"
+        ? getBuiltInFavIconForUrl(anchorProps.href)
+        : null;
 
     React.useEffect(() => {
       if (visual.kind !== "favicon") {
@@ -109,6 +114,9 @@ export const CitationChip = forwardRef<HTMLAnchorElement, CitationChipProps>(
           .join(" ")}
       >
         {visual.kind === "favicon" ? (
+          BuiltInFavicon ? (
+            <BuiltInFavicon className={styles.iconImage} />
+          ) : (
           !hideFavicon && (
             <img
               src={faviconSrc}
@@ -125,6 +133,7 @@ export const CitationChip = forwardRef<HTMLAnchorElement, CitationChipProps>(
                 setHideFavicon(true);
               }}
             />
+          )
           )
         ) : visual.kind === "loading" ? (
           <span className={styles.stateIcon} aria-hidden="true">
