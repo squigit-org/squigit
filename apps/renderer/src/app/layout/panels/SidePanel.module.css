@@ -140,6 +140,7 @@
 .threadRow.active {
   background-color: var(--c-raw-067);
   color: var(--c-raw-050);
+  transition: color 0.15s ease;
 }
 
 .pinnedRow {
@@ -172,19 +173,17 @@
   justify-content: center;
 }
 
-.threadBubbleIcon {
+.threadIcon {
   position: absolute;
   inset: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--c-raw-106);
-  transition:
-    opacity 0.15s ease,
-    color 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
-.pinLeftBtn {
+.pinBtn {
   position: absolute;
   inset: 0;
   display: flex;
@@ -199,38 +198,37 @@
   cursor: pointer;
   transition:
     opacity 0.15s ease,
-    color 0.15s ease,
     visibility 0s linear 0.15s;
 }
 
-.threadRow:hover .pinLeftBtn,
-.threadRow.menuOpen .pinLeftBtn {
+.threadRow:hover .pinBtn,
+.threadRow.menuOpen .pinBtn {
   opacity: 1;
   visibility: visible;
   transition-delay: 0s;
 }
 
-.pinLeftBtn.pinActive {
+.pinBtn.pinActive {
   opacity: 1;
   visibility: visible;
 }
 
-.threadRow:hover .threadBubbleIcon,
-.threadRow.menuOpen .threadBubbleIcon,
-.pinnedRow .threadBubbleIcon {
+.threadRow:hover .threadIcon,
+.threadRow.menuOpen .threadIcon,
+.pinnedRow .threadIcon {
   opacity: 0;
 }
 
-.threadRow.active .threadBubbleIcon,
-.threadRow.active .pinLeftBtn {
+.threadRow.active .threadIcon,
+.threadRow.active .pinBtn {
   color: var(--c-raw-050);
 }
 
-.pinLeftBtn:hover {
+.pinBtn:hover {
   color: var(--c-raw-050);
 }
 
-.pinLeftBtn:hover svg {
+.pinBtn:hover svg {
   fill: currentColor;
 }
 
@@ -304,8 +302,7 @@
   opacity: 1;
   transition:
     opacity 0.15s ease,
-    transform 0.15s ease,
-    color 0.15s ease;
+    transform 0.15s ease;
   pointer-events: none;
 }
 

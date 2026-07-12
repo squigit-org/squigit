@@ -146,7 +146,6 @@
   cursor: pointer;
   color: var(--c-raw-002);
   transition:
-    background-color 120ms ease,
     opacity 120ms ease;
 
   white-space: nowrap;

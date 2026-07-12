@@ -196,11 +196,11 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
                   <FolderOpen
                     size={20}
                     strokeWidth={1.5}
-                    className={styles.threadBubbleIcon}
+                    className={styles.threadIcon}
                   />
                   <button
                     type="button"
-                    className={`${styles.pinLeftBtn} ${thread.is_pinned ? styles.pinActive : ""}`}
+                    className={`${styles.pinBtn} ${thread.is_pinned ? styles.pinActive : ""}`}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();

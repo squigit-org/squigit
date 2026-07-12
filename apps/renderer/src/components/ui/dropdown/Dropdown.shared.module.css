@@ -19,7 +19,6 @@
   border-radius: 6px;
   cursor: pointer;
   color: var(--c-raw-004);
-  transition: background-color 0.15s ease;
 }
 
 .trigger {
@@ -49,9 +48,6 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
 }
 
 .chevron {
