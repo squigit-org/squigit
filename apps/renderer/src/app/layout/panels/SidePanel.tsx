@@ -53,11 +53,11 @@ const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
 
 const SYSTEM_PREFIX = "__system_";
 
-const formatThreadAge = (isoDate: string): string => {
+const formatThreadAge = (isoDate: string, now = Date.now()): string => {
   const parsed = new Date(isoDate);
   if (Number.isNaN(parsed.getTime())) return "";
 
-  const elapsedMs = Math.max(0, Date.now() - parsed.getTime());
+  const elapsedMs = Math.max(0, now - parsed.getTime());
   const minute = 60_000;
   const hour = 60 * minute;
   const day = 24 * hour;
@@ -77,6 +77,7 @@ interface ThreadItemProps {
   isBusy: boolean;
   isSelectionMode: boolean;
   isSelected: boolean;
+  currentTime: number;
   menuState: { x: number; y: number } | null;
   onSelectThread: (threadId: string) => void;
   onToggleSelectionThread: (threadId: string) => void;
@@ -95,6 +96,7 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
     isBusy,
     isSelectionMode,
     isSelected,
+    currentTime,
     menuState,
     onSelectThread,
     onToggleSelectionThread,
@@ -150,7 +152,7 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
     });
 
     const lastActivityAt = thread.updated_at || thread.created_at;
-    const lastActivityLabel = formatThreadAge(lastActivityAt);
+    const lastActivityLabel = formatThreadAge(lastActivityAt, currentTime);
     const lastActivityTitle = useMemo(
       () => new Date(lastActivityAt).toLocaleString(),
       [lastActivityAt],
@@ -290,6 +292,7 @@ export const SidePanel: React.FC = () => {
   const threads = app.threadHistory.threads;
   const activeSessionId = app.threadHistory.activeSessionId;
 
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -315,6 +318,20 @@ export const SidePanel: React.FC = () => {
     app.threadHistory.handleRenameThread,
     app.threadHistory.handleTogglePinThread,
   ]);
+
+  useEffect(() => {
+    const syncCurrentTime = () => setCurrentTime(Date.now());
+    const intervalId = window.setInterval(syncCurrentTime, 30_000);
+
+    window.addEventListener("focus", syncCurrentTime);
+    document.addEventListener("visibilitychange", syncCurrentTime);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", syncCurrentTime);
+      document.removeEventListener("visibilitychange", syncCurrentTime);
+    };
+  }, []);
 
   const { pinnedThreads, threadThreads, allThreads } = useMemo(() => {
     const sortedThreads = threads
@@ -544,6 +561,7 @@ export const SidePanel: React.FC = () => {
                 isBusy={busyThreadId === thread.id}
                 isSelectionMode={isSelectionMode}
                 isSelected={selectedIdSet.has(thread.id)}
+                currentTime={currentTime}
                 menuState={
                   activeContextMenu?.id === thread.id ? activeContextMenu : null
                 }
@@ -573,6 +591,7 @@ export const SidePanel: React.FC = () => {
               isBusy={busyThreadId === thread.id}
               isSelectionMode={isSelectionMode}
               isSelected={selectedIdSet.has(thread.id)}
+              currentTime={currentTime}
               menuState={
                 activeContextMenu?.id === thread.id ? activeContextMenu : null
               }
