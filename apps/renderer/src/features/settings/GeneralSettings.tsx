@@ -7,7 +7,12 @@
 import React, { useState } from "react";
 import styles from "./GeneralSettings.module.css";
 import { CapturePreview } from "@/app/router/routes/WizardRoute/components/CapturePreview/CapturePreview";
-import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownSectionTitle,
+  ToggleSwitch,
+} from "@/components/ui";
 
 interface GeneralSettingsProps {
   themePreference: "dark" | "light" | "system";
@@ -127,17 +132,11 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           </div>
 
           <div className={styles.rowControl}>
-            <label className={styles.toggleSwitch}>
-              <input
-                type="checkbox"
-                className={styles.toggleInput}
-                checked={ocrEnabled}
-                onChange={(e) => onToggleOcrEnabled(e.target.checked)}
-                aria-checked={ocrEnabled}
-                aria-label="Image OCR"
-              />
-              <span className={styles.toggleSlider} />
-            </label>
+            <ToggleSwitch
+              checked={ocrEnabled}
+              onChange={onToggleOcrEnabled}
+              ariaLabel="Image OCR"
+            />
           </div>
         </div>
 
@@ -152,18 +151,12 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           </div>
 
           <div className={styles.rowControl}>
-            <label className={styles.toggleSwitch}>
-              <input
-                type="checkbox"
-                className={styles.toggleInput}
-                checked={autoExpandOCR}
-                disabled={!ocrEnabled}
-                onChange={(e) => onToggleAutoExpand(e.target.checked)}
-                aria-checked={autoExpandOCR}
-                aria-label="Auto-extend Content"
-              />
-              <span className={styles.toggleSlider} />
-            </label>
+            <ToggleSwitch
+              checked={autoExpandOCR}
+              disabled={!ocrEnabled}
+              onChange={onToggleAutoExpand}
+              ariaLabel="Auto-extend Content"
+            />
           </div>
         </div>
       </div>
