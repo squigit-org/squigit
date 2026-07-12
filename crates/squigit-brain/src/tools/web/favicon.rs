@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use futures_util::future::join_all;
-use squigit_memory::ThreadStorage;
-use squigit_auth::ProfileStore;
 use reqwest::{header, redirect::Policy};
+use squigit_auth::ProfileStore;
+use squigit_memory::ThreadStorage;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
@@ -25,8 +25,7 @@ pub(crate) fn favicon_for_url(url: &str) -> Option<String> {
 
 fn active_thread_storage() -> Option<ThreadStorage> {
     let profile_store = ProfileStore::new().ok()?;
-    let active_id = profile_store.get_active_profile_id().ok()??;
-    let threads_dir = profile_store.get_threads_dir(&active_id);
+    let threads_dir = profile_store.get_threads_dir();
     ThreadStorage::with_base_dir(threads_dir).ok()
 }
 

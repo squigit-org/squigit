@@ -6,9 +6,8 @@ import { sendStreamEvent } from "./stream";
 export const getThreadDir = (threadId: string) => {
   const path = require("path");
   const base = addon.getStoreBaseDir?.();
-  const active = addon.getActiveProfileId?.();
-  if (!base || !active) throw new Error("No active profile");
-  return path.join(base, active, "threads", threadId);
+  if (!base) throw new Error("Store base directory is unavailable");
+  return path.join(base, "threads", threadId);
 };
 
 export function registerThreadHandlers() {

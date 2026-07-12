@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use crate::error::{Result, StorageError};
 use crate::types::{
-    AttachmentRegistry, ThreadData, ThreadMessage, ThreadMetadata, OcrFrame, OcrRegion, StoredImage,
+    AttachmentRegistry, OcrFrame, OcrRegion, StoredImage, ThreadData, ThreadMessage, ThreadMetadata,
 };
 
 const DEFAULT_OCR_MODEL_ID: &str = "pp-ocr-v5-en";
@@ -80,8 +80,8 @@ pub struct ThreadStorage {
 impl ThreadStorage {
     /// Create a new storage manager with a custom base directory.
     ///
-    /// This is the primary constructor for profile-aware storage.
-    /// Use this with a profile's threads directory.
+    /// This is the primary constructor for thread storage.
+    /// Use this with the global threads directory.
     ///
     /// # Example
     ///
@@ -89,8 +89,8 @@ impl ThreadStorage {
     /// use squigit_memory::ThreadStorage;
     /// use std::path::PathBuf;
     ///
-    /// let profile_threads_dir = PathBuf::from("/path/to/profile/threads");
-    /// let storage = ThreadStorage::with_base_dir(profile_threads_dir).unwrap();
+    /// let threads_dir = PathBuf::from("/path/to/squigit/threads");
+    /// let storage = ThreadStorage::with_base_dir(threads_dir).unwrap();
     /// ```
     pub fn with_base_dir(base_dir: PathBuf) -> Result<Self> {
         let objects_dir = crate::paths::base_config_dir()
@@ -112,12 +112,7 @@ impl ThreadStorage {
     ///
     /// Uses `~/.config/squigit/threads/` on Linux (and appropriate config dirs on other OSs).
     ///
-    /// **Note**: This constructor is provided for backward compatibility.
-    /// New code should use `with_base_dir()` with a profile-specific path.
-    #[deprecated(
-        since = "0.2.0",
-        note = "Use with_base_dir() for profile-aware storage"
-    )]
+    /// This uses the global thread directory shared by every account and guest mode.
     pub fn new() -> Result<Self> {
         let base_dir = crate::paths::base_config_dir()
             .ok_or(StorageError::NoDataDir)?
@@ -771,8 +766,6 @@ impl ThreadStorage {
 
         Ok(())
     }
-
-
 }
 
 #[cfg(test)]
@@ -852,7 +845,9 @@ mod tests {
             },
         );
 
-        storage.save_thread(&thread).expect("save thread with registry");
+        storage
+            .save_thread(&thread)
+            .expect("save thread with registry");
 
         let loaded = storage.load_thread(&metadata.id).expect("load thread");
         assert_eq!(loaded.attachment_registry.len(), 1);
@@ -862,5 +857,4 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(base_dir);
     }
-
 }

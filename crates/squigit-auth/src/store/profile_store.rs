@@ -25,7 +25,7 @@ type ProfileMap = BTreeMap<String, Profile>;
 /// - `{base_dir}/auth.json`
 /// - `{base_dir}/profiles.json`
 /// - `{base_dir}/keys.json`
-/// - `{base_dir}/{profile_id}/threads/`
+/// - `{base_dir}/threads/`
 pub struct ProfileStore {
     /// Base directory: `{config_dir}/squigit/`
     pub(super) base_dir: PathBuf,
@@ -80,11 +80,11 @@ impl ProfileStore {
         self.base_dir.join(profile_id)
     }
 
-    /// Get the threads directory for a specific profile.
+    /// Get the global threads directory.
     ///
-    /// Returns `{base_dir}/{profile_id}/threads/`
-    pub fn get_threads_dir(&self, profile_id: &str) -> PathBuf {
-        self.get_profile_dir(profile_id).join("threads")
+    /// Returns `{base_dir}/threads/`
+    pub fn get_threads_dir(&self) -> PathBuf {
+        self.base_dir.join("threads")
     }
 
     /// Get the consolidated key file path.

@@ -7,7 +7,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use squigit_auth::ProfileStore;
 use squigit_memory::{ThreadMessage, ThreadStorage};
 
-use crate::types::{NapiThreadData, NapiThreadMetadata, NapiStoredImage};
+use crate::types::{NapiStoredImage, NapiThreadData, NapiThreadMetadata};
 
 fn map_storage_err(err: squigit_memory::StorageError) -> Error {
     Error::from_reason(err.to_string())
@@ -19,11 +19,7 @@ fn map_profile_err(err: squigit_auth::error::ProfileError) -> Error {
 
 fn active_storage() -> Result<ThreadStorage> {
     let profile_store = ProfileStore::new().map_err(map_profile_err)?;
-    let active_id = profile_store
-        .get_active_profile_id()
-        .map_err(map_profile_err)?
-        .ok_or_else(|| Error::from_reason("No active profile. Please log in first."))?;
-    let threads_dir = profile_store.get_threads_dir(&active_id);
+    let threads_dir = profile_store.get_threads_dir();
     ThreadStorage::with_base_dir(threads_dir).map_err(map_storage_err)
 }
 

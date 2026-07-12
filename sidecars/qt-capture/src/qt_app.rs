@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::audio_guard::AudioGuard;
+use crate::display_hotplug::DisplayWatcher;
+use crate::single_instance::InstanceLock;
 use anyhow::{Context, Result};
 use std::env;
 use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, ExitCode, Stdio};
-use crate::display_hotplug::DisplayWatcher;
-use crate::single_instance::InstanceLock;
 
-use squigit_memory::{ThreadData, ThreadMetadata, ThreadStorage};
 use squigit_auth::ProfileStore;
+use squigit_memory::{ThreadData, ThreadMetadata, ThreadStorage};
 
 use crate::paths::QtPaths;
 
@@ -189,14 +189,7 @@ This usually indicates a native crash during startup/capture."
         ProfileStore::new()
             .ok()
             .and_then(|profile_store| {
-                profile_store
-                    .get_active_profile_id()
-                    .ok()
-                    .flatten()
-                    .map(|active_id| (profile_store, active_id))
-            })
-            .and_then(|(profile_store, active_id)| {
-                let threads_dir = profile_store.get_threads_dir(&active_id);
+                let threads_dir = profile_store.get_threads_dir();
                 ThreadStorage::with_base_dir(threads_dir).ok()
             })
             .and_then(|storage| {
@@ -220,14 +213,7 @@ This usually indicates a native crash during startup/capture."
         ProfileStore::new()
             .ok()
             .and_then(|profile_store| {
-                profile_store
-                    .get_active_profile_id()
-                    .ok()
-                    .flatten()
-                    .map(|active_id| (profile_store, active_id))
-            })
-            .and_then(|(profile_store, active_id)| {
-                let threads_dir = profile_store.get_threads_dir(&active_id);
+                let threads_dir = profile_store.get_threads_dir();
                 ThreadStorage::with_base_dir(threads_dir).ok()
             })
             .and_then(|storage| storage.store_image_from_path(path, None).ok())

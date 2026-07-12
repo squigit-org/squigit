@@ -4,6 +4,35 @@ import { requireStringArg } from "../system/arguments";
 import { getThreadDir } from "./thread";
 import { sendStreamEvent } from "./stream";
 
+const resolveOcrImagePath = (rawImagePath: string) => {
+  const path = require("path");
+  const fs = require("fs");
+  const base = addon.getStoreBaseDir?.();
+
+  if (!base) return rawImagePath;
+
+  const normalized = path.normalize(rawImagePath);
+  if (!path.isAbsolute(normalized)) {
+    const relative = normalized.replace(/^(\.\.[/\\])+/, "").replace(/^\.?[/\\]/, "");
+    if (relative === "objects" || relative.startsWith(`objects${path.sep}`)) {
+      return path.join(base, relative);
+    }
+    return path.join(base, "threads", relative);
+  }
+
+  if (fs.existsSync(normalized)) {
+    return normalized;
+  }
+
+  const marker = `${path.sep}objects${path.sep}`;
+  const markerIndex = normalized.indexOf(marker);
+  if (markerIndex !== -1) {
+    return path.join(base, "objects", normalized.slice(markerIndex + marker.length));
+  }
+
+  return normalized;
+};
+
 export function registerMediaHandlers() {
   ipcMain.handle("analyze_image", async (event, args) => {
     return addon.analyzeImage?.(
@@ -95,15 +124,9 @@ export function registerMediaHandlers() {
     addon.processImagePath?.(args.path),
   );
   ipcMain.handle("ocr_image", async (_, args) => {
-    let absolutePath = args.imageData;
-    const path = require("path");
-    if (!path.isAbsolute(absolutePath)) {
-      const base = addon.getStoreBaseDir?.();
-      const active = addon.getActiveProfileId?.();
-      if (base && active) {
-        absolutePath = path.join(base, active, "threads", absolutePath);
-      }
-    }
+    const absolutePath = resolveOcrImagePath(
+      requireStringArg("ocr_image", args, "imageData", "imagePath", "path"),
+    );
     const resultJson = await addon.ocrImage?.(
       absolutePath,
       args.isBase64 || false,

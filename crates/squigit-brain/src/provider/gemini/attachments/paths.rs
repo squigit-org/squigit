@@ -1,17 +1,12 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_memory::ThreadStorage;
 use squigit_auth::ProfileStore;
+use squigit_memory::ThreadStorage;
 
 pub(crate) fn get_active_storage() -> Result<ThreadStorage, String> {
     let profile_store = ProfileStore::new().map_err(|e| e.to_string())?;
-    let active_id = profile_store
-        .get_active_profile_id()
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "No active profile. Please log in first.".to_string())?;
-
-    let threads_dir = profile_store.get_threads_dir(&active_id);
+    let threads_dir = profile_store.get_threads_dir();
     ThreadStorage::with_base_dir(threads_dir).map_err(|e| e.to_string())
 }
 
@@ -61,7 +56,7 @@ pub(crate) fn resolve_attachment_path_internal(path: &str) -> Result<std::path::
     Err(format!("Attachment not found: {}", path))
 }
 
-/// Resolve and enforce the attachment path to be inside the active profile thread storage scope.
+/// Resolve and enforce the attachment path to be inside the global thread storage scope.
 pub(crate) fn resolve_attachment_path_for_local_context(
     path: &str,
 ) -> Result<std::path::PathBuf, String> {
@@ -76,7 +71,9 @@ pub(crate) fn resolve_attachment_path_for_local_context(
 
     let objects_dir = std::fs::canonicalize(storage.objects_dir()).unwrap_or_default();
 
-    if is_path_within_base(&resolved, &base_dir) || (!objects_dir.as_os_str().is_empty() && is_path_within_base(&resolved, &objects_dir)) {
+    if is_path_within_base(&resolved, &base_dir)
+        || (!objects_dir.as_os_str().is_empty() && is_path_within_base(&resolved, &objects_dir))
+    {
         return Ok(resolved);
     }
 

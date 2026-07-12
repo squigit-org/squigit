@@ -3,8 +3,8 @@
 
 //! Everything pixel/image/clipboard — tone detection, clipboard R/W, image processing, imgbb upload.
 
-use squigit_memory::{ThreadStorage, StoredImage};
 use squigit_auth::ProfileStore;
+use squigit_memory::{StoredImage, ThreadStorage};
 
 // =============================================================================
 // Tone Detection
@@ -209,12 +209,7 @@ pub fn read_and_store_clipboard_image() -> Result<StoredImage, String> {
         .map_err(|e| format!("Failed to encode image: {}", e))?;
 
     let profile_store = ProfileStore::new().map_err(|e| e.to_string())?;
-    let active_id = profile_store
-        .get_active_profile_id()
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "No active profile. Please log in first.".to_string())?;
-
-    let threads_dir = profile_store.get_threads_dir(&active_id);
+    let threads_dir = profile_store.get_threads_dir();
     let storage = ThreadStorage::with_base_dir(threads_dir).map_err(|e| e.to_string())?;
     let stored = storage
         .store_image(&buffer, None)
