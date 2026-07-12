@@ -9,7 +9,6 @@ export type SystemEventUnlisten = () => void;
 
 export interface SystemPort {
   openExternalUrl(url: string): Promise<void>;
-  deleteTempFile(path: string): Promise<void>;
   getApiKey(provider: SystemApiKeyProvider, profileId: string): Promise<string>;
   uploadImageToImgBB(imagePath: string, apiKey: string): Promise<string>;
   closeImgbbWindow(): Promise<void>;

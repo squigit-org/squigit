@@ -11,5 +11,4 @@ export interface Attachment {
   extension: string;
   path: string;
   sourcePath?: string;
-  isTemp?: boolean;
 }

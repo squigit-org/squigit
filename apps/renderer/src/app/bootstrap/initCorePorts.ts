@@ -156,8 +156,6 @@ export function initializeCorePorts(): void {
   setSystemPort({
     openExternalUrl: (url: string) =>
       platform.invoke("open_external_url", { url }),
-    deleteTempFile: (path: string) =>
-      platform.invoke("delete_temp_file", { path }),
     getApiKey: (provider, profileId) =>
       platform.invoke<string>("get_api_key", { provider, profileId }),
     uploadImageToImgBB: (imagePath: string, apiKey: string) =>

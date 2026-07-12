@@ -24,6 +24,5 @@ export function attachmentFromPath(
     extension: ext,
     path,
     sourcePath,
-    isTemp: path.startsWith("/tmp/"),
   };
 }

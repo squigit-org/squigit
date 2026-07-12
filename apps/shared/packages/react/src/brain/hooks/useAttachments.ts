@@ -7,7 +7,6 @@
 import { useState, useCallback } from "react";
 import type { Attachment } from "@squigit/core/brain/attachments";
 import { attachmentFromPath } from "@squigit/core/brain/attachments";
-import { getSystemPort } from "@squigit/core/ports";
 
 function filterImageAttachments(attachments: Attachment[]): Attachment[] {
   return attachments.filter((attachment) => attachment.type === "image");
@@ -28,24 +27,11 @@ export function useAttachments() {
   }, []);
 
   const removeAttachment = useCallback((id: string) => {
-    setAttachmentsState((prev) => {
-      const target = prev.find((a) => a.id === id);
-      if (target?.isTemp) {
-        getSystemPort().deleteTempFile(target.path).catch(() => {});
-      }
-      return prev.filter((a) => a.id !== id);
-    });
+    setAttachmentsState((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
   const clearAttachments = useCallback(() => {
-    setAttachmentsState((prev) => {
-      prev
-        .filter((a) => a.isTemp)
-        .forEach((a) => {
-          getSystemPort().deleteTempFile(a.path).catch(() => {});
-        });
-      return [];
-    });
+    setAttachmentsState([]);
   }, []);
 
   const addFromPath = useCallback(
