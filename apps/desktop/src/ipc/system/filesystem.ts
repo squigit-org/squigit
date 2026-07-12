@@ -115,4 +115,3 @@ export function registerFilesystemHandlers() {
     await fs.copyFile(args.sourcePath, args.targetPath);
   });
 }
-

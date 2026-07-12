@@ -221,7 +221,7 @@ export const useSystemSync = () => {
       checkAndHydrateActiveAvatar(activeProf);
 
       if (!activeProf) {
-        console.log("No active profile found");
+        console.log("[useSystemSync] No active profile found");
         clearApiKeys();
       } else {
         await loadApiKeys(activeProf.id);
