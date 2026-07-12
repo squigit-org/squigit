@@ -1,8 +1,8 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_ocr::models::ModelManager;
-use squigit_ocr::ocr::{OcrRequest, OcrRuntime};
+use ocr_runtime::models::ModelManager;
+use ocr_runtime::ocr::{OcrRequest, OcrRuntime};
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -76,7 +76,7 @@ async fn run() -> Result<(), String> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
         return Err(
-            "usage: cargo run -p squigit-ocr --example live_ocr_harness -- <analyze|download|models> ..."
+            "usage: cargo run -p ocr-runtime --example live_ocr_harness -- <analyze|download|models> ..."
                 .to_string(),
         );
     };
@@ -196,7 +196,7 @@ fn host_target_triple() -> &'static str {
 }
 
 fn test_assets_dir(repo_root: &Path) -> PathBuf {
-    repo_root.join("crates/squigit-ocr/examples/assets")
+    repo_root.join("crates/ocr-runtime/examples/assets")
 }
 
 async fn analyze(

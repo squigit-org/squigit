@@ -5,11 +5,11 @@ use napi::{Error, Result};
 use napi_derive::napi;
 use serde::{de::DeserializeOwned, Serialize};
 use squigit_auth::ProfileStore;
-use squigit_memory::{ThreadMessage, ThreadStorage};
+use squigit_storage::{ThreadMessage, ThreadStorage};
 
 use crate::types::{NapiStoredImage, NapiThreadData, NapiThreadMetadata};
 
-fn map_storage_err(err: squigit_memory::StorageError) -> Error {
+fn map_storage_err(err: squigit_storage::StorageError) -> Error {
     Error::from_reason(err.to_string())
 }
 
@@ -77,9 +77,9 @@ pub fn create_thread(
     ocr_lang: Option<String>,
 ) -> Result<NapiThreadMetadata> {
     let storage = active_storage()?;
-    let mut metadata = squigit_memory::ThreadMetadata::new(title, image_hash.clone(), ocr_lang);
+    let mut metadata = squigit_storage::ThreadMetadata::new(title, image_hash.clone(), ocr_lang);
     metadata.image_tone = storage.get_image_tone(&image_hash);
-    let thread = squigit_memory::ThreadData::new(metadata.clone());
+    let thread = squigit_storage::ThreadData::new(metadata.clone());
     storage.save_thread(&thread).map_err(map_storage_err)?;
     Ok(metadata.into())
 }
@@ -91,9 +91,9 @@ pub fn create_thread_json(
     ocr_lang: Option<String>,
 ) -> Result<String> {
     let storage = active_storage()?;
-    let mut metadata = squigit_memory::ThreadMetadata::new(title, image_hash.clone(), ocr_lang);
+    let mut metadata = squigit_storage::ThreadMetadata::new(title, image_hash.clone(), ocr_lang);
     metadata.image_tone = storage.get_image_tone(&image_hash);
-    let thread = squigit_memory::ThreadData::new(metadata.clone());
+    let thread = squigit_storage::ThreadData::new(metadata.clone());
     storage.save_thread(&thread).map_err(map_storage_err)?;
     to_json(&metadata)
 }
@@ -155,7 +155,7 @@ pub fn update_thread_metadata(metadata: NapiThreadMetadata) -> Result<()> {
 #[napi]
 pub fn update_thread_metadata_json(metadata_json: String) -> Result<()> {
     let storage = active_storage()?;
-    let metadata = from_json::<squigit_memory::ThreadMetadata>(&metadata_json)?;
+    let metadata = from_json::<squigit_storage::ThreadMetadata>(&metadata_json)?;
     storage
         .update_thread_metadata(&metadata)
         .map_err(map_storage_err)

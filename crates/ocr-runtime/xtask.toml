@@ -2,8 +2,8 @@ schema = 2
 
 [context]
 kind = "component"
-name = "squigit-ocr"
-display_name = "Squigit OCR"
+name = "ocr-runtime"
+display_name = "OCR Runtime"
 category = "crates"
 order = 70
 
@@ -27,13 +27,12 @@ include = ["tests/*.rs", "tests/**/*.rs"]
 [operations]
 dev = { enabled = false, handler = "none", description = "Development mode is not enabled." }
 doctor = { enabled = true, handler = "cargo-crate", description = "Cargo Check this Crate" }
-build = { enabled = true, handler = "cargo-crate", requires_commit_sha = false, description = "Build Squigit OCR" }
+build = { enabled = true, handler = "cargo-crate", requires_commit_sha = false, description = "Build OCR Runtime" }
 test = { enabled = true, handler = "cargo-crate", description = "Run Crate test suites" }
 clean = { enabled = true, handler = "cargo-crate", description = "Remove Build artifacts" }
 bump = { enabled = true, handler = "cargo-crate", description = "Prepare a SemVer update" }
 release = { enabled = false, handler = "none", description = "Release is not enabled." }
 
 [ui.menu]
-title = "Squigit OCR xtask"
+title = "OCR Runtime xtask"
 usage = "cargo xtask <command> [options]"
-

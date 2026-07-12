@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_memory::{ThreadStorage, OcrRegion, StorageError};
+use squigit_storage::{ThreadStorage, OcrRegion, StorageError};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};

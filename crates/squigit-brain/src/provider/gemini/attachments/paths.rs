@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use squigit_auth::ProfileStore;
-use squigit_memory::ThreadStorage;
+use squigit_storage::ThreadStorage;
 
 pub(crate) fn get_active_storage() -> Result<ThreadStorage, String> {
     let profile_store = ProfileStore::new().map_err(|e| e.to_string())?;

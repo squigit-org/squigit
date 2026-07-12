@@ -111,7 +111,7 @@ fn resolve_ocr_image_path(image_path: String) -> PathBuf {
         return path;
     }
 
-    let Some(base_dir) = squigit_memory::paths::base_config_dir() else {
+    let Some(base_dir) = squigit_storage::paths::base_config_dir() else {
         return path;
     };
 
@@ -137,10 +137,10 @@ pub async fn ocr_image(
 ) -> Result<String> {
     let current_exe = std::env::current_exe().unwrap_or_default();
     let resource_dir = current_exe.parent().unwrap_or(Path::new(""));
-    let (sidecar_path, runtime_dir) = squigit_ocr::sidecar::resolve_sidecar_path(resource_dir);
+    let (sidecar_path, runtime_dir) = ocr_runtime::sidecar::resolve_sidecar_path(resource_dir);
 
     // Let's prepare OcrRequest
-    let request = squigit_ocr::ocr::OcrRequest {
+    let request = ocr_runtime::ocr::OcrRequest {
         sidecar_path,
         runtime_dir,
         image_path: resolve_ocr_image_path(image_path),
@@ -148,7 +148,7 @@ pub async fn ocr_image(
         timeout_secs: None,
     };
 
-    let runtime = squigit_ocr::ocr::OcrRuntime::new();
+    let runtime = ocr_runtime::ocr::OcrRuntime::new();
     let result = runtime
         .run(request)
         .await
@@ -161,12 +161,12 @@ pub async fn ocr_image(
 // OCR Model Downloader
 // =============================================================================
 
-static MODEL_MANAGER: std::sync::OnceLock<squigit_ocr::models::ModelManager> =
+static MODEL_MANAGER: std::sync::OnceLock<ocr_runtime::models::ModelManager> =
     std::sync::OnceLock::new();
 
-fn get_model_manager() -> Result<&'static squigit_ocr::models::ModelManager> {
+fn get_model_manager() -> Result<&'static ocr_runtime::models::ModelManager> {
     if MODEL_MANAGER.get().is_none() {
-        let m = squigit_ocr::models::ModelManager::new()
+        let m = ocr_runtime::models::ModelManager::new()
             .map_err(|e| napi::Error::from_reason(e.to_string()))?;
         m.start_monitor();
         let _ = MODEL_MANAGER.set(m);

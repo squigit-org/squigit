@@ -10,7 +10,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0"
 fs2 = "0.4"
-squigit-memory = { path = "../../crates/squigit-memory" }
+squigit-storage = { path = "../../crates/squigit-storage" }
 squigit-auth = { path = "../../crates/squigit-auth" }
 dirs = "5.0"
 

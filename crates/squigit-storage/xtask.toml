@@ -2,8 +2,8 @@ schema = 2
 
 [context]
 kind = "component"
-name = "squigit-memory"
-display_name = "Squigit Memory"
+name = "squigit-storage"
+display_name = "Squigit Storage"
 category = "crates"
 order = 60
 
@@ -27,13 +27,12 @@ include = ["tests/*.rs", "tests/**/*.rs"]
 [operations]
 dev = { enabled = false, handler = "none", description = "Development mode is not enabled." }
 doctor = { enabled = true, handler = "cargo-crate", description = "Cargo Check this Crate" }
-build = { enabled = true, handler = "cargo-crate", requires_commit_sha = false, description = "Build Squigit Memory" }
+build = { enabled = true, handler = "cargo-crate", requires_commit_sha = false, description = "Build Squigit Storage" }
 test = { enabled = true, handler = "cargo-crate", description = "Run Crate test suites" }
 clean = { enabled = true, handler = "cargo-crate", description = "Remove Build artifacts" }
 bump = { enabled = true, handler = "cargo-crate", description = "Prepare a SemVer update" }
 release = { enabled = false, handler = "none", description = "Release is not enabled." }
 
 [ui.menu]
-title = "Squigit Memory xtask"
+title = "Squigit Storage xtask"
 usage = "cargo xtask <command> [options]"
-

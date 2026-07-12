@@ -45,7 +45,7 @@ impl ProfileStore {
     /// - macOS: `~/Library/Application Support/squigit/`
     /// - Windows: `%APPDATA%/squigit/`
     pub fn new() -> Result<Self> {
-        let base_dir = squigit_memory::paths::base_config_dir().ok_or(ProfileError::NoConfigDir)?;
+        let base_dir = squigit_storage::paths::base_config_dir().ok_or(ProfileError::NoConfigDir)?;
 
         Self::with_base_dir(base_dir)
     }

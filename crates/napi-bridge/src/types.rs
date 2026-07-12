@@ -4,7 +4,7 @@
 use napi_derive::napi;
 use squigit_auth::types::Profile as UserProfile;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
-use squigit_memory::{StoredImage, ThreadData, ThreadMessage, ThreadMetadata};
+use squigit_storage::{StoredImage, ThreadData, ThreadMessage, ThreadMetadata};
 
 #[napi(object)]
 pub struct NapiProfile {

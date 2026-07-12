@@ -10,7 +10,7 @@
 //! # Example
 //!
 //! ```no_run
-//! use squigit_memory::{ThreadStorage, ThreadMetadata, ThreadData};
+//! use squigit_storage::{ThreadStorage, ThreadMetadata, ThreadData};
 //!
 //! let storage = ThreadStorage::with_base_dir(std::env::temp_dir().join("squigit-doc-example")).unwrap();
 //!

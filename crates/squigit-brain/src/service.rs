@@ -5,7 +5,7 @@ use crate::context::builder::format_history_log;
 use crate::provider::gemini::transport::types::GeminiEvent;
 use crate::events::BrainEventSink;
 use crate::runtime::BrainRuntimeState;
-use squigit_memory::{ThreadData, ThreadMessage, ThreadMetadata, StoredImage};
+use squigit_storage::{ThreadData, ThreadMessage, ThreadMetadata, StoredImage};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
@@ -416,7 +416,7 @@ impl BrainEventSink for CollectingEventSink<'_> {
 }
 
 fn normalize_prompt_message_with_at_paths(
-    storage: &squigit_memory::ThreadStorage,
+    storage: &squigit_storage::ThreadStorage,
     input: &str,
 ) -> Result<String, String> {
     let mut changed = false;

@@ -10,7 +10,7 @@ use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, ExitCode, Stdio};
 
 use squigit_auth::ProfileStore;
-use squigit_memory::{ThreadData, ThreadMetadata, ThreadStorage};
+use squigit_storage::{ThreadData, ThreadMetadata, ThreadStorage};
 
 use crate::paths::QtPaths;
 

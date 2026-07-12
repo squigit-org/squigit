@@ -3,7 +3,7 @@
 
 use serde::Deserialize;
 use squigit_auth::ProfileStore;
-use squigit_memory::{StoredImage, ThreadStorage};
+use squigit_storage::{StoredImage, ThreadStorage};
 use std::path::Path;
 
 pub fn get_active_storage() -> Result<ThreadStorage, String> {

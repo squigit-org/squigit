@@ -4,7 +4,7 @@
 //! Everything pixel/image/clipboard — tone detection, clipboard R/W, image processing, imgbb upload.
 
 use squigit_auth::ProfileStore;
-use squigit_memory::{StoredImage, ThreadStorage};
+use squigit_storage::{StoredImage, ThreadStorage};
 
 // =============================================================================
 // Tone Detection

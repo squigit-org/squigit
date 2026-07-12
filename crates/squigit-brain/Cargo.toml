@@ -17,7 +17,7 @@ rand = "0.8"
 base64 = "0.22.1"
 tokio = { version = "1.37", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
-squigit-memory = { path = "../squigit-memory" }
+squigit-storage = { path = "../squigit-storage" }
 squigit-auth = { path = "../squigit-auth" }
 chrono = "0.4"
 iana-time-zone = "0.1"

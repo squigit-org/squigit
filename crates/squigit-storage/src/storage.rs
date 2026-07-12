@@ -86,7 +86,7 @@ impl ThreadStorage {
     /// # Example
     ///
     /// ```no_run
-    /// use squigit_memory::ThreadStorage;
+    /// use squigit_storage::ThreadStorage;
     /// use std::path::PathBuf;
     ///
     /// let threads_dir = PathBuf::from("/path/to/squigit/threads");
@@ -776,7 +776,7 @@ mod tests {
 
     fn make_test_storage() -> (ThreadStorage, PathBuf) {
         let base_dir =
-            std::env::temp_dir().join(format!("squigit-ocr-storage-test-{}", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("squigit-storage-test-{}", uuid::Uuid::new_v4()));
         let storage = ThreadStorage::with_base_dir(base_dir.clone()).expect("storage init");
         (storage, base_dir)
     }

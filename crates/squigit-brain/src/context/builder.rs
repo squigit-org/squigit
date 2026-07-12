@@ -7,7 +7,7 @@ use crate::context::loader::{
     interpolate, load_frame, load_image_brief_prompt, load_scenes, load_soul, load_system,
     load_title_prompt,
 };
-use squigit_memory::identity::load_rules;
+use squigit_storage::identity::load_rules;
 use std::collections::HashMap;
 
 /// Build the system prompt for the initial turn (with image).

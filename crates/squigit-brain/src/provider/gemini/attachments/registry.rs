@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 
 use chrono::{DateTime, Utc};
-use squigit_memory::{
+use squigit_storage::{
     ThreadAttachmentKind, ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadStorage,
     StorageError,
 };

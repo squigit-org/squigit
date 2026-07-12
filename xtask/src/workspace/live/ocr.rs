@@ -47,7 +47,7 @@ pub fn models(runtime: &Runtime) -> XtaskResult {
 fn run_harness(runtime: &Runtime, operation: &str, arguments: &[String]) -> XtaskResult {
     let cargo_arguments = cargo_arguments(operation, arguments);
     let config_dir = runtime.temp_root.join("live/ocr/userData");
-    println!("  $ cargo run -p squigit-ocr --example live_ocr_harness -- {operation} ...");
+    println!("  $ cargo run -p ocr-runtime --example live_ocr_harness -- {operation} ...");
     let status = Command::new("cargo")
         .args(&cargo_arguments)
         .current_dir(&runtime.repo_root)
@@ -72,7 +72,7 @@ fn cargo_arguments(operation: &str, arguments: &[String]) -> Vec<String> {
     let mut command = vec![
         "run".to_string(),
         "-p".to_string(),
-        "squigit-ocr".to_string(),
+        "ocr-runtime".to_string(),
         "--example".to_string(),
         "live_ocr_harness".to_string(),
         "--".to_string(),

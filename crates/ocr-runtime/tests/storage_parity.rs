@@ -1,8 +1,8 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_memory::{ThreadData, ThreadMetadata, ThreadStorage};
-use squigit_ocr::ocr::{boxes_to_storage_regions, persist_boxes_to_thread_storage, OcrBox};
+use squigit_storage::{ThreadData, ThreadMetadata, ThreadStorage};
+use ocr_runtime::ocr::{boxes_to_storage_regions, persist_boxes_to_thread_storage, OcrBox};
 
 #[test]
 fn cli_style_ocr_write_is_renderable_through_shared_thread_storage_frame() {

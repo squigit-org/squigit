@@ -41,8 +41,8 @@ pub async fn run_sidecar_version(command: String) -> Result<String> {
         if command == "squigit-ocr --version" {
             let current_exe = std::env::current_exe().unwrap_or_default();
             let resource_dir = current_exe.parent().unwrap_or(std::path::Path::new(""));
-            let (sidecar_path, _) = squigit_ocr::sidecar::resolve_sidecar_path(resource_dir);
-            return squigit_ocr::sidecar::read_sidecar_version(&sidecar_path)
+            let (sidecar_path, _) = ocr_runtime::sidecar::resolve_sidecar_path(resource_dir);
+            return ocr_runtime::sidecar::read_sidecar_version(&sidecar_path)
                 .map_err(|e| napi::Error::from_reason(e.to_string()));
         }
 
