@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(squigit-stt VERSION 0.2.0)
+project(squigit-stt-native VERSION 0.2.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,7 +56,7 @@ if(NOT EXISTS "${MINIAUDIO_DIR}/miniaudio.h")
     file(DOWNLOAD ${MINIAUDIO_URL} ${MINIAUDIO_DIR}/miniaudio.h)
 endif()
 
-set(WHISPER_MODELS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/models")
+set(WHISPER_MODELS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../models")
 set(WHISPER_REQUIRED_MODEL "${WHISPER_MODELS_DIR}/ggml-tiny.en.bin")
 if(NOT EXISTS "${WHISPER_REQUIRED_MODEL}")
     message(FATAL_ERROR
@@ -72,11 +72,11 @@ set(SOURCES
     src/inference.cpp
 )
 
-add_executable(squigit-stt ${SOURCES})
-target_compile_definitions(squigit-stt PRIVATE SQUIGIT_STT_VERSION=\"${PROJECT_VERSION}\")
+add_executable(whisper-stt-engine ${SOURCES})
+target_compile_definitions(whisper-stt-engine PRIVATE SQUIGIT_STT_ENGINE_VERSION=\"${PROJECT_VERSION}\")
 
 # Include directories
-target_include_directories(squigit-stt PRIVATE
+target_include_directories(whisper-stt-engine PRIVATE
     ${whisper_cpp_SOURCE_DIR}             # For whisper.h in v1.7.1 (it might be in root)
     ${whisper_cpp_SOURCE_DIR}/include     # For newer versions or if moved
     ${whisper_cpp_SOURCE_DIR}/ggml/include
@@ -85,24 +85,24 @@ target_include_directories(squigit-stt PRIVATE
 
 # Link libraries
 # Linking against the targets defined by FetchContent
-target_link_libraries(squigit-stt PRIVATE whisper nlohmann_json::nlohmann_json)
+target_link_libraries(whisper-stt-engine PRIVATE whisper nlohmann_json::nlohmann_json)
 
 if(APPLE)
-    set_target_properties(squigit-stt PROPERTIES
-        BUILD_RPATH "@loader_path/_internal"
-        INSTALL_RPATH "@loader_path/_internal"
+    set_target_properties(whisper-stt-engine PROPERTIES
+        BUILD_RPATH "@loader_path/.."
+        INSTALL_RPATH "@loader_path/.."
     )
 elseif(UNIX)
-    set_target_properties(squigit-stt PROPERTIES
-        BUILD_RPATH "\$ORIGIN/_internal"
-        INSTALL_RPATH "\$ORIGIN/_internal"
+    set_target_properties(whisper-stt-engine PROPERTIES
+        BUILD_RPATH "\$ORIGIN/.."
+        INSTALL_RPATH "\$ORIGIN/.."
     )
 endif()
 
 if(UNIX AND NOT APPLE)
-    target_link_libraries(squigit-stt PRIVATE pthread dl)
+    target_link_libraries(whisper-stt-engine PRIVATE pthread dl)
 endif()
 
 if(APPLE)
-    target_link_libraries(squigit-stt PRIVATE "-framework CoreAudio -framework AudioToolbox -framework CoreFoundation -framework Metal -framework Foundation")
+    target_link_libraries(whisper-stt-engine PRIVATE "-framework CoreAudio -framework AudioToolbox -framework CoreFoundation -framework Metal -framework Foundation")
 endif()

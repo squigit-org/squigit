@@ -9,23 +9,23 @@ order = 30
 
 [requirements]
 node = false
-rust = false
+rust = true
 python = false
 cmake = true
 qt = false
 
 [version]
 scheme = "semver"
-files = ["CMakeLists.txt", "CHANGELOG.md"]
+files = ["Cargo.toml", "native/CMakeLists.txt", "CHANGELOG.md"]
 include_root = true
-source = { path = "CMakeLists.txt", format = "regex", pattern = 'project\(squigit-stt VERSION\s+(?P<version>[0-9.]+)\)' }
+source = { path = "Cargo.toml", format = "toml", key = "package.version" }
 
 [release]
 tag = "stt-v{version}"
 
 [tests]
 root = "tests"
-include = ["tests/*.cpp", "tests/**/*.cpp"]
+include = ["tests/*.rs", "tests/**/*.rs", "tests/*.cpp", "tests/**/*.cpp"]
 
 [operations]
 dev = { enabled = false, handler = "none", description = "Development mode is not enabled for the native Whisper STT sidecar." }
@@ -39,4 +39,3 @@ release = { enabled = true, handler = "whisper-release", description = "Prepare 
 [ui.menu]
 title = "Whisper STT xtask"
 usage = "cargo xtask <command> [options]"
-

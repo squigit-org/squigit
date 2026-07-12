@@ -76,7 +76,8 @@ Paddle OCR uses explicit SemVer and updates:
 
 Whisper STT uses explicit SemVer and updates:
 
-- `sidecars/whisper-stt/CMakeLists.txt`
+- `sidecars/whisper-stt/Cargo.toml`
+- `sidecars/whisper-stt/native/CMakeLists.txt`
 - `sidecars/whisper-stt/CHANGELOG.md`
 
 Qt Capture uses explicit SemVer and updates its Cargo and native CMake project versions. It has no changelog.
