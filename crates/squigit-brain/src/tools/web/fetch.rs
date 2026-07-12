@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use url::Url;
 
 use super::constants::{MAX_FETCH_BYTES, MAX_REDIRECTS, MAX_SUMMARY_WORDS};
-use super::favicon::{cache_favicons_for_sources, citation_source};
+use super::favicon::{citation_source, hydrate_favicons_for_sources};
 use super::html::{clean_page_text, compact_summary, extract_title};
 use super::retry::{emit_progress, with_retries_with_progress};
 use super::transport::{read_capped_response_body, send_with_transport, TransportClients};
@@ -111,7 +111,7 @@ pub(crate) async fn run_url_fetch_once(
     let title = extract_title(&html, &canonical);
     let summary = compact_summary(&text, MAX_SUMMARY_WORDS);
     let mut sources = vec![citation_source(title, canonical.clone(), summary.clone())];
-    cache_favicons_for_sources(&mut sources).await;
+    hydrate_favicons_for_sources(&mut sources).await;
 
     let context = format!(
         "[Fetched page: {}]\n- {}\n\n{}",

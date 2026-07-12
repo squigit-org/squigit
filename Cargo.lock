@@ -3431,6 +3431,7 @@ dependencies = [
 name = "squigit-brain"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "futures-util",
  "iana-time-zone",

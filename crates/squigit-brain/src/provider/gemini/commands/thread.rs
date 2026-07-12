@@ -33,6 +33,30 @@ use crate::runtime::BrainRuntimeState;
 const DEFAULT_INITIAL_USER_PROMPT: &str =
     "Analyze this image and explain it or discuss fixes about the issue it describes.";
 
+fn strip_visual_citation_payloads(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            map.remove("favicon_url");
+            map.remove("favicon_base64");
+            for child in map.values_mut() {
+                strip_visual_citation_payloads(child);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                strip_visual_citation_payloads(item);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn model_safe_tool_response(value: &serde_json::Value) -> serde_json::Value {
+    let mut safe = value.clone();
+    strip_visual_citation_payloads(&mut safe);
+    safe
+}
+
 fn normalize_attachment_lookup_key(path: &str) -> String {
     let trimmed = path.trim();
     trimmed
@@ -609,6 +633,7 @@ pub async fn stream_gemini_thread_v2(
                     message: dispatch_result.message.clone(),
                 },
             );
+            let model_response_value = model_safe_tool_response(&dispatch_result.response_value);
 
             if dispatch_result.is_failure {
                 consecutive_tool_failures += 1;
@@ -664,7 +689,7 @@ pub async fn stream_gemini_thread_v2(
                 parts: vec![GeminiPart {
                     function_response: Some(GeminiFunctionResponse {
                         name: function_call.name.clone(),
-                        response: dispatch_result.response_value,
+                        response: model_response_value,
                     }),
                     ..Default::default()
                 }],

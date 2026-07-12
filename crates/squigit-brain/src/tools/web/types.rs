@@ -9,7 +9,9 @@ pub struct CitationSource {
     pub url: String,
     pub summary: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub favicon: Option<String>,
+    pub favicon_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub favicon_base64: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

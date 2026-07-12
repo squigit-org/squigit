@@ -20,7 +20,6 @@ import {
   TextShimmer,
 } from "@/components/ui";
 import { useMediaContext } from "@/app/context/AppMedia";
-import { platform } from "@/platform";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -163,30 +162,25 @@ function toCitationPreview(summary: string): string {
   return `${tokens.slice(0, CITATION_PREVIEW_TOKENS).join(" ")}...`;
 }
 
-function resolveCitationFavicon(
-  favicon: string | undefined,
+function resolveCitationFaviconSources(
+  faviconBase64: string | undefined,
+  faviconUrl: string | undefined,
   domain: string,
-): string {
+): { src: string; fallbackSrc?: string } {
   const fallback = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-  const candidate = favicon?.trim();
-  if (!candidate) {
-    return fallback;
-  }
+  const primary = faviconBase64?.trim() || faviconUrl?.trim() || fallback;
+  const fallbackSrc = primary === fallback ? undefined : faviconUrl?.trim() || fallback;
 
   if (
-    /^https?:\/\//iu.test(candidate) ||
-    /^data:/iu.test(candidate) ||
-    /^asset:/iu.test(candidate) ||
-    /^tauri:/iu.test(candidate)
+    /^https?:\/\//iu.test(primary) ||
+    /^data:/iu.test(primary) ||
+    /^asset:/iu.test(primary) ||
+    /^tauri:/iu.test(primary)
   ) {
-    return candidate;
+    return { src: primary, fallbackSrc };
   }
 
-  try {
-    return platform.convertFileSrc(candidate);
-  } catch {
-    return fallback;
-  }
+  return { src: fallback };
 }
 
 function getToolStepThoughtSeconds(step: ToolStep): number {
@@ -323,9 +317,14 @@ const WebsiteCitationChip: React.FC<{
   const anchorRef = useRef<HTMLAnchorElement>(null);
 
   const domain = useMemo(() => getCitationDomain(citation.url), [citation.url]);
-  const faviconUrl = useMemo(
-    () => resolveCitationFavicon(citation.favicon, domain),
-    [citation.favicon, domain],
+  const favicon = useMemo(
+    () =>
+      resolveCitationFaviconSources(
+        citation.favicon_base64,
+        citation.favicon_url,
+        domain,
+      ),
+    [citation.favicon_base64, citation.favicon_url, domain],
   );
   const preview = useMemo(
     () => toCitationPreview(citation.summary || ""),
@@ -345,7 +344,8 @@ const WebsiteCitationChip: React.FC<{
         animate={animate}
         visual={{
           kind: "favicon",
-          src: faviconUrl,
+          src: favicon.src,
+          fallbackSrc: favicon.fallbackSrc,
         }}
         onMouseEnter={() => setShowTip(true)}
         onMouseLeave={() => setShowTip(false)}
@@ -356,7 +356,7 @@ const WebsiteCitationChip: React.FC<{
         parentRef={anchorRef}
         show={showTip}
         headerUrl={citation.url}
-        headerIconUrl={faviconUrl}
+        headerIconUrl={favicon.src}
         body={preview}
       />
     </>

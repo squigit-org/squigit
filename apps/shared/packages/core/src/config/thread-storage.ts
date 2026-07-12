@@ -28,7 +28,8 @@ export interface ThreadCitation {
   title: string;
   url: string;
   summary: string;
-  favicon?: string;
+  favicon_url?: string;
+  favicon_base64?: string;
 }
 
 /** Tool timeline step metadata persisted with assistant messages. */

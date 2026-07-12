@@ -4,7 +4,7 @@
 use reqwest::{header, StatusCode};
 
 use super::constants::{DDG_SEARCH_URL, DEFAULT_MAX_RESULTS, MAX_FETCH_BYTES, MOJEEK_SEARCH_URL};
-use super::favicon::cache_favicons_for_sources;
+use super::favicon::hydrate_favicons_for_sources;
 use super::html::{
     build_query_result, looks_like_ddg_challenge_page, looks_like_mojeek_block_page,
     parse_ddg_results, parse_mojeek_results, rerank_sources,
@@ -140,7 +140,7 @@ where
         .await
         {
             Ok(mut sources) => {
-                cache_favicons_for_sources(&mut sources).await;
+                hydrate_favicons_for_sources(&mut sources).await;
                 println!(
                     "[WebSearch] backend={} success results={}",
                     backend.as_str(),

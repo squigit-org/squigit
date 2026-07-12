@@ -121,7 +121,8 @@ mod tests {
                 title: "Example".to_string(),
                 url: "https://example.com:443/path#section".to_string(),
                 summary: "Summary".to_string(),
-                favicon: None,
+                favicon_url: None,
+                favicon_base64: None,
             }],
         };
 

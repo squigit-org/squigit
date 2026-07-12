@@ -52,7 +52,8 @@ export function createToolEventHandler(options: ToolEventHandlerOptions) {
         title?: string;
         url?: string;
         summary?: string;
-        favicon?: string;
+        favicon_url?: string;
+        favicon_base64?: string;
       };
 
       if (!source.url || !source.title) {
@@ -63,9 +64,15 @@ export function createToolEventHandler(options: ToolEventHandlerOptions) {
         title: String(source.title),
         url: String(source.url),
         summary: String(source.summary || ""),
-        favicon:
-          typeof source.favicon === "string" && source.favicon.trim().length > 0
-            ? source.favicon
+        favicon_url:
+          typeof source.favicon_url === "string" &&
+          source.favicon_url.trim().length > 0
+            ? source.favicon_url
+            : undefined,
+        favicon_base64:
+          typeof source.favicon_base64 === "string" &&
+          source.favicon_base64.trim().length > 0
+            ? source.favicon_base64
             : undefined,
       });
     }

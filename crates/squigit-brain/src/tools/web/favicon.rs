@@ -1,13 +1,11 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use base64::{engine::general_purpose, Engine as _};
 use futures_util::future::join_all;
 use reqwest::{header, redirect::Policy};
-use squigit_auth::ProfileStore;
-use squigit_memory::ThreadStorage;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Duration;
 use url::Url;
 
@@ -23,13 +21,7 @@ pub(crate) fn favicon_for_url(url: &str) -> Option<String> {
         .map(|domain| format!("https://www.google.com/s2/favicons?domain={}&sz=32", domain))
 }
 
-fn active_thread_storage() -> Option<ThreadStorage> {
-    let profile_store = ProfileStore::new().ok()?;
-    let threads_dir = profile_store.get_threads_dir();
-    ThreadStorage::with_base_dir(threads_dir).ok()
-}
-
-fn favicon_extension_from_content_type(content_type: &str) -> Option<&'static str> {
+fn favicon_mime_from_content_type(content_type: &str) -> Option<&'static str> {
     let normalized = content_type
         .split(';')
         .next()
@@ -38,16 +30,16 @@ fn favicon_extension_from_content_type(content_type: &str) -> Option<&'static st
         .to_ascii_lowercase();
 
     match normalized.as_str() {
-        "image/png" => Some("png"),
-        "image/jpeg" => Some("jpg"),
-        "image/webp" => Some("webp"),
-        "image/svg+xml" => Some("svg"),
-        "image/x-icon" | "image/vnd.microsoft.icon" => Some("ico"),
+        "image/png" => Some("image/png"),
+        "image/jpeg" => Some("image/jpeg"),
+        "image/webp" => Some("image/webp"),
+        "image/svg+xml" => Some("image/svg+xml"),
+        "image/x-icon" | "image/vnd.microsoft.icon" => Some("image/x-icon"),
         _ => None,
     }
 }
 
-fn favicon_extension_from_url(url: &str) -> Option<String> {
+fn favicon_mime_from_url(url: &str) -> Option<&'static str> {
     let parsed = Url::parse(url).ok()?;
     let ext = Path::new(parsed.path())
         .extension()
@@ -60,12 +52,18 @@ fn favicon_extension_from_url(url: &str) -> Option<String> {
         return None;
     }
 
-    Some(ext)
+    match ext.as_str() {
+        "png" => Some("image/png"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "webp" => Some("image/webp"),
+        "svg" => Some("image/svg+xml"),
+        "ico" => Some("image/x-icon"),
+        _ => None,
+    }
 }
 
-async fn fetch_and_store_favicon(
+async fn fetch_favicon_base64(
     client: reqwest::Client,
-    storage: Arc<ThreadStorage>,
     favicon_url: String,
 ) -> (String, Option<String>) {
     let response = match client
@@ -109,28 +107,20 @@ async fn fetch_and_store_favicon(
         return (favicon_url, None);
     }
 
-    let extension = content_type
+    let mime = content_type
         .as_deref()
-        .and_then(favicon_extension_from_content_type)
-        .map(str::to_string)
-        .or_else(|| favicon_extension_from_url(&favicon_url))
-        .unwrap_or_else(|| "png".to_string());
+        .and_then(favicon_mime_from_content_type)
+        .or_else(|| favicon_mime_from_url(&favicon_url))
+        .unwrap_or("image/png");
+    let encoded = general_purpose::STANDARD.encode(bytes.as_ref());
 
-    match storage.store_file(bytes.as_ref(), &extension, None) {
-        Ok(stored) => (favicon_url, Some(stored.path)),
-        Err(_) => (favicon_url, None),
-    }
+    (favicon_url, Some(format!("data:{};base64,{}", mime, encoded)))
 }
 
-pub(crate) async fn cache_favicons_for_sources(sources: &mut [CitationSource]) {
+pub(crate) async fn hydrate_favicons_for_sources(sources: &mut [CitationSource]) {
     if sources.is_empty() {
         return;
     }
-
-    let Some(storage) = active_thread_storage() else {
-        return;
-    };
-    let storage = Arc::new(storage);
 
     let favicon_client = match reqwest::Client::builder()
         .redirect(Policy::limited(MAX_REDIRECTS))
@@ -148,7 +138,7 @@ pub(crate) async fn cache_favicons_for_sources(sources: &mut [CitationSource]) {
 
     for source in sources.iter() {
         let Some(favicon_url) = source
-            .favicon
+            .favicon_url
             .as_deref()
             .map(str::trim)
             .filter(|v| is_remote_http_url(v))
@@ -166,13 +156,13 @@ pub(crate) async fn cache_favicons_for_sources(sources: &mut [CitationSource]) {
     }
 
     let tasks = unique_urls.into_iter().map(|favicon_url| {
-        fetch_and_store_favicon(favicon_client.clone(), Arc::clone(&storage), favicon_url)
+        fetch_favicon_base64(favicon_client.clone(), favicon_url)
     });
-    let cached_favicon_paths = join_all(tasks).await.into_iter().collect::<HashMap<_, _>>();
+    let hydrated_favicons = join_all(tasks).await.into_iter().collect::<HashMap<_, _>>();
 
     for source in sources.iter_mut() {
         let Some(favicon_url) = source
-            .favicon
+            .favicon_url
             .as_deref()
             .map(str::trim)
             .filter(|v| is_remote_http_url(v))
@@ -180,8 +170,8 @@ pub(crate) async fn cache_favicons_for_sources(sources: &mut [CitationSource]) {
             continue;
         };
 
-        if let Some(Some(local_path)) = cached_favicon_paths.get(favicon_url) {
-            source.favicon = Some(local_path.clone());
+        if let Some(Some(favicon_base64)) = hydrated_favicons.get(favicon_url) {
+            source.favicon_base64 = Some(favicon_base64.clone());
         }
     }
 }
@@ -192,6 +182,7 @@ pub(crate) fn citation_source(title: String, url: String, summary: String) -> Ci
         title,
         url,
         summary,
-        favicon,
+        favicon_url: favicon,
+        favicon_base64: None,
     }
 }

@@ -10,7 +10,8 @@ export interface Citation {
   title: string;
   url: string;
   summary: string;
-  favicon?: string;
+  favicon_url?: string;
+  favicon_base64?: string;
 }
 
 export interface ToolStep {

@@ -85,7 +85,9 @@ pub struct CitationSource {
     pub url: String,
     pub summary: String,
     #[serde(default)]
-    pub favicon: Option<String>,
+    pub favicon_url: Option<String>,
+    #[serde(default)]
+    pub favicon_base64: Option<String>,
 }
 
 /// Tool-step metadata persisted with a message.

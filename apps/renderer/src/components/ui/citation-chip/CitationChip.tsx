@@ -13,6 +13,7 @@ type CitationChipVisual =
   | {
       kind: "favicon";
       src: string;
+      fallbackSrc?: string;
       alt?: string;
     }
   | {
@@ -76,8 +77,22 @@ export const CitationChip = forwardRef<HTMLAnchorElement, CitationChipProps>(
     },
     ref,
   ) => {
+    const [faviconSrc, setFaviconSrc] = useState(
+      visual.kind === "favicon" ? visual.src : "",
+    );
     const [hideFavicon, setHideFavicon] = useState(false);
     const resolvedVariant = variant || (visual.kind === "favicon" ? "site" : "file");
+
+    React.useEffect(() => {
+      if (visual.kind !== "favicon") {
+        setFaviconSrc("");
+        setHideFavicon(false);
+        return;
+      }
+
+      setFaviconSrc(visual.src);
+      setHideFavicon(false);
+    }, [visual]);
 
     return (
       <a
@@ -96,10 +111,19 @@ export const CitationChip = forwardRef<HTMLAnchorElement, CitationChipProps>(
         {visual.kind === "favicon" ? (
           !hideFavicon && (
             <img
-              src={visual.src}
+              src={faviconSrc}
               alt={visual.alt || ""}
               className={styles.iconImage}
-              onError={() => setHideFavicon(true)}
+              onError={() => {
+                if (
+                  visual.fallbackSrc &&
+                  faviconSrc !== visual.fallbackSrc
+                ) {
+                  setFaviconSrc(visual.fallbackSrc);
+                  return;
+                }
+                setHideFavicon(true);
+              }}
             />
           )
         ) : visual.kind === "loading" ? (
