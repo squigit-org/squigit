@@ -138,6 +138,19 @@ export interface NapiStreamEvent {
   result?: string
 }
 
+export interface NapiSttEvent {
+  eventType: string
+  text?: string
+  isFinal?: boolean
+  status?: string
+  message?: string
+}
+
+export interface NapiSttOptions {
+  model?: string
+  language?: string
+}
+
 export interface NapiThreadData {
   metadata: NapiThreadMetadata
   messages: Array<NapiThreadMessage>
@@ -161,19 +174,6 @@ export interface NapiThreadMetadata {
   ocrLang?: string
   imageTone?: string
   reverseImageSearchUrl?: string
-}
-
-export interface NapiSttOptions {
-  model?: string
-  language?: string
-}
-
-export interface NapiSttEvent {
-  eventType: string
-  text?: string
-  isFinal?: boolean
-  status?: string
-  message?: string
 }
 
 export declare function ocrImage(imagePath: string, isBase64: boolean, modelName: string): Promise<string>
