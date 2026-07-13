@@ -486,7 +486,6 @@ fn cmake_configure_args(source: &Path, build: &Path, qt_prefix: Option<&Path>) -
         OsString::from("-B"),
         build.as_os_str().to_os_string(),
         OsString::from("-DCMAKE_BUILD_TYPE=Debug"),
-        OsString::from("-DFETCHCONTENT_FULLY_DISCONNECTED=ON"),
     ];
     if let Some(prefix) = qt_prefix {
         args.push(OsString::from(format!(
@@ -1040,7 +1039,6 @@ mod tests {
         .into_iter()
         .map(|value| value.to_string_lossy().into_owned())
         .collect::<Vec<_>>();
-        assert!(args.contains(&"-DFETCHCONTENT_FULLY_DISCONNECTED=ON".to_string()));
         assert!(args.contains(&"-DCMAKE_PREFIX_PATH=/opt/Qt/6.8.0/gcc_64".to_string()));
     }
 

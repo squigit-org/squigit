@@ -157,7 +157,7 @@ pub fn default_ocr_annotations() -> OcrAnnotations {
 }
 
 /// LLM context window state for a thread.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ContextWindow {
     pub tokens_used: u32,
     #[serde(default)]
@@ -166,18 +166,8 @@ pub struct ContextWindow {
     pub compacted_context: Option<String>,
 }
 
-impl Default for ContextWindow {
-    fn default() -> Self {
-        Self {
-            tokens_used: 0,
-            compacted_at: None,
-            compacted_context: None,
-        }
-    }
-}
-
 /// Reverse image search cache for the core thread image.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ReverseImageSearchCache {
     #[serde(default)]
     pub imgbb_url: Option<String>,
@@ -185,16 +175,6 @@ pub struct ReverseImageSearchCache {
     pub google_lens_url: Option<String>,
     #[serde(default)]
     pub created_at: Option<DateTime<Utc>>,
-}
-
-impl Default for ReverseImageSearchCache {
-    fn default() -> Self {
-        Self {
-            imgbb_url: None,
-            google_lens_url: None,
-            created_at: None,
-        }
-    }
 }
 
 fn default_image_tone() -> Option<String> {

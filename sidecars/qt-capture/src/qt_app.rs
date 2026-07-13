@@ -199,8 +199,7 @@ This usually indicates a native crash during startup/capture."
                     .map(|stored| (storage, stored))
             })
             .map(|(storage, stored)| {
-                let metadata =
-                    ThreadMetadata::new("New thread".to_string(), stored.hash.clone(), None);
+                let metadata = ThreadMetadata::new("New thread".to_string(), stored.hash.clone());
                 let thread = ThreadData::new(metadata.clone());
                 let _ = storage.save_thread(&thread);
                 let _ = std::fs::remove_file(path);
