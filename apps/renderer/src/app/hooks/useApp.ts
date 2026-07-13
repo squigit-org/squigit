@@ -7,17 +7,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { platform } from "@/platform";
 import {
-  AUTO_OCR_DISABLED_MODEL_ID,
+  type OcrAnnotationEntry,
   type OcrAnnotations,
+  type OcrModelAnnotation,
   appendThreadMessage,
   overwriteThreadMessages,
+  resolveOcrModelId,
 } from "@squigit/core/config";
 import type { Attachment } from "@squigit/core/brain/attachments";
 import { github } from "@squigit/core/services/github";
-import {
-  resolveOcrModelId,
-  SUPPORTED_OCR_MODEL_IDS,
-} from "@squigit/core/config";
 import {
   getPendingUpdate,
   useAuth,
@@ -39,46 +37,26 @@ import { useAppPanel } from "./useAppPanel";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
-const getThreadOcrModel = (
-  annotations: OcrAnnotations,
-  metadataOcrLanguage?: string,
-): string => {
-  const hasModelData = (modelId?: string) =>
-    !!modelId &&
-    modelId !== AUTO_OCR_DISABLED_MODEL_ID &&
-    Array.isArray(annotations[modelId]);
+const isScannedOcrEntry = (
+  entry: OcrAnnotationEntry | undefined,
+): entry is OcrModelAnnotation =>
+  !!entry && !Array.isArray(entry) && !!entry.scanned_at;
 
-  const resolvedMetadataModel = resolveOcrModelId(metadataOcrLanguage, "");
-  if (resolvedMetadataModel && hasModelData(resolvedMetadataModel)) {
-    return resolvedMetadataModel;
-  }
+const getThreadOcrModel = (annotations: OcrAnnotations): string => {
+  let latestModelId = "";
+  let latestScannedAt = -Infinity;
 
-  const scannedModelSet = new Set(
-    Object.entries(annotations)
-      .filter(
-        ([modelId, regions]) =>
-          modelId !== AUTO_OCR_DISABLED_MODEL_ID && Array.isArray(regions),
-      )
-      .map(([modelId]) => resolveOcrModelId(modelId, ""))
-      .filter((modelId) => !!modelId),
-  );
+  for (const [modelId, entry] of Object.entries(annotations)) {
+    if (!isScannedOcrEntry(entry)) continue;
 
-  for (const modelId of SUPPORTED_OCR_MODEL_IDS) {
-    if (scannedModelSet.has(modelId)) {
-      return modelId;
+    const scannedAt = new Date(entry.scanned_at || 0).getTime();
+    if (scannedAt > latestScannedAt) {
+      latestModelId = modelId;
+      latestScannedAt = scannedAt;
     }
   }
 
-  const fallbackScannedModel = Object.keys(annotations)
-    .filter(
-      (modelId) =>
-        modelId !== AUTO_OCR_DISABLED_MODEL_ID && hasModelData(modelId),
-    )
-    .sort()[0];
-
-  return fallbackScannedModel
-    ? resolveOcrModelId(fallbackScannedModel, "")
-    : "";
+  return resolveOcrModelId(latestModelId, "");
 };
 
 function getAttachmentAnalysisCounts(items: Attachment[]) {
@@ -101,6 +79,7 @@ export const useApp = () => {
   const activeProfileRef = useRef<any>(null);
   const systemRef = useRef(system);
   const threadHistoryRef = useRef<any>(null);
+  const threadOcrModelMemoryRef = useRef<Record<string, string>>({});
   const agreedToTermsRef = useRef(false);
   const hasShownCaptureTerminalHintRef = useRef(false);
 
@@ -246,8 +225,13 @@ export const useApp = () => {
     thread,
     ocr,
     system,
-    getSafeOcrModel: () => getThreadOcrModel(ocr.ocrData, undefined),
+    getSafeOcrModel: () => getThreadOcrModel(ocr.ocrData),
   });
+
+  const getRememberedThreadOcrModel = useCallback((threadId: string) => {
+    return threadOcrModelMemoryRef.current[threadId] || "";
+  }, []);
+
   const navigation = useAppNavigation({
     thread,
     threadHistory,
@@ -257,6 +241,7 @@ export const useApp = () => {
     isActiveThreadBusy,
     closeMediaViewer: media.closeMediaViewer,
     runWithBusyGuard: busyGuard.runWithBusyGuard,
+    getRememberedThreadOcrModel,
   });
   const capture = useAppCapture({
     system,
@@ -304,9 +289,9 @@ export const useApp = () => {
     system.wizardState?.isFinished,
   ]);
 
-  const handleUpdateLensUrl = useCallback(
-    (url: string | null) => {
-      ocr.handleUpdateLensUrl(url);
+  const handleUpdateLensCache = useCallback(
+    (cache: Parameters<typeof ocr.handleUpdateLensCache>[0]) => {
+      ocr.handleUpdateLensCache(cache);
     },
     [ocr],
   );
@@ -320,6 +305,25 @@ export const useApp = () => {
       ocr.handleUpdateOCRData(threadId, modelId, data);
     },
     [ocr],
+  );
+
+  const handleOcrModelChange = useCallback(
+    (model: string) => {
+      system.setSessionOcrLanguage(model);
+
+      const activeId = threadHistory.activeSessionId;
+      if (!activeId || isOnboardingId(activeId)) {
+        return;
+      }
+
+      const resolvedModel = resolveOcrModelId(model, "");
+      if (resolvedModel) {
+        threadOcrModelMemoryRef.current[activeId] = resolvedModel;
+      } else {
+        delete threadOcrModelMemoryRef.current[activeId];
+      }
+    },
+    [system, threadHistory.activeSessionId],
   );
 
   const trackPendingPromptAttachmentAnalysis = useCallback(
@@ -445,8 +449,9 @@ export const useApp = () => {
     setShowLoginRequiredDialog: dialogs.setShowLoginRequiredDialog,
     setShowCaptureDeniedDialog: dialogs.setShowCaptureDeniedDialog,
     performLogout,
-    handleUpdateLensUrl,
+    handleUpdateLensCache,
     handleUpdateOCRData,
+    handleOcrModelChange,
     handleImageReady: capture.handleImageReady,
     handleSelectThread: navigation.handleSelectThread,
     handleNewSession: navigation.handleNewSession,

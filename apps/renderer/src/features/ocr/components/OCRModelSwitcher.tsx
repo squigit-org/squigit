@@ -7,7 +7,6 @@
 import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check, PackagePlus } from "lucide-react";
-import { DEFAULT_OCR_MODEL_ID } from "@squigit/core/config";
 import { SettingsSection } from "@/features/settings";
 import { getLanguageCode } from "../ocr-models.types";
 import { useModelsStore } from "../ocr-models.store";
@@ -80,15 +79,11 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
   const isCurrentModelValid = installedModels.some(
     (m) => m.id === currentOcrModel,
   );
-  const fallbackModel =
-    installedModels.find((model) => model.id === DEFAULT_OCR_MODEL_ID)?.id ||
-    installedModels[0]?.id ||
-    "";
   const effectiveModel = !currentOcrModel
     ? ""
     : isCurrentModelValid
       ? currentOcrModel
-      : fallbackModel;
+      : "";
 
   const dropdownContent = (
     <div

@@ -32,11 +32,11 @@ import {
   type DialogContent,
 } from "@squigit/core/helpers";
 import {
-  AUTO_OCR_DISABLED_MODEL_ID,
   cancelOcrJob,
+  type OcrAnnotationEntry,
   type OcrAnnotations,
+  type ReverseImageSearchCache,
   saveImageTone,
-  saveOcrData,
 } from "@squigit/core/config";
 
 interface OCRBox {
@@ -53,7 +53,7 @@ export interface ImageArtifactProps {
     tone?: string;
   } | null;
   sessionLensUrl: string | null;
-  setSessionLensUrl: (url: string) => void;
+  onReverseImageSearchCache: (cache: ReverseImageSearchCache) => void;
   threadTitle: string;
   onDescribeEdits: (description: string) => void;
   isVisible: boolean;
@@ -94,10 +94,20 @@ const normalizeToneResult = (value: string): ImageToneMode => {
   return "dark";
 };
 
+const getOcrEntryData = (entry: OcrAnnotationEntry | undefined) => {
+  if (!entry || Array.isArray(entry)) {
+    return [];
+  }
+  return entry.ocr_data || [];
+};
+
+const hasScannedOcrEntry = (entry: OcrAnnotationEntry | undefined) =>
+  !!entry && !Array.isArray(entry) && !!entry.scanned_at;
+
 export const ImageArtifact: React.FC<ImageArtifactProps> = ({
   startupImage,
   sessionLensUrl,
-  setSessionLensUrl,
+  onReverseImageSearchCache,
   isVisible,
   ocrData,
   onUpdateOCRData,
@@ -253,11 +263,11 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     useReverseImageSearch(
       startupImage,
       sessionLensUrl,
-      setSessionLensUrl,
+      onReverseImageSearchCache,
       activeProfileId,
     );
 
-  const currentModelData = ocrData[currentOcrModel] || [];
+  const currentModelData = getOcrEntryData(ocrData[currentOcrModel]);
 
   const displayData = currentModelData.map((d) => ({
     text: d.text,
@@ -272,10 +282,6 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
   const isTranslateDisabled = isNavigating
     ? lastTranslateDisabledRef.current
     : displayData.length === 0;
-
-  const autoOcrDisabledForThread = Array.isArray(
-    ocrData[AUTO_OCR_DISABLED_MODEL_ID],
-  );
 
   const { svgRef, handleTextMouseDown } = useOCRSelection({
     data: displayData,
@@ -360,7 +366,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
         return;
       }
 
-      if (ocrData[modelToUse] && !options?.force) {
+      if (hasScannedOcrEntry(ocrData[modelToUse]) && !options?.force) {
         console.log(
           `[ImageArtifact] Data already exists for model: ${modelToUse}`,
         );
@@ -506,7 +512,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
         onOcrModelChange(resolvedModel);
       }
 
-      const hasCachedData = Array.isArray(ocrData[resolvedModel]);
+      const hasCachedData = hasScannedOcrEntry(ocrData[resolvedModel]);
       if (!hasCachedData) {
         restartScanForModel(resolvedModel, false);
       }
@@ -524,11 +530,6 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
     setLoading(false);
     onOcrModelChange("");
     await cancelOcrJob();
-    if (threadId) {
-      saveOcrData(threadId, AUTO_OCR_DISABLED_MODEL_ID, []).catch((err) =>
-        console.error("Failed to persist OCR auto-run opt-out:", err),
-      );
-    }
   };
 
   useEffect(() => {
@@ -537,8 +538,7 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
       startupImage &&
       ocrEnabled &&
       currentOcrModel &&
-      !ocrData[currentOcrModel] &&
-      !autoOcrDisabledForThread &&
+      !hasScannedOcrEntry(ocrData[currentOcrModel]) &&
       !loading &&
       !errorDialog &&
       !hasScannedRef.current &&
@@ -549,7 +549,6 @@ export const ImageArtifact: React.FC<ImageArtifactProps> = ({
   }, [
     startupImage,
     ocrData,
-    autoOcrDisabledForThread,
     loading,
     errorDialog,
     scan,

@@ -7,16 +7,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
-  resolveOcrModelId,
-  SUPPORTED_OCR_MODEL_IDS,
-} from "@squigit/core/config";
-import {
-  AUTO_OCR_DISABLED_MODEL_ID,
   cancelOcrJob,
+  EMPTY_STATE_ASSET_ID,
   getImagePath,
   loadThread,
   updateThreadMetadata,
+  type OcrAnnotationEntry,
   type OcrAnnotations,
+  type OcrModelAnnotation,
+  resolveOcrModelId,
   ThreadCitation,
   ThreadToolStep,
 } from "@squigit/core/config";
@@ -35,53 +34,33 @@ type SearchRevealTarget = {
   requestedAt: number;
 };
 
-const getThreadOcrModel = (
-  annotations: OcrAnnotations,
-  metadataOcrLanguage?: string,
-): string => {
-  const hasModelData = (modelId?: string) =>
-    !!modelId &&
-    modelId !== AUTO_OCR_DISABLED_MODEL_ID &&
-    Array.isArray(annotations[modelId]);
+const isScannedOcrEntry = (
+  entry: OcrAnnotationEntry | undefined,
+): entry is OcrModelAnnotation =>
+  !!entry && !Array.isArray(entry) && !!entry.scanned_at;
 
-  const resolvedMetadataModel = resolveOcrModelId(metadataOcrLanguage, "");
-  if (resolvedMetadataModel && hasModelData(resolvedMetadataModel)) {
-    return resolvedMetadataModel;
-  }
+const getThreadOcrModel = (annotations: OcrAnnotations): string => {
+  let latestModelId = "";
+  let latestScannedAt = -Infinity;
 
-  const scannedModelSet = new Set(
-    Object.entries(annotations)
-      .filter(
-        ([modelId, regions]) =>
-          modelId !== AUTO_OCR_DISABLED_MODEL_ID && Array.isArray(regions),
-      )
-      .map(([modelId]) => resolveOcrModelId(modelId, ""))
-      .filter((modelId) => !!modelId),
-  );
+  for (const [modelId, entry] of Object.entries(annotations)) {
+    if (!isScannedOcrEntry(entry)) continue;
 
-  for (const modelId of SUPPORTED_OCR_MODEL_IDS) {
-    if (scannedModelSet.has(modelId)) {
-      return modelId;
+    const scannedAt = new Date(entry.scanned_at || 0).getTime();
+    if (scannedAt > latestScannedAt) {
+      latestModelId = modelId;
+      latestScannedAt = scannedAt;
     }
   }
 
-  const fallbackScannedModel = Object.keys(annotations)
-    .filter(
-      (modelId) =>
-        modelId !== AUTO_OCR_DISABLED_MODEL_ID && hasModelData(modelId),
-    )
-    .sort()[0];
-
-  return fallbackScannedModel
-    ? resolveOcrModelId(fallbackScannedModel, "")
-    : "";
+  return resolveOcrModelId(latestModelId, "");
 };
 
 const withNavigationOcrGuard = (
   annotations: OcrAnnotations,
 ): OcrAnnotations => ({
   ...annotations,
-  [AUTO_OCR_DISABLED_MODEL_ID]: [],
+  [EMPTY_STATE_ASSET_ID]: [],
 });
 
 function normalizeStoredCitations(
@@ -146,6 +125,7 @@ export const useAppNavigation = ({
   isActiveThreadBusy,
   closeMediaViewer,
   runWithBusyGuard,
+  getRememberedThreadOcrModel,
 }: {
   thread: any;
   threadHistory: any;
@@ -155,6 +135,7 @@ export const useAppNavigation = ({
   isActiveThreadBusy: boolean;
   closeMediaViewer: () => void;
   runWithBusyGuard: (action: () => void | Promise<void>) => void;
+  getRememberedThreadOcrModel: (threadId: string) => string;
 }) => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [isThreadContentReady, setIsThreadContentReady] = useState(true);
@@ -221,37 +202,6 @@ export const useAppNavigation = ({
       }
     }
   }, [threadHistory, threadTitle, isNavigating]);
-
-  useEffect(() => {
-    if (isNavigating) return;
-
-    const activeId = threadHistory.activeSessionId;
-    if (!activeId || isOnboardingId(activeId)) return;
-
-    const currentThread = threadHistory.threads.find(
-      (c: any) => c.id === activeId,
-    );
-    if (!currentThread) return;
-
-    const targetOcrLang = system.sessionOcrLanguage || undefined;
-    const currentOcrLang = currentThread.ocr_lang || undefined;
-    if (currentOcrLang === targetOcrLang) return;
-
-    updateThreadMetadata({
-      ...currentThread,
-      ocr_lang: targetOcrLang,
-    }).then(() => {
-      console.log(
-        "Automatically saved OCR language to thread metadata:",
-        targetOcrLang,
-      );
-    });
-  }, [
-    threadHistory,
-    isNavigating,
-    system.sessionOcrLanguage,
-    system.ocrEnabled,
-  ]);
 
   const openSearchOverlay = useCallback(() => {
     setIsSearchOverlayOpen(true);
@@ -328,7 +278,7 @@ export const useAppNavigation = ({
               mimeType: "image/png",
               imageId: metadata.image_hash,
               fromHistory: true,
-              tone: metadata.image_tone ?? undefined,
+              tone: "d",
             });
             threadHistory.setActiveSessionId(id);
           });
@@ -366,23 +316,27 @@ export const useAppNavigation = ({
 
         const loadedOcrData = threadData.ocr_data || {};
         const navigationSafeOcrData = withNavigationOcrGuard(loadedOcrData);
-        const threadOcrModel = getThreadOcrModel(
-          loadedOcrData,
-          threadData.metadata.ocr_lang,
-        );
+        const rememberedOcrModel = getRememberedThreadOcrModel(id);
+        const latestScannedOcrModel = getThreadOcrModel(loadedOcrData);
+        const threadOcrModel =
+          rememberedOcrModel ||
+          latestScannedOcrModel ||
+          (system.ocrEnabled
+            ? resolveOcrModelId(system.startupOcrLanguage, "")
+            : "");
         flushSync(() => {
           system.setSessionThreadTitle(threadData.metadata.title);
-          system.setSessionOcrLanguage(system.ocrEnabled ? threadOcrModel : "");
+          system.setSessionOcrLanguage(threadOcrModel);
           ocr.setOcrData(navigationSafeOcrData);
           ocr.setSessionLensUrl(
-            threadData.metadata.reverse_image_search_url || null,
+            threadData.reverse_image_search?.google_lens_url || null,
           );
           system.setStartupImage({
             path: imagePath,
             mimeType: "image/png",
             imageId: threadData.metadata.image_hash,
             fromHistory: true,
-            tone: threadData.metadata.image_tone ?? undefined,
+            tone: threadData.image_tone ?? undefined,
           });
           threadHistory.setActiveSessionId(id);
         });
@@ -421,6 +375,7 @@ export const useAppNavigation = ({
       finalizeNavigationState,
       ocr,
       system,
+      getRememberedThreadOcrModel,
     ],
   );
 

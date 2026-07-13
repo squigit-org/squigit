@@ -118,8 +118,7 @@ function applyPreferenceUpdates(
   if (updates.ocrEnabled !== undefined) {
     next.ocrEnabled = updates.ocrEnabled;
     next.sessionOcrLanguage = updates.ocrEnabled
-      ? normalizedUpdatedOcrLanguage ??
-        resolveOcrModelId(state.startupOcrLanguage)
+      ? normalizedUpdatedOcrLanguage ?? resolveOcrModelId(state.startupOcrLanguage)
       : "";
   }
 

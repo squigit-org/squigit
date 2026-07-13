@@ -9,11 +9,9 @@ import { platform } from "@/platform";
 import { commands } from "@/platform";
 import { resolveOcrModelId } from "@squigit/core/config";
 import {
-  AUTO_OCR_DISABLED_MODEL_ID,
   cancelOcrJob,
   createThread,
   getImagePath,
-  saveOcrData,
 } from "@squigit/core/config";
 
 export const useAppCapture = ({
@@ -83,16 +81,7 @@ export const useAppCapture = ({
       });
 
       try {
-        const newThread = await createThread(
-          "New thread",
-          imageData.imageId,
-          systemRef.current.ocrEnabled
-            ? resolveOcrModelId(systemRef.current.startupOcrLanguage)
-            : null,
-        );
-        if (!systemRef.current.ocrEnabled) {
-          await saveOcrData(newThread.id, AUTO_OCR_DISABLED_MODEL_ID, []);
-        }
+        const newThread = await createThread("New thread", imageData.imageId);
         threadHistory.setActiveSessionId(newThread.id);
         threadHistory.refreshThreads();
         console.log("Created new thread:", newThread.id);
@@ -242,9 +231,6 @@ export const useAppCapture = ({
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         threadHistoryRef.current.setActiveSessionId(threadId);
-        if (!systemRef.current.ocrEnabled) {
-          await saveOcrData(threadId, AUTO_OCR_DISABLED_MODEL_ID, []);
-        }
         threadHistoryRef.current.refreshThreads();
       } catch (error) {
         console.error("[capture-complete] Failed:", error);

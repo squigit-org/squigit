@@ -7,7 +7,7 @@
 import React, { type RefObject } from "react";
 import { InlineMenu, LoadingSpinner } from "@/components/ui";
 import type { Attachment } from "@squigit/core/brain/attachments";
-import type { OcrAnnotations } from "@squigit/core/config";
+import type { OcrAnnotations, ReverseImageSearchCache } from "@squigit/core/config";
 import { ThreadInput, ImageArtifact } from "@/features/thread";
 import styles from "./ThreadRoute.module.css";
 
@@ -33,7 +33,7 @@ interface ThreadRouteLayoutProps {
   isImageExpanded: boolean;
   onToggleImageExpanded: () => void;
   sessionLensUrl: string | null;
-  setSessionLensUrl: (url: string | null) => void;
+  onReverseImageSearchCache: (cache: ReverseImageSearchCache) => void;
   threadTitle: string;
   onDescribeEdits: (description: string) => void | Promise<void>;
   ocrData: OcrAnnotations;
@@ -99,7 +99,7 @@ const ThreadRouteLayoutComponent: React.FC<ThreadRouteLayoutProps> = ({
   isImageExpanded,
   onToggleImageExpanded,
   sessionLensUrl,
-  setSessionLensUrl,
+  onReverseImageSearchCache,
   threadTitle,
   onDescribeEdits,
   ocrData,
@@ -152,7 +152,7 @@ const ThreadRouteLayoutComponent: React.FC<ThreadRouteLayoutProps> = ({
             <ImageArtifact
               startupImage={visibleStartupImage}
               sessionLensUrl={sessionLensUrl}
-              setSessionLensUrl={setSessionLensUrl}
+              onReverseImageSearchCache={onReverseImageSearchCache}
               threadTitle={threadTitle}
               onDescribeEdits={onDescribeEdits}
               ocrData={ocrData}

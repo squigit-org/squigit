@@ -1141,7 +1141,7 @@ export const ThreadRoute: React.FC = () => {
       isImageExpanded={isImageExpanded}
       onToggleImageExpanded={() => setIsImageExpanded(!isImageExpanded)}
       sessionLensUrl={app.sessionLensUrl}
-      setSessionLensUrl={app.handleUpdateLensUrl}
+      onReverseImageSearchCache={app.handleUpdateLensCache}
       threadTitle={app.threadTitle}
       onDescribeEdits={app.thread.handleDescribeEdits}
       ocrData={app.ocrData}
@@ -1154,7 +1154,7 @@ export const ThreadRoute: React.FC = () => {
       autoExpandOCR={app.system.autoExpandOCR}
       activeProfileId={app.system.activeProfile?.id || null}
       currentOcrModel={app.system.sessionOcrLanguage}
-      onOcrModelChange={app.system.setSessionOcrLanguage}
+      onOcrModelChange={app.handleOcrModelChange}
       isOcrScanning={app.isOcrScanning}
       onOcrScanningChange={app.setIsOcrScanning}
       inputValue={app.input}
