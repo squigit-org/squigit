@@ -12,7 +12,7 @@ fn redact_url_api_key(message: &str) -> String {
     };
     let value_start = key_start + "key=".len();
     let value_end = message[value_start..]
-        .find(|ch| matches!(ch, '&' | ')' | ' ' | '\n' | '\r'))
+        .find(|ch: char| "&) \n\r".contains(ch))
         .map(|offset| value_start + offset)
         .unwrap_or(message.len());
 

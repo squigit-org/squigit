@@ -253,8 +253,9 @@ fn is_transient_gemini_transport_error(error: &str) -> bool {
 /// Wraps [`stream_request_iteration`] with automatic retry on 429 rate-limit errors.
 ///
 /// When a rate-limit error is received, the function waits for the duration specified
-/// by the API's `retryDelay` field (or a 10 s default) and retries up to two more
-/// times. A `ToolStatus` event is emitted so the user sees feedback during the wait.
+/// by the API's `retryDelay` field (or a 10 s default) and retries the same model once.
+/// If that still fails, the error bubbles up so the caller can try the next fallback
+/// model immediately.
 async fn stream_iteration_with_rate_limit_retry(
     sink: &dyn BrainEventSink,
     client: &reqwest::Client,
@@ -263,7 +264,7 @@ async fn stream_iteration_with_rate_limit_retry(
     channel_id: &str,
     cancel_token: &tokio_util::sync::CancellationToken,
 ) -> Result<StreamIterationResult, String> {
-    const MAX_RATE_LIMIT_RETRIES: usize = 2;
+    const MAX_RATE_LIMIT_RETRIES: usize = 1;
     const MAX_TRANSPORT_RETRIES: usize = 2;
 
     let mut last_error = String::new();

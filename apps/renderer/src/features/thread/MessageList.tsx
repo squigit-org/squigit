@@ -62,7 +62,7 @@ function getVisibleProgressText(text: string | undefined): string | null {
 
 function renderProgressText(text: string): React.ReactNode {
   const rateLimitCountdownMatch = text.match(
-    /^(Rate limited, retrying in )(\d+s)$/,
+    /^(Model busy, retrying in )(\d+s)$/,
   );
 
   if (rateLimitCountdownMatch) {
