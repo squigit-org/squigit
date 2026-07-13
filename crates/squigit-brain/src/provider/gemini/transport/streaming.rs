@@ -6,6 +6,27 @@ use futures_util::StreamExt;
 
 use super::types::{GeminiEvent, GeminiFunctionCall, GeminiRequest, GeminiResponseChunk};
 
+fn redact_url_api_key(message: &str) -> String {
+    let Some(key_start) = message.find("key=") else {
+        return message.to_string();
+    };
+    let value_start = key_start + "key=".len();
+    let value_end = message[value_start..]
+        .find(|ch| matches!(ch, '&' | ')' | ' ' | '\n' | '\r'))
+        .map(|offset| value_start + offset)
+        .unwrap_or(message.len());
+
+    let mut redacted = String::with_capacity(message.len());
+    redacted.push_str(&message[..value_start]);
+    redacted.push_str("<redacted>");
+    redacted.push_str(&message[value_end..]);
+    redacted
+}
+
+fn transport_error_message(context: &str, error: reqwest::Error) -> String {
+    redact_url_api_key(&format!("{}: {}", context, error))
+}
+
 pub(crate) fn emit_event(sink: &dyn BrainEventSink, channel_id: &str, event: GeminiEvent) {
     sink.emit(channel_id, event);
 }
@@ -25,7 +46,9 @@ pub(crate) async fn stream_request_iteration(
     cancel_token: &tokio_util::sync::CancellationToken,
 ) -> Result<StreamIterationResult, String> {
     let response_result = tokio::select! {
-        res = client.post(url).json(request_body).send() => res.map_err(|e| format!("Failed to send request to Gemini: {}", e)),
+        res = client.post(url).json(request_body).send() => {
+            res.map_err(|error| transport_error_message("Failed to send request to Gemini", error))
+        },
         _ = cancel_token.cancelled() => Err("CANCELLED".to_string()),
     };
     let response = response_result?;
@@ -103,7 +126,7 @@ pub(crate) async fn stream_request_iteration(
                             }
                         }
                     }
-                    Some(Err(e)) => return Err(format!("Stream error: {}", e)),
+                    Some(Err(error)) => return Err(transport_error_message("Stream error", error)),
                     None => break,
                 }
             }

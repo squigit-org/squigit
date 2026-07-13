@@ -238,6 +238,18 @@ fn parse_rate_limit_retry_secs(error: &str) -> Option<f64> {
     Some(10.0)
 }
 
+fn is_transient_gemini_transport_error(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    lower.contains("channel closed")
+        || lower.contains("connection closed")
+        || lower.contains("connection reset")
+        || lower.contains("connection aborted")
+        || lower.contains("operation timed out")
+        || lower.contains("request timed out")
+        || lower.contains("tcp connect error")
+        || lower.contains("dns error")
+}
+
 /// Wraps [`stream_request_iteration`] with automatic retry on 429 rate-limit errors.
 ///
 /// When a rate-limit error is received, the function waits for the duration specified
@@ -252,8 +264,10 @@ async fn stream_iteration_with_rate_limit_retry(
     cancel_token: &tokio_util::sync::CancellationToken,
 ) -> Result<StreamIterationResult, String> {
     const MAX_RATE_LIMIT_RETRIES: usize = 2;
+    const MAX_TRANSPORT_RETRIES: usize = 2;
 
     let mut last_error = String::new();
+    let mut transport_retries = 0usize;
 
     for attempt in 0..=MAX_RATE_LIMIT_RETRIES {
         match stream_request_iteration(sink, client, url, request_body, channel_id, cancel_token)
@@ -261,6 +275,29 @@ async fn stream_iteration_with_rate_limit_retry(
         {
             Ok(result) => return Ok(result),
             Err(err) => {
+                if is_transient_gemini_transport_error(&err)
+                    && transport_retries < MAX_TRANSPORT_RETRIES
+                {
+                    transport_retries += 1;
+                    emit_event(
+                        sink,
+                        channel_id,
+                        GeminiEvent::ToolStatus {
+                            message: format!(
+                                "Connection hiccup, retrying ({}/{})",
+                                transport_retries, MAX_TRANSPORT_RETRIES
+                            ),
+                        },
+                    );
+                    tokio::select! {
+                        _ = tokio::time::sleep(std::time::Duration::from_millis(750 * transport_retries as u64)) => {},
+                        _ = cancel_token.cancelled() => return Err("CANCELLED".to_string()),
+                    }
+                    emit_event(sink, channel_id, GeminiEvent::Reset);
+                    last_error = err;
+                    continue;
+                }
+
                 if attempt < MAX_RATE_LIMIT_RETRIES {
                     if let Some(secs) = parse_rate_limit_retry_secs(&err) {
                         let wait_secs = (secs.ceil() as u64).clamp(2, 30);
