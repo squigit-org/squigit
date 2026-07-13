@@ -40,28 +40,6 @@ pub(crate) fn tool_status_text(
     function_call: &GeminiFunctionCall,
     attachment_display_name: Option<&str>,
 ) -> Option<String> {
-    if function_call.name == "read_local_attachment_context" {
-        if let Some(display_name) = attachment_display_name
-            .map(str::trim)
-            .filter(|v| !v.is_empty())
-        {
-            return Some(format!("Reading local context from {}", display_name));
-        }
-
-        let path = function_call
-            .args
-            .get("path")
-            .and_then(|v| v.as_str())
-            .map(str::trim)
-            .filter(|v| !v.is_empty());
-        if let Some(path_value) = path {
-            if let Some(file_name) = displayable_attachment_name(path_value) {
-                return Some(format!("Reading local context from {}", file_name));
-            }
-        }
-        return Some("Reading local attachment context".to_string());
-    }
-
     if function_call.name == "recall_thread_attachment" {
         if let Some(display_name) = attachment_display_name
             .map(str::trim)
@@ -119,20 +97,17 @@ pub(crate) fn build_system_instruction_with_tool_policy(
         instruction.push_str(
             "\n\n## Tool Usage Policy\n\
              - If the user asks for current, time-sensitive, or uncertain facts, call `web_search`.\n\
-             - If the user asks about attached local text or code content, call `read_local_attachment_context`.\n\
-             - If the user asks a complex, exact, or follow-up question about a prior local code/text attachment, call `read_local_attachment_context` again using the exact path from attachment references or the thread attachment catalog.\n\
              - Secondary uploaded files from this thread may only be used when the user attaches them in this turn or when you explicitly call `recall_thread_attachment`.\n\
-             - Use the thread attachment catalog in context to pick the right tool: `read_local_attachment_context` for `text_local`, `recall_thread_attachment` for `image_upload` or `document_upload`.\n\
+             - Use the thread attachment catalog in context to pick uploaded attachments for `recall_thread_attachment`.\n\
              - If the user asks for page-specific, OCR, quote-exact, transcription, chart-reading, or slide/sheet/section-specific details from a prior uploaded image or document, you must call `recall_thread_attachment` before answering.\n\
              - Never answer exact file-grounded questions from `image_brief` or path references alone when a prior uploaded image/document is needed.\n\
-             - Never answer exact code/text questions from summaries alone when a local attachment can be re-read with `read_local_attachment_context`.\n\
-             - For PDF, Word, spreadsheet, slide, and similar document attachments, rely on the attached Gemini file directly (do not call `read_local_attachment_context` for documents).\n\
+             - Text/code attachments are pasted into the user message as raw text before you see it.\n\
+             - For PDF, Word, spreadsheet, slide, and similar document attachments, rely on the attached Gemini file directly.\n\
              - If greeting/chit-thread, do not call tools.\n\
              - Never invent URLs or sources.\n\
              - When using `url`, only fetch URLs from prior search results in this turn.\n\
              - If one search pass is too shallow, call `web_search` again with a refined query.\n\
              - After tool results contain enough relevant information, write a direct human-facing answer from those results; never finish with only sources or tool metadata.\n\
-             - For local attachments, use paths exactly as provided by the user/tool context.\n\
              - If web search fails repeatedly, answer from model knowledge and clearly state web search was unavailable.",
         );
     }
@@ -281,8 +256,8 @@ mod tests {
     fn tool_step_id_uses_tool_name() {
         assert_eq!(tool_step_id(0, "web_search"), "web-search-call-1");
         assert_eq!(
-            tool_step_id(1, "read_local_attachment_context"),
-            "read-local-attachment-context-call-2"
+            tool_step_id(1, "recall_thread_attachment"),
+            "recall-thread-attachment-call-2"
         );
     }
 
@@ -299,30 +274,6 @@ mod tests {
     }
 
     #[test]
-    fn tool_status_text_for_local_attachment() {
-        let call = GeminiFunctionCall {
-            name: "read_local_attachment_context".to_string(),
-            args: json!({ "path": "/tmp/report.pdf" }),
-        };
-        assert_eq!(
-            tool_status_text(&call, None),
-            Some("Reading local context from report.pdf".to_string())
-        );
-    }
-
-    #[test]
-    fn tool_status_text_prefers_display_name_when_available() {
-        let call = GeminiFunctionCall {
-            name: "read_local_attachment_context".to_string(),
-            args: json!({ "path": "objects/ab/abcdef123.pdf" }),
-        };
-        assert_eq!(
-            tool_status_text(&call, Some("Quarterly Report.pdf")),
-            Some("Reading local context from Quarterly Report.pdf".to_string())
-        );
-    }
-
-    #[test]
     fn tool_status_text_prefers_display_name_for_recall() {
         let call = GeminiFunctionCall {
             name: "recall_thread_attachment".to_string(),
@@ -335,24 +286,10 @@ mod tests {
     }
 
     #[test]
-    fn tool_status_text_hides_hashy_attachment_names() {
-        let call = GeminiFunctionCall {
-            name: "read_local_attachment_context".to_string(),
-            args: json!({ "path": "objects/ab/00f8e1ec68a90d7d33ed18d6e44a4f36.rs" }),
-        };
-        assert_eq!(
-            tool_status_text(&call, None),
-            Some("Reading local attachment context".to_string())
-        );
-    }
-
-    #[test]
-    fn tool_policy_mentions_rereading_prior_local_attachments() {
+    fn tool_policy_treats_text_as_pasted_content() {
         let instruction =
             build_system_instruction_with_tool_policy("", "", "", true).expect("policy");
-        assert!(instruction.contains("prior local code/text attachment"));
-        assert!(instruction.contains("`read_local_attachment_context` again"));
-        assert!(instruction.contains("`text_local`"));
-        assert!(instruction.contains("exact code/text questions"));
+        assert!(instruction.contains("Text/code attachments are pasted"));
+        assert!(instruction.contains("`recall_thread_attachment`"));
     }
 }

@@ -16,12 +16,10 @@ use crate::provider::gemini::agent::tool_orchestrator::{
     build_system_instruction_with_tool_policy, tool_status_text, tool_step_id,
 };
 use crate::provider::gemini::attachments::{
-    build_attachment_preview_context, build_interleaved_parts, build_thread_attachment_catalog,
-    extract_attachment_mentions, prepare_turn_attachments,
+    build_interleaved_parts, build_thread_attachment_catalog, extract_attachment_mentions,
+    prepare_turn_attachments,
 };
-use crate::provider::gemini::request_log::{
-    write_request_log, GeminiRequestLogContext,
-};
+use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
 use crate::provider::gemini::transport::streaming::{
     emit_event, stream_request_iteration, StreamIterationResult,
 };
@@ -396,7 +394,7 @@ pub async fn stream_gemini_thread_v2(
                 &img_desc, &first_msg, &history,
             );
 
-            let mut composed_user_message = user_message.clone();
+            let composed_user_message = user_message.clone();
             for (path, display_name) in crate::provider::gemini::attachments::load_thread_attachment_display_names(thread_id.as_deref())? {
                 insert_attachment_display_name(
                     &mut attachment_display_name_by_path,
@@ -426,15 +424,6 @@ pub async fn stream_gemini_thread_v2(
                 &runtime.provider_file_cache,
             )
             .await?;
-
-            if let Some(preview_block) =
-                build_attachment_preview_context(&prepared_attachments.preview_attachment_paths).await?
-            {
-                if !composed_user_message.trim().is_empty() {
-                    composed_user_message.push_str("\n\n");
-                }
-                composed_user_message.push_str(&preview_block);
-            }
 
             if let Some(attachment_catalog) = build_thread_attachment_catalog(thread_id.as_deref())? {
                 context_prompt.push_str("\n\n");

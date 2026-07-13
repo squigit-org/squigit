@@ -26,9 +26,7 @@ pub(crate) struct ToolDispatchContext<'a> {
     pub(crate) model: &'a str,
     pub(crate) thread_id: Option<&'a str>,
     pub(crate) gemini_file_cache: &'a std::sync::Arc<
-        tokio::sync::Mutex<
-            HashMap<String, crate::provider::gemini::attachments::GeminiFileRef>,
-        >,
+        tokio::sync::Mutex<HashMap<String, crate::provider::gemini::attachments::GeminiFileRef>>,
     >,
     pub(crate) request_control: &'a GeminiRequestControl,
     pub(crate) web_state: &'a mut WebToolDispatchState,
@@ -52,9 +50,6 @@ where
 {
     match function_call.name.as_str() {
         "web_search" => execute_web_search(function_call, context, &mut emit_status).await,
-        "read_local_attachment_context" => {
-            Ok(execute_local_attachment_context(function_call, context).await)
-        }
         "recall_thread_attachment" => {
             Ok(execute_recall_thread_attachment(function_call, context).await)
         }
@@ -69,93 +64,6 @@ where
             message: format!("Unsupported tool call `{}`.", function_call.name),
             is_failure: true,
         }),
-    }
-}
-
-async fn execute_local_attachment_context(
-    function_call: &GeminiFunctionCall,
-    context: &mut ToolDispatchContext<'_>,
-) -> ToolDispatchResult {
-    let path = function_call
-        .args
-        .get("path")
-        .and_then(|v| v.as_str())
-        .map(str::trim)
-        .filter(|v| !v.is_empty());
-
-    let Some(path) = path else {
-        return ToolDispatchResult {
-            response_value: json!({
-                "ok": false,
-                "path": "",
-                "error_code": "invalid_arguments",
-                "error_message": "Tool call requires `path`"
-            }),
-            follow_up_parts: Vec::new(),
-            status: "error".to_string(),
-            message: "Local attachment read failed: missing `path`.".to_string(),
-            is_failure: true,
-        };
-    };
-
-    let requested_max = function_call.args.get("max_chars").and_then(|value| {
-        value
-            .as_u64()
-            .map(|v| v as usize)
-            .or_else(|| value.as_i64().map(|v| v.max(1) as usize))
-    });
-    let bounded_max =
-        crate::provider::gemini::attachments::clamp_tool_max_chars(requested_max);
-
-    let result = crate::provider::gemini::attachments::read_local_attachment_context(
-        path,
-        Some(bounded_max),
-    )
-    .await;
-
-    let (status, message, is_failure) = match &result {
-        crate::provider::gemini::attachments::LocalAttachmentContextResult::Success(
-            success,
-        ) => {
-            let msg = if success.truncated {
-                format!(
-                    "Read local attachment context ({} chars, truncated).",
-                    success.char_count
-                )
-            } else {
-                format!(
-                    "Read local attachment context ({} chars).",
-                    success.char_count
-                )
-            };
-            ("done".to_string(), msg, false)
-        }
-        crate::provider::gemini::attachments::LocalAttachmentContextResult::Failure(
-            failure,
-        ) => (
-            "error".to_string(),
-            format!("Local attachment read failed: {}", failure.error_message),
-            true,
-        ),
-    };
-
-    if context.request_control.is_answer_now_requested() {
-        return ToolDispatchResult {
-            response_value: result.to_json_value(),
-            follow_up_parts: Vec::new(),
-            status,
-            message: "Answer requested while reading local context; returning current result."
-                .to_string(),
-            is_failure,
-        };
-    }
-
-    ToolDispatchResult {
-        response_value: result.to_json_value(),
-        follow_up_parts: Vec::new(),
-        status,
-        message,
-        is_failure,
     }
 }
 
@@ -576,41 +484,6 @@ mod tests {
                 .get("error_code")
                 .and_then(|v| v.as_str()),
             Some("unknown_tool")
-        );
-    }
-
-    #[tokio::test]
-    async fn local_attachment_tool_requires_path() {
-        let client = reqwest::Client::new();
-        let request_control = GeminiRequestControl::new();
-        let mut web_state = WebToolDispatchState::default();
-        let gemini_file_cache = std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
-        let mut context = ToolDispatchContext {
-            client: &client,
-            api_key: "k",
-            model: "m",
-            thread_id: None,
-            gemini_file_cache: &gemini_file_cache,
-            request_control: &request_control,
-            web_state: &mut web_state,
-        };
-        let call = GeminiFunctionCall {
-            name: "read_local_attachment_context".to_string(),
-            args: json!({}),
-        };
-
-        let result = dispatch_tool_call(&call, &mut context, |_| {})
-            .await
-            .expect("dispatch should not fail");
-
-        assert_eq!(result.status, "error");
-        assert!(result.is_failure);
-        assert_eq!(
-            result
-                .response_value
-                .get("error_code")
-                .and_then(|v| v.as_str()),
-            Some("invalid_arguments")
         );
     }
 

@@ -5,8 +5,8 @@
 
 use chrono::{DateTime, Utc};
 use squigit_storage::{
-    ThreadAttachmentKind, ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadStorage,
-    StorageError,
+    StorageError, ThreadAttachmentKind, ThreadAttachmentProviderFile, ThreadAttachmentRecord,
+    ThreadData, ThreadStorage,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -17,7 +17,7 @@ use super::detector::{extract_attachment_mentions, AttachmentMention};
 use super::types::GeminiFileObject;
 use super::{
     ensure_file_uploaded, is_gemini_document_path, is_gemini_uploadable_path, is_image_path,
-    is_text_like_path, mime_from_extension, GeminiFileRef,
+    mime_from_extension, GeminiFileRef,
 };
 use crate::provider::gemini::transport::types::{GeminiFileData, GeminiPart};
 
@@ -26,7 +26,6 @@ const MAX_ATTACHMENT_CATALOG_ITEMS: usize = 8;
 type GeminiFileCache = Arc<Mutex<HashMap<String, GeminiFileRef>>>;
 
 pub(crate) struct PreparedTurnAttachments {
-    pub(crate) preview_attachment_paths: Vec<String>,
     pub(crate) uploaded_parts: Vec<GeminiPart>,
 }
 
@@ -61,12 +60,6 @@ fn attachment_display_name(path: &str, explicit: Option<&str>) -> String {
 }
 
 fn classify_attachment(path: &str) -> Option<(ThreadAttachmentKind, String)> {
-    if is_text_like_path(path) {
-        return Some((
-            ThreadAttachmentKind::TextLocal,
-            mime_from_extension(path).to_string(),
-        ));
-    }
     if is_image_path(path) {
         return Some((
             ThreadAttachmentKind::ImageUpload,
@@ -87,6 +80,14 @@ fn is_uploadable_kind(kind: &ThreadAttachmentKind) -> bool {
         kind,
         ThreadAttachmentKind::ImageUpload | ThreadAttachmentKind::DocumentUpload
     )
+}
+
+fn uploadable_kind_label(kind: &ThreadAttachmentKind) -> Option<&'static str> {
+    match kind {
+        ThreadAttachmentKind::ImageUpload => Some("image_upload"),
+        ThreadAttachmentKind::DocumentUpload => Some("document_upload"),
+        ThreadAttachmentKind::TextLocal => None,
+    }
 }
 
 fn catalog_access_label(record: &ThreadAttachmentRecord) -> &'static str {
@@ -133,7 +134,9 @@ fn get_active_storage() -> Result<ThreadStorage, String> {
     super::paths::get_active_storage()
 }
 
-fn load_thread_for_registry(thread_id: &str) -> Result<Option<(ThreadStorage, ThreadData, bool)>, String> {
+fn load_thread_for_registry(
+    thread_id: &str,
+) -> Result<Option<(ThreadStorage, ThreadData, bool)>, String> {
     let storage = get_active_storage()?;
     match storage.load_thread(thread_id) {
         Ok(mut thread) => {
@@ -151,7 +154,9 @@ fn save_thread_if_needed(
     changed: bool,
 ) -> Result<(), String> {
     if changed {
-        storage.save_thread(thread).map_err(|error| error.to_string())?;
+        storage
+            .save_thread(thread)
+            .map_err(|error| error.to_string())?;
     }
     Ok(())
 }
@@ -401,7 +406,6 @@ pub(crate) async fn prepare_turn_attachments(
         Some(id) => load_thread_for_registry(id)?,
         None => None,
     };
-    let mut preview_attachment_paths = Vec::new();
     let mut uploaded_parts = Vec::new();
 
     for mention in mentions {
@@ -409,11 +413,6 @@ pub(crate) async fn prepare_turn_attachments(
 
         if let Some((_, thread, changed)) = loaded_thread.as_mut() {
             *changed |= upsert_record(thread, &path, mention.display_name.as_deref(), Utc::now());
-        }
-
-        if is_text_like_path(&path) {
-            preview_attachment_paths.push(path);
-            continue;
         }
 
         if !is_gemini_uploadable_path(&path) {
@@ -436,10 +435,7 @@ pub(crate) async fn prepare_turn_attachments(
         save_thread_if_needed(storage, thread, *changed)?;
     }
 
-    Ok(PreparedTurnAttachments {
-        preview_attachment_paths,
-        uploaded_parts,
-    })
+    Ok(PreparedTurnAttachments { uploaded_parts })
 }
 
 pub(crate) fn build_thread_attachment_catalog(
@@ -455,6 +451,7 @@ pub(crate) fn build_thread_attachment_catalog(
     let mut entries = thread
         .attachment_registry
         .values()
+        .filter(|record| is_uploadable_kind(&record.kind))
         .cloned()
         .collect::<Vec<_>>();
 
@@ -468,18 +465,15 @@ pub(crate) fn build_thread_attachment_catalog(
 
     let lines = entries
         .into_iter()
-        .map(|record| {
-            format!(
+        .filter_map(|record| {
+            let kind = uploadable_kind_label(&record.kind)?;
+            Some(format!(
                 "- `{}` (kind: {}, access: {}): `{}`",
                 record.display_name,
-                match record.kind {
-                    ThreadAttachmentKind::ImageUpload => "image_upload",
-                    ThreadAttachmentKind::DocumentUpload => "document_upload",
-                    ThreadAttachmentKind::TextLocal => "text_local",
-                },
+                kind,
                 catalog_access_label(&record),
                 record.cas_path
-            )
+            ))
         })
         .collect::<Vec<_>>();
 
@@ -503,6 +497,7 @@ pub(crate) fn load_thread_attachment_display_names(
     let entries = thread
         .attachment_registry
         .values()
+        .filter(|record| is_uploadable_kind(&record.kind))
         .map(|record| (record.cas_path.clone(), record.display_name.clone()))
         .collect::<Vec<_>>();
 
@@ -546,7 +541,8 @@ fn find_matching_records<'a>(
         return exact_display_matches;
     }
 
-    thread.attachment_registry
+    thread
+        .attachment_registry
         .values()
         .filter(|record| {
             if !is_uploadable_kind(&record.kind) || !kind_matches_filter(&record.kind, kind_filter)
@@ -622,16 +618,13 @@ pub(crate) async fn recall_thread_attachment(
     if matches.len() > 1 {
         let candidates = matches
             .into_iter()
-            .map(|record| {
-                serde_json::json!({
+            .filter_map(|record| {
+                let kind = uploadable_kind_label(&record.kind)?;
+                Some(serde_json::json!({
                     "display_name": record.display_name,
                     "cas_path": record.cas_path,
-                    "kind": match record.kind {
-                        ThreadAttachmentKind::ImageUpload => "image_upload",
-                        ThreadAttachmentKind::DocumentUpload => "document_upload",
-                        ThreadAttachmentKind::TextLocal => "text_local",
-                    }
-                })
+                    "kind": kind,
+                }))
             })
             .collect::<Vec<_>>();
         save_thread_if_needed(&storage, &thread, changed)?;
@@ -664,6 +657,8 @@ pub(crate) async fn recall_thread_attachment(
         .map(|record| record.kind.clone())
         .unwrap_or(ThreadAttachmentKind::DocumentUpload);
     drop(matches);
+    let selected_kind_label = uploadable_kind_label(&selected_kind)
+        .ok_or_else(|| "Attachment recall selected a non-uploadable attachment".to_string())?;
 
     let (file_ref, file_changed, strategy) =
         ensure_live_file_ref(&mut thread, &selected_path, api_key, cache).await?;
@@ -679,11 +674,7 @@ pub(crate) async fn recall_thread_attachment(
             "ok": true,
             "display_name": selected_display_name,
             "cas_path": selected_path,
-            "kind": match selected_kind {
-                ThreadAttachmentKind::ImageUpload => "image_upload",
-                ThreadAttachmentKind::DocumentUpload => "document_upload",
-                ThreadAttachmentKind::TextLocal => "text_local",
-            },
+            "kind": selected_kind_label,
             "recall_strategy": strategy,
             "file_uri": file_ref.file_uri,
         }),

@@ -4,7 +4,6 @@
 mod cache;
 mod detector;
 mod mime;
-mod parser;
 mod parts;
 pub mod paths;
 mod registry;
@@ -14,18 +13,13 @@ mod upload;
 pub use cache::ensure_file_uploaded;
 pub(crate) use detector::extract_attachment_mentions;
 pub use mime::{
-    is_gemini_document_path, is_gemini_uploadable_path, is_image_path, is_text_like_path,
-    mime_from_extension,
-};
-pub(crate) use parser::{
-    build_attachment_preview_context, clamp_tool_max_chars, read_local_attachment_context,
-    LocalAttachmentContextResult,
+    is_gemini_document_path, is_gemini_uploadable_path, is_image_path, mime_from_extension,
 };
 pub(crate) use parts::build_interleaved_parts;
 #[allow(unused_imports)]
 pub(crate) use registry::{
-    build_thread_attachment_catalog, load_thread_attachment_display_names, prepare_turn_attachments,
-    recall_thread_attachment, RecallThreadAttachmentOutcome,
+    build_thread_attachment_catalog, load_thread_attachment_display_names,
+    prepare_turn_attachments, recall_thread_attachment, RecallThreadAttachmentOutcome,
 };
 pub use types::GeminiFileRef;
 pub use upload::{poll_file_status, upload_file_to_gemini};

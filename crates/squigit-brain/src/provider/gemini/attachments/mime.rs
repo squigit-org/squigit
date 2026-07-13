@@ -1,12 +1,6 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-const TEXT_LIKE_EXTENSIONS: &[&str] = &[
-    "rs", "py", "js", "jsx", "ts", "tsx", "css", "html", "md", "txt", "csv", "json", "xml", "yml",
-    "yaml", "toml", "sh", "bash", "c", "cpp", "h", "hpp", "java", "go", "php", "rb", "swift", "kt",
-    "sql", "rst", "ini", "cfg", "conf", "env", "log",
-];
-
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"];
 
 const GEMINI_DOCUMENT_EXTENSIONS: &[&str] = &[
@@ -43,20 +37,11 @@ pub fn mime_from_extension(ext: &str) -> &str {
         "odt" => "application/vnd.oasis.opendocument.text",
         "ods" => "application/vnd.oasis.opendocument.spreadsheet",
         "odp" => "application/vnd.oasis.opendocument.presentation",
-        "rs" | "py" | "js" | "jsx" | "ts" | "tsx" | "css" | "html" | "md" | "txt" | "csv"
-        | "json" | "xml" | "yml" | "yaml" | "toml" | "sh" | "bash" | "c" | "cpp" | "h" | "hpp"
-        | "java" | "go" | "php" | "rb" | "swift" | "kt" | "sql" | "rst" | "ini" | "cfg"
-        | "conf" | "env" | "log" => "text/plain",
         "mp3" => "audio/mpeg",
         "wav" => "audio/wav",
         "mp4" => "video/mp4",
         _ => "application/octet-stream",
     }
-}
-
-pub fn is_text_like_path(path: &str) -> bool {
-    let extension = normalized_extension(path);
-    TEXT_LIKE_EXTENSIONS.contains(&extension.as_str())
 }
 
 pub fn is_image_path(path: &str) -> bool {
@@ -76,13 +61,6 @@ pub fn is_gemini_uploadable_path(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn text_like_paths_are_detected() {
-        assert!(is_text_like_path("objects/ab/file.rs"));
-        assert!(is_text_like_path("/tmp/file.txt"));
-        assert!(!is_text_like_path("objects/ab/file.docx"));
-    }
 
     #[test]
     fn gemini_document_paths_are_detected() {
