@@ -362,6 +362,7 @@ export const useBrainEngine = (config: {
               if (modelToTry === primaryModelId) {
                 popLastUserHistory();
               }
+              resetPendingRawText();
               modelToTry = nextFallback;
               continue;
             }
@@ -375,9 +376,7 @@ export const useBrainEngine = (config: {
   const markPendingTransportDone = (finalResponse: string) => {
     updatePendingAssistantTurn((turn) => {
       const nextRawText =
-        finalResponse.length > turn.rawText.length
-          ? finalResponse
-          : turn.rawText;
+        finalResponse.trim().length > 0 ? finalResponse : turn.rawText;
       const hasVisibleText = nextRawText.trim().length > 0;
 
       return {
@@ -413,18 +412,25 @@ export const useBrainEngine = (config: {
 
   const buildCommittedAssistantMessage = (
     turn: PendingAssistantTurn,
-  ): Message => ({
-    id: turn.id,
-    role: "model",
-    text: turn.displayText.trimEnd(),
-    timestamp: Date.now(),
-    thoughtSeconds:
-      turn.thoughtSeconds ?? getThoughtSecondsFromToolSteps(turn.toolSteps),
-    stopped: turn.stopped || turn.phase === "stopped",
-    alreadyStreamed: true,
-    citations: turn.visibleCitations,
-    toolSteps: turn.toolSteps,
-  });
+  ): Message => {
+    const isStopped = turn.stopped || turn.phase === "stopped";
+    const committedText = isStopped
+      ? turn.displayText
+      : getRenderableStreamingText(turn.rawText).text;
+
+    return {
+      id: turn.id,
+      role: "model",
+      text: committedText.trimEnd(),
+      timestamp: Date.now(),
+      thoughtSeconds:
+        turn.thoughtSeconds ?? getThoughtSecondsFromToolSteps(turn.toolSteps),
+      stopped: isStopped,
+      alreadyStreamed: true,
+      citations: turn.visibleCitations,
+      toolSteps: turn.toolSteps,
+    };
+  };
 
   const commitPendingAssistantTurn = (turn: PendingAssistantTurn) => {
     if (finalizedPendingTurnIdRef.current === turn.id) return;
