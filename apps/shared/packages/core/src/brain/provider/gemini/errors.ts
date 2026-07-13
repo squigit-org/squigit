@@ -57,6 +57,19 @@ export function isProviderQuotaZeroError(error: any): boolean {
   return searchStr.includes("limit: 0");
 }
 
+export function isProviderRateLimitError(error: any): boolean {
+  const searchStr = getGeminiErrorSearchText(error);
+
+  return (
+    searchStr.includes("429") ||
+    searchStr.includes("quota") ||
+    searchStr.includes("resource_exhausted") ||
+    searchStr.includes("high demand") ||
+    searchStr.includes("rate limit") ||
+    searchStr.includes("retrydelay")
+  );
+}
+
 export function isProviderHighDemandError(error: any): boolean {
   const searchStr = getGeminiErrorSearchText(error);
 

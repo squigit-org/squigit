@@ -40,6 +40,7 @@ import { createToolEventHandler } from "@squigit/core/brain/engine";
 import {
   isBrainHighDemandError,
   isBrainQuotaZeroError,
+  isBrainRateLimitError,
   isBrainNetworkError,
   getFriendlyBrainErrorMessage,
 } from "@squigit/core/brain/provider";
@@ -345,7 +346,8 @@ export const useBrainEngine = (config: {
           }
           if (
             isBrainHighDemandError(apiError) ||
-            isBrainQuotaZeroError(apiError)
+            isBrainQuotaZeroError(apiError) ||
+            isBrainRateLimitError(apiError)
           ) {
             // If tools already executed in this turn, don't silently fall back.
             // Fallback would restart the request from scratch, losing all tool

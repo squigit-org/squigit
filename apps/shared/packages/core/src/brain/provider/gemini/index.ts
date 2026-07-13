@@ -11,6 +11,7 @@ export {
   getProviderHighDemandMessage,
   isProviderHighDemandError,
   isProviderQuotaZeroError,
+  isProviderRateLimitError,
   parseProviderError,
   isNetworkError,
 } from "./errors";
