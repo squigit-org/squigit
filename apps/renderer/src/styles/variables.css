@@ -192,6 +192,7 @@
   --c-raw-161: #1a1a1a;
   --c-raw-162: #fafafa;
   --c-raw-163: #7373731d;
+  --c-raw-164: #131313a1;
 }
 
 body.light-mode,
@@ -364,4 +365,5 @@ html.light {
   --c-raw-161: #d4d4d4;
   --c-raw-162: #000000;
   --c-raw-163: #4d4d4d0e;
+  --c-raw-164: #ffffff7d;
 }

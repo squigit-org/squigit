@@ -79,9 +79,9 @@
   top: calc(100% + var(--dropdown-offset, 8px));
   right: 0;
   min-width: 200px;
-  background-color: var(--c-raw-147);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--c-raw-164);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--c-raw-149);
   border-radius: 12px;
   padding: 8px;
@@ -191,5 +191,5 @@
 }
 
 .actionButton:hover {
-  background-color: var(--c-raw-047);
+  background-color: var(--c-raw-150);
 }
