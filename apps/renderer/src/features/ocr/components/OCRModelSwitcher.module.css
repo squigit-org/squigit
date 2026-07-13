@@ -4,22 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/components/ui/dropdown/Dropdown.shared.module.css";
-
 .modelSwitcher {
-  position: relative;
   pointer-events: auto;
 }
 
-.trigger {
-  font-size: 0.875rem;
-  font-weight: 500;
+.triggerLabel {
   color: var(--c-raw-003);
-  font-family: "Inter", sans-serif;
-}
-
-.hidden {
-  display: none;
 }
 
 .modelList {
@@ -48,34 +38,5 @@
 }
 
 .modelItem {
-  composes: item;
   flex-shrink: 0;
-}
-
-.activeModel {
-  composes: itemActive;
-}
-
-.dropdown {
-  composes: dropdown from "@/components/ui/dropdown/Dropdown.shared.module.css";
-}
-
-.open {
-  composes: open from "@/components/ui/dropdown/Dropdown.shared.module.css";
-}
-
-.sectionTitle {
-  composes: sectionTitle from "@/components/ui/dropdown/Dropdown.shared.module.css";
-}
-
-.divider {
-  composes: divider from "@/components/ui/dropdown/Dropdown.shared.module.css";
-}
-
-.actions {
-  composes: actions from "@/components/ui/dropdown/Dropdown.shared.module.css";
-}
-
-.actionButton {
-  composes: actionButton from "@/components/ui/dropdown/Dropdown.shared.module.css";
 }

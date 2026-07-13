@@ -4,12 +4,52 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "@/components/ui/dropdown/Dropdown.shared.module.css";
-
 .accountSwitcher {
   position: relative;
   pointer-events: auto;
   -webkit-app-region: no-drag;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--c-raw-003);
+  font-family: "Inter", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.trigger:hover:not(:disabled) {
+  background-color: transparent;
+  color: var(--c-raw-002);
+}
+
+.trigger:hover:not(:disabled) .triggerIcon {
+  color: var(--c-raw-002);
+}
+
+.trigger:hover:not(:disabled) .cancelIcon {
+  color: var(--c-raw-099);
+}
+
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.triggerIcon {
+  color: var(--c-raw-004);
+  transition: transform 0.2s ease;
+}
+
+.triggerIconOpen {
+  transform: rotate(180deg);
 }
 
 .cancelIcon {
@@ -25,6 +65,52 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background-color: var(--c-raw-147);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--c-raw-149);
+  border-radius: 12px;
+  padding: 8px;
+  z-index: 1000;
+  box-shadow:
+    0 20px 25px -5px var(--c-raw-045),
+    0 8px 10px -6px var(--c-raw-044);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.15s ease,
+    visibility 0.15s ease,
+    transform 0.15s ease;
+
+  isolation: isolate;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.dropdownOpen {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.sectionTitle {
+  padding: 8px 10px 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-raw-057);
 }
 
 .accountList {
@@ -46,11 +132,29 @@
 }
 
 .accountItem {
-  composes: item;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+  font-family: "Inter", sans-serif;
+  color: var(--c-raw-046);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.accountItem:hover {
+  background-color: var(--c-raw-150);
 }
 
 .activeAccount {
-  composes: itemActive;
+  background-color: var(--c-raw-038);
 }
 
 .itemAvatar {
@@ -88,6 +192,12 @@
   text-overflow: ellipsis;
 }
 
+.checkIcon {
+  color: var(--c-raw-050);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .deleteButton {
   background: transparent;
   border: none;
@@ -120,8 +230,44 @@
   color: var(--c-raw-059);
 }
 
+.divider {
+  height: 1px;
+  background-color: var(--c-raw-041);
+  margin: 6px 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--c-raw-046);
+  transition: all 0.15s ease;
+  font-family: "Inter", sans-serif;
+}
+
+.actionButton:hover {
+  background-color: var(--c-raw-047);
+}
+
 .actionButtonLoading {
   opacity: 0.85;
+}
+
+.spin {
+  animation: "rotate" 1s linear infinite;
 }
 
 .avatarContainer {

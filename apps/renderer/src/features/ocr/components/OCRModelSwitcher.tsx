@@ -4,9 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
-import { createPortal } from "react-dom";
-import { ChevronDown, Check, PackagePlus } from "lucide-react";
+import React, { useState } from "react";
+import { PackagePlus } from "lucide-react";
+import {
+  Dropdown,
+  DropdownAction,
+  DropdownDivider,
+  DropdownItem,
+  DropdownSectionTitle,
+} from "@/components/ui";
 import { SettingsSection } from "@/features/settings";
 import { getLanguageCode } from "../ocr-models.types";
 import { useModelsStore } from "../ocr-models.store";
@@ -26,55 +32,8 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
   disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const models = useModelsStore((s) => s.models);
   const installedModels = models.filter((m) => m.state === "downloaded");
-
-  const updatePosition = () => {
-    if (isOpen && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setDropdownStyle({
-        position: "fixed",
-        top: `${rect.bottom + 18}px`,
-        right: `${window.innerWidth - rect.right}px`,
-        minWidth: "220px",
-        zIndex: 9999,
-      });
-    }
-  };
-
-  useLayoutEffect(() => {
-    updatePosition();
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        const target = event.target as Element;
-        if (!target.closest(`.${styles.dropdown}`)) {
-          setIsOpen(false);
-        }
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
 
   const isCurrentModelValid = installedModels.some(
     (m) => m.id === currentOcrModel,
@@ -85,70 +44,52 @@ export const OCRModelSwitcher: React.FC<OCRModelSwitcherProps> = ({
       ? currentOcrModel
       : "";
 
-  const dropdownContent = (
-    <div
-      className={`${styles.dropdown} ${isOpen ? styles.open : ""}`}
-      style={dropdownStyle}
-      onMouseDown={(e) => e.stopPropagation()}
+  return (
+    <Dropdown
+      className={styles.modelSwitcher}
+      label={effectiveModel ? getLanguageCode(effectiveModel) : "Select Model"}
+      width={220}
+      isOpen={isOpen}
+      onOpenChange={setIsOpen}
+      disabled={disabled}
+      title="Select OCR Model"
+      chevronSize={14}
+      offset={18}
+      portal
+      zIndex={9999}
+      triggerLabelClassName={styles.triggerLabel}
     >
-      <div className={styles.sectionTitle}>OCR Model</div>
+      <DropdownSectionTitle>OCR Model</DropdownSectionTitle>
       <div className={styles.modelList}>
         {installedModels.map((model) => (
-          <button
+          <DropdownItem
             key={model.id}
-            className={`${styles.modelItem} ${
-              model.id === effectiveModel ? styles.activeModel : ""
-            }`}
+            className={styles.modelItem}
+            isActive={model.id === effectiveModel}
+            label={
+              <div className={styles.modelInfo}>
+                <span className={styles.modelName}>{model.name}</span>
+              </div>
+            }
             onClick={() => {
               onOcrModelChange(model.id);
               setIsOpen(false);
             }}
-          >
-            <div className={styles.modelInfo}>
-              <span className={styles.modelName}>{model.name}</span>
-            </div>
-            {model.id === effectiveModel && (
-              <Check size={14} className={styles.checkIcon} />
-            )}
-          </button>
+          />
         ))}
       </div>
 
-      <div className={styles.divider} />
+      <DropdownDivider />
 
-      <div className={styles.actions}>
-        <button
-          className={styles.actionButton}
-          onClick={() => {
-            onOpenSettings("models");
-            setIsOpen(false);
-          }}
-        >
-          <PackagePlus size={16} />
-          <span>Get more models</span>
-        </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className={styles.modelSwitcher} ref={containerRef}>
-      <button
-        disabled={disabled}
-        className={`${styles.trigger} ${styles.triggerGlobal} ${isOpen ? styles.active : ""}`}
-        onClick={() => setIsOpen(!isOpen)}
-        title="Select OCR Model"
+      <DropdownAction
+        icon={<PackagePlus size={16} />}
+        onClick={() => {
+          onOpenSettings("models");
+          setIsOpen(false);
+        }}
       >
-        <span className={styles.triggerText}>
-          {effectiveModel ? getLanguageCode(effectiveModel) : "Select Model"}
-        </span>
-        <ChevronDown
-          size={14}
-          className={`${styles.chevron} ${styles.chevronClr} ${isOpen ? styles.rotate : ""}`}
-        />
-      </button>
-
-      {createPortal(dropdownContent, document.body)}
-    </div>
+        Get more models
+      </DropdownAction>
+    </Dropdown>
   );
 };

@@ -63,7 +63,7 @@
 }
 
 .actionBtn:hover:not(:disabled) {
-  background-color: var(--c-raw-010);
+  background-color: var(--c-raw-163);
 }
 
 .actionBtn:disabled {
@@ -123,7 +123,7 @@
   border-radius: 9999px;
   background: transparent;
   border: none;
-  color: var(--c-raw-050);
+  color: var(--c-raw-004);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -132,7 +132,7 @@
 }
 
 .toolBtn:hover {
-  color: var(--c-raw-036);
+  color: var(--c-raw-002);
 }
 
 .spinner {
@@ -140,7 +140,9 @@
 }
 
 .floatingContainer {
-  background-color: var(--c-raw-012);
+  background: var(--c-raw-151);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--c-raw-010);
   box-shadow: 0 2px 8px #00000020;
   position: relative;
@@ -176,7 +178,7 @@
   cursor: pointer;
   z-index: 2;
   position: relative;
-  background-color: var(--c-raw-012);
+  background: transparent;
 }
 
 .thumbnailWrapper {
@@ -354,7 +356,7 @@
   width: 100%;
   flex: 1;
   min-height: 0;
-  background-color: var(--c-raw-011);
+  background-color: transparent;
   border-radius: 8px;
   position: relative;
   display: flex;

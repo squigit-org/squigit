@@ -103,7 +103,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
   return (
     <div className={styles.accountSwitcher} ref={containerRef}>
       <button
-        className={`${styles.trigger} ${styles.triggerGlobal} ${isOpen ? styles.active : ""}`}
+        className={styles.trigger}
         onClick={handleTriggerClick}
         onMouseEnter={() => setIsTriggerHovered(true)}
         onMouseLeave={() => setIsTriggerHovered(false)}
@@ -122,28 +122,28 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
           showCancelAuth ? (
             <X
               size={18}
-              className={`${styles.chevron} ${styles.chevronClr} ${styles.cancelIcon}`}
+              className={`${styles.triggerIcon} ${styles.cancelIcon}`}
             />
           ) : (
             <Loader2
               size={18}
-              className={`${styles.chevron} ${styles.chevronClr} ${styles.spin}`}
+              className={`${styles.triggerIcon} ${styles.spin}`}
             />
           )
         ) : isSwitchingProfile ? (
           <Loader2
             size={18}
-            className={`${styles.chevron} ${styles.chevronClr} ${styles.spin}`}
+            className={`${styles.triggerIcon} ${styles.spin}`}
           />
         ) : (
           <ChevronDown
             size={18}
-            className={`${styles.chevron} ${styles.chevronClr} ${isOpen ? styles.rotate : ""}`}
+            className={`${styles.triggerIcon} ${isOpen ? styles.triggerIconOpen : ""}`}
           />
         )}
       </button>
 
-      <div className={`${styles.dropdown} ${isOpen ? styles.open : ""}`}>
+      <div className={`${styles.dropdown} ${isOpen ? styles.dropdownOpen : ""}`}>
         <div className={styles.sectionTitle}>Switch Account</div>
         <div className={styles.accountList}>
           {profiles.map((profile) => {

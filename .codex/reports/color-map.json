@@ -1113,7 +1113,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 29,
       "column": 21,
       "raw": "rgba(255, 255, 255, 0.08)",
@@ -1123,7 +1123,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 33,
       "column": 21,
       "raw": "rgba(255, 255, 255, 0.12)",
@@ -1133,7 +1133,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 86,
       "column": 21,
       "raw": "rgba(26, 26, 26, 0.98)",
@@ -1143,7 +1143,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 89,
       "column": 21,
       "raw": "rgba(63, 63, 70, 0.5)",
@@ -1153,7 +1153,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 94,
       "column": 22,
       "raw": "rgba(0, 0, 0, 0.4)",
@@ -1163,7 +1163,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 95,
       "column": 21,
       "raw": "rgba(0, 0, 0, 0.3)",
@@ -1173,7 +1173,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 131,
       "column": 10,
       "raw": "#71717a",
@@ -1183,7 +1183,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 136,
       "column": 21,
       "raw": "rgba(63, 63, 70, 0.5)",
@@ -1193,7 +1193,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 153,
       "column": 15,
       "raw": "rgba(63, 63, 70, 0.5)",
@@ -1203,7 +1203,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 170,
       "column": 10,
       "raw": "#ededed",
@@ -1213,7 +1213,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 176,
       "column": 21,
       "raw": "rgba(255, 255, 255, 0.06)",
@@ -1223,7 +1223,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 180,
       "column": 21,
       "raw": "rgba(255, 255, 255, 0.08)",
@@ -1233,7 +1233,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 184,
       "column": 10,
       "raw": "#ffffff",
@@ -1243,7 +1243,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 206,
       "column": 10,
       "raw": "#dbdbe7",
@@ -1253,7 +1253,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 212,
       "column": 21,
       "raw": "rgba(255, 255, 255, 0.06)",
@@ -1263,7 +1263,7 @@
       "source": "generated"
     },
     {
-      "file": "ui/src/components/dropdown/Dropdown.shared.module.css",
+      "file": "ui/src/components/dropdown/Dropdown.module.css",
       "line": 213,
       "column": 10,
       "raw": "#ededed",
