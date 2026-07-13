@@ -66,8 +66,8 @@ export function initializeCorePorts(): void {
     storeImageFromPath: (path: string) =>
       platform.invoke("store_image_from_path", { path }),
     getImagePath: (hash: string) => platform.invoke("get_image_path", { hash }),
-    createThread: (title: string, imageHash: string, ocrLang?: string | null) =>
-      platform.invoke("create_thread", { title, imageHash, ocrLang }),
+    createThread: (title: string, imageHash: string) =>
+      platform.invoke("create_thread", { title, imageHash }),
     loadThread: (threadId: string) =>
       platform.invoke("load_thread", { threadId }),
     listThreads: () => platform.invoke("list_threads"),
@@ -93,10 +93,14 @@ export function initializeCorePorts(): void {
     initOcrAnnotations: (threadId, modelIds) =>
       platform.invoke("init_ocr_annotations", { threadId, modelIds }),
     cancelOcrJob: () => platform.invoke("cancel_ocr_job"),
-    saveReverseImageSearchUrl: (threadId, url) =>
-      platform.invoke("save_reverse_image_search_url", { threadId, url }),
-    getReverseImageSearchUrl: (threadId) =>
-      platform.invoke("get_reverse_image_search_url", { threadId }),
+    saveReverseImageSearchCache: (threadId, imgbbUrl, googleLensUrl) =>
+      platform.invoke("save_reverse_image_search_cache", {
+        threadId,
+        imgbbUrl,
+        googleLensUrl,
+      }),
+    getReverseImageSearchCache: (threadId) =>
+      platform.invoke("get_reverse_image_search_cache", { threadId }),
     saveImageTone: (threadId, tone) =>
       platform.invoke("save_image_tone", { threadId, tone }),
     saveImageBrief: (threadId, brief) =>

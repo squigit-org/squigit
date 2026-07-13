@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { addon, parseAddonJson, requireAddonFn } from "../system/addon";
-import { optionalStringArg, requireStringArg } from "../system/arguments";
+import { requireStringArg } from "../system/arguments";
 import { sendStreamEvent } from "./stream";
 
 export const getThreadDir = (threadId: string) => {
@@ -15,7 +15,6 @@ export function registerThreadHandlers() {
     const json = requireAddonFn("create_thread")(
       requireStringArg("create_thread", args, "title"),
       requireStringArg("create_thread", args, "imageHash", "image_hash"),
-      optionalStringArg(args, "ocrLang", "ocr_lang"),
     );
     return parseAddonJson("create_thread", json);
   });
@@ -68,8 +67,17 @@ export function registerThreadHandlers() {
   ipcMain.handle("delete_thread", (_, args) =>
     addon.delete_thread?.(args.threadId),
   );
-  ipcMain.handle("get_reverse_image_search_url", (_, args) =>
-    addon.get_reverse_image_search_url?.(args.threadId),
+  ipcMain.handle("get_reverse_image_search_cache", (_, args) => {
+    const json = addon.get_reverse_image_search_cache?.(args.threadId);
+    return json ? JSON.parse(json) : null;
+  });
+
+  ipcMain.handle("save_reverse_image_search_cache", (_, args) =>
+    addon.save_reverse_image_search_cache?.(
+      args.threadId,
+      args.imgbbUrl,
+      args.googleLensUrl,
+    ),
   );
   ipcMain.handle("get_image_path", (_, args) =>
     addon.get_image_path?.(
@@ -81,9 +89,6 @@ export function registerThreadHandlers() {
         "image_hash",
       ),
     ),
-  );
-  ipcMain.handle("save_reverse_image_search_url", (_, args) =>
-    addon.save_reverse_image_search_url?.(args.threadId, args.url),
   );
   ipcMain.handle("generate_thread_title", (_, args) =>
     addon.generate_thread_title?.(args.apiKey, args.model, args.promptContext),
@@ -247,18 +252,7 @@ export function registerThreadHandlers() {
     ),
   );
 
-  ipcMain.handle("save_image_brief", async (_, args) => {
-    const fs = require("fs/promises");
-    try {
-      const threadDir = getThreadDir(args.threadId);
-      const metaPath = require("path").join(threadDir, "meta.json");
-      const meta = JSON.parse(await fs.readFile(metaPath, "utf8"));
-      meta.image_brief = args.brief;
-      await fs.writeFile(metaPath, JSON.stringify(meta, null, 2));
-    } catch (e) {
-      console.error("save_image_brief error", e);
-    }
-  });
+  ipcMain.handle("save_image_brief", () => {});
 
   ipcMain.handle("list_threads", () => {
     const json = requireAddonFn("list_threads")();

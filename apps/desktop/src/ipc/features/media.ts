@@ -3,6 +3,36 @@ import { addon } from "../system/addon";
 import { requireStringArg } from "../system/arguments";
 import { getThreadDir } from "./thread";
 
+const EMPTY_STATE_ASSET_ID = "__empty_state_asset__";
+const DEFAULT_OCR_MODEL_ID = "pp-ocr-v5-en";
+const SUPPORTED_OCR_MODEL_IDS = new Set([
+  "pp-ocr-v5-en",
+  "pp-ocr-v5-latin",
+  "pp-ocr-v5-cyrillic",
+  "pp-ocr-v5-korean",
+  "pp-ocr-v5-cjk",
+  "pp-ocr-v5-devanagari",
+]);
+
+const createEmptyOcrAnnotations = () => ({
+  [EMPTY_STATE_ASSET_ID]: [],
+});
+
+const ensureEmptyStateAsset = (annotations: any) => {
+  if (!annotations || typeof annotations !== "object" || Array.isArray(annotations)) {
+    return createEmptyOcrAnnotations();
+  }
+  if (!Array.isArray(annotations[EMPTY_STATE_ASSET_ID])) {
+    annotations[EMPTY_STATE_ASSET_ID] = [];
+  }
+  return annotations;
+};
+
+const resolveOcrModelId = (modelId: string | undefined) =>
+  modelId && SUPPORTED_OCR_MODEL_IDS.has(modelId)
+    ? modelId
+    : DEFAULT_OCR_MODEL_ID;
+
 const resolveOcrImagePath = (rawImagePath: string) => {
   const path = require("path");
   const fs = require("fs");
@@ -53,11 +83,16 @@ export function registerMediaHandlers() {
         threadDir,
         "ocr_annotations.json",
       );
-      let annotations: any = {};
+      let annotations: any = createEmptyOcrAnnotations();
       try {
-        annotations = JSON.parse(await fs.readFile(annotationsPath, "utf-8"));
+        annotations = ensureEmptyStateAsset(
+          JSON.parse(await fs.readFile(annotationsPath, "utf-8")),
+        );
       } catch {}
-      annotations[args.modelId || "eng"] = args.ocrData;
+      annotations[resolveOcrModelId(args.modelId)] = {
+        scanned_at: new Date().toISOString(),
+        ocr_data: args.ocrData || [],
+      };
       await fs.writeFile(annotationsPath, JSON.stringify(annotations, null, 2));
     } catch (e) {
       console.error("save_ocr_data error", e);
@@ -71,10 +106,13 @@ export function registerMediaHandlers() {
         getThreadDir(args.threadId),
         "ocr_annotations.json",
       );
-      const annotations = JSON.parse(
-        await fs.readFile(annotationsPath, "utf-8"),
+      const annotations = ensureEmptyStateAsset(
+        JSON.parse(await fs.readFile(annotationsPath, "utf-8")),
       );
-      return annotations[args.modelId || "eng"] || null;
+      const entry = annotations[resolveOcrModelId(args.modelId)];
+      return entry && !Array.isArray(entry) && entry.scanned_at
+        ? entry.ocr_data || []
+        : null;
     } catch {
       return null;
     }
@@ -87,9 +125,11 @@ export function registerMediaHandlers() {
         getThreadDir(args.threadId),
         "ocr_annotations.json",
       );
-      return JSON.parse(await fs.readFile(annotationsPath, "utf-8"));
+      return ensureEmptyStateAsset(
+        JSON.parse(await fs.readFile(annotationsPath, "utf-8")),
+      );
     } catch {
-      return {};
+      return createEmptyOcrAnnotations();
     }
   });
 
@@ -102,12 +142,17 @@ export function registerMediaHandlers() {
         threadDir,
         "ocr_annotations.json",
       );
-      let annotations: any = {};
+      let annotations: any = createEmptyOcrAnnotations();
       try {
-        annotations = JSON.parse(await fs.readFile(annotationsPath, "utf-8"));
+        annotations = ensureEmptyStateAsset(
+          JSON.parse(await fs.readFile(annotationsPath, "utf-8")),
+        );
       } catch {}
       for (const modelId of args.modelIds || []) {
-        if (!(modelId in annotations)) annotations[modelId] = null;
+        const resolvedModelId = resolveOcrModelId(modelId);
+        if (!(resolvedModelId in annotations)) {
+          annotations[resolvedModelId] = { scanned_at: null, ocr_data: [] };
+        }
       }
       await fs.writeFile(annotationsPath, JSON.stringify(annotations, null, 2));
     } catch (e) {

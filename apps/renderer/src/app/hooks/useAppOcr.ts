@@ -7,8 +7,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
   type OcrAnnotations,
+  type ReverseImageSearchCache,
   saveOcrData,
-  saveReverseImageSearchUrl,
+  saveReverseImageSearchCache,
 } from "@squigit/core/config";
 
 export const useAppOcr = (activeSessionId: string | null) => {
@@ -21,12 +22,17 @@ export const useAppOcr = (activeSessionId: string | null) => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
-  const handleUpdateLensUrl = useCallback(
-    (url: string | null) => {
-      setSessionLensUrl(url);
-      if (activeSessionId && url) {
-        saveReverseImageSearchUrl(activeSessionId, url).catch((e) =>
-          console.error("Failed to save reverse image search URL", e),
+  const handleUpdateLensCache = useCallback(
+    (cache: ReverseImageSearchCache) => {
+      const googleLensUrl = cache.google_lens_url || null;
+      setSessionLensUrl(googleLensUrl);
+      if (activeSessionId && cache.imgbb_url && googleLensUrl) {
+        saveReverseImageSearchCache(
+          activeSessionId,
+          cache.imgbb_url,
+          googleLensUrl,
+        ).catch((e) =>
+          console.error("Failed to save reverse image search cache", e),
         );
       }
     },
@@ -63,7 +69,10 @@ export const useAppOcr = (activeSessionId: string | null) => {
       setOcrData((prev) => {
         const newState = {
           ...prev,
-          [modelId]: regions,
+          [modelId]: {
+            scanned_at: new Date().toISOString(),
+            ocr_data: regions,
+          },
         };
         console.log(
           `[useApp] New OCR Data keys: ${Object.keys(newState).join(", ")}`,
@@ -77,7 +86,7 @@ export const useAppOcr = (activeSessionId: string | null) => {
   return {
     sessionLensUrl,
     setSessionLensUrl,
-    handleUpdateLensUrl,
+    handleUpdateLensCache,
     ocrData,
     setOcrData,
     handleUpdateOCRData,

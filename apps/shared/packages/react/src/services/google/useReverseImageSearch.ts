@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { google } from "@squigit/core/services/google";
 import { getSystemPort } from "@squigit/core/ports";
 import { openExternalUrl } from "@squigit/core/services/system";
+import type { ReverseImageSearchCache } from "@squigit/core/config";
 
 /**
  * Uploads an image file path to ImgBB and returns the hosted URL.
@@ -46,7 +47,7 @@ export const useReverseImageSearch = (
     imageId: string;
   } | null,
   cachedUrl: string | null,
-  setCachedUrl: (url: string) => void,
+  setCachedCache: (cache: ReverseImageSearchCache) => void,
   activeProfileId: string | null,
 ) => {
   const [isLensLoading, setIsLensLoading] = useState(false);
@@ -81,7 +82,11 @@ export const useReverseImageSearch = (
       const lensUrl = generateLensUrl(publicUrl);
       const finalUrl = appendQuery(lensUrl, searchQuery);
 
-      setCachedUrl(lensUrl);
+      setCachedCache({
+        imgbb_url: publicUrl,
+        google_lens_url: lensUrl,
+        created_at: new Date().toISOString(),
+      });
       await openExternalUrl(finalUrl);
     } finally {
       setIsLensLoading(false);
