@@ -2106,6 +2106,7 @@ dependencies = [
  "serde_json",
  "squigit-auth",
  "squigit-brain",
+ "squigit-harness",
  "squigit-storage",
  "tokio",
  "webbrowser",
@@ -3480,6 +3481,11 @@ dependencies = [
 [[package]]
 name = "squigit-harness"
 version = "0.1.0"
+dependencies = [
+ "regex",
+ "squigit-auth",
+ "squigit-storage",
+]
 
 [[package]]
 name = "squigit-storage"

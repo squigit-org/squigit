@@ -9,6 +9,7 @@ import { useSettingsStore } from "@/features/settings/settings.store";
 import type { ProviderStreamEvent } from "@squigit/core/brain/engine";
 import {
   setConfigPort,
+  setHarnessPort,
   setProviderPort,
   setStoragePort,
   setSystemPort,
@@ -58,6 +59,14 @@ export function initializeCorePorts(): void {
         unlisten();
       };
     },
+  });
+
+  setHarnessPort({
+    prepareTextFirstMessage: (input) =>
+      platform.invoke("prepare_text_first_message", {
+        messageText: input.messageText,
+        textAttachmentPaths: input.textAttachmentPaths,
+      }),
   });
 
   setStoragePort({

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod brain;
+pub mod harness;
 pub mod profile;
 pub mod storage;
 pub mod types;

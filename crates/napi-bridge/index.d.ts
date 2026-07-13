@@ -121,11 +121,29 @@ export interface NapiSttOptions {
   language?: string
 }
 
+export interface NapiHarnessTextAttachment {
+  path: string
+  displayName: string
+  extension: string
+  charCount: number
+  ok: boolean
+  errorCode?: string
+  errorMessage?: string
+}
+
+export interface NapiHarnessTextFirstMessage {
+  messageText: string
+  attachments: Array<NapiHarnessTextAttachment>
+  consumedPaths: Array<string>
+}
+
 export declare function ocr_image(imagePath: string, isBase64: boolean, modelName: string): Promise<string>
 
 export declare function play_ui_sound(effect: string): void
 
 export declare function process_image_path(path: string): NapiStoredImage
+
+export declare function prepare_text_first_message(messageText: string, textAttachmentPaths: Array<string>): NapiHarnessTextFirstMessage
 
 export declare function profile_count(): number
 

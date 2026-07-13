@@ -20,6 +20,7 @@ chrono = { version = "0.4", features = ["serde"] }
 squigit-auth = { path = "../squigit-auth" }
 squigit-storage = { path = "../squigit-storage" }
 squigit-brain = { path = "../squigit-brain" }
+squigit-harness = { path = "../squigit-harness" }
 desktop-runtime = { path = "../desktop-runtime", optional = true }
 ocr-runtime = { path = "../ocr-runtime", optional = true }
 webbrowser = "1.2.1"
