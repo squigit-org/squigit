@@ -20,7 +20,11 @@ export type {
   ThreadToolStep,
   ThreadMessage,
   OcrRegion,
+  OcrModelAnnotation,
+  OcrAnnotationEntry,
   OcrAnnotations,
+  ContextWindow,
+  ReverseImageSearchCache,
   ThreadData,
   ThreadSearchResult,
   StoredImage,
@@ -28,7 +32,7 @@ export type {
 } from "./thread-storage.ts";
 
 export {
-  AUTO_OCR_DISABLED_MODEL_ID,
+  EMPTY_STATE_ASSET_ID,
   storeImageBytes,
   storeImageFromPath,
   getImagePath,
@@ -45,8 +49,8 @@ export {
   getOcrAnnotations,
   initOcrAnnotations,
   cancelOcrJob,
-  saveReverseImageSearchUrl,
-  getReverseImageSearchUrl,
+  saveReverseImageSearchCache,
+  getReverseImageSearchCache,
   saveImageTone,
   saveImageBrief,
 } from "./thread-storage.ts";

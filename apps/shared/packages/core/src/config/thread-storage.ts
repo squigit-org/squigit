@@ -18,9 +18,6 @@ export interface ThreadMetadata {
   updated_at: string;
   image_hash: string;
   is_pinned: boolean;
-  ocr_lang?: string;
-  image_tone?: string | null;
-  reverse_image_search_url?: string | null;
 }
 
 /** A single thread message (matches Rust ThreadMessage). */
@@ -58,20 +55,42 @@ export interface OcrRegion {
   bbox: number[][];
 }
 
-/** OCR annotations: keyed by model_id, each value is cached results or null (not scanned). */
-export type OcrAnnotations = Record<string, OcrRegion[] | null>;
+/** OCR output for a single PaddleOCR model. */
+export interface OcrModelAnnotation {
+  scanned_at?: string | null;
+  ocr_data: OcrRegion[];
+}
+
+export type OcrAnnotationEntry = OcrModelAnnotation | OcrRegion[];
+
+/** OCR annotations: keyed by sentinel/model_id. */
+export type OcrAnnotations = Record<string, OcrAnnotationEntry>;
 
 /**
- * Special OCR annotations key used to persist "do not auto-run OCR for this thread".
- * Manual OCR model selection still works.
+ * Empty-state sentinel stored in every OCR annotations file.
  */
-export const AUTO_OCR_DISABLED_MODEL_ID = "__meta_auto_ocr_disabled__";
+export const EMPTY_STATE_ASSET_ID = "__empty_state_asset__";
+
+export interface ContextWindow {
+  tokens_used: number;
+  compacted_at?: string | null;
+  compacted_context?: string | null;
+}
+
+export interface ReverseImageSearchCache {
+  imgbb_url?: string | null;
+  google_lens_url?: string | null;
+  created_at?: string | null;
+}
 
 /** Complete thread data (matches Rust ThreadData). */
 export interface ThreadData {
   metadata: ThreadMetadata;
   messages: ThreadMessage[];
   ocr_data: OcrAnnotations;
+  context_window: ContextWindow;
+  reverse_image_search: ReverseImageSearchCache;
+  image_tone?: string | null;
   image_brief?: string | null;
 }
 
@@ -127,9 +146,8 @@ export async function getImagePath(hash: string): Promise<string> {
 export async function createThread(
   title: string,
   imageHash: string,
-  ocrLang?: string | null,
 ): Promise<ThreadMetadata> {
-  return getStoragePort().createThread(title, imageHash, ocrLang);
+  return getStoragePort().createThread(title, imageHash);
 }
 
 /** Load a thread by ID (full data including messages). */
@@ -228,19 +246,24 @@ export async function cancelOcrJob(): Promise<void> {
 // Reverse Image Search Commands
 // =============================================================================
 
-/** Save the reverse image search URL for a thread. */
-export async function saveReverseImageSearchUrl(
+/** Save the reverse image search cache for a thread. */
+export async function saveReverseImageSearchCache(
   threadId: string,
-  url: string,
+  imgbbUrl: string,
+  googleLensUrl: string,
 ): Promise<void> {
-  return getStoragePort().saveReverseImageSearchUrl(threadId, url);
+  return getStoragePort().saveReverseImageSearchCache(
+    threadId,
+    imgbbUrl,
+    googleLensUrl,
+  );
 }
 
-/** Get the reverse image search URL for a thread. */
-export async function getReverseImageSearchUrl(
+/** Get the reverse image search cache for a thread. */
+export async function getReverseImageSearchCache(
   threadId: string,
-): Promise<string | null> {
-  return getStoragePort().getReverseImageSearchUrl(threadId);
+): Promise<ReverseImageSearchCache | null> {
+  return getStoragePort().getReverseImageSearchCache(threadId);
 }
 
 // =============================================================================

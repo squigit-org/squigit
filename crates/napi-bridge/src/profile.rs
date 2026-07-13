@@ -6,7 +6,9 @@ use napi_derive::napi;
 use squigit_auth::auth::{
     hydrate_avatar as hydrate_profile_avatar, start_google_auth_flow, AuthFlowSettings,
 };
-use squigit_auth::security::{encrypt_and_save_api_key, get_decrypted_key, ApiKeyProvider};
+use squigit_auth::security::{
+    encrypt_and_save_api_key as ensak, get_decrypted_key, ApiKeyProvider,
+};
 use squigit_auth::ProfileStore;
 use std::str::FromStr;
 use std::sync::{atomic::AtomicBool, Arc, Mutex};
@@ -167,7 +169,7 @@ pub fn encrypt_and_save_api_key(
     let store = ProfileStore::new().map_err(map_profile_err)?;
     let provider_enum =
         ApiKeyProvider::from_str(&provider).map_err(|e| Error::from_reason(e.to_string()))?;
-    encrypt_and_save_api_key(&store, &profile_id, provider_enum, &key).map_err(map_profile_err)?;
+    ensak(&store, &profile_id, provider_enum, &key).map_err(map_profile_err)?;
     Ok(key)
 }
 

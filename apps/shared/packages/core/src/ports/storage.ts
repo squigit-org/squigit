@@ -11,6 +11,7 @@ import type {
   ThreadSearchResult,
   OcrAnnotations,
   OcrRegion,
+  ReverseImageSearchCache,
   StoredImage,
 } from "../config/thread-storage";
 
@@ -18,11 +19,7 @@ export interface StoragePort {
   storeImageBytes(bytes: number[]): Promise<StoredImage>;
   storeImageFromPath(path: string): Promise<StoredImage>;
   getImagePath(hash: string): Promise<string>;
-  createThread(
-    title: string,
-    imageHash: string,
-    ocrLang?: string | null,
-  ): Promise<ThreadMetadata>;
+  createThread(title: string, imageHash: string): Promise<ThreadMetadata>;
   loadThread(threadId: string): Promise<ThreadData>;
   listThreads(): Promise<ThreadMetadata[]>;
   searchThreads(query: string, limit: number): Promise<ThreadSearchResult[]>;
@@ -46,8 +43,14 @@ export interface StoragePort {
   getOcrAnnotations(threadId: string): Promise<OcrAnnotations>;
   initOcrAnnotations(threadId: string, modelIds: string[]): Promise<void>;
   cancelOcrJob(): Promise<void>;
-  saveReverseImageSearchUrl(threadId: string, url: string): Promise<void>;
-  getReverseImageSearchUrl(threadId: string): Promise<string | null>;
+  saveReverseImageSearchCache(
+    threadId: string,
+    imgbbUrl: string,
+    googleLensUrl: string,
+  ): Promise<void>;
+  getReverseImageSearchCache(
+    threadId: string,
+  ): Promise<ReverseImageSearchCache | null>;
   saveImageTone(threadId: string, tone: string): Promise<void>;
   saveImageBrief(threadId: string, brief: string): Promise<void>;
 }

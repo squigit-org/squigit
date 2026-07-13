@@ -64,7 +64,6 @@ async fn run() -> Result<(), String> {
                         ),
                         user_name: None,
                         user_email: None,
-                        ocr_lang: None,
                     },
                 )
                 .await?;
@@ -139,7 +138,7 @@ async fn resolve_model(api_key: &str) -> Result<String, String> {
         .map(|s| s.to_string())
         .collect();
 
-    // Sort to get the least/oldest model, which is typically lexicographically first 
+    // Sort to get the least/oldest model, which is typically lexicographically first
     // e.g. "models/gemini-1.5-flash" < "models/gemini-2.0-flash"
     flash_models.sort();
 

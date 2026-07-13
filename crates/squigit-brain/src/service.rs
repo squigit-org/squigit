@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::context::builder::format_history_log;
-use crate::provider::gemini::transport::types::GeminiEvent;
 use crate::events::BrainEventSink;
+use crate::provider::gemini::transport::types::GeminiEvent;
 use crate::runtime::BrainRuntimeState;
-use squigit_storage::{ThreadData, ThreadMessage, ThreadMetadata, StoredImage};
+use squigit_storage::{StoredImage, ThreadData, ThreadMessage, ThreadMetadata};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
@@ -48,7 +48,6 @@ pub struct AnalyzeImageRequest {
     pub channel_id: String,
     pub user_name: Option<String>,
     pub user_email: Option<String>,
-    pub ocr_lang: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -166,12 +165,7 @@ impl BrainService {
         let image = crate::context::media::process_and_store_image(&request.image_path, None)?;
         let storage = crate::context::media::get_active_storage()?;
 
-        let mut metadata = ThreadMetadata::new(
-            "Untitled".to_string(),
-            image.hash.clone(),
-            request.ocr_lang.clone(),
-        );
-        metadata.image_tone = storage.get_image_tone(&image.hash);
+        let mut metadata = ThreadMetadata::new("Untitled".to_string(), image.hash.clone());
         let thread = ThreadData::new(metadata.clone());
         storage.save_thread(&thread).map_err(|e| e.to_string())?;
 
@@ -206,7 +200,10 @@ impl BrainService {
         }
         if !assistant_message.trim().is_empty() {
             storage
-                .append_message(&metadata.id, &ThreadMessage::assistant(assistant_message.clone()))
+                .append_message(
+                    &metadata.id,
+                    &ThreadMessage::assistant(assistant_message.clone()),
+                )
                 .map_err(|e| e.to_string())?;
         }
 
@@ -321,8 +318,14 @@ impl BrainService {
             .map_err(|e| e.to_string())?;
 
         let mut metadata = thread.metadata;
-        if metadata.title == "Untitled" || metadata.title == "New thread" || metadata.title.trim().is_empty() {
-            let title_context = format!("User: {}\nAssistant: {}", normalized_user_message, assistant_message);
+        if metadata.title == "Untitled"
+            || metadata.title == "New thread"
+            || metadata.title.trim().is_empty()
+        {
+            let title_context = format!(
+                "User: {}\nAssistant: {}",
+                normalized_user_message, assistant_message
+            );
             if let Ok(title) = self
                 .generate_thread_title(GenerateThreadTitleRequest {
                     api_key: request.api_key.clone(),

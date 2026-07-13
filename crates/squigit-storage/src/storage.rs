@@ -3,19 +3,24 @@
 
 //! Content Addressable Storage (CAS) implementation for images and thread data.
 
+use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use crate::error::{Result, StorageError};
 use crate::types::{
-    AttachmentRegistry, OcrAnnotations, OcrRegion, StoredImage, ThreadData, ThreadMessage,
-    ThreadMetadata,
+    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotationEntry, OcrAnnotations,
+    OcrModelAnnotation, OcrRegion, ReverseImageSearchCache, StoredImage, ThreadData, ThreadMessage,
+    ThreadMetadata, EMPTY_STATE_ASSET_ID,
 };
 
 const OCR_ANNOTATIONS_FILE: &str = "ocr_annotations.json";
-const DEFAULT_OCR_MODEL_ID: &str = "pp-ocr-v5-en";
-const AUTO_OCR_DISABLED_MODEL_ID: &str = "__meta_auto_ocr_disabled__";
+const CONTEXT_WINDOW_FILE: &str = "context_window.json";
+const REVERSE_IMAGE_SEARCH_FILE: &str = "reverse_image_search.json";
+const MESSAGES_FILE: &str = "messages.json";
+const ATTACHMENT_REGISTRY_FILE: &str = "attachment_registry.json";
+type ThreadIndex = BTreeMap<String, ThreadMetadata>;
 
 fn is_supported_ocr_model_id(model_id: &str) -> bool {
     matches!(
@@ -29,27 +34,12 @@ fn is_supported_ocr_model_id(model_id: &str) -> bool {
     )
 }
 
-fn normalize_ocr_model_id(model_id: &str) -> &str {
-    let trimmed = model_id.trim();
-    if trimmed.is_empty() {
-        return DEFAULT_OCR_MODEL_ID;
-    }
-    if is_supported_ocr_model_id(trimmed) {
-        return trimmed;
-    }
-    DEFAULT_OCR_MODEL_ID
-}
-
-fn is_reserved_ocr_annotations_id(model_id: &str) -> bool {
-    model_id == AUTO_OCR_DISABLED_MODEL_ID
-}
-
 fn canonicalize_ocr_annotations_id(model_id: &str) -> Option<&str> {
     let trimmed = model_id.trim();
     if trimmed.is_empty() {
         return None;
     }
-    if is_supported_ocr_model_id(trimmed) || is_reserved_ocr_annotations_id(trimmed) {
+    if is_supported_ocr_model_id(trimmed) {
         return Some(trimmed);
     }
     None
@@ -58,7 +48,7 @@ fn canonicalize_ocr_annotations_id(model_id: &str) -> Option<&str> {
 fn retain_supported_ocr_annotations_ids(annotations: &mut OcrAnnotations) -> bool {
     let unsupported_keys: Vec<String> = annotations
         .keys()
-        .filter(|key| !is_supported_ocr_model_id(key) && !is_reserved_ocr_annotations_id(key))
+        .filter(|key| key.as_str() != EMPTY_STATE_ASSET_ID && !is_supported_ocr_model_id(key))
         .cloned()
         .collect();
 
@@ -69,8 +59,39 @@ fn retain_supported_ocr_annotations_ids(annotations: &mut OcrAnnotations) -> boo
     !unsupported_keys.is_empty()
 }
 
+fn ensure_empty_state_asset(annotations: &mut OcrAnnotations) -> bool {
+    if matches!(
+        annotations.get(EMPTY_STATE_ASSET_ID),
+        Some(OcrAnnotationEntry::EmptyState(_))
+    ) {
+        return false;
+    }
+
+    annotations.insert(
+        EMPTY_STATE_ASSET_ID.to_string(),
+        OcrAnnotationEntry::EmptyState(Vec::new()),
+    );
+    true
+}
+
 fn ocr_annotations_path(thread_dir: &Path) -> PathBuf {
     thread_dir.join(OCR_ANNOTATIONS_FILE)
+}
+
+fn context_window_path(thread_dir: &Path) -> PathBuf {
+    thread_dir.join(CONTEXT_WINDOW_FILE)
+}
+
+fn reverse_image_search_path(thread_dir: &Path) -> PathBuf {
+    thread_dir.join(REVERSE_IMAGE_SEARCH_FILE)
+}
+
+fn messages_path(thread_dir: &Path) -> PathBuf {
+    thread_dir.join(MESSAGES_FILE)
+}
+
+fn attachment_registry_path(thread_dir: &Path) -> PathBuf {
+    thread_dir.join(ATTACHMENT_REGISTRY_FILE)
 }
 
 /// Main storage manager for threads and images.
@@ -105,6 +126,7 @@ impl ThreadStorage {
         let index_path = base_dir.join("index.json");
 
         // Create directories if they don't exist
+        fs::create_dir_all(&base_dir)?;
         fs::create_dir_all(&objects_dir)?;
 
         Ok(Self {
@@ -339,30 +361,36 @@ impl ThreadStorage {
         let thread_dir = self.thread_dir(&thread.metadata.id);
         fs::create_dir_all(&thread_dir)?;
 
-        // Save metadata
-        let meta_path = thread_dir.join("meta.json");
-        let mut metadata = thread.metadata.clone();
-        if metadata.image_brief.is_none() {
-            metadata.image_brief = thread.image_brief.clone();
-        }
-        let meta_json = serde_json::to_string_pretty(&metadata)?;
-        fs::write(&meta_path, meta_json)?;
-
-        // Always save OCR annotations file
+        // Always save OCR annotations file.
         let ocr_path = ocr_annotations_path(&thread_dir);
-        let ocr_json = serde_json::to_string_pretty(&thread.ocr_data)?;
+        let mut ocr_data = thread.ocr_data.clone();
+        ensure_empty_state_asset(&mut ocr_data);
+        retain_supported_ocr_annotations_ids(&mut ocr_data);
+        let ocr_json = serde_json::to_string_pretty(&ocr_data)?;
         fs::write(&ocr_path, ocr_json)?;
 
-        // Save messages as JSON only
-        let messages_json_path = thread_dir.join("messages.json");
-        if !thread.messages.is_empty() {
-            let json_content = serde_json::to_string_pretty(&thread.messages)?;
-            fs::write(&messages_json_path, json_content)?;
-        } else if messages_json_path.exists() {
-            fs::remove_file(&messages_json_path)?
+        // Create thread-local state files.
+        let context_path = context_window_path(&thread_dir);
+        if !context_path.exists() {
+            fs::write(
+                &context_path,
+                serde_json::to_string_pretty(&thread.context_window)?,
+            )?;
         }
 
-        let attachment_registry_path = thread_dir.join("attachment_registry.json");
+        let reverse_path = reverse_image_search_path(&thread_dir);
+        if !reverse_path.exists() {
+            fs::write(
+                &reverse_path,
+                serde_json::to_string_pretty(&thread.reverse_image_search)?,
+            )?;
+        }
+
+        let messages_json_path = messages_path(&thread_dir);
+        let json_content = serde_json::to_string_pretty(&thread.messages)?;
+        fs::write(&messages_json_path, json_content)?;
+
+        let attachment_registry_path = attachment_registry_path(&thread_dir);
         if !thread.attachment_registry.is_empty() {
             let registry_json = serde_json::to_string_pretty(&thread.attachment_registry)?;
             fs::write(&attachment_registry_path, registry_json)?;
@@ -370,8 +398,7 @@ impl ThreadStorage {
             fs::remove_file(&attachment_registry_path)?;
         }
 
-        // Update the index
-        self.update_index(&metadata)?;
+        self.update_index(&thread.metadata)?;
 
         Ok(())
     }
@@ -384,18 +411,7 @@ impl ThreadStorage {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
 
-        // Load metadata
-        let meta_path = thread_dir.join("meta.json");
-        let meta_json = fs::read_to_string(&meta_path)?;
-        let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
-        let mut metadata_changed = false;
-        if let Some(lang) = metadata.ocr_lang.clone() {
-            let normalized_lang = normalize_ocr_model_id(&lang).to_string();
-            if normalized_lang != lang {
-                metadata.ocr_lang = Some(normalized_lang);
-                metadata_changed = true;
-            }
-        }
+        let metadata = self.get_index_metadata(thread_id)?;
 
         // Load OCR annotations from the only supported storage file.
         let ocr_path = ocr_annotations_path(&thread_dir);
@@ -404,9 +420,12 @@ impl ThreadStorage {
             let json = fs::read_to_string(&ocr_path)?;
             serde_json::from_str(&json)?
         } else {
-            OcrAnnotations::new()
+            default_ocr_annotations()
         };
 
+        if ensure_empty_state_asset(&mut ocr_data) {
+            annotations_changed = true;
+        }
         if retain_supported_ocr_annotations_ids(&mut ocr_data) {
             annotations_changed = true;
         }
@@ -414,14 +433,7 @@ impl ThreadStorage {
             let new_json = serde_json::to_string_pretty(&ocr_data)?;
             fs::write(&ocr_path, new_json)?;
         }
-        if metadata_changed {
-            let new_meta = serde_json::to_string_pretty(&metadata)?;
-            fs::write(&meta_path, new_meta)?;
-            self.update_index(&metadata)?;
-        }
-
-        // Load messages from JSON
-        let messages_json_path = thread_dir.join("messages.json");
+        let messages_json_path = messages_path(&thread_dir);
         let messages = if messages_json_path.exists() {
             let json_content = fs::read_to_string(&messages_json_path)?;
             serde_json::from_str::<Vec<ThreadMessage>>(&json_content)?
@@ -429,9 +441,27 @@ impl ThreadStorage {
             Vec::new()
         };
 
-        let image_brief = metadata.image_brief.clone();
+        let context_path = context_window_path(&thread_dir);
+        let context_window = if context_path.exists() {
+            let json = fs::read_to_string(&context_path)?;
+            serde_json::from_str::<ContextWindow>(&json)?
+        } else {
+            let context = ContextWindow::default();
+            fs::write(&context_path, serde_json::to_string_pretty(&context)?)?;
+            context
+        };
 
-        let attachment_registry_path = thread_dir.join("attachment_registry.json");
+        let reverse_path = reverse_image_search_path(&thread_dir);
+        let reverse_image_search = if reverse_path.exists() {
+            let json = fs::read_to_string(&reverse_path)?;
+            serde_json::from_str::<ReverseImageSearchCache>(&json)?
+        } else {
+            let cache = ReverseImageSearchCache::default();
+            fs::write(&reverse_path, serde_json::to_string_pretty(&cache)?)?;
+            cache
+        };
+
+        let attachment_registry_path = attachment_registry_path(&thread_dir);
         let attachment_registry = if attachment_registry_path.exists() {
             let json = fs::read_to_string(&attachment_registry_path)?;
             serde_json::from_str::<AttachmentRegistry>(&json)?
@@ -443,45 +473,29 @@ impl ThreadStorage {
             metadata,
             messages,
             ocr_data,
+            context_window,
+            reverse_image_search,
             attachment_registry,
-            image_brief,
+            image_tone: Some("d".to_string()),
+            image_brief: Some("summary of the image here".to_string()),
         })
     }
 
-    /// Save the detected tone for a thread to its metadata directly.
-    pub fn save_image_tone(&self, thread_id: &str, tone: &str) -> Result<()> {
+    /// Save image tone placeholder. Object manifests will own this value.
+    pub fn save_image_tone(&self, thread_id: &str, _tone: &str) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
         if !thread_dir.exists() {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
-        let meta_path = thread_dir.join("meta.json");
-        let meta_json = fs::read_to_string(&meta_path)?;
-        let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
-
-        metadata.image_tone = Some(tone.to_string());
-        metadata.updated_at = chrono::Utc::now();
-
-        let new_meta = serde_json::to_string_pretty(&metadata)?;
-        fs::write(&meta_path, new_meta)?;
-        self.update_index(&metadata)?;
-
         Ok(())
     }
 
-    /// Save image brief for a thread.
-    pub fn save_image_brief(&self, thread_id: &str, brief: &str) -> Result<()> {
+    /// Save image brief placeholder. Object manifests will own this value.
+    pub fn save_image_brief(&self, thread_id: &str, _brief: &str) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
         if !thread_dir.exists() {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
-        let meta_path = thread_dir.join("meta.json");
-        let meta_json = fs::read_to_string(&meta_path)?;
-        let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
-        metadata.image_brief = Some(brief.to_string());
-
-        let new_meta = serde_json::to_string_pretty(&metadata)?;
-        fs::write(&meta_path, new_meta)?;
-        self.update_index(&metadata)?;
         Ok(())
     }
 
@@ -491,8 +505,8 @@ impl ThreadStorage {
             return Ok(Vec::new());
         }
 
-        let index_json = fs::read_to_string(&self.index_path)?;
-        let threads: Vec<ThreadMetadata> = serde_json::from_str(&index_json)?;
+        let mut threads: Vec<ThreadMetadata> = self.read_index()?.into_values().collect();
+        threads.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         Ok(threads)
     }
 
@@ -518,28 +532,13 @@ impl ThreadStorage {
             return Err(StorageError::ThreadNotFound(metadata.id.clone()));
         }
 
-        let meta_path = thread_dir.join("meta.json");
-        let mut metadata_to_save = metadata.clone();
-        if meta_path.exists() {
-            let current_json = fs::read_to_string(&meta_path)?;
-            let current: ThreadMetadata = serde_json::from_str(&current_json)?;
-            if metadata_to_save.image_brief.is_none() {
-                metadata_to_save.image_brief = current.image_brief;
-            }
-        }
-
-        // Save updated metadata
-        let meta_json = serde_json::to_string_pretty(&metadata_to_save)?;
-        fs::write(&meta_path, meta_json)?;
-
-        // Update index
-        self.update_index(&metadata_to_save)?;
+        self.update_index(metadata)?;
 
         Ok(())
     }
 
     // =========================================================================
-    // OCR and Thread Metadata
+    // OCR and Thread State
     // =========================================================================
 
     /// Save OCR data for a specific model into the thread's OCR annotations.
@@ -560,11 +559,18 @@ impl ThreadStorage {
             let json = fs::read_to_string(&ocr_path)?;
             serde_json::from_str(&json)?
         } else {
-            OcrAnnotations::new()
+            default_ocr_annotations()
         };
+        ensure_empty_state_asset(&mut annotations);
         retain_supported_ocr_annotations_ids(&mut annotations);
 
-        annotations.insert(canonical_model_id.to_string(), Some(ocr_data.to_vec()));
+        annotations.insert(
+            canonical_model_id.to_string(),
+            OcrAnnotationEntry::Model(OcrModelAnnotation {
+                scanned_at: Some(chrono::Utc::now()),
+                ocr_data: ocr_data.to_vec(),
+            }),
+        );
 
         let json = serde_json::to_string_pretty(&annotations)?;
         fs::write(&ocr_path, json)?;
@@ -586,11 +592,23 @@ impl ThreadStorage {
 
         let json = fs::read_to_string(&ocr_path)?;
         let mut annotations: OcrAnnotations = serde_json::from_str(&json)?;
+        let mut annotations_changed = ensure_empty_state_asset(&mut annotations);
         if retain_supported_ocr_annotations_ids(&mut annotations) {
-            let normalized = serde_json::to_string_pretty(&annotations)?;
-            fs::write(&ocr_path, normalized)?;
+            annotations_changed = true;
         }
-        Ok(annotations.get(canonical_model_id).cloned().unwrap_or(None))
+        if annotations_changed {
+            fs::write(&ocr_path, serde_json::to_string_pretty(&annotations)?)?;
+        }
+
+        let data = annotations
+            .get(canonical_model_id)
+            .and_then(|entry| match entry {
+                OcrAnnotationEntry::Model(model) if model.scanned_at.is_some() => {
+                    Some(model.ocr_data.clone())
+                }
+                _ => None,
+            });
+        Ok(data)
     }
 
     /// Get the entire OCR annotations for a thread.
@@ -599,19 +617,22 @@ impl ThreadStorage {
         let ocr_path = ocr_annotations_path(&thread_dir);
 
         if !ocr_path.exists() {
-            return Ok(OcrAnnotations::new());
+            return Ok(default_ocr_annotations());
         }
 
         let json = fs::read_to_string(&ocr_path)?;
         let mut annotations: OcrAnnotations = serde_json::from_str(&json)?;
+        let mut annotations_changed = ensure_empty_state_asset(&mut annotations);
         if retain_supported_ocr_annotations_ids(&mut annotations) {
-            let normalized = serde_json::to_string_pretty(&annotations)?;
-            fs::write(&ocr_path, normalized)?;
+            annotations_changed = true;
+        }
+        if annotations_changed {
+            fs::write(&ocr_path, serde_json::to_string_pretty(&annotations)?)?;
         }
         Ok(annotations)
     }
 
-    /// Initialize OCR annotations with null values for all given model IDs.
+    /// Initialize OCR annotations with empty entries for all given model IDs.
     /// Only adds keys that don't already exist (won't overwrite cached data).
     pub fn init_ocr_annotations(&self, thread_id: &str, model_ids: &[String]) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
@@ -622,8 +643,9 @@ impl ThreadStorage {
             let json = fs::read_to_string(&ocr_path)?;
             serde_json::from_str(&json)?
         } else {
-            OcrAnnotations::new()
+            default_ocr_annotations()
         };
+        ensure_empty_state_asset(&mut annotations);
         retain_supported_ocr_annotations_ids(&mut annotations);
 
         for model_id in model_ids {
@@ -631,7 +653,10 @@ impl ThreadStorage {
                 .ok_or_else(|| StorageError::InvalidOcrModel(model_id.clone()))?;
             annotations
                 .entry(canonical_model_id.to_string())
-                .or_insert(None);
+                .or_insert(OcrAnnotationEntry::Model(OcrModelAnnotation {
+                    scanned_at: None,
+                    ocr_data: Vec::new(),
+                }));
         }
 
         let json = serde_json::to_string_pretty(&annotations)?;
@@ -640,29 +665,45 @@ impl ThreadStorage {
         Ok(())
     }
 
-    /// Save the reverse image search URL for a thread.
-    pub fn save_reverse_image_search_url(&self, thread_id: &str, url: &str) -> Result<()> {
+    /// Save the reverse image search cache for a thread.
+    pub fn save_reverse_image_search_cache(
+        &self,
+        thread_id: &str,
+        imgbb_url: &str,
+        google_lens_url: &str,
+    ) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
         if !thread_dir.exists() {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
 
-        let meta_path = thread_dir.join("meta.json");
-        let meta_json = fs::read_to_string(&meta_path)?;
-        let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
-        metadata.reverse_image_search_url = Some(url.to_string());
-        fs::write(&meta_path, serde_json::to_string_pretty(&metadata)?)?;
-        self.update_index(&metadata)?;
+        let cache = ReverseImageSearchCache {
+            imgbb_url: Some(imgbb_url.to_string()),
+            google_lens_url: Some(google_lens_url.to_string()),
+            created_at: Some(chrono::Utc::now()),
+        };
+        fs::write(
+            reverse_image_search_path(&thread_dir),
+            serde_json::to_string_pretty(&cache)?,
+        )?;
 
         Ok(())
     }
 
-    /// Get the reverse image search URL for a thread.
-    pub fn get_reverse_image_search_url(&self, thread_id: &str) -> Result<Option<String>> {
-        let meta_path = self.thread_dir(thread_id).join("meta.json");
-        let meta_json = fs::read_to_string(&meta_path)?;
-        let metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
-        Ok(metadata.reverse_image_search_url)
+    /// Get the reverse image search cache for a thread.
+    pub fn get_reverse_image_search_cache(
+        &self,
+        thread_id: &str,
+    ) -> Result<Option<ReverseImageSearchCache>> {
+        let thread_dir = self.thread_dir(thread_id);
+        let path = reverse_image_search_path(&thread_dir);
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        let json = fs::read_to_string(path)?;
+        let cache = serde_json::from_str::<ReverseImageSearchCache>(&json)?;
+        Ok(Some(cache))
     }
 
     /// Append a message to a thread.
@@ -670,7 +711,7 @@ impl ThreadStorage {
         let thread_dir = self.thread_dir(thread_id);
         fs::create_dir_all(&thread_dir)?;
 
-        let messages_json_path = thread_dir.join("messages.json");
+        let messages_json_path = messages_path(&thread_dir);
 
         // Load existing messages or start fresh
         let mut json_messages: Vec<ThreadMessage> = if messages_json_path.exists() {
@@ -685,14 +726,8 @@ impl ThreadStorage {
             serde_json::to_string_pretty(&json_messages)?,
         )?;
 
-        // Update the thread's updated_at timestamp
-        let meta_path = thread_dir.join("meta.json");
-        if meta_path.exists() {
-            let meta_json = fs::read_to_string(&meta_path)?;
-            let mut metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
+        if let Ok(mut metadata) = self.get_index_metadata(thread_id) {
             metadata.updated_at = chrono::Utc::now();
-            let updated_json = serde_json::to_string_pretty(&metadata)?;
-            fs::write(&meta_path, updated_json)?;
             self.update_index(&metadata)?;
         }
 
@@ -703,34 +738,41 @@ impl ThreadStorage {
     // Internal Helpers
     // =========================================================================
 
+    fn read_index(&self) -> Result<ThreadIndex> {
+        if !self.index_path.exists() {
+            return Ok(ThreadIndex::new());
+        }
+
+        let index_json = fs::read_to_string(&self.index_path)?;
+        let index = serde_json::from_str::<ThreadIndex>(&index_json)?;
+        Ok(index)
+    }
+
+    fn write_index(&self, index: &ThreadIndex) -> Result<()> {
+        let json = serde_json::to_string_pretty(index)?;
+        fs::write(&self.index_path, json)?;
+        Ok(())
+    }
+
+    fn get_index_metadata(&self, thread_id: &str) -> Result<ThreadMetadata> {
+        let mut index = self.read_index()?;
+        index
+            .remove(thread_id)
+            .ok_or_else(|| StorageError::ThreadNotFound(thread_id.to_string()))
+    }
+
     /// Update the index with thread metadata.
     fn update_index(&self, metadata: &ThreadMetadata) -> Result<()> {
-        let mut threads = self.list_threads().unwrap_or_default();
-
-        // Remove existing entry if present
-        threads.retain(|c| c.id != metadata.id);
-
-        // Add updated entry
-        threads.push(metadata.clone());
-
-        // Sort by updated_at descending
-        threads.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-
-        let json = serde_json::to_string_pretty(&threads)?;
-        fs::write(&self.index_path, json)?;
-
-        Ok(())
+        let mut index = self.read_index()?;
+        index.insert(metadata.id.clone(), metadata.clone());
+        self.write_index(&index)
     }
 
     /// Remove a thread from the index.
     fn remove_from_index(&self, thread_id: &str) -> Result<()> {
-        let mut threads = self.list_threads().unwrap_or_default();
-        threads.retain(|c| c.id != thread_id);
-
-        let json = serde_json::to_string_pretty(&threads)?;
-        fs::write(&self.index_path, json)?;
-
-        Ok(())
+        let mut index = self.read_index()?;
+        index.remove(thread_id);
+        self.write_index(&index)
     }
 }
 
@@ -748,9 +790,9 @@ mod tests {
     }
 
     #[test]
-    fn auto_ocr_disabled_key_is_preserved_and_does_not_overwrite_english() {
+    fn empty_state_asset_is_preserved_and_does_not_overwrite_english() {
         let (storage, base_dir) = make_test_storage();
-        let metadata = ThreadMetadata::new("Test".to_string(), "0".repeat(64), None);
+        let metadata = ThreadMetadata::new("Test".to_string(), "0".repeat(64));
         let thread = ThreadData::new(metadata.clone());
         storage.save_thread(&thread).expect("save thread");
 
@@ -760,26 +802,29 @@ mod tests {
         }];
 
         storage
-            .save_ocr_data(&metadata.id, DEFAULT_OCR_MODEL_ID, &en_regions)
+            .save_ocr_data(&metadata.id, "pp-ocr-v5-en", &en_regions)
             .expect("save english ocr");
-        storage
-            .save_ocr_data(&metadata.id, AUTO_OCR_DISABLED_MODEL_ID, &[])
-            .expect("save auto-disable marker");
 
         let annotations = storage
             .get_ocr_annotations(&metadata.id)
             .expect("load annotations");
         let en = annotations
-            .get(DEFAULT_OCR_MODEL_ID)
-            .and_then(|v| v.as_ref())
+            .get("pp-ocr-v5-en")
+            .and_then(|entry| match entry {
+                OcrAnnotationEntry::Model(model) => Some(&model.ocr_data),
+                OcrAnnotationEntry::EmptyState(_) => None,
+            })
             .expect("english ocr present");
         assert_eq!(en.len(), 1);
 
-        let auto_disabled = annotations
-            .get(AUTO_OCR_DISABLED_MODEL_ID)
-            .and_then(|v| v.as_ref())
-            .expect("auto-disable marker present");
-        assert!(auto_disabled.is_empty());
+        let empty_state_asset = annotations
+            .get(EMPTY_STATE_ASSET_ID)
+            .and_then(|entry| match entry {
+                OcrAnnotationEntry::EmptyState(items) => Some(items),
+                OcrAnnotationEntry::Model(_) => None,
+            })
+            .expect("empty-state asset present");
+        assert!(empty_state_asset.is_empty());
 
         let _ = std::fs::remove_dir_all(base_dir);
     }
@@ -797,7 +842,7 @@ mod tests {
     #[test]
     fn attachment_registry_round_trips_via_sidecar() {
         let (storage, base_dir) = make_test_storage();
-        let metadata = ThreadMetadata::new("Registry".to_string(), "0".repeat(64), None);
+        let metadata = ThreadMetadata::new("Registry".to_string(), "0".repeat(64));
         let mut thread = ThreadData::new(metadata.clone());
         thread.attachment_registry.insert(
             "/tmp/threads/objects/ab/file.pdf".to_string(),

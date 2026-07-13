@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use uuid::Uuid;
 
-/// Metadata for a thread session.
+pub const EMPTY_STATE_ASSET_ID: &str = "__empty_state_asset__";
+
+/// Metadata for a thread session stored in the thread index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThreadMetadata {
     /// Unique identifier for the thread.
@@ -24,21 +26,11 @@ pub struct ThreadMetadata {
     /// Whether the thread is pinned.
     #[serde(default)]
     pub is_pinned: bool,
-    pub ocr_lang: Option<String>,
-    /// Image tone detected upon upload (light/dark).
-    #[serde(default)]
-    pub image_tone: Option<String>,
-    /// Generated concise text description of the session's startup image.
-    #[serde(default)]
-    pub image_brief: Option<String>,
-    /// Reverse image search URL for the session's startup image.
-    #[serde(default)]
-    pub reverse_image_search_url: Option<String>,
 }
 
 impl ThreadMetadata {
     /// Create new thread metadata with a generated ID.
-    pub fn new(title: String, image_hash: String, ocr_lang: Option<String>) -> Self {
+    pub fn new(title: String, image_hash: String) -> Self {
         let now = Utc::now();
         // Generate ID: YYYYMMDD-HHMMSS-<UUID_SUFFIX>
         // Use first 8 chars of a UUID for randomness
@@ -53,10 +45,6 @@ impl ThreadMetadata {
             updated_at: now,
             image_hash,
             is_pinned: false,
-            ocr_lang,
-            image_tone: None,
-            image_brief: None,
-            reverse_image_search_url: None,
         }
     }
 }
@@ -136,10 +124,86 @@ pub struct OcrRegion {
     pub bbox: Vec<Vec<i32>>,
 }
 
-/// OCR annotations: a map of model_id → cached OCR results.
-/// `None` means the model hasn't scanned this image yet.
-/// `Some(vec)` means cached results (may be empty if no text found).
-pub type OcrAnnotations = HashMap<String, Option<Vec<OcrRegion>>>;
+/// OCR output for a single model.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OcrModelAnnotation {
+    /// When this OCR model last finished scanning this thread image.
+    #[serde(default)]
+    pub scanned_at: Option<DateTime<Utc>>,
+    /// Cached OCR results for this model.
+    #[serde(default)]
+    pub ocr_data: Vec<OcrRegion>,
+}
+
+/// OCR annotations entry.
+///
+/// The empty-state sentinel is stored as an empty array while real model IDs
+/// store timestamped OCR data.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum OcrAnnotationEntry {
+    EmptyState(Vec<OcrRegion>),
+    Model(OcrModelAnnotation),
+}
+
+/// OCR annotations keyed by sentinel/model ID.
+pub type OcrAnnotations = HashMap<String, OcrAnnotationEntry>;
+
+pub fn default_ocr_annotations() -> OcrAnnotations {
+    HashMap::from([(
+        EMPTY_STATE_ASSET_ID.to_string(),
+        OcrAnnotationEntry::EmptyState(Vec::new()),
+    )])
+}
+
+/// LLM context window state for a thread.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextWindow {
+    pub tokens_used: u32,
+    #[serde(default)]
+    pub compacted_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub compacted_context: Option<String>,
+}
+
+impl Default for ContextWindow {
+    fn default() -> Self {
+        Self {
+            tokens_used: 0,
+            compacted_at: None,
+            compacted_context: None,
+        }
+    }
+}
+
+/// Reverse image search cache for the core thread image.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReverseImageSearchCache {
+    #[serde(default)]
+    pub imgbb_url: Option<String>,
+    #[serde(default)]
+    pub google_lens_url: Option<String>,
+    #[serde(default)]
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+impl Default for ReverseImageSearchCache {
+    fn default() -> Self {
+        Self {
+            imgbb_url: None,
+            google_lens_url: None,
+            created_at: None,
+        }
+    }
+}
+
+fn default_image_tone() -> Option<String> {
+    Some("d".to_string())
+}
+
+fn default_image_brief() -> Option<String> {
+    Some("summary of the image here".to_string())
+}
 
 fn now_utc() -> DateTime<Utc> {
     Utc::now()
@@ -194,14 +258,23 @@ pub struct ThreadData {
     /// Thread messages.
     #[serde(default)]
     pub messages: Vec<ThreadMessage>,
-    /// OCR annotations: keyed by model_id, each value is cached results or null.
-    #[serde(default)]
+    /// OCR annotations keyed by sentinel/model ID.
+    #[serde(default = "default_ocr_annotations")]
     pub ocr_data: OcrAnnotations,
+    /// LLM context window state.
+    #[serde(default)]
+    pub context_window: ContextWindow,
+    /// Reverse image search cache for the core thread image.
+    #[serde(default)]
+    pub reverse_image_search: ReverseImageSearchCache,
     /// Per-thread tracked attachments keyed by CAS path.
     #[serde(default)]
     pub attachment_registry: AttachmentRegistry,
+    /// Image tone from the object manifest. Placeholder until manifests land.
+    #[serde(default = "default_image_tone")]
+    pub image_tone: Option<String>,
     /// Generated concise text description of the session's startup image.
-    #[serde(default)]
+    #[serde(default = "default_image_brief")]
     pub image_brief: Option<String>,
 }
 
@@ -211,9 +284,12 @@ impl ThreadData {
         Self {
             metadata,
             messages: Vec::new(),
-            ocr_data: HashMap::new(),
+            ocr_data: default_ocr_annotations(),
+            context_window: ContextWindow::default(),
+            reverse_image_search: ReverseImageSearchCache::default(),
             attachment_registry: BTreeMap::new(),
-            image_brief: None,
+            image_tone: default_image_tone(),
+            image_brief: default_image_brief(),
         }
     }
 }

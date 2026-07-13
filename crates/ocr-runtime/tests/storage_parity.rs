@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use ocr_runtime::ocr::{boxes_to_storage_regions, persist_boxes_to_thread_storage, OcrBox};
-use squigit_storage::{ThreadData, ThreadMetadata, ThreadStorage};
+use squigit_storage::{OcrAnnotationEntry, ThreadData, ThreadMetadata, ThreadStorage};
 
 #[test]
 fn cli_style_ocr_write_is_renderable_through_shared_thread_storage_annotations() {
@@ -10,11 +10,7 @@ fn cli_style_ocr_write_is_renderable_through_shared_thread_storage_annotations()
     let storage_root = temp.path().join("threads");
     let storage = ThreadStorage::with_base_dir(storage_root).expect("thread storage");
 
-    let metadata = ThreadMetadata::new(
-        "Parity Thread".to_string(),
-        "deadbeef".to_string(),
-        Some("pp-ocr-v5-en".to_string()),
-    );
+    let metadata = ThreadMetadata::new("Parity Thread".to_string(), "deadbeef".to_string());
     storage
         .save_thread(&ThreadData::new(metadata.clone()))
         .expect("save thread");
@@ -38,7 +34,10 @@ fn cli_style_ocr_write_is_renderable_through_shared_thread_storage_annotations()
         .expect("load annotations");
     let restored = annotations
         .get("pp-ocr-v5-en")
-        .and_then(|value| value.clone())
+        .and_then(|entry| match entry {
+            OcrAnnotationEntry::Model(model) => Some(model.ocr_data.clone()),
+            OcrAnnotationEntry::EmptyState(_) => None,
+        })
         .expect("model annotations should be populated");
 
     assert_eq!(restored.len(), regions.len());

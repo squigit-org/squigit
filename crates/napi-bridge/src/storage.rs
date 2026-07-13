@@ -71,14 +71,9 @@ pub fn get_image_path(hash: String) -> Result<String> {
 }
 
 #[napi(js_name = "create_thread")]
-pub fn create_thread(
-    title: String,
-    image_hash: String,
-    ocr_lang: Option<String>,
-) -> Result<String> {
+pub fn create_thread(title: String, image_hash: String) -> Result<String> {
     let storage = active_storage()?;
-    let mut metadata = squigit_storage::ThreadMetadata::new(title, image_hash.clone(), ocr_lang);
-    metadata.image_tone = storage.get_image_tone(&image_hash);
+    let metadata = squigit_storage::ThreadMetadata::new(title, image_hash);
     let thread = squigit_storage::ThreadData::new(metadata.clone());
     storage.save_thread(&thread).map_err(map_storage_err)?;
     to_json(&metadata)
@@ -126,20 +121,25 @@ pub fn append_thread_message(thread_id: String, role: String, content: String) -
         .map_err(map_storage_err)
 }
 
-#[napi(js_name = "save_reverse_image_search_url")]
-pub fn save_reverse_image_search_url(thread_id: String, url: String) -> Result<()> {
+#[napi(js_name = "save_reverse_image_search_cache")]
+pub fn save_reverse_image_search_cache(
+    thread_id: String,
+    imgbb_url: String,
+    google_lens_url: String,
+) -> Result<()> {
     let storage = active_storage()?;
     storage
-        .save_reverse_image_search_url(&thread_id, &url)
+        .save_reverse_image_search_cache(&thread_id, &imgbb_url, &google_lens_url)
         .map_err(map_storage_err)
 }
 
-#[napi(js_name = "get_reverse_image_search_url")]
-pub fn get_reverse_image_search_url(thread_id: String) -> Result<Option<String>> {
+#[napi(js_name = "get_reverse_image_search_cache")]
+pub fn get_reverse_image_search_cache(thread_id: String) -> Result<String> {
     let storage = active_storage()?;
-    storage
-        .get_reverse_image_search_url(&thread_id)
-        .map_err(map_storage_err)
+    let cache = storage
+        .get_reverse_image_search_cache(&thread_id)
+        .map_err(map_storage_err)?;
+    to_json(&cache)
 }
 
 #[napi(js_name = "save_image_tone")]

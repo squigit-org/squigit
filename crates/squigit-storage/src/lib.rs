@@ -21,7 +21,7 @@
 //! println!("Image path: {}", stored.path);
 //!
 //! // Create a thread
-//! let metadata = ThreadMetadata::new("My Analysis".to_string(), stored.hash, None);
+//! let metadata = ThreadMetadata::new("My Analysis".to_string(), stored.hash);
 //! let thread = ThreadData::new(metadata);
 //! storage.save_thread(&thread).unwrap();
 //! ```
@@ -35,7 +35,8 @@ pub mod types;
 pub use error::{Result, StorageError};
 pub use storage::ThreadStorage;
 pub use types::{
-    AttachmentRegistry, OcrAnnotations, OcrRegion, StoredImage, ThreadAttachmentKind,
+    AttachmentRegistry, ContextWindow, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation,
+    OcrRegion, ReverseImageSearchCache, StoredImage, ThreadAttachmentKind,
     ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadMessage,
-    ThreadMetadata,
+    ThreadMetadata, EMPTY_STATE_ASSET_ID,
 };
