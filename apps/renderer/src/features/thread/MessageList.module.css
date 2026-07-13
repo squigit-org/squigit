@@ -43,6 +43,17 @@
   animation: "progressTextReveal" 180ms ease-out forwards;
 }
 
+.progressTextStatic {
+  opacity: 1;
+  animation: none;
+}
+
+.progressCountdown {
+  display: inline-block;
+  opacity: 0;
+  animation: "progressTextReveal" 180ms ease-out forwards;
+}
+
 .quickAnswerButton {
   border: none;
   background: transparent;
@@ -61,7 +72,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .progressText {
+  .progressText,
+  .progressCountdown {
     animation: none;
     opacity: 1;
     transform: none;

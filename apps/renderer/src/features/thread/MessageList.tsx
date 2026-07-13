@@ -60,6 +60,35 @@ function getVisibleProgressText(text: string | undefined): string | null {
   return trimmed;
 }
 
+function renderProgressText(text: string): React.ReactNode {
+  const rateLimitCountdownMatch = text.match(
+    /^(Rate limited, retrying in )(\d+s)$/,
+  );
+
+  if (rateLimitCountdownMatch) {
+    return (
+      <p
+        className={`${styles.progressText} ${styles.progressTextStatic}`}
+        aria-live="polite"
+      >
+        {rateLimitCountdownMatch[1]}
+        <span
+          key={rateLimitCountdownMatch[2]}
+          className={styles.progressCountdown}
+        >
+          {rateLimitCountdownMatch[2]}
+        </span>
+      </p>
+    );
+  }
+
+  return (
+    <p key={text} className={styles.progressText} aria-live="polite">
+      {text}
+    </p>
+  );
+}
+
 const MessageListComponent: React.FC<MessageListProps> = ({
   activeThreadId,
   messages,
@@ -293,15 +322,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
                   )}
                 </div>
 
-                {visibleProgressText && (
-                  <p
-                    key={visibleProgressText}
-                    className={styles.progressText}
-                    aria-live="polite"
-                  >
-                    {visibleProgressText}
-                  </p>
-                )}
+                {visibleProgressText && renderProgressText(visibleProgressText)}
               </div>
             )}
 
