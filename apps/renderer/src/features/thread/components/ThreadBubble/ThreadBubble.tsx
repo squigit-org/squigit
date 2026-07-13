@@ -20,7 +20,7 @@ import {
   TextShimmer,
 } from "@/components/ui";
 import { useMediaContext } from "@/app/context/AppMedia";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -28,6 +28,7 @@ import rehypeRaw from "rehype-raw";
 import { API_STATUS_TEXT } from "@squigit/core/helpers";
 import {
   attachmentFromPath,
+  isAttachmentLinkDestination,
   isAttachmentPath,
   normalizeAttachmentMarkdownLinks,
   parseAttachmentPaths,
@@ -91,6 +92,7 @@ const MarkdownRenderer = React.memo(
       remarkPlugins={[remarkGfm, remarkMath, remarkDisableIndentedCode]}
       rehypePlugins={isUser ? [rehypeKatex] : [rehypeKatex, rehypeRaw]}
       components={components}
+      urlTransform={markdownUrlTransform}
     >
       {markdown}
     </ReactMarkdown>
@@ -226,6 +228,14 @@ function normalizeAttachmentHref(href: string): string {
   } catch {
     return unwrapped;
   }
+}
+
+function markdownUrlTransform(url: string, key: string): string {
+  if (key === "href" && isAttachmentLinkDestination(url)) {
+    return url;
+  }
+
+  return defaultUrlTransform(url);
 }
 
 function getTextLineCount(text: string): number {

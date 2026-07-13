@@ -26,6 +26,7 @@ export {
 export {
   LINK_ATTACHMENT_MENTION_RE,
   formatAttachmentLinkDestination,
+  isAttachmentLinkDestination,
   isAbsoluteCasAttachmentMarkdownLink,
   normalizeAttachmentMarkdownLinks,
   parseAttachmentPaths,

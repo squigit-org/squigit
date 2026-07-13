@@ -27,6 +27,11 @@ function isFileLinkDestination(destination: string): boolean {
   return unwrapped.toLowerCase().startsWith("file://");
 }
 
+export function isAttachmentLinkDestination(destination: string): boolean {
+  const path = unwrapMarkdownLinkDestination(destination);
+  return isFileLinkDestination(destination) && isAttachmentPath(path);
+}
+
 export function formatAttachmentLinkDestination(path: string): string {
   const value = unwrapMarkdownLinkDestination(path);
   const normalized = value.replace(/\\/g, "/");
@@ -48,7 +53,7 @@ export function normalizeAttachmentMarkdownLinks(text: string): string {
     LINK_ATTACHMENT_MENTION_RE,
     (full, label: string, rawDestination: string) => {
       const path = unwrapMarkdownLinkDestination(rawDestination);
-      if (!isFileLinkDestination(rawDestination) || !isAttachmentPath(path)) {
+      if (!isAttachmentLinkDestination(rawDestination)) {
         return full;
       }
       return buildAttachmentMention(path, label);
@@ -61,9 +66,13 @@ export function parseAttachmentPaths(text: string): string[] {
   const seen = new Set<string>();
 
   for (const match of text.matchAll(LINK_ATTACHMENT_MENTION_RE)) {
-    if (!isFileLinkDestination(String(match[2] || ""))) continue;
     const path = unwrapMarkdownLinkDestination(String(match[2] || ""));
-    if (!isAttachmentPath(path) || seen.has(path)) continue;
+    if (
+      !isAttachmentLinkDestination(String(match[2] || "")) ||
+      seen.has(path)
+    ) {
+      continue;
+    }
     seen.add(path);
     out.push(path);
   }
@@ -75,8 +84,7 @@ export function stripAttachmentMentions(text: string): string {
   const withoutLinks = text.replace(
     LINK_ATTACHMENT_MENTION_RE,
     (full, _label, rawPath: string) => {
-      const path = unwrapMarkdownLinkDestination(rawPath);
-      return isFileLinkDestination(rawPath) && isAttachmentPath(path) ? "" : full;
+      return isAttachmentLinkDestination(rawPath) ? "" : full;
     },
   );
   return withoutLinks.replace(/\n{3,}/g, "\n\n").trim();
@@ -87,7 +95,7 @@ export function stripImageAttachmentMentions(text: string): string {
     LINK_ATTACHMENT_MENTION_RE,
     (full, label: string, rawPath: string) => {
       const path = unwrapMarkdownLinkDestination(rawPath);
-      if (!isFileLinkDestination(rawPath) || !isAttachmentPath(path)) {
+      if (!isAttachmentLinkDestination(rawPath)) {
         return full;
       }
 
