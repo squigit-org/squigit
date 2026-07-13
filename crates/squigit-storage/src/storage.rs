@@ -5,13 +5,15 @@
 
 use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::error::{Result, StorageError};
 use crate::types::{
-    AttachmentRegistry, OcrFrame, OcrRegion, StoredImage, ThreadData, ThreadMessage, ThreadMetadata,
+    AttachmentRegistry, OcrAnnotations, OcrRegion, StoredImage, ThreadData, ThreadMessage,
+    ThreadMetadata,
 };
 
+const OCR_ANNOTATIONS_FILE: &str = "ocr_annotations.json";
 const DEFAULT_OCR_MODEL_ID: &str = "pp-ocr-v5-en";
 const AUTO_OCR_DISABLED_MODEL_ID: &str = "__meta_auto_ocr_disabled__";
 
@@ -38,33 +40,37 @@ fn normalize_ocr_model_id(model_id: &str) -> &str {
     DEFAULT_OCR_MODEL_ID
 }
 
-fn is_reserved_ocr_frame_id(model_id: &str) -> bool {
+fn is_reserved_ocr_annotations_id(model_id: &str) -> bool {
     model_id == AUTO_OCR_DISABLED_MODEL_ID
 }
 
-fn canonicalize_ocr_frame_id(model_id: &str) -> Option<&str> {
+fn canonicalize_ocr_annotations_id(model_id: &str) -> Option<&str> {
     let trimmed = model_id.trim();
     if trimmed.is_empty() {
         return None;
     }
-    if is_supported_ocr_model_id(trimmed) || is_reserved_ocr_frame_id(trimmed) {
+    if is_supported_ocr_model_id(trimmed) || is_reserved_ocr_annotations_id(trimmed) {
         return Some(trimmed);
     }
     None
 }
 
-fn retain_supported_ocr_frame_ids(frame: &mut OcrFrame) -> bool {
-    let keys: Vec<String> = frame.keys().cloned().collect();
-    let mut changed = false;
+fn retain_supported_ocr_annotations_ids(annotations: &mut OcrAnnotations) -> bool {
+    let unsupported_keys: Vec<String> = annotations
+        .keys()
+        .filter(|key| !is_supported_ocr_model_id(key) && !is_reserved_ocr_annotations_id(key))
+        .cloned()
+        .collect();
 
-    for key in keys {
-        if !is_supported_ocr_model_id(&key) && !is_reserved_ocr_frame_id(&key) {
-            frame.remove(&key);
-            changed = true;
-        }
+    for key in &unsupported_keys {
+        annotations.remove(key);
     }
 
-    changed
+    !unsupported_keys.is_empty()
+}
+
+fn ocr_annotations_path(thread_dir: &Path) -> PathBuf {
+    thread_dir.join(OCR_ANNOTATIONS_FILE)
 }
 
 /// Main storage manager for threads and images.
@@ -342,8 +348,8 @@ impl ThreadStorage {
         let meta_json = serde_json::to_string_pretty(&metadata)?;
         fs::write(&meta_path, meta_json)?;
 
-        // Always save OCR frame file
-        let ocr_path = thread_dir.join("ocr_frame.json");
+        // Always save OCR annotations file
+        let ocr_path = ocr_annotations_path(&thread_dir);
         let ocr_json = serde_json::to_string_pretty(&thread.ocr_data)?;
         fs::write(&ocr_path, ocr_json)?;
 
@@ -391,34 +397,22 @@ impl ThreadStorage {
             }
         }
 
-        // Load OCR frame (supports one-time conversion from old ocr.json).
-        let frame_path = thread_dir.join("ocr_frame.json");
-        let old_frame_path = thread_dir.join("ocr.json");
-        let mut frame_changed = false;
-        let mut ocr_data: OcrFrame = if frame_path.exists() {
-            let json = fs::read_to_string(&frame_path)?;
+        // Load OCR annotations from the only supported storage file.
+        let ocr_path = ocr_annotations_path(&thread_dir);
+        let mut annotations_changed = false;
+        let mut ocr_data: OcrAnnotations = if ocr_path.exists() {
+            let json = fs::read_to_string(&ocr_path)?;
             serde_json::from_str(&json)?
-        } else if old_frame_path.exists() {
-            // Convert old flat array into frame format keyed by default model id.
-            let json = fs::read_to_string(&old_frame_path)?;
-            let old_regions: Vec<OcrRegion> = serde_json::from_str(&json).unwrap_or_default();
-            let mut frame = OcrFrame::new();
-            if !old_regions.is_empty() {
-                frame.insert(DEFAULT_OCR_MODEL_ID.to_string(), Some(old_regions));
-            }
-            frame_changed = true;
-            let _ = fs::remove_file(&old_frame_path);
-            frame
         } else {
-            OcrFrame::new()
+            OcrAnnotations::new()
         };
 
-        if retain_supported_ocr_frame_ids(&mut ocr_data) {
-            frame_changed = true;
+        if retain_supported_ocr_annotations_ids(&mut ocr_data) {
+            annotations_changed = true;
         }
-        if frame_changed {
+        if annotations_changed {
             let new_json = serde_json::to_string_pretty(&ocr_data)?;
-            fs::write(&frame_path, new_json)?;
+            fs::write(&ocr_path, new_json)?;
         }
         if metadata_changed {
             let new_meta = serde_json::to_string_pretty(&metadata)?;
@@ -548,8 +542,8 @@ impl ThreadStorage {
     // OCR and Thread Metadata
     // =========================================================================
 
-    /// Save OCR data for a specific model into the thread's OCR frame.
-    /// Merges the data into the existing frame (read-modify-write).
+    /// Save OCR data for a specific model into the thread's OCR annotations.
+    /// Merges the data into the existing annotations (read-modify-write).
     pub fn save_ocr_data(
         &self,
         thread_id: &str,
@@ -558,86 +552,90 @@ impl ThreadStorage {
     ) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
         fs::create_dir_all(&thread_dir)?;
-        let canonical_model_id = canonicalize_ocr_frame_id(model_id)
+        let canonical_model_id = canonicalize_ocr_annotations_id(model_id)
             .ok_or_else(|| StorageError::InvalidOcrModel(model_id.to_string()))?;
 
-        let frame_path = thread_dir.join("ocr_frame.json");
-        let mut frame: OcrFrame = if frame_path.exists() {
-            let json = fs::read_to_string(&frame_path)?;
+        let ocr_path = ocr_annotations_path(&thread_dir);
+        let mut annotations: OcrAnnotations = if ocr_path.exists() {
+            let json = fs::read_to_string(&ocr_path)?;
             serde_json::from_str(&json)?
         } else {
-            OcrFrame::new()
+            OcrAnnotations::new()
         };
-        retain_supported_ocr_frame_ids(&mut frame);
+        retain_supported_ocr_annotations_ids(&mut annotations);
 
-        frame.insert(canonical_model_id.to_string(), Some(ocr_data.to_vec()));
+        annotations.insert(canonical_model_id.to_string(), Some(ocr_data.to_vec()));
 
-        let json = serde_json::to_string_pretty(&frame)?;
-        fs::write(&frame_path, json)?;
+        let json = serde_json::to_string_pretty(&annotations)?;
+        fs::write(&ocr_path, json)?;
 
         Ok(())
     }
 
-    /// Get OCR data for a specific model from the thread's frame.
-    /// Returns None if the model hasn't scanned yet, or empty vec if no frame exists.
+    /// Get OCR data for a specific model from the thread's annotations.
+    /// Returns None if the model hasn't scanned yet, or if no annotations file exists.
     pub fn get_ocr_data(&self, thread_id: &str, model_id: &str) -> Result<Option<Vec<OcrRegion>>> {
-        let frame_path = self.thread_dir(thread_id).join("ocr_frame.json");
-        let canonical_model_id = canonicalize_ocr_frame_id(model_id)
+        let thread_dir = self.thread_dir(thread_id);
+        let ocr_path = ocr_annotations_path(&thread_dir);
+        let canonical_model_id = canonicalize_ocr_annotations_id(model_id)
             .ok_or_else(|| StorageError::InvalidOcrModel(model_id.to_string()))?;
 
-        if !frame_path.exists() {
+        if !ocr_path.exists() {
             return Ok(None);
         }
 
-        let json = fs::read_to_string(&frame_path)?;
-        let mut frame: OcrFrame = serde_json::from_str(&json)?;
-        if retain_supported_ocr_frame_ids(&mut frame) {
-            let normalized = serde_json::to_string_pretty(&frame)?;
-            fs::write(&frame_path, normalized)?;
+        let json = fs::read_to_string(&ocr_path)?;
+        let mut annotations: OcrAnnotations = serde_json::from_str(&json)?;
+        if retain_supported_ocr_annotations_ids(&mut annotations) {
+            let normalized = serde_json::to_string_pretty(&annotations)?;
+            fs::write(&ocr_path, normalized)?;
         }
-        Ok(frame.get(canonical_model_id).cloned().unwrap_or(None))
+        Ok(annotations.get(canonical_model_id).cloned().unwrap_or(None))
     }
 
-    /// Get the entire OCR frame for a thread.
-    pub fn get_ocr_frame(&self, thread_id: &str) -> Result<OcrFrame> {
-        let frame_path = self.thread_dir(thread_id).join("ocr_frame.json");
+    /// Get the entire OCR annotations for a thread.
+    pub fn get_ocr_annotations(&self, thread_id: &str) -> Result<OcrAnnotations> {
+        let thread_dir = self.thread_dir(thread_id);
+        let ocr_path = ocr_annotations_path(&thread_dir);
 
-        if !frame_path.exists() {
-            return Ok(OcrFrame::new());
+        if !ocr_path.exists() {
+            return Ok(OcrAnnotations::new());
         }
 
-        let json = fs::read_to_string(&frame_path)?;
-        let mut frame: OcrFrame = serde_json::from_str(&json)?;
-        if retain_supported_ocr_frame_ids(&mut frame) {
-            let normalized = serde_json::to_string_pretty(&frame)?;
-            fs::write(&frame_path, normalized)?;
+        let json = fs::read_to_string(&ocr_path)?;
+        let mut annotations: OcrAnnotations = serde_json::from_str(&json)?;
+        if retain_supported_ocr_annotations_ids(&mut annotations) {
+            let normalized = serde_json::to_string_pretty(&annotations)?;
+            fs::write(&ocr_path, normalized)?;
         }
-        Ok(frame)
+        Ok(annotations)
     }
 
-    /// Initialize an OCR frame with null values for all given model IDs.
+    /// Initialize OCR annotations with null values for all given model IDs.
     /// Only adds keys that don't already exist (won't overwrite cached data).
-    pub fn init_ocr_frame(&self, thread_id: &str, model_ids: &[String]) -> Result<()> {
+    pub fn init_ocr_annotations(&self, thread_id: &str, model_ids: &[String]) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
         fs::create_dir_all(&thread_dir)?;
 
-        let frame_path = thread_dir.join("ocr_frame.json");
-        let mut frame: OcrFrame = if frame_path.exists() {
-            let json = fs::read_to_string(&frame_path)?;
+        let ocr_path = ocr_annotations_path(&thread_dir);
+        let mut annotations: OcrAnnotations = if ocr_path.exists() {
+            let json = fs::read_to_string(&ocr_path)?;
             serde_json::from_str(&json)?
         } else {
-            OcrFrame::new()
+            OcrAnnotations::new()
         };
-        retain_supported_ocr_frame_ids(&mut frame);
+        retain_supported_ocr_annotations_ids(&mut annotations);
 
         for model_id in model_ids {
-            let canonical_model_id = canonicalize_ocr_frame_id(model_id)
+            let canonical_model_id = canonicalize_ocr_annotations_id(model_id)
                 .ok_or_else(|| StorageError::InvalidOcrModel(model_id.clone()))?;
-            frame.entry(canonical_model_id.to_string()).or_insert(None);
+            annotations
+                .entry(canonical_model_id.to_string())
+                .or_insert(None);
         }
 
-        let json = serde_json::to_string_pretty(&frame)?;
-        fs::write(&frame_path, json)?;
+        let json = serde_json::to_string_pretty(&annotations)?;
+        fs::write(&ocr_path, json)?;
 
         Ok(())
     }
@@ -666,7 +664,6 @@ impl ThreadStorage {
         let metadata: ThreadMetadata = serde_json::from_str(&meta_json)?;
         Ok(metadata.reverse_image_search_url)
     }
-
 
     /// Append a message to a thread.
     pub fn append_message(&self, thread_id: &str, message: &ThreadMessage) -> Result<()> {
@@ -769,14 +766,16 @@ mod tests {
             .save_ocr_data(&metadata.id, AUTO_OCR_DISABLED_MODEL_ID, &[])
             .expect("save auto-disable marker");
 
-        let frame = storage.get_ocr_frame(&metadata.id).expect("load frame");
-        let en = frame
+        let annotations = storage
+            .get_ocr_annotations(&metadata.id)
+            .expect("load annotations");
+        let en = annotations
             .get(DEFAULT_OCR_MODEL_ID)
             .and_then(|v| v.as_ref())
             .expect("english ocr present");
         assert_eq!(en.len(), 1);
 
-        let auto_disabled = frame
+        let auto_disabled = annotations
             .get(AUTO_OCR_DISABLED_MODEL_ID)
             .and_then(|v| v.as_ref())
             .expect("auto-disable marker present");

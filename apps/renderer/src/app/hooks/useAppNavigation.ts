@@ -16,7 +16,7 @@ import {
   getImagePath,
   loadThread,
   updateThreadMetadata,
-  type OcrFrame,
+  type OcrAnnotations,
   ThreadCitation,
   ThreadToolStep,
 } from "@squigit/core/config";
@@ -36,13 +36,13 @@ type SearchRevealTarget = {
 };
 
 const getThreadOcrModel = (
-  frame: OcrFrame,
+  annotations: OcrAnnotations,
   metadataOcrLanguage?: string,
 ): string => {
   const hasModelData = (modelId?: string) =>
     !!modelId &&
     modelId !== AUTO_OCR_DISABLED_MODEL_ID &&
-    Array.isArray(frame[modelId]);
+    Array.isArray(annotations[modelId]);
 
   const resolvedMetadataModel = resolveOcrModelId(metadataOcrLanguage, "");
   if (resolvedMetadataModel && hasModelData(resolvedMetadataModel)) {
@@ -50,7 +50,7 @@ const getThreadOcrModel = (
   }
 
   const scannedModelSet = new Set(
-    Object.entries(frame)
+    Object.entries(annotations)
       .filter(
         ([modelId, regions]) =>
           modelId !== AUTO_OCR_DISABLED_MODEL_ID && Array.isArray(regions),
@@ -65,7 +65,7 @@ const getThreadOcrModel = (
     }
   }
 
-  const fallbackScannedModel = Object.keys(frame)
+  const fallbackScannedModel = Object.keys(annotations)
     .filter(
       (modelId) =>
         modelId !== AUTO_OCR_DISABLED_MODEL_ID && hasModelData(modelId),
@@ -77,8 +77,10 @@ const getThreadOcrModel = (
     : "";
 };
 
-const withNavigationOcrGuard = (frame: OcrFrame): OcrFrame => ({
-  ...frame,
+const withNavigationOcrGuard = (
+  annotations: OcrAnnotations,
+): OcrAnnotations => ({
+  ...annotations,
   [AUTO_OCR_DISABLED_MODEL_ID]: [],
 });
 

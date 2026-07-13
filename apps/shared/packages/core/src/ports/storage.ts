@@ -9,7 +9,7 @@ import type {
   ThreadMessage,
   ThreadMetadata,
   ThreadSearchResult,
-  OcrFrame,
+  OcrAnnotations,
   OcrRegion,
   StoredImage,
 } from "../config/thread-storage";
@@ -43,8 +43,8 @@ export interface StoragePort {
     ocrData: OcrRegion[],
   ): Promise<void>;
   getOcrData(threadId: string, modelId: string): Promise<OcrRegion[] | null>;
-  getOcrFrame(threadId: string): Promise<OcrFrame>;
-  initOcrFrame(threadId: string, modelIds: string[]): Promise<void>;
+  getOcrAnnotations(threadId: string): Promise<OcrAnnotations>;
+  initOcrAnnotations(threadId: string, modelIds: string[]): Promise<void>;
   cancelOcrJob(): Promise<void>;
   saveReverseImageSearchUrl(threadId: string, url: string): Promise<void>;
   getReverseImageSearchUrl(threadId: string): Promise<string | null>;

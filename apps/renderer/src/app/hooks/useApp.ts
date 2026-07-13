@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { platform } from "@/platform";
 import {
   AUTO_OCR_DISABLED_MODEL_ID,
-  OcrFrame,
+  type OcrAnnotations,
   appendThreadMessage,
   overwriteThreadMessages,
 } from "@squigit/core/config";
@@ -40,13 +40,13 @@ import { useAppPanel } from "./useAppPanel";
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 const getThreadOcrModel = (
-  frame: OcrFrame,
+  annotations: OcrAnnotations,
   metadataOcrLanguage?: string,
 ): string => {
   const hasModelData = (modelId?: string) =>
     !!modelId &&
     modelId !== AUTO_OCR_DISABLED_MODEL_ID &&
-    Array.isArray(frame[modelId]);
+    Array.isArray(annotations[modelId]);
 
   const resolvedMetadataModel = resolveOcrModelId(metadataOcrLanguage, "");
   if (resolvedMetadataModel && hasModelData(resolvedMetadataModel)) {
@@ -54,7 +54,7 @@ const getThreadOcrModel = (
   }
 
   const scannedModelSet = new Set(
-    Object.entries(frame)
+    Object.entries(annotations)
       .filter(
         ([modelId, regions]) =>
           modelId !== AUTO_OCR_DISABLED_MODEL_ID && Array.isArray(regions),
@@ -69,7 +69,7 @@ const getThreadOcrModel = (
     }
   }
 
-  const fallbackScannedModel = Object.keys(frame)
+  const fallbackScannedModel = Object.keys(annotations)
     .filter(
       (modelId) =>
         modelId !== AUTO_OCR_DISABLED_MODEL_ID && hasModelData(modelId),

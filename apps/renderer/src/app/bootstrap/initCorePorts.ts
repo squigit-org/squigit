@@ -88,9 +88,10 @@ export function initializeCorePorts(): void {
       platform.invoke("save_ocr_data", { threadId, modelId, ocrData }),
     getOcrData: (threadId, modelId) =>
       platform.invoke("get_ocr_data", { threadId, modelId }),
-    getOcrFrame: (threadId) => platform.invoke("get_ocr_frame", { threadId }),
-    initOcrFrame: (threadId, modelIds) =>
-      platform.invoke("init_ocr_frame", { threadId, modelIds }),
+    getOcrAnnotations: (threadId) =>
+      platform.invoke("get_ocr_annotations", { threadId }),
+    initOcrAnnotations: (threadId, modelIds) =>
+      platform.invoke("init_ocr_annotations", { threadId, modelIds }),
     cancelOcrJob: () => platform.invoke("cancel_ocr_job"),
     saveReverseImageSearchUrl: (threadId, url) =>
       platform.invoke("save_reverse_image_search_url", { threadId, url }),

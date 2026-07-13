@@ -34,7 +34,7 @@ import {
 import {
   AUTO_OCR_DISABLED_MODEL_ID,
   cancelOcrJob,
-  type OcrFrame,
+  type OcrAnnotations,
   saveImageTone,
   saveOcrData,
 } from "@squigit/core/config";
@@ -59,7 +59,7 @@ export interface ImageArtifactProps {
   isVisible: boolean;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
 
-  ocrData: OcrFrame;
+  ocrData: OcrAnnotations;
   onUpdateOCRData: (
     threadId: string | null,
     modelId: string,

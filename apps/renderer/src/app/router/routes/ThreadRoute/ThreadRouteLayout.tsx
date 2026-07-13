@@ -7,7 +7,7 @@
 import React, { type RefObject } from "react";
 import { InlineMenu, LoadingSpinner } from "@/components/ui";
 import type { Attachment } from "@squigit/core/brain/attachments";
-import type { OcrFrame } from "@squigit/core/config";
+import type { OcrAnnotations } from "@squigit/core/config";
 import { ThreadInput, ImageArtifact } from "@/features/thread";
 import styles from "./ThreadRoute.module.css";
 
@@ -36,7 +36,7 @@ interface ThreadRouteLayoutProps {
   setSessionLensUrl: (url: string | null) => void;
   threadTitle: string;
   onDescribeEdits: (description: string) => void | Promise<void>;
-  ocrData: OcrFrame;
+  ocrData: OcrAnnotations;
   onUpdateOCRData: (
     threadId: string | null,
     modelId: string,

@@ -58,11 +58,11 @@ export interface OcrRegion {
   bbox: number[][];
 }
 
-/** OCR frame: keyed by model_id, each value is cached results or null (not scanned). */
-export type OcrFrame = Record<string, OcrRegion[] | null>;
+/** OCR annotations: keyed by model_id, each value is cached results or null (not scanned). */
+export type OcrAnnotations = Record<string, OcrRegion[] | null>;
 
 /**
- * Special OCR frame key used to persist "do not auto-run OCR for this thread".
+ * Special OCR annotations key used to persist "do not auto-run OCR for this thread".
  * Manual OCR model selection still works.
  */
 export const AUTO_OCR_DISABLED_MODEL_ID = "__meta_auto_ocr_disabled__";
@@ -71,7 +71,7 @@ export const AUTO_OCR_DISABLED_MODEL_ID = "__meta_auto_ocr_disabled__";
 export interface ThreadData {
   metadata: ThreadMetadata;
   messages: ThreadMessage[];
-  ocr_data: OcrFrame;
+  ocr_data: OcrAnnotations;
   image_brief?: string | null;
 }
 
@@ -200,17 +200,19 @@ export async function getOcrData(
   return getStoragePort().getOcrData(threadId, modelId);
 }
 
-/** Get the entire OCR frame for a thread. */
-export async function getOcrFrame(threadId: string): Promise<OcrFrame> {
-  return getStoragePort().getOcrFrame(threadId);
+/** Get the entire OCR annotations for a thread. */
+export async function getOcrAnnotations(
+  threadId: string,
+): Promise<OcrAnnotations> {
+  return getStoragePort().getOcrAnnotations(threadId);
 }
 
-/** Initialize OCR frame with null values for given model IDs. */
-export async function initOcrFrame(
+/** Initialize OCR annotations with null values for given model IDs. */
+export async function initOcrAnnotations(
   threadId: string,
   modelIds: string[],
 ): Promise<void> {
-  return getStoragePort().initOcrFrame(threadId, modelIds);
+  return getStoragePort().initOcrAnnotations(threadId, modelIds);
 }
 
 /** Cancel the currently running OCR job. */

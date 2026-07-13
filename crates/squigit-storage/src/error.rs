@@ -36,7 +36,7 @@ pub enum StorageError {
     #[error("Thread not found: {0}")]
     ThreadNotFound(String),
 
-    /// Unsupported OCR model/frame key.
+    /// Unsupported OCR annotations key.
     #[error("Unsupported OCR model id: {0}")]
     InvalidOcrModel(String),
 }

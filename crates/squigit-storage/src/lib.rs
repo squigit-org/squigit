@@ -35,6 +35,7 @@ pub mod types;
 pub use error::{Result, StorageError};
 pub use storage::ThreadStorage;
 pub use types::{
-    AttachmentRegistry, ThreadAttachmentKind, ThreadAttachmentProviderFile, ThreadAttachmentRecord,
-    ThreadData, ThreadMessage, ThreadMetadata, OcrFrame, OcrRegion, StoredImage,
+    AttachmentRegistry, OcrAnnotations, OcrRegion, StoredImage, ThreadAttachmentKind,
+    ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadMessage,
+    ThreadMetadata,
 };

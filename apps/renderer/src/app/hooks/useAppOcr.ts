@@ -6,14 +6,14 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
-  type OcrFrame,
+  type OcrAnnotations,
   saveOcrData,
   saveReverseImageSearchUrl,
 } from "@squigit/core/config";
 
 export const useAppOcr = (activeSessionId: string | null) => {
   const [sessionLensUrl, setSessionLensUrl] = useState<string | null>(null);
-  const [ocrData, setOcrData] = useState<OcrFrame>({});
+  const [ocrData, setOcrData] = useState<OcrAnnotations>({});
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const activeSessionIdRef = useRef(activeSessionId);
 

@@ -132,14 +132,14 @@ pub struct OcrRegion {
     /// Extracted text.
     pub text: String,
     /// Bounding box coordinates.
-    #[serde(default, alias = "box", alias = "box_coords")]
+    #[serde(default)]
     pub bbox: Vec<Vec<i32>>,
 }
 
-/// OCR frame: a map of model_id → cached OCR results.
+/// OCR annotations: a map of model_id → cached OCR results.
 /// `None` means the model hasn't scanned this image yet.
 /// `Some(vec)` means cached results (may be empty if no text found).
-pub type OcrFrame = HashMap<String, Option<Vec<OcrRegion>>>;
+pub type OcrAnnotations = HashMap<String, Option<Vec<OcrRegion>>>;
 
 fn now_utc() -> DateTime<Utc> {
     Utc::now()
@@ -194,9 +194,9 @@ pub struct ThreadData {
     /// Thread messages.
     #[serde(default)]
     pub messages: Vec<ThreadMessage>,
-    /// OCR frame: keyed by model_id, each value is cached results or null.
+    /// OCR annotations: keyed by model_id, each value is cached results or null.
     #[serde(default)]
-    pub ocr_data: OcrFrame,
+    pub ocr_data: OcrAnnotations,
     /// Per-thread tracked attachments keyed by CAS path.
     #[serde(default)]
     pub attachment_registry: AttachmentRegistry,

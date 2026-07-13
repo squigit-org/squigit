@@ -49,13 +49,16 @@ export function registerMediaHandlers() {
     try {
       const threadDir = getThreadDir(args.threadId);
       await fs.mkdir(threadDir, { recursive: true });
-      const framePath = require("path").join(threadDir, "ocr_frame.json");
-      let frame: any = {};
+      const annotationsPath = require("path").join(
+        threadDir,
+        "ocr_annotations.json",
+      );
+      let annotations: any = {};
       try {
-        frame = JSON.parse(await fs.readFile(framePath, "utf-8"));
+        annotations = JSON.parse(await fs.readFile(annotationsPath, "utf-8"));
       } catch {}
-      frame[args.modelId || "eng"] = args.ocrData;
-      await fs.writeFile(framePath, JSON.stringify(frame, null, 2));
+      annotations[args.modelId || "eng"] = args.ocrData;
+      await fs.writeFile(annotationsPath, JSON.stringify(annotations, null, 2));
     } catch (e) {
       console.error("save_ocr_data error", e);
     }
@@ -64,46 +67,51 @@ export function registerMediaHandlers() {
   ipcMain.handle("get_ocr_data", async (_, args) => {
     const fs = require("fs/promises");
     try {
-      const framePath = require("path").join(
+      const annotationsPath = require("path").join(
         getThreadDir(args.threadId),
-        "ocr_frame.json",
+        "ocr_annotations.json",
       );
-      const frame = JSON.parse(await fs.readFile(framePath, "utf-8"));
-      return frame[args.modelId || "eng"] || null;
+      const annotations = JSON.parse(
+        await fs.readFile(annotationsPath, "utf-8"),
+      );
+      return annotations[args.modelId || "eng"] || null;
     } catch {
       return null;
     }
   });
 
-  ipcMain.handle("get_ocr_frame", async (_, args) => {
+  ipcMain.handle("get_ocr_annotations", async (_, args) => {
     const fs = require("fs/promises");
     try {
-      const framePath = require("path").join(
+      const annotationsPath = require("path").join(
         getThreadDir(args.threadId),
-        "ocr_frame.json",
+        "ocr_annotations.json",
       );
-      return JSON.parse(await fs.readFile(framePath, "utf-8"));
+      return JSON.parse(await fs.readFile(annotationsPath, "utf-8"));
     } catch {
       return {};
     }
   });
 
-  ipcMain.handle("init_ocr_frame", async (_, args) => {
+  ipcMain.handle("init_ocr_annotations", async (_, args) => {
     const fs = require("fs/promises");
     try {
       const threadDir = getThreadDir(args.threadId);
       await fs.mkdir(threadDir, { recursive: true });
-      const framePath = require("path").join(threadDir, "ocr_frame.json");
-      let frame: any = {};
+      const annotationsPath = require("path").join(
+        threadDir,
+        "ocr_annotations.json",
+      );
+      let annotations: any = {};
       try {
-        frame = JSON.parse(await fs.readFile(framePath, "utf-8"));
+        annotations = JSON.parse(await fs.readFile(annotationsPath, "utf-8"));
       } catch {}
       for (const modelId of args.modelIds || []) {
-        if (!(modelId in frame)) frame[modelId] = null;
+        if (!(modelId in annotations)) annotations[modelId] = null;
       }
-      await fs.writeFile(framePath, JSON.stringify(frame, null, 2));
+      await fs.writeFile(annotationsPath, JSON.stringify(annotations, null, 2));
     } catch (e) {
-      console.error("init_ocr_frame error", e);
+      console.error("init_ocr_annotations error", e);
     }
   });
 
