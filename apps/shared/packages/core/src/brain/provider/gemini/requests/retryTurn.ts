@@ -18,6 +18,7 @@ import {
   addToHistory,
 } from "../../../session/context";
 import { buildContextWindow } from "../../../session/summarizer";
+import { prepareBrainInput } from "../../../attachments";
 import { normalizeMessageForHistory } from "../../../attachments/memory";
 import {
   generateGeminiImageBrief,
@@ -196,22 +197,35 @@ export const retryFromMessage = async (
   brainSessionStore.imageDescription = imgDesc;
 
   const messagesBefore = allMessages.slice(0, messageIndex);
-  const firstUser = messagesBefore.find((m) => m.role === "user");
-  brainSessionStore.userFirstMsg = firstUser?.text || null;
+  const preparedMessagesBefore = [];
+  let firstPreparedUserText: string | null = null;
+  let lastPreparedUserText: string | null = null;
+  for (const message of messagesBefore) {
+    let text = message.text;
+    if (message.role === "user") {
+      text = (await prepareBrainInput(message.text)).brainText;
+      firstPreparedUserText ??= text;
+      lastPreparedUserText = text;
+    }
+    preparedMessagesBefore.push({
+      role: message.role,
+      text,
+    });
+  }
+  brainSessionStore.userFirstMsg = firstPreparedUserText
+    ? normalizeMessageForHistory(firstPreparedUserText)
+    : null;
 
-  brainSessionStore.conversationHistory = messagesBefore.map((m) => ({
+  brainSessionStore.conversationHistory = preparedMessagesBefore.map((m) => ({
     role: m.role === "user" ? "User" : "Assistant",
     content: normalizeMessageForHistory(m.text),
   }));
   // No more slice(-6) — summarize.ts handles windowing
 
-  const lastUserMsg = [...messagesBefore]
-    .reverse()
-    .find((m) => m.role === "user");
-  if (!lastUserMsg) {
+  if (!lastPreparedUserText) {
     throw new Error("No user message found before the retried message");
   }
-  const retryUserMessage = normalizeMessageForHistory(lastUserMsg.text);
+  const retryUserMessage = normalizeMessageForHistory(lastPreparedUserText);
 
   const channelId = createProviderChannelId();
   brainSessionStore.currentChannelId = channelId;

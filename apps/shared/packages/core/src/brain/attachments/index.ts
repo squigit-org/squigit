@@ -37,3 +37,4 @@ export {
 
 export { attachmentFromPath } from "./factory.ts";
 export { normalizeMessageForHistory } from "./memory.ts";
+export { prepareBrainInput, type PreparedBrainInput } from "./conductor.ts";

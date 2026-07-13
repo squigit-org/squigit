@@ -13,6 +13,7 @@ import type {
   BrainEngineHandle,
   BrainStartupImage,
 } from "@squigit/core/brain/engine";
+import { prepareBrainInput } from "@squigit/core/brain/attachments";
 import {
   cancelActiveProviderRequest as cancelActiveBrainRequest,
   DEFAULT_PROVIDER_FALLBACK_MODEL_ID as DEFAULT_BRAIN_FALLBACK_MODEL_ID,
@@ -894,12 +895,13 @@ export const useBrainEngine = (config: {
     beginPendingAssistantTurn(responseId, "message", requestStartedAtMs);
 
     try {
+      const preparedInput = await prepareBrainInput(lastSentMessage.text);
       const toolTracker = createStreamToolTracker(resetPendingRawText);
       const responseText = await executeWithSilentFallback(
         config.currentModel,
         (targetModel) =>
           sendBrainMessage(
-            lastSentMessage.text,
+            preparedInput.brainText,
             targetModel,
             (token: string) => {
               appendPendingRawText(token);
@@ -927,11 +929,12 @@ export const useBrainEngine = (config: {
     if (!userText.trim() || config.state.isLoading) return;
     const targetThreadId = config.threadId;
     sessionThreadIdRef.current = targetThreadId;
+    const preparedInput = await prepareBrainInput(userText);
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
-      text: userText,
+      text: preparedInput.displayText,
       timestamp: Date.now(),
     };
 
@@ -952,7 +955,7 @@ export const useBrainEngine = (config: {
         modelId || config.currentModel,
         (targetModel) =>
           sendBrainMessage(
-            userText,
+            preparedInput.brainText,
             targetModel,
             (token: string) => {
               appendPendingRawText(token);

@@ -11,6 +11,14 @@ export type {
 } from "./provider";
 export { setProviderPort, getProviderPort } from "./provider";
 
+export type {
+  HarnessPort,
+  HarnessPrepareTextFirstMessageInput,
+  HarnessTextAttachment,
+  HarnessTextFirstMessage,
+} from "./harness";
+export { setHarnessPort, getHarnessPort } from "./harness";
+
 export type { StoragePort } from "./storage";
 export { setStoragePort, getStoragePort } from "./storage";
 
