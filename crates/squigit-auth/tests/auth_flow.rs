@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::env;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::Arc;
 use std::thread;
 
 use serial_test::serial;
 use squigit_auth::auth::{
-    start_google_auth_flow, AuthAccountPolicy, AuthFlowSettings, AuthSuccessData, CredentialsSource,
+    begin_google_auth_flow, complete_google_auth_flow, AuthAccountPolicy, AuthFlowSettings,
+    AuthSuccessData, CredentialsSource, GoogleAuthAttempt,
 };
 use squigit_auth::{Profile, ProfileError, ProfileStore};
 use tempfile::tempdir;
@@ -27,6 +28,23 @@ fn temp_store() -> ProfileStore {
     let root = dir.path().to_path_buf();
     std::mem::forget(dir);
     ProfileStore::with_base_dir(root.to_path_buf()).unwrap()
+}
+
+fn callback_url_for_attempt(attempt: &GoogleAuthAttempt, code: &str) -> String {
+    let auth_url = Url::parse(attempt.auth_url()).unwrap();
+    let query = |key: &str| {
+        auth_url
+            .query_pairs()
+            .find(|(candidate, _)| candidate == key)
+            .map(|(_, value)| value.into_owned())
+            .unwrap()
+    };
+    assert_eq!(query("prompt"), "select_account");
+    format!(
+        "{}?code={code}&state={}",
+        query("redirect_uri"),
+        query("state")
+    )
 }
 
 struct EnvGuard {
@@ -65,7 +83,6 @@ fn run_policy_flow(
     name: &str,
 ) -> (Result<AuthSuccessData, ProfileError>, String) {
     let oauth_port = free_port();
-    let callback_port = free_port();
     let _no_proxy_guard = EnvGuard::set("NO_PROXY", "127.0.0.1,localhost");
     let _no_proxy_lower_guard = EnvGuard::set("no_proxy", "127.0.0.1,localhost");
     let email = email.to_string();
@@ -132,49 +149,24 @@ fn run_policy_flow(
             }}
         }}"#
     );
-    let (body_tx, body_rx) = std::sync::mpsc::channel();
-    let mut settings = AuthFlowSettings::new(Arc::new(move |auth_url| {
-        let auth_url = Url::parse(auth_url)?;
-        let query = |key: &str| {
-            auth_url
-                .query_pairs()
-                .find(|(candidate, _)| candidate == key)
-                .map(|(_, value)| value.into_owned())
-                .unwrap()
-        };
-        assert_eq!(query("prompt"), "select_account");
-        let callback_url = format!(
-            "{}/?code=test-code&state={}",
-            query("redirect_uri"),
-            query("state")
-        );
-        let body_tx = body_tx.clone();
-        thread::spawn(move || {
-            let client = reqwest::blocking::Client::builder()
-                .no_proxy()
-                .build()
-                .unwrap();
-            let body = client.get(callback_url).send().unwrap().text().unwrap();
-            body_tx.send(body).unwrap();
-        });
-        Ok(())
-    }));
-    settings.redirect_port = callback_port;
+    let mut settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
     settings.user_info_url = format!("http://127.0.0.1:{oauth_port}/userinfo");
     settings.credentials_source = CredentialsSource::RawJson(credentials);
     settings.account_policy = policy;
 
-    let result = start_google_auth_flow(store, &settings, Arc::new(AtomicBool::new(false)));
-    let body = body_rx
-        .recv_timeout(std::time::Duration::from_secs(2))
-        .unwrap();
+    let attempt = begin_google_auth_flow(&settings).unwrap();
+    let callback_url = callback_url_for_attempt(&attempt, "test-code");
+    let result = complete_google_auth_flow(store, &settings, attempt, &callback_url);
+    let body = result
+        .as_ref()
+        .map(|_| "Authentication Successful".to_string())
+        .unwrap_or_else(|err| err.to_string());
     server_handle.join().unwrap();
     (result, body)
 }
 
 #[test]
 fn placeholder_credentials_are_rejected() {
-    let store = temp_store();
     let mut settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
     settings.credentials_source = CredentialsSource::RawJson(
         r#"{
@@ -188,15 +180,13 @@ fn placeholder_credentials_are_rejected() {
         .to_string(),
     );
 
-    let err =
-        start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap_err();
+    let err = begin_google_auth_flow(&settings).unwrap_err();
     assert!(matches!(err, ProfileError::MissingCredentials(_)));
 }
 
 #[test]
 #[serial]
 fn auto_credentials_source_prefers_raw_env_over_path_env() {
-    let store = temp_store();
     let dir = tempdir().unwrap();
     let path = dir.path().join("credentials.json");
     std::fs::write(&path, "not-json").unwrap();
@@ -217,21 +207,18 @@ fn auto_credentials_source_prefers_raw_env_over_path_env() {
         }"#,
     );
 
-    let mut settings = AuthFlowSettings::new(Arc::new(|_| {
-        Err(ProfileError::Auth("browser-opened".to_string()))
-    }));
+    let mut settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
     settings.credentials_source = CredentialsSource::Auto;
-    settings.redirect_port = free_port();
 
-    let err =
-        start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap_err();
-    assert_eq!(err.to_string(), "browser-opened");
+    let attempt = begin_google_auth_flow(&settings).unwrap();
+    assert!(attempt
+        .auth_url()
+        .starts_with("https://example.com/o/oauth2/auth?"));
 }
 
 #[test]
 #[serial]
 fn auto_credentials_source_can_use_path_env() {
-    let store = temp_store();
     let dir = tempdir().unwrap();
     let path = dir.path().join("credentials.json");
     std::fs::write(
@@ -253,23 +240,20 @@ fn auto_credentials_source_can_use_path_env() {
         path.to_string_lossy().to_string(),
     );
 
-    let mut settings = AuthFlowSettings::new(Arc::new(|_| {
-        Err(ProfileError::Auth("browser-opened".to_string()))
-    }));
+    let mut settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
     settings.credentials_source = CredentialsSource::Auto;
-    settings.redirect_port = free_port();
 
-    let err =
-        start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap_err();
-    assert_eq!(err.to_string(), "browser-opened");
+    let attempt = begin_google_auth_flow(&settings).unwrap();
+    assert!(attempt
+        .auth_url()
+        .starts_with("https://example.com/o/oauth2/auth?"));
 }
 
 #[test]
 #[serial]
-fn start_google_auth_flow_round_trips_against_stub_endpoints() {
+fn complete_google_auth_flow_round_trips_against_stub_endpoints() {
     let store = temp_store();
     let oauth_port = free_port();
-    let callback_port = free_port();
     let avatar_url = format!("http://127.0.0.1:{}/avatar", oauth_port);
     let _no_proxy_guard = EnvGuard::set("NO_PROXY", "127.0.0.1,localhost");
     let _no_proxy_lower_guard = EnvGuard::set("no_proxy", "127.0.0.1,localhost");
@@ -354,7 +338,8 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
         oauth_port, oauth_port
     );
 
-    let mut settings = AuthFlowSettings::new(Arc::new(|url| {
+    let (callback_tx, callback_rx) = std::sync::mpsc::channel();
+    let mut settings = AuthFlowSettings::new(Arc::new(move |url| {
         let client = reqwest::blocking::Client::builder()
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
@@ -377,22 +362,17 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
             })?
             .to_string();
 
-        thread::spawn(move || {
-            let callback_client = reqwest::blocking::Client::builder()
-                .no_proxy()
-                .build()
-                .unwrap();
-            let _ = callback_client.get(location).send();
-        });
+        callback_tx.send(location).unwrap();
 
         Ok(())
     }));
-    settings.redirect_port = callback_port;
     settings.user_info_url = format!("http://127.0.0.1:{}/userinfo", oauth_port);
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
 
-    let result =
-        start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap();
+    let attempt = begin_google_auth_flow(&settings).unwrap();
+    (settings.open_browser)(attempt.auth_url()).unwrap();
+    let callback_url = callback_rx.recv().unwrap();
+    let result = complete_google_auth_flow(&store, &settings, attempt, &callback_url).unwrap();
     assert_eq!(result.name, "Integration User");
     assert_eq!(result.email, "integration@example.com");
     assert_eq!(result.avatar_url.as_deref(), Some(avatar_url.as_str()));
@@ -492,104 +472,28 @@ fn existing_only_policy_accepts_saved_accounts_and_rejects_unknown_accounts_in_b
 
 #[test]
 #[serial]
-fn cancelled_auth_serves_failure_page_for_late_callback() {
+fn stale_callback_state_is_rejected_without_writing_profiles() {
     let store = temp_store();
-    let oauth_port = free_port();
-    let callback_port = free_port();
-    let _no_proxy_guard = EnvGuard::set("NO_PROXY", "127.0.0.1,localhost");
-    let _no_proxy_lower_guard = EnvGuard::set("no_proxy", "127.0.0.1,localhost");
-
-    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
-    let server_handle = thread::spawn(move || {
-        let server = Server::http(("127.0.0.1", oauth_port)).unwrap();
-        ready_tx.send(()).unwrap();
-        let request = server.recv().unwrap();
-        let parsed =
-            Url::parse(&format!("http://127.0.0.1:{}{}", oauth_port, request.url())).unwrap();
-        assert_eq!(parsed.path(), "/auth");
-
-        let redirect_uri = parsed
-            .query_pairs()
-            .find(|(key, _)| key == "redirect_uri")
-            .map(|(_, value)| value.into_owned())
-            .unwrap();
-        let state = parsed
-            .query_pairs()
-            .find(|(key, _)| key == "state")
-            .map(|(_, value)| value.into_owned())
-            .unwrap();
-        let location = format!("{}/?code=late-code&state={}", redirect_uri, state);
-        let response = Response::from_string("")
-            .with_status_code(StatusCode(302))
-            .with_header(Header::from_bytes(&b"Location"[..], location.as_bytes()).unwrap());
-        request.respond(response).unwrap();
-    });
-    ready_rx.recv().unwrap();
-
-    let raw_credentials = format!(
-        r#"{{
-            "installed": {{
+    let raw_credentials = r#"{
+            "installed": {
                 "client_id": "test-client.apps.googleusercontent.com",
                 "client_secret": "test-secret",
-                "auth_uri": "http://127.0.0.1:{}/auth",
-                "token_uri": "http://127.0.0.1:{}/token"
-            }}
-        }}"#,
-        oauth_port, oauth_port
-    );
+                "auth_uri": "https://accounts.example.test/auth",
+                "token_uri": "https://accounts.example.test/token"
+            }
+        }"#
+    .to_string();
 
-    let (location_tx, location_rx) = std::sync::mpsc::channel();
-    let mut settings = AuthFlowSettings::new(Arc::new(move |url| {
-        let client = reqwest::blocking::Client::builder()
-            .no_proxy()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(ProfileError::Network)?;
-        let response = client.get(url).send()?;
-        let location = response
-            .headers()
-            .get(reqwest::header::LOCATION)
-            .and_then(|value| value.to_str().ok())
-            .ok_or_else(|| {
-                ProfileError::Auth("OAuth stub redirect did not include Location".to_string())
-            })?
-            .to_string();
-        location_tx.send(location).unwrap();
-        Ok(())
-    }));
-    settings.redirect_port = callback_port;
+    let mut settings = AuthFlowSettings::new(Arc::new(|_| Ok(())));
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
 
-    let auth_cancelled = Arc::new(AtomicBool::new(false));
-    let cancel_flag = auth_cancelled.clone();
-    let cancel_url = settings.cancel_url();
-    let store_base_dir = store.base_dir().clone();
-
-    let auth_thread = thread::spawn(move || start_google_auth_flow(&store, &settings, cancel_flag));
-
-    let callback_location = location_rx.recv().unwrap();
-    auth_cancelled.store(true, std::sync::atomic::Ordering::SeqCst);
-
-    let client = reqwest::blocking::Client::builder()
-        .no_proxy()
-        .build()
-        .unwrap();
-    let cancel_response = client.get(&cancel_url).send().unwrap();
-    assert!(cancel_response.status().is_success());
-
-    let callback_response = client.get(&callback_location).send().unwrap();
-    let callback_body = callback_response.text().unwrap();
-    assert!(callback_body.contains("Authentication Expired"));
-    assert!(callback_body.contains("Please close this tab and try again from Squigit."));
-
-    let result = auth_thread.join().unwrap();
+    let attempt = begin_google_auth_flow(&settings).unwrap();
+    let callback_url = "org.squigit.app:/oauth2redirect/google?code=late-code&state=stale";
+    let result = complete_google_auth_flow(&store, &settings, attempt, callback_url);
     assert!(
-        matches!(result, Err(ProfileError::Auth(message)) if message == "Authentication expired")
+        matches!(result, Err(ProfileError::Auth(message)) if message == "OAuth callback state mismatch")
     );
 
-    let check_store = ProfileStore::with_base_dir(store_base_dir).unwrap();
-    assert!(check_store.get_active_profile_id().unwrap().is_none());
-    assert!(check_store.list_profiles().unwrap().is_empty());
-
-    server_handle.join().unwrap();
+    assert!(store.get_active_profile_id().unwrap().is_none());
+    assert!(store.list_profiles().unwrap().is_empty());
 }

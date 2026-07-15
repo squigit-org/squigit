@@ -9,6 +9,7 @@ pub mod types;
 
 pub use auth::{
     AuthAccountPolicy, AuthFlowSettings, AuthSuccessData, BrowserOpener, CredentialsSource,
+    GoogleAuthAttempt,
 };
 pub use error::{ProfileError, Result};
 pub use security::{validate_api_key, verify_artifact_signature, ApiKeyProvider};

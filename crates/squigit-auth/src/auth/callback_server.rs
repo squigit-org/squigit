@@ -11,8 +11,8 @@ use super::CredentialsSource;
 
 const DEFAULT_USER_INFO_URL: &str = "https://openidconnect.googleapis.com/v1/userinfo";
 const DEFAULT_JWKS_URL: &str = "https://www.googleapis.com/oauth2/v3/certs";
-
-pub(super) const CANCELLED_CALLBACK_GRACE: Duration = Duration::from_secs(2);
+const DEFAULT_REDIRECT_URI: &str = "org.squigit.app:/oauth2redirect/google";
+const DEFAULT_STATUS_PAGE_URL: &str = "https://squigit-org.github.io/login/popup-google-auth/";
 
 pub type BrowserOpener = Arc<dyn Fn(&str) -> Result<()> + Send + Sync>;
 
@@ -30,8 +30,8 @@ pub enum AuthAccountPolicy {
 
 #[derive(Clone)]
 pub struct AuthFlowSettings {
-    pub redirect_host: String,
-    pub redirect_port: u16,
+    pub redirect_uri: String,
+    pub status_page_url: String,
     pub user_info_url: String,
     pub jwks_url: String,
     pub timeout: Duration,
@@ -44,8 +44,8 @@ pub struct AuthFlowSettings {
 impl fmt::Debug for AuthFlowSettings {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AuthFlowSettings")
-            .field("redirect_host", &self.redirect_host)
-            .field("redirect_port", &self.redirect_port)
+            .field("redirect_uri", &self.redirect_uri)
+            .field("status_page_url", &self.status_page_url)
             .field("user_info_url", &self.user_info_url)
             .field("jwks_url", &self.jwks_url)
             .field("timeout", &self.timeout)
@@ -58,8 +58,8 @@ impl fmt::Debug for AuthFlowSettings {
 impl AuthFlowSettings {
     pub fn new(open_browser: BrowserOpener) -> Self {
         Self {
-            redirect_host: "127.0.0.1".to_string(),
-            redirect_port: 3000,
+            redirect_uri: DEFAULT_REDIRECT_URI.to_string(),
+            status_page_url: DEFAULT_STATUS_PAGE_URL.to_string(),
             user_info_url: DEFAULT_USER_INFO_URL.to_string(),
             jwks_url: DEFAULT_JWKS_URL.to_string(),
             timeout: Duration::from_secs(120),
@@ -70,14 +70,6 @@ impl AuthFlowSettings {
     }
 
     pub fn redirect_uri(&self) -> String {
-        format!("http://{}:{}", self.redirect_host, self.redirect_port)
-    }
-
-    pub fn cancel_path(&self) -> String {
-        "/squigit-cancel".to_string()
-    }
-
-    pub fn cancel_url(&self) -> String {
-        format!("{}{}", self.redirect_uri(), self.cancel_path())
+        self.redirect_uri.clone()
     }
 }

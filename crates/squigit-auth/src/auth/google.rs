@@ -11,23 +11,17 @@ use jsonwebtoken::jwk::JwkSet;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs;
 use std::io::Cursor;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tiny_http::{Header, Response, Server, StatusCode};
 use url::Url;
 
 use crate::types::{canonical_google_issuer, LastLogin, GOOGLE_PROVIDER};
 use crate::{Profile, ProfileError, ProfileStore, Result};
 
-use super::callback_server::CANCELLED_CALLBACK_GRACE;
 use super::credentials::load_google_oauth_config;
-use super::templates::{respond_failure, respond_success, FAVICON_BYTES};
 use super::{AuthAccountPolicy, AuthFlowSettings};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -37,6 +31,45 @@ pub struct AuthSuccessData {
     pub email: String,
     pub avatar_base64: Option<String>,
     pub avatar_url: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct GoogleAuthAttempt {
+    auth_url: String,
+    state: String,
+    nonce: String,
+    code_verifier: String,
+    redirect_uri: String,
+    client_id: String,
+    token_uri: String,
+    started_at: Instant,
+}
+
+impl fmt::Debug for GoogleAuthAttempt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GoogleAuthAttempt")
+            .field("auth_url", &self.auth_url)
+            .field("state", &self.state)
+            .field("redirect_uri", &self.redirect_uri)
+            .field("client_id", &self.client_id)
+            .field("token_uri", &self.token_uri)
+            .field("started_at", &self.started_at)
+            .finish_non_exhaustive()
+    }
+}
+
+impl GoogleAuthAttempt {
+    pub fn auth_url(&self) -> &str {
+        &self.auth_url
+    }
+
+    pub fn state(&self) -> &str {
+        &self.state
+    }
+
+    fn is_expired(&self, timeout: Duration) -> bool {
+        self.started_at.elapsed() > timeout
+    }
 }
 
 #[derive(Deserialize)]
@@ -364,22 +397,10 @@ fn complete_display_claims(
     ))
 }
 
-pub fn start_google_auth_flow(
-    store: &ProfileStore,
-    settings: &AuthFlowSettings,
-    auth_cancelled: Arc<AtomicBool>,
-) -> Result<AuthSuccessData> {
+pub fn begin_google_auth_flow(settings: &AuthFlowSettings) -> Result<GoogleAuthAttempt> {
     let secrets = load_google_oauth_config(settings)?;
-    let bind_addr = format!("{}:{}", settings.redirect_host, settings.redirect_port);
-    let server = Server::http(&bind_addr).map_err(|err| {
-        ProfileError::Auth(format!(
-            "Failed to start auth server on {}: {}",
-            bind_addr, err
-        ))
-    })?;
-
-    let expected_state = generate_state_token();
-    let expected_nonce = generate_nonce();
+    let state = generate_state_token();
+    let nonce = generate_nonce();
     let code_verifier = generate_code_verifier();
     let code_challenge = code_challenge_s256(&code_verifier);
     let redirect_uri = settings.redirect_uri();
@@ -393,321 +414,213 @@ pub fn start_google_auth_flow(
         .append_pair("scope", "openid profile email")
         .append_pair("access_type", "online")
         .append_pair("prompt", "select_account")
-        .append_pair("state", &expected_state)
-        .append_pair("nonce", &expected_nonce)
+        .append_pair("state", &state)
+        .append_pair("nonce", &nonce)
         .append_pair("code_challenge", &code_challenge)
         .append_pair("code_challenge_method", "S256");
 
-    (settings.open_browser)(auth_url.as_str())?;
+    Ok(GoogleAuthAttempt {
+        auth_url: auth_url.to_string(),
+        state,
+        nonce,
+        code_verifier,
+        redirect_uri,
+        client_id: secrets.client_id,
+        token_uri: secrets.token_uri,
+        started_at: Instant::now(),
+    })
+}
 
-    let started_at = Instant::now();
-    let mut cancelled_callback_deadline: Option<Instant> = None;
-    loop {
-        if auth_cancelled.load(Ordering::SeqCst) && cancelled_callback_deadline.is_none() {
-            cancelled_callback_deadline = Some(Instant::now() + CANCELLED_CALLBACK_GRACE);
-        }
+fn redirect_uri_matches(callback_url: &Url, expected_redirect_uri: &str) -> Result<bool> {
+    let expected = Url::parse(expected_redirect_uri)?;
+    Ok(callback_url.scheme() == expected.scheme()
+        && callback_url.username() == expected.username()
+        && callback_url.password() == expected.password()
+        && callback_url.host_str() == expected.host_str()
+        && callback_url.port_or_known_default() == expected.port_or_known_default()
+        && callback_url.path() == expected.path())
+}
 
-        if let Some(deadline) = cancelled_callback_deadline {
-            if Instant::now() >= deadline {
-                return Err(ProfileError::Auth("Authentication cancelled".to_string()));
-            }
-        }
+pub fn google_auth_callback_state(
+    callback_url: &str,
+    expected_redirect_uri: &str,
+) -> Result<String> {
+    let url = Url::parse(callback_url).map_err(|err| {
+        ProfileError::Auth(format!("Failed to parse OAuth callback URL: {}", err))
+    })?;
 
-        if started_at.elapsed() > settings.timeout {
-            return Err(ProfileError::Auth("Authentication timed out".to_string()));
-        }
-
-        let request = match server.recv_timeout(Duration::from_millis(250)) {
-            Ok(Some(request)) => request,
-            Ok(None) => continue,
-            Err(err) => {
-                return Err(ProfileError::Auth(format!(
-                    "Failed waiting for OAuth callback: {}",
-                    err
-                )))
-            }
-        };
-
-        let request_url = request.url().to_string();
-        if request_url == "/favicon.ico" || request_url == "/favicon.png" {
-            let response = Response::from_data(FAVICON_BYTES.to_vec())
-                .with_header(Header::from_bytes(&b"Content-Type"[..], &b"image/png"[..]).unwrap());
-            let _ = request.respond(response);
-            continue;
-        }
-
-        if request_url == settings.cancel_path() {
-            cancelled_callback_deadline = Some(Instant::now() + CANCELLED_CALLBACK_GRACE);
-            let _ = request.respond(Response::empty(StatusCode(200)));
-            continue;
-        }
-
-        if auth_cancelled.load(Ordering::SeqCst) || started_at.elapsed() > settings.timeout {
-            let _ = respond_failure(
-                request,
-                "Authentication Expired",
-                "<p>The authentication request has expired or was cancelled.</p><p>Please close this tab and try again from Squigit.</p>",
-            );
-            return Err(ProfileError::Auth("Authentication expired".to_string()));
-        }
-
-        let callback_url = format!("{}{}", redirect_uri, request_url);
-        let url = match Url::parse(&callback_url) {
-            Ok(url) => url,
-            Err(err) => {
-                let _ = respond_failure(
-                    request,
-                    "Authentication Failed",
-                    "<p>The OAuth callback URL was invalid.</p><p>Please close this tab and try again.</p>",
-                );
-                return Err(ProfileError::Auth(format!(
-                    "Failed to parse OAuth callback URL: {}",
-                    err
-                )));
-            }
-        };
-
-        if let Some((_, error_code)) = url.query_pairs().find(|(key, _)| key == "error") {
-            let message = format!("<p>Google returned an error while signing in: <strong>{}</strong>.</p><p>Please close this tab and try again.</p>", error_code);
-            let _ = respond_failure(request, "Authentication Failed", &message);
-            return Err(ProfileError::Auth(format!(
-                "Google sign-in returned an error: {}",
-                error_code
-            )));
-        }
-
-        let returned_state = url
-            .query_pairs()
-            .find(|(key, _)| key == "state")
-            .map(|(_, value)| value.into_owned());
-        if returned_state.as_deref() != Some(expected_state.as_str()) {
-            let _ = respond_failure(
-                request,
-                "Authentication Failed",
-                "<p>The OAuth callback state was invalid. This request may be stale or tampered with.</p><p>Please close this tab and try again.</p>",
-            );
-            return Err(ProfileError::Auth(
-                "OAuth callback state mismatch".to_string(),
-            ));
-        }
-
-        let Some((_, code)) = url.query_pairs().find(|(key, _)| key == "code") else {
-            let _ = respond_failure(
-                request,
-                "Authentication Failed",
-                "<p>No authorization code was returned by Google.</p><p>Please close this tab and try again.</p>",
-            );
-            return Err(ProfileError::Auth(
-                "No authorization code found in callback".to_string(),
-            ));
-        };
-
-        let client = Client::builder().timeout(Duration::from_secs(20)).build()?;
-        let token_form = vec![
-            ("client_id".to_string(), secrets.client_id.clone()),
-            ("code".to_string(), code.to_string()),
-            ("code_verifier".to_string(), code_verifier.clone()),
-            ("grant_type".to_string(), "authorization_code".to_string()),
-            ("redirect_uri".to_string(), redirect_uri.clone()),
-        ];
-        let token_res = match client.post(&secrets.token_uri).form(&token_form).send() {
-            Ok(response) => response,
-            Err(err) => {
-                let _ = respond_failure(
-                    request,
-                    "Authentication Failed",
-                    "<p>Token exchange with Google failed.</p><p>Please close this tab and try again.</p>",
-                );
-                return Err(ProfileError::Auth(format!(
-                    "Token exchange failed: {}",
-                    err
-                )));
-            }
-        };
-
-        if !token_res.status().is_success() {
-            let _ = respond_failure(
-                request,
-                "Authentication Failed",
-                "<p>Google refused the authorization code exchange.</p><p>Please close this tab and try again.</p>",
-            );
-            return Err(ProfileError::Auth(format!(
-                "Google refused token exchange: HTTP {}",
-                token_res.status()
-            )));
-        }
-
-        let token_data: TokenResponse = match token_res.json() {
-            Ok(token_data) => token_data,
-            Err(err) => {
-                let _ = respond_failure(
-                    request,
-                    "Authentication Failed",
-                    "<p>Google returned an unexpected token response.</p><p>Please close this tab and try again.</p>",
-                );
-                return Err(ProfileError::Auth(format!(
-                    "Failed to decode Google token response: {}",
-                    err
-                )));
-            }
-        };
-
-        let claims = match validate_google_id_token(
-            &client,
-            settings,
-            &token_data.id_token,
-            &secrets.client_id,
-            &expected_nonce,
-        ) {
-            Ok(claims) => claims,
-            Err(err) => {
-                let _ = respond_failure(
-                    request,
-                    "Authentication Failed",
-                    "<p>Google identity validation failed.</p><p>Please close this tab and try again.</p>",
-                );
-                return Err(err);
-            }
-        };
-
-        let (name, email, picture) = match complete_display_claims(
-            &client,
-            settings,
-            &claims,
-            token_data.access_token.as_deref(),
-        ) {
-            Ok(data) => data,
-            Err(err) => {
-                let _ = respond_failure(
-                    request,
-                    "Authentication Failed",
-                    "<p>Google did not return the profile details Squigit needs.</p><p>Please close this tab and try again.</p>",
-                );
-                return Err(err);
-            }
-        };
-
-        let identity_issuer = canonical_google_issuer(&claims.iss);
-        let identity = crate::types::ProfileIdentity::google(identity_issuer, &claims.sub);
-        let profile_id = Profile::id_from_identity(&identity);
-        let profile_exists = store.get_profile(&profile_id)?.is_some();
-        let policy_failure = match settings.account_policy {
-            AuthAccountPolicy::Any => None,
-            AuthAccountPolicy::ExistingOnly if !profile_exists => Some((
-                "Account Not Found",
-                "<p>This Google Account has not been added to Squigit yet.</p><p>Please close this tab and use signup first.</p>",
-                "Account has not been added yet",
-            )),
-            AuthAccountPolicy::NewOnly if profile_exists => Some((
-                "Account Already Added",
-                "<p>This Google Account is already connected to Squigit.</p><p>Please close this tab and use login instead.</p>",
-                "Account already exists",
-            )),
-            _ => None,
-        };
-        if let Some((title, content, error)) = policy_failure {
-            respond_failure(request, title, content)?;
-            return Err(ProfileError::Auth(error.to_string()));
-        }
-
-        let mut avatar_url = picture.unwrap_or_default();
-
-        let avatar_url = if avatar_url.trim().is_empty() {
-            None
-        } else {
-            if avatar_url.starts_with("http://")
-                && !avatar_url.starts_with("http://127.0.0.1")
-                && !avatar_url.starts_with("http://localhost")
-            {
-                avatar_url = avatar_url.replacen("http://", "https://", 1);
-            }
-            Some(avatar_url.clone())
-        };
-
-        let mut profile = Profile::new_google(
-            identity_issuer,
-            &claims.sub,
-            &email,
-            &name,
-            None,
-            avatar_url.clone(),
-        );
-        if let Some(existing_profile) = store.get_profile(&profile.id)? {
-            profile.created_at = existing_profile.created_at;
-        }
-        profile.touch();
-
-        if let Err(err) = store.upsert_profile(&profile) {
-            let _ = respond_failure(
-                request,
-                "Authentication Failed",
-                "<p>Squigit could not save your profile locally.</p><p>Please close this tab and try again.</p>",
-            );
-            return Err(err);
-        }
-
-        let id_token_issued_at = match jwt_timestamp_to_datetime(claims.iat, "iat") {
-            Ok(value) => value,
-            Err(err) => {
-                let _ = respond_failure(
-                    request,
-                    "Authentication Failed",
-                    "<p>Google returned an invalid identity timestamp.</p><p>Please close this tab and try again.</p>",
-                );
-                return Err(err);
-            }
-        };
-        let id_token_expires_at = match jwt_timestamp_to_datetime(claims.exp, "exp") {
-            Ok(value) => value,
-            Err(err) => {
-                let _ = respond_failure(
-                    request,
-                    "Authentication Failed",
-                    "<p>Google returned an invalid identity timestamp.</p><p>Please close this tab and try again.</p>",
-                );
-                return Err(err);
-            }
-        };
-
-        let last_login = LastLogin {
-            profile_id: profile.id.clone(),
-            provider: GOOGLE_PROVIDER.to_string(),
-            issuer: identity_issuer.to_string(),
-            subject: claims.sub.clone(),
-            authenticated_at: Utc::now(),
-            audience: claims.aud.clone(),
-            scope: granted_scopes(token_data.scope.as_deref()),
-            pkce_method: "S256".to_string(),
-            id_token_issued_at,
-            id_token_expires_at,
-        };
-
-        if let Err(err) = store.record_last_login(last_login) {
-            let _ = respond_failure(
-                request,
-                "Authentication Failed",
-                "<p>Squigit could not activate your profile locally.</p><p>Please close this tab and try again.</p>",
-            );
-            return Err(err);
-        }
-
-        let user_data = AuthSuccessData {
-            id: profile.id.clone(),
-            name: profile.name.clone(),
-            email: profile.email.clone(),
-            avatar_base64: profile.avatar_base64.clone(),
-            avatar_url,
-        };
-
-        respond_success(
-            request,
-            "Authentication Successful",
-            &format!(
-                "<p>{} is now connected to your Google Account.</p><p>You can close this tab.</p>",
-                "Squigit"
-            ),
-        )?;
-
-        return Ok(user_data);
+    if !redirect_uri_matches(&url, expected_redirect_uri)? {
+        return Err(ProfileError::Auth(
+            "OAuth callback URL did not match the expected redirect URI".to_string(),
+        ));
     }
+
+    url.query_pairs()
+        .find(|(key, _)| key == "state")
+        .map(|(_, value)| value.into_owned())
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| ProfileError::Auth("OAuth callback did not include state".to_string()))
+}
+
+fn authorization_code_from_callback(
+    callback_url: &str,
+    expected_redirect_uri: &str,
+    expected_state: &str,
+) -> Result<String> {
+    let url = Url::parse(callback_url).map_err(|err| {
+        ProfileError::Auth(format!("Failed to parse OAuth callback URL: {}", err))
+    })?;
+
+    if !redirect_uri_matches(&url, expected_redirect_uri)? {
+        return Err(ProfileError::Auth(
+            "OAuth callback URL did not match the expected redirect URI".to_string(),
+        ));
+    }
+
+    let returned_state = url
+        .query_pairs()
+        .find(|(key, _)| key == "state")
+        .map(|(_, value)| value.into_owned());
+    if returned_state.as_deref() != Some(expected_state) {
+        return Err(ProfileError::Auth(
+            "OAuth callback state mismatch".to_string(),
+        ));
+    }
+
+    if let Some((_, error_code)) = url.query_pairs().find(|(key, _)| key == "error") {
+        return Err(ProfileError::Auth(format!(
+            "Google sign-in returned an error: {}",
+            error_code
+        )));
+    }
+
+    url.query_pairs()
+        .find(|(key, _)| key == "code")
+        .map(|(_, value)| value.into_owned())
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| ProfileError::Auth("No authorization code found in callback".to_string()))
+}
+
+pub fn complete_google_auth_flow(
+    store: &ProfileStore,
+    settings: &AuthFlowSettings,
+    attempt: GoogleAuthAttempt,
+    callback_url: &str,
+) -> Result<AuthSuccessData> {
+    if attempt.is_expired(settings.timeout) {
+        return Err(ProfileError::Auth("Authentication timed out".to_string()));
+    }
+
+    let code =
+        authorization_code_from_callback(callback_url, &attempt.redirect_uri, &attempt.state)?;
+
+    let client = Client::builder().timeout(Duration::from_secs(20)).build()?;
+    let token_form = vec![
+        ("client_id".to_string(), attempt.client_id.clone()),
+        ("code".to_string(), code),
+        ("code_verifier".to_string(), attempt.code_verifier.clone()),
+        ("grant_type".to_string(), "authorization_code".to_string()),
+        ("redirect_uri".to_string(), attempt.redirect_uri.clone()),
+    ];
+    let token_res = client
+        .post(&attempt.token_uri)
+        .form(&token_form)
+        .send()
+        .map_err(|err| ProfileError::Auth(format!("Token exchange failed: {}", err)))?;
+
+    if !token_res.status().is_success() {
+        return Err(ProfileError::Auth(format!(
+            "Google refused token exchange: HTTP {}",
+            token_res.status()
+        )));
+    }
+
+    let token_data: TokenResponse = token_res.json().map_err(|err| {
+        ProfileError::Auth(format!("Failed to decode Google token response: {}", err))
+    })?;
+
+    let claims = validate_google_id_token(
+        &client,
+        settings,
+        &token_data.id_token,
+        &attempt.client_id,
+        &attempt.nonce,
+    )?;
+
+    let (name, email, picture) = complete_display_claims(
+        &client,
+        settings,
+        &claims,
+        token_data.access_token.as_deref(),
+    )?;
+
+    let identity_issuer = canonical_google_issuer(&claims.iss);
+    let identity = crate::types::ProfileIdentity::google(identity_issuer, &claims.sub);
+    let profile_id = Profile::id_from_identity(&identity);
+    let profile_exists = store.get_profile(&profile_id)?.is_some();
+    let policy_failure = match settings.account_policy {
+        AuthAccountPolicy::Any => None,
+        AuthAccountPolicy::ExistingOnly if !profile_exists => {
+            Some("Account has not been added yet")
+        }
+        AuthAccountPolicy::NewOnly if profile_exists => Some("Account already exists"),
+        _ => None,
+    };
+    if let Some(error) = policy_failure {
+        return Err(ProfileError::Auth(error.to_string()));
+    }
+
+    let mut avatar_url = picture.unwrap_or_default();
+
+    let avatar_url = if avatar_url.trim().is_empty() {
+        None
+    } else {
+        if avatar_url.starts_with("http://")
+            && !avatar_url.starts_with("http://127.0.0.1")
+            && !avatar_url.starts_with("http://localhost")
+        {
+            avatar_url = avatar_url.replacen("http://", "https://", 1);
+        }
+        Some(avatar_url.clone())
+    };
+
+    let mut profile = Profile::new_google(
+        identity_issuer,
+        &claims.sub,
+        &email,
+        &name,
+        None,
+        avatar_url.clone(),
+    );
+    if let Some(existing_profile) = store.get_profile(&profile.id)? {
+        profile.created_at = existing_profile.created_at;
+    }
+    profile.touch();
+    store.upsert_profile(&profile)?;
+
+    let id_token_issued_at = jwt_timestamp_to_datetime(claims.iat, "iat")?;
+    let id_token_expires_at = jwt_timestamp_to_datetime(claims.exp, "exp")?;
+
+    let last_login = LastLogin {
+        profile_id: profile.id.clone(),
+        provider: GOOGLE_PROVIDER.to_string(),
+        issuer: identity_issuer.to_string(),
+        subject: claims.sub.clone(),
+        authenticated_at: Utc::now(),
+        audience: claims.aud.clone(),
+        scope: granted_scopes(token_data.scope.as_deref()),
+        pkce_method: "S256".to_string(),
+        id_token_issued_at,
+        id_token_expires_at,
+    };
+
+    store.record_last_login(last_login)?;
+
+    Ok(AuthSuccessData {
+        id: profile.id.clone(),
+        name: profile.name.clone(),
+        email: profile.email.clone(),
+        avatar_base64: profile.avatar_base64.clone(),
+        avatar_url,
+    })
 }

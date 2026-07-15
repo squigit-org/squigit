@@ -4,8 +4,10 @@
 mod callback_server;
 mod credentials;
 mod google;
-mod templates;
 
 pub use callback_server::{AuthAccountPolicy, AuthFlowSettings, BrowserOpener};
 pub use credentials::{validate_google_credentials, CredentialsSource};
-pub use google::{hydrate_avatar, start_google_auth_flow, AuthSuccessData};
+pub use google::{
+    begin_google_auth_flow, complete_google_auth_flow, google_auth_callback_state, hydrate_avatar,
+    AuthSuccessData, GoogleAuthAttempt,
+};

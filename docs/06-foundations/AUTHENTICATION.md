@@ -6,7 +6,7 @@
 
 ## Summary
 
-Squigit uses Google only to bootstrap a local profile identity. The app is an Electron public client and OpenID Connect relying party: it opens the system browser, receives a loopback authorization code, protects the exchange with PKCE S256, validates Google's signed ID token, and keys the local profile by Google issuer plus subject.
+Squigit uses Google only to bootstrap a local profile identity. The app is an Electron public client and OpenID Connect relying party: it opens the system browser, receives an authorization code through the `org.squigit.app:/oauth2redirect/google` app callback, protects the exchange with PKCE S256, validates Google's signed ID token, and keys the local profile by Google issuer plus subject.
 
 After validation, normal app use is local. Profiles, settings, chats, and BYOK credentials stay on the device. Squigit does not store Google access tokens, refresh tokens, or raw ID tokens for the current product surface.
 
@@ -61,8 +61,11 @@ The authorization request uses:
 - `access_type=online`
 - `prompt=select_account`
 - `code_challenge_method=S256`
+- `redirect_uri=org.squigit.app:/oauth2redirect/google`
 
 The token exchange sends `client_id`, authorization `code`, `redirect_uri`, `grant_type=authorization_code`, and `code_verifier`. A bundled `client_secret` may exist in downloaded Google credentials, but Squigit does not rely on it because desktop apps are public clients.
+
+The hosted page at `https://squigit-org.github.io/login/popup-google-auth/` is status UI only. It may show completion, cancellation, invalid-link, or unavailable states, but it never receives OAuth codes, state, ID tokens, access tokens, or refresh tokens.
 
 ## Validation
 

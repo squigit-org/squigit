@@ -1,22 +1,17 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use signal_hook::consts::{SIGINT, SIGTERM};
-use signal_hook::flag;
-use squigit_auth::auth::{start_google_auth_flow, AuthAccountPolicy, AuthFlowSettings};
+use squigit_auth::auth::{
+    begin_google_auth_flow, complete_google_auth_flow, AuthAccountPolicy, AuthFlowSettings,
+};
 use squigit_auth::{Profile, ProfileError, ProfileStore};
 use std::env;
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-use std::thread;
-use std::time::Duration;
+use std::sync::Arc;
 
 const CONFIG_DIR_ENV: &str = "SQUIGIT_CONFIG_DIR";
-const DESKTOP_AUTH_PORT: u16 = 6062;
 
 fn main() {
     if let Err(error) = run() {
@@ -100,19 +95,15 @@ fn run_google_auth(policy: AuthAccountPolicy) -> Result<(), String> {
     let mut settings = AuthFlowSettings::new(Arc::new(|url| {
         open_system_browser(url).map_err(ProfileError::Auth)
     }));
-    settings.redirect_port = DESKTOP_AUTH_PORT;
     settings.account_policy = policy;
 
-    let auth_cancelled = Arc::new(AtomicBool::new(false));
-    install_cancel_signal_handlers(auth_cancelled.clone())?;
-    let cancel_notifier = spawn_cancel_notifier(settings.cancel_url(), auth_cancelled.clone());
-
     println!("[auth] Complete the Google flow in your browser.");
-    let result = start_google_auth_flow(&store, &settings, auth_cancelled)
+    let attempt = begin_google_auth_flow(&settings).map_err(|error| error.to_string())?;
+    (settings.open_browser)(attempt.auth_url()).map_err(|error| error.to_string())?;
+    let callback_url = prompt_callback_url()?;
+    complete_google_auth_flow(&store, &settings, attempt, &callback_url)
         .map(|_| ())
-        .map_err(|error| error.to_string());
-    cancel_notifier.store(true, Ordering::SeqCst);
-    result
+        .map_err(|error| error.to_string())
 }
 
 fn logout(store: &ProfileStore) -> Result<(), String> {
@@ -181,29 +172,21 @@ fn print_profiles(store: &ProfileStore) -> Result<(), String> {
     Ok(())
 }
 
-fn install_cancel_signal_handlers(cancelled: Arc<AtomicBool>) -> Result<(), String> {
-    flag::register(SIGINT, cancelled.clone())
-        .map_err(|error| format!("Failed to register SIGINT handler: {error}"))?;
-    flag::register(SIGTERM, cancelled)
-        .map_err(|error| format!("Failed to register SIGTERM handler: {error}"))?;
-    Ok(())
-}
+fn prompt_callback_url() -> Result<String, String> {
+    print!("Paste the final org.squigit.app callback URL: ");
+    io::stdout()
+        .flush()
+        .map_err(|error| format!("Failed to flush stdout: {error}"))?;
 
-fn spawn_cancel_notifier(cancel_url: String, cancelled: Arc<AtomicBool>) -> Arc<AtomicBool> {
-    let shutdown = Arc::new(AtomicBool::new(false));
-    let thread_shutdown = shutdown.clone();
-    thread::spawn(move || {
-        let client = reqwest::blocking::Client::new();
-        let mut request_sent = false;
-        while !thread_shutdown.load(Ordering::SeqCst) {
-            if cancelled.load(Ordering::SeqCst) && !request_sent {
-                let _ = client.get(&cancel_url).send();
-                request_sent = true;
-            }
-            thread::sleep(Duration::from_millis(50));
-        }
-    });
-    shutdown
+    let mut callback_url = String::new();
+    io::stdin()
+        .read_line(&mut callback_url)
+        .map_err(|error| format!("Failed to read callback URL: {error}"))?;
+    let callback_url = callback_url.trim().to_string();
+    if callback_url.is_empty() {
+        return Err("callback URL is required".to_string());
+    }
+    Ok(callback_url)
 }
 
 #[cfg(target_os = "linux")]
