@@ -591,6 +591,7 @@ module.exports.cancel_download_ocr_model = nativeBinding.cancel_download_ocr_mod
 module.exports.cancel_google_auth = nativeBinding.cancel_google_auth
 module.exports.cancel_request = nativeBinding.cancel_request
 module.exports.clear_active_profile = nativeBinding.clear_active_profile
+module.exports.complete_google_auth_callback = nativeBinding.complete_google_auth_callback
 module.exports.copy_image_from_path_to_clipboard = nativeBinding.copy_image_from_path_to_clipboard
 module.exports.copy_image_to_clipboard = nativeBinding.copy_image_to_clipboard
 module.exports.create_thread = nativeBinding.create_thread
