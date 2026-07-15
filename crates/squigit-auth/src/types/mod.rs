@@ -5,4 +5,7 @@
 
 mod profile;
 
-pub use profile::{Profile, ProfileAuth, ProfileSnapshot};
+pub use profile::{
+    canonical_google_issuer, LastLogin, Profile, ProfileAuth, ProfileIdentity, ProfileSnapshot,
+    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, GOOGLE_ISSUER, GOOGLE_PROVIDER,
+};

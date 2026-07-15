@@ -6,7 +6,10 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::error::{ProfileError, Result};
-use crate::types::{Profile, ProfileAuth, ProfileSnapshot};
+use crate::types::{
+    canonical_google_issuer, LastLogin, Profile, ProfileAuth, ProfileSnapshot,
+    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION,
+};
 
 /// Active account state filename.
 const AUTH_FILE: &str = "auth.json";
@@ -45,7 +48,8 @@ impl ProfileStore {
     /// - macOS: `~/Library/Application Support/squigit/`
     /// - Windows: `%APPDATA%/squigit/`
     pub fn new() -> Result<Self> {
-        let base_dir = squigit_storage::paths::base_config_dir().ok_or(ProfileError::NoConfigDir)?;
+        let base_dir =
+            squigit_storage::paths::base_config_dir().ok_or(ProfileError::NoConfigDir)?;
 
         Self::with_base_dir(base_dir)
     }
@@ -111,6 +115,7 @@ impl ProfileStore {
 
         let content = fs::read_to_string(&self.auth_path)?;
         let auth: ProfileAuth = serde_json::from_str(&content)?;
+        Self::validate_auth_schema(&auth)?;
         Ok(auth)
     }
 
@@ -142,6 +147,17 @@ impl ProfileStore {
             .values()
             .max_by(|a, b| a.last_used_at.cmp(&b.last_used_at))
             .map(|profile| profile.id.clone())
+    }
+
+    fn validate_auth_schema(auth: &ProfileAuth) -> Result<()> {
+        if auth.schema != AUTH_SCHEMA_VERSION || auth.auth_mode != AUTH_MODE_GOOGLE_OIDC_PKCE {
+            return Err(ProfileError::Auth(format!(
+                "Unsupported auth.json schema. Delete the Squigit config folder or reinstall to start fresh with schema {}.",
+                AUTH_SCHEMA_VERSION
+            )));
+        }
+
+        Ok(())
     }
 
     fn delete_profile_keys(&self, profile_id: &str) -> Result<()> {
@@ -182,10 +198,28 @@ impl ProfileStore {
             return Err(ProfileError::ProfileNotFound(profile_id.to_string()));
         }
 
-        self.save_auth(&ProfileAuth {
-            active_profile_id: Some(profile_id.to_string()),
-        })?;
+        let mut auth = self.load_auth()?;
+        auth.active_profile_id = Some(profile_id.to_string());
+        self.save_auth(&auth)?;
         self.touch_profile(profile_id)?;
+        Ok(())
+    }
+
+    /// Record a successful provider login and activate the authenticated profile.
+    pub fn record_last_login(&self, last_login: LastLogin) -> Result<()> {
+        let profiles = self.load_profiles()?;
+
+        if !profiles.contains_key(&last_login.profile_id) {
+            return Err(ProfileError::ProfileNotFound(last_login.profile_id.clone()));
+        }
+
+        self.save_auth(&ProfileAuth {
+            schema: AUTH_SCHEMA_VERSION,
+            auth_mode: AUTH_MODE_GOOGLE_OIDC_PKCE.to_string(),
+            active_profile_id: Some(last_login.profile_id.clone()),
+            last_login: Some(last_login.clone()),
+        })?;
+        self.touch_profile(&last_login.profile_id)?;
         Ok(())
     }
 
@@ -228,9 +262,9 @@ impl ProfileStore {
         };
 
         if needs_active_profile {
-            self.save_auth(&ProfileAuth {
-                active_profile_id: Some(stored_profile.id),
-            })?;
+            let mut auth = self.load_auth()?;
+            auth.active_profile_id = Some(stored_profile.id);
+            self.save_auth(&auth)?;
         }
 
         Ok(())
@@ -242,18 +276,13 @@ impl ProfileStore {
         Ok(profiles.get(profile_id).cloned())
     }
 
-    /// Find a profile by email address.
-    ///
-    /// Profile IDs are derived from normalized email addresses, so this
-    /// performs a deterministic lookup and verifies the profile exists.
-    pub fn find_profile_by_email(&self, email: &str) -> Result<Option<Profile>> {
-        let normalized = email.trim();
-        if normalized.is_empty() {
-            return Ok(None);
-        }
-
-        let profile_id = Profile::id_from_email(normalized);
-        self.get_profile(&profile_id)
+    /// Find a profile by provider issuer and subject.
+    pub fn find_profile_by_identity(&self, issuer: &str, subject: &str) -> Result<Option<Profile>> {
+        let issuer = canonical_google_issuer(issuer);
+        let profiles = self.load_profiles()?;
+        Ok(profiles.into_values().find(|profile| {
+            profile.identity.issuer == issuer && profile.identity.subject == subject
+        }))
     }
 
     /// Get the currently active profile.
@@ -320,8 +349,17 @@ impl ProfileStore {
 
         if active_is_missing {
             auth.active_profile_id = Self::newest_profile_id(&profiles);
-            self.save_auth(&auth)?;
         }
+
+        if auth
+            .last_login
+            .as_ref()
+            .is_some_and(|last_login| last_login.profile_id == profile_id)
+        {
+            auth.last_login = None;
+        }
+
+        self.save_auth(&auth)?;
 
         Ok(())
     }

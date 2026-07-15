@@ -30,7 +30,8 @@ struct GoogleCredentials {
 #[derive(Deserialize, Debug, Clone)]
 pub(super) struct OAuthConfig {
     pub(super) client_id: String,
-    pub(super) client_secret: String,
+    #[serde(rename = "client_secret")]
+    pub(super) _client_secret: Option<String>,
     pub(super) auth_uri: String,
     pub(super) token_uri: String,
 }
@@ -68,10 +69,7 @@ fn load_google_credentials_raw(source: &CredentialsSource) -> Result<String> {
 }
 
 fn is_placeholder_config(config: &OAuthConfig) -> bool {
-    config.client_id.contains("replace-me")
-        || config.client_secret.contains("replace-me")
-        || config.client_id.trim().is_empty()
-        || config.client_secret.trim().is_empty()
+    config.client_id.contains("replace-me") || config.client_id.trim().is_empty()
 }
 
 pub(super) fn load_google_oauth_config(settings: &AuthFlowSettings) -> Result<OAuthConfig> {

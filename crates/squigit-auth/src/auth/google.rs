@@ -1,8 +1,14 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use base64::{engine::general_purpose, Engine as _};
+use base64::{
+    engine::{general_purpose, general_purpose::URL_SAFE_NO_PAD},
+    Engine as _,
+};
+use chrono::{DateTime, Utc};
 use image::ImageFormat;
+use jsonwebtoken::jwk::JwkSet;
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -16,6 +22,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tiny_http::{Header, Response, Server, StatusCode};
 use url::Url;
 
+use crate::types::{canonical_google_issuer, LastLogin, GOOGLE_PROVIDER};
 use crate::{Profile, ProfileError, ProfileStore, Result};
 
 use super::callback_server::CANCELLED_CALLBACK_GRACE;
@@ -34,39 +41,100 @@ pub struct AuthSuccessData {
 
 #[derive(Deserialize)]
 struct TokenResponse {
-    access_token: String,
+    access_token: Option<String>,
+    id_token: String,
+    scope: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct UserProfile {
-    names: Option<Vec<Name>>,
-    #[serde(rename = "emailAddresses")]
-    email_addresses: Option<Vec<Email>>,
-    photos: Option<Vec<Photo>>,
+struct GoogleIdTokenClaims {
+    iss: String,
+    sub: String,
+    aud: String,
+    exp: u64,
+    iat: u64,
+    nonce: Option<String>,
+    email: Option<String>,
+    email_verified: Option<serde_json::Value>,
+    name: Option<String>,
+    picture: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct Name {
-    #[serde(rename = "displayName")]
-    display_name: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct Email {
-    value: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct Photo {
-    url: Option<String>,
+struct OidcUserInfo {
+    sub: String,
+    email: Option<String>,
+    email_verified: Option<serde_json::Value>,
+    name: Option<String>,
+    picture: Option<String>,
 }
 
 fn generate_state_token() -> String {
+    generate_urlsafe_token(32)
+}
+
+fn generate_code_verifier() -> String {
+    generate_urlsafe_token(32)
+}
+
+fn generate_nonce() -> String {
+    generate_urlsafe_token(32)
+}
+
+fn generate_urlsafe_token(byte_len: usize) -> String {
     use rand::{rngs::OsRng, RngCore};
 
-    let mut bytes = [0u8; 16];
+    let mut bytes = vec![0u8; byte_len];
     OsRng.fill_bytes(&mut bytes);
-    hex::encode(bytes)
+    URL_SAFE_NO_PAD.encode(bytes)
+}
+
+fn code_challenge_s256(code_verifier: &str) -> String {
+    use sha2::{Digest, Sha256};
+
+    let digest = Sha256::digest(code_verifier.as_bytes());
+    URL_SAFE_NO_PAD.encode(digest)
+}
+
+fn jwt_timestamp_to_datetime(value: u64, field: &str) -> Result<DateTime<Utc>> {
+    DateTime::<Utc>::from_timestamp(value as i64, 0).ok_or_else(|| {
+        ProfileError::Auth(format!(
+            "Google ID token contained an invalid '{}' timestamp",
+            field
+        ))
+    })
+}
+
+fn email_verified_is_false(value: Option<&serde_json::Value>) -> bool {
+    match value {
+        Some(serde_json::Value::Bool(false)) => true,
+        Some(serde_json::Value::String(value)) if value.eq_ignore_ascii_case("false") => true,
+        _ => false,
+    }
+}
+
+fn normalize_optional_string(value: Option<String>) -> Option<String> {
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn granted_scopes(scope: Option<&str>) -> Vec<String> {
+    let scopes = scope
+        .unwrap_or("openid profile email")
+        .split_whitespace()
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+
+    if scopes.is_empty() {
+        vec![
+            "openid".to_string(),
+            "profile".to_string(),
+            "email".to_string(),
+        ]
+    } else {
+        scopes
+    }
 }
 
 fn avatar_target_id(store: &ProfileStore, profile_id: Option<&str>) -> Result<String> {
@@ -102,7 +170,9 @@ fn download_avatar_data_url(client: &Client, url: &str, profile_id: &str) -> Res
 
     let bytes = response.bytes()?;
     if bytes.is_empty() {
-        return Err(ProfileError::Auth("Downloaded avatar is empty.".to_string()));
+        return Err(ProfileError::Auth(
+            "Downloaded avatar is empty.".to_string(),
+        ));
     }
 
     let temp_path = avatar_temp_path(profile_id);
@@ -123,9 +193,7 @@ fn download_avatar_data_url(client: &Client, url: &str, profile_id: &str) -> Res
 }
 
 fn hydrate_avatar_once(store: &ProfileStore, url: &str, profile_id: &str) -> Result<String> {
-    let client = Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()?;
+    let client = Client::builder().timeout(Duration::from_secs(15)).build()?;
     let avatar_base64 = download_avatar_data_url(&client, url, profile_id)?;
 
     let mut profile = store
@@ -162,10 +230,7 @@ pub fn hydrate_avatar(store: &ProfileStore, url: &str, profile_id: Option<&str>)
         match hydrate_avatar_once(store, url, &target_id) {
             Ok(avatar_base64) => return Ok(avatar_base64),
             Err(err) if should_retry_avatar_hydration(&err) => {
-                let delay = retry_delays
-                    .get(attempt)
-                    .copied()
-                    .unwrap_or(60);
+                let delay = retry_delays.get(attempt).copied().unwrap_or(60);
                 attempt = attempt.saturating_add(1);
                 eprintln!(
                     "[auth] Avatar hydration failed for profile {}: {}. Retrying in {}s.",
@@ -176,6 +241,127 @@ pub fn hydrate_avatar(store: &ProfileStore, url: &str, profile_id: Option<&str>)
             Err(err) => return Err(err),
         }
     }
+}
+
+fn validate_google_id_token(
+    client: &Client,
+    settings: &AuthFlowSettings,
+    id_token: &str,
+    client_id: &str,
+    expected_nonce: &str,
+) -> Result<GoogleIdTokenClaims> {
+    let header = decode_header(id_token)
+        .map_err(|err| ProfileError::Auth(format!("Failed to decode ID token header: {}", err)))?;
+
+    if header.alg != Algorithm::RS256 {
+        return Err(ProfileError::Auth(format!(
+            "Unexpected Google ID token algorithm: {:?}",
+            header.alg
+        )));
+    }
+
+    let kid = header.kid.ok_or_else(|| {
+        ProfileError::Auth("Google ID token header did not include kid".to_string())
+    })?;
+
+    let jwks_response = client.get(&settings.jwks_url).send()?;
+    if !jwks_response.status().is_success() {
+        return Err(ProfileError::Auth(format!(
+            "Failed to fetch Google JWKS: HTTP {}",
+            jwks_response.status()
+        )));
+    }
+
+    let jwks: JwkSet = jwks_response.json().map_err(|err| {
+        ProfileError::Auth(format!("Failed to decode Google JWKS response: {}", err))
+    })?;
+    let jwk = jwks
+        .find(&kid)
+        .ok_or_else(|| ProfileError::Auth("Google JWKS did not include token kid".to_string()))?;
+    let decoding_key = DecodingKey::from_jwk(jwk)
+        .map_err(|err| ProfileError::Auth(format!("Failed to load Google JWK: {}", err)))?;
+
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_audience(&[client_id]);
+    validation.set_issuer(&["https://accounts.google.com", "accounts.google.com"]);
+    validation.set_required_spec_claims(&["exp", "iss", "aud", "sub"]);
+
+    let token_data = decode::<GoogleIdTokenClaims>(id_token, &decoding_key, &validation)
+        .map_err(|err| ProfileError::Auth(format!("Google ID token validation failed: {}", err)))?;
+    let claims = token_data.claims;
+
+    if claims.nonce.as_deref() != Some(expected_nonce) {
+        return Err(ProfileError::Auth(
+            "Google ID token nonce mismatch".to_string(),
+        ));
+    }
+    if claims.sub.trim().is_empty() {
+        return Err(ProfileError::Auth(
+            "Google ID token did not include a subject".to_string(),
+        ));
+    }
+    if email_verified_is_false(claims.email_verified.as_ref()) {
+        return Err(ProfileError::Auth(
+            "Google account email is not verified".to_string(),
+        ));
+    }
+
+    Ok(claims)
+}
+
+fn complete_display_claims(
+    client: &Client,
+    settings: &AuthFlowSettings,
+    claims: &GoogleIdTokenClaims,
+    access_token: Option<&str>,
+) -> Result<(String, String, Option<String>)> {
+    let mut email = normalize_optional_string(claims.email.clone());
+    let mut name = normalize_optional_string(claims.name.clone());
+    let mut picture = normalize_optional_string(claims.picture.clone());
+
+    if (email.is_none() || name.is_none() || picture.is_none())
+        && access_token.is_some_and(|token| !token.trim().is_empty())
+    {
+        let token = access_token.unwrap();
+        let user_info_res = client
+            .get(&settings.user_info_url)
+            .bearer_auth(token)
+            .send()?;
+
+        if user_info_res.status().is_success() {
+            let user_info: OidcUserInfo = user_info_res.json().map_err(|err| {
+                ProfileError::Auth(format!(
+                    "Failed to decode Google UserInfo response: {}",
+                    err
+                ))
+            })?;
+
+            if user_info.sub != claims.sub {
+                return Err(ProfileError::Auth(
+                    "Google UserInfo subject did not match ID token subject".to_string(),
+                ));
+            }
+            if email_verified_is_false(user_info.email_verified.as_ref()) {
+                return Err(ProfileError::Auth(
+                    "Google account email is not verified".to_string(),
+                ));
+            }
+
+            email = email.or_else(|| normalize_optional_string(user_info.email));
+            name = name.or_else(|| normalize_optional_string(user_info.name));
+            picture = picture.or_else(|| normalize_optional_string(user_info.picture));
+        }
+    }
+
+    let email = email.ok_or_else(|| {
+        ProfileError::Auth("Google identity response did not include an email address".to_string())
+    })?;
+
+    Ok((
+        name.unwrap_or_else(|| "Squigit User".to_string()),
+        email,
+        picture,
+    ))
 }
 
 pub fn start_google_auth_flow(
@@ -193,6 +379,9 @@ pub fn start_google_auth_flow(
     })?;
 
     let expected_state = generate_state_token();
+    let expected_nonce = generate_nonce();
+    let code_verifier = generate_code_verifier();
+    let code_challenge = code_challenge_s256(&code_verifier);
     let redirect_uri = settings.redirect_uri();
 
     let mut auth_url = Url::parse(&secrets.auth_uri)?;
@@ -201,10 +390,13 @@ pub fn start_google_auth_flow(
         .append_pair("client_id", &secrets.client_id)
         .append_pair("redirect_uri", &redirect_uri)
         .append_pair("response_type", "code")
-        .append_pair("scope", "profile email")
-        .append_pair("access_type", "offline")
-        .append_pair("prompt", "select_account consent")
-        .append_pair("state", &expected_state);
+        .append_pair("scope", "openid profile email")
+        .append_pair("access_type", "online")
+        .append_pair("prompt", "select_account")
+        .append_pair("state", &expected_state)
+        .append_pair("nonce", &expected_nonce)
+        .append_pair("code_challenge", &code_challenge)
+        .append_pair("code_challenge_method", "S256");
 
     (settings.open_browser)(auth_url.as_str())?;
 
@@ -310,18 +502,15 @@ pub fn start_google_auth_flow(
             ));
         };
 
-        let client = Client::new();
-        let token_res = match client
-            .post(&secrets.token_uri)
-            .form(&[
-                ("client_id", secrets.client_id.clone()),
-                ("client_secret", secrets.client_secret.clone()),
-                ("code", code.to_string()),
-                ("grant_type", "authorization_code".to_string()),
-                ("redirect_uri", redirect_uri.clone()),
-            ])
-            .send()
-        {
+        let client = Client::builder().timeout(Duration::from_secs(20)).build()?;
+        let token_form = vec![
+            ("client_id".to_string(), secrets.client_id.clone()),
+            ("code".to_string(), code.to_string()),
+            ("code_verifier".to_string(), code_verifier.clone()),
+            ("grant_type".to_string(), "authorization_code".to_string()),
+            ("redirect_uri".to_string(), redirect_uri.clone()),
+        ];
+        let token_res = match client.post(&secrets.token_uri).form(&token_form).send() {
             Ok(response) => response,
             Err(err) => {
                 let _ = respond_failure(
@@ -363,70 +552,44 @@ pub fn start_google_auth_flow(
             }
         };
 
-        let profile_res = match client
-            .get(&settings.user_info_url)
-            .bearer_auth(&token_data.access_token)
-            .send()
-        {
-            Ok(profile_res) => profile_res,
+        let claims = match validate_google_id_token(
+            &client,
+            settings,
+            &token_data.id_token,
+            &secrets.client_id,
+            &expected_nonce,
+        ) {
+            Ok(claims) => claims,
             Err(err) => {
                 let _ = respond_failure(
                     request,
                     "Authentication Failed",
-                    "<p>Google profile lookup failed.</p><p>Please close this tab and try again.</p>",
+                    "<p>Google identity validation failed.</p><p>Please close this tab and try again.</p>",
                 );
-                return Err(ProfileError::Auth(format!("Profile fetch failed: {}", err)));
+                return Err(err);
             }
         };
 
-        if !profile_res.status().is_success() {
-            let _ = respond_failure(
-                request,
-                "Authentication Failed",
-                "<p>Google profile lookup failed.</p><p>Please close this tab and try again.</p>",
-            );
-            return Err(ProfileError::Auth(format!(
-                "Google profile lookup failed: HTTP {}",
-                profile_res.status()
-            )));
-        }
-
-        let profile: UserProfile = match profile_res.json() {
-            Ok(profile) => profile,
+        let (name, email, picture) = match complete_display_claims(
+            &client,
+            settings,
+            &claims,
+            token_data.access_token.as_deref(),
+        ) {
+            Ok(data) => data,
             Err(err) => {
                 let _ = respond_failure(
                     request,
                     "Authentication Failed",
-                    "<p>Google returned an unexpected profile response.</p><p>Please close this tab and try again.</p>",
+                    "<p>Google did not return the profile details Squigit needs.</p><p>Please close this tab and try again.</p>",
                 );
-                return Err(ProfileError::Auth(format!(
-                    "Failed to decode Google profile response: {}",
-                    err
-                )));
+                return Err(err);
             }
         };
 
-        let name = profile
-            .names
-            .and_then(|items| items.first().and_then(|item| item.display_name.clone()))
-            .unwrap_or_else(|| "Squigit User".to_string());
-        let email = profile
-            .email_addresses
-            .and_then(|items| items.first().and_then(|item| item.value.clone()))
-            .unwrap_or_default();
-
-        if email.trim().is_empty() {
-            let _ = respond_failure(
-                request,
-                "Authentication Failed",
-                "<p>Google did not return an email address for this account.</p><p>Please close this tab and try again.</p>",
-            );
-            return Err(ProfileError::Auth(
-                "Google profile response did not include an email address".to_string(),
-            ));
-        }
-
-        let profile_id = Profile::id_from_email(&email);
+        let identity_issuer = canonical_google_issuer(&claims.iss);
+        let identity = crate::types::ProfileIdentity::google(identity_issuer, &claims.sub);
+        let profile_id = Profile::id_from_identity(&identity);
         let profile_exists = store.get_profile(&profile_id)?.is_some();
         let policy_failure = match settings.account_policy {
             AuthAccountPolicy::Any => None,
@@ -447,10 +610,7 @@ pub fn start_google_auth_flow(
             return Err(ProfileError::Auth(error.to_string()));
         }
 
-        let mut avatar_url = profile
-            .photos
-            .and_then(|items| items.first().and_then(|item| item.url.clone()))
-            .unwrap_or_default();
+        let mut avatar_url = picture.unwrap_or_default();
 
         let avatar_url = if avatar_url.trim().is_empty() {
             None
@@ -464,7 +624,14 @@ pub fn start_google_auth_flow(
             Some(avatar_url.clone())
         };
 
-        let mut profile = Profile::new(&email, &name, None, avatar_url.clone());
+        let mut profile = Profile::new_google(
+            identity_issuer,
+            &claims.sub,
+            &email,
+            &name,
+            None,
+            avatar_url.clone(),
+        );
         if let Some(existing_profile) = store.get_profile(&profile.id)? {
             profile.created_at = existing_profile.created_at;
         }
@@ -478,7 +645,44 @@ pub fn start_google_auth_flow(
             );
             return Err(err);
         }
-        if let Err(err) = store.set_active_profile_id(&profile.id) {
+
+        let id_token_issued_at = match jwt_timestamp_to_datetime(claims.iat, "iat") {
+            Ok(value) => value,
+            Err(err) => {
+                let _ = respond_failure(
+                    request,
+                    "Authentication Failed",
+                    "<p>Google returned an invalid identity timestamp.</p><p>Please close this tab and try again.</p>",
+                );
+                return Err(err);
+            }
+        };
+        let id_token_expires_at = match jwt_timestamp_to_datetime(claims.exp, "exp") {
+            Ok(value) => value,
+            Err(err) => {
+                let _ = respond_failure(
+                    request,
+                    "Authentication Failed",
+                    "<p>Google returned an invalid identity timestamp.</p><p>Please close this tab and try again.</p>",
+                );
+                return Err(err);
+            }
+        };
+
+        let last_login = LastLogin {
+            profile_id: profile.id.clone(),
+            provider: GOOGLE_PROVIDER.to_string(),
+            issuer: identity_issuer.to_string(),
+            subject: claims.sub.clone(),
+            authenticated_at: Utc::now(),
+            audience: claims.aud.clone(),
+            scope: granted_scopes(token_data.scope.as_deref()),
+            pkce_method: "S256".to_string(),
+            id_token_issued_at,
+            id_token_expires_at,
+        };
+
+        if let Err(err) = store.record_last_login(last_login) {
             let _ = respond_failure(
                 request,
                 "Authentication Failed",

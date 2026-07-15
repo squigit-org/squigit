@@ -9,8 +9,8 @@ use crate::Result;
 
 use super::CredentialsSource;
 
-const DEFAULT_USER_INFO_URL: &str =
-    "https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses,photos";
+const DEFAULT_USER_INFO_URL: &str = "https://openidconnect.googleapis.com/v1/userinfo";
+const DEFAULT_JWKS_URL: &str = "https://www.googleapis.com/oauth2/v3/certs";
 
 pub(super) const CANCELLED_CALLBACK_GRACE: Duration = Duration::from_secs(2);
 
@@ -30,10 +30,10 @@ pub enum AuthAccountPolicy {
 
 #[derive(Clone)]
 pub struct AuthFlowSettings {
-
     pub redirect_host: String,
     pub redirect_port: u16,
     pub user_info_url: String,
+    pub jwks_url: String,
     pub timeout: Duration,
     pub credentials_source: CredentialsSource,
     /// Account classification applied before avatar hydration or profile persistence.
@@ -47,6 +47,7 @@ impl fmt::Debug for AuthFlowSettings {
             .field("redirect_host", &self.redirect_host)
             .field("redirect_port", &self.redirect_port)
             .field("user_info_url", &self.user_info_url)
+            .field("jwks_url", &self.jwks_url)
             .field("timeout", &self.timeout)
             .field("credentials_source", &self.credentials_source)
             .field("account_policy", &self.account_policy)
@@ -60,6 +61,7 @@ impl AuthFlowSettings {
             redirect_host: "127.0.0.1".to_string(),
             redirect_port: 3000,
             user_info_url: DEFAULT_USER_INFO_URL.to_string(),
+            jwks_url: DEFAULT_JWKS_URL.to_string(),
             timeout: Duration::from_secs(120),
             credentials_source: CredentialsSource::Auto,
             account_policy: AuthAccountPolicy::Any,
