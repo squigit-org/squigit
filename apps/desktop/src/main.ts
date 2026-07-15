@@ -1,3 +1,6 @@
+import { spawn } from "child_process";
+import fs from "fs";
+import os from "os";
 import { app, BrowserWindow, shell, session, protocol } from "electron";
 import path from "path";
 import { setupIpc } from "./ipc";
@@ -95,17 +98,93 @@ function refreshAuthStatusUrl() {
   }
 }
 
-function registerOAuthProtocolClient() {
+function protocolLaunchArgs() {
   const maybeDefaultApp = process as NodeJS.Process & { defaultApp?: boolean };
-  for (const scheme of googleAuthProtocolSchemes()) {
-    if (maybeDefaultApp.defaultApp && process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient(scheme, process.execPath, [
-        path.resolve(process.argv[1]),
+  if (maybeDefaultApp.defaultApp && process.argv.length >= 2) {
+    return [path.resolve(process.argv[1])];
+  }
+  return [];
+}
+
+function desktopExecQuote(value: string) {
+  return `"${value.replace(/(["\\$`])/g, "\\$1")}"`;
+}
+
+function runDetached(command: string, args: string[]) {
+  try {
+    const child = spawn(command, args, {
+      detached: true,
+      stdio: "ignore",
+    });
+    child.on("error", () => {});
+    child.unref();
+  } catch {
+    // Optional desktop integration command is not available.
+  }
+}
+
+function registerLinuxOAuthProtocolClient(
+  schemes: readonly string[],
+  appArgs: readonly string[],
+) {
+  if (process.platform !== "linux") {
+    return;
+  }
+
+  try {
+    const applicationsDir = path.join(
+      os.homedir(),
+      ".local",
+      "share",
+      "applications",
+    );
+    const desktopFileName = "squigit-oauth.desktop";
+    const desktopFilePath = path.join(applicationsDir, desktopFileName);
+    const mimeTypes = schemes.map((scheme) => `x-scheme-handler/${scheme}`);
+    const execParts = [
+      desktopExecQuote(process.execPath),
+      ...appArgs.map(desktopExecQuote),
+      "%u",
+    ];
+    const desktopFile = [
+      "[Desktop Entry]",
+      "Type=Application",
+      "Name=Squigit",
+      `Exec=${execParts.join(" ")}`,
+      "Terminal=false",
+      "NoDisplay=true",
+      "Categories=Utility;",
+      `MimeType=${mimeTypes.join(";")};`,
+      "",
+    ].join("\n");
+
+    fs.mkdirSync(applicationsDir, { recursive: true });
+    fs.writeFileSync(desktopFilePath, desktopFile);
+
+    for (const scheme of schemes) {
+      runDetached("xdg-mime", [
+        "default",
+        desktopFileName,
+        `x-scheme-handler/${scheme}`,
       ]);
+    }
+    runDetached("update-desktop-database", [applicationsDir]);
+  } catch (error) {
+    console.warn("Could not register Linux OAuth protocol handlers:", error);
+  }
+}
+
+function registerOAuthProtocolClient() {
+  const schemes = googleAuthProtocolSchemes();
+  const appArgs = protocolLaunchArgs();
+  for (const scheme of schemes) {
+    if (appArgs.length > 0) {
+      app.setAsDefaultProtocolClient(scheme, process.execPath, [...appArgs]);
     } else {
       app.setAsDefaultProtocolClient(scheme);
     }
   }
+  registerLinuxOAuthProtocolClient(schemes, appArgs);
 }
 
 async function focusMainWindow() {
