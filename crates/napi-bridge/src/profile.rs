@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 
 use crate::types::{NapiAuthResult, NapiProfile, NapiProfileSnapshot};
 
-const CALLBACK_COMPLETION_TIMEOUT: Duration = Duration::from_secs(60 * 60);
+const CALLBACK_COMPLETION_TIMEOUT: Duration = Duration::from_secs(4 * 60 * 60);
 
 type AuthCompletion = std::result::Result<AuthSuccessData, String>;
 
