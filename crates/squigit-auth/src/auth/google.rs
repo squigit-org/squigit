@@ -9,7 +9,8 @@ use chrono::{DateTime, Utc};
 use image::ImageFormat;
 use jsonwebtoken::jwk::JwkSet;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
-use reqwest::blocking::Client;
+use reqwest::blocking::{Client, Response};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fs;
@@ -44,6 +45,7 @@ pub struct GoogleAuthAttempt {
     code_verifier: String,
     redirect_uri: String,
     client_id: String,
+    client_secret: Option<String>,
     token_uri: String,
     started_at: Instant,
 }
@@ -88,6 +90,12 @@ struct TokenResponse {
     access_token: Option<String>,
     id_token: String,
     scope: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct TokenErrorResponse {
+    error: Option<String>,
+    error_description: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -437,6 +445,9 @@ pub fn begin_google_auth_flow(settings: &AuthFlowSettings) -> Result<GoogleAuthA
         code_verifier,
         redirect_uri,
         client_id: secrets.client_id,
+        client_secret: secrets
+            .client_secret
+            .filter(|secret| !secret.trim().is_empty()),
         token_uri: secrets.token_uri,
         started_at: Instant::now(),
     })
@@ -512,6 +523,105 @@ fn authorization_code_from_callback(
         .ok_or_else(|| ProfileError::Auth("No authorization code found in callback".to_string()))
 }
 
+fn decode_token_response(response: Response) -> Result<TokenResponse> {
+    response.json().map_err(|err| {
+        ProfileError::Auth(format!("Failed to decode Google token response: {}", err))
+    })
+}
+
+fn read_token_error(response: Response) -> (StatusCode, String) {
+    let status = response.status();
+    let body = response.text().unwrap_or_default();
+    (status, body)
+}
+
+fn token_exchange_error_message(status: StatusCode, body: &str) -> String {
+    let trimmed = body.trim();
+    if let Ok(error) = serde_json::from_str::<TokenErrorResponse>(trimmed) {
+        let mut details = Vec::new();
+        if let Some(code) = error.error.filter(|value| !value.trim().is_empty()) {
+            details.push(code);
+        }
+        if let Some(description) = error
+            .error_description
+            .filter(|value| !value.trim().is_empty())
+        {
+            details.push(description);
+        }
+        if !details.is_empty() {
+            return format!(
+                "Google refused token exchange: HTTP {} ({})",
+                status,
+                details.join(": ")
+            );
+        }
+    }
+
+    if trimmed.is_empty() {
+        return format!("Google refused token exchange: HTTP {}", status);
+    }
+
+    let detail: String = trimmed.chars().take(600).collect();
+    format!(
+        "Google refused token exchange: HTTP {} ({})",
+        status, detail
+    )
+}
+
+fn token_error_mentions_client_secret(body: &str) -> bool {
+    let body = body.to_ascii_lowercase();
+    body.contains("client_secret") || body.contains("client secret")
+}
+
+fn exchange_authorization_code(
+    client: &Client,
+    attempt: &GoogleAuthAttempt,
+    code: String,
+) -> Result<TokenResponse> {
+    let token_form = vec![
+        ("client_id".to_string(), attempt.client_id.clone()),
+        ("code".to_string(), code),
+        ("code_verifier".to_string(), attempt.code_verifier.clone()),
+        ("grant_type".to_string(), "authorization_code".to_string()),
+        ("redirect_uri".to_string(), attempt.redirect_uri.clone()),
+    ];
+    let token_res = client
+        .post(&attempt.token_uri)
+        .form(&token_form)
+        .send()
+        .map_err(|err| ProfileError::Auth(format!("Token exchange failed: {}", err)))?;
+
+    if token_res.status().is_success() {
+        return decode_token_response(token_res);
+    }
+
+    let (status, body) = read_token_error(token_res);
+    if token_error_mentions_client_secret(&body) {
+        if let Some(client_secret) = attempt.client_secret.as_deref() {
+            let mut token_form_with_secret = token_form;
+            token_form_with_secret.push(("client_secret".to_string(), client_secret.to_string()));
+            let retry_res = client
+                .post(&attempt.token_uri)
+                .form(&token_form_with_secret)
+                .send()
+                .map_err(|err| ProfileError::Auth(format!("Token exchange failed: {}", err)))?;
+            if retry_res.status().is_success() {
+                return decode_token_response(retry_res);
+            }
+
+            let (retry_status, retry_body) = read_token_error(retry_res);
+            return Err(ProfileError::Auth(token_exchange_error_message(
+                retry_status,
+                &retry_body,
+            )));
+        }
+    }
+
+    Err(ProfileError::Auth(token_exchange_error_message(
+        status, &body,
+    )))
+}
+
 pub fn complete_google_auth_flow(
     store: &ProfileStore,
     settings: &AuthFlowSettings,
@@ -526,29 +636,7 @@ pub fn complete_google_auth_flow(
         authorization_code_from_callback(callback_url, &attempt.redirect_uri, &attempt.state)?;
 
     let client = Client::builder().timeout(TOKEN_EXCHANGE_TIMEOUT).build()?;
-    let token_form = vec![
-        ("client_id".to_string(), attempt.client_id.clone()),
-        ("code".to_string(), code),
-        ("code_verifier".to_string(), attempt.code_verifier.clone()),
-        ("grant_type".to_string(), "authorization_code".to_string()),
-        ("redirect_uri".to_string(), attempt.redirect_uri.clone()),
-    ];
-    let token_res = client
-        .post(&attempt.token_uri)
-        .form(&token_form)
-        .send()
-        .map_err(|err| ProfileError::Auth(format!("Token exchange failed: {}", err)))?;
-
-    if !token_res.status().is_success() {
-        return Err(ProfileError::Auth(format!(
-            "Google refused token exchange: HTTP {}",
-            token_res.status()
-        )));
-    }
-
-    let token_data: TokenResponse = token_res.json().map_err(|err| {
-        ProfileError::Auth(format!("Failed to decode Google token response: {}", err))
-    })?;
+    let token_data = exchange_authorization_code(&client, &attempt, code)?;
 
     let claims = validate_google_id_token(
         &client,

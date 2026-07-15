@@ -31,7 +31,7 @@ struct GoogleCredentials {
 pub(super) struct OAuthConfig {
     pub(super) client_id: String,
     #[serde(rename = "client_secret")]
-    pub(super) _client_secret: Option<String>,
+    pub(super) client_secret: Option<String>,
     pub(super) auth_uri: String,
     pub(super) token_uri: String,
 }
