@@ -44,6 +44,15 @@ function statusPageUrl(fragment: "complete" | "invalid" | "unavailable") {
   return url.toString();
 }
 
+async function openOAuthStatusPage(
+  fragment: "complete" | "invalid" | "unavailable",
+) {
+  if (process.env.SQUIGIT_OPEN_OAUTH_STATUS_PAGE !== "1") {
+    return;
+  }
+  await shell.openExternal(statusPageUrl(fragment));
+}
+
 function isOAuthCallbackUrl(rawUrl: string) {
   try {
     const url = new URL(rawUrl);
@@ -208,16 +217,16 @@ async function completeOAuthCallback(rawUrl: string) {
   const completeCallback = addon.complete_google_auth_callback;
   if (typeof completeCallback !== "function") {
     console.error("Missing napi-bridge export 'complete_google_auth_callback'.");
-    await shell.openExternal(statusPageUrl("unavailable"));
+    await openOAuthStatusPage("unavailable");
     return;
   }
 
   try {
     await completeCallback(rawUrl);
-    await shell.openExternal(statusPageUrl("complete"));
+    await openOAuthStatusPage("complete");
   } catch (error) {
     console.error("Google auth callback failed:", error);
-    await shell.openExternal(statusPageUrl("invalid"));
+    await openOAuthStatusPage("invalid");
   }
 }
 
