@@ -24,6 +24,9 @@ use crate::{Profile, ProfileError, ProfileStore, Result};
 use super::credentials::load_google_oauth_config;
 use super::{AuthAccountPolicy, AuthFlowSettings};
 
+const AVATAR_DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+const TOKEN_EXCHANGE_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthSuccessData {
     pub id: String,
@@ -226,7 +229,7 @@ fn download_avatar_data_url(client: &Client, url: &str, profile_id: &str) -> Res
 }
 
 fn hydrate_avatar_once(store: &ProfileStore, url: &str, profile_id: &str) -> Result<String> {
-    let client = Client::builder().timeout(Duration::from_secs(15)).build()?;
+    let client = Client::builder().timeout(AVATAR_DOWNLOAD_TIMEOUT).build()?;
     let avatar_base64 = download_avatar_data_url(&client, url, profile_id)?;
 
     let mut profile = store
@@ -514,7 +517,7 @@ pub fn complete_google_auth_flow(
     let code =
         authorization_code_from_callback(callback_url, &attempt.redirect_uri, &attempt.state)?;
 
-    let client = Client::builder().timeout(Duration::from_secs(20)).build()?;
+    let client = Client::builder().timeout(TOKEN_EXCHANGE_TIMEOUT).build()?;
     let token_form = vec![
         ("client_id".to_string(), attempt.client_id.clone()),
         ("code".to_string(), code),

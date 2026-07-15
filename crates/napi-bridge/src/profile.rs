@@ -20,6 +20,8 @@ use std::time::{Duration, Instant};
 
 use crate::types::{NapiAuthResult, NapiProfile, NapiProfileSnapshot};
 
+const CALLBACK_COMPLETION_TIMEOUT: Duration = Duration::from_secs(60 * 60);
+
 type AuthCompletion = std::result::Result<AuthSuccessData, String>;
 
 enum AuthSignal {
@@ -205,7 +207,7 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
             }
 
             if let Some(callback_started_at) = callback_started_at {
-                if callback_started_at.elapsed() > Duration::from_secs(75) {
+                if callback_started_at.elapsed() > CALLBACK_COMPLETION_TIMEOUT {
                     return Err(Error::from_reason(
                         "Authentication callback timed out".to_string(),
                     ));

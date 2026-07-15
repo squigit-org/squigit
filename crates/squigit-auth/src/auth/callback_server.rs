@@ -13,6 +13,7 @@ const DEFAULT_USER_INFO_URL: &str = "https://openidconnect.googleapis.com/v1/use
 const DEFAULT_JWKS_URL: &str = "https://www.googleapis.com/oauth2/v3/certs";
 const DEFAULT_REDIRECT_URI: &str = "org.squigit.app:/oauth2redirect/google";
 const DEFAULT_STATUS_PAGE_URL: &str = "https://squigit-org.github.io/login/popup-google-auth/";
+const DEFAULT_AUTH_ATTEMPT_TIMEOUT: Duration = Duration::from_secs(4 * 60 * 60);
 
 pub type BrowserOpener = Arc<dyn Fn(&str) -> Result<()> + Send + Sync>;
 
@@ -62,7 +63,7 @@ impl AuthFlowSettings {
             status_page_url: DEFAULT_STATUS_PAGE_URL.to_string(),
             user_info_url: DEFAULT_USER_INFO_URL.to_string(),
             jwks_url: DEFAULT_JWKS_URL.to_string(),
-            timeout: Duration::from_secs(120),
+            timeout: DEFAULT_AUTH_ATTEMPT_TIMEOUT,
             credentials_source: CredentialsSource::Auto,
             account_policy: AuthAccountPolicy::Any,
             open_browser,
