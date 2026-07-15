@@ -91,7 +91,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
     >
       {currentLoadingState &&
         (showCancel ? (
-          <span style={{ fontSize: "0.8rem", color: "var(--c-raw-099)" }}>
+          <span style={{ fontSize: "0.8rem", color: "var(--c-raw-050)" }}>
             Cancel ✕
           </span>
         ) : (
