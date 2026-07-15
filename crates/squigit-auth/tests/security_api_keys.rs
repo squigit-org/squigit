@@ -13,7 +13,14 @@ fn temp_store() -> ProfileStore {
     let root = temp_dir.path().to_path_buf();
     std::mem::forget(temp_dir);
     let store = ProfileStore::with_base_dir(root.to_path_buf()).unwrap();
-    let profile = Profile::new("auth@example.com", "Auth User", None, None);
+    let profile = Profile::new_google(
+        "https://accounts.google.com",
+        "auth-subject",
+        "auth@example.com",
+        "Auth User",
+        None,
+        None,
+    );
     store.upsert_profile(&profile).unwrap();
     store
 }

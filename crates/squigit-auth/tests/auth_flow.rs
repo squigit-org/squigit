@@ -134,31 +134,31 @@ fn run_policy_flow(
     );
     let (body_tx, body_rx) = std::sync::mpsc::channel();
     let mut settings = AuthFlowSettings::new(Arc::new(move |auth_url| {
-            let auth_url = Url::parse(auth_url)?;
-            let query = |key: &str| {
-                auth_url
-                    .query_pairs()
-                    .find(|(candidate, _)| candidate == key)
-                    .map(|(_, value)| value.into_owned())
-                    .unwrap()
-            };
-            assert_eq!(query("prompt"), "select_account consent");
-            let callback_url = format!(
-                "{}/?code=test-code&state={}",
-                query("redirect_uri"),
-                query("state")
-            );
-            let body_tx = body_tx.clone();
-            thread::spawn(move || {
-                let client = reqwest::blocking::Client::builder()
-                    .no_proxy()
-                    .build()
-                    .unwrap();
-                let body = client.get(callback_url).send().unwrap().text().unwrap();
-                body_tx.send(body).unwrap();
-            });
-            Ok(())
-        }));
+        let auth_url = Url::parse(auth_url)?;
+        let query = |key: &str| {
+            auth_url
+                .query_pairs()
+                .find(|(candidate, _)| candidate == key)
+                .map(|(_, value)| value.into_owned())
+                .unwrap()
+        };
+        assert_eq!(query("prompt"), "select_account");
+        let callback_url = format!(
+            "{}/?code=test-code&state={}",
+            query("redirect_uri"),
+            query("state")
+        );
+        let body_tx = body_tx.clone();
+        thread::spawn(move || {
+            let client = reqwest::blocking::Client::builder()
+                .no_proxy()
+                .build()
+                .unwrap();
+            let body = client.get(callback_url).send().unwrap().text().unwrap();
+            body_tx.send(body).unwrap();
+        });
+        Ok(())
+    }));
     settings.redirect_port = callback_port;
     settings.user_info_url = format!("http://127.0.0.1:{oauth_port}/userinfo");
     settings.credentials_source = CredentialsSource::RawJson(credentials);
@@ -355,38 +355,38 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
     );
 
     let mut settings = AuthFlowSettings::new(Arc::new(|url| {
-            let client = reqwest::blocking::Client::builder()
+        let client = reqwest::blocking::Client::builder()
+            .no_proxy()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(ProfileError::Network)?;
+        let response = client.get(url).send()?;
+        if response.status() != reqwest::StatusCode::FOUND {
+            return Err(ProfileError::Auth(format!(
+                "Unexpected browser status: {}",
+                response.status()
+            )));
+        }
+
+        let location = response
+            .headers()
+            .get(reqwest::header::LOCATION)
+            .and_then(|value| value.to_str().ok())
+            .ok_or_else(|| {
+                ProfileError::Auth("OAuth stub redirect did not include Location".to_string())
+            })?
+            .to_string();
+
+        thread::spawn(move || {
+            let callback_client = reqwest::blocking::Client::builder()
                 .no_proxy()
-                .redirect(reqwest::redirect::Policy::none())
                 .build()
-                .map_err(ProfileError::Network)?;
-            let response = client.get(url).send()?;
-            if response.status() != reqwest::StatusCode::FOUND {
-                return Err(ProfileError::Auth(format!(
-                    "Unexpected browser status: {}",
-                    response.status()
-                )));
-            }
+                .unwrap();
+            let _ = callback_client.get(location).send();
+        });
 
-            let location = response
-                .headers()
-                .get(reqwest::header::LOCATION)
-                .and_then(|value| value.to_str().ok())
-                .ok_or_else(|| {
-                    ProfileError::Auth("OAuth stub redirect did not include Location".to_string())
-                })?
-                .to_string();
-
-            thread::spawn(move || {
-                let callback_client = reqwest::blocking::Client::builder()
-                    .no_proxy()
-                    .build()
-                    .unwrap();
-                let _ = callback_client.get(location).send();
-            });
-
-            Ok(())
-        }));
+        Ok(())
+    }));
     settings.redirect_port = callback_port;
     settings.user_info_url = format!("http://127.0.0.1:{}/userinfo", oauth_port);
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
@@ -395,10 +395,7 @@ fn start_google_auth_flow_round_trips_against_stub_endpoints() {
         start_google_auth_flow(&store, &settings, Arc::new(AtomicBool::new(false))).unwrap();
     assert_eq!(result.name, "Integration User");
     assert_eq!(result.email, "integration@example.com");
-    assert_eq!(
-        result.avatar_url.as_deref(),
-        Some(avatar_url.as_str())
-    );
+    assert_eq!(result.avatar_url.as_deref(), Some(avatar_url.as_str()));
     assert!(result.avatar_base64.is_none());
 
     let active_id = store.get_active_profile_id().unwrap().unwrap();
@@ -452,7 +449,14 @@ fn new_only_policy_accepts_new_accounts_and_rejects_existing_accounts_in_browser
 #[serial]
 fn existing_only_policy_accepts_saved_accounts_and_rejects_unknown_accounts_in_browser() {
     let store = temp_store();
-    let existing = Profile::new("saved@example.com", "Saved User", None, None);
+    let existing = Profile::new_google(
+        "https://accounts.google.com",
+        "saved-subject",
+        "saved@example.com",
+        "Saved User",
+        None,
+        None,
+    );
     store.upsert_profile(&existing).unwrap();
 
     let (logged_in, success_page) = run_policy_flow(
@@ -481,7 +485,7 @@ fn existing_only_policy_accepts_saved_accounts_and_rejects_unknown_accounts_in_b
     assert!(failure_page.contains("has not been added to Squigit"));
     assert_eq!(store.profile_count().unwrap(), 1);
     assert!(store
-        .find_profile_by_email("unknown@example.com")
+        .find_profile_by_identity("https://accounts.google.com", "unknown-subject")
         .unwrap()
         .is_none());
 }
@@ -536,23 +540,23 @@ fn cancelled_auth_serves_failure_page_for_late_callback() {
 
     let (location_tx, location_rx) = std::sync::mpsc::channel();
     let mut settings = AuthFlowSettings::new(Arc::new(move |url| {
-            let client = reqwest::blocking::Client::builder()
-                .no_proxy()
-                .redirect(reqwest::redirect::Policy::none())
-                .build()
-                .map_err(ProfileError::Network)?;
-            let response = client.get(url).send()?;
-            let location = response
-                .headers()
-                .get(reqwest::header::LOCATION)
-                .and_then(|value| value.to_str().ok())
-                .ok_or_else(|| {
-                    ProfileError::Auth("OAuth stub redirect did not include Location".to_string())
-                })?
-                .to_string();
-            location_tx.send(location).unwrap();
-            Ok(())
-        }));
+        let client = reqwest::blocking::Client::builder()
+            .no_proxy()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(ProfileError::Network)?;
+        let response = client.get(url).send()?;
+        let location = response
+            .headers()
+            .get(reqwest::header::LOCATION)
+            .and_then(|value| value.to_str().ok())
+            .ok_or_else(|| {
+                ProfileError::Auth("OAuth stub redirect did not include Location".to_string())
+            })?
+            .to_string();
+        location_tx.send(location).unwrap();
+        Ok(())
+    }));
     settings.redirect_port = callback_port;
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
 
