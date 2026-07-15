@@ -173,7 +173,7 @@ fn print_profiles(store: &ProfileStore) -> Result<(), String> {
 }
 
 fn prompt_callback_url() -> Result<String, String> {
-    print!("Paste the final org.squigit.app callback URL: ");
+    print!("Paste the final Google auth callback URL: ");
     io::stdout()
         .flush()
         .map_err(|error| format!("Failed to flush stdout: {error}"))?;

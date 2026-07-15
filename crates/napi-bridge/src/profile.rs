@@ -5,6 +5,7 @@ use napi::{Error, Result};
 use napi_derive::napi;
 use squigit_auth::auth::{
     begin_google_auth_flow, complete_google_auth_flow, google_auth_callback_state,
+    google_auth_redirect_schemes, google_auth_status_page_url,
     hydrate_avatar as hydrate_profile_avatar, AuthFlowSettings, AuthSuccessData, GoogleAuthAttempt,
 };
 use squigit_auth::security::{
@@ -165,6 +166,18 @@ pub fn profile_count() -> Result<u32> {
         .map(|count| count as u32)
 }
 
+#[napi(js_name = "get_google_auth_callback_schemes")]
+pub fn get_google_auth_callback_schemes() -> Result<Vec<String>> {
+    let settings = google_auth_settings();
+    let attempt = begin_google_auth_flow(&settings).map_err(map_profile_err)?;
+    Ok(google_auth_redirect_schemes(Some(attempt.client_id())))
+}
+
+#[napi(js_name = "get_google_auth_status_url")]
+pub fn get_google_auth_status_url() -> String {
+    google_auth_status_page_url()
+}
+
 #[napi(js_name = "start_google_auth")]
 pub async fn start_google_auth() -> Result<NapiAuthResult> {
     tokio::task::spawn_blocking(|| {
@@ -243,7 +256,7 @@ pub async fn complete_google_auth_callback(callback_url: String) -> Result<NapiA
                 Error::from_reason("No active Google authentication attempt".to_string())
             })?;
             let callback_state =
-                google_auth_callback_state(&callback_url, &pending.settings.redirect_uri)
+                google_auth_callback_state(&callback_url, pending.attempt.redirect_uri())
                     .map_err(map_profile_err)?;
             if callback_state != pending.state {
                 return Err(Error::from_reason(

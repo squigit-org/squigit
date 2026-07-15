@@ -24,9 +24,10 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
-const oauthScheme = "org.squigit.app";
+const primaryOAuthScheme = "org.squigit.app";
+const clientIdOAuthSchemePrefix = "com.googleusercontent.apps.";
 const oauthCallbackPath = "/oauth2redirect/google";
-const authStatusUrl = "https://squigit-org.github.io/login/popup-google-auth/";
+let authStatusUrl = "https://squigit-org.github.io/login/popup-google-auth/";
 const pendingOAuthCallbacks: string[] = [];
 let isHandlingOAuthCallback = false;
 
@@ -43,7 +44,12 @@ function statusPageUrl(fragment: "complete" | "invalid" | "unavailable") {
 function isOAuthCallbackUrl(rawUrl: string) {
   try {
     const url = new URL(rawUrl);
-    return url.protocol === `${oauthScheme}:` && url.pathname === oauthCallbackPath;
+    const scheme = url.protocol.replace(/:$/, "");
+    return (
+      (scheme === primaryOAuthScheme ||
+        scheme.startsWith(clientIdOAuthSchemePrefix)) &&
+      url.pathname === oauthCallbackPath
+    );
   } catch {
     return false;
   }
@@ -53,15 +59,53 @@ function findOAuthCallbackUrl(values: readonly string[]) {
   return values.find((value) => isOAuthCallbackUrl(value));
 }
 
-function registerOAuthProtocolClient() {
-  const maybeDefaultApp = process as NodeJS.Process & { defaultApp?: boolean };
-  if (maybeDefaultApp.defaultApp && process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(oauthScheme, process.execPath, [
-      path.resolve(process.argv[1]),
-    ]);
+function googleAuthProtocolSchemes() {
+  const schemes = new Set<string>([primaryOAuthScheme]);
+  const getSchemes = addon.get_google_auth_callback_schemes;
+  if (typeof getSchemes === "function") {
+    try {
+      const nativeSchemes = getSchemes();
+      if (Array.isArray(nativeSchemes)) {
+        for (const scheme of nativeSchemes) {
+          if (typeof scheme === "string" && scheme.trim()) {
+            schemes.add(scheme.trim());
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("Could not load Google auth callback schemes:", error);
+    }
+  }
+  return [...schemes];
+}
+
+function refreshAuthStatusUrl() {
+  const getStatusUrl = addon.get_google_auth_status_url;
+  if (typeof getStatusUrl !== "function") {
     return;
   }
-  app.setAsDefaultProtocolClient(oauthScheme);
+
+  try {
+    const nativeStatusUrl = getStatusUrl();
+    if (typeof nativeStatusUrl === "string" && nativeStatusUrl.trim()) {
+      authStatusUrl = nativeStatusUrl.trim();
+    }
+  } catch (error) {
+    console.warn("Could not load Google auth status URL:", error);
+  }
+}
+
+function registerOAuthProtocolClient() {
+  const maybeDefaultApp = process as NodeJS.Process & { defaultApp?: boolean };
+  for (const scheme of googleAuthProtocolSchemes()) {
+    if (maybeDefaultApp.defaultApp && process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(scheme, process.execPath, [
+        path.resolve(process.argv[1]),
+      ]);
+    } else {
+      app.setAsDefaultProtocolClient(scheme);
+    }
+  }
 }
 
 async function focusMainWindow() {
@@ -212,6 +256,7 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  refreshAuthStatusUrl();
   registerOAuthProtocolClient();
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

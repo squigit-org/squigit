@@ -38,6 +38,10 @@ export declare function get_active_profile_id(): string | null
 
 export declare function get_api_key(profileId: string, provider: string): string | null
 
+export declare function get_google_auth_callback_schemes(): Array<string>
+
+export declare function get_google_auth_status_url(): string
+
 export declare function get_image_path(hash: string): string
 
 export declare function get_linux_package_manager(): string

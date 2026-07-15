@@ -153,7 +153,7 @@ fn run() -> Result<(), String> {
 }
 
 fn prompt_callback_url() -> Result<String, String> {
-    print!("Paste the final org.squigit.app callback URL: ");
+    print!("Paste the final Google auth callback URL: ");
     io::stdout()
         .flush()
         .map_err(|err| format!("Failed to flush stdout: {err}"))?;

@@ -31,6 +31,14 @@ fn temp_store() -> ProfileStore {
 }
 
 fn callback_url_for_attempt(attempt: &GoogleAuthAttempt, code: &str) -> String {
+    callback_url_for_attempt_with_state(attempt, code, None)
+}
+
+fn callback_url_for_attempt_with_state(
+    attempt: &GoogleAuthAttempt,
+    code: &str,
+    state_override: Option<&str>,
+) -> String {
     let auth_url = Url::parse(attempt.auth_url()).unwrap();
     let query = |key: &str| {
         auth_url
@@ -40,11 +48,10 @@ fn callback_url_for_attempt(attempt: &GoogleAuthAttempt, code: &str) -> String {
             .unwrap()
     };
     assert_eq!(query("prompt"), "select_account");
-    format!(
-        "{}?code={code}&state={}",
-        query("redirect_uri"),
-        query("state")
-    )
+    let state = state_override
+        .map(str::to_string)
+        .unwrap_or_else(|| query("state"));
+    format!("{}?code={code}&state={}", query("redirect_uri"), state)
 }
 
 struct EnvGuard {
@@ -488,8 +495,8 @@ fn stale_callback_state_is_rejected_without_writing_profiles() {
     settings.credentials_source = CredentialsSource::RawJson(raw_credentials);
 
     let attempt = begin_google_auth_flow(&settings).unwrap();
-    let callback_url = "org.squigit.app:/oauth2redirect/google?code=late-code&state=stale";
-    let result = complete_google_auth_flow(&store, &settings, attempt, callback_url);
+    let callback_url = callback_url_for_attempt_with_state(&attempt, "late-code", Some("stale"));
+    let result = complete_google_auth_flow(&store, &settings, attempt, &callback_url);
     assert!(
         matches!(result, Err(ProfileError::Auth(message)) if message == "OAuth callback state mismatch")
     );

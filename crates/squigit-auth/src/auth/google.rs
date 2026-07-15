@@ -70,6 +70,14 @@ impl GoogleAuthAttempt {
         &self.state
     }
 
+    pub fn redirect_uri(&self) -> &str {
+        &self.redirect_uri
+    }
+
+    pub fn client_id(&self) -> &str {
+        &self.client_id
+    }
+
     fn is_expired(&self, timeout: Duration) -> bool {
         self.started_at.elapsed() > timeout
     }
@@ -406,7 +414,7 @@ pub fn begin_google_auth_flow(settings: &AuthFlowSettings) -> Result<GoogleAuthA
     let nonce = generate_nonce();
     let code_verifier = generate_code_verifier();
     let code_challenge = code_challenge_s256(&code_verifier);
-    let redirect_uri = settings.redirect_uri();
+    let redirect_uri = settings.redirect_uri_for_client_id(&secrets.client_id);
 
     let mut auth_url = Url::parse(&secrets.auth_uri)?;
     auth_url
