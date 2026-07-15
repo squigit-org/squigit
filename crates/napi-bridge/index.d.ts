@@ -10,6 +10,8 @@ export declare function cancel_request(channelId?: string | undefined | null): P
 
 export declare function clear_active_profile(): void
 
+export declare function complete_google_auth_callback(callbackUrl: string): Promise<NapiAuthResult>
+
 export declare function copy_image_from_path_to_clipboard(path: string): void
 
 export declare function copy_image_to_clipboard(imageBase64: string): void

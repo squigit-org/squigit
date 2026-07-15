@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell, session, protocol } from "electron";
 import path from "path";
 import { setupIpc } from "./ipc";
+import { addon } from "./ipc/system/addon";
 import { registerProtocols } from "./protocol";
 
 const originalUserData = app.getPath("userData");
@@ -23,10 +24,121 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+const oauthScheme = "org.squigit.app";
+const oauthCallbackPath = "/oauth2redirect/google";
+const authStatusUrl = "https://squigit-org.github.io/login/popup-google-auth/";
+const pendingOAuthCallbacks: string[] = [];
+let isHandlingOAuthCallback = false;
 
 if (isDev) {
   process.env["ELECTRON_DISABLE_SECURITY_WARNINGS"] = "true";
 }
+
+function statusPageUrl(fragment: "complete" | "invalid" | "unavailable") {
+  const url = new URL(authStatusUrl);
+  url.hash = fragment;
+  return url.toString();
+}
+
+function isOAuthCallbackUrl(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === `${oauthScheme}:` && url.pathname === oauthCallbackPath;
+  } catch {
+    return false;
+  }
+}
+
+function findOAuthCallbackUrl(values: readonly string[]) {
+  return values.find((value) => isOAuthCallbackUrl(value));
+}
+
+function registerOAuthProtocolClient() {
+  const maybeDefaultApp = process as NodeJS.Process & { defaultApp?: boolean };
+  if (maybeDefaultApp.defaultApp && process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(oauthScheme, process.execPath, [
+      path.resolve(process.argv[1]),
+    ]);
+    return;
+  }
+  app.setAsDefaultProtocolClient(oauthScheme);
+}
+
+async function focusMainWindow() {
+  if (!mainWindow && app.isReady()) {
+    await createWindow();
+  }
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+async function completeOAuthCallback(rawUrl: string) {
+  await focusMainWindow();
+
+  const completeCallback = addon.complete_google_auth_callback;
+  if (typeof completeCallback !== "function") {
+    console.error("Missing napi-bridge export 'complete_google_auth_callback'.");
+    await shell.openExternal(statusPageUrl("unavailable"));
+    return;
+  }
+
+  try {
+    await completeCallback(rawUrl);
+    await shell.openExternal(statusPageUrl("complete"));
+  } catch (error) {
+    console.error("Google auth callback failed:", error);
+    await shell.openExternal(statusPageUrl("invalid"));
+  }
+}
+
+async function drainOAuthCallbacks() {
+  if (isHandlingOAuthCallback) return;
+  isHandlingOAuthCallback = true;
+  try {
+    while (pendingOAuthCallbacks.length > 0) {
+      const rawUrl = pendingOAuthCallbacks.shift();
+      if (rawUrl) {
+        await completeOAuthCallback(rawUrl);
+      }
+    }
+  } finally {
+    isHandlingOAuthCallback = false;
+  }
+}
+
+function enqueueOAuthCallback(rawUrl: string) {
+  if (!isOAuthCallbackUrl(rawUrl)) {
+    return false;
+  }
+  pendingOAuthCallbacks.push(rawUrl);
+  if (app.isReady()) {
+    void drainOAuthCallbacks();
+  }
+  return true;
+}
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
+
+app.on("second-instance", (_event, commandLine) => {
+  const callbackUrl = findOAuthCallbackUrl(commandLine);
+  if (callbackUrl) {
+    enqueueOAuthCallback(callbackUrl);
+  } else {
+    void focusMainWindow();
+  }
+});
+
+app.on("open-url", (event, rawUrl) => {
+  event.preventDefault();
+  enqueueOAuthCallback(rawUrl);
+});
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -99,7 +211,9 @@ async function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  registerOAuthProtocolClient();
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -117,11 +231,17 @@ app.whenReady().then(() => {
 
   registerProtocols();
   setupIpc();
-  createWindow();
+  await createWindow();
+
+  const initialCallbackUrl = findOAuthCallbackUrl(process.argv);
+  if (initialCallbackUrl) {
+    enqueueOAuthCallback(initialCallbackUrl);
+  }
+  await drainOAuthCallbacks();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      void createWindow();
     }
   });
 });

@@ -4,21 +4,88 @@
 use napi::{Error, Result};
 use napi_derive::napi;
 use squigit_auth::auth::{
-    hydrate_avatar as hydrate_profile_avatar, start_google_auth_flow, AuthFlowSettings,
+    begin_google_auth_flow, complete_google_auth_flow, google_auth_callback_state,
+    hydrate_avatar as hydrate_profile_avatar, AuthFlowSettings, AuthSuccessData, GoogleAuthAttempt,
 };
 use squigit_auth::security::{
     encrypt_and_save_api_key as ensak, get_decrypted_key, ApiKeyProvider,
 };
 use squigit_auth::ProfileStore;
 use std::str::FromStr;
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    mpsc, Arc, Mutex,
+};
+use std::time::{Duration, Instant};
 
 use crate::types::{NapiAuthResult, NapiProfile, NapiProfileSnapshot};
 
-static ACTIVE_AUTH_CANCEL: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
+type AuthCompletion = std::result::Result<AuthSuccessData, String>;
+
+enum AuthSignal {
+    CallbackAccepted,
+    Completed(AuthCompletion),
+    Cancelled,
+}
+
+struct PendingGoogleAuth {
+    state: String,
+    settings: AuthFlowSettings,
+    attempt: GoogleAuthAttempt,
+    sender: mpsc::Sender<AuthSignal>,
+    cancelled: Arc<AtomicBool>,
+}
+
+static ACTIVE_GOOGLE_AUTH: Mutex<Option<PendingGoogleAuth>> = Mutex::new(None);
 
 fn map_profile_err(err: squigit_auth::error::ProfileError) -> Error {
     Error::from_reason(err.to_string())
+}
+
+fn auth_success_to_napi(result: AuthSuccessData) -> NapiAuthResult {
+    NapiAuthResult {
+        id: result.id,
+        name: result.name,
+        email: result.email,
+        avatar_base64: result.avatar_base64,
+        avatar_url: result.avatar_url,
+    }
+}
+
+fn google_auth_settings() -> AuthFlowSettings {
+    AuthFlowSettings::new(Arc::new(|url| {
+        #[cfg(target_os = "linux")]
+        {
+            let _ = std::process::Command::new("xdg-open")
+                .arg(url)
+                .env_remove("LD_LIBRARY_PATH")
+                .env_remove("ELECTRON_RUN_AS_NODE")
+                .env_remove("GIO_EXTRA_MODULES")
+                .spawn();
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = webbrowser::open(url);
+        }
+        Ok(())
+    }))
+}
+
+fn cancel_pending_auth(pending: PendingGoogleAuth) {
+    pending.cancelled.store(true, Ordering::SeqCst);
+    let _ = pending.sender.send(AuthSignal::Cancelled);
+}
+
+fn clear_pending_auth_if_state(state: &str) {
+    let mut lock = ACTIVE_GOOGLE_AUTH.lock().unwrap();
+    let should_clear = lock
+        .as_ref()
+        .is_some_and(|pending| pending.state.as_str() == state);
+    if should_clear {
+        if let Some(pending) = lock.take() {
+            cancel_pending_auth(pending);
+        }
+    }
 }
 
 #[napi(js_name = "get_store_base_dir")]
@@ -99,43 +166,104 @@ pub fn profile_count() -> Result<u32> {
 #[napi(js_name = "start_google_auth")]
 pub async fn start_google_auth() -> Result<NapiAuthResult> {
     tokio::task::spawn_blocking(|| {
-        let store = ProfileStore::new().map_err(map_profile_err)?;
+        let settings = google_auth_settings();
+        let attempt = begin_google_auth_flow(&settings).map_err(map_profile_err)?;
+        let auth_url = attempt.auth_url().to_string();
+        let state = attempt.state().to_string();
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let (sender, receiver) = mpsc::channel();
 
-        // We let the auth flow handle credentials resolution (via SQUIGIT_GOOGLE_CREDENTIALS_JSON etc)
-        let mut settings = AuthFlowSettings::new(Arc::new(|url| {
-            #[cfg(target_os = "linux")]
-            {
-                let _ = std::process::Command::new("xdg-open")
-                    .arg(url)
-                    .env_remove("LD_LIBRARY_PATH")
-                    .env_remove("ELECTRON_RUN_AS_NODE")
-                    .env_remove("GIO_EXTRA_MODULES")
-                    .spawn();
-            }
-            #[cfg(not(target_os = "linux"))]
-            {
-                let _ = webbrowser::open(url);
-            }
-            Ok(())
-        }));
-        settings.redirect_port = 6062;
-
-        let auth_cancelled = Arc::new(AtomicBool::new(false));
         {
-            let mut lock = ACTIVE_AUTH_CANCEL.lock().unwrap();
-            *lock = Some(auth_cancelled.clone());
+            let mut lock = ACTIVE_GOOGLE_AUTH.lock().unwrap();
+            if let Some(pending) = lock.take() {
+                cancel_pending_auth(pending);
+            }
+            *lock = Some(PendingGoogleAuth {
+                state: state.clone(),
+                settings: settings.clone(),
+                attempt,
+                sender,
+                cancelled: cancelled.clone(),
+            });
         }
 
-        let result =
-            start_google_auth_flow(&store, &settings, auth_cancelled).map_err(map_profile_err)?;
+        if let Err(err) = (settings.open_browser)(&auth_url) {
+            clear_pending_auth_if_state(&state);
+            return Err(map_profile_err(err));
+        }
 
-        Ok(NapiAuthResult {
-            id: result.id,
-            name: result.name,
-            email: result.email,
-            avatar_base64: result.avatar_base64,
-            avatar_url: result.avatar_url,
-        })
+        let started_at = Instant::now();
+        let mut callback_started_at: Option<Instant> = None;
+        loop {
+            if cancelled.load(Ordering::SeqCst) {
+                return Err(Error::from_reason("Authentication cancelled".to_string()));
+            }
+
+            if callback_started_at.is_none() && started_at.elapsed() > settings.timeout {
+                clear_pending_auth_if_state(&state);
+                return Err(Error::from_reason("Authentication timed out".to_string()));
+            }
+
+            if let Some(callback_started_at) = callback_started_at {
+                if callback_started_at.elapsed() > Duration::from_secs(75) {
+                    return Err(Error::from_reason(
+                        "Authentication callback timed out".to_string(),
+                    ));
+                }
+            }
+
+            match receiver.recv_timeout(Duration::from_millis(250)) {
+                Ok(AuthSignal::CallbackAccepted) => {
+                    callback_started_at = Some(Instant::now());
+                }
+                Ok(AuthSignal::Completed(Ok(result))) => return Ok(auth_success_to_napi(result)),
+                Ok(AuthSignal::Completed(Err(reason))) => return Err(Error::from_reason(reason)),
+                Ok(AuthSignal::Cancelled) => {
+                    return Err(Error::from_reason("Authentication cancelled".to_string()))
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => continue,
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    return Err(Error::from_reason("Authentication cancelled".to_string()))
+                }
+            }
+        }
+    })
+    .await
+    .map_err(|e| Error::from_reason(e.to_string()))?
+}
+
+#[napi(js_name = "complete_google_auth_callback")]
+pub async fn complete_google_auth_callback(callback_url: String) -> Result<NapiAuthResult> {
+    tokio::task::spawn_blocking(move || {
+        let pending = {
+            let mut lock = ACTIVE_GOOGLE_AUTH.lock().unwrap();
+            let pending = lock.as_ref().ok_or_else(|| {
+                Error::from_reason("No active Google authentication attempt".to_string())
+            })?;
+            let callback_state =
+                google_auth_callback_state(&callback_url, &pending.settings.redirect_uri)
+                    .map_err(map_profile_err)?;
+            if callback_state != pending.state {
+                return Err(Error::from_reason(
+                    "OAuth callback state mismatch".to_string(),
+                ));
+            }
+            lock.take().ok_or_else(|| {
+                Error::from_reason("No active Google authentication attempt".to_string())
+            })?
+        };
+
+        let _ = pending.sender.send(AuthSignal::CallbackAccepted);
+        let store = ProfileStore::new().map_err(map_profile_err)?;
+        let result =
+            complete_google_auth_flow(&store, &pending.settings, pending.attempt, &callback_url)
+                .map_err(|err| err.to_string());
+        let _ = pending.sender.send(AuthSignal::Completed(result.clone()));
+
+        match result {
+            Ok(result) => Ok(auth_success_to_napi(result)),
+            Err(reason) => Err(Error::from_reason(reason)),
+        }
     })
     .await
     .map_err(|e| Error::from_reason(e.to_string()))?
@@ -153,9 +281,9 @@ pub async fn hydrate_avatar(url: String, profile_id: Option<String>) -> Result<S
 
 #[napi(js_name = "cancel_google_auth")]
 pub fn cancel_google_auth() -> Result<()> {
-    let mut lock = ACTIVE_AUTH_CANCEL.lock().unwrap();
-    if let Some(flag) = lock.take() {
-        flag.store(true, std::sync::atomic::Ordering::SeqCst);
+    let mut lock = ACTIVE_GOOGLE_AUTH.lock().unwrap();
+    if let Some(pending) = lock.take() {
+        cancel_pending_auth(pending);
     }
     Ok(())
 }
