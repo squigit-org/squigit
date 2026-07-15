@@ -100,6 +100,9 @@ function refreshAuthStatusUrl() {
 
 function protocolLaunchArgs() {
   const maybeDefaultApp = process as NodeJS.Process & { defaultApp?: boolean };
+  if (!app.isPackaged) {
+    return ["--no-sandbox", app.getAppPath()];
+  }
   if (maybeDefaultApp.defaultApp && process.argv.length >= 2) {
     return [path.resolve(process.argv[1])];
   }
