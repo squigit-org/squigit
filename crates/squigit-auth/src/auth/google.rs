@@ -27,6 +27,14 @@ use super::{AuthAccountPolicy, AuthFlowSettings};
 
 const AVATAR_DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 const TOKEN_EXCHANGE_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+const TOKEN_EXCHANGE_RETRY_DELAYS: [Duration; 6] = [
+    Duration::from_secs(2),
+    Duration::from_secs(5),
+    Duration::from_secs(10),
+    Duration::from_secs(20),
+    Duration::from_secs(40),
+    Duration::from_secs(60),
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthSuccessData {
@@ -573,6 +581,46 @@ fn token_error_mentions_client_secret(body: &str) -> bool {
     body.contains("client_secret") || body.contains("client secret")
 }
 
+fn post_token_form(
+    client: &Client,
+    attempt: &GoogleAuthAttempt,
+    token_form: &[(String, String)],
+) -> std::result::Result<Response, reqwest::Error> {
+    client.post(&attempt.token_uri).form(token_form).send()
+}
+
+fn post_token_form_with_retries(
+    client: &Client,
+    attempt: &GoogleAuthAttempt,
+    token_form: &[(String, String)],
+) -> Result<Response> {
+    let max_attempts = TOKEN_EXCHANGE_RETRY_DELAYS.len() + 1;
+
+    for attempt_index in 0..max_attempts {
+        match post_token_form(client, attempt, token_form) {
+            Ok(response) => return Ok(response),
+            Err(err) => {
+                let attempt_number = attempt_index + 1;
+                let Some(delay) = TOKEN_EXCHANGE_RETRY_DELAYS.get(attempt_index) else {
+                    return Err(ProfileError::Auth(format!(
+                        "Token exchange failed after {max_attempts} attempts: {err}"
+                    )));
+                };
+
+                eprintln!(
+                    "[auth] Token exchange transport failed on attempt {attempt_number}/{max_attempts}: {err}. Retrying in {}s.",
+                    delay.as_secs()
+                );
+                thread::sleep(*delay);
+            }
+        }
+    }
+
+    Err(ProfileError::Auth(
+        "Token exchange failed before Google returned a response".to_string(),
+    ))
+}
+
 fn exchange_authorization_code(
     client: &Client,
     attempt: &GoogleAuthAttempt,
@@ -585,11 +633,7 @@ fn exchange_authorization_code(
         ("grant_type".to_string(), "authorization_code".to_string()),
         ("redirect_uri".to_string(), attempt.redirect_uri.clone()),
     ];
-    let token_res = client
-        .post(&attempt.token_uri)
-        .form(&token_form)
-        .send()
-        .map_err(|err| ProfileError::Auth(format!("Token exchange failed: {}", err)))?;
+    let token_res = post_token_form_with_retries(client, attempt, &token_form)?;
 
     if token_res.status().is_success() {
         return decode_token_response(token_res);
@@ -600,11 +644,7 @@ fn exchange_authorization_code(
         if let Some(client_secret) = attempt.client_secret.as_deref() {
             let mut token_form_with_secret = token_form;
             token_form_with_secret.push(("client_secret".to_string(), client_secret.to_string()));
-            let retry_res = client
-                .post(&attempt.token_uri)
-                .form(&token_form_with_secret)
-                .send()
-                .map_err(|err| ProfileError::Auth(format!("Token exchange failed: {}", err)))?;
+            let retry_res = post_token_form_with_retries(client, attempt, &token_form_with_secret)?;
             if retry_res.status().is_success() {
                 return decode_token_response(retry_res);
             }
@@ -635,7 +675,11 @@ pub fn complete_google_auth_flow(
     let code =
         authorization_code_from_callback(callback_url, &attempt.redirect_uri, &attempt.state)?;
 
-    let client = Client::builder().timeout(TOKEN_EXCHANGE_TIMEOUT).build()?;
+    let client = Client::builder()
+        .timeout(TOKEN_EXCHANGE_TIMEOUT)
+        .http1_only()
+        .pool_max_idle_per_host(0)
+        .build()?;
     let token_data = exchange_authorization_code(&client, &attempt, code)?;
 
     let claims = validate_google_id_token(
