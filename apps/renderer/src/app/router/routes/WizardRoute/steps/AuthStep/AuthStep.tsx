@@ -110,13 +110,13 @@ export const AuthStep: React.FC<AuthStepProps> = ({ setCustomAction }) => {
       </div>
       <div className={styles.authWrapper}>
         {authState === "awaiting" && (
-          <div className={styles.authState}>
+          <div className={styles.authState} role="status" aria-live="polite">
             <Loader2 size={18} className={styles.spin} /> Awaiting
             Authentication
           </div>
         )}
         {authState === "success" && (
-          <div className={styles.authState}>
+          <div className={styles.authState} role="status" aria-live="polite">
             <CheckCircle2 size={14} /> Logged in as {userEmail}
           </div>
         )}

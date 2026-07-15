@@ -4,8 +4,8 @@ use std::process::{Command, Stdio};
 
 const CONFIG_DIR_ENV: &str = "SQUIGIT_CONFIG_DIR";
 
-pub fn run(runtime: &Runtime, action: &str, subject: Option<&str>) -> XtaskResult {
-    let arguments = cargo_arguments(action, subject);
+pub fn run(runtime: &Runtime, action: &str, profile_id: Option<&str>) -> XtaskResult {
+    let arguments = cargo_arguments(action, profile_id);
     let config_dir = auth_config_dir(&runtime.temp_root);
     println!("  $ cargo run -p squigit-auth --example live_auth_harness -- {action} ...");
     let status = Command::new("cargo")
@@ -31,7 +31,7 @@ fn auth_config_dir(temp_root: &Path) -> PathBuf {
     temp_root.join("live/auth/userData")
 }
 
-fn cargo_arguments(action: &str, subject: Option<&str>) -> Vec<String> {
+fn cargo_arguments(action: &str, profile_id: Option<&str>) -> Vec<String> {
     let mut arguments = vec![
         "run".to_string(),
         "-p".to_string(),
@@ -41,8 +41,8 @@ fn cargo_arguments(action: &str, subject: Option<&str>) -> Vec<String> {
         "--".to_string(),
         action.to_string(),
     ];
-    if let Some(subject) = subject {
-        arguments.push(subject.to_string());
+    if let Some(profile_id) = profile_id {
+        arguments.push(profile_id.to_string());
     }
     arguments
 }
@@ -52,14 +52,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn forwards_auth_actions_and_optional_remove_subject() {
+    fn forwards_auth_actions_and_optional_remove_profile_id() {
         let login = cargo_arguments("login", None);
         assert_eq!(login.last().map(String::as_str), Some("login"));
 
-        let remove = cargo_arguments("remove", Some("person@example.com"));
+        let remove = cargo_arguments("remove", Some("google_abc123"));
         assert_eq!(
             &remove[remove.len() - 2..],
-            &["remove".to_string(), "person@example.com".to_string()]
+            &["remove".to_string(), "google_abc123".to_string()]
         );
     }
 

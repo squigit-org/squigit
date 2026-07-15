@@ -109,6 +109,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
         onMouseLeave={() => setIsTriggerHovered(false)}
         disabled={isSwitchingProfile}
         title={showCancelAuth ? "Cancel Google sign-in" : undefined}
+        aria-busy={isAddingAccount || isSwitchingProfile}
       >
         <div className={styles.avatar}>
           <Avatar

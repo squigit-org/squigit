@@ -17,6 +17,18 @@ type AuthFailurePayload = {
   cancelled: boolean;
 };
 
+const logAuthError = (message: string, error?: unknown) => {
+  const details = `${message} ${String(error ?? "")}`;
+  if (details.includes("Unsupported auth.json schema")) {
+    console.warn(
+      "[auth] Local auth files use an old Squigit schema. Delete the Squigit config folder or reinstall to start fresh.",
+    );
+    return;
+  }
+
+  console.error(message, error);
+};
+
 export const useAuth = () => {
   const [authStage, setAuthStage] = useState<AuthStage>("LOADING");
 
@@ -26,7 +38,7 @@ export const useAuth = () => {
         const snapshot = await commands.getProfileSnapshot();
         setAuthStage(snapshot.activeProfile ? "AUTHENTICATED" : "LOGIN");
       } catch (e) {
-        console.error("Auth check failed:", e);
+        logAuthError("Auth check failed:", e);
         setAuthStage("LOGIN");
       }
     };
@@ -65,7 +77,7 @@ export const useSystemAuth = (
           setSwitchingProfileId(null);
 
           if (!payload?.cancelled) {
-            console.error("Google auth failed:", payload?.error);
+            logAuthError(payload?.error ?? "Google auth failed");
           }
         },
       );
@@ -138,7 +150,7 @@ export const useSystemAuth = (
             );
           }
         } else {
-          console.error("Failed to start auth:", e);
+          logAuthError("Failed to start auth:", e);
         }
       }
     }

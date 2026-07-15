@@ -47,13 +47,19 @@ fn run() -> Result<(), String> {
                 println!("{}", profile_id);
             }
         }
-        "profile-id-for-email" => {
-            let email = args.next().ok_or_else(|| "missing email".to_string())?;
+        "profile-id-for-identity" => {
+            let issuer = args.next().ok_or_else(|| "missing issuer".to_string())?;
+            let subject = args.next().ok_or_else(|| "missing subject".to_string())?;
             let store = ProfileStore::new().map_err(|err| err.to_string())?;
             let profile = store
-                .find_profile_by_email(&email)
+                .find_profile_by_identity(&issuer, &subject)
                 .map_err(|err| err.to_string())?
-                .ok_or_else(|| format!("Profile not found for email: {}", email))?;
+                .ok_or_else(|| {
+                    format!(
+                        "Profile not found for issuer '{}' and subject '{}'",
+                        issuer, subject
+                    )
+                })?;
             println!("{}", profile.id);
         }
         "set-active-profile" => {

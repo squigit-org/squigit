@@ -87,6 +87,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
       onMouseLeave={handleMouseLeave}
       className={getButtonClass()}
       disabled={authState === "awaiting"}
+      aria-busy={currentLoadingState || authState === "awaiting"}
     >
       {currentLoadingState &&
         (showCancel ? (

@@ -65,14 +65,14 @@ fn run() -> Result<(), String> {
             println!("\nConfig: {}", config_dir.display());
         }
         "remove" => {
-            let subject = args
+            let profile_id = args
                 .next()
-                .ok_or_else(|| "remove requires <id-or-email>".to_string())?;
+                .ok_or_else(|| "remove requires <profile-id>".to_string())?;
             if args.next().is_some() {
-                return Err("remove accepts exactly one <id-or-email>".to_string());
+                return Err("remove accepts exactly one <profile-id>".to_string());
             }
             let store = ProfileStore::new().map_err(|error| error.to_string())?;
-            let removed = remove_profile(&store, &subject)?;
+            let removed = remove_profile(&store, &profile_id)?;
             println!("Removed {} ({}).", removed.email, removed.id);
             println!("Config: {}", config_dir.display());
         }
@@ -97,8 +97,9 @@ fn isolated_config_dir() -> Result<PathBuf, String> {
 
 fn run_google_auth(policy: AuthAccountPolicy) -> Result<(), String> {
     let store = ProfileStore::new().map_err(|error| error.to_string())?;
-    let mut settings =
-        AuthFlowSettings::new(Arc::new(|url| open_system_browser(url).map_err(ProfileError::Auth)));
+    let mut settings = AuthFlowSettings::new(Arc::new(|url| {
+        open_system_browser(url).map_err(ProfileError::Auth)
+    }));
     settings.redirect_port = DESKTOP_AUTH_PORT;
     settings.account_policy = policy;
 
@@ -120,8 +121,8 @@ fn logout(store: &ProfileStore) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
-fn remove_profile(store: &ProfileStore, subject: &str) -> Result<Profile, String> {
-    let profile = resolve_profile(store, subject)?;
+fn remove_profile(store: &ProfileStore, profile_id: &str) -> Result<Profile, String> {
+    let profile = resolve_profile(store, profile_id)?;
     let active_id = store
         .get_active_profile_id()
         .map_err(|error| error.to_string())?;
@@ -137,26 +138,20 @@ fn remove_profile(store: &ProfileStore, subject: &str) -> Result<Profile, String
     Ok(profile)
 }
 
-fn resolve_profile(store: &ProfileStore, subject: &str) -> Result<Profile, String> {
-    let subject = subject.trim();
-    if subject.is_empty() {
-        return Err("remove requires a non-empty <id-or-email>".to_string());
+fn resolve_profile(store: &ProfileStore, profile_id: &str) -> Result<Profile, String> {
+    let profile_id = profile_id.trim();
+    if profile_id.is_empty() {
+        return Err("remove requires a non-empty <profile-id>".to_string());
     }
 
     if let Some(profile) = store
-        .get_profile(subject)
-        .map_err(|error| error.to_string())?
-    {
-        return Ok(profile);
-    }
-    if let Some(profile) = store
-        .find_profile_by_email(subject)
+        .get_profile(profile_id)
         .map_err(|error| error.to_string())?
     {
         return Ok(profile);
     }
 
-    Err(format!("No temporary profile found for '{subject}'."))
+    Err(format!("No temporary profile found for '{profile_id}'."))
 }
 
 fn print_profiles(store: &ProfileStore) -> Result<(), String> {
@@ -255,11 +250,22 @@ fn spawn_browser(mut command: Command) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    fn test_profile(subject: &str, email: &str, name: &str) -> Profile {
+        Profile::new_google(
+            "https://accounts.google.com",
+            subject,
+            email,
+            name,
+            None,
+            None,
+        )
+    }
+
     fn store_with_profiles() -> (tempfile::TempDir, ProfileStore, Profile, Profile) {
         let directory = tempfile::tempdir().unwrap();
         let store = ProfileStore::with_base_dir(directory.path().to_path_buf()).unwrap();
-        let first = Profile::new("first@example.com", "First User", None, None);
-        let second = Profile::new("second@example.com", "Second User", None, None);
+        let first = test_profile("subject-1", "first@example.com", "First User");
+        let second = test_profile("subject-2", "second@example.com", "Second User");
         store.upsert_profile(&first).unwrap();
         store.upsert_profile(&second).unwrap();
         store.set_active_profile_id(&second.id).unwrap();
@@ -278,14 +284,11 @@ mod tests {
     }
 
     #[test]
-    fn profile_resolution_accepts_id_and_case_insensitive_email() {
+    fn profile_resolution_accepts_id_only() {
         let (_directory, store, first, _second) = store_with_profiles();
 
         assert_eq!(resolve_profile(&store, &first.id).unwrap().id, first.id);
-        assert_eq!(
-            resolve_profile(&store, "FIRST@EXAMPLE.COM").unwrap().id,
-            first.id
-        );
+        assert!(resolve_profile(&store, "FIRST@EXAMPLE.COM").is_err());
     }
 
     #[test]
@@ -293,7 +296,7 @@ mod tests {
         let (_directory, store, first, second) = store_with_profiles();
 
         assert!(remove_profile(&store, &second.id).is_err());
-        let removed = remove_profile(&store, &first.email).unwrap();
+        let removed = remove_profile(&store, &first.id).unwrap();
 
         assert_eq!(removed.id, first.id);
         assert!(store.get_profile(&first.id).unwrap().is_none());
@@ -307,7 +310,7 @@ mod tests {
     fn removal_preserves_the_final_profile_invariant() {
         let directory = tempfile::tempdir().unwrap();
         let store = ProfileStore::with_base_dir(directory.path().to_path_buf()).unwrap();
-        let profile = Profile::new("only@example.com", "Only User", None, None);
+        let profile = test_profile("subject-only", "only@example.com", "Only User");
         store.upsert_profile(&profile).unwrap();
         logout(&store).unwrap();
 

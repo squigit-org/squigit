@@ -18,6 +18,8 @@ const API_KEY_ENV: &str = "GEMINI_API_KEY";
 const CONFIG_DIR_ENV: &str = "SQUIGIT_CONFIG_DIR";
 const LIVE_EMAIL: &str = "example@squigit.com";
 const LIVE_NAME: &str = "Squigit Live Test";
+const LIVE_ISSUER: &str = "https://accounts.google.com";
+const LIVE_SUBJECT: &str = "squigit-live-test";
 
 #[tokio::main]
 async fn main() {
@@ -193,7 +195,7 @@ fn prepare_live_profile(api_key: Option<&str>) -> Result<Profile, String> {
 }
 
 fn bootstrap_live_profile(store: &ProfileStore, api_key: Option<&str>) -> Result<Profile, String> {
-    let profile = Profile::new(LIVE_EMAIL, LIVE_NAME, None, None);
+    let profile = Profile::new_google(LIVE_ISSUER, LIVE_SUBJECT, LIVE_EMAIL, LIVE_NAME, None, None);
     store
         .upsert_profile(&profile)
         .map_err(|error| error.to_string())?;
