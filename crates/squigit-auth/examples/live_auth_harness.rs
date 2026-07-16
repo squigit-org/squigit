@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use squigit_auth::auth::{
-    begin_google_auth_flow, complete_google_auth_flow, AuthAccountPolicy, AuthFlowSettings,
+    begin_google_auth_flow, complete_google_auth_flow, google_auth_status_page_url_for,
+    AuthAccountPolicy, AuthFlowSettings, LoopbackAuthPage, LoopbackAuthServer,
 };
-use squigit_auth::{Profile, ProfileError, ProfileStore};
+use squigit_auth::{AuthSuccessData, Profile, ProfileError, ProfileStore};
 use std::env;
-use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
+use std::time::Instant;
 
 const CONFIG_DIR_ENV: &str = "SQUIGIT_CONFIG_DIR";
 
@@ -22,6 +23,8 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let config_dir = isolated_config_dir()?;
+    let store =
+        ProfileStore::with_base_dir(config_dir.clone()).map_err(|error| error.to_string())?;
     let mut args = env::args().skip(1);
     let Some(action) = args.next() else {
         return Err(
@@ -40,13 +43,14 @@ fn run() -> Result<(), String> {
             } else {
                 AuthAccountPolicy::NewOnly
             };
-            run_google_auth(policy)?;
+            let profile = run_google_auth(&store, policy)?;
+            println!("Signed in as {} ({})", profile.email, profile.id);
+            println!("Config: {}", config_dir.display());
         }
         "logout" => {
             if args.next().is_some() {
                 return Err("logout does not accept arguments".to_string());
             }
-            let store = ProfileStore::new().map_err(|error| error.to_string())?;
             logout(&store)?;
             println!("Logged out. Temporary profiles were preserved.");
             println!("Config: {}", config_dir.display());
@@ -55,7 +59,6 @@ fn run() -> Result<(), String> {
             if args.next().is_some() {
                 return Err("profiles does not accept arguments".to_string());
             }
-            let store = ProfileStore::new().map_err(|error| error.to_string())?;
             print_profiles(&store)?;
             println!("\nConfig: {}", config_dir.display());
         }
@@ -66,7 +69,6 @@ fn run() -> Result<(), String> {
             if args.next().is_some() {
                 return Err("remove accepts exactly one <profile-id>".to_string());
             }
-            let store = ProfileStore::new().map_err(|error| error.to_string())?;
             let removed = remove_profile(&store, &profile_id)?;
             println!("Removed {} ({}).", removed.email, removed.id);
             println!("Config: {}", config_dir.display());
@@ -90,20 +92,43 @@ fn isolated_config_dir() -> Result<PathBuf, String> {
     Ok(path)
 }
 
-fn run_google_auth(policy: AuthAccountPolicy) -> Result<(), String> {
-    let store = ProfileStore::new().map_err(|error| error.to_string())?;
+fn run_google_auth(
+    store: &ProfileStore,
+    policy: AuthAccountPolicy,
+) -> Result<AuthSuccessData, String> {
+    let loopback = LoopbackAuthServer::bind().map_err(|error| error.to_string())?;
     let mut settings = AuthFlowSettings::new(Arc::new(|url| {
         open_system_browser(url).map_err(ProfileError::Auth)
     }));
+    settings.redirect_uri = loopback.redirect_uri().to_string();
     settings.account_policy = policy;
 
-    println!("[auth] Complete the Google flow in your browser.");
+    println!("[auth] Redirecting to your browser...");
     let attempt = begin_google_auth_flow(&settings).map_err(|error| error.to_string())?;
     (settings.open_browser)(attempt.auth_url()).map_err(|error| error.to_string())?;
-    let callback_url = prompt_callback_url()?;
-    complete_google_auth_flow(&store, &settings, attempt, &callback_url)
-        .map(|_| ())
-        .map_err(|error| error.to_string())
+    let started_at = Instant::now();
+    let callback = loop {
+        if started_at.elapsed() > settings.timeout {
+            return Err("Authentication timed out".to_string());
+        }
+
+        if let Some(callback) = loopback.recv_timeout().map_err(|error| error.to_string())? {
+            break callback;
+        }
+    };
+
+    let result = complete_google_auth_flow(store, &settings, attempt, callback.callback_url())
+        .map_err(|error| error.to_string());
+    let page = match &result {
+        Ok(_) => LoopbackAuthPage::Success,
+        Err(_) => LoopbackAuthPage::Invalid,
+    };
+    let status_url = google_auth_status_page_url_for(&settings.status_page_url, page);
+    if let Err(error) = callback.redirect(&status_url) {
+        eprintln!("[auth] Failed to redirect loopback auth response: {error}");
+    }
+
+    result
 }
 
 fn logout(store: &ProfileStore) -> Result<(), String> {
@@ -157,7 +182,7 @@ fn print_profiles(store: &ProfileStore) -> Result<(), String> {
         return Ok(());
     }
 
-    println!("\n{:<18} {:<32} {:<26} Status", "ID", "Email", "Name");
+    println!("\n{:<45} {:<32} {:<26} Status", "ID", "Email", "Name");
     for profile in profiles {
         let status = if active_id.as_deref() == Some(profile.id.as_str()) {
             "active"
@@ -170,23 +195,6 @@ fn print_profiles(store: &ProfileStore) -> Result<(), String> {
         );
     }
     Ok(())
-}
-
-fn prompt_callback_url() -> Result<String, String> {
-    print!("Paste the final Google auth callback URL: ");
-    io::stdout()
-        .flush()
-        .map_err(|error| format!("Failed to flush stdout: {error}"))?;
-
-    let mut callback_url = String::new();
-    io::stdin()
-        .read_line(&mut callback_url)
-        .map_err(|error| format!("Failed to read callback URL: {error}"))?;
-    let callback_url = callback_url.trim().to_string();
-    if callback_url.is_empty() {
-        return Err("callback URL is required".to_string());
-    }
-    Ok(callback_url)
 }
 
 #[cfg(target_os = "linux")]

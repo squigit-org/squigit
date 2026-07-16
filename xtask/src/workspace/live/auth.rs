@@ -1,4 +1,5 @@
 use crate::{Runtime, XtaskResult};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -7,7 +8,16 @@ const CONFIG_DIR_ENV: &str = "SQUIGIT_CONFIG_DIR";
 pub fn run(runtime: &Runtime, action: &str, profile_id: Option<&str>) -> XtaskResult {
     let arguments = cargo_arguments(action, profile_id);
     let config_dir = auth_config_dir(&runtime.temp_root);
-    println!("  $ cargo run -p squigit-auth --example live_auth_harness -- {action} ...");
+    fs::create_dir_all(&config_dir).map_err(|error| {
+        format!(
+            "Could not create temporary auth config directory {}: {error}",
+            config_dir.display()
+        )
+    })?;
+    println!(
+        "  $ {CONFIG_DIR_ENV}={} cargo run -p squigit-auth --example live_auth_harness -- {action} ...",
+        config_dir.display()
+    );
     let status = Command::new("cargo")
         .args(&arguments)
         .current_dir(&runtime.repo_root)
