@@ -3,8 +3,7 @@
 
 use napi::{Error, Result};
 use napi_derive::napi;
-use serde::{de::DeserializeOwned, Serialize};
-use squigit_auth::ProfileStore;
+use serde::{Serialize, de::DeserializeOwned};
 use squigit_storage::{ThreadMessage, ThreadStorage};
 
 use crate::types::NapiStoredImage;
@@ -13,14 +12,8 @@ fn map_storage_err(err: squigit_storage::StorageError) -> Error {
     Error::from_reason(err.to_string())
 }
 
-fn map_profile_err(err: squigit_auth::error::ProfileError) -> Error {
-    Error::from_reason(err.to_string())
-}
-
 fn active_storage() -> Result<ThreadStorage> {
-    let profile_store = ProfileStore::new().map_err(map_profile_err)?;
-    let threads_dir = profile_store.get_threads_dir();
-    ThreadStorage::with_base_dir(threads_dir).map_err(map_storage_err)
+    ThreadStorage::new().map_err(map_storage_err)
 }
 
 fn map_json_err(err: serde_json::Error) -> Error {

@@ -2,14 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::Deserialize;
-use squigit_auth::ProfileStore;
 use squigit_storage::{StoredImage, ThreadStorage};
 use std::path::Path;
 
 pub fn get_active_storage() -> Result<ThreadStorage, String> {
-    let profile_store = ProfileStore::new().map_err(|e| e.to_string())?;
-    let threads_dir = profile_store.get_threads_dir();
-    ThreadStorage::with_base_dir(threads_dir).map_err(|e| e.to_string())
+    ThreadStorage::new().map_err(|e| e.to_string())
 }
 
 pub fn process_bytes_internal(

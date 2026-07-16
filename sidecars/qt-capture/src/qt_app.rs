@@ -9,7 +9,6 @@ use std::env;
 use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, ExitCode, Stdio};
 
-use squigit_auth::ProfileStore;
 use squigit_storage::{ThreadData, ThreadMetadata, ThreadStorage};
 
 use crate::paths::QtPaths;
@@ -186,12 +185,8 @@ This usually indicates a native crash during startup/capture."
     }
 
     fn process_capture(&self, path: &str) -> (Option<String>, Option<String>) {
-        ProfileStore::new()
+        ThreadStorage::new()
             .ok()
-            .and_then(|profile_store| {
-                let threads_dir = profile_store.get_threads_dir();
-                ThreadStorage::with_base_dir(threads_dir).ok()
-            })
             .and_then(|storage| {
                 storage
                     .store_image_from_path(path, None)
@@ -209,12 +204,8 @@ This usually indicates a native crash during startup/capture."
     }
 
     fn process_capture_input_only(&self, path: &str) -> (Option<String>, Option<String>) {
-        ProfileStore::new()
+        ThreadStorage::new()
             .ok()
-            .and_then(|profile_store| {
-                let threads_dir = profile_store.get_threads_dir();
-                ThreadStorage::with_base_dir(threads_dir).ok()
-            })
             .and_then(|storage| storage.store_image_from_path(path, None).ok())
             .map(|stored| {
                 let _ = std::fs::remove_file(path);

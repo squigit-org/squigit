@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use regex::Regex;
-use squigit_auth::ProfileStore;
 use squigit_storage::ThreadStorage;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -49,9 +48,7 @@ struct Mention {
 }
 
 fn active_storage() -> Result<ThreadStorage, String> {
-    let profile_store = ProfileStore::new().map_err(|error| error.to_string())?;
-    let threads_dir = profile_store.get_threads_dir();
-    ThreadStorage::with_base_dir(threads_dir).map_err(|error| error.to_string())
+    ThreadStorage::new().map_err(|error| error.to_string())
 }
 
 fn is_path_within_base(path: &Path, base: &Path) -> bool {

@@ -1,13 +1,10 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_auth::ProfileStore;
 use squigit_storage::ThreadStorage;
 
 pub(crate) fn get_active_storage() -> Result<ThreadStorage, String> {
-    let profile_store = ProfileStore::new().map_err(|e| e.to_string())?;
-    let threads_dir = profile_store.get_threads_dir();
-    ThreadStorage::with_base_dir(threads_dir).map_err(|e| e.to_string())
+    ThreadStorage::new().map_err(|e| e.to_string())
 }
 
 pub(crate) fn resolve_attachment_path_internal(path: &str) -> Result<std::path::PathBuf, String> {

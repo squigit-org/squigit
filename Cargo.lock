@@ -521,7 +521,6 @@ dependencies = [
  "anyhow",
  "dirs 5.0.1",
  "fs2",
- "squigit-auth",
  "squigit-storage",
  "windows-sys 0.61.2",
 ]
