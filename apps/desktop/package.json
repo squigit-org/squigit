@@ -7,17 +7,6 @@
     "build": "vite build",
     "package": "electron-builder"
   },
-  "build": {
-    "protocols": [
-      {
-        "name": "Squigit OAuth",
-        "schemes": [
-          "org.squigit.app",
-          "com.googleusercontent.apps.1059704513755-aq45tgm2fe9e3pakirk517g3nmd26n9q"
-        ]
-      }
-    ]
-  },
   "dependencies": {
     "napi-bridge": "file:../../crates/napi-bridge"
   },

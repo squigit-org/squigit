@@ -10,8 +10,6 @@ export declare function cancel_request(channelId?: string | undefined | null): P
 
 export declare function clear_active_profile(): void
 
-export declare function complete_google_auth_callback(callbackUrl: string): Promise<NapiAuthResult>
-
 export declare function copy_image_from_path_to_clipboard(path: string): void
 
 export declare function copy_image_to_clipboard(imageBase64: string): void
@@ -37,10 +35,6 @@ export declare function get_active_profile(): NapiProfile | null
 export declare function get_active_profile_id(): string | null
 
 export declare function get_api_key(profileId: string, provider: string): string | null
-
-export declare function get_google_auth_callback_schemes(): Array<string>
-
-export declare function get_google_auth_status_url(): string
 
 export declare function get_image_path(hash: string): string
 

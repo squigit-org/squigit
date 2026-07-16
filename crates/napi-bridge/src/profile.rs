@@ -3,39 +3,26 @@
 
 use napi::{Error, Result};
 use napi_derive::napi;
+use squigit_auth::ProfileStore;
 use squigit_auth::auth::{
-    begin_google_auth_flow, complete_google_auth_flow, google_auth_callback_state,
-    google_auth_redirect_schemes, google_auth_status_page_url,
-    hydrate_avatar as hydrate_profile_avatar, AuthFlowSettings, AuthSuccessData, GoogleAuthAttempt,
+    AuthFlowSettings, AuthSuccessData, LoopbackAuthPage, LoopbackAuthServer,
+    auth_cancelled_callback, begin_google_auth_flow, complete_google_auth_flow,
+    google_auth_status_page_url_for, hydrate_avatar as hydrate_profile_avatar,
 };
 use squigit_auth::security::{
-    encrypt_and_save_api_key as ensak, get_decrypted_key, ApiKeyProvider,
+    ApiKeyProvider, encrypt_and_save_api_key as ensak, get_decrypted_key,
 };
-use squigit_auth::ProfileStore;
 use std::str::FromStr;
 use std::sync::{
+    Arc, Mutex,
     atomic::{AtomicBool, Ordering},
-    mpsc, Arc, Mutex,
 };
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crate::types::{NapiAuthResult, NapiProfile, NapiProfileSnapshot};
 
-const CALLBACK_COMPLETION_TIMEOUT: Duration = Duration::from_secs(4 * 60 * 60);
-
-type AuthCompletion = std::result::Result<AuthSuccessData, String>;
-
-enum AuthSignal {
-    CallbackAccepted,
-    Completed(AuthCompletion),
-    Cancelled,
-}
-
 struct PendingGoogleAuth {
     state: String,
-    settings: AuthFlowSettings,
-    attempt: GoogleAuthAttempt,
-    sender: mpsc::Sender<AuthSignal>,
     cancelled: Arc<AtomicBool>,
 }
 
@@ -76,17 +63,18 @@ fn google_auth_settings() -> AuthFlowSettings {
 
 fn cancel_pending_auth(pending: PendingGoogleAuth) {
     pending.cancelled.store(true, Ordering::SeqCst);
-    let _ = pending.sender.send(AuthSignal::Cancelled);
 }
 
-fn clear_pending_auth_if_state(state: &str) {
+fn clear_pending_auth_if_state(state: &str, cancel: bool) {
     let mut lock = ACTIVE_GOOGLE_AUTH.lock().unwrap();
     let should_clear = lock
         .as_ref()
         .is_some_and(|pending| pending.state.as_str() == state);
     if should_clear {
         if let Some(pending) = lock.take() {
-            cancel_pending_auth(pending);
+            if cancel {
+                cancel_pending_auth(pending);
+            }
         }
     }
 }
@@ -166,27 +154,16 @@ pub fn profile_count() -> Result<u32> {
         .map(|count| count as u32)
 }
 
-#[napi(js_name = "get_google_auth_callback_schemes")]
-pub fn get_google_auth_callback_schemes() -> Result<Vec<String>> {
-    let settings = google_auth_settings();
-    let attempt = begin_google_auth_flow(&settings).map_err(map_profile_err)?;
-    Ok(google_auth_redirect_schemes(Some(attempt.client_id())))
-}
-
-#[napi(js_name = "get_google_auth_status_url")]
-pub fn get_google_auth_status_url() -> String {
-    google_auth_status_page_url()
-}
-
 #[napi(js_name = "start_google_auth")]
 pub async fn start_google_auth() -> Result<NapiAuthResult> {
     tokio::task::spawn_blocking(|| {
-        let settings = google_auth_settings();
+        let loopback = LoopbackAuthServer::bind().map_err(map_profile_err)?;
+        let mut settings = google_auth_settings();
+        settings.redirect_uri = loopback.redirect_uri().to_string();
         let attempt = begin_google_auth_flow(&settings).map_err(map_profile_err)?;
         let auth_url = attempt.auth_url().to_string();
         let state = attempt.state().to_string();
         let cancelled = Arc::new(AtomicBool::new(false));
-        let (sender, receiver) = mpsc::channel();
 
         {
             let mut lock = ACTIVE_GOOGLE_AUTH.lock().unwrap();
@@ -195,85 +172,47 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
             }
             *lock = Some(PendingGoogleAuth {
                 state: state.clone(),
-                settings: settings.clone(),
-                attempt,
-                sender,
                 cancelled: cancelled.clone(),
             });
         }
 
         if let Err(err) = (settings.open_browser)(&auth_url) {
-            clear_pending_auth_if_state(&state);
+            clear_pending_auth_if_state(&state, false);
             return Err(map_profile_err(err));
         }
 
         let started_at = Instant::now();
-        let mut callback_started_at: Option<Instant> = None;
-        loop {
+        let callback = loop {
             if cancelled.load(Ordering::SeqCst) {
+                clear_pending_auth_if_state(&state, false);
                 return Err(Error::from_reason("Authentication cancelled".to_string()));
             }
 
-            if callback_started_at.is_none() && started_at.elapsed() > settings.timeout {
-                clear_pending_auth_if_state(&state);
+            if started_at.elapsed() > settings.timeout {
+                clear_pending_auth_if_state(&state, true);
                 return Err(Error::from_reason("Authentication timed out".to_string()));
             }
 
-            if let Some(callback_started_at) = callback_started_at {
-                if callback_started_at.elapsed() > CALLBACK_COMPLETION_TIMEOUT {
-                    return Err(Error::from_reason(
-                        "Authentication callback timed out".to_string(),
-                    ));
-                }
+            if let Some(callback) = loopback.recv_timeout().map_err(map_profile_err)? {
+                break callback;
             }
-
-            match receiver.recv_timeout(Duration::from_millis(250)) {
-                Ok(AuthSignal::CallbackAccepted) => {
-                    callback_started_at = Some(Instant::now());
-                }
-                Ok(AuthSignal::Completed(Ok(result))) => return Ok(auth_success_to_napi(result)),
-                Ok(AuthSignal::Completed(Err(reason))) => return Err(Error::from_reason(reason)),
-                Ok(AuthSignal::Cancelled) => {
-                    return Err(Error::from_reason("Authentication cancelled".to_string()))
-                }
-                Err(mpsc::RecvTimeoutError::Timeout) => continue,
-                Err(mpsc::RecvTimeoutError::Disconnected) => {
-                    return Err(Error::from_reason("Authentication cancelled".to_string()))
-                }
-            }
-        }
-    })
-    .await
-    .map_err(|e| Error::from_reason(e.to_string()))?
-}
-
-#[napi(js_name = "complete_google_auth_callback")]
-pub async fn complete_google_auth_callback(callback_url: String) -> Result<NapiAuthResult> {
-    tokio::task::spawn_blocking(move || {
-        let pending = {
-            let mut lock = ACTIVE_GOOGLE_AUTH.lock().unwrap();
-            let pending = lock.as_ref().ok_or_else(|| {
-                Error::from_reason("No active Google authentication attempt".to_string())
-            })?;
-            let callback_state =
-                google_auth_callback_state(&callback_url, pending.attempt.redirect_uri())
-                    .map_err(map_profile_err)?;
-            if callback_state != pending.state {
-                return Err(Error::from_reason(
-                    "OAuth callback state mismatch".to_string(),
-                ));
-            }
-            lock.take().ok_or_else(|| {
-                Error::from_reason("No active Google authentication attempt".to_string())
-            })?
         };
 
-        let _ = pending.sender.send(AuthSignal::CallbackAccepted);
+        let callback_url = callback.callback_url().to_string();
         let store = ProfileStore::new().map_err(map_profile_err)?;
-        let result =
-            complete_google_auth_flow(&store, &pending.settings, pending.attempt, &callback_url)
-                .map_err(|err| err.to_string());
-        let _ = pending.sender.send(AuthSignal::Completed(result.clone()));
+        let result = complete_google_auth_flow(&store, &settings, attempt, &callback_url)
+            .map_err(|err| err.to_string());
+        let page = match &result {
+            Ok(_) => LoopbackAuthPage::Complete,
+            Err(_) if auth_cancelled_callback(&callback_url) => LoopbackAuthPage::Cancelled,
+            Err(_) => LoopbackAuthPage::Invalid,
+        };
+        let status_url = google_auth_status_page_url_for(&settings.status_page_url, page);
+
+        if let Err(err) = callback.redirect(&status_url).map_err(map_profile_err) {
+            eprintln!("[auth] Failed to redirect loopback auth response: {err}");
+        }
+        clear_pending_auth_if_state(&state, false);
 
         match result {
             Ok(result) => Ok(auth_success_to_napi(result)),

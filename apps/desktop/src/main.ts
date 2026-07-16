@@ -1,10 +1,6 @@
-import { spawn } from "child_process";
-import fs from "fs";
-import os from "os";
 import { app, BrowserWindow, shell, session, protocol } from "electron";
 import path from "path";
 import { setupIpc } from "./ipc";
-import { addon } from "./ipc/system/addon";
 import { registerProtocols } from "./protocol";
 
 const originalUserData = app.getPath("userData");
@@ -27,176 +23,9 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
-const primaryOAuthScheme = "org.squigit.app";
-const clientIdOAuthSchemePrefix = "com.googleusercontent.apps.";
-const oauthCallbackPath = "/oauth2redirect/google";
-let authStatusUrl = "https://squigit-org.github.io/login/popup-google-auth/";
-const pendingOAuthCallbacks: string[] = [];
-let isHandlingOAuthCallback = false;
 
 if (isDev) {
   process.env["ELECTRON_DISABLE_SECURITY_WARNINGS"] = "true";
-}
-
-function statusPageUrl(fragment: "complete" | "invalid" | "unavailable") {
-  const url = new URL(authStatusUrl);
-  url.hash = fragment;
-  return url.toString();
-}
-
-async function openOAuthStatusPage(
-  fragment: "complete" | "invalid" | "unavailable",
-) {
-  if (process.env.SQUIGIT_OPEN_OAUTH_STATUS_PAGE !== "1") {
-    return;
-  }
-  await shell.openExternal(statusPageUrl(fragment));
-}
-
-function isOAuthCallbackUrl(rawUrl: string) {
-  try {
-    const url = new URL(rawUrl);
-    const scheme = url.protocol.replace(/:$/, "");
-    return (
-      (scheme === primaryOAuthScheme ||
-        scheme.startsWith(clientIdOAuthSchemePrefix)) &&
-      url.pathname === oauthCallbackPath
-    );
-  } catch {
-    return false;
-  }
-}
-
-function findOAuthCallbackUrl(values: readonly string[]) {
-  return values.find((value) => isOAuthCallbackUrl(value));
-}
-
-function googleAuthProtocolSchemes() {
-  const schemes = new Set<string>([primaryOAuthScheme]);
-  const getSchemes = addon.get_google_auth_callback_schemes;
-  if (typeof getSchemes === "function") {
-    try {
-      const nativeSchemes = getSchemes();
-      if (Array.isArray(nativeSchemes)) {
-        for (const scheme of nativeSchemes) {
-          if (typeof scheme === "string" && scheme.trim()) {
-            schemes.add(scheme.trim());
-          }
-        }
-      }
-    } catch (error) {
-      console.warn("Could not load Google auth callback schemes:", error);
-    }
-  }
-  return [...schemes];
-}
-
-function refreshAuthStatusUrl() {
-  const getStatusUrl = addon.get_google_auth_status_url;
-  if (typeof getStatusUrl !== "function") {
-    return;
-  }
-
-  try {
-    const nativeStatusUrl = getStatusUrl();
-    if (typeof nativeStatusUrl === "string" && nativeStatusUrl.trim()) {
-      authStatusUrl = nativeStatusUrl.trim();
-    }
-  } catch (error) {
-    console.warn("Could not load Google auth status URL:", error);
-  }
-}
-
-function protocolLaunchArgs() {
-  const maybeDefaultApp = process as NodeJS.Process & { defaultApp?: boolean };
-  if (!app.isPackaged) {
-    return ["--no-sandbox", app.getAppPath()];
-  }
-  if (maybeDefaultApp.defaultApp && process.argv.length >= 2) {
-    return [path.resolve(process.argv[1])];
-  }
-  return [];
-}
-
-function desktopExecQuote(value: string) {
-  return `"${value.replace(/(["\\$`])/g, "\\$1")}"`;
-}
-
-function runDetached(command: string, args: string[]) {
-  try {
-    const child = spawn(command, args, {
-      detached: true,
-      stdio: "ignore",
-    });
-    child.on("error", () => {});
-    child.unref();
-  } catch {
-    // Optional desktop integration command is not available.
-  }
-}
-
-function registerLinuxOAuthProtocolClient(
-  schemes: readonly string[],
-  appArgs: readonly string[],
-) {
-  if (process.platform !== "linux") {
-    return;
-  }
-
-  try {
-    const applicationsDir = path.join(
-      os.homedir(),
-      ".local",
-      "share",
-      "applications",
-    );
-    const desktopFileName = "squigit-oauth.desktop";
-    const desktopFilePath = path.join(applicationsDir, desktopFileName);
-    const mimeTypes = schemes.map((scheme) => `x-scheme-handler/${scheme}`);
-    const execParts = [
-      desktopExecQuote(process.execPath),
-      ...appArgs.map(desktopExecQuote),
-      "%u",
-    ];
-    const desktopFile = [
-      "[Desktop Entry]",
-      "Type=Application",
-      "Name=Squigit",
-      `Exec=${execParts.join(" ")}`,
-      "Terminal=false",
-      "NoDisplay=true",
-      "Categories=Utility;",
-      `MimeType=${mimeTypes.join(";")};`,
-      "",
-    ].join("\n");
-
-    fs.mkdirSync(applicationsDir, { recursive: true });
-    fs.writeFileSync(desktopFilePath, desktopFile);
-
-    for (const scheme of schemes) {
-      runDetached("xdg-mime", [
-        "default",
-        desktopFileName,
-        `x-scheme-handler/${scheme}`,
-      ]);
-    }
-    runDetached("update-desktop-database", [applicationsDir]);
-  } catch (error) {
-    console.warn("Could not register Linux OAuth protocol handlers:", error);
-  }
-}
-
-function registerOAuthProtocolClient() {
-  const schemes = googleAuthProtocolSchemes();
-  const appArgs = protocolLaunchArgs();
-  for (const scheme of schemes) {
-    if (appArgs.length > 0) {
-      app.setAsDefaultProtocolClient(scheme, process.execPath, [...appArgs]);
-    } else {
-      app.setAsDefaultProtocolClient(scheme);
-    }
-  }
-  registerLinuxOAuthProtocolClient(schemes, appArgs);
 }
 
 async function focusMainWindow() {
@@ -211,68 +40,13 @@ async function focusMainWindow() {
   mainWindow.focus();
 }
 
-async function completeOAuthCallback(rawUrl: string) {
-  await focusMainWindow();
-
-  const completeCallback = addon.complete_google_auth_callback;
-  if (typeof completeCallback !== "function") {
-    console.error("Missing napi-bridge export 'complete_google_auth_callback'.");
-    await openOAuthStatusPage("unavailable");
-    return;
-  }
-
-  try {
-    await completeCallback(rawUrl);
-    await openOAuthStatusPage("complete");
-  } catch (error) {
-    console.error("Google auth callback failed:", error);
-    await openOAuthStatusPage("invalid");
-  }
-}
-
-async function drainOAuthCallbacks() {
-  if (isHandlingOAuthCallback) return;
-  isHandlingOAuthCallback = true;
-  try {
-    while (pendingOAuthCallbacks.length > 0) {
-      const rawUrl = pendingOAuthCallbacks.shift();
-      if (rawUrl) {
-        await completeOAuthCallback(rawUrl);
-      }
-    }
-  } finally {
-    isHandlingOAuthCallback = false;
-  }
-}
-
-function enqueueOAuthCallback(rawUrl: string) {
-  if (!isOAuthCallbackUrl(rawUrl)) {
-    return false;
-  }
-  pendingOAuthCallbacks.push(rawUrl);
-  if (app.isReady()) {
-    void drainOAuthCallbacks();
-  }
-  return true;
-}
-
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
 }
 
-app.on("second-instance", (_event, commandLine) => {
-  const callbackUrl = findOAuthCallbackUrl(commandLine);
-  if (callbackUrl) {
-    enqueueOAuthCallback(callbackUrl);
-  } else {
-    void focusMainWindow();
-  }
-});
-
-app.on("open-url", (event, rawUrl) => {
-  event.preventDefault();
-  enqueueOAuthCallback(rawUrl);
+app.on("second-instance", () => {
+  void focusMainWindow();
 });
 
 async function createWindow() {
@@ -347,9 +121,6 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  refreshAuthStatusUrl();
-  registerOAuthProtocolClient();
-
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -368,12 +139,6 @@ app.whenReady().then(async () => {
   registerProtocols();
   setupIpc();
   await createWindow();
-
-  const initialCallbackUrl = findOAuthCallbackUrl(process.argv);
-  if (initialCallbackUrl) {
-    enqueueOAuthCallback(initialCallbackUrl);
-  }
-  await drainOAuthCallbacks();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
