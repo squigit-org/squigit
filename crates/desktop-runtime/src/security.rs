@@ -3,9 +3,9 @@
 
 //! Security — API key encryption/decryption.
 
-use std::str::FromStr;
 use squigit_auth::security::ApiKeyProvider;
-use squigit_auth::ProfileStore;
+use squigit_storage::ProfileStore;
+use std::str::FromStr;
 
 // =============================================================================
 // API Key Encryption

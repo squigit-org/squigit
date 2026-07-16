@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use napi_derive::napi;
-use squigit_auth::types::Profile as UserProfile;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
-use squigit_storage::StoredImage;
+use squigit_storage::{Profile as UserProfile, ProfileSnapshot, StoredImage};
 
 #[napi(object)]
 pub struct NapiProfile {
@@ -38,8 +37,8 @@ pub struct NapiProfileSnapshot {
     pub profiles: Vec<NapiProfile>,
 }
 
-impl From<squigit_auth::types::ProfileSnapshot> for NapiProfileSnapshot {
-    fn from(snapshot: squigit_auth::types::ProfileSnapshot) -> Self {
+impl From<ProfileSnapshot> for NapiProfileSnapshot {
+    fn from(snapshot: ProfileSnapshot) -> Self {
         Self {
             active_profile_id: snapshot.active_profile_id,
             active_profile: snapshot.active_profile.map(Into::into),

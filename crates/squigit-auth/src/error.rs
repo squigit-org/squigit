@@ -56,6 +56,10 @@ pub enum ProfileError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
+    /// Profile/auth/key persistence failure from squigit-storage.
+    #[error("{0}")]
+    Storage(#[from] squigit_storage::StorageError),
+
     /// HTTP or network failure during auth/avatar fetches.
     #[error("Network error: {0}")]
     Network(#[from] reqwest::Error),

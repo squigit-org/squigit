@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use squigit_auth::auth::{
-    begin_google_auth_flow, complete_google_auth_flow, google_auth_status_page_url_for,
     AuthAccountPolicy, AuthFlowSettings, LoopbackAuthPage, LoopbackAuthServer,
+    begin_google_auth_flow, complete_google_auth_flow, google_auth_status_page_url_for,
 };
-use squigit_auth::{AuthSuccessData, Profile, ProfileError, ProfileStore};
+use squigit_auth::{AuthSuccessData, ProfileError};
+use squigit_storage::{Profile, ProfileStore};
 use std::env;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};

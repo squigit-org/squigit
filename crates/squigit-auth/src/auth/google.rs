@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use base64::{
-    engine::{general_purpose, general_purpose::URL_SAFE_NO_PAD},
     Engine as _,
+    engine::{general_purpose, general_purpose::URL_SAFE_NO_PAD},
 };
 use chrono::{DateTime, Utc};
 use image::ImageFormat;
 use jsonwebtoken::jwk::JwkSet;
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
-use reqwest::blocking::{Client, Response};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 use reqwest::StatusCode;
+use reqwest::blocking::{Client, Response};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fs;
@@ -19,8 +19,11 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use url::Url;
 
-use crate::types::{canonical_google_issuer, LastLogin, GOOGLE_PROVIDER};
-use crate::{Profile, ProfileError, ProfileStore, Result};
+use squigit_storage::{
+    GOOGLE_PROVIDER, LastLogin, Profile, ProfileIdentity, ProfileStore, canonical_google_issuer,
+};
+
+use crate::{ProfileError, Result};
 
 use super::credentials::load_google_oauth_config;
 use super::{AuthAccountPolicy, AuthFlowSettings};
@@ -142,7 +145,7 @@ fn generate_nonce() -> String {
 }
 
 fn generate_urlsafe_token(byte_len: usize) -> String {
-    use rand::{rngs::OsRng, RngCore};
+    use rand::{RngCore, rngs::OsRng};
 
     let mut bytes = vec![0u8; byte_len];
     OsRng.fill_bytes(&mut bytes);
@@ -698,7 +701,7 @@ pub fn complete_google_auth_flow(
     )?;
 
     let identity_issuer = canonical_google_issuer(&claims.iss);
-    let identity = crate::types::ProfileIdentity::google(identity_issuer, &claims.sub);
+    let identity = ProfileIdentity::google(identity_issuer, &claims.sub);
     let profile_id = Profile::id_from_identity(&identity);
     let profile_exists = store.get_profile(&profile_id)?.is_some();
     let policy_failure = match settings.account_policy {

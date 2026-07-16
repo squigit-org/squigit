@@ -4,8 +4,8 @@
 use std::fs;
 
 use sha2::{Digest, Sha256};
-use squigit_auth::security::{encrypt_and_save_api_key, get_decrypted_key, ApiKeyProvider};
-use squigit_auth::{Profile, ProfileStore};
+use squigit_auth::security::{ApiKeyProvider, encrypt_and_save_api_key, get_decrypted_key};
+use squigit_storage::{Profile, ProfileStore};
 use tempfile::tempdir;
 
 fn temp_store() -> ProfileStore {

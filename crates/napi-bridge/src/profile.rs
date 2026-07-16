@@ -3,7 +3,6 @@
 
 use napi::{Error, Result};
 use napi_derive::napi;
-use squigit_auth::ProfileStore;
 use squigit_auth::auth::{
     AuthFlowSettings, AuthSuccessData, LoopbackAuthPage, LoopbackAuthServer,
     begin_google_auth_flow, complete_google_auth_flow, google_auth_status_page_url_for,
@@ -12,6 +11,7 @@ use squigit_auth::auth::{
 use squigit_auth::security::{
     ApiKeyProvider, encrypt_and_save_api_key as ensak, get_decrypted_key,
 };
+use squigit_storage::ProfileStore;
 use std::str::FromStr;
 use std::sync::{
     Arc, Mutex,
@@ -28,7 +28,7 @@ struct PendingGoogleAuth {
 
 static ACTIVE_GOOGLE_AUTH: Mutex<Option<PendingGoogleAuth>> = Mutex::new(None);
 
-fn map_profile_err(err: squigit_auth::error::ProfileError) -> Error {
+fn map_profile_err(err: impl ToString) -> Error {
     Error::from_reason(err.to_string())
 }
 

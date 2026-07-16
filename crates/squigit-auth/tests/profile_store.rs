@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_auth::{LastLogin, Profile, ProfileAuth, ProfileIdentity, ProfileStore};
+use squigit_storage::{LastLogin, Profile, ProfileAuth, ProfileIdentity, ProfileStore};
 use tempfile::tempdir;
 
 fn temp_store() -> ProfileStore {

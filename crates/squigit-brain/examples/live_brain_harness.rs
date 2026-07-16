@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use squigit_auth::security::{
-    encrypt_and_save_api_key, get_decrypted_key, validate_api_key, ApiKeyProvider,
+    ApiKeyProvider, encrypt_and_save_api_key, get_decrypted_key, validate_api_key,
 };
-use squigit_auth::{Profile, ProfileStore};
 use squigit_brain::context::media::get_active_storage;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
 use squigit_brain::service::{AnalyzeImageRequest, BrainService, PromptThreadRequest};
+use squigit_storage::{Profile, ProfileStore};
 use std::env;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};

@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 
-use crate::error::{ProfileError, Result};
+use crate::error::{Result, StorageError};
 
 use super::ProfileStore;
 
@@ -37,7 +37,7 @@ impl ProfileStore {
 
     pub(crate) fn write_bytes_atomic(&self, path: &Path, bytes: &[u8]) -> Result<()> {
         let parent = path.parent().ok_or_else(|| {
-            ProfileError::Io(std::io::Error::new(
+            StorageError::Io(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!("Path has no parent: {}", path.display()),
             ))

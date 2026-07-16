@@ -26,17 +26,22 @@
 //! storage.save_thread(&thread).unwrap();
 //! ```
 
+pub mod cas;
 pub mod error;
-pub mod identity;
+pub mod rules;
 pub mod paths;
-pub mod storage;
-pub mod types;
+pub mod profiles;
+pub mod threads;
 
+pub use cas::StoredImage;
 pub use error::{Result, StorageError};
-pub use storage::ThreadStorage;
-pub use types::{
-    AttachmentRegistry, ContextWindow, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation,
-    OcrRegion, ReverseImageSearchCache, StoredImage, ThreadAttachmentKind,
+pub use profiles::{
+    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, GOOGLE_ISSUER, GOOGLE_PROVIDER, LastLogin,
+    Profile, ProfileAuth, ProfileIdentity, ProfileSnapshot, ProfileStore, canonical_google_issuer,
+};
+pub use threads::{
+    AttachmentRegistry, ContextWindow, EMPTY_STATE_ASSET_ID, OcrAnnotationEntry, OcrAnnotations,
+    OcrModelAnnotation, OcrRegion, ReverseImageSearchCache, ThreadAttachmentKind,
     ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadMessage,
-    ThreadMetadata, EMPTY_STATE_ASSET_ID,
+    ThreadMetadata, ThreadStorage,
 };

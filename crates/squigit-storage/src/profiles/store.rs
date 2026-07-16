@@ -5,11 +5,11 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::error::{ProfileError, Result};
-use crate::types::{
-    canonical_google_issuer, LastLogin, Profile, ProfileAuth, ProfileSnapshot,
-    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION,
+use super::types::{
+    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, LastLogin, Profile, ProfileAuth,
+    ProfileSnapshot, canonical_google_issuer,
 };
+use crate::error::{Result, StorageError};
 
 /// Active account state filename.
 const AUTH_FILE: &str = "auth.json";
@@ -21,6 +21,7 @@ const PROFILES_FILE: &str = "profiles.json";
 const KEYS_FILE: &str = "keys.json";
 
 type ProfileMap = BTreeMap<String, Profile>;
+type KeyFile = BTreeMap<String, BTreeMap<String, serde_json::Value>>;
 
 /// Manager for profile storage operations.
 ///
@@ -48,8 +49,7 @@ impl ProfileStore {
     /// - macOS: `~/Library/Application Support/squigit/`
     /// - Windows: `%APPDATA%/squigit/`
     pub fn new() -> Result<Self> {
-        let base_dir =
-            squigit_storage::paths::base_config_dir().ok_or(ProfileError::NoConfigDir)?;
+        let base_dir = crate::paths::base_config_dir().ok_or(StorageError::NoConfigDir)?;
 
         Self::with_base_dir(base_dir)
     }
@@ -91,17 +91,11 @@ impl ProfileStore {
         self.base_dir.join("threads")
     }
 
-    /// Get the consolidated key file path.
-    pub fn get_keys_path(&self) -> PathBuf {
-        self.keys_path.clone()
-    }
-
-    /// Get the provider key file path.
+    /// Get the provider key storage location for diagnostics and harnesses.
     ///
-    /// API keys are stored together in `{base_dir}/keys.json`, nested by profile ID
-    /// and provider name.
+    /// API key payload reads and writes should use the typed payload methods.
     pub fn get_provider_key_path(&self, _profile_id: &str, _provider: &str) -> PathBuf {
-        self.get_keys_path()
+        self.keys_path.clone()
     }
 
     // =========================================================================
@@ -137,6 +131,19 @@ impl ProfileStore {
         self.write_json_atomic(&self.profiles_path, profiles)
     }
 
+    fn load_key_file(&self) -> Result<KeyFile> {
+        if !self.keys_path.exists() {
+            return Ok(KeyFile::default());
+        }
+
+        let content = fs::read_to_string(&self.keys_path)?;
+        Ok(serde_json::from_str(&content)?)
+    }
+
+    fn save_key_file(&self, keys: &KeyFile) -> Result<()> {
+        self.write_json_atomic(&self.keys_path, keys)
+    }
+
     fn sorted_profiles(mut profiles: Vec<Profile>) -> Vec<Profile> {
         profiles.sort_by(|a, b| b.last_used_at.cmp(&a.last_used_at));
         profiles
@@ -151,7 +158,7 @@ impl ProfileStore {
 
     fn validate_auth_schema(auth: &ProfileAuth) -> Result<()> {
         if auth.schema != AUTH_SCHEMA_VERSION || auth.auth_mode != AUTH_MODE_GOOGLE_OIDC_PKCE {
-            return Err(ProfileError::Auth(format!(
+            return Err(StorageError::AuthState(format!(
                 "Unsupported auth.json schema. Delete the Squigit config folder or reinstall to start fresh with schema {}.",
                 AUTH_SCHEMA_VERSION
             )));
@@ -160,15 +167,38 @@ impl ProfileStore {
         Ok(())
     }
 
-    fn delete_profile_keys(&self, profile_id: &str) -> Result<()> {
-        if !self.keys_path.exists() {
-            return Ok(());
-        }
+    /// Load an encrypted key payload by profile and provider storage key.
+    pub fn load_encrypted_key_payload(
+        &self,
+        profile_id: &str,
+        provider_key: &str,
+    ) -> Result<Option<serde_json::Value>> {
+        let keys = self.load_key_file()?;
+        Ok(keys
+            .get(profile_id)
+            .and_then(|profile_keys| profile_keys.get(provider_key))
+            .cloned())
+    }
 
-        let content = fs::read_to_string(&self.keys_path)?;
-        let mut keys: BTreeMap<String, serde_json::Value> = serde_json::from_str(&content)?;
+    /// Save an encrypted key payload by profile and provider storage key.
+    pub fn save_encrypted_key_payload(
+        &self,
+        profile_id: &str,
+        provider_key: &str,
+        payload: serde_json::Value,
+    ) -> Result<()> {
+        let mut keys = self.load_key_file()?;
+        keys.entry(profile_id.to_string())
+            .or_default()
+            .insert(provider_key.to_string(), payload);
+        self.save_key_file(&keys)
+    }
+
+    /// Delete all encrypted key payloads for a profile.
+    pub fn delete_profile_key_payloads(&self, profile_id: &str) -> Result<()> {
+        let mut keys = self.load_key_file()?;
         if keys.remove(profile_id).is_some() {
-            self.write_json_atomic(&self.keys_path, &keys)?;
+            self.save_key_file(&keys)?;
         }
 
         Ok(())
@@ -195,7 +225,7 @@ impl ProfileStore {
         let profiles = self.load_profiles()?;
 
         if !profiles.contains_key(profile_id) {
-            return Err(ProfileError::ProfileNotFound(profile_id.to_string()));
+            return Err(StorageError::ProfileNotFound(profile_id.to_string()));
         }
 
         let mut auth = self.load_auth()?;
@@ -210,7 +240,7 @@ impl ProfileStore {
         let profiles = self.load_profiles()?;
 
         if !profiles.contains_key(&last_login.profile_id) {
-            return Err(ProfileError::ProfileNotFound(last_login.profile_id.clone()));
+            return Err(StorageError::ProfileNotFound(last_login.profile_id.clone()));
         }
 
         self.save_auth(&ProfileAuth {
@@ -326,11 +356,11 @@ impl ProfileStore {
         let mut profiles = self.load_profiles()?;
 
         if profiles.len() <= 1 && profiles.contains_key(profile_id) {
-            return Err(ProfileError::CannotDeleteLastProfile);
+            return Err(StorageError::CannotDeleteLastProfile);
         }
 
         if profiles.remove(profile_id).is_none() {
-            return Err(ProfileError::ProfileNotFound(profile_id.to_string()));
+            return Err(StorageError::ProfileNotFound(profile_id.to_string()));
         }
 
         let profile_dir = self.get_profile_dir(profile_id);
@@ -338,7 +368,7 @@ impl ProfileStore {
             fs::remove_dir_all(&profile_dir)?;
         }
 
-        self.delete_profile_keys(profile_id)?;
+        self.delete_profile_key_payloads(profile_id)?;
         self.save_profiles(&profiles)?;
 
         let mut auth = self.load_auth()?;

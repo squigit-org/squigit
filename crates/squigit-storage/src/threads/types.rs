@@ -273,15 +273,3 @@ impl ThreadData {
         }
     }
 }
-
-/// Result of storing an image.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StoredImage {
-    /// BLAKE3 hash of the image (content ID).
-    pub hash: String,
-    /// Absolute path to the stored image file.
-    pub path: String,
-    /// Image tone detected upon upload (light/dark).
-    #[serde(default)]
-    pub tone: Option<String>,
-}
