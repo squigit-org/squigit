@@ -32,17 +32,17 @@ Email, name, and avatar are display attributes. They can change and are never us
 
 ### Native Auth Crate
 
-`crates/squigit-auth/` owns the local authentication model.
+`crates/squigit-auth/` owns local authentication behavior: OAuth flow state, provider validation, profile value creation, avatar hydration policy, API key validation, encryption/decryption, and OTA verification.
 
 Important files:
 
 - `src/auth/callback_server.rs`: auth settings, localhost loopback server, hosted status page URL selection, and HTTP 302 redirect response.
 - `src/auth/credentials.rs`: Google OAuth credential loading and validation.
 - `src/auth/google.rs`: PKCE generation, Google authorization URL construction, callback validation, token exchange, ID token validation, profile creation/update, avatar hydration.
-- `src/store/profile_store.rs`: `auth.json`, `profiles.json`, `keys.json`, active profile state, profile CRUD, schema validation.
-- `src/types/profile.rs`: schema constants, profile identity, profile id derivation, `LastLogin`.
-- `src/security/api_keys.rs` and `src/security/crypto.rs`: profile-scoped BYOK validation and encrypted key storage.
+- `src/security/api_keys.rs` and `src/security/crypto.rs`: profile-scoped BYOK validation and encrypted payload creation/decryption.
 - `build.rs`: embeds OAuth credentials into the Rust build when configured.
+
+`crates/squigit-storage/src/profile/` owns profile types and the persisted profile/auth/key storage contract: `auth.json`, `profiles.json`, `keys.json`, active profile state, profile CRUD, schema validation, and atomic writes.
 
 ### NAPI Bridge
 
@@ -337,7 +337,7 @@ If Google credentials include a `client_secret`, Squigit stores it only as part 
 
 ## Local Storage Contract
 
-`ProfileStore::new()` uses the app config directory from `squigit-storage`.
+`ProfileStore::new()` lives in `squigit-storage` and uses the app config directory from `squigit-storage`.
 
 Root files:
 
@@ -347,6 +347,8 @@ Root files:
 {base_dir}/keys.json
 {base_dir}/threads/
 ```
+
+Storage owns filenames, paths, JSON read/write, and atomic writes. Auth creates values and passes them to typed storage APIs.
 
 Writes are atomic: JSON is written to a temp file, synced, and renamed into place.
 
@@ -447,9 +449,13 @@ Shape:
 }
 ```
 
-The encryption key is derived locally with PBKDF2-HMAC-SHA256 from a stable passphrase based on the user's home directory path. This is device-local protection for BYOK values, not a replacement for OS keychain isolation.
+The encryption key is derived locally in `squigit-auth` with PBKDF2-HMAC-SHA256 from a stable passphrase based on the user's home directory path. This is device-local protection for BYOK values, not a replacement for OS keychain isolation.
+
+`squigit-auth` owns key validation, encryption, decryption, and encrypted payload shape. `squigit-storage` owns loading and saving encrypted key payloads by profile id and provider storage key.
 
 Deleting a profile removes that profile's keys from `keys.json`.
+
+Future database migrations should stay isolated in `squigit-storage`: `profiles.json` can become profile rows and `keys.json` can become encrypted-key rows while auth continues to use typed storage methods. `auth.json` remains a separate JSON file unless a later refactor explicitly changes that contract.
 
 ## Profile Operations
 
@@ -845,8 +851,9 @@ Read these files before changing auth:
 crates/squigit-auth/src/auth/callback_server.rs
 crates/squigit-auth/src/auth/credentials.rs
 crates/squigit-auth/src/auth/google.rs
-crates/squigit-auth/src/store/profile_store.rs
-crates/squigit-auth/src/types/profile.rs
+crates/squigit-auth/src/security/crypto.rs
+crates/squigit-storage/src/profile/store.rs
+crates/squigit-storage/src/profile/types.rs
 crates/napi-bridge/src/profile.rs
 apps/desktop/src/ipc/features/profiles.ts
 apps/renderer/src/platform/electron/commands.ts
