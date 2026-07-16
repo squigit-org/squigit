@@ -120,16 +120,14 @@ pub struct LoopbackAuthRequest {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LoopbackAuthPage {
-    Complete,
-    Cancelled,
+    Success,
     Invalid,
 }
 
 impl LoopbackAuthPage {
     fn fragment(self) -> &'static str {
         match self {
-            LoopbackAuthPage::Complete => "complete",
-            LoopbackAuthPage::Cancelled => "cancelled",
+            LoopbackAuthPage::Success => "success",
             LoopbackAuthPage::Invalid => "invalid",
         }
     }
@@ -249,17 +247,6 @@ fn cache_header() -> Header {
 
 fn referrer_header() -> Header {
     Header::from_bytes(&b"Referrer-Policy"[..], &b"no-referrer"[..]).unwrap()
-}
-
-pub fn auth_cancelled_callback(callback_url: &str) -> bool {
-    Url::parse(callback_url)
-        .ok()
-        .and_then(|url| {
-            url.query_pairs()
-                .find(|(key, _)| key == "error")
-                .map(|(_, value)| value.into_owned())
-        })
-        .is_some_and(|error| error == "access_denied")
 }
 
 fn squigit_app_domain_available() -> bool {

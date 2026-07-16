@@ -70,25 +70,28 @@ Important files:
 The hosted page lives in:
 
 ```text
-squigit-org.github.io/login/popup-google-auth/index.html
-squigit-org.github.io/src/auth-popup/main.tsx
-squigit-org.github.io/src/auth-popup/styles.css
+squigit-org.github.io/site/login/popup-google-auth/index.html
+squigit-org.github.io/src/features/auth-popup/main.tsx
+squigit-org.github.io/src/features/auth-popup/styles.css
 ```
 
-The Vite website build registers this route as the `authPopup` entry in `squigit-org.github.io/vite.config.ts`.
+The Vite website build uses `site/` as its root and registers this route as the `authPopup` entry in `squigit-org.github.io/vite.config.ts`. The source path is `site/login/popup-google-auth/index.html`; the served URL remains:
+
+```text
+/login/popup-google-auth/
+```
 
 In the current desktop flow, the hosted page is status UI only. It receives one of these fragments:
 
 ```text
-#complete
-#cancelled
+#success
 #invalid
 #unavailable
 ```
 
 It does not need OAuth `code`, `state`, ID tokens, access tokens, refresh tokens, or profile data.
 
-The file still contains a `handoff` branch for a direct `?code&state` web callback shape. The desktop loopback flow does not use that branch.
+The page also supports a direct web callback shape. If it receives `?code&state`, it renders the success state and its "Open Squigit" button builds an `org.squigit.app:/oauth2redirect/google` deep link from the current query string. If it receives `?error`, it renders the invalid state. The desktop loopback flow does not use that branch.
 
 ### Renderer Auth Surfaces
 
@@ -196,7 +199,7 @@ Auth UI is split across several renderer files:
 
     ```http
     HTTP/1.1 302 Found
-    Location: https://squigit-org.github.io/login/popup-google-auth/#complete
+    Location: https://squigit-org.github.io/login/popup-google-auth/#success
     Connection: close
     Cache-Control: no-store
     Referrer-Policy: no-referrer
@@ -205,10 +208,10 @@ Auth UI is split across several renderer files:
     If `squigit.app` is available, the status URL becomes:
 
     ```text
-    https://squigit.app/login/popup-google-auth/#complete
+    https://squigit.app/login/popup-google-auth/#success
     ```
 
-    For cancellation and failure states, the fragment is `#cancelled` or `#invalid`.
+    For provider or local auth failures that reach the status page, the fragment is `#invalid`. The hosted status page does not define a cancellation fragment.
 
     This makes the existing OAuth tab navigate in place to Squigit's hosted page. The hosted page never receives the OAuth code.
 
@@ -606,13 +609,13 @@ The `auth-success` listener exists for event-based auth completion. The current 
 
 The hosted status page uses the URL hash to choose copy and icon:
 
-- `#complete`: Google login was accepted and Squigit is finishing locally or has finished locally.
-- `#cancelled`: user denied/cancelled Google sign-in.
+- `#success`: Google login was accepted, Rust finished local auth, and the browser can show the success page.
 - `#invalid`: the callback reached Squigit but local auth failed.
 - `#unavailable`: no meaningful status was provided.
-- `handoff`: legacy/direct web callback shape when `?code` or `?error` appears with `state`.
 
 In the current desktop loopback flow, Squigit's local server redirects to the hosted page after local auth work is done. Therefore the hosted page should normally see only hash fragments, not OAuth query parameters.
+
+The page also has direct callback behavior for a web redirect shape: `?code&state` renders success and can open Squigit through `org.squigit.app:/oauth2redirect/google`; `?error` renders invalid.
 
 The page has a strict CSP in `index.html`:
 
@@ -686,7 +689,7 @@ If the response is below HTTP 500, Squigit uses the `.app` status page. Otherwis
 This means that once `squigit.app` is live and serving HTTPS, the desktop app should automatically prefer:
 
 ```text
-https://squigit.app/login/popup-google-auth/#complete
+https://squigit.app/login/popup-google-auth/#success
 ```
 
 without changing the OAuth redirect URI, because OAuth still redirects to localhost first.
@@ -710,15 +713,15 @@ If the existing website remains on GitHub Pages:
 
    ```text
    https://squigit.app/
-   https://squigit.app/login/popup-google-auth/#complete
-   https://squigit.app/login/popup-google-auth/#cancelled
+   https://squigit.app/login/popup-google-auth/#success
    https://squigit.app/login/popup-google-auth/#invalid
+   https://squigit.app/login/popup-google-auth/#unavailable
    ```
 
 8. Start a desktop Google login and verify the final browser tab URL is:
 
    ```text
-   https://squigit.app/login/popup-google-auth/#complete
+   https://squigit.app/login/popup-google-auth/#success
    ```
 
 ### Vercel Or Next.js Roadmap
@@ -736,8 +739,7 @@ If the landing page moves to Vercel or Next.js:
 4. Preserve hash-only status behavior:
 
    ```text
-   #complete
-   #cancelled
+   #success
    #invalid
    #unavailable
    ```
@@ -794,8 +796,8 @@ Recommended code cleanup after the domain is stable:
 
 2. Remove `GITHUB_PAGES_STATUS_PAGE_URL` fallback from production builds.
 3. Keep a development override for local or preview status-page testing.
-4. Remove the legacy `handoff` branch from `src/auth-popup/main.tsx` if no web redirect flow uses it.
-5. Remove `appCallbackUrl = 'org.squigit.app:/oauth2redirect/google'` from the hosted popup when the `handoff` branch is removed.
+4. Remove the direct web-callback branch from `src/features/auth-popup/main.tsx` if no web redirect flow uses it.
+5. Remove `appCallbackUrl = 'org.squigit.app:/oauth2redirect/google'` from the hosted popup when the direct web-callback branch is removed.
 6. Remove renderer `auth-success` and `auth-failure` listeners if no active platform emits those events.
 7. Decide whether `credentials.rs` should continue accepting both `installed` and `web`; for the current desktop client, `installed` is the expected production shape.
 
@@ -804,10 +806,10 @@ Recommended code cleanup after the domain is stable:
 After the domain change:
 
 - `https://squigit.app/` returns a non-5xx response.
-- `https://squigit.app/login/popup-google-auth/#complete` renders the status page.
+- `https://squigit.app/login/popup-google-auth/#success` renders the status page.
 - The desktop app opens Google sign-in normally.
 - Google redirects to loopback.
-- The loopback response is a `302` to `https://squigit.app/login/popup-google-auth/#complete`.
+- The loopback response is a `302` to `https://squigit.app/login/popup-google-auth/#success`.
 - The final browser tab URL contains no OAuth `code` or `state`.
 - `auth.json` contains schema 2 login metadata and no tokens.
 - `profiles.json` contains the expected `issuer` and `subject`.
@@ -827,17 +829,13 @@ These are cleanup candidates for auth maintainers. They are not required for the
 
    The current Electron auth path resolves `startGoogleAuth()` directly. `auth-success` and `auth-failure` listeners are present in renderer hooks but are not the main completion mechanism.
 
-3. Remove legacy hosted-page handoff code.
+3. Decide whether direct hosted-page callback code is still needed.
 
-   The current desktop flow does not send OAuth query params to the hosted page. If no future web flow needs `?code&state`, remove `handoffUrl`, `oauthCallbackParams`, and the custom-scheme `appCallbackUrl`.
+   The current desktop flow does not send OAuth query params to the hosted page. If no future web flow needs `?code&state`, remove `oauthCallbackState`, `squigitDeepLink`, and the custom-scheme `appCallbackUrl`.
 
 4. Decide credential shape policy.
 
    Keeping `installed` and `web` support is flexible, but the current architecture expects a desktop OAuth client. If future agents refactor credentials, they should not change the loopback OAuth architecture without updating this document.
-
-5. Tighten hosted-page copy.
-
-   Because the local 302 happens after Rust finishes local auth, `#complete` can safely say the sign-in is complete rather than still finishing.
 
 ## Reference Map For Agents
 
@@ -857,8 +855,8 @@ apps/renderer/src/hooks/system/useSystemSync.ts
 apps/renderer/src/app/layout/frame/AuthButton.tsx
 apps/renderer/src/app/layout/frame/AccountSwitcher.tsx
 apps/renderer/src/app/router/routes/WizardRoute/steps/AuthStep/AuthStep.tsx
-squigit-org.github.io/login/popup-google-auth/index.html
-squigit-org.github.io/src/auth-popup/main.tsx
+squigit-org.github.io/site/login/popup-google-auth/index.html
+squigit-org.github.io/src/features/auth-popup/main.tsx
 squigit-org.github.io/vite.config.ts
 ```
 

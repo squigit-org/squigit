@@ -6,8 +6,8 @@ use napi_derive::napi;
 use squigit_auth::ProfileStore;
 use squigit_auth::auth::{
     AuthFlowSettings, AuthSuccessData, LoopbackAuthPage, LoopbackAuthServer,
-    auth_cancelled_callback, begin_google_auth_flow, complete_google_auth_flow,
-    google_auth_status_page_url_for, hydrate_avatar as hydrate_profile_avatar,
+    begin_google_auth_flow, complete_google_auth_flow, google_auth_status_page_url_for,
+    hydrate_avatar as hydrate_profile_avatar,
 };
 use squigit_auth::security::{
     ApiKeyProvider, encrypt_and_save_api_key as ensak, get_decrypted_key,
@@ -203,8 +203,7 @@ pub async fn start_google_auth() -> Result<NapiAuthResult> {
         let result = complete_google_auth_flow(&store, &settings, attempt, &callback_url)
             .map_err(|err| err.to_string());
         let page = match &result {
-            Ok(_) => LoopbackAuthPage::Complete,
-            Err(_) if auth_cancelled_callback(&callback_url) => LoopbackAuthPage::Cancelled,
+            Ok(_) => LoopbackAuthPage::Success,
             Err(_) => LoopbackAuthPage::Invalid,
         };
         let status_url = google_auth_status_page_url_for(&settings.status_page_url, page);
