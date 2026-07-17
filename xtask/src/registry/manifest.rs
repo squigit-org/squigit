@@ -293,7 +293,6 @@ impl RootOperations {
     }
 }
 
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct UiVocabulary {
@@ -307,6 +306,14 @@ pub struct UiVocabulary {
 pub struct UiMenu {
     pub title: String,
     pub usage: String,
+    pub doc: Option<UiDoc>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UiDoc {
+    pub path: String,
+    pub topic: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -342,6 +349,7 @@ pub struct UiRequirement {
 pub struct UiScreen {
     pub title: String,
     pub usage: Option<String>,
+    pub doc: Option<UiDoc>,
     #[serde(default)]
     pub requirements: Vec<UiRequirement>,
     pub description: Option<String>,
@@ -356,7 +364,6 @@ pub struct UiPrompt {
     pub question: String,
     pub declined: Option<String>,
 }
-
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -33,15 +33,18 @@ commands = "Commands:"
 [ui.menu]
 title = "Squigit xtask"
 usage = "cargo xtask <command> [path/to/component] [options]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "xtask" }
 
 [ui.screens.dev]
 title = "Squigit Dev"
 usage = "cargo xtask dev [relative/path/to/component]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "dev" }
 description = "Start a component in development mode."
 
 [ui.screens.build]
 title = "Squigit Build"
 usage = "cargo xtask build [target] [options]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "build" }
 
 [ui.screens.build.section]
 title = "Targets:"
@@ -56,6 +59,7 @@ entries = [
 [ui.screens.release]
 title = "Squigit Release"
 usage = "cargo xtask release [target]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "release" }
 
 [ui.screens.release.section]
 title = "Targets:"
@@ -70,6 +74,7 @@ entries = [
 [ui.screens.live]
 title = "Squigit Live"
 usage = "cargo xtask live [workflow] [options]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "live" }
 
 [ui.screens.live.section]
 title = "Workflows:"
@@ -83,6 +88,7 @@ entries = [
 [ui.screens."live.auth"]
 title = "Live auth"
 usage = "cargo xtask live auth [operation] [options]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "live" }
 
 [ui.screens."live.auth".section]
 title = "Operations:"
@@ -97,6 +103,7 @@ entries = [
 [ui.screens."live.brain"]
 title = "Live brain"
 usage = "cargo xtask live brain [operation] [options]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "live" }
 requirements = [
     { text = "GEMINI_API_KEY (required for analyze and prompt)", link = { label = "aistudio.google.com/app/api-keys", url = "https://aistudio.google.com/app/api-keys" } },
 ]
@@ -112,6 +119,7 @@ entries = [
 [ui.screens."live.ocr"]
 title = "Live OCR"
 usage = "cargo xtask live ocr [operation] [options]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "live" }
 
 [ui.screens."live.ocr".section]
 title = "Operations:"
@@ -124,6 +132,7 @@ entries = [
 [ui.screens."live.capture"]
 title = "Live capture"
 usage = "cargo xtask live capture [mode]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "live" }
 
 [ui.screens."live.capture".section]
 title = "Modes:"
@@ -135,6 +144,7 @@ entries = [
 [ui.screens.crypto]
 title = "Squigit crypto"
 usage = "cargo xtask crypto [operation] [options]"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "crypto" }
 
 [ui.screens.crypto.section]
 title = "Operations:"
@@ -146,6 +156,7 @@ entries = [
 [ui.screens."crypto.sign"]
 title = "Crypto sign"
 usage = "cargo xtask crypto sign <artifact.zip>"
+doc = { path = "docs/03-development/DEVELOPMENT.md", topic = "crypto" }
 requirements = [
     { text = "Bash: export SQUIGIT_OTA_PRIVATE_KEY_PEM=\"$(cat priv.pem)\"" },
     { text = "PowerShell: $env:SQUIGIT_OTA_PRIVATE_KEY_PEM = Get-Content priv.pem -Raw" },

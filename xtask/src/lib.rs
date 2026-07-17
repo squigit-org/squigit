@@ -57,7 +57,7 @@ pub fn run(args: &[String]) -> i32 {
             return 1;
         }
     };
-    let mut forwarded_args = args.to_vec();
+    let (mut forwarded_args, help) = commands::strip_help_flags(args);
     if registry.is_repository() {
         let selected_component = forwarded_args
             .first()
@@ -106,5 +106,5 @@ pub fn run(args: &[String]) -> i32 {
         }
     }
     let mut runtime = Runtime::from_registry(&registry);
-    commands::dispatch(&mut runtime, &registry, &forwarded_args)
+    commands::dispatch(&mut runtime, &registry, &forwarded_args, help)
 }

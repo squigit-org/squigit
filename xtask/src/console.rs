@@ -1,7 +1,9 @@
 use std::env;
+use std::fs;
 use std::io::{self, IsTerminal, Write};
+use std::path::Path;
 
-use crate::registry::manifest::{UiMenu, UiPrompt, UiScreen};
+use crate::registry::manifest::{UiDoc, UiMenu, UiPrompt, UiScreen};
 use crate::registry::Registry;
 use crate::Runtime;
 
@@ -127,6 +129,10 @@ pub fn render_menu(runtime: &Runtime, registry: &Registry) {
         Vec::new()
     };
     print_entries(runtime, &entries);
+    let doc = menu.doc.as_ref().or(registry.root.ui.menu.doc.as_ref());
+    if let Some(doc) = doc {
+        render_doc(runtime, doc);
+    }
 }
 
 pub fn render_root_screen(runtime: &Runtime, registry: &Registry, route: &str) {
@@ -172,6 +178,13 @@ pub fn render_screen(runtime: &Runtime, registry: &Registry, screen: &UiScreen) 
             .collect::<Vec<_>>();
         print_entries(runtime, &entries);
     }
+    if let Some(doc) = &screen.doc {
+        render_doc(runtime, doc);
+    }
+}
+
+pub fn render_doc_pointer(runtime: &Runtime, doc: &UiDoc) {
+    render_doc_lines(runtime, doc);
 }
 
 pub fn root_prompt<'a>(registry: &'a Registry, route: &str) -> &'a UiPrompt {
@@ -233,6 +246,70 @@ fn print_entries(runtime: &Runtime, entries: &[(&str, &str)]) {
     for (label, description) in entries {
         let padded = format!("{label:<width$}");
         println!("  {}{}", runtime.console.cyan(&padded), description);
+    }
+}
+
+fn render_doc(runtime: &Runtime, doc: &UiDoc) {
+    println!();
+    render_doc_lines(runtime, doc);
+}
+
+fn render_doc_lines(runtime: &Runtime, doc: &UiDoc) {
+    println!("Need more help? {} the file link below:", click_action());
+    println!();
+    println!("{}", runtime.console.yellow(&doc_link(runtime, doc)));
+}
+
+fn click_action() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "Command-click"
+    } else {
+        "Ctrl-click"
+    }
+}
+
+fn doc_link(runtime: &Runtime, doc: &UiDoc) -> String {
+    let path = runtime.repo_root.join(&doc.path);
+    let line = doc_line(runtime, doc);
+    let target = doc_file_target(&path, line);
+    runtime.console.link(&target, &vscode_file_url(&path, line))
+}
+
+fn doc_file_target(path: &Path, line: usize) -> String {
+    format!("{}:{line}", path.display())
+}
+
+fn vscode_file_url(path: &Path, line: usize) -> String {
+    let mut path = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .replace('%', "%25")
+        .replace(' ', "%20")
+        .replace('#', "%23")
+        .replace('?', "%3F");
+    if !path.starts_with('/') {
+        path.insert(0, '/');
+    }
+    format!("vscode://file{path}:{line}")
+}
+
+fn doc_line(runtime: &Runtime, doc: &UiDoc) -> usize {
+    fs::read_to_string(runtime.repo_root.join(&doc.path))
+        .ok()
+        .and_then(|content| {
+            content.lines().enumerate().find_map(|(index, line)| {
+                doc_heading_matches(line, &doc.topic).then_some(index + 1)
+            })
+        })
+        .unwrap_or(1)
+}
+
+fn doc_heading_matches(line: &str, topic: &str) -> bool {
+    let line = line.trim();
+    if topic == "xtask" {
+        line == format!("## {topic}") || line == format!("##{topic}")
+    } else {
+        line == format!("### {topic}") || line == format!("###{topic}")
     }
 }
 

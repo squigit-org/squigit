@@ -1,6 +1,6 @@
 use super::discovery::{validate_relative_path, MANIFEST_NAME};
 use super::manifest::{
-    Category, ComponentManifest, ContextKind, Operation, OperationConfig, RootManifest,
+    Category, ComponentManifest, ContextKind, Operation, OperationConfig, RootManifest, UiDoc,
     UiMenu, UiPrompt, UiScreen, UiVocabulary, VersionConfig, VersionFormat, VersionScheme,
     SCHEMA_VERSION,
 };
@@ -46,7 +46,6 @@ pub fn validate_root(repo_root: &Path, manifest: &RootManifest, errors: &mut Vec
         validate_operation(&owner, name, operation, true, errors);
     }
     validate_root_ui(&owner, manifest, errors);
-
 }
 
 pub fn validate_component(
@@ -386,6 +385,7 @@ pub fn validate_component_handler(
 fn validate_root_ui(owner: &Path, manifest: &RootManifest, errors: &mut Vec<String>) {
     validate_vocabulary(owner, &manifest.ui.vocabulary, errors);
     validate_menu(owner, "ui.menu", &manifest.ui.menu, errors);
+    validate_required_doc(owner, "ui.menu.doc", &manifest.ui.menu.doc, errors);
 
     let required_screens = [
         "dev",
@@ -415,6 +415,12 @@ fn validate_root_ui(owner: &Path, manifest: &RootManifest, errors: &mut Vec<Stri
             ));
         }
         validate_screen(owner, &format!("ui.screens.{route}"), screen, errors);
+        validate_required_doc(
+            owner,
+            &format!("ui.screens.{route}.doc"),
+            &screen.doc,
+            errors,
+        );
     }
 
     validate_prompt_map(owner, &manifest.ui.prompts, &["crypto.keygen"], errors);
@@ -449,13 +455,18 @@ fn validate_vocabulary(owner: &Path, vocabulary: &UiVocabulary, errors: &mut Vec
 fn validate_menu(owner: &Path, name: &str, menu: &UiMenu, errors: &mut Vec<String>) {
     validate_nonempty(&format!("{name}.title"), &menu.title, owner, errors);
     validate_nonempty(&format!("{name}.usage"), &menu.usage, owner, errors);
+    if let Some(doc) = &menu.doc {
+        validate_doc(owner, &format!("{name}.doc"), doc, errors);
+    }
 }
-
 
 fn validate_screen(owner: &Path, name: &str, screen: &UiScreen, errors: &mut Vec<String>) {
     validate_nonempty(&format!("{name}.title"), &screen.title, owner, errors);
     if let Some(usage) = &screen.usage {
         validate_nonempty(&format!("{name}.usage"), usage, owner, errors);
+    }
+    if let Some(doc) = &screen.doc {
+        validate_doc(owner, &format!("{name}.doc"), doc, errors);
     }
     if let Some(description) = &screen.description {
         validate_nonempty(&format!("{name}.description"), description, owner, errors);
@@ -509,6 +520,24 @@ fn validate_screen(owner: &Path, name: &str, screen: &UiScreen, errors: &mut Vec
                 errors,
             );
         }
+    }
+}
+
+fn validate_required_doc(owner: &Path, name: &str, doc: &Option<UiDoc>, errors: &mut Vec<String>) {
+    if doc.is_none() {
+        errors.push(format!("{}: {name} is required", owner.display()));
+    }
+}
+
+fn validate_doc(owner: &Path, name: &str, doc: &UiDoc, errors: &mut Vec<String>) {
+    validate_nonempty(&format!("{name}.path"), &doc.path, owner, errors);
+    validate_nonempty(&format!("{name}.topic"), &doc.topic, owner, errors);
+    if let Err(error) = validate_relative_path(Path::new(&doc.path)) {
+        errors.push(format!(
+            "{}: {name}.path '{}': {error}",
+            owner.display(),
+            doc.path
+        ));
     }
 }
 
