@@ -160,12 +160,13 @@
   font-weight: 500;
 }
 
-.item:hover {
+.item:not(.itemActive):hover {
   background-color: var(--c-raw-150);
 }
 
 .itemActive {
   background-color: var(--c-raw-038);
+  cursor: default;
 }
 
 .checkIcon {

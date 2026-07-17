@@ -63,6 +63,7 @@ export interface ModelsState {
   refresh: () => Promise<void>;
   startDownload: (modelId: string) => Promise<void>;
   cancelDownload: (modelId: string) => Promise<void>;
+  trashDownloadedModel: (modelId: string) => Promise<void>;
   installedModels: () => OcrModelStatus[];
 }
 
@@ -153,6 +154,25 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
       }));
     } catch (error) {
       console.error(`Failed to cancel download for ${modelId}:`, error);
+    }
+  },
+
+  trashDownloadedModel: async (modelId: string) => {
+    const modelToTrash = get().models.find((m) => m.id === modelId);
+    if (
+      !modelToTrash ||
+      modelToTrash.id === DEFAULT_OCR_MODEL_ID ||
+      modelToTrash.state !== "downloaded"
+    ) {
+      return;
+    }
+
+    try {
+      await commands.trashDownloadedOcrModel(modelId);
+      await get().refresh();
+    } catch (error) {
+      console.error(`Failed to trash downloaded model ${modelId}:`, error);
+      throw error;
     }
   },
 }));

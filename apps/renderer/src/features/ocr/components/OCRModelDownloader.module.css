@@ -52,20 +52,23 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background-color: var(--c-raw-053);
   border: 1px solid var(--c-raw-043);
   border-radius: 8px;
   transition: background-color 0.15s ease;
-}
-
-.modelRow:hover {
-  background-color: var(--c-raw-038);
 }
 
 .modelRowInfo {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+
+.modelActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .modelName {
@@ -79,31 +82,38 @@
   color: var(--c-raw-046);
 }
 
-.downloadButton {
+.downloadButton,
+.trashButton {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid var(--c-raw-037);
-  background-color: var(--c-raw-143);
-  color: var(--c-raw-115);
+  border: 0;
+  background-color: transparent;
+  color: var(--c-raw-004);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .downloadButton:hover:not(:disabled) {
-  background-color: var(--c-raw-037);
+  color: var(--c-raw-002);
 }
 
-.downloadButton:active:not(:disabled) {
+.downloadButton:active:not(:disabled),
+.trashButton:active:not(:disabled) {
   transform: scale(0.96);
 }
 
-.downloadButton:disabled {
+.downloadButton:disabled,
+.trashButton:disabled {
   opacity: 0.8;
   cursor: default;
+}
+
+.trashButton:hover:not(:disabled) {
+  color: var(--c-raw-015);
 }
 
 .downloading {

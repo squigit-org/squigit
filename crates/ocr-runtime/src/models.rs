@@ -17,8 +17,15 @@ use tokio_util::sync::CancellationToken;
 
 use crate::network::{NetworkStatus, PeerNetworkMonitor};
 
-
 const DEFAULT_OCR_LANGUAGE: &str = "pp-ocr-v5-en";
+const SUPPORTED_OCR_MODEL_IDS: &[&str] = &[
+    "pp-ocr-v5-en",
+    "pp-ocr-v5-latin",
+    "pp-ocr-v5-cyrillic",
+    "pp-ocr-v5-korean",
+    "pp-ocr-v5-cjk",
+    "pp-ocr-v5-devanagari",
+];
 
 #[derive(Debug, Error)]
 pub enum ModelError {
@@ -30,6 +37,8 @@ pub enum ModelError {
     Network(#[from] reqwest::Error),
     #[error("Extraction error: {0}")]
     Extraction(String),
+    #[error("Unsupported OCR model id: {0}")]
+    UnsupportedModelId(String),
     #[error("Download cancelled")]
     Cancelled,
 }
@@ -51,6 +60,14 @@ fn canonical_ocr_model_id(model_id: &str) -> &str {
         return DEFAULT_OCR_LANGUAGE;
     }
     model_id
+}
+
+fn supported_ocr_model_id(model_id: &str) -> Option<&'static str> {
+    let canonical_id = canonical_ocr_model_id(model_id);
+    SUPPORTED_OCR_MODEL_IDS
+        .iter()
+        .copied()
+        .find(|supported_id| *supported_id == canonical_id)
 }
 
 fn has_model_graph_file(model_dir: &Path) -> bool {
@@ -113,9 +130,9 @@ pub struct ModelManager {
 
 impl ModelManager {
     pub fn new() -> Result<Self> {
-        let config_dir = squigit_storage::paths::base_config_dir().ok_or(ModelError::NoConfigDir)?;
-        let models_dir = config_dir
-            .join("models");
+        let config_dir =
+            squigit_storage::paths::base_config_dir().ok_or(ModelError::NoConfigDir)?;
+        let models_dir = config_dir.join("models");
 
         fs::create_dir_all(&models_dir)?;
 
@@ -151,7 +168,10 @@ impl ModelManager {
     }
 
     pub fn is_model_installed(&self, model_id: &str) -> bool {
-        let dir = self.get_model_dir(model_id);
+        let Some(canonical_id) = supported_ocr_model_id(model_id) else {
+            return false;
+        };
+        let dir = self.get_model_dir(canonical_id);
         dir.exists() && is_model_dir_ready(&dir)
     }
 
@@ -164,7 +184,10 @@ impl ModelManager {
                 let path = entry.path();
                 if path.is_dir() && is_model_dir_ready(&path) {
                     if let Some(name) = path.file_name() {
-                        models.push(name.to_string_lossy().to_string());
+                        let model_id = name.to_string_lossy();
+                        if supported_ocr_model_id(&model_id).is_some() {
+                            models.push(model_id.to_string());
+                        }
                     }
                 }
             }
@@ -182,6 +205,30 @@ impl ModelManager {
         }
     }
 
+    pub fn trash_downloaded_model(&self, model_id: &str) -> Result<()> {
+        let canonical_id = supported_ocr_model_id(model_id)
+            .ok_or_else(|| ModelError::UnsupportedModelId(model_id.to_string()))?;
+        self.cancel_download(canonical_id);
+
+        let temp_file_path = self.get_temp_file_path(canonical_id);
+        if temp_file_path.exists() {
+            fs::remove_file(&temp_file_path)?;
+        }
+
+        let model_dir = self.get_model_dir(canonical_id);
+        if !model_dir.exists() {
+            return Ok(());
+        }
+
+        if model_dir.is_dir() {
+            fs::remove_dir_all(model_dir)?;
+        } else {
+            fs::remove_file(model_dir)?;
+        }
+
+        Ok(())
+    }
+
     pub async fn download_and_extract<F>(
         &self,
         url: &str,
@@ -191,7 +238,9 @@ impl ModelManager {
     where
         F: FnMut(DownloadProgressPayload) + Send,
     {
-        let canonical_id = canonical_ocr_model_id(model_id).to_string();
+        let canonical_id = supported_ocr_model_id(model_id)
+            .ok_or_else(|| ModelError::UnsupportedModelId(model_id.to_string()))?
+            .to_string();
         let target_dir = self.get_model_dir(&canonical_id);
 
         if self.is_model_installed(&canonical_id) {

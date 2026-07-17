@@ -218,6 +218,9 @@ export function registerMediaHandlers() {
   ipcMain.handle("cancel_download_ocr_model", (_, args) =>
     addon.cancel_download_ocr_model?.(args.modelId),
   );
+  ipcMain.handle("trash_downloaded_ocr_model", (_, args) =>
+    addon.trash_downloaded_ocr_model?.(args.modelId),
+  );
   ipcMain.handle("download_ocr_model", async (event, args) => {
     return addon.download_ocr_model?.(
       args.modelId,

@@ -112,6 +112,16 @@ export const getDeleteMultipleThreadsDialog = (
   ],
 });
 
+export const getRemoveOcrModelDialog = (modelName: string): DialogContent => ({
+  title: "Remove OCR Model",
+  message: `Are you sure you want to remove ${modelName}?\nThe downloaded model files will be removed from this device.`,
+  variant: "error",
+  actions: [
+    { label: "Cancel", variant: "secondary", actionKey: "cancel" },
+    { label: "Remove Model", variant: "danger", actionKey: "confirm" },
+  ],
+});
+
 export const getAppBusyDialog = (reason: string): DialogContent => ({
   title: "Application Busy",
   message: `The application is currently ${reason}. Please wait until it finishes.`,

@@ -588,6 +588,7 @@ if (!nativeBinding) {
 module.exports = nativeBinding
 module.exports.append_thread_message = nativeBinding.append_thread_message
 module.exports.cancel_download_ocr_model = nativeBinding.cancel_download_ocr_model
+module.exports.trash_downloaded_ocr_model = nativeBinding.trash_downloaded_ocr_model
 module.exports.cancel_google_auth = nativeBinding.cancel_google_auth
 module.exports.cancel_request = nativeBinding.cancel_request
 module.exports.clear_active_profile = nativeBinding.clear_active_profile

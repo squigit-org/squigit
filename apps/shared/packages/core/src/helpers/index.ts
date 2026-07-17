@@ -8,6 +8,7 @@ export type { DialogVariant, DialogContent } from "./dialogs.ts";
 export {
   getDialogs,
   getDeleteMultipleThreadsDialog,
+  getRemoveOcrModelDialog,
   getAppBusyDialog,
   getErrorDialog,
   getMissingPackageDialog,

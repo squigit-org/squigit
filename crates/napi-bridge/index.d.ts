@@ -4,6 +4,8 @@ export declare function append_thread_message(threadId: string, role: string, co
 
 export declare function cancel_download_ocr_model(modelId: string): void
 
+export declare function trash_downloaded_ocr_model(modelId: string): void
+
 export declare function cancel_google_auth(): void
 
 export declare function cancel_request(channelId?: string | undefined | null): Promise<void>

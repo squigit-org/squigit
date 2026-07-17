@@ -134,6 +134,7 @@ export const commands = {
   
   // OCR Model Management
   cancelDownloadOcrModel: (modelId: string) => platform.invoke("cancel_download_ocr_model", { modelId }),
+  trashDownloadedOcrModel: (modelId: string) => platform.invoke("trash_downloaded_ocr_model", { modelId }),
   
   // AI Runtime Control
   quickAnswerProviderRequest: (channelId: string) => platform.invoke("quick_answer_request", { channelId }),

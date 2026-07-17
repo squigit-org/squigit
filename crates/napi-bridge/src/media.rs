@@ -199,6 +199,14 @@ pub fn cancel_download_ocr_model(model_id: String) -> Result<()> {
     Ok(())
 }
 
+#[napi(js_name = "trash_downloaded_ocr_model")]
+pub fn trash_downloaded_ocr_model(model_id: String) -> Result<()> {
+    let manager = get_model_manager()?;
+    manager
+        .trash_downloaded_model(&model_id)
+        .map_err(|e| napi::Error::from_reason(e.to_string()))
+}
+
 #[napi(js_name = "list_downloaded_models")]
 pub fn list_downloaded_models() -> Result<Vec<String>> {
     let manager = get_model_manager()?;
