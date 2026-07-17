@@ -79,6 +79,8 @@ export function initializeCorePorts(): void {
       platform.invoke("create_thread", { title, imageHash }),
     loadThread: (threadId: string) =>
       platform.invoke("load_thread", { threadId }),
+    forkThread: (threadId: string, messageIndex: number) =>
+      platform.invoke("fork_thread", { threadId, messageIndex }),
     listThreads: () => platform.invoke("list_threads"),
     searchThreads: (query: string, limit: number) =>
       platform.invoke("search_threads", { query, limit }),

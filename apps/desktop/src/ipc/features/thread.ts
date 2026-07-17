@@ -64,6 +64,22 @@ export function registerThreadHandlers() {
     );
     return parseAddonJson("load_thread", json);
   });
+  ipcMain.handle("fork_thread", (_, args) => {
+    const messageIndex = args?.messageIndex ?? args?.message_index;
+    if (
+      typeof messageIndex !== "number" ||
+      !Number.isInteger(messageIndex) ||
+      messageIndex < 0
+    ) {
+      throw new Error("fork_thread requires messageIndex.");
+    }
+
+    const json = requireAddonFn("fork_thread")(
+      requireStringArg("fork_thread", args, "threadId", "thread_id"),
+      messageIndex,
+    );
+    return parseAddonJson("fork_thread", json);
+  });
   ipcMain.handle("delete_thread", (_, args) =>
     addon.delete_thread?.(args.threadId),
   );

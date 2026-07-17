@@ -21,6 +21,7 @@ export interface StoragePort {
   getImagePath(hash: string): Promise<string>;
   createThread(title: string, imageHash: string): Promise<ThreadMetadata>;
   loadThread(threadId: string): Promise<ThreadData>;
+  forkThread(threadId: string, messageIndex: number): Promise<ThreadMetadata>;
   listThreads(): Promise<ThreadMetadata[]>;
   searchThreads(query: string, limit: number): Promise<ThreadSearchResult[]>;
   deleteThread(threadId: string): Promise<void>;

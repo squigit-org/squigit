@@ -31,6 +31,7 @@ interface ThreadChatProps {
   onQuickAnswer?: () => void;
   onPendingTurnLayoutChange?: () => void;
   messages: Message[];
+  messageIndexOffset?: number;
   pendingAssistantTurn?: PendingAssistantTurn | null;
   pendingPromptAttachmentAnalysis?: AttachmentAnalysisCounts | null;
   hideThinkingProgress?: boolean;
@@ -39,6 +40,7 @@ interface ThreadChatProps {
   onToggleMessageCollapse?: (messageId: string, nextExpanded: boolean) => void;
   onRetryMessage?: (messageId: string, modelId?: string) => void;
   onUndoMessage?: (messageId: string) => void;
+  onForkMessage?: (messageIndex: number) => void | Promise<void>;
   onSystemAction?: (actionId: string, value?: string) => void;
 }
 
@@ -55,6 +57,7 @@ const ThreadChatComponent: React.FC<ThreadChatProps> = ({
   onQuickAnswer,
   onPendingTurnLayoutChange,
   messages,
+  messageIndexOffset = 0,
   pendingAssistantTurn,
   pendingPromptAttachmentAnalysis,
   hideThinkingProgress = false,
@@ -63,6 +66,7 @@ const ThreadChatComponent: React.FC<ThreadChatProps> = ({
   onToggleMessageCollapse,
   onRetryMessage,
   onUndoMessage,
+  onForkMessage,
   onSystemAction,
 }) => {
   return (
@@ -143,6 +147,7 @@ const ThreadChatComponent: React.FC<ThreadChatProps> = ({
       <MessageList
         activeThreadId={activeThreadId}
         messages={messages}
+        messageIndexOffset={messageIndexOffset}
         onPendingTurnLayoutChange={onPendingTurnLayoutChange}
         pendingAssistantTurn={pendingAssistantTurn}
         pendingPromptAttachmentAnalysis={pendingPromptAttachmentAnalysis}
@@ -153,6 +158,7 @@ const ThreadChatComponent: React.FC<ThreadChatProps> = ({
         onQuickAnswer={onQuickAnswer}
         onRetryMessage={onRetryMessage}
         onUndoMessage={onUndoMessage}
+        onForkMessage={onForkMessage}
         onSystemAction={onSystemAction}
       />
     </>
@@ -182,6 +188,7 @@ export const ThreadChat = React.memo(
       prevProps.onPendingTurnLayoutChange ===
         nextProps.onPendingTurnLayoutChange &&
       prevProps.messages === nextProps.messages &&
+      prevProps.messageIndexOffset === nextProps.messageIndexOffset &&
       prevProps.pendingAssistantTurn === nextProps.pendingAssistantTurn &&
       prevProps.pendingPromptAttachmentAnalysis ===
         nextProps.pendingPromptAttachmentAnalysis &&
@@ -191,6 +198,7 @@ export const ThreadChat = React.memo(
       prevProps.onToggleMessageCollapse === nextProps.onToggleMessageCollapse &&
       prevProps.onRetryMessage === nextProps.onRetryMessage &&
       prevProps.onUndoMessage === nextProps.onUndoMessage &&
+      prevProps.onForkMessage === nextProps.onForkMessage &&
       prevProps.onSystemAction === nextProps.onSystemAction
     );
   },

@@ -11,6 +11,7 @@ import {
   type OcrAnnotations,
   type OcrModelAnnotation,
   appendThreadMessage,
+  forkThread as forkStoredThread,
   overwriteThreadMessages,
   resolveOcrModelId,
 } from "@squigit/core/config";
@@ -353,6 +354,29 @@ export const useApp = () => {
     }
   };
 
+  const handleForkMessage = useCallback(
+    async (messageIndex: number) => {
+      const activeId = threadHistory.activeSessionId;
+      if (!activeId || isOnboardingId(activeId)) {
+        return;
+      }
+
+      try {
+        const forkedThread = await forkStoredThread(activeId, messageIndex);
+        await navigation.performSelectThread(forkedThread.id);
+        void threadHistory.refreshThreads();
+      } catch (error) {
+        console.error("Failed to fork thread:", error);
+        throw error;
+      }
+    },
+    [
+      navigation.performSelectThread,
+      threadHistory.activeSessionId,
+      threadHistory.refreshThreads,
+    ],
+  );
+
   const handleSwitchProfile = async (profileId: string) => {
     const isInWizard = threadHistory.activeSessionId === "__system_wizard";
     if (!isInWizard) {
@@ -469,6 +493,7 @@ export const useApp = () => {
     handleCopy: contextMenuState.handleCopy,
     handleDeleteThreadWrapper,
     handleDeleteThreadsWrapper,
+    handleForkMessage,
     handleExit: () => platform.app.exit(0),
     handleSwitchProfile,
     handleSystemAction,

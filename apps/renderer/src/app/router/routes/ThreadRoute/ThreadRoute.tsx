@@ -1193,6 +1193,7 @@ export const ThreadRoute: React.FC = () => {
         onQuickAnswer={app.thread.handleQuickAnswer}
         onPendingTurnLayoutChange={handlePendingTurnLayoutChange}
         messages={visibleWindowedMessages}
+        messageIndexOffset={messageWindowStartIndex}
         pendingAssistantTurn={effectivePendingAssistantTurn}
         pendingPromptAttachmentAnalysis={app.pendingPromptAttachmentAnalysis}
         hideThinkingProgress={app.thread.isAnalyzing}
@@ -1201,6 +1202,7 @@ export const ThreadRoute: React.FC = () => {
         onToggleMessageCollapse={handleToggleMessageCollapse}
         onRetryMessage={handleRetryMessage}
         onUndoMessage={handleRequestUndoMessage}
+        onForkMessage={app.handleForkMessage}
         onSystemAction={app.handleSystemAction}
       />
     </ThreadWorkspace>

@@ -26,6 +26,7 @@ const THINKING_LABEL = "Thinking";
 interface MessageListProps {
   activeThreadId?: string | null;
   messages: Message[];
+  messageIndexOffset?: number;
   onPendingTurnLayoutChange?: () => void;
   pendingAssistantTurn?: PendingAssistantTurn | null;
   pendingPromptAttachmentAnalysis?: AttachmentAnalysisCounts | null;
@@ -36,6 +37,7 @@ interface MessageListProps {
   onQuickAnswer?: () => void;
   onRetryMessage?: (messageId: string, modelId?: string) => void;
   onUndoMessage?: (messageId: string) => void;
+  onForkMessage?: (messageIndex: number) => void | Promise<void>;
   onSystemAction?: (actionId: string, value?: string) => void;
 }
 
@@ -92,6 +94,7 @@ function renderProgressText(text: string): React.ReactNode {
 const MessageListComponent: React.FC<MessageListProps> = ({
   activeThreadId,
   messages,
+  messageIndexOffset = 0,
   onPendingTurnLayoutChange,
   pendingAssistantTurn,
   pendingPromptAttachmentAnalysis,
@@ -102,6 +105,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
   onQuickAnswer,
   onRetryMessage,
   onUndoMessage,
+  onForkMessage,
   onSystemAction,
 }) => {
   const [delayedAttachmentStatus, setDelayedAttachmentStatus] = React.useState<{
@@ -264,7 +268,8 @@ const MessageListComponent: React.FC<MessageListProps> = ({
 
   return (
     <div className={styles.container}>
-      {messages.map((msg) => {
+      {messages.map((msg, index) => {
+        const messageIndex = messageIndexOffset + index;
         const roleCodeVisibilityKey =
           msg.role === "user"
             ? latestMessageIdsByRole.user
@@ -284,6 +289,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
             <ThreadBubble
               threadId={activeThreadId}
               message={msg}
+              messageIndex={messageIndex}
               collapseMode={getMessageCollapseMode?.(msg.id) ?? "none"}
               onToggleCollapse={onToggleMessageCollapse}
               hideCodeBlocksByDefault={hideCodeBlocksByDefault}
@@ -298,6 +304,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
                   ? () => onUndoMessage(msg.id)
                   : undefined
               }
+              onForkMessage={onForkMessage}
               onAction={msg.role === "system" ? onSystemAction : undefined}
             />
           </div>
@@ -361,6 +368,7 @@ export const MessageList = React.memo(
     return (
       prevProps.activeThreadId === nextProps.activeThreadId &&
       prevProps.messages === nextProps.messages &&
+      prevProps.messageIndexOffset === nextProps.messageIndexOffset &&
       prevProps.onPendingTurnLayoutChange ===
         nextProps.onPendingTurnLayoutChange &&
       prevProps.pendingAssistantTurn === nextProps.pendingAssistantTurn &&
@@ -369,7 +377,8 @@ export const MessageList = React.memo(
       prevProps.hideThinkingProgress === nextProps.hideThinkingProgress &&
       prevProps.selectedModel === nextProps.selectedModel &&
       prevProps.getMessageCollapseMode === nextProps.getMessageCollapseMode &&
-      prevProps.onToggleMessageCollapse === nextProps.onToggleMessageCollapse
+      prevProps.onToggleMessageCollapse === nextProps.onToggleMessageCollapse &&
+      prevProps.onForkMessage === nextProps.onForkMessage
     );
   },
 );

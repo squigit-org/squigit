@@ -155,6 +155,14 @@ export async function loadThread(threadId: string): Promise<ThreadData> {
   return getStoragePort().loadThread(threadId);
 }
 
+/** Fork a thread through the given message index. */
+export async function forkThread(
+  threadId: string,
+  messageIndex: number,
+): Promise<ThreadMetadata> {
+  return getStoragePort().forkThread(threadId, messageIndex);
+}
+
 /** List all threads (metadata only). */
 export async function listThreads(): Promise<ThreadMetadata[]> {
   return getStoragePort().listThreads();

@@ -38,6 +38,7 @@ export {
   getImagePath,
   createThread,
   loadThread,
+  forkThread,
   listThreads,
   searchThreads,
   deleteThread,

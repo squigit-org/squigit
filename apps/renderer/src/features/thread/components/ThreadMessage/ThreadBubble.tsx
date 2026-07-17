@@ -62,11 +62,13 @@ import { ImageCollage } from "./ImageCollage";
 interface ThreadBubbleProps {
   threadId?: string | null;
   message: Message;
+  messageIndex?: number;
   pendingTurn?: PendingAssistantTurn | null;
   onRetry?: () => void;
   retryDisabled?: boolean;
   actionDisabled?: boolean;
   onUndo?: () => void;
+  onForkMessage?: (messageIndex: number) => void | Promise<void>;
   onAction?: (actionId: string, value?: string) => void;
   enableInternalLinks?: boolean;
   collapseMode?: MessageCollapseMode;
@@ -388,11 +390,13 @@ const WebsiteCitationChip: React.FC<{
 const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
   threadId = null,
   message,
+  messageIndex,
   pendingTurn = null,
   onRetry,
   retryDisabled = false,
   actionDisabled = false,
   onUndo,
+  onForkMessage,
   onAction,
   enableInternalLinks = false,
   collapseMode = "none",
@@ -592,6 +596,14 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
   );
   const markdownBoundaryKey = `${message.id}-${message.role}-${renderedText.length}-${effectiveCollapseMode}`;
   const canAction = !actionDisabled && hasDisplayText;
+  const canFork =
+    canAction &&
+    !isUser &&
+    message.role !== "system" &&
+    !isPendingAssistant &&
+    !!threadId &&
+    typeof messageIndex === "number" &&
+    !!onForkMessage;
   const shouldShowRetryButton =
     !isUser && message.role !== "system" && !!onRetry;
   const shouldShowActionButton = message.role !== "system";
@@ -701,11 +713,17 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
     });
   };
 
-  const handleFork = () => {
+  const handleFork = async () => {
     setHoveredAction(null);
-    if (!canAction) return;
+    if (!canFork || isForking || typeof messageIndex !== "number") return;
     setIsForking(true);
-    window.setTimeout(() => setIsForking(false), 2000);
+    try {
+      await onForkMessage?.(messageIndex);
+    } catch (error) {
+      console.error("[thread] Failed to fork message:", error);
+    } finally {
+      setIsForking(false);
+    }
   };
 
   const markdownComponents = useMemo(
@@ -1102,13 +1120,13 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
                   show={hoveredAction === "copy" && canAction}
                   above
                 />
-                {!isUser && (
+                {canFork && (
                   <>
                     <button
                       ref={forkButtonRef}
                       onClick={handleFork}
                       aria-label="Fork"
-                      disabled={!canAction}
+                      disabled={!canFork || isForking}
                       onMouseEnter={() => setHoveredAction("fork")}
                       onMouseLeave={() => setHoveredAction(null)}
                     >
@@ -1121,7 +1139,7 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
                     <Tooltip
                       text="Fork"
                       parentRef={forkButtonRef}
-                      show={hoveredAction === "fork" && canAction}
+                      show={hoveredAction === "fork" && canFork && !isForking}
                       above
                     />
                   </>
@@ -1163,11 +1181,13 @@ export const ThreadBubble = React.memo(
   (prevProps, nextProps) => {
     return (
       prevProps.message === nextProps.message &&
+      prevProps.messageIndex === nextProps.messageIndex &&
       prevProps.pendingTurn === nextProps.pendingTurn &&
       prevProps.retryDisabled === nextProps.retryDisabled &&
       prevProps.actionDisabled === nextProps.actionDisabled &&
       !!prevProps.onRetry === !!nextProps.onRetry &&
       !!prevProps.onUndo === !!nextProps.onUndo &&
+      prevProps.onForkMessage === nextProps.onForkMessage &&
       prevProps.enableInternalLinks === nextProps.enableInternalLinks &&
       prevProps.collapseMode === nextProps.collapseMode &&
       prevProps.onToggleCollapse === nextProps.onToggleCollapse &&
