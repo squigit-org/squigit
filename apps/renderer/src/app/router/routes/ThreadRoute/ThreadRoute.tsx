@@ -20,6 +20,8 @@ import {
   useThreadInputHeight,
   useThreadWheel,
   useThreadError,
+  ThreadWorkspace,
+  ThreadChat,
 } from "@/features/thread";
 import {
   API_STATUS_TEXT,
@@ -27,7 +29,6 @@ import {
   getAttachmentAnalysisStatusText,
   isQuickAnswerSuppressedProgressText,
 } from "@squigit/core/helpers";
-
 import {
   parseAttachmentPaths,
   attachmentFromPath,
@@ -35,11 +36,7 @@ import {
   stripImageAttachmentMentions,
   type Attachment,
 } from "@squigit/core/brain/attachments";
-
 import type { MessageCollapseMode } from "@squigit/core/brain/engine";
-
-import { ThreadRouteLayout } from "./ThreadRouteLayout";
-import { ThreadRouteContent } from "./ThreadRouteContent";
 import styles from "./ThreadRoute.module.css";
 
 function getBaseName(path: string): string {
@@ -1126,7 +1123,7 @@ export const ThreadRoute: React.FC = () => {
   );
 
   return (
-    <ThreadRouteLayout
+    <ThreadWorkspace
       headerRef={headerRef}
       scrollContainerRef={scrollContainerRef}
       bottomAnchorRef={bottomAnchorRef}
@@ -1183,7 +1180,7 @@ export const ThreadRoute: React.FC = () => {
       onInlineMenuAction={handleAction}
       onInlineMenuSwitchPage={switchPage}
     >
-      <ThreadRouteContent
+      <ThreadChat
         activeThreadId={app.threadHistory.activeSessionId}
         parsedError={parsedError}
         isErrorOpen={isErrorOpen}
@@ -1206,6 +1203,6 @@ export const ThreadRoute: React.FC = () => {
         onUndoMessage={handleRequestUndoMessage}
         onSystemAction={app.handleSystemAction}
       />
-    </ThreadRouteLayout>
+    </ThreadWorkspace>
   );
 };
