@@ -9,7 +9,7 @@ import { usePlatform } from "@/hooks/shared";
 import { useAppContext } from "../providers/AppProvider";
 import { AppLayout } from "../layout/AppLayout";
 import { AppRoutes } from "./AppRoutes";
-import { AppDialogs } from "./dialogs";
+import { AppDialogs } from "../context/AppDialogs";
 
 import "katex/dist/katex.min.css";
 
