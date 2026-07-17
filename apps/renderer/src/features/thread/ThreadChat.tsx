@@ -16,7 +16,7 @@ import {
   type MessageCollapseMode,
   type PendingAssistantTurn,
 } from "@squigit/core/brain/engine";
-import styles from "./ThreadRoute.module.css";
+import styles from "./ThreadChat.module.css";
 
 interface ThreadChatProps {
   activeThreadId?: string | null;
