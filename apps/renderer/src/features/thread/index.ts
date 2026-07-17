@@ -4,9 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./components/ThreadBubble/ThreadBubble";
 export * from "./components/ThreadInput/ThreadInput";
-export * from "./components/ImageArtifact/ImageArtifact";
+export * from "./components/ThreadImage/ThreadImage";
 
 export * from "./hooks/useThread";
 export * from "./hooks/useThreadScroll";
@@ -16,4 +15,5 @@ export * from "./hooks/useThreadError";
 export * from "./hooks/useThreadHistory";
 export * from "./hooks/useThreadState";
 
-export * from "./MessageList";
+export * from "./ThreadWorkspace";
+export * from "./ThreadChat";
