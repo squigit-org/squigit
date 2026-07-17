@@ -26,6 +26,7 @@ import {
   CitationTip,
   CodeBlock,
   TextShimmer,
+  Tooltip,
 } from "@/components/ui";
 import { useMediaContext } from "@/app/context/AppMedia";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
@@ -87,6 +88,8 @@ interface MarkdownErrorBoundaryState {
 type MarkdownComponents = React.ComponentProps<
   typeof ReactMarkdown
 >["components"];
+
+type BubbleActionTooltip = "retry" | "copy" | "fork" | "undo";
 
 interface MarkdownRendererProps {
   markdown: string;
@@ -402,9 +405,15 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
   const isPendingAssistant = !!pendingTurn && message.role === "model";
   const [isCopied, setIsCopied] = useState(false);
   const [isForking, setIsForking] = useState(false);
+  const [hoveredAction, setHoveredAction] =
+    useState<BubbleActionTooltip | null>(null);
   const [revealedCodeBlockKeys, setRevealedCodeBlockKeys] = useState<
     Set<string>
   >(() => new Set());
+  const retryButtonRef = useRef<HTMLButtonElement>(null);
+  const copyButtonRef = useRef<HTMLButtonElement>(null);
+  const forkButtonRef = useRef<HTMLButtonElement>(null);
+  const undoButtonRef = useRef<HTMLButtonElement>(null);
   const revealCodeBlockHandlersRef = useRef<Map<string, () => void>>(new Map());
   const previousRoleCodeVisibilityKeyRef = useRef<string | null>(
     roleCodeVisibilityKey,
@@ -661,6 +670,7 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
   );
 
   const handleCopy = () => {
+    setHoveredAction(null);
     if (!canAction) return;
 
     let copyText = displayText;
@@ -692,6 +702,7 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
   };
 
   const handleFork = () => {
+    setHoveredAction(null);
     if (!canAction) return;
     setIsForking(true);
     window.setTimeout(() => setIsForking(false), 2000);
@@ -1050,51 +1061,95 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
             )}
 
             {!isUser && shouldShowRetryButton && !isPendingStreaming && (
-              <button
-                onClick={onRetry}
-                title="Retry"
-                aria-label="Retry"
-                disabled={retryDisabled}
-              >
-                <RotateCcw size={15} />
-              </button>
+              <>
+                <button
+                  ref={retryButtonRef}
+                  onClick={() => {
+                    setHoveredAction(null);
+                    onRetry?.();
+                  }}
+                  aria-label="Retry"
+                  disabled={retryDisabled}
+                  onMouseEnter={() => setHoveredAction("retry")}
+                  onMouseLeave={() => setHoveredAction(null)}
+                >
+                  <RotateCcw size={15} />
+                </button>
+                <Tooltip
+                  text="Retry"
+                  parentRef={retryButtonRef}
+                  show={hoveredAction === "retry" && !retryDisabled}
+                  above
+                />
+              </>
             )}
 
             {shouldShowActionButton && !isPendingStreaming && (
               <>
                 <button
+                  ref={copyButtonRef}
                   onClick={handleCopy}
-                  title="Copy"
                   aria-label="Copy"
                   disabled={!canAction}
+                  onMouseEnter={() => setHoveredAction("copy")}
+                  onMouseLeave={() => setHoveredAction(null)}
                 >
                   {isCopied ? <Check size={15} /> : <Copy size={15} />}
                 </button>
+                <Tooltip
+                  text="Copy"
+                  parentRef={copyButtonRef}
+                  show={hoveredAction === "copy" && canAction}
+                  above
+                />
                 {!isUser && (
-                  <button
-                    onClick={handleFork}
-                    title="Fork"
-                    aria-label="Fork"
-                    disabled={!canAction}
-                  >
-                    {isForking ? (
-                      <Loader2 size={15} className={`${styles.spin}`} />
-                    ) : (
-                      <GitFork size={15} />
-                    )}
-                  </button>
+                  <>
+                    <button
+                      ref={forkButtonRef}
+                      onClick={handleFork}
+                      aria-label="Fork"
+                      disabled={!canAction}
+                      onMouseEnter={() => setHoveredAction("fork")}
+                      onMouseLeave={() => setHoveredAction(null)}
+                    >
+                      {isForking ? (
+                        <Loader2 size={15} className={`${styles.spin}`} />
+                      ) : (
+                        <GitFork size={15} />
+                      )}
+                    </button>
+                    <Tooltip
+                      text="Fork"
+                      parentRef={forkButtonRef}
+                      show={hoveredAction === "fork" && canAction}
+                      above
+                    />
+                  </>
                 )}
               </>
             )}
 
             {isUser && onUndo && (
-              <button
-                onClick={onUndo}
-                title="Undo and Edit"
-                aria-label="Undo and Edit"
-              >
-                <Pencil size={15} />
-              </button>
+              <>
+                <button
+                  ref={undoButtonRef}
+                  onClick={() => {
+                    setHoveredAction(null);
+                    onUndo();
+                  }}
+                  aria-label="Undo and Edit"
+                  onMouseEnter={() => setHoveredAction("undo")}
+                  onMouseLeave={() => setHoveredAction(null)}
+                >
+                  <Pencil size={15} />
+                </button>
+                <Tooltip
+                  text="Undo and Edit"
+                  parentRef={undoButtonRef}
+                  show={hoveredAction === "undo"}
+                  above
+                />
+              </>
             )}
           </div>
         </div>
