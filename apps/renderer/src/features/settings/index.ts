@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "../../app/router/routes/WizardRoute/components/CapturePreview/CapturePreview";
 export * from "./settings.types";
 export * from "./settings.store";
 export * from "./APIKeySettings";
