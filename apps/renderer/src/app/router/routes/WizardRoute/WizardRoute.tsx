@@ -7,12 +7,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { SettingsSection } from "@/features/settings";
 import { useAppContext } from "../../../providers/AppProvider";
-import { AuthStep } from "./steps/AuthStep/AuthStep";
-import { APIKeyStep } from "./steps/APIKeyStep/APIKeyStep";
-import { SetupStep } from "./steps/SetupStep/SetupStep";
-import { PreferencesStep } from "./steps/PreferencesStep/PreferencesStep";
-import { LicenseStep } from "./steps/LicenseStep/LicenseStep";
-import { FlowButton } from "./components/FlowButton/FlowButton";
+import {
+  AuthStep,
+  APIKeyStep,
+  SetupStep,
+  PreferencesStep,
+  LicenseStep,
+  FlowButton,
+} from "@/features/wizard";
 import styles from "./WizardRoute.module.css";
 
 interface WizardRouteProps {
