@@ -1,0 +1,81 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  margin-bottom: 0;
+}
+
+.pendingTurn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pendingProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.progressText {
+  max-width: min(100%, var(--thread-content-rail-width, 41.5rem));
+  color: var(--c-raw-057);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  opacity: 0;
+  animation: "progressTextReveal" 180ms ease-out forwards;
+}
+
+.progressTextStatic {
+  opacity: 1;
+  animation: none;
+}
+
+.progressCountdown {
+  display: inline-block;
+  opacity: 0;
+  animation: "progressTextReveal" 180ms ease-out forwards;
+}
+
+.quickAnswerButton {
+  border: none;
+  background: transparent;
+  color: var(--c-raw-004);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.quickAnswerButton:hover {
+  color: var(--c-raw-003);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressText,
+  .progressCountdown {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
