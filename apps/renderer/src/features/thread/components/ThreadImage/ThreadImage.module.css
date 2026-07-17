@@ -1,0 +1,410 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--c-raw-002);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  padding: 8px 0;
+  caret-color: var(--c-raw-004);
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.searchInput::placeholder {
+  color: var(--c-raw-005);
+}
+
+.searchInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.searchActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.searchDivider {
+  height: 1rem;
+  width: 1px;
+  margin: 0 0.25rem;
+  background-color: var(--c-raw-037);
+}
+
+.actionBtn {
+  padding: 6px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--c-raw-050);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionBtn:hover:not(:disabled) {
+  background-color: var(--c-raw-163);
+}
+
+.actionBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.imageToolbar {
+  position: absolute;
+  left: 18px;
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--c-raw-012);
+  border: 1px solid var(--c-raw-043);
+  border-radius: 8px;
+  padding: 6px 4px;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  user-select: none;
+  cursor: default;
+}
+
+.toolbarDrag {
+  cursor: -webkit-grab;
+  cursor: grab;
+  color: var(--c-raw-050);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbarDrag svg {
+  pointer-events: none;
+}
+
+.toolbarDrag:active {
+  cursor: -webkit-grabbing;
+  cursor: grabbing;
+}
+
+.toolbarSeparator {
+  width: 16px;
+  height: 1px;
+  background-color: var(--c-raw-037);
+}
+
+.toolBtn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  background: transparent;
+  border: none;
+  color: var(--c-raw-004);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toolBtn:hover {
+  color: var(--c-raw-002);
+}
+
+.spinner {
+  animation: "rotate" 1s linear infinite;
+}
+
+.floatingContainer {
+  background: var(--c-raw-151);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--c-raw-010);
+  box-shadow: 0 2px 8px #00000020;
+  position: relative;
+  width: var(--image-artifact-width, 95%);
+  max-width: 43.5rem;
+  height: var(--image-artifact-height, 57px);
+  margin: var(
+    --image-artifact-shell-margin,
+    var(--image-artifact-top-gap, 10px) auto 1rem auto
+  );
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  contain: layout style;
+}
+
+.floatingContainer.expanded {
+  height: 65vh;
+}
+
+.barHeader {
+  min-height: 48px;
+  height: auto;
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 16px;
+  cursor: pointer;
+  z-index: 2;
+  position: relative;
+  background: transparent;
+}
+
+.thumbnailWrapper {
+  display: flex;
+  align-items: center;
+
+  border: 1px solid var(--c-raw-010);
+  border-radius: 6px;
+  gap: 12px;
+  margin-right: 12px;
+  margin-top: 2px;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+  position: relative;
+  overflow: visible;
+  z-index: 3;
+  isolation: isolate;
+}
+
+.thumbnailWrapper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background-color: var(--c-raw-036);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.thumbnailWrapper:hover::after {
+  opacity: 0.1;
+}
+
+.thumbnailWrapper.thumbnailLoading {
+  cursor: not-allowed;
+}
+
+.thumbnailWrapper.thumbnailLoading::after {
+  display: none;
+}
+
+.cancelButton {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  background-color: var(--c-raw-008);
+  border: 1px solid var(--c-raw-036);
+  color: var(--c-raw-003);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    background-color 0.2s;
+  pointer-events: auto;
+}
+
+.thumbnailWrapper:hover .cancelButton {
+  opacity: 1;
+}
+
+.cancelButton:hover {
+  color: var(--c-raw-036);
+}
+
+.cancelIcon {
+  width: 12px;
+  height: 12px;
+}
+
+.thumbnailWrapper.thumbnailExpanded {
+  cursor: default;
+}
+
+.thumbnailWrapper.thumbnailExpanded::after {
+  display: none;
+}
+
+.miniThumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  transition:
+    filter 0.2s ease,
+    opacity 0.3s ease;
+}
+
+.miniThumbHidden {
+  opacity: 0;
+}
+
+.miniThumbSkeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--c-raw-012) 82%, var(--c-raw-010));
+  pointer-events: none;
+}
+
+.inputContainer {
+  flex: 1;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.barBtn:hover:not(:disabled) {
+  background-color: var(--c-raw-010);
+  color: var(--c-raw-000);
+}
+
+.barBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toggleIcon:hover {
+  color: var(--c-raw-003);
+}
+
+.expandedContent {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 8px 8px;
+  overflow: hidden;
+  position: relative;
+  contain: layout style paint;
+}
+
+.floatingContainer .imageToolbar {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease,
+    visibility 0s linear 0.2s;
+  pointer-events: none;
+}
+
+.floatingContainer.expanded .imageToolbar {
+  opacity: 0.94;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.floatingContainer [data-text-layer] {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.floatingContainer.expanded [data-text-layer] {
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+.bigImageBox {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background-color: transparent;
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.bigImageBox.showScrollbar {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-raw-008) var(--c-raw-012);
+}
+
+.viewer {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 16px;
+}
+
+.imageWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.innerContent {
+  position: relative;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.bigImage {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: high-quality;
+}
+
+.floatingContainer.expanded .bigImage {
+  max-height: none;
+}
