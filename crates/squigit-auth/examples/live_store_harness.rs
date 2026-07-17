@@ -7,12 +7,12 @@ use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use squigit_auth::ProfileError;
 use squigit_auth::auth::{
-    AuthFlowSettings, begin_google_auth_flow, complete_google_auth_flow,
-    validate_google_credentials,
+    begin_google_auth_flow, complete_google_auth_flow, validate_google_credentials,
+    AuthFlowSettings,
 };
-use squigit_auth::security::{ApiKeyProvider, encrypt_and_save_api_key, get_decrypted_key};
+use squigit_auth::security::{encrypt_and_save_api_key, get_decrypted_key, ApiKeyProvider};
+use squigit_auth::ProfileError;
 use squigit_storage::ProfileStore;
 
 fn main() {

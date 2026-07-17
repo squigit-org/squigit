@@ -5,8 +5,6 @@ use semver::{Version, VersionReq};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-
-
 #[derive(Debug, Error)]
 pub enum SidecarError {
     #[error("ERR_MISSING_OCR_PACKAGE")]
@@ -88,15 +86,14 @@ pub fn resolve_sidecar_path(resource_dir: &Path) -> (PathBuf, Option<PathBuf>) {
 pub fn read_sidecar_version(sidecar_path: &Path) -> Result<String, SidecarError> {
     let mut cmd = std::process::Command::new(sidecar_path);
     cmd.arg("--version");
-    
+
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
     }
-    
-    let output = cmd.output()
-        .map_err(|_| SidecarError::MissingPackage)?;
+
+    let output = cmd.output().map_err(|_| SidecarError::MissingPackage)?;
 
     if !output.status.success() {
         return Err(SidecarError::MissingPackage);

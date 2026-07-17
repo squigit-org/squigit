@@ -64,7 +64,9 @@ fn build_native(native_dir: &Path) -> Result<()> {
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 fn build_native(_native_dir: &Path) -> Result<()> {
-    Err(anyhow::anyhow!("Qt Capture builds are unsupported on this operating system"))
+    Err(anyhow::anyhow!(
+        "Qt Capture builds are unsupported on this operating system"
+    ))
 }
 
 #[cfg(target_os = "linux")]
@@ -84,7 +86,9 @@ fn deploy(native_dir: &Path) -> Result<()> {
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 fn deploy(_native_dir: &Path) -> Result<()> {
-    Err(anyhow::anyhow!("Qt Capture deployment is unsupported on this operating system"))
+    Err(anyhow::anyhow!(
+        "Qt Capture deployment is unsupported on this operating system"
+    ))
 }
 
 fn package(runtime: &Runtime, native_dir: &Path) -> Result<()> {

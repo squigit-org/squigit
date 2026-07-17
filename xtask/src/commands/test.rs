@@ -290,10 +290,7 @@ fn print_test_inventory(
 }
 
 fn print_running(runtime: &Runtime, label: &str) {
-    println!(
-        "\nRunning:\n {}",
-        runtime.console.green(label)
-    );
+    println!("\nRunning:\n {}", runtime.console.green(label));
 }
 
 fn confirm_default_yes(runtime: &Runtime, prompt: &str) -> io::Result<bool> {

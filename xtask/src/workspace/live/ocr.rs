@@ -108,7 +108,11 @@ mod tests {
         let args = cargo_arguments("analyze", &["image.png".to_string(), "ko".to_string()]);
         assert_eq!(
             &args[args.len() - 3..],
-            &["analyze".to_string(), "image.png".to_string(), "ko".to_string()]
+            &[
+                "analyze".to_string(),
+                "image.png".to_string(),
+                "ko".to_string()
+            ]
         );
     }
 

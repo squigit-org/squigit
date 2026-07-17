@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use aes_gcm::{
-    Aes256Gcm, Key, Nonce,
     aead::{Aead, KeyInit},
+    Aes256Gcm, Key, Nonce,
 };
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use pbkdf2::pbkdf2;
-use rand::{RngCore, rngs::OsRng};
+use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
 use squigit_storage::ProfileStore;
 
 use crate::{ProfileError, Result};
 
-use super::{ApiKeyProvider, validate_api_key};
+use super::{validate_api_key, ApiKeyProvider};
 
 fn get_stable_passphrase() -> Result<String> {
     let home_dir = dirs::home_dir().ok_or(ProfileError::NoConfigDir)?;

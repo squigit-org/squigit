@@ -1,9 +1,9 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit_storage::{ThreadMessage, ThreadMetadata, ThreadStorage};
 use regex::{Regex, RegexBuilder};
 use serde::Serialize;
+use squigit_storage::{ThreadMessage, ThreadMetadata, ThreadStorage};
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 

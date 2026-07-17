@@ -10,4 +10,4 @@ pub use auth::{
     GoogleAuthAttempt,
 };
 pub use error::{ProfileError, Result};
-pub use security::{ApiKeyProvider, validate_api_key, verify_artifact_signature};
+pub use security::{validate_api_key, verify_artifact_signature, ApiKeyProvider};

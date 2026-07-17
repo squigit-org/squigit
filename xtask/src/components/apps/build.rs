@@ -35,4 +35,3 @@ fn build_renderer(
     runtime.success("Renderer build complete.");
     Ok(())
 }
-

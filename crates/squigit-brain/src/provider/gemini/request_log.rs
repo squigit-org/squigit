@@ -15,10 +15,7 @@ pub(crate) struct GeminiRequestLogContext<'a> {
     pub(crate) iteration: Option<usize>,
 }
 
-pub(crate) fn write_request_log(
-    context: &GeminiRequestLogContext<'_>,
-    request: &GeminiRequest,
-) {
+pub(crate) fn write_request_log(context: &GeminiRequestLogContext<'_>, request: &GeminiRequest) {
     let Some(path) = build_log_path(context) else {
         return;
     };
@@ -91,6 +88,10 @@ fn sanitize_filename_component(value: &str) -> String {
         .collect();
 
     let trimmed = sanitized.trim_matches('_');
-    let final_value = if trimmed.is_empty() { "request" } else { trimmed };
+    let final_value = if trimmed.is_empty() {
+        "request"
+    } else {
+        trimmed
+    };
     final_value.chars().take(48).collect()
 }

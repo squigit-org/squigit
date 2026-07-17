@@ -31,10 +31,8 @@ pub fn run(runtime: &Runtime, registry: &Registry, args: &[String]) -> i32 {
             _ => return super::fail(runtime, "Whisper STT build accepts only --native."),
         },
         "paddle-ocr" => {
-            let yes = match super::parse_optional_yes(
-                args,
-                "Paddle OCR build accepts only --yes.",
-            ) {
+            let yes = match super::parse_optional_yes(args, "Paddle OCR build accepts only --yes.")
+            {
                 Ok(yes) => yes,
                 Err(error) => return super::fail(runtime, &error),
             };

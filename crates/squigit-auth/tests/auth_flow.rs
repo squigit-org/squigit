@@ -6,11 +6,11 @@ use std::sync::Arc;
 use std::thread;
 
 use serial_test::serial;
-use squigit_auth::ProfileError;
 use squigit_auth::auth::{
-    AuthAccountPolicy, AuthFlowSettings, AuthSuccessData, CredentialsSource, GoogleAuthAttempt,
-    begin_google_auth_flow, complete_google_auth_flow,
+    begin_google_auth_flow, complete_google_auth_flow, AuthAccountPolicy, AuthFlowSettings,
+    AuthSuccessData, CredentialsSource, GoogleAuthAttempt,
 };
+use squigit_auth::ProfileError;
 use squigit_storage::{Profile, ProfileStore};
 use tempfile::tempdir;
 use tiny_http::{Header, Response, Server, StatusCode};
@@ -219,11 +219,9 @@ fn auto_credentials_source_prefers_raw_env_over_path_env() {
     settings.credentials_source = CredentialsSource::Auto;
 
     let attempt = begin_google_auth_flow(&settings).unwrap();
-    assert!(
-        attempt
-            .auth_url()
-            .starts_with("https://example.com/o/oauth2/auth?")
-    );
+    assert!(attempt
+        .auth_url()
+        .starts_with("https://example.com/o/oauth2/auth?"));
 }
 
 #[test]
@@ -254,11 +252,9 @@ fn auto_credentials_source_can_use_path_env() {
     settings.credentials_source = CredentialsSource::Auto;
 
     let attempt = begin_google_auth_flow(&settings).unwrap();
-    assert!(
-        attempt
-            .auth_url()
-            .starts_with("https://example.com/o/oauth2/auth?")
-    );
+    assert!(attempt
+        .auth_url()
+        .starts_with("https://example.com/o/oauth2/auth?"));
 }
 
 #[test]
@@ -476,12 +472,10 @@ fn existing_only_policy_accepts_saved_accounts_and_rejects_unknown_accounts_in_b
     assert!(failure_page.contains("Account Not Found"));
     assert!(failure_page.contains("has not been added to Squigit"));
     assert_eq!(store.profile_count().unwrap(), 1);
-    assert!(
-        store
-            .find_profile_by_identity("https://accounts.google.com", "unknown-subject")
-            .unwrap()
-            .is_none()
-    );
+    assert!(store
+        .find_profile_by_identity("https://accounts.google.com", "unknown-subject")
+        .unwrap()
+        .is_none());
 }
 
 #[test]

@@ -16,9 +16,7 @@ pub async fn ensure_file_uploaded(
     cache: &Mutex<HashMap<String, GeminiFileRef>>,
 ) -> Result<GeminiFileRef, String> {
     let resolved_path =
-        crate::provider::gemini::attachments::paths::resolve_attachment_path_internal(
-            cas_path,
-        )?;
+        crate::provider::gemini::attachments::paths::resolve_attachment_path_internal(cas_path)?;
 
     let cas_hash = resolved_path
         .file_stem()
@@ -26,7 +24,11 @@ pub async fn ensure_file_uploaded(
         .unwrap_or("unknown")
         .to_string();
 
-    let cache_key = format!("{}_{}", cas_hash, &api_key[api_key.len().saturating_sub(6)..]);
+    let cache_key = format!(
+        "{}_{}",
+        cas_hash,
+        &api_key[api_key.len().saturating_sub(6)..]
+    );
 
     {
         let cache_lock = cache.lock().await;

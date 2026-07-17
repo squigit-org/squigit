@@ -9,7 +9,7 @@ use squigit_storage::{StoredImage, ThreadStorage};
 // Tone Detection
 // =============================================================================
 
-use image::{GenericImageView, imageops};
+use image::{imageops, GenericImageView};
 
 struct Lcg(u64);
 impl Lcg {

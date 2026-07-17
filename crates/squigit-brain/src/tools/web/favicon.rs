@@ -99,10 +99,7 @@ fn favicon_mime_from_url(url: &str) -> Option<&'static str> {
     }
 }
 
-async fn fetch_favicon_base64(
-    client: reqwest::Client,
-    favicon_url: String,
-) -> Option<String> {
+async fn fetch_favicon_base64(client: reqwest::Client, favicon_url: String) -> Option<String> {
     println!("[WebSearch] favicon hydrate start url={}", favicon_url);
 
     let response = match client

@@ -265,7 +265,10 @@ async fn analyze(
             let manager = ModelManager::new().map_err(|e| e.to_string())?;
             let model_dir = manager.get_model_dir(model.id);
             if manager.is_model_installed(model.id) {
-                println!("[ocr] Using downloaded model: {} ({})", model.name, model.id);
+                println!(
+                    "[ocr] Using downloaded model: {} ({})",
+                    model.name, model.id
+                );
                 Some(model_dir)
             } else {
                 return Err(format!(
@@ -323,10 +326,7 @@ async fn download(model_specifier: &str) -> Result<(), String> {
         )
     })?;
 
-    println!(
-        "[ocr] Downloading {} ({})...",
-        model.name, model.id
-    );
+    println!("[ocr] Downloading {} ({})...", model.name, model.id);
 
     let manager = ModelManager::new().map_err(|e| e.to_string())?;
 
@@ -347,7 +347,10 @@ async fn download(model_specifier: &str) -> Result<(), String> {
                     progress.status, progress.progress, progress.loaded, progress.total
                 );
             } else {
-                eprint!("\r  [{}] {} bytes loaded    ", progress.status, progress.loaded);
+                eprint!(
+                    "\r  [{}] {} bytes loaded    ",
+                    progress.status, progress.loaded
+                );
             }
         })
         .await
@@ -365,7 +368,9 @@ async fn download(model_specifier: &str) -> Result<(), String> {
 
 fn models() -> Result<(), String> {
     let manager = ModelManager::new().map_err(|e| e.to_string())?;
-    let downloaded = manager.list_downloaded_models().map_err(|e| e.to_string())?;
+    let downloaded = manager
+        .list_downloaded_models()
+        .map_err(|e| e.to_string())?;
 
     // Installed models.
     println!("Installed Models\n");

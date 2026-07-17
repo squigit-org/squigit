@@ -90,8 +90,6 @@ fn run_desktop(runtime: &Runtime, component: &Component) -> XtaskResult {
     result
 }
 
-
-
 pub(super) fn ensure_node_dependencies(runtime: &Runtime, directory: &Path) -> XtaskResult {
     if directory.join("node_modules").is_dir() {
         return Ok(());
@@ -206,8 +204,6 @@ impl Drop for ManagedChild {
     }
 }
 
-
-
 fn require_populated_directory(path: &Path, message: &str) -> XtaskResult {
     let populated = path
         .read_dir()
@@ -219,4 +215,3 @@ fn require_populated_directory(path: &Path, message: &str) -> XtaskResult {
         Err(format!("{message} Expected files in {}.", path.display()))
     }
 }
-

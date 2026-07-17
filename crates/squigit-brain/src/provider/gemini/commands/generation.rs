@@ -1,11 +1,11 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
 use crate::provider::gemini::transport::types::{
     GeminiContent, GeminiFileData, GeminiPart, GeminiRequest, GeminiResponseChunk,
 };
 use crate::runtime::BrainRuntimeState;
-use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
 
 /// Generate a thread title for the thread using the brain's title prompt and the text context.
 /// Returns the generated title text directly.
@@ -81,7 +81,10 @@ pub async fn generate_thread_title(
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            println!("Title Gen Error Status (Attempt {}): {} - {}", attempts, status, error_text);
+            println!(
+                "Title Gen Error Status (Attempt {}): {} - {}",
+                attempts, status, error_text
+            );
             last_error = format!("Status {}: {}", status, error_text);
             if (status.as_u16() == 503 || status.as_u16() == 429) && attempts < max_attempts {
                 tokio::time::sleep(std::time::Duration::from_millis(1000 * attempts)).await;
@@ -99,7 +102,10 @@ pub async fn generate_thread_title(
     }
 
     if body.is_empty() {
-        return Err(format!("Failed to generate title after {} attempts. Last error: {}", max_attempts, last_error));
+        return Err(format!(
+            "Failed to generate title after {} attempts. Last error: {}",
+            max_attempts, last_error
+        ));
     }
 
     // Parse single response

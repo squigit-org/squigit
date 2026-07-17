@@ -77,9 +77,7 @@ pub(crate) async fn build_interleaved_parts(
     text: &str,
     api_key: &str,
     cache: &Arc<
-        tokio::sync::Mutex<
-            HashMap<String, crate::provider::gemini::attachments::GeminiFileRef>,
-        >,
+        tokio::sync::Mutex<HashMap<String, crate::provider::gemini::attachments::GeminiFileRef>>,
     >,
 ) -> Result<Vec<GeminiPart>, String> {
     let re = Regex::new(

@@ -4,18 +4,18 @@
 use napi::{Error, Result};
 use napi_derive::napi;
 use squigit_auth::auth::{
-    AuthFlowSettings, AuthSuccessData, LoopbackAuthPage, LoopbackAuthServer,
     begin_google_auth_flow, complete_google_auth_flow, google_auth_status_page_url_for,
-    hydrate_avatar as hydrate_profile_avatar,
+    hydrate_avatar as hydrate_profile_avatar, AuthFlowSettings, AuthSuccessData, LoopbackAuthPage,
+    LoopbackAuthServer,
 };
 use squigit_auth::security::{
-    ApiKeyProvider, encrypt_and_save_api_key as ensak, get_decrypted_key,
+    encrypt_and_save_api_key as ensak, get_decrypted_key, ApiKeyProvider,
 };
 use squigit_storage::ProfileStore;
 use std::str::FromStr;
 use std::sync::{
-    Arc, Mutex,
     atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
 };
 use std::time::Instant;
 

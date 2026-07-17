@@ -307,10 +307,7 @@ async fn stream_iteration_with_rate_limit_retry(
                                 sink,
                                 channel_id,
                                 GeminiEvent::ToolStatus {
-                                    message: format!(
-                                        "Model busy, retrying in {}s",
-                                        remaining_secs
-                                    ),
+                                    message: format!("Model busy, retrying in {}s", remaining_secs),
                                 },
                             );
 

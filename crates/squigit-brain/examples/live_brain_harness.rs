@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use squigit_auth::security::{
-    ApiKeyProvider, encrypt_and_save_api_key, get_decrypted_key, validate_api_key,
+    encrypt_and_save_api_key, get_decrypted_key, validate_api_key, ApiKeyProvider,
 };
 use squigit_brain::context::media::get_active_storage;
 use squigit_brain::events::BrainEventSink;

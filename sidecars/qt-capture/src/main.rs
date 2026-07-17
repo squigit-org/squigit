@@ -3,10 +3,10 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-mod paths;
-mod qt_app;
 mod audio_guard;
 mod display_hotplug;
+mod paths;
+mod qt_app;
 mod single_instance;
 
 use anyhow::Result;

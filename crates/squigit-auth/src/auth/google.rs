@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use base64::{
-    Engine as _,
     engine::{general_purpose, general_purpose::URL_SAFE_NO_PAD},
+    Engine as _,
 };
 use chrono::{DateTime, Utc};
 use image::ImageFormat;
 use jsonwebtoken::jwk::JwkSet;
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
-use reqwest::StatusCode;
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use reqwest::blocking::{Client, Response};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fs;
@@ -20,7 +20,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use url::Url;
 
 use squigit_storage::{
-    GOOGLE_PROVIDER, LastLogin, Profile, ProfileIdentity, ProfileStore, canonical_google_issuer,
+    canonical_google_issuer, LastLogin, Profile, ProfileIdentity, ProfileStore, GOOGLE_PROVIDER,
 };
 
 use crate::{ProfileError, Result};
@@ -145,7 +145,7 @@ fn generate_nonce() -> String {
 }
 
 fn generate_urlsafe_token(byte_len: usize) -> String {
-    use rand::{RngCore, rngs::OsRng};
+    use rand::{rngs::OsRng, RngCore};
 
     let mut bytes = vec![0u8; byte_len];
     OsRng.fill_bytes(&mut bytes);

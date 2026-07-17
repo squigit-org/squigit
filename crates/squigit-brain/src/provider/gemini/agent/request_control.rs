@@ -1,9 +1,9 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::runtime::BrainRuntimeState;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use crate::runtime::BrainRuntimeState;
 
 #[derive(Clone)]
 pub struct GeminiRequestControl {

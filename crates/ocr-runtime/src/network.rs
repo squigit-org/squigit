@@ -57,7 +57,10 @@ impl PeerNetworkMonitor {
                 // Connect timeout of 2s.
                 // This is a "TCP Ping".
                 let addr = std::net::SocketAddr::from(([8, 8, 8, 8], 53));
-                let status = match std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(2)) {
+                let status = match std::net::TcpStream::connect_timeout(
+                    &addr,
+                    std::time::Duration::from_secs(2),
+                ) {
                     Ok(_) => {
                         let latency = start.elapsed().as_millis() as u64;
                         let status = if latency > 300 {
