@@ -40,6 +40,10 @@ pub enum StorageError {
     #[error("Thread not found: {0}")]
     ThreadNotFound(String),
 
+    /// Invalid thread fork point.
+    #[error("Invalid thread fork point: {0}")]
+    InvalidThreadFork(String),
+
     /// Profile with the given ID was not found.
     #[error("Profile not found: {0}")]
     ProfileNotFound(String),

@@ -3,7 +3,7 @@
 
 use napi::{Error, Result};
 use napi_derive::napi;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 use squigit_storage::{ThreadMessage, ThreadStorage};
 
 use crate::types::NapiStoredImage;
@@ -84,6 +84,15 @@ pub fn load_thread(thread_id: String) -> Result<String> {
     let storage = active_storage()?;
     let thread = storage.load_thread(&thread_id).map_err(map_storage_err)?;
     to_json(&thread)
+}
+
+#[napi(js_name = "fork_thread")]
+pub fn fork_thread(thread_id: String, message_index: u32) -> Result<String> {
+    let storage = active_storage()?;
+    let metadata = storage
+        .fork_thread(&thread_id, message_index as usize)
+        .map_err(map_storage_err)?;
+    to_json(&metadata)
 }
 
 #[napi(js_name = "delete_thread")]

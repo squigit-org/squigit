@@ -5,8 +5,8 @@ use std::path::PathBuf;
 
 use crate::error::StorageError;
 use crate::threads::{
-    EMPTY_STATE_ASSET_ID, OcrAnnotationEntry, OcrRegion, ThreadAttachmentKind,
-    ThreadAttachmentRecord, ThreadData, ThreadMetadata, ThreadStorage,
+    OcrAnnotationEntry, OcrRegion, ThreadAttachmentKind, ThreadAttachmentRecord, ThreadData,
+    ThreadMetadata, ThreadStorage, EMPTY_STATE_ASSET_ID,
 };
 
 fn make_test_storage() -> (ThreadStorage, PathBuf) {
@@ -91,11 +91,9 @@ fn attachment_registry_round_trips_via_sidecar() {
         .load_thread(&metadata.id)
         .expect("load with registry");
     assert_eq!(loaded.attachment_registry.len(), 1);
-    assert!(
-        loaded
-            .attachment_registry
-            .contains_key("/tmp/threads/objects/ab/file.pdf")
-    );
+    assert!(loaded
+        .attachment_registry
+        .contains_key("/tmp/threads/objects/ab/file.pdf"));
 
     let mut cleared = loaded;
     cleared.attachment_registry.clear();

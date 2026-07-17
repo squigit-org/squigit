@@ -7,8 +7,8 @@ use crate::error::{Result, StorageError};
 
 use super::paths::ocr_annotations_path;
 use super::{
-    EMPTY_STATE_ASSET_ID, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion,
-    ThreadStorage, default_ocr_annotations,
+    default_ocr_annotations, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion,
+    ThreadStorage, EMPTY_STATE_ASSET_ID,
 };
 
 fn is_supported_ocr_model_id(model_id: &str) -> bool {

@@ -1,7 +1,10 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use regex::Regex;
+use std::collections::BTreeSet;
 use std::fs;
+use std::path::Path;
 
 use crate::error::{Result, StorageError};
 
@@ -10,9 +13,66 @@ use super::paths::{
     attachment_registry_path, context_window_path, messages_path, ocr_annotations_path,
 };
 use super::{
-    AttachmentRegistry, ContextWindow, OcrAnnotations, ReverseImageSearchCache, ThreadData,
-    ThreadMessage, ThreadMetadata, ThreadStorage, default_ocr_annotations,
+    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotations,
+    ReverseImageSearchCache, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage,
 };
+
+fn copy_dir_all(source: &Path, destination: &Path) -> Result<()> {
+    fs::create_dir_all(destination)?;
+
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let destination_path = destination.join(entry.file_name());
+
+        if file_type.is_dir() {
+            copy_dir_all(&entry.path(), &destination_path)?;
+        } else {
+            fs::copy(entry.path(), destination_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn unwrap_current_attachment_destination(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    let unwrapped = trimmed
+        .strip_prefix('<')
+        .and_then(|value| value.strip_suffix('>'))
+        .map(str::trim)
+        .unwrap_or(trimmed);
+    let rest = unwrapped.strip_prefix("file://")?;
+
+    if let Some(path) = rest.strip_prefix('/') {
+        if path.as_bytes().get(1) == Some(&b':') {
+            return Some(path.to_string());
+        }
+    }
+
+    Some(rest.to_string())
+}
+
+fn extract_current_attachment_paths(text: &str) -> BTreeSet<String> {
+    let re = Regex::new(r"\[[^\]\n]+\]\((<[^>\n]+>|[^)\n]+)\)")
+        .expect("current attachment link regex must compile");
+    re.captures_iter(text)
+        .filter_map(|capture| capture.get(1))
+        .filter_map(|raw| unwrap_current_attachment_destination(raw.as_str()))
+        .collect()
+}
+
+fn retain_referenced_attachments(thread: &mut ThreadData) {
+    let retained_paths = thread
+        .messages
+        .iter()
+        .flat_map(|message| extract_current_attachment_paths(&message.content))
+        .collect::<BTreeSet<_>>();
+
+    thread.attachment_registry.retain(|key, record| {
+        retained_paths.contains(key) || retained_paths.contains(&record.cas_path)
+    });
+}
 
 impl ThreadStorage {
     /// Save a new thread or update an existing one.
@@ -178,6 +238,52 @@ impl ThreadStorage {
 
         self.remove_from_index(thread_id)?;
         Ok(())
+    }
+
+    /// Fork a thread by copying its folder and trimming message-local sidecars.
+    pub fn fork_thread(&self, thread_id: &str, message_index: usize) -> Result<ThreadMetadata> {
+        let source_dir = self.thread_dir(thread_id);
+        if !source_dir.exists() {
+            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
+        }
+
+        let source_thread = self.load_thread(thread_id)?;
+        let retained_len = message_index.checked_add(1).ok_or_else(|| {
+            StorageError::InvalidThreadFork(format!("message index {} is too large", message_index))
+        })?;
+
+        if retained_len > source_thread.messages.len() {
+            return Err(StorageError::InvalidThreadFork(format!(
+                "message index {} is outside thread {}",
+                message_index, thread_id
+            )));
+        }
+
+        let mut metadata = ThreadMetadata::new(
+            format!("forked {}", source_thread.metadata.title),
+            source_thread.metadata.image_hash.clone(),
+        );
+        metadata.is_pinned = false;
+
+        let destination_dir = self.thread_dir(&metadata.id);
+        copy_dir_all(&source_dir, &destination_dir)?;
+
+        let source_had_attachment_registry = attachment_registry_path(&source_dir).exists();
+        let mut forked_thread = source_thread;
+        forked_thread.metadata = metadata.clone();
+        forked_thread.messages.truncate(retained_len);
+        retain_referenced_attachments(&mut forked_thread);
+
+        self.save_thread(&forked_thread)?;
+
+        if source_had_attachment_registry && forked_thread.attachment_registry.is_empty() {
+            fs::write(
+                attachment_registry_path(&destination_dir),
+                serde_json::to_string_pretty(&forked_thread.attachment_registry)?,
+            )?;
+        }
+
+        Ok(metadata)
     }
 
     /// Update thread metadata.

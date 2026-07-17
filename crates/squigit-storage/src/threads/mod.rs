@@ -19,10 +19,10 @@ pub mod types;
 mod tests;
 
 pub use types::{
-    AttachmentRegistry, ContextWindow, EMPTY_STATE_ASSET_ID, OcrAnnotationEntry, OcrAnnotations,
+    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotationEntry, OcrAnnotations,
     OcrModelAnnotation, OcrRegion, ReverseImageSearchCache, ThreadAttachmentKind,
     ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadMessage,
-    ThreadMetadata, default_ocr_annotations,
+    ThreadMetadata, EMPTY_STATE_ASSET_ID,
 };
 
 /// Main storage manager for threads and content-addressed objects.

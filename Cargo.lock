@@ -3733,6 +3733,7 @@ dependencies = [
  "chrono",
  "dirs 6.0.0",
  "image",
+ "regex",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

@@ -4,8 +4,6 @@ export declare function append_thread_message(threadId: string, role: string, co
 
 export declare function cancel_download_ocr_model(modelId: string): void
 
-export declare function trash_downloaded_ocr_model(modelId: string): void
-
 export declare function cancel_google_auth(): void
 
 export declare function cancel_request(channelId?: string | undefined | null): Promise<void>
@@ -27,6 +25,8 @@ export declare function detect_image_tone(bytes: Buffer): string | null
 export declare function download_ocr_model(modelId: string, url: string, progressCb: (progressJson: string) => void): Promise<string>
 
 export declare function encrypt_and_save_api_key(profileId: string, provider: string, key: string): string
+
+export declare function fork_thread(threadId: string, messageIndex: number): string
 
 export declare function generate_image_brief(apiKey: string, imagePath: string, model: string): Promise<string>
 
@@ -174,6 +174,8 @@ export declare function store_file_from_path(path: string): NapiStoredImage
 export declare function store_image_from_path(path: string): NapiStoredImage
 
 export declare function stream_thread(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, userMessage: string, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
+
+export declare function trash_downloaded_ocr_model(modelId: string): void
 
 export declare function update_thread_metadata(metadataJson: string): void
 

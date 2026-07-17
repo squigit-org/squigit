@@ -9,6 +9,6 @@ mod types;
 
 pub use store::ProfileStore;
 pub use types::{
-    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, GOOGLE_ISSUER, GOOGLE_PROVIDER, LastLogin,
-    Profile, ProfileAuth, ProfileIdentity, ProfileSnapshot, canonical_google_issuer,
+    canonical_google_issuer, LastLogin, Profile, ProfileAuth, ProfileIdentity, ProfileSnapshot,
+    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, GOOGLE_ISSUER, GOOGLE_PROVIDER,
 };

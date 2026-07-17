@@ -6,8 +6,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use super::types::{
-    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, LastLogin, Profile, ProfileAuth,
-    ProfileSnapshot, canonical_google_issuer,
+    canonical_google_issuer, LastLogin, Profile, ProfileAuth, ProfileSnapshot,
+    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION,
 };
 use crate::error::{Result, StorageError};
 
