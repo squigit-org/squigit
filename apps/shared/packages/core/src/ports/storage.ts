@@ -11,6 +11,7 @@ import type {
   ThreadSearchResult,
   OcrAnnotations,
   OcrRegion,
+  ProjectMetadata,
   ReverseImageSearchCache,
   StoredImage,
 } from "../config/thread-storage";
@@ -19,7 +20,13 @@ export interface StoragePort {
   storeImageBytes(bytes: number[]): Promise<StoredImage>;
   storeImageFromPath(path: string): Promise<StoredImage>;
   getImagePath(hash: string): Promise<string>;
-  createThread(title: string, imageHash: string): Promise<ThreadMetadata>;
+  createThread(
+    title: string,
+    imageHash: string,
+    projectId?: string | null,
+  ): Promise<ThreadMetadata>;
+  createProject(path: string): Promise<ProjectMetadata>;
+  listProjects(): Promise<ProjectMetadata[]>;
   loadThread(threadId: string): Promise<ThreadData>;
   forkThread(threadId: string, messageIndex: number): Promise<ThreadMetadata>;
   listThreads(): Promise<ThreadMetadata[]>;

@@ -13,7 +13,7 @@ use super::paths::{
     attachment_registry_path, context_window_path, messages_path, ocr_annotations_path,
 };
 use super::{
-    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotations,
+    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotations, ProjectMetadata,
     ReverseImageSearchCache, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage,
 };
 
@@ -75,8 +75,7 @@ fn retain_referenced_attachments(thread: &mut ThreadData) {
 }
 
 impl ThreadStorage {
-    /// Save a new thread or update an existing one.
-    pub fn save_thread(&self, thread: &ThreadData) -> Result<()> {
+    fn save_thread_files(&self, thread: &ThreadData) -> Result<()> {
         let thread_dir = self.thread_dir(&thread.metadata.id);
         fs::create_dir_all(&thread_dir)?;
 
@@ -118,8 +117,19 @@ impl ThreadStorage {
             fs::remove_file(&attachment_registry_path)?;
         }
 
-        self.update_index(&thread.metadata)?;
         Ok(())
+    }
+
+    /// Save a new thread to the device project or update it in its current project.
+    pub fn save_thread(&self, thread: &ThreadData) -> Result<()> {
+        self.save_thread_files(thread)?;
+        self.update_index(&thread.metadata)
+    }
+
+    /// Save a new thread in a specific project.
+    pub fn save_thread_in_project(&self, thread: &ThreadData, project_id: &str) -> Result<()> {
+        self.save_thread_files(thread)?;
+        self.update_index_in_project(&thread.metadata, project_id)
     }
 
     /// Load a thread by ID.
@@ -219,13 +229,19 @@ impl ThreadStorage {
 
     /// List all threads, metadata only.
     pub fn list_threads(&self) -> Result<Vec<ThreadMetadata>> {
-        if !self.index_path.exists() {
-            return Ok(Vec::new());
-        }
-
-        let mut threads: Vec<ThreadMetadata> = self.read_index()?.into_values().collect();
+        let mut threads = self
+            .read_index()?
+            .projects
+            .into_iter()
+            .flat_map(|project| project.threads.into_values())
+            .collect::<Vec<_>>();
         threads.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         Ok(threads)
+    }
+
+    /// List projects in sidebar order with their nested thread metadata.
+    pub fn list_projects(&self) -> Result<Vec<ProjectMetadata>> {
+        Ok(self.read_index()?.projects)
     }
 
     /// Delete a thread by ID.
@@ -247,6 +263,7 @@ impl ThreadStorage {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
 
+        let source_project_id = self.get_thread_project_id(thread_id)?;
         let source_thread = self.load_thread(thread_id)?;
         let retained_len = message_index.checked_add(1).ok_or_else(|| {
             StorageError::InvalidThreadFork(format!("message index {} is too large", message_index))
@@ -274,7 +291,7 @@ impl ThreadStorage {
         forked_thread.messages.truncate(retained_len);
         retain_referenced_attachments(&mut forked_thread);
 
-        self.save_thread(&forked_thread)?;
+        self.save_thread_in_project(&forked_thread, &source_project_id)?;
 
         if source_had_attachment_registry && forked_thread.attachment_registry.is_empty() {
             fs::write(

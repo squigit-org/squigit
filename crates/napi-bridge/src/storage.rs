@@ -64,12 +64,36 @@ pub fn get_image_path(hash: String) -> Result<String> {
 }
 
 #[napi(js_name = "create_thread")]
-pub fn create_thread(title: String, image_hash: String) -> Result<String> {
+pub fn create_thread(
+    title: String,
+    image_hash: String,
+    project_id: Option<String>,
+) -> Result<String> {
     let storage = active_storage()?;
     let metadata = squigit_storage::ThreadMetadata::new(title, image_hash);
     let thread = squigit_storage::ThreadData::new(metadata.clone());
-    storage.save_thread(&thread).map_err(map_storage_err)?;
+    if let Some(project_id) = project_id {
+        storage
+            .save_thread_in_project(&thread, &project_id)
+            .map_err(map_storage_err)?;
+    } else {
+        storage.save_thread(&thread).map_err(map_storage_err)?;
+    }
     to_json(&metadata)
+}
+
+#[napi(js_name = "create_project")]
+pub fn create_project(path: String) -> Result<String> {
+    let storage = active_storage()?;
+    let project = storage.create_project(&path).map_err(map_storage_err)?;
+    to_json(&project)
+}
+
+#[napi(js_name = "list_projects")]
+pub fn list_projects() -> Result<String> {
+    let storage = active_storage()?;
+    let projects = storage.list_projects().map_err(map_storage_err)?;
+    to_json(&projects)
 }
 
 #[napi(js_name = "list_threads")]

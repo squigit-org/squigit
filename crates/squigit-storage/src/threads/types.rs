@@ -49,6 +49,41 @@ impl ThreadMetadata {
     }
 }
 
+/// A project groups threads under one AI working directory.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectMetadata {
+    /// Unique identifier for the project.
+    pub id: String,
+    /// Folder name displayed in the sidebar.
+    pub name: String,
+    /// AI sandbox working directory. The device project has no path.
+    pub path: Option<String>,
+    /// Thread metadata keyed by thread ID.
+    pub threads: BTreeMap<String, ThreadMetadata>,
+}
+
+impl ProjectMetadata {
+    /// Create a project with a generated ID.
+    pub fn new(name: String, path: Option<String>) -> Self {
+        Self {
+            id: format!("project-{}", Uuid::new_v4()),
+            name,
+            path,
+            threads: BTreeMap::new(),
+        }
+    }
+
+    /// Create the pathless project representing the current device.
+    pub fn device_default() -> Self {
+        #[cfg(target_os = "macos")]
+        let name = "This Mac";
+        #[cfg(not(target_os = "macos"))]
+        let name = "This PC";
+
+        Self::new(name.to_string(), None)
+    }
+}
+
 /// A single thread message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThreadMessage {

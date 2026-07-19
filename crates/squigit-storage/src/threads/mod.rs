@@ -20,7 +20,7 @@ mod tests;
 
 pub use types::{
     default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotationEntry, OcrAnnotations,
-    OcrModelAnnotation, OcrRegion, ReverseImageSearchCache, ThreadAttachmentKind,
+    OcrModelAnnotation, OcrRegion, ProjectMetadata, ReverseImageSearchCache, ThreadAttachmentKind,
     ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadMessage,
     ThreadMetadata, EMPTY_STATE_ASSET_ID,
 };

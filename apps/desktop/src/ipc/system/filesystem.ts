@@ -74,9 +74,18 @@ export function registerFilesystemHandlers() {
       }
     }
     const result = await electronDialog.showOpenDialog({
-      properties: options?.multiple ? ["openFile", "multiSelections"] : ["openFile"],
-      filters: filters.length > 0 ? filters : undefined,
+      properties: options?.directory
+        ? options?.multiple
+          ? ["openDirectory", "multiSelections"]
+          : ["openDirectory"]
+        : options?.multiple
+          ? ["openFile", "multiSelections"]
+          : ["openFile"],
+      filters:
+        !options?.directory && filters.length > 0 ? filters : undefined,
       defaultPath,
+      title: options?.title,
+      buttonLabel: options?.buttonLabel,
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     return options?.multiple ? result.filePaths : result.filePaths[0];

@@ -14,7 +14,9 @@ export declare function copy_image_from_path_to_clipboard(path: string): void
 
 export declare function copy_image_to_clipboard(imageBase64: string): void
 
-export declare function create_thread(title: string, imageHash: string): string
+export declare function create_project(path: string): string
+
+export declare function create_thread(title: string, imageHash: string, projectId?: string | undefined | null): string
 
 export declare function delete_profile(profileId: string): void
 
@@ -63,6 +65,8 @@ export declare function hydrate_avatar(url: string, profileId?: string | undefin
 export declare function list_downloaded_models(): Array<string>
 
 export declare function list_profiles(): Array<NapiProfile>
+
+export declare function list_projects(): string
 
 export declare function list_threads(): string
 

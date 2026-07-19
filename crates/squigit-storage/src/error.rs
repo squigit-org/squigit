@@ -40,6 +40,18 @@ pub enum StorageError {
     #[error("Thread not found: {0}")]
     ThreadNotFound(String),
 
+    /// Project not found.
+    #[error("Project not found: {0}")]
+    ProjectNotFound(String),
+
+    /// Project path is invalid or too broad to use as a working directory.
+    #[error("Invalid project path: {0}")]
+    InvalidProjectPath(String),
+
+    /// Project path is already registered.
+    #[error("Project path is already in use: {0}")]
+    ProjectPathAlreadyExists(String),
+
     /// Invalid thread fork point.
     #[error("Invalid thread fork point: {0}")]
     InvalidThreadFork(String),

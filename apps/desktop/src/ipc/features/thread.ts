@@ -15,8 +15,21 @@ export function registerThreadHandlers() {
     const json = requireAddonFn("create_thread")(
       requireStringArg("create_thread", args, "title"),
       requireStringArg("create_thread", args, "imageHash", "image_hash"),
+      args?.projectId ?? args?.project_id,
     );
     return parseAddonJson("create_thread", json);
+  });
+
+  ipcMain.handle("create_project", (_, args) => {
+    const json = requireAddonFn("create_project")(
+      requireStringArg("create_project", args, "path"),
+    );
+    return parseAddonJson("create_project", json);
+  });
+
+  ipcMain.handle("list_projects", () => {
+    const json = requireAddonFn("list_projects")();
+    return parseAddonJson("list_projects", json);
   });
 
   ipcMain.handle("cancel_request", (_, args) =>

@@ -20,6 +20,14 @@ export interface ThreadMetadata {
   is_pinned: boolean;
 }
 
+/** A sidebar project and its AI sandbox working directory. */
+export interface ProjectMetadata {
+  id: string;
+  name: string;
+  path: string | null;
+  threads: Record<string, ThreadMetadata>;
+}
+
 /** A single thread message (matches Rust ThreadMessage). */
 export interface ThreadCitation {
   title: string;
@@ -146,8 +154,19 @@ export async function getImagePath(hash: string): Promise<string> {
 export async function createThread(
   title: string,
   imageHash: string,
+  projectId?: string | null,
 ): Promise<ThreadMetadata> {
-  return getStoragePort().createThread(title, imageHash);
+  return getStoragePort().createThread(title, imageHash, projectId);
+}
+
+/** Register a folder as a project. */
+export async function createProject(path: string): Promise<ProjectMetadata> {
+  return getStoragePort().createProject(path);
+}
+
+/** List projects with their nested thread metadata. */
+export async function listProjects(): Promise<ProjectMetadata[]> {
+  return getStoragePort().listProjects();
 }
 
 /** Load a thread by ID (full data including messages). */
