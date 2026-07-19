@@ -6,8 +6,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
+  createProject,
   deleteThread,
-  listThreads,
+  listProjects,
+  type ProjectMetadata,
   type ThreadMetadata,
   type ThreadSearchResult,
   searchThreads as searchThreadsApi,
@@ -19,6 +21,8 @@ const TOUCH_THROTTLE_MS = 1200;
 
 export const useThreadHistory = (activeProfileId: string | null = null) => {
   const [threads, setThreads] = useState<ThreadMetadata[]>([]);
+  const [projects, setProjects] = useState<ProjectMetadata[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const threadsRef = useRef<ThreadMetadata[]>([]);
@@ -31,16 +35,55 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
   const refreshThreads = useCallback(async () => {
     setIsLoading(true);
     try {
-      const threadList = await listThreads();
+      const projectList = await listProjects();
+      const threadList = projectList.flatMap((project) =>
+        Object.values(project.threads),
+      );
 
+      setProjects(projectList);
       setThreads(threadList.filter((c) => !isOnboardingId(c.id)));
+      setActiveProjectId((current) =>
+        current && projectList.some((project) => project.id === current)
+          ? current
+          : (projectList[0]?.id ?? null),
+      );
     } catch (e) {
-      console.error("Failed to load threads:", e);
+      console.error("Failed to load projects:", e);
+      setProjects([]);
       setThreads([]);
     } finally {
       setIsLoading(false);
     }
   }, [activeProfileId]);
+
+  const updateProjectThread = useCallback((updated: ThreadMetadata) => {
+    setProjects((current) =>
+      current.map((project) =>
+        project.threads[updated.id]
+          ? {
+              ...project,
+              threads: { ...project.threads, [updated.id]: updated },
+            }
+          : project,
+      ),
+    );
+  }, []);
+
+  const handleCreateProject = useCallback(async (path: string) => {
+    const project = await createProject(path);
+    setProjects((current) => [
+      project,
+      ...current.filter((item) => item.id !== project.id),
+    ]);
+    setActiveProjectId(project.id);
+    return project;
+  }, []);
+
+  const getProjectIdForThread = useCallback(
+    (threadId: string) =>
+      projects.find((project) => !!project.threads[threadId])?.id ?? null,
+    [projects],
+  );
 
   useEffect(() => {
     refreshThreads();
@@ -55,6 +98,14 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     try {
       await deleteThread(id);
       setThreads((prev) => prev.filter((c) => c.id !== id));
+      setProjects((current) =>
+        current.map((project) => {
+          if (!project.threads[id]) return project;
+          const nextThreads = { ...project.threads };
+          delete nextThreads[id];
+          return { ...project, threads: nextThreads };
+        }),
+      );
       if (activeSessionId === id) {
         setActiveSessionId(null);
       }
@@ -69,6 +120,17 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     try {
       await Promise.all(realIds.map((id) => deleteThread(id)));
       setThreads((prev) => prev.filter((c) => !realIds.includes(c.id)));
+      const removedIds = new Set(realIds);
+      setProjects((current) =>
+        current.map((project) => ({
+          ...project,
+          threads: Object.fromEntries(
+            Object.entries(project.threads).filter(
+              ([id]) => !removedIds.has(id),
+            ),
+          ),
+        })),
+      );
       if (activeSessionId && realIds.includes(activeSessionId)) {
         setActiveSessionId(null);
       }
@@ -87,11 +149,13 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
       title: newTitle,
     };
     setThreads((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    updateProjectThread(updated);
     try {
       await updateThreadMeta(updated);
     } catch (e) {
       console.error("Failed to rename thread:", e);
       setThreads((prev) => prev.map((c) => (c.id === id ? thread : c)));
+      updateProjectThread(thread);
     }
   };
 
@@ -107,11 +171,13 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     };
 
     setThreads((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    updateProjectThread(updated);
     try {
       await updateThreadMeta(updated);
     } catch (e) {
       console.error("Failed to toggle pin:", e);
       setThreads((prev) => prev.map((c) => (c.id === id ? thread : c)));
+      updateProjectThread(thread);
     }
   };
 
@@ -134,6 +200,7 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     };
 
     setThreads((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    updateProjectThread(updated);
 
     try {
       await updateThreadMeta(updated);
@@ -156,10 +223,15 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
 
   return {
     threads,
+    projects,
+    activeProjectId,
+    setActiveProjectId,
     activeSessionId,
     setActiveSessionId,
     isLoading,
     refreshThreads,
+    handleCreateProject,
+    getProjectIdForThread,
     handleDeleteThread,
     handleDeleteThreads,
     handleRenameThread,

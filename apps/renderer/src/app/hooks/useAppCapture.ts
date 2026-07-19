@@ -81,7 +81,11 @@ export const useAppCapture = ({
       });
 
       try {
-        const newThread = await createThread("New thread", imageData.imageId);
+        const newThread = await createThread(
+          "New thread",
+          imageData.imageId,
+          threadHistoryRef.current?.activeProjectId,
+        );
         threadHistory.setActiveSessionId(newThread.id);
         threadHistory.refreshThreads();
         console.log("Created new thread:", newThread.id);
@@ -97,6 +101,7 @@ export const useAppCapture = ({
       ocr,
       system,
       systemRef,
+      threadHistoryRef,
     ],
   );
 

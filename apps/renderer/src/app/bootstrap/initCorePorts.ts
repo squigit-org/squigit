@@ -75,8 +75,14 @@ export function initializeCorePorts(): void {
     storeImageFromPath: (path: string) =>
       platform.invoke("store_image_from_path", { path }),
     getImagePath: (hash: string) => platform.invoke("get_image_path", { hash }),
-    createThread: (title: string, imageHash: string) =>
-      platform.invoke("create_thread", { title, imageHash }),
+    createThread: (
+      title: string,
+      imageHash: string,
+      projectId?: string | null,
+    ) => platform.invoke("create_thread", { title, imageHash, projectId }),
+    createProject: (path: string) =>
+      platform.invoke("create_project", { path }),
+    listProjects: () => platform.invoke("list_projects"),
     loadThread: (threadId: string) =>
       platform.invoke("load_thread", { threadId }),
     forkThread: (threadId: string, messageIndex: number) =>

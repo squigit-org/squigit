@@ -17,15 +17,14 @@ import {
   Trash2,
   Check,
   X,
-  FolderOpen,
   FolderOpenIcon,
-  Search,
   GitFork,
 } from "lucide-react";
 
 import { NewThreadIcon, CollapesItemsIcon } from "@/components/icons";
 import { Dialog, LoadingSpinner } from "@/components/ui";
-import { useKeyDown, usePlatform } from "@/hooks/shared";
+import { useKeyDown } from "@/hooks/shared";
+import { platform as platformBridge } from "@/platform";
 import { getDeleteMultipleThreadsDialog } from "@squigit/core/helpers";
 import type { ThreadMetadata } from "@squigit/core/config";
 import { PanelContextMenu } from "../menus/PanelContextMenu";
@@ -50,6 +49,46 @@ const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
 );
 
 const SYSTEM_PREFIX = "__system_";
+
+const isUnsafeProjectPath = (path: string): boolean => {
+  const normalized = path.trim().replace(/[\\/]+$/, "");
+  if (!normalized) return true;
+
+  const windowsPath = normalized.replace(/\//g, "\\").toLowerCase();
+  if (/^[a-z]:$/.test(windowsPath)) return true;
+  if (
+    /^[a-z]:\\(windows|users|program files|program files \(x86\)|programdata)$/i.test(
+      windowsPath,
+    )
+  ) {
+    return true;
+  }
+
+  const posixPath = normalized.replace(/\\/g, "/").toLowerCase();
+  return new Set([
+    "/",
+    "/applications",
+    "/library",
+    "/system",
+    "/users",
+    "/volumes",
+    "/bin",
+    "/boot",
+    "/dev",
+    "/etc",
+    "/home",
+    "/lib",
+    "/lib64",
+    "/opt",
+    "/proc",
+    "/root",
+    "/run",
+    "/sbin",
+    "/sys",
+    "/usr",
+    "/var",
+  ]).has(posixPath);
+};
 
 const formatThreadAge = (isoDate: string, now = Date.now()): string => {
   const parsed = new Date(isoDate);
@@ -280,7 +319,6 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
 
 export const SidePanel: React.FC = () => {
   const app = useAppContext();
-  const platform = usePlatform();
   const threads = app.threadHistory.threads;
   const activeSessionId = app.threadHistory.activeSessionId;
 
@@ -296,6 +334,10 @@ export const SidePanel: React.FC = () => {
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [collapsedProjectIds, setCollapsedProjectIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const pinToggleLockRef = useRef<Set<string>>(new Set());
   const selectThreadRef = useRef(app.handleNavigation);
   const renameThreadRef = useRef(app.threadHistory.handleRenameThread);
@@ -325,22 +367,29 @@ export const SidePanel: React.FC = () => {
     };
   }, []);
 
-  const { pinnedThreads, threadThreads, allThreads } = useMemo(() => {
-    const sortedThreads = threads
-      .filter((c: any) => !c.id.startsWith(SYSTEM_PREFIX))
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(b.updated_at || b.created_at).getTime() -
-          new Date(a.updated_at || a.created_at).getTime(),
-      );
+  const projectGroups = useMemo(
+    () =>
+      app.threadHistory.projects.map((project) => ({
+        ...project,
+        threads: Object.values(project.threads)
+          .filter((thread) => !thread.id.startsWith(SYSTEM_PREFIX))
+          .sort((a, b) => {
+            if (a.is_pinned !== b.is_pinned) {
+              return a.is_pinned ? -1 : 1;
+            }
+            return (
+              new Date(b.updated_at || b.created_at).getTime() -
+              new Date(a.updated_at || a.created_at).getTime()
+            );
+          }),
+      })),
+    [app.threadHistory.projects],
+  );
 
-    return {
-      pinnedThreads: sortedThreads.filter((thread) => thread.is_pinned),
-      threadThreads: sortedThreads.filter((thread) => !thread.is_pinned),
-      allThreads: sortedThreads,
-    };
-  }, [threads]);
+  const allThreads = useMemo(
+    () => threads.filter((thread) => !thread.id.startsWith(SYSTEM_PREFIX)),
+    [threads],
+  );
 
   const isThreadBusy =
     app.thread.isAnalyzing ||
@@ -348,13 +397,6 @@ export const SidePanel: React.FC = () => {
     app.thread.isAiTyping ||
     app.isOcrScanning;
   const busyThreadId = isThreadBusy ? activeSessionId : null;
-
-  const directoryLabel = useMemo(() => {
-    if (platform.isMac) {
-      return `This Mac`;
-    }
-    return `This PC`;
-  }, [platform.isMac]);
 
   const handleOpenContextMenu = useCallback(
     (id: string, x: number, y: number) => {
@@ -387,12 +429,57 @@ export const SidePanel: React.FC = () => {
   }, []);
 
   const handleNavigation = useCallback(
-    (threadId: string) => {
+    (projectId: string, threadId: string) => {
       if (threadId === activeSessionId) return;
+      app.threadHistory.setActiveProjectId(projectId);
       selectThreadRef.current(threadId);
     },
-    [activeSessionId],
+    [activeSessionId, app.threadHistory],
   );
+
+  const handleNewThread = useCallback(
+    (projectId: string) => {
+      app.threadHistory.setActiveProjectId(projectId);
+      app.handleNewSession();
+    },
+    [app],
+  );
+
+  const handleToggleProject = useCallback((projectId: string) => {
+    setCollapsedProjectIds((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }, []);
+
+  const handleNewProject = useCallback(async () => {
+    try {
+      const selected = await platformBridge.dialog.open({
+        directory: true,
+        title: "New Project",
+        buttonLabel: "Select this folder",
+      });
+      if (!selected || Array.isArray(selected)) return;
+
+      if (isUnsafeProjectPath(selected)) {
+        setProjectError(
+          "Choose a dedicated project folder instead of a device, home, or system folder.",
+        );
+        return;
+      }
+
+      await app.threadHistory.handleCreateProject(selected);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setProjectError(
+        message.includes("already in use")
+          ? "That folder is already open as a project."
+          : "This folder cannot be used as a project working directory.",
+      );
+    }
+  }, [app.threadHistory]);
 
   const handleRenameThread = useCallback(
     (threadId: string, newTitle: string) => {
@@ -486,91 +573,98 @@ export const SidePanel: React.FC = () => {
       )}
 
       <div className={styles.scrollArea}>
-        {pinnedThreads.length > 0 && (
-          <div className={styles.groupInner}>
-            {pinnedThreads.map((thread) => (
-              <ThreadItem
-                key={thread.id}
-                thread={thread}
-                isActive={thread.id === activeSessionId}
-                isBusy={busyThreadId === thread.id}
-                isSelectionMode={isSelectionMode}
-                isSelected={selectedIdSet.has(thread.id)}
-                currentTime={currentTime}
-                menuState={
-                  activeContextMenu?.id === thread.id ? activeContextMenu : null
-                }
-                onSelectThread={handleNavigation}
-                onToggleSelectionThread={toggleThreadSelection}
-                onDeleteThread={handleQueueDeleteThread}
-                onRenameThread={handleRenameThread}
-                onTogglePinThread={handleTogglePin}
-                onOpenContextMenu={handleOpenContextMenu}
-                onCloseContextMenu={handleCloseContextMenu}
-                onEnableSelectionMode={handleEnableSelectionMode}
-              />
-            ))}
-          </div>
-        )}
+        {projectGroups.map((project, projectIndex) => {
+          const isCollapsed = collapsedProjectIds.has(project.id);
 
-        <div className={styles.threadsDivider}>
-          <span>{directoryLabel}</span>
-          <div className={styles.directoryActions}>
-            <button
-              onClick={app.handleNewSession}
-              className={`${styles.iconButton}`}
-              title="Collapse"
-              aria-label="Collapse"
-            >
-              <CollapesItemsIcon size={16} />
-            </button>
-            <button
-              onClick={app.handleNewSession}
-              className={`${styles.iconButton}`}
-              title="New Project"
-              aria-label="New Project"
-            >
-              <FolderOpenIcon size={17} />
-            </button>
-            <button
-              onClick={app.handleNewSession}
-              className={`${styles.iconButton}`}
-              title="New Thread"
-              aria-label="New Thread"
-            >
-              <NewThreadIcon size={16} />
-            </button>
-          </div>
-        </div>
+          return (
+            <section className={styles.projectGroup} key={project.id}>
+              <div className={styles.threadsDivider}>
+                <span className={styles.directoryLabel} title={project.name}>
+                  {project.name}
+                </span>
+                <div className={styles.directoryActions}>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleProject(project.id)}
+                    className={styles.iconButton}
+                    title={isCollapsed ? "Expand" : "Collapse"}
+                    aria-label={isCollapsed ? "Expand" : "Collapse"}
+                    aria-expanded={!isCollapsed}
+                  >
+                    <CollapesItemsIcon
+                      size={16}
+                      className={`${styles.collapseIcon} ${
+                        isCollapsed ? styles.collapseIconCollapsed : ""
+                      }`}
+                    />
+                  </button>
+                  {projectIndex === 0 && (
+                    <button
+                      type="button"
+                      onClick={handleNewProject}
+                      className={styles.iconButton}
+                      title="New Project"
+                      aria-label="New Project"
+                    >
+                      <FolderOpenIcon size={17} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleNewThread(project.id)}
+                    className={styles.iconButton}
+                    title="New Thread"
+                    aria-label="New Thread"
+                  >
+                    <NewThreadIcon size={16} />
+                  </button>
+                </div>
+              </div>
 
-        <div className={styles.groupInner}>
-          {threadThreads.map((thread) => (
-            <ThreadItem
-              key={thread.id}
-              thread={thread}
-              isActive={thread.id === activeSessionId}
-              isBusy={busyThreadId === thread.id}
-              isSelectionMode={isSelectionMode}
-              isSelected={selectedIdSet.has(thread.id)}
-              currentTime={currentTime}
-              menuState={
-                activeContextMenu?.id === thread.id ? activeContextMenu : null
-              }
-              onSelectThread={handleNavigation}
-              onToggleSelectionThread={toggleThreadSelection}
-              onDeleteThread={handleQueueDeleteThread}
-              onRenameThread={handleRenameThread}
-              onTogglePinThread={handleTogglePin}
-              onOpenContextMenu={handleOpenContextMenu}
-              onCloseContextMenu={handleCloseContextMenu}
-              onEnableSelectionMode={handleEnableSelectionMode}
-            />
-          ))}
+              <div
+                className={`${styles.projectThreads} ${
+                  isCollapsed ? styles.projectThreadsCollapsed : ""
+                }`}
+                aria-hidden={isCollapsed}
+              >
+                <div className={styles.projectThreadsClip}>
+                  <div className={styles.groupInner}>
+                    {project.threads.map((thread) => (
+                      <ThreadItem
+                        key={thread.id}
+                        thread={thread}
+                        isActive={thread.id === activeSessionId}
+                        isBusy={busyThreadId === thread.id}
+                        isSelectionMode={isSelectionMode}
+                        isSelected={selectedIdSet.has(thread.id)}
+                        currentTime={currentTime}
+                        menuState={
+                          activeContextMenu?.id === thread.id
+                            ? activeContextMenu
+                            : null
+                        }
+                        onSelectThread={(threadId) =>
+                          handleNavigation(project.id, threadId)
+                        }
+                        onToggleSelectionThread={toggleThreadSelection}
+                        onDeleteThread={handleQueueDeleteThread}
+                        onRenameThread={handleRenameThread}
+                        onTogglePinThread={handleTogglePin}
+                        onOpenContextMenu={handleOpenContextMenu}
+                        onCloseContextMenu={handleCloseContextMenu}
+                        onEnableSelectionMode={handleEnableSelectionMode}
+                      />
+                    ))}
 
-          {allThreads.length === 0 && (
-            <div className={styles.emptyState}>No threads yet.</div>
-          )}
-        </div>
+                    {project.threads.length === 0 && (
+                      <div className={styles.emptyState}>No threads yet.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       <Dialog
@@ -589,6 +683,20 @@ export const SidePanel: React.FC = () => {
           if (key === "confirm") handleBulkDelete();
           else setShowBulkDelete(false);
         }}
+      />
+
+      <Dialog
+        isOpen={!!projectError}
+        variant="warning"
+        title="Folder unavailable"
+        message={projectError || ""}
+        actions={[
+          {
+            label: "Close",
+            variant: "primary",
+            onClick: () => setProjectError(null),
+          },
+        ]}
       />
     </div>
   );

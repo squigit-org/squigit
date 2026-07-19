@@ -46,7 +46,17 @@ export const platform: PlatformBridge = {
     removeFile: (path, options) =>
       remove(path, { baseDir: options?.baseDir === "AppConfig" ? BaseDirectory.AppConfig : undefined }),
   },
-  dialog: { open, save },
+  dialog: {
+    open: (options) =>
+      open({
+        multiple: options?.multiple,
+        directory: options?.directory,
+        filters: options?.filters,
+        defaultPath: options?.defaultPath,
+        title: options?.title,
+      }),
+    save,
+  },
   app: { getVersion, getRuntimeVersion: getTauriVersion, exit, relaunch },
   window: { startDragging: () => getCurrentWindow().startDragging() },
   updater: { check },

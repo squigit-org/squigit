@@ -16,6 +16,7 @@ export {
 
 export type {
   ThreadMetadata,
+  ProjectMetadata,
   ThreadCitation,
   ThreadToolStep,
   ThreadMessage,
@@ -37,6 +38,8 @@ export {
   storeImageFromPath,
   getImagePath,
   createThread,
+  createProject,
+  listProjects,
   loadThread,
   forkThread,
   listThreads,

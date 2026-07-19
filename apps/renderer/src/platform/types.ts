@@ -6,8 +6,11 @@
 
 export interface OpenDialogOptions {
   multiple?: boolean;
+  directory?: boolean;
   filters?: Array<{ name: string; extensions: string[] }>;
   defaultPath?: string;
+  title?: string;
+  buttonLabel?: string;
 }
 
 export interface SaveDialogOptions {

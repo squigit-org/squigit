@@ -222,6 +222,7 @@ export const useAppNavigation = ({
       const metadata = threadHistory.threads.find(
         (threadMeta: any) => threadMeta.id === id,
       );
+      const projectId = threadHistory.getProjectIdForThread(id);
 
       flushSync(() => {
         setIsNavigating(true);
@@ -233,6 +234,9 @@ export const useAppNavigation = ({
 
         if (!isOnboardingId(id) && metadata?.title) {
           system.setSessionThreadTitle(metadata.title);
+          if (projectId) {
+            threadHistory.setActiveProjectId(projectId);
+          }
         }
       });
 
