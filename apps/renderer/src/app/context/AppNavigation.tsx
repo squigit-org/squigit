@@ -12,7 +12,7 @@ export type AppNavigationContextValue = Pick<
   | "searchOverlay"
   | "openSearchOverlay"
   | "closeSearchOverlay"
-  | "handleSelectThread"
+  | "handleNavigation"
   | "handleNewSession"
   | "revealSearchMatch"
   | "clearSearchReveal"

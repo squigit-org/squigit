@@ -28,14 +28,6 @@
   user-select: none;
 }
 
-.title {
-  font-size: 28px;
-  font-weight: 500;
-  color: var(--c-raw-000);
-  margin: 0;
-  letter-spacing: -0.5px;
-}
-
 .actions {
   display: flex;
   flex-direction: column;
@@ -48,7 +40,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 48px;
-  min-width: 380px;
+  min-width: 200px;
 }
 
 .actionLabel {

@@ -399,7 +399,7 @@ export const useAppNavigation = ({
     finalizeNavigationState(requestId);
   }, [threadHistory, closeMediaViewer, finalizeNavigationState, ocr, system]);
 
-  const handleSelectThread = useCallback(
+  const handleNavigation = useCallback(
     (id: string) => {
       runWithBusyGuard(() => performSelectThread(id));
     },
@@ -438,7 +438,7 @@ export const useAppNavigation = ({
     clearSearchReveal,
     performSelectThread,
     performNewSession,
-    handleSelectThread,
+    handleNavigation,
     revealSearchMatch,
     handleNewSession,
   };

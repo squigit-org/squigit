@@ -17,15 +17,13 @@ import {
   Trash2,
   Check,
   X,
-  Search,
   FolderOpen,
-  ArrowUpRight,
+  FolderOpenIcon,
+  Search,
+  GitFork,
 } from "lucide-react";
 
-import {
-  SidePanelNewThreadIcon,
-  SidePanelSquigitsIcon,
-} from "@/components/icons";
+import { NewThreadIcon, CollapesItemsIcon } from "@/components/icons";
 import { Dialog, LoadingSpinner } from "@/components/ui";
 import { useKeyDown, usePlatform } from "@/hooks/shared";
 import { getDeleteMultipleThreadsDialog } from "@squigit/core/helpers";
@@ -180,40 +178,7 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
             />
           )}
 
-          {!isSelectionMode && (
-            <div
-              className={styles.threadLeading}
-              style={{ paddingLeft: "2px" }}
-            >
-              {isBusy ? (
-                <span className={styles.rowSpinner} aria-hidden="true">
-                  <span className={styles.rowSpinnerInner}>
-                    <LoadingSpinner />
-                  </span>
-                </span>
-              ) : (
-                <>
-                  <FolderOpen
-                    size={20}
-                    strokeWidth={1.5}
-                    className={styles.threadIcon}
-                  />
-                  <button
-                    type="button"
-                    className={`${styles.pinBtn} ${thread.is_pinned ? styles.pinActive : ""}`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onTogglePinThread(thread.id);
-                    }}
-                    title={thread.is_pinned ? "Unpin" : "Pin"}
-                  >
-                    <Pin size={17} style={{ transform: "rotate(45deg)" }} />
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+          {!isSelectionMode && <div style={{ paddingLeft: "16px" }}></div>}
 
           {isRenaming ? (
             <input
@@ -240,15 +205,42 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
 
           {!isSelectionMode && (
             <div className={styles.threadActions}>
-              {thread.is_pinned && (
+              {isBusy ? (
+                <span className={styles.rowSpinner} aria-hidden="true">
+                  <span className={styles.rowSpinnerInner}>
+                    <LoadingSpinner />
+                  </span>
+                </span>
+              ) : (
                 <span className={styles.threadDate} title={lastActivityTitle}>
                   {lastActivityLabel}
                 </span>
               )}
-
               <button
                 type="button"
-                className={`${styles.menuBtn} ${thread.is_pinned ? styles.pinnedMenuBtn : ""}`}
+                className={`${styles.pinBtn} ${thread.is_pinned ? styles.pinActive : ""}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTogglePinThread(thread.id);
+                }}
+                title={thread.is_pinned ? "Unpin" : "Pin"}
+              >
+                <Pin size={15} style={{ transform: "rotate(45deg)" }} />
+              </button>
+              <button
+                type="button"
+                className={styles.forkBtn}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+              >
+                <GitFork size={14} />
+              </button>
+              <button
+                type="button"
+                className={`${styles.actionRight}`}
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -305,16 +297,16 @@ export const SidePanel: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const pinToggleLockRef = useRef<Set<string>>(new Set());
-  const selectThreadRef = useRef(app.handleSelectThread);
+  const selectThreadRef = useRef(app.handleNavigation);
   const renameThreadRef = useRef(app.threadHistory.handleRenameThread);
   const togglePinRef = useRef(app.threadHistory.handleTogglePinThread);
 
   useEffect(() => {
-    selectThreadRef.current = app.handleSelectThread;
+    selectThreadRef.current = app.handleNavigation;
     renameThreadRef.current = app.threadHistory.handleRenameThread;
     togglePinRef.current = app.threadHistory.handleTogglePinThread;
   }, [
-    app.handleSelectThread,
+    app.handleNavigation,
     app.threadHistory.handleRenameThread,
     app.threadHistory.handleTogglePinThread,
   ]);
@@ -357,19 +349,12 @@ export const SidePanel: React.FC = () => {
     app.isOcrScanning;
   const busyThreadId = isThreadBusy ? activeSessionId : null;
 
-  const searchShortcutLabel = useMemo(() => {
+  const directoryLabel = useMemo(() => {
     if (platform.isMac) {
-      return `${platform.modSymbol}K`;
+      return `This Mac`;
     }
-    return `${platform.modSymbol} + K`;
-  }, [platform.isMac, platform.modSymbol]);
-
-  const newThreadShortcutLabel = useMemo(() => {
-    if (platform.isMac) {
-      return `${platform.modSymbol}${platform.shiftSymbol}O`;
-    }
-    return `${platform.modSymbol} + Shift + O`;
-  }, [platform.isMac, platform.modSymbol, platform.shiftSymbol]);
+    return `This PC`;
+  }, [platform.isMac]);
 
   const handleOpenContextMenu = useCallback(
     (id: string, x: number, y: number) => {
@@ -401,7 +386,7 @@ export const SidePanel: React.FC = () => {
     }
   }, []);
 
-  const handleSelectThread = useCallback(
+  const handleNavigation = useCallback(
     (threadId: string) => {
       if (threadId === activeSessionId) return;
       selectThreadRef.current(threadId);
@@ -497,57 +482,7 @@ export const SidePanel: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className={styles.headerArea}>
-          <div className={styles.groupContent}>
-            <div className={styles.groupInner}>
-              <div className={styles.threadRow} onClick={app.handleNewSession}>
-                <div
-                  className={styles.threadIconMain}
-                  style={{ paddingLeft: "2px" }}
-                >
-                  <SidePanelNewThreadIcon size={18} />
-                </div>
-                <span className={styles.threadTitle}>New thread</span>
-                <div className={styles.rowShortcut} aria-hidden="true">
-                  <span className={styles.rowShortcutText}>
-                    {newThreadShortcutLabel}
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className={`${styles.threadRow} ${app.searchOverlay.isOpen ? styles.active : ""}`}
-                onClick={app.openSearchOverlay}
-              >
-                <div
-                  className={styles.threadIconMain}
-                  style={{ paddingLeft: "1px" }}
-                >
-                  <Search size={19} />
-                </div>
-                <span className={styles.threadTitle}>Search threads</span>
-                <div className={styles.rowShortcut} aria-hidden="true">
-                  <span className={styles.rowShortcutText}>
-                    {searchShortcutLabel}
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className={`${styles.threadRow} ${activeSessionId === "__system_gallery" ? styles.active : ""}`}
-                onClick={() => app.handleSelectThread("__system_gallery")}
-              >
-                <div className={styles.threadIconMain}>
-                  <SidePanelSquigitsIcon size={22} />
-                </div>
-                <span className={styles.threadTitle}>Your squigits</span>
-                <div className={styles.rowShortcut} aria-hidden="true">
-                  <ArrowUpRight size={14} className={styles.rowShortcutIcon} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div className={styles.headerArea}>Squigit</div>
       )}
 
       <div className={styles.scrollArea}>
@@ -565,7 +500,7 @@ export const SidePanel: React.FC = () => {
                 menuState={
                   activeContextMenu?.id === thread.id ? activeContextMenu : null
                 }
-                onSelectThread={handleSelectThread}
+                onSelectThread={handleNavigation}
                 onToggleSelectionThread={toggleThreadSelection}
                 onDeleteThread={handleQueueDeleteThread}
                 onRenameThread={handleRenameThread}
@@ -579,7 +514,33 @@ export const SidePanel: React.FC = () => {
         )}
 
         <div className={styles.threadsDivider}>
-          <span>Threads</span>
+          <span>{directoryLabel}</span>
+          <div className={styles.directoryActions}>
+            <button
+              onClick={app.handleNewSession}
+              className={`${styles.iconButton}`}
+              title="Collapse"
+              aria-label="Collapse"
+            >
+              <CollapesItemsIcon size={16} />
+            </button>
+            <button
+              onClick={app.handleNewSession}
+              className={`${styles.iconButton}`}
+              title="New Project"
+              aria-label="New Project"
+            >
+              <FolderOpenIcon size={17} />
+            </button>
+            <button
+              onClick={app.handleNewSession}
+              className={`${styles.iconButton}`}
+              title="New Thread"
+              aria-label="New Thread"
+            >
+              <NewThreadIcon size={16} />
+            </button>
+          </div>
         </div>
 
         <div className={styles.groupInner}>
@@ -595,7 +556,7 @@ export const SidePanel: React.FC = () => {
               menuState={
                 activeContextMenu?.id === thread.id ? activeContextMenu : null
               }
-              onSelectThread={handleSelectThread}
+              onSelectThread={handleNavigation}
               onToggleSelectionThread={toggleThreadSelection}
               onDeleteThread={handleQueueDeleteThread}
               onRenameThread={handleRenameThread}

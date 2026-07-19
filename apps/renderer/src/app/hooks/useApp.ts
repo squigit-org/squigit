@@ -188,7 +188,7 @@ export const useApp = () => {
   );
 
   const threadTitle = isImageMissing
-    ? "Squigit"
+    ? ""
     : isGeneratingTitle
       ? "New thread"
       : system.sessionThreadTitle || "New thread";
@@ -477,7 +477,7 @@ export const useApp = () => {
     handleUpdateOCRData,
     handleOcrModelChange,
     handleImageReady: capture.handleImageReady,
-    handleSelectThread: navigation.handleSelectThread,
+    handleNavigation: navigation.handleNavigation,
     handleNewSession: navigation.handleNewSession,
     handleAddAccount,
     setInput: drafts.setInput,

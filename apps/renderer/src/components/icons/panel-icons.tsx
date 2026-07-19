@@ -34,7 +34,7 @@ export const SidePanelToggleIcon = ({
   </svg>
 );
 
-export const SidePanelNewThreadIcon = ({
+export const NewThreadIcon = ({
   size,
   className,
   style,
@@ -61,7 +61,7 @@ export const SidePanelNewThreadIcon = ({
   </svg>
 );
 
-export const SidePanelSquigitsIcon = ({
+export const SquigitsIcon = ({
   size,
   className,
   style,
@@ -91,5 +91,32 @@ export const SidePanelSquigitsIcon = ({
       strokeWidth="8.20785"
     />
     <circle cx="73.0312" cy="59.4555" r="8.72703" fill="currentColor" />
+  </svg>
+);
+
+export const CollapesItemsIcon = ({
+  size,
+  className,
+  style,
+}: IconProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 121 118"
+    fill="none"
+    className={className}
+    style={style}
+  >
+    <path
+      d="M104.48 72.7959V91.8586C104.48 103.457 95.078 112.859 83.4801 112.859H25.4675C13.8696 112.859 4.46753 103.457 4.46753 91.8586V37.3047C4.46753 25.7067 13.8695 16.3047 25.4675 16.3047H47.4124"
+      stroke="currentColor"
+      strokeWidth="8.93484"
+      strokeLinecap="round"
+    />
+    <path
+      d="M43.1669 53.6424L81.7635 16.6424C87.9474 10.7144 97.7666 10.9223 103.695 17.1063C109.623 23.2902 109.415 33.1088 103.232 39.0369L64.7774 75.9004C61.9576 78.6034 58.3471 80.3334 54.4737 80.8374L35.8215 83.2635C34.9464 83.3772 34.2154 82.6027 34.3799 81.7356L37.8515 63.4429C38.5612 59.7029 40.4188 56.2767 43.1669 53.6424Z"
+      stroke="currentColor"
+      strokeWidth="8.3584"
+    />
   </svg>
 );

@@ -93,7 +93,7 @@ export const AppDialogs: React.FC = () => {
             )}
             onAction={(key) => {
               if (key === "show_changelog" && app.pendingUpdate) {
-                app.handleSelectThread(
+                app.handleNavigation(
                   `__system_update_${app.pendingUpdate.version}`,
                 );
               }
@@ -109,7 +109,7 @@ export const AppDialogs: React.FC = () => {
         item={app.mediaViewer.item}
         onRevealInThread={(threadId) => {
           app.closeMediaViewer();
-          app.handleSelectThread(threadId);
+          app.handleNavigation(threadId);
         }}
       />
 

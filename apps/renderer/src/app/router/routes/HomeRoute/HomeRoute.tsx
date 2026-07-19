@@ -209,13 +209,12 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
       onDrop={handleDrop}
     >
       <div className={styles.content}>
-        <AppIcon size={80} color="var(--c-raw-000)" />
-        <h1 className={styles.title}>Squigit</h1>
+        <AppIcon size={110} color="var(--c-raw-038)" />
 
         <div className={styles.actions}>
           <div className={styles.actionRow}>
             <span className={styles.actionLabel}>
-              Analyze part of your screen
+              Squiggle it
             </span>
             <span className={styles.actionKeys}>
               {platformInfo.screenshotKeys}

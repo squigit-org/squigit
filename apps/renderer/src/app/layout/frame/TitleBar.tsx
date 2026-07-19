@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from "react";
 import { platform, commands } from "@/platform";
-import { Box, Pin } from "lucide-react";
+import { Box, Pin, Search } from "lucide-react";
 import { SidePanelToggleIcon } from "@/components/icons";
 import { usePlatform } from "@/hooks/shared";
 import { WindowControls } from "./WindowControls";
@@ -86,7 +86,7 @@ export const TitleBar: React.FC = () => {
   const handleOpenUpdate = () => {
     if (!pendingUpdate) return;
     setHasSeenUpdateButton(true);
-    app.handleSelectThread(`__system_update_${pendingUpdate.version}`);
+    app.handleNavigation(`__system_update_${pendingUpdate.version}`);
   };
 
   return (
@@ -112,11 +112,20 @@ export const TitleBar: React.FC = () => {
                 className={`${styles.iconButton} ${
                   app.isSidePanelOpen ? styles.active : ""
                 }`}
-                title="Recent Threads"
-                aria-label="Recent threads"
+                title="Recent Threads and more"
+                aria-label="Recent threads and more"
               >
-                <SidePanelToggleIcon size={20} active={app.isSidePanelOpen} />
+              <SidePanelToggleIcon size={20} active={app.isSidePanelOpen} />
               </button>
+              <button
+                onClick={app.openSearchOverlay}
+                className={`${styles.iconButton}`}
+                title="Search Threads"
+                aria-label="Search threads"
+              >
+                <Search size={20} />
+              </button>
+              
             </div>
           )}
       </div>

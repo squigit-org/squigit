@@ -63,3 +63,22 @@ export const WidgetOverlayIconButton: React.FC<
     </>
   );
 };
+
+export const SidebarButtonWithTooltip = ({
+  icon,
+  label,
+  isActive,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  isActive?: boolean;
+  onClick: () => void;
+}) => (
+  <WidgetOverlayIconButton
+    icon={icon}
+    label={label}
+    isActive={isActive}
+    onClick={onClick}
+  />
+);

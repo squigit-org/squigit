@@ -101,11 +101,11 @@ export const useAppCapture = ({
   );
 
   const handleImageReadyRef = useRef(handleImageReady);
-  const handleSelectThreadRef = useRef(performSelectThread);
+  const handleNavigationRef = useRef(performSelectThread);
 
   useEffect(() => {
     handleImageReadyRef.current = handleImageReady;
-    handleSelectThreadRef.current = performSelectThread;
+    handleNavigationRef.current = performSelectThread;
   }, [handleImageReady, performSelectThread]);
 
   useEffect(() => {
@@ -175,7 +175,7 @@ export const useAppCapture = ({
         if (!threadId) return;
 
         console.log("Triggering frontend transition to new capture:", threadId);
-        await handleSelectThreadRef.current(threadId);
+        await handleNavigationRef.current(threadId);
       },
     );
 

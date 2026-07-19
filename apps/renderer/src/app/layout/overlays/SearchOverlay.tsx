@@ -11,7 +11,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { WidgetOverlay } from "@/components/ui";
+import { SidebarButtonWithTooltip, WidgetOverlay } from "@/components/ui";
 import type { ThreadMetadata, ThreadSearchResult } from "@squigit/core/config";
 import { useNavigationContext } from "@/app/context/AppNavigation";
 import {
@@ -21,6 +21,8 @@ import {
   highlightTokensFromQuery,
 } from "@/features/search";
 import styles from "./SearchOverlay.module.css";
+import { SquigitsIcon } from "@/components/icons";
+import { useAppContext } from "@/app/providers/AppProvider";
 
 const SEARCH_LIMIT = 80;
 const SEARCH_DEBOUNCE_MS = 120;
@@ -41,6 +43,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   threads,
   searchThreads,
 }) => {
+  const app = useAppContext();
   const navigation = useNavigationContext();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ThreadSearchResult[]>([]);
@@ -111,10 +114,18 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     [navigation],
   );
 
+  const handleNavigation = useCallback(
+    (screenId: string) => {
+      onClose();
+      app.handleNavigation(screenId)
+    },
+    [navigation, onClose],
+  );
+
   const handleSelectThread = useCallback(
     (threadId: string) => {
       onClose();
-      navigation.handleSelectThread(threadId);
+      navigation.handleNavigation(threadId);
     },
     [navigation, onClose],
   );
@@ -157,6 +168,13 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
       onClose={onClose}
       contentClassName={styles.content}
       sectionContentClassName={styles.section}
+      sidebarBottom={
+        <SidebarButtonWithTooltip
+          icon={<SquigitsIcon size={22} />}
+          label="Your squigits"
+          onClick={() => handleNavigation("__system_gallery")}
+        />
+      }
     >
       <div className={styles.root}>
         <SearchBar

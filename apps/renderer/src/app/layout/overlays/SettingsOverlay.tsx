@@ -16,7 +16,7 @@ import {
 import { commands } from "@/platform";
 import { github } from "@squigit/core/services/github";
 import type { UserPreferences } from "@squigit/core/config";
-import { WidgetOverlay, WidgetOverlayIconButton } from "@/components/ui";
+import { SidebarButtonWithTooltip, WidgetOverlay } from "@/components/ui";
 import {
   GeneralSettings,
   ModelSettings,
@@ -185,22 +185,3 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
     </>
   );
 };
-
-const SidebarButtonWithTooltip = ({
-  icon,
-  label,
-  isActive,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  isActive?: boolean;
-  onClick: () => void;
-}) => (
-  <WidgetOverlayIconButton
-    icon={icon}
-    label={label}
-    isActive={isActive}
-    onClick={onClick}
-  />
-);
