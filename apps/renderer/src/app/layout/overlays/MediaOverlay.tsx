@@ -52,6 +52,8 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     y: number;
   } | null>(null);
   const [activeImage, setActiveImage] = useState<MediaGalleryItem | null>(null);
+  const [activeTextContent, setActiveTextContent] = useState("");
+  const [textUsesCasPath, setTextUsesCasPath] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const copiedTimerRef = useRef<number | null>(null);
   const isThreadOpenedImage =
@@ -77,6 +79,8 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
           }
         : null,
     );
+    setActiveTextContent(item?.kind === "text" ? item.textContent ?? "" : "");
+    setTextUsesCasPath(false);
     setThreadMenu(null);
     setIsCopied(false);
   }, [isOpen, item]);
@@ -116,6 +120,8 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
         await platform.invoke("copy_image_from_path_to_clipboard", {
           path: activePath,
         });
+      } else if (item?.kind === "text") {
+        await navigator.clipboard.writeText(activeTextContent);
       } else {
         let copyPath = activePath;
         if (activeSourcePath) {
@@ -145,9 +151,11 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
   const handleReveal = async () => {
     if (!activePath) return;
 
-    const candidates = Array.from(
-      new Set([activeSourcePath, activePath].filter((path) => !!path)),
-    ) as string[];
+    const candidates = textUsesCasPath
+      ? [activePath]
+      : (Array.from(
+          new Set([activeSourcePath, activePath].filter((path) => !!path)),
+        ) as string[]);
     let lastError: unknown;
 
     for (const path of candidates) {
@@ -181,6 +189,19 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
       window.clearTimeout(copiedTimerRef.current);
       copiedTimerRef.current = null;
     }
+  }, []);
+
+  const handleTextContentChange = useCallback((value: string) => {
+    setActiveTextContent(value);
+    setIsCopied(false);
+    if (copiedTimerRef.current !== null) {
+      window.clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = null;
+    }
+  }, []);
+
+  const handleTextSaved = useCallback(() => {
+    setTextUsesCasPath(true);
   }, []);
 
   const handleRevealInThread = (
@@ -218,8 +239,13 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
 
     return (
       <MediaTextViewer
+        filePath={item.path}
+        fileName={item.name}
+        threadId={item.threadId}
         extension={item.extension}
-        textContent={item.textContent ?? ""}
+        textContent={activeTextContent}
+        onTextContentChange={handleTextContentChange}
+        onSaved={handleTextSaved}
       />
     );
   };
@@ -235,7 +261,13 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
           <MediaSidebar
             onReveal={handleReveal}
             onCopy={handleCopy}
-            copyLabel={item?.kind === "image" ? "Copy as image" : "Copy path"}
+            copyLabel={
+              item?.kind === "image"
+                ? "Copy as image"
+                : item?.kind === "text"
+                  ? "Copy content"
+                  : "Copy path"
+            }
             isCopied={isCopied}
             isRevealInThreadActive={threadMenu !== null}
             onRevealInThread={

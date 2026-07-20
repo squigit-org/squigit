@@ -401,6 +401,10 @@
   overflow: auto !important;
 }
 
+.textareaOverlay:read-only {
+  cursor: text;
+}
+
 .textareaOverlay::placeholder {
   color: var(--c-raw-005);
 }

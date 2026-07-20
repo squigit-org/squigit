@@ -466,6 +466,7 @@ const moveSelectedLines = (
 export interface CodeBlockEditorProps {
   language: string;
   value: string;
+  readOnly?: boolean;
   onChange?: (value: string) => void;
   onLanguageChange?: (language: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -487,6 +488,7 @@ export const CodeBlockEditor = forwardRef<
     {
       language,
       value,
+      readOnly = false,
       onChange,
       onLanguageChange,
       onKeyDown,
@@ -662,7 +664,7 @@ export const CodeBlockEditor = forwardRef<
 
     const handleCut = useCallback(() => {
       const textarea = textareaRef.current;
-      if (!textarea || !onChange) return;
+      if (!textarea || !onChange || readOnly) return;
 
       if (textarea.selectionStart !== textarea.selectionEnd) {
         const start = textarea.selectionStart;
@@ -679,11 +681,11 @@ export const CodeBlockEditor = forwardRef<
           updateActiveLine();
         }, 0);
       }
-    }, [onChange, updateActiveLine, value]);
+    }, [onChange, readOnly, updateActiveLine, value]);
 
     const handlePaste = useCallback(async () => {
       const textarea = textareaRef.current;
-      if (!textarea || !onChange) return;
+      if (!textarea || !onChange || readOnly) return;
 
       try {
         const text = await navigator.clipboard.readText();
@@ -700,7 +702,7 @@ export const CodeBlockEditor = forwardRef<
       } catch (err) {
         console.error("Failed to read clipboard:", err);
       }
-    }, [onChange, updateActiveLine, value]);
+    }, [onChange, readOnly, updateActiveLine, value]);
 
     const handleSelectAll = useCallback(() => {
       textareaRef.current?.select();
@@ -743,7 +745,7 @@ export const CodeBlockEditor = forwardRef<
     const handleEditorKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         const textarea = textareaRef.current;
-        if (!textarea) return;
+        if (!textarea || readOnly) return;
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -869,14 +871,14 @@ export const CodeBlockEditor = forwardRef<
           applyEdit(value, end + 1);
         }
       },
-      [applyEdit, displayLanguage, onChange, value],
+      [applyEdit, displayLanguage, onChange, readOnly, value],
     );
 
     return (
       <div
         className={`${styles.wrapper} ${fillHeight ? styles.fillHeight : ""}`}
         role="region"
-        aria-label="Editor code block"
+        aria-label={readOnly ? "Viewer code block" : "Editor code block"}
       >
         <div
           className={`${styles.header} ${
@@ -982,6 +984,7 @@ export const CodeBlockEditor = forwardRef<
               ref={textareaRef}
               className={styles.textareaOverlay}
               value={value}
+              readOnly={readOnly}
               wrap="off"
               onChange={(e) => onChange?.(e.target.value)}
               onKeyDown={(e) => {
@@ -993,7 +996,7 @@ export const CodeBlockEditor = forwardRef<
               onFocus={updateActiveLine}
               placeholder={placeholder}
               spellCheck={false}
-              aria-label="code editor"
+              aria-label={readOnly ? "code viewer" : "code editor"}
               onContextMenu={handleContextMenu}
             />
             {contextMenuData.isOpen && (
@@ -1002,8 +1005,8 @@ export const CodeBlockEditor = forwardRef<
                 y={contextMenuData.y}
                 onClose={handleCloseContextMenu}
                 onCopy={handleCopy}
-                onCut={handleCut}
-                onPaste={handlePaste}
+                onCut={readOnly ? undefined : handleCut}
+                onPaste={readOnly ? undefined : handlePaste}
                 onSelectAll={handleSelectAll}
                 hasSelection={
                   textareaRef.current

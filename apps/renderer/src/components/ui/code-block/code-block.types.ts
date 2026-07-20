@@ -11,6 +11,8 @@ export interface CodeBlockProps {
   value: string;
   /** Enable textarea editing mode */
   isEditor?: boolean;
+  /** Keep the editor presentation while preventing content changes */
+  readOnly?: boolean;
   /** Callback when content changes (Editor mode only) */
   onChange?: (value: string) => void;
   /** Callback when the language label is renamed (Editor mode only) */

@@ -15,6 +15,7 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
       language,
       value,
       isEditor = false,
+      readOnly = false,
       onChange,
       onLanguageChange,
       onKeyDown,
@@ -39,6 +40,7 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
           ref={ref}
           language={language}
           value={value}
+          readOnly={readOnly}
           onChange={onChange}
           onLanguageChange={onLanguageChange}
           onKeyDown={onKeyDown}

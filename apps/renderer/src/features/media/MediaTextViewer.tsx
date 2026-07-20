@@ -5,21 +5,39 @@
  */
 
 import React from "react";
-import { CodeBlock } from "@/components/ui";
+import { MediaCodeEditor } from "./components/MediaCodeEditor";
 import styles from "./MediaTextViewer.module.css";
 
 interface MediaTextViewerProps {
+  filePath: string;
+  fileName: string;
+  threadId?: string;
   extension: string;
   textContent: string;
+  onTextContentChange: (value: string) => void;
+  onSaved: () => void;
 }
 
 export const MediaTextViewer: React.FC<MediaTextViewerProps> = ({
+  filePath,
+  fileName,
+  threadId,
   extension,
   textContent,
+  onTextContentChange,
+  onSaved,
 }) => {
   return (
     <div className={styles.textViewerWrap}>
-      <CodeBlock language={extension || "text"} value={textContent} />
+      <MediaCodeEditor
+        filePath={filePath}
+        fileName={fileName}
+        threadId={threadId}
+        language={extension || "text"}
+        value={textContent}
+        onValueChange={onTextContentChange}
+        onSaved={onSaved}
+      />
     </div>
   );
 };

@@ -328,6 +328,7 @@ export const useAppMedia = ({
           item: {
             kind: "text",
             path: resolvedPath,
+            threadId: registryThreadId,
             sourcePath,
             name: attachment.name,
             extension,
@@ -345,7 +346,7 @@ export const useAppMedia = ({
         }
       }
     },
-    [resolveAttachmentSourcePath, revealInFileManager],
+    [registryThreadId, resolveAttachmentSourcePath, revealInFileManager],
   );
 
   return {
