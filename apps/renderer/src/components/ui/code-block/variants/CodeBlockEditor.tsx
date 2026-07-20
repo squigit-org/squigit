@@ -11,6 +11,7 @@ import React, {
   useImperativeHandle,
   useLayoutEffect,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { Terminal } from "lucide-react";
@@ -20,11 +21,30 @@ import { TextContextMenu } from "@/app/layout/menus/TextContextMenu";
 import styles from "./CodeBlock.shared.module.css";
 
 const INDENT = "  ";
+const PLAIN_LANGUAGES = new Set([
+  "text",
+  "txt",
+  "plain",
+  "plaintext",
+  "prompt",
+]);
 
-const getLineCount = (text: string) => text.split("\n").length;
+const getLineCount = (text: string) => {
+  let count = 1;
+  for (let index = 0; index < text.length; index += 1) {
+    if (text.charCodeAt(index) === 10) count += 1;
+  }
+  return count;
+};
 
-const getLineNumberAtPosition = (text: string, position: number) =>
-  text.slice(0, position).split("\n").length;
+const getLineNumberAtPosition = (text: string, position: number) => {
+  let line = 1;
+  const end = Math.min(position, text.length);
+  for (let index = 0; index < end; index += 1) {
+    if (text.charCodeAt(index) === 10) line += 1;
+  }
+  return line;
+};
 
 const getLineIndexAtPosition = (text: string, position: number) =>
   getLineNumberAtPosition(text, position) - 1;
@@ -508,6 +528,11 @@ export const CodeBlockEditor = forwardRef<
     const gutterContentRef = useRef<HTMLDivElement>(null);
     const languageInputRef = useRef<HTMLInputElement>(null);
     const isCancellingRenameRef = useRef(false);
+    const activeLineSnapshotRef = useRef({
+      text: "",
+      position: 0,
+      line: 1,
+    });
     const {
       data: contextMenuData,
       handleContextMenu,
@@ -517,27 +542,47 @@ export const CodeBlockEditor = forwardRef<
     const [isRenamingLanguage, setIsRenamingLanguage] = useState(false);
     const [renameValue, setRenameValue] = useState(displayLanguage);
     const [activeLine, setActiveLine] = useState(1);
-    const lineCount = getLineCount(value);
-    const lineNumbers = Array.from(
-      { length: lineCount },
-      (_, index) => index + 1,
+    const lineCount = useMemo(() => getLineCount(value), [value]);
+    const lineNumbers = useMemo(
+      () => Array.from({ length: lineCount }, (_, index) => index + 1),
+      [lineCount],
+    );
+    const gutterLines = useMemo(
+      () =>
+        lineNumbers.map((lineNumber) => (
+          <div
+            key={lineNumber}
+            className={`${styles.gutterLine} ${
+              lineNumber === activeLine ? styles.gutterLineActive : ""
+            }`}
+          >
+            {lineNumber}
+          </div>
+        )),
+      [activeLine, lineNumbers],
     );
     const lineNumberDigits = Math.max(String(lineCount).length, 2);
-    const editorStyle = {
-      ...style,
-      "--cb-editor-gutter-digits": lineNumberDigits,
-    } as React.CSSProperties;
+    const editorStyle = useMemo(
+      () =>
+        ({
+          ...style,
+          "--cb-editor-gutter-digits": lineNumberDigits,
+        }) as React.CSSProperties,
+      [lineNumberDigits, style],
+    );
 
     // Expose the textarea ref to parent
     useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement);
 
     // Only highlight if a valid language is provided (not "text")
     const shouldHighlight = Boolean(
-      displayLanguage && displayLanguage.toLowerCase() !== "text",
+      displayLanguage && !PLAIN_LANGUAGES.has(displayLanguage.toLowerCase()),
     );
-    const { highlightedHtml } = useCodeHighlighter(
+    const { highlightedHtml, isLoading: isHighlighting } = useCodeHighlighter(
       shouldHighlight ? value : "",
       displayLanguage,
+      shouldHighlight,
+      readOnly ? 0 : 120,
     );
 
     const handleBeginRename = useCallback(() => {
@@ -570,10 +615,44 @@ export const CodeBlockEditor = forwardRef<
       const textarea = textareaRef.current;
       if (!textarea) return;
 
-      const nextActiveLine = getLineNumberAtPosition(
-        textarea.value,
-        textarea.selectionStart,
-      );
+      const text = textarea.value;
+      const position = textarea.selectionStart;
+      const previous = activeLineSnapshotRef.current;
+      let nextActiveLine: number;
+
+      if (text === previous.text) {
+        nextActiveLine = previous.line;
+        if (position > previous.position) {
+          for (let index = previous.position; index < position; index += 1) {
+            if (text.charCodeAt(index) === 10) nextActiveLine += 1;
+          }
+        } else {
+          for (let index = position; index < previous.position; index += 1) {
+            if (text.charCodeAt(index) === 10) nextActiveLine -= 1;
+          }
+        }
+      } else if (
+        text.length === previous.text.length + 1 &&
+        position === previous.position + 1
+      ) {
+        nextActiveLine =
+          previous.line + (text.charCodeAt(previous.position) === 10 ? 1 : 0);
+      } else if (
+        text.length + 1 === previous.text.length &&
+        position === previous.position - 1
+      ) {
+        nextActiveLine =
+          previous.line -
+          (previous.text.charCodeAt(previous.position - 1) === 10 ? 1 : 0);
+      } else {
+        nextActiveLine = getLineNumberAtPosition(text, position);
+      }
+
+      activeLineSnapshotRef.current = {
+        text,
+        position,
+        line: nextActiveLine,
+      };
 
       setActiveLine((currentLine) =>
         currentLine === nextActiveLine ? currentLine : nextActiveLine,
@@ -594,10 +673,6 @@ export const CodeBlockEditor = forwardRef<
     useLayoutEffect(() => {
       handleScroll();
     }, [handleScroll, highlightedHtml, value]);
-
-    useEffect(() => {
-      updateActiveLine();
-    }, [updateActiveLine, value]);
 
     useEffect(() => {
       const handleSelectionChange = () => {
@@ -940,16 +1015,7 @@ export const CodeBlockEditor = forwardRef<
         <div className={styles.EditorContainer} style={editorStyle}>
           <div className={styles.gutter} aria-hidden="true">
             <div ref={gutterContentRef} className={styles.gutterContent}>
-              {lineNumbers.map((lineNumber) => (
-                <div
-                  key={lineNumber}
-                  className={`${styles.gutterLine} ${
-                    lineNumber === activeLine ? styles.gutterLineActive : ""
-                  }`}
-                >
-                  {lineNumber}
-                </div>
-              ))}
+              {gutterLines}
             </div>
           </div>
           <div className={styles.editorCanvas}>
@@ -959,7 +1025,7 @@ export const CodeBlockEditor = forwardRef<
             </div>
 
             {/* Highlighted code layer (behind) */}
-            {shouldHighlight && highlightedHtml ? (
+            {shouldHighlight && highlightedHtml && !isHighlighting ? (
               <div
                 ref={(element) => {
                   highlightRef.current = element;

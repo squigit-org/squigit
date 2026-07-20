@@ -5,16 +5,32 @@
  */
 
 import { useState, useEffect } from "react";
-import { createHighlighter, type Highlighter } from "shiki";
+import {
+  bundledLanguages,
+  bundledLanguagesInfo,
+  createHighlighter,
+  type BundledLanguage,
+  type Highlighter,
+} from "shiki";
 
 export const SYNTAX_THEMES = {
   dark: "vesper",
   light: "github-light",
 } as const;
 
-export const DEFAULT_LANGUAGE = "bash";
+export const DEFAULT_LANGUAGE = "text";
 
 let highlighterPromise: Promise<Highlighter> | null = null;
+const languageLoadPromises = new Map<string, Promise<void>>();
+const languageIds = new Map<string, BundledLanguage>();
+
+for (const language of bundledLanguagesInfo) {
+  const id = language.id as BundledLanguage;
+  languageIds.set(language.id.toLowerCase(), id);
+  for (const alias of language.aliases ?? []) {
+    languageIds.set(alias.toLowerCase(), id);
+  }
+}
 
 export const getHighlighter = async (): Promise<Highlighter> => {
   if (!highlighterPromise) {
@@ -31,22 +47,30 @@ export const highlightCode = async (
   language: string,
 ): Promise<string> => {
   const highlighter = await getHighlighter();
+  const requestedLanguage = language.trim().toLowerCase();
+  const languageId = languageIds.get(requestedLanguage);
 
-  if (
-    language &&
-    language !== "text" &&
-    !highlighter.getLoadedLanguages().includes(language)
-  ) {
+  if (languageId && !highlighter.getLoadedLanguages().includes(languageId)) {
+    let loadPromise = languageLoadPromises.get(languageId);
+
+    if (!loadPromise) {
+      loadPromise = highlighter
+        .loadLanguage(bundledLanguages[languageId])
+        .finally(() => languageLoadPromises.delete(languageId));
+      languageLoadPromises.set(languageId, loadPromise);
+    }
+
     try {
-      await highlighter.loadLanguage(language as any);
-    } catch (e) {
-      console.warn(`[syntax] Failed to load language: ${language}`);
+      await loadPromise;
+    } catch {
+      // Unsupported or unavailable grammars render as plain text.
     }
   }
 
-  const lang = highlighter.getLoadedLanguages().includes(language)
-    ? language
-    : DEFAULT_LANGUAGE;
+  const lang =
+    languageId && highlighter.getLoadedLanguages().includes(languageId)
+      ? languageId
+      : DEFAULT_LANGUAGE;
 
   return highlighter.codeToHtml(code, {
     lang,
@@ -59,6 +83,7 @@ export const highlightCode = async (
 };
 
 const CACHE_MAX = 64;
+const CACHE_MAX_CODE_LENGTH = 50_000;
 const highlightCache = new Map<string, string>();
 const highlightPromiseCache = new Map<string, Promise<string>>();
 
@@ -77,80 +102,112 @@ function cacheSet(key: string, html: string): void {
 }
 
 function getHighlightPromise(
-  key: string,
+  key: string | null,
   code: string,
   language: string,
 ): Promise<string> {
-  const existingPromise = highlightPromiseCache.get(key);
+  const existingPromise = key ? highlightPromiseCache.get(key) : undefined;
   if (existingPromise) {
     return existingPromise;
   }
 
   const nextPromise = highlightCode(code, language)
     .then((html) => {
-      cacheSet(key, html);
-      highlightPromiseCache.delete(key);
+      if (key) {
+        cacheSet(key, html);
+        highlightPromiseCache.delete(key);
+      }
       return html;
     })
     .catch((error) => {
-      highlightPromiseCache.delete(key);
+      if (key) highlightPromiseCache.delete(key);
       throw error;
     });
 
-  highlightPromiseCache.set(key, nextPromise);
+  if (key) highlightPromiseCache.set(key, nextPromise);
   return nextPromise;
+}
+
+interface HighlightState {
+  code: string;
+  language: string;
+  html: string;
 }
 
 export const useCodeHighlighter = (
   code: string,
   language: string,
   enabled = true,
+  delayMs = 0,
 ) => {
-  const key = enabled && language !== "text" ? cacheKey(code, language) : "";
+  const normalizedLanguage = language.trim().toLowerCase();
+  const shouldHighlight = enabled && normalizedLanguage !== "text";
+  const key =
+    shouldHighlight && code.length <= CACHE_MAX_CODE_LENGTH
+      ? cacheKey(code, normalizedLanguage)
+      : null;
   const cached = key ? highlightCache.get(key) : undefined;
 
-  const [highlightedHtml, setHighlightedHtml] = useState(cached ?? "");
+  const [highlight, setHighlight] = useState<HighlightState>({
+    code: cached ? code : "",
+    language: cached ? normalizedLanguage : "",
+    html: cached ?? "",
+  });
   const [isLoading, setIsLoading] = useState(
-    enabled && language !== "text" && !cached,
+    shouldHighlight && !cached,
   );
 
   useEffect(() => {
-    if (!enabled || language === "text") {
+    if (!shouldHighlight) {
       setIsLoading(false);
       return;
     }
 
-    const k = cacheKey(code, language);
-    const hit = highlightCache.get(k);
+    const hit = key ? highlightCache.get(key) : undefined;
     if (hit) {
-      setHighlightedHtml(hit);
+      setHighlight({ code, language: normalizedLanguage, html: hit });
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     let isMounted = true;
+    let timer: number | null = null;
 
     const doHighlight = async () => {
       try {
-        const html = await getHighlightPromise(k, code, language);
+        const html = await getHighlightPromise(
+          key,
+          code,
+          normalizedLanguage,
+        );
 
         if (isMounted) {
-          setHighlightedHtml(html);
+          setHighlight({ code, language: normalizedLanguage, html });
           setIsLoading(false);
         }
-      } catch (error) {
-        console.error("[syntax] Highlighting error:", error);
+      } catch {
         if (isMounted) setIsLoading(false);
       }
     };
 
-    doHighlight();
+    if (delayMs > 0) {
+      timer = window.setTimeout(() => void doHighlight(), delayMs);
+    } else {
+      void doHighlight();
+    }
 
     return () => {
       isMounted = false;
+      if (timer !== null) window.clearTimeout(timer);
     };
-  }, [code, language, enabled]);
+  }, [code, delayMs, key, normalizedLanguage, shouldHighlight]);
 
-  return { highlightedHtml, isLoading };
+  const hasCurrentHighlight =
+    highlight.code === code && highlight.language === normalizedLanguage;
+
+  return {
+    highlightedHtml: hasCurrentHighlight ? highlight.html : "",
+    isLoading: shouldHighlight && (isLoading || !hasCurrentHighlight),
+  };
 };
