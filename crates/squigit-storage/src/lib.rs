@@ -41,7 +41,7 @@ pub use profiles::{
 };
 pub use threads::{
     AttachmentRegistry, ContextWindow, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation,
-    OcrRegion, ProjectMetadata, ReverseImageSearchCache, ThreadAttachmentKind,
-    ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadMessage,
-    ThreadMetadata, ThreadStorage, EMPTY_STATE_ASSET_ID,
+    OcrRegion, ReverseImageSearchCache, ThreadAttachmentKind, ThreadAttachmentProviderFile,
+    ThreadAttachmentRecord, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage,
+    WorkspaceMetadata, EMPTY_STATE_ASSET_ID,
 };

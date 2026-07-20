@@ -23,9 +23,8 @@ pub struct ThreadMetadata {
     pub updated_at: DateTime<Utc>,
     /// BLAKE3 hash of the associated image.
     pub image_hash: String,
-    /// Whether the thread is pinned.
-    #[serde(default)]
-    pub is_pinned: bool,
+    /// When the thread was pinned, or `None` when it is not pinned.
+    pub pinned_at: Option<DateTime<Utc>>,
 }
 
 impl ThreadMetadata {
@@ -44,36 +43,36 @@ impl ThreadMetadata {
             created_at: now,
             updated_at: now,
             image_hash,
-            is_pinned: false,
+            pinned_at: None,
         }
     }
 }
 
-/// A project groups threads under one AI working directory.
+/// A workspace groups threads under one AI sandbox path.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProjectMetadata {
-    /// Unique identifier for the project.
+pub struct WorkspaceMetadata {
+    /// Unique identifier for the workspace.
     pub id: String,
-    /// Folder name displayed in the sidebar.
+    /// Workspace name displayed in the sidebar.
     pub name: String,
-    /// AI sandbox working directory. The device project has no path.
+    /// AI sandbox path. The device workspace has no path.
     pub path: Option<String>,
     /// Thread metadata keyed by thread ID.
     pub threads: BTreeMap<String, ThreadMetadata>,
 }
 
-impl ProjectMetadata {
-    /// Create a project with a generated ID.
+impl WorkspaceMetadata {
+    /// Create a workspace with a generated ID.
     pub fn new(name: String, path: Option<String>) -> Self {
         Self {
-            id: format!("project-{}", Uuid::new_v4()),
+            id: format!("workspace-{}", Uuid::new_v4()),
             name,
             path,
             threads: BTreeMap::new(),
         }
     }
 
-    /// Create the pathless project representing the current device.
+    /// Create the pathless workspace representing the current device.
     pub fn device_default() -> Self {
         #[cfg(target_os = "macos")]
         let name = "This Mac";

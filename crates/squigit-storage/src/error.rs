@@ -40,17 +40,17 @@ pub enum StorageError {
     #[error("Thread not found: {0}")]
     ThreadNotFound(String),
 
-    /// Project not found.
-    #[error("Project not found: {0}")]
-    ProjectNotFound(String),
+    /// Workspace not found.
+    #[error("Workspace not found: {0}")]
+    WorkspaceNotFound(String),
 
-    /// Project path is invalid or too broad to use as a working directory.
-    #[error("Invalid project path: {0}")]
-    InvalidProjectPath(String),
+    /// Workspace path is invalid or too broad to use as an AI sandbox.
+    #[error("Invalid workspace path: {0}")]
+    InvalidWorkspacePath(String),
 
-    /// Project path is already registered.
-    #[error("Project path is already in use: {0}")]
-    ProjectPathAlreadyExists(String),
+    /// Workspace path is already registered.
+    #[error("Workspace path is already in use: {0}")]
+    WorkspacePathAlreadyExists(String),
 
     /// Invalid thread fork point.
     #[error("Invalid thread fork point: {0}")]

@@ -14,9 +14,9 @@ export declare function copy_image_from_path_to_clipboard(path: string): void
 
 export declare function copy_image_to_clipboard(imageBase64: string): void
 
-export declare function create_project(path: string): string
+export declare function create_thread(title: string, imageHash: string, workspaceId?: string | undefined | null): string
 
-export declare function create_thread(title: string, imageHash: string, projectId?: string | undefined | null): string
+export declare function create_workspace(path: string): string
 
 export declare function delete_profile(profileId: string): void
 
@@ -66,9 +66,9 @@ export declare function list_downloaded_models(): Array<string>
 
 export declare function list_profiles(): Array<NapiProfile>
 
-export declare function list_projects(): string
-
 export declare function list_threads(): string
+
+export declare function list_workspaces(): string
 
 export declare function load_thread(threadId: string): string
 
@@ -166,6 +166,8 @@ export declare function save_image_tone(threadId: string, tone: string): void
 export declare function save_reverse_image_search_cache(threadId: string, imgbbUrl: string, googleLensUrl: string): void
 
 export declare function set_active_profile(profileId: string): void
+
+export declare function set_thread_workspace(threadId: string, workspaceId: string): void
 
 export declare function start_google_auth(): Promise<NapiAuthResult>
 

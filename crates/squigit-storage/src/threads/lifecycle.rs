@@ -13,8 +13,9 @@ use super::paths::{
     attachment_registry_path, context_window_path, messages_path, ocr_annotations_path,
 };
 use super::{
-    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotations, ProjectMetadata,
+    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotations,
     ReverseImageSearchCache, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage,
+    WorkspaceMetadata,
 };
 
 fn copy_dir_all(source: &Path, destination: &Path) -> Result<()> {
@@ -120,16 +121,22 @@ impl ThreadStorage {
         Ok(())
     }
 
-    /// Save a new thread to the device project or update it in its current project.
+    /// Save a new thread to the device workspace or update it in its current workspace.
     pub fn save_thread(&self, thread: &ThreadData) -> Result<()> {
         self.save_thread_files(thread)?;
         self.update_index(&thread.metadata)
     }
 
-    /// Save a new thread in a specific project.
-    pub fn save_thread_in_project(&self, thread: &ThreadData, project_id: &str) -> Result<()> {
+    /// Save a new thread in a specific workspace.
+    pub fn save_thread_in_workspace(&self, thread: &ThreadData, workspace_id: &str) -> Result<()> {
         self.save_thread_files(thread)?;
-        self.update_index_in_project(&thread.metadata, project_id)
+        self.update_index_in_workspace(&thread.metadata, workspace_id)
+    }
+
+    /// Move an existing thread to a workspace without rewriting its thread files.
+    pub fn set_thread_workspace(&self, thread_id: &str, workspace_id: &str) -> Result<()> {
+        let metadata = self.get_index_metadata(thread_id)?;
+        self.update_index_in_workspace(&metadata, workspace_id)
     }
 
     /// Load a thread by ID.
@@ -231,17 +238,17 @@ impl ThreadStorage {
     pub fn list_threads(&self) -> Result<Vec<ThreadMetadata>> {
         let mut threads = self
             .read_index()?
-            .projects
+            .workspaces
             .into_iter()
-            .flat_map(|project| project.threads.into_values())
+            .flat_map(|workspace| workspace.threads.into_values())
             .collect::<Vec<_>>();
         threads.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         Ok(threads)
     }
 
-    /// List projects in sidebar order with their nested thread metadata.
-    pub fn list_projects(&self) -> Result<Vec<ProjectMetadata>> {
-        Ok(self.read_index()?.projects)
+    /// List workspaces in sidebar order with their nested thread metadata.
+    pub fn list_workspaces(&self) -> Result<Vec<WorkspaceMetadata>> {
+        Ok(self.read_index()?.workspaces)
     }
 
     /// Delete a thread by ID.
@@ -263,7 +270,7 @@ impl ThreadStorage {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
 
-        let source_project_id = self.get_thread_project_id(thread_id)?;
+        let source_workspace_id = self.get_thread_workspace_id(thread_id)?;
         let source_thread = self.load_thread(thread_id)?;
         let retained_len = message_index.checked_add(1).ok_or_else(|| {
             StorageError::InvalidThreadFork(format!("message index {} is too large", message_index))
@@ -280,7 +287,7 @@ impl ThreadStorage {
             format!("forked {}", source_thread.metadata.title),
             source_thread.metadata.image_hash.clone(),
         );
-        metadata.is_pinned = false;
+        metadata.pinned_at = None;
 
         let destination_dir = self.thread_dir(&metadata.id);
         copy_dir_all(&source_dir, &destination_dir)?;
@@ -291,7 +298,7 @@ impl ThreadStorage {
         forked_thread.messages.truncate(retained_len);
         retain_referenced_attachments(&mut forked_thread);
 
-        self.save_thread_in_project(&forked_thread, &source_project_id)?;
+        self.save_thread_in_workspace(&forked_thread, &source_workspace_id)?;
 
         if source_had_attachment_registry && forked_thread.attachment_registry.is_empty() {
             fs::write(
