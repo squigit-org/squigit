@@ -13,11 +13,16 @@ import styles from "./GalleryRoute.module.css";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";
 
-interface GalleryCandidate {
-  hash: string;
+interface GalleryThread {
   threadId: string;
   title: string;
   updatedAt: string;
+}
+
+interface GalleryCandidate {
+  hash: string;
+  updatedAt: string;
+  threads: GalleryThread[];
 }
 
 interface GalleryImage extends GalleryCandidate {
@@ -38,32 +43,45 @@ interface GalleryThumbnailProps {
 
 const toTimestamp = (value: string) => new Date(value || 0).getTime();
 
-const selectLatestByHash = (threads: ThreadMetadata[]): GalleryCandidate[] => {
+const groupThreadsByHash = (threads: ThreadMetadata[]): GalleryCandidate[] => {
   const byHash = new Map<string, GalleryCandidate>();
 
   for (const thread of threads) {
     const hash = thread.image_hash?.trim();
     if (!hash) continue;
 
-    const candidate: GalleryCandidate = {
-      hash,
+    const threadReference: GalleryThread = {
       threadId: thread.id,
       title: thread.title || "Untitled",
       updatedAt: thread.updated_at || thread.created_at,
     };
 
     const existing = byHash.get(hash);
-    if (
-      !existing ||
-      toTimestamp(candidate.updatedAt) > toTimestamp(existing.updatedAt)
-    ) {
-      byHash.set(hash, candidate);
+    if (existing) {
+      existing.threads.push(threadReference);
+      if (
+        toTimestamp(threadReference.updatedAt) >
+        toTimestamp(existing.updatedAt)
+      ) {
+        existing.updatedAt = threadReference.updatedAt;
+      }
+    } else {
+      byHash.set(hash, {
+        hash,
+        updatedAt: threadReference.updatedAt,
+        threads: [threadReference],
+      });
     }
   }
 
-  return Array.from(byHash.values()).sort(
-    (a, b) => toTimestamp(b.updatedAt) - toTimestamp(a.updatedAt),
-  );
+  return Array.from(byHash.values())
+    .map((candidate) => ({
+      ...candidate,
+      threads: candidate.threads.sort(
+        (a, b) => toTimestamp(b.updatedAt) - toTimestamp(a.updatedAt),
+      ),
+    }))
+    .sort((a, b) => toTimestamp(b.updatedAt) - toTimestamp(a.updatedAt));
 };
 
 const GalleryThumbnail: React.FC<GalleryThumbnailProps> = ({
@@ -92,7 +110,7 @@ export const GalleryRoute: React.FC<GalleryRouteProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<GalleryImage[]>([]);
 
-  const candidates = useMemo(() => selectLatestByHash(threads), [threads]);
+  const candidates = useMemo(() => groupThreadsByHash(threads), [threads]);
 
   useEffect(() => {
     if (activeSessionId !== SYSTEM_GALLERY_ID) return;
@@ -130,9 +148,9 @@ export const GalleryRoute: React.FC<GalleryRouteProps> = ({
   }, [candidates]);
 
   const handleOpenImage = useCallback(
-    (item: GalleryImage) => {
+    (item: GalleryImage, index: number) => {
       const extension = item.path.split(".").pop()?.toLowerCase() || "png";
-      const viewerName = item.title.trim() || "Image";
+      const viewerName = "Image";
       const attachment: Attachment = {
         id: `gallery-${item.hash}`,
         type: "image",
@@ -143,10 +161,25 @@ export const GalleryRoute: React.FC<GalleryRouteProps> = ({
 
       void openMediaViewer(attachment, {
         isGallery: true,
-        threadId: item.threadId,
+        galleryEntries: items.map((galleryItem) => ({
+          attachment: {
+            id: `gallery-${galleryItem.hash}`,
+            type: "image",
+            name: "Image",
+            extension:
+              galleryItem.path.split(".").pop()?.toLowerCase() || "png",
+            path: galleryItem.path,
+          },
+          imageThreads: galleryItem.threads.map((thread) => ({
+            id: thread.threadId,
+            title: thread.title,
+            updatedAt: thread.updatedAt,
+          })),
+        })),
+        initialIndex: index,
       });
     },
-    [openMediaViewer],
+    [items, openMediaViewer],
   );
 
   if (isLoading) {
@@ -165,12 +198,14 @@ export const GalleryRoute: React.FC<GalleryRouteProps> = ({
       </header>
 
       <div className={styles.grid}>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <GalleryThumbnail
-            key={`${item.hash}-${item.threadId}`}
+            key={item.hash}
             imagePath={item.path}
-            title={item.title}
-            onClick={() => handleOpenImage(item)}
+            title={`found in ${item.threads.length} ${
+              item.threads.length === 1 ? "thread" : "threads"
+            }`}
+            onClick={() => handleOpenImage(item, index)}
           />
         ))}
       </div>

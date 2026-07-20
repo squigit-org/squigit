@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { commands } from "@/platform";
 import {
   type Attachment,
@@ -12,12 +12,19 @@ import {
   isImageExtension,
   unwrapMarkdownLinkDestination,
 } from "@squigit/core/brain/attachments";
-import { type MediaGalleryItem, type MediaViewerItem } from "@/features/media";
+import {
+  type MediaGalleryItem,
+  type MediaThreadReference,
+  type MediaViewerItem,
+} from "@/features/media";
 
 export type MediaViewerOpenOptions = {
   isGallery?: boolean;
-  threadId?: string;
-  galleryAttachments?: Attachment[];
+  imageThreads?: MediaThreadReference[];
+  galleryEntries?: Array<{
+    attachment: Attachment;
+    imageThreads?: MediaThreadReference[];
+  }>;
   initialIndex?: number;
   openedFromThread?: boolean;
 };
@@ -38,9 +45,6 @@ const UNSUPPORTED_PREVIEW_EXTENSIONS = new Set([
   "key",
 ]);
 
-const ATTACHMENT_SOURCE_MAP_STORAGE_KEY = "squigit:attachment-source-map:v1";
-const ATTACHMENT_SOURCE_MAP_MAX_ENTRIES = 2048;
-
 function normalizeAttachmentPath(path: string): string {
   const unwrapped = unwrapMarkdownLinkDestination(path);
 
@@ -51,54 +55,20 @@ function normalizeAttachmentPath(path: string): string {
   }
 }
 
-function readAttachmentSourceMap(): Map<string, string> {
-  if (typeof window === "undefined") return new Map();
-
-  try {
-    const raw = localStorage.getItem(ATTACHMENT_SOURCE_MAP_STORAGE_KEY);
-    if (!raw) return new Map();
-
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return new Map();
-    }
-
-    const map = new Map<string, string>();
-    for (const [casPath, sourcePath] of Object.entries(parsed)) {
-      if (typeof sourcePath === "string" && sourcePath.length > 0) {
-        map.set(casPath, sourcePath);
-      }
-    }
-
-    return map;
-  } catch {
-    return new Map();
-  }
-}
-
-function persistAttachmentSourceMap(map: Map<string, string>) {
-  if (typeof window === "undefined") return;
-
-  try {
-    const entries = Array.from(map.entries());
-    const trimmedEntries =
-      entries.length > ATTACHMENT_SOURCE_MAP_MAX_ENTRIES
-        ? entries.slice(entries.length - ATTACHMENT_SOURCE_MAP_MAX_ENTRIES)
-        : entries;
-
-    localStorage.setItem(
-      ATTACHMENT_SOURCE_MAP_STORAGE_KEY,
-      JSON.stringify(Object.fromEntries(trimmedEntries)),
-    );
-  } catch {
-    // Ignore storage quota / JSON errors and keep in-memory map.
-  }
-}
-
-export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
-  const attachmentSourceMapRef = useRef<Map<string, string>>(
-    readAttachmentSourceMap(),
-  );
+export const useAppMedia = ({
+  attachments,
+  activeThreadId,
+}: {
+  attachments: Attachment[];
+  activeThreadId: string | null;
+}) => {
+  const registryThreadId =
+    activeThreadId && !activeThreadId.startsWith("__system_")
+      ? activeThreadId
+      : undefined;
+  const [attachmentSources, setAttachmentSources] = useState<
+    Record<string, string>
+  >({});
   const [mediaViewer, setMediaViewer] = useState<{
     isOpen: boolean;
     item: MediaViewerItem | null;
@@ -107,31 +77,72 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
     item: null,
   });
 
+  useEffect(() => {
+    let cancelled = false;
+    setAttachmentSources({});
+
+    void commands
+      .listAttachmentSources(registryThreadId)
+      .then((sources) => {
+        if (!cancelled) {
+          setAttachmentSources((current) => ({ ...sources, ...current }));
+        }
+      })
+      .catch((error) => {
+        console.warn("[media] Could not load attachment sources:", error);
+        if (!cancelled) setAttachmentSources({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [registryThreadId]);
+
   const rememberAttachmentSourcePath = useCallback(
-    (casPath: string, sourcePath: string) => {
+    async (casPath: string, sourcePath: string) => {
       if (!casPath || !sourcePath) return;
-      attachmentSourceMapRef.current.set(casPath, sourcePath);
-      persistAttachmentSourceMap(attachmentSourceMapRef.current);
+
+      if (registryThreadId) {
+        try {
+          await commands.registerAttachmentSource(
+            registryThreadId,
+            casPath,
+            sourcePath,
+          );
+        } catch (error) {
+          console.warn("[media] Could not register attachment source:", error);
+        }
+      }
+
+      setAttachmentSources((current) => ({
+        ...current,
+        [casPath]: sourcePath,
+      }));
     },
-    [],
+    [registryThreadId],
   );
 
   useEffect(() => {
     attachments.forEach((attachment) => {
       if (attachment.sourcePath) {
-        rememberAttachmentSourcePath(attachment.path, attachment.sourcePath);
+        void rememberAttachmentSourcePath(
+          attachment.path,
+          attachment.sourcePath,
+        ).catch((error) => {
+          console.warn("[media] Could not register attachment source:", error);
+        });
       }
     });
   }, [attachments, rememberAttachmentSourcePath]);
 
   const getAttachmentSourcePath = useCallback((path: string) => {
-    const directMatch = attachmentSourceMapRef.current.get(path);
+    const directMatch = attachmentSources[path];
     if (directMatch) return directMatch;
 
     const fileName = path.split(/[/\\]/).pop();
     if (!fileName) return null;
 
-    for (const [casPath, sourcePath] of attachmentSourceMapRef.current) {
+    for (const [casPath, sourcePath] of Object.entries(attachmentSources)) {
       if (
         casPath.endsWith(`/${fileName}`) ||
         casPath.endsWith(`\\${fileName}`)
@@ -141,7 +152,24 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
     }
 
     return null;
-  }, []);
+  }, [attachmentSources]);
+
+  const resolveAttachmentSourcePath = useCallback(
+    async (path: string, fallback?: string) => {
+      try {
+        return (
+          (await commands.resolveAttachmentSourcePath(path, registryThreadId)) ||
+          fallback ||
+          getAttachmentSourcePath(path) ||
+          undefined
+        );
+      } catch (error) {
+        console.warn("[media] Could not resolve attachment source:", error);
+        return fallback || getAttachmentSourcePath(path) || undefined;
+      }
+    },
+    [getAttachmentSourcePath, registryThreadId],
+  );
 
   const closeMediaViewer = useCallback(() => {
     setMediaViewer((prev) => ({ ...prev, isOpen: false }));
@@ -166,11 +194,10 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
         pathExtension && pathExtension !== "file"
           ? pathExtension
           : attachment.extension.toLowerCase();
-      const sourcePath =
-        attachment.sourcePath ||
-        getAttachmentSourcePath(normalizedAttachmentPath) ||
-        getAttachmentSourcePath(attachment.path) ||
-        undefined;
+      const sourcePath = await resolveAttachmentSourcePath(
+        normalizedAttachmentPath,
+        attachment.sourcePath,
+      );
 
       let resolvedPath = normalizedAttachmentPath;
       try {
@@ -195,44 +222,50 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
       }
 
       if (attachment.type === "image" || isImageExtension(extension)) {
-        const galleryAttachments =
-          options?.galleryAttachments?.filter(
-            (entry) =>
+        const galleryEntries =
+          options?.galleryEntries?.filter(
+            ({ attachment: entry }) =>
               entry.type === "image" || isImageExtension(entry.extension),
           ) ?? [];
         let galleryItems: MediaGalleryItem[] | undefined;
         let galleryIndex: number | undefined;
 
-        if (galleryAttachments.length > 0) {
+        if (galleryEntries.length > 0) {
           const resolvedGallery = await Promise.all(
-            galleryAttachments.map(async (galleryAttachment) => {
-              const gallerySourcePath =
-                galleryAttachment.sourcePath ||
-                getAttachmentSourcePath(galleryAttachment.path) ||
-                undefined;
-
-              let galleryResolvedPath = galleryAttachment.path;
-              try {
-                galleryResolvedPath = await commands.resolveAttachmentPath(
+            galleryEntries.map(
+              async ({ attachment: galleryAttachment, imageThreads }) => {
+                const gallerySourcePath = await resolveAttachmentSourcePath(
                   galleryAttachment.path,
+                  galleryAttachment.sourcePath,
                 );
-              } catch (error) {
-                console.warn("[media] Could not resolve gallery path:", error);
-              }
 
-              return {
-                path: galleryResolvedPath,
-                sourcePath: gallerySourcePath,
-                name: galleryAttachment.name,
-                extension: galleryAttachment.extension.toLowerCase(),
-              };
-            }),
+                let galleryResolvedPath = galleryAttachment.path;
+                try {
+                  galleryResolvedPath = await commands.resolveAttachmentPath(
+                    galleryAttachment.path,
+                  );
+                } catch (error) {
+                  console.warn(
+                    "[media] Could not resolve gallery path:",
+                    error,
+                  );
+                }
+
+                return {
+                  path: galleryResolvedPath,
+                  sourcePath: gallerySourcePath,
+                  name: galleryAttachment.name,
+                  extension: galleryAttachment.extension.toLowerCase(),
+                  imageThreads,
+                };
+              },
+            ),
           );
 
           if (resolvedGallery.length > 0) {
             galleryItems = resolvedGallery;
-            const fallbackIndex = galleryAttachments.findIndex(
-              (entry) =>
+            const fallbackIndex = galleryEntries.findIndex(
+              ({ attachment: entry }) =>
                 entry.id === attachment.id || entry.path === attachment.path,
             );
             const initialIndex =
@@ -263,7 +296,8 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
             extension: activeGalleryItem?.extension || extension,
             isGallery:
               options?.isGallery === true || (galleryItems?.length ?? 0) > 1,
-            galleryThreadId: options?.threadId,
+            imageThreads:
+              activeGalleryItem?.imageThreads || options?.imageThreads,
             galleryItems,
             galleryIndex,
             openedFromThread: options?.openedFromThread === true,
@@ -311,7 +345,7 @@ export const useAppMedia = ({ attachments }: { attachments: Attachment[] }) => {
         }
       }
     },
-    [getAttachmentSourcePath, revealInFileManager],
+    [resolveAttachmentSourcePath, revealInFileManager],
   );
 
   return {

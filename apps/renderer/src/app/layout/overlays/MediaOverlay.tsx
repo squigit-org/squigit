@@ -4,10 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState } from "react";
-import { commands } from "@/platform";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { commands, platform } from "@/platform";
 import { WidgetOverlay } from "@/components/ui";
 import { AppContextMenu } from "@/app/layout/menus/AppContextMenu";
+import { ImageThreadsMenu } from "@/app/layout/menus/ImageThreadsMenu";
 import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import {
@@ -15,7 +22,8 @@ import {
   MediaImageViewer,
   MediaPdfViewer,
   MediaTextViewer,
-  MediaViewerItem,
+  type MediaGalleryItem,
+  type MediaViewerItem,
 } from "@/features/media";
 import styles from "./MediaOverlay.module.css";
 
@@ -39,12 +47,47 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     y: number;
     hasSelection: boolean;
   } | null>(null);
+  const [threadMenu, setThreadMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [activeImage, setActiveImage] = useState<MediaGalleryItem | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+  const copiedTimerRef = useRef<number | null>(null);
   const isThreadOpenedImage =
     item?.kind === "image" && item?.openedFromThread === true;
 
   const activePath = useMemo(
-    () => item?.sourcePath || item?.path || "",
-    [item?.sourcePath, item?.path],
+    () => activeImage?.path || item?.path || "",
+    [activeImage?.path, item?.path],
+  );
+  const activeSourcePath =
+    activeImage?.sourcePath || item?.sourcePath || undefined;
+  const activeImageThreads = activeImage?.imageThreads || item?.imageThreads;
+
+  useEffect(() => {
+    setActiveImage(
+      item?.kind === "image"
+        ? {
+            path: item.path,
+            sourcePath: item.sourcePath,
+            name: item.name,
+            extension: item.extension,
+            imageThreads: item.imageThreads,
+          }
+        : null,
+    );
+    setThreadMenu(null);
+    setIsCopied(false);
+  }, [isOpen, item]);
+
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+    },
+    [],
   );
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -54,6 +97,7 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     const selection = window.getSelection();
     const hasSelection = !!selection && selection.toString().length > 0;
 
+    setThreadMenu(null);
     setContextMenu({ x: e.clientX, y: e.clientY, hasSelection });
   };
 
@@ -65,32 +109,91 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     setContextMenu(null);
   };
 
-  const handleCopyPath = () => {
+  const handleCopy = async () => {
     if (!activePath) return;
-    navigator.clipboard.writeText(activePath);
+    try {
+      if (item?.kind === "image") {
+        await platform.invoke("copy_image_from_path_to_clipboard", {
+          path: activePath,
+        });
+      } else {
+        let copyPath = activePath;
+        if (activeSourcePath) {
+          try {
+            if (await platform.fs.exists(activeSourcePath)) {
+              copyPath = activeSourcePath;
+            }
+          } catch {
+            // The CAS path remains the reliable fallback.
+          }
+        }
+        await navigator.clipboard.writeText(copyPath);
+      }
+      setIsCopied(true);
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+      copiedTimerRef.current = window.setTimeout(() => {
+        setIsCopied(false);
+        copiedTimerRef.current = null;
+      }, 1800);
+    } catch (error) {
+      console.error("[MediaOverlay] Failed to copy media:", error);
+    }
   };
 
   const handleReveal = async () => {
     if (!activePath) return;
-    try {
-      await commands.revealInFileManager(activePath);
-    } catch (error) {
-      if (item && activePath !== item.path) {
-        try {
-          await commands.revealInFileManager(item.path);
-          return;
-        } catch {
-          // Continue to log original error.
-        }
+
+    const candidates = Array.from(
+      new Set([activeSourcePath, activePath].filter((path) => !!path)),
+    ) as string[];
+    let lastError: unknown;
+
+    for (const path of candidates) {
+      let exists: boolean | null = null;
+      try {
+        exists = await platform.fs.exists(path);
+      } catch (error) {
+        lastError = error;
       }
-      console.error("[MediaOverlay] Failed to reveal file:", error);
+      if (exists === false) continue;
+
+      try {
+        await commands.revealInFileManager(path);
+        return;
+      } catch (error) {
+        lastError = error;
+      }
     }
+
+    console.error(
+      "[MediaOverlay] Failed to reveal file:",
+      lastError || new Error("The media file no longer exists."),
+    );
   };
 
-  const handleRevealInThread = () => {
-    const threadId = item?.galleryThreadId;
-    if (!threadId || !onRevealInThread) return;
-    onRevealInThread(threadId);
+  const handleActiveImageChange = useCallback((image: MediaGalleryItem) => {
+    setActiveImage(image);
+    setThreadMenu(null);
+    setIsCopied(false);
+    if (copiedTimerRef.current !== null) {
+      window.clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = null;
+    }
+  }, []);
+
+  const handleRevealInThread = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    if (!activeImageThreads?.length || !onRevealInThread) return;
+    const button = event.currentTarget.getBoundingClientRect();
+    setContextMenu(null);
+    setThreadMenu((current) =>
+      current
+        ? null
+        : { x: button.right, y: button.top + button.height / 2 },
+    );
   };
 
   const renderViewer = () => {
@@ -104,6 +207,7 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
           isGallery={item.isGallery === true}
           galleryItems={item.galleryItems}
           initialIndex={item.galleryIndex}
+          onActiveItemChange={handleActiveImageChange}
         />
       );
     }
@@ -130,9 +234,14 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
         sidebarBottom={
           <MediaSidebar
             onReveal={handleReveal}
-            onCopyPath={handleCopyPath}
+            onCopy={handleCopy}
+            copyLabel={item?.kind === "image" ? "Copy as image" : "Copy path"}
+            isCopied={isCopied}
+            isRevealInThreadActive={threadMenu !== null}
             onRevealInThread={
-              item?.isGallery && item.galleryThreadId && !isThreadOpenedImage
+              item?.kind === "image" &&
+              activeImageThreads?.length &&
+              !isThreadOpenedImage
                 ? handleRevealInThread
                 : undefined
             }
@@ -140,12 +249,17 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
         }
       >
         <div className={styles.viewerRoot}>
-          {!isThreadOpenedImage && (
+          {item?.kind !== "image" && (
             <div className={styles.viewerHeader}>
               <h3 className={styles.viewerTitle}>{item?.name || "Viewer"}</h3>
             </div>
           )}
-          <div className={styles.viewerBody}>{renderViewer()}</div>
+          <div
+            className={styles.viewerBody}
+            onPointerDownCapture={() => setThreadMenu(null)}
+          >
+            {renderViewer()}
+          </div>
         </div>
       </WidgetOverlay>
       {contextMenu && (
@@ -155,6 +269,15 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
           onClose={() => setContextMenu(null)}
           onCopy={handleCopySelection}
           hasSelection={contextMenu.hasSelection}
+        />
+      )}
+      {threadMenu && activeImageThreads && onRevealInThread && (
+        <ImageThreadsMenu
+          x={threadMenu.x}
+          y={threadMenu.y}
+          threads={activeImageThreads}
+          onClose={() => setThreadMenu(null)}
+          onSelect={onRevealInThread}
         />
       )}
     </>

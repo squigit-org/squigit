@@ -5,19 +5,26 @@
  */
 
 import React from "react";
-import { FolderOpen, Copy, MessageSquare } from "lucide-react";
+import { Check, Copy, FolderOpen, MessageSquare } from "lucide-react";
 import { WidgetOverlayIconButton } from "@/components/ui";
+import styles from "./MediaSidebar.module.css";
 
 interface MediaSidebarProps {
   onReveal: () => void;
-  onCopyPath: () => void;
-  onRevealInThread?: () => void;
+  onCopy: () => void;
+  copyLabel: string;
+  isCopied?: boolean;
+  onRevealInThread?: React.MouseEventHandler<HTMLButtonElement>;
+  isRevealInThreadActive?: boolean;
 }
 
 export const MediaSidebar: React.FC<MediaSidebarProps> = ({
   onReveal,
-  onCopyPath,
+  onCopy,
+  copyLabel,
+  isCopied = false,
   onRevealInThread,
+  isRevealInThreadActive = false,
 }) => {
   return (
     <>
@@ -25,6 +32,9 @@ export const MediaSidebar: React.FC<MediaSidebarProps> = ({
         <WidgetOverlayIconButton
           icon={<MessageSquare size={22} />}
           label="Reveal in thread"
+          isActive={isRevealInThreadActive}
+          activeClassName={styles.revealActive}
+          onMouseDown={(event) => event.stopPropagation()}
           onClick={onRevealInThread}
         />
       )}
@@ -34,9 +44,9 @@ export const MediaSidebar: React.FC<MediaSidebarProps> = ({
         onClick={onReveal}
       />
       <WidgetOverlayIconButton
-        icon={<Copy size={22} />}
-        label="Copy path"
-        onClick={onCopyPath}
+        icon={isCopied ? <Check size={22} /> : <Copy size={22} />}
+        label={isCopied ? "Copied" : copyLabel}
+        onClick={onCopy}
       />
     </>
   );

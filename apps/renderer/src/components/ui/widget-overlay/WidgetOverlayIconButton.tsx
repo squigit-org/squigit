@@ -12,7 +12,8 @@ interface WidgetOverlayIconButtonProps {
   icon: React.ReactNode;
   label: string;
   isActive?: boolean;
-  onClick: () => void;
+  onClick: React.MouseEventHandler<HTMLButtonElement>;
+  onMouseDown?: React.MouseEventHandler<HTMLButtonElement>;
   className?: string;
   activeClassName?: string;
 }
@@ -28,9 +29,8 @@ const buildClassName = ({
 }) =>
   [
     styles.sidebarButton,
-    isActive ? styles.active : "",
+    isActive ? activeClassName || styles.active : "",
     className || "",
-    isActive ? activeClassName || "" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -42,6 +42,7 @@ export const WidgetOverlayIconButton: React.FC<
   label,
   isActive = false,
   onClick,
+  onMouseDown,
   className,
   activeClassName,
 }) => {
@@ -53,13 +54,15 @@ export const WidgetOverlayIconButton: React.FC<
       <button
         ref={btnRef}
         className={buildClassName({ isActive, className, activeClassName })}
+        aria-label={label}
         onClick={onClick}
+        onMouseDown={onMouseDown}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
       >
         {icon}
       </button>
-      <Tooltip text={label} parentRef={btnRef} show={hover} />
+      <Tooltip text={label} parentRef={btnRef} show={hover && !isActive} />
     </>
   );
 };
@@ -73,7 +76,7 @@ export const SidebarButtonWithTooltip = ({
   icon: React.ReactNode;
   label: string;
   isActive?: boolean;
-  onClick: () => void;
+  onClick: React.MouseEventHandler<HTMLButtonElement>;
 }) => (
   <WidgetOverlayIconButton
     icon={icon}

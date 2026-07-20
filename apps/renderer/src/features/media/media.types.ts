@@ -6,11 +6,18 @@
 
 export type MediaViewerKind = "image" | "pdf" | "text";
 
+export interface MediaThreadReference {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
 export interface MediaGalleryItem {
   path: string;
   sourcePath?: string;
   name: string;
   extension: string;
+  imageThreads?: MediaThreadReference[];
 }
 
 export interface MediaViewerItem {
@@ -21,7 +28,7 @@ export interface MediaViewerItem {
   extension: string;
   textContent?: string;
   isGallery?: boolean;
-  galleryThreadId?: string;
+  imageThreads?: MediaThreadReference[];
   galleryItems?: MediaGalleryItem[];
   galleryIndex?: number;
   openedFromThread?: boolean;

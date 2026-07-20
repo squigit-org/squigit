@@ -222,7 +222,10 @@ export const useApp = () => {
     thread.isAiTyping ||
     ocr.isOcrScanning;
 
-  const media = useAppMedia({ attachments: attachments.attachments });
+  const media = useAppMedia({
+    attachments: attachments.attachments,
+    activeThreadId: threadHistory.activeSessionId,
+  });
   const busyGuard = useAppBusyGuard({
     thread,
     ocr,
