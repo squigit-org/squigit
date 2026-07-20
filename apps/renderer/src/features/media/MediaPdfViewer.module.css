@@ -17,11 +17,53 @@
 
 .pdfPages {
   flex: 1;
+  min-height: 0;
   overflow: auto;
+  padding: 14px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-raw-058) transparent;
+}
+
+.pdfPages::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.pdfPages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pdfPages::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: var(--c-raw-058);
+}
+
+.pdfPages::-webkit-scrollbar-thumb:hover {
+  background: var(--c-raw-049);
+}
+
+.pdfPages::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.zoomSurface {
+  position: relative;
+  margin-inline: auto;
+}
+
+.pdfPagesContent {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 14px;
+  width: max-content;
+  transform-origin: top left;
+  will-change: transform;
 }
 
 .pdfPage {
@@ -30,27 +72,113 @@
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 6px 18px var(--c-raw-130);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
 }
 
 .pdfCanvas {
   display: block;
-  width: auto;
-  max-width: 100%;
-  height: auto !important;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+.zoomControl {
+  margin-top: 2px;
+  margin-bottom: 3px;
+}
+
+.metaBar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 6px 8px 5px 12px;
+}
+
+.pageCounter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45ch;
+  flex: 0 0 auto;
+  color: var(--c-raw-004);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.currentPageButton,
+.pageInput {
+  min-width: 1ch;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--c-raw-004);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.currentPageButton {
+  cursor: text;
+}
+
+.currentPageButton:hover,
+.pageInput:focus {
+  color: var(--c-raw-002);
+}
+
+.pageInput {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.pageInput::-webkit-outer-spin-button,
+.pageInput::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.pageNavigation {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.pageButton {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--c-raw-004);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pageButton:hover:not(:disabled) {
+  color: var(--c-raw-002);
+  background: var(--c-raw-038);
+}
+
+.pageButton:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .loadingText,
-.errorText,
-.metaText {
+.errorText {
   font-size: 0.8rem;
   padding: 8px 12px 0;
 }
 
-.loadingText,
-.metaText {
+.loadingText {
+  font-size: 0.8rem;
   color: var(--c-raw-004);
 }
 
