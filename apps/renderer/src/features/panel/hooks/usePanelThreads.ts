@@ -238,6 +238,7 @@ export const usePanelThreads = ({
       setForkingThreadIds((current) => new Set(current).add(threadId));
       try {
         await app.handleForkThread(threadId);
+        onNavigate?.();
       } catch {
         // The app-level handler reports the storage/navigation error.
       } finally {
@@ -249,7 +250,7 @@ export const usePanelThreads = ({
         });
       }
     },
-    [app.handleForkThread],
+    [app.handleForkThread, onNavigate],
   );
 
   useEffect(
