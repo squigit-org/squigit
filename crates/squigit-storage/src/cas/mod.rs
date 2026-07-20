@@ -80,10 +80,6 @@ impl ThreadStorage {
         extension: &str,
         explicit_tone: Option<String>,
     ) -> Result<StoredImage> {
-        if bytes.is_empty() {
-            return Err(StorageError::EmptyImage);
-        }
-
         let hash = blake3::hash(bytes).to_hex().to_string();
         let prefix = &hash[..2];
         let subdir = self.objects_dir.join(prefix);

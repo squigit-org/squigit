@@ -100,6 +100,23 @@ export const commands = {
       sourcePath,
       displayName,
     }),
+  reviseAttachmentCasPath: (
+    threadId: string,
+    citationPath: string,
+    newCasPath: string,
+    displayName?: string,
+  ) =>
+    invoke("revise_attachment_cas_path", {
+      threadId,
+      citationPath,
+      newCasPath,
+      displayName,
+    }),
+  resolveAttachmentCasPath: (citationPath: string, threadId: string) =>
+    invoke<string | null>("resolve_attachment_cas_path", {
+      citationPath,
+      threadId,
+    }),
   resolveAttachmentSourcePath: (casPath: string, threadId?: string) =>
     invoke<string | null>("resolve_attachment_source_path", {
       casPath,
@@ -121,5 +138,10 @@ export const commands = {
     invoke<{ hash: string; path: string }>("store_image_bytes", {
       bytes,
       originalName,
+    }),
+  storeTextInCas: (content: string, extension: string) =>
+    invoke<{ hash: string; path: string }>("store_text_in_cas", {
+      content,
+      extension,
     }),
 };

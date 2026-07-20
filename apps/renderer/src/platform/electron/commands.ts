@@ -77,6 +77,11 @@ export const commands = {
       bytes,
       originalName,
     }),
+  storeTextInCas: (content: string, extension: string) =>
+    platform.invoke<{ hash: string; path: string }>("store_text_in_cas", {
+      content,
+      extension,
+    }),
   resolveAttachmentPath: (path: string) =>
     platform.invoke<string>("resolve_attachment_path", { path }),
   registerAttachmentSource: (
@@ -90,6 +95,23 @@ export const commands = {
       casPath,
       sourcePath,
       displayName,
+    }),
+  reviseAttachmentCasPath: (
+    threadId: string,
+    citationPath: string,
+    newCasPath: string,
+    displayName?: string,
+  ) =>
+    platform.invoke("revise_attachment_cas_path", {
+      threadId,
+      citationPath,
+      newCasPath,
+      displayName,
+    }),
+  resolveAttachmentCasPath: (citationPath: string, threadId: string) =>
+    platform.invoke<string | null>("resolve_attachment_cas_path", {
+      citationPath,
+      threadId,
     }),
   resolveAttachmentSourcePath: (casPath: string, threadId?: string) =>
     platform.invoke<string | null>("resolve_attachment_source_path", {

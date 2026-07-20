@@ -69,6 +69,33 @@ pub fn register_attachment_source(
         .map_err(map_storage_err)
 }
 
+#[napi(js_name = "revise_attachment_cas_path")]
+pub fn revise_attachment_cas_path(
+    thread_id: String,
+    citation_path: String,
+    new_cas_path: String,
+    display_name: Option<String>,
+) -> Result<()> {
+    active_storage()?
+        .revise_attachment_cas_path(
+            &thread_id,
+            &citation_path,
+            &new_cas_path,
+            display_name.as_deref(),
+        )
+        .map_err(map_storage_err)
+}
+
+#[napi(js_name = "resolve_attachment_cas_path")]
+pub fn resolve_attachment_cas_path(
+    citation_path: String,
+    thread_id: String,
+) -> Result<Option<String>> {
+    active_storage()?
+        .get_attachment_cas_path(&citation_path, &thread_id)
+        .map_err(map_storage_err)
+}
+
 #[napi(js_name = "resolve_attachment_source_path")]
 pub fn resolve_attachment_source_path(
     cas_path: String,

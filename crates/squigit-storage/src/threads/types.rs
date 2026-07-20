@@ -244,7 +244,7 @@ pub struct ThreadAttachmentProviderFile {
     pub last_validated_at: Option<DateTime<Utc>>,
 }
 
-/// Per-thread tracked attachment metadata keyed by CAS path.
+/// Per-thread tracked attachment metadata keyed by its stable citation path.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ThreadAttachmentRecord {
     pub cas_path: String,
@@ -261,7 +261,7 @@ pub struct ThreadAttachmentRecord {
     pub last_recalled_at: Option<DateTime<Utc>>,
 }
 
-/// Attachment registry persisted alongside thread data.
+/// Attachment registry persisted alongside thread data, keyed by citation path.
 pub type AttachmentRegistry = BTreeMap<String, ThreadAttachmentRecord>;
 
 /// Complete thread data including messages and OCR.

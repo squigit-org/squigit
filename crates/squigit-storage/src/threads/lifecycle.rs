@@ -29,6 +29,39 @@ fn normalize_attachment_registry_key(value: &str) -> String {
         .to_string()
 }
 
+fn is_cas_object_path(value: &str) -> bool {
+    let path = Path::new(value);
+    if !path.is_absolute() {
+        return false;
+    }
+
+    let Some(hash) = path.file_stem().and_then(|value| value.to_str()) else {
+        return false;
+    };
+    if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return false;
+    }
+
+    let Some(prefix) = path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|value| value.to_str())
+    else {
+        return false;
+    };
+    let Some(objects_dir) = path
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::file_name)
+        .and_then(|value| value.to_str())
+    else {
+        return false;
+    };
+
+    prefix.eq_ignore_ascii_case(&hash[..2])
+        && objects_dir.eq_ignore_ascii_case("objects")
+}
+
 fn attachment_kind_and_mime(path: &str) -> (ThreadAttachmentKind, &'static str) {
     let extension = Path::new(path)
         .extension()
@@ -160,7 +193,7 @@ fn retain_referenced_attachments(thread: &mut ThreadData) {
 }
 
 impl ThreadStorage {
-    /// Persist the original filesystem location for a CAS-backed attachment.
+    /// Persist the preferred source location for a CAS-backed attachment.
     pub fn register_attachment_source(
         &self,
         thread_id: &str,
@@ -188,8 +221,11 @@ impl ThreadStorage {
 
         match thread.attachment_registry.get_mut(&key) {
             Some(record) => {
-                record.cas_path = key;
-                record.source_path = Some(canonical_source);
+                let has_saved_revision =
+                    normalize_attachment_registry_key(&record.cas_path) != key;
+                if !has_saved_revision {
+                    record.source_path = Some(canonical_source);
+                }
                 record.display_name = display_name;
                 record.kind = kind;
                 record.mime_type = mime_type.to_string();
@@ -215,7 +251,108 @@ impl ThreadStorage {
         self.save_thread(&thread)
     }
 
-    /// Find an attachment's recorded original path, preferring the active thread.
+    /// Point a citation in one thread at a newly saved immutable CAS object.
+    pub fn revise_attachment_cas_path(
+        &self,
+        thread_id: &str,
+        citation_path: &str,
+        new_cas_path: &str,
+        display_name: Option<&str>,
+    ) -> Result<()> {
+        let mut thread = self.load_thread(thread_id)?;
+        let key = normalize_attachment_registry_key(citation_path);
+        let registry_key = thread
+            .attachment_registry
+            .get_key_value(&key)
+            .map(|(key, _)| key.clone())
+            .or_else(|| {
+                thread
+                    .attachment_registry
+                    .iter()
+                    .find(|(_, record)| {
+                        normalize_attachment_registry_key(&record.cas_path) == key
+                    })
+                    .map(|(key, _)| key.clone())
+            })
+            .unwrap_or(key);
+        let canonical_cas_path = fs::canonicalize(new_cas_path)
+            .unwrap_or_else(|_| Path::new(new_cas_path).to_path_buf())
+            .to_string_lossy()
+            .to_string();
+
+        if !is_cas_object_path(&canonical_cas_path)
+            || !Path::new(&canonical_cas_path).is_file()
+        {
+            return Err(StorageError::ImageNotFound(canonical_cas_path));
+        }
+
+        let fallback_name = Path::new(&registry_key)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("attachment");
+        let display_name = display_name
+            .map(str::trim)
+            .filter(|name| !name.is_empty())
+            .unwrap_or(fallback_name)
+            .to_string();
+        let (kind, mime_type) = attachment_kind_and_mime(&canonical_cas_path);
+        let now = Utc::now();
+
+        match thread.attachment_registry.get_mut(&registry_key) {
+            Some(record) => {
+                record.cas_path = canonical_cas_path;
+                record.source_path = None;
+                record.provider_file = None;
+                record.display_name = display_name;
+                record.kind = kind;
+                record.mime_type = mime_type.to_string();
+                record.last_seen_at = now;
+            }
+            None => {
+                thread.attachment_registry.insert(
+                    registry_key,
+                    ThreadAttachmentRecord {
+                        cas_path: canonical_cas_path,
+                        source_path: None,
+                        display_name,
+                        kind,
+                        mime_type: mime_type.to_string(),
+                        provider_file: None,
+                        last_seen_at: now,
+                        last_recalled_at: None,
+                    },
+                );
+            }
+        }
+
+        self.save_thread(&thread)
+    }
+
+    /// Resolve the current CAS object attached to a citation in one thread.
+    pub fn get_attachment_cas_path(
+        &self,
+        citation_path: &str,
+        thread_id: &str,
+    ) -> Result<Option<String>> {
+        let thread = match self.load_thread(thread_id) {
+            Ok(thread) => thread,
+            Err(StorageError::ThreadNotFound(_)) => return Ok(None),
+            Err(error) => return Err(error),
+        };
+        let target = normalize_attachment_registry_key(citation_path);
+        let record = thread.attachment_registry.get(&target).or_else(|| {
+            thread.attachment_registry.values().find(|record| {
+                normalize_attachment_registry_key(&record.cas_path) == target
+            })
+        });
+
+        Ok(record
+            .map(|record| record.cas_path.trim())
+            .filter(|path| !path.is_empty() && Path::new(path).is_file())
+            .map(str::to_string))
+    }
+
+    /// Find an attachment's recorded source path within the requested thread.
     pub fn get_attachment_source_path(
         &self,
         cas_path: &str,
@@ -227,12 +364,11 @@ impl ThreadStorage {
                     return Ok(Some(source_path));
                 }
             }
+
+            return Ok(None);
         }
 
         for metadata in self.list_threads()? {
-            if thread_id.is_some_and(|thread_id| thread_id == metadata.id) {
-                continue;
-            }
             if let Ok(thread) = self.load_thread(&metadata.id) {
                 if let Some(source_path) = registry_source_for_path(&thread, cas_path) {
                     return Ok(Some(source_path));
@@ -262,7 +398,7 @@ impl ThreadStorage {
             let Ok(thread) = self.load_thread(&thread_id) else {
                 continue;
             };
-            for record in thread.attachment_registry.values() {
+            for (citation_path, record) in &thread.attachment_registry {
                 let Some(source_path) = record
                     .source_path
                     .as_deref()
@@ -272,7 +408,7 @@ impl ThreadStorage {
                     continue;
                 };
                 sources
-                    .entry(record.cas_path.clone())
+                    .entry(citation_path.clone())
                     .or_insert_with(|| source_path.to_string());
             }
         }
