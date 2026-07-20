@@ -12,7 +12,7 @@
 }
 
 .threadList {
-  max-height: 260px;
+  max-height: 180px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--c-raw-058) transparent;
