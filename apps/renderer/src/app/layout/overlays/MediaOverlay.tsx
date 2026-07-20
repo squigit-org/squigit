@@ -296,6 +296,7 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
         threadId={item.threadId}
         extension={item.extension}
         textContent={activeTextContent}
+        canEdit={item.openedFromThread !== true}
         onTextContentChange={handleTextContentChange}
         onSaved={handleTextSaved}
       />

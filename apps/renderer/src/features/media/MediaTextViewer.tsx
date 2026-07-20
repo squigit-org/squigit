@@ -18,6 +18,7 @@ interface MediaTextViewerProps {
   threadId?: string;
   extension: string;
   textContent: string;
+  canEdit: boolean;
   onTextContentChange: (value: string) => void;
   onSaved: (casPath: string) => void;
 }
@@ -36,6 +37,7 @@ export const MediaTextViewer = forwardRef<
       threadId,
       extension,
       textContent,
+      canEdit,
       onTextContentChange,
       onSaved,
     },
@@ -50,6 +52,7 @@ export const MediaTextViewer = forwardRef<
         threadId={threadId}
         language={extension || "text"}
         value={textContent}
+        canEdit={canEdit}
         onValueChange={onTextContentChange}
         onSaved={onSaved}
       />

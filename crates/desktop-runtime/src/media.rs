@@ -259,7 +259,10 @@ pub fn copy_image_to_clipboard(image_base64: String) -> Result<(), String> {
 pub fn copy_image_from_path_to_clipboard(path: String) -> Result<(), String> {
     use arboard::{Clipboard, ImageData};
 
-    let img = image::open(&path).map_err(|e| format!("Failed to open image at {}: {}", path, e))?;
+    let bytes = std::fs::read(&path)
+        .map_err(|e| format!("Failed to read image at {}: {}", path, e))?;
+    let img = image::load_from_memory(&bytes)
+        .map_err(|e| format!("Failed to decode image at {}: {}", path, e))?;
 
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();

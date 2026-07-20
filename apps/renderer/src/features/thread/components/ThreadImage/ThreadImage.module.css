@@ -363,6 +363,7 @@
   align-items: flex-start;
   justify-content: center;
   overflow: hidden;
+  scrollbar-gutter: stable both-edges;
 }
 
 .bigImageBox.showScrollbar {

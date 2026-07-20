@@ -294,6 +294,7 @@ export const useAppMedia = ({
             name: attachment.name,
             extension,
             textContent,
+            openedFromThread: options?.openedFromThread === true,
           },
         });
       } catch (error) {

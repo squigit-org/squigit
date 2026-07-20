@@ -654,10 +654,13 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
       const label = getNodeText(children).trim();
       const originalName = label || attachment.name;
 
-      void openMediaViewer({
-        ...attachment,
-        name: originalName,
-      });
+      void openMediaViewer(
+        {
+          ...attachment,
+          name: originalName,
+        },
+        { openedFromThread: true },
+      );
     },
     [openMediaViewer],
   );

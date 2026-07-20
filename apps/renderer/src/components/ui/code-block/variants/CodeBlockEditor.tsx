@@ -1005,6 +1005,11 @@ export const CodeBlockEditor = forwardRef<
             title={actionTitle || actionLabel}
             aria-label={actionTitle || actionLabel}
             disabled={actionDisabled}
+            data-disabled-edit={
+              actionDisabled && actionLabel.trim().toLowerCase() === "edit"
+                ? "true"
+                : undefined
+            }
           >
             {actionIcon && (
               <span className={styles.iconWrapper}>{actionIcon}</span>

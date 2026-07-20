@@ -35,6 +35,7 @@ interface MediaCodeEditorProps {
   threadId?: string;
   language: string;
   value: string;
+  canEdit: boolean;
   onValueChange: (value: string) => void;
   onSaved: (casPath: string) => void;
 }
@@ -51,6 +52,7 @@ export const MediaCodeEditor = forwardRef<
       threadId,
       language,
       value,
+      canEdit,
       onValueChange,
       onSaved,
     },
@@ -88,9 +90,10 @@ export const MediaCodeEditor = forwardRef<
     }, [isEditing]);
 
     const beginEditing = useCallback(() => {
+      if (!canEdit) return;
       setSaveError(null);
       setIsEditing(true);
-    }, []);
+    }, [canEdit]);
 
     const saveToCas = useCallback(async (): Promise<boolean> => {
       if (isSaving) return false;
@@ -174,7 +177,7 @@ export const MediaCodeEditor = forwardRef<
       [isDirty, isEditing, saveToCas],
     );
 
-    const isSaveDisabled = isEditing && (!isDirty || isSaving);
+    const isActionDisabled = !canEdit || (isEditing && (!isDirty || isSaving));
 
     return (
       <div className={styles.root}>
@@ -192,7 +195,9 @@ export const MediaCodeEditor = forwardRef<
               ? isDirty
                 ? "Save changes"
                 : "No changes to save"
-              : "Edit file"
+              : canEdit
+                ? "Edit file"
+                : "Sent attachments cannot be edited"
           }
           actionIcon={
             isSaving ? (
@@ -204,7 +209,7 @@ export const MediaCodeEditor = forwardRef<
             )
           }
           onAction={handleAction}
-          actionDisabled={isSaveDisabled}
+          actionDisabled={isActionDisabled}
           fillHeight
           style={EDITOR_STYLE}
         />
