@@ -5,6 +5,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { Profile } from "./tauri.types";
 export * from "./tauri.types";
 
@@ -85,11 +86,37 @@ export const commands = {
   getSystemTheme: () => invoke<"light" | "dark">("get_system_theme"),
   getLinuxPackageManager: () => invoke<string>("get_linux_package_manager"),
   getMachineInfo: () => invoke<string>("get_machine_info"),
-  resolveAttachmentPath: (path: string) => invoke<string>("resolve_attachment_path", { path }),
-  readAttachmentText: (path: string) => invoke<string>("read_attachment_text", { path }),
-  validateTextFile: (path: string) => invoke<boolean>("validate_text_file", { path }),
-  runSidecarVersion: (command: string) => invoke<string>("run_sidecar_version", { command }),
+  resolveAttachmentPath: (path: string) =>
+    invoke<string>("resolve_attachment_path", { path }),
+  registerAttachmentSource: (
+    threadId: string,
+    casPath: string,
+    sourcePath: string,
+    displayName?: string,
+  ) =>
+    invoke("register_attachment_source", {
+      threadId,
+      casPath,
+      sourcePath,
+      displayName,
+    }),
+  resolveAttachmentSourcePath: (casPath: string, threadId?: string) =>
+    invoke<string | null>("resolve_attachment_source_path", {
+      casPath,
+      threadId,
+    }),
+  listAttachmentSources: (threadId?: string) =>
+    invoke<Record<string, string>>("list_attachment_sources", { threadId }),
+  readAttachmentText: (path: string) =>
+    invoke<string>("read_attachment_text", { path }),
+  validateTextFile: (path: string) =>
+    invoke<boolean>("validate_text_file", { path }),
+  revealInFileManager: (path: string) => revealItemInDir(path),
+  runSidecarVersion: (command: string) =>
+    invoke<string>("run_sidecar_version", { command }),
   readClipboardText: () => invoke<string | null>("read_clipboard_text"),
+  copyImageFromPathToClipboard: (path: string) =>
+    invoke("copy_image_from_path_to_clipboard", { path }),
   storeImageBytes: (bytes: number[], originalName?: string) =>
     invoke<{ hash: string; path: string }>("store_image_bytes", {
       bytes,

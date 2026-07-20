@@ -57,6 +57,38 @@ pub fn store_file_from_path(path: String) -> Result<NapiStoredImage> {
     Ok(stored.into())
 }
 
+#[napi(js_name = "register_attachment_source")]
+pub fn register_attachment_source(
+    thread_id: String,
+    cas_path: String,
+    source_path: String,
+    display_name: Option<String>,
+) -> Result<()> {
+    active_storage()?
+        .register_attachment_source(&thread_id, &cas_path, &source_path, display_name.as_deref())
+        .map_err(map_storage_err)
+}
+
+#[napi(js_name = "resolve_attachment_source_path")]
+pub fn resolve_attachment_source_path(
+    cas_path: String,
+    thread_id: Option<String>,
+) -> Result<Option<String>> {
+    let source_path = active_storage()?
+        .get_attachment_source_path(&cas_path, thread_id.as_deref())
+        .map_err(map_storage_err)?;
+
+    Ok(source_path.filter(|path| std::path::Path::new(path).is_file()))
+}
+
+#[napi(js_name = "list_attachment_sources")]
+pub fn list_attachment_sources(thread_id: Option<String>) -> Result<String> {
+    let sources = active_storage()?
+        .list_attachment_sources(thread_id.as_deref())
+        .map_err(map_storage_err)?;
+    to_json(&sources)
+}
+
 #[napi(js_name = "get_image_path")]
 pub fn get_image_path(hash: String) -> Result<String> {
     let storage = active_storage()?;

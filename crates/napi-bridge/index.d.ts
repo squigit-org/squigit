@@ -64,6 +64,8 @@ export declare function hydrate_avatar(url: string, profileId?: string | undefin
 
 export declare function list_downloaded_models(): Array<string>
 
+export declare function list_attachment_sources(threadId?: string | undefined | null): string
+
 export declare function list_profiles(): Array<NapiProfile>
 
 export declare function list_threads(): string
@@ -156,6 +158,10 @@ export declare function profile_count(): number
 export declare function read_clipboard_image(): NapiStoredImage
 
 export declare function read_clipboard_text(): string
+
+export declare function register_attachment_source(threadId: string, casPath: string, sourcePath: string, displayName?: string | undefined | null): void
+
+export declare function resolve_attachment_source_path(casPath: string, threadId?: string | undefined | null): string | null
 
 export declare function request_quick_answer(channelId: string): Promise<void>
 

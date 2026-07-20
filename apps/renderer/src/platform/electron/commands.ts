@@ -79,6 +79,27 @@ export const commands = {
     }),
   resolveAttachmentPath: (path: string) =>
     platform.invoke<string>("resolve_attachment_path", { path }),
+  registerAttachmentSource: (
+    threadId: string,
+    casPath: string,
+    sourcePath: string,
+    displayName?: string,
+  ) =>
+    platform.invoke("register_attachment_source", {
+      threadId,
+      casPath,
+      sourcePath,
+      displayName,
+    }),
+  resolveAttachmentSourcePath: (casPath: string, threadId?: string) =>
+    platform.invoke<string | null>("resolve_attachment_source_path", {
+      casPath,
+      threadId,
+    }),
+  listAttachmentSources: (threadId?: string) =>
+    platform.invoke<Record<string, string>>("list_attachment_sources", {
+      threadId,
+    }),
 
   // Clipboard
   copyImageToClipboard: (base64Data: string) =>
