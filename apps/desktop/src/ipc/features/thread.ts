@@ -15,21 +15,33 @@ export function registerThreadHandlers() {
     const json = requireAddonFn("create_thread")(
       requireStringArg("create_thread", args, "title"),
       requireStringArg("create_thread", args, "imageHash", "image_hash"),
-      args?.projectId ?? args?.project_id,
+      args?.workspaceId ?? args?.workspace_id,
     );
     return parseAddonJson("create_thread", json);
   });
 
-  ipcMain.handle("create_project", (_, args) => {
-    const json = requireAddonFn("create_project")(
-      requireStringArg("create_project", args, "path"),
+  ipcMain.handle("create_workspace", (_, args) => {
+    const json = requireAddonFn("create_workspace")(
+      requireStringArg("create_workspace", args, "path"),
     );
-    return parseAddonJson("create_project", json);
+    return parseAddonJson("create_workspace", json);
   });
 
-  ipcMain.handle("list_projects", () => {
-    const json = requireAddonFn("list_projects")();
-    return parseAddonJson("list_projects", json);
+  ipcMain.handle("list_workspaces", () => {
+    const json = requireAddonFn("list_workspaces")();
+    return parseAddonJson("list_workspaces", json);
+  });
+
+  ipcMain.handle("set_thread_workspace", (_, args) => {
+    requireAddonFn("set_thread_workspace")(
+      requireStringArg("set_thread_workspace", args, "threadId", "thread_id"),
+      requireStringArg(
+        "set_thread_workspace",
+        args,
+        "workspaceId",
+        "workspace_id",
+      ),
+    );
   });
 
   ipcMain.handle("cancel_request", (_, args) =>

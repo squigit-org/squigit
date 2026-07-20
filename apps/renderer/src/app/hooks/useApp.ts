@@ -12,6 +12,7 @@ import {
   type OcrModelAnnotation,
   appendThreadMessage,
   forkThread as forkStoredThread,
+  loadThread as loadStoredThread,
   overwriteThreadMessages,
   resolveOcrModelId,
 } from "@squigit/core/config";
@@ -354,27 +355,49 @@ export const useApp = () => {
     }
   };
 
+  const forkThreadAtMessage = useCallback(
+    async (threadId: string, messageIndex: number) => {
+      const forkedThread = await forkStoredThread(threadId, messageIndex);
+      await navigation.performSelectThread(forkedThread.id);
+      void threadHistory.refreshThreads();
+    },
+    [
+      navigation.performSelectThread,
+      threadHistory.refreshThreads,
+    ],
+  );
+
   const handleForkMessage = useCallback(
     async (messageIndex: number) => {
       const activeId = threadHistory.activeSessionId;
-      if (!activeId || isOnboardingId(activeId)) {
-        return;
-      }
+      if (!activeId || isOnboardingId(activeId)) return;
 
       try {
-        const forkedThread = await forkStoredThread(activeId, messageIndex);
-        await navigation.performSelectThread(forkedThread.id);
-        void threadHistory.refreshThreads();
+        await forkThreadAtMessage(activeId, messageIndex);
       } catch (error) {
         console.error("Failed to fork thread:", error);
         throw error;
       }
     },
-    [
-      navigation.performSelectThread,
-      threadHistory.activeSessionId,
-      threadHistory.refreshThreads,
-    ],
+    [forkThreadAtMessage, threadHistory.activeSessionId],
+  );
+
+  const handleForkThread = useCallback(
+    async (threadId: string) => {
+      if (isOnboardingId(threadId)) return;
+
+      try {
+        const storedThread = await loadStoredThread(threadId);
+        const lastMessageIndex = storedThread.messages.length - 1;
+        if (lastMessageIndex < 0) return;
+
+        await forkThreadAtMessage(threadId, lastMessageIndex);
+      } catch (error) {
+        console.error("Failed to fork thread:", error);
+        throw error;
+      }
+    },
+    [forkThreadAtMessage],
   );
 
   const handleSwitchProfile = async (profileId: string) => {
@@ -494,6 +517,7 @@ export const useApp = () => {
     handleDeleteThreadWrapper,
     handleDeleteThreadsWrapper,
     handleForkMessage,
+    handleForkThread,
     handleExit: () => platform.app.exit(0),
     handleSwitchProfile,
     handleSystemAction,

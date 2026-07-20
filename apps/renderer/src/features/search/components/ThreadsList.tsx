@@ -6,10 +6,10 @@
 
 import React from "react";
 import { LoadingSpinner } from "@/components/ui";
+import { formatCompactAge } from "@squigit/core/helpers";
 import type { ThreadSearchResult } from "@squigit/core/config";
 import {
   type ThreadGroup,
-  formatSearchRowDate,
   renderSnippetWithHighlights,
 } from "../search.utils";
 import { ThreadRow } from "./ThreadRow";
@@ -21,6 +21,7 @@ interface ThreadsListProps {
   results: ThreadSearchResult[];
   groups: ThreadGroup[];
   highlightTokens: string[];
+  currentTime: number;
   onSelectResult: (result: ThreadSearchResult) => void;
   onSelectThread: (threadId: string) => void;
 }
@@ -31,6 +32,7 @@ export const ThreadsList: React.FC<ThreadsListProps> = ({
   results,
   groups,
   highlightTokens,
+  currentTime,
   onSelectResult,
   onSelectThread,
 }) => {
@@ -58,7 +60,10 @@ export const ThreadsList: React.FC<ThreadsListProps> = ({
                     highlightTokens,
                     styles.highlight,
                   )}
-                  dateLabel={formatSearchRowDate(result.thread_updated_at)}
+                  dateLabel={formatCompactAge(
+                    result.thread_updated_at,
+                    currentTime,
+                  )}
                   onClick={() => onSelectResult(result)}
                 />
               ))
@@ -76,8 +81,11 @@ export const ThreadsList: React.FC<ThreadsListProps> = ({
               {group.threads.map((thread) => (
                 <ThreadRow
                   key={thread.id}
-                  compact
                   title={thread.title || "Untitled thread"}
+                  dateLabel={formatCompactAge(
+                    thread.updated_at || thread.created_at,
+                    currentTime,
+                  )}
                   onClick={() => onSelectThread(thread.id)}
                 />
               ))}

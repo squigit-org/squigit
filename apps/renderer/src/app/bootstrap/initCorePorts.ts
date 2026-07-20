@@ -78,11 +78,13 @@ export function initializeCorePorts(): void {
     createThread: (
       title: string,
       imageHash: string,
-      projectId?: string | null,
-    ) => platform.invoke("create_thread", { title, imageHash, projectId }),
-    createProject: (path: string) =>
-      platform.invoke("create_project", { path }),
-    listProjects: () => platform.invoke("list_projects"),
+      workspaceId?: string | null,
+    ) => platform.invoke("create_thread", { title, imageHash, workspaceId }),
+    createWorkspace: (path: string) =>
+      platform.invoke("create_workspace", { path }),
+    listWorkspaces: () => platform.invoke("list_workspaces"),
+    setThreadWorkspace: (threadId: string, workspaceId: string) =>
+      platform.invoke("set_thread_workspace", { threadId, workspaceId }),
     loadThread: (threadId: string) =>
       platform.invoke("load_thread", { threadId }),
     forkThread: (threadId: string, messageIndex: number) =>

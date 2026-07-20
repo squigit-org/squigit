@@ -17,11 +17,11 @@ export interface ThreadMetadata {
   created_at: string;
   updated_at: string;
   image_hash: string;
-  is_pinned: boolean;
+  pinned_at: string | null;
 }
 
-/** A sidebar project and its AI sandbox working directory. */
-export interface ProjectMetadata {
+/** A sidebar workspace and its AI sandbox path. */
+export interface WorkspaceMetadata {
   id: string;
   name: string;
   path: string | null;
@@ -154,19 +154,29 @@ export async function getImagePath(hash: string): Promise<string> {
 export async function createThread(
   title: string,
   imageHash: string,
-  projectId?: string | null,
+  workspaceId?: string | null,
 ): Promise<ThreadMetadata> {
-  return getStoragePort().createThread(title, imageHash, projectId);
+  return getStoragePort().createThread(title, imageHash, workspaceId);
 }
 
-/** Register a folder as a project. */
-export async function createProject(path: string): Promise<ProjectMetadata> {
-  return getStoragePort().createProject(path);
+/** Register a path as a workspace. */
+export async function createWorkspace(
+  path: string,
+): Promise<WorkspaceMetadata> {
+  return getStoragePort().createWorkspace(path);
 }
 
-/** List projects with their nested thread metadata. */
-export async function listProjects(): Promise<ProjectMetadata[]> {
-  return getStoragePort().listProjects();
+/** List workspaces with their nested thread metadata. */
+export async function listWorkspaces(): Promise<WorkspaceMetadata[]> {
+  return getStoragePort().listWorkspaces();
+}
+
+/** Move an existing thread to a workspace. */
+export async function setThreadWorkspace(
+  threadId: string,
+  workspaceId: string,
+): Promise<void> {
+  return getStoragePort().setThreadWorkspace(threadId, workspaceId);
 }
 
 /** Load a thread by ID (full data including messages). */

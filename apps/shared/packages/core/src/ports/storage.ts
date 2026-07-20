@@ -11,7 +11,7 @@ import type {
   ThreadSearchResult,
   OcrAnnotations,
   OcrRegion,
-  ProjectMetadata,
+  WorkspaceMetadata,
   ReverseImageSearchCache,
   StoredImage,
 } from "../config/thread-storage";
@@ -23,10 +23,11 @@ export interface StoragePort {
   createThread(
     title: string,
     imageHash: string,
-    projectId?: string | null,
+    workspaceId?: string | null,
   ): Promise<ThreadMetadata>;
-  createProject(path: string): Promise<ProjectMetadata>;
-  listProjects(): Promise<ProjectMetadata[]>;
+  createWorkspace(path: string): Promise<WorkspaceMetadata>;
+  listWorkspaces(): Promise<WorkspaceMetadata[]>;
+  setThreadWorkspace(threadId: string, workspaceId: string): Promise<void>;
   loadThread(threadId: string): Promise<ThreadData>;
   forkThread(threadId: string, messageIndex: number): Promise<ThreadMetadata>;
   listThreads(): Promise<ThreadMetadata[]>;

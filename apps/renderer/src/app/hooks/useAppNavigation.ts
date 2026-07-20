@@ -34,6 +34,8 @@ type SearchRevealTarget = {
   requestedAt: number;
 };
 
+export type SearchOverlayMode = "threads" | "workspaces";
+
 const isScannedOcrEntry = (
   entry: OcrAnnotationEntry | undefined,
 ): entry is OcrModelAnnotation =>
@@ -142,6 +144,8 @@ export const useAppNavigation = ({
   const [showThreadShellDuringNavigation, setShowThreadShellDuringNavigation] =
     useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
+  const [searchOverlayMode, setSearchOverlayMode] =
+    useState<SearchOverlayMode>("threads");
   const [pendingSearchReveal, setPendingSearchReveal] =
     useState<SearchRevealTarget | null>(null);
 
@@ -203,9 +207,13 @@ export const useAppNavigation = ({
     }
   }, [threadHistory, threadTitle, isNavigating]);
 
-  const openSearchOverlay = useCallback(() => {
-    setIsSearchOverlayOpen(true);
-  }, []);
+  const openSearchOverlay = useCallback(
+    (mode: SearchOverlayMode = "threads") => {
+      setSearchOverlayMode(mode);
+      setIsSearchOverlayOpen(true);
+    },
+    [],
+  );
 
   const closeSearchOverlay = useCallback(() => {
     setIsSearchOverlayOpen(false);
@@ -222,8 +230,6 @@ export const useAppNavigation = ({
       const metadata = threadHistory.threads.find(
         (threadMeta: any) => threadMeta.id === id,
       );
-      const projectId = threadHistory.getProjectIdForThread(id);
-
       flushSync(() => {
         setIsNavigating(true);
         setIsThreadContentReady(false);
@@ -231,12 +237,10 @@ export const useAppNavigation = ({
         setPendingSearchReveal(null);
         closeMediaViewer();
         ocr.setSessionLensUrl(null);
+        threadHistory.setPendingWorkspaceId(null);
 
         if (!isOnboardingId(id) && metadata?.title) {
           system.setSessionThreadTitle(metadata.title);
-          if (projectId) {
-            threadHistory.setActiveProjectId(projectId);
-          }
         }
       });
 
@@ -383,25 +387,29 @@ export const useAppNavigation = ({
     ],
   );
 
-  const performNewSession = useCallback(async () => {
-    const requestId = navigationRequestIdRef.current + 1;
-    navigationRequestIdRef.current = requestId;
+  const performNewSession = useCallback(
+    async (workspaceId: string | null = null) => {
+      const requestId = navigationRequestIdRef.current + 1;
+      navigationRequestIdRef.current = requestId;
 
-    flushSync(() => {
-      setIsNavigating(true);
-      setIsThreadContentReady(false);
-      setShowThreadShellDuringNavigation(false);
-      setPendingSearchReveal(null);
-      closeMediaViewer();
-    });
+      flushSync(() => {
+        setIsNavigating(true);
+        setIsThreadContentReady(false);
+        setShowThreadShellDuringNavigation(false);
+        setPendingSearchReveal(null);
+        closeMediaViewer();
+        threadHistory.setPendingWorkspaceId(workspaceId);
+      });
 
-    system.resetSession();
-    threadHistory.setActiveSessionId(null);
-    threadHistory.setActiveSessionId(null);
-    ocr.setOcrData({});
-    ocr.setSessionLensUrl(null);
-    finalizeNavigationState(requestId);
-  }, [threadHistory, closeMediaViewer, finalizeNavigationState, ocr, system]);
+      system.resetSession();
+      threadHistory.setActiveSessionId(null);
+      threadHistory.setActiveSessionId(null);
+      ocr.setOcrData({});
+      ocr.setSessionLensUrl(null);
+      finalizeNavigationState(requestId);
+    },
+    [threadHistory, closeMediaViewer, finalizeNavigationState, ocr, system],
+  );
 
   const handleNavigation = useCallback(
     (id: string) => {
@@ -425,8 +433,8 @@ export const useAppNavigation = ({
     [closeSearchOverlay, performSelectThread, runWithBusyGuard],
   );
 
-  const handleNewSession = useCallback(() => {
-    runWithBusyGuard(performNewSession);
+  const handleNewSession = useCallback((workspaceId: string | null = null) => {
+    runWithBusyGuard(() => performNewSession(workspaceId));
   }, [performNewSession, runWithBusyGuard]);
 
   return {
@@ -435,6 +443,7 @@ export const useAppNavigation = ({
     showThreadShellDuringNavigation,
     searchOverlay: {
       isOpen: isSearchOverlayOpen,
+      mode: searchOverlayMode,
       pendingReveal: pendingSearchReveal,
     },
     openSearchOverlay,

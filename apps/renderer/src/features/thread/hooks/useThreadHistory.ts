@@ -6,12 +6,12 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  createProject,
+  createWorkspace,
   deleteThread,
-  listProjects,
-  type ProjectMetadata,
+  listWorkspaces,
   type ThreadMetadata,
   type ThreadSearchResult,
+  type WorkspaceMetadata,
   searchThreads as searchThreadsApi,
   updateThreadMetadata as updateThreadMeta,
 } from "@squigit/core/config";
@@ -21,8 +21,10 @@ const TOUCH_THROTTLE_MS = 1200;
 
 export const useThreadHistory = (activeProfileId: string | null = null) => {
   const [threads, setThreads] = useState<ThreadMetadata[]>([]);
-  const [projects, setProjects] = useState<ProjectMetadata[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [workspaces, setWorkspaces] = useState<WorkspaceMetadata[]>([]);
+  const [pendingWorkspaceId, setPendingWorkspaceId] = useState<string | null>(
+    null,
+  );
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const threadsRef = useRef<ThreadMetadata[]>([]);
@@ -35,55 +37,48 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
   const refreshThreads = useCallback(async () => {
     setIsLoading(true);
     try {
-      const projectList = await listProjects();
-      const threadList = projectList.flatMap((project) =>
-        Object.values(project.threads),
+      const workspaceList = await listWorkspaces();
+      const threadList = workspaceList.flatMap((workspace) =>
+        Object.values(workspace.threads),
       );
 
-      setProjects(projectList);
+      setWorkspaces(workspaceList);
       setThreads(threadList.filter((c) => !isOnboardingId(c.id)));
-      setActiveProjectId((current) =>
-        current && projectList.some((project) => project.id === current)
+      setPendingWorkspaceId((current) =>
+        current && workspaceList.some((workspace) => workspace.id === current)
           ? current
-          : (projectList[0]?.id ?? null),
+          : null,
       );
     } catch (e) {
-      console.error("Failed to load projects:", e);
-      setProjects([]);
+      console.error("Failed to load workspaces:", e);
+      setWorkspaces([]);
       setThreads([]);
     } finally {
       setIsLoading(false);
     }
   }, [activeProfileId]);
 
-  const updateProjectThread = useCallback((updated: ThreadMetadata) => {
-    setProjects((current) =>
-      current.map((project) =>
-        project.threads[updated.id]
+  const updateWorkspaceThread = useCallback((updated: ThreadMetadata) => {
+    setWorkspaces((current) =>
+      current.map((workspace) =>
+        workspace.threads[updated.id]
           ? {
-              ...project,
-              threads: { ...project.threads, [updated.id]: updated },
+              ...workspace,
+              threads: { ...workspace.threads, [updated.id]: updated },
             }
-          : project,
+          : workspace,
       ),
     );
   }, []);
 
-  const handleCreateProject = useCallback(async (path: string) => {
-    const project = await createProject(path);
-    setProjects((current) => [
-      project,
-      ...current.filter((item) => item.id !== project.id),
+  const handleCreateWorkspace = useCallback(async (path: string) => {
+    const workspace = await createWorkspace(path);
+    setWorkspaces((current) => [
+      workspace,
+      ...current.filter((item) => item.id !== workspace.id),
     ]);
-    setActiveProjectId(project.id);
-    return project;
+    return workspace;
   }, []);
-
-  const getProjectIdForThread = useCallback(
-    (threadId: string) =>
-      projects.find((project) => !!project.threads[threadId])?.id ?? null,
-    [projects],
-  );
 
   useEffect(() => {
     refreshThreads();
@@ -98,12 +93,12 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     try {
       await deleteThread(id);
       setThreads((prev) => prev.filter((c) => c.id !== id));
-      setProjects((current) =>
-        current.map((project) => {
-          if (!project.threads[id]) return project;
-          const nextThreads = { ...project.threads };
+      setWorkspaces((current) =>
+        current.map((workspace) => {
+          if (!workspace.threads[id]) return workspace;
+          const nextThreads = { ...workspace.threads };
           delete nextThreads[id];
-          return { ...project, threads: nextThreads };
+          return { ...workspace, threads: nextThreads };
         }),
       );
       if (activeSessionId === id) {
@@ -121,11 +116,11 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
       await Promise.all(realIds.map((id) => deleteThread(id)));
       setThreads((prev) => prev.filter((c) => !realIds.includes(c.id)));
       const removedIds = new Set(realIds);
-      setProjects((current) =>
-        current.map((project) => ({
-          ...project,
+      setWorkspaces((current) =>
+        current.map((workspace) => ({
+          ...workspace,
           threads: Object.fromEntries(
-            Object.entries(project.threads).filter(
+            Object.entries(workspace.threads).filter(
               ([id]) => !removedIds.has(id),
             ),
           ),
@@ -149,13 +144,13 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
       title: newTitle,
     };
     setThreads((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    updateProjectThread(updated);
+    updateWorkspaceThread(updated);
     try {
       await updateThreadMeta(updated);
     } catch (e) {
       console.error("Failed to rename thread:", e);
       setThreads((prev) => prev.map((c) => (c.id === id ? thread : c)));
-      updateProjectThread(thread);
+      updateWorkspaceThread(thread);
     }
   };
 
@@ -164,20 +159,19 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     const thread = threads.find((c) => c.id === id);
     if (!thread) return;
 
-    const newPinnedState = !thread.is_pinned;
     const updated = {
       ...thread,
-      is_pinned: newPinnedState,
+      pinned_at: thread.pinned_at ? null : new Date().toISOString(),
     };
 
     setThreads((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    updateProjectThread(updated);
+    updateWorkspaceThread(updated);
     try {
       await updateThreadMeta(updated);
     } catch (e) {
       console.error("Failed to toggle pin:", e);
       setThreads((prev) => prev.map((c) => (c.id === id ? thread : c)));
-      updateProjectThread(thread);
+      updateWorkspaceThread(thread);
     }
   };
 
@@ -200,7 +194,7 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     };
 
     setThreads((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    updateProjectThread(updated);
+    updateWorkspaceThread(updated);
 
     try {
       await updateThreadMeta(updated);
@@ -223,15 +217,14 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
 
   return {
     threads,
-    projects,
-    activeProjectId,
-    setActiveProjectId,
+    workspaces,
+    pendingWorkspaceId,
+    setPendingWorkspaceId,
     activeSessionId,
     setActiveSessionId,
     isLoading,
     refreshThreads,
-    handleCreateProject,
-    getProjectIdForThread,
+    handleCreateWorkspace,
     handleDeleteThread,
     handleDeleteThreads,
     handleRenameThread,

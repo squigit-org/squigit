@@ -1,0 +1,72 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.orderingItem {
+  position: relative;
+}
+
+.orderingSubmenu {
+  position: absolute;
+  top: -4px;
+  left: calc(100% + 6px);
+  z-index: 1;
+  display: none;
+  width: 150px;
+  padding: 4px;
+  border: 1px solid var(--c-raw-149);
+  border-radius: 8px;
+  background: var(--c-raw-147);
+  box-shadow: 0 4px 12px var(--c-raw-084);
+}
+
+.orderingSubmenu::before {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  width: 8px;
+  height: 100%;
+  content: "";
+}
+
+.orderingItem:hover .orderingSubmenu,
+.orderingItem:focus-within .orderingSubmenu {
+  display: flex;
+  flex-direction: column;
+}
+
+.orderingOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.orderingOption:hover,
+.orderingOption:focus-visible {
+  color: var(--c-raw-050);
+  background: var(--c-raw-150);
+  outline: none;
+}
+
+.orderingOptionActive {
+  color: var(--c-raw-050);
+  background: var(--c-raw-067);
+}
+
+.orderingOption svg {
+  color: currentColor;
+}

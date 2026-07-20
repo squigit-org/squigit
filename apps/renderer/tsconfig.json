@@ -29,6 +29,6 @@
       "react-dom/client": ["./node_modules/@types/react-dom/client.d.ts"]
     }
   },
-  "include": ["./**/*.ts", "./**/*.tsx", "vite-env.d.ts"],
+  "include": ["./**/*.ts", "./**/*.tsx", "vite-env.d.ts", "../shared/packages/core/src/helpers/format-age.ts"],
   "exclude": ["node_modules", "dist", "release"]
 }

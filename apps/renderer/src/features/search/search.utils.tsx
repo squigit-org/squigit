@@ -50,25 +50,6 @@ const formatGroupHeader = (isoDate: string): string => {
   return parsed.toLocaleDateString(undefined, options);
 };
 
-export const formatSearchRowDate = (isoDate: string): string => {
-  const parsed = new Date(isoDate);
-  if (Number.isNaN(parsed.getTime())) return "";
-
-  const now = new Date();
-  const diffDays = Math.round(
-    (startOfDay(now) - startOfDay(parsed)) / 86_400_000,
-  );
-
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "yesterday";
-
-  const options: Intl.DateTimeFormatOptions =
-    parsed.getFullYear() === now.getFullYear()
-      ? { month: "short", day: "numeric" }
-      : { month: "short", day: "numeric", year: "numeric" };
-  return parsed.toLocaleDateString(undefined, options).toLowerCase();
-};
-
 export const buildThreadGroups = (threads: ThreadMetadata[]): ThreadGroup[] => {
   const sorted = threads
     .filter((thread) => !isOnboardingId(thread.id))

@@ -94,7 +94,7 @@ export const SquigitsIcon = ({
   </svg>
 );
 
-export const CollapesItemsIcon = ({
+export const CustomizePanelIcon = ({
   size,
   className,
   style,

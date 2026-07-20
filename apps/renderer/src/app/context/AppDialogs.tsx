@@ -115,6 +115,7 @@ export const AppDialogs: React.FC = () => {
 
       <SearchOverlay
         isOpen={app.searchOverlay.isOpen}
+        mode={app.searchOverlay.mode}
         onClose={app.closeSearchOverlay}
         threads={app.threadHistory.threads}
         searchThreads={app.threadHistory.searchThreads}

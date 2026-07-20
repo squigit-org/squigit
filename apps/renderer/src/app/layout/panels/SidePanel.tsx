@@ -7,6 +7,7 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -19,15 +20,25 @@ import {
   X,
   FolderOpenIcon,
   GitFork,
+  Loader2,
+  Settings,
+  ChevronRight,
 } from "lucide-react";
 
-import { NewThreadIcon, CollapesItemsIcon } from "@/components/icons";
-import { Dialog, LoadingSpinner } from "@/components/ui";
+import { CustomizePanelIcon, NewThreadIcon } from "@/components/icons";
+import { Dialog, LoadingSpinner, Tooltip } from "@/components/ui";
 import { useKeyDown } from "@/hooks/shared";
 import { platform as platformBridge } from "@/platform";
-import { getDeleteMultipleThreadsDialog } from "@squigit/core/helpers";
+import {
+  getDeleteMultipleThreadsDialog,
+  formatCompactAge,
+} from "@squigit/core/helpers";
 import type { ThreadMetadata } from "@squigit/core/config";
-import { PanelContextMenu } from "../menus/PanelContextMenu";
+import { ThreadContextMenu } from "../menus/ThreadContextMenu";
+import {
+  PanelContextMenu,
+  type WorkspaceOrdering,
+} from "../menus/PanelContextMenu";
 import { useAppContext } from "../../providers/AppProvider";
 import styles from "./SidePanel.module.css";
 
@@ -48,9 +59,65 @@ const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
   </div>
 );
 
+interface TooltipButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  tooltip: string;
+}
+
+const TooltipButton: React.FC<TooltipButtonProps> = ({
+  tooltip,
+  children,
+  onMouseEnter,
+  onMouseLeave,
+  onFocus,
+  onBlur,
+  onClick,
+  ...buttonProps
+}) => {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <>
+      <button
+        {...buttonProps}
+        ref={buttonRef}
+        onMouseEnter={(event) => {
+          setShowTooltip(true);
+          onMouseEnter?.(event);
+        }}
+        onMouseLeave={(event) => {
+          setShowTooltip(false);
+          onMouseLeave?.(event);
+        }}
+        onFocus={(event) => {
+          setShowTooltip(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setShowTooltip(false);
+          onBlur?.(event);
+        }}
+        onClick={(event) => {
+          setShowTooltip(false);
+          onClick?.(event);
+        }}
+      >
+        {children}
+      </button>
+      <Tooltip
+        text={tooltip}
+        parentRef={buttonRef}
+        show={showTooltip}
+        above
+      />
+    </>
+  );
+};
+
 const SYSTEM_PREFIX = "__system_";
 
-const isUnsafeProjectPath = (path: string): boolean => {
+const isUnsafeWorkspacePath = (path: string): boolean => {
   const normalized = path.trim().replace(/[\\/]+$/, "");
   if (!normalized) return true;
 
@@ -90,28 +157,12 @@ const isUnsafeProjectPath = (path: string): boolean => {
   ]).has(posixPath);
 };
 
-const formatThreadAge = (isoDate: string, now = Date.now()): string => {
-  const parsed = new Date(isoDate);
-  if (Number.isNaN(parsed.getTime())) return "";
-
-  const elapsedMs = Math.max(0, now - parsed.getTime());
-  const minute = 60_000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  const month = 30 * day;
-  const year = 365 * day;
-
-  if (elapsedMs >= year) return `${Math.floor(elapsedMs / year)}y`;
-  if (elapsedMs >= month) return `${Math.floor(elapsedMs / month)}m`;
-  if (elapsedMs >= day) return `${Math.floor(elapsedMs / day)}d`;
-  if (elapsedMs >= hour) return `${Math.floor(elapsedMs / hour)}h`;
-  return `${Math.max(1, Math.floor(elapsedMs / minute))}m`;
-};
-
 interface ThreadItemProps {
   thread: ThreadMetadata;
   isActive: boolean;
+  isEntering: boolean;
   isBusy: boolean;
+  isForking: boolean;
   isSelectionMode: boolean;
   isSelected: boolean;
   currentTime: number;
@@ -120,7 +171,12 @@ interface ThreadItemProps {
   onToggleSelectionThread: (threadId: string) => void;
   onDeleteThread: (threadId: string) => void;
   onRenameThread: (threadId: string, newTitle: string) => void;
-  onTogglePinThread: (threadId: string) => void;
+  onTogglePinThread: (
+    threadId: string,
+    pointer: { x: number; y: number },
+  ) => void;
+  onLeaveThread: (pointer: { x: number; y: number }) => void;
+  onForkThread: (threadId: string) => void;
   onOpenContextMenu: (id: string, x: number, y: number) => void;
   onCloseContextMenu: () => void;
   onEnableSelectionMode: () => void;
@@ -130,7 +186,9 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
   ({
     thread,
     isActive,
+    isEntering,
     isBusy,
+    isForking,
     isSelectionMode,
     isSelected,
     currentTime,
@@ -140,13 +198,17 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
     onDeleteThread,
     onRenameThread,
     onTogglePinThread,
+    onLeaveThread,
+    onForkThread,
     onOpenContextMenu,
     onCloseContextMenu,
     onEnableSelectionMode,
   }) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [renameValue, setRenameValue] = useState(thread.title);
+    const [showAgeTooltip, setShowAgeTooltip] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const ageRef = useRef<HTMLSpanElement>(null);
 
     const showMenu = !!menuState;
 
@@ -189,7 +251,7 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
     });
 
     const lastActivityAt = thread.updated_at || thread.created_at;
-    const lastActivityLabel = formatThreadAge(lastActivityAt, currentTime);
+    const lastActivityLabel = formatCompactAge(lastActivityAt, currentTime);
     const lastActivityTitle = useMemo(
       () => new Date(lastActivityAt).toLocaleString(),
       [lastActivityAt],
@@ -198,7 +260,10 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
     return (
       <>
         <div
-          className={`${styles.threadRow} ${thread.is_pinned ? styles.pinnedRow : ""} ${isActive ? styles.active : ""} ${showMenu ? styles.menuOpen : ""}`}
+          className={`${styles.threadRow} ${thread.pinned_at ? styles.pinnedRow : ""} ${isActive ? styles.active : ""} ${isEntering ? styles.threadRowEntering : ""} ${showMenu ? styles.menuOpen : ""}`}
+          onPointerLeave={(event) =>
+            onLeaveThread({ x: event.clientX, y: event.clientY })
+          }
           onClick={
             isSelectionMode
               ? () => onToggleSelectionThread(thread.id)
@@ -251,31 +316,61 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
                   </span>
                 </span>
               ) : (
-                <span className={styles.threadDate} title={lastActivityTitle}>
-                  {lastActivityLabel}
-                </span>
+                <>
+                  <span
+                    ref={ageRef}
+                    className={styles.threadDate}
+                    onMouseEnter={() => setShowAgeTooltip(true)}
+                    onMouseLeave={() => setShowAgeTooltip(false)}
+                  >
+                    {lastActivityLabel}
+                  </span>
+                  <Tooltip
+                    text={lastActivityTitle}
+                    parentRef={ageRef}
+                    show={showAgeTooltip}
+                    above
+                  />
+                </>
               )}
               <button
                 type="button"
-                className={`${styles.pinBtn} ${thread.is_pinned ? styles.pinActive : ""}`}
+                className={`${styles.pinBtn} ${thread.pinned_at ? styles.pinActive : ""}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onTogglePinThread(thread.id, {
+                    x: event.clientX,
+                    y: event.clientY,
+                  });
+                }}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onTogglePinThread(thread.id);
                 }}
-                title={thread.is_pinned ? "Unpin" : "Pin"}
               >
                 <Pin size={15} style={{ transform: "rotate(45deg)" }} />
               </button>
               <button
                 type="button"
-                className={styles.forkBtn}
+                className={`${styles.forkBtn} ${isForking ? styles.forkBtnLoading : ""}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (!isBusy && !isForking) onForkThread(thread.id);
+                }}
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
                 }}
+                aria-label={isForking ? "Forking thread" : "Fork thread"}
+                aria-busy={isForking}
               >
-                <GitFork size={14} />
+                {isForking ? (
+                  <Loader2 size={14} className={styles.forkSpinner} />
+                ) : (
+                  <GitFork size={14} />
+                )}
               </button>
               <button
                 type="button"
@@ -293,7 +388,7 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
         </div>
 
         {showMenu && menuState && (
-          <PanelContextMenu
+          <ThreadContextMenu
             x={menuState.x}
             y={menuState.y}
             onClose={onCloseContextMenu}
@@ -326,19 +421,44 @@ export const SidePanel: React.FC = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const [activeContextMenu, setActiveContextMenu] = useState<{
+  const [activeThreadContextMenu, setActiveThreadContextMenu] = useState<{
     id: string;
     x: number;
     y: number;
   } | null>(null);
+  const [panelContextMenu, setPanelContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [workspaceOrdering, setWorkspaceOrdering] =
+    useState<WorkspaceOrdering>("created");
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
-  const [projectError, setProjectError] = useState<string | null>(null);
-  const [collapsedProjectIds, setCollapsedProjectIds] = useState<Set<string>>(
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [collapsedWorkspaceIds, setCollapsedWorkspaceIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [didInitializeWorkspaceCollapse, setDidInitializeWorkspaceCollapse] =
+    useState(false);
+  const [enteringThreadIds, setEnteringThreadIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [forkingThreadIds, setForkingThreadIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [isPinHoverFrozen, setIsPinHoverFrozen] = useState(false);
+  const pinHoverFreezeOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const pinHoverFreezeTimeoutRef = useRef<number | null>(null);
+  const pendingWorkspaceCollapseRef = useRef<{
+    id: string;
+    wasCollapsed: boolean;
+  } | null>(null);
+  const didInitializeThreadIdsRef = useRef(false);
+  const knownThreadIdsRef = useRef<Set<string>>(new Set());
+  const threadEntryTimeoutsRef = useRef<Map<string, number>>(new Map());
   const pinToggleLockRef = useRef<Set<string>>(new Set());
+  const forkThreadLockRef = useRef<Set<string>>(new Set());
   const selectThreadRef = useRef(app.handleNavigation);
   const renameThreadRef = useRef(app.threadHistory.handleRenameThread);
   const togglePinRef = useRef(app.threadHistory.handleTogglePinThread);
@@ -367,15 +487,20 @@ export const SidePanel: React.FC = () => {
     };
   }, []);
 
-  const projectGroups = useMemo(
+  const workspaceItems = useMemo(
     () =>
-      app.threadHistory.projects.map((project) => ({
-        ...project,
-        threads: Object.values(project.threads)
+      app.threadHistory.workspaces.map((workspace) => ({
+        ...workspace,
+        threads: Object.values(workspace.threads)
           .filter((thread) => !thread.id.startsWith(SYSTEM_PREFIX))
           .sort((a, b) => {
-            if (a.is_pinned !== b.is_pinned) {
-              return a.is_pinned ? -1 : 1;
+            if (a.pinned_at || b.pinned_at) {
+              if (!a.pinned_at) return 1;
+              if (!b.pinned_at) return -1;
+              return (
+                new Date(b.pinned_at).getTime() -
+                new Date(a.pinned_at).getTime()
+              );
             }
             return (
               new Date(b.updated_at || b.created_at).getTime() -
@@ -383,8 +508,189 @@ export const SidePanel: React.FC = () => {
             );
           }),
       })),
-    [app.threadHistory.projects],
+    [app.threadHistory.workspaces],
   );
+
+  const pathWorkspaces = useMemo(
+    () => {
+      const workspaces = workspaceItems.filter(
+        (workspace) => workspace.path !== null,
+      );
+      if (workspaceOrdering === "created") return workspaces;
+
+      const updatedTime = (workspace: (typeof workspaceItems)[number]) =>
+        workspace.threads.reduce(
+          (latest, thread) =>
+            Math.max(
+              latest,
+              new Date(thread.updated_at || thread.created_at).getTime(),
+            ),
+          0,
+        );
+
+      return workspaces.sort((a, b) => {
+        return updatedTime(b) - updatedTime(a);
+      });
+    },
+    [workspaceItems, workspaceOrdering],
+  );
+  const defaultWorkspace = useMemo(
+    () => workspaceItems.find((workspace) => workspace.path === null) ?? null,
+    [workspaceItems],
+  );
+  const visiblePathWorkspaces = pathWorkspaces.slice(0, 3);
+  const isHomeRoute = activeSessionId === null;
+  const pendingWorkspaceId = app.threadHistory.pendingWorkspaceId;
+
+  useEffect(() => {
+    if (
+      didInitializeWorkspaceCollapse ||
+      app.threadHistory.isLoading ||
+      workspaceItems.length === 0
+    ) {
+      return;
+    }
+
+    setCollapsedWorkspaceIds(
+      new Set(
+        workspaceItems
+          .filter(
+            (workspace) =>
+              workspace.path !== null && workspace.id !== pendingWorkspaceId,
+          )
+          .map((workspace) => workspace.id),
+      ),
+    );
+    setDidInitializeWorkspaceCollapse(true);
+  }, [
+    app.threadHistory.isLoading,
+    didInitializeWorkspaceCollapse,
+    pendingWorkspaceId,
+    workspaceItems,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!pendingWorkspaceId || !isHomeRoute) return;
+
+    setCollapsedWorkspaceIds((current) => {
+      const next = new Set(current);
+      const previous = pendingWorkspaceCollapseRef.current;
+
+      if (previous && previous.id !== pendingWorkspaceId) {
+        if (previous.wasCollapsed) next.add(previous.id);
+        else next.delete(previous.id);
+      }
+
+      if (!previous || previous.id !== pendingWorkspaceId) {
+        pendingWorkspaceCollapseRef.current = {
+          id: pendingWorkspaceId,
+          wasCollapsed: next.has(pendingWorkspaceId),
+        };
+      }
+
+      next.delete(pendingWorkspaceId);
+      return next;
+    });
+  }, [isHomeRoute, pendingWorkspaceId]);
+
+  const cancelPendingThread = useCallback(() => {
+    const previous = pendingWorkspaceCollapseRef.current;
+    pendingWorkspaceCollapseRef.current = null;
+
+    if (previous) {
+      setCollapsedWorkspaceIds((current) => {
+        const next = new Set(current);
+        if (previous.wasCollapsed) next.add(previous.id);
+        else next.delete(previous.id);
+        return next;
+      });
+    }
+
+    app.threadHistory.setPendingWorkspaceId(null);
+  }, [app.threadHistory]);
+
+  const consumePendingThread = useCallback(() => {
+    pendingWorkspaceCollapseRef.current = null;
+    app.threadHistory.setPendingWorkspaceId(null);
+  }, [app.threadHistory]);
+
+  useEffect(() => {
+    const nextThreadIds = new Set(
+      workspaceItems.flatMap((workspace) =>
+        workspace.threads.map((thread) => thread.id),
+      ),
+    );
+
+    if (!didInitializeThreadIdsRef.current) {
+      if (app.threadHistory.isLoading || workspaceItems.length === 0) return;
+      didInitializeThreadIdsRef.current = true;
+      knownThreadIdsRef.current = nextThreadIds;
+      return;
+    }
+
+    const addedThreadIds = [...nextThreadIds].filter(
+      (threadId) => !knownThreadIdsRef.current.has(threadId),
+    );
+    knownThreadIdsRef.current = nextThreadIds;
+    if (addedThreadIds.length === 0) return;
+
+    setEnteringThreadIds((current) => {
+      const next = new Set(current);
+      addedThreadIds.forEach((threadId) => next.add(threadId));
+      return next;
+    });
+
+    addedThreadIds.forEach((threadId) => {
+      const existingTimeout = threadEntryTimeoutsRef.current.get(threadId);
+      if (existingTimeout !== undefined) window.clearTimeout(existingTimeout);
+      const timeout = window.setTimeout(() => {
+        threadEntryTimeoutsRef.current.delete(threadId);
+        setEnteringThreadIds((current) => {
+          if (!current.has(threadId)) return current;
+          const next = new Set(current);
+          next.delete(threadId);
+          return next;
+        });
+      }, 240);
+      threadEntryTimeoutsRef.current.set(threadId, timeout);
+    });
+
+    if (pendingWorkspaceId) consumePendingThread();
+  }, [
+    app.threadHistory.isLoading,
+    consumePendingThread,
+    pendingWorkspaceId,
+    workspaceItems,
+  ]);
+
+  useEffect(
+    () => () => {
+      threadEntryTimeoutsRef.current.forEach((timeout) =>
+        window.clearTimeout(timeout),
+      );
+      threadEntryTimeoutsRef.current.clear();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!isHomeRoute && !pendingWorkspaceId) {
+      const previous = pendingWorkspaceCollapseRef.current;
+      pendingWorkspaceCollapseRef.current = null;
+
+      const openedNewThread = activeSessionId
+        ? !knownThreadIdsRef.current.has(activeSessionId)
+        : false;
+      if (previous && !openedNewThread) {
+        setCollapsedWorkspaceIds((current) => {
+          const next = new Set(current);
+          if (previous.wasCollapsed) next.add(previous.id);
+          else next.delete(previous.id);
+          return next;
+        });
+      }
+    }
+  }, [activeSessionId, isHomeRoute, pendingWorkspaceId]);
 
   const allThreads = useMemo(
     () => threads.filter((thread) => !thread.id.startsWith(SYSTEM_PREFIX)),
@@ -401,7 +707,8 @@ export const SidePanel: React.FC = () => {
   const handleOpenContextMenu = useCallback(
     (id: string, x: number, y: number) => {
       const xPos = x + 180 > window.innerWidth ? x - 180 : x;
-      setActiveContextMenu((prev) => {
+      setPanelContextMenu(null);
+      setActiveThreadContextMenu((prev) => {
         if (prev && prev.id === id && prev.x === xPos && prev.y === y) {
           return prev;
         }
@@ -412,12 +719,25 @@ export const SidePanel: React.FC = () => {
   );
 
   const handleCloseContextMenu = useCallback(() => {
-    setActiveContextMenu((prev) => (prev === null ? prev : null));
+    setActiveThreadContextMenu((prev) => (prev === null ? prev : null));
   }, []);
 
-  const handleTogglePin = useCallback(async (threadId: string) => {
+  const handleTogglePin = useCallback(async (
+    threadId: string,
+    pointer: { x: number; y: number },
+  ) => {
     if (pinToggleLockRef.current.has(threadId)) return;
 
+    pinHoverFreezeOriginRef.current = pointer;
+    setIsPinHoverFrozen(true);
+    if (pinHoverFreezeTimeoutRef.current !== null) {
+      window.clearTimeout(pinHoverFreezeTimeoutRef.current);
+    }
+    pinHoverFreezeTimeoutRef.current = window.setTimeout(() => {
+      pinHoverFreezeTimeoutRef.current = null;
+      pinHoverFreezeOriginRef.current = null;
+      setIsPinHoverFrozen(false);
+    }, 5_00);
     pinToggleLockRef.current.add(threadId);
     try {
       await togglePinRef.current(threadId);
@@ -428,55 +748,124 @@ export const SidePanel: React.FC = () => {
     }
   }, []);
 
+  const handleLeaveThread = useCallback(
+    (pointer: { x: number; y: number }) => {
+      if (!isPinHoverFrozen) return;
+      const origin = pinHoverFreezeOriginRef.current;
+      if (origin && origin.x === pointer.x && origin.y === pointer.y) return;
+
+      if (pinHoverFreezeTimeoutRef.current !== null) {
+        window.clearTimeout(pinHoverFreezeTimeoutRef.current);
+        pinHoverFreezeTimeoutRef.current = null;
+      }
+      pinHoverFreezeOriginRef.current = null;
+      setIsPinHoverFrozen(false);
+    },
+    [isPinHoverFrozen],
+  );
+
+  const handleForkThread = useCallback(
+    async (threadId: string) => {
+      if (forkThreadLockRef.current.has(threadId)) return;
+
+      forkThreadLockRef.current.add(threadId);
+      setForkingThreadIds((current) => new Set(current).add(threadId));
+      try {
+        await app.handleForkThread(threadId);
+      } catch {
+        // The app-level handler reports the storage/navigation error.
+      } finally {
+        forkThreadLockRef.current.delete(threadId);
+        setForkingThreadIds((current) => {
+          const next = new Set(current);
+          next.delete(threadId);
+          return next;
+        });
+      }
+    },
+    [app.handleForkThread],
+  );
+
+  useEffect(
+    () => () => {
+      if (pinHoverFreezeTimeoutRef.current !== null) {
+        window.clearTimeout(pinHoverFreezeTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
   const handleNavigation = useCallback(
-    (projectId: string, threadId: string) => {
+    (threadId: string) => {
       if (threadId === activeSessionId) return;
-      app.threadHistory.setActiveProjectId(projectId);
+      if (pendingWorkspaceId) cancelPendingThread();
       selectThreadRef.current(threadId);
     },
-    [activeSessionId, app.threadHistory],
+    [activeSessionId, cancelPendingThread, pendingWorkspaceId],
   );
 
   const handleNewThread = useCallback(
-    (projectId: string) => {
-      app.threadHistory.setActiveProjectId(projectId);
-      app.handleNewSession();
+    (workspaceId: string | null) => {
+      app.handleNewSession(workspaceId);
     },
     [app],
   );
 
-  const handleToggleProject = useCallback((projectId: string) => {
-    setCollapsedProjectIds((current) => {
+  const handleToggleWorkspace = useCallback((workspaceId: string) => {
+    setCollapsedWorkspaceIds((current) => {
       const next = new Set(current);
-      if (next.has(projectId)) next.delete(projectId);
-      else next.add(projectId);
+      if (next.has(workspaceId)) next.delete(workspaceId);
+      else next.add(workspaceId);
       return next;
     });
   }, []);
 
-  const handleNewProject = useCallback(async () => {
+  const handleTogglePanelContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      const rect = event.currentTarget.getBoundingClientRect();
+      setActiveThreadContextMenu(null);
+      setPanelContextMenu((current) =>
+        current ? null : { x: rect.left, y: rect.bottom },
+      );
+    },
+    [],
+  );
+
+  const handleCollapseAllWorkspaces = useCallback(() => {
+    setCollapsedWorkspaceIds(
+      new Set(workspaceItems.map((workspace) => workspace.id)),
+    );
+  }, [workspaceItems]);
+
+  const handleExpandAllWorkspaces = useCallback(() => {
+    setCollapsedWorkspaceIds(new Set());
+  }, []);
+
+  const handleNewWorkspace = useCallback(async () => {
     try {
       const selected = await platformBridge.dialog.open({
         directory: true,
-        title: "New Project",
-        buttonLabel: "Select this folder",
+        title: "New Workspace",
+        buttonLabel: "Select workspace",
       });
       if (!selected || Array.isArray(selected)) return;
 
-      if (isUnsafeProjectPath(selected)) {
-        setProjectError(
-          "Choose a dedicated project folder instead of a device, home, or system folder.",
+      if (isUnsafeWorkspacePath(selected)) {
+        setWorkspaceError(
+          "Choose a dedicated workspace instead of a device, home, or system path.",
         );
         return;
       }
 
-      await app.threadHistory.handleCreateProject(selected);
+      const workspace = await app.threadHistory.handleCreateWorkspace(selected);
+      setCollapsedWorkspaceIds((current) => new Set(current).add(workspace.id));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setProjectError(
+      setWorkspaceError(
         message.includes("already in use")
-          ? "That folder is already open as a project."
-          : "This folder cannot be used as a project working directory.",
+          ? "That workspace is already open."
+          : "This path cannot be used as a workspace.",
       );
     }
   }, [app.threadHistory]);
@@ -529,8 +918,137 @@ export const SidePanel: React.FC = () => {
     setShowBulkDelete(false);
   };
 
+  const renderWorkspace = (workspace: (typeof workspaceItems)[number]) => {
+    const isDefault = workspace.path === null;
+    const isCollapsed = didInitializeWorkspaceCollapse
+      ? collapsedWorkspaceIds.has(workspace.id)
+      : !isDefault && workspace.id !== pendingWorkspaceId;
+    const showPendingThread =
+      !isDefault &&
+      isHomeRoute &&
+      pendingWorkspaceId === workspace.id;
+    const showNewThreadButton = isDefault
+      ? !isHomeRoute
+      : !showPendingThread;
+    return (
+      <section className={styles.workspace} key={workspace.id}>
+        <div
+          className={styles.workspaceDivider}
+          role="button"
+          tabIndex={0}
+          aria-expanded={!isCollapsed}
+          onClick={() => handleToggleWorkspace(workspace.id)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            handleToggleWorkspace(workspace.id);
+          }}
+        >
+          <ChevronRight
+            size={15}
+            className={`${styles.workspaceChevron} ${
+              isCollapsed ? "" : styles.workspaceChevronExpanded
+            }`}
+          />
+          <span className={styles.workspaceLabel}>
+            {workspace.name}
+          </span>
+          <div className={styles.workspaceActions}>
+            <div
+              className={`${styles.workspaceThreadAction} ${
+                showNewThreadButton ? styles.workspaceThreadActionEnabled : ""
+              }`}
+            >
+              <TooltipButton
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleNewThread(isDefault ? null : workspace.id);
+                }}
+                className={`${styles.iconButton} ${styles.workspaceNewThreadButton}`}
+                tooltip="New Thread"
+                aria-label={`New thread in ${workspace.name}`}
+                tabIndex={showNewThreadButton ? 0 : -1}
+                aria-hidden={!showNewThreadButton}
+              >
+                <NewThreadIcon size={16} />
+              </TooltipButton>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={`${styles.workspaceThreads} ${
+            isCollapsed ? styles.workspaceThreadsCollapsed : ""
+          }`}
+          aria-hidden={isCollapsed}
+        >
+          <div className={styles.workspaceThreadsClip}>
+            <div className={styles.workspaceInner}>
+              {showPendingThread && (
+                <div
+                  className={`${styles.threadRow} ${styles.pendingThreadRow}`}
+                  aria-label={`New thread pending in ${workspace.name}`}
+                >
+                  <div className={styles.threadIndent} />
+                  <span className={styles.threadTitle}>New thread</span>
+                  <TooltipButton
+                    type="button"
+                    className={styles.pendingThreadClose}
+                    onClick={cancelPendingThread}
+                    tooltip="Cancel new thread"
+                    aria-label={`Cancel new thread in ${workspace.name}`}
+                  >
+                    <X size={14} />
+                  </TooltipButton>
+                </div>
+              )}
+
+              {workspace.threads.map((thread) => (
+                <ThreadItem
+                  key={thread.id}
+                  thread={thread}
+                  isActive={thread.id === activeSessionId}
+                  isEntering={enteringThreadIds.has(thread.id)}
+                  isBusy={busyThreadId === thread.id}
+                  isForking={forkingThreadIds.has(thread.id)}
+                  isSelectionMode={isSelectionMode}
+                  isSelected={selectedIdSet.has(thread.id)}
+                  currentTime={currentTime}
+                  menuState={
+                    activeThreadContextMenu?.id === thread.id
+                      ? activeThreadContextMenu
+                      : null
+                  }
+                  onSelectThread={handleNavigation}
+                  onToggleSelectionThread={toggleThreadSelection}
+                  onDeleteThread={handleQueueDeleteThread}
+                  onRenameThread={handleRenameThread}
+                  onTogglePinThread={handleTogglePin}
+                  onLeaveThread={handleLeaveThread}
+                  onForkThread={handleForkThread}
+                  onOpenContextMenu={handleOpenContextMenu}
+                  onCloseContextMenu={handleCloseContextMenu}
+                  onEnableSelectionMode={handleEnableSelectionMode}
+                />
+              ))}
+
+              {workspace.threads.length === 0 && !showPendingThread && (
+                <div className={styles.emptyState}>No threads yet.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  };
+
   return (
-    <div className={styles.panel}>
+    <div
+      className={`${styles.panel} ${
+        isPinHoverFrozen ? styles.pinHoverFrozen : ""
+      }`}
+    >
       {isSelectionMode ? (
         <div className={styles.selectionHeader}>
           <div className={styles.selectionLeft}>
@@ -573,99 +1091,79 @@ export const SidePanel: React.FC = () => {
       )}
 
       <div className={styles.scrollArea}>
-        {projectGroups.map((project, projectIndex) => {
-          const isCollapsed = collapsedProjectIds.has(project.id);
-
-          return (
-            <section className={styles.projectGroup} key={project.id}>
-              <div className={styles.threadsDivider}>
-                <span className={styles.directoryLabel} title={project.name}>
-                  {project.name}
-                </span>
-                <div className={styles.directoryActions}>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleProject(project.id)}
-                    className={styles.iconButton}
-                    title={isCollapsed ? "Expand" : "Collapse"}
-                    aria-label={isCollapsed ? "Expand" : "Collapse"}
-                    aria-expanded={!isCollapsed}
-                  >
-                    <CollapesItemsIcon
-                      size={16}
-                      className={`${styles.collapseIcon} ${
-                        isCollapsed ? styles.collapseIconCollapsed : ""
-                      }`}
-                    />
-                  </button>
-                  {projectIndex === 0 && (
-                    <button
-                      type="button"
-                      onClick={handleNewProject}
-                      className={styles.iconButton}
-                      title="New Project"
-                      aria-label="New Project"
-                    >
-                      <FolderOpenIcon size={17} />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleNewThread(project.id)}
-                    className={styles.iconButton}
-                    title="New Thread"
-                    aria-label="New Thread"
-                  >
-                    <NewThreadIcon size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <div
-                className={`${styles.projectThreads} ${
-                  isCollapsed ? styles.projectThreadsCollapsed : ""
+        <div className={styles.workspacesHeader}>
+          <span className={styles.workspacesTitle}>Workspaces</span>
+          <div className={styles.workspacesHeaderActions}>
+            <TooltipButton
+              type="button"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={handleTogglePanelContextMenu}
+              className={styles.iconButton}
+              tooltip="Customize workspaces"
+              aria-label="Customize workspaces"
+              aria-expanded={!!panelContextMenu}
+            >
+              <CustomizePanelIcon
+                size={16}
+                className={`${styles.customizePanelIcon} ${
+                  panelContextMenu ? styles.customizePanelIconOpen : ""
                 }`}
-                aria-hidden={isCollapsed}
-              >
-                <div className={styles.projectThreadsClip}>
-                  <div className={styles.groupInner}>
-                    {project.threads.map((thread) => (
-                      <ThreadItem
-                        key={thread.id}
-                        thread={thread}
-                        isActive={thread.id === activeSessionId}
-                        isBusy={busyThreadId === thread.id}
-                        isSelectionMode={isSelectionMode}
-                        isSelected={selectedIdSet.has(thread.id)}
-                        currentTime={currentTime}
-                        menuState={
-                          activeContextMenu?.id === thread.id
-                            ? activeContextMenu
-                            : null
-                        }
-                        onSelectThread={(threadId) =>
-                          handleNavigation(project.id, threadId)
-                        }
-                        onToggleSelectionThread={toggleThreadSelection}
-                        onDeleteThread={handleQueueDeleteThread}
-                        onRenameThread={handleRenameThread}
-                        onTogglePinThread={handleTogglePin}
-                        onOpenContextMenu={handleOpenContextMenu}
-                        onCloseContextMenu={handleCloseContextMenu}
-                        onEnableSelectionMode={handleEnableSelectionMode}
-                      />
-                    ))}
+              />
+            </TooltipButton>
+            <TooltipButton
+              type="button"
+              onClick={() => {
+                if (pendingWorkspaceId) cancelPendingThread();
+                setPanelContextMenu(null);
+              }}
+              className={styles.iconButton}
+              tooltip="Workspace settings"
+              aria-label="Workspace settings"
+            >
+              <Settings size={16} />
+            </TooltipButton>
+            <TooltipButton
+              type="button"
+              onClick={handleNewWorkspace}
+              className={styles.iconButton}
+              tooltip="Add workspace"
+              aria-label="Add workspace"
+            >
+              <FolderOpenIcon size={17} />
+            </TooltipButton>
+          </div>
+        </div>
 
-                    {project.threads.length === 0 && (
-                      <div className={styles.emptyState}>No threads yet.</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-          );
-        })}
+        {visiblePathWorkspaces.map(renderWorkspace)}
+
+        {pathWorkspaces.length > 3 && (
+          <div className={styles.viewAllDivider}>
+            <span className={styles.viewAllLine} />
+            <button
+              type="button"
+              className={styles.viewAllButton}
+              onClick={() => app.openSearchOverlay("workspaces")}
+            >
+              View all ({pathWorkspaces.length})
+            </button>
+            <span className={styles.viewAllLine} />
+          </div>
+        )}
+
+        {defaultWorkspace && renderWorkspace(defaultWorkspace)}
       </div>
+
+      {panelContextMenu && (
+        <PanelContextMenu
+          x={panelContextMenu.x}
+          y={panelContextMenu.y}
+          onClose={() => setPanelContextMenu(null)}
+          ordering={workspaceOrdering}
+          onChangeOrdering={setWorkspaceOrdering}
+          onCollapseAll={handleCollapseAllWorkspaces}
+          onExpandAll={handleExpandAllWorkspaces}
+        />
+      )}
 
       <Dialog
         isOpen={!!deleteId}
@@ -686,15 +1184,15 @@ export const SidePanel: React.FC = () => {
       />
 
       <Dialog
-        isOpen={!!projectError}
+        isOpen={!!workspaceError}
         variant="warning"
-        title="Folder unavailable"
-        message={projectError || ""}
+        title="Workspace unavailable"
+        message={workspaceError || ""}
         actions={[
           {
             label: "Close",
             variant: "primary",
-            onClick: () => setProjectError(null),
+            onClick: () => setWorkspaceError(null),
           },
         ]}
       />

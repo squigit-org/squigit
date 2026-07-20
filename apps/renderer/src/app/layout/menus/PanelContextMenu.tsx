@@ -10,61 +10,87 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
 } from "@/components/ui";
-import { Pencil, CheckSquare, Trash2 } from "lucide-react";
+import { ChevronRight, Clock3 } from "lucide-react";
+import { NewThreadIcon } from "@/components/icons";
+import styles from "./PanelContextMenu.module.css";
+
+export type WorkspaceOrdering = "created" | "updated";
 
 interface PanelContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
-  onRename: () => void;
-  onToggleSelection: () => void;
-  onDelete: () => void;
-  isSelected: boolean;
+  ordering: WorkspaceOrdering;
+  onChangeOrdering: (ordering: WorkspaceOrdering) => void;
+  onCollapseAll: () => void;
+  onExpandAll: () => void;
 }
 
 export const PanelContextMenu: React.FC<PanelContextMenuProps> = ({
   x,
   y,
   onClose,
-  onRename,
-  onToggleSelection,
-  onDelete,
-  isSelected: _isSelected,
+  ordering,
+  onChangeOrdering,
+  onCollapseAll,
+  onExpandAll,
 }) => {
   return (
     <ContextMenu x={x} y={y} onClose={onClose} width={180}>
-      <ContextMenuItem
-        onClick={() => {
-          onRename();
-          onClose();
-        }}
-        icon={<Pencil size={14} />}
-      >
-        Rename
-      </ContextMenuItem>
+      <div className={styles.orderingItem}>
+        <ContextMenuItem shortcut={<ChevronRight size={13} />}>
+          Ordering
+        </ContextMenuItem>
+
+        <div className={styles.orderingSubmenu}>
+          <button
+            type="button"
+            className={`${styles.orderingOption} ${
+              ordering === "created" ? styles.orderingOptionActive : ""
+            }`}
+            onClick={() => {
+              onChangeOrdering("created");
+              onClose();
+            }}
+          >
+            <NewThreadIcon size={14} />
+            <span>Created</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.orderingOption} ${
+              ordering === "updated" ? styles.orderingOptionActive : ""
+            }`}
+            onClick={() => {
+              onChangeOrdering("updated");
+              onClose();
+            }}
+          >
+            <Clock3 size={14} />
+            <span>Updated</span>
+          </button>
+        </div>
+      </div>
 
       <ContextMenuSeparator />
 
       <ContextMenuItem
         onClick={() => {
-          onToggleSelection();
+          onCollapseAll();
           onClose();
         }}
-        icon={<CheckSquare size={14} />}
       >
-        Select
+        Collapse all
       </ContextMenuItem>
-
       <ContextMenuItem
-        variant="danger"
         onClick={() => {
-          onDelete();
+          onExpandAll();
           onClose();
         }}
-        icon={<Trash2 size={14} />}
       >
-        Delete
+        Expand all
       </ContextMenuItem>
+      <ContextMenuItem disabled>Mark all as read</ContextMenuItem>
     </ContextMenu>
   );
 };

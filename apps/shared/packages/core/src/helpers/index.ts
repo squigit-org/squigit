@@ -32,6 +32,8 @@ export {
 export type { ParsedError } from "./error-parser.ts";
 export { parseAppError } from "./error-parser.ts";
 
+export { formatCompactAge } from "./format-age.ts";
+
 export type { ReportAction } from "./reporting.ts";
 export {
   buildMailto,

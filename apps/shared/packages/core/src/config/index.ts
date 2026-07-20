@@ -16,7 +16,7 @@ export {
 
 export type {
   ThreadMetadata,
-  ProjectMetadata,
+  WorkspaceMetadata,
   ThreadCitation,
   ThreadToolStep,
   ThreadMessage,
@@ -38,8 +38,9 @@ export {
   storeImageFromPath,
   getImagePath,
   createThread,
-  createProject,
-  listProjects,
+  createWorkspace,
+  listWorkspaces,
+  setThreadWorkspace,
   loadThread,
   forkThread,
   listThreads,

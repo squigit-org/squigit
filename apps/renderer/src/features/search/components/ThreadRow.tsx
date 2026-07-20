@@ -5,14 +5,13 @@
  */
 
 import React from "react";
-import { MessageCircle } from "lucide-react";
 import styles from "./ThreadRow.module.css";
 
 interface ThreadRowProps {
   title: string;
   snippet?: React.ReactNode;
   dateLabel?: string;
-  compact?: boolean;
+  indented?: boolean;
   onClick: () => void;
 }
 
@@ -20,27 +19,21 @@ export const ThreadRow: React.FC<ThreadRowProps> = ({
   title,
   snippet,
   dateLabel,
-  compact = false,
+  indented = false,
   onClick,
 }) => {
   return (
     <button
       type="button"
-      className={`${styles.row} ${compact ? styles.rowCompact : ""}`}
+      className={`${styles.row} ${indented ? styles.rowIndented : ""}`}
       onClick={onClick}
     >
-      <div className={styles.rowIcon}>
-        <MessageCircle size={16} />
-      </div>
-
       <div className={styles.rowText}>
-        <div className={styles.rowTitle}>{title || "Untitled thread"}</div>
-        {snippet ? <div className={styles.rowSnippet}>{snippet}</div> : null}
+        <span className={styles.rowTitle}>{title || "Untitled thread"}</span>
+        {snippet ? <span className={styles.rowSnippet}>{snippet}</span> : null}
       </div>
 
-      {!compact ? (
-        <div className={styles.rowDate}>{dateLabel || ""}</div>
-      ) : null}
+      <span className={styles.rowDate}>{dateLabel || ""}</span>
     </button>
   );
 };

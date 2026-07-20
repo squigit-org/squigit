@@ -12,6 +12,7 @@ import {
   cancelOcrJob,
   createThread,
   getImagePath,
+  setThreadWorkspace,
 } from "@squigit/core/config";
 
 export const useAppCapture = ({
@@ -81,11 +82,13 @@ export const useAppCapture = ({
       });
 
       try {
+        const workspaceId = threadHistoryRef.current?.pendingWorkspaceId;
         const newThread = await createThread(
           "New thread",
           imageData.imageId,
-          threadHistoryRef.current?.activeProjectId,
+          workspaceId,
         );
+        threadHistoryRef.current?.setPendingWorkspaceId(null);
         threadHistory.setActiveSessionId(newThread.id);
         threadHistory.refreshThreads();
         console.log("Created new thread:", newThread.id);
@@ -211,6 +214,12 @@ export const useAppCapture = ({
           dialogs.setShowLoginRequiredDialog(true);
           return;
         }
+
+        const workspaceId = threadHistoryRef.current?.pendingWorkspaceId;
+        if (workspaceId) {
+          await setThreadWorkspace(threadId, workspaceId);
+        }
+        threadHistoryRef.current?.setPendingWorkspaceId(null);
 
         const imagePath = await getImagePath(imageHash);
 

@@ -118,7 +118,7 @@ export const TitleBar: React.FC = () => {
               <SidePanelToggleIcon size={20} active={app.isSidePanelOpen} />
               </button>
               <button
-                onClick={app.openSearchOverlay}
+                onClick={() => app.openSearchOverlay()}
                 className={`${styles.iconButton}`}
                 title="Search Threads"
                 aria-label="Search threads"
