@@ -65,11 +65,15 @@ interface ThreadWorkspaceProps {
   attachments: Attachment[];
   onAttachmentsChange: (attachments: Attachment[]) => void;
   onCaptureToInput: () => void | Promise<void>;
-  onPreviewAttachment: (attachment: Attachment) => void | Promise<void>;
+  onPreviewAttachment: (
+    attachment: Attachment,
+    index: number,
+    images: Attachment[],
+  ) => void | Promise<void>;
   rememberAttachmentSourcePath: (
     storedPath: string,
     sourcePath: string,
-  ) => void;
+  ) => void | Promise<void>;
   showScrollToBottomButton: boolean;
   keepScrollToBottomButtonMounted: boolean;
   scrollToBottomButtonRef: RefObject<HTMLButtonElement | null>;

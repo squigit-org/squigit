@@ -647,8 +647,9 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
     (attachment: (typeof imageAttachments)[number], index: number) => {
       void openMediaViewer(attachment, {
         isGallery: true,
-        threadId: threadId || undefined,
-        galleryAttachments: imageAttachments,
+        galleryEntries: imageAttachments.map((image) => ({
+          attachment: image,
+        })),
         initialIndex: index,
         openedFromThread: true,
       });

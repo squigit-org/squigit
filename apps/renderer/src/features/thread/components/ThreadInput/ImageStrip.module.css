@@ -31,6 +31,40 @@
   display: none;
 }
 
+.scrollButton {
+  position: absolute;
+  z-index: 4;
+  top: 43px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--c-raw-010);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-raw-012) 88%, transparent);
+  color: var(--c-raw-003);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.scrollButton:hover {
+  color: var(--c-raw-002);
+  background: var(--c-raw-010);
+}
+
+.scrollButtonLeft {
+  left: 2px;
+}
+
+.scrollButtonRight {
+  right: 2px;
+}
+
 .scrollbarTrack {
   position: absolute;
   bottom: 0;

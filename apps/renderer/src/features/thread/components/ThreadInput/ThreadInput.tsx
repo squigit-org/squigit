@@ -170,7 +170,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
                 hash: string;
                 path: string;
               }>("store_image_from_path", { path: filePath });
-              rememberAttachmentSourcePath?.(result.path, filePath);
+              await rememberAttachmentSourcePath?.(result.path, filePath);
               nextAttachments.push(
                 attachmentFromPath(
                   result.path,
@@ -191,7 +191,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
                 hash: string;
                 path: string;
               }>("store_file_from_path", { path: filePath });
-              rememberAttachmentSourcePath?.(result.path, filePath);
+              await rememberAttachmentSourcePath?.(result.path, filePath);
               inlineLinks.push(
                 buildAttachmentMention(result.path, originalName),
               );
@@ -220,7 +220,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
               hash: string;
               path: string;
             }>("store_file_from_path", { path: filePath });
-            rememberAttachmentSourcePath?.(result.path, filePath);
+            await rememberAttachmentSourcePath?.(result.path, filePath);
             inlineLinks.push(buildAttachmentMention(result.path, originalName));
           } catch (err) {
             console.error("Failed to validate selected text file:", err);

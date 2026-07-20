@@ -12,7 +12,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { CircleAlert, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleAlert, Loader2 } from "lucide-react";
 import { platform } from "@/platform";
 import { CloseCrossIcon } from "@/components/icons";
 import type { Attachment } from "@squigit/core/brain/attachments";
@@ -167,17 +167,25 @@ const ScrollbarThumb: React.FC<ScrollbarThumbProps> = ({
 interface ImageStripProps {
   attachments: Attachment[];
   onRemove?: (id: string) => void;
-  onClick?: (attachment: Attachment) => void;
+  onClick?: (
+    attachment: Attachment,
+    index: number,
+    images: Attachment[],
+  ) => void;
 }
 
 interface ScrollState {
   canScroll: boolean;
+  canScrollLeft: boolean;
+  canScrollRight: boolean;
   thumbWidth: number;
   thumbLeft: number;
 }
 
 const INITIAL_SCROLL_STATE: ScrollState = {
   canScroll: false,
+  canScrollLeft: false,
+  canScrollRight: false,
   thumbWidth: 0,
   thumbLeft: 0,
 };
@@ -228,15 +236,26 @@ export const ImageStrip: React.FC<ImageStripProps> = ({
       clientWidth,
       scrollLeft,
     );
+    const maxScrollLeft = scrollWidth - clientWidth;
+    const canScrollLeft = scrollLeft > 1;
+    const canScrollRight = scrollLeft < maxScrollLeft - 1;
     setScrollState((prev) => {
       if (
         prev.canScroll === true &&
+        prev.canScrollLeft === canScrollLeft &&
+        prev.canScrollRight === canScrollRight &&
         prev.thumbWidth === thumbWidth &&
         prev.thumbLeft === thumbLeft
       ) {
         return prev;
       }
-      return { canScroll: true, thumbWidth, thumbLeft };
+      return {
+        canScroll: true,
+        canScrollLeft,
+        canScrollRight,
+        thumbWidth,
+        thumbLeft,
+      };
     });
   }, []);
 
@@ -279,11 +298,20 @@ export const ImageStrip: React.FC<ImageStripProps> = ({
   }, [updateScroll]);
 
   const handleClick = useCallback(
-    (attachment: Attachment) => {
-      onClick?.(attachment);
+    (attachment: Attachment, index: number) => {
+      onClick?.(attachment, index, displayAttachments);
     },
-    [onClick],
+    [displayAttachments, onClick],
   );
+
+  const scrollStrip = useCallback((direction: -1 | 1) => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    strip.scrollBy({
+      left: direction * Math.max(72, strip.clientWidth * 0.72),
+      behavior: "smooth",
+    });
+  }, []);
 
   const handleRemove = useCallback(
     (e: React.MouseEvent, id: string) => {
@@ -297,16 +325,28 @@ export const ImageStrip: React.FC<ImageStripProps> = ({
 
   return (
     <div className={styles.wrapper}>
+      {scrollState.canScrollLeft && (
+        <button
+          type="button"
+          className={`${styles.scrollButton} ${styles.scrollButtonLeft}`}
+          onClick={() => scrollStrip(-1)}
+          aria-label="Scroll attached images left"
+        >
+          <ChevronLeft size={17} />
+        </button>
+      )}
       <div className={styles.strip} ref={stripRef} onScroll={updateScroll}>
-        {displayAttachments.map((attachment) => (
+        {displayAttachments.map((attachment, index) => (
           <div
             key={attachment.id}
             className={styles.thumbWrapper}
-            onClick={() => handleClick(attachment)}
+            onClick={() => handleClick(attachment, index)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") handleClick(attachment);
+              if (e.key === "Enter" || e.key === " ") {
+                handleClick(attachment, index);
+              }
             }}
           >
             <ImageThumbnail attachment={attachment} />
@@ -320,6 +360,17 @@ export const ImageStrip: React.FC<ImageStripProps> = ({
           </div>
         ))}
       </div>
+
+      {scrollState.canScrollRight && (
+        <button
+          type="button"
+          className={`${styles.scrollButton} ${styles.scrollButtonRight}`}
+          onClick={() => scrollStrip(1)}
+          aria-label="Scroll attached images right"
+        >
+          <ChevronRight size={17} />
+        </button>
+      )}
 
       {scrollState.canScroll && (
         <ScrollbarThumb

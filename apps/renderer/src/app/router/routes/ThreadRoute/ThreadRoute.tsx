@@ -1166,7 +1166,14 @@ export const ThreadRoute: React.FC = () => {
       attachments={app.attachments}
       onAttachmentsChange={app.setAttachments}
       onCaptureToInput={handleCaptureToInput}
-      onPreviewAttachment={app.openMediaViewer}
+      onPreviewAttachment={(attachment, index, images) =>
+        app.openMediaViewer(attachment, {
+          isGallery: images.length > 1,
+          galleryEntries: images.map((image) => ({ attachment: image })),
+          initialIndex: index,
+          openedFromThread: true,
+        })
+      }
       rememberAttachmentSourcePath={app.rememberAttachmentSourcePath}
       showScrollToBottomButton={showScrollToBottomButton}
       keepScrollToBottomButtonMounted={showLoadingOverlay}
