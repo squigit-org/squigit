@@ -81,6 +81,7 @@ export const ThreadsList: React.FC<ThreadsListProps> = ({
               {group.threads.map((thread) => (
                 <ThreadRow
                   key={thread.id}
+                  indented
                   title={thread.title || "Untitled thread"}
                   dateLabel={formatCompactAge(
                     thread.updated_at || thread.created_at,

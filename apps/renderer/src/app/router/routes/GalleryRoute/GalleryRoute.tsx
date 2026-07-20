@@ -4,14 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { platform } from "@/platform";
 import { useMediaContext } from "@/app/context/AppMedia";
+import { LoadingSpinner } from "@/components/ui";
 import type { Attachment } from "@squigit/core/brain/attachments";
 import { getImagePath, type ThreadMetadata } from "@squigit/core/config";
 import styles from "./GalleryRoute.module.css";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";
+const IMAGE_PATH_CONCURRENCY = 8;
 
 interface GalleryThread {
   threadId: string;
@@ -42,6 +50,13 @@ interface GalleryThumbnailProps {
 }
 
 const toTimestamp = (value: string) => new Date(value || 0).getTime();
+
+const waitForNextPaint = (): Promise<void> =>
+  new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
 
 const groupThreadsByHash = (threads: ThreadMetadata[]): GalleryCandidate[] => {
   const byHash = new Map<string, GalleryCandidate>();
@@ -108,44 +123,85 @@ export const GalleryRoute: React.FC<GalleryRouteProps> = ({
 }) => {
   const { openMediaViewer } = useMediaContext();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(
+    activeSessionId === SYSTEM_GALLERY_ID,
+  );
   const [items, setItems] = useState<GalleryImage[]>([]);
-
-  const candidates = useMemo(() => groupThreadsByHash(threads), [threads]);
 
   useEffect(() => {
     if (activeSessionId !== SYSTEM_GALLERY_ID) return;
-    void refreshThreads();
+
+    let cancelled = false;
+    const refresh = async () => {
+      setIsRefreshing(true);
+      await refreshThreads();
+      if (!cancelled) {
+        setIsRefreshing(false);
+      }
+    };
+
+    void refresh();
+    return () => {
+      cancelled = true;
+    };
   }, [activeSessionId, refreshThreads]);
 
   useEffect(() => {
+    if (isRefreshing) return;
+
     let cancelled = false;
 
     const load = async () => {
       setIsLoading(true);
+      await waitForNextPaint();
+      if (cancelled) return;
 
-      const resolved = await Promise.all(
-        candidates.map(async (candidate) => {
+      const candidates = groupThreadsByHash(threads);
+      const resolved: Array<GalleryImage | null> = new Array(
+        candidates.length,
+      ).fill(null);
+      let nextCandidateIndex = 0;
+
+      const resolveNextCandidate = async () => {
+        while (!cancelled) {
+          const index = nextCandidateIndex;
+          nextCandidateIndex += 1;
+          if (index >= candidates.length) return;
+
+          const candidate = candidates[index];
           try {
             const path = await getImagePath(candidate.hash);
-            return { ...candidate, path };
+            resolved[index] = { ...candidate, path };
           } catch {
-            return null;
+            resolved[index] = null;
           }
-        }),
+        }
+      };
+
+      await Promise.all(
+        Array.from(
+          {
+            length: Math.min(IMAGE_PATH_CONCURRENCY, candidates.length),
+          },
+          () => resolveNextCandidate(),
+        ),
       );
 
       if (cancelled) return;
-      setItems(
-        resolved.filter((entry): entry is GalleryImage => entry !== null),
+      const nextItems = resolved.filter(
+        (entry): entry is GalleryImage => entry !== null,
       );
-      setIsLoading(false);
+      startTransition(() => {
+        setItems(nextItems);
+        setIsLoading(false);
+      });
     };
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, [candidates]);
+  }, [isRefreshing, threads]);
 
   const handleOpenImage = useCallback(
     (item: GalleryImage, index: number) => {
@@ -183,7 +239,17 @@ export const GalleryRoute: React.FC<GalleryRouteProps> = ({
   );
 
   if (isLoading) {
-    return <div className={styles.state}>Loading images...</div>;
+    return (
+      <div
+        className={`${styles.state} ${styles.loadingState}`}
+        role="status"
+        aria-live="polite"
+        aria-label="Loading images"
+      >
+        <LoadingSpinner />
+        <span>Loading images...</span>
+      </div>
+    );
   }
 
   if (items.length === 0) {

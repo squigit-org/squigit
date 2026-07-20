@@ -109,6 +109,77 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
   );
 };
 
+interface WorkspaceNewThreadButtonProps {
+  workspaceName: string;
+  isVisible: boolean;
+  isNavigating: boolean;
+  isHomeRoute: boolean;
+  isThreadBusy: boolean;
+  onNewThread: () => void;
+}
+
+const WorkspaceNewThreadButton: React.FC<WorkspaceNewThreadButtonProps> = ({
+  workspaceName,
+  isVisible,
+  isNavigating,
+  isHomeRoute,
+  isThreadBusy,
+  onNewThread,
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const navigationStartedRef = useRef(false);
+  const showLoading = isLoading && !isHomeRoute;
+
+  useEffect(() => {
+    if (!isLoading) {
+      navigationStartedRef.current = false;
+      return;
+    }
+
+    if (isNavigating) {
+      navigationStartedRef.current = true;
+      return;
+    }
+
+    if (isHomeRoute || navigationStartedRef.current) {
+      setIsLoading(false);
+    }
+  }, [isHomeRoute, isLoading, isNavigating]);
+
+  return (
+    <TooltipButton
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        if (isLoading || isNavigating) return;
+        if (!isThreadBusy) {
+          setIsLoading(true);
+        }
+        onNewThread();
+      }}
+      className={`${styles.iconButton} ${styles.workspaceNewThreadButton} ${
+        showLoading ? styles.workspaceNewThreadButtonLoading : ""
+      }`}
+      tooltip={showLoading ? "Opening new thread..." : "New Thread"}
+      aria-label={
+        showLoading
+          ? `Opening new thread in ${workspaceName}`
+          : `New thread in ${workspaceName}`
+      }
+      aria-busy={showLoading}
+      disabled={isLoading || isNavigating}
+      tabIndex={isVisible ? 0 : -1}
+      aria-hidden={!isVisible}
+    >
+      {showLoading ? (
+        <Loader2 size={16} className={styles.newThreadSpinner} />
+      ) : (
+        <NewThreadIcon size={16} />
+      )}
+    </TooltipButton>
+  );
+};
+
 const SYSTEM_PREFIX = "__system_";
 
 const isUnsafeWorkspacePath = (path: string): boolean => {
@@ -406,7 +477,15 @@ const ThreadItem: React.FC<ThreadItemProps> = React.memo(
   },
 );
 
-export const SidePanel: React.FC = () => {
+interface SidePanelProps {
+  variant?: "panel" | "flat";
+  onNavigate?: () => void;
+}
+
+export const SidePanel: React.FC<SidePanelProps> = ({
+  variant = "panel",
+  onNavigate,
+}) => {
   const app = useAppContext();
   const threads = app.threadHistory.threads;
   const activeSessionId = app.threadHistory.activeSessionId;
@@ -824,18 +903,24 @@ export const SidePanel: React.FC = () => {
 
   const handleNavigation = useCallback(
     (threadId: string) => {
-      if (threadId === activeSessionId) return;
+      if (threadId === activeSessionId) {
+        onNavigate?.();
+        return;
+      }
       if (pendingWorkspaceId) cancelPendingThread();
       selectThreadRef.current(threadId);
+      onNavigate?.();
     },
-    [activeSessionId, cancelPendingThread, pendingWorkspaceId],
+    [activeSessionId, cancelPendingThread, onNavigate, pendingWorkspaceId],
   );
 
   const handleNewThread = useCallback(
     (workspaceId: string | null) => {
+      if (app.isNavigating) return;
+      onNavigate?.();
       app.handleNewSession(workspaceId);
     },
-    [app],
+    [app.handleNewSession, app.isNavigating, onNavigate],
   );
 
   const handleToggleWorkspace = useCallback((workspaceId: string) => {
@@ -980,20 +1065,16 @@ export const SidePanel: React.FC = () => {
                 showNewThreadButton ? styles.workspaceThreadActionEnabled : ""
               }`}
             >
-              <TooltipButton
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleNewThread(isDefault ? null : workspace.id);
-                }}
-                className={`${styles.iconButton} ${styles.workspaceNewThreadButton}`}
-                tooltip="New Thread"
-                aria-label={`New thread in ${workspace.name}`}
-                tabIndex={showNewThreadButton ? 0 : -1}
-                aria-hidden={!showNewThreadButton}
-              >
-                <NewThreadIcon size={16} />
-              </TooltipButton>
+              <WorkspaceNewThreadButton
+                workspaceName={workspace.name}
+                isVisible={showNewThreadButton}
+                isNavigating={app.isNavigating}
+                isHomeRoute={isHomeRoute}
+                isThreadBusy={isThreadBusy}
+                onNewThread={() =>
+                  handleNewThread(isDefault ? null : workspace.id)
+                }
+              />
             </div>
           </div>
         </div>
@@ -1066,7 +1147,7 @@ export const SidePanel: React.FC = () => {
 
   return (
     <div
-      className={`${styles.panel} ${
+      className={`${styles.panel} ${variant === "flat" ? styles.flat : ""} ${
         isPinHoverFrozen ? styles.pinHoverFrozen : ""
       }`}
     >
@@ -1107,52 +1188,56 @@ export const SidePanel: React.FC = () => {
             </button>
           </div>
         </div>
-      ) : (
+      ) : variant === "panel" ? (
         <div className={styles.headerArea}>Squigit</div>
-      )}
+      ) : null}
 
       <div className={styles.scrollArea}>
-        <div className={styles.workspacesHeader}>
-          <span className={styles.workspacesTitle}>Workspaces</span>
-          <div className={styles.workspacesHeaderActions}>
-            <TooltipButton
-              type="button"
-              onMouseDown={(event) => event.stopPropagation()}
-              onClick={handleTogglePanelContextMenu}
-              className={`${styles.iconButton} ${panelContextMenu ? styles.active : ""}`}
-              tooltip="Customize workspaces"
-              aria-label="Customize workspaces"
-              aria-expanded={!!panelContextMenu}
-            >
-              <CustomizePanelIcon size={16} />
-            </TooltipButton>
-            <TooltipButton
-              type="button"
-              onClick={() => {
-                if (pendingWorkspaceId) cancelPendingThread();
-                setPanelContextMenu(null);
-              }}
-              className={styles.iconButton}
-              tooltip="Workspace settings"
-              aria-label="Workspace settings"
-            >
-              <Settings size={16} />
-            </TooltipButton>
-            <TooltipButton
-              type="button"
-              onClick={handleNewWorkspace}
-              className={styles.iconButton}
-              tooltip="Add workspace"
-              aria-label="Add workspace"
-            >
-              <FolderOpenIcon size={17} />
-            </TooltipButton>
+        {variant === "panel" && (
+          <div className={styles.workspacesHeader}>
+            <span className={styles.workspacesTitle}>Workspaces</span>
+            <div className={styles.workspacesHeaderActions}>
+              <TooltipButton
+                type="button"
+                onMouseDown={(event) => event.stopPropagation()}
+                onClick={handleTogglePanelContextMenu}
+                className={`${styles.iconButton} ${panelContextMenu ? styles.active : ""}`}
+                tooltip="Customize workspaces"
+                aria-label="Customize workspaces"
+                aria-expanded={!!panelContextMenu}
+              >
+                <CustomizePanelIcon size={16} />
+              </TooltipButton>
+              <TooltipButton
+                type="button"
+                onClick={() => {
+                  if (pendingWorkspaceId) cancelPendingThread();
+                  setPanelContextMenu(null);
+                }}
+                className={styles.iconButton}
+                tooltip="Workspace settings"
+                aria-label="Workspace settings"
+              >
+                <Settings size={16} />
+              </TooltipButton>
+              <TooltipButton
+                type="button"
+                onClick={handleNewWorkspace}
+                className={styles.iconButton}
+                tooltip="Add workspace"
+                aria-label="Add workspace"
+              >
+                <FolderOpenIcon size={17} />
+              </TooltipButton>
+            </div>
           </div>
-        </div>
+        )}
 
-        {visiblePathWorkspaces.map(renderWorkspace)}
+        {(variant === "flat" ? pathWorkspaces : visiblePathWorkspaces).map(
+          renderWorkspace,
+        )}
 
-        {pathWorkspaces.length > 3 && (
+        {variant === "panel" && pathWorkspaces.length > 3 && (
           <div className={styles.viewAllDivider}>
             <span className={styles.viewAllLine} />
             <button

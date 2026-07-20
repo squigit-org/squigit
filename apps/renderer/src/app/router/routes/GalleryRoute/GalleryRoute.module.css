@@ -85,3 +85,7 @@
   color: var(--c-raw-073);
   font-size: 0.88rem;
 }
+
+.loadingState {
+  gap: 10px;
+}

@@ -27,6 +27,13 @@
   overflow: hidden;
 }
 
+.flat {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
 .headerArea {
   padding: 16px 15px 10px;
   display: flex;
@@ -233,11 +240,22 @@
     background-color 0.15s ease;
 }
 
+.workspaceNewThreadButtonLoading {
+  opacity: 1;
+  pointer-events: none;
+}
+
 .workspaceDivider:hover
   .workspaceThreadActionEnabled
   .workspaceNewThreadButton {
   opacity: 1;
   pointer-events: auto;
+}
+
+.workspaceDivider:hover
+  .workspaceThreadActionEnabled
+  .workspaceNewThreadButtonLoading {
+  pointer-events: none;
 }
 
 .iconButton {
@@ -655,6 +673,10 @@
 }
 
 .forkSpinner {
+  animation: "rotate" 1s linear infinite;
+}
+
+.newThreadSpinner {
   animation: "rotate" 1s linear infinite;
 }
 

@@ -4,8 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   cancelOcrJob,
   EMPTY_STATE_ASSET_ID,
@@ -26,6 +31,7 @@ import {
 } from "@squigit/core/brain/engine";
 
 const SYSTEM_GALLERY_ID = "__system_gallery";
+const MESSAGE_PREPARATION_CHUNK = 200;
 const isOnboardingId = (id: string) => id.startsWith("__system_");
 
 type SearchRevealTarget = {
@@ -158,17 +164,22 @@ export const useAppNavigation = ({
     isBusy: false,
   });
 
-  const finalizeNavigationState = useCallback((requestId: number) => {
-    if (navigationRequestIdRef.current !== requestId) {
-      return;
-    }
+  const commitNavigationState = useCallback(
+    (requestId: number, commit?: () => void) => {
+      if (navigationRequestIdRef.current !== requestId) {
+        return false;
+      }
 
-    flushSync(() => {
-      setIsNavigating(false);
-      setShowThreadShellDuringNavigation(false);
-      setIsThreadContentReady(true);
-    });
-  }, []);
+      startTransition(() => {
+        commit?.();
+        setIsNavigating(false);
+        setShowThreadShellDuringNavigation(false);
+        setIsThreadContentReady(true);
+      });
+      return true;
+    },
+    [],
+  );
 
   useEffect(() => {
     const activeId = threadHistory.activeSessionId;
@@ -227,27 +238,37 @@ export const useAppNavigation = ({
     async (id: string) => {
       const requestId = navigationRequestIdRef.current + 1;
       navigationRequestIdRef.current = requestId;
+      const previousActiveId = threadHistory.activeSessionId;
+      const isThreadTarget = !isOnboardingId(id);
+      const shouldShowTargetRouteImmediately =
+        isThreadTarget || id === SYSTEM_GALLERY_ID;
       const metadata = threadHistory.threads.find(
         (threadMeta: any) => threadMeta.id === id,
       );
-      flushSync(() => {
+
+      cancelOcrJob();
+      startTransition(() => {
         setIsNavigating(true);
         setIsThreadContentReady(false);
-        setShowThreadShellDuringNavigation(!isOnboardingId(id));
+        setShowThreadShellDuringNavigation(isThreadTarget);
         setPendingSearchReveal(null);
         closeMediaViewer();
+        ocr.setIsOcrScanning(false);
+        ocr.setOcrData(withNavigationOcrGuard({}));
         ocr.setSessionLensUrl(null);
         threadHistory.setPendingWorkspaceId(null);
 
-        if (!isOnboardingId(id) && metadata?.title) {
+        if (isThreadTarget && metadata?.title) {
           system.setSessionThreadTitle(metadata.title);
         }
-      });
 
-      cancelOcrJob();
-      flushSync(() => {
-        ocr.setIsOcrScanning(false);
-        ocr.setOcrData(withNavigationOcrGuard({}));
+        if (id === SYSTEM_GALLERY_ID) {
+          system.setSessionThreadTitle("Gallery");
+        }
+
+        if (shouldShowTargetRouteImmediately) {
+          threadHistory.setActiveSessionId(id);
+        }
       });
 
       await waitForNextPaint();
@@ -256,68 +277,31 @@ export const useAppNavigation = ({
       }
 
       if (isOnboardingId(id)) {
-        flushSync(() => {
+        commitNavigationState(requestId, () => {
           if (id.startsWith("__system_update")) {
             system.setSessionThreadTitle("Update Available");
-          } else if (id === SYSTEM_GALLERY_ID) {
-            system.setSessionThreadTitle("Gallery");
           }
-          threadHistory.setActiveSessionId(id);
+          if (!shouldShowTargetRouteImmediately) {
+            threadHistory.setActiveSessionId(id);
+          }
         });
-        finalizeNavigationState(requestId);
         return;
       }
 
       try {
-        const imagePathPromise = metadata?.image_hash
-          ? getImagePath(metadata.image_hash)
-          : null;
-        const threadDataPromise = loadThread(id);
-
-        if (imagePathPromise && metadata?.image_hash) {
-          const imagePath = await imagePathPromise;
-          if (navigationRequestIdRef.current !== requestId) {
-            return;
-          }
-
-          flushSync(() => {
-            system.setStartupImage({
-              path: imagePath,
-              mimeType: "image/png",
-              imageId: metadata.image_hash,
-              fromHistory: true,
-              tone: "d",
-            });
-            threadHistory.setActiveSessionId(id);
-          });
-
-          thread.restoreState(
-            {
-              messages: [],
-              firstResponseId: null,
-            },
-            {
-              path: imagePath,
-              mimeType: "image/png",
-              imageId: metadata.image_hash,
-            },
-            null,
-          );
-
-          await waitForNextPaint();
-          if (navigationRequestIdRef.current !== requestId) {
-            return;
-          }
-        }
-
-        const threadData = await threadDataPromise;
+        const [threadData, metadataImagePath] = await Promise.all([
+          loadThread(id),
+          metadata?.image_hash
+            ? getImagePath(metadata.image_hash)
+            : Promise.resolve(null),
+        ]);
         if (navigationRequestIdRef.current !== requestId) {
           return;
         }
 
-        const imagePath = imagePathPromise
-          ? await imagePathPromise
-          : await getImagePath(threadData.metadata.image_hash);
+        const imagePath =
+          metadataImagePath ??
+          (await getImagePath(threadData.metadata.image_hash));
         if (navigationRequestIdRef.current !== requestId) {
           return;
         }
@@ -332,7 +316,26 @@ export const useAppNavigation = ({
           (system.ocrEnabled
             ? resolveOcrModelId(system.startupOcrLanguage, "")
             : "");
-        flushSync(() => {
+
+        const messages: Message[] = [];
+        for (let index = 0; index < threadData.messages.length; index += 1) {
+          messages.push({
+            ...mapStoredMessage(threadData.messages[index]),
+            id: index.toString(),
+          });
+
+          if (
+            (index + 1) % MESSAGE_PREPARATION_CHUNK === 0 &&
+            index + 1 < threadData.messages.length
+          ) {
+            await waitForNextPaint();
+            if (navigationRequestIdRef.current !== requestId) {
+              return;
+            }
+          }
+        }
+
+        commitNavigationState(requestId, () => {
           system.setSessionThreadTitle(threadData.metadata.title);
           system.setSessionOcrLanguage(threadOcrModel);
           ocr.setOcrData(navigationSafeOcrData);
@@ -346,41 +349,31 @@ export const useAppNavigation = ({
             fromHistory: true,
             tone: threadData.image_tone ?? undefined,
           });
-          threadHistory.setActiveSessionId(id);
+          void thread.restoreState(
+            {
+              messages,
+              firstResponseId: null,
+            },
+            {
+              path: imagePath,
+              mimeType: "image/png",
+              imageId: threadData.metadata.image_hash,
+            },
+            threadData.image_brief,
+          );
         });
-        await waitForNextPaint();
-        if (navigationRequestIdRef.current !== requestId) {
-          return;
-        }
-
-        const messages = threadData.messages.map((message, idx) => ({
-          ...mapStoredMessage(message),
-          id: idx.toString(),
-        }));
-
-        thread.restoreState(
-          {
-            messages,
-            firstResponseId: null,
-          },
-          {
-            path: imagePath,
-            mimeType: "image/png",
-            imageId: threadData.metadata.image_hash,
-          },
-          threadData.image_brief,
-        );
       } catch (e) {
         console.error("Failed to load thread:", e);
-      } finally {
-        finalizeNavigationState(requestId);
+        commitNavigationState(requestId, () => {
+          threadHistory.setActiveSessionId(previousActiveId);
+        });
       }
     },
     [
       thread,
       threadHistory,
       closeMediaViewer,
-      finalizeNavigationState,
+      commitNavigationState,
       ocr,
       system,
       getRememberedThreadOcrModel,
@@ -392,7 +385,7 @@ export const useAppNavigation = ({
       const requestId = navigationRequestIdRef.current + 1;
       navigationRequestIdRef.current = requestId;
 
-      flushSync(() => {
+      startTransition(() => {
         setIsNavigating(true);
         setIsThreadContentReady(false);
         setShowThreadShellDuringNavigation(false);
@@ -401,14 +394,15 @@ export const useAppNavigation = ({
         threadHistory.setPendingWorkspaceId(workspaceId);
       });
 
-      system.resetSession();
-      threadHistory.setActiveSessionId(null);
-      threadHistory.setActiveSessionId(null);
-      ocr.setOcrData({});
-      ocr.setSessionLensUrl(null);
-      finalizeNavigationState(requestId);
+      await waitForNextPaint();
+      commitNavigationState(requestId, () => {
+        system.resetSession();
+        threadHistory.setActiveSessionId(null);
+        ocr.setOcrData({});
+        ocr.setSessionLensUrl(null);
+      });
     },
-    [threadHistory, closeMediaViewer, finalizeNavigationState, ocr, system],
+    [threadHistory, closeMediaViewer, commitNavigationState, ocr, system],
   );
 
   const handleNavigation = useCallback(
