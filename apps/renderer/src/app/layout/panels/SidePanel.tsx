@@ -538,7 +538,29 @@ export const SidePanel: React.FC = () => {
     () => workspaceItems.find((workspace) => workspace.path === null) ?? null,
     [workspaceItems],
   );
-  const visiblePathWorkspaces = pathWorkspaces.slice(0, 3);
+  const activeWorkspaceId = useMemo(
+    () =>
+      activeSessionId
+        ? workspaceItems.find((workspace) =>
+            workspace.threads.some((thread) => thread.id === activeSessionId),
+          )?.id ?? null
+        : null,
+    [activeSessionId, workspaceItems],
+  );
+  const visiblePathWorkspaces = useMemo(() => {
+    const visible = pathWorkspaces.slice(0, 3);
+    const activeWorkspace = pathWorkspaces.find(
+      (workspace) => workspace.id === activeWorkspaceId,
+    );
+    if (
+      !activeWorkspace ||
+      visible.some((workspace) => workspace.id === activeWorkspace.id)
+    ) {
+      return visible;
+    }
+
+    return [activeWorkspace, ...visible].slice(0, 3);
+  }, [activeWorkspaceId, pathWorkspaces]);
   const isHomeRoute = activeSessionId === null;
   const pendingWorkspaceId = app.threadHistory.pendingWorkspaceId;
 
@@ -556,7 +578,9 @@ export const SidePanel: React.FC = () => {
         workspaceItems
           .filter(
             (workspace) =>
-              workspace.path !== null && workspace.id !== pendingWorkspaceId,
+              workspace.path !== null &&
+              workspace.id !== pendingWorkspaceId &&
+              workspace.id !== activeWorkspaceId,
           )
           .map((workspace) => workspace.id),
       ),
@@ -564,10 +588,22 @@ export const SidePanel: React.FC = () => {
     setDidInitializeWorkspaceCollapse(true);
   }, [
     app.threadHistory.isLoading,
+    activeWorkspaceId,
     didInitializeWorkspaceCollapse,
     pendingWorkspaceId,
     workspaceItems,
   ]);
+
+  useLayoutEffect(() => {
+    if (!activeWorkspaceId) return;
+
+    setCollapsedWorkspaceIds((current) => {
+      if (!current.has(activeWorkspaceId)) return current;
+      const next = new Set(current);
+      next.delete(activeWorkspaceId);
+      return next;
+    });
+  }, [activeWorkspaceId]);
 
   useLayoutEffect(() => {
     if (!pendingWorkspaceId || !isHomeRoute) return;
