@@ -13,7 +13,6 @@ export type AppMediaContextValue = Pick<
   | "rememberAttachmentSourcePath"
   | "openMediaViewer"
   | "closeMediaViewer"
-  | "getAttachmentSourcePath"
 >;
 
 const AppMediaContext = createContext<AppMediaContextValue | null>(null);

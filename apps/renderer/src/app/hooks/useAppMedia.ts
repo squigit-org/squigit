@@ -66,9 +66,6 @@ export const useAppMedia = ({
     activeThreadId && !activeThreadId.startsWith("__system_")
       ? activeThreadId
       : undefined;
-  const [attachmentSources, setAttachmentSources] = useState<
-    Record<string, string>
-  >({});
   const [mediaViewer, setMediaViewer] = useState<{
     isOpen: boolean;
     item: MediaViewerItem | null;
@@ -76,27 +73,6 @@ export const useAppMedia = ({
     isOpen: false,
     item: null,
   });
-
-  useEffect(() => {
-    let cancelled = false;
-    setAttachmentSources({});
-
-    void commands
-      .listAttachmentSources(registryThreadId)
-      .then((sources) => {
-        if (!cancelled) {
-          setAttachmentSources((current) => ({ ...sources, ...current }));
-        }
-      })
-      .catch((error) => {
-        console.warn("[media] Could not load attachment sources:", error);
-        if (!cancelled) setAttachmentSources({});
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [registryThreadId]);
 
   const rememberAttachmentSourcePath = useCallback(
     async (casPath: string, sourcePath: string) => {
@@ -113,11 +89,6 @@ export const useAppMedia = ({
           console.warn("[media] Could not register attachment source:", error);
         }
       }
-
-      setAttachmentSources((current) => ({
-        ...current,
-        [casPath]: sourcePath,
-      }));
     },
     [registryThreadId],
   );
@@ -135,40 +106,19 @@ export const useAppMedia = ({
     });
   }, [attachments, rememberAttachmentSourcePath]);
 
-  const getAttachmentSourcePath = useCallback((path: string) => {
-    const directMatch = attachmentSources[path];
-    if (directMatch) return directMatch;
-
-    const fileName = path.split(/[/\\]/).pop();
-    if (!fileName) return null;
-
-    for (const [casPath, sourcePath] of Object.entries(attachmentSources)) {
-      if (
-        casPath.endsWith(`/${fileName}`) ||
-        casPath.endsWith(`\\${fileName}`)
-      ) {
-        return sourcePath;
-      }
-    }
-
-    return null;
-  }, [attachmentSources]);
-
   const resolveAttachmentSourcePath = useCallback(
-    async (path: string, fallback?: string) => {
+    async (path: string) => {
       try {
         return (
           (await commands.resolveAttachmentSourcePath(path, registryThreadId)) ||
-          fallback ||
-          getAttachmentSourcePath(path) ||
           undefined
         );
       } catch (error) {
         console.warn("[media] Could not resolve attachment source:", error);
-        return fallback || getAttachmentSourcePath(path) || undefined;
+        return undefined;
       }
     },
-    [getAttachmentSourcePath, registryThreadId],
+    [registryThreadId],
   );
 
   const closeMediaViewer = useCallback(() => {
@@ -194,19 +144,30 @@ export const useAppMedia = ({
         pathExtension && pathExtension !== "file"
           ? pathExtension
           : attachment.extension.toLowerCase();
-      const sourcePath = await resolveAttachmentSourcePath(
-        normalizedAttachmentPath,
-        attachment.sourcePath,
-      );
+      let currentCasPath = normalizedAttachmentPath;
+      if (registryThreadId) {
+        try {
+          currentCasPath =
+            (await commands.resolveAttachmentCasPath(
+              normalizedAttachmentPath,
+              registryThreadId,
+            )) || normalizedAttachmentPath;
+        } catch (error) {
+          console.warn("[media] Could not resolve attachment revision:", error);
+        }
+      }
 
-      let resolvedPath = normalizedAttachmentPath;
+      let resolvedPath = currentCasPath;
       try {
-        resolvedPath = await commands.resolveAttachmentPath(
-          normalizedAttachmentPath,
-        );
+        resolvedPath = await commands.resolveAttachmentPath(currentCasPath);
       } catch (error) {
         console.warn("[media] Could not resolve attachment path:", error);
       }
+
+      const sourcePath =
+        currentCasPath !== normalizedAttachmentPath
+          ? undefined
+          : await resolveAttachmentSourcePath(normalizedAttachmentPath);
 
       const revealPath = sourcePath || resolvedPath;
 
@@ -236,7 +197,6 @@ export const useAppMedia = ({
               async ({ attachment: galleryAttachment, imageThreads }) => {
                 const gallerySourcePath = await resolveAttachmentSourcePath(
                   galleryAttachment.path,
-                  galleryAttachment.sourcePath,
                 );
 
                 let galleryResolvedPath = galleryAttachment.path;
@@ -328,6 +288,7 @@ export const useAppMedia = ({
           item: {
             kind: "text",
             path: resolvedPath,
+            attachmentPath: normalizedAttachmentPath,
             threadId: registryThreadId,
             sourcePath,
             name: attachment.name,
@@ -352,7 +313,6 @@ export const useAppMedia = ({
   return {
     mediaViewer,
     rememberAttachmentSourcePath,
-    getAttachmentSourcePath,
     openMediaViewer,
     closeMediaViewer,
   };

@@ -39,11 +39,6 @@ import {
 import type { MessageCollapseMode } from "@squigit/core/brain/engine";
 import styles from "./ThreadRoute.module.css";
 
-function getBaseName(path: string): string {
-  const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
-}
-
 function getVisibleImageProgressText(
   text: string | null | undefined,
 ): string | null {
@@ -781,11 +776,7 @@ export const ThreadRoute: React.FC = () => {
     }
 
     const parsedPromptAttachments = parseAttachmentPaths(app.input).map(
-      (path) => {
-        const sourcePath = app.getAttachmentSourcePath(path) || undefined;
-        const originalName = sourcePath ? getBaseName(sourcePath) : undefined;
-        return attachmentFromPath(path, undefined, originalName, sourcePath);
-      },
+      (path) => attachmentFromPath(path),
     );
 
     app.trackPendingPromptAttachmentAnalysis(
@@ -799,7 +790,6 @@ export const ThreadRoute: React.FC = () => {
     app.attachments,
     app.thread,
     app.clearAttachments,
-    app.getAttachmentSourcePath,
     app.input,
     app.inputModel,
     app.setInput,
@@ -876,11 +866,7 @@ export const ThreadRoute: React.FC = () => {
       if (!targetMessage) return;
 
       const restoredAttachments = parseAttachmentPaths(targetMessage.text)
-        .map((path) => {
-          const sourcePath = app.getAttachmentSourcePath(path) || undefined;
-          const originalName = sourcePath ? getBaseName(sourcePath) : undefined;
-          return attachmentFromPath(path, undefined, originalName, sourcePath);
-        })
+        .map((path) => attachmentFromPath(path))
         .filter((attachment) => attachment.type === "image");
 
       app.setInput(stripImageAttachmentMentions(targetMessage.text));

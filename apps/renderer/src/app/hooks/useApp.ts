@@ -531,7 +531,6 @@ export const useApp = () => {
     closeSearchOverlay: navigation.closeSearchOverlay,
     revealSearchMatch: navigation.revealSearchMatch,
     clearSearchReveal: navigation.clearSearchReveal,
-    getAttachmentSourcePath: media.getAttachmentSourcePath,
     containerRef,
     isOcrScanning: ocr.isOcrScanning,
     setIsOcrScanning: ocr.setIsOcrScanning,

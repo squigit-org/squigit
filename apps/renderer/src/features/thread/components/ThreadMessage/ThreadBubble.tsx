@@ -154,11 +154,6 @@ const COLLAPSE_ELIGIBLE_LINE_THRESHOLD = 120;
 const COLLAPSE_PREVIEW_CHAR_LIMIT = 1_800;
 const COLLAPSE_PREVIEW_LINE_LIMIT = 60;
 
-function getBaseName(path: string): string {
-  const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
-}
-
 const CITATION_PREVIEW_TOKENS = 28;
 
 function getCitationDomain(url: string): string {
@@ -404,7 +399,7 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
   hideCodeBlocksByDefault = false,
   roleCodeVisibilityKey = null,
 }) => {
-  const { getAttachmentSourcePath, openMediaViewer } = useMediaContext();
+  const { openMediaViewer } = useMediaContext();
   const isUser = message.role === "user";
   const isPendingAssistant = !!pendingTurn && message.role === "model";
   const [isCopied, setIsCopied] = useState(false);
@@ -448,13 +443,8 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
 
   const attachments = useMemo(() => {
     const paths = parseAttachmentPaths(message.text);
-    return paths.map((path) => {
-      const sourcePath = getAttachmentSourcePath(path) || undefined;
-      const originalName = sourcePath ? getBaseName(sourcePath) : undefined;
-
-      return attachmentFromPath(path, undefined, originalName, sourcePath);
-    });
-  }, [getAttachmentSourcePath, message.text]);
+    return paths.map((path) => attachmentFromPath(path));
+  }, [message.text]);
   const imageAttachments = useMemo(
     () => attachments.filter((attachment) => attachment.type === "image"),
     [attachments],
@@ -660,26 +650,16 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
   const handleLocalAttachmentLink = useCallback(
     (href: string, children: React.ReactNode) => {
       const normalizedHref = normalizeAttachmentHref(href);
-      const sourcePath =
-        getAttachmentSourcePath(normalizedHref) ||
-        getAttachmentSourcePath(href) ||
-        undefined;
-      const attachment = attachmentFromPath(
-        normalizedHref,
-        undefined,
-        undefined,
-        sourcePath,
-      );
+      const attachment = attachmentFromPath(normalizedHref);
       const label = getNodeText(children).trim();
-      const originalName =
-        label || (sourcePath ? getBaseName(sourcePath) : attachment.name);
+      const originalName = label || attachment.name;
 
       void openMediaViewer({
         ...attachment,
         name: originalName,
       });
     },
-    [getAttachmentSourcePath, openMediaViewer],
+    [openMediaViewer],
   );
 
   const handleCopy = () => {
@@ -817,19 +797,8 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
 
         if (isLocalAttachmentLink && typeof href === "string") {
           const normalizedHref = normalizeAttachmentHref(href);
-          const sourcePath =
-            getAttachmentSourcePath(normalizedHref) ||
-            getAttachmentSourcePath(href) ||
-            undefined;
-          const attachment = attachmentFromPath(
-            normalizedHref,
-            undefined,
-            undefined,
-            sourcePath,
-          );
-          const fileName = sourcePath
-            ? getBaseName(sourcePath)
-            : attachment.name;
+          const attachment = attachmentFromPath(normalizedHref);
+          const fileName = attachment.name;
           const label = getNodeText(children).trim() || fileName;
 
           return (
@@ -890,7 +859,6 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
     [
       enableInternalLinks,
       getRevealCodeBlockHandler,
-      getAttachmentSourcePath,
       handleLocalAttachmentLink,
       hideCodeBlocksByDefault,
       isPendingAssistant,

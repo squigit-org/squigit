@@ -94,11 +94,6 @@ export interface ThreadInputEditorHandle {
   hasSelection: () => boolean;
 }
 
-function getBaseName(path: string): string {
-  const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
-}
-
 function toAttachmentMentionAttrs(
   label: string,
   rawDestination: string,
@@ -420,12 +415,11 @@ const Placeholder = Extension.create<{
 });
 
 const AttachmentMentionChip: React.FC<NodeViewProps> = ({ node }) => {
-  const { getAttachmentSourcePath, openMediaViewer } = useMediaContext();
+  const { openMediaViewer } = useMediaContext();
   const path = String(node.attrs.path || "");
   const label = String(node.attrs.label || "").trim();
-  const sourcePath = getAttachmentSourcePath(path) || undefined;
-  const attachment = attachmentFromPath(path, undefined, undefined, sourcePath);
-  const fileName = sourcePath ? getBaseName(sourcePath) : attachment.name;
+  const attachment = attachmentFromPath(path);
+  const fileName = attachment.name;
   const chipLabel = label || fileName;
 
   const openAttachment = useCallback(() => {
@@ -452,7 +446,7 @@ const AttachmentMentionChip: React.FC<NodeViewProps> = ({ node }) => {
         label={chipLabel}
         tabIndex={-1}
         draggable={false}
-        title={sourcePath || path}
+        title={path}
         onMouseDown={(event) => {
           if (event.button !== 0) {
             return;

@@ -42,11 +42,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       rememberAttachmentSourcePath: app.rememberAttachmentSourcePath,
       openMediaViewer: app.openMediaViewer,
       closeMediaViewer: app.closeMediaViewer,
-      getAttachmentSourcePath: app.getAttachmentSourcePath,
     }),
     [
       app.closeMediaViewer,
-      app.getAttachmentSourcePath,
       app.mediaViewer,
       app.openMediaViewer,
       app.rememberAttachmentSourcePath,
