@@ -12,7 +12,7 @@ import React, {
   useState,
 } from "react";
 import { commands, platform } from "@/platform";
-import { WidgetOverlay } from "@/components/ui";
+import { Dialog, WidgetOverlay } from "@/components/ui";
 import { AppContextMenu } from "@/app/layout/menus/AppContextMenu";
 import { ImageThreadsMenu } from "@/app/layout/menus/ImageThreadsMenu";
 import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
@@ -23,6 +23,7 @@ import {
   MediaPdfViewer,
   MediaTextViewer,
   type MediaGalleryItem,
+  type MediaTextViewerHandle,
   type MediaViewerItem,
 } from "@/features/media";
 import styles from "./MediaOverlay.module.css";
@@ -53,15 +54,22 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
   } | null>(null);
   const [activeImage, setActiveImage] = useState<MediaGalleryItem | null>(null);
   const [activeTextContent, setActiveTextContent] = useState("");
+  const [activeTextPath, setActiveTextPath] = useState("");
   const [textUsesCasPath, setTextUsesCasPath] = useState(false);
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] =
+    useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const copiedTimerRef = useRef<number | null>(null);
+  const textViewerRef = useRef<MediaTextViewerHandle>(null);
   const isThreadOpenedImage =
     item?.kind === "image" && item?.openedFromThread === true;
 
   const activePath = useMemo(
-    () => activeImage?.path || item?.path || "",
-    [activeImage?.path, item?.path],
+    () =>
+      activeImage?.path ||
+      (item?.kind === "text" ? activeTextPath : item?.path) ||
+      "",
+    [activeImage?.path, activeTextPath, item?.kind, item?.path],
   );
   const activeSourcePath =
     activeImage?.sourcePath || item?.sourcePath || undefined;
@@ -80,10 +88,16 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
         : null,
     );
     setActiveTextContent(item?.kind === "text" ? item.textContent ?? "" : "");
+    setActiveTextPath(item?.kind === "text" ? item.path : "");
     setTextUsesCasPath(false);
+    setShowUnsavedChangesDialog(false);
     setThreadMenu(null);
     setIsCopied(false);
   }, [isOpen, item]);
+
+  useEffect(() => {
+    if (!isOpen) textViewerRef.current?.reset();
+  }, [isOpen]);
 
   useEffect(
     () => () => {
@@ -200,9 +214,45 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     }
   }, []);
 
-  const handleTextSaved = useCallback(() => {
+  const handleTextSaved = useCallback((casPath: string) => {
+    setActiveTextPath(casPath);
     setTextUsesCasPath(true);
   }, []);
+
+  const handleRequestClose = useCallback(() => {
+    if (textViewerRef.current?.hasUnsavedChanges()) {
+      setShowUnsavedChangesDialog(true);
+      return;
+    }
+
+    textViewerRef.current?.reset();
+    onClose();
+  }, [onClose]);
+
+  const handleUnsavedChangesAction = useCallback(
+    async (actionKey: string) => {
+      if (actionKey === "cancel") {
+        setShowUnsavedChangesDialog(false);
+        return;
+      }
+
+      if (actionKey === "discard") {
+        setShowUnsavedChangesDialog(false);
+        textViewerRef.current?.reset();
+        onClose();
+        return;
+      }
+
+      if (actionKey === "save") {
+        const didSave = await textViewerRef.current?.save();
+        if (didSave) {
+          setShowUnsavedChangesDialog(false);
+          onClose();
+        }
+      }
+    },
+    [onClose],
+  );
 
   const handleRevealInThread = (
     event: React.MouseEvent<HTMLButtonElement>,
@@ -239,7 +289,9 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
 
     return (
       <MediaTextViewer
-        filePath={item.path}
+        ref={textViewerRef}
+        filePath={activeTextPath || item.path}
+        attachmentPath={item.attachmentPath || item.path}
         fileName={item.name}
         threadId={item.threadId}
         extension={item.extension}
@@ -254,7 +306,7 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     <>
       <WidgetOverlay
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={handleRequestClose}
         onContextMenu={handleContextMenu}
         sectionContentClassName={styles.sectionContent}
         sidebarBottom={
@@ -312,6 +364,11 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
           onSelect={onRevealInThread}
         />
       )}
+      <Dialog
+        isOpen={showUnsavedChangesDialog}
+        type="UNSAVED_MEDIA_CHANGES"
+        onAction={(actionKey) => void handleUnsavedChangesAction(actionKey)}
+      />
     </>
   );
 };

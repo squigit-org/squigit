@@ -4,33 +4,48 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
-import { MediaCodeEditor } from "./components/MediaCodeEditor";
+import { forwardRef } from "react";
+import {
+  MediaCodeEditor,
+  type MediaCodeEditorHandle,
+} from "./components/MediaCodeEditor";
 import styles from "./MediaTextViewer.module.css";
 
 interface MediaTextViewerProps {
   filePath: string;
+  attachmentPath: string;
   fileName: string;
   threadId?: string;
   extension: string;
   textContent: string;
   onTextContentChange: (value: string) => void;
-  onSaved: () => void;
+  onSaved: (casPath: string) => void;
 }
 
-export const MediaTextViewer: React.FC<MediaTextViewerProps> = ({
-  filePath,
-  fileName,
-  threadId,
-  extension,
-  textContent,
-  onTextContentChange,
-  onSaved,
-}) => {
-  return (
+export type MediaTextViewerHandle = MediaCodeEditorHandle;
+
+export const MediaTextViewer = forwardRef<
+  MediaTextViewerHandle,
+  MediaTextViewerProps
+>(
+  (
+    {
+      filePath,
+      attachmentPath,
+      fileName,
+      threadId,
+      extension,
+      textContent,
+      onTextContentChange,
+      onSaved,
+    },
+    ref,
+  ) => (
     <div className={styles.textViewerWrap}>
       <MediaCodeEditor
+        ref={ref}
         filePath={filePath}
+        attachmentPath={attachmentPath}
         fileName={fileName}
         threadId={threadId}
         language={extension || "text"}
@@ -39,5 +54,7 @@ export const MediaTextViewer: React.FC<MediaTextViewerProps> = ({
         onSaved={onSaved}
       />
     </div>
-  );
-};
+  ),
+);
+
+MediaTextViewer.displayName = "MediaTextViewer";

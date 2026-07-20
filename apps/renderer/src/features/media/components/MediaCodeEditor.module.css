@@ -27,3 +27,13 @@
   font-size: 0.76rem;
   line-height: 1.35;
 }
+
+.spinner {
+  animation: media-code-editor-spin 0.8s linear infinite;
+}
+
+@keyframes media-code-editor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

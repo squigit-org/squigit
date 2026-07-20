@@ -23,6 +23,7 @@ export interface MediaGalleryItem {
 export interface MediaViewerItem {
   kind: MediaViewerKind;
   path: string;
+  attachmentPath?: string;
   threadId?: string;
   sourcePath?: string;
   name: string;

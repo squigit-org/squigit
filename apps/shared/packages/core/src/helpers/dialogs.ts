@@ -88,6 +88,17 @@ export const getDialogs = (): Record<string, DialogContent> => ({
       { label: "Undo and Edit", variant: "danger", actionKey: "confirm" },
     ],
   },
+  UNSAVED_MEDIA_CHANGES: {
+    title: "Save Changes?",
+    message:
+      "This file has unsaved changes. Save them as a new CAS version before closing?",
+    variant: "warning",
+    actions: [
+      { label: "Cancel", variant: "secondary", actionKey: "cancel" },
+      { label: "Discard", variant: "danger", actionKey: "discard" },
+      { label: "Save", variant: "primary", actionKey: "save" },
+    ],
+  },
   LOGIN_REQUIRED: {
     title: "Login Required",
     message: `You need to sign in first to use Squigit.`,
