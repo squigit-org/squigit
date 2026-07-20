@@ -229,6 +229,14 @@
   margin-right: -12px;
 }
 
+.primaryAction {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .iconButton {
   display: flex;
   align-items: center;

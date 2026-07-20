@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { Check, Copy, FolderOpen, MessageSquare } from "lucide-react";
+import { Check, Copy, FolderOpen, Loader2, MessageSquare } from "lucide-react";
 import { WidgetOverlayIconButton } from "@/components/ui";
 import styles from "./MediaSidebar.module.css";
 
@@ -14,6 +14,7 @@ interface MediaSidebarProps {
   onCopy: () => void;
   copyLabel: string;
   isCopied?: boolean;
+  isCopying?: boolean;
   onRevealInThread?: React.MouseEventHandler<HTMLButtonElement>;
   isRevealInThreadActive?: boolean;
 }
@@ -23,6 +24,7 @@ export const MediaSidebar: React.FC<MediaSidebarProps> = ({
   onCopy,
   copyLabel,
   isCopied = false,
+  isCopying = false,
   onRevealInThread,
   isRevealInThreadActive = false,
 }) => {
@@ -44,9 +46,18 @@ export const MediaSidebar: React.FC<MediaSidebarProps> = ({
         onClick={onReveal}
       />
       <WidgetOverlayIconButton
-        icon={isCopied ? <Check size={22} /> : <Copy size={22} />}
-        label={isCopied ? "Copied" : copyLabel}
+        icon={
+          isCopying ? (
+            <Loader2 size={22} className={styles.spinner} />
+          ) : isCopied ? (
+            <Check size={22} />
+          ) : (
+            <Copy size={22} />
+          )
+        }
+        label={isCopying ? "Copying" : isCopied ? "Copied" : copyLabel}
         onClick={onCopy}
+        disabled={isCopying}
       />
     </>
   );

@@ -7,3 +7,13 @@
 .revealActive {
   color: var(--c-raw-002);
 }
+
+.spinner {
+  animation: media-sidebar-spin 0.8s linear infinite;
+}
+
+@keyframes media-sidebar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

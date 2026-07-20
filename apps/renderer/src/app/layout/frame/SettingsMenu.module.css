@@ -13,24 +13,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   line-height: 0;
-  transform: rotate(0deg);
-  transform-origin: 50% 50%;
-  transition: transform 0.12s linear;
 }
 
 .triggerIcon {
   display: block;
+  flex: none;
+  transform: rotate(0deg);
+  transform-box: view-box;
+  transform-origin: center;
+  transition: transform 0.12s linear;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
-.iconActive {
+.triggerIconActive {
   transform: rotate(30deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .triggerIconWrap {
+  .triggerIcon {
     transition: none;
   }
 }

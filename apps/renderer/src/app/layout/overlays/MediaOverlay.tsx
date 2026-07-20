@@ -59,6 +59,7 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] =
     useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
   const copiedTimerRef = useRef<number | null>(null);
   const textViewerRef = useRef<MediaTextViewerHandle>(null);
   const isThreadOpenedImage =
@@ -93,6 +94,7 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     setShowUnsavedChangesDialog(false);
     setThreadMenu(null);
     setIsCopied(false);
+    setIsCopying(false);
   }, [isOpen, item]);
 
   useEffect(() => {
@@ -128,7 +130,8 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
   };
 
   const handleCopy = async () => {
-    if (!activePath) return;
+    if (!activePath || isCopying) return;
+    setIsCopying(true);
     try {
       if (item?.kind === "image") {
         await platform.invoke("copy_image_from_path_to_clipboard", {
@@ -159,6 +162,8 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
       }, 1800);
     } catch (error) {
       console.error("[MediaOverlay] Failed to copy media:", error);
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -322,6 +327,7 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
                   : "Copy path"
             }
             isCopied={isCopied}
+            isCopying={isCopying}
             isRevealInThreadActive={threadMenu !== null}
             onRevealInThread={
               item?.kind === "image" &&

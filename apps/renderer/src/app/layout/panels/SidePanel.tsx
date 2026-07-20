@@ -59,8 +59,7 @@ const Checkbox: React.FC<{ checked: boolean; onChange: () => void }> = ({
   </div>
 );
 
-interface TooltipButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface TooltipButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   tooltip: string;
 }
 
@@ -105,12 +104,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
       >
         {children}
       </button>
-      <Tooltip
-        text={tooltip}
-        parentRef={buttonRef}
-        show={showTooltip}
-        above
-      />
+      <Tooltip text={tooltip} parentRef={buttonRef} show={showTooltip} above />
     </>
   );
 };
@@ -436,9 +430,9 @@ export const SidePanel: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
-  const [collapsedWorkspaceIds, setCollapsedWorkspaceIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [collapsedWorkspaceIds, setCollapsedWorkspaceIds] = useState<
+    Set<string>
+  >(() => new Set());
   const [didInitializeWorkspaceCollapse, setDidInitializeWorkspaceCollapse] =
     useState(false);
   const [enteringThreadIds, setEnteringThreadIds] = useState<Set<string>>(
@@ -511,29 +505,26 @@ export const SidePanel: React.FC = () => {
     [app.threadHistory.workspaces],
   );
 
-  const pathWorkspaces = useMemo(
-    () => {
-      const workspaces = workspaceItems.filter(
-        (workspace) => workspace.path !== null,
+  const pathWorkspaces = useMemo(() => {
+    const workspaces = workspaceItems.filter(
+      (workspace) => workspace.path !== null,
+    );
+    if (workspaceOrdering === "created") return workspaces;
+
+    const updatedTime = (workspace: (typeof workspaceItems)[number]) =>
+      workspace.threads.reduce(
+        (latest, thread) =>
+          Math.max(
+            latest,
+            new Date(thread.updated_at || thread.created_at).getTime(),
+          ),
+        0,
       );
-      if (workspaceOrdering === "created") return workspaces;
 
-      const updatedTime = (workspace: (typeof workspaceItems)[number]) =>
-        workspace.threads.reduce(
-          (latest, thread) =>
-            Math.max(
-              latest,
-              new Date(thread.updated_at || thread.created_at).getTime(),
-            ),
-          0,
-        );
-
-      return workspaces.sort((a, b) => {
-        return updatedTime(b) - updatedTime(a);
-      });
-    },
-    [workspaceItems, workspaceOrdering],
-  );
+    return workspaces.sort((a, b) => {
+      return updatedTime(b) - updatedTime(a);
+    });
+  }, [workspaceItems, workspaceOrdering]);
   const defaultWorkspace = useMemo(
     () => workspaceItems.find((workspace) => workspace.path === null) ?? null,
     [workspaceItems],
@@ -541,9 +532,9 @@ export const SidePanel: React.FC = () => {
   const activeWorkspaceId = useMemo(
     () =>
       activeSessionId
-        ? workspaceItems.find((workspace) =>
+        ? (workspaceItems.find((workspace) =>
             workspace.threads.some((thread) => thread.id === activeSessionId),
-          )?.id ?? null
+          )?.id ?? null)
         : null,
     [activeSessionId, workspaceItems],
   );
@@ -758,31 +749,31 @@ export const SidePanel: React.FC = () => {
     setActiveThreadContextMenu((prev) => (prev === null ? prev : null));
   }, []);
 
-  const handleTogglePin = useCallback(async (
-    threadId: string,
-    pointer: { x: number; y: number },
-  ) => {
-    if (pinToggleLockRef.current.has(threadId)) return;
+  const handleTogglePin = useCallback(
+    async (threadId: string, pointer: { x: number; y: number }) => {
+      if (pinToggleLockRef.current.has(threadId)) return;
 
-    pinHoverFreezeOriginRef.current = pointer;
-    setIsPinHoverFrozen(true);
-    if (pinHoverFreezeTimeoutRef.current !== null) {
-      window.clearTimeout(pinHoverFreezeTimeoutRef.current);
-    }
-    pinHoverFreezeTimeoutRef.current = window.setTimeout(() => {
-      pinHoverFreezeTimeoutRef.current = null;
-      pinHoverFreezeOriginRef.current = null;
-      setIsPinHoverFrozen(false);
-    }, 5_00);
-    pinToggleLockRef.current.add(threadId);
-    try {
-      await togglePinRef.current(threadId);
-    } finally {
-      setTimeout(() => {
-        pinToggleLockRef.current.delete(threadId);
-      }, 220);
-    }
-  }, []);
+      pinHoverFreezeOriginRef.current = pointer;
+      setIsPinHoverFrozen(true);
+      if (pinHoverFreezeTimeoutRef.current !== null) {
+        window.clearTimeout(pinHoverFreezeTimeoutRef.current);
+      }
+      pinHoverFreezeTimeoutRef.current = window.setTimeout(() => {
+        pinHoverFreezeTimeoutRef.current = null;
+        pinHoverFreezeOriginRef.current = null;
+        setIsPinHoverFrozen(false);
+      }, 5_00);
+      pinToggleLockRef.current.add(threadId);
+      try {
+        await togglePinRef.current(threadId);
+      } finally {
+        setTimeout(() => {
+          pinToggleLockRef.current.delete(threadId);
+        }, 220);
+      }
+    },
+    [],
+  );
 
   const handleLeaveThread = useCallback(
     (pointer: { x: number; y: number }) => {
@@ -960,12 +951,8 @@ export const SidePanel: React.FC = () => {
       ? collapsedWorkspaceIds.has(workspace.id)
       : !isDefault && workspace.id !== pendingWorkspaceId;
     const showPendingThread =
-      !isDefault &&
-      isHomeRoute &&
-      pendingWorkspaceId === workspace.id;
-    const showNewThreadButton = isDefault
-      ? !isHomeRoute
-      : !showPendingThread;
+      !isDefault && isHomeRoute && pendingWorkspaceId === workspace.id;
+    const showNewThreadButton = isDefault ? !isHomeRoute : !showPendingThread;
     return (
       <section className={styles.workspace} key={workspace.id}>
         <div
@@ -986,9 +973,7 @@ export const SidePanel: React.FC = () => {
               isCollapsed ? "" : styles.workspaceChevronExpanded
             }`}
           />
-          <span className={styles.workspaceLabel}>
-            {workspace.name}
-          </span>
+          <span className={styles.workspaceLabel}>{workspace.name}</span>
           <div className={styles.workspaceActions}>
             <div
               className={`${styles.workspaceThreadAction} ${
@@ -1134,17 +1119,12 @@ export const SidePanel: React.FC = () => {
               type="button"
               onMouseDown={(event) => event.stopPropagation()}
               onClick={handleTogglePanelContextMenu}
-              className={styles.iconButton}
+              className={`${styles.iconButton} ${panelContextMenu ? styles.active : ""}`}
               tooltip="Customize workspaces"
               aria-label="Customize workspaces"
               aria-expanded={!!panelContextMenu}
             >
-              <CustomizePanelIcon
-                size={16}
-                className={`${styles.customizePanelIcon} ${
-                  panelContextMenu ? styles.customizePanelIconOpen : ""
-                }`}
-              />
+              <CustomizePanelIcon size={16} />
             </TooltipButton>
             <TooltipButton
               type="button"

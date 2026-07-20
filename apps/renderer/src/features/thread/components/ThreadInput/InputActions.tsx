@@ -61,11 +61,14 @@ export const InputActions: React.FC<InputActionsProps> = ({
   const [showFileButtonTooltip, setShowFileButtonTooltip] = useState(false);
   const [showCodeButtonTooltip, setShowCodeButtonTooltip] = useState(false);
   const [showKeepProgressTooltip, setShowKeepProgressTooltip] = useState(false);
+  const [showPrimaryActionTooltip, setShowPrimaryActionTooltip] =
+    useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
 
   const fileButtonRef = useRef<HTMLButtonElement>(null);
   const codeButtonRef = useRef<HTMLButtonElement>(null);
   const keepProgressInfoRef = useRef<HTMLButtonElement>(null);
+  const primaryActionRef = useRef<HTMLDivElement>(null);
 
   const handlePaperclipClick = async () => {
     try {
@@ -101,6 +104,12 @@ export const InputActions: React.FC<InputActionsProps> = ({
 
   const selectedModelLabel =
     AI_MODELS.find((m) => m.id === selectedModel)?.triggerLabel || "Auto";
+  const isStopAction = isAiTyping || isStoppable;
+  const primaryActionLabel = isStopAction
+    ? "Stop"
+    : isButtonActive
+      ? "Send"
+      : "Ask Anything";
 
   return (
     <div className={styles.actions}>
@@ -193,24 +202,43 @@ export const InputActions: React.FC<InputActionsProps> = ({
       <div className={styles.rightActions}>
         <VoiceButton onTranscript={onTranscript} disabled={disabled} />
 
-        {isAiTyping || isStoppable ? (
-          <button
-            className={styles.stopButton}
-            onClick={onStop}
-            aria-label="Stop generating"
-          >
-            <Square size={14} fill="currentColor" />
-          </button>
-        ) : (
-          <button
-            className={`${styles.submitButton} ${isButtonActive ? styles.submitActive : ""}`}
-            onClick={onSubmit}
-            disabled={!isButtonActive}
-            aria-label="Submit"
-          >
-            <ArrowUp size={18} />
-          </button>
-        )}
+        <div
+          ref={primaryActionRef}
+          className={styles.primaryAction}
+          onMouseEnter={() => setShowPrimaryActionTooltip(true)}
+          onMouseLeave={() => setShowPrimaryActionTooltip(false)}
+        >
+          {isStopAction ? (
+            <button
+              className={styles.stopButton}
+              onClick={() => {
+                setShowPrimaryActionTooltip(false);
+                onStop?.();
+              }}
+              aria-label={primaryActionLabel}
+            >
+              <Square size={14} fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              className={`${styles.submitButton} ${isButtonActive ? styles.submitActive : ""}`}
+              onClick={() => {
+                setShowPrimaryActionTooltip(false);
+                onSubmit();
+              }}
+              disabled={!isButtonActive}
+              aria-label={primaryActionLabel}
+            >
+              <ArrowUp size={18} />
+            </button>
+          )}
+        </div>
+        <Tooltip
+          text={primaryActionLabel}
+          parentRef={primaryActionRef}
+          show={showPrimaryActionTooltip}
+          above
+        />
       </div>
     </div>
   );

@@ -50,10 +50,11 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
     <Dropdown
       className={styles.settingsMenu}
       label={
-        <span
-          className={`${styles.triggerIconWrap} ${isOpen ? styles.iconActive : ""}`}
-        >
-          <Settings size={22} className={styles.triggerIcon} />
+        <span className={styles.triggerIconWrap}>
+          <Settings
+            size={22}
+            className={`${styles.triggerIcon} ${isOpen ? styles.triggerIconActive : ""}`}
+          />
         </span>
       }
       width={200}

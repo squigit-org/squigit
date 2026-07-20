@@ -257,19 +257,10 @@
     background-color 0.15s ease;
 }
 
-.iconButton:hover {
+.iconButton:hover,
+.iconButton.active {
   color: var(--c-raw-050);
   background: var(--c-raw-067);
-}
-
-.customizePanelIcon {
-  transform: rotate(0deg);
-  transform-origin: center;
-  transition: transform 0.18s ease;
-}
-
-.customizePanelIconOpen {
-  transform: rotate(-90deg);
 }
 
 .workspaceThreads {

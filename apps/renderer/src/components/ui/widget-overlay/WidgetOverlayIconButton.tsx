@@ -16,6 +16,7 @@ interface WidgetOverlayIconButtonProps {
   onMouseDown?: React.MouseEventHandler<HTMLButtonElement>;
   className?: string;
   activeClassName?: string;
+  disabled?: boolean;
 }
 
 const buildClassName = ({
@@ -45,6 +46,7 @@ export const WidgetOverlayIconButton: React.FC<
   onMouseDown,
   className,
   activeClassName,
+  disabled = false,
 }) => {
   const [hover, setHover] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -55,7 +57,11 @@ export const WidgetOverlayIconButton: React.FC<
         ref={btnRef}
         className={buildClassName({ isActive, className, activeClassName })}
         aria-label={label}
-        onClick={onClick}
+        disabled={disabled}
+        onClick={(event) => {
+          setHover(false);
+          onClick(event);
+        }}
         onMouseDown={onMouseDown}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
