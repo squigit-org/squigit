@@ -9,6 +9,7 @@
   --panel-row-gap: 4px;
   --panel-row-height: 28px;
   --panel-row-radius: 8px;
+  --workspace-expanded-min-height: 46px;
 
   width: 280px;
   height: 100%;
@@ -76,29 +77,81 @@
   background: var(--c-raw-013);
 }
 
-.groupContent {
+.workspacesHeader {
   display: flex;
-  flex-direction: column;
-  min-height: 0;
+  align-items: center;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 var(--panel-gutter) 2px calc(var(--panel-gutter) + 10px);
+  color: var(--c-raw-106);
 }
 
-.groupInner {
+.workspacesTitle {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.viewAllLine {
+  height: 1px;
+  min-width: 12px;
+  background: var(--c-raw-067);
+}
+
+.workspacesHeaderActions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.viewAllDivider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px calc(var(--panel-gutter) + 10px);
+}
+
+.viewAllLine {
+  flex: 1 1 auto;
+}
+
+.viewAllButton {
+  flex: 0 0 auto;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--c-raw-106);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.viewAllButton:hover {
+  color: var(--c-raw-050);
+}
+
+.workspaceInner {
   display: flex;
   flex-direction: column;
   gap: var(--panel-row-gap);
   min-width: 0;
+  min-height: var(--workspace-expanded-min-height);
+  box-sizing: border-box;
   padding-inline: var(--panel-gutter);
 }
 
-.projectGroup {
+.workspace {
   min-width: 0;
 }
 
-.projectGroup + .projectGroup {
+.workspace + .workspace {
   margin-top: 4px;
 }
 
-.threadsDivider {
+.workspaceDivider {
   position: relative;
   top: auto;
   z-index: 1;
@@ -106,9 +159,11 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  min-height: 28px;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  height: var(--panel-row-height);
+  box-sizing: border-box;
+  border-radius: var(--panel-row-radius);
+  padding-top: 0;
+  padding-bottom: 0;
   padding-left: calc(var(--panel-gutter) + 10px);
   padding-right: var(--panel-gutter);
   font-size: 0.85rem;
@@ -117,11 +172,24 @@
   text-transform: none;
   color: var(--c-raw-000);
   text-align: left;
-  background: var(--c-raw-013);
+  cursor: pointer;
   -webkit-font-smoothing: antialiased;
 }
 
-.directoryLabel {
+.workspaceChevron {
+  flex: 0 0 auto;
+  margin-right: 4px;
+  cursor: pointer;
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition: transform 0.18s ease;
+}
+
+.workspaceChevronExpanded {
+  transform: rotate(90deg);
+}
+
+.workspaceLabel {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -129,13 +197,46 @@
   white-space: nowrap;
 }
 
-.directoryActions {
+.workspaceActions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   flex: 0 0 auto;
   gap: 2px;
   margin-left: auto;
+}
+
+.workspaceThreadAction {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px;
+  flex: 0 0 24px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  overflow: hidden;
+  contain: layout paint;
+  isolation: isolate;
+}
+
+.workspaceNewThreadButton {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.workspaceNewThreadButton {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.workspaceDivider:hover
+  .workspaceThreadActionEnabled
+  .workspaceNewThreadButton {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .iconButton {
@@ -161,17 +262,17 @@
   background: var(--c-raw-067);
 }
 
-.collapseIcon {
+.customizePanelIcon {
   transform: rotate(0deg);
   transform-origin: center;
   transition: transform 0.18s ease;
 }
 
-.collapseIconCollapsed {
+.customizePanelIconOpen {
   transform: rotate(-90deg);
 }
 
-.projectThreads {
+.workspaceThreads {
   display: grid;
   grid-template-rows: 1fr;
   opacity: 1;
@@ -182,14 +283,14 @@
     transform 0.2s ease;
 }
 
-.projectThreadsCollapsed {
+.workspaceThreadsCollapsed {
   grid-template-rows: 0fr;
   opacity: 0;
   transform: translateY(-8px);
   pointer-events: none;
 }
 
-.projectThreadsClip {
+.workspaceThreadsClip {
   min-height: 0;
   overflow: hidden;
 }
@@ -212,7 +313,8 @@
   min-width: 0;
 }
 
-.threadRow:hover {
+.threadRow:hover,
+.workspaceDivider:hover {
   background-color: var(--c-raw-067);
   color: var(--c-raw-050);
 }
@@ -226,6 +328,73 @@
   background-color: var(--c-raw-067);
   color: var(--c-raw-050);
   transition: color 0.15s ease;
+}
+
+.threadRowEntering {
+  overflow: hidden;
+  transform-origin: top;
+  animation: threadRowAppend 0.24s ease-out both;
+}
+
+@keyframes threadRowAppend {
+  from {
+    height: 0;
+    opacity: 0;
+    transform: translateY(-8px) scaleY(0.88);
+  }
+
+  to {
+    height: var(--panel-row-height);
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+.pendingThreadRow {
+  cursor: default;
+  pointer-events: auto;
+  background-color: var(--c-raw-067);
+  color: var(--c-raw-050);
+}
+
+.pendingThreadRow:hover {
+  background-color: var(--c-raw-067);
+  color: var(--c-raw-050);
+}
+
+.threadRow.pendingThreadRow:hover .threadTitle {
+  color: var(--c-raw-050);
+}
+
+.pendingThreadRow .threadTitle {
+  color: var(--c-raw-050);
+}
+
+.pendingThreadClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--c-raw-050);
+  background: transparent;
+  cursor: pointer;
+}
+
+.pendingThreadClose:hover,
+.pendingThreadClose:focus-visible {
+  background: var(--c-raw-010);
+  outline: none;
+}
+
+.threadIndent {
+  width: 16px;
+  flex: 0 0 16px;
 }
 
 .pinnedRow {
@@ -324,10 +493,10 @@
   margin-left: auto;
   position: relative;
   display: grid;
-  grid-template-columns: 24px 24px;
-  flex: 0 0 48px;
-  width: 48px;
-  min-width: 48px;
+  grid-template-columns: 24px 24px 24px;
+  flex: 0 0 72px;
+  width: 72px;
+  min-width: 72px;
   height: 24px;
   overflow: hidden;
   contain: layout paint;
@@ -335,7 +504,7 @@
 }
 
 .threadDate {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1;
   display: flex;
   align-items: center;
@@ -417,37 +586,116 @@
   pointer-events: none;
 }
 
-.forkBtn,
-.pinBtn {
+.forkBtn {
   grid-column: 1;
 }
 
-.actionRight {
+.pinBtn {
   grid-column: 2;
 }
 
-.forkBtn {
-  color: var(--c-raw-106);
-  opacity: 1;
-  transform: translate3d(0, 0, 0) scale(1);
-  pointer-events: auto;
+.actionRight {
+  grid-column: 3;
 }
 
+.forkBtn,
 .pinBtn {
   color: var(--c-raw-106);
 }
 
 .threadRow:hover .forkBtn,
 .threadRow.menuOpen .forkBtn {
-  opacity: 0;
-  pointer-events: none;
-  transform: translate3d(0, -2px, 0) scale(0.96);
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .threadRow:hover .pinBtn,
 .threadRow.menuOpen .pinBtn,
 .threadRow:hover .actionRight,
 .threadRow.menuOpen .actionRight {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.pinnedRow .threadActions {
+  grid-template-columns: 24px 24px 24px;
+  flex-basis: 72px;
+  width: 72px;
+  min-width: 72px;
+}
+
+.pinnedRow .threadDate {
+  grid-column: 3;
+  opacity: 1;
+}
+
+.pinnedRow .pinBtn {
+  grid-column: 2;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.pinnedRow .forkBtn {
+  grid-column: 1;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.pinnedRow .actionRight {
+  grid-column: 3;
+}
+
+.pinnedRow:hover .forkBtn,
+.pinnedRow.menuOpen .forkBtn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.forkBtn.forkBtnLoading {
+  opacity: 1;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.forkSpinner {
+  animation: "rotate" 1s linear infinite;
+}
+
+.pinHoverFrozen .threadRow .threadDate,
+.pinHoverFrozen .threadRow .forkBtn,
+.pinHoverFrozen .threadRow .pinBtn,
+.pinHoverFrozen .threadRow .actionRight {
+  transition: none;
+}
+
+.pinHoverFrozen .threadRow {
+  transition: none;
+}
+
+.pinHoverFrozen .threadRow:hover .threadDate {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.pinHoverFrozen .threadRow:hover .forkBtn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.pinHoverFrozen .threadRow:hover .pinBtn,
+.pinHoverFrozen .threadRow:hover .actionRight {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 2px, 0) scale(0.96);
+}
+
+.pinHoverFrozen .pinnedRow:hover .pinBtn {
   opacity: 1;
   pointer-events: auto;
   transform: translate3d(0, 0, 0) scale(1);
@@ -462,6 +710,10 @@
 
 .pinBtn:hover svg,
 .pinBtn.pinActive svg {
+  fill: currentColor;
+}
+
+.forkBtn:hover svg circle {
   fill: currentColor;
 }
 
@@ -542,8 +794,19 @@
 }
 
 .emptyState {
-  padding: 20px var(--panel-gutter) 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--workspace-expanded-min-height);
+  box-sizing: border-box;
+  padding: 0 var(--panel-gutter);
   text-align: center;
   color: var(--c-raw-073);
   font-size: 0.88rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .threadRowEntering {
+    animation: none;
+  }
 }
