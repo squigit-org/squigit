@@ -18,8 +18,8 @@ import {
   RotateCcw,
   Pencil,
   ChevronRight,
-  GitFork,
   Loader2,
+  Split,
 } from "lucide-react";
 import {
   CitationChip,
@@ -1105,11 +1105,11 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
                       {isForking ? (
                         <Loader2 size={15} className={`${styles.spin}`} />
                       ) : (
-                        <GitFork size={15} />
+                        <Split size={15} style={{rotate: "90deg"}} />
                       )}
                     </button>
                     <Tooltip
-                      text="Fork"
+                      text="Continue in new thread"
                       parentRef={forkButtonRef}
                       show={hoveredAction === "fork" && canFork && !isForking}
                       above

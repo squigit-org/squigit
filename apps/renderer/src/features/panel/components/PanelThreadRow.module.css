@@ -269,12 +269,7 @@
   fill: currentColor;
 }
 
-.forkButton:hover svg circle {
-  fill: currentColor;
-}
-
 .active .threadDate,
-.active .forkButton,
 .active .pinButton,
 .active .menuButton {
   color: var(--c-raw-050);

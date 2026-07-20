@@ -5,13 +5,14 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { GitFork, Loader2, MoreHorizontal, Pin } from "lucide-react";
+import { Loader2, MoreHorizontal, Pin, Split } from "lucide-react";
 import type { ThreadMetadata } from "@squigit/core/config";
 import { formatCompactAge } from "@squigit/core/helpers";
 import { LoadingSpinner, Tooltip } from "@/components/ui";
 import { useKeyDown } from "@/hooks/shared";
 import type { PanelPoint, PanelThreadMenuState } from "../panel.types";
 import { PanelCheckbox } from "./PanelCheckbox";
+import { PanelTooltipButton } from "./PanelTooltipButton";
 import { PanelThreadContextMenu } from "@/app/layout/menus/PanelThreadContextMenu";
 import styles from "./PanelThreadRow.module.css";
 
@@ -192,11 +193,13 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
                   />
                 </>
               )}
-              <button
+              <PanelTooltipButton
                 type="button"
                 className={`${styles.pinButton} ${
                   thread.pinned_at ? styles.pinActive : ""
                 }`}
+                tooltip={thread.pinned_at ? "Unpin thread" : "Pin thread"}
+                aria-label={thread.pinned_at ? "Unpin thread" : "Pin thread"}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -211,12 +214,13 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
                 }}
               >
                 <Pin size={15} style={{ transform: "rotate(45deg)" }} />
-              </button>
-              <button
+              </PanelTooltipButton>
+              <PanelTooltipButton
                 type="button"
                 className={`${styles.forkButton} ${
                   isForking ? styles.forkButtonLoading : ""
                 }`}
+                tooltip={isForking ? "Forking thread..." : "Fork thread"}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -232,9 +236,9 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
                 {isForking ? (
                   <Loader2 size={14} className={styles.forkSpinner} />
                 ) : (
-                  <GitFork size={14} />
+                  <Split size={14} style={{rotate:"90deg"}} />
                 )}
-              </button>
+              </PanelTooltipButton>
               <button
                 type="button"
                 className={styles.menuButton}
