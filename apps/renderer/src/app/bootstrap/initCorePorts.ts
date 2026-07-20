@@ -66,6 +66,7 @@ export function initializeCorePorts(): void {
       platform.invoke("prepare_text_first_message", {
         messageText: input.messageText,
         textAttachmentPaths: input.textAttachmentPaths,
+        threadId: input.threadId,
       }),
   });
 

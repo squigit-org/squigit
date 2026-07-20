@@ -3,6 +3,8 @@
 
 use napi::{Error, Result};
 use napi_derive::napi;
+use squigit_storage::ThreadStorage;
+use std::collections::HashMap;
 
 #[napi(object)]
 pub struct NapiHarnessTextAttachment {
@@ -50,10 +52,26 @@ impl From<squigit_harness::TextFirstMessage> for NapiHarnessTextFirstMessage {
 pub fn prepare_text_first_message(
     message_text: String,
     text_attachment_paths: Vec<String>,
+    thread_id: Option<String>,
 ) -> Result<NapiHarnessTextFirstMessage> {
+    let mut resolved_text_attachment_paths = HashMap::new();
+    if let Some(thread_id) = thread_id.as_deref() {
+        let storage =
+            ThreadStorage::new().map_err(|error| Error::from_reason(error.to_string()))?;
+        for citation_path in &text_attachment_paths {
+            if let Some(cas_path) = storage
+                .get_attachment_cas_path(citation_path, thread_id)
+                .map_err(|error| Error::from_reason(error.to_string()))?
+            {
+                resolved_text_attachment_paths.insert(citation_path.clone(), cas_path);
+            }
+        }
+    }
+
     squigit_harness::prepare_text_first_message(squigit_harness::PrepareTextFirstMessageInput {
         message_text,
         text_attachment_paths,
+        resolved_text_attachment_paths,
     })
     .map(Into::into)
     .map_err(Error::from_reason)

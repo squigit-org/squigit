@@ -20,6 +20,7 @@ const TEXT_EXTENSIONS: &[&str] = &[
 pub struct PrepareTextFirstMessageInput {
     pub message_text: String,
     pub text_attachment_paths: Vec<String>,
+    pub resolved_text_attachment_paths: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -312,7 +313,12 @@ pub fn prepare_text_first_message(
         }
 
         if !replacements.contains_key(&mention.path) {
-            let prepared = read_text_attachment(&mention.path, &mention.label);
+            let content_path = input
+                .resolved_text_attachment_paths
+                .get(&mention.path)
+                .map(String::as_str)
+                .unwrap_or(&mention.path);
+            let prepared = read_text_attachment(content_path, &mention.label);
             consumed_paths.push(mention.path.clone());
             attachments.push(prepared.0.clone());
             replacements.insert(mention.path.clone(), prepared);

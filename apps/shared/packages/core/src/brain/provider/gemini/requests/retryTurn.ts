@@ -203,7 +203,7 @@ export const retryFromMessage = async (
   for (const message of messagesBefore) {
     let text = message.text;
     if (message.role === "user") {
-      text = (await prepareBrainInput(message.text)).brainText;
+      text = (await prepareBrainInput(message.text, threadId)).brainText;
       firstPreparedUserText ??= text;
       lastPreparedUserText = text;
     }

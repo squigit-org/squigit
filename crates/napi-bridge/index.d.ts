@@ -62,9 +62,9 @@ export declare function has_profiles(): boolean
 
 export declare function hydrate_avatar(url: string, profileId?: string | undefined | null): Promise<string>
 
-export declare function list_downloaded_models(): Array<string>
-
 export declare function list_attachment_sources(threadId?: string | undefined | null): string
+
+export declare function list_downloaded_models(): Array<string>
 
 export declare function list_profiles(): Array<NapiProfile>
 
@@ -149,7 +149,7 @@ export declare function ocr_image(imagePath: string, isBase64: boolean, modelNam
 
 export declare function play_ui_sound(effect: string): void
 
-export declare function prepare_text_first_message(messageText: string, textAttachmentPaths: Array<string>): NapiHarnessTextFirstMessage
+export declare function prepare_text_first_message(messageText: string, textAttachmentPaths: Array<string>, threadId?: string | undefined | null): NapiHarnessTextFirstMessage
 
 export declare function process_image_path(path: string): NapiStoredImage
 
@@ -161,9 +161,13 @@ export declare function read_clipboard_text(): string
 
 export declare function register_attachment_source(threadId: string, casPath: string, sourcePath: string, displayName?: string | undefined | null): void
 
-export declare function resolve_attachment_source_path(casPath: string, threadId?: string | undefined | null): string | null
+export declare function revise_attachment_cas_path(threadId: string, citationPath: string, newCasPath: string, displayName?: string | undefined | null): void
 
 export declare function request_quick_answer(channelId: string): Promise<void>
+
+export declare function resolve_attachment_cas_path(citationPath: string, threadId: string): string | null
+
+export declare function resolve_attachment_source_path(casPath: string, threadId?: string | undefined | null): string | null
 
 export declare function run_sidecar_version(command: string): Promise<string>
 

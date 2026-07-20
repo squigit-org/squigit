@@ -43,6 +43,7 @@ function parseTextLocalAttachmentPaths(messageText: string): string[] {
 
 export async function prepareBrainInput(
   messageText: string,
+  threadId?: string | null,
 ): Promise<PreparedBrainInput> {
   const displayText = messageText;
   const textAttachmentPaths = parseTextLocalAttachmentPaths(messageText);
@@ -58,6 +59,7 @@ export async function prepareBrainInput(
   const prepared = await getHarnessPort().prepareTextFirstMessage({
     messageText,
     textAttachmentPaths,
+    threadId,
   });
 
   return {

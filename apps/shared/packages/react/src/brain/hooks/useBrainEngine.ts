@@ -903,7 +903,10 @@ export const useBrainEngine = (config: {
     beginPendingAssistantTurn(responseId, "message", requestStartedAtMs);
 
     try {
-      const preparedInput = await prepareBrainInput(lastSentMessage.text);
+      const preparedInput = await prepareBrainInput(
+        lastSentMessage.text,
+        config.threadId,
+      );
       const toolTracker = createStreamToolTracker(resetPendingRawText);
       const responseText = await executeWithSilentFallback(
         config.currentModel,
@@ -937,7 +940,7 @@ export const useBrainEngine = (config: {
     if (!userText.trim() || config.state.isLoading) return;
     const targetThreadId = config.threadId;
     sessionThreadIdRef.current = targetThreadId;
-    const preparedInput = await prepareBrainInput(userText);
+    const preparedInput = await prepareBrainInput(userText, targetThreadId);
 
     const userMsg: Message = {
       id: Date.now().toString(),

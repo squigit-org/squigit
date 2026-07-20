@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { requireAddonFn } from "../system/addon";
-import { requireStringArg } from "../system/arguments";
+import { optionalStringArg, requireStringArg } from "../system/arguments";
 
 const requireStringArrayArg = (
   command: string,
@@ -35,6 +35,7 @@ export function registerHarnessHandlers() {
         "textAttachmentPaths",
         "text_attachment_paths",
       ),
+      optionalStringArg(args, "threadId", "thread_id"),
     ),
   );
 }

@@ -7,6 +7,7 @@
 export interface HarnessPrepareTextFirstMessageInput {
   messageText: string;
   textAttachmentPaths: string[];
+  threadId?: string | null;
 }
 
 export interface HarnessTextAttachment {
