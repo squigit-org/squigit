@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { SidePanel } from "@/app/layout/panels/SidePanel";
+import { SidePanel } from "@/features/panel";
 import { TitleBar } from "@/app/layout/frame/TitleBar";
 import styles from "./AppLayout.module.css";
 

@@ -1,0 +1,287 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.threadRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 5px;
+  border-radius: var(--panel-row-radius);
+  cursor: pointer;
+  color: var(--c-raw-106);
+  height: var(--panel-row-height);
+  box-sizing: border-box;
+  background-color: transparent;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+  min-width: 0;
+}
+
+.threadRow:hover,
+.menuOpen,
+.active {
+  background-color: var(--c-raw-067);
+  color: var(--c-raw-050);
+}
+
+.active {
+  transition: color 0.15s ease;
+}
+
+.threadRowEntering {
+  overflow: hidden;
+  transform-origin: top;
+  animation: threadRowAppend 0.24s ease-out both;
+}
+
+@keyframes threadRowAppend {
+  from {
+    height: 0;
+    opacity: 0;
+    transform: translateY(-8px) scaleY(0.88);
+  }
+
+  to {
+    height: var(--panel-row-height);
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+.threadIndent {
+  width: 16px;
+  flex: 0 0 16px;
+}
+
+.pinnedRow {
+  background-color: transparent;
+}
+
+.rowSpinner {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rowSpinnerInner {
+  transform-origin: center;
+  display: inline-flex;
+}
+
+.threadTitleInput {
+  flex: 1 1 auto;
+  background: transparent;
+  color: var(--c-raw-050);
+  font-size: 0.85rem;
+  padding: 2px 4px 2px 2px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  outline: none;
+  min-width: 0;
+}
+
+.threadTitle {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--c-raw-106);
+  font-weight: 400;
+  min-width: 0;
+}
+
+.menuOpen .threadTitle,
+.threadRow:hover .threadTitle,
+.active .threadTitle {
+  color: var(--c-raw-050);
+}
+
+.threadActions {
+  margin-left: auto;
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px 24px 24px;
+  flex: 0 0 72px;
+  width: 72px;
+  min-width: 72px;
+  height: 24px;
+  overflow: hidden;
+  contain: layout paint;
+  isolation: isolate;
+}
+
+.threadDate {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 0.72rem;
+  color: var(--c-raw-106);
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  opacity: 1;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+  pointer-events: none;
+}
+
+.threadRow:hover .threadDate,
+.menuOpen .threadDate {
+  opacity: 0;
+  transform: translate3d(0, -2px, 0) scale(0.96);
+}
+
+.forkButton,
+.pinButton,
+.menuButton {
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--c-raw-000);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    color 0.15s ease;
+  cursor: pointer;
+  opacity: 0;
+  transform: translate3d(0, 2px, 0) scale(0.96);
+  pointer-events: none;
+}
+
+.forkButton {
+  grid-column: 1;
+}
+
+.pinButton {
+  grid-column: 2;
+}
+
+.menuButton {
+  grid-column: 3;
+}
+
+.forkButton,
+.pinButton {
+  color: var(--c-raw-106);
+}
+
+.threadRow:hover .forkButton,
+.menuOpen .forkButton,
+.threadRow:hover .pinButton,
+.menuOpen .pinButton,
+.threadRow:hover .menuButton,
+.menuOpen .menuButton {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.pinnedRow .threadActions {
+  grid-template-columns: 24px 24px 24px;
+  flex-basis: 72px;
+  width: 72px;
+  min-width: 72px;
+}
+
+.pinnedRow .threadDate {
+  grid-column: 3;
+  opacity: 1;
+}
+
+.pinnedRow .pinButton,
+.pinnedRow .forkButton {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.forkButtonLoading {
+  opacity: 1;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.forkSpinner {
+  animation: "rotate" 1s linear infinite;
+}
+
+.pinHoverFrozen,
+.pinHoverFrozen .threadDate,
+.pinHoverFrozen .forkButton,
+.pinHoverFrozen .pinButton,
+.pinHoverFrozen .menuButton {
+  transition: none;
+}
+
+.pinHoverFrozen:hover .threadDate {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.pinHoverFrozen:hover .forkButton {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.pinHoverFrozen:hover .pinButton,
+.pinHoverFrozen:hover .menuButton {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 2px, 0) scale(0.96);
+}
+
+.pinHoverFrozen.pinnedRow:hover .pinButton {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.forkButton:hover,
+.pinButton:hover,
+.menuButton:hover {
+  background: transparent;
+  color: inherit;
+}
+
+.pinButton:hover svg,
+.pinActive svg {
+  fill: currentColor;
+}
+
+.forkButton:hover svg circle {
+  fill: currentColor;
+}
+
+.active .threadDate,
+.active .forkButton,
+.active .pinButton,
+.active .menuButton {
+  color: var(--c-raw-050);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .threadRowEntering {
+    animation: none;
+  }
+}

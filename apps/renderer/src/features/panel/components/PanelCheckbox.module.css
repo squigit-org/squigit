@@ -1,0 +1,30 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--c-raw-000);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 0;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.checked {
+  background: var(--c-raw-050);
+  border-color: var(--c-raw-050);
+}
+
+.checkboxInner {
+  color: var(--c-raw-013);
+}

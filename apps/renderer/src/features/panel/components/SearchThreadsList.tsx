@@ -12,10 +12,10 @@ import {
   type ThreadGroup,
   renderSnippetWithHighlights,
 } from "../search.utils";
-import { ThreadRow } from "./ThreadRow";
-import styles from "./ThreadsList.module.css";
+import { SearchThreadRow } from "./SearchThreadRow";
+import styles from "./SearchThreadsList.module.css";
 
-interface ThreadsListProps {
+interface SearchThreadsListProps {
   hasQuery: boolean;
   isLoading: boolean;
   results: ThreadSearchResult[];
@@ -26,7 +26,7 @@ interface ThreadsListProps {
   onSelectThread: (threadId: string) => void;
 }
 
-export const ThreadsList: React.FC<ThreadsListProps> = ({
+export const SearchThreadsList: React.FC<SearchThreadsListProps> = ({
   hasQuery,
   isLoading,
   results,
@@ -52,7 +52,7 @@ export const ThreadsList: React.FC<ThreadsListProps> = ({
 
           {!isLoading
             ? results.map((result) => (
-                <ThreadRow
+                <SearchThreadRow
                   key={`${result.thread_id}:${result.message_index}`}
                   title={result.thread_title || "Untitled thread"}
                   snippet={renderSnippetWithHighlights(
@@ -79,7 +79,7 @@ export const ThreadsList: React.FC<ThreadsListProps> = ({
             <div key={`${group.key}:${group.label}`} className={styles.group}>
               <div className={styles.groupHeader}>{group.label}</div>
               {group.threads.map((thread) => (
-                <ThreadRow
+                <SearchThreadRow
                   key={thread.id}
                   indented
                   title={thread.title || "Untitled thread"}

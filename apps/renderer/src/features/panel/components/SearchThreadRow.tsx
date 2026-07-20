@@ -5,9 +5,9 @@
  */
 
 import React from "react";
-import styles from "./ThreadRow.module.css";
+import styles from "./SearchThreadRow.module.css";
 
-interface ThreadRowProps {
+interface SearchThreadRowProps {
   title: string;
   snippet?: React.ReactNode;
   dateLabel?: string;
@@ -15,7 +15,7 @@ interface ThreadRowProps {
   onClick: () => void;
 }
 
-export const ThreadRow: React.FC<ThreadRowProps> = ({
+export const SearchThreadRow: React.FC<SearchThreadRowProps> = ({
   title,
   snippet,
   dateLabel,

@@ -15,15 +15,15 @@ import { SidebarButtonWithTooltip, WidgetOverlay } from "@/components/ui";
 import type { ThreadMetadata, ThreadSearchResult } from "@squigit/core/config";
 import { useNavigationContext } from "@/app/context/AppNavigation";
 import {
-  ThreadsList,
+  SearchThreadsList,
   SearchBar,
   buildThreadGroups,
   highlightTokensFromQuery,
-} from "@/features/search";
+  SidePanel,
+} from "@/features/panel";
 import styles from "./SearchOverlay.module.css";
 import { SquigitsIcon } from "@/components/icons";
 import { useAppContext } from "@/app/providers/AppProvider";
-import { SidePanel } from "@/app/layout/panels/SidePanel";
 
 const SEARCH_LIMIT = 80;
 const SEARCH_DEBOUNCE_MS = 120;
@@ -202,7 +202,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             <SidePanel variant="flat" onNavigate={onClose} />
           ) : null
         ) : (
-          <ThreadsList
+          <SearchThreadsList
             hasQuery={hasQuery}
             isLoading={isLoading}
             results={results}

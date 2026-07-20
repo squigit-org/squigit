@@ -12,24 +12,22 @@ import {
 } from "@/components/ui";
 import { Pencil, CheckSquare, Trash2 } from "lucide-react";
 
-interface ThreadContextMenuProps {
+interface PanelThreadContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
   onRename: () => void;
   onToggleSelection: () => void;
   onDelete: () => void;
-  isSelected: boolean;
 }
 
-export const ThreadContextMenu: React.FC<ThreadContextMenuProps> = ({
+export const PanelThreadContextMenu: React.FC<PanelThreadContextMenuProps> = ({
   x,
   y,
   onClose,
   onRename,
   onToggleSelection,
   onDelete,
-  isSelected: _isSelected,
 }) => {
   return (
     <ContextMenu x={x} y={y} onClose={onClose} width={180}>

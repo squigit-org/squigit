@@ -4,7 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export * from "./SidePanel";
+
+export * from "./panel.types";
+
 export * from "./search.utils";
-export * from "./components/ThreadRow";
-export * from "./components/ThreadsList";
+export * from "./components/SearchThreadRow";
+export * from "./components/SearchThreadsList";
 export * from "./components/SearchBar";

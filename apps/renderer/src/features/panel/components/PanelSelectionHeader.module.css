@@ -1,0 +1,78 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.selectionHeader {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 10px var(--panel-gutter);
+  background: var(--c-raw-013);
+}
+
+.selectionLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selectionCenter {
+  justify-self: center;
+}
+
+.selectionRight {
+  display: flex;
+  justify-self: end;
+  gap: 6px;
+}
+
+.selectionCount {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c-raw-050);
+}
+
+.labelAll {
+  color: var(--c-raw-106);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.iconButton {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--c-raw-106);
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.iconButton:hover {
+  background-color: var(--c-raw-067);
+  border-color: var(--c-raw-010);
+  color: var(--c-raw-050);
+}
+
+.iconButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.danger {
+  color: var(--c-raw-015);
+}
+
+.danger:hover {
+  color: var(--c-raw-050);
+}

@@ -12,11 +12,10 @@ import {
 } from "@/components/ui";
 import { ChevronRight, Clock3 } from "lucide-react";
 import { NewThreadIcon } from "@/components/icons";
-import styles from "./PanelContextMenu.module.css";
+import type { WorkspaceOrdering } from "@/features/panel";
+import styles from "./WorkspaceContextMenu.module.css";
 
-export type WorkspaceOrdering = "created" | "updated";
-
-interface PanelContextMenuProps {
+interface WorkspaceContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
@@ -26,7 +25,7 @@ interface PanelContextMenuProps {
   onExpandAll: () => void;
 }
 
-export const PanelContextMenu: React.FC<PanelContextMenuProps> = ({
+export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
   x,
   y,
   onClose,
