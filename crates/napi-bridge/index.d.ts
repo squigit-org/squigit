@@ -161,13 +161,13 @@ export declare function read_clipboard_text(): string
 
 export declare function register_attachment_source(threadId: string, casPath: string, sourcePath: string, displayName?: string | undefined | null): void
 
-export declare function revise_attachment_cas_path(threadId: string, citationPath: string, newCasPath: string, displayName?: string | undefined | null): void
-
 export declare function request_quick_answer(channelId: string): Promise<void>
 
 export declare function resolve_attachment_cas_path(citationPath: string, threadId: string): string | null
 
 export declare function resolve_attachment_source_path(casPath: string, threadId?: string | undefined | null): string | null
+
+export declare function revise_attachment_cas_path(threadId: string, citationPath: string, newCasPath: string, displayName?: string | undefined | null): void
 
 export declare function run_sidecar_version(command: string): Promise<string>
 
