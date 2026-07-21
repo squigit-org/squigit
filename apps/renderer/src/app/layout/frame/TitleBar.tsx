@@ -6,7 +6,14 @@
 
 import React, { useEffect, useState } from "react";
 import { platform, commands } from "@/platform";
-import { Box, Pin, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Box,
+  Loader2,
+  Pin,
+  Search,
+} from "lucide-react";
 import { SidePanelToggleIcon } from "@/components/icons";
 import { usePlatform } from "@/hooks/shared";
 import { WindowControls } from "./WindowControls";
@@ -115,7 +122,7 @@ export const TitleBar: React.FC = () => {
                 title="Recent Threads and more"
                 aria-label="Recent threads and more"
               >
-              <SidePanelToggleIcon size={20} active={app.isSidePanelOpen} />
+              <SidePanelToggleIcon size={19} active={app.isSidePanelOpen} />
               </button>
               <button
                 onClick={() => app.openSearchOverlay()}
@@ -123,9 +130,58 @@ export const TitleBar: React.FC = () => {
                 title="Search Threads"
                 aria-label="Search threads"
               >
-                <Search size={20} />
+                <Search size={19} />
               </button>
-              
+              <button
+                onClick={app.navigateBack}
+                className={`${styles.iconButton} ${
+                  app.historyNavigationDirection === "back"
+                    ? styles.navigationButtonLoading
+                    : app.canNavigateBack &&
+                        (app.isNavigating ||
+                          app.historyNavigationDirection !== null)
+                      ? styles.navigationButtonLocked
+                      : ""
+                }`}
+                title="Go back"
+                aria-label="Go back"
+                disabled={
+                  !app.canNavigateBack ||
+                  app.isNavigating ||
+                  app.historyNavigationDirection !== null
+                }
+              >
+                {app.historyNavigationDirection === "back" ? (
+                  <Loader2 size={18} className={styles.navigationSpinner} />
+                ) : (
+                  <ArrowLeft size={18} />
+                )}
+              </button>
+              <button
+                onClick={app.navigateForward}
+                className={`${styles.iconButton} ${
+                  app.historyNavigationDirection === "forward"
+                    ? styles.navigationButtonLoading
+                    : app.canNavigateForward &&
+                        (app.isNavigating ||
+                          app.historyNavigationDirection !== null)
+                      ? styles.navigationButtonLocked
+                      : ""
+                }`}
+                title="Go forward"
+                aria-label="Go forward"
+                disabled={
+                  !app.canNavigateForward ||
+                  app.isNavigating ||
+                  app.historyNavigationDirection !== null
+                }
+              >
+                {app.historyNavigationDirection === "forward" ? (
+                  <Loader2 size={18} className={styles.navigationSpinner} />
+                ) : (
+                  <ArrowRight size={18} />
+                )}
+              </button>
             </div>
           )}
       </div>
@@ -208,7 +264,7 @@ export const TitleBar: React.FC = () => {
         {isUnix && (
           <button
             onClick={handleToggleAlwaysOnTop}
-            className={`${styles.iconButton} ${isAlwaysOnTop ? styles.active : ""}`}
+            className={`${styles.pinButton} ${isAlwaysOnTop ? styles.active : ""}`}
             title={isAlwaysOnTop ? "Unpin window" : "Pin window on top"}
             aria-label={isAlwaysOnTop ? "Unpin window" : "Pin window on top"}
           >

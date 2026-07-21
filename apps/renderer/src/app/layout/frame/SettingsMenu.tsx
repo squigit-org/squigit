@@ -52,7 +52,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       label={
         <span className={styles.triggerIconWrap}>
           <Settings
-            size={22}
+            size={20}
             className={`${styles.triggerIcon} ${isOpen ? styles.triggerIconActive : ""}`}
           />
         </span>

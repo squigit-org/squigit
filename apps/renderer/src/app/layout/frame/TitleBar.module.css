@@ -66,7 +66,8 @@
   text-align: center;
 }
 
-.iconButton {
+.iconButton,
+.pinButton {
   padding: 0.375rem;
   border-radius: 0.375rem;
   color: var(--c-raw-004);
@@ -81,7 +82,40 @@
 }
 
 .iconButton:hover {
-  background-color: var(--c-raw-067);
+  color: var(--c-raw-050);
+}
+
+.iconButton:disabled {
+  color: var(--c-raw-004);
+  cursor: default;
+  opacity: 0.35;
+}
+
+.navigationButtonLoading:disabled {
+  color: var(--c-raw-050);
+  opacity: 1;
+}
+
+.navigationButtonLocked:disabled {
+  opacity: 1;
+}
+
+.navigationSpinner {
+  animation: titlebar-navigation-spin 0.8s linear infinite;
+}
+
+.pinButton:hover {
+  color: var(--c-raw-050);
+}
+
+.pinButton:hover svg {
+  fill: currentColor;
+}
+
+@keyframes titlebar-navigation-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 body.has-open-dialog .iconButton {
@@ -93,7 +127,6 @@ body.has-open-dialog .iconButton {
 .controlsWrapper {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
 }
 
 .updateButton {

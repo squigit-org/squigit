@@ -41,6 +41,16 @@ type SearchRevealTarget = {
 };
 
 export type SearchOverlayMode = "threads" | "workspaces";
+export type HistoryNavigationDirection = "back" | "forward" | null;
+
+interface RouteNavigationOptions {
+  recordHistory?: boolean;
+}
+
+interface RouteHistorySnapshot {
+  index: number;
+  length: number;
+}
 
 const isScannedOcrEntry = (
   entry: OcrAnnotationEntry | undefined,
@@ -154,8 +164,19 @@ export const useAppNavigation = ({
     useState<SearchOverlayMode>("threads");
   const [pendingSearchReveal, setPendingSearchReveal] =
     useState<SearchRevealTarget | null>(null);
+  const [historyNavigationDirection, setHistoryNavigationDirection] =
+    useState<HistoryNavigationDirection>(null);
 
   const navigationRequestIdRef = useRef(0);
+  const routeHistoryRef = useRef<Array<string | null>>([
+    threadHistory.activeSessionId,
+  ]);
+  const routeHistorySnapshotRef = useRef<RouteHistorySnapshot>({
+    index: 0,
+    length: 1,
+  });
+  const [routeHistorySnapshot, setRouteHistorySnapshot] =
+    useState<RouteHistorySnapshot>(routeHistorySnapshotRef.current);
   const busyTouchStateRef = useRef<{
     threadId: string | null;
     isBusy: boolean;
@@ -163,6 +184,31 @@ export const useAppNavigation = ({
     threadId: null,
     isBusy: false,
   });
+
+  const commitRouteHistorySnapshot = useCallback(
+    (snapshot: RouteHistorySnapshot) => {
+      routeHistorySnapshotRef.current = snapshot;
+      setRouteHistorySnapshot(snapshot);
+    },
+    [],
+  );
+
+  const pushRouteHistory = useCallback(
+    (routeId: string | null) => {
+      const history = routeHistoryRef.current;
+      const { index } = routeHistorySnapshotRef.current;
+
+      if (history[index] === routeId) return;
+
+      history.length = index + 1;
+      history.push(routeId);
+      commitRouteHistorySnapshot({
+        index: history.length - 1,
+        length: history.length,
+      });
+    },
+    [commitRouteHistorySnapshot],
+  );
 
   const commitNavigationState = useCallback(
     (requestId: number, commit?: () => void) => {
@@ -218,6 +264,10 @@ export const useAppNavigation = ({
     }
   }, [threadHistory, threadTitle, isNavigating]);
 
+  useEffect(() => {
+    pushRouteHistory(threadHistory.activeSessionId);
+  }, [pushRouteHistory, threadHistory.activeSessionId]);
+
   const openSearchOverlay = useCallback(
     (mode: SearchOverlayMode = "threads") => {
       setSearchOverlayMode(mode);
@@ -235,7 +285,7 @@ export const useAppNavigation = ({
   }, []);
 
   const performSelectThread = useCallback(
-    async (id: string) => {
+    async (id: string, options: RouteNavigationOptions = {}) => {
       const requestId = navigationRequestIdRef.current + 1;
       navigationRequestIdRef.current = requestId;
       const previousActiveId = threadHistory.activeSessionId;
@@ -245,6 +295,10 @@ export const useAppNavigation = ({
       const metadata = threadHistory.threads.find(
         (threadMeta: any) => threadMeta.id === id,
       );
+
+      if (options.recordHistory !== false) {
+        pushRouteHistory(id);
+      }
 
       cancelOcrJob();
       startTransition(() => {
@@ -377,13 +431,21 @@ export const useAppNavigation = ({
       ocr,
       system,
       getRememberedThreadOcrModel,
+      pushRouteHistory,
     ],
   );
 
   const performNewSession = useCallback(
-    async (workspaceId: string | null = null) => {
+    async (
+      workspaceId: string | null = null,
+      options: RouteNavigationOptions = {},
+    ) => {
       const requestId = navigationRequestIdRef.current + 1;
       navigationRequestIdRef.current = requestId;
+
+      if (options.recordHistory !== false) {
+        pushRouteHistory(null);
+      }
 
       startTransition(() => {
         setIsNavigating(true);
@@ -402,7 +464,14 @@ export const useAppNavigation = ({
         ocr.setSessionLensUrl(null);
       });
     },
-    [threadHistory, closeMediaViewer, commitNavigationState, ocr, system],
+    [
+      threadHistory,
+      closeMediaViewer,
+      commitNavigationState,
+      ocr,
+      pushRouteHistory,
+      system,
+    ],
   );
 
   const handleNavigation = useCallback(
@@ -427,9 +496,97 @@ export const useAppNavigation = ({
     [closeSearchOverlay, performSelectThread, runWithBusyGuard],
   );
 
-  const handleNewSession = useCallback((workspaceId: string | null = null) => {
-    runWithBusyGuard(() => performNewSession(workspaceId));
-  }, [performNewSession, runWithBusyGuard]);
+  const handleNewSession = useCallback(
+    (workspaceId: string | null = null) => {
+      runWithBusyGuard(() => performNewSession(workspaceId));
+    },
+    [performNewSession, runWithBusyGuard],
+  );
+
+  const navigateBack = useCallback(() => {
+    if (
+      routeHistorySnapshotRef.current.index === 0 ||
+      isNavigating ||
+      historyNavigationDirection !== null
+    ) {
+      return;
+    }
+
+    runWithBusyGuard(async () => {
+      const currentSnapshot = routeHistorySnapshotRef.current;
+      if (currentSnapshot.index === 0) return;
+
+      const targetIndex = currentSnapshot.index - 1;
+      const targetRoute = routeHistoryRef.current[targetIndex];
+      commitRouteHistorySnapshot({
+        index: targetIndex,
+        length: currentSnapshot.length,
+      });
+      setHistoryNavigationDirection("back");
+      try {
+        if (targetRoute === null) {
+          await performNewSession(null, { recordHistory: false });
+        } else {
+          await performSelectThread(targetRoute, { recordHistory: false });
+        }
+      } finally {
+        await waitForNextPaint();
+        setHistoryNavigationDirection(null);
+      }
+    });
+  }, [
+    commitRouteHistorySnapshot,
+    historyNavigationDirection,
+    isNavigating,
+    performNewSession,
+    performSelectThread,
+    runWithBusyGuard,
+  ]);
+
+  const navigateForward = useCallback(() => {
+    if (
+      routeHistorySnapshotRef.current.index >=
+        routeHistorySnapshotRef.current.length - 1 ||
+      isNavigating ||
+      historyNavigationDirection !== null
+    ) {
+      return;
+    }
+
+    runWithBusyGuard(async () => {
+      const currentSnapshot = routeHistorySnapshotRef.current;
+      if (currentSnapshot.index >= currentSnapshot.length - 1) return;
+
+      const targetIndex = currentSnapshot.index + 1;
+      const targetRoute = routeHistoryRef.current[targetIndex];
+      commitRouteHistorySnapshot({
+        index: targetIndex,
+        length: currentSnapshot.length,
+      });
+      setHistoryNavigationDirection("forward");
+      try {
+        if (targetRoute === null) {
+          await performNewSession(null, { recordHistory: false });
+        } else {
+          await performSelectThread(targetRoute, { recordHistory: false });
+        }
+      } finally {
+        await waitForNextPaint();
+        setHistoryNavigationDirection(null);
+      }
+    });
+  }, [
+    commitRouteHistorySnapshot,
+    historyNavigationDirection,
+    isNavigating,
+    performNewSession,
+    performSelectThread,
+    runWithBusyGuard,
+  ]);
+
+  const canNavigateBack = routeHistorySnapshot.index > 0;
+  const canNavigateForward =
+    routeHistorySnapshot.index < routeHistorySnapshot.length - 1;
 
   return {
     isNavigating,
@@ -448,5 +605,10 @@ export const useAppNavigation = ({
     handleNavigation,
     revealSearchMatch,
     handleNewSession,
+    canNavigateBack,
+    canNavigateForward,
+    historyNavigationDirection,
+    navigateBack,
+    navigateForward,
   };
 };
