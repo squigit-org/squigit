@@ -58,6 +58,7 @@ import { remarkDisableIndentedCode } from "../../utils/markdownPlugins";
 import styles from "./ThreadBubble.module.css";
 import mdStyles from "./BubbleMD.module.css";
 import { ImageCollage } from "./ImageCollage";
+import { ThinkingOrb } from "thinking-orbs";
 
 interface ThreadBubbleProps {
   threadId?: string | null;
@@ -975,17 +976,20 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
                 </div>
 
                 {isWritingCode && (
-                  <TextShimmer
-                    text={API_STATUS_TEXT.WRITING_CODE}
-                    compact={true}
-                    duration={2}
-                    spotWidth={30}
-                    angle={90}
-                    peakWidth={3}
-                    bleedInner={8}
-                    bleedOuter={30}
-                    className={mdStyles.writingCodeShimmer}
-                  />
+                  <div className={styles.writingCodeRow}>
+                    <ThinkingOrb state="solving" size={20} />
+                    <TextShimmer
+                      text={API_STATUS_TEXT.WRITING_CODE}
+                      compact={true}
+                      duration={2}
+                      spotWidth={30}
+                      angle={90}
+                      peakWidth={3}
+                      bleedInner={8}
+                      bleedOuter={30}
+                      className={mdStyles.writingCodeShimmer}
+                    />
+                  </div>
                 )}
 
                 {showCitations && (

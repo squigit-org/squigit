@@ -20,6 +20,7 @@ import {
 } from "@squigit/core/helpers";
 import { ThreadBubble } from "./ThreadBubble";
 import styles from "./MessageList.module.css";
+import { ThinkingOrb } from "thinking-orbs";
 
 const THINKING_LABEL = "Thinking";
 
@@ -317,6 +318,7 @@ const MessageListComponent: React.FC<MessageListProps> = ({
             {shouldShowThinkingLabel && (
               <div className={styles.pendingProgress}>
                 <div className={styles.progressRow}>
+                  <ThinkingOrb state="solving" size={20} />
                   <TextShimmer text={THINKING_LABEL} compact={true} />
                   {showQuickAnswer && (
                     <button

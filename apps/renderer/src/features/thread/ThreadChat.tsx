@@ -16,6 +16,7 @@ import {
   type MessageCollapseMode,
   type PendingAssistantTurn,
 } from "@squigit/core/brain/engine";
+import { ThinkingOrb } from 'thinking-orbs';
 import styles from "./ThreadChat.module.css";
 
 interface ThreadChatProps {
@@ -89,6 +90,7 @@ const ThreadChatComponent: React.FC<ThreadChatProps> = ({
       {isImageProgressVisible && (
         <div className={styles.imagePendingProgress}>
           <div className={styles.imageProgressRow}>
+            <ThinkingOrb state="working" size={20} />
             <TextShimmer
               text={API_STATUS_TEXT.ANALYZING_IMAGE}
               compact={true}
