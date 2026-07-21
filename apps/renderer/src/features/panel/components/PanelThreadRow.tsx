@@ -251,7 +251,7 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
                 {isForking ? (
                   <Loader2 size={14} className={styles.forkSpinner} />
                 ) : (
-                  <Split size={14} style={{rotate:"90deg"}} />
+                  <Split size={14} style={{ rotate: "90deg" }} />
                 )}
               </PanelTooltipButton>
               <button
@@ -273,8 +273,13 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
           <PanelThreadContextMenu
             x={menuState.x}
             y={menuState.y}
+            isPinned={!!thread.pinned_at}
+            isForkDisabled={isBusy || isForking}
+            isForking={isForking}
             onClose={onCloseContextMenu}
             onRename={() => setIsRenaming(true)}
+            onPin={(pointer) => onTogglePinThread(thread.id, pointer)}
+            onFork={() => onForkThread(thread.id)}
             moveWorkspaces={moveWorkspaces}
             onMoveToWorkspace={(workspaceId) => {
               const rect = rowRef.current?.getBoundingClientRect();

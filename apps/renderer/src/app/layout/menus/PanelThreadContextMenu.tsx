@@ -17,16 +17,23 @@ import {
   GitBranch,
   Loader2,
   Pencil,
+  Pin,
+  Split,
   Trash2,
 } from "lucide-react";
-import type { PanelMoveWorkspace } from "@/features/panel";
+import type { PanelMoveWorkspace, PanelPoint } from "@/features/panel";
 import styles from "./PanelThreadContextMenu.module.css";
 
 interface PanelThreadContextMenuProps {
   x: number;
   y: number;
+  isPinned: boolean;
+  isForkDisabled: boolean;
+  isForking: boolean;
   onClose: () => void;
   onRename: () => void;
+  onPin: (pointer: PanelPoint) => void;
+  onFork: () => void;
   moveWorkspaces: PanelMoveWorkspace[];
   onMoveToWorkspace: (workspaceId: string) => Promise<void>;
   onToggleSelection: () => void;
@@ -36,8 +43,13 @@ interface PanelThreadContextMenuProps {
 export const PanelThreadContextMenu: React.FC<PanelThreadContextMenuProps> = ({
   x,
   y,
+  isPinned,
+  isForkDisabled,
+  isForking,
   onClose,
   onRename,
+  onPin,
+  onFork,
   moveWorkspaces,
   onMoveToWorkspace,
   onToggleSelection,
@@ -67,7 +79,33 @@ export const PanelThreadContextMenu: React.FC<PanelThreadContextMenuProps> = ({
         }}
         icon={<Pencil size={14} />}
       >
-        Rename
+        Rename thread
+      </ContextMenuItem>
+      <ContextMenuItem
+        onClick={(event) => {
+          onPin({ x: event.clientX, y: event.clientY });
+          onClose();
+        }}
+        icon={<Pin size={14} style={{ transform: "rotate(45deg)" }} />}
+      >
+        {isPinned ? "Unpin thread" : "Pin thread"}
+      </ContextMenuItem>
+      <ContextMenuItem
+        onClick={() => {
+          onFork();
+          onClose();
+        }}
+        icon={
+          isForking ? (
+            <Loader2 size={14} className={styles.spinner} />
+          ) : (
+            <Split size={14} style={{ rotate: "90deg" }} />
+          )
+        }
+        disabled={isForkDisabled}
+        aria-busy={isForking}
+      >
+        {isForking ? "Forking thread..." : "Fork thread"}
       </ContextMenuItem>
 
       <div
