@@ -8,6 +8,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ChevronRight, Loader2, X } from "lucide-react";
 import { NewThreadIcon } from "@/components/icons";
 import type {
+  PanelMoveWorkspace,
   PanelPoint,
   PanelThreadMenuState,
   PanelWorkspace,
@@ -99,6 +100,7 @@ export interface WorkspaceSectionSharedProps {
   isThreadBusy: boolean;
   pendingWorkspaceId: string | null;
   selectedIdSet: Set<string>;
+  moveWorkspaces: PanelMoveWorkspace[];
   onCancelPendingThread: () => void;
   onCloseContextMenu: () => void;
   onDeleteThread: (threadId: string) => void;
@@ -112,6 +114,11 @@ export interface WorkspaceSectionSharedProps {
   onTogglePinThread: (threadId: string, pointer: PanelPoint) => void;
   onToggleSelectionThread: (threadId: string) => void;
   onToggleWorkspace: (workspaceId: string) => void;
+  onMoveThread: (
+    threadId: string,
+    workspaceId: string,
+    origin: PanelPoint,
+  ) => Promise<void>;
 }
 
 interface WorkspaceSectionProps extends WorkspaceSectionSharedProps {
@@ -135,6 +142,7 @@ export const WorkspaceSection: React.FC<WorkspaceSectionProps> = ({
   isThreadBusy,
   pendingWorkspaceId,
   selectedIdSet,
+  moveWorkspaces,
   onCancelPendingThread,
   onCloseContextMenu,
   onDeleteThread,
@@ -148,11 +156,15 @@ export const WorkspaceSection: React.FC<WorkspaceSectionProps> = ({
   onTogglePinThread,
   onToggleSelectionThread,
   onToggleWorkspace,
+  onMoveThread,
 }) => {
   const isDefault = workspace.path === null;
   const showPendingThread =
     !isDefault && isHomeRoute && pendingWorkspaceId === workspace.id;
   const showNewThreadButton = isDefault ? !isHomeRoute : !showPendingThread;
+  const moveDestinations = moveWorkspaces.filter(
+    (item) => item.id !== workspace.id,
+  );
 
   return (
     <section className={styles.workspace}>
@@ -237,6 +249,7 @@ export const WorkspaceSection: React.FC<WorkspaceSectionProps> = ({
                     ? activeThreadContextMenu
                     : null
                 }
+                moveWorkspaces={moveDestinations}
                 onSelectThread={onSelectThread}
                 onToggleSelectionThread={onToggleSelectionThread}
                 onDeleteThread={onDeleteThread}
@@ -247,6 +260,7 @@ export const WorkspaceSection: React.FC<WorkspaceSectionProps> = ({
                 onOpenContextMenu={onOpenContextMenu}
                 onCloseContextMenu={onCloseContextMenu}
                 onEnableSelectionMode={onEnableSelectionMode}
+                onMoveThread={onMoveThread}
               />
             ))}
 

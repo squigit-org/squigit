@@ -83,11 +83,13 @@ export const SidePanel: React.FC<SidePanelProps> = ({
         isPinHoverFrozen={panelThreads.isPinHoverFrozen}
         isSelectionMode={selection.isSelectionMode}
         isThreadBusy={panelThreads.isThreadBusy}
+        moveWorkspaces={workspaces.workspaceItems}
         pathWorkspaces={workspaces.pathWorkspaces}
         pendingWorkspaceId={workspaces.pendingWorkspaceId}
         selectedIdSet={selection.selectedIdSet}
         visiblePathWorkspaces={workspaces.visiblePathWorkspaces}
         workspaceContextMenu={workspaces.workspaceContextMenu}
+        threadMoveAnimation={workspaces.threadMoveAnimation}
         onAddWorkspace={workspaces.createWorkspace}
         onCancelPendingThread={workspaces.cancelPendingThread}
         onClearWorkspaceUi={workspaces.clearWorkspaceUi}
@@ -99,10 +101,14 @@ export const SidePanel: React.FC<SidePanelProps> = ({
         onNewThread={workspaces.openNewThread}
         onOpenContextMenu={panelThreads.openContextMenu}
         onRenameThread={panelThreads.renameThread}
+        onMoveThread={workspaces.moveThreadToWorkspace}
         onSelectThread={panelThreads.navigateToThread}
         onTogglePinThread={panelThreads.togglePin}
         onToggleSelectionThread={selection.toggleThreadSelection}
         onToggleWorkspace={workspaces.toggleWorkspace}
+        onCompleteThreadMoveAnimation={
+          workspaces.completeThreadMoveAnimation
+        }
         onToggleWorkspaceContextMenu={handleToggleWorkspaceContextMenu}
         onViewAll={() => app.openSearchOverlay("workspaces")}
       />

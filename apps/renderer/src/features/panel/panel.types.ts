@@ -26,6 +26,17 @@ export interface PanelWorkspace
   threads: ThreadMetadata[];
 }
 
+export interface PanelMoveWorkspace {
+  id: string;
+  name: string;
+}
+
+export interface PanelThreadMoveAnimation {
+  threadId: string;
+  origin: PanelPoint;
+  token: number;
+}
+
 export interface SidePanelProps {
   variant?: PanelVariant;
   onNavigate?: () => void;

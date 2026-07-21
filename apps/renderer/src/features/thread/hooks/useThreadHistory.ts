@@ -9,6 +9,7 @@ import {
   createWorkspace,
   deleteThread,
   listWorkspaces,
+  setThreadWorkspace,
   type ThreadMetadata,
   type ThreadSearchResult,
   type WorkspaceMetadata,
@@ -175,6 +176,47 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     }
   };
 
+  const handleMoveThread = useCallback(
+    async (threadId: string, workspaceId: string) => {
+      if (isOnboardingId(threadId)) return;
+
+      await setThreadWorkspace(threadId, workspaceId);
+      setWorkspaces((current) => {
+        const sourceWorkspace = current.find(
+          (workspace) => workspace.threads[threadId],
+        );
+        const destinationWorkspace = current.find(
+          (workspace) => workspace.id === workspaceId,
+        );
+        const thread = sourceWorkspace?.threads[threadId];
+        if (
+          !sourceWorkspace ||
+          !destinationWorkspace ||
+          !thread ||
+          sourceWorkspace.id === destinationWorkspace.id
+        ) {
+          return current;
+        }
+
+        return current.map((workspace) => {
+          if (workspace.id === sourceWorkspace.id) {
+            const nextThreads = { ...workspace.threads };
+            delete nextThreads[threadId];
+            return { ...workspace, threads: nextThreads };
+          }
+          if (workspace.id === destinationWorkspace.id) {
+            return {
+              ...workspace,
+              threads: { ...workspace.threads, [threadId]: thread },
+            };
+          }
+          return workspace;
+        });
+      });
+    },
+    [],
+  );
+
   const touchThread = useCallback(async (id: string) => {
     if (isOnboardingId(id)) return;
 
@@ -228,6 +270,7 @@ export const useThreadHistory = (activeProfileId: string | null = null) => {
     handleDeleteThread,
     handleDeleteThreads,
     handleRenameThread,
+    handleMoveThread,
     handleTogglePinThread,
     touchThread,
     searchThreads,

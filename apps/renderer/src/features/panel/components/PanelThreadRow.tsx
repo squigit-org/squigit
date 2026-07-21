@@ -10,7 +10,11 @@ import type { ThreadMetadata } from "@squigit/core/config";
 import { formatCompactAge } from "@squigit/core/helpers";
 import { LoadingSpinner, Tooltip } from "@/components/ui";
 import { useKeyDown } from "@/hooks/shared";
-import type { PanelPoint, PanelThreadMenuState } from "../panel.types";
+import type {
+  PanelMoveWorkspace,
+  PanelPoint,
+  PanelThreadMenuState,
+} from "../panel.types";
 import { PanelCheckbox } from "./PanelCheckbox";
 import { PanelTooltipButton } from "./PanelTooltipButton";
 import { PanelThreadContextMenu } from "@/app/layout/menus/PanelThreadContextMenu";
@@ -27,6 +31,7 @@ export interface PanelThreadRowProps {
   isSelected: boolean;
   currentTime: number;
   menuState: PanelThreadMenuState | null;
+  moveWorkspaces: PanelMoveWorkspace[];
   onSelectThread: (threadId: string) => void;
   onToggleSelectionThread: (threadId: string) => void;
   onDeleteThread: (threadId: string) => void;
@@ -37,6 +42,11 @@ export interface PanelThreadRowProps {
   onOpenContextMenu: (id: string, x: number, y: number) => void;
   onCloseContextMenu: () => void;
   onEnableSelectionMode: () => void;
+  onMoveThread: (
+    threadId: string,
+    workspaceId: string,
+    origin: PanelPoint,
+  ) => Promise<void>;
 }
 
 export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
@@ -51,6 +61,7 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
     isSelected,
     currentTime,
     menuState,
+    moveWorkspaces,
     onSelectThread,
     onToggleSelectionThread,
     onDeleteThread,
@@ -61,12 +72,14 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
     onOpenContextMenu,
     onCloseContextMenu,
     onEnableSelectionMode,
+    onMoveThread,
   }) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [renameValue, setRenameValue] = useState(thread.title);
     const [showAgeTooltip, setShowAgeTooltip] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const ageRef = useRef<HTMLSpanElement>(null);
+    const rowRef = useRef<HTMLDivElement>(null);
     const showMenu = !!menuState;
 
     useEffect(() => {
@@ -114,6 +127,8 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
     return (
       <>
         <div
+          ref={rowRef}
+          data-panel-thread-id={thread.id}
           className={`${styles.threadRow} ${
             thread.pinned_at ? styles.pinnedRow : ""
           } ${isActive ? styles.active : ""} ${
@@ -260,6 +275,14 @@ export const PanelThreadRow: React.FC<PanelThreadRowProps> = React.memo(
             y={menuState.y}
             onClose={onCloseContextMenu}
             onRename={() => setIsRenaming(true)}
+            moveWorkspaces={moveWorkspaces}
+            onMoveToWorkspace={(workspaceId) => {
+              const rect = rowRef.current?.getBoundingClientRect();
+              return onMoveThread(thread.id, workspaceId, {
+                x: rect?.left ?? 0,
+                y: rect?.top ?? 0,
+              });
+            }}
             onToggleSelection={() => {
               onEnableSelectionMode();
               if (!isSelected) onToggleSelectionThread(thread.id);

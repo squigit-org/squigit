@@ -5,7 +5,6 @@
  */
 
 import React from "react";
-import { MessageSquare } from "lucide-react";
 import { ContextMenu, ContextMenuItem } from "@/components/ui";
 import type { MediaThreadReference } from "@/features/media";
 import { formatCompactAge } from "@squigit/core/helpers";
@@ -26,14 +25,19 @@ export const ImageThreadsMenu: React.FC<ImageThreadsMenuProps> = ({
   onSelect,
   onClose,
 }) => (
-  <ContextMenu x={x} y={y} onClose={onClose} width={240}>
+  <ContextMenu
+    x={x}
+    y={y}
+    onClose={onClose}
+    width={240}
+    placement="top-right"
+  >
     <div className={styles.heading}>Found in {threads.length} threads</div>
     <div className={styles.threadList}>
       {threads.map((thread) => (
         <ContextMenuItem
           key={thread.id}
           className={styles.threadItem}
-          icon={<MessageSquare size={14} />}
           title={thread.title}
           shortcut={formatCompactAge(thread.updatedAt)}
           onClick={() => {

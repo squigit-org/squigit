@@ -177,7 +177,7 @@ export declare function save_reverse_image_search_cache(threadId: string, imgbbU
 
 export declare function set_active_profile(profileId: string): void
 
-export declare function set_thread_workspace(threadId: string, workspaceId: string): void
+export declare function set_thread_workspace(threadId: string, workspaceId: string): Promise<void>
 
 export declare function start_google_auth(): Promise<NapiAuthResult>
 

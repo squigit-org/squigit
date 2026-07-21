@@ -15,7 +15,11 @@ import {
 } from "react";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { platform as platformBridge } from "@/platform";
-import type { PanelPoint, WorkspaceOrdering } from "../panel.types";
+import type {
+  PanelPoint,
+  PanelThreadMoveAnimation,
+  WorkspaceOrdering,
+} from "../panel.types";
 import {
   buildPanelWorkspaces,
   getVisiblePanelWorkspaces,
@@ -43,14 +47,20 @@ export const usePanelWorkspaces = ({
   >(() => new Set());
   const [didInitializeWorkspaceCollapse, setDidInitializeWorkspaceCollapse] =
     useState(false);
+  const [threadMoveAnimation, setThreadMoveAnimation] =
+    useState<PanelThreadMoveAnimation | null>(null);
   const pendingWorkspaceCollapseRef = useRef<{
     id: string;
     wasCollapsed: boolean;
   } | null>(null);
 
   const workspaceItems = useMemo(
-    () => buildPanelWorkspaces(app.threadHistory.workspaces),
-    [app.threadHistory.workspaces],
+    () =>
+      buildPanelWorkspaces(
+        app.threadHistory.workspaces,
+        workspaceOrdering,
+      ),
+    [app.threadHistory.workspaces, workspaceOrdering],
   );
   const pathWorkspaces = useMemo(
     () => orderPathWorkspaces(workspaceItems, workspaceOrdering),
@@ -250,6 +260,38 @@ export const usePanelWorkspaces = ({
     [app.handleNewSession, app.isNavigating, onNavigate],
   );
 
+  const moveThreadToWorkspace = useCallback(
+    async (
+      threadId: string,
+      workspaceId: string,
+      origin: PanelPoint,
+    ) => {
+      try {
+        await app.threadHistory.handleMoveThread(threadId, workspaceId);
+        setCollapsedWorkspaceIds((current) => {
+          if (!current.has(workspaceId)) return current;
+          const next = new Set(current);
+          next.delete(workspaceId);
+          return next;
+        });
+        setThreadMoveAnimation({
+          threadId,
+          origin,
+          token: Date.now(),
+        });
+      } catch (error) {
+        console.error("Failed to move thread:", error);
+        setWorkspaceError("The thread could not be moved to that workspace.");
+        throw error;
+      }
+    },
+    [app.threadHistory],
+  );
+
+  const completeThreadMoveAnimation = useCallback(() => {
+    setThreadMoveAnimation(null);
+  }, []);
+
   const clearWorkspaceUi = useCallback(() => {
     if (pendingWorkspaceId) cancelPendingThread();
     setWorkspaceContextMenu(null);
@@ -263,18 +305,21 @@ export const usePanelWorkspaces = ({
     collapsedWorkspaceIds,
     collapseAllWorkspaces,
     consumePendingThread,
+    completeThreadMoveAnimation,
     createWorkspace,
     defaultWorkspace,
     didInitializeWorkspaceCollapse,
     expandAllWorkspaces,
     isHomeRoute,
     isNavigating: app.isNavigating,
+    moveThreadToWorkspace,
     openNewThread,
     pathWorkspaces,
     pendingWorkspaceId,
     restorePendingWorkspaceCollapse,
     setWorkspaceError,
     setWorkspaceOrdering,
+    threadMoveAnimation,
     toggleWorkspace,
     toggleWorkspaceContextMenu,
     visiblePathWorkspaces,

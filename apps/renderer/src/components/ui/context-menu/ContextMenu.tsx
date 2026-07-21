@@ -20,6 +20,7 @@ interface ContextMenuProps {
   onClose: () => void;
   children: ReactNode;
   width?: number;
+  placement?: "default" | "top-right";
 }
 
 const EDGE_PADDING = 8;
@@ -31,6 +32,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onClose,
   children,
   width,
+  placement = "default",
 }) => {
   const [position, setPosition] = useState({ x, y });
   const [isPositioned, setIsPositioned] = useState(false);
@@ -44,7 +46,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     const viewportHeight = window.innerHeight;
 
     let safeX = x + CURSOR_OFFSET;
-    let safeY = y + CURSOR_OFFSET;
+    let safeY =
+      placement === "top-right"
+        ? y - menuRect.height - CURSOR_OFFSET
+        : y + CURSOR_OFFSET;
 
     if (x + menuRect.width + EDGE_PADDING > viewportWidth) {
       safeX = x - menuRect.width - CURSOR_OFFSET;
@@ -64,7 +69,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
     setPosition({ x: safeX, y: safeY });
     setIsPositioned(true);
-  }, [x, y]);
+  }, [placement, x, y]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

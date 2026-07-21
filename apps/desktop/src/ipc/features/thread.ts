@@ -33,7 +33,7 @@ export function registerThreadHandlers() {
   });
 
   ipcMain.handle("set_thread_workspace", (_, args) => {
-    requireAddonFn("set_thread_workspace")(
+    return requireAddonFn("set_thread_workspace")(
       requireStringArg("set_thread_workspace", args, "threadId", "thread_id"),
       requireStringArg(
         "set_thread_workspace",

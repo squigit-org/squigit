@@ -12,6 +12,36 @@
   background: var(--c-raw-013);
 }
 
+.flatList {
+  box-sizing: border-box;
+  margin: 4px 4px 6px;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-raw-007) var(--c-raw-013);
+}
+
+.flatList::-webkit-scrollbar {
+  width: 10px;
+}
+
+.flatList::-webkit-scrollbar-track {
+  margin-block: 4px;
+  border-radius: 999px;
+  background: var(--c-raw-013);
+}
+
+.flatList::-webkit-scrollbar-thumb {
+  border: 2px solid var(--c-raw-013);
+  border-radius: 999px;
+  background: var(--c-raw-007);
+  background-clip: padding-box;
+}
+
+.flatList::-webkit-scrollbar-thumb:hover {
+  background: var(--c-raw-008);
+  background-clip: padding-box;
+}
+
 .header {
   display: flex;
   align-items: center;

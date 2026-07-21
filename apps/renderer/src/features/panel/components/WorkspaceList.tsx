@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { FolderOpenIcon, Settings } from "lucide-react";
 import { CustomizePanelIcon } from "@/components/icons";
 import type {
   PanelPoint,
+  PanelThreadMoveAnimation,
   PanelThreadMenuState,
   PanelVariant,
   PanelWorkspace,
@@ -28,8 +29,10 @@ interface WorkspaceListProps extends WorkspaceSectionSharedProps {
   pathWorkspaces: PanelWorkspace[];
   visiblePathWorkspaces: PanelWorkspace[];
   workspaceContextMenu: PanelPoint | null;
+  threadMoveAnimation: PanelThreadMoveAnimation | null;
   onAddWorkspace: () => void;
   onClearWorkspaceUi: () => void;
+  onCompleteThreadMoveAnimation: () => void;
   onToggleWorkspaceContextMenu: (
     event: React.MouseEvent<HTMLButtonElement>,
   ) => void;
@@ -44,12 +47,47 @@ export const WorkspaceList: React.FC<WorkspaceListProps> = ({
   pathWorkspaces,
   visiblePathWorkspaces,
   workspaceContextMenu,
+  threadMoveAnimation,
   onAddWorkspace,
   onClearWorkspaceUi,
+  onCompleteThreadMoveAnimation,
   onToggleWorkspaceContextMenu,
   onViewAll,
   ...workspaceSectionProps
 }) => {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || !threadMoveAnimation) return;
+
+    const row = list.querySelector<HTMLElement>(
+      `[data-panel-thread-id="${CSS.escape(threadMoveAnimation.threadId)}"]`,
+    );
+    if (!row || row.closest('[aria-hidden="true"]')) {
+      onCompleteThreadMoveAnimation();
+      return;
+    }
+
+    const destination = row.getBoundingClientRect();
+    const deltaX = threadMoveAnimation.origin.x - destination.left;
+    const deltaY = threadMoveAnimation.origin.y - destination.top;
+    const animation = row.animate(
+      [
+        { transform: `translate(${deltaX}px, ${deltaY}px)`, opacity: 0.45 },
+        { transform: "translate(0, 0)", opacity: 1 },
+      ],
+      {
+        duration: 280,
+        easing: "cubic-bezier(0.2, 0, 0, 1)",
+      },
+    );
+    animation.addEventListener("finish", onCompleteThreadMoveAnimation, {
+      once: true,
+    });
+    return () => animation.cancel();
+  }, [threadMoveAnimation, onCompleteThreadMoveAnimation]);
+
   const renderWorkspace = (workspace: PanelWorkspace) => {
     const isDefault = workspace.path === null;
     const isCollapsed = didInitializeWorkspaceCollapse
@@ -68,7 +106,12 @@ export const WorkspaceList: React.FC<WorkspaceListProps> = ({
   };
 
   return (
-    <div className={styles.list}>
+    <div
+      ref={listRef}
+      className={`${styles.list} ${
+        variant === "flat" ? styles.flatList : ""
+      }`}
+    >
       {variant === "panel" && (
         <div className={styles.header}>
           <span className={styles.title}>Workspaces</span>

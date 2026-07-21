@@ -268,7 +268,7 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
     setThreadMenu((current) =>
       current
         ? null
-        : { x: button.right, y: button.top + button.height / 2 },
+        : { x: button.right, y: button.top },
     );
   };
 

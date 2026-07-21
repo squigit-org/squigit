@@ -156,11 +156,18 @@ pub fn list_workspaces() -> Result<String> {
 }
 
 #[napi(js_name = "set_thread_workspace")]
-pub fn set_thread_workspace(thread_id: String, workspace_id: String) -> Result<()> {
-    let storage = active_storage()?;
-    storage
-        .set_thread_workspace(&thread_id, &workspace_id)
-        .map_err(map_storage_err)
+pub async fn set_thread_workspace(
+    thread_id: String,
+    workspace_id: String,
+) -> Result<()> {
+    tokio::task::spawn_blocking(move || {
+        let storage = active_storage()?;
+        storage
+            .set_thread_workspace(&thread_id, &workspace_id)
+            .map_err(map_storage_err)
+    })
+    .await
+    .unwrap_or_else(|error| Err(Error::from_reason(error.to_string())))
 }
 
 #[napi(js_name = "list_threads")]
