@@ -18,6 +18,8 @@ interface CodeBlockViewerProps {
   hideCodeContent?: boolean;
   hiddenCodeLineCount?: number;
   onRevealCodeContent?: () => void;
+  streaming?: boolean;
+  wrapLongLines?: boolean;
 }
 
 export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
@@ -28,6 +30,8 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
   hideCodeContent = false,
   hiddenCodeLineCount,
   onRevealCodeContent,
+  streaming = false,
+  wrapLongLines = false,
 }) => {
   const PLAIN_LANGUAGES = ["text", "txt", "plain", "plaintext", "prompt"];
   const isPlain = !language || PLAIN_LANGUAGES.includes(language.toLowerCase());
@@ -37,7 +41,7 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
   const { highlightedHtml } = useCodeHighlighter(
     value,
     language,
-    !hideCodeContent && !isPlain,
+    !hideCodeContent && !isPlain && !streaming,
   );
   const handleCopy = () => copy(value);
 
@@ -71,7 +75,9 @@ export const CodeBlockViewer: React.FC<CodeBlockViewerProps> = ({
         <span>Copy</span>
       </button>
 
-      <div className={styles.content}>
+      <div
+        className={`${styles.content} ${wrapLongLines ? styles.wrapLongLines : ""}`}
+      >
         {hideCodeContent ? (
           <button
             type="button"

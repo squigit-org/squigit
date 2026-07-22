@@ -738,6 +738,9 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
             !isPendingAssistant &&
             !revealedCodeBlockKeys.has(blockKey);
           const hiddenLineCount = Math.max(1, getTextLineCount(codeText));
+          const hasPathologicallyLongLine = codeText
+            .split("\n")
+            .some((line) => line.length > 240);
 
           return (
             <CodeBlock
@@ -747,6 +750,10 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
               hideCodeContent={shouldHideCodeBlock}
               hiddenCodeLineCount={hiddenLineCount}
               onRevealCodeContent={getRevealCodeBlockHandler(blockKey)}
+              streaming={isPendingStreaming}
+              wrapLongLines={
+                isPendingStreaming || hasPathologicallyLongLine
+              }
             />
           );
         }
@@ -866,6 +873,7 @@ const ThreadBubbleComponent: React.FC<ThreadBubbleProps> = ({
       handleLocalAttachmentLink,
       hideCodeBlocksByDefault,
       isPendingAssistant,
+      isPendingStreaming,
       onAction,
       revealedCodeBlockKeys,
     ],

@@ -31,6 +31,8 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
       hideCodeContent,
       hiddenCodeLineCount,
       onRevealCodeContent,
+      streaming,
+      wrapLongLines,
     },
     ref,
   ) => {
@@ -65,6 +67,8 @@ const CodeBlockComponent = forwardRef<HTMLTextAreaElement, CodeBlockProps>(
         hideCodeContent={hideCodeContent}
         hiddenCodeLineCount={hiddenCodeLineCount}
         onRevealCodeContent={onRevealCodeContent}
+        streaming={streaming}
+        wrapLongLines={wrapLongLines}
       />
     );
   },

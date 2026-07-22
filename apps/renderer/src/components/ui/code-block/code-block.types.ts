@@ -42,4 +42,8 @@ export interface CodeBlockProps {
   hiddenCodeLineCount?: number;
   /** Reveal handler when hidden content label is clicked */
   onRevealCodeContent?: () => void;
+  /** Render rapidly changing code without repeatedly re-running syntax highlighting */
+  streaming?: boolean;
+  /** Visually wrap unusually long lines without changing the copied source */
+  wrapLongLines?: boolean;
 }
