@@ -14,18 +14,15 @@ import {
 } from "../transport";
 import {
   setImageDescription,
-  setImageBrief,
   addToHistory,
 } from "../../../session/context";
 import { buildContextWindow } from "../../../session/summarizer";
 import { prepareBrainInput } from "../../../attachments";
 import { normalizeMessageForHistory } from "../../../attachments/memory";
 import {
-  generateGeminiImageBrief,
   listenGeminiStream,
   streamGeminiThread,
 } from "../commands";
-import { saveImageBrief } from "../../../../config/thread-storage";
 import type { ModelAttemptPlan } from "../../../../config/models-config";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
 
@@ -37,7 +34,6 @@ export const retryFromMessage = async (
   threadId?: string | null,
   onToken?: (token: string) => void,
   fallbackImagePath?: string,
-  onBriefReady?: (brief: string) => void,
   onEvent?: (event: ProviderStreamEvent) => void,
 ): Promise<string> => {
   if (!brainSessionStore.storedApiKey)
@@ -93,46 +89,6 @@ export const retryFromMessage = async (
     brainSessionStore.currentUnlisten = unlisten;
 
     try {
-      const generateAndSaveBrief = async () => {
-        if (brainSessionStore.imageBrief) {
-          if (onBriefReady && brainSessionStore.generationId === myGenId) {
-            onBriefReady(brainSessionStore.imageBrief);
-          }
-          return brainSessionStore.imageBrief;
-        }
-
-        // Delay brief generation by 5000ms so it doesn't fire concurrently with the main stream
-        // during high-demand/cold-start situations, which prevents simultaneous 503s.
-        await new Promise((r) => setTimeout(r, 5000));
-
-        try {
-          const providerApiKey = brainSessionStore.storedApiKey;
-          const storedImagePath = brainSessionStore.storedImagePath;
-          if (!providerApiKey || !storedImagePath) return "";
-          const brief = await generateGeminiImageBrief(
-            providerApiKey,
-            storedImagePath,
-            microTaskCandidates,
-          );
-          if (brief) {
-            if (threadId) {
-              saveImageBrief(threadId, brief).catch(console.error);
-            }
-            setImageBrief(brief);
-            if (brainSessionStore.generationId === myGenId) {
-              if (onBriefReady) onBriefReady(brief);
-            }
-            return brief;
-          }
-          return "";
-        } catch (error) {
-          console.warn("[GeminiClient] Image brief generation failed:", error);
-          return "";
-        }
-      };
-
-      void generateAndSaveBrief();
-
       streamWatchdog.touch();
       const providerApiKey = brainSessionStore.storedApiKey;
       if (!providerApiKey) {
@@ -156,7 +112,6 @@ export const retryFromMessage = async (
           threadId: threadId ?? null,
           userName: brainSessionStore.userName ?? undefined,
           userEmail: brainSessionStore.userEmail ?? undefined,
-          imageBrief: "",
         }),
         streamWatchdog.stallPromise,
       ]);
@@ -271,7 +226,6 @@ export const retryFromMessage = async (
         threadId: threadId ?? null,
         userName: brainSessionStore.userName ?? undefined,
         userEmail: brainSessionStore.userEmail ?? undefined,
-        imageBrief: brainSessionStore.imageBrief,
       }),
       streamWatchdog.stallPromise,
     ]);

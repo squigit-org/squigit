@@ -61,7 +61,6 @@ export interface StoragePort {
     threadId: string,
   ): Promise<ReverseImageSearchCache | null>;
   saveImageTone(threadId: string, tone: string): Promise<void>;
-  saveImageBrief(threadId: string, brief: string): Promise<void>;
 }
 
 let storagePort: StoragePort | null = null;

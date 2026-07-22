@@ -49,13 +49,11 @@ export {
 
 export {
   addToHistory,
-  getImageBrief,
   getImageDescription,
   initializeBrainProvider,
   popLastUserHistory,
   replaceLastAssistantHistory,
   resetBrainContext,
-  setImageBrief,
   setImageDescription,
   setUserFirstMsg,
   setUserInfo,

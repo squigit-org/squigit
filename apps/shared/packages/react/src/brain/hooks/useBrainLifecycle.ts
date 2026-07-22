@@ -120,7 +120,6 @@ export const useBrainLifecycle = (config: {
       firstResponseId: string | null;
     },
     image?: { path: string; mimeType: string; imageId: string },
-    imageBrief?: string | null,
   ) => {
     setMessages(state.messages);
     setFirstResponseId(state.firstResponseId);
@@ -153,7 +152,6 @@ export const useBrainLifecycle = (config: {
           firstUserMsg?.text || null,
           savedHistory,
           imagePath,
-          imageBrief ?? firstMsg.text, // fallback for older sessions
         );
       } catch (e) {
         console.error("Failed to restore brain session:", e);

@@ -74,9 +74,8 @@ export const sendMessage = async (
     console.log(
       `[GeminiClient] Model candidates: ${modelCandidates.join(", ")}`,
     );
-    console.log(`[GeminiClient] Prompt: "${text}"`);
     console.log(
-      `[GeminiClient] Image Brief Present: ${Boolean(brainSessionStore.imageBrief)}`,
+      `[GeminiClient] Image Hash Available: ${Boolean(brainSessionStore.storedImagePath)}`,
     );
 
     const { historyLog } = buildContextWindow();
@@ -100,7 +99,6 @@ export const sendMessage = async (
         threadId: threadId ?? null,
         userName: brainSessionStore.userName ?? undefined,
         userEmail: brainSessionStore.userEmail ?? undefined,
-        imageBrief: brainSessionStore.imageBrief,
       }),
       streamWatchdog.stallPromise,
     ]);

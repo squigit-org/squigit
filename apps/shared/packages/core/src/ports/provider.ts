@@ -19,18 +19,12 @@ export interface StreamGeminiThreadInput extends Record<string, unknown> {
   threadId: string | null;
   userName?: string | null;
   userEmail?: string | null;
-  imageBrief?: string | null;
 }
 
 export type ProviderUnlisten = () => void;
 
 export interface ProviderPort {
   streamThread(input: StreamGeminiThreadInput): Promise<void>;
-  generateImageBrief(
-    apiKey: string,
-    imagePath: string,
-    modelCandidates: string[],
-  ): Promise<string>;
   generateThreadTitle(
     apiKey: string,
     modelCandidates: string[],

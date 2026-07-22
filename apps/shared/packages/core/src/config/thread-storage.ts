@@ -99,7 +99,6 @@ export interface ThreadData {
   context_window: ContextWindow;
   reverse_image_search: ReverseImageSearchCache;
   image_tone?: string | null;
-  image_brief?: string | null;
 }
 
 /** Ranked thread search hit returned by the local search engine. */
@@ -304,21 +303,12 @@ export async function getReverseImageSearchCache(
 }
 
 // =============================================================================
-// Tone and Brief Commands
+// Tone Commands
 // =============================================================================
 
-/** Save detected image tone for a thread. */
 export async function saveImageTone(
   threadId: string,
   tone: string,
 ): Promise<void> {
   return getStoragePort().saveImageTone(threadId, tone);
-}
-
-/** Save image brief for a thread. */
-export async function saveImageBrief(
-  threadId: string,
-  brief: string,
-): Promise<void> {
-  return getStoragePort().saveImageBrief(threadId, brief);
 }

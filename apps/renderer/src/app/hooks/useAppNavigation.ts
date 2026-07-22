@@ -413,7 +413,6 @@ export const useAppNavigation = ({
               mimeType: "image/png",
               imageId: threadData.metadata.image_hash,
             },
-            threadData.image_brief,
           );
         });
       } catch (e) {

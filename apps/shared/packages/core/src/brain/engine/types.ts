@@ -165,7 +165,6 @@ export interface BrainSessionSnapshot {
   imageDescription: string | null;
   userFirstMsg: string | null;
   conversationHistory: BrainConversationEntry[];
-  imageBrief: string | null;
   storedImagePath: string | null;
   currentModelId: string;
 }

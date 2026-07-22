@@ -25,16 +25,6 @@ export function initializeCorePorts(): void {
   setProviderPort({
     streamThread: (input: StreamGeminiThreadInput) =>
       platform.invoke("stream_thread", input),
-    generateImageBrief: (
-      apiKey: string,
-      imagePath: string,
-      modelCandidates: string[],
-    ) =>
-      platform.invoke<string>("generate_image_brief", {
-        apiKey,
-        imagePath,
-        modelCandidates,
-      }),
     generateThreadTitle: (
       apiKey: string,
       modelCandidates: string[],
@@ -127,8 +117,6 @@ export function initializeCorePorts(): void {
       platform.invoke("get_reverse_image_search_cache", { threadId }),
     saveImageTone: (threadId, tone) =>
       platform.invoke("save_image_tone", { threadId, tone }),
-    saveImageBrief: (threadId, brief) =>
-      platform.invoke("save_image_brief", { threadId, brief }),
   });
 
   setConfigPort({

@@ -18,18 +18,6 @@ export function streamGeminiThread(
   return getProviderPort().streamThread(input);
 }
 
-export function generateGeminiImageBrief(
-  apiKey: string,
-  imagePath: string,
-  modelCandidates: readonly string[],
-): Promise<string> {
-  return getProviderPort().generateImageBrief(
-    apiKey,
-    imagePath,
-    [...modelCandidates],
-  );
-}
-
 export function generateGeminiThreadTitle(
   apiKey: string,
   modelCandidates: readonly string[],

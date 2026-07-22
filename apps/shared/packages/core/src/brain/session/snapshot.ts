@@ -13,14 +13,12 @@ export function restoreBrainSession(
   savedUserFirstMsg: string | null,
   savedHistory: BrainConversationEntry[],
   savedImagePath: string | null,
-  savedImageBrief: string | null = null,
 ) {
   brainSessionStore.currentModelId = modelId;
   brainSessionStore.imageDescription = savedImageDescription;
   brainSessionStore.userFirstMsg = savedUserFirstMsg;
   brainSessionStore.conversationHistory = savedHistory;
   brainSessionStore.storedImagePath = savedImagePath;
-  brainSessionStore.imageBrief = savedImageBrief;
 }
 
 export function getBrainSessionSnapshot(): BrainSessionSnapshot {
@@ -28,7 +26,6 @@ export function getBrainSessionSnapshot(): BrainSessionSnapshot {
     imageDescription: brainSessionStore.imageDescription,
     userFirstMsg: brainSessionStore.userFirstMsg,
     conversationHistory: [...brainSessionStore.conversationHistory],
-    imageBrief: brainSessionStore.imageBrief,
     storedImagePath: brainSessionStore.storedImagePath,
     currentModelId: brainSessionStore.currentModelId,
   };
