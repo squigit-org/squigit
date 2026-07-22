@@ -32,7 +32,7 @@ export const MODELS = [
 
 export const MODEL_EFFORTS = ["low", "medium", "high"] as const;
 export const DEFAULT_MODEL_ID: ModelId = MODEL_IDS.PRIMARY_FAST;
-export const DEFAULT_MODEL_EFFORT: ModelEffort = "low";
+export const DEFAULT_MODEL_EFFORT: ModelEffort = "medium";
 export const DEFAULT_MODEL_SELECTION: ModelSelection = {
   modelId: DEFAULT_MODEL_ID,
   effort: DEFAULT_MODEL_EFFORT,

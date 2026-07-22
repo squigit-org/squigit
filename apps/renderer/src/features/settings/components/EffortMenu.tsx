@@ -13,7 +13,11 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronRight } from "lucide-react";
-import { MODEL_EFFORTS, type ModelEffort } from "@squigit/core/config";
+import {
+  DEFAULT_MODEL_EFFORT,
+  MODEL_EFFORTS,
+  type ModelEffort,
+} from "@squigit/core/config";
 import styles from "./EffortMenu.module.css";
 
 interface EffortMenuProps {
@@ -138,7 +142,12 @@ export const EffortMenu: React.FC<EffortMenuProps> = ({
               setIsOpen(false);
             }}
           >
-            <span>{formatEffortLabel(option)}</span>
+            <span className={styles.optionLabel}>
+              <span>{formatEffortLabel(option)}</span>
+              {option === DEFAULT_MODEL_EFFORT && (
+                <span className={styles.defaultBadge}>default</span>
+              )}
+            </span>
             {effort === option && <Check size={14} />}
           </button>
         ))}
