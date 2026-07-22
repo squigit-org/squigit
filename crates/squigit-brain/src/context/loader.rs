@@ -105,25 +105,23 @@ pub struct SystemConfig {
     pub runtime_template: String,
 }
 
-/// Image brief configuration from image_brief.yml
 #[derive(Debug, Deserialize)]
-pub struct ImageBriefConfig {
-    pub describe_image: String,
+pub struct FileBriefConfig {
+    pub summarize_file: String,
 }
 
-/// Load the system runtime configuration from embedded YAML
 pub fn load_system() -> Result<SystemConfig, String> {
     let yaml_content = include_str!("../assets/core/system_prompt.yml");
     serde_yaml::from_str(yaml_content)
         .map_err(|e| format!("Failed to parse system_prompt.yml: {}", e))
 }
 
-/// Load the image brief prompt from embedded YAML
-pub fn load_image_brief_prompt() -> Result<String, String> {
-    let yaml_content = include_str!("../assets/helpers/image_brief.yml");
-    let config: ImageBriefConfig = serde_yaml::from_str(yaml_content)
-        .map_err(|e| format!("Failed to parse image_brief.yml: {}", e))?;
-    Ok(config.describe_image)
+#[allow(dead_code)]
+pub fn load_file_brief_prompt() -> Result<String, String> {
+    let yaml_content = include_str!("../assets/helpers/file_brief.yml");
+    let config: FileBriefConfig = serde_yaml::from_str(yaml_content)
+        .map_err(|e| format!("Failed to parse file_brief.yml: {}", e))?;
+    Ok(config.summarize_file)
 }
 
 /// Load the web search tool declaration from embedded JSON

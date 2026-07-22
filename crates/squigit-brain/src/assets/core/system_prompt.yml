@@ -16,6 +16,3 @@ runtime_template: |
   ## User
   - **Name**: {{USER_NAME}}
   - **Email**: {{USER_EMAIL}}
-
-  ## Image Context
-  {{IMAGE_BRIEF}}

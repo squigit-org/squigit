@@ -1,0 +1,5 @@
+summarize_file: |
+  Summarize this file in 2-3 concise sentences.
+  Cover: what type of content it contains, its main subject, and any notable details.
+  Do NOT analyze, do NOT suggest actions, do NOT interpret intent.
+  Just describe the content factually.
