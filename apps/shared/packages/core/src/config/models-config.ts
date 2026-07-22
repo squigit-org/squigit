@@ -93,7 +93,7 @@ export const buildModelAttemptPlan = (
       return dedupe(stableLite);
     }
     if (selection.effort === "medium") {
-      return dedupe([...stableFlash, ...stableLite]);
+      return dedupe([...stableFlash.slice(1), ...stableLite]);
     }
     return dedupe([
       MODEL_IDS.PRIMARY_FAST,
