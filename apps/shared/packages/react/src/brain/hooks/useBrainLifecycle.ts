@@ -7,6 +7,7 @@
 import { useEffect, useRef } from "react";
 import type { Message } from "@squigit/core/brain/engine";
 import { restoreBrainSession } from "@squigit/core/brain/session";
+import type { ModelEffort, ModelId } from "@squigit/core/config";
 
 export const useBrainLifecycle = (config: {
   enabled: boolean;
@@ -18,7 +19,8 @@ export const useBrainLifecycle = (config: {
     fromHistory?: boolean;
   } | null;
   apiKey: string;
-  currentModel: string;
+  currentModel: ModelId;
+  currentEffort: ModelEffort;
   onMissingApiKey?: () => void;
   state: any; // from useThreadState
   engine: any; // from useBrainEngine
@@ -75,7 +77,10 @@ export const useBrainLifecycle = (config: {
       if (config.apiKey) {
         config.engine.startSession(
           config.apiKey,
-          config.currentModel,
+          {
+            modelId: config.currentModel,
+            effort: config.currentEffort,
+          },
           config.startupImage,
         );
       } else {
@@ -87,6 +92,7 @@ export const useBrainLifecycle = (config: {
     config.apiKey,
     config.startupImage,
     config.currentModel,
+    config.currentEffort,
     config.enabled,
     config.threadId,
     messages.length,

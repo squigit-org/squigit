@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Debug, Clone)]
 pub struct StreamThreadRequest {
     pub api_key: String,
-    pub model: String,
+    pub model_candidates: Vec<String>,
     pub is_initial_turn: bool,
     pub image_path: Option<String>,
     pub image_description: Option<String>,
@@ -28,7 +28,7 @@ pub struct StreamThreadRequest {
 #[derive(Debug, Clone)]
 pub struct GenerateThreadTitleRequest {
     pub api_key: String,
-    pub model: String,
+    pub model_candidates: Vec<String>,
     pub prompt_context: String,
 }
 
@@ -36,13 +36,14 @@ pub struct GenerateThreadTitleRequest {
 pub struct GenerateImageBriefRequest {
     pub api_key: String,
     pub image_path: String,
-    pub model: String,
+    pub model_candidates: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct AnalyzeImageRequest {
     pub api_key: String,
-    pub model: String,
+    pub main_model_candidates: Vec<String>,
+    pub micro_model_candidates: Vec<String>,
     pub image_path: String,
     pub user_message: Option<String>,
     pub channel_id: String,
@@ -61,7 +62,8 @@ pub struct AnalyzeImageResult {
 #[derive(Debug, Clone)]
 pub struct PromptThreadRequest {
     pub api_key: String,
-    pub model: String,
+    pub main_model_candidates: Vec<String>,
+    pub micro_model_candidates: Vec<String>,
     pub thread_id: String,
     pub user_message: String,
     pub channel_id: String,
@@ -100,7 +102,7 @@ impl BrainService {
             &self.runtime,
             sink,
             request.api_key,
-            request.model,
+            request.model_candidates,
             request.is_initial_turn,
             request.image_path,
             request.image_description,
@@ -122,7 +124,7 @@ impl BrainService {
     ) -> Result<String, String> {
         crate::provider::gemini::commands::generation::generate_thread_title(
             request.api_key,
-            request.model,
+            request.model_candidates,
             request.prompt_context,
         )
         .await
@@ -136,7 +138,7 @@ impl BrainService {
             &self.runtime,
             request.api_key,
             request.image_path,
-            request.model,
+            request.model_candidates,
         )
         .await
     }
@@ -175,7 +177,7 @@ impl BrainService {
             &collector,
             StreamThreadRequest {
                 api_key: request.api_key.clone(),
-                model: request.model.clone(),
+                model_candidates: request.main_model_candidates.clone(),
                 is_initial_turn: true,
                 image_path: Some(image.path.clone()),
                 image_description: None,
@@ -213,7 +215,7 @@ impl BrainService {
             .generate_image_brief(GenerateImageBriefRequest {
                 api_key: api_key.clone(),
                 image_path: image.path.clone(),
-                model: request.model.clone(),
+                model_candidates: request.micro_model_candidates.clone(),
             })
             .await
             .ok()
@@ -227,7 +229,7 @@ impl BrainService {
         if let Ok(title) = self
             .generate_thread_title(GenerateThreadTitleRequest {
                 api_key,
-                model: request.model,
+                model_candidates: request.micro_model_candidates,
                 prompt_context: title_context,
             })
             .await
@@ -286,7 +288,7 @@ impl BrainService {
             &collector,
             StreamThreadRequest {
                 api_key: request.api_key.clone(),
-                model: request.model.clone(),
+                model_candidates: request.main_model_candidates.clone(),
                 is_initial_turn: false,
                 image_path: Some(image_path),
                 image_description: Some(image_description),
@@ -329,7 +331,7 @@ impl BrainService {
             if let Ok(title) = self
                 .generate_thread_title(GenerateThreadTitleRequest {
                     api_key: request.api_key.clone(),
-                    model: request.model.clone(),
+                    model_candidates: request.micro_model_candidates.clone(),
                     prompt_context: title_context,
                 })
                 .await
@@ -382,7 +384,7 @@ impl BrainEventSink for CollectingEventSink<'_> {
         if let Ok(mut text) = self.text.lock() {
             match &event {
                 GeminiEvent::Token { token } => text.push_str(token),
-                GeminiEvent::Reset => text.clear(),
+                GeminiEvent::Reset { .. } => text.clear(),
                 _ => {}
             }
         }

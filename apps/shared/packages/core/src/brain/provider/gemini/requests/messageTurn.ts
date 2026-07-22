@@ -17,10 +17,11 @@ import { buildContextWindow } from "../../../session/summarizer";
 import { normalizeMessageForHistory } from "../../../attachments/memory";
 import { listenGeminiStream, streamGeminiThread } from "../commands";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
+import type { ModelAttemptPlan } from "../../../../config/models-config";
 
 export const sendMessage = async (
   text: string,
-  modelId?: string,
+  modelCandidates: ModelAttemptPlan,
   onToken?: (token: string) => void,
   threadId?: string | null,
   onEvent?: (event: ProviderStreamEvent) => void,
@@ -30,9 +31,7 @@ export const sendMessage = async (
   if (!brainSessionStore.imageDescription)
     throw new Error("No active thread session");
 
-  if (modelId) {
-    brainSessionStore.currentModelId = modelId;
-  }
+  brainSessionStore.currentModelId = modelCandidates[0] ?? "";
 
   const myGenId = brainSessionStore.generationId;
   const normalizedUserText = normalizeMessageForHistory(text);
@@ -73,7 +72,7 @@ export const sendMessage = async (
   try {
     console.log(`[GeminiClient] Sending Message`);
     console.log(
-      `[GeminiClient] Target Model: ${brainSessionStore.currentModelId}`,
+      `[GeminiClient] Model candidates: ${modelCandidates.join(", ")}`,
     );
     console.log(`[GeminiClient] Prompt: "${text}"`);
     console.log(
@@ -90,7 +89,7 @@ export const sendMessage = async (
     await Promise.race([
       streamGeminiThread({
         apiKey: providerApiKey,
-        model: brainSessionStore.currentModelId,
+        modelCandidates: [...modelCandidates],
         isInitialTurn: false,
         imagePath: null, // Image never re-sent, brief is used instead
         imageDescription: brainSessionStore.imageDescription,

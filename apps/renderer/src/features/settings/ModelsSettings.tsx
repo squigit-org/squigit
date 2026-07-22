@@ -8,7 +8,15 @@ import React, { useCallback, useEffect, useState } from "react";
 import styles from "./ModelsSettings.module.css";
 import { Dropdown, DropdownItem, DropdownSectionTitle } from "@/components/ui";
 import { DEFAULT_OCR_MODEL_ID, MODELS } from "@squigit/core/config";
-import type { UserPreferences } from "@squigit/core/config";
+import {
+  EffortMenu,
+  formatEffortLabel,
+} from "./components/EffortMenu";
+import type {
+  ModelEffort,
+  ModelId,
+  UserPreferences,
+} from "@squigit/core/config";
 import {
   OCRModelDownloader,
   useModelsStore,
@@ -16,7 +24,8 @@ import {
 } from "@/features/ocr";
 
 interface ModelSettingsProps {
-  localModel: string;
+  localModel: ModelId;
+  effort: ModelEffort;
   ocrLanguage: string;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
   isWizard?: boolean;
@@ -24,6 +33,7 @@ interface ModelSettingsProps {
 
 export const ModelSettings: React.FC<ModelSettingsProps> = ({
   localModel,
+  effort,
   ocrLanguage,
   updatePreferences,
   isWizard,
@@ -43,7 +53,7 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
     getModelById(DEFAULT_OCR_MODEL_ID);
 
   const handleModelSelect = useCallback(
-    (id: string) => {
+    (id: ModelId) => {
       setActiveModel(id);
       updatePreferences({ model: id });
       setAiMenuOpen(false);
@@ -60,7 +70,10 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
     MODELS.find((model) => model.id === id)?.name || id;
 
   return (
-    <section className={`${styles.container} ${isWizard ? styles.wizardContainer : ""}`} aria-labelledby="models-heading">
+    <section
+      className={`${styles.container} ${isWizard ? styles.wizardContainer : ""}`}
+      aria-labelledby="models-heading"
+    >
       {!isWizard && (
         <header className={styles.sectionHeader}>
           <h2 id="models-heading" className={styles.sectionTitle}>
@@ -72,29 +85,39 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
       <div className={`${styles.group} ${isWizard ? styles.wizardGroup : ""}`}>
         <div className={styles.row}>
           <div className={styles.rowMeta}>
-            <span className={styles.label}>{isWizard ? "Default model" : "AI features"}</span>
+            <span className={styles.label}>
+              {isWizard ? "Default model" : "AI features"}
+            </span>
             <span className={styles.description}>
               Choose your preferred model for future squigits
             </span>
           </div>
           <div className={styles.rowControl}>
             <Dropdown
-              label={getModelLabel(activeModel)}
+              label={`Gemini ${getModelLabel(activeModel)} ${formatEffortLabel(
+                effort,
+              )}`}
               width={180}
               isOpen={aiMenuOpen}
               onOpenChange={setAiMenuOpen}
               direction={isWizard ? "up" : "down"}
             >
-              <DropdownSectionTitle>Gemini Models</DropdownSectionTitle>
               <div className={styles.list}>
                 {MODELS.map((model) => (
                   <DropdownItem
                     key={model.id}
-                    label={model.name}
+                    label={`Gemini ${model.name}`}
                     isActive={activeModel === model.id}
                     onClick={() => handleModelSelect(model.id)}
                   />
                 ))}
+                <EffortMenu
+                  effort={effort}
+                  zIndex={10000}
+                  onSelect={(nextEffort) =>
+                    updatePreferences({ effort: nextEffort })
+                  }
+                />
               </div>
             </Dropdown>
           </div>

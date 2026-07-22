@@ -41,6 +41,7 @@ export const WidgetOverlay: React.FC<WidgetOverlayProps> = ({
       const target = event.target as Element;
       const isContextMenu = target.closest('[data-is-context-menu="true"]');
       const isDialog = target.closest('[data-dialog-container="true"]');
+      const isDropdownSubmenu = target.closest("[data-dropdown-submenu]");
       const isTitleBar = target.closest("[data-tauri-drag-region]");
       const isInsideOverlayRoot = target.closest(
         '[data-widget-overlay-root="true"]',
@@ -52,6 +53,7 @@ export const WidgetOverlay: React.FC<WidgetOverlayProps> = ({
         !appRef.current.contains(target as Node) &&
         !isContextMenu &&
         !isDialog &&
+        !isDropdownSubmenu &&
         !(isTitleBar && !isInsideOverlayRoot)
       ) {
         onClose();

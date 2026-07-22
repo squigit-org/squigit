@@ -40,6 +40,10 @@ pub(crate) struct ToolDispatchResult {
     pub(crate) is_failure: bool,
 }
 
+pub(crate) fn is_supported_tool_name(name: &str) -> bool {
+    matches!(name, "web_search" | "recall_thread_attachment")
+}
+
 pub(crate) async fn dispatch_tool_call<F>(
     function_call: &GeminiFunctionCall,
     context: &mut ToolDispatchContext<'_>,

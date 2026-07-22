@@ -4,58 +4,134 @@
  * spdx-license-identifier: apache-2.0
  */
 
-export interface FallbackQueues {
-  flash: string[];
-  pro: string[];
-  lite: string[];
+const BOOTSTRAP_LITE_MODEL = "models/gemini-flash-lite-latest";
+
+export interface GoogleModelDescriptor {
+  name?: string;
+  supportedGenerationMethods?: string[];
 }
 
-let fallbackQueues: FallbackQueues = {
-  flash: [],
-  pro: [],
-  lite: [],
-};
+export interface ModelDiscoveryQueues {
+  flash: readonly string[];
+  lite: readonly string[];
+}
 
-export const setFallbackQueues = (queues: FallbackQueues) => {
-  fallbackQueues = queues;
-};
+interface RegistryEntry {
+  apiKey: string;
+  successful: boolean;
+  queues: ModelDiscoveryQueues;
+}
 
-export const getFallbackQueues = (): FallbackQueues => fallbackQueues;
+let activeEntry: RegistryEntry | null = null;
 
-export const parseFallbackModels = (apiModels: any[]): FallbackQueues => {
-  // 1. Filter out all the noise (previews, embeddings, vision-only, etc.)
-  // We only want stable standard generation models.
-  const stableThreadModels = apiModels.filter(
-    (m) =>
-      m.supportedGenerationMethods?.includes("generateContent") &&
-      !m.name.includes("preview") &&
-      !m.name.includes("latest") && // Strict exclusion of latest so we don't retry 503s on latest
-      !m.name.includes("embedding") &&
-      m.name.startsWith("models/gemini-"),
-  );
-
-  // 2. Separate into Lite, Flash, and Pro buckets
-  const liteModels = stableThreadModels.filter((m) => m.name.includes("-lite"));
-  const flashModels = stableThreadModels.filter(
-    (m) => m.name.includes("-flash") && !m.name.includes("-lite"),
-  );
-  const proModels = stableThreadModels.filter((m) => m.name.includes("-pro"));
-
-  // 3. Sort them descending by version number extracted from the name
-  // This ensures the newest model is always at index 0
-  const sortByVersionDesc = (a: any, b: any) => {
-    const getVer = (name: string) =>
-      parseFloat(name.match(/[\d.]+/)?.[0] || "0");
-    return getVer(b.name) - getVer(a.name);
+export const setActiveModelDiscoveryKey = (apiKey: string | null) => {
+  const nextApiKey = apiKey?.trim() || null;
+  if (!nextApiKey) {
+    activeEntry = null;
+    return;
+  }
+  if (activeEntry?.apiKey === nextApiKey) return;
+  activeEntry = {
+    apiKey: nextApiKey,
+    successful: false,
+    queues: { flash: [], lite: [] },
   };
+};
 
-  flashModels.sort(sortByVersionDesc);
-  proModels.sort(sortByVersionDesc);
-  liteModels.sort(sortByVersionDesc);
+export const commitModelDiscovery = (
+  apiKey: string,
+  models: readonly GoogleModelDescriptor[],
+) => {
+  if (activeEntry?.apiKey !== apiKey) return;
+  activeEntry = {
+    apiKey,
+    successful: true,
+    queues: parseDiscoveredModels(models),
+  };
+};
+
+export const getModelDiscoverySnapshot = (): ModelDiscoveryQueues => {
+  if (!activeEntry?.successful) {
+    return { flash: [], lite: [BOOTSTRAP_LITE_MODEL] };
+  }
 
   return {
-    flash: flashModels.map((m) => m.name),
-    pro: proModels.map((m) => m.name),
-    lite: liteModels.map((m) => m.name),
+    flash: [...activeEntry.queues.flash],
+    lite:
+      activeEntry.queues.lite.length > 0
+        ? [...activeEntry.queues.lite]
+        : [BOOTSTRAP_LITE_MODEL],
+  };
+};
+
+type StableModel = {
+  name: string;
+  family: number[];
+  kind: "flash" | "lite";
+  canonical: boolean;
+};
+
+const STABLE_FLASH_MODEL =
+  /^models\/gemini-(\d+(?:\.\d+)+)-flash(-lite)?(?:-(\d{3}))?$/u;
+
+const parseStableModel = (
+  model: GoogleModelDescriptor,
+): StableModel | null => {
+  if (!model.supportedGenerationMethods?.includes("generateContent")) {
+    return null;
+  }
+
+  const name = model.name?.toLowerCase() ?? "";
+  if (
+    !name ||
+    /(?:latest|preview|experimental|\bexp\b|image|live|audio|tts)/u.test(name)
+  ) {
+    return null;
+  }
+
+  const match = STABLE_FLASH_MODEL.exec(name);
+  if (!match) return null;
+
+  return {
+    name,
+    family: match[1].split(".").map(Number),
+    kind: match[2] ? "lite" : "flash",
+    canonical: !match[3],
+  };
+};
+
+const compareFamilies = (left: number[], right: number[]) => {
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+};
+
+export const parseDiscoveredModels = (
+  models: readonly GoogleModelDescriptor[],
+): ModelDiscoveryQueues => {
+  const equivalentFamilies = new Map<string, StableModel>();
+
+  for (const descriptor of models) {
+    const candidate = parseStableModel(descriptor);
+    if (!candidate) continue;
+
+    const familyKey = `${candidate.kind}:${candidate.family.join(".")}`;
+    const existing = equivalentFamilies.get(familyKey);
+    if (!existing || (candidate.canonical && !existing.canonical)) {
+      equivalentFamilies.set(familyKey, candidate);
+    }
+  }
+
+  const sorted = [...equivalentFamilies.values()].sort((left, right) => {
+    const familyOrder = compareFamilies(left.family, right.family);
+    return familyOrder !== 0 ? familyOrder : left.name.localeCompare(right.name);
+  });
+
+  return {
+    flash: sorted.filter(({ kind }) => kind === "flash").map(({ name }) => name),
+    lite: sorted.filter(({ kind }) => kind === "lite").map(({ name }) => name),
   };
 };

@@ -7,7 +7,9 @@
 import { cancelGeminiRequest, requestGeminiQuickAnswer } from "./commands";
 import { brainSessionStore } from "../../session/store";
 
-const DEFAULT_STREAM_STALL_TIMEOUT_MS = 120_000;
+// Native candidate routing detects a stalled model at 120s. This UI-level
+// watchdog stays slightly wider so the native layer can reset and advance.
+const DEFAULT_STREAM_STALL_TIMEOUT_MS = 135_000;
 
 interface StreamWatchdog {
   touch: () => void;

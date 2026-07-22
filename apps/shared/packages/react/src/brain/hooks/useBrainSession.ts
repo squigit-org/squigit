@@ -8,12 +8,13 @@ import { useThreadState } from "./useThreadState";
 import type { Message } from "@squigit/core/brain/engine";
 import { useBrainEngine } from "./useBrainEngine";
 import { useBrainLifecycle } from "./useBrainLifecycle";
+import type { ModelEffort, ModelId, ModelSelection } from "@squigit/core/config";
 
 export const useBrainSession = ({
   apiKey,
   currentModel,
+  currentEffort,
   startupImage,
-  setCurrentModel,
   enabled,
   onMessage,
   onOverwriteMessages,
@@ -26,14 +27,14 @@ export const useBrainSession = ({
   userEmail,
 }: {
   apiKey: string;
-  currentModel: string;
+  currentModel: ModelId;
+  currentEffort: ModelEffort;
   startupImage: {
     path: string;
     mimeType: string;
     imageId: string;
     fromHistory?: boolean;
   } | null;
-  setCurrentModel: (model: string) => void;
   enabled: boolean;
   onMessage?: (message: Message, threadId: string) => void;
   onOverwriteMessages?: (messages: Message[]) => void;
@@ -41,7 +42,10 @@ export const useBrainSession = ({
   threadTitle: string;
   onMissingApiKey?: () => void;
   onTitleGenerated?: (title: string) => void;
-  generateTitle?: (text: string) => Promise<string>;
+  generateTitle?: (
+    text: string,
+    modelCandidates: readonly string[],
+  ) => Promise<string>;
   userName?: string;
   userEmail?: string;
 }) => {
@@ -50,7 +54,7 @@ export const useBrainSession = ({
   const engine = useBrainEngine({
     apiKey,
     currentModel,
-    setCurrentModel,
+    currentEffort,
     threadId,
     threadTitle,
     startupImage,
@@ -70,6 +74,7 @@ export const useBrainSession = ({
     startupImage,
     apiKey,
     currentModel,
+    currentEffort,
     onMissingApiKey,
     state,
     engine,
@@ -110,15 +115,14 @@ export const useBrainSession = ({
     handleQuickAnswer: engine.handleQuickAnswer,
     startSession: (
       key: string,
-      modelId: string,
+      selection: ModelSelection,
       imgData: {
         path: string;
         mimeType: string;
         imageId: string;
         fromHistory?: boolean;
       } | null,
-      isRetry = false,
-    ) => engine.startSession(key, modelId, imgData, isRetry),
+    ) => engine.startSession(key, selection, imgData),
     getCurrentState: lifecycle.getCurrentState,
     restoreState: lifecycle.restoreState,
     appendErrorMessage: state.appendErrorMessage,

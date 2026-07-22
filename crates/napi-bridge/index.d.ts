@@ -30,9 +30,9 @@ export declare function encrypt_and_save_api_key(profileId: string, provider: st
 
 export declare function fork_thread(threadId: string, messageIndex: number): string
 
-export declare function generate_image_brief(apiKey: string, imagePath: string, model: string): Promise<string>
+export declare function generate_image_brief(apiKey: string, imagePath: string, modelCandidates: Array<string>): Promise<string>
 
-export declare function generate_thread_title(apiKey: string, model: string, promptContext: string): Promise<string>
+export declare function generate_thread_title(apiKey: string, modelCandidates: Array<string>, promptContext: string): Promise<string>
 
 export declare function get_active_profile(): NapiProfile | null
 
@@ -123,6 +123,7 @@ export interface NapiStoredImage {
 /** Stream event sent via ThreadsafeFunction callback. */
 export interface NapiStreamEvent {
   eventType: string
+  phase?: string
   token?: string
   message?: string
   id?: string
@@ -130,6 +131,8 @@ export interface NapiStreamEvent {
   status?: string
   args?: string
   result?: string
+  payload?: string
+  clearTools?: boolean
 }
 
 export interface NapiSttEvent {
@@ -189,7 +192,7 @@ export declare function store_file_from_path(path: string): NapiStoredImage
 
 export declare function store_image_from_path(path: string): NapiStoredImage
 
-export declare function stream_thread(apiKey: string, model: string, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, userMessage: string, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
+export declare function stream_thread(apiKey: string, modelCandidates: Array<string>, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, userMessage: string, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, imageBrief: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
 
 export declare function trash_downloaded_ocr_model(modelId: string): void
 

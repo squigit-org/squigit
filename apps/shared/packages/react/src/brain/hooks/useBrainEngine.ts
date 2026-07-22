@@ -16,15 +16,18 @@ import type {
 import { prepareBrainInput } from "@squigit/core/brain/attachments";
 import {
   cancelActiveProviderRequest as cancelActiveBrainRequest,
-  DEFAULT_PROVIDER_FALLBACK_MODEL_ID as DEFAULT_BRAIN_FALLBACK_MODEL_ID,
   requestProviderQuickAnswer as requestBrainQuickAnswer,
   retryProviderMessage as retryBrainMessage,
   sendProviderMessage as sendBrainMessage,
-  shouldFallbackToDefaultProviderModel as shouldFallbackToDefaultBrainModel,
   startProviderSessionStream as startBrainSessionStream,
 } from "@squigit/core/brain/provider";
-import { MODEL_IDS } from "@squigit/core/config";
-import { getFallbackQueues } from "@squigit/core/config/models-cache";
+import {
+  buildModelAttemptPlan,
+  DEFAULT_MODEL_SELECTION,
+  type ModelEffort,
+  type ModelId,
+  type ModelSelection,
+} from "@squigit/core/config";
 
 import {
   advanceStreamCursorByWords,
@@ -34,14 +37,9 @@ import {
   STREAM_PLAYBACK_INTERVAL_MS,
   STREAM_PRIME_DELAY_MS,
 } from "@squigit/core/brain/engine";
-import { runWithRetries } from "@squigit/core/brain/engine";
 import { createToolEventHandler } from "@squigit/core/brain/engine";
 
 import {
-  isBrainHighDemandError,
-  isBrainQuotaZeroError,
-  isBrainRateLimitError,
-  isBrainNetworkError,
   getFriendlyBrainErrorMessage,
 } from "@squigit/core/brain/provider";
 
@@ -50,7 +48,6 @@ import {
   restoreBrainSession,
   setImageDescription,
   getImageDescription,
-  popLastUserHistory,
 } from "@squigit/core/brain/session";
 import { API_STATUS_TEXT, mapToolStatusText } from "@squigit/core/helpers";
 
@@ -71,8 +68,8 @@ function isUntitledThreadTitle(title: string | null | undefined): boolean {
 
 export const useBrainEngine = (config: {
   apiKey: string;
-  currentModel: string;
-  setCurrentModel: (model: string) => void;
+  currentModel: ModelId;
+  currentEffort: ModelEffort;
   threadId: string | null;
   threadTitle: string;
   startupImage: BrainStartupImage | null;
@@ -80,7 +77,10 @@ export const useBrainEngine = (config: {
   onMessage?: (message: Message, threadId: string) => void;
   onOverwriteMessages?: (messages: Message[]) => void;
   onTitleGenerated?: (title: string) => void;
-  generateTitle?: (text: string) => Promise<string>;
+  generateTitle?: (
+    text: string,
+    modelCandidates: readonly string[],
+  ) => Promise<string>;
   state: any; // from useThreadState
   userName?: string;
   userEmail?: string;
@@ -115,6 +115,9 @@ export const useBrainEngine = (config: {
   const playbackCursorRef = useRef(0);
   const activePendingTurnIdRef = useRef<string | null>(null);
   const finalizedPendingTurnIdRef = useRef<string | null>(null);
+  const activeComposerSelectionRef = useRef<ModelSelection>({
+    ...DEFAULT_MODEL_SELECTION,
+  });
 
   const cleanupAbortController = () => {
     if (abortControllerRef.current) {
@@ -189,10 +192,6 @@ export const useBrainEngine = (config: {
 
   const getElapsedThoughtSeconds = (startedAtMs: number): number => {
     return Math.max(1, Math.round((Date.now() - startedAtMs) / 1000));
-  };
-
-  const isRequestAborted = (signal?: AbortSignal): boolean => {
-    return Boolean(signal?.aborted) || isRequestCancelledRef.current;
   };
 
   const getDefaultProgressText = (
@@ -274,105 +273,6 @@ export const useBrainEngine = (config: {
       visibleCitations: [],
       stopped: false,
     }));
-  };
-
-  const showRetryLoopProgress = (text: string) => {
-    resetPendingRawText();
-    setStreamingToolSteps([]);
-    setStreamingCitations([]);
-    setToolStatus(text);
-    updatePendingAssistantTurn((turn) => ({
-      ...turn,
-      progressText: text,
-      toolSteps: [],
-      pendingCitations: [],
-      visibleCitations: [],
-    }));
-  };
-
-  const runWithNetworkRetries = async <T>(
-    run: () => Promise<T>,
-    signal?: AbortSignal,
-  ): Promise<T> => {
-    return runWithRetries(run, {
-      signal,
-      maxRetries: 3,
-      retryDelaysMs: [5000, 10000, 15000],
-      isRequestAborted,
-      shouldRetry: (error, sig) => {
-        if (isRequestAborted(sig)) return false;
-        const pendingText =
-          pendingAssistantTurnRef.current?.rawText.trim() ?? "";
-        if (pendingText.length > 0) return false;
-        return isBrainNetworkError(error);
-      },
-      onRetry: (retryCount) => {
-        showRetryLoopProgress(
-          `Waiting for internet connection... (Attempt ${retryCount}/3)`,
-        );
-      },
-      onRetryExhausted: (_max) => {
-        return new Error(
-          `Internet connection lost. Please check your network and try again.`,
-        );
-      },
-    });
-  };
-
-  const executeWithSilentFallback = async <T>(
-    primaryModelId: string,
-    runWithModel: (modelId: string) => Promise<T>,
-    signal?: AbortSignal,
-  ): Promise<T> => {
-    return runWithNetworkRetries(async () => {
-      let modelToTry = primaryModelId;
-      let fallbackQueue: string[] = [];
-
-      const queues = getFallbackQueues();
-      if (primaryModelId === MODEL_IDS.PRIMARY_FAST) {
-        fallbackQueue = [...queues.flash];
-      } else if (primaryModelId === MODEL_IDS.PRIMARY_REASONING) {
-        fallbackQueue = [...queues.pro];
-      } else if (primaryModelId === MODEL_IDS.MICRO_TASKS) {
-        fallbackQueue = [...queues.lite];
-      }
-
-      while (true) {
-        try {
-          return await runWithModel(modelToTry);
-        } catch (apiError: any) {
-          if (isRequestAborted(signal) || apiError?.message === "CANCELLED") {
-            throw apiError;
-          }
-          if (
-            isBrainHighDemandError(apiError) ||
-            isBrainQuotaZeroError(apiError) ||
-            isBrainRateLimitError(apiError)
-          ) {
-            // If tools already executed in this turn, don't silently fall back.
-            // Fallback would restart the request from scratch, losing all tool
-            // results (search citations, etc.) and producing an empty answer.
-            const activeTurn = pendingAssistantTurnRef.current;
-            if (activeTurn && activeTurn.toolSteps.length > 0) {
-              throw apiError;
-            }
-            if (fallbackQueue.length > 0) {
-              const nextFallback = fallbackQueue.shift()!;
-              console.log(
-                `[Brain] 503/429-0 on ${modelToTry}, silently falling back to ${nextFallback}`,
-              );
-              if (modelToTry === primaryModelId) {
-                popLastUserHistory();
-              }
-              resetPendingRawText();
-              modelToTry = nextFallback;
-              continue;
-            }
-          }
-          throw apiError;
-        }
-      }
-    }, signal);
   };
 
   const markPendingTransportDone = (finalResponse: string) => {
@@ -666,14 +566,13 @@ export const useBrainEngine = (config: {
 
   const startSession = async (
     key: string,
-    modelId: string,
+    selection: ModelSelection,
     imgData: {
       path: string;
       mimeType: string;
       imageId: string;
       fromHistory?: boolean;
     } | null,
-    isRetry = false,
   ) => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -692,11 +591,9 @@ export const useBrainEngine = (config: {
       return;
     }
 
-    if (!isRetry) {
-      resetInitialUi();
-      setMessages([]);
-      setLastSentMessage(null);
-    }
+    resetInitialUi();
+    setMessages([]);
+    setLastSentMessage(null);
 
     if (!imgData) {
       setIsLoading(false);
@@ -708,14 +605,14 @@ export const useBrainEngine = (config: {
     const responseId = Date.now().toString();
     beginPendingAssistantTurn(responseId, "initial", requestStartedAtMs);
 
-    if (!isRetry) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      if (signal.aborted) {
-        clearPendingGenerationState();
-        return;
-      }
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    if (signal.aborted) {
+      clearPendingGenerationState();
+      return;
     }
     let hasGeneratedTitleFromBrief = false;
+    const mainCandidates = buildModelAttemptPlan(selection, "main");
+    const microTaskCandidates = buildModelAttemptPlan(selection, "micro");
 
     try {
       if (signal.aborted) {
@@ -726,48 +623,43 @@ export const useBrainEngine = (config: {
       const toolTracker = createStreamToolTracker(resetPendingRawText);
 
       console.log(
-        "[useBrainEngine] Calling startBrainSessionStream with model:",
-        modelId,
+        "[useBrainEngine] Starting with model candidates:",
+        mainCandidates,
       );
-      const responseText = await executeWithSilentFallback(
-        modelId,
-        (targetModel) =>
-          startBrainSessionStream(
-            targetModel,
-            imgData.path,
-            (token: string) => {
-              if (signal.aborted) return;
-              appendPendingRawText(token);
-            },
-            config.threadId,
-            config.userName,
-            config.userEmail,
-            (brief: string) => {
-              if (
-                hasGeneratedTitleFromBrief ||
-                isRetry ||
-                imgData.fromHistory ||
-                !config.generateTitle ||
-                !config.onTitleGenerated
-              ) {
-                return;
-              }
+      const responseText = await startBrainSessionStream(
+        mainCandidates,
+        microTaskCandidates,
+        imgData.path,
+        (token: string) => {
+          if (signal.aborted) return;
+          appendPendingRawText(token);
+        },
+        config.threadId,
+        config.userName,
+        config.userEmail,
+        (brief: string) => {
+          if (
+            hasGeneratedTitleFromBrief ||
+            imgData.fromHistory ||
+            !config.generateTitle ||
+            !config.onTitleGenerated
+          ) {
+            return;
+          }
 
-              hasGeneratedTitleFromBrief = true;
-              console.log(
-                "[useBrainEngine] Triggering title generation using image brief",
-              );
-              config
-                .generateTitle(brief)
-                .then((title) => {
-                  console.log("[useBrainEngine] Title generated:", title);
-                  if (!signal.aborted) config.onTitleGenerated?.(title);
-                })
-                .catch(console.error);
-            },
-            toolTracker.onEvent,
-          ),
-        signal,
+          hasGeneratedTitleFromBrief = true;
+          console.log(
+            "[useBrainEngine] Triggering title generation using image brief",
+          );
+          config
+            .generateTitle(brief, microTaskCandidates)
+            .then((title) => {
+              console.log("[useBrainEngine] Title generated:", title);
+              if (!signal.aborted) config.onTitleGenerated?.(title);
+            })
+            .catch(console.error);
+        },
+        toolTracker.onEvent,
       );
       console.log("[useBrainEngine] startBrainSessionStream finished!");
 
@@ -788,24 +680,6 @@ export const useBrainEngine = (config: {
       }
 
       console.error(apiError);
-      if (
-        !isRetry &&
-        shouldFallbackToDefaultBrainModel(config.currentModel, apiError)
-      ) {
-        if (config.currentModel !== DEFAULT_BRAIN_FALLBACK_MODEL_ID) {
-          console.log("Model failed, trying lite version...");
-          config.setCurrentModel(DEFAULT_BRAIN_FALLBACK_MODEL_ID);
-          clearPendingGenerationState();
-          void startSession(
-            key,
-            DEFAULT_BRAIN_FALLBACK_MODEL_ID,
-            imgData,
-            true,
-          );
-          return;
-        }
-      }
-
       cancelActiveBrainRequest();
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -856,24 +730,27 @@ export const useBrainEngine = (config: {
         throw new Error("Cannot start session. Missing required data.");
       }
       const startupImage = config.startupImage;
+      const selection: ModelSelection = {
+        modelId: config.currentModel,
+        effort: config.currentEffort,
+      };
+      const mainCandidates = buildModelAttemptPlan(selection, "main");
+      const microTaskCandidates = buildModelAttemptPlan(selection, "micro");
 
       const toolTracker = createStreamToolTracker(resetPendingRawText);
 
-      const responseText = await executeWithSilentFallback(
-        config.currentModel,
-        (targetModel) =>
-          startBrainSessionStream(
-            targetModel,
-            startupImage.path,
-            (token: string) => {
-              appendPendingRawText(token);
-            },
-            config.threadId,
-            undefined,
-            undefined,
-            undefined,
-            toolTracker.onEvent,
-          ),
+      const responseText = await startBrainSessionStream(
+        mainCandidates,
+        microTaskCandidates,
+        startupImage.path,
+        (token: string) => {
+          appendPendingRawText(token);
+        },
+        config.threadId,
+        undefined,
+        undefined,
+        undefined,
+        toolTracker.onEvent,
       );
 
       void toolTracker;
@@ -908,18 +785,18 @@ export const useBrainEngine = (config: {
         config.threadId,
       );
       const toolTracker = createStreamToolTracker(resetPendingRawText);
-      const responseText = await executeWithSilentFallback(
-        config.currentModel,
-        (targetModel) =>
-          sendBrainMessage(
-            preparedInput.brainText,
-            targetModel,
-            (token: string) => {
-              appendPendingRawText(token);
-            },
-            config.threadId,
-            toolTracker.onEvent,
-          ),
+      const mainCandidates = buildModelAttemptPlan(
+        activeComposerSelectionRef.current,
+        "main",
+      );
+      const responseText = await sendBrainMessage(
+        preparedInput.brainText,
+        mainCandidates,
+        (token: string) => {
+          appendPendingRawText(token);
+        },
+        config.threadId,
+        toolTracker.onEvent,
       );
 
       void toolTracker;
@@ -936,7 +813,10 @@ export const useBrainEngine = (config: {
     }
   };
 
-  const handleSend = async (userText: string, modelId?: string) => {
+  const handleSend = async (
+    userText: string,
+    selection?: ModelSelection,
+  ) => {
     if (!userText.trim() || config.state.isLoading) return;
     const targetThreadId = config.threadId;
     sessionThreadIdRef.current = targetThreadId;
@@ -961,19 +841,18 @@ export const useBrainEngine = (config: {
     beginPendingAssistantTurn(responseId, "message", requestStartedAtMs);
 
     try {
+      const activeSelection = selection ?? activeComposerSelectionRef.current;
+      activeComposerSelectionRef.current = activeSelection;
+      const mainCandidates = buildModelAttemptPlan(activeSelection, "main");
       const toolTracker = createStreamToolTracker(resetPendingRawText);
-      const responseText = await executeWithSilentFallback(
-        modelId || config.currentModel,
-        (targetModel) =>
-          sendBrainMessage(
-            preparedInput.brainText,
-            targetModel,
-            (token: string) => {
-              appendPendingRawText(token);
-            },
-            config.threadId,
-            toolTracker.onEvent,
-          ),
+      const responseText = await sendBrainMessage(
+        preparedInput.brainText,
+        mainCandidates,
+        (token: string) => {
+          appendPendingRawText(token);
+        },
+        config.threadId,
+        toolTracker.onEvent,
       );
 
       void toolTracker;
@@ -990,13 +869,19 @@ export const useBrainEngine = (config: {
     }
   };
 
-  const handleRetryMessage = async (messageId: string, modelId?: string) => {
+  const handleRetryMessage = async (
+    messageId: string,
+    selection?: ModelSelection,
+  ) => {
     const msgIndex = messages.findIndex((m: Message) => m.id === messageId);
     if (msgIndex === -1) return;
     sessionThreadIdRef.current = config.threadId;
 
     const truncatedMessages = messages.slice(0, msgIndex);
-    const retryModelId = modelId || config.currentModel;
+    const retrySelection = selection ?? activeComposerSelectionRef.current;
+    activeComposerSelectionRef.current = retrySelection;
+    const mainCandidates = buildModelAttemptPlan(retrySelection, "main");
+    const microTaskCandidates = buildModelAttemptPlan(retrySelection, "micro");
 
     preRetryMessagesRef.current = [...messages];
 
@@ -1026,21 +911,18 @@ export const useBrainEngine = (config: {
         msgIndex === 0 ? "initial" : "retry",
         requestStartedAtMs,
       );
-      const responseText = await executeWithSilentFallback(
-        retryModelId,
-        (targetModel) =>
-          retryBrainMessage(
-            msgIndex,
-            messages,
-            targetModel,
-            config.threadId,
-            (token: string) => {
-              appendPendingRawText(token);
-            },
-            fallbackImagePath,
-            undefined,
-            toolTracker.onEvent,
-          ),
+      const responseText = await retryBrainMessage(
+        msgIndex,
+        messages,
+        mainCandidates,
+        microTaskCandidates,
+        config.threadId,
+        (token: string) => {
+          appendPendingRawText(token);
+        },
+        fallbackImagePath,
+        undefined,
+        toolTracker.onEvent,
       );
 
       if (
@@ -1051,7 +933,7 @@ export const useBrainEngine = (config: {
         config.onTitleGenerated
       ) {
         config
-          .generateTitle(responseText)
+          .generateTitle(responseText, microTaskCandidates)
           .then((title) => config.onTitleGenerated?.(title))
           .catch(console.error);
       }

@@ -21,17 +21,25 @@ export function streamGeminiThread(
 export function generateGeminiImageBrief(
   apiKey: string,
   imagePath: string,
-  model?: string,
+  modelCandidates: readonly string[],
 ): Promise<string> {
-  return getProviderPort().generateImageBrief(apiKey, imagePath, model);
+  return getProviderPort().generateImageBrief(
+    apiKey,
+    imagePath,
+    [...modelCandidates],
+  );
 }
 
 export function generateGeminiThreadTitle(
   apiKey: string,
-  model: string,
+  modelCandidates: readonly string[],
   promptContext: string,
 ): Promise<string> {
-  return getProviderPort().generateThreadTitle(apiKey, model, promptContext);
+  return getProviderPort().generateThreadTitle(
+    apiKey,
+    [...modelCandidates],
+    promptContext,
+  );
 }
 
 export function cancelGeminiRequest(channelId: string | null): Promise<void> {
@@ -46,5 +54,19 @@ export function listenGeminiStream(
   channelId: string,
   onEvent: (event: ProviderStreamEvent) => void,
 ): Promise<() => void> {
-  return getProviderPort().listenToStream(channelId, onEvent);
+  return getProviderPort().listenToStream(channelId, (event) => {
+    if (event.type === "debug") {
+      const label = `[GeminiClient] ${event.phase}`;
+      if (event.payload === undefined) {
+        console.log(label, event.message);
+      } else {
+        console.log(label, event.message, event.payload);
+      }
+      return;
+    }
+    if (event.type === "token") {
+      console.log("[GeminiClient] Generated chunk:", event.token);
+    }
+    onEvent(event);
+  });
 }

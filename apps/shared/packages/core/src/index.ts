@@ -37,8 +37,6 @@ export {
   sendProviderMessage,
   startProviderSession,
   startProviderSessionStream,
-  shouldFallbackToDefaultProviderModel,
-  DEFAULT_PROVIDER_FALLBACK_MODEL_ID,
   generateBrainTitle,
   getFriendlyBrainErrorMessage,
   getBrainHighDemandExhaustedMessage,

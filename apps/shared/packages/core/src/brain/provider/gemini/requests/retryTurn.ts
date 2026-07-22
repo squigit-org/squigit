@@ -26,13 +26,14 @@ import {
   streamGeminiThread,
 } from "../commands";
 import { saveImageBrief } from "../../../../config/thread-storage";
-import { MODEL_IDS } from "../../../../config/models-config";
+import type { ModelAttemptPlan } from "../../../../config/models-config";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
 
 export const retryFromMessage = async (
   messageIndex: number,
   allMessages: Array<{ role: string; text: string }>,
-  modelId: string,
+  modelCandidates: ModelAttemptPlan,
+  microTaskCandidates: ModelAttemptPlan,
   threadId?: string | null,
   onToken?: (token: string) => void,
   fallbackImagePath?: string,
@@ -42,7 +43,12 @@ export const retryFromMessage = async (
   if (!brainSessionStore.storedApiKey)
     throw new Error("Gemini API Key not set");
 
-  brainSessionStore.currentModelId = modelId;
+  console.log("[GeminiClient] Retrying Message", {
+    messageIndex,
+    modelCandidates,
+  });
+
+  brainSessionStore.currentModelId = modelCandidates[0] ?? "";
   const myGenId = brainSessionStore.generationId;
 
   if (!brainSessionStore.storedImagePath && fallbackImagePath) {
@@ -99,51 +105,30 @@ export const retryFromMessage = async (
         // during high-demand/cold-start situations, which prevents simultaneous 503s.
         await new Promise((r) => setTimeout(r, 5000));
 
-        let attempt = 0;
-        let lastError = null;
-        const delays = [1000, 2000];
-        while (attempt < 3) {
-          try {
-            const providerApiKey = brainSessionStore.storedApiKey;
-            const storedImagePath = brainSessionStore.storedImagePath;
-            if (!providerApiKey || !storedImagePath) return "";
-            const modelToUse = MODEL_IDS.MICRO_TASKS;
-            const brief = await generateGeminiImageBrief(
-              providerApiKey,
-              storedImagePath,
-              modelToUse,
-            );
-            if (brief) {
-              if (threadId) {
-                saveImageBrief(threadId, brief).catch(console.error);
-              }
-              setImageBrief(brief);
-              if (brainSessionStore.generationId === myGenId) {
-                if (onBriefReady) onBriefReady(brief);
-              }
-              return brief;
+        try {
+          const providerApiKey = brainSessionStore.storedApiKey;
+          const storedImagePath = brainSessionStore.storedImagePath;
+          if (!providerApiKey || !storedImagePath) return "";
+          const brief = await generateGeminiImageBrief(
+            providerApiKey,
+            storedImagePath,
+            microTaskCandidates,
+          );
+          if (brief) {
+            if (threadId) {
+              saveImageBrief(threadId, brief).catch(console.error);
             }
-            return "";
-          } catch (e) {
-            console.warn(
-              `[GeminiClient] Image brief retry attempt ${attempt + 1} failed:`,
-              e,
-            );
-            lastError = e;
-            attempt++;
-            if (attempt < 3) {
-              const jitter = Math.floor(Math.random() * 500);
-              await new Promise((r) =>
-                setTimeout(r, delays[attempt - 1] + jitter),
-              );
+            setImageBrief(brief);
+            if (brainSessionStore.generationId === myGenId) {
+              if (onBriefReady) onBriefReady(brief);
             }
+            return brief;
           }
+          return "";
+        } catch (error) {
+          console.warn("[GeminiClient] Image brief generation failed:", error);
+          return "";
         }
-        console.warn(
-          "[GeminiClient] Image brief failed all retries.",
-          lastError,
-        );
-        return "";
       };
 
       void generateAndSaveBrief();
@@ -153,10 +138,14 @@ export const retryFromMessage = async (
       if (!providerApiKey) {
         throw new Error("Gemini API Key not set");
       }
+      console.log("[GeminiClient] Sending Retry Prompt", {
+        prompt: "Initial screenshot analysis",
+        modelCandidates,
+      });
       await Promise.race([
         streamGeminiThread({
           apiKey: providerApiKey,
-          model: brainSessionStore.currentModelId,
+          modelCandidates: [...modelCandidates],
           isInitialTurn: true,
           imagePath: brainSessionStore.storedImagePath,
           imageDescription: null,
@@ -179,6 +168,7 @@ export const retryFromMessage = async (
         throw new Error("CANCELLED");
 
       const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+      console.log("[GeminiClient] Generated Message:", finalResponse);
       setImageDescription(finalResponse);
       brainSessionStore.conversationHistory = [
         { role: "Assistant", content: finalResponse },
@@ -262,11 +252,15 @@ export const retryFromMessage = async (
       throw new Error("Gemini API Key not set");
     }
 
+    console.log("[GeminiClient] Sending Retry Prompt", {
+      prompt: retryUserMessage,
+      modelCandidates,
+    });
     streamWatchdog.touch();
     await Promise.race([
       streamGeminiThread({
         apiKey: providerApiKey,
-        model: brainSessionStore.currentModelId,
+        modelCandidates: [...modelCandidates],
         isInitialTurn: false,
         imagePath: null, // Image never re-sent, brief is used instead
         imageDescription: imgDesc,
@@ -289,6 +283,7 @@ export const retryFromMessage = async (
       throw new Error("CANCELLED");
 
     const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+    console.log("[GeminiClient] Generated Message:", finalResponse);
     addToHistory("Assistant", finalResponse);
 
     return finalResponse;

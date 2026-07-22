@@ -3,6 +3,7 @@
 
 use crate::events::BrainEventSink;
 use futures_util::StreamExt;
+use std::time::Duration;
 
 use super::types::{GeminiEvent, GeminiFunctionCall, GeminiRequest, GeminiResponseChunk};
 
@@ -45,17 +46,49 @@ pub(crate) async fn stream_request_iteration(
     channel_id: &str,
     cancel_token: &tokio_util::sync::CancellationToken,
 ) -> Result<StreamIterationResult, String> {
+    const STREAM_STALL_TIMEOUT: Duration = Duration::from_secs(120);
+
     let response_result = tokio::select! {
-        res = client.post(url).json(request_body).send() => {
-            res.map_err(|error| transport_error_message("Failed to send request to Gemini", error))
+        res = tokio::time::timeout(STREAM_STALL_TIMEOUT, client.post(url).json(request_body).send()) => {
+            match res {
+                Ok(response) => response.map_err(|error| transport_error_message("Failed to send request to Gemini", error)),
+                Err(_) => Err("Gemini stream stalled before receiving a response.".to_string()),
+            }
         },
         _ = cancel_token.cancelled() => Err("CANCELLED".to_string()),
     };
     let response = response_result?;
+    let response_status = response.status();
 
-    if !response.status().is_success() {
+    emit_event(
+        sink,
+        channel_id,
+        GeminiEvent::Debug {
+            phase: "response.open".to_string(),
+            message: "Gemini opened the streaming response".to_string(),
+            payload: Some(serde_json::json!({
+                "status": response_status.as_u16(),
+            })),
+        },
+    );
+
+    if !response_status.is_success() {
         let error_text = response.text().await.unwrap_or_default();
-        return Err(format!("Gemini API Error: {}", error_text));
+        emit_event(
+            sink,
+            channel_id,
+            GeminiEvent::Debug {
+                phase: "response.raw".to_string(),
+                message: "Gemini returned an error response".to_string(),
+                payload: Some(serde_json::json!({
+                    "status": response_status.as_u16(),
+                    "body": error_text,
+                })),
+            },
+        );
+        return Err(format!(
+            "Gemini API Error ({response_status}): {error_text}"
+        ));
     }
 
     let mut stream = response.bytes_stream();
@@ -66,7 +99,9 @@ pub(crate) async fn stream_request_iteration(
 
     'stream_loop: loop {
         tokio::select! {
-            chunk_opt = stream.next() => {
+            chunk_result = tokio::time::timeout(STREAM_STALL_TIMEOUT, stream.next()) => {
+                let chunk_opt = chunk_result
+                    .map_err(|_| "Gemini stream stalled before producing a complete response.".to_string())?;
                 match chunk_opt {
                     Some(Ok(chunk)) => {
                         buffer.push_str(&String::from_utf8_lossy(&chunk));
@@ -76,12 +111,32 @@ pub(crate) async fn stream_request_iteration(
 
                             let trimmed = line.trim();
                             if let Some(data) = trimmed.strip_prefix("data: ") {
+                                let raw_payload = serde_json::from_str::<serde_json::Value>(data)
+                                    .unwrap_or_else(|_| serde_json::Value::String(data.to_string()));
+                                emit_event(
+                                    sink,
+                                    channel_id,
+                                    GeminiEvent::Debug {
+                                        phase: "response.raw".to_string(),
+                                        message: "Gemini SSE payload".to_string(),
+                                        payload: Some(raw_payload),
+                                    },
+                                );
                                 if data == "[DONE]" {
                                     break 'stream_loop;
                                 }
                                 let Ok(chunk_data) = serde_json::from_str::<GeminiResponseChunk>(data) else {
                                     continue;
                                 };
+                                if let Some(block_reason) = chunk_data
+                                    .prompt_feedback
+                                    .as_ref()
+                                    .and_then(|feedback| feedback.block_reason.as_deref())
+                                {
+                                    return Err(format!(
+                                        "Gemini safety failure: {block_reason}"
+                                    ));
+                                }
                                 let Some(candidates) = chunk_data.candidates else {
                                     continue;
                                 };
@@ -97,10 +152,6 @@ pub(crate) async fn stream_request_iteration(
                                                     function_call = Some(fc.clone());
                                                     function_call_thought_signature =
                                                         part.thought_signature.clone();
-                                                    if !full_text.is_empty() {
-                                                        full_text.clear();
-                                                        emit_event(sink, channel_id, GeminiEvent::Reset);
-                                                    }
                                                 }
                                                 continue;
                                             }
@@ -120,7 +171,19 @@ pub(crate) async fn stream_request_iteration(
                                     }
                                 }
 
-                                if first.finish_reason.is_some() {
+                                if let Some(finish_reason) = first.finish_reason.as_deref() {
+                                    if matches!(
+                                        finish_reason,
+                                        "SAFETY"
+                                            | "BLOCKLIST"
+                                            | "PROHIBITED_CONTENT"
+                                            | "SPII"
+                                            | "IMAGE_SAFETY"
+                                    ) {
+                                        return Err(format!(
+                                            "Gemini safety failure: {finish_reason}"
+                                        ));
+                                    }
                                     break 'stream_loop;
                                 }
                             }
@@ -133,6 +196,19 @@ pub(crate) async fn stream_request_iteration(
             _ = cancel_token.cancelled() => return Err("CANCELLED".to_string()),
         }
     }
+
+    emit_event(
+        sink,
+        channel_id,
+        GeminiEvent::Debug {
+            phase: "response.complete".to_string(),
+            message: "Gemini response stream completed".to_string(),
+            payload: Some(serde_json::json!({
+                "textCharacters": full_text.chars().count(),
+                "hasFunctionCall": function_call.is_some(),
+            })),
+        },
+    );
 
     Ok(StreamIterationResult {
         function_call,

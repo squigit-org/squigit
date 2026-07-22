@@ -22,8 +22,6 @@ export {
   sendMessage as sendProviderMessage,
   startNewThread as startProviderSession,
   startNewThreadStream as startProviderSessionStream,
-  shouldFallbackToGeminiDefaultModel as shouldFallbackToDefaultProviderModel,
-  GEMINI_FALLBACK_MODEL_ID as DEFAULT_PROVIDER_FALLBACK_MODEL_ID,
 } from "./gemini";
 
 export {

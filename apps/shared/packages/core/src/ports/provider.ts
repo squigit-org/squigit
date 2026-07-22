@@ -8,7 +8,7 @@ import type { ProviderStreamEvent } from "../brain/engine/types";
 
 export interface StreamGeminiThreadInput extends Record<string, unknown> {
   apiKey: string;
-  model: string;
+  modelCandidates: string[];
   isInitialTurn: boolean;
   imagePath: string | null;
   imageDescription: string | null;
@@ -29,11 +29,11 @@ export interface ProviderPort {
   generateImageBrief(
     apiKey: string,
     imagePath: string,
-    model?: string,
+    modelCandidates: string[],
   ): Promise<string>;
   generateThreadTitle(
     apiKey: string,
-    model: string,
+    modelCandidates: string[],
     promptContext: string,
   ): Promise<string>;
   cancelRequest(channelId: string | null): Promise<void>;

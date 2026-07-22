@@ -6,6 +6,7 @@
 
 import { useState, useCallback } from "react";
 import { generateBrainTitle } from "@squigit/core/brain/provider";
+import type { ModelAttemptPlan } from "@squigit/core/config";
 
 interface UseBrainTitleProps {
   apiKey: string;
@@ -15,13 +16,16 @@ export const useBrainTitle = ({ apiKey }: UseBrainTitleProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateTitleForText = useCallback(
-    async (text: string): Promise<string> => {
+    async (
+      text: string,
+      modelCandidates: ModelAttemptPlan,
+    ): Promise<string> => {
       if (!apiKey || !text) return "New thread";
 
       setIsGenerating(true);
 
       try {
-        return await generateBrainTitle(apiKey, text);
+        return await generateBrainTitle(apiKey, text, modelCandidates);
       } catch (error) {
         console.error("Failed to generate title:", error);
         return "New thread";

@@ -38,7 +38,9 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
     placeholder: customPlaceholder,
     variant = "default",
     selectedModel,
+    selectedEffort,
     onModelChange,
+    onEffortChange,
     attachments,
     onAttachmentsChange,
     onCaptureToInput,
@@ -329,7 +331,9 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
           isStoppable={isStoppable}
           disabled={disabled}
           selectedModel={selectedModel}
+          selectedEffort={selectedEffort}
           onModelChange={onModelChange}
+          onEffortChange={onEffortChange}
           onTranscript={(text, isFinal) => {
             if (isFinal) {
               const normalizedText = text.trim();

@@ -228,6 +228,7 @@ export const TitleBar: React.FC = () => {
               activeSection={app.system.settingsSection}
               onSectionChange={app.system.setSettingsSection}
               defaultModel={app.system.startupModel}
+              defaultEffort={app.system.startupEffort}
               defaultOcrLanguage={app.system.startupOcrLanguage}
               updatePreferences={app.system.updatePreferences}
               themePreference={app.system.themePreference}

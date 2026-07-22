@@ -96,6 +96,8 @@ pub(crate) fn build_system_instruction_with_tool_policy(
     if tools_enabled {
         instruction.push_str(
             "\n\n## Tool Usage Policy\n\
+             - Call only tools whose exact names appear in the provided function declarations. Never invent or call undeclared tools such as `run_code` or `execute_code`.\n\
+             - When the user asks you to write or generate code, put the code directly in the Markdown response; do not call a tool for it.\n\
              - If the user asks for current, time-sensitive, or uncertain facts, call `web_search`.\n\
              - Secondary uploaded files from this thread may only be used when the user attaches them in this turn or when you explicitly call `recall_thread_attachment`.\n\
              - Use the thread attachment catalog in context to pick uploaded attachments for `recall_thread_attachment`.\n\

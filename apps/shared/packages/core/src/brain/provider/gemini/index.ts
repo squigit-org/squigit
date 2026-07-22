@@ -15,10 +15,6 @@ export {
   parseProviderError,
   isNetworkError,
 } from "./errors";
-export {
-  GEMINI_FALLBACK_MODEL_ID,
-  shouldFallbackToGeminiDefaultModel,
-} from "./models";
 export { generateProviderTitle } from "./title";
 export { startNewThread, startNewThreadStream } from "./requests/initialTurn";
 export { sendMessage } from "./requests/messageTurn";

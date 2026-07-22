@@ -4,13 +4,14 @@
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::events::BrainEventSink;
 use crate::provider::gemini::agent::request_control::{
     register_request, remove_request, GeminiRequestControl,
 };
 use crate::provider::gemini::agent::tool_dispatch::{
-    dispatch_tool_call, ToolDispatchContext, WebToolDispatchState,
+    dispatch_tool_call, is_supported_tool_name, ToolDispatchContext, WebToolDispatchState,
 };
 use crate::provider::gemini::agent::tool_orchestrator::{
     build_system_instruction_with_tool_policy, tool_status_text, tool_step_id,
@@ -19,6 +20,7 @@ use crate::provider::gemini::attachments::{
     build_interleaved_parts, build_thread_attachment_catalog, extract_attachment_mentions,
     prepare_turn_attachments,
 };
+use crate::provider::gemini::fallback::{is_candidate_retryable_error, is_transport_error};
 use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
 use crate::provider::gemini::transport::streaming::{
     emit_event, stream_request_iteration, StreamIterationResult,
@@ -205,58 +207,8 @@ fn append_final_tool_answer_instruction(contents: &mut Vec<GeminiContent>, reaso
     });
 }
 
-/// Extracts the retry delay (in seconds) from a Gemini 429 rate-limit error.
-/// Returns `None` if the error is not a rate-limit error.
-fn parse_rate_limit_retry_secs(error: &str) -> Option<f64> {
-    if !error.contains("429") && !error.contains("RESOURCE_EXHAUSTED") {
-        return None;
-    }
-
-    // Try to extract retryDelay from the JSON error body.
-    // Error format: "Gemini API Error: {\"error\":{...\"details\":[{...\"retryDelay\":\"7s\"...}]}}"
-    if let Some(json_str) = error.strip_prefix("Gemini API Error: ") {
-        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json_str) {
-            if let Some(details) = parsed
-                .get("error")
-                .and_then(|e| e.get("details"))
-                .and_then(|d| d.as_array())
-            {
-                for detail in details {
-                    if let Some(delay_str) = detail.get("retryDelay").and_then(|v| v.as_str()) {
-                        if let Some(secs_str) = delay_str.strip_suffix('s') {
-                            if let Ok(secs) = secs_str.parse::<f64>() {
-                                return Some(secs);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // We know it's a 429 but can't parse the delay — use a conservative default.
-    Some(10.0)
-}
-
-fn is_transient_gemini_transport_error(error: &str) -> bool {
-    let lower = error.to_ascii_lowercase();
-    lower.contains("channel closed")
-        || lower.contains("connection closed")
-        || lower.contains("connection reset")
-        || lower.contains("connection aborted")
-        || lower.contains("operation timed out")
-        || lower.contains("request timed out")
-        || lower.contains("tcp connect error")
-        || lower.contains("dns error")
-}
-
-/// Wraps [`stream_request_iteration`] with automatic retry on 429 rate-limit errors.
-///
-/// When a rate-limit error is received, the function waits for the duration specified
-/// by the API's `retryDelay` field (or a 10 s default) and retries the same model once.
-/// If that still fails, the error bubbles up so the caller can try the next fallback
-/// model immediately.
-async fn stream_iteration_with_rate_limit_retry(
+/// Retry only interrupted transports against the same active candidate.
+async fn stream_iteration_with_transport_retry(
     sink: &dyn BrainEventSink,
     client: &reqwest::Client,
     url: &str,
@@ -264,22 +216,32 @@ async fn stream_iteration_with_rate_limit_retry(
     channel_id: &str,
     cancel_token: &tokio_util::sync::CancellationToken,
 ) -> Result<StreamIterationResult, String> {
-    const MAX_RATE_LIMIT_RETRIES: usize = 1;
     const MAX_TRANSPORT_RETRIES: usize = 2;
 
-    let mut last_error = String::new();
     let mut transport_retries = 0usize;
 
-    for attempt in 0..=MAX_RATE_LIMIT_RETRIES {
+    loop {
         match stream_request_iteration(sink, client, url, request_body, channel_id, cancel_token)
             .await
         {
             Ok(result) => return Ok(result),
             Err(err) => {
-                if is_transient_gemini_transport_error(&err)
-                    && transport_retries < MAX_TRANSPORT_RETRIES
-                {
+                if is_transport_error(&err) && transport_retries < MAX_TRANSPORT_RETRIES {
                     transport_retries += 1;
+                    emit_event(
+                        sink,
+                        channel_id,
+                        GeminiEvent::Debug {
+                            phase: "transport.retry".to_string(),
+                            message: "Retrying the active model after a transport interruption"
+                                .to_string(),
+                            payload: Some(json!({
+                                "attempt": transport_retries,
+                                "maximum": MAX_TRANSPORT_RETRIES,
+                                "error": err,
+                            })),
+                        },
+                    );
                     emit_event(
                         sink,
                         channel_id,
@@ -294,37 +256,145 @@ async fn stream_iteration_with_rate_limit_retry(
                         _ = tokio::time::sleep(std::time::Duration::from_millis(750 * transport_retries as u64)) => {},
                         _ = cancel_token.cancelled() => return Err("CANCELLED".to_string()),
                     }
-                    emit_event(sink, channel_id, GeminiEvent::Reset);
-                    last_error = err;
+                    emit_event(sink, channel_id, GeminiEvent::Reset { clear_tools: false });
                     continue;
                 }
-
-                if attempt < MAX_RATE_LIMIT_RETRIES {
-                    if let Some(secs) = parse_rate_limit_retry_secs(&err) {
-                        let wait_secs = (secs.ceil() as u64).clamp(2, 30);
-                        for remaining_secs in (1..=wait_secs).rev() {
-                            emit_event(
-                                sink,
-                                channel_id,
-                                GeminiEvent::ToolStatus {
-                                    message: format!("Model busy, retrying in {}s", remaining_secs),
-                                },
-                            );
-
-                            tokio::select! {
-                                _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {},
-                                _ = cancel_token.cancelled() => return Err("CANCELLED".to_string()),
-                            }
-                        }
-
-                        emit_event(sink, channel_id, GeminiEvent::Reset);
-
-                        last_error = err;
-                        continue;
-                    }
-                }
-
                 return Err(err);
+            }
+        }
+    }
+}
+
+struct CandidateTrackingSink<'a> {
+    delegate: &'a dyn BrainEventSink,
+    tool_result_produced: &'a AtomicBool,
+}
+
+impl BrainEventSink for CandidateTrackingSink<'_> {
+    fn emit(&self, channel_id: &str, event: GeminiEvent) {
+        if matches!(&event, GeminiEvent::ToolEnd { .. }) {
+            self.tool_result_produced.store(true, Ordering::Relaxed);
+        }
+        self.delegate.emit(channel_id, event);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn stream_gemini_thread_v2(
+    runtime: &BrainRuntimeState,
+    sink: &dyn BrainEventSink,
+    api_key: String,
+    model_candidates: Vec<String>,
+    is_initial_turn: bool,
+    image_path: Option<String>,
+    image_description: Option<String>,
+    user_first_msg: Option<String>,
+    history_log: Option<String>,
+    user_message: String,
+    channel_id: String,
+    thread_id: Option<String>,
+    user_name: Option<String>,
+    user_email: Option<String>,
+    image_brief: Option<String>,
+) -> Result<(), String> {
+    if model_candidates.is_empty() {
+        return Err("At least one model candidate is required.".to_string());
+    }
+
+    emit_event(
+        sink,
+        &channel_id,
+        GeminiEvent::Debug {
+            phase: "request.queued".to_string(),
+            message: "Preparing the Gemini prompt".to_string(),
+            payload: Some(json!({
+                "modelCandidates": model_candidates,
+                "initialTurn": is_initial_turn,
+            })),
+        },
+    );
+
+    let mut last_error = "All model candidates failed.".to_string();
+    for (index, model) in model_candidates.iter().enumerate() {
+        emit_event(
+            sink,
+            &channel_id,
+            GeminiEvent::Debug {
+                phase: "candidate.start".to_string(),
+                message: "Starting Gemini model candidate".to_string(),
+                payload: Some(json!({
+                    "model": model,
+                    "position": index + 1,
+                    "total": model_candidates.len(),
+                })),
+            },
+        );
+        let tool_result_produced = AtomicBool::new(false);
+        let tracking_sink = CandidateTrackingSink {
+            delegate: sink,
+            tool_result_produced: &tool_result_produced,
+        };
+        let result = stream_gemini_thread_candidate(
+            runtime,
+            &tracking_sink,
+            api_key.clone(),
+            model.clone(),
+            is_initial_turn,
+            image_path.clone(),
+            image_description.clone(),
+            user_first_msg.clone(),
+            history_log.clone(),
+            user_message.clone(),
+            channel_id.clone(),
+            thread_id.clone(),
+            user_name.clone(),
+            user_email.clone(),
+            image_brief.clone(),
+        )
+        .await;
+
+        match result {
+            Ok(()) => {
+                emit_event(
+                    sink,
+                    &channel_id,
+                    GeminiEvent::Debug {
+                        phase: "candidate.complete".to_string(),
+                        message: "Gemini model candidate completed".to_string(),
+                        payload: Some(json!({ "model": model })),
+                    },
+                );
+                return Ok(());
+            }
+            Err(error) => {
+                let has_next = index + 1 < model_candidates.len();
+                let retryable = is_candidate_retryable_error(&error);
+                let may_switch =
+                    has_next && !tool_result_produced.load(Ordering::Relaxed) && retryable;
+                emit_event(
+                    sink,
+                    &channel_id,
+                    GeminiEvent::Debug {
+                        phase: "candidate.failed".to_string(),
+                        message: if may_switch {
+                            "Candidate failed; advancing immediately"
+                        } else {
+                            "Candidate failed"
+                        }
+                        .to_string(),
+                        payload: Some(json!({
+                            "model": model,
+                            "error": error,
+                            "retryable": retryable,
+                            "willAdvance": may_switch,
+                        })),
+                    },
+                );
+                last_error = error;
+                if !may_switch {
+                    return Err(last_error);
+                }
+                emit_event(sink, &channel_id, GeminiEvent::Reset { clear_tools: true });
             }
         }
     }
@@ -333,7 +403,7 @@ async fn stream_iteration_with_rate_limit_retry(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn stream_gemini_thread_v2(
+async fn stream_gemini_thread_candidate(
     runtime: &BrainRuntimeState,
     sink: &dyn BrainEventSink,
     api_key: String,
@@ -356,7 +426,7 @@ pub async fn stream_gemini_thread_v2(
 ) -> Result<(), String> {
     const MAX_TOOL_CALLS_PER_TURN: usize = 3;
     const MAX_AGENT_ITERATIONS: usize = 8;
-    const MAX_OUTPUT_TOKENS: usize = 2048;
+    const MAX_OUTPUT_TOKENS: usize = 8192;
 
     let result = async {
         let client = reqwest::Client::new();
@@ -538,6 +608,22 @@ pub async fn stream_gemini_thread_v2(
                 },
             };
 
+            emit_event(
+                sink,
+                &channel_id,
+                GeminiEvent::Debug {
+                    phase: "request.send".to_string(),
+                    message: "Sending prompt to Gemini".to_string(),
+                    payload: serde_json::to_value(&request_body).ok().map(|request| {
+                        json!({
+                            "model": model,
+                            "iteration": iter + 1,
+                            "request": request,
+                        })
+                    }),
+                },
+            );
+
             write_request_log(
                 &GeminiRequestLogContext {
                     kind: "thread_stream",
@@ -550,10 +636,14 @@ pub async fn stream_gemini_thread_v2(
 
             // Clear any stale streamed text before the answer-synthesis pass.
             if !allow_tools && tool_calls > 0 {
-                emit_event(sink, &channel_id, GeminiEvent::Reset);
+                emit_event(
+                    sink,
+                    &channel_id,
+                    GeminiEvent::Reset { clear_tools: false },
+                );
             }
 
-            let iteration = stream_iteration_with_rate_limit_retry(
+            let iteration = stream_iteration_with_transport_retry(
                 sink,
                 &client,
                 &url,
@@ -601,6 +691,33 @@ pub async fn stream_gemini_thread_v2(
                 }
                 return Ok(());
             };
+
+            if !is_supported_tool_name(&function_call.name) {
+                emit_event(
+                    sink,
+                    &channel_id,
+                    GeminiEvent::Debug {
+                        phase: "tool.rejected".to_string(),
+                        message: "Gemini returned an undeclared tool call".to_string(),
+                        payload: Some(json!({
+                            "model": model,
+                            "tool": function_call.name,
+                        })),
+                    },
+                );
+                return Err(format!(
+                    "Gemini returned an unsupported tool call `{}`.",
+                    function_call.name
+                ));
+            }
+
+            if !iteration.text.is_empty() {
+                emit_event(
+                    sink,
+                    &channel_id,
+                    GeminiEvent::Reset { clear_tools: false },
+                );
+            }
 
             let attachment_display_name = tool_attachment_lookup_value(&function_call)
                 .and_then(|raw_value| {

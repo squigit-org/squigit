@@ -15,6 +15,7 @@ export const APIKeyStep = () => {
         <div className={styles.modelSection}>
           <ModelSettings
             localModel={app.system.startupModel}
+            effort={app.system.startupEffort}
             ocrLanguage={app.system.startupOcrLanguage}
             updatePreferences={app.system.updatePreferences}
             isWizard={true}

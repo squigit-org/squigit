@@ -1,0 +1,87 @@
+/**
+ * @license
+ * Copyright 2026 a7mddra
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.parentRow,
+.option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--c-raw-046);
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.parentRow {
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.parentRow:hover,
+.parentRow:focus-visible,
+.option:not(.active):hover,
+.option:focus-visible {
+  background-color: var(--c-raw-150);
+  outline: none;
+}
+
+.value {
+  margin-left: auto;
+  color: var(--c-raw-057);
+  font-weight: 400;
+}
+
+.chevron {
+  color: var(--c-raw-057);
+  flex-shrink: 0;
+}
+
+.sideMenu {
+  position: fixed;
+  z-index: 1300;
+  width: 250px;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--c-raw-149);
+  border-radius: 12px;
+  background: var(--c-raw-164);
+  box-shadow:
+    0 20px 25px -5px var(--c-raw-045),
+    0 8px 10px -6px var(--c-raw-044);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.note {
+  margin: 0;
+  padding: 7px 10px 8px;
+  color: var(--c-raw-057);
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.35;
+  opacity: 0.68;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option {
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.active {
+  background-color: var(--c-raw-038);
+  cursor: default;
+}

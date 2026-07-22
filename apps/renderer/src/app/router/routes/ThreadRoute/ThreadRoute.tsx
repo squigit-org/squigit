@@ -782,7 +782,10 @@ export const ThreadRoute: React.FC = () => {
     app.trackPendingPromptAttachmentAnalysis(
       dedupeAttachmentsByPath([...app.attachments, ...parsedPromptAttachments]),
     );
-    app.thread.handleSend(finalInput, app.inputModel);
+    app.thread.handleSend(finalInput, {
+      modelId: app.inputModel,
+      effort: app.inputEffort,
+    });
     app.setInput("");
     app.clearAttachments();
     snapToBottomAfterSend();
@@ -792,6 +795,7 @@ export const ThreadRoute: React.FC = () => {
     app.clearAttachments,
     app.input,
     app.inputModel,
+    app.inputEffort,
     app.setInput,
     app.trackPendingPromptAttachmentAnalysis,
     snapToBottomAfterSend,
@@ -844,9 +848,12 @@ export const ThreadRoute: React.FC = () => {
   );
 
   const handleRetryMessage = useCallback(
-    (messageId: string, modelId?: string) => {
+    (messageId: string) => {
       app.trackPendingPromptAttachmentAnalysis(getRetryAttachments(messageId));
-      app.thread.handleRetryMessage(messageId, modelId);
+      app.thread.handleRetryMessage(messageId, {
+        modelId: app.inputModel,
+        effort: app.inputEffort,
+      });
     },
     [app, getRetryAttachments],
   );
@@ -1148,7 +1155,9 @@ export const ThreadRoute: React.FC = () => {
       isStoppable={app.thread.isAnalyzing || app.thread.isGenerating}
       onStopGeneration={app.thread.handleStopGeneration}
       selectedModel={app.inputModel}
+      selectedEffort={app.inputEffort}
       onModelChange={app.setInputModel}
+      onEffortChange={app.setInputEffort}
       attachments={app.attachments}
       onAttachmentsChange={app.setAttachments}
       onCaptureToInput={handleCaptureToInput}

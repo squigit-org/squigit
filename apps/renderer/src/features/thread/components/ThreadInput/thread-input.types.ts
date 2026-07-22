@@ -6,10 +6,11 @@
 
 import type { KeyboardEvent, RefObject } from "react";
 import type { Attachment } from "@squigit/core/brain/attachments";
+import type { ModelEffort, ModelId } from "@squigit/core/config";
 
 export type ThreadSubmitHandler = () => void;
 
-export type ThreadModelSelectHandler = (model: string) => void;
+export type ThreadModelSelectHandler = (model: ModelId) => void;
 
 export interface ThreadInputProps {
   startupImage: {
@@ -30,8 +31,10 @@ export interface ThreadInputProps {
   variant?: "default" | "transparent";
   className?: string;
   onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
-  selectedModel: string;
+  selectedModel: ModelId;
+  selectedEffort: ModelEffort;
   onModelChange: ThreadModelSelectHandler;
+  onEffortChange: (effort: ModelEffort) => void;
   attachments: Attachment[];
   onAttachmentsChange: (attachments: Attachment[]) => void;
   onCaptureToInput?: () => void;

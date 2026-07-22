@@ -64,12 +64,36 @@ export {
   MODEL_IDS,
   MODELS,
   DEFAULT_MODEL_ID,
+  DEFAULT_MODEL_EFFORT,
+  DEFAULT_MODEL_SELECTION,
+  FLASH_LITE_LATEST_MODEL_ID,
+  MODEL_EFFORTS,
+  buildModelAttemptPlan,
   isSupportedModelId,
   resolveModelId,
+  isModelEffort,
+  resolveModelEffort,
   DEFAULT_OCR_MODEL_ID,
   SUPPORTED_OCR_MODEL_IDS,
   isSupportedOcrModelId,
   resolveOcrModelId,
+} from "./models-config.ts";
+export type {
+  GoogleModelDescriptor,
+  ModelDiscoveryQueues,
+} from "./models-cache.ts";
+export {
+  commitModelDiscovery,
+  getModelDiscoverySnapshot,
+  parseDiscoveredModels,
+  setActiveModelDiscoveryKey,
+} from "./models-cache.ts";
+export type {
+  ModelId,
+  ModelEffort,
+  ModelSelection,
+  ModelTask,
+  ModelAttemptPlan,
 } from "./models-config.ts";
 
 export {

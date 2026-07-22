@@ -183,8 +183,10 @@ export const Dropdown: React.FC<DropdownProps> = ({
       const target = event.target as Node;
       const clickedTrigger = containerRef.current?.contains(target);
       const clickedMenu = menuRef.current?.contains(target);
+      const clickedSubmenu =
+        target instanceof Element && !!target.closest("[data-dropdown-submenu]");
 
-      if (!clickedTrigger && !clickedMenu) {
+      if (!clickedTrigger && !clickedMenu && !clickedSubmenu) {
         handleOpenChange(false);
       }
     };
@@ -219,6 +221,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   const menu = (
     <div
       ref={menuRef}
+      data-dropdown-menu="true"
       className={clsx(
         styles.menu,
         isUp && styles.menuAbove,

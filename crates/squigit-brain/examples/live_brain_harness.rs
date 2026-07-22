@@ -20,6 +20,7 @@ const LIVE_EMAIL: &str = "example@squigit.com";
 const LIVE_NAME: &str = "Squigit Live Test";
 const LIVE_ISSUER: &str = "https://accounts.google.com";
 const LIVE_SUBJECT: &str = "squigit-live-test";
+const BOOTSTRAP_LOW_MODEL: &str = "models/gemini-flash-lite-latest";
 
 #[tokio::main]
 async fn main() {
@@ -48,7 +49,7 @@ async fn run() -> Result<(), String> {
             let user_message = (!message.trim().is_empty()).then_some(message);
             prepare_live_profile(Some(&provider_api_key()?))?;
             let api_key = active_google_api_key()?;
-            let model = resolve_model(&api_key).await?;
+            let model_candidates = vec![BOOTSTRAP_LOW_MODEL.to_string()];
 
             println!("[brain] handshaking with Gemini...");
             let sink = TerminalEventSink::default();
@@ -57,7 +58,8 @@ async fn run() -> Result<(), String> {
                     &sink,
                     AnalyzeImageRequest {
                         api_key,
-                        model,
+                        main_model_candidates: model_candidates.clone(),
+                        micro_model_candidates: model_candidates,
                         image_path,
                         user_message,
                         channel_id: format!(
@@ -84,7 +86,7 @@ async fn run() -> Result<(), String> {
             }
             prepare_live_profile(Some(&provider_api_key()?))?;
             let api_key = active_google_api_key()?;
-            let model = resolve_model(&api_key).await?;
+            let model_candidates = vec![BOOTSTRAP_LOW_MODEL.to_string()];
 
             println!("[brain] handshaking with Gemini...");
             let sink = TerminalEventSink::default();
@@ -93,7 +95,8 @@ async fn run() -> Result<(), String> {
                     &sink,
                     PromptThreadRequest {
                         api_key,
-                        model,
+                        main_model_candidates: model_candidates.clone(),
+                        micro_model_candidates: model_candidates,
                         thread_id,
                         user_message: message,
                         channel_id: format!(
@@ -117,40 +120,6 @@ async fn run() -> Result<(), String> {
     }
 
     Ok(())
-}
-
-async fn resolve_model(api_key: &str) -> Result<String, String> {
-    let url = format!("https://generativelanguage.googleapis.com/v1beta/models?key={api_key}");
-    let response = reqwest::get(&url)
-        .await
-        .map_err(|e| format!("Failed to fetch models: {e}"))?;
-    let data: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse models response: {e}"))?;
-
-    let models = data["models"]
-        .as_array()
-        .ok_or_else(|| "No models found in the response".to_string())?;
-
-    let mut flash_models: Vec<String> = models
-        .iter()
-        .filter_map(|m| m["name"].as_str())
-        .filter(|name| name.contains("gemini") && name.contains("flash"))
-        .map(|s| s.to_string())
-        .collect();
-
-    // Sort to get the least/oldest model, which is typically lexicographically first
-    // e.g. "models/gemini-1.5-flash" < "models/gemini-2.0-flash"
-    flash_models.sort();
-
-    if let Some(model) = flash_models.first() {
-        println!("[brain] dynamically resolved model: {model}");
-        Ok(model.clone())
-    } else {
-        println!("[brain] using fallback model: models/gemini-1.5-flash");
-        Ok("models/gemini-2.5-flash".to_string())
-    }
 }
 
 fn isolated_config_dir() -> Result<PathBuf, String> {

@@ -5,12 +5,19 @@
  */
 
 import { useState } from "react";
-import { DEFAULT_MODEL_ID } from "@squigit/core/config";
+import {
+  DEFAULT_MODEL_EFFORT,
+  DEFAULT_MODEL_ID,
+  type ModelEffort,
+  type ModelId,
+} from "@squigit/core/config";
 
 export const useAppDrafts = () => {
   const [input, setInput] = useState("");
   const [imageInput, setImageInput] = useState("");
-  const [inputModel, setInputModel] = useState<string>(DEFAULT_MODEL_ID);
+  const [inputModel, setInputModel] = useState<ModelId>(DEFAULT_MODEL_ID);
+  const [inputEffort, setInputEffort] =
+    useState<ModelEffort>(DEFAULT_MODEL_EFFORT);
 
   return {
     input,
@@ -19,5 +26,7 @@ export const useAppDrafts = () => {
     setImageInput,
     inputModel,
     setInputModel,
+    inputEffort,
+    setInputEffort,
   };
 };

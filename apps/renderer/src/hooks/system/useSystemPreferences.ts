@@ -19,6 +19,12 @@ export const useSystemPreferences = () => {
   const setEditingModel = useSettingsStore((s) => s.setEditingModel);
   const sessionModel = useSettingsStore((s) => s.sessionModel);
   const setSessionModel = useSettingsStore((s) => s.setSessionModel);
+  const startupEffort = useSettingsStore((s) => s.startupEffort);
+  const setStartupEffort = useSettingsStore((s) => s.setStartupEffort);
+  const editingEffort = useSettingsStore((s) => s.editingEffort);
+  const setEditingEffort = useSettingsStore((s) => s.setEditingEffort);
+  const sessionEffort = useSettingsStore((s) => s.sessionEffort);
+  const setSessionEffort = useSettingsStore((s) => s.setSessionEffort);
   const autoExpandOCR = useSettingsStore((s) => s.autoExpandOCR);
   const setAutoExpandOCR = useSettingsStore((s) => s.setAutoExpandOCR);
   const ocrEnabled = useSettingsStore((s) => s.ocrEnabled);
@@ -68,6 +74,12 @@ export const useSystemPreferences = () => {
     setEditingModel,
     sessionModel,
     setSessionModel,
+    startupEffort,
+    setStartupEffort,
+    editingEffort,
+    setEditingEffort,
+    sessionEffort,
+    setSessionEffort,
 
     autoExpandOCR,
     setAutoExpandOCR,

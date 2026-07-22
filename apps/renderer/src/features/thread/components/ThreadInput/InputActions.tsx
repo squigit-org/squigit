@@ -9,13 +9,17 @@ import { Paperclip, ArrowUp, Square, Camera, Code2 } from "lucide-react";
 import { platform } from "@/platform";
 import { ACCEPTED_EXTENSIONS } from "@squigit/core/brain/attachments";
 import { MODELS } from "@squigit/core/config";
+import type { ModelEffort, ModelId } from "@squigit/core/config";
 import {
   Dropdown,
   DropdownItem,
-  DropdownSectionTitle,
   Tooltip,
 } from "@/components/ui";
 import { VoiceButton } from "./VoiceButton";
+import {
+  EffortMenu,
+  formatEffortLabel,
+} from "@/features/settings/components/EffortMenu";
 import styles from "./ThreadInput.module.css";
 
 const getModelTriggerLabel = (name: string) => {
@@ -36,8 +40,10 @@ interface InputActionsProps {
   isAiTyping: boolean;
   isStoppable: boolean;
   disabled: boolean;
-  selectedModel: string;
-  onModelChange: (model: string) => void;
+  selectedModel: ModelId;
+  selectedEffort: ModelEffort;
+  onModelChange: (model: ModelId) => void;
+  onEffortChange: (effort: ModelEffort) => void;
   onTranscript: (text: string, isFinal: boolean) => void;
   onCaptureToInput?: () => void;
   onFilePaths?: (paths: string[]) => void;
@@ -52,7 +58,9 @@ export const InputActions: React.FC<InputActionsProps> = ({
   isStoppable,
   disabled,
   selectedModel,
+  selectedEffort,
   onModelChange,
+  onEffortChange,
   onTranscript,
   onCaptureToInput,
   onFilePaths,
@@ -95,15 +103,18 @@ export const InputActions: React.FC<InputActionsProps> = ({
   };
 
   const handleModelSelect = useCallback(
-    (id: string) => {
+    (id: ModelId) => {
       onModelChange(id);
       setAiMenuOpen(false);
     },
     [onModelChange],
   );
 
-  const selectedModelLabel =
+  const selectedModelName =
     AI_MODELS.find((m) => m.id === selectedModel)?.triggerLabel || "Auto";
+  const selectedModelLabel = `${selectedModelName} ${formatEffortLabel(
+    selectedEffort,
+  )}`;
   const isStopAction = isAiTyping || isStoppable;
   const primaryActionLabel = isStopAction
     ? "Stop"
@@ -181,7 +192,6 @@ export const InputActions: React.FC<InputActionsProps> = ({
           width={180}
           align="left"
         >
-          <DropdownSectionTitle>Model</DropdownSectionTitle>
           {AI_MODELS.map((model) => (
             <div
               key={model.id}
@@ -196,6 +206,11 @@ export const InputActions: React.FC<InputActionsProps> = ({
               />
             </div>
           ))}
+          <EffortMenu
+            effort={selectedEffort}
+            onSelect={onEffortChange}
+            placement="right-end"
+          />
         </Dropdown>
       </div>
 

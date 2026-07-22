@@ -79,6 +79,7 @@ export function isProviderHighDemandError(error: any): boolean {
     searchStr.includes("unavailable") ||
     searchStr.includes("high demand") ||
     searchStr.includes("currently experiencing high demand") ||
+    searchStr.includes("stream stalled") ||
     searchStr.includes("streaming stalled with no events for 120s") ||
     (searchStr.includes("streaming stalled") &&
       searchStr.includes("no events for 120s"))

@@ -8,6 +8,7 @@ import React, { type RefObject } from "react";
 import { InlineMenu, LoadingSpinner } from "@/components/ui";
 import type { Attachment } from "@squigit/core/brain/attachments";
 import type { OcrAnnotations, ReverseImageSearchCache } from "@squigit/core/config";
+import type { ModelEffort, ModelId } from "@squigit/core/config";
 import { ThreadInput, ThreadImage } from "@/features/thread";
 import styles from "./ThreadWorkspace.module.css";
 
@@ -60,8 +61,10 @@ interface ThreadWorkspaceProps {
   isAiTyping: boolean;
   isStoppable: boolean;
   onStopGeneration: () => void;
-  selectedModel: string;
-  onModelChange: (model: string) => void;
+  selectedModel: ModelId;
+  selectedEffort: ModelEffort;
+  onModelChange: (model: ModelId) => void;
+  onEffortChange: (effort: ModelEffort) => void;
   attachments: Attachment[];
   onAttachmentsChange: (attachments: Attachment[]) => void;
   onCaptureToInput: () => void | Promise<void>;
@@ -127,7 +130,9 @@ const ThreadWorkspaceComponent: React.FC<ThreadWorkspaceProps> = ({
   isStoppable,
   onStopGeneration,
   selectedModel,
+  selectedEffort,
   onModelChange,
+  onEffortChange,
   attachments,
   onAttachmentsChange,
   onCaptureToInput,
@@ -201,7 +206,9 @@ const ThreadWorkspaceComponent: React.FC<ThreadWorkspaceProps> = ({
               isStoppable={isStoppable}
               onStopGeneration={onStopGeneration}
               selectedModel={selectedModel}
+              selectedEffort={selectedEffort}
               onModelChange={onModelChange}
+              onEffortChange={onEffortChange}
               attachments={attachments}
               onAttachmentsChange={onAttachmentsChange}
               onCaptureToInput={onCaptureToInput}

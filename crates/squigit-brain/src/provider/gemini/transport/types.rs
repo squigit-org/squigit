@@ -80,15 +80,30 @@ pub(crate) struct GeminiResponsePart {
 #[derive(Debug, Deserialize)]
 pub(crate) struct GeminiResponseChunk {
     pub(crate) candidates: Option<Vec<GeminiResponseCandidate>>,
+    #[serde(rename = "promptFeedback")]
+    pub(crate) prompt_feedback: Option<GeminiPromptFeedback>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct GeminiPromptFeedback {
+    #[serde(rename = "blockReason")]
+    pub(crate) block_reason: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum GeminiEvent {
+    Debug {
+        phase: String,
+        message: String,
+        payload: Option<serde_json::Value>,
+    },
     Token {
         token: String,
     },
-    Reset,
+    Reset {
+        clear_tools: bool,
+    },
     ToolStatus {
         message: String,
     },

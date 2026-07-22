@@ -8,11 +8,18 @@ import {
   DEFAULT_PREFERENCES,
   CONFIG_FILE_NAME,
 } from "./defaults";
-import { resolveModelId, resolveOcrModelId } from "./models-config";
+import {
+  resolveModelEffort,
+  resolveModelId,
+  resolveOcrModelId,
+  type ModelEffort,
+  type ModelId,
+} from "./models-config";
 import { getConfigPort } from "../ports/config";
 
 export interface UserPreferences {
-  model: string;
+  model: ModelId;
+  effort: ModelEffort;
   theme: "dark" | "light" | "system";
   ocrEnabled: boolean;
   autoExpandOCR: boolean;
@@ -23,6 +30,7 @@ export interface UserPreferences {
 export async function getDefaultPreferences(): Promise<UserPreferences> {
   return {
     model: DEFAULT_PREFERENCES.model,
+    effort: DEFAULT_PREFERENCES.effort,
     theme: DEFAULT_PREFERENCES.theme,
     ocrEnabled: DEFAULT_PREFERENCES.ocrEnabled,
     autoExpandOCR: DEFAULT_PREFERENCES.autoExpandOCR,
@@ -39,6 +47,7 @@ export type WizardState = {
 
 const USER_PREFERENCE_KEYS = [
   "model",
+  "effort",
   "theme",
   "ocrEnabled",
   "autoExpandOCR",
@@ -77,7 +86,10 @@ function parsePreferencesToml(content: string): Partial<UserPreferences> {
 
     switch (key) {
       case "model":
-        parsed.model = parseTomlString(rawValue);
+        parsed.model = parseTomlString(rawValue) as ModelId;
+        break;
+      case "effort":
+        parsed.effort = parseTomlString(rawValue) as ModelEffort;
         break;
       case "theme":
         parsed.theme = parseTomlString(rawValue) as UserPreferences["theme"];
@@ -164,6 +176,10 @@ export async function loadPreferences(): Promise<UserPreferences> {
     const parsed = parsePreferencesToml(content);
 
     const normalizedModel = resolveModelId(parsed.model, defaultPrefs.model);
+    const normalizedEffort = resolveModelEffort(
+      parsed.effort,
+      defaultPrefs.effort,
+    );
     const normalizedOcrLanguage = resolveOcrModelId(
       parsed.ocrLanguage,
       defaultPrefs.ocrLanguage,
@@ -182,6 +198,7 @@ export async function loadPreferences(): Promise<UserPreferences> {
       ...defaultPrefs,
       ...parsed,
       model: normalizedModel,
+      effort: normalizedEffort,
       theme: normalizedTheme,
       ocrLanguage: normalizedOcrLanguage,
       captureType: normalizedCaptureType,
@@ -189,6 +206,7 @@ export async function loadPreferences(): Promise<UserPreferences> {
 
     if (
       parsed.model !== normalizedModel ||
+      parsed.effort !== normalizedEffort ||
       parsed.theme !== normalizedTheme ||
       parsed.ocrLanguage !== normalizedOcrLanguage ||
       parsed.captureType !== normalizedCaptureType

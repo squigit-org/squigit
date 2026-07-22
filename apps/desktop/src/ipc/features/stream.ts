@@ -32,6 +32,9 @@ const normalizeStreamEvent = (streamEvent: any) => {
   if ("result" in normalized) {
     normalized.result = parseMaybeJson(normalized.result);
   }
+  if ("payload" in normalized) {
+    normalized.payload = parseMaybeJson(normalized.payload);
+  }
 
   return normalized;
 };
@@ -52,4 +55,3 @@ export const sendStreamEvent = (
 
   event.sender.send(channelId, normalizeStreamEvent(streamEvent));
 };
-

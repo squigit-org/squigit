@@ -77,6 +77,7 @@ impl From<StoredImage> for NapiStoredImage {
 #[napi(object)]
 pub struct NapiStreamEvent {
     pub event_type: String,
+    pub phase: Option<String>,
     pub token: Option<String>,
     pub message: Option<String>,
     pub id: Option<String>,
@@ -84,6 +85,8 @@ pub struct NapiStreamEvent {
     pub status: Option<String>,
     pub args: Option<String>,
     pub result: Option<String>,
+    pub payload: Option<String>,
+    pub clear_tools: Option<bool>,
 }
 
 #[napi(object)]
@@ -104,28 +107,13 @@ pub struct NapiSttEvent {
 impl From<GeminiEvent> for NapiStreamEvent {
     fn from(event: GeminiEvent) -> Self {
         match event {
-            GeminiEvent::Token { token } => Self {
-                event_type: "token".to_string(),
-                token: Some(token),
-                message: None,
-                id: None,
-                name: None,
-                status: None,
-                args: None,
-                result: None,
-            },
-            GeminiEvent::Reset => Self {
-                event_type: "reset".to_string(),
-                token: None,
-                message: None,
-                id: None,
-                name: None,
-                status: None,
-                args: None,
-                result: None,
-            },
-            GeminiEvent::ToolStatus { message } => Self {
-                event_type: "tool_status".to_string(),
+            GeminiEvent::Debug {
+                phase,
+                message,
+                payload,
+            } => Self {
+                event_type: "debug".to_string(),
+                phase: Some(phase),
                 token: None,
                 message: Some(message),
                 id: None,
@@ -133,6 +121,47 @@ impl From<GeminiEvent> for NapiStreamEvent {
                 status: None,
                 args: None,
                 result: None,
+                payload: payload.and_then(|value| serde_json::to_string(&value).ok()),
+                clear_tools: None,
+            },
+            GeminiEvent::Token { token } => Self {
+                event_type: "token".to_string(),
+                phase: None,
+                token: Some(token),
+                message: None,
+                id: None,
+                name: None,
+                status: None,
+                args: None,
+                result: None,
+                payload: None,
+                clear_tools: None,
+            },
+            GeminiEvent::Reset { clear_tools } => Self {
+                event_type: "reset".to_string(),
+                phase: None,
+                token: None,
+                message: None,
+                id: None,
+                name: None,
+                status: None,
+                args: None,
+                result: None,
+                payload: None,
+                clear_tools: Some(clear_tools),
+            },
+            GeminiEvent::ToolStatus { message } => Self {
+                event_type: "tool_status".to_string(),
+                phase: None,
+                token: None,
+                message: Some(message),
+                id: None,
+                name: None,
+                status: None,
+                args: None,
+                result: None,
+                payload: None,
+                clear_tools: None,
             },
             GeminiEvent::ToolStart {
                 id,
@@ -141,6 +170,7 @@ impl From<GeminiEvent> for NapiStreamEvent {
                 message,
             } => Self {
                 event_type: "tool_start".to_string(),
+                phase: None,
                 token: None,
                 message: Some(message),
                 id: Some(id),
@@ -148,6 +178,8 @@ impl From<GeminiEvent> for NapiStreamEvent {
                 status: None,
                 args: Some(serde_json::to_string(&args).unwrap_or_default()),
                 result: None,
+                payload: None,
+                clear_tools: None,
             },
             GeminiEvent::ToolEnd {
                 id,
@@ -157,6 +189,7 @@ impl From<GeminiEvent> for NapiStreamEvent {
                 message,
             } => Self {
                 event_type: "tool_end".to_string(),
+                phase: None,
                 token: None,
                 message: Some(message),
                 id: Some(id),
@@ -164,6 +197,8 @@ impl From<GeminiEvent> for NapiStreamEvent {
                 status: Some(status),
                 args: None,
                 result: Some(serde_json::to_string(&result).unwrap_or_default()),
+                payload: None,
+                clear_tools: None,
             },
         }
     }

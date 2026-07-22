@@ -4,5 +4,6 @@
 pub mod agent;
 pub mod attachments;
 pub mod commands;
+pub(crate) mod fallback;
 pub mod request_log;
 pub mod transport;

@@ -15,7 +15,11 @@ import {
 } from "lucide-react";
 import { commands } from "@/platform";
 import { github } from "@squigit/core/services/github";
-import type { UserPreferences } from "@squigit/core/config";
+import type {
+  ModelEffort,
+  ModelId,
+  UserPreferences,
+} from "@squigit/core/config";
 import { SidebarButtonWithTooltip, WidgetOverlay } from "@/components/ui";
 import {
   GeneralSettings,
@@ -33,7 +37,8 @@ interface SettingsOverlayProps {
   onClose: () => void;
   activeSection: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
-  defaultModel: string;
+  defaultModel: ModelId;
+  defaultEffort: ModelEffort;
   defaultOcrLanguage: string;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
   themePreference: "dark" | "light" | "system";
@@ -49,6 +54,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
   activeSection,
   onSectionChange,
   defaultModel,
+  defaultEffort,
   defaultOcrLanguage,
   updatePreferences,
   themePreference,
@@ -163,6 +169,7 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
         {activeSection === "models" && (
           <ModelSettings
             localModel={defaultModel}
+            effort={defaultEffort}
             ocrLanguage={defaultOcrLanguage}
             updatePreferences={updatePreferences}
           />

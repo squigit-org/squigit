@@ -5,6 +5,7 @@
  */
 
 import type { BrainParsedError } from "../provider";
+import type { ModelSelection } from "../../config/models-config";
 
 export interface Citation {
   title: string;
@@ -115,6 +116,7 @@ export interface ProviderTokenEvent {
 
 export interface ProviderResetEvent {
   type: "reset";
+  clearTools?: boolean;
 }
 
 export interface ProviderToolStatusEvent {
@@ -139,7 +141,15 @@ export interface ProviderToolEndEvent {
   message: string;
 }
 
+export interface ProviderDebugEvent {
+  type: "debug";
+  phase: string;
+  message: string;
+  payload?: unknown;
+}
+
 export type ProviderStreamEvent =
+  | ProviderDebugEvent
   | ProviderTokenEvent
   | ProviderResetEvent
   | ProviderToolStatusEvent
@@ -168,13 +178,15 @@ export interface BrainLifecycleState {
 export interface BrainEngineHandle {
   startSession: (
     key: string,
-    modelId: string,
+    selection: ModelSelection,
     imgData: BrainStartupImage | null,
-    isRetry?: boolean,
   ) => Promise<void>;
-  handleSend: (userText: string, modelId?: string) => Promise<void>;
+  handleSend: (userText: string, selection?: ModelSelection) => Promise<void>;
   handleRetrySend: () => Promise<void>;
-  handleRetryMessage: (messageId: string, modelId?: string) => Promise<void>;
+  handleRetryMessage: (
+    messageId: string,
+    selection?: ModelSelection,
+  ) => Promise<void>;
   handleUndoMessage: (messageId: string) => void;
   handleDescribeEdits: (editDescription: string) => Promise<void>;
   handleStopGeneration: () => void;

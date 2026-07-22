@@ -24,11 +24,12 @@ import {
   streamGeminiThread,
 } from "../commands";
 import { saveImageBrief } from "../../../../config/thread-storage";
-import { MODEL_IDS } from "../../../../config/models-config";
+import type { ModelAttemptPlan } from "../../../../config/models-config";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
 
 export const startNewThreadStream = async (
-  modelId: string,
+  modelCandidates: ModelAttemptPlan,
+  microTaskCandidates: ModelAttemptPlan,
   imagePath: string,
   onToken: (token: string) => void,
   threadId?: string | null,
@@ -42,7 +43,7 @@ export const startNewThreadStream = async (
 
   cancelCurrentRequest();
   brainSessionStore.currentAbortController = new AbortController();
-  brainSessionStore.currentModelId = modelId;
+  brainSessionStore.currentModelId = modelCandidates[0] ?? "";
   const myGenId = brainSessionStore.generationId;
 
   resetBrainContext();
@@ -78,7 +79,7 @@ export const startNewThreadStream = async (
 
   try {
     console.log(`[GeminiClient] Starting New Stream`);
-    console.log(`[GeminiClient] Target Model: ${modelId}`);
+    console.log(`[GeminiClient] Model candidates:`, modelCandidates);
 
     const generateAndSaveBrief = async () => {
       if (brainSessionStore.imageBrief) {
@@ -92,47 +93,29 @@ export const startNewThreadStream = async (
       // during high-demand/cold-start situations, which prevents simultaneous 503s.
       await new Promise((r) => setTimeout(r, 5000));
 
-      let attempt = 0;
-      let lastError = null;
-      const delays = [1000, 2000];
-      while (attempt < 3) {
-        try {
-          const providerApiKey = brainSessionStore.storedApiKey;
-          if (!providerApiKey) return "";
-          const modelToUse = MODEL_IDS.MICRO_TASKS;
-          const brief = await generateGeminiImageBrief(
-            providerApiKey,
-            imagePath,
-            modelToUse,
-          );
-          if (brief) {
-            if (threadId) {
-              saveImageBrief(threadId, brief).catch(console.error);
-            }
-            setImageBrief(brief);
-            if (brainSessionStore.generationId === myGenId) {
-              if (onBriefReady) onBriefReady(brief);
-            }
-            return brief;
+      try {
+        const providerApiKey = brainSessionStore.storedApiKey;
+        if (!providerApiKey) return "";
+        const brief = await generateGeminiImageBrief(
+          providerApiKey,
+          imagePath,
+          microTaskCandidates,
+        );
+        if (brief) {
+          if (threadId) {
+            saveImageBrief(threadId, brief).catch(console.error);
           }
-          return "";
-        } catch (e) {
-          console.warn(
-            `[GeminiClient] Image brief attempt ${attempt + 1} failed:`,
-            e,
-          );
-          lastError = e;
-          attempt++;
-          if (attempt < 3) {
-            const jitter = Math.floor(Math.random() * 500);
-            await new Promise((r) =>
-              setTimeout(r, delays[attempt - 1] + jitter),
-            );
+          setImageBrief(brief);
+          if (brainSessionStore.generationId === myGenId) {
+            if (onBriefReady) onBriefReady(brief);
           }
+          return brief;
         }
+        return "";
+      } catch (error) {
+        console.warn("[GeminiClient] Image brief generation failed:", error);
+        return "";
       }
-      console.warn("[GeminiClient] Image brief failed all retries.", lastError);
-      return "";
     };
 
     void generateAndSaveBrief();
@@ -145,7 +128,7 @@ export const startNewThreadStream = async (
     await Promise.race([
       streamGeminiThread({
         apiKey: providerApiKey,
-        model: modelId,
+        modelCandidates: [...modelCandidates],
         isInitialTurn: true,
         imagePath,
         imageDescription: null,
@@ -175,6 +158,7 @@ export const startNewThreadStream = async (
     console.log(
       `[GeminiClient] Stream Completed successfully. Length: ${finalResponse.length} chars.`,
     );
+    console.log("[GeminiClient] Generated Message:", finalResponse);
     return finalResponse;
   } catch (error) {
     streamWatchdog.stop();
@@ -187,13 +171,15 @@ export const startNewThreadStream = async (
 };
 
 export const startNewThread = async (
-  modelId: string,
+  modelCandidates: ModelAttemptPlan,
+  microTaskCandidates: ModelAttemptPlan,
   imagePath: string,
   threadId?: string | null,
 ): Promise<string> => {
   let fullText = "";
   await startNewThreadStream(
-    modelId,
+    modelCandidates,
+    microTaskCandidates,
     imagePath,
     (token) => {
       fullText += token;

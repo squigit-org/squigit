@@ -6,12 +6,13 @@
 
 import { Message } from "@squigit/core/brain/engine";
 import { useBrainSession } from "@squigit/react/brain/hooks";
+import type { ModelEffort, ModelId } from "@squigit/core/config";
 
 export const useThread = ({
   apiKey,
   currentModel,
+  currentEffort,
   startupImage,
-  setCurrentModel,
   enabled,
   onMessage,
   onOverwriteMessages,
@@ -24,14 +25,14 @@ export const useThread = ({
   userEmail,
 }: {
   apiKey: string;
-  currentModel: string;
+  currentModel: ModelId;
+  currentEffort: ModelEffort;
   startupImage: {
     path: string;
     mimeType: string;
     imageId: string;
     fromHistory?: boolean;
   } | null;
-  setCurrentModel: (model: string) => void;
   enabled: boolean;
   onMessage?: (message: Message, threadId: string) => void;
   onOverwriteMessages?: (messages: Message[]) => void;
@@ -39,15 +40,18 @@ export const useThread = ({
   threadTitle: string;
   onMissingApiKey?: () => void;
   onTitleGenerated?: (title: string) => void;
-  generateTitle?: (text: string) => Promise<string>;
+  generateTitle?: (
+    text: string,
+    modelCandidates: readonly string[],
+  ) => Promise<string>;
   userName?: string;
   userEmail?: string;
 }) => {
   return useBrainSession({
     apiKey,
     currentModel,
+    currentEffort,
     startupImage,
-    setCurrentModel,
     enabled,
     onMissingApiKey,
     onMessage,

@@ -9,10 +9,16 @@ import { commands, platform } from "@/platform";
 import { initializeBrainProvider } from "@squigit/core/brain/session";
 import {
   DEFAULT_OCR_MODEL_ID,
+  DEFAULT_MODEL_EFFORT,
+  DEFAULT_PREFERENCES,
   loadPreferences,
+  resolveModelId,
+  resolveModelEffort,
   resolveOcrModelId,
   savePreferences,
   type UserPreferences,
+  type ModelEffort,
+  type ModelId,
 } from "@squigit/core/config";
 import { getConfigPort } from "@squigit/core/ports";
 
@@ -47,9 +53,12 @@ interface SettingsState {
   saveApiKey: (provider: ApiKeyProvider, key: string) => Promise<boolean>;
 
   preferencesHydrated: boolean;
-  startupModel: string;
-  editingModel: string;
-  sessionModel: string;
+  startupModel: ModelId;
+  editingModel: ModelId;
+  sessionModel: ModelId;
+  startupEffort: ModelEffort;
+  editingEffort: ModelEffort;
+  sessionEffort: ModelEffort;
   themePreference: ThemePreference;
   autoExpandOCR: boolean;
   ocrEnabled: boolean;
@@ -61,9 +70,12 @@ interface SettingsState {
     defaults: PreferenceDefaults,
   ) => void;
   updatePreferences: (updates: Partial<UserPreferences>) => Promise<void>;
-  setStartupModel: (model: string) => void;
-  setEditingModel: (model: string) => void;
-  setSessionModel: (model: string) => void;
+  setStartupModel: (model: ModelId) => void;
+  setEditingModel: (model: ModelId) => void;
+  setSessionModel: (model: ModelId) => void;
+  setStartupEffort: (effort: ModelEffort) => void;
+  setEditingEffort: (effort: ModelEffort) => void;
+  setSessionEffort: (effort: ModelEffort) => void;
   setThemePreference: (theme: ThemePreference) => void;
   setAutoExpandOCR: (enabled: boolean) => void;
   setOcrEnabled: (enabled: boolean) => void;
@@ -105,6 +117,13 @@ function applyPreferenceUpdates(
     next.startupModel = updates.model;
     next.editingModel = updates.model;
     next.sessionModel = updates.model;
+  }
+
+  if (updates.effort !== undefined) {
+    const effort = resolveModelEffort(updates.effort);
+    next.startupEffort = effort;
+    next.editingEffort = effort;
+    next.sessionEffort = effort;
   }
 
   if (updates.theme !== undefined) {
@@ -305,9 +324,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
     },
 
     preferencesHydrated: false,
-    startupModel: "",
-    editingModel: "",
-    sessionModel: "",
+    startupModel: DEFAULT_PREFERENCES.model,
+    editingModel: DEFAULT_PREFERENCES.model,
+    sessionModel: DEFAULT_PREFERENCES.model,
+    startupEffort: DEFAULT_MODEL_EFFORT,
+    editingEffort: DEFAULT_MODEL_EFFORT,
+    sessionEffort: DEFAULT_MODEL_EFFORT,
     themePreference: "system",
     autoExpandOCR: true,
     ocrEnabled: true,
@@ -316,7 +338,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
     sessionOcrLanguage: DEFAULT_OCR_MODEL_ID,
 
     hydratePreferences: (prefs, defaults) => {
-      const loadedModel = prefs.model || defaults.defaultModel;
+      const loadedModel = resolveModelId(
+        prefs.model,
+        resolveModelId(defaults.defaultModel),
+      );
       const loadedOcrLanguage = resolveOcrModelId(
         prefs.ocrLanguage,
         defaults.defaultOcrLanguage,
@@ -324,12 +349,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
       const ocrEnabled =
         prefs.ocrEnabled !== undefined ? prefs.ocrEnabled : true;
       const themePreference = prefs.theme || "system";
+      const loadedEffort = resolveModelEffort(prefs.effort);
 
       set({
         preferencesHydrated: true,
         startupModel: loadedModel,
         editingModel: loadedModel,
         sessionModel: loadedModel,
+        startupEffort: loadedEffort,
+        editingEffort: loadedEffort,
+        sessionEffort: loadedEffort,
         themePreference,
         ocrEnabled,
         autoExpandOCR:
@@ -362,6 +391,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
     setStartupModel: (model) => set({ startupModel: model }),
     setEditingModel: (model) => set({ editingModel: model }),
     setSessionModel: (model) => set({ sessionModel: model }),
+    setStartupEffort: (effort) => set({ startupEffort: effort }),
+    setEditingEffort: (effort) => set({ editingEffort: effort }),
+    setSessionEffort: (effort) => set({ sessionEffort: effort }),
     setThemePreference: (theme) => set({ themePreference: theme }),
     setAutoExpandOCR: (enabled) => set({ autoExpandOCR: enabled }),
     setOcrEnabled: (enabled) =>

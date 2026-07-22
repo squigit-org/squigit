@@ -84,6 +84,18 @@ export function createToolEventHandler(options: ToolEventHandlerOptions) {
     if (!event?.type) return;
 
     if (event.type === "reset") {
+      if (event.clearTools) {
+        steps = [];
+        citations = [];
+        options.setStreamingToolSteps([]);
+        options.setStreamingCitations([]);
+        options.updatePendingAssistantTurn((turn) => ({
+          ...turn,
+          toolSteps: [],
+          pendingCitations: [],
+          visibleCitations: [],
+        }));
+      }
       options.onResetText?.();
       return;
     }

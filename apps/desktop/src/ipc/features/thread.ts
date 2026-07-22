@@ -51,7 +51,7 @@ export function registerThreadHandlers() {
   ipcMain.handle("stream_thread", async (event, args) => {
     return addon.stream_thread?.(
       args.apiKey,
-      args.model,
+      args.modelCandidates,
       args.isInitialTurn,
       args.imagePath,
       args.imageDescription,
@@ -81,7 +81,11 @@ export function registerThreadHandlers() {
     );
   });
   ipcMain.handle("generate_image_brief", (_, args) =>
-    addon.generate_image_brief?.(args.apiKey, args.imagePath, args.model),
+    addon.generate_image_brief?.(
+      args.apiKey,
+      args.imagePath,
+      args.modelCandidates,
+    ),
   );
   ipcMain.handle("load_thread", (_, args) => {
     const json = requireAddonFn("load_thread")(
@@ -132,7 +136,11 @@ export function registerThreadHandlers() {
     ),
   );
   ipcMain.handle("generate_thread_title", (_, args) =>
-    addon.generate_thread_title?.(args.apiKey, args.model, args.promptContext),
+    addon.generate_thread_title?.(
+      args.apiKey,
+      args.modelCandidates,
+      args.promptContext,
+    ),
   );
 
   ipcMain.handle("search_threads", (_, args) => {

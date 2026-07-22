@@ -35,7 +35,7 @@ impl BrainEventSink for NapiEventSink {
 #[allow(clippy::too_many_arguments)]
 pub async fn stream_thread(
     api_key: String,
-    model: String,
+    model_candidates: Vec<String>,
     is_initial_turn: bool,
     image_path: Option<String>,
     image_description: Option<String>,
@@ -55,7 +55,7 @@ pub async fn stream_thread(
 
     let request = StreamThreadRequest {
         api_key,
-        model,
+        model_candidates,
         is_initial_turn,
         image_path,
         image_description,
@@ -78,13 +78,13 @@ pub async fn stream_thread(
 #[napi(js_name = "generate_thread_title")]
 pub async fn generate_thread_title(
     api_key: String,
-    model: String,
+    model_candidates: Vec<String>,
     prompt_context: String,
 ) -> Result<String> {
     let service = get_brain_service();
     let request = GenerateThreadTitleRequest {
         api_key,
-        model,
+        model_candidates,
         prompt_context,
     };
     service
@@ -97,13 +97,13 @@ pub async fn generate_thread_title(
 pub async fn generate_image_brief(
     api_key: String,
     image_path: String,
-    model: String,
+    model_candidates: Vec<String>,
 ) -> Result<String> {
     let service = get_brain_service();
     let request = GenerateImageBriefRequest {
         api_key,
         image_path,
-        model,
+        model_candidates,
     };
     service
         .generate_image_brief(request)

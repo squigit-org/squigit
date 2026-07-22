@@ -25,20 +25,24 @@ export function initializeCorePorts(): void {
   setProviderPort({
     streamThread: (input: StreamGeminiThreadInput) =>
       platform.invoke("stream_thread", input),
-    generateImageBrief: (apiKey: string, imagePath: string, model?: string) =>
+    generateImageBrief: (
+      apiKey: string,
+      imagePath: string,
+      modelCandidates: string[],
+    ) =>
       platform.invoke<string>("generate_image_brief", {
         apiKey,
         imagePath,
-        model,
+        modelCandidates,
       }),
     generateThreadTitle: (
       apiKey: string,
-      model: string,
+      modelCandidates: string[],
       promptContext: string,
     ) =>
       platform.invoke<string>("generate_thread_title", {
         apiKey,
-        model,
+        modelCandidates,
         promptContext,
       }),
     cancelRequest: (channelId: string | null) =>
