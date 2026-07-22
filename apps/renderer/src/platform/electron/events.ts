@@ -5,11 +5,11 @@
  */
 
 import { platform } from "./index";
-import type { TauriEventMap } from "../tauri/events";
+import type { PlatformEventMap } from "../shared.types";
 
-export function listenTo<K extends keyof TauriEventMap>(
+export function listenTo<K extends keyof PlatformEventMap>(
   event: K,
-  handler: (payload: TauriEventMap[K]) => void,
+  handler: (payload: PlatformEventMap[K]) => void,
 ) {
   return platform.listen(event as string, handler);
 }

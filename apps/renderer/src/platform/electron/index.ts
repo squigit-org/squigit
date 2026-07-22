@@ -47,5 +47,5 @@ export const platform: PlatformBridge = {
 
 export { commands } from "./commands";
 export { listenTo } from "./events";
-export type * from "../tauri/tauri.types";
+export type * from "../shared.types";
 export const platformType = "linux";

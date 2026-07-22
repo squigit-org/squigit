@@ -1,9 +1,3 @@
-/**
- * @license
- * copyright 2026 a7mddra
- * spdx-license-identifier: apache-2.0
- */
-
 export interface ImageResponse {
   base64: string;
   mimeType: string;
@@ -18,7 +12,6 @@ export interface Profile {
 }
 
 export interface AppConstants {
-
   defaultModel: string;
   defaultTheme: string;
   defaultPrompt: string;
@@ -26,4 +19,13 @@ export interface AppConstants {
   defaultCaptureType: string;
   defaultOcrLanguage: string;
   defaultActiveAccount: string;
+}
+
+export interface PlatformEventMap {
+  "provider-stream-token":
+    | { type: "token"; token: string }
+    | { type: "reset" }
+    | { type: "tool_status"; message: string }
+    | { type: "tool_start"; id: string; name: string; args: Record<string, unknown>; message: string }
+    | { type: "tool_end"; id: string; name: string; status: string; result: Record<string, unknown>; message: string };
 }

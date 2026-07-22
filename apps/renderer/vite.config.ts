@@ -20,7 +20,7 @@ export default defineConfig({
       allow: ["..", "../../shared"],
     },
   },
-  envPrefix: ["VITE_", "TAURI_", "ELECTRON_"],
+  envPrefix: ["VITE_", "ELECTRON_"],
   define: {
     __PLATFORM__: JSON.stringify(platform),
   },
@@ -36,9 +36,7 @@ export default defineConfig({
     },
   },
   build: {
-    target:
-      process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
-    minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
-    sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    minify: false,
+    sourcemap: true,
   },
 });

@@ -5,7 +5,7 @@
  */
 
 import { platform } from "./index";
-import type { Profile } from "../tauri/tauri.types";
+import type { Profile } from "../shared.types";
 
 type NativeProfile = Profile & {
   avatarBase64?: string | null;
@@ -65,7 +65,7 @@ export const commands = {
 
   // Image Storage & Processing
   processImagePath: (path: string) =>
-    platform.invoke<string>("process_image_path", { path }),
+    platform.invoke<{ hash: string; path: string }>("process_image_path", { path }),
   readImageFile: (path: string) =>
     platform.invoke<number[]>("read_image_file", { path }),
   storeImageFromPath: (path: string) =>
@@ -148,7 +148,7 @@ export const commands = {
 
   // App Utilities
   getAppConstants: () =>
-    platform.invoke<{ appVersion: string }>("get_app_constants"),
+    platform.invoke<import("../shared.types").AppConstants & { appVersion: string }>("get_app_constants"),
 
   // Accounts
   listProfiles: async () =>
