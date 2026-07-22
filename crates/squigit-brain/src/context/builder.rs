@@ -4,7 +4,7 @@
 //! Processor module - Builds API payloads for initial and subsequent turns.
 
 use crate::context::loader::{
-    interpolate, load_frame, load_image_brief_prompt, load_scenes, load_soul, load_system,
+    interpolate, load_frame, load_scenes, load_soul, load_system,
     load_title_prompt,
 };
 use squigit_storage::rules::load_rules;
@@ -100,17 +100,9 @@ pub fn get_title_prompt() -> Result<String, String> {
     load_title_prompt()
 }
 
-/// Get the image brief prompt (for lightweight description via Lite model).
-pub fn get_image_brief_prompt() -> Result<String, String> {
-    load_image_brief_prompt()
-}
-
-/// Build the system instruction for the native Gemini `system_instruction` field.
-/// Called on EVERY turn. Interpolates system.yml with runtime data.
 pub fn build_system_instruction(
     user_name: &str,
     user_email: &str,
-    image_brief: &str,
 ) -> Result<String, String> {
     let system_config = load_system()?;
 
@@ -157,14 +149,6 @@ pub fn build_system_instruction(
     vars.insert("LOCALE".to_string(), locale);
     vars.insert("USER_NAME".to_string(), user_name.to_string());
     vars.insert("USER_EMAIL".to_string(), user_email.to_string());
-    vars.insert(
-        "IMAGE_BRIEF".to_string(),
-        if image_brief.is_empty() {
-            "(Image file is attached directly to this request)".to_string()
-        } else {
-            image_brief.to_string()
-        },
-    );
 
     let runtime_section = interpolate(&system_config.runtime_template, &vars);
     let mut full_instruction = format!(

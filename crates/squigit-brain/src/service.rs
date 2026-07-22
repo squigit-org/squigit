@@ -5,7 +5,7 @@ use crate::context::builder::format_history_log;
 use crate::events::BrainEventSink;
 use crate::provider::gemini::transport::types::GeminiEvent;
 use crate::runtime::BrainRuntimeState;
-use squigit_storage::{StoredImage, ThreadData, ThreadMessage, ThreadMetadata};
+use squigit_storage::{ThreadData, ThreadMessage, ThreadMetadata};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
@@ -22,7 +22,6 @@ pub struct StreamThreadRequest {
     pub thread_id: Option<String>,
     pub user_name: Option<String>,
     pub user_email: Option<String>,
-    pub image_brief: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -30,13 +29,6 @@ pub struct GenerateThreadTitleRequest {
     pub api_key: String,
     pub model_candidates: Vec<String>,
     pub prompt_context: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct GenerateImageBriefRequest {
-    pub api_key: String,
-    pub image_path: String,
-    pub model_candidates: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,9 +46,7 @@ pub struct AnalyzeImageRequest {
 #[derive(Debug, Clone)]
 pub struct AnalyzeImageResult {
     pub metadata: ThreadMetadata,
-    pub image: StoredImage,
     pub assistant_message: String,
-    pub image_brief: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -113,7 +103,6 @@ impl BrainService {
             request.thread_id,
             request.user_name,
             request.user_email,
-            request.image_brief,
         )
         .await
     }
@@ -126,19 +115,6 @@ impl BrainService {
             request.api_key,
             request.model_candidates,
             request.prompt_context,
-        )
-        .await
-    }
-
-    pub async fn generate_image_brief(
-        &self,
-        request: GenerateImageBriefRequest,
-    ) -> Result<String, String> {
-        crate::provider::gemini::commands::generation::generate_image_brief(
-            &self.runtime,
-            request.api_key,
-            request.image_path,
-            request.model_candidates,
         )
         .await
     }
@@ -188,7 +164,6 @@ impl BrainService {
                 thread_id: Some(metadata.id.clone()),
                 user_name: request.user_name,
                 user_email: request.user_email,
-                image_brief: None,
             },
         )
         .await?;
@@ -209,26 +184,10 @@ impl BrainService {
                 .map_err(|e| e.to_string())?;
         }
 
-        let api_key = request.api_key.clone();
-
-        let image_brief = self
-            .generate_image_brief(GenerateImageBriefRequest {
-                api_key: api_key.clone(),
-                image_path: image.path.clone(),
-                model_candidates: request.micro_model_candidates.clone(),
-            })
-            .await
-            .ok()
-            .filter(|value| !value.trim().is_empty());
-
-        if let Some(brief) = image_brief.as_ref() {
-            let _ = storage.save_image_brief(&metadata.id, brief);
-        }
-
         let title_context = format!("User: {}\nAssistant: {}", text, assistant_message);
         if let Ok(title) = self
             .generate_thread_title(GenerateThreadTitleRequest {
-                api_key,
+                api_key: request.api_key.clone(),
                 model_candidates: request.micro_model_candidates,
                 prompt_context: title_context,
             })
@@ -243,9 +202,7 @@ impl BrainService {
 
         Ok(AnalyzeImageResult {
             metadata,
-            image,
             assistant_message,
-            image_brief,
         })
     }
 
@@ -299,7 +256,6 @@ impl BrainService {
                 thread_id: Some(request.thread_id.clone()),
                 user_name: request.user_name,
                 user_email: request.user_email,
-                image_brief: thread.image_brief.clone(),
             },
         )
         .await?;

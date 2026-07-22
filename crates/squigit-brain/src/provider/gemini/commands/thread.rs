@@ -295,7 +295,6 @@ pub async fn stream_gemini_thread_v2(
     thread_id: Option<String>,
     user_name: Option<String>,
     user_email: Option<String>,
-    image_brief: Option<String>,
 ) -> Result<(), String> {
     if model_candidates.is_empty() {
         return Err("At least one model candidate is required.".to_string());
@@ -349,7 +348,6 @@ pub async fn stream_gemini_thread_v2(
             thread_id.clone(),
             user_name.clone(),
             user_email.clone(),
-            image_brief.clone(),
         )
         .await;
 
@@ -422,7 +420,6 @@ async fn stream_gemini_thread_candidate(
     // Runtime context params (NEW)
     user_name: Option<String>,
     user_email: Option<String>,
-    image_brief: Option<String>,
 ) -> Result<(), String> {
     const MAX_TOOL_CALLS_PER_TURN: usize = 3;
     const MAX_AGENT_ITERATIONS: usize = 8;
@@ -579,7 +576,6 @@ async fn stream_gemini_thread_candidate(
             let sys_instruction = build_system_instruction_with_tool_policy(
                 user_name.as_deref().unwrap_or(""),
                 user_email.as_deref().unwrap_or(""),
-                image_brief.as_deref().unwrap_or(""),
                 allow_tools,
             )?;
             let system_instruction = Some(GeminiContent {

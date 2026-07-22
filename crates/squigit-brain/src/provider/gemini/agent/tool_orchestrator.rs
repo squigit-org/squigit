@@ -87,11 +87,10 @@ pub(crate) fn tool_status_text(
 pub(crate) fn build_system_instruction_with_tool_policy(
     user_name: &str,
     user_email: &str,
-    image_brief: &str,
     tools_enabled: bool,
 ) -> Result<String, String> {
     let mut instruction =
-        crate::context::builder::build_system_instruction(user_name, user_email, image_brief)?;
+        crate::context::builder::build_system_instruction(user_name, user_email)?;
 
     if tools_enabled {
         instruction.push_str(
@@ -102,7 +101,7 @@ pub(crate) fn build_system_instruction_with_tool_policy(
              - Secondary uploaded files from this thread may only be used when the user attaches them in this turn or when you explicitly call `recall_thread_attachment`.\n\
              - Use the thread attachment catalog in context to pick uploaded attachments for `recall_thread_attachment`.\n\
              - If the user asks for page-specific, OCR, quote-exact, transcription, chart-reading, or slide/sheet/section-specific details from a prior uploaded image or document, you must call `recall_thread_attachment` before answering.\n\
-             - Never answer exact file-grounded questions from `image_brief` or path references alone when a prior uploaded image/document is needed.\n\
+             - Never answer exact file-grounded questions from path references alone when a prior uploaded image/document is needed.\n\
              - Text/code attachments are pasted into the user message as raw text before you see it.\n\
              - For PDF, Word, spreadsheet, slide, and similar document attachments, rely on the attached Gemini file directly.\n\
              - If greeting/chit-thread, do not call tools.\n\
@@ -290,7 +289,7 @@ mod tests {
     #[test]
     fn tool_policy_treats_text_as_pasted_content() {
         let instruction =
-            build_system_instruction_with_tool_policy("", "", "", true).expect("policy");
+            build_system_instruction_with_tool_policy("", "", true).expect("policy");
         assert!(instruction.contains("Text/code attachments are pasted"));
         assert!(instruction.contains("`recall_thread_attachment`"));
     }

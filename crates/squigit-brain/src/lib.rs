@@ -11,6 +11,6 @@ pub mod system;
 pub mod tools;
 
 pub use service::{
-    AnalyzeImageRequest, BrainService, GenerateImageBriefRequest, GenerateThreadTitleRequest,
+    AnalyzeImageRequest, BrainService, GenerateThreadTitleRequest,
     PromptThreadRequest, StreamThreadRequest,
 };

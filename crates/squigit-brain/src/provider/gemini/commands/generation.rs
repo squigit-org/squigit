@@ -4,9 +4,8 @@
 use crate::provider::gemini::fallback::{is_candidate_retryable_error, is_transport_error};
 use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
 use crate::provider::gemini::transport::types::{
-    GeminiContent, GeminiFileData, GeminiPart, GeminiRequest, GeminiResponseChunk,
+    GeminiContent, GeminiPart, GeminiRequest, GeminiResponseChunk,
 };
-use crate::runtime::BrainRuntimeState;
 use std::time::Duration;
 
 fn extract_generated_text(body: &str) -> Result<String, String> {
@@ -177,64 +176,6 @@ pub async fn generate_thread_title(
         Err(error) => {
             eprintln!("[ThreadTitle] Candidate plan failed: {error}");
             Ok("New thread".to_string())
-        }
-    }
-}
-
-/// Generate a lightweight image description using the supplied micro-task plan.
-pub async fn generate_image_brief(
-    runtime: &BrainRuntimeState,
-    api_key: String,
-    image_path: String,
-    model_candidates: Vec<String>,
-) -> Result<String, String> {
-    use crate::context::builder::get_image_brief_prompt;
-
-    let brief_prompt = get_image_brief_prompt()?;
-    let file_ref = crate::provider::gemini::attachments::ensure_file_uploaded(
-        &api_key,
-        &image_path,
-        &runtime.provider_file_cache,
-    )
-    .await?;
-    let request_body = GeminiRequest {
-        system_instruction: None,
-        contents: vec![GeminiContent {
-            role: "user".to_string(),
-            parts: vec![
-                GeminiPart {
-                    file_data: Some(GeminiFileData {
-                        mime_type: file_ref.mime_type,
-                        file_uri: file_ref.file_uri,
-                    }),
-                    ..Default::default()
-                },
-                GeminiPart {
-                    text: Some(brief_prompt),
-                    ..Default::default()
-                },
-            ],
-        }],
-        generation_config: None,
-        tools: None,
-        tool_config: None,
-    };
-
-    write_request_log(
-        &GeminiRequestLogContext {
-            kind: "image_brief",
-            channel_id: None,
-            thread_id: None,
-            iteration: None,
-        },
-        &request_body,
-    );
-
-    match generate_with_candidates(&api_key, &model_candidates, &request_body).await {
-        Ok(brief) => Ok(brief),
-        Err(error) => {
-            eprintln!("[ImageBrief] Candidate plan failed: {error}");
-            Ok(String::new())
         }
     }
 }
