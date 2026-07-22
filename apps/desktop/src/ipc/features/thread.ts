@@ -62,7 +62,6 @@ export function registerThreadHandlers() {
       args.threadId,
       args.userName,
       args.userEmail,
-      args.imageBrief,
       (err: any, streamEvent: any) => {
         sendStreamEvent(event, args.channelId, err, streamEvent);
       },
@@ -80,13 +79,6 @@ export function registerThreadHandlers() {
       JSON.stringify(args.metadata),
     );
   });
-  ipcMain.handle("generate_image_brief", (_, args) =>
-    addon.generate_image_brief?.(
-      args.apiKey,
-      args.imagePath,
-      args.modelCandidates,
-    ),
-  );
   ipcMain.handle("load_thread", (_, args) => {
     const json = requireAddonFn("load_thread")(
       requireStringArg("load_thread", args, "threadId", "thread_id"),

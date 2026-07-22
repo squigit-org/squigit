@@ -7,7 +7,7 @@ use napi_derive::napi;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
 use squigit_brain::service::{
-    BrainService, GenerateImageBriefRequest, GenerateThreadTitleRequest, StreamThreadRequest,
+    BrainService, GenerateThreadTitleRequest, StreamThreadRequest,
 };
 use std::sync::OnceLock;
 
@@ -46,7 +46,6 @@ pub async fn stream_thread(
     thread_id: Option<String>,
     user_name: Option<String>,
     user_email: Option<String>,
-    image_brief: Option<String>,
     #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => void")]
     on_event: ThreadsafeFunction<NapiStreamEvent>,
 ) -> Result<()> {
@@ -66,7 +65,6 @@ pub async fn stream_thread(
         thread_id,
         user_name,
         user_email,
-        image_brief,
     };
 
     service
@@ -89,24 +87,6 @@ pub async fn generate_thread_title(
     };
     service
         .generate_thread_title(request)
-        .await
-        .map_err(|e| Error::from_reason(e.to_string()))
-}
-
-#[napi(js_name = "generate_image_brief")]
-pub async fn generate_image_brief(
-    api_key: String,
-    image_path: String,
-    model_candidates: Vec<String>,
-) -> Result<String> {
-    let service = get_brain_service();
-    let request = GenerateImageBriefRequest {
-        api_key,
-        image_path,
-        model_candidates,
-    };
-    service
-        .generate_image_brief(request)
         .await
         .map_err(|e| Error::from_reason(e.to_string()))
 }
