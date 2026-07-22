@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import styles from "./GeneralSettings.module.css";
-import { CapturePreview } from "@/features/wizard";
+import { CapturePreview } from "./components/CapturePreview";
 import {
   Dropdown,
   DropdownItem,

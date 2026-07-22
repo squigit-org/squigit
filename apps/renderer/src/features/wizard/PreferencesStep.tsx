@@ -5,10 +5,10 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import ThemePicker from "./components/ThemePicker/ThemePicker";
+import ThemePicker from "./components/ThemePicker";
 import { useAppContext } from "@/app/providers/AppProvider";
 import { commands } from "@/platform";
-import { CapturePreview } from "./components/CapturePreview/CapturePreview";
+import { CapturePreview } from "@/features/settings/components/CapturePreview";
 import { PersonaSettings } from "@/features/settings/PersonaSettings";
 import { useSettingsStore } from "@/features/settings/settings.store";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";

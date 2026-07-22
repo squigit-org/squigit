@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export * from "./components/CapturePreview.tsx";
+
 export * from "./settings.types";
 export * from "./settings.store";
 export * from "./APIKeySettings";

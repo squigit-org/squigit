@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export * from "./components/FlowButton/FlowButton";
-export * from "./components/CapturePreview/CapturePreview";
+export * from "./components/FlowButton";
 
 export * from "./AuthStep"
 export * from "./APIKeyStep"
