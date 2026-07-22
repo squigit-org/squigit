@@ -552,21 +552,11 @@ impl ThreadStorage {
             reverse_image_search,
             attachment_registry,
             image_tone: Some("d".to_string()),
-            image_brief: Some("summary of the image here".to_string()),
         })
     }
 
     /// Save image tone placeholder. Object manifests will own this value.
     pub fn save_image_tone(&self, thread_id: &str, _tone: &str) -> Result<()> {
-        let thread_dir = self.thread_dir(thread_id);
-        if !thread_dir.exists() {
-            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
-        }
-        Ok(())
-    }
-
-    /// Save image brief placeholder. Object manifests will own this value.
-    pub fn save_image_brief(&self, thread_id: &str, _brief: &str) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
         if !thread_dir.exists() {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));

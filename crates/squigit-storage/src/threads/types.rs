@@ -215,10 +215,6 @@ fn default_image_tone() -> Option<String> {
     Some("d".to_string())
 }
 
-fn default_image_brief() -> Option<String> {
-    Some("summary of the image here".to_string())
-}
-
 fn now_utc() -> DateTime<Utc> {
     Utc::now()
 }
@@ -287,9 +283,6 @@ pub struct ThreadData {
     /// Image tone from the object manifest. Placeholder until manifests land.
     #[serde(default = "default_image_tone")]
     pub image_tone: Option<String>,
-    /// Generated concise text description of the session's startup image.
-    #[serde(default = "default_image_brief")]
-    pub image_brief: Option<String>,
 }
 
 impl ThreadData {
@@ -303,7 +296,6 @@ impl ThreadData {
             reverse_image_search: ReverseImageSearchCache::default(),
             attachment_registry: BTreeMap::new(),
             image_tone: default_image_tone(),
-            image_brief: default_image_brief(),
         }
     }
 }
