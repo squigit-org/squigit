@@ -5,16 +5,14 @@
  */
 
 import type { Message, PendingAssistantTurn } from "./types";
-import { getRenderableStreamingText } from "./playback";
 
 export function buildCommittedAssistantMessage(
   turn: PendingAssistantTurn,
   thoughtSeconds?: number,
 ): Message {
   const isStopped = turn.stopped || turn.phase === "stopped";
-  const committedText = isStopped
-    ? turn.displayText
-    : getRenderableStreamingText(turn.rawText).text;
+  const committedText =
+    turn.rawText.trim().length > 0 ? turn.rawText : turn.displayText;
 
   return {
     id: turn.id,

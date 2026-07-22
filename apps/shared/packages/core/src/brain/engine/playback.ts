@@ -6,41 +6,39 @@ const INCOMPLETE_LINK_PATTERNS: RegExp[] = [
 export const STREAM_PRIME_DELAY_MS = 140;
 export const STREAM_PLAYBACK_INTERVAL_MS = 70;
 
-function hideIncompleteCodeBlocks(
-  text: string,
-): { text: string; isWritingCode: boolean } {
+function hasIncompleteCodeBlock(text: string): boolean {
   const lines = text.split("\n");
   let inCodeBlock = false;
-  let codeBlockMarker = "";
-  let startLineIndex = -1;
+  let fenceCharacter = "";
+  let fenceLength = 0;
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
-    const match = line.match(/^\s*(`{3,})/u);
+    const match = line.match(/^\s*(`{3,}|~{3,})(.*)$/u);
 
     if (!inCodeBlock) {
       if (match) {
         inCodeBlock = true;
-        codeBlockMarker = match[1];
-        startLineIndex = i;
+        fenceCharacter = match[1][0];
+        fenceLength = match[1].length;
       }
       continue;
     }
 
-    if (line.trim().startsWith(codeBlockMarker)) {
+    const marker = match?.[1] || "";
+    const suffix = match?.[2] || "";
+    if (
+      marker[0] === fenceCharacter &&
+      marker.length >= fenceLength &&
+      suffix.trim().length === 0
+    ) {
       inCodeBlock = false;
-      codeBlockMarker = "";
+      fenceCharacter = "";
+      fenceLength = 0;
     }
   }
 
-  if (!inCodeBlock) {
-    return { text, isWritingCode: false };
-  }
-
-  return {
-    text: lines.slice(0, startLineIndex).join("\n"),
-    isWritingCode: true,
-  };
+  return inCodeBlock;
 }
 
 function hideDanglingMarkdown(text: string): string {
@@ -64,10 +62,9 @@ function hideDanglingMarkdown(text: string): string {
 export function getRenderableStreamingText(
   rawText: string,
 ): { text: string; isWritingCode: boolean } {
-  const { text, isWritingCode } = hideIncompleteCodeBlocks(rawText);
   return {
-    text: hideDanglingMarkdown(text),
-    isWritingCode,
+    text: hideDanglingMarkdown(rawText),
+    isWritingCode: hasIncompleteCodeBlock(rawText),
   };
 }
 

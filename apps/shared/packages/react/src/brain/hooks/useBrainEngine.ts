@@ -316,9 +316,8 @@ export const useBrainEngine = (config: {
     turn: PendingAssistantTurn,
   ): Message => {
     const isStopped = turn.stopped || turn.phase === "stopped";
-    const committedText = isStopped
-      ? turn.displayText
-      : getRenderableStreamingText(turn.rawText).text;
+    const committedText =
+      turn.rawText.trim().length > 0 ? turn.rawText : turn.displayText;
 
     return {
       id: turn.id,
