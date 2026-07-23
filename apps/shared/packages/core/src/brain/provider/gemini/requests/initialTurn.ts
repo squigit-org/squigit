@@ -26,7 +26,6 @@ import { requireNonEmptyProviderResponse } from "./responseGuard";
 
 export const startNewThreadStream = async (
   modelCandidates: ModelAttemptPlan,
-  microTaskCandidates: ModelAttemptPlan,
   imagePath: string,
   onToken: (token: string) => void,
   threadId?: string | null,
@@ -92,6 +91,7 @@ export const startNewThreadStream = async (
         userFirstMsg: null,
         historyLog: null,
         userMessage: "",
+        userMessageId: null,
         channelId: channelId,
         threadId: threadId ?? null,
         userName,
@@ -128,14 +128,12 @@ export const startNewThreadStream = async (
 
 export const startNewThread = async (
   modelCandidates: ModelAttemptPlan,
-  microTaskCandidates: ModelAttemptPlan,
   imagePath: string,
   threadId?: string | null,
 ): Promise<string> => {
   let fullText = "";
   await startNewThreadStream(
     modelCandidates,
-    microTaskCandidates,
     imagePath,
     (token) => {
       fullText += token;

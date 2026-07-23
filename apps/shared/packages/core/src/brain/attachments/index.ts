@@ -18,6 +18,7 @@ export {
 export {
   ABSOLUTE_CAS_PATH_RE,
   getBaseName,
+  getAttachmentHash,
   unwrapMarkdownLinkDestination,
   isAttachmentPath,
   isAbsoluteCasPath,
@@ -36,5 +37,4 @@ export {
 } from "./markdown.ts";
 
 export { attachmentFromPath } from "./factory.ts";
-export { normalizeMessageForHistory } from "./memory.ts";
 export { prepareBrainInput, type PreparedBrainInput } from "./conductor.ts";

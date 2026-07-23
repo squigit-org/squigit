@@ -24,6 +24,7 @@ export interface StoragePort {
     title: string,
     imageHash: string,
     workspaceId?: string | null,
+    displayName?: string | null,
   ): Promise<ThreadMetadata>;
   createWorkspace(path: string): Promise<WorkspaceMetadata>;
   listWorkspaces(): Promise<WorkspaceMetadata[]>;
@@ -36,8 +37,7 @@ export interface StoragePort {
   updateThreadMetadata(metadata: ThreadMetadata): Promise<void>;
   appendThreadMessage(
     threadId: string,
-    role: "user" | "assistant",
-    content: string,
+    message: ThreadMessage,
   ): Promise<void>;
   overwriteThreadMessages(
     threadId: string,

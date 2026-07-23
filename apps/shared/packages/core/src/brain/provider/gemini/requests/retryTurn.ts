@@ -18,7 +18,6 @@ import {
 } from "../../../session/context";
 import { buildContextWindow } from "../../../session/summarizer";
 import { prepareBrainInput } from "../../../attachments";
-import { normalizeMessageForHistory } from "../../../attachments/memory";
 import {
   listenGeminiStream,
   streamGeminiThread,
@@ -28,9 +27,8 @@ import { requireNonEmptyProviderResponse } from "./responseGuard";
 
 export const retryFromMessage = async (
   messageIndex: number,
-  allMessages: Array<{ role: string; text: string }>,
+  allMessages: Array<{ id: string; role: string; text: string }>,
   modelCandidates: ModelAttemptPlan,
-  microTaskCandidates: ModelAttemptPlan,
   threadId?: string | null,
   onToken?: (token: string) => void,
   fallbackImagePath?: string,
@@ -108,6 +106,7 @@ export const retryFromMessage = async (
           userFirstMsg: null,
           historyLog: null,
           userMessage: "",
+          userMessageId: null,
           channelId,
           threadId: threadId ?? null,
           userName: brainSessionStore.userName ?? undefined,
@@ -157,20 +156,27 @@ export const retryFromMessage = async (
       text,
     });
   }
-  brainSessionStore.userFirstMsg = firstPreparedUserText
-    ? normalizeMessageForHistory(firstPreparedUserText)
-    : null;
+  brainSessionStore.userFirstMsg = firstPreparedUserText;
 
   brainSessionStore.conversationHistory = preparedMessagesBefore.map((m) => ({
     role: m.role === "user" ? "User" : "Assistant",
-    content: normalizeMessageForHistory(m.text),
+    content: m.text,
   }));
   // No more slice(-6) — summarize.ts handles windowing
 
   if (!lastPreparedUserText) {
     throw new Error("No user message found before the retried message");
   }
-  const retryUserMessage = normalizeMessageForHistory(lastPreparedUserText);
+  const retryUserMessage = lastPreparedUserText;
+  const retryUserMessageId = messagesBefore
+    .slice()
+    .reverse()
+    .find((message) => message.role === "user")?.id;
+  if (!retryUserMessageId) {
+    throw new Error(
+      "No persisted user message ID found before the retried message",
+    );
+  }
 
   const channelId = createProviderChannelId();
   brainSessionStore.currentChannelId = channelId;
@@ -222,6 +228,7 @@ export const retryFromMessage = async (
         userFirstMsg: brainSessionStore.userFirstMsg,
         historyLog,
         userMessage: retryUserMessage,
+        userMessageId: retryUserMessageId,
         channelId,
         threadId: threadId ?? null,
         userName: brainSessionStore.userName ?? undefined,

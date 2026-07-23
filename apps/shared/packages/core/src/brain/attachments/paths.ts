@@ -5,7 +5,16 @@
  */
 
 export const ABSOLUTE_CAS_PATH_RE =
-  /(?:^|[\\/])objects[\\/][0-9a-f]{2}[\\/][0-9a-f]{64}\.[^/\\>\n]+$/iu;
+  /(?:^|[\\/])objects[\\/][0-9a-f]{2}[\\/][0-9a-f]{64}[\\/][0-9a-f]{64}\.[^/\\>\n]+$/iu;
+
+export function getAttachmentHash(path: string): string | null {
+  const value = unwrapMarkdownLinkDestination(path);
+  const baseName = getBaseName(value);
+  const stem = baseName.includes(".")
+    ? baseName.slice(0, baseName.lastIndexOf("."))
+    : baseName;
+  return /^[0-9a-f]{64}$/i.test(stem) ? stem.toLowerCase() : null;
+}
 
 export function getBaseName(path: string): string {
   const lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));

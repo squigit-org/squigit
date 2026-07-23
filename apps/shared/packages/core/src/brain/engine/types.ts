@@ -6,6 +6,7 @@
 
 import type { BrainParsedError } from "../provider";
 import type { ModelSelection } from "../../config/models-config";
+import type { ThreadMessageAttachment } from "../../config/thread-storage";
 
 export interface Citation {
   title: string;
@@ -67,6 +68,7 @@ export interface Message {
   alreadyStreamed?: boolean;
   citations?: Citation[];
   toolSteps?: ToolStep[];
+  attachments?: ThreadMessageAttachment[];
 }
 
 export type MessageCollapseMode = "none" | "collapsed" | "expanded";
@@ -180,7 +182,11 @@ export interface BrainEngineHandle {
     selection: ModelSelection,
     imgData: BrainStartupImage | null,
   ) => Promise<void>;
-  handleSend: (userText: string, selection?: ModelSelection) => Promise<void>;
+  handleSend: (
+    userText: string,
+    selection?: ModelSelection,
+    attachments?: ThreadMessageAttachment[],
+  ) => Promise<void>;
   handleRetrySend: () => Promise<void>;
   handleRetryMessage: (
     messageId: string,

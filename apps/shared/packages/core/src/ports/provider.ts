@@ -15,6 +15,7 @@ export interface StreamGeminiThreadInput extends Record<string, unknown> {
   userFirstMsg: string | null;
   historyLog: string | null;
   userMessage: string;
+  userMessageId: string | null;
   channelId: string;
   threadId: string | null;
   userName?: string | null;

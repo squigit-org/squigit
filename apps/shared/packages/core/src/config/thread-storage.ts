@@ -48,13 +48,42 @@ export interface ThreadToolStep {
   endedAtMs?: number;
 }
 
-/** A single thread message (matches Rust ThreadMessage). */
-export interface ThreadMessage {
-  role: "user" | "assistant";
+export interface ThreadMessageAttachment {
+  attachment_hash: string;
+  source_path: string | null;
+}
+
+export interface ThreadUserMessage {
+  id: string;
+  role: "user";
   content: string;
   timestamp: string;
-  citations?: ThreadCitation[];
-  tool_steps?: ThreadToolStep[];
+  attachments: ThreadMessageAttachment[];
+}
+
+export interface ThreadAssistantMessage {
+  id: string;
+  role: "assistant";
+  content: string;
+  timestamp: string;
+  citations: ThreadCitation[];
+  tool_steps: ThreadToolStep[];
+}
+
+/** A strict role-discriminated persisted message (matches Rust ThreadMessage). */
+export type ThreadMessage = ThreadUserMessage | ThreadAssistantMessage;
+
+export type AttachmentFileType =
+  | "text_local"
+  | "image_upload"
+  | "document_upload";
+
+export interface AttachmentManifestEntry {
+  attachment_hash: string;
+  display_name: string;
+  file_type: AttachmentFileType;
+  file_brief: string | null;
+  last_mention_at: string;
 }
 
 /** OCR data for an image region (matches Rust OcrRegion). */
@@ -98,6 +127,7 @@ export interface ThreadData {
   ocr_data: OcrAnnotations;
   context_window: ContextWindow;
   reverse_image_search: ReverseImageSearchCache;
+  attachment_manifest: AttachmentManifestEntry[];
   image_tone?: string | null;
 }
 
@@ -154,8 +184,14 @@ export async function createThread(
   title: string,
   imageHash: string,
   workspaceId?: string | null,
+  displayName?: string | null,
 ): Promise<ThreadMetadata> {
-  return getStoragePort().createThread(title, imageHash, workspaceId);
+  return getStoragePort().createThread(
+    title,
+    imageHash,
+    workspaceId,
+    displayName,
+  );
 }
 
 /** Register a path as a workspace. */
@@ -219,10 +255,9 @@ export async function updateThreadMetadata(
 /** Append a message to a thread. */
 export async function appendThreadMessage(
   threadId: string,
-  role: "user" | "assistant",
-  content: string,
+  message: ThreadMessage,
 ): Promise<void> {
-  return getStoragePort().appendThreadMessage(threadId, role, content);
+  return getStoragePort().appendThreadMessage(threadId, message);
 }
 
 /** Overwrite all messages in a thread. */

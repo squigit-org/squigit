@@ -11,4 +11,5 @@ export interface Attachment {
   extension: string;
   path: string;
   sourcePath?: string;
+  status?: "pending" | "failed" | "success";
 }

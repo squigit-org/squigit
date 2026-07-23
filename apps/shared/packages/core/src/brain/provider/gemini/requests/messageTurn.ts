@@ -14,13 +14,13 @@ import {
 } from "../transport";
 import { setUserFirstMsg, addToHistory } from "../../../session/context";
 import { buildContextWindow } from "../../../session/summarizer";
-import { normalizeMessageForHistory } from "../../../attachments/memory";
 import { listenGeminiStream, streamGeminiThread } from "../commands";
 import { requireNonEmptyProviderResponse } from "./responseGuard";
 import type { ModelAttemptPlan } from "../../../../config/models-config";
 
 export const sendMessage = async (
   text: string,
+  userMessageId: string,
   modelCandidates: ModelAttemptPlan,
   onToken?: (token: string) => void,
   threadId?: string | null,
@@ -34,9 +34,8 @@ export const sendMessage = async (
   brainSessionStore.currentModelId = modelCandidates[0] ?? "";
 
   const myGenId = brainSessionStore.generationId;
-  const normalizedUserText = normalizeMessageForHistory(text);
-  setUserFirstMsg(normalizedUserText);
-  addToHistory("User", normalizedUserText);
+  setUserFirstMsg(text);
+  addToHistory("User", text);
 
   const channelId = createProviderChannelId();
   brainSessionStore.currentChannelId = channelId;
@@ -94,7 +93,8 @@ export const sendMessage = async (
         imageDescription: brainSessionStore.imageDescription,
         userFirstMsg: brainSessionStore.userFirstMsg,
         historyLog,
-        userMessage: normalizedUserText,
+        userMessage: text,
+        userMessageId,
         channelId: channelId,
         threadId: threadId ?? null,
         userName: brainSessionStore.userName ?? undefined,

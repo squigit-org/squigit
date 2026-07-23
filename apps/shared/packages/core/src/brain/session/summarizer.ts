@@ -5,7 +5,6 @@
  */
 
 import { brainSessionStore } from "./store";
-import { normalizeMessageForHistory } from "../attachments/memory";
 
 /** Approximate bytes per token (same as Codex: APPROX_BYTES_PER_TOKEN = 4). */
 const BYTES_PER_TOKEN = 4;
@@ -29,7 +28,7 @@ export function buildContextWindow(): {
       : history
           .map(
             ({ role, content }) =>
-              `**${role}**: ${normalizeMessageForHistory(content)}`,
+              `**${role}**: ${content}`,
           )
           .join("\n\n");
 
