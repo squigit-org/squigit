@@ -4,9 +4,9 @@
 use futures_util::future::join_all;
 use regex::Regex;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::provider::gemini::transport::types::{GeminiFileData, GeminiPart};
+use crate::runtime::BrainRuntimeState;
 
 fn unwrap_link_destination(path: &str) -> &str {
     let trimmed = path.trim();
@@ -74,11 +74,9 @@ fn is_attachment_link_path(path: &str) -> bool {
 }
 
 pub(crate) async fn build_interleaved_parts(
+    runtime: &BrainRuntimeState,
     text: &str,
     api_key: &str,
-    cache: &Arc<
-        tokio::sync::Mutex<HashMap<String, crate::provider::gemini::attachments::GeminiFileRef>>,
-    >,
 ) -> Result<Vec<GeminiPart>, String> {
     let re = Regex::new(
         r"(?x)
@@ -142,7 +140,7 @@ pub(crate) async fn build_interleaved_parts(
     unique_paths.dedup();
 
     let prepare_futures = unique_paths.iter().map(|p| async {
-        crate::provider::gemini::attachments::ensure_file_uploaded(api_key, p, cache).await
+        crate::provider::gemini::attachments::ensure_file_uploaded(runtime, api_key, p, None).await
     });
 
     let results = join_all(prepare_futures).await;

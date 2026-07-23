@@ -3,6 +3,10 @@
 
 use crate::context::builder::format_history_log;
 use crate::events::BrainEventSink;
+use crate::provider::gemini::attachments::{
+    PrepareAttachmentRequest, PrepareAttachmentResult, PrepareSubmissionAttachmentsRequest,
+    PrepareSubmissionAttachmentsResult,
+};
 use crate::runtime::BrainRuntimeState;
 use squigit_storage::{MessageAttachment, ThreadData, ThreadMessage, ThreadMetadata};
 
@@ -21,6 +25,7 @@ pub struct StreamThreadRequest {
     pub thread_id: Option<String>,
     pub user_name: Option<String>,
     pub user_email: Option<String>,
+    pub attachment_preflight_token: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -103,8 +108,34 @@ impl BrainService {
             request.thread_id,
             request.user_name,
             request.user_email,
+            request.attachment_preflight_token,
         )
         .await
+    }
+
+    pub async fn prepare_attachment(
+        &self,
+        request: PrepareAttachmentRequest,
+    ) -> PrepareAttachmentResult {
+        crate::provider::gemini::attachments::prepare_attachment(&self.runtime, request).await
+    }
+
+    pub async fn cancel_attachment(&self, job_id: String) -> Result<(), String> {
+        crate::provider::gemini::attachments::cancel_attachment(&self.runtime, &job_id).await;
+        Ok(())
+    }
+
+    pub async fn cancel_all_attachment_jobs(&self) -> Result<(), String> {
+        crate::provider::gemini::attachments::cancel_all_attachment_jobs(&self.runtime).await;
+        Ok(())
+    }
+
+    pub async fn prepare_submission_attachments(
+        &self,
+        request: PrepareSubmissionAttachmentsRequest,
+    ) -> PrepareSubmissionAttachmentsResult {
+        crate::provider::gemini::attachments::prepare_submission_attachments(&self.runtime, request)
+            .await
     }
 
     pub async fn generate_thread_title(
@@ -172,6 +203,7 @@ impl BrainService {
                     thread_id: Some(metadata.id.clone()),
                     user_name: request.user_name,
                     user_email: request.user_email,
+                    attachment_preflight_token: None,
                 },
             )
             .await?;
@@ -272,6 +304,7 @@ impl BrainService {
                     thread_id: Some(request.thread_id.clone()),
                     user_name: request.user_name,
                     user_email: request.user_email,
+                    attachment_preflight_token: None,
                 },
             )
             .await?;

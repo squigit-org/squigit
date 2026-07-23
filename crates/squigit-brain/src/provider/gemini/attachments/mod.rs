@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod cache;
+mod lifecycle;
 mod manifest;
 mod mime;
 mod parts;
@@ -10,6 +11,16 @@ mod types;
 mod upload;
 
 pub use cache::ensure_file_uploaded;
+pub(crate) use lifecycle::{
+    cancel_all_attachment_jobs, cancel_attachment, cancel_preflight, consume_attachment_preflight,
+    prepare_attachment, prepare_submission_attachments, AttachmentPreflightLease,
+    AttachmentPreparationJob, SharedAttachmentWork,
+};
+pub use lifecycle::{
+    AttachmentPreparationError, AttachmentPreparationStatus, PrepareAttachmentRequest,
+    PrepareAttachmentResult, PrepareSubmissionAttachmentsRequest,
+    PrepareSubmissionAttachmentsResult, SubmissionAttachmentResult,
+};
 #[allow(unused_imports)]
 pub(crate) use manifest::{
     build_attachment_manifest_context, load_attachment_display_names, prepare_turn_attachments,

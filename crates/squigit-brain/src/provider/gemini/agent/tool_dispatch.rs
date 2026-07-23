@@ -21,13 +21,11 @@ pub(crate) struct WebToolDispatchState {
 }
 
 pub(crate) struct ToolDispatchContext<'a> {
+    pub(crate) runtime: &'a crate::runtime::BrainRuntimeState,
     pub(crate) client: &'a reqwest::Client,
     pub(crate) api_key: &'a str,
     pub(crate) model: &'a str,
     pub(crate) thread_id: Option<&'a str>,
-    pub(crate) gemini_file_cache: &'a std::sync::Arc<
-        tokio::sync::Mutex<HashMap<String, crate::provider::gemini::attachments::GeminiFileRef>>,
-    >,
     pub(crate) request_control: &'a GeminiRequestControl,
     pub(crate) web_state: &'a mut WebToolDispatchState,
 }
@@ -119,12 +117,12 @@ async fn execute_recall_thread_attachment(
         .and_then(|value| value.as_str());
 
     match crate::provider::gemini::attachments::recall_thread_attachment(
+        context.runtime,
         thread_id,
         target,
         kind,
         reason,
         context.api_key,
-        context.gemini_file_cache,
     )
     .await
     {
@@ -459,15 +457,15 @@ mod tests {
     #[tokio::test]
     async fn unknown_tool_returns_error_result() {
         let client = reqwest::Client::new();
+        let runtime = crate::runtime::BrainRuntimeState::new();
         let request_control = GeminiRequestControl::new();
         let mut web_state = WebToolDispatchState::default();
-        let gemini_file_cache = std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
         let mut context = ToolDispatchContext {
+            runtime: &runtime,
             client: &client,
             api_key: "k",
             model: "m",
             thread_id: None,
-            gemini_file_cache: &gemini_file_cache,
             request_control: &request_control,
             web_state: &mut web_state,
         };
@@ -494,15 +492,15 @@ mod tests {
     #[tokio::test]
     async fn web_search_dispatches_through_web_handler() {
         let client = reqwest::Client::new();
+        let runtime = crate::runtime::BrainRuntimeState::new();
         let request_control = GeminiRequestControl::new();
         let mut web_state = WebToolDispatchState::default();
-        let gemini_file_cache = std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
         let mut context = ToolDispatchContext {
+            runtime: &runtime,
             client: &client,
             api_key: "k",
             model: "m",
             thread_id: None,
-            gemini_file_cache: &gemini_file_cache,
             request_control: &request_control,
             web_state: &mut web_state,
         };

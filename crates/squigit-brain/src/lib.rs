@@ -10,7 +10,12 @@ pub mod service;
 pub mod system;
 pub mod tools;
 
+pub use provider::gemini::attachments::{
+    AttachmentPreparationError, AttachmentPreparationStatus, PrepareAttachmentRequest,
+    PrepareAttachmentResult, PrepareSubmissionAttachmentsRequest,
+    PrepareSubmissionAttachmentsResult, SubmissionAttachmentResult,
+};
 pub use service::{
-    AnalyzeImageRequest, BrainService, GenerateThreadTitleRequest,
-    PromptThreadRequest, StreamThreadRequest,
+    AnalyzeImageRequest, BrainService, GenerateThreadTitleRequest, PromptThreadRequest,
+    StreamThreadRequest,
 };

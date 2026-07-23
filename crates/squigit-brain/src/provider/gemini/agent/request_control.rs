@@ -55,6 +55,7 @@ pub async fn cancel_gemini_request(
     runtime: &BrainRuntimeState,
     channel_id: Option<String>,
 ) -> Result<(), String> {
+    crate::provider::gemini::attachments::cancel_preflight(runtime, channel_id.as_deref()).await;
     let mut map = runtime.active_requests.lock().await;
     if let Some(id) = channel_id {
         log::info!("Cancelling request for channel: {}", id);

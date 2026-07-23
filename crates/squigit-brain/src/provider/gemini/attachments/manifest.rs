@@ -4,13 +4,10 @@
 use squigit_storage::{AttachmentFileType, AttachmentManifestEntry, ThreadMessage, ThreadStorage};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use super::{ensure_file_uploaded, GeminiFileRef};
 use crate::provider::gemini::transport::types::{GeminiFileData, GeminiPart};
-
-type GeminiFileCache = Arc<Mutex<HashMap<String, GeminiFileRef>>>;
+use crate::runtime::BrainRuntimeState;
 
 pub(crate) struct PreparedTurnAttachments {
     pub(crate) uploaded_parts: Vec<GeminiPart>,
@@ -94,10 +91,11 @@ pub(crate) fn load_attachment_display_names(
 }
 
 pub(crate) async fn prepare_turn_attachments(
+    runtime: &BrainRuntimeState,
     thread_id: Option<&str>,
     user_message_id: Option<&str>,
     api_key: &str,
-    cache: &GeminiFileCache,
+    preflight_files: Option<&HashMap<String, GeminiFileRef>>,
 ) -> Result<PreparedTurnAttachments, String> {
     let (Some(thread_id), Some(message_id)) = (thread_id, user_message_id) else {
         return Ok(PreparedTurnAttachments {
@@ -131,10 +129,22 @@ pub(crate) async fn prepare_turn_attachments(
         if !is_uploadable(&entry.file_type) {
             continue;
         }
-        let path = storage
-            .find_object_blob(&entry.attachment_hash)
-            .map_err(|error| error.to_string())?;
-        let file_ref = ensure_file_uploaded(api_key, &path.to_string_lossy(), cache).await?;
+        let file_ref = if let Some(preflight_files) = preflight_files {
+            preflight_files
+                .get(&entry.attachment_hash)
+                .cloned()
+                .ok_or_else(|| {
+                    format!(
+                        "Attachment {} is missing from the consumed preflight",
+                        entry.attachment_hash
+                    )
+                })?
+        } else {
+            let path = storage
+                .find_object_blob(&entry.attachment_hash)
+                .map_err(|error| error.to_string())?;
+            ensure_file_uploaded(runtime, api_key, &path.to_string_lossy(), None).await?
+        };
         uploaded_parts.push(to_file_part(&file_ref));
     }
 
@@ -196,12 +206,12 @@ fn matching_entries<'a>(
 }
 
 pub(crate) async fn recall_thread_attachment(
+    runtime: &BrainRuntimeState,
     thread_id: &str,
     target: &str,
     kind: Option<&str>,
     _reason: Option<&str>,
     api_key: &str,
-    cache: &GeminiFileCache,
 ) -> Result<RecallThreadAttachmentOutcome, String> {
     let storage = storage()?;
     let manifest = storage
@@ -251,7 +261,7 @@ pub(crate) async fn recall_thread_attachment(
     let path = storage
         .find_object_blob(&hash)
         .map_err(|error| error.to_string())?;
-    let file_ref = ensure_file_uploaded(api_key, &path.to_string_lossy(), cache).await?;
+    let file_ref = ensure_file_uploaded(runtime, api_key, &path.to_string_lossy(), None).await?;
     storage
         .touch_attachment(thread_id, &hash)
         .map_err(|error| error.to_string())?;

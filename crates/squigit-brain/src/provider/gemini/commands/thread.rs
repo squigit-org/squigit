@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde_json::json;
+use squigit_storage::ThreadMessage;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -296,10 +297,51 @@ pub async fn stream_gemini_thread_v2(
     thread_id: Option<String>,
     user_name: Option<String>,
     user_email: Option<String>,
+    attachment_preflight_token: Option<String>,
 ) -> Result<String, String> {
     if model_candidates.is_empty() {
         return Err("At least one model candidate is required.".to_string());
     }
+
+    let mut api_key = api_key;
+    let preflight_files = if let Some(token) = attachment_preflight_token.as_deref() {
+        if is_initial_turn {
+            return Err(
+                "Attachment preflight tokens are only valid for follow-up turns".to_string(),
+            );
+        }
+        let (Some(thread_id), Some(message_id)) =
+            (thread_id.as_deref(), user_message_id.as_deref())
+        else {
+            return Err(
+                "Attachment preflight requires a thread and exact user message ID".to_string(),
+            );
+        };
+        let storage = squigit_storage::ThreadStorage::new().map_err(|error| error.to_string())?;
+        let message = storage
+            .get_message(thread_id, message_id)
+            .map_err(|error| error.to_string())?
+            .ok_or_else(|| format!("User message not found: {message_id}"))?;
+        let ThreadMessage::User { attachments, .. } = message else {
+            return Err(format!("Message is not a user message: {message_id}"));
+        };
+        let hashes = attachments
+            .into_iter()
+            .map(|attachment| attachment.attachment_hash)
+            .collect::<Vec<_>>();
+        let consumed = crate::provider::gemini::attachments::consume_attachment_preflight(
+            runtime,
+            token,
+            Some(thread_id),
+            Some(message_id),
+            &hashes,
+        )
+        .await?;
+        api_key = consumed.api_key;
+        Some(consumed.files_by_hash)
+    } else {
+        None
+    };
 
     emit_event(
         sink,
@@ -350,6 +392,7 @@ pub async fn stream_gemini_thread_v2(
             thread_id.clone(),
             user_name.clone(),
             user_email.clone(),
+            preflight_files.clone(),
         )
         .await;
 
@@ -423,6 +466,7 @@ async fn stream_gemini_thread_candidate(
     // Runtime context params (NEW)
     user_name: Option<String>,
     user_email: Option<String>,
+    preflight_files: Option<HashMap<String, crate::provider::gemini::attachments::GeminiFileRef>>,
 ) -> Result<String, String> {
     const MAX_TOOL_CALLS_PER_TURN: usize = 3;
     const MAX_AGENT_ITERATIONS: usize = 8;
@@ -457,9 +501,13 @@ async fn stream_gemini_thread_candidate(
             let mut parts = vec![];
 
             if let Some(path) = image_path.clone() {
-                let file_ref =
-                    crate::provider::gemini::attachments::ensure_file_uploaded(&api_key, &path, &runtime.provider_file_cache)
-                        .await?;
+                let file_ref = crate::provider::gemini::attachments::ensure_file_uploaded(
+                    runtime,
+                    &api_key,
+                    &path,
+                    None,
+                )
+                .await?;
                 parts.push(GeminiPart {
                     file_data: Some(GeminiFileData {
                         mime_type: file_ref.mime_type.clone(),
@@ -490,8 +538,7 @@ async fn stream_gemini_thread_candidate(
                 user_message.clone()
             };
             let interleaved_parts =
-                build_interleaved_parts(&initial_user_message, &api_key, &runtime.provider_file_cache)
-                    .await?;
+                build_interleaved_parts(runtime, &initial_user_message, &api_key).await?;
             parts.extend(interleaved_parts);
 
             vec![GeminiContent {
@@ -516,10 +563,11 @@ async fn stream_gemini_thread_candidate(
                 );
             }
             let prepared_attachments = prepare_turn_attachments(
+                runtime,
                 thread_id.as_deref(),
                 user_message_id.as_deref(),
                 &api_key,
-                &runtime.provider_file_cache,
+                preflight_files.as_ref(),
             )
             .await?;
 
@@ -741,11 +789,11 @@ async fn stream_gemini_thread_candidate(
             );
 
             let mut dispatch_context = ToolDispatchContext {
+                runtime,
                 client: &client,
                 api_key: &api_key,
                 model: &model,
                 thread_id: thread_id.as_deref(),
-                gemini_file_cache: &runtime.provider_file_cache,
                 request_control: &request_control,
                 web_state: &mut web_tool_state,
             };
