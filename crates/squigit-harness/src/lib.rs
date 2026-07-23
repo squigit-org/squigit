@@ -52,60 +52,39 @@ fn active_storage() -> Result<ThreadStorage, String> {
     ThreadStorage::new().map_err(|error| error.to_string())
 }
 
-fn is_path_within_base(path: &Path, base: &Path) -> bool {
-    path.starts_with(base)
-}
-
 fn resolve_attachment_path(path: &str) -> Result<PathBuf, String> {
-    let incoming = PathBuf::from(path);
-    if incoming.is_absolute() {
-        if incoming.exists() {
-            return std::fs::canonicalize(&incoming).map_err(|error| error.to_string());
-        }
-        return Err("Attachment not found".to_string());
-    }
-
     let storage = active_storage()?;
-    let from_base_dir = storage.base_dir().join(&incoming);
-    if from_base_dir.exists() {
-        return std::fs::canonicalize(&from_base_dir).map_err(|error| error.to_string());
+    let incoming = PathBuf::from(path);
+    let hash = if path.len() == 64 && path.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        Some(path)
+    } else {
+        incoming
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
     }
-
-    if let Some(file_name) = incoming.file_name().and_then(|name| name.to_str()) {
-        if let Some((hash, _ext)) = file_name.split_once('.') {
-            if hash.len() >= 2 {
-                let prefix_dir = storage.objects_dir().join(&hash[..2]);
-                if let Ok(entries) = std::fs::read_dir(prefix_dir) {
-                    for entry in entries.flatten() {
-                        let candidate = entry.path();
-                        let stem = candidate.file_stem().and_then(|value| value.to_str());
-                        if stem == Some(hash) {
-                            return std::fs::canonicalize(candidate)
-                                .map_err(|error| error.to_string());
-                        }
-                    }
-                }
-            }
-        }
+    .ok_or_else(|| "Attachment is not a CAS object".to_string())?;
+    let canonical = storage
+        .find_object_blob(hash)
+        .and_then(|path| std::fs::canonicalize(path).map_err(Into::into))
+        .map_err(|error| error.to_string())?;
+    if !incoming.is_absolute() || path == hash {
+        return Ok(canonical);
     }
-
-    Err("Attachment not found".to_string())
+    let requested = std::fs::canonicalize(incoming).map_err(|error| error.to_string())?;
+    if requested == canonical {
+        Ok(canonical)
+    } else {
+        Err("Attachment path is not the canonical CAS object".to_string())
+    }
 }
 
 fn resolve_text_attachment_path(path: &str) -> Result<PathBuf, String> {
     let resolved = resolve_attachment_path(path)?;
     let storage = active_storage()?;
-    let base_dir = std::fs::canonicalize(storage.base_dir()).map_err(|error| {
-        format!(
-            "Failed to canonicalize active thread storage directory: {}",
-            error
-        )
-    })?;
     let objects_dir = std::fs::canonicalize(storage.objects_dir()).unwrap_or_default();
 
-    if is_path_within_base(&resolved, &base_dir)
-        || (!objects_dir.as_os_str().is_empty() && is_path_within_base(&resolved, &objects_dir))
-    {
+    if !objects_dir.as_os_str().is_empty() && resolved.starts_with(&objects_dir) {
         return Ok(resolved);
     }
 
@@ -180,7 +159,25 @@ fn read_text_attachment(path: &str, label: &str) -> (TextAttachmentResult, Strin
         .and_then(|resolved| std::fs::read(&resolved).map_err(|error| error.to_string()))
     {
         Ok(bytes) => {
-            let text = String::from_utf8_lossy(&bytes).to_string();
+            let text = String::from_utf8(bytes)
+                .map_err(|error| format!("Attachment is not valid UTF-8: {error}"));
+            let text = match text {
+                Ok(text) => text,
+                Err(message) => {
+                    return (
+                        TextAttachmentResult {
+                            path: path.to_string(),
+                            display_name: name.clone(),
+                            extension,
+                            char_count: 0,
+                            ok: false,
+                            error_code: Some("read_failed".to_string()),
+                            error_message: Some(message.clone()),
+                        },
+                        format!("[Read failed: {message}]"),
+                    );
+                }
+            };
             let char_count = text.chars().count();
             (
                 TextAttachmentResult {

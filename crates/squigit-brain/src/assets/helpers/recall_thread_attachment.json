@@ -8,7 +8,7 @@
         "properties": {
           "target": {
             "type": "string",
-            "description": "The prior attachment to recall. Prefer the exact CAS path, display name, basename, or stem from the thread attachment catalog."
+            "description": "The prior attachment to recall. Prefer its exact attachment_hash, display name, basename, or stem from the attachment manifest."
           },
           "kind": {
             "type": "string",

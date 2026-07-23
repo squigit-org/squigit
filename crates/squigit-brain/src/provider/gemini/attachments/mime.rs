@@ -84,9 +84,9 @@ mod tests {
 
     #[test]
     fn image_paths_are_detected() {
-        assert!(is_image_path("objects/ab/file.png"));
+        assert!(is_image_path("objects/ab/hash/hash.png"));
         assert!(is_image_path("/tmp/file.webp"));
-        assert!(!is_image_path("objects/ab/file.docx"));
+        assert!(!is_image_path("objects/ab/hash/hash.docx"));
     }
 
     #[test]

@@ -89,8 +89,7 @@ pub(crate) fn build_system_instruction_with_tool_policy(
     user_email: &str,
     tools_enabled: bool,
 ) -> Result<String, String> {
-    let mut instruction =
-        crate::context::builder::build_system_instruction(user_name, user_email)?;
+    let mut instruction = crate::context::builder::build_system_instruction(user_name, user_email)?;
 
     if tools_enabled {
         instruction.push_str(
@@ -99,7 +98,7 @@ pub(crate) fn build_system_instruction_with_tool_policy(
              - When the user asks you to write or generate code, put the code directly in the Markdown response; do not call a tool for it.\n\
              - If the user asks for current, time-sensitive, or uncertain facts, call `web_search`.\n\
              - Secondary uploaded files from this thread may only be used when the user attaches them in this turn or when you explicitly call `recall_thread_attachment`.\n\
-             - Use the thread attachment catalog in context to pick uploaded attachments for `recall_thread_attachment`.\n\
+             - Use the attachment manifest in context to pick uploaded attachments for `recall_thread_attachment`.\n\
              - If the user asks for page-specific, OCR, quote-exact, transcription, chart-reading, or slide/sheet/section-specific details from a prior uploaded image or document, you must call `recall_thread_attachment` before answering.\n\
              - Never answer exact file-grounded questions from path references alone when a prior uploaded image/document is needed.\n\
              - Text/code attachments are pasted into the user message as raw text before you see it.\n\
@@ -278,7 +277,7 @@ mod tests {
     fn tool_status_text_prefers_display_name_for_recall() {
         let call = GeminiFunctionCall {
             name: "recall_thread_attachment".to_string(),
-            args: json!({ "target": "objects/ab/abcdef123.pdf" }),
+            args: json!({ "target": "Quarterly Report.pdf" }),
         };
         assert_eq!(
             tool_status_text(&call, Some("Quarterly Report.pdf")),
@@ -288,8 +287,7 @@ mod tests {
 
     #[test]
     fn tool_policy_treats_text_as_pasted_content() {
-        let instruction =
-            build_system_instruction_with_tool_policy("", "", true).expect("policy");
+        let instruction = build_system_instruction_with_tool_policy("", "", true).expect("policy");
         assert!(instruction.contains("Text/code attachments are pasted"));
         assert!(instruction.contains("`recall_thread_attachment`"));
     }

@@ -17,7 +17,7 @@ use crate::provider::gemini::agent::tool_orchestrator::{
     build_system_instruction_with_tool_policy, tool_status_text, tool_step_id,
 };
 use crate::provider::gemini::attachments::{
-    build_interleaved_parts, build_thread_attachment_catalog, extract_attachment_mentions,
+    build_attachment_manifest_context, build_interleaved_parts, load_attachment_display_names,
     prepare_turn_attachments,
 };
 use crate::provider::gemini::fallback::{is_candidate_retryable_error, is_transport_error};
@@ -291,6 +291,7 @@ pub async fn stream_gemini_thread_v2(
     user_first_msg: Option<String>,
     history_log: Option<String>,
     user_message: String,
+    user_message_id: Option<String>,
     channel_id: String,
     thread_id: Option<String>,
     user_name: Option<String>,
@@ -344,6 +345,7 @@ pub async fn stream_gemini_thread_v2(
             user_first_msg.clone(),
             history_log.clone(),
             user_message.clone(),
+            user_message_id.clone(),
             channel_id.clone(),
             thread_id.clone(),
             user_name.clone(),
@@ -415,6 +417,7 @@ async fn stream_gemini_thread_candidate(
     history_log: Option<String>,
     // Current user message (empty on first turn for image-only analysis)
     user_message: String,
+    user_message_id: Option<String>,
     channel_id: String,
     thread_id: Option<String>,
     // Runtime context params (NEW)
@@ -472,6 +475,14 @@ async fn stream_gemini_thread_candidate(
                 text: Some(system_prompt),
                 ..Default::default()
             });
+            if let Some(manifest_context) =
+                build_attachment_manifest_context(thread_id.as_deref())?
+            {
+                parts.push(GeminiPart {
+                    text: Some(manifest_context),
+                    ..Default::default()
+                });
+            }
 
             let initial_user_message = if user_message.trim().is_empty() {
                 DEFAULT_INITIAL_USER_PROMPT.to_string()
@@ -497,39 +508,26 @@ async fn stream_gemini_thread_candidate(
             );
 
             let composed_user_message = user_message.clone();
-            for (path, display_name) in crate::provider::gemini::attachments::load_thread_attachment_display_names(thread_id.as_deref())? {
+            for (hash, display_name) in load_attachment_display_names(thread_id.as_deref())? {
                 insert_attachment_display_name(
                     &mut attachment_display_name_by_path,
-                    &path,
+                    &hash,
                     &display_name,
                 );
             }
-            let attachment_mentions = extract_attachment_mentions(&user_message);
-            for mention in &attachment_mentions {
-                if let Some(display_name) = mention
-                    .display_name
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|v| !v.is_empty())
-                {
-                    insert_attachment_display_name(
-                        &mut attachment_display_name_by_path,
-                        &mention.path,
-                        display_name,
-                    );
-                }
-            }
             let prepared_attachments = prepare_turn_attachments(
                 thread_id.as_deref(),
-                &attachment_mentions,
+                user_message_id.as_deref(),
                 &api_key,
                 &runtime.provider_file_cache,
             )
             .await?;
 
-            if let Some(attachment_catalog) = build_thread_attachment_catalog(thread_id.as_deref())? {
+            if let Some(manifest_context) =
+                build_attachment_manifest_context(thread_id.as_deref())?
+            {
                 context_prompt.push_str("\n\n");
-                context_prompt.push_str(&attachment_catalog);
+                context_prompt.push_str(&manifest_context);
             }
 
             let mut parts = vec![

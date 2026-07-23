@@ -5,7 +5,7 @@ use crate::context::builder::format_history_log;
 use crate::events::BrainEventSink;
 use crate::provider::gemini::transport::types::GeminiEvent;
 use crate::runtime::BrainRuntimeState;
-use squigit_storage::{ThreadData, ThreadMessage, ThreadMetadata};
+use squigit_storage::{MessageAttachment, ThreadData, ThreadMessage, ThreadMetadata};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
@@ -18,6 +18,7 @@ pub struct StreamThreadRequest {
     pub user_first_msg: Option<String>,
     pub history_log: Option<String>,
     pub user_message: String,
+    pub user_message_id: Option<String>,
     pub channel_id: String,
     pub thread_id: Option<String>,
     pub user_name: Option<String>,
@@ -99,6 +100,7 @@ impl BrainService {
             request.user_first_msg,
             request.history_log,
             request.user_message,
+            request.user_message_id,
             request.channel_id,
             request.thread_id,
             request.user_name,
@@ -144,7 +146,14 @@ impl BrainService {
         let storage = crate::context::media::get_active_storage()?;
 
         let mut metadata = ThreadMetadata::new("Untitled".to_string(), image.hash.clone());
-        let thread = ThreadData::new(metadata.clone());
+        let display_name = std::path::Path::new(&request.image_path)
+            .file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or("squigitshot.png");
+        let initial = storage
+            .attachment_manifest_entry(&image.hash, display_name, metadata.created_at)
+            .map_err(|error| error.to_string())?;
+        let thread = ThreadData::new(metadata.clone(), initial);
         storage.save_thread(&thread).map_err(|e| e.to_string())?;
 
         let text = request.user_message.unwrap_or_default();
@@ -160,6 +169,7 @@ impl BrainService {
                 user_first_msg: None,
                 history_log: None,
                 user_message: text.clone(),
+                user_message_id: None,
                 channel_id: request.channel_id,
                 thread_id: Some(metadata.id.clone()),
                 user_name: request.user_name,
@@ -215,7 +225,7 @@ impl BrainService {
         let thread = storage
             .load_thread(&request.thread_id)
             .map_err(|e| e.to_string())?;
-        let normalized_user_message =
+        let (normalized_user_message, message_attachments) =
             normalize_prompt_message_with_at_paths(&storage, &request.user_message)?;
 
         let image_path = storage
@@ -224,21 +234,30 @@ impl BrainService {
 
         let mut history_pairs = Vec::new();
         for message in &thread.messages {
-            history_pairs.push((message.role.clone(), message.content.clone()));
+            history_pairs.push((message.role().to_string(), message.content().to_string()));
         }
 
         let image_description = thread
             .messages
             .iter()
-            .find(|message| message.role == "assistant")
-            .map(|message| message.content.clone())
+            .find(|message| message.role() == "assistant")
+            .map(|message| message.content().to_string())
             .unwrap_or_default();
         let user_first_msg = thread
             .messages
             .iter()
-            .find(|message| message.role == "user")
-            .map(|message| message.content.clone())
+            .find(|message| message.role() == "user")
+            .map(|message| message.content().to_string())
             .unwrap_or_default();
+
+        let user_message = ThreadMessage::user_with_attachments(
+            normalized_user_message.clone(),
+            message_attachments,
+        );
+        let user_message_id = user_message.id().to_string();
+        storage
+            .append_message(&request.thread_id, &user_message)
+            .map_err(|e| e.to_string())?;
 
         let collector = CollectingEventSink::new(Some(sink));
         self.stream_thread(
@@ -252,6 +271,7 @@ impl BrainService {
                 user_first_msg: Some(user_first_msg),
                 history_log: Some(format_history_log(&history_pairs)),
                 user_message: normalized_user_message.clone(),
+                user_message_id: Some(user_message_id),
                 channel_id: request.channel_id,
                 thread_id: Some(request.thread_id.clone()),
                 user_name: request.user_name,
@@ -262,12 +282,6 @@ impl BrainService {
 
         let assistant_message = collector.current_text();
 
-        storage
-            .append_message(
-                &request.thread_id,
-                &ThreadMessage::user(normalized_user_message.clone()),
-            )
-            .map_err(|e| e.to_string())?;
         storage
             .append_message(
                 &request.thread_id,
@@ -354,8 +368,9 @@ impl BrainEventSink for CollectingEventSink<'_> {
 fn normalize_prompt_message_with_at_paths(
     storage: &squigit_storage::ThreadStorage,
     input: &str,
-) -> Result<String, String> {
+) -> Result<(String, Vec<MessageAttachment>), String> {
     let mut changed = false;
+    let mut attachments = Vec::new();
     let normalized = input
         .split_whitespace()
         .map(|token| {
@@ -379,15 +394,19 @@ fn normalize_prompt_message_with_at_paths(
                 .file_name()
                 .and_then(|value| value.to_str())
                 .unwrap_or("attachment");
+            attachments.push(MessageAttachment {
+                attachment_hash: stored.hash,
+                source_path: Some(raw_path.to_string()),
+            });
             changed = true;
-            Ok(format!("[{}](<{}>)", label, stored.path))
+            Ok(format!("[{label}](<file://{}>)", stored.path))
         })
         .collect::<Result<Vec<_>, String>>()?
         .join(" ");
 
     if changed {
-        Ok(normalized)
+        Ok((normalized, attachments))
     } else {
-        Ok(input.to_string())
+        Ok((input.to_string(), attachments))
     }
 }

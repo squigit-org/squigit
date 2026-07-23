@@ -29,8 +29,9 @@ pub fn process_and_store_image(
     path: &str,
     explicit_tone: Option<String>,
 ) -> Result<StoredImage, String> {
-    let buffer = std::fs::read(path).map_err(|e| format!("Failed to read file: {}", e))?;
-    process_bytes_internal(buffer, explicit_tone)
+    get_active_storage()?
+        .store_image_from_path(path, explicit_tone)
+        .map_err(|error| error.to_string())
 }
 
 #[derive(Debug, Deserialize)]

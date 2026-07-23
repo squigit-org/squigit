@@ -205,7 +205,7 @@ fn score_message(
     total_messages: usize,
     now_unix: i64,
 ) -> Option<ScoredMessage> {
-    let body_normalized = normalize_text(&message.content);
+    let body_normalized = normalize_text(message.content());
     if body_normalized.is_empty() {
         return None;
     }
@@ -234,9 +234,9 @@ fn score_message(
     if parsed.is_empty() {
         return Some(ScoredMessage {
             message_index,
-            message_role: message.role.clone(),
-            message_timestamp: message.timestamp.to_rfc3339(),
-            snippet: build_snippet(&message.content, None),
+            message_role: message.role().to_string(),
+            message_timestamp: message.timestamp().to_rfc3339(),
+            snippet: build_snippet(message.content(), None),
             score: round_score(recency * 70.0 + position_bias * 30.0),
         });
     }
@@ -247,7 +247,7 @@ fn score_message(
     let regex_bounds = parsed
         .regex
         .as_ref()
-        .and_then(|compiled| compiled.find(&message.content))
+        .and_then(|compiled| compiled.find(message.content()))
         .map(|m| (m.start(), m.end()));
 
     if parsed.is_regex_mode && regex_bounds.is_none() {
@@ -328,13 +328,13 @@ fn score_message(
         return None;
     }
 
-    let bounds = regex_bounds.or_else(|| find_literal_match_bounds(&message.content, parsed));
+    let bounds = regex_bounds.or_else(|| find_literal_match_bounds(message.content(), parsed));
 
     Some(ScoredMessage {
         message_index,
-        message_role: message.role.clone(),
-        message_timestamp: message.timestamp.to_rfc3339(),
-        snippet: build_snippet(&message.content, bounds),
+        message_role: message.role().to_string(),
+        message_timestamp: message.timestamp().to_rfc3339(),
+        snippet: build_snippet(message.content(), bounds),
         score: round_score(score),
     })
 }
