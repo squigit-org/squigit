@@ -33,6 +33,7 @@ import {
   parseAttachmentPaths,
   attachmentFromPath,
   buildAttachmentMention,
+  getAttachmentHash,
   stripImageAttachmentMentions,
   type Attachment,
 } from "@squigit/core/brain/attachments";
@@ -775,17 +776,43 @@ export const ThreadRoute: React.FC = () => {
       return;
     }
 
-    const parsedPromptAttachments = parseAttachmentPaths(app.input).map(
-      (path) => attachmentFromPath(path),
+    const attachmentByPath = new Map(
+      app.attachments.map((attachment) => [attachment.path, attachment]),
     );
+    const parsedPromptAttachments = parseAttachmentPaths(finalInput).map(
+      (path) => attachmentByPath.get(path) ?? attachmentFromPath(path),
+    );
+    const attachmentsByHash = parsedPromptAttachments.reduce(
+      (byHash, attachment) => {
+        const attachmentHash = getAttachmentHash(attachment.path);
+        if (attachmentHash) {
+          byHash.set(attachmentHash, {
+            attachment_hash: attachmentHash,
+            source_path: attachment.sourcePath ?? null,
+          });
+        }
+        return byHash;
+      },
+      new Map<
+        string,
+        { attachment_hash: string; source_path: string | null }
+      >(),
+    );
+    const structuredAttachments = Array.from(attachmentsByHash.values());
 
     app.trackPendingPromptAttachmentAnalysis(
       dedupeAttachmentsByPath([...app.attachments, ...parsedPromptAttachments]),
     );
-    app.thread.handleSend(finalInput, {
-      modelId: app.inputModel,
-      effort: app.inputEffort,
-    });
+    void app.thread
+      .handleSend(
+        finalInput,
+        {
+          modelId: app.inputModel,
+          effort: app.inputEffort,
+        },
+        structuredAttachments,
+      )
+      .catch(console.error);
     app.setInput("");
     app.clearAttachments();
     snapToBottomAfterSend();
@@ -1169,7 +1196,6 @@ export const ThreadRoute: React.FC = () => {
           openedFromThread: true,
         })
       }
-      rememberAttachmentSourcePath={app.rememberAttachmentSourcePath}
       showScrollToBottomButton={showScrollToBottomButton}
       keepScrollToBottomButtonMounted={showLoadingOverlay}
       scrollToBottomButtonRef={scrollToBottomButtonRef}

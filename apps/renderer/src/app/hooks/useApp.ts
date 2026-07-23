@@ -15,7 +15,9 @@ import {
   loadThread as loadStoredThread,
   overwriteThreadMessages,
   resolveOcrModelId,
+  type ThreadMessage,
 } from "@squigit/core/config";
+import type { Message } from "@squigit/core/brain/engine";
 import type { Attachment } from "@squigit/core/brain/attachments";
 import { github } from "@squigit/core/services/github";
 import {
@@ -38,6 +40,29 @@ import { useAppOcr } from "./useAppOcr";
 import { useAppPanel } from "./useAppPanel";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
+
+function toStoredMessage(message: Message): ThreadMessage {
+  const base = {
+    id: message.id,
+    content: message.text,
+    timestamp: new Date(message.timestamp).toISOString(),
+  };
+
+  if (message.role === "user") {
+    return {
+      ...base,
+      role: "user",
+      attachments: message.attachments ?? [],
+    };
+  }
+
+  return {
+    ...base,
+    role: "assistant",
+    citations: Array.isArray(message.citations) ? message.citations : [],
+    tool_steps: Array.isArray(message.toolSteps) ? message.toolSteps : [],
+  };
+}
 
 const isScannedOcrEntry = (
   entry: OcrAnnotationEntry | undefined,
@@ -158,30 +183,21 @@ export const useApp = () => {
   });
 
   const handleMessageAdded = useCallback(
-    (msg: any, targetThreadId?: string) => {
+    async (msg: Message, targetThreadId: string) => {
       const activeId = targetThreadId || threadHistory.activeSessionId;
       if (activeId && !isOnboardingId(activeId)) {
-        const role = msg.role === "user" ? "user" : "assistant";
-        appendThreadMessage(activeId, role, msg.text).catch(console.error);
+        await appendThreadMessage(activeId, toStoredMessage(msg));
       }
     },
     [threadHistory.activeSessionId],
   );
 
   const handleOverwriteMessages = useCallback(
-    (msgs: any[]) => {
+    (msgs: Message[]) => {
       const activeId = threadHistory.activeSessionId;
       if (!activeId) return;
 
-      const formatted = msgs.map((message: any) => ({
-        role: (message.role === "user" ? "user" : "assistant") as
-          | "user"
-          | "assistant",
-        content: message.text,
-        timestamp: new Date(message.timestamp).toISOString(),
-        citations: Array.isArray(message.citations) ? message.citations : [],
-        tool_steps: Array.isArray(message.toolSteps) ? message.toolSteps : [],
-      }));
+      const formatted = msgs.map(toStoredMessage);
 
       overwriteThreadMessages(activeId, formatted).catch(console.error);
     },
@@ -223,7 +239,6 @@ export const useApp = () => {
     ocr.isOcrScanning;
 
   const media = useAppMedia({
-    attachments: attachments.attachments,
     activeThreadId: threadHistory.activeSessionId,
   });
   const busyGuard = useAppBusyGuard({
@@ -519,7 +534,6 @@ export const useApp = () => {
     trackPendingPromptAttachmentAnalysis,
     addAttachmentFromPath: attachments.addFromPath,
     clearAttachments: attachments.clearAttachments,
-    rememberAttachmentSourcePath: media.rememberAttachmentSourcePath,
     setShowUpdate,
     handleContextMenu: contextMenuState.handleContextMenu,
     handleCloseContextMenu: contextMenuState.handleCloseContextMenu,

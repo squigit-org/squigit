@@ -8,21 +8,17 @@ import { useState, useCallback } from "react";
 import type { Attachment } from "@squigit/core/brain/attachments";
 import { attachmentFromPath } from "@squigit/core/brain/attachments";
 
-function filterImageAttachments(attachments: Attachment[]): Attachment[] {
-  return attachments.filter((attachment) => attachment.type === "image");
-}
-
 export function useAttachments() {
   const [attachments, setAttachmentsState] = useState<Attachment[]>([]);
 
   const setAttachments = useCallback((nextAttachments: Attachment[]) => {
-    setAttachmentsState(filterImageAttachments(nextAttachments));
+    setAttachmentsState(nextAttachments);
   }, []);
 
   const addAttachments = useCallback((newOnes: Attachment[]) => {
     setAttachmentsState((prev) => [
       ...prev,
-      ...filterImageAttachments(newOnes),
+      ...newOnes,
     ]);
   }, []);
 

@@ -61,7 +61,12 @@ export const commands = {
   runSidecarVersion: (command: string) => platform.invoke<string>("run_sidecar_version", { command }),
   
   // App Capture
-  getInitialImage: () => platform.invoke<{ hash: string; path: string } | null>("get_initial_image"),
+  getInitialImage: () =>
+    platform.invoke<{
+      hash: string;
+      path: string;
+      displayName?: string;
+    } | null>("get_initial_image"),
 
   // Image Storage & Processing
   processImagePath: (path: string) =>
@@ -84,42 +89,9 @@ export const commands = {
     }),
   resolveAttachmentPath: (path: string) =>
     platform.invoke<string>("resolve_attachment_path", { path }),
-  registerAttachmentSource: (
-    threadId: string,
-    casPath: string,
-    sourcePath: string,
-    displayName?: string,
-  ) =>
-    platform.invoke("register_attachment_source", {
-      threadId,
-      casPath,
-      sourcePath,
-      displayName,
-    }),
-  reviseAttachmentCasPath: (
-    threadId: string,
-    citationPath: string,
-    newCasPath: string,
-    displayName?: string,
-  ) =>
-    platform.invoke("revise_attachment_cas_path", {
-      threadId,
-      citationPath,
-      newCasPath,
-      displayName,
-    }),
-  resolveAttachmentCasPath: (citationPath: string, threadId: string) =>
-    platform.invoke<string | null>("resolve_attachment_cas_path", {
-      citationPath,
-      threadId,
-    }),
-  resolveAttachmentSourcePath: (casPath: string, threadId?: string) =>
+  resolveAttachmentSourcePath: (attachmentHash: string, threadId?: string) =>
     platform.invoke<string | null>("resolve_attachment_source_path", {
-      casPath,
-      threadId,
-    }),
-  listAttachmentSources: (threadId?: string) =>
-    platform.invoke<Record<string, string>>("list_attachment_sources", {
+      attachmentHash,
       threadId,
     }),
 

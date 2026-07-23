@@ -36,7 +36,7 @@ export const useBrainSession = ({
     fromHistory?: boolean;
   } | null;
   enabled: boolean;
-  onMessage?: (message: Message, threadId: string) => void;
+  onMessage?: (message: Message, threadId: string) => Promise<void>;
   onOverwriteMessages?: (messages: Message[]) => void;
   threadId: string | null;
   threadTitle: string;

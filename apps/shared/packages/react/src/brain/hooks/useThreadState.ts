@@ -71,7 +71,7 @@ export const useThreadState = (enabled: boolean) => {
     targetThreadId?: string | null,
   ) => {
     const errorBubble: Message = {
-      id: Date.now().toString(),
+      id: `msg_${crypto.randomUUID()}`,
       role: "model",
       text: errorMsg,
       timestamp: Date.now(),
@@ -81,9 +81,14 @@ export const useThreadState = (enabled: boolean) => {
     setMessages((prev) => [...prev, errorBubble]);
 
     if (targetThreadId) {
-      appendThreadMessage(targetThreadId, "assistant", errorMsg).catch(
-        console.error,
-      );
+      appendThreadMessage(targetThreadId, {
+        id: errorBubble.id,
+        role: "assistant",
+        content: errorBubble.text,
+        timestamp: new Date(errorBubble.timestamp).toISOString(),
+        citations: [],
+        tool_steps: [],
+      }).catch(console.error);
     }
 
     setIsLoading(false);

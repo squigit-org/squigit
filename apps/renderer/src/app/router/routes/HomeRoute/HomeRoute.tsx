@@ -33,6 +33,7 @@ const isExpectedClipboardImageMiss = (error: unknown): boolean => {
 interface CASImageData {
   imageId: string;
   path: string;
+  displayName?: string;
 }
 
 interface HomeRouteProps {
@@ -81,6 +82,7 @@ export const HomeRoute: React.FC<HomeRouteProps> = ({
               onImageReady({
                 imageId: result.hash,
                 path: result.path,
+                displayName: file.name || filePath.split(/[/\\]/).pop(),
               });
             } catch (error) {
               console.error("Failed to process dropped file:", error);

@@ -13,6 +13,7 @@ import type {
   BrainEngineHandle,
   BrainStartupImage,
 } from "@squigit/core/brain/engine";
+import type { ThreadMessageAttachment } from "@squigit/core/config";
 import { prepareBrainInput } from "@squigit/core/brain/attachments";
 import {
   cancelActiveProviderRequest as cancelActiveBrainRequest,
@@ -53,6 +54,8 @@ import { API_STATUS_TEXT, mapToolStatusText } from "@squigit/core/helpers";
 
 const DEFAULT_THREAD_TITLE_NORMALIZED = "new thread";
 
+const createMessageId = () => `msg_${crypto.randomUUID()}`;
+
 function normalizeThreadTitle(title: string | null | undefined): string {
   if (!title) return "";
 
@@ -74,7 +77,7 @@ export const useBrainEngine = (config: {
   threadTitle: string;
   startupImage: BrainStartupImage | null;
   onMissingApiKey?: () => void;
-  onMessage?: (message: Message, threadId: string) => void;
+  onMessage?: (message: Message, threadId: string) => Promise<void>;
   onOverwriteMessages?: (messages: Message[]) => void;
   onTitleGenerated?: (title: string) => void;
   generateTitle?: (
@@ -601,7 +604,7 @@ export const useBrainEngine = (config: {
 
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
-    const responseId = Date.now().toString();
+    const responseId = createMessageId();
     beginPendingAssistantTurn(responseId, "initial", requestStartedAtMs);
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -609,9 +612,7 @@ export const useBrainEngine = (config: {
       clearPendingGenerationState();
       return;
     }
-    let hasGeneratedTitleFromBrief = false;
     const mainCandidates = buildModelAttemptPlan(selection, "main");
-    const microTaskCandidates = buildModelAttemptPlan(selection, "micro");
 
     try {
       if (signal.aborted) {
@@ -627,7 +628,6 @@ export const useBrainEngine = (config: {
       );
       const responseText = await startBrainSessionStream(
         mainCandidates,
-        microTaskCandidates,
         imgData.path,
         (token: string) => {
           if (signal.aborted) return;
@@ -636,28 +636,6 @@ export const useBrainEngine = (config: {
         config.threadId,
         config.userName,
         config.userEmail,
-        (brief: string) => {
-          if (
-            hasGeneratedTitleFromBrief ||
-            imgData.fromHistory ||
-            !config.generateTitle ||
-            !config.onTitleGenerated
-          ) {
-            return;
-          }
-
-          hasGeneratedTitleFromBrief = true;
-          console.log(
-            "[useBrainEngine] Triggering title generation using image brief",
-          );
-          config
-            .generateTitle(brief, microTaskCandidates)
-            .then((title) => {
-              console.log("[useBrainEngine] Title generated:", title);
-              if (!signal.aborted) config.onTitleGenerated?.(title);
-            })
-            .catch(console.error);
-        },
         toolTracker.onEvent,
       );
       console.log("[useBrainEngine] startBrainSessionStream finished!");
@@ -721,7 +699,7 @@ export const useBrainEngine = (config: {
 
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
-    const responseId = Date.now().toString();
+    const responseId = createMessageId();
     beginPendingAssistantTurn(responseId, "edit", requestStartedAtMs);
 
     try {
@@ -734,19 +712,16 @@ export const useBrainEngine = (config: {
         effort: config.currentEffort,
       };
       const mainCandidates = buildModelAttemptPlan(selection, "main");
-      const microTaskCandidates = buildModelAttemptPlan(selection, "micro");
 
       const toolTracker = createStreamToolTracker(resetPendingRawText);
 
       const responseText = await startBrainSessionStream(
         mainCandidates,
-        microTaskCandidates,
         startupImage.path,
         (token: string) => {
           appendPendingRawText(token);
         },
         config.threadId,
-        undefined,
         undefined,
         undefined,
         toolTracker.onEvent,
@@ -775,7 +750,7 @@ export const useBrainEngine = (config: {
     const targetThreadId = config.threadId;
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
-    const responseId = (Date.now() + 1).toString();
+    const responseId = createMessageId();
     beginPendingAssistantTurn(responseId, "message", requestStartedAtMs);
 
     try {
@@ -790,6 +765,7 @@ export const useBrainEngine = (config: {
       );
       const responseText = await sendBrainMessage(
         preparedInput.brainText,
+        lastSentMessage.id,
         mainCandidates,
         (token: string) => {
           appendPendingRawText(token);
@@ -815,6 +791,7 @@ export const useBrainEngine = (config: {
   const handleSend = async (
     userText: string,
     selection?: ModelSelection,
+    attachments: ThreadMessageAttachment[] = [],
   ) => {
     if (!userText.trim() || config.state.isLoading) return;
     const targetThreadId = config.threadId;
@@ -822,21 +799,23 @@ export const useBrainEngine = (config: {
     const preparedInput = await prepareBrainInput(userText, targetThreadId);
 
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: createMessageId(),
       role: "user",
       text: preparedInput.displayText,
       timestamp: Date.now(),
+      attachments,
     };
 
     setLastSentMessage(userMsg);
     setMessages((prev: Message[]) => [...prev, userMsg]);
-    if (config.onMessage && targetThreadId)
-      config.onMessage(userMsg, targetThreadId);
+    if (config.onMessage && targetThreadId) {
+      await config.onMessage(userMsg, targetThreadId);
+    }
     setIsLoading(true);
     isRequestCancelledRef.current = false;
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
-    const responseId = (Date.now() + 1).toString();
+    const responseId = createMessageId();
     beginPendingAssistantTurn(responseId, "message", requestStartedAtMs);
 
     try {
@@ -846,6 +825,7 @@ export const useBrainEngine = (config: {
       const toolTracker = createStreamToolTracker(resetPendingRawText);
       const responseText = await sendBrainMessage(
         preparedInput.brainText,
+        userMsg.id,
         mainCandidates,
         (token: string) => {
           appendPendingRawText(token);
@@ -880,7 +860,6 @@ export const useBrainEngine = (config: {
     const retrySelection = selection ?? activeComposerSelectionRef.current;
     activeComposerSelectionRef.current = retrySelection;
     const mainCandidates = buildModelAttemptPlan(retrySelection, "main");
-    const microTaskCandidates = buildModelAttemptPlan(retrySelection, "micro");
 
     preRetryMessagesRef.current = [...messages];
 
@@ -896,7 +875,7 @@ export const useBrainEngine = (config: {
     resetToolStreamingState();
     const requestStartedAtMs = Date.now();
 
-    const newResponseId = Date.now().toString();
+    const newResponseId = createMessageId();
 
     let fallbackImagePath: string | undefined;
     if (config.startupImage) {
@@ -914,13 +893,11 @@ export const useBrainEngine = (config: {
         msgIndex,
         messages,
         mainCandidates,
-        microTaskCandidates,
         config.threadId,
         (token: string) => {
           appendPendingRawText(token);
         },
         fallbackImagePath,
-        undefined,
         toolTracker.onEvent,
       );
 
@@ -931,6 +908,7 @@ export const useBrainEngine = (config: {
         config.generateTitle &&
         config.onTitleGenerated
       ) {
+        const microTaskCandidates = buildModelAttemptPlan(retrySelection, "micro");
         config
           .generateTitle(responseText, microTaskCandidates)
           .then((title) => config.onTitleGenerated?.(title))
@@ -1016,7 +994,7 @@ export const useBrainEngine = (config: {
       config.onOverwriteMessages?.(oldMessages);
     } else {
       const stoppedMsg: Message = {
-        id: Date.now().toString(),
+        id: createMessageId(),
         role: "model",
         text: "You stopped this response.",
         timestamp: Date.now(),
@@ -1025,7 +1003,7 @@ export const useBrainEngine = (config: {
       setMessages((prev: Message[]) => [...prev, stoppedMsg]);
       const targetThreadId = sessionThreadIdRef.current || config.threadId;
       if (config.onMessage && targetThreadId) {
-        config.onMessage(stoppedMsg, targetThreadId);
+        void config.onMessage(stoppedMsg, targetThreadId);
       }
     }
 

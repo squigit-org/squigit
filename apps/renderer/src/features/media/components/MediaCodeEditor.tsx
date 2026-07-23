@@ -30,9 +30,6 @@ export interface MediaCodeEditorHandle {
 
 interface MediaCodeEditorProps {
   filePath: string;
-  attachmentPath: string;
-  fileName: string;
-  threadId?: string;
   language: string;
   value: string;
   canEdit: boolean;
@@ -47,9 +44,6 @@ export const MediaCodeEditor = forwardRef<
   (
     {
       filePath,
-      attachmentPath,
-      fileName,
-      threadId,
       language,
       value,
       canEdit,
@@ -104,15 +98,6 @@ export const MediaCodeEditor = forwardRef<
       try {
         const stored = await commands.storeTextInCas(value, language || "txt");
 
-        if (threadId) {
-          await commands.reviseAttachmentCasPath(
-            threadId,
-            attachmentPath,
-            stored.path,
-            fileName,
-          );
-        }
-
         setSavedValue(value);
         onSaved(stored.path);
         setIsEditing(false);
@@ -127,13 +112,10 @@ export const MediaCodeEditor = forwardRef<
         setIsSaving(false);
       }
     }, [
-      attachmentPath,
-      fileName,
       isSaving,
       language,
       onSaved,
       savedValue,
-      threadId,
       value,
     ]);
 

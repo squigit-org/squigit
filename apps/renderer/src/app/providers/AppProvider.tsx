@@ -39,7 +39,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const mediaValue = useMemo<AppMediaContextValue>(
     () => ({
       mediaViewer: app.mediaViewer,
-      rememberAttachmentSourcePath: app.rememberAttachmentSourcePath,
       openMediaViewer: app.openMediaViewer,
       closeMediaViewer: app.closeMediaViewer,
     }),
@@ -47,7 +46,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       app.closeMediaViewer,
       app.mediaViewer,
       app.openMediaViewer,
-      app.rememberAttachmentSourcePath,
     ],
   );
   const navigationValue = useMemo<AppNavigationContextValue>(

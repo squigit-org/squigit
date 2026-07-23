@@ -52,7 +52,11 @@ export const useAppCapture = ({
   const [hasCheckedStartupImage, setHasCheckedStartupImage] = useState(false);
 
   const handleImageReady = useCallback(
-    async (imageData: { imageId: string; path: string }) => {
+    async (imageData: {
+      imageId: string;
+      path: string;
+      displayName?: string;
+    }) => {
       if (!activeProfileRef.current) {
         console.log("Image upload attempted in guest mode - requiring login");
         dialogs.setShowLoginRequiredDialog(true);
@@ -87,6 +91,7 @@ export const useAppCapture = ({
           "New thread",
           imageData.imageId,
           workspaceId,
+          imageData.displayName,
         );
         threadHistoryRef.current?.setPendingWorkspaceId(null);
         threadHistory.setActiveSessionId(newThread.id);
@@ -133,6 +138,7 @@ export const useAppCapture = ({
           handleImageReady({
             imageId: initialImage.hash,
             path: initialImage.path,
+            displayName: initialImage.displayName,
           });
         }
       } catch (e) {
@@ -170,6 +176,7 @@ export const useAppCapture = ({
         handleImageReadyRef.current({
           imageId: result.hash,
           path: result.path,
+          displayName: imagePath.split(/[/\\]/).pop(),
         });
       } catch (error) {
         console.error("Failed to process CLI image event:", error);

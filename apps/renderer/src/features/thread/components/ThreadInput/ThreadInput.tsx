@@ -45,7 +45,6 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
     onAttachmentsChange,
     onCaptureToInput,
     onPreviewAttachment,
-    rememberAttachmentSourcePath,
     showScrollToBottomButton = false,
     keepScrollToBottomButtonMounted = false,
     scrollToBottomButtonRef,
@@ -172,7 +171,6 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
                 hash: string;
                 path: string;
               }>("store_image_from_path", { path: filePath });
-              await rememberAttachmentSourcePath?.(result.path, filePath);
               nextAttachments.push(
                 attachmentFromPath(
                   result.path,
@@ -193,7 +191,14 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
                 hash: string;
                 path: string;
               }>("store_file_from_path", { path: filePath });
-              await rememberAttachmentSourcePath?.(result.path, filePath);
+              nextAttachments.push(
+                attachmentFromPath(
+                  result.path,
+                  undefined,
+                  originalName,
+                  filePath,
+                ),
+              );
               inlineLinks.push(
                 buildAttachmentMention(result.path, originalName),
               );
@@ -222,7 +227,14 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
               hash: string;
               path: string;
             }>("store_file_from_path", { path: filePath });
-            await rememberAttachmentSourcePath?.(result.path, filePath);
+            nextAttachments.push(
+              attachmentFromPath(
+                result.path,
+                undefined,
+                originalName,
+                filePath,
+              ),
+            );
             inlineLinks.push(buildAttachmentMention(result.path, originalName));
           } catch (err) {
             console.error("Failed to validate selected text file:", err);
@@ -236,11 +248,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
           insertInlineFileLinks(inlineLinks);
         }
       },
-      [
-        insertInlineFileLinks,
-        onAttachmentsChange,
-        rememberAttachmentSourcePath,
-      ],
+      [insertInlineFileLinks, onAttachmentsChange],
     );
 
     const handleDragOver = useCallback((e: React.DragEvent) => {

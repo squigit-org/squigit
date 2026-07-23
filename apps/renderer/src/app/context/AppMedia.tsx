@@ -10,7 +10,6 @@ import type { AppState } from "../providers/AppProvider";
 export type AppMediaContextValue = Pick<
   AppState,
   | "mediaViewer"
-  | "rememberAttachmentSourcePath"
   | "openMediaViewer"
   | "closeMediaViewer"
 >;

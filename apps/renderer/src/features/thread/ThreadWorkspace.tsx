@@ -73,10 +73,6 @@ interface ThreadWorkspaceProps {
     index: number,
     images: Attachment[],
   ) => void | Promise<void>;
-  rememberAttachmentSourcePath: (
-    storedPath: string,
-    sourcePath: string,
-  ) => void | Promise<void>;
   showScrollToBottomButton: boolean;
   keepScrollToBottomButtonMounted: boolean;
   scrollToBottomButtonRef: RefObject<HTMLButtonElement | null>;
@@ -137,7 +133,6 @@ const ThreadWorkspaceComponent: React.FC<ThreadWorkspaceProps> = ({
   onAttachmentsChange,
   onCaptureToInput,
   onPreviewAttachment,
-  rememberAttachmentSourcePath,
   showScrollToBottomButton,
   keepScrollToBottomButtonMounted,
   scrollToBottomButtonRef,
@@ -213,7 +208,6 @@ const ThreadWorkspaceComponent: React.FC<ThreadWorkspaceProps> = ({
               onAttachmentsChange={onAttachmentsChange}
               onCaptureToInput={onCaptureToInput}
               onPreviewAttachment={onPreviewAttachment}
-              rememberAttachmentSourcePath={rememberAttachmentSourcePath}
               showScrollToBottomButton={showScrollToBottomButton}
               keepScrollToBottomButtonMounted={keepScrollToBottomButtonMounted}
               scrollToBottomButtonRef={scrollToBottomButtonRef}

@@ -23,6 +23,7 @@ import {
   resolveOcrModelId,
   ThreadCitation,
   ThreadToolStep,
+  type ThreadMessage,
 } from "@squigit/core/config";
 import {
   type Citation,
@@ -108,21 +109,20 @@ function normalizeStoredToolSteps(
   }));
 }
 
-function mapStoredMessage(message: {
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string;
-  citations?: ThreadCitation[];
-  tool_steps?: ThreadToolStep[];
-}): Message {
+function mapStoredMessage(message: ThreadMessage): Message {
   return {
-    id: "",
+    id: message.id,
     role: message.role === "user" ? "user" : "model",
     text: message.content,
     timestamp: new Date(message.timestamp).getTime(),
     alreadyStreamed: true,
-    citations: normalizeStoredCitations(message.citations),
-    toolSteps: normalizeStoredToolSteps(message.tool_steps),
+    citations: normalizeStoredCitations(
+      message.role === "assistant" ? message.citations : undefined,
+    ),
+    toolSteps: normalizeStoredToolSteps(
+      message.role === "assistant" ? message.tool_steps : undefined,
+    ),
+    attachments: message.role === "user" ? message.attachments : undefined,
   };
 }
 
@@ -373,10 +373,7 @@ export const useAppNavigation = ({
 
         const messages: Message[] = [];
         for (let index = 0; index < threadData.messages.length; index += 1) {
-          messages.push({
-            ...mapStoredMessage(threadData.messages[index]),
-            id: index.toString(),
-          });
+          messages.push(mapStoredMessage(threadData.messages[index]));
 
           if (
             (index + 1) % MESSAGE_PREPARATION_CHUNK === 0 &&

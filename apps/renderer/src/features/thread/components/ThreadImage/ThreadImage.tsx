@@ -390,13 +390,8 @@ export const ThreadImage: React.FC<ThreadImageProps> = ({
       cancelledRef.current = false;
 
       try {
-        const casRelativePath =
-          startupImage.imageId && startupImage.imageId.length >= 2
-            ? `objects/${startupImage.imageId.slice(0, 2)}/${startupImage.imageId}.png`
-            : startupImage.path;
-
         const results = await platformBridge.invoke<OCRBox[]>("ocr_image", {
-          imageData: casRelativePath,
+          imageData: startupImage.path,
           isBase64: false,
           modelName: modelToUse,
         });

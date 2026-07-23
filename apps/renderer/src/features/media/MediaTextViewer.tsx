@@ -13,9 +13,6 @@ import styles from "./MediaTextViewer.module.css";
 
 interface MediaTextViewerProps {
   filePath: string;
-  attachmentPath: string;
-  fileName: string;
-  threadId?: string;
   extension: string;
   textContent: string;
   canEdit: boolean;
@@ -32,9 +29,6 @@ export const MediaTextViewer = forwardRef<
   (
     {
       filePath,
-      attachmentPath,
-      fileName,
-      threadId,
       extension,
       textContent,
       canEdit,
@@ -47,9 +41,6 @@ export const MediaTextViewer = forwardRef<
       <MediaCodeEditor
         ref={ref}
         filePath={filePath}
-        attachmentPath={attachmentPath}
-        fileName={fileName}
-        threadId={threadId}
         language={extension || "text"}
         value={textContent}
         canEdit={canEdit}

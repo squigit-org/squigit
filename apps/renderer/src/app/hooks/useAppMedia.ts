@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { commands } from "@/platform";
 import {
   type Attachment,
+  getAttachmentHash,
   getExtension,
   isImageExtension,
   unwrapMarkdownLinkDestination,
@@ -56,13 +57,11 @@ function normalizeAttachmentPath(path: string): string {
 }
 
 export const useAppMedia = ({
-  attachments,
   activeThreadId,
 }: {
-  attachments: Attachment[];
   activeThreadId: string | null;
 }) => {
-  const registryThreadId =
+  const threadId =
     activeThreadId && !activeThreadId.startsWith("__system_")
       ? activeThreadId
       : undefined;
@@ -74,43 +73,13 @@ export const useAppMedia = ({
     item: null,
   });
 
-  const rememberAttachmentSourcePath = useCallback(
-    async (casPath: string, sourcePath: string) => {
-      if (!casPath || !sourcePath) return;
-
-      if (registryThreadId) {
-        try {
-          await commands.registerAttachmentSource(
-            registryThreadId,
-            casPath,
-            sourcePath,
-          );
-        } catch (error) {
-          console.warn("[media] Could not register attachment source:", error);
-        }
-      }
-    },
-    [registryThreadId],
-  );
-
-  useEffect(() => {
-    attachments.forEach((attachment) => {
-      if (attachment.sourcePath) {
-        void rememberAttachmentSourcePath(
-          attachment.path,
-          attachment.sourcePath,
-        ).catch((error) => {
-          console.warn("[media] Could not register attachment source:", error);
-        });
-      }
-    });
-  }, [attachments, rememberAttachmentSourcePath]);
-
   const resolveAttachmentSourcePath = useCallback(
     async (path: string) => {
+      const attachmentHash = getAttachmentHash(path);
+      if (!attachmentHash) return undefined;
       try {
         return (
-          (await commands.resolveAttachmentSourcePath(path, registryThreadId)) ||
+          (await commands.resolveAttachmentSourcePath(attachmentHash, threadId)) ||
           undefined
         );
       } catch (error) {
@@ -118,7 +87,7 @@ export const useAppMedia = ({
         return undefined;
       }
     },
-    [registryThreadId],
+    [threadId],
   );
 
   const closeMediaViewer = useCallback(() => {
@@ -144,18 +113,7 @@ export const useAppMedia = ({
         pathExtension && pathExtension !== "file"
           ? pathExtension
           : attachment.extension.toLowerCase();
-      let currentCasPath = normalizedAttachmentPath;
-      if (registryThreadId) {
-        try {
-          currentCasPath =
-            (await commands.resolveAttachmentCasPath(
-              normalizedAttachmentPath,
-              registryThreadId,
-            )) || normalizedAttachmentPath;
-        } catch (error) {
-          console.warn("[media] Could not resolve attachment revision:", error);
-        }
-      }
+      const currentCasPath = normalizedAttachmentPath;
 
       let resolvedPath = currentCasPath;
       try {
@@ -288,8 +246,6 @@ export const useAppMedia = ({
           item: {
             kind: "text",
             path: resolvedPath,
-            attachmentPath: normalizedAttachmentPath,
-            threadId: registryThreadId,
             sourcePath,
             name: attachment.name,
             extension,
@@ -308,12 +264,11 @@ export const useAppMedia = ({
         }
       }
     },
-    [registryThreadId, resolveAttachmentSourcePath, revealInFileManager],
+    [threadId, resolveAttachmentSourcePath, revealInFileManager],
   );
 
   return {
     mediaViewer,
-    rememberAttachmentSourcePath,
     openMediaViewer,
     closeMediaViewer,
   };

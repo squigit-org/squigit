@@ -43,10 +43,6 @@ export interface ThreadInputProps {
     index: number,
     images: Attachment[],
   ) => void | Promise<void>;
-  rememberAttachmentSourcePath?: (
-    storedPath: string,
-    sourcePath: string,
-  ) => void | Promise<void>;
   showScrollToBottomButton?: boolean;
   keepScrollToBottomButtonMounted?: boolean;
   scrollToBottomButtonRef?: RefObject<HTMLButtonElement | null>;

@@ -296,9 +296,6 @@ export const MediaOverlay: React.FC<MediaOverlayProps> = ({
       <MediaTextViewer
         ref={textViewerRef}
         filePath={activeTextPath || item.path}
-        attachmentPath={item.attachmentPath || item.path}
-        fileName={item.name}
-        threadId={item.threadId}
         extension={item.extension}
         textContent={activeTextContent}
         canEdit={item.openedFromThread !== true}

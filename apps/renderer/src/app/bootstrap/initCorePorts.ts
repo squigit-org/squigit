@@ -74,7 +74,14 @@ export function initializeCorePorts(): void {
       title: string,
       imageHash: string,
       workspaceId?: string | null,
-    ) => platform.invoke("create_thread", { title, imageHash, workspaceId }),
+      displayName?: string | null,
+    ) =>
+      platform.invoke("create_thread", {
+        title,
+        imageHash,
+        workspaceId,
+        displayName,
+      }),
     createWorkspace: (path: string) =>
       platform.invoke("create_workspace", { path }),
     listWorkspaces: () => platform.invoke("list_workspaces"),
@@ -91,11 +98,8 @@ export function initializeCorePorts(): void {
       platform.invoke("delete_thread", { threadId }),
     updateThreadMetadata: (metadata) =>
       platform.invoke("update_thread_metadata", { metadata }),
-    appendThreadMessage: (
-      threadId: string,
-      role: "user" | "assistant",
-      content: string,
-    ) => platform.invoke("append_thread_message", { threadId, role, content }),
+    appendThreadMessage: (threadId, message) =>
+      platform.invoke("append_thread_message", { threadId, message }),
     overwriteThreadMessages: (threadId, messages) =>
       platform.invoke("overwrite_thread_messages", { threadId, messages }),
     saveOcrData: (threadId, modelId, ocrData) =>
