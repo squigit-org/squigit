@@ -58,6 +58,7 @@ interface ThreadWorkspaceProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   isThreadLoading: boolean;
+  isSubmittingAttachments: boolean;
   isAiTyping: boolean;
   isStoppable: boolean;
   onStopGeneration: () => void;
@@ -67,6 +68,8 @@ interface ThreadWorkspaceProps {
   onEffortChange: (effort: ModelEffort) => void;
   attachments: Attachment[];
   onAttachmentsChange: (attachments: Attachment[]) => void;
+  onRemoveAttachment: (id: string) => void;
+  onRetryAttachment: (id: string) => void;
   onCaptureToInput: () => void | Promise<void>;
   onPreviewAttachment: (
     attachment: Attachment,
@@ -122,6 +125,7 @@ const ThreadWorkspaceComponent: React.FC<ThreadWorkspaceProps> = ({
   onInputChange,
   onSend,
   isThreadLoading,
+  isSubmittingAttachments,
   isAiTyping,
   isStoppable,
   onStopGeneration,
@@ -131,6 +135,8 @@ const ThreadWorkspaceComponent: React.FC<ThreadWorkspaceProps> = ({
   onEffortChange,
   attachments,
   onAttachmentsChange,
+  onRemoveAttachment,
+  onRetryAttachment,
   onCaptureToInput,
   onPreviewAttachment,
   showScrollToBottomButton,
@@ -197,6 +203,7 @@ const ThreadWorkspaceComponent: React.FC<ThreadWorkspaceProps> = ({
               onInputChange={onInputChange}
               onSend={onSend}
               isLoading={isThreadLoading}
+              isSubmittingAttachments={isSubmittingAttachments}
               isAiTyping={isAiTyping}
               isStoppable={isStoppable}
               onStopGeneration={onStopGeneration}
@@ -206,6 +213,8 @@ const ThreadWorkspaceComponent: React.FC<ThreadWorkspaceProps> = ({
               onEffortChange={onEffortChange}
               attachments={attachments}
               onAttachmentsChange={onAttachmentsChange}
+              onRemoveAttachment={onRemoveAttachment}
+              onRetryAttachment={onRetryAttachment}
               onCaptureToInput={onCaptureToInput}
               onPreviewAttachment={onPreviewAttachment}
               showScrollToBottomButton={showScrollToBottomButton}

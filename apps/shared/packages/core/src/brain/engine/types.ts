@@ -191,6 +191,11 @@ export interface BrainEngineHandle {
     userText: string,
     selection?: ModelSelection,
     attachments?: ThreadMessageAttachment[],
+    options?: {
+      userMessageId?: string;
+      attachmentPreflightToken?: string | null;
+      onAccepted?: () => void;
+    },
   ) => Promise<void>;
   handleRetrySend: () => Promise<void>;
   handleRetryMessage: (

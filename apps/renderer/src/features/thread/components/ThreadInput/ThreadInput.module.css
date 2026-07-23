@@ -297,6 +297,10 @@
   cursor: pointer;
 }
 
+.submitSpinner {
+  animation: "rotate" 0.9s linear infinite;
+}
+
 .stopButton {
   display: flex;
   align-items: center;

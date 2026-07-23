@@ -4,6 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export type AttachmentLifecycleStatus = "pending" | "ready" | "failed";
+
+export interface AttachmentLifecycleError {
+  code: string;
+  message: string;
+}
+
+export type AttachmentFileType =
+  | "text_local"
+  | "image_upload"
+  | "document_upload";
+
 export interface Attachment {
   id: string;
   type: "image" | "file";
@@ -11,5 +23,10 @@ export interface Attachment {
   extension: string;
   path: string;
   sourcePath?: string;
-  status?: "pending" | "failed" | "success";
+  attachmentHash?: string;
+  casPath?: string;
+  preparationJobId?: string;
+  fileType?: AttachmentFileType;
+  status?: AttachmentLifecycleStatus;
+  error?: AttachmentLifecycleError | null;
 }

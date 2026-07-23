@@ -167,6 +167,7 @@ const ScrollbarThumb: React.FC<ScrollbarThumbProps> = ({
 interface ImageStripProps {
   attachments: Attachment[];
   onRemove?: (id: string) => void;
+  onRetry?: (id: string) => void;
   onClick?: (
     attachment: Attachment,
     index: number,
@@ -193,6 +194,7 @@ const INITIAL_SCROLL_STATE: ScrollState = {
 export const ImageStrip: React.FC<ImageStripProps> = ({
   attachments,
   onRemove,
+  onRetry,
   onClick,
 }) => {
   const stripRef = useRef<HTMLDivElement>(null);
@@ -299,9 +301,16 @@ export const ImageStrip: React.FC<ImageStripProps> = ({
 
   const handleClick = useCallback(
     (attachment: Attachment, index: number) => {
+      if (attachment.status === "failed") {
+        onRetry?.(attachment.id);
+        return;
+      }
+      if (attachment.status === "pending") {
+        return;
+      }
       onClick?.(attachment, index, displayAttachments);
     },
-    [displayAttachments, onClick],
+    [displayAttachments, onClick, onRetry],
   );
 
   const scrollStrip = useCallback((direction: -1 | 1) => {
@@ -340,9 +349,24 @@ export const ImageStrip: React.FC<ImageStripProps> = ({
           <div
             key={attachment.id}
             className={styles.thumbWrapper}
+            title={
+              attachment.status === "failed"
+                ? attachment.error?.message || "Upload failed. Click to retry."
+                : attachment.status === "pending"
+                  ? `Preparing ${attachment.name}`
+                  : attachment.name
+            }
             onClick={() => handleClick(attachment, index)}
             role="button"
             tabIndex={0}
+            aria-label={
+              attachment.status === "failed"
+                ? `${attachment.name}: upload failed. Retry`
+                : attachment.status === "pending"
+                  ? `${attachment.name}: preparing`
+                  : `Preview ${attachment.name}`
+            }
+            aria-busy={attachment.status === "pending"}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 handleClick(attachment, index);

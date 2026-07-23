@@ -14,6 +14,8 @@ import {
   setStoragePort,
   setSystemPort,
   type StreamGeminiThreadInput,
+  type PrepareAttachmentInput,
+  type PrepareSubmissionAttachmentsInput,
 } from "@squigit/core/ports";
 
 let initialized = false;
@@ -25,6 +27,13 @@ export function initializeCorePorts(): void {
   setProviderPort({
     streamThread: (input: StreamGeminiThreadInput) =>
       platform.invoke<string>("stream_thread", input),
+    prepareAttachment: (input: PrepareAttachmentInput) =>
+      platform.invoke("prepare_attachment", { ...input }),
+    cancelAttachment: (jobId: string) =>
+      platform.invoke("cancel_attachment", { jobId }),
+    prepareSubmissionAttachments: (
+      input: PrepareSubmissionAttachmentsInput,
+    ) => platform.invoke("prepare_submission_attachments", { ...input }),
     generateThreadTitle: (
       apiKey: string,
       modelCandidates: string[],

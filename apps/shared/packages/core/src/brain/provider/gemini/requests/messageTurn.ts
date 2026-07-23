@@ -27,6 +27,7 @@ export const sendMessage = async (
   onToken?: (token: string) => void,
   threadId?: string | null,
   onEvent?: (event: ProviderStreamEvent) => void,
+  attachmentPreflightToken?: string | null,
 ): Promise<string> => {
   if (!brainSessionStore.storedApiKey)
     throw new Error("Gemini API Key not set");
@@ -100,6 +101,7 @@ export const sendMessage = async (
           historyLog,
           userMessage: text,
           userMessageId,
+          attachmentPreflightToken: attachmentPreflightToken ?? null,
           channelId: channelId,
           threadId: threadId ?? null,
           userName: brainSessionStore.userName ?? undefined,

@@ -24,6 +24,7 @@ export interface ThreadInputProps {
   onInputChange: (value: string) => void;
   onSend: ThreadSubmitHandler;
   isLoading: boolean;
+  isSubmittingAttachments?: boolean;
   isAiTyping?: boolean;
   isStoppable?: boolean;
   onStopGeneration?: () => void;
@@ -37,6 +38,8 @@ export interface ThreadInputProps {
   onEffortChange: (effort: ModelEffort) => void;
   attachments: Attachment[];
   onAttachmentsChange: (attachments: Attachment[]) => void;
+  onRemoveAttachment?: (id: string) => void;
+  onRetryAttachment?: (id: string) => void;
   onCaptureToInput?: () => void;
   onPreviewAttachment?: (
     attachment: Attachment,

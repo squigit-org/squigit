@@ -32,6 +32,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
     onInputChange: onChange,
     onSend,
     isLoading,
+    isSubmittingAttachments = false,
     isAiTyping = false,
     isStoppable = false,
     onStopGeneration,
@@ -43,6 +44,8 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
     onEffortChange,
     attachments,
     onAttachmentsChange,
+    onRemoveAttachment,
+    onRetryAttachment,
     onCaptureToInput,
     onPreviewAttachment,
     showScrollToBottomButton = false,
@@ -53,7 +56,12 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
     if (!startupImage && !forceVisible && !isNavigating) return null;
 
     const placeholder = customPlaceholder || "Ask anything";
-    const disabled = isLoading && !isAiTyping;
+    const disabled =
+      (isLoading && !isAiTyping) || isSubmittingAttachments;
+    const hasUnreadyAttachment = attachments.some(
+      (attachment) =>
+        attachment.status === "pending" || attachment.status === "failed",
+    );
 
     const [isExpanded, setIsExpanded] = useState(false);
     const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
@@ -66,6 +74,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
       if (
         !disabled &&
         !isLoading &&
+        !hasUnreadyAttachment &&
         (value.trim().length > 0 || attachments.length > 0)
       ) {
         editorRef.current?.resetScroll();
@@ -82,6 +91,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
     const isButtonActive =
       !disabled &&
       !isLoading &&
+      !hasUnreadyAttachment &&
       (value.trim().length > 0 || attachments.length > 0);
     const shouldRenderScrollToBottomButton =
       !!onScrollToBottom &&
@@ -157,95 +167,84 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
     const handleFilePaths = useCallback(
       async (paths: string[]) => {
         const currentAttachments = latestAttachmentsRef.current;
-        const nextAttachments = [...currentAttachments];
-        const inlineLinks: string[] = [];
+        const immediateAttachments: typeof currentAttachments = [];
+        const immediateLinks: string[] = [];
+        const unknownPaths: Array<{
+          path: string;
+          name: string;
+        }> = [];
 
         for (const filePath of paths) {
           const originalName = filePath.split(/[/\\]/).pop() || filePath;
-          const ext = getExtension(filePath);
-          const isAllowed = isAcceptedExtension(ext);
-
-          if (isImageExtension(ext)) {
-            try {
-              const result = await platform.invoke<{
-                hash: string;
-                path: string;
-              }>("store_image_from_path", { path: filePath });
-              nextAttachments.push(
-                attachmentFromPath(
-                  result.path,
-                  undefined,
-                  originalName,
-                  filePath,
-                ),
-              );
-            } catch (err) {
-              console.error("Failed to store image:", err);
-            }
+          const extension = getExtension(originalName);
+          if (!isAcceptedExtension(extension)) {
+            unknownPaths.push({ path: filePath, name: originalName });
             continue;
           }
 
-          if (isAllowed) {
-            try {
-              const result = await platform.invoke<{
-                hash: string;
-                path: string;
-              }>("store_file_from_path", { path: filePath });
-              nextAttachments.push(
-                attachmentFromPath(
-                  result.path,
-                  undefined,
-                  originalName,
-                  filePath,
-                ),
-              );
-              inlineLinks.push(
-                buildAttachmentMention(result.path, originalName),
-              );
-            } catch (err) {
-              console.error("Failed to store file:", err);
-            }
-            continue;
+          const attachment = attachmentFromPath(
+            filePath,
+            undefined,
+            originalName,
+            filePath,
+          );
+          immediateAttachments.push(attachment);
+          if (!isImageExtension(attachment.extension)) {
+            immediateLinks.push(
+              buildAttachmentMention(filePath, originalName),
+            );
           }
+        }
 
+        if (immediateAttachments.length > 0) {
+          onAttachmentsChange([
+            ...currentAttachments,
+            ...immediateAttachments,
+          ]);
+        }
+        if (immediateLinks.length > 0) {
+          insertInlineFileLinks(immediateLinks);
+        }
+
+        const validatedAttachments: typeof currentAttachments = [];
+        const validatedLinks: string[] = [];
+        for (const candidate of unknownPaths) {
           try {
             const isText = await platform.invoke<boolean>(
               "validate_text_file",
-              {
-                path: filePath,
-              },
+              { path: candidate.path },
             );
             if (!isText) {
               console.warn(
                 "Selected file is binary and not supported:",
-                filePath,
+                candidate.path,
               );
               continue;
             }
-
-            const result = await platform.invoke<{
-              hash: string;
-              path: string;
-            }>("store_file_from_path", { path: filePath });
-            nextAttachments.push(
+            validatedAttachments.push(
               attachmentFromPath(
-                result.path,
+                candidate.path,
                 undefined,
-                originalName,
-                filePath,
+                candidate.name,
+                candidate.path,
               ),
             );
-            inlineLinks.push(buildAttachmentMention(result.path, originalName));
-          } catch (err) {
-            console.error("Failed to validate selected text file:", err);
+            validatedLinks.push(
+              buildAttachmentMention(candidate.path, candidate.name),
+            );
+          } catch (error) {
+            console.error("Failed to validate selected text file:", error);
           }
         }
 
-        if (nextAttachments.length > currentAttachments.length) {
-          onAttachmentsChange(nextAttachments);
+        if (validatedAttachments.length > 0) {
+          onAttachmentsChange([
+            ...latestAttachmentsRef.current,
+            ...validatedAttachments,
+          ]);
         }
-        if (inlineLinks.length > 0) {
-          insertInlineFileLinks(inlineLinks);
+        if (validatedLinks.length > 0) {
+          insertInlineFileLinks(validatedLinks);
         }
       },
       [insertInlineFileLinks, onAttachmentsChange],
@@ -260,6 +259,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
       async (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        if (disabled) return;
 
         const files = e.dataTransfer.files;
         if (!files || files.length === 0) return;
@@ -272,7 +272,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
           await handleFilePaths(paths);
         }
       },
-      [handleFilePaths],
+      [disabled, handleFilePaths],
     );
 
     const containerContent = (
@@ -287,9 +287,20 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
         <ImageStrip
           attachments={attachments}
           onClick={onPreviewAttachment}
-          onRemove={(id) =>
-            onAttachmentsChange(attachments.filter((a) => a.id !== id))
+          onRemove={
+            disabled
+              ? undefined
+              : (id) => {
+                  if (onRemoveAttachment) {
+                    onRemoveAttachment(id);
+                    return;
+                  }
+                  onAttachmentsChange(
+                    attachments.filter((a) => a.id !== id),
+                  );
+                }
           }
+          onRetry={onRetryAttachment}
         />
 
         <InputTextarea
@@ -307,6 +318,8 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
               attachmentFromPath(path),
             ]);
           }}
+          attachments={attachments}
+          onRetryAttachment={onRetryAttachment}
           isExpanded={isExpanded}
           setIsExpanded={setIsExpanded}
         />
@@ -338,6 +351,7 @@ export const ThreadInput: React.FC<ThreadInputProps> = React.memo(
           isAiTyping={isAiTyping}
           isStoppable={isStoppable}
           disabled={disabled}
+          isSubmitting={isSubmittingAttachments}
           selectedModel={selectedModel}
           selectedEffort={selectedEffort}
           onModelChange={onModelChange}

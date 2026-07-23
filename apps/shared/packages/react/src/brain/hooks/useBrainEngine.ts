@@ -792,6 +792,11 @@ export const useBrainEngine = (config: {
     userText: string,
     selection?: ModelSelection,
     attachments: ThreadMessageAttachment[] = [],
+    options?: {
+      userMessageId?: string;
+      attachmentPreflightToken?: string | null;
+      onAccepted?: () => void;
+    },
   ) => {
     if (!userText.trim() || config.state.isLoading) return;
     const targetThreadId = config.threadId;
@@ -799,7 +804,7 @@ export const useBrainEngine = (config: {
     const preparedInput = await prepareBrainInput(userText, targetThreadId);
 
     const userMsg: Message = {
-      id: createMessageId(),
+      id: options?.userMessageId || createMessageId(),
       role: "user",
       text: preparedInput.displayText,
       timestamp: Date.now(),
@@ -811,6 +816,7 @@ export const useBrainEngine = (config: {
     if (config.onMessage && targetThreadId) {
       await config.onMessage(userMsg, targetThreadId);
     }
+    options?.onAccepted?.();
     setIsLoading(true);
     isRequestCancelledRef.current = false;
     resetToolStreamingState();
@@ -832,6 +838,7 @@ export const useBrainEngine = (config: {
         },
         config.threadId,
         toolTracker.onEvent,
+        options?.attachmentPreflightToken,
       );
 
       void toolTracker;

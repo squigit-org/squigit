@@ -759,7 +759,7 @@ export const ThreadRoute: React.FC = () => {
   }, [showFlatMenu]);
 
   // Handlers
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const existingPaths = new Set(parseAttachmentPaths(app.input));
     const imageAttachments = app.attachments.filter(
       (attachment) =>
@@ -768,23 +768,43 @@ export const ThreadRoute: React.FC = () => {
     let finalInput = app.input;
     if (imageAttachments.length > 0) {
       const mentions = imageAttachments
-        .map((a) => buildAttachmentMention(a.path, a.name))
+        .map((a) =>
+          buildAttachmentMention(a.casPath || a.path, a.name),
+        )
         .join("\n");
       finalInput = `${app.input}\n\n${mentions}`.trim();
     }
-    if (!finalInput.trim() || app.thread.isLoading) {
+    if (
+      !finalInput.trim() ||
+      app.thread.isLoading ||
+      app.isSubmittingAttachments ||
+      app.attachments.some(
+        (attachment) =>
+          attachment.status === "pending" ||
+          attachment.status === "failed",
+      )
+    ) {
       return;
     }
 
-    const attachmentByPath = new Map(
-      app.attachments.map((attachment) => [attachment.path, attachment]),
-    );
+    const attachmentByPath = new Map<string, Attachment>();
+    for (const attachment of app.attachments) {
+      attachmentByPath.set(attachment.path, attachment);
+      if (attachment.casPath) {
+        attachmentByPath.set(attachment.casPath, attachment);
+      }
+      if (attachment.sourcePath) {
+        attachmentByPath.set(attachment.sourcePath, attachment);
+      }
+    }
     const parsedPromptAttachments = parseAttachmentPaths(finalInput).map(
       (path) => attachmentByPath.get(path) ?? attachmentFromPath(path),
     );
     const attachmentsByHash = parsedPromptAttachments.reduce(
       (byHash, attachment) => {
-        const attachmentHash = getAttachmentHash(attachment.path);
+        const attachmentHash =
+          attachment.attachmentHash ||
+          getAttachmentHash(attachment.casPath || attachment.path);
         if (attachmentHash) {
           byHash.set(attachmentHash, {
             attachment_hash: attachmentHash,
@@ -799,31 +819,72 @@ export const ThreadRoute: React.FC = () => {
       >(),
     );
     const structuredAttachments = Array.from(attachmentsByHash.values());
-
-    app.trackPendingPromptAttachmentAnalysis(
-      dedupeAttachmentsByPath([...app.attachments, ...parsedPromptAttachments]),
+    const submissionAttachmentHashes = structuredAttachments.map(
+      (attachment) => attachment.attachment_hash,
     );
-    void app.thread
-      .handleSend(
-        finalInput,
-        {
-          modelId: app.inputModel,
-          effort: app.inputEffort,
-        },
-        structuredAttachments,
-      )
-      .catch(console.error);
-    app.setInput("");
-    app.clearAttachments();
-    snapToBottomAfterSend();
+    const threadId = app.threadHistory.activeSessionId;
+    if (!threadId || threadId.startsWith("__system_")) {
+      return;
+    }
+
+    const userMessageId = `msg_${crypto.randomUUID()}`;
+    const submittedAttachmentIds = app.attachments.map(
+      (attachment) => attachment.id,
+    );
+
+    try {
+      const attachmentPreflightToken =
+        await app.prepareSubmissionAttachments(
+          threadId,
+          userMessageId,
+          submissionAttachmentHashes,
+        );
+
+      app.trackPendingPromptAttachmentAnalysis(
+        dedupeAttachmentsByPath([
+          ...app.attachments,
+          ...parsedPromptAttachments,
+        ]),
+      );
+      void app.thread
+        .handleSend(
+          finalInput,
+          {
+            modelId: app.inputModel,
+            effort: app.inputEffort,
+          },
+          structuredAttachments,
+          {
+            userMessageId,
+            attachmentPreflightToken,
+            onAccepted: () => {
+              app.setInput("");
+              app.clearSubmittedAttachments(submittedAttachmentIds);
+              app.finishAttachmentSubmission();
+              snapToBottomAfterSend();
+            },
+          },
+        )
+        .catch((error) => {
+          app.finishAttachmentSubmission();
+          console.error(error);
+        });
+    } catch (error) {
+      app.finishAttachmentSubmission();
+      console.error("[attachments] Submission preflight failed:", error);
+    }
   }, [
     app.attachments,
     app.thread,
-    app.clearAttachments,
+    app.clearSubmittedAttachments,
+    app.finishAttachmentSubmission,
     app.input,
     app.inputModel,
     app.inputEffort,
+    app.isSubmittingAttachments,
+    app.prepareSubmissionAttachments,
     app.setInput,
+    app.threadHistory.activeSessionId,
     app.trackPendingPromptAttachmentAnalysis,
     snapToBottomAfterSend,
   ]);
@@ -901,7 +962,6 @@ export const ThreadRoute: React.FC = () => {
 
       const restoredAttachments = parseAttachmentPaths(targetMessage.text)
         .map((path) => attachmentFromPath(path))
-        .filter((attachment) => attachment.type === "image");
 
       app.setInput(stripImageAttachmentMentions(targetMessage.text));
       app.setAttachments(restoredAttachments);
@@ -1178,6 +1238,7 @@ export const ThreadRoute: React.FC = () => {
       onInputChange={app.setInput}
       onSend={handleSend}
       isThreadLoading={app.thread.isLoading}
+      isSubmittingAttachments={app.isSubmittingAttachments}
       isAiTyping={app.thread.isAiTyping}
       isStoppable={app.thread.isAnalyzing || app.thread.isGenerating}
       onStopGeneration={app.thread.handleStopGeneration}
@@ -1187,6 +1248,8 @@ export const ThreadRoute: React.FC = () => {
       onEffortChange={app.setInputEffort}
       attachments={app.attachments}
       onAttachmentsChange={app.setAttachments}
+      onRemoveAttachment={app.removeAttachment}
+      onRetryAttachment={app.retryAttachment}
       onCaptureToInput={handleCaptureToInput}
       onPreviewAttachment={(attachment, index, images) =>
         app.openMediaViewer(attachment, {

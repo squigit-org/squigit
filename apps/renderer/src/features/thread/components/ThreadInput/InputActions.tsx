@@ -5,7 +5,14 @@
  */
 
 import React, { useState, useRef, useCallback } from "react";
-import { Paperclip, ArrowUp, Square, Camera, Code2 } from "lucide-react";
+import {
+  Paperclip,
+  ArrowUp,
+  Square,
+  Camera,
+  Code2,
+  Loader2,
+} from "lucide-react";
 import { platform } from "@/platform";
 import { ACCEPTED_EXTENSIONS } from "@squigit/core/brain/attachments";
 import { MODELS } from "@squigit/core/config";
@@ -40,6 +47,7 @@ interface InputActionsProps {
   isAiTyping: boolean;
   isStoppable: boolean;
   disabled: boolean;
+  isSubmitting?: boolean;
   selectedModel: ModelId;
   selectedEffort: ModelEffort;
   onModelChange: (model: ModelId) => void;
@@ -57,6 +65,7 @@ export const InputActions: React.FC<InputActionsProps> = ({
   isAiTyping,
   isStoppable,
   disabled,
+  isSubmitting = false,
   selectedModel,
   selectedEffort,
   onModelChange,
@@ -118,9 +127,11 @@ export const InputActions: React.FC<InputActionsProps> = ({
   const isStopAction = isAiTyping || isStoppable;
   const primaryActionLabel = isStopAction
     ? "Stop"
-    : isButtonActive
-      ? "Send"
-      : "Ask Anything";
+    : isSubmitting
+      ? "Preparing attachments"
+      : isButtonActive
+        ? "Send"
+        : "Ask Anything";
 
   return (
     <div className={styles.actions}>
@@ -241,10 +252,15 @@ export const InputActions: React.FC<InputActionsProps> = ({
                 setShowPrimaryActionTooltip(false);
                 onSubmit();
               }}
-              disabled={!isButtonActive}
+              disabled={!isButtonActive || isSubmitting}
               aria-label={primaryActionLabel}
+              aria-busy={isSubmitting}
             >
-              <ArrowUp size={18} />
+              {isSubmitting ? (
+                <Loader2 size={18} className={styles.submitSpinner} />
+              ) : (
+                <ArrowUp size={18} />
+              )}
             </button>
           )}
         </div>

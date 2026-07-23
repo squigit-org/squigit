@@ -8,6 +8,11 @@ export type {
   StreamGeminiThreadInput,
   ProviderUnlisten,
   ProviderPort,
+  PrepareAttachmentInput,
+  AttachmentPreparationResult,
+  SubmissionAttachmentResult,
+  PrepareSubmissionAttachmentsInput,
+  PrepareSubmissionAttachmentsResult,
 } from "./provider";
 export { setProviderPort, getProviderPort } from "./provider";
 

@@ -18,7 +18,14 @@ import {
   type ThreadMessage,
 } from "@squigit/core/config";
 import type { Message } from "@squigit/core/brain/engine";
-import type { Attachment } from "@squigit/core/brain/attachments";
+import {
+  attachmentFromPath,
+  buildAttachmentMention,
+  isAttachmentLinkDestination,
+  LINK_ATTACHMENT_MENTION_RE,
+  type Attachment,
+  unwrapMarkdownLinkDestination,
+} from "@squigit/core/brain/attachments";
 import { github } from "@squigit/core/services/github";
 import {
   getPendingUpdate,
@@ -40,6 +47,39 @@ import { useAppOcr } from "./useAppOcr";
 import { useAppPanel } from "./useAppPanel";
 
 const isOnboardingId = (id: string) => id.startsWith("__system_");
+
+function parseDraftAttachmentPaths(text: string): string[] {
+  const paths: string[] = [];
+  const attachmentPattern = new RegExp(
+    LINK_ATTACHMENT_MENTION_RE.source,
+    LINK_ATTACHMENT_MENTION_RE.flags,
+  );
+  for (const match of text.matchAll(attachmentPattern)) {
+    const destination = String(match[2] || "");
+    if (isAttachmentLinkDestination(destination)) {
+      paths.push(unwrapMarkdownLinkDestination(destination));
+    }
+  }
+  return paths;
+}
+
+function replaceDraftAttachmentPath(
+  text: string,
+  sourcePath: string,
+  casPath: string,
+): string {
+  const attachmentPattern = new RegExp(
+    LINK_ATTACHMENT_MENTION_RE.source,
+    LINK_ATTACHMENT_MENTION_RE.flags,
+  );
+  return text.replace(
+    attachmentPattern,
+    (full, label: string, destination: string) =>
+      unwrapMarkdownLinkDestination(destination) === sourcePath
+        ? buildAttachmentMention(casPath, label)
+        : full,
+  );
+}
 
 function toStoredMessage(message: Message): ThreadMessage {
   const base = {
@@ -236,7 +276,69 @@ export const useApp = () => {
     thread.isAnalyzing ||
     thread.isGenerating ||
     thread.isAiTyping ||
+    attachments.isSubmittingAttachments ||
     ocr.isOcrScanning;
+
+  useEffect(() => {
+    let nextInput = drafts.input;
+    for (const attachment of attachments.attachments) {
+      if (
+        attachment.casPath &&
+        attachment.sourcePath &&
+        attachment.casPath !== attachment.sourcePath &&
+        attachments.attachments
+          .filter(
+            (item) =>
+              item.type === attachment.type &&
+              item.sourcePath === attachment.sourcePath,
+          )
+          .every((item) => !!item.casPath)
+      ) {
+        nextInput = replaceDraftAttachmentPath(
+          nextInput,
+          attachment.sourcePath,
+          attachment.casPath,
+        );
+      }
+    }
+
+    if (nextInput !== drafts.input) {
+      drafts.setInput(nextInput);
+      return;
+    }
+
+    const mentionedPaths = parseDraftAttachmentPaths(nextInput);
+    const current = attachments.attachments;
+    const next = current.filter((attachment) => attachment.type === "image");
+    const unmatchedFiles = current.filter(
+      (attachment) => attachment.type === "file",
+    );
+    for (const path of mentionedPaths) {
+      const matchIndex = unmatchedFiles.findIndex(
+        (attachment) =>
+          path === attachment.path ||
+          path === attachment.casPath ||
+          path === attachment.sourcePath,
+      );
+      if (matchIndex === -1) {
+        next.push(attachmentFromPath(path));
+      } else {
+        next.push(unmatchedFiles.splice(matchIndex, 1)[0]);
+      }
+    }
+
+    if (
+      next.length !== current.length ||
+      next.some((attachment, index) => attachment.id !== current[index]?.id)
+    ) {
+      attachments.setAttachments(next);
+    }
+  }, [
+    attachments.attachments,
+    attachments.setAttachments,
+    drafts.input,
+    drafts.setInput,
+  ]);
 
   const media = useAppMedia({
     activeThreadId: threadHistory.activeSessionId,
@@ -494,6 +596,7 @@ export const useApp = () => {
     inputModel: drafts.inputModel,
     inputEffort: drafts.inputEffort,
     attachments: attachments.attachments,
+    isSubmittingAttachments: attachments.isSubmittingAttachments,
     pendingPromptAttachmentAnalysis,
     setInputModel: drafts.setInputModel,
     setInputEffort: drafts.setInputEffort,
@@ -533,7 +636,12 @@ export const useApp = () => {
     setAttachments: attachments.setAttachments,
     trackPendingPromptAttachmentAnalysis,
     addAttachmentFromPath: attachments.addFromPath,
+    removeAttachment: attachments.removeAttachment,
     clearAttachments: attachments.clearAttachments,
+    clearSubmittedAttachments: attachments.clearSubmittedAttachments,
+    retryAttachment: attachments.retryAttachment,
+    prepareSubmissionAttachments: attachments.prepareSubmission,
+    finishAttachmentSubmission: attachments.finishSubmission,
     setShowUpdate,
     handleContextMenu: contextMenuState.handleContextMenu,
     handleCloseContextMenu: contextMenuState.handleCloseContextMenu,

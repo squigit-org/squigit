@@ -4,13 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type { Attachment } from "./types.ts";
+export type {
+  Attachment,
+  AttachmentFileType,
+  AttachmentLifecycleError,
+  AttachmentLifecycleStatus,
+} from "./types.ts";
 export {
   IMAGE_EXTENSION_VALUES,
   ACCEPTED_EXTENSION_VALUES,
   IMAGE_EXTENSIONS,
   ACCEPTED_EXTENSIONS,
   isImageExtension,
+  isDocumentExtension,
+  isCloudUploadExtension,
   isAcceptedExtension,
   getExtension,
 } from "./extensions.ts";

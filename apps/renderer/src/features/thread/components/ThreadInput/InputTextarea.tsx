@@ -47,6 +47,7 @@ import {
   buildAttachmentMention,
   isAttachmentPath,
   unwrapMarkdownLinkDestination,
+  type Attachment,
 } from "@squigit/core/brain/attachments";
 import { useMediaContext } from "@/app/context/AppMedia";
 import styles from "./ThreadInput.module.css";
@@ -64,6 +65,11 @@ const EMPTY_DOC_JSON: JSONContent = {
 interface AttachmentMentionAttrs {
   label: string;
   path: string;
+  attachmentId?: string;
+  resolvedPath?: string;
+  fileType?: Attachment["fileType"];
+  lifecycleStatus?: Attachment["status"];
+  errorMessage?: string;
 }
 
 interface InputTextareaProps {
@@ -75,6 +81,8 @@ interface InputTextareaProps {
   onSelectionChange: (hasSelection: boolean) => void;
   onContextMenu: (e: React.MouseEvent<HTMLElement>) => void;
   onImagePasted: (path: string) => void;
+  attachments: Attachment[];
+  onRetryAttachment?: (id: string) => void;
   isExpanded: boolean;
   setIsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -414,13 +422,30 @@ const Placeholder = Extension.create<{
   },
 });
 
-const AttachmentMentionChip: React.FC<NodeViewProps> = ({ node }) => {
+interface AttachmentMentionOptions {
+  onRetryAttachmentRef: React.MutableRefObject<
+    ((id: string) => void) | undefined
+  >;
+}
+
+const AttachmentMentionChip: React.FC<NodeViewProps> = ({
+  node,
+  extension,
+}) => {
   const { openMediaViewer } = useMediaContext();
   const path = String(node.attrs.path || "");
+  const resolvedPath = String(node.attrs.resolvedPath || path);
   const label = String(node.attrs.label || "").trim();
-  const attachment = attachmentFromPath(path);
+  const attachmentId = String(node.attrs.attachmentId || "");
+  const lifecycleStatus = node.attrs.lifecycleStatus as
+    | Attachment["status"]
+    | undefined;
+  const fileType = node.attrs.fileType as Attachment["fileType"] | undefined;
+  const errorMessage = String(node.attrs.errorMessage || "");
+  const attachment = attachmentFromPath(resolvedPath);
   const fileName = attachment.name;
   const chipLabel = label || fileName;
+  const options = extension.options as AttachmentMentionOptions;
 
   const openAttachment = useCallback(() => {
     void openMediaViewer({
@@ -438,15 +463,30 @@ const AttachmentMentionChip: React.FC<NodeViewProps> = ({ node }) => {
     >
       <CitationChip
         variant="file"
-        href={path}
-        visual={{
-          kind: "file",
-          fileName,
-        }}
+        href={resolvedPath}
+        visual={
+          lifecycleStatus === "pending" && fileType !== "text_local"
+            ? { kind: "loading" }
+            : lifecycleStatus === "failed"
+              ? { kind: "error" }
+              : { kind: "file", fileName }
+        }
         label={chipLabel}
         tabIndex={-1}
         draggable={false}
-        title={path}
+        title={
+          lifecycleStatus === "failed"
+            ? errorMessage || "Upload failed. Click to retry."
+            : lifecycleStatus === "pending"
+              ? `Preparing ${chipLabel}`
+              : resolvedPath
+        }
+        aria-busy={lifecycleStatus === "pending"}
+        aria-label={
+          lifecycleStatus === "failed"
+            ? `${chipLabel}: upload failed. Retry`
+            : undefined
+        }
         onMouseDown={(event) => {
           if (event.button !== 0) {
             return;
@@ -457,6 +497,13 @@ const AttachmentMentionChip: React.FC<NodeViewProps> = ({ node }) => {
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
+          if (lifecycleStatus === "failed" && attachmentId) {
+            options.onRetryAttachmentRef.current?.(attachmentId);
+            return;
+          }
+          if (lifecycleStatus === "pending") {
+            return;
+          }
           openAttachment();
         }}
       />
@@ -464,7 +511,7 @@ const AttachmentMentionChip: React.FC<NodeViewProps> = ({ node }) => {
   );
 };
 
-const AttachmentMention = Node.create({
+const AttachmentMention = Node.create<AttachmentMentionOptions>({
   name: "attachmentMention",
   group: "inline",
   inline: true,
@@ -478,6 +525,21 @@ const AttachmentMention = Node.create({
         default: "",
       },
       path: {
+        default: "",
+      },
+      attachmentId: {
+        default: "",
+      },
+      resolvedPath: {
+        default: "",
+      },
+      fileType: {
+        default: undefined,
+      },
+      lifecycleStatus: {
+        default: undefined,
+      },
+      errorMessage: {
         default: "",
       },
     };
@@ -566,6 +628,8 @@ export const InputTextarea = forwardRef<
       onSelectionChange,
       onContextMenu,
       onImagePasted,
+      attachments,
+      onRetryAttachment,
       isExpanded,
       setIsExpanded,
     },
@@ -576,6 +640,7 @@ export const InputTextarea = forwardRef<
     const onSubmitRef = useRef(onSubmit);
     const onSelectionChangeRef = useRef(onSelectionChange);
     const onImagePastedRef = useRef(onImagePasted);
+    const onRetryAttachmentRef = useRef(onRetryAttachment);
     const pendingLocalValuesRef = useRef<string[]>([]);
     const maxHeight = `${LINE_HEIGHT * (isExpanded ? 15 : 10) + INPUT_VERTICAL_PADDING}px`;
     const showExpandButton =
@@ -596,6 +661,10 @@ export const InputTextarea = forwardRef<
     useEffect(() => {
       onImagePastedRef.current = onImagePasted;
     }, [onImagePasted]);
+
+    useEffect(() => {
+      onRetryAttachmentRef.current = onRetryAttachment;
+    }, [onRetryAttachment]);
 
     const insertRawText = useCallback(
       (nextValue: string, mode: "selection" | "end" = "selection") => {
@@ -687,7 +756,9 @@ export const InputTextarea = forwardRef<
         Placeholder.configure({
           placeholder,
         }),
-        AttachmentMention,
+        AttachmentMention.configure({
+          onRetryAttachmentRef,
+        }),
       ],
       editorProps: {
         attributes: {
@@ -762,6 +833,58 @@ export const InputTextarea = forwardRef<
     useEffect(() => {
       editorRef.current = editor;
     }, [editor]);
+
+    useEffect(() => {
+      if (!editor) {
+        return;
+      }
+
+      let transaction = editor.state.tr;
+      let changed = false;
+      const unmatchedAttachments = attachments.filter(
+        (item) => item.type === "file",
+      );
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name !== "attachmentMention") {
+          return;
+        }
+
+        const path = String(node.attrs.path || "");
+        const attachmentIndex = unmatchedAttachments.findIndex(
+          (item) =>
+            item.path === path ||
+            item.casPath === path ||
+            item.sourcePath === path,
+        );
+        const attachment =
+          attachmentIndex === -1
+            ? undefined
+            : unmatchedAttachments.splice(attachmentIndex, 1)[0];
+        const nextAttrs = {
+          ...node.attrs,
+          attachmentId: attachment?.id || "",
+          resolvedPath: attachment?.casPath || attachment?.path || path,
+          fileType: attachment?.fileType,
+          lifecycleStatus: attachment?.status,
+          errorMessage: attachment?.error?.message || "",
+        };
+
+        if (
+          nextAttrs.attachmentId !== node.attrs.attachmentId ||
+          nextAttrs.resolvedPath !== node.attrs.resolvedPath ||
+          nextAttrs.fileType !== node.attrs.fileType ||
+          nextAttrs.lifecycleStatus !== node.attrs.lifecycleStatus ||
+          nextAttrs.errorMessage !== node.attrs.errorMessage
+        ) {
+          transaction = transaction.setNodeMarkup(pos, undefined, nextAttrs);
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        editor.view.dispatch(transaction);
+      }
+    }, [attachments, editor]);
 
     useEffect(() => {
       if (!editor) {

@@ -16,16 +16,69 @@ export interface StreamGeminiThreadInput extends Record<string, unknown> {
   historyLog: string | null;
   userMessage: string;
   userMessageId: string | null;
+  attachmentPreflightToken?: string | null;
   channelId: string;
   threadId: string | null;
   userName?: string | null;
   userEmail?: string | null;
 }
 
+export interface PrepareAttachmentInput {
+  jobId: string;
+  sourcePath: string;
+}
+
+export interface AttachmentPreparationResult {
+  job_id: string;
+  attachment_hash?: string | null;
+  cas_path?: string | null;
+  file_type?:
+    | "text_local"
+    | "image_upload"
+    | "document_upload"
+    | null;
+  status: "pending" | "ready" | "failed" | "cancelled";
+  disposition?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+}
+
+export interface SubmissionAttachmentResult {
+  attachment_hash: string;
+  file_type?:
+    | "text_local"
+    | "image_upload"
+    | "document_upload"
+    | null;
+  status: "pending" | "ready" | "failed" | "cancelled";
+  disposition?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+}
+
+export interface PrepareSubmissionAttachmentsInput {
+  preflightId: string;
+  threadId: string;
+  userMessageId: string;
+  hashes: string[];
+}
+
+export interface PrepareSubmissionAttachmentsResult {
+  preflight_token?: string | null;
+  results: SubmissionAttachmentResult[];
+}
+
 export type ProviderUnlisten = () => void;
 
 export interface ProviderPort {
   streamThread(input: StreamGeminiThreadInput): Promise<string>;
+  prepareAttachment(
+    input: PrepareAttachmentInput,
+  ): Promise<AttachmentPreparationResult>;
+  cancelAttachment(jobId: string): Promise<void>;
+  prepareSubmissionAttachments(
+    input: PrepareSubmissionAttachmentsInput,
+  ): Promise<PrepareSubmissionAttachmentsResult>;
   generateThreadTitle(
     apiKey: string,
     modelCandidates: string[],
