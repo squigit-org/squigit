@@ -66,6 +66,7 @@ export function registerThreadHandlers() {
       args.userEmail,
       (err: any, streamEvent: any) => {
         sendStreamEvent(event, args.channelId, err, streamEvent);
+        return true;
       },
     );
   });

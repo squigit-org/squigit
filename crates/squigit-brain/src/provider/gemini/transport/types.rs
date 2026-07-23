@@ -61,6 +61,8 @@ pub(crate) struct GeminiResponseCandidate {
     pub(crate) content: Option<GeminiResponseContent>,
     #[serde(rename = "finishReason")]
     pub(crate) finish_reason: Option<String>,
+    #[serde(rename = "finishMessage")]
+    pub(crate) finish_message: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

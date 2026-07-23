@@ -24,7 +24,7 @@ export function initializeCorePorts(): void {
 
   setProviderPort({
     streamThread: (input: StreamGeminiThreadInput) =>
-      platform.invoke("stream_thread", input),
+      platform.invoke<string>("stream_thread", input),
     generateThreadTitle: (
       apiKey: string,
       modelCandidates: string[],

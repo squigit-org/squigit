@@ -150,13 +150,18 @@ export interface ProviderDebugEvent {
   payload?: unknown;
 }
 
+export interface ProviderCompleteEvent {
+  type: "complete";
+}
+
 export type ProviderStreamEvent =
   | ProviderDebugEvent
   | ProviderTokenEvent
   | ProviderResetEvent
   | ProviderToolStatusEvent
   | ProviderToolStartEvent
-  | ProviderToolEndEvent;
+  | ProviderToolEndEvent
+  | ProviderCompleteEvent;
 
 export interface BrainConversationEntry {
   role: string;

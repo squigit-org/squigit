@@ -10,7 +10,9 @@ import {
   cancelCurrentRequest,
   clearActiveProviderTransport,
   createProviderChannelId,
+  createStreamCompletionBarrier,
   createStreamWatchdog,
+  reportStreamReconciliation,
 } from "../transport";
 import { setUserFirstMsg, addToHistory } from "../../../session/context";
 import { buildContextWindow } from "../../../session/summarizer";
@@ -41,6 +43,7 @@ export const sendMessage = async (
   brainSessionStore.currentChannelId = channelId;
   let fullResponse = "";
   const streamWatchdog = createStreamWatchdog(() => cancelCurrentRequest());
+  const streamCompletion = createStreamCompletionBarrier();
 
   const unlisten = await listenGeminiStream(channelId, (payload) => {
     if (brainSessionStore.generationId !== myGenId) return;
@@ -49,6 +52,7 @@ export const sendMessage = async (
       type?: ProviderStreamEvent["type"];
       token?: string;
     };
+    if (streamCompletion.accept(normalizedPayload)) return;
 
     if (!normalizedPayload?.type || normalizedPayload.type === "token") {
       const token = normalizedPayload.token || "";
@@ -84,22 +88,25 @@ export const sendMessage = async (
     }
 
     streamWatchdog.touch();
-    await Promise.race([
-      streamGeminiThread({
-        apiKey: providerApiKey,
-        modelCandidates: [...modelCandidates],
-        isInitialTurn: false,
-        imagePath: null, // Image never re-sent, brief is used instead
-        imageDescription: brainSessionStore.imageDescription,
-        userFirstMsg: brainSessionStore.userFirstMsg,
-        historyLog,
-        userMessage: text,
-        userMessageId,
-        channelId: channelId,
-        threadId: threadId ?? null,
-        userName: brainSessionStore.userName ?? undefined,
-        userEmail: brainSessionStore.userEmail ?? undefined,
-      }),
+    const nativeResponse = await Promise.race([
+      Promise.all([
+        streamGeminiThread({
+          apiKey: providerApiKey,
+          modelCandidates: [...modelCandidates],
+          isInitialTurn: false,
+          imagePath: null, // Image never re-sent, brief is used instead
+          imageDescription: brainSessionStore.imageDescription,
+          userFirstMsg: brainSessionStore.userFirstMsg,
+          historyLog,
+          userMessage: text,
+          userMessageId,
+          channelId: channelId,
+          threadId: threadId ?? null,
+          userName: brainSessionStore.userName ?? undefined,
+          userEmail: brainSessionStore.userEmail ?? undefined,
+        }),
+        streamCompletion.promise,
+      ]).then(([response]) => response),
       streamWatchdog.stallPromise,
     ]);
     streamWatchdog.stop();
@@ -108,7 +115,8 @@ export const sendMessage = async (
     if (brainSessionStore.generationId !== myGenId)
       throw new Error("CANCELLED");
 
-    const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+    const finalResponse = requireNonEmptyProviderResponse(nativeResponse);
+    reportStreamReconciliation(fullResponse, finalResponse);
     addToHistory("Assistant", finalResponse);
 
     console.log(

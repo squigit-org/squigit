@@ -3,10 +3,8 @@
 
 use crate::context::builder::format_history_log;
 use crate::events::BrainEventSink;
-use crate::provider::gemini::transport::types::GeminiEvent;
 use crate::runtime::BrainRuntimeState;
 use squigit_storage::{MessageAttachment, ThreadData, ThreadMessage, ThreadMetadata};
-use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
 pub struct StreamThreadRequest {
@@ -88,7 +86,7 @@ impl BrainService {
         &self,
         sink: &dyn BrainEventSink,
         request: StreamThreadRequest,
-    ) -> Result<(), String> {
+    ) -> Result<String, String> {
         crate::provider::gemini::commands::thread::stream_gemini_thread_v2(
             &self.runtime,
             sink,
@@ -157,28 +155,26 @@ impl BrainService {
         storage.save_thread(&thread).map_err(|e| e.to_string())?;
 
         let text = request.user_message.unwrap_or_default();
-        let collector = CollectingEventSink::new(Some(sink));
-        self.stream_thread(
-            &collector,
-            StreamThreadRequest {
-                api_key: request.api_key.clone(),
-                model_candidates: request.main_model_candidates.clone(),
-                is_initial_turn: true,
-                image_path: Some(image.path.clone()),
-                image_description: None,
-                user_first_msg: None,
-                history_log: None,
-                user_message: text.clone(),
-                user_message_id: None,
-                channel_id: request.channel_id,
-                thread_id: Some(metadata.id.clone()),
-                user_name: request.user_name,
-                user_email: request.user_email,
-            },
-        )
-        .await?;
-
-        let assistant_message = collector.current_text();
+        let assistant_message = self
+            .stream_thread(
+                sink,
+                StreamThreadRequest {
+                    api_key: request.api_key.clone(),
+                    model_candidates: request.main_model_candidates.clone(),
+                    is_initial_turn: true,
+                    image_path: Some(image.path.clone()),
+                    image_description: None,
+                    user_first_msg: None,
+                    history_log: None,
+                    user_message: text.clone(),
+                    user_message_id: None,
+                    channel_id: request.channel_id,
+                    thread_id: Some(metadata.id.clone()),
+                    user_name: request.user_name,
+                    user_email: request.user_email,
+                },
+            )
+            .await?;
 
         if !text.trim().is_empty() {
             storage
@@ -259,28 +255,26 @@ impl BrainService {
             .append_message(&request.thread_id, &user_message)
             .map_err(|e| e.to_string())?;
 
-        let collector = CollectingEventSink::new(Some(sink));
-        self.stream_thread(
-            &collector,
-            StreamThreadRequest {
-                api_key: request.api_key.clone(),
-                model_candidates: request.main_model_candidates.clone(),
-                is_initial_turn: false,
-                image_path: Some(image_path),
-                image_description: Some(image_description),
-                user_first_msg: Some(user_first_msg),
-                history_log: Some(format_history_log(&history_pairs)),
-                user_message: normalized_user_message.clone(),
-                user_message_id: Some(user_message_id),
-                channel_id: request.channel_id,
-                thread_id: Some(request.thread_id.clone()),
-                user_name: request.user_name,
-                user_email: request.user_email,
-            },
-        )
-        .await?;
-
-        let assistant_message = collector.current_text();
+        let assistant_message = self
+            .stream_thread(
+                sink,
+                StreamThreadRequest {
+                    api_key: request.api_key.clone(),
+                    model_candidates: request.main_model_candidates.clone(),
+                    is_initial_turn: false,
+                    image_path: Some(image_path),
+                    image_description: Some(image_description),
+                    user_first_msg: Some(user_first_msg),
+                    history_log: Some(format_history_log(&history_pairs)),
+                    user_message: normalized_user_message.clone(),
+                    user_message_id: Some(user_message_id),
+                    channel_id: request.channel_id,
+                    thread_id: Some(request.thread_id.clone()),
+                    user_name: request.user_name,
+                    user_email: request.user_email,
+                },
+            )
+            .await?;
 
         storage
             .append_message(
@@ -325,43 +319,6 @@ impl BrainService {
 impl Default for BrainService {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-struct CollectingEventSink<'a> {
-    delegate: Option<&'a dyn BrainEventSink>,
-    text: Arc<Mutex<String>>,
-}
-
-impl<'a> CollectingEventSink<'a> {
-    fn new(delegate: Option<&'a dyn BrainEventSink>) -> Self {
-        Self {
-            delegate,
-            text: Arc::new(Mutex::new(String::new())),
-        }
-    }
-
-    fn current_text(&self) -> String {
-        self.text
-            .lock()
-            .map(|value| value.clone())
-            .unwrap_or_default()
-    }
-}
-
-impl BrainEventSink for CollectingEventSink<'_> {
-    fn emit(&self, channel_id: &str, event: GeminiEvent) {
-        if let Ok(mut text) = self.text.lock() {
-            match &event {
-                GeminiEvent::Token { token } => text.push_str(token),
-                GeminiEvent::Reset { .. } => text.clear(),
-                _ => {}
-            }
-        }
-
-        if let Some(delegate) = self.delegate {
-            delegate.emit(channel_id, event);
-        }
     }
 }
 

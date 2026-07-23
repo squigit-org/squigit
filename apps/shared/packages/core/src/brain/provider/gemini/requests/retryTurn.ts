@@ -10,7 +10,9 @@ import {
   cancelCurrentRequest,
   clearActiveProviderTransport,
   createProviderChannelId,
+  createStreamCompletionBarrier,
   createStreamWatchdog,
+  reportStreamReconciliation,
 } from "../transport";
 import {
   setImageDescription,
@@ -62,6 +64,7 @@ export const retryFromMessage = async (
     brainSessionStore.currentChannelId = channelId;
     let fullResponse = "";
     const streamWatchdog = createStreamWatchdog(() => cancelCurrentRequest());
+    const streamCompletion = createStreamCompletionBarrier();
 
     const unlisten = await listenGeminiStream(channelId, (payload) => {
       if (brainSessionStore.generationId !== myGenId) return;
@@ -70,6 +73,7 @@ export const retryFromMessage = async (
         type?: ProviderStreamEvent["type"];
         token?: string;
       };
+      if (streamCompletion.accept(normalizedPayload)) return;
       if (!normalizedPayload?.type || normalizedPayload.type === "token") {
         const token = normalizedPayload.token || "";
         fullResponse += token;
@@ -96,22 +100,25 @@ export const retryFromMessage = async (
         prompt: "Initial screenshot analysis",
         modelCandidates,
       });
-      await Promise.race([
-        streamGeminiThread({
-          apiKey: providerApiKey,
-          modelCandidates: [...modelCandidates],
-          isInitialTurn: true,
-          imagePath: brainSessionStore.storedImagePath,
-          imageDescription: null,
-          userFirstMsg: null,
-          historyLog: null,
-          userMessage: "",
-          userMessageId: null,
-          channelId,
-          threadId: threadId ?? null,
-          userName: brainSessionStore.userName ?? undefined,
-          userEmail: brainSessionStore.userEmail ?? undefined,
-        }),
+      const nativeResponse = await Promise.race([
+        Promise.all([
+          streamGeminiThread({
+            apiKey: providerApiKey,
+            modelCandidates: [...modelCandidates],
+            isInitialTurn: true,
+            imagePath: brainSessionStore.storedImagePath,
+            imageDescription: null,
+            userFirstMsg: null,
+            historyLog: null,
+            userMessage: "",
+            userMessageId: null,
+            channelId,
+            threadId: threadId ?? null,
+            userName: brainSessionStore.userName ?? undefined,
+            userEmail: brainSessionStore.userEmail ?? undefined,
+          }),
+          streamCompletion.promise,
+        ]).then(([response]) => response),
         streamWatchdog.stallPromise,
       ]);
       streamWatchdog.stop();
@@ -121,7 +128,8 @@ export const retryFromMessage = async (
       if (brainSessionStore.generationId !== myGenId)
         throw new Error("CANCELLED");
 
-      const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+      const finalResponse = requireNonEmptyProviderResponse(nativeResponse);
+      reportStreamReconciliation(fullResponse, finalResponse);
       console.log("[GeminiClient] Generated Message:", finalResponse);
       setImageDescription(finalResponse);
       brainSessionStore.conversationHistory = [
@@ -182,6 +190,7 @@ export const retryFromMessage = async (
   brainSessionStore.currentChannelId = channelId;
   let fullResponse = "";
   const streamWatchdog = createStreamWatchdog(() => cancelCurrentRequest());
+  const streamCompletion = createStreamCompletionBarrier();
 
   const unlisten = await listenGeminiStream(channelId, (payload) => {
     if (brainSessionStore.generationId !== myGenId) return;
@@ -190,6 +199,7 @@ export const retryFromMessage = async (
       type?: ProviderStreamEvent["type"];
       token?: string;
     };
+    if (streamCompletion.accept(normalizedPayload)) return;
     if (!normalizedPayload?.type || normalizedPayload.type === "token") {
       const token = normalizedPayload.token || "";
       fullResponse += token;
@@ -218,22 +228,25 @@ export const retryFromMessage = async (
       modelCandidates,
     });
     streamWatchdog.touch();
-    await Promise.race([
-      streamGeminiThread({
-        apiKey: providerApiKey,
-        modelCandidates: [...modelCandidates],
-        isInitialTurn: false,
-        imagePath: null, // Image never re-sent, brief is used instead
-        imageDescription: imgDesc,
-        userFirstMsg: brainSessionStore.userFirstMsg,
-        historyLog,
-        userMessage: retryUserMessage,
-        userMessageId: retryUserMessageId,
-        channelId,
-        threadId: threadId ?? null,
-        userName: brainSessionStore.userName ?? undefined,
-        userEmail: brainSessionStore.userEmail ?? undefined,
-      }),
+    const nativeResponse = await Promise.race([
+      Promise.all([
+        streamGeminiThread({
+          apiKey: providerApiKey,
+          modelCandidates: [...modelCandidates],
+          isInitialTurn: false,
+          imagePath: null, // Image never re-sent, brief is used instead
+          imageDescription: imgDesc,
+          userFirstMsg: brainSessionStore.userFirstMsg,
+          historyLog,
+          userMessage: retryUserMessage,
+          userMessageId: retryUserMessageId,
+          channelId,
+          threadId: threadId ?? null,
+          userName: brainSessionStore.userName ?? undefined,
+          userEmail: brainSessionStore.userEmail ?? undefined,
+        }),
+        streamCompletion.promise,
+      ]).then(([response]) => response),
       streamWatchdog.stallPromise,
     ]);
     streamWatchdog.stop();
@@ -243,7 +256,8 @@ export const retryFromMessage = async (
     if (brainSessionStore.generationId !== myGenId)
       throw new Error("CANCELLED");
 
-    const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+    const finalResponse = requireNonEmptyProviderResponse(nativeResponse);
+    reportStreamReconciliation(fullResponse, finalResponse);
     console.log("[GeminiClient] Generated Message:", finalResponse);
     addToHistory("Assistant", finalResponse);
 

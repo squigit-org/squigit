@@ -38,6 +38,96 @@ pub(crate) struct StreamIterationResult {
     pub(crate) text: String,
 }
 
+enum StreamPayloadControl {
+    Continue,
+    Complete,
+}
+
+fn process_stream_payload(
+    sink: &dyn BrainEventSink,
+    channel_id: &str,
+    data: &str,
+    full_text: &mut String,
+    function_call: &mut Option<GeminiFunctionCall>,
+    function_call_thought_signature: &mut Option<String>,
+) -> Result<StreamPayloadControl, String> {
+    let raw_payload = serde_json::from_str::<serde_json::Value>(data)
+        .unwrap_or_else(|_| serde_json::Value::String(data.to_string()));
+    emit_event(
+        sink,
+        channel_id,
+        GeminiEvent::Debug {
+            phase: "response.raw".to_string(),
+            message: "Gemini SSE payload".to_string(),
+            payload: Some(raw_payload),
+        },
+    );
+
+    if data == "[DONE]" {
+        return Ok(StreamPayloadControl::Complete);
+    }
+
+    let chunk_data = serde_json::from_str::<GeminiResponseChunk>(data)
+        .map_err(|error| format!("Failed to parse Gemini SSE payload: {error}"))?;
+    if let Some(block_reason) = chunk_data
+        .prompt_feedback
+        .as_ref()
+        .and_then(|feedback| feedback.block_reason.as_deref())
+    {
+        return Err(format!("Gemini safety failure: {block_reason}"));
+    }
+    let Some(candidates) = chunk_data.candidates else {
+        return Ok(StreamPayloadControl::Continue);
+    };
+    let Some(first) = candidates.first() else {
+        return Ok(StreamPayloadControl::Continue);
+    };
+
+    if let Some(content) = &first.content {
+        if let Some(parts) = &content.parts {
+            for part in parts {
+                if let Some(fc) = &part.function_call {
+                    if function_call.is_none() {
+                        *function_call = Some(fc.clone());
+                        *function_call_thought_signature = part.thought_signature.clone();
+                    }
+                    continue;
+                }
+                if function_call.is_none() {
+                    if let Some(text) = &part.text {
+                        full_text.push_str(text);
+                        emit_event(
+                            sink,
+                            channel_id,
+                            GeminiEvent::Token {
+                                token: text.clone(),
+                            },
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    let Some(finish_reason) = first.finish_reason.as_deref() else {
+        return Ok(StreamPayloadControl::Continue);
+    };
+    if finish_reason == "STOP" {
+        return Ok(StreamPayloadControl::Complete);
+    }
+
+    let finish_message = first
+        .finish_message
+        .as_deref()
+        .map(str::trim)
+        .filter(|message| !message.is_empty())
+        .map(|message| format!(": {message}"))
+        .unwrap_or_default();
+    Err(format!(
+        "Gemini generation stopped with finish reason {finish_reason}{finish_message}"
+    ))
+}
+
 pub(crate) async fn stream_request_iteration(
     sink: &dyn BrainEventSink,
     client: &reqwest::Client,
@@ -96,6 +186,7 @@ pub(crate) async fn stream_request_iteration(
     let mut full_text = String::new();
     let mut function_call: Option<GeminiFunctionCall> = None;
     let mut function_call_thought_signature: Option<String> = None;
+    let mut completed = false;
 
     'stream_loop: loop {
         tokio::select! {
@@ -110,91 +201,52 @@ pub(crate) async fn stream_request_iteration(
                             buffer.drain(..idx + 1);
 
                             let trimmed = line.trim();
-                            if let Some(data) = trimmed.strip_prefix("data: ") {
-                                let raw_payload = serde_json::from_str::<serde_json::Value>(data)
-                                    .unwrap_or_else(|_| serde_json::Value::String(data.to_string()));
-                                emit_event(
-                                    sink,
-                                    channel_id,
-                                    GeminiEvent::Debug {
-                                        phase: "response.raw".to_string(),
-                                        message: "Gemini SSE payload".to_string(),
-                                        payload: Some(raw_payload),
-                                    },
-                                );
-                                if data == "[DONE]" {
-                                    break 'stream_loop;
-                                }
-                                let Ok(chunk_data) = serde_json::from_str::<GeminiResponseChunk>(data) else {
-                                    continue;
-                                };
-                                if let Some(block_reason) = chunk_data
-                                    .prompt_feedback
-                                    .as_ref()
-                                    .and_then(|feedback| feedback.block_reason.as_deref())
-                                {
-                                    return Err(format!(
-                                        "Gemini safety failure: {block_reason}"
-                                    ));
-                                }
-                                let Some(candidates) = chunk_data.candidates else {
-                                    continue;
-                                };
-                                let Some(first) = candidates.first() else {
-                                    continue;
-                                };
-
-                                if let Some(content) = &first.content {
-                                    if let Some(parts) = &content.parts {
-                                        for part in parts {
-                                            if let Some(fc) = &part.function_call {
-                                                if function_call.is_none() {
-                                                    function_call = Some(fc.clone());
-                                                    function_call_thought_signature =
-                                                        part.thought_signature.clone();
-                                                }
-                                                continue;
-                                            }
-                                            if function_call.is_none() {
-                                                if let Some(text) = &part.text {
-                                                    full_text.push_str(text);
-                                                    emit_event(
-                                                        sink,
-                                                        channel_id,
-                                                        GeminiEvent::Token {
-                                                            token: text.clone(),
-                                                        },
-                                                    );
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if let Some(finish_reason) = first.finish_reason.as_deref() {
-                                    if matches!(
-                                        finish_reason,
-                                        "SAFETY"
-                                            | "BLOCKLIST"
-                                            | "PROHIBITED_CONTENT"
-                                            | "SPII"
-                                            | "IMAGE_SAFETY"
-                                    ) {
-                                        return Err(format!(
-                                            "Gemini safety failure: {finish_reason}"
-                                        ));
-                                    }
+                            if let Some(data) = trimmed.strip_prefix("data:") {
+                                if matches!(
+                                    process_stream_payload(
+                                        sink,
+                                        channel_id,
+                                        data.trim_start(),
+                                        &mut full_text,
+                                        &mut function_call,
+                                        &mut function_call_thought_signature,
+                                    )?,
+                                    StreamPayloadControl::Complete
+                                ) {
+                                    completed = true;
                                     break 'stream_loop;
                                 }
                             }
                         }
                     }
                     Some(Err(error)) => return Err(transport_error_message("Stream error", error)),
-                    None => break,
+                    None => {
+                        let trailing = buffer.trim();
+                        if let Some(data) = trailing.strip_prefix("data:") {
+                            completed = matches!(
+                                process_stream_payload(
+                                    sink,
+                                    channel_id,
+                                    data.trim_start(),
+                                    &mut full_text,
+                                    &mut function_call,
+                                    &mut function_call_thought_signature,
+                                )?,
+                                StreamPayloadControl::Complete
+                            );
+                        }
+                        break;
+                    },
                 }
             }
             _ = cancel_token.cancelled() => return Err("CANCELLED".to_string()),
         }
+    }
+
+    if !completed {
+        return Err(
+            "Gemini stream ended before a terminal completion event was received.".to_string(),
+        );
     }
 
     emit_event(

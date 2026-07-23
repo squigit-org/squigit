@@ -25,7 +25,7 @@ export interface StreamGeminiThreadInput extends Record<string, unknown> {
 export type ProviderUnlisten = () => void;
 
 export interface ProviderPort {
-  streamThread(input: StreamGeminiThreadInput): Promise<void>;
+  streamThread(input: StreamGeminiThreadInput): Promise<string>;
   generateThreadTitle(
     apiKey: string,
     modelCandidates: string[],

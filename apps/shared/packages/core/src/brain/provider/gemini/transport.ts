@@ -17,6 +17,47 @@ interface StreamWatchdog {
   stallPromise: Promise<never>;
 }
 
+interface StreamCompletionBarrier {
+  promise: Promise<void>;
+  accept: (event: { type?: string } | null | undefined) => boolean;
+}
+
+export function createStreamCompletionBarrier(): StreamCompletionBarrier {
+  let completed = false;
+  let resolveCompletion: (() => void) | null = null;
+  const promise = new Promise<void>((resolve) => {
+    resolveCompletion = resolve;
+  });
+
+  return {
+    promise,
+    accept: (event) => {
+      if (event?.type !== "complete") return false;
+      if (!completed) {
+        completed = true;
+        resolveCompletion?.();
+      }
+      return true;
+    },
+  };
+}
+
+export function reportStreamReconciliation(
+  streamedResponse: string,
+  authoritativeResponse: string,
+) {
+  if (streamedResponse === authoritativeResponse) return;
+
+  console.warn(
+    "[GeminiClient] Stream delivery differed from the native final response.",
+    {
+      streamedCharacters: streamedResponse.length,
+      authoritativeCharacters: authoritativeResponse.length,
+      difference: authoritativeResponse.length - streamedResponse.length,
+    },
+  );
+}
+
 export function createStreamWatchdog(
   onStall: () => void,
   timeoutMs = DEFAULT_STREAM_STALL_TIMEOUT_MS,

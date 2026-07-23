@@ -15,7 +15,9 @@ import {
   cancelCurrentRequest,
   clearActiveProviderTransport,
   createProviderChannelId,
+  createStreamCompletionBarrier,
   createStreamWatchdog,
+  reportStreamReconciliation,
 } from "../transport";
 import {
   listenGeminiStream,
@@ -48,6 +50,7 @@ export const startNewThreadStream = async (
   brainSessionStore.currentChannelId = channelId;
   let fullResponse = "";
   const streamWatchdog = createStreamWatchdog(() => cancelCurrentRequest());
+  const streamCompletion = createStreamCompletionBarrier();
 
   const unlisten = await listenGeminiStream(channelId, (payload) => {
     if (brainSessionStore.generationId !== myGenId) return;
@@ -56,6 +59,7 @@ export const startNewThreadStream = async (
       type?: ProviderStreamEvent["type"];
       token?: string;
     };
+    if (streamCompletion.accept(normalizedPayload)) return;
     if (!normalizedPayload?.type || normalizedPayload.type === "token") {
       const token = normalizedPayload.token || "";
       fullResponse += token;
@@ -81,22 +85,25 @@ export const startNewThreadStream = async (
     if (!providerApiKey) {
       throw new Error("Gemini API Key not set");
     }
-    await Promise.race([
-      streamGeminiThread({
-        apiKey: providerApiKey,
-        modelCandidates: [...modelCandidates],
-        isInitialTurn: true,
-        imagePath,
-        imageDescription: null,
-        userFirstMsg: null,
-        historyLog: null,
-        userMessage: "",
-        userMessageId: null,
-        channelId: channelId,
-        threadId: threadId ?? null,
-        userName,
-        userEmail,
-      }),
+    const nativeResponse = await Promise.race([
+      Promise.all([
+        streamGeminiThread({
+          apiKey: providerApiKey,
+          modelCandidates: [...modelCandidates],
+          isInitialTurn: true,
+          imagePath,
+          imageDescription: null,
+          userFirstMsg: null,
+          historyLog: null,
+          userMessage: "",
+          userMessageId: null,
+          channelId: channelId,
+          threadId: threadId ?? null,
+          userName,
+          userEmail,
+        }),
+        streamCompletion.promise,
+      ]).then(([response]) => response),
       streamWatchdog.stallPromise,
     ]);
     streamWatchdog.stop();
@@ -107,7 +114,8 @@ export const startNewThreadStream = async (
     if (brainSessionStore.generationId !== myGenId)
       throw new Error("CANCELLED");
 
-    const finalResponse = requireNonEmptyProviderResponse(fullResponse);
+    const finalResponse = requireNonEmptyProviderResponse(nativeResponse);
+    reportStreamReconciliation(fullResponse, finalResponse);
     setImageDescription(finalResponse);
     addToHistory("Assistant", finalResponse);
 

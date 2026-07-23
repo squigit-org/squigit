@@ -296,7 +296,7 @@ pub async fn stream_gemini_thread_v2(
     thread_id: Option<String>,
     user_name: Option<String>,
     user_email: Option<String>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     if model_candidates.is_empty() {
         return Err("At least one model candidate is required.".to_string());
     }
@@ -354,7 +354,7 @@ pub async fn stream_gemini_thread_v2(
         .await;
 
         match result {
-            Ok(()) => {
+            Ok(answer) => {
                 emit_event(
                     sink,
                     &channel_id,
@@ -364,7 +364,7 @@ pub async fn stream_gemini_thread_v2(
                         payload: Some(json!({ "model": model })),
                     },
                 );
-                return Ok(());
+                return Ok(answer);
             }
             Err(error) => {
                 let has_next = index + 1 < model_candidates.len();
@@ -423,10 +423,10 @@ async fn stream_gemini_thread_candidate(
     // Runtime context params (NEW)
     user_name: Option<String>,
     user_email: Option<String>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     const MAX_TOOL_CALLS_PER_TURN: usize = 3;
     const MAX_AGENT_ITERATIONS: usize = 8;
-    const MAX_OUTPUT_TOKENS: usize = 8192;
+    const MAX_OUTPUT_TOKENS: usize = 65_536;
 
     let result = async {
         let client = reqwest::Client::new();
@@ -655,7 +655,7 @@ async fn stream_gemini_thread_candidate(
                         "Gemini returned an empty response.".to_string()
                     });
                 }
-                return Ok(());
+                return Ok(iteration.text);
             }
 
             let Some(function_call) = iteration.function_call else {
@@ -683,7 +683,7 @@ async fn stream_gemini_thread_candidate(
                         "Gemini returned an empty response.".to_string()
                     });
                 }
-                return Ok(());
+                return Ok(iteration.text);
             };
 
             if !is_supported_tool_name(&function_call.name) {

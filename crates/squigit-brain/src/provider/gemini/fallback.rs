@@ -15,6 +15,8 @@ pub(crate) fn is_transport_error(error: &str) -> bool {
         || lower.contains("failed to send request")
         || lower.contains("failed to read response")
         || lower.contains("stream error")
+        || lower.contains("failed to parse gemini sse payload")
+        || lower.contains("before a terminal completion event")
 }
 
 #[allow(dead_code)]
@@ -30,5 +32,6 @@ pub(crate) fn is_candidate_retryable_error(error: &str) -> bool {
         || lower.contains("404")
         || lower.contains("empty response")
         || lower.contains("stream stalled")
+        || lower.contains("finish reason max_tokens")
         || lower.contains("unsupported tool call")
 }

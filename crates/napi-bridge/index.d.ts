@@ -184,7 +184,7 @@ export declare function store_file_from_path(path: string): NapiStoredImage
 
 export declare function store_image_from_path(path: string): NapiStoredImage
 
-export declare function stream_thread(apiKey: string, modelCandidates: Array<string>, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, userMessage: string, userMessageId: string | undefined | null, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => void): Promise<void>
+export declare function stream_thread(apiKey: string, modelCandidates: Array<string>, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, userMessage: string, userMessageId: string | undefined | null, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => boolean): Promise<string>
 
 export declare function trash_downloaded_ocr_model(modelId: string): void
 

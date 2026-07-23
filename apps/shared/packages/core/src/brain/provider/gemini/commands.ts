@@ -14,7 +14,7 @@ export type { StreamGeminiThreadInput };
 
 export function streamGeminiThread(
   input: StreamGeminiThreadInput,
-): Promise<void> {
+): Promise<string> {
   return getProviderPort().streamThread(input);
 }
 

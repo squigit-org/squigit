@@ -18,7 +18,7 @@ fn get_brain_service() -> &'static BrainService {
 }
 
 struct NapiEventSink {
-    tsfn: ThreadsafeFunction<NapiStreamEvent>,
+    tsfn: ThreadsafeFunction<NapiStreamEvent, bool>,
 }
 
 impl BrainEventSink for NapiEventSink {
@@ -26,6 +26,15 @@ impl BrainEventSink for NapiEventSink {
         let napi_event: NapiStreamEvent = event.into();
         self.tsfn
             .call(Ok(napi_event), ThreadsafeFunctionCallMode::NonBlocking);
+    }
+}
+
+impl NapiEventSink {
+    async fn flush(&self) -> Result<()> {
+        self.tsfn
+            .call_async(Ok(NapiStreamEvent::complete()))
+            .await
+            .map(|_| ())
     }
 }
 
@@ -45,9 +54,9 @@ pub async fn stream_thread(
     thread_id: Option<String>,
     user_name: Option<String>,
     user_email: Option<String>,
-    #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => void")]
-    on_event: ThreadsafeFunction<NapiStreamEvent>,
-) -> Result<()> {
+    #[napi(ts_arg_type = "(err: null | Error, event: NapiStreamEvent) => boolean")]
+    on_event: ThreadsafeFunction<NapiStreamEvent, bool>,
+) -> Result<String> {
     let service = get_brain_service();
     let sink = NapiEventSink { tsfn: on_event };
 
@@ -67,10 +76,12 @@ pub async fn stream_thread(
         user_email,
     };
 
-    service
+    let final_text = service
         .stream_thread(&sink, request)
         .await
-        .map_err(|e| Error::from_reason(e.to_string()))
+        .map_err(|e| Error::from_reason(e.to_string()))?;
+    sink.flush().await?;
+    Ok(final_text)
 }
 
 #[napi(js_name = "generate_thread_title")]

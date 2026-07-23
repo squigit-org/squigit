@@ -89,6 +89,24 @@ pub struct NapiStreamEvent {
     pub clear_tools: Option<bool>,
 }
 
+impl NapiStreamEvent {
+    pub(crate) fn complete() -> Self {
+        Self {
+            event_type: "complete".to_string(),
+            phase: None,
+            token: None,
+            message: None,
+            id: None,
+            name: None,
+            status: None,
+            args: None,
+            result: None,
+            payload: None,
+            clear_tools: None,
+        }
+    }
+}
+
 #[napi(object)]
 pub struct NapiSttOptions {
     pub model: Option<String>,
