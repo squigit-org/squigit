@@ -5,6 +5,7 @@ use napi::{Error, Result};
 use napi_derive::napi;
 use squigit_storage::ThreadStorage;
 use std::collections::HashMap;
+use std::path::Path;
 
 #[napi(object)]
 pub struct NapiHarnessTextAttachment {
@@ -52,19 +53,25 @@ impl From<squigit_harness::TextFirstMessage> for NapiHarnessTextFirstMessage {
 pub fn prepare_text_first_message(
     message_text: String,
     text_attachment_paths: Vec<String>,
-    thread_id: Option<String>,
+    _thread_id: Option<String>,
 ) -> Result<NapiHarnessTextFirstMessage> {
     let mut resolved_text_attachment_paths = HashMap::new();
-    if let Some(thread_id) = thread_id.as_deref() {
-        let storage =
-            ThreadStorage::new().map_err(|error| Error::from_reason(error.to_string()))?;
-        for citation_path in &text_attachment_paths {
-            if let Some(cas_path) = storage
-                .get_attachment_cas_path(citation_path, thread_id)
-                .map_err(|error| Error::from_reason(error.to_string()))?
-            {
-                resolved_text_attachment_paths.insert(citation_path.clone(), cas_path);
-            }
+    let storage = ThreadStorage::new().map_err(|error| Error::from_reason(error.to_string()))?;
+    for citation_path in &text_attachment_paths {
+        let Some(hash) = Path::new(citation_path)
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .filter(|value| {
+                value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+            })
+        else {
+            continue;
+        };
+        if let Ok(cas_path) = storage.find_object_blob(hash) {
+            resolved_text_attachment_paths.insert(
+                citation_path.clone(),
+                cas_path.to_string_lossy().to_string(),
+            );
         }
     }
 

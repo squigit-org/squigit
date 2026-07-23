@@ -40,9 +40,8 @@ pub fn store_image_from_path(path: String) -> Result<NapiStoredImage> {
     #[cfg(not(feature = "desktop"))]
     {
         let storage = active_storage()?;
-        let buffer = std::fs::read(&path).map_err(|e| Error::from_reason(e.to_string()))?;
         let image = storage
-            .store_image(&buffer, None)
+            .store_image_from_path(&path, None)
             .map_err(map_storage_err)?;
         Ok(image.into())
     }
@@ -57,63 +56,16 @@ pub fn store_file_from_path(path: String) -> Result<NapiStoredImage> {
     Ok(stored.into())
 }
 
-#[napi(js_name = "register_attachment_source")]
-pub fn register_attachment_source(
-    thread_id: String,
-    cas_path: String,
-    source_path: String,
-    display_name: Option<String>,
-) -> Result<()> {
-    active_storage()?
-        .register_attachment_source(&thread_id, &cas_path, &source_path, display_name.as_deref())
-        .map_err(map_storage_err)
-}
-
-#[napi(js_name = "revise_attachment_cas_path")]
-pub fn revise_attachment_cas_path(
-    thread_id: String,
-    citation_path: String,
-    new_cas_path: String,
-    display_name: Option<String>,
-) -> Result<()> {
-    active_storage()?
-        .revise_attachment_cas_path(
-            &thread_id,
-            &citation_path,
-            &new_cas_path,
-            display_name.as_deref(),
-        )
-        .map_err(map_storage_err)
-}
-
-#[napi(js_name = "resolve_attachment_cas_path")]
-pub fn resolve_attachment_cas_path(
-    citation_path: String,
-    thread_id: String,
-) -> Result<Option<String>> {
-    active_storage()?
-        .get_attachment_cas_path(&citation_path, &thread_id)
-        .map_err(map_storage_err)
-}
-
 #[napi(js_name = "resolve_attachment_source_path")]
 pub fn resolve_attachment_source_path(
-    cas_path: String,
+    attachment_hash: String,
     thread_id: Option<String>,
 ) -> Result<Option<String>> {
     let source_path = active_storage()?
-        .get_attachment_source_path(&cas_path, thread_id.as_deref())
+        .get_attachment_source_path(&attachment_hash, thread_id.as_deref())
         .map_err(map_storage_err)?;
 
     Ok(source_path.filter(|path| std::path::Path::new(path).is_file()))
-}
-
-#[napi(js_name = "list_attachment_sources")]
-pub fn list_attachment_sources(thread_id: Option<String>) -> Result<String> {
-    let sources = active_storage()?
-        .list_attachment_sources(thread_id.as_deref())
-        .map_err(map_storage_err)?;
-    to_json(&sources)
 }
 
 #[napi(js_name = "get_image_path")]
@@ -127,10 +79,19 @@ pub fn create_thread(
     title: String,
     image_hash: String,
     workspace_id: Option<String>,
+    display_name: Option<String>,
 ) -> Result<String> {
     let storage = active_storage()?;
     let metadata = squigit_storage::ThreadMetadata::new(title, image_hash);
-    let thread = squigit_storage::ThreadData::new(metadata.clone());
+    let display_name = display_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("squigitshot.png");
+    let initial = storage
+        .attachment_manifest_entry(&metadata.image_hash, display_name, metadata.created_at)
+        .map_err(map_storage_err)?;
+    let thread = squigit_storage::ThreadData::new(metadata.clone(), initial);
     if let Some(workspace_id) = workspace_id {
         storage
             .save_thread_in_workspace(&thread, &workspace_id)
@@ -156,10 +117,7 @@ pub fn list_workspaces() -> Result<String> {
 }
 
 #[napi(js_name = "set_thread_workspace")]
-pub async fn set_thread_workspace(
-    thread_id: String,
-    workspace_id: String,
-) -> Result<()> {
+pub async fn set_thread_workspace(thread_id: String, workspace_id: String) -> Result<()> {
     tokio::task::spawn_blocking(move || {
         let storage = active_storage()?;
         storage
@@ -209,15 +167,20 @@ pub fn update_thread_metadata(metadata_json: String) -> Result<()> {
 }
 
 #[napi(js_name = "append_thread_message")]
-pub fn append_thread_message(thread_id: String, role: String, content: String) -> Result<()> {
+pub fn append_thread_message(thread_id: String, message_json: String) -> Result<()> {
     let storage = active_storage()?;
-    let msg = if role == "assistant" {
-        ThreadMessage::assistant(content)
-    } else {
-        ThreadMessage::user(content)
-    };
+    let msg = from_json::<ThreadMessage>(&message_json)?;
     storage
         .append_message(&thread_id, &msg)
+        .map_err(map_storage_err)
+}
+
+#[napi(js_name = "overwrite_thread_messages")]
+pub fn overwrite_thread_messages(thread_id: String, messages_json: String) -> Result<()> {
+    let storage = active_storage()?;
+    let messages = from_json::<Vec<ThreadMessage>>(&messages_json)?;
+    storage
+        .overwrite_messages(&thread_id, messages)
         .map_err(map_storage_err)
 }
 

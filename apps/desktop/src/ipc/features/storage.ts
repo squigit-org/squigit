@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { addon, parseAddonJson, requireAddonFn } from "../system/addon";
+import { addon, requireAddonFn } from "../system/addon";
 import { requireStringArg } from "../system/arguments";
 
 export function registerStorageHandlers() {
@@ -60,85 +60,17 @@ export function registerStorageHandlers() {
   });
   ipcMain.handle("validate_text_file", () => true);
   ipcMain.handle("resolve_attachment_path", (_, args) => args.path);
-  ipcMain.handle("register_attachment_source", (_, args) =>
-    requireAddonFn("register_attachment_source")(
-      requireStringArg(
-        "register_attachment_source",
-        args,
-        "threadId",
-        "thread_id",
-      ),
-      requireStringArg(
-        "register_attachment_source",
-        args,
-        "casPath",
-        "cas_path",
-      ),
-      requireStringArg(
-        "register_attachment_source",
-        args,
-        "sourcePath",
-        "source_path",
-      ),
-      args?.displayName ?? args?.display_name,
-    ),
-  );
-  ipcMain.handle("revise_attachment_cas_path", (_, args) =>
-    requireAddonFn("revise_attachment_cas_path")(
-      requireStringArg(
-        "revise_attachment_cas_path",
-        args,
-        "threadId",
-        "thread_id",
-      ),
-      requireStringArg(
-        "revise_attachment_cas_path",
-        args,
-        "citationPath",
-        "citation_path",
-      ),
-      requireStringArg(
-        "revise_attachment_cas_path",
-        args,
-        "newCasPath",
-        "new_cas_path",
-      ),
-      args?.displayName ?? args?.display_name,
-    ),
-  );
-  ipcMain.handle("resolve_attachment_cas_path", (_, args) =>
-    requireAddonFn("resolve_attachment_cas_path")(
-      requireStringArg(
-        "resolve_attachment_cas_path",
-        args,
-        "citationPath",
-        "citation_path",
-      ),
-      requireStringArg(
-        "resolve_attachment_cas_path",
-        args,
-        "threadId",
-        "thread_id",
-      ),
-    ),
-  );
   ipcMain.handle("resolve_attachment_source_path", (_, args) =>
     requireAddonFn("resolve_attachment_source_path")(
       requireStringArg(
         "resolve_attachment_source_path",
         args,
-        "casPath",
-        "cas_path",
+        "attachmentHash",
+        "attachment_hash",
       ),
       args?.threadId ?? args?.thread_id,
     ),
   );
-  ipcMain.handle("list_attachment_sources", (_, args) => {
-    const json = requireAddonFn("list_attachment_sources")(
-      args?.threadId ?? args?.thread_id,
-    );
-    return parseAddonJson("list_attachment_sources", json);
-  });
 
   ipcMain.handle("read_attachment_text", async (_, args) => {
     const fs = require("fs/promises");

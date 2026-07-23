@@ -6,9 +6,7 @@ use napi::{Error, Result};
 use napi_derive::napi;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
-use squigit_brain::service::{
-    BrainService, GenerateThreadTitleRequest, StreamThreadRequest,
-};
+use squigit_brain::service::{BrainService, GenerateThreadTitleRequest, StreamThreadRequest};
 use std::sync::OnceLock;
 
 use crate::types::NapiStreamEvent;
@@ -42,6 +40,7 @@ pub async fn stream_thread(
     user_first_msg: Option<String>,
     history_log: Option<String>,
     user_message: String,
+    user_message_id: Option<String>,
     channel_id: String,
     thread_id: Option<String>,
     user_name: Option<String>,
@@ -61,6 +60,7 @@ pub async fn stream_thread(
         user_first_msg,
         history_log,
         user_message,
+        user_message_id,
         channel_id,
         thread_id,
         user_name,

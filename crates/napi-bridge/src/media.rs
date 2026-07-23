@@ -8,7 +8,6 @@ use crate::types::NapiStoredImage;
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi::Result;
 use napi_derive::napi;
-use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 // =============================================================================
@@ -83,50 +82,8 @@ pub fn play_ui_sound(effect: String) -> Result<()> {
     Ok(())
 }
 
-fn object_path_tail(path: &Path) -> Option<PathBuf> {
-    let mut found_objects = false;
-    let mut tail = PathBuf::new();
-
-    for component in path.components() {
-        if found_objects {
-            tail.push(component.as_os_str());
-            continue;
-        }
-
-        if component.as_os_str() == OsStr::new("objects") {
-            found_objects = true;
-        }
-    }
-
-    if found_objects && !tail.as_os_str().is_empty() {
-        Some(tail)
-    } else {
-        None
-    }
-}
-
 fn resolve_ocr_image_path(image_path: String) -> PathBuf {
-    let path = PathBuf::from(&image_path);
-    if path.exists() {
-        return path;
-    }
-
-    let Some(base_dir) = squigit_storage::paths::base_config_dir() else {
-        return path;
-    };
-
-    if !path.is_absolute() {
-        if let Some(tail) = object_path_tail(&path) {
-            return base_dir.join("objects").join(tail);
-        }
-        return base_dir.join("threads").join(path);
-    }
-
-    if let Some(tail) = object_path_tail(&path) {
-        return base_dir.join("objects").join(tail);
-    }
-
-    path
+    PathBuf::from(image_path)
 }
 
 #[napi(js_name = "ocr_image")]

@@ -16,6 +16,7 @@ export function registerThreadHandlers() {
       requireStringArg("create_thread", args, "title"),
       requireStringArg("create_thread", args, "imageHash", "image_hash"),
       args?.workspaceId ?? args?.workspace_id,
+      args?.displayName ?? args?.display_name,
     );
     return parseAddonJson("create_thread", json);
   });
@@ -58,6 +59,7 @@ export function registerThreadHandlers() {
       args.userFirstMsg,
       args.historyLog,
       args.userMessage,
+      args.userMessageId,
       args.channelId,
       args.threadId,
       args.userName,
@@ -69,7 +71,15 @@ export function registerThreadHandlers() {
   });
 
   ipcMain.handle("append_thread_message", (_, args) =>
-    addon.append_thread_message?.(args.threadId, args.role, args.content),
+    requireAddonFn("append_thread_message")(
+      requireStringArg(
+        "append_thread_message",
+        args,
+        "threadId",
+        "thread_id",
+      ),
+      JSON.stringify(args.message),
+    ),
   );
   ipcMain.handle("update_thread_metadata", (_, args) => {
     if (!args?.metadata || typeof args.metadata !== "object") {
@@ -273,18 +283,17 @@ export function registerThreadHandlers() {
     return results.slice(0, limit);
   });
 
-  ipcMain.handle("overwrite_thread_messages", async (_, args) => {
-    const fs = require("fs/promises");
-    try {
-      const msgPath = require("path").join(
-        getThreadDir(args.threadId),
-        "messages.json",
-      );
-      await fs.writeFile(msgPath, JSON.stringify(args.messages, null, 2));
-    } catch (e) {
-      console.error("overwrite_thread_messages error", e);
-    }
-  });
+  ipcMain.handle("overwrite_thread_messages", (_, args) =>
+    requireAddonFn("overwrite_thread_messages")(
+      requireStringArg(
+        "overwrite_thread_messages",
+        args,
+        "threadId",
+        "thread_id",
+      ),
+      JSON.stringify(args.messages),
+    ),
+  );
 
   ipcMain.handle("save_image_tone", (_, args) =>
     requireAddonFn("save_image_tone")(

@@ -155,7 +155,11 @@ pub fn detect_image_tone_from_bytes(bytes: &[u8]) -> Option<String> {
 
 pub fn process_and_store_image(path: String) -> Result<StoredImage, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
-    process_bytes_internal(bytes)
+    if bytes.is_empty() {
+        return Err("Empty image buffer".to_string());
+    }
+    let explicit_tone = detect_image_tone_from_bytes(&bytes);
+    squigit_brain::context::media::process_and_store_image(&path, explicit_tone)
 }
 
 pub fn process_bytes_internal(buffer: Vec<u8>) -> Result<StoredImage, String> {
@@ -259,8 +263,8 @@ pub fn copy_image_to_clipboard(image_base64: String) -> Result<(), String> {
 pub fn copy_image_from_path_to_clipboard(path: String) -> Result<(), String> {
     use arboard::{Clipboard, ImageData};
 
-    let bytes = std::fs::read(&path)
-        .map_err(|e| format!("Failed to read image at {}: {}", path, e))?;
+    let bytes =
+        std::fs::read(&path).map_err(|e| format!("Failed to read image at {}: {}", path, e))?;
     let img = image::load_from_memory(&bytes)
         .map_err(|e| format!("Failed to decode image at {}: {}", path, e))?;
 

@@ -193,12 +193,15 @@ This usually indicates a native crash during startup/capture."
                     .ok()
                     .map(|stored| (storage, stored))
             })
-            .map(|(storage, stored)| {
+            .and_then(|(storage, stored)| {
                 let metadata = ThreadMetadata::new("New thread".to_string(), stored.hash.clone());
-                let thread = ThreadData::new(metadata.clone());
+                let initial = storage
+                    .attachment_manifest_entry(&stored.hash, "squigitshot.png", metadata.created_at)
+                    .ok()?;
+                let thread = ThreadData::new(metadata.clone(), initial);
                 let _ = storage.save_thread(&thread);
                 let _ = std::fs::remove_file(path);
-                (Some(metadata.id), Some(stored.hash))
+                Some((Some(metadata.id), Some(stored.hash)))
             })
             .unwrap_or_else(|| (Some(path.to_string()), None))
     }
