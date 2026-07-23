@@ -498,7 +498,7 @@ impl ThreadStorage {
             .iter()
             .find(|entry| entry.attachment_hash == initial_hash)
             .cloned()
-            .ok_or_else(|| StorageError::ImageNotFound(initial_hash))?;
+            .ok_or(StorageError::ImageNotFound(initial_hash))?;
         forked_thread.attachment_manifest = vec![initial];
         let retained_messages = forked_thread.messages.clone();
         for message in &retained_messages {
