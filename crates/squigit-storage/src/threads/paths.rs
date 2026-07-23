@@ -7,7 +7,7 @@ const OCR_ANNOTATIONS_FILE: &str = "ocr_annotations.json";
 const CONTEXT_WINDOW_FILE: &str = "context_window.json";
 const REVERSE_IMAGE_SEARCH_FILE: &str = "reverse_image_search.json";
 const MESSAGES_FILE: &str = "messages.json";
-const ATTACHMENT_REGISTRY_FILE: &str = "attachment_registry.json";
+const ATTACHMENT_MANIFEST_FILE: &str = "attachment_manifest.json";
 
 pub(super) fn ocr_annotations_path(thread_dir: &Path) -> PathBuf {
     thread_dir.join(OCR_ANNOTATIONS_FILE)
@@ -25,6 +25,6 @@ pub(super) fn messages_path(thread_dir: &Path) -> PathBuf {
     thread_dir.join(MESSAGES_FILE)
 }
 
-pub(super) fn attachment_registry_path(thread_dir: &Path) -> PathBuf {
-    thread_dir.join(ATTACHMENT_REGISTRY_FILE)
+pub(super) fn attachment_manifest_path(thread_dir: &Path) -> PathBuf {
+    thread_dir.join(ATTACHMENT_MANIFEST_FILE)
 }

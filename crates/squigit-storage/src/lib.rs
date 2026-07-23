@@ -22,7 +22,8 @@
 //!
 //! // Create a thread
 //! let metadata = ThreadMetadata::new("My Analysis".to_string(), stored.hash);
-//! let thread = ThreadData::new(metadata);
+//! let initial = storage.attachment_manifest_entry(&metadata.image_hash, "squigitshot.png", chrono::Utc::now()).unwrap();
+//! let thread = ThreadData::new(metadata, initial);
 //! storage.save_thread(&thread).unwrap();
 //! ```
 
@@ -33,15 +34,15 @@ pub mod profiles;
 pub mod rules;
 pub mod threads;
 
-pub use cas::StoredImage;
+pub use cas::{AttachmentFileType, ObjectFileContext, ObjectManifest, ObjectRemote, StoredImage};
 pub use error::{Result, StorageError};
 pub use profiles::{
     canonical_google_issuer, LastLogin, Profile, ProfileAuth, ProfileIdentity, ProfileSnapshot,
     ProfileStore, AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, GOOGLE_ISSUER, GOOGLE_PROVIDER,
 };
 pub use threads::{
-    AttachmentRegistry, ContextWindow, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation,
-    OcrRegion, ReverseImageSearchCache, ThreadAttachmentKind, ThreadAttachmentProviderFile,
-    ThreadAttachmentRecord, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage,
-    WorkspaceMetadata, EMPTY_STATE_ASSET_ID,
+    AttachmentManifest, AttachmentManifestEntry, ContextWindow, MessageAttachment,
+    OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion, ReverseImageSearchCache,
+    ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
+    EMPTY_STATE_ASSET_ID,
 };

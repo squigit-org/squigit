@@ -154,8 +154,7 @@ impl ThreadStorage {
 
     fn write_index(&self, index: &ThreadIndex) -> Result<()> {
         let json = serde_json::to_string_pretty(index)?;
-        fs::write(&self.index_path, json)?;
-        Ok(())
+        super::atomic_write(&self.index_path, json.as_bytes())
     }
 
     pub fn create_workspace(&self, path: &str) -> Result<WorkspaceMetadata> {

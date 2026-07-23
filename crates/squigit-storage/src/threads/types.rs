@@ -83,21 +83,30 @@ impl WorkspaceMetadata {
     }
 }
 
-/// A single thread message.
+/// A CAS object referenced by one user message.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MessageAttachment {
+    pub attachment_hash: String,
+    pub source_path: Option<String>,
+}
+
+/// A persisted message with a strict role-specific JSON shape.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ThreadMessage {
-    /// Role: "user" or "assistant".
-    pub role: String,
-    /// Message content (markdown).
-    pub content: String,
-    /// When the message was sent.
-    pub timestamp: DateTime<Utc>,
-    /// Optional structured citation chips shown under assistant responses.
-    #[serde(default)]
-    pub citations: Vec<CitationSource>,
-    /// Optional tool call timeline metadata for this message.
-    #[serde(default)]
-    pub tool_steps: Vec<ToolStep>,
+#[serde(tag = "role", rename_all = "lowercase")]
+pub enum ThreadMessage {
+    User {
+        id: String,
+        content: String,
+        timestamp: DateTime<Utc>,
+        attachments: Vec<MessageAttachment>,
+    },
+    Assistant {
+        id: String,
+        content: String,
+        timestamp: DateTime<Utc>,
+        citations: Vec<CitationSource>,
+        tool_steps: Vec<ToolStep>,
+    },
 }
 
 /// Structured citation source metadata persisted with a message.
@@ -122,13 +131,36 @@ pub struct ToolStep {
     pub args: serde_json::Value,
     #[serde(default)]
     pub message: Option<String>,
+    #[serde(default, rename = "startedAtMs")]
+    pub started_at_ms: Option<u64>,
+    #[serde(default, rename = "endedAtMs")]
+    pub ended_at_ms: Option<u64>,
 }
 
 impl ThreadMessage {
+    fn new_id() -> String {
+        format!("msg_{}", Uuid::new_v4())
+    }
+
     /// Create a new user message.
     pub fn user(content: String) -> Self {
-        Self {
-            role: "user".to_string(),
+        Self::user_with_attachments(content, Vec::new())
+    }
+
+    /// Create a new user message with structured CAS attachment hashes.
+    pub fn user_with_attachments(content: String, attachments: Vec<MessageAttachment>) -> Self {
+        Self::User {
+            id: Self::new_id(),
+            content,
+            timestamp: Utc::now(),
+            attachments,
+        }
+    }
+
+    /// Create a new assistant message.
+    pub fn assistant(content: String) -> Self {
+        Self::Assistant {
+            id: Self::new_id(),
             content,
             timestamp: Utc::now(),
             citations: Vec::new(),
@@ -136,14 +168,35 @@ impl ThreadMessage {
         }
     }
 
-    /// Create a new assistant message.
-    pub fn assistant(content: String) -> Self {
-        Self {
-            role: "assistant".to_string(),
-            content,
-            timestamp: Utc::now(),
-            citations: Vec::new(),
-            tool_steps: Vec::new(),
+    pub fn id(&self) -> &str {
+        match self {
+            Self::User { id, .. } | Self::Assistant { id, .. } => id,
+        }
+    }
+
+    pub fn role(&self) -> &'static str {
+        match self {
+            Self::User { .. } => "user",
+            Self::Assistant { .. } => "assistant",
+        }
+    }
+
+    pub fn content(&self) -> &str {
+        match self {
+            Self::User { content, .. } | Self::Assistant { content, .. } => content,
+        }
+    }
+
+    pub fn timestamp(&self) -> DateTime<Utc> {
+        match self {
+            Self::User { timestamp, .. } | Self::Assistant { timestamp, .. } => *timestamp,
+        }
+    }
+
+    pub fn attachments(&self) -> &[MessageAttachment] {
+        match self {
+            Self::User { attachments, .. } => attachments,
+            Self::Assistant { .. } => &[],
         }
     }
 }
@@ -211,54 +264,17 @@ pub struct ReverseImageSearchCache {
     pub created_at: Option<DateTime<Utc>>,
 }
 
-fn default_image_tone() -> Option<String> {
-    Some("d".to_string())
-}
-
-fn now_utc() -> DateTime<Utc> {
-    Utc::now()
-}
-
-/// Attachment kinds tracked per thread.
+/// Per-thread model context for a CAS attachment.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ThreadAttachmentKind {
-    TextLocal,
-    ImageUpload,
-    DocumentUpload,
-}
-
-/// Persisted provider-hosted file handle for a tracked attachment.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ThreadAttachmentProviderFile {
-    pub file_uri: String,
-    pub file_name: String,
-    pub mime_type: String,
-    pub uploaded_at: DateTime<Utc>,
-    pub expires_at: DateTime<Utc>,
-    #[serde(default)]
-    pub last_validated_at: Option<DateTime<Utc>>,
-}
-
-/// Per-thread tracked attachment metadata keyed by its stable citation path.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ThreadAttachmentRecord {
-    pub cas_path: String,
+pub struct AttachmentManifestEntry {
+    pub attachment_hash: String,
     pub display_name: String,
-    pub kind: ThreadAttachmentKind,
-    pub mime_type: String,
-    #[serde(default)]
-    pub source_path: Option<String>,
-    #[serde(default)]
-    pub provider_file: Option<ThreadAttachmentProviderFile>,
-    #[serde(default = "now_utc")]
-    pub last_seen_at: DateTime<Utc>,
-    #[serde(default)]
-    pub last_recalled_at: Option<DateTime<Utc>>,
+    pub file_type: crate::cas::AttachmentFileType,
+    pub file_brief: Option<String>,
+    pub last_mention_at: DateTime<Utc>,
 }
 
-/// Attachment registry persisted alongside thread data, keyed by citation path.
-pub type AttachmentRegistry = BTreeMap<String, ThreadAttachmentRecord>;
+pub type AttachmentManifest = Vec<AttachmentManifestEntry>;
 
 /// Complete thread data including messages and OCR.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -277,25 +293,23 @@ pub struct ThreadData {
     /// Reverse image search cache for the core thread image.
     #[serde(default)]
     pub reverse_image_search: ReverseImageSearchCache,
-    /// Per-thread tracked attachments keyed by CAS path.
-    #[serde(default)]
-    pub attachment_registry: AttachmentRegistry,
-    /// Image tone from the object manifest. Placeholder until manifests land.
-    #[serde(default = "default_image_tone")]
+    /// Per-thread attachment context persisted in attachment_manifest.json.
+    pub attachment_manifest: AttachmentManifest,
+    /// Image tone resolved from the initial object's manifest.
     pub image_tone: Option<String>,
 }
 
 impl ThreadData {
     /// Create new thread data with metadata.
-    pub fn new(metadata: ThreadMetadata) -> Self {
+    pub fn new(metadata: ThreadMetadata, initial_attachment: AttachmentManifestEntry) -> Self {
         Self {
             metadata,
             messages: Vec::new(),
             ocr_data: default_ocr_annotations(),
             context_window: ContextWindow::default(),
             reverse_image_search: ReverseImageSearchCache::default(),
-            attachment_registry: BTreeMap::new(),
-            image_tone: default_image_tone(),
+            attachment_manifest: vec![initial_attachment],
+            image_tone: None,
         }
     }
 }

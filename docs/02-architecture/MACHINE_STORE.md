@@ -13,7 +13,9 @@ Squigit has one machine-wide store shared by every shell. Electron and the CLI a
 │   ├── threads/
 │   │   ├── threads.sqlite3
 │   │   └── {thread_uuid}/ocr/{model_id}.json
-│   ├── objects/{hash_prefix}/{blake3_hash}.{ext}
+│   ├── objects/{hash_prefix}/{blake3_hash}/
+│   │   ├── manifest.json
+│   │   └── {blake3_hash}.{canonical_ext}
 │   ├── accounts/{account_uuid}/
 │   │   ├── account.json
 │   │   └── keys/

@@ -11,8 +11,15 @@ fn cli_style_ocr_write_is_renderable_through_shared_thread_storage_annotations()
     let storage = ThreadStorage::with_base_dir(storage_root).expect("thread storage");
 
     let metadata = ThreadMetadata::new("Parity Thread".to_string(), "deadbeef".to_string());
+    let initial = squigit_storage::AttachmentManifestEntry {
+        attachment_hash: metadata.image_hash.clone(),
+        display_name: "squigitshot.png".to_string(),
+        file_type: squigit_storage::AttachmentFileType::ImageUpload,
+        file_brief: None,
+        last_mention_at: metadata.created_at,
+    };
     storage
-        .save_thread(&ThreadData::new(metadata.clone()))
+        .save_thread(&ThreadData::new(metadata.clone(), initial))
         .expect("save thread");
 
     let boxes = vec![OcrBox {

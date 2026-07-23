@@ -4,6 +4,7 @@
 //! Thread storage manager and thread-local persisted state.
 
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 
 use crate::error::{Result, StorageError};
@@ -19,11 +20,22 @@ pub mod types;
 mod tests;
 
 pub use types::{
-    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotationEntry, OcrAnnotations,
-    OcrModelAnnotation, OcrRegion, ReverseImageSearchCache, ThreadAttachmentKind,
-    ThreadAttachmentProviderFile, ThreadAttachmentRecord, ThreadData, ThreadMessage,
-    ThreadMetadata, WorkspaceMetadata, EMPTY_STATE_ASSET_ID,
+    default_ocr_annotations, AttachmentManifest, AttachmentManifestEntry, ContextWindow,
+    MessageAttachment, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion,
+    ReverseImageSearchCache, ThreadData, ThreadMessage, ThreadMetadata, WorkspaceMetadata,
+    EMPTY_STATE_ASSET_ID,
 };
+
+pub(crate) fn atomic_write(path: &Path, contents: &[u8]) -> Result<()> {
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("data");
+    let temporary = path.with_file_name(format!(".{file_name}.tmp-{}", uuid::Uuid::new_v4()));
+    fs::write(&temporary, contents)?;
+    fs::rename(temporary, path)?;
+    Ok(())
+}
 
 /// Main storage manager for threads and content-addressed objects.
 pub struct ThreadStorage {

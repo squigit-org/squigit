@@ -94,7 +94,10 @@ impl ThreadStorage {
             }),
         );
 
-        fs::write(&ocr_path, serde_json::to_string_pretty(&annotations)?)?;
+        super::atomic_write(
+            &ocr_path,
+            serde_json::to_string_pretty(&annotations)?.as_bytes(),
+        )?;
         Ok(())
     }
 
@@ -116,7 +119,10 @@ impl ThreadStorage {
             annotations_changed = true;
         }
         if annotations_changed {
-            fs::write(&ocr_path, serde_json::to_string_pretty(&annotations)?)?;
+            super::atomic_write(
+                &ocr_path,
+                serde_json::to_string_pretty(&annotations)?.as_bytes(),
+            )?;
         }
 
         let data = annotations
@@ -146,7 +152,10 @@ impl ThreadStorage {
             annotations_changed = true;
         }
         if annotations_changed {
-            fs::write(&ocr_path, serde_json::to_string_pretty(&annotations)?)?;
+            super::atomic_write(
+                &ocr_path,
+                serde_json::to_string_pretty(&annotations)?.as_bytes(),
+            )?;
         }
         Ok(annotations)
     }
@@ -177,7 +186,10 @@ impl ThreadStorage {
                 }));
         }
 
-        fs::write(&ocr_path, serde_json::to_string_pretty(&annotations)?)?;
+        super::atomic_write(
+            &ocr_path,
+            serde_json::to_string_pretty(&annotations)?.as_bytes(),
+        )?;
         Ok(())
     }
 }

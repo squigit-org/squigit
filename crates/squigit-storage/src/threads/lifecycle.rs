@@ -1,139 +1,24 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
+use crate::cas::AttachmentFileType;
 use crate::error::{Result, StorageError};
 
 use super::ocr::{ensure_empty_state_asset, retain_supported_ocr_annotations_ids};
 use super::paths::{
-    attachment_registry_path, context_window_path, messages_path, ocr_annotations_path,
+    attachment_manifest_path, context_window_path, messages_path, ocr_annotations_path,
 };
 use super::{
-    default_ocr_annotations, AttachmentRegistry, ContextWindow, OcrAnnotations,
-    ReverseImageSearchCache, ThreadAttachmentKind, ThreadAttachmentRecord, ThreadData,
-    ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
+    default_ocr_annotations, AttachmentManifest, AttachmentManifestEntry, ContextWindow,
+    OcrAnnotations, ReverseImageSearchCache, ThreadData, ThreadMessage, ThreadMetadata,
+    ThreadStorage, WorkspaceMetadata,
 };
-
-fn normalize_attachment_registry_key(value: &str) -> String {
-    let trimmed = value.trim();
-    trimmed
-        .strip_prefix('<')
-        .and_then(|inner| inner.strip_suffix('>'))
-        .map(str::trim)
-        .unwrap_or(trimmed)
-        .to_string()
-}
-
-fn is_cas_object_path(value: &str) -> bool {
-    let path = Path::new(value);
-    if !path.is_absolute() {
-        return false;
-    }
-
-    let Some(hash) = path.file_stem().and_then(|value| value.to_str()) else {
-        return false;
-    };
-    if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return false;
-    }
-
-    let Some(prefix) = path
-        .parent()
-        .and_then(Path::file_name)
-        .and_then(|value| value.to_str())
-    else {
-        return false;
-    };
-    let Some(objects_dir) = path
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::file_name)
-        .and_then(|value| value.to_str())
-    else {
-        return false;
-    };
-
-    prefix.eq_ignore_ascii_case(&hash[..2])
-        && objects_dir.eq_ignore_ascii_case("objects")
-}
-
-fn attachment_kind_and_mime(path: &str) -> (ThreadAttachmentKind, &'static str) {
-    let extension = Path::new(path)
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .unwrap_or("")
-        .to_ascii_lowercase();
-
-    match extension.as_str() {
-        "png" => (ThreadAttachmentKind::ImageUpload, "image/png"),
-        "jpg" | "jpeg" => (ThreadAttachmentKind::ImageUpload, "image/jpeg"),
-        "webp" => (ThreadAttachmentKind::ImageUpload, "image/webp"),
-        "gif" => (ThreadAttachmentKind::ImageUpload, "image/gif"),
-        "bmp" => (ThreadAttachmentKind::ImageUpload, "image/bmp"),
-        "svg" => (ThreadAttachmentKind::ImageUpload, "image/svg+xml"),
-        "pdf" => (ThreadAttachmentKind::DocumentUpload, "application/pdf"),
-        "doc" => (ThreadAttachmentKind::DocumentUpload, "application/msword"),
-        "docx" => (
-            ThreadAttachmentKind::DocumentUpload,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ),
-        "xls" => (
-            ThreadAttachmentKind::DocumentUpload,
-            "application/vnd.ms-excel",
-        ),
-        "xlsx" => (
-            ThreadAttachmentKind::DocumentUpload,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        ),
-        "ppt" => (
-            ThreadAttachmentKind::DocumentUpload,
-            "application/vnd.ms-powerpoint",
-        ),
-        "pptx" => (
-            ThreadAttachmentKind::DocumentUpload,
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        ),
-        "rtf" => (ThreadAttachmentKind::DocumentUpload, "application/rtf"),
-        "odt" => (
-            ThreadAttachmentKind::DocumentUpload,
-            "application/vnd.oasis.opendocument.text",
-        ),
-        "ods" => (
-            ThreadAttachmentKind::DocumentUpload,
-            "application/vnd.oasis.opendocument.spreadsheet",
-        ),
-        "odp" => (
-            ThreadAttachmentKind::DocumentUpload,
-            "application/vnd.oasis.opendocument.presentation",
-        ),
-        _ => (ThreadAttachmentKind::TextLocal, "text/plain"),
-    }
-}
-
-fn registry_source_for_path(thread: &ThreadData, path: &str) -> Option<String> {
-    let target = normalize_attachment_registry_key(path);
-    let target_name = Path::new(&target).file_name();
-
-    thread
-        .attachment_registry
-        .get(&target)
-        .or_else(|| {
-            thread.attachment_registry.values().find(|record| {
-                normalize_attachment_registry_key(&record.cas_path) == target
-                    || target_name
-                        .is_some_and(|name| Path::new(&record.cas_path).file_name() == Some(name))
-            })
-        })
-        .and_then(|record| record.source_path.as_deref())
-        .map(str::trim)
-        .filter(|source_path| !source_path.is_empty())
-        .map(str::to_string)
-}
 
 fn copy_dir_all(source: &Path, destination: &Path) -> Result<()> {
     fs::create_dir_all(destination)?;
@@ -153,267 +38,285 @@ fn copy_dir_all(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
-fn unwrap_current_attachment_destination(raw: &str) -> Option<String> {
-    let trimmed = raw.trim();
-    let unwrapped = trimmed
-        .strip_prefix('<')
-        .and_then(|value| value.strip_suffix('>'))
-        .map(str::trim)
-        .unwrap_or(trimmed);
-    let rest = unwrapped.strip_prefix("file://")?;
+fn normalize_hash(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.len() == 64 && trimmed.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Some(trimmed.to_ascii_lowercase());
+    }
 
-    if let Some(path) = rest.strip_prefix('/') {
-        if path.as_bytes().get(1) == Some(&b':') {
-            return Some(path.to_string());
+    Path::new(trimmed)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .and_then(normalize_hash)
+}
+
+fn attachment_display_names(content: &str) -> BTreeMap<String, String> {
+    let re = Regex::new(r"\[([^\]\n]+)\]\((<[^>\n]+>|[^)\n]+)\)")
+        .expect("attachment markdown regex must compile");
+    let mut names = BTreeMap::new();
+
+    for capture in re.captures_iter(content) {
+        let Some(label) = capture.get(1).map(|value| value.as_str().trim()) else {
+            continue;
+        };
+        let Some(raw_path) = capture.get(2).map(|value| value.as_str().trim()) else {
+            continue;
+        };
+        let unwrapped = raw_path
+            .strip_prefix('<')
+            .and_then(|value| value.strip_suffix('>'))
+            .unwrap_or(raw_path);
+        let Some(path) = unwrapped.strip_prefix("file://") else {
+            continue;
+        };
+        if let Some(hash) = normalize_hash(path) {
+            names.entry(hash).or_insert_with(|| label.to_string());
         }
     }
 
-    Some(rest.to_string())
+    names
 }
 
-fn extract_current_attachment_paths(text: &str) -> BTreeSet<String> {
-    let re = Regex::new(r"\[[^\]\n]+\]\((<[^>\n]+>|[^)\n]+)\)")
-        .expect("current attachment link regex must compile");
-    re.captures_iter(text)
-        .filter_map(|capture| capture.get(1))
-        .filter_map(|raw| unwrap_current_attachment_destination(raw.as_str()))
-        .collect()
-}
-
-fn retain_referenced_attachments(thread: &mut ThreadData) {
-    let retained_paths = thread
-        .messages
-        .iter()
-        .flat_map(|message| extract_current_attachment_paths(&message.content))
-        .collect::<BTreeSet<_>>();
-
-    thread.attachment_registry.retain(|key, record| {
-        retained_paths.contains(key) || retained_paths.contains(&record.cas_path)
+fn sort_attachment_manifest(manifest: &mut AttachmentManifest, initial_hash: &str) {
+    manifest.sort_by(|left, right| {
+        let left_initial = left.attachment_hash == initial_hash;
+        let right_initial = right.attachment_hash == initial_hash;
+        match (left_initial, right_initial) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => right
+                .last_mention_at
+                .cmp(&left.last_mention_at)
+                .then_with(|| left.attachment_hash.cmp(&right.attachment_hash)),
+        }
     });
 }
 
+fn retained_attachment_hashes(messages: &[ThreadMessage]) -> BTreeSet<String> {
+    messages
+        .iter()
+        .flat_map(ThreadMessage::attachments)
+        .map(|attachment| attachment.attachment_hash.clone())
+        .collect()
+}
+
+fn validate_message_ids(messages: &[ThreadMessage]) -> Result<()> {
+    let mut seen = BTreeSet::new();
+    for message in messages {
+        let id = message.id();
+        let uuid = id.strip_prefix("msg_").ok_or_else(|| {
+            StorageError::InvalidThreadMessage(format!("message ID `{id}` has no msg_ prefix"))
+        })?;
+        uuid::Uuid::parse_str(uuid).map_err(|_| {
+            StorageError::InvalidThreadMessage(format!("message ID `{id}` is not a UUID"))
+        })?;
+        if !seen.insert(id) {
+            return Err(StorageError::InvalidThreadMessage(format!(
+                "duplicate message ID `{id}`"
+            )));
+        }
+        let mut attachment_hashes = BTreeSet::new();
+        for attachment in message.attachments() {
+            let hash = attachment.attachment_hash.as_str();
+            if hash.len() != 64
+                || !hash
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            {
+                return Err(StorageError::InvalidThreadMessage(format!(
+                    "attachment hash `{hash}` is not a canonical BLAKE3 hash"
+                )));
+            }
+            if !attachment_hashes.insert(hash) {
+                return Err(StorageError::InvalidThreadMessage(format!(
+                    "message `{id}` repeats attachment hash `{hash}`"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn retain_referenced_attachments(thread: &mut ThreadData) {
+    let retained = retained_attachment_hashes(&thread.messages);
+    let initial_hash = thread.metadata.image_hash.clone();
+    thread.attachment_manifest.retain(|entry| {
+        entry.attachment_hash == initial_hash || retained.contains(&entry.attachment_hash)
+    });
+    sort_attachment_manifest(&mut thread.attachment_manifest, &initial_hash);
+}
+
+fn source_for_hash(thread: &ThreadData, hash: &str) -> Option<(DateTime<Utc>, String)> {
+    thread
+        .messages
+        .iter()
+        .filter_map(|message| match message {
+            ThreadMessage::User {
+                timestamp,
+                attachments,
+                ..
+            } => attachments
+                .iter()
+                .find(|attachment| attachment.attachment_hash == hash)
+                .and_then(|attachment| attachment.source_path.as_deref())
+                .map(str::trim)
+                .filter(|source_path| !source_path.is_empty() && Path::new(source_path).is_file())
+                .map(|source_path| (*timestamp, source_path.to_string())),
+            ThreadMessage::Assistant { .. } => None,
+        })
+        .max_by(|left, right| left.0.cmp(&right.0))
+}
+
 impl ThreadStorage {
-    /// Persist the preferred source location for a CAS-backed attachment.
-    pub fn register_attachment_source(
+    pub fn attachment_manifest_entry(
         &self,
-        thread_id: &str,
-        cas_path: &str,
-        source_path: &str,
-        display_name: Option<&str>,
-    ) -> Result<()> {
-        let mut thread = self.load_thread(thread_id)?;
-        let key = normalize_attachment_registry_key(cas_path);
-        let canonical_source = fs::canonicalize(source_path)
-            .unwrap_or_else(|_| Path::new(source_path).to_path_buf())
-            .to_string_lossy()
-            .to_string();
-        let fallback_name = Path::new(&canonical_source)
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("attachment");
-        let display_name = display_name
-            .map(str::trim)
-            .filter(|name| !name.is_empty())
-            .unwrap_or(fallback_name)
-            .to_string();
-        let (kind, mime_type) = attachment_kind_and_mime(&key);
-        let now = Utc::now();
+        attachment_hash: &str,
+        display_name: &str,
+        last_mention_at: DateTime<Utc>,
+    ) -> Result<AttachmentManifestEntry> {
+        let hash = normalize_hash(attachment_hash).ok_or(StorageError::InvalidHash)?;
+        self.find_object_blob(&hash)?;
+        let mut object_manifest = self.load_object_manifest(&hash)?;
 
-        match thread.attachment_registry.get_mut(&key) {
-            Some(record) => {
-                let has_saved_revision =
-                    normalize_attachment_registry_key(&record.cas_path) != key;
-                if !has_saved_revision {
-                    record.source_path = Some(canonical_source);
-                }
-                record.display_name = display_name;
-                record.kind = kind;
-                record.mime_type = mime_type.to_string();
-                record.last_seen_at = now;
-            }
-            None => {
-                thread.attachment_registry.insert(
-                    key.clone(),
-                    ThreadAttachmentRecord {
-                        cas_path: key,
-                        source_path: Some(canonical_source),
-                        display_name,
-                        kind,
-                        mime_type: mime_type.to_string(),
-                        provider_file: None,
-                        last_seen_at: now,
-                        last_recalled_at: None,
-                    },
-                );
-            }
-        }
-
-        self.save_thread(&thread)
-    }
-
-    /// Point a citation in one thread at a newly saved immutable CAS object.
-    pub fn revise_attachment_cas_path(
-        &self,
-        thread_id: &str,
-        citation_path: &str,
-        new_cas_path: &str,
-        display_name: Option<&str>,
-    ) -> Result<()> {
-        let mut thread = self.load_thread(thread_id)?;
-        let key = normalize_attachment_registry_key(citation_path);
-        let registry_key = thread
-            .attachment_registry
-            .get_key_value(&key)
-            .map(|(key, _)| key.clone())
-            .or_else(|| {
-                thread
-                    .attachment_registry
-                    .iter()
-                    .find(|(_, record)| {
-                        normalize_attachment_registry_key(&record.cas_path) == key
-                    })
-                    .map(|(key, _)| key.clone())
-            })
-            .unwrap_or(key);
-        let canonical_cas_path = fs::canonicalize(new_cas_path)
-            .unwrap_or_else(|_| Path::new(new_cas_path).to_path_buf())
-            .to_string_lossy()
-            .to_string();
-
-        if !is_cas_object_path(&canonical_cas_path)
-            || !Path::new(&canonical_cas_path).is_file()
+        if object_manifest.file_context.file_type == AttachmentFileType::TextLocal
+            && object_manifest.file_context.file_brief.is_none()
         {
-            return Err(StorageError::ImageNotFound(canonical_cas_path));
+            let bytes = fs::read(self.find_object_blob(&hash)?)?;
+            object_manifest.file_context.file_brief =
+                Some(std::str::from_utf8(&bytes)?.to_string());
+            self.save_object_manifest(&hash, &object_manifest)?;
         }
 
-        let fallback_name = Path::new(&registry_key)
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("attachment");
-        let display_name = display_name
-            .map(str::trim)
-            .filter(|name| !name.is_empty())
-            .unwrap_or(fallback_name)
-            .to_string();
-        let (kind, mime_type) = attachment_kind_and_mime(&canonical_cas_path);
-        let now = Utc::now();
-
-        match thread.attachment_registry.get_mut(&registry_key) {
-            Some(record) => {
-                record.cas_path = canonical_cas_path;
-                record.source_path = None;
-                record.provider_file = None;
-                record.display_name = display_name;
-                record.kind = kind;
-                record.mime_type = mime_type.to_string();
-                record.last_seen_at = now;
-            }
-            None => {
-                thread.attachment_registry.insert(
-                    registry_key,
-                    ThreadAttachmentRecord {
-                        cas_path: canonical_cas_path,
-                        source_path: None,
-                        display_name,
-                        kind,
-                        mime_type: mime_type.to_string(),
-                        provider_file: None,
-                        last_seen_at: now,
-                        last_recalled_at: None,
-                    },
-                );
-            }
-        }
-
-        self.save_thread(&thread)
+        Ok(AttachmentManifestEntry {
+            attachment_hash: hash,
+            display_name: display_name.trim().to_string(),
+            file_type: object_manifest.file_context.file_type,
+            file_brief: object_manifest.file_context.file_brief,
+            last_mention_at,
+        })
     }
 
-    /// Resolve the current CAS object attached to a citation in one thread.
-    pub fn get_attachment_cas_path(
+    fn apply_user_message_attachments(
         &self,
-        citation_path: &str,
-        thread_id: &str,
-    ) -> Result<Option<String>> {
-        let thread = match self.load_thread(thread_id) {
-            Ok(thread) => thread,
-            Err(StorageError::ThreadNotFound(_)) => return Ok(None),
-            Err(error) => return Err(error),
+        thread: &mut ThreadData,
+        message: &ThreadMessage,
+    ) -> Result<()> {
+        let ThreadMessage::User {
+            content,
+            timestamp,
+            attachments,
+            ..
+        } = message
+        else {
+            return Ok(());
         };
-        let target = normalize_attachment_registry_key(citation_path);
-        let record = thread.attachment_registry.get(&target).or_else(|| {
-            thread.attachment_registry.values().find(|record| {
-                normalize_attachment_registry_key(&record.cas_path) == target
-            })
-        });
+        let names = attachment_display_names(content);
 
-        Ok(record
-            .map(|record| record.cas_path.trim())
-            .filter(|path| !path.is_empty() && Path::new(path).is_file())
-            .map(str::to_string))
+        for attachment in attachments {
+            let hash =
+                normalize_hash(&attachment.attachment_hash).ok_or(StorageError::InvalidHash)?;
+            let fallback_name = self
+                .find_object_blob(&hash)?
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("attachment")
+                .to_string();
+            let display_name = names.get(&hash).cloned().unwrap_or(fallback_name);
+            let fresh = self.attachment_manifest_entry(&hash, &display_name, *timestamp)?;
+
+            if let Some(existing) = thread
+                .attachment_manifest
+                .iter_mut()
+                .find(|entry| entry.attachment_hash == hash)
+            {
+                existing.display_name = fresh.display_name;
+                existing.file_type = fresh.file_type;
+                existing.file_brief = fresh.file_brief;
+                if existing.last_mention_at < *timestamp {
+                    existing.last_mention_at = *timestamp;
+                }
+            } else {
+                thread.attachment_manifest.push(fresh);
+            }
+        }
+
+        sort_attachment_manifest(&mut thread.attachment_manifest, &thread.metadata.image_hash);
+        Ok(())
     }
 
-    /// Find an attachment's recorded source path within the requested thread.
+    pub fn refresh_attachment_manifest(&self, thread_id: &str) -> Result<AttachmentManifest> {
+        let mut thread = self.load_thread(thread_id)?;
+        let mut changed = false;
+
+        for entry in &mut thread.attachment_manifest {
+            let object_manifest = self.load_object_manifest(&entry.attachment_hash)?;
+            if entry.file_type != object_manifest.file_context.file_type {
+                entry.file_type = object_manifest.file_context.file_type.clone();
+                changed = true;
+            }
+            if entry.file_brief != object_manifest.file_context.file_brief {
+                entry.file_brief = object_manifest.file_context.file_brief.clone();
+                changed = true;
+            }
+        }
+        sort_attachment_manifest(&mut thread.attachment_manifest, &thread.metadata.image_hash);
+        if changed {
+            self.save_thread_files(&thread)?;
+        }
+        Ok(thread.attachment_manifest)
+    }
+
+    pub fn touch_attachment(&self, thread_id: &str, attachment_hash: &str) -> Result<()> {
+        let hash = normalize_hash(attachment_hash).ok_or(StorageError::InvalidHash)?;
+        let mut thread = self.load_thread(thread_id)?;
+        let entry = thread
+            .attachment_manifest
+            .iter_mut()
+            .find(|entry| entry.attachment_hash == hash)
+            .ok_or_else(|| StorageError::ImageNotFound(hash.clone()))?;
+        entry.last_mention_at = Utc::now();
+        sort_attachment_manifest(&mut thread.attachment_manifest, &thread.metadata.image_hash);
+        self.save_thread_files(&thread)
+    }
+
+    pub fn get_message(&self, thread_id: &str, message_id: &str) -> Result<Option<ThreadMessage>> {
+        Ok(self
+            .load_thread(thread_id)?
+            .messages
+            .into_iter()
+            .find(|message| message.id() == message_id))
+    }
+
+    /// Find the newest existing source path recorded for an object hash.
     pub fn get_attachment_source_path(
         &self,
-        cas_path: &str,
+        attachment_hash_or_path: &str,
         thread_id: Option<&str>,
     ) -> Result<Option<String>> {
-        if let Some(thread_id) = thread_id {
-            if let Ok(thread) = self.load_thread(thread_id) {
-                if let Some(source_path) = registry_source_for_path(&thread, cas_path) {
-                    return Ok(Some(source_path));
-                }
-            }
-
+        let Some(hash) = normalize_hash(attachment_hash_or_path) else {
             return Ok(None);
-        }
-
-        for metadata in self.list_threads()? {
-            if let Ok(thread) = self.load_thread(&metadata.id) {
-                if let Some(source_path) = registry_source_for_path(&thread, cas_path) {
-                    return Ok(Some(source_path));
-                }
-            }
-        }
-
-        Ok(None)
-    }
-
-    /// Return source paths from attachment registries for renderer hydration.
-    pub fn list_attachment_sources(
-        &self,
-        thread_id: Option<&str>,
-    ) -> Result<BTreeMap<String, String>> {
-        let mut sources = BTreeMap::new();
-        let thread_ids = if let Some(thread_id) = thread_id {
-            vec![thread_id.to_string()]
-        } else {
-            self.list_threads()?
-                .into_iter()
-                .map(|metadata| metadata.id)
-                .collect()
         };
 
-        for thread_id in thread_ids {
-            let Ok(thread) = self.load_thread(&thread_id) else {
-                continue;
-            };
-            for (citation_path, record) in &thread.attachment_registry {
-                let Some(source_path) = record
-                    .source_path
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|source_path| !source_path.is_empty())
-                else {
-                    continue;
-                };
-                sources
-                    .entry(citation_path.clone())
-                    .or_insert_with(|| source_path.to_string());
-            }
+        if let Some(thread_id) = thread_id {
+            return self
+                .load_thread(thread_id)
+                .map(|thread| source_for_hash(&thread, &hash).map(|(_, path)| path));
         }
 
-        Ok(sources)
+        let mut newest = None::<(DateTime<Utc>, String)>;
+        for metadata in self.list_threads()? {
+            if let Ok(thread) = self.load_thread(&metadata.id) {
+                if let Some(candidate) = source_for_hash(&thread, &hash) {
+                    if newest
+                        .as_ref()
+                        .is_none_or(|current| candidate.0 > current.0)
+                    {
+                        newest = Some(candidate);
+                    }
+                }
+            }
+        }
+        Ok(newest.map(|(_, path)| path))
     }
 
     fn save_thread_files(&self, thread: &ThreadData) -> Result<()> {
@@ -424,125 +327,100 @@ impl ThreadStorage {
         let mut ocr_data = thread.ocr_data.clone();
         ensure_empty_state_asset(&mut ocr_data);
         retain_supported_ocr_annotations_ids(&mut ocr_data);
-        fs::write(&ocr_path, serde_json::to_string_pretty(&ocr_data)?)?;
+        super::atomic_write(
+            &ocr_path,
+            serde_json::to_string_pretty(&ocr_data)?.as_bytes(),
+        )?;
 
         let context_path = context_window_path(&thread_dir);
         if !context_path.exists() {
-            fs::write(
+            super::atomic_write(
                 &context_path,
-                serde_json::to_string_pretty(&thread.context_window)?,
+                serde_json::to_string_pretty(&thread.context_window)?.as_bytes(),
             )?;
         }
 
         let reverse_path = super::paths::reverse_image_search_path(&thread_dir);
         if !reverse_path.exists() {
-            fs::write(
+            super::atomic_write(
                 &reverse_path,
-                serde_json::to_string_pretty(&thread.reverse_image_search)?,
+                serde_json::to_string_pretty(&thread.reverse_image_search)?.as_bytes(),
             )?;
         }
 
-        let messages_path = messages_path(&thread_dir);
-        fs::write(
-            &messages_path,
-            serde_json::to_string_pretty(&thread.messages)?,
+        super::atomic_write(
+            &messages_path(&thread_dir),
+            serde_json::to_string_pretty(&thread.messages)?.as_bytes(),
         )?;
-
-        let attachment_registry_path = attachment_registry_path(&thread_dir);
-        if !thread.attachment_registry.is_empty() {
-            fs::write(
-                &attachment_registry_path,
-                serde_json::to_string_pretty(&thread.attachment_registry)?,
-            )?;
-        } else if attachment_registry_path.exists() {
-            fs::remove_file(&attachment_registry_path)?;
-        }
-
+        super::atomic_write(
+            &attachment_manifest_path(&thread_dir),
+            serde_json::to_string_pretty(&thread.attachment_manifest)?.as_bytes(),
+        )?;
         Ok(())
     }
 
-    /// Save a new thread to the device workspace or update it in its current workspace.
     pub fn save_thread(&self, thread: &ThreadData) -> Result<()> {
         self.save_thread_files(thread)?;
         self.update_index(&thread.metadata)
     }
 
-    /// Save a new thread in a specific workspace.
     pub fn save_thread_in_workspace(&self, thread: &ThreadData, workspace_id: &str) -> Result<()> {
         self.save_thread_files(thread)?;
         self.update_index_in_workspace(&thread.metadata, workspace_id)
     }
 
-    /// Move an existing thread to a workspace without rewriting its thread files.
     pub fn set_thread_workspace(&self, thread_id: &str, workspace_id: &str) -> Result<()> {
         let metadata = self.get_index_metadata(thread_id)?;
         self.update_index_in_workspace(&metadata, workspace_id)
     }
 
-    /// Load a thread by ID.
     pub fn load_thread(&self, thread_id: &str) -> Result<ThreadData> {
         let thread_dir = self.thread_dir(thread_id);
-
         if !thread_dir.exists() {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
         }
 
         let metadata = self.get_index_metadata(thread_id)?;
-
         let ocr_path = ocr_annotations_path(&thread_dir);
         let mut annotations_changed = false;
         let mut ocr_data: OcrAnnotations = if ocr_path.exists() {
-            let json = fs::read_to_string(&ocr_path)?;
-            serde_json::from_str(&json)?
+            serde_json::from_str(&fs::read_to_string(&ocr_path)?)?
         } else {
             default_ocr_annotations()
         };
-
-        if ensure_empty_state_asset(&mut ocr_data) {
-            annotations_changed = true;
-        }
-        if retain_supported_ocr_annotations_ids(&mut ocr_data) {
-            annotations_changed = true;
-        }
+        annotations_changed |= ensure_empty_state_asset(&mut ocr_data);
+        annotations_changed |= retain_supported_ocr_annotations_ids(&mut ocr_data);
         if annotations_changed {
-            fs::write(&ocr_path, serde_json::to_string_pretty(&ocr_data)?)?;
+            super::atomic_write(
+                &ocr_path,
+                serde_json::to_string_pretty(&ocr_data)?.as_bytes(),
+            )?;
         }
 
-        let messages_path = messages_path(&thread_dir);
-        let messages = if messages_path.exists() {
-            let json = fs::read_to_string(&messages_path)?;
-            serde_json::from_str::<Vec<ThreadMessage>>(&json)?
+        let messages = if messages_path(&thread_dir).exists() {
+            serde_json::from_str::<Vec<ThreadMessage>>(&fs::read_to_string(messages_path(
+                &thread_dir,
+            ))?)?
         } else {
             Vec::new()
         };
-
-        let context_path = context_window_path(&thread_dir);
-        let context_window = if context_path.exists() {
-            let json = fs::read_to_string(&context_path)?;
-            serde_json::from_str::<ContextWindow>(&json)?
+        let context_window = if context_window_path(&thread_dir).exists() {
+            serde_json::from_str::<ContextWindow>(&fs::read_to_string(context_window_path(
+                &thread_dir,
+            ))?)?
         } else {
-            let context = ContextWindow::default();
-            fs::write(&context_path, serde_json::to_string_pretty(&context)?)?;
-            context
+            ContextWindow::default()
         };
-
         let reverse_path = super::paths::reverse_image_search_path(&thread_dir);
         let reverse_image_search = if reverse_path.exists() {
-            let json = fs::read_to_string(&reverse_path)?;
-            serde_json::from_str::<ReverseImageSearchCache>(&json)?
+            serde_json::from_str::<ReverseImageSearchCache>(&fs::read_to_string(reverse_path)?)?
         } else {
-            let cache = ReverseImageSearchCache::default();
-            fs::write(&reverse_path, serde_json::to_string_pretty(&cache)?)?;
-            cache
+            ReverseImageSearchCache::default()
         };
-
-        let attachment_registry_path = attachment_registry_path(&thread_dir);
-        let attachment_registry = if attachment_registry_path.exists() {
-            let json = fs::read_to_string(&attachment_registry_path)?;
-            serde_json::from_str::<AttachmentRegistry>(&json)?
-        } else {
-            AttachmentRegistry::new()
-        };
+        let attachment_manifest = serde_json::from_str::<AttachmentManifest>(&fs::read_to_string(
+            attachment_manifest_path(&thread_dir),
+        )?)?;
+        let image_tone = self.get_image_tone(&metadata.image_hash);
 
         Ok(ThreadData {
             metadata,
@@ -550,21 +428,18 @@ impl ThreadStorage {
             ocr_data,
             context_window,
             reverse_image_search,
-            attachment_registry,
-            image_tone: Some("d".to_string()),
+            attachment_manifest,
+            image_tone,
         })
     }
 
-    /// Save image tone placeholder. Object manifests will own this value.
-    pub fn save_image_tone(&self, thread_id: &str, _tone: &str) -> Result<()> {
-        let thread_dir = self.thread_dir(thread_id);
-        if !thread_dir.exists() {
-            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
-        }
-        Ok(())
+    pub fn save_image_tone(&self, thread_id: &str, tone: &str) -> Result<()> {
+        let metadata = self.get_index_metadata(thread_id)?;
+        let mut manifest = self.load_object_manifest(&metadata.image_hash)?;
+        manifest.file_context.image_tone = Some(tone.to_string());
+        self.save_object_manifest(&metadata.image_hash, &manifest)
     }
 
-    /// List all threads, metadata only.
     pub fn list_threads(&self) -> Result<Vec<ThreadMetadata>> {
         let mut threads = self
             .read_index()?
@@ -576,24 +451,19 @@ impl ThreadStorage {
         Ok(threads)
     }
 
-    /// List workspaces in sidebar order with their nested thread metadata.
     pub fn list_workspaces(&self) -> Result<Vec<WorkspaceMetadata>> {
         Ok(self.read_index()?.workspaces)
     }
 
-    /// Delete a thread by ID.
     pub fn delete_thread(&self, thread_id: &str) -> Result<()> {
         let thread_dir = self.thread_dir(thread_id);
-
         if thread_dir.exists() {
             fs::remove_dir_all(&thread_dir)?;
         }
-
         self.remove_from_index(thread_id)?;
         Ok(())
     }
 
-    /// Fork a thread by copying its folder and trimming message-local sidecars.
     pub fn fork_thread(&self, thread_id: &str, message_index: usize) -> Result<ThreadMetadata> {
         let source_dir = self.thread_dir(thread_id);
         if !source_dir.exists() {
@@ -603,13 +473,11 @@ impl ThreadStorage {
         let source_workspace_id = self.get_thread_workspace_id(thread_id)?;
         let source_thread = self.load_thread(thread_id)?;
         let retained_len = message_index.checked_add(1).ok_or_else(|| {
-            StorageError::InvalidThreadFork(format!("message index {} is too large", message_index))
+            StorageError::InvalidThreadFork(format!("message index {message_index} is too large"))
         })?;
-
         if retained_len > source_thread.messages.len() {
             return Err(StorageError::InvalidThreadFork(format!(
-                "message index {} is outside thread {}",
-                message_index, thread_id
+                "message index {message_index} is outside thread {thread_id}"
             )));
         }
 
@@ -618,61 +486,83 @@ impl ThreadStorage {
             source_thread.metadata.image_hash.clone(),
         );
         metadata.pinned_at = None;
-
         let destination_dir = self.thread_dir(&metadata.id);
         copy_dir_all(&source_dir, &destination_dir)?;
 
-        let source_had_attachment_registry = attachment_registry_path(&source_dir).exists();
         let mut forked_thread = source_thread;
         forked_thread.metadata = metadata.clone();
         forked_thread.messages.truncate(retained_len);
-        retain_referenced_attachments(&mut forked_thread);
-
-        self.save_thread_in_workspace(&forked_thread, &source_workspace_id)?;
-
-        if source_had_attachment_registry && forked_thread.attachment_registry.is_empty() {
-            fs::write(
-                attachment_registry_path(&destination_dir),
-                serde_json::to_string_pretty(&forked_thread.attachment_registry)?,
-            )?;
+        let initial_hash = forked_thread.metadata.image_hash.clone();
+        let initial = forked_thread
+            .attachment_manifest
+            .iter()
+            .find(|entry| entry.attachment_hash == initial_hash)
+            .cloned()
+            .ok_or_else(|| StorageError::ImageNotFound(initial_hash))?;
+        forked_thread.attachment_manifest = vec![initial];
+        let retained_messages = forked_thread.messages.clone();
+        for message in &retained_messages {
+            self.apply_user_message_attachments(&mut forked_thread, message)?;
         }
-
+        self.save_thread_in_workspace(&forked_thread, &source_workspace_id)?;
         Ok(metadata)
     }
 
-    /// Update thread metadata.
     pub fn update_thread_metadata(&self, metadata: &ThreadMetadata) -> Result<()> {
-        let thread_dir = self.thread_dir(&metadata.id);
-
-        if !thread_dir.exists() {
+        if !self.thread_dir(&metadata.id).exists() {
             return Err(StorageError::ThreadNotFound(metadata.id.clone()));
         }
-
         self.update_index(metadata)?;
         Ok(())
     }
 
-    /// Append a message to a thread.
     pub fn append_message(&self, thread_id: &str, message: &ThreadMessage) -> Result<()> {
-        let thread_dir = self.thread_dir(thread_id);
-        fs::create_dir_all(&thread_dir)?;
-
-        let messages_path = messages_path(&thread_dir);
-        let mut messages: Vec<ThreadMessage> = if messages_path.exists() {
-            let json = fs::read_to_string(&messages_path)?;
-            serde_json::from_str(&json)?
-        } else {
-            Vec::new()
-        };
-
-        messages.push(message.clone());
-        fs::write(&messages_path, serde_json::to_string_pretty(&messages)?)?;
-
-        if let Ok(mut metadata) = self.get_index_metadata(thread_id) {
-            metadata.updated_at = chrono::Utc::now();
-            self.update_index(&metadata)?;
+        let mut thread = self.load_thread(thread_id)?;
+        validate_message_ids(std::slice::from_ref(message))?;
+        if thread
+            .messages
+            .iter()
+            .any(|existing| existing.id() == message.id())
+        {
+            return Err(StorageError::InvalidThreadMessage(format!(
+                "duplicate message ID `{}`",
+                message.id()
+            )));
         }
+        self.apply_user_message_attachments(&mut thread, message)?;
+        thread.messages.push(message.clone());
+        thread.metadata.updated_at = Utc::now();
+        self.save_thread(&thread)
+    }
 
-        Ok(())
+    pub fn overwrite_messages(&self, thread_id: &str, messages: Vec<ThreadMessage>) -> Result<()> {
+        let mut thread = self.load_thread(thread_id)?;
+        validate_message_ids(&messages)?;
+        let next_ids = messages
+            .iter()
+            .map(|message| message.id().to_string())
+            .collect::<BTreeSet<_>>();
+        let removed_message = thread
+            .messages
+            .iter()
+            .any(|message| !next_ids.contains(message.id()));
+        if removed_message {
+            let initial_hash = thread.metadata.image_hash.clone();
+            let initial = thread
+                .attachment_manifest
+                .iter()
+                .find(|entry| entry.attachment_hash == initial_hash)
+                .cloned()
+                .ok_or_else(|| StorageError::ImageNotFound(initial_hash.clone()))?;
+            thread.attachment_manifest = vec![initial];
+        }
+        thread.messages = messages;
+        let saved_messages = thread.messages.clone();
+        for message in &saved_messages {
+            self.apply_user_message_attachments(&mut thread, message)?;
+        }
+        retain_referenced_attachments(&mut thread);
+        thread.metadata.updated_at = Utc::now();
+        self.save_thread(&thread)
     }
 }

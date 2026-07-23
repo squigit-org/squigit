@@ -24,6 +24,10 @@ pub enum StorageError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
+    /// A locally parsed text attachment must contain valid UTF-8.
+    #[error("Text attachment is not valid UTF-8: {0}")]
+    InvalidUtf8(#[from] std::str::Utf8Error),
+
     /// Empty image provided.
     #[error("Empty image data")]
     EmptyImage,
@@ -55,6 +59,10 @@ pub enum StorageError {
     /// Invalid thread fork point.
     #[error("Invalid thread fork point: {0}")]
     InvalidThreadFork(String),
+
+    /// Persisted message IDs must use the `msg_<UUID>` contract.
+    #[error("Invalid thread message: {0}")]
+    InvalidThreadMessage(String),
 
     /// Profile with the given ID was not found.
     #[error("Profile not found: {0}")]

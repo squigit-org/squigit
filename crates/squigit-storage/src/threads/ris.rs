@@ -26,9 +26,9 @@ impl ThreadStorage {
             google_lens_url: Some(google_lens_url.to_string()),
             created_at: Some(chrono::Utc::now()),
         };
-        fs::write(
-            reverse_image_search_path(&thread_dir),
-            serde_json::to_string_pretty(&cache)?,
+        super::atomic_write(
+            &reverse_image_search_path(&thread_dir),
+            serde_json::to_string_pretty(&cache)?.as_bytes(),
         )?;
 
         Ok(())
