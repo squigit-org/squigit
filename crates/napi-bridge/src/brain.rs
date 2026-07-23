@@ -7,6 +7,7 @@ use napi_derive::napi;
 use squigit_brain::events::BrainEventSink;
 use squigit_brain::provider::gemini::transport::types::GeminiEvent;
 use squigit_brain::service::{BrainService, GenerateThreadTitleRequest, StreamThreadRequest};
+use squigit_brain::{PrepareAttachmentRequest, PrepareSubmissionAttachmentsRequest};
 use std::sync::OnceLock;
 
 use crate::types::NapiStreamEvent;
@@ -50,6 +51,7 @@ pub async fn stream_thread(
     history_log: Option<String>,
     user_message: String,
     user_message_id: Option<String>,
+    attachment_preflight_token: Option<String>,
     channel_id: String,
     thread_id: Option<String>,
     user_name: Option<String>,
@@ -70,6 +72,7 @@ pub async fn stream_thread(
         history_log,
         user_message,
         user_message_id,
+        attachment_preflight_token,
         channel_id,
         thread_id,
         user_name,
@@ -82,6 +85,51 @@ pub async fn stream_thread(
         .map_err(|e| Error::from_reason(e.to_string()))?;
     sink.flush().await?;
     Ok(final_text)
+}
+
+#[napi(js_name = "prepare_attachment")]
+pub async fn prepare_attachment(job_id: String, source_path: String) -> Result<String> {
+    let result = get_brain_service()
+        .prepare_attachment(PrepareAttachmentRequest {
+            job_id,
+            source_path,
+        })
+        .await;
+    serde_json::to_string(&result).map_err(|error| Error::from_reason(error.to_string()))
+}
+
+#[napi(js_name = "cancel_attachment")]
+pub async fn cancel_attachment(job_id: String) -> Result<()> {
+    get_brain_service()
+        .cancel_attachment(job_id)
+        .await
+        .map_err(Error::from_reason)
+}
+
+#[napi(js_name = "cancel_all_attachment_jobs")]
+pub async fn cancel_all_attachment_jobs() -> Result<()> {
+    get_brain_service()
+        .cancel_all_attachment_jobs()
+        .await
+        .map_err(Error::from_reason)
+}
+
+#[napi(js_name = "prepare_submission_attachments")]
+pub async fn prepare_submission_attachments(
+    preflight_id: String,
+    thread_id: String,
+    user_message_id: String,
+    attachment_hashes: Vec<String>,
+) -> Result<String> {
+    let result = get_brain_service()
+        .prepare_submission_attachments(PrepareSubmissionAttachmentsRequest {
+            preflight_id,
+            thread_id,
+            user_message_id,
+            attachment_hashes,
+        })
+        .await;
+    serde_json::to_string(&result).map_err(|error| Error::from_reason(error.to_string()))
 }
 
 #[napi(js_name = "generate_thread_title")]

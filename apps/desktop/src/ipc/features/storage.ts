@@ -58,7 +58,21 @@ export function registerStorageHandlers() {
       await fs.rm(tempDirectory, { recursive: true, force: true });
     }
   });
-  ipcMain.handle("validate_text_file", () => true);
+  ipcMain.handle("validate_text_file", async (_, args) => {
+    const fs = require("fs/promises");
+    const sourcePath = requireStringArg(
+      "validate_text_file",
+      args,
+      "path",
+    );
+    const bytes = await fs.readFile(sourcePath);
+    try {
+      new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      return true;
+    } catch {
+      return false;
+    }
+  });
   ipcMain.handle("resolve_attachment_path", (_, args) => args.path);
   ipcMain.handle("resolve_attachment_source_path", (_, args) =>
     requireAddonFn("resolve_attachment_source_path")(

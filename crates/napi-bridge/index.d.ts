@@ -2,6 +2,10 @@
 /* eslint-disable */
 export declare function append_thread_message(threadId: string, messageJson: string): void
 
+export declare function cancel_all_attachment_jobs(): Promise<void>
+
+export declare function cancel_attachment(jobId: string): Promise<void>
+
 export declare function cancel_download_ocr_model(modelId: string): void
 
 export declare function cancel_google_auth(): void
@@ -150,6 +154,10 @@ export declare function overwrite_thread_messages(threadId: string, messagesJson
 
 export declare function play_ui_sound(effect: string): void
 
+export declare function prepare_attachment(jobId: string, sourcePath: string): Promise<string>
+
+export declare function prepare_submission_attachments(preflightId: string, threadId: string, userMessageId: string, attachmentHashes: Array<string>): Promise<string>
+
 export declare function prepare_text_first_message(messageText: string, textAttachmentPaths: Array<string>, threadId?: string | undefined | null): NapiHarnessTextFirstMessage
 
 export declare function process_image_path(path: string): NapiStoredImage
@@ -184,7 +192,7 @@ export declare function store_file_from_path(path: string): NapiStoredImage
 
 export declare function store_image_from_path(path: string): NapiStoredImage
 
-export declare function stream_thread(apiKey: string, modelCandidates: Array<string>, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, userMessage: string, userMessageId: string | undefined | null, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => boolean): Promise<string>
+export declare function stream_thread(apiKey: string, modelCandidates: Array<string>, isInitialTurn: boolean, imagePath: string | undefined | null, imageDescription: string | undefined | null, userFirstMsg: string | undefined | null, historyLog: string | undefined | null, userMessage: string, userMessageId: string | undefined | null, attachmentPreflightToken: string | undefined | null, channelId: string, threadId: string | undefined | null, userName: string | undefined | null, userEmail: string | undefined | null, onEvent: (err: null | Error, event: NapiStreamEvent) => boolean): Promise<string>
 
 export declare function trash_downloaded_ocr_model(modelId: string): void
 

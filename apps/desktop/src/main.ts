@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell, session, protocol } from "electron";
 import path from "path";
 import { setupIpc } from "./ipc";
+import { addon } from "./ipc/system/addon";
 import { registerProtocols } from "./protocol";
 
 const originalUserData = app.getPath("userData");
@@ -117,6 +118,14 @@ async function createWindow() {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+  });
+
+  mainWindow.on("close", () => {
+    void Promise.resolve(addon.cancel_all_attachment_jobs?.()).catch(
+      (error) => {
+        console.warn("Failed to cancel attachment jobs during shutdown:", error);
+      },
+    );
   });
 }
 

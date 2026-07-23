@@ -49,6 +49,64 @@ export function registerThreadHandlers() {
     addon.cancel_request?.(args.channelId),
   );
 
+  ipcMain.handle("prepare_attachment", async (_, args) => {
+    const json = await requireAddonFn("prepare_attachment")(
+      requireStringArg("prepare_attachment", args, "jobId", "job_id"),
+      requireStringArg(
+        "prepare_attachment",
+        args,
+        "sourcePath",
+        "source_path",
+      ),
+    );
+    return parseAddonJson("prepare_attachment", json);
+  });
+
+  ipcMain.handle("cancel_attachment", (_, args) =>
+    requireAddonFn("cancel_attachment")(
+      requireStringArg("cancel_attachment", args, "jobId", "job_id"),
+    ),
+  );
+
+  ipcMain.handle("cancel_all_attachment_jobs", () =>
+    requireAddonFn("cancel_all_attachment_jobs")(),
+  );
+
+  ipcMain.handle("prepare_submission_attachments", async (_, args) => {
+    const hashes = args?.hashes ?? args?.attachmentHashes;
+    if (
+      !Array.isArray(hashes) ||
+      !hashes.every((hash) => typeof hash === "string")
+    ) {
+      throw new Error(
+        "prepare_submission_attachments requires an array of hashes.",
+      );
+    }
+
+    const json = await requireAddonFn("prepare_submission_attachments")(
+      requireStringArg(
+        "prepare_submission_attachments",
+        args,
+        "preflightId",
+        "preflight_id",
+      ),
+      requireStringArg(
+        "prepare_submission_attachments",
+        args,
+        "threadId",
+        "thread_id",
+      ),
+      requireStringArg(
+        "prepare_submission_attachments",
+        args,
+        "userMessageId",
+        "user_message_id",
+      ),
+      hashes,
+    );
+    return parseAddonJson("prepare_submission_attachments", json);
+  });
+
   ipcMain.handle("stream_thread", async (event, args) => {
     return addon.stream_thread?.(
       args.apiKey,
@@ -60,6 +118,7 @@ export function registerThreadHandlers() {
       args.historyLog,
       args.userMessage,
       args.userMessageId,
+      args.attachmentPreflightToken,
       args.channelId,
       args.threadId,
       args.userName,

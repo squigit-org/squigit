@@ -587,6 +587,8 @@ if (!nativeBinding) {
 
 module.exports = nativeBinding
 module.exports.append_thread_message = nativeBinding.append_thread_message
+module.exports.cancel_all_attachment_jobs = nativeBinding.cancel_all_attachment_jobs
+module.exports.cancel_attachment = nativeBinding.cancel_attachment
 module.exports.cancel_download_ocr_model = nativeBinding.cancel_download_ocr_model
 module.exports.cancel_google_auth = nativeBinding.cancel_google_auth
 module.exports.cancel_request = nativeBinding.cancel_request
@@ -624,6 +626,8 @@ module.exports.load_thread = nativeBinding.load_thread
 module.exports.ocr_image = nativeBinding.ocr_image
 module.exports.overwrite_thread_messages = nativeBinding.overwrite_thread_messages
 module.exports.play_ui_sound = nativeBinding.play_ui_sound
+module.exports.prepare_attachment = nativeBinding.prepare_attachment
+module.exports.prepare_submission_attachments = nativeBinding.prepare_submission_attachments
 module.exports.prepare_text_first_message = nativeBinding.prepare_text_first_message
 module.exports.process_image_path = nativeBinding.process_image_path
 module.exports.profile_count = nativeBinding.profile_count
