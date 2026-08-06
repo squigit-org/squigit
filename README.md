@@ -8,7 +8,6 @@ If you want BYOK, open-source, privacy-first AI analysis and local OCR for the r
 
 </br>
 
-
 ---
 
 ## Quickstart
