@@ -4,11 +4,10 @@
 </p>
 </br>
 
-If you want BYOK, open-source, privacy-first AI analysis and local OCR for the region you squiggle, then <code>squigit</code> is the tool you seek.
+If you want BYOK, open-source, privacy-first AI analysis and local OCR for the region you squiggle, then <code>squigit</code> is the tool you seek. If you want the desktop app experience, run <code>squigit app</code> or visit <a href="https://squigit-org.github.io/#download">the Squigit App page</a>.
 
 </br>
 
-If you want the desktop app experience, run <code>squigit app</code> or visit <a href="https://squigit-org.github.io/#download">the Squigit App page</a>.
 
 ---
 
