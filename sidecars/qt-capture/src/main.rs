@@ -1,0 +1,29 @@
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
+mod paths;
+mod qt_app;
+mod guards;
+
+use anyhow::Result;
+use qt_app::QtApp;
+use guards::AudioSuppressor;
+use std::process::ExitCode;
+
+fn main() -> ExitCode {
+    match run() {
+        Ok(code) => code,
+        Err(e) => {
+            eprintln!("[qt-capture] Error: {:#}", e);
+            AudioSuppressor::unmute();
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn run() -> Result<ExitCode> {
+    let mut app = QtApp::new();
+    app.run()
+}
