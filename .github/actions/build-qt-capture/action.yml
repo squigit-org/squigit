@@ -1,0 +1,77 @@
+name: "Build Qt Capture"
+description: "Builds and signs the Qt native Capture Engine standalone wrapper"
+inputs:
+  target:
+    description: "Rust target triple"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build Linux Artifacts (Docker)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        docker build -t squigit-builder -f sidecars/qt-capture/Dockerfile .
+        docker run --rm -v $PWD:/build -w /build -e CARGO_HTTP_MULTIPLEXING=false squigit-builder bash -c "cargo xtask build capture"
+        for path in target apps/desktop/binaries sidecars/qt-capture/native/_internal; do
+          if [ -e "$path" ]; then
+            sudo chown -R "$(id -u):$(id -g)" "$path"
+          fi
+        done
+
+    - name: Install Qt (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install qt@6
+        echo "Qt6_DIR=$(brew --prefix qt@6)" >> $GITHUB_ENV
+
+    - name: Install Qt (Windows)
+      if: runner.os == 'Windows'
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: "6.6.0"
+        host: "windows"
+        target: "desktop"
+        arch: "win64_msvc2019_64"
+        modules: "qt5compat qtshadertools qtimageformats"
+
+    - name: Setup MSVC (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Build Capture Engine (Unix - No Docker)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: cargo xtask build capture
+
+    - name: Sign Capture Engine (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        IDENTITY="-"
+        DIR="apps/desktop/binaries"
+        CAPTURE_APP="$DIR/qt-capture-${{ inputs.target }}/_internal/capture.app"
+
+        if [ -d "$DIR" ]; then
+          find "$DIR" -type f \( -name "*.dylib" -o -name "capture-engine" \) -print0 | while IFS= read -r -d '' f; do
+            codesign --force --options runtime --timestamp=none --sign "$IDENTITY" "$f"
+          done
+
+          if [ -d "$CAPTURE_APP" ]; then
+            find "$CAPTURE_APP" -type d -name "*.framework" -print0 | while IFS= read -r -d '' fw; do
+              codesign --force --options runtime --timestamp=none --sign "$IDENTITY" "$fw"
+            done
+            codesign --force --options runtime --timestamp=none --sign "$IDENTITY" "$CAPTURE_APP"
+          fi
+        fi
+
+
+    - name: Build Capture Engine (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: cargo xtask build capture
