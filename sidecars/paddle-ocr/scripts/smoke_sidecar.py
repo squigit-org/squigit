@@ -36,14 +36,12 @@ def _write_ppm_image(path: Path, width: int, height: int, mode: str) -> None:
     with path.open("wb") as f:
         f.write(header)
         if mode == "normal":
-            # Light gradient pattern (small file) to avoid trivial parser edge cases.
             row = bytearray()
             for x in range(width):
                 row.extend((x % 256, 255 - (x % 256), 180))
             for _ in range(height):
                 f.write(row)
         else:
-            # Dense alternating pattern to make processing non-trivial for cancel smoke.
             row_a = bytes([20, 20, 20]) * width
             row_b = bytes([240, 240, 240]) * width
             for y in range(height):

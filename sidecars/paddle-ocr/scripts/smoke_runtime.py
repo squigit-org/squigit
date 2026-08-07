@@ -31,7 +31,6 @@ def main() -> int:
 
     try:
         engine = OCREngine(cfg)
-        # Force full PaddleOCR initialization to catch missing runtime deps early.
         engine._get_ocr()
     except Exception as exc:
         print(f"OCR runtime smoke failed during engine init: {exc}")
