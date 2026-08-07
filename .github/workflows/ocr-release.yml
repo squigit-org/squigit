@@ -1,0 +1,1424 @@
+name: "OCR Release"
+
+on:
+  push:
+    tags:
+      - "ocr-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "OCR formula version (e.g.:0.2.0)"
+        required: true
+        type: string
+      release_tag:
+        description: "Optional release tag override (e.g.:ocr-v0.2.0). Leave empty to auto-use ocr-v<version>."
+        required: false
+        default: ""
+        type: string
+      release_homebrew:
+        description: "Run Homebrew lane"
+        required: false
+        default: false
+        type: boolean
+      release_winget:
+        description: "Run Winget lane"
+        required: false
+        default: false
+        type: boolean
+      submit_winget_pr:
+        description: "Submit/update winget-pkgs PR"
+        required: false
+        default: false
+        type: boolean
+      release_apt:
+        description: "Run APT lane"
+        required: false
+        default: false
+        type: boolean
+      release_dnf:
+        description: "Run DNF lane"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  resolve-channel-scope:
+    name: Resolve Channel Scope
+    runs-on: ubuntu-latest
+    outputs:
+      run_homebrew: ${{ steps.scope.outputs.run_homebrew }}
+      run_winget: ${{ steps.scope.outputs.run_winget }}
+      run_apt: ${{ steps.scope.outputs.run_apt }}
+      run_dnf: ${{ steps.scope.outputs.run_dnf }}
+    steps:
+      - name: Resolve channels
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            run_homebrew=true
+            run_winget=true
+            run_apt=true
+            run_dnf=true
+          else
+            run_homebrew="${{ inputs.release_homebrew }}"
+            run_winget="${{ inputs.release_winget }}"
+            run_apt="${{ inputs.release_apt }}"
+            run_dnf="${{ inputs.release_dnf }}"
+
+            if [ "${run_homebrew}" != "true" ] && [ "${run_winget}" != "true" ] && [ "${run_apt}" != "true" ] && [ "${run_dnf}" != "true" ]; then
+              echo "At least one channel must be enabled for workflow_dispatch."
+              exit 1
+            fi
+          fi
+
+          echo "run_homebrew=${run_homebrew}" >> "$GITHUB_OUTPUT"
+          echo "run_winget=${run_winget}" >> "$GITHUB_OUTPUT"
+          echo "run_apt=${run_apt}" >> "$GITHUB_OUTPUT"
+          echo "run_dnf=${run_dnf}" >> "$GITHUB_OUTPUT"
+          echo "Resolved channels: homebrew=${run_homebrew}, winget=${run_winget}, apt=${run_apt}, dnf=${run_dnf}"
+
+  resolve-release-meta:
+    name: Resolve Release Metadata
+    needs: resolve-channel-scope
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+    steps:
+      - name: Resolve version and release tag
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            RELEASE_TAG="${{ inputs.release_tag }}"
+            if [ -z "${RELEASE_TAG}" ]; then
+              RELEASE_TAG="ocr-v${VERSION}"
+            fi
+          else
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+            VERSION="${RELEASE_TAG#ocr-v}"
+          fi
+
+          if [ -z "${VERSION}" ]; then
+            echo "Resolved VERSION is empty"
+            exit 1
+          fi
+
+          if [ -z "${RELEASE_TAG}" ]; then
+            echo "Resolved RELEASE_TAG is empty"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved release metadata: tag=${RELEASE_TAG}, version=${VERSION}"
+
+  build-release-ocr:
+    name: Build OCR macOS Arm64 + Release Asset
+    if: needs.resolve-channel-scope.outputs.run_homebrew == 'true'
+    needs:
+      - resolve-channel-scope
+      - resolve-release-meta
+    runs-on: macos-14
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      asset_url: ${{ steps.meta.outputs.asset_url }}
+      sha256: ${{ steps.meta.outputs.sha256 }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Reuse Existing macOS OCR Asset
+        id: reuse-macos
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          ASSET_NAME="squigit-ocr-mac-aarch64.tar.gz"
+          ASSET_URL="https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/${ASSET_NAME}"
+
+          if curl --fail --silent --show-error --location --head --max-time 30 "${ASSET_URL}" >/dev/null; then
+            ASSET_PATH="${RUNNER_TEMP}/${ASSET_NAME}"
+            curl --fail --silent --show-error --location "${ASSET_URL}" -o "${ASSET_PATH}"
+            SHA256="$(shasum -a 256 "${ASSET_PATH}" | awk '{ print $1 }')"
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+            echo "asset_name=${ASSET_NAME}" >> "$GITHUB_OUTPUT"
+            echo "asset_sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Rust
+        if: steps.reuse-macos.outputs.hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build PaddleOCR Sidecar
+        if: steps.reuse-macos.outputs.hit != 'true'
+        uses: ./.github/actions/build-paddle-ocr
+        with:
+          python-version: "3.12"
+          pyi-mode: "onedir"
+
+      - name: Run OCR Version Smoke Check
+        if: steps.reuse-macos.outputs.hit != 'true'
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.resolve-release-meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          chmod +x packaging/binaries/paddle-ocr-aarch64-apple-darwin/squigit-ocr || true
+          OCR_VERSION="$(packaging/binaries/paddle-ocr-aarch64-apple-darwin/squigit-ocr --version | tr -d '\r' | tail -n 1)"
+          echo "Detected OCR version: ${OCR_VERSION}"
+          if ! [[ "${OCR_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid OCR version output: ${OCR_VERSION}"
+            exit 1
+          fi
+          if [ "${OCR_VERSION}" != "${EXPECTED_VERSION}" ]; then
+            echo "OCR version mismatch: built=${OCR_VERSION}, expected=${EXPECTED_VERSION}"
+            echo "Align sidecar --version with the release version/tag before publishing."
+            exit 1
+          fi
+
+      - name: Generate OCR Smoke Image
+        if: steps.reuse-macos.outputs.hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sidecars/paddle-ocr/venv/bin/python sidecars/paddle-ocr/scripts/gen_test_image.py \
+            --output /tmp/ocr-smoke.png \
+            --text "SQUIGIT macOS-ARM OCR SMOKE"
+
+      - name: Run Sidecar CLI and Print JSON
+        if: steps.reuse-macos.outputs.hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x packaging/binaries/paddle-ocr-aarch64-apple-darwin/squigit-ocr || true
+          packaging/binaries/paddle-ocr-aarch64-apple-darwin/squigit-ocr /tmp/ocr-smoke.png | tee /tmp/ocr-smoke-output.json
+
+      - name: Validate OCR JSON Payload
+        if: steps.reuse-macos.outputs.hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sidecars/paddle-ocr/venv/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+
+          out = Path("/tmp/ocr-smoke-output.json")
+          payload = json.loads(out.read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list):
+              raise SystemExit(f"OCR payload type {type(payload).__name__}, expected list")
+          if not payload:
+              raise SystemExit("OCR payload list is empty")
+
+          text_values = [str(item.get("text", "")).strip() for item in payload if isinstance(item, dict)]
+          merged = " | ".join(t for t in text_values if t)
+          upper = merged.upper()
+          for token in ("SQUIGIT", "OCR", "CLI", "VALIDATION"):
+              if token not in upper:
+                  raise SystemExit(f"Expected token '{token}' in OCR text, got: {merged!r}")
+
+          print(f"Detected entries: {len(payload)}")
+          print(f"Detected text: {merged}")
+          PY
+
+      - name: Create Release Tarball
+        if: steps.reuse-macos.outputs.hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czvf squigit-ocr-mac-aarch64.tar.gz -C packaging/binaries/paddle-ocr-aarch64-apple-darwin .
+
+      - name: Upload OCR Asset to GitHub Release
+        if: steps.reuse-macos.outputs.hit != 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.resolve-release-meta.outputs.release_tag }}
+          name: OCR v${{ needs.resolve-release-meta.outputs.version }}
+          files: squigit-ocr-mac-aarch64.tar.gz
+          overwrite_files: true
+          repository: squigit-org/squigit
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export Release Metadata
+        id: meta
+        shell: bash
+        env:
+          VERSION: ${{ needs.resolve-release-meta.outputs.version }}
+          RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
+          CACHE_HIT: ${{ steps.reuse-macos.outputs.hit }}
+          CACHED_SHA256: ${{ steps.reuse-macos.outputs.asset_sha256 }}
+        run: |
+          set -euo pipefail
+          if [ "${CACHE_HIT}" = "true" ]; then
+            SHA256="${CACHED_SHA256}"
+          else
+            SHA256="$(shasum -a 256 squigit-ocr-mac-aarch64.tar.gz | awk '{ print $1 }')"
+          fi
+          ASSET_URL="https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/squigit-ocr-mac-aarch64.tar.gz"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          echo "asset_url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+
+  build-release-ocr-windows:
+    name: Build OCR Windows x64 + Release Asset
+    if: needs.resolve-channel-scope.outputs.run_winget == 'true'
+    needs:
+      - resolve-channel-scope
+      - resolve-release-meta
+    runs-on: windows-latest
+    outputs:
+      version: ${{ needs.resolve-release-meta.outputs.version }}
+      release_tag: ${{ needs.resolve-release-meta.outputs.release_tag }}
+      asset_url: ${{ steps.meta.outputs.asset_url }}
+      sha256: ${{ steps.meta.outputs.sha256 }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Reuse Existing Windows OCR Asset
+        id: reuse-windows
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $assetName = "squigit-ocr-win-x64.zip"
+          $assetUrl = "https://github.com/squigit-org/squigit/releases/download/$env:RELEASE_TAG/$assetName"
+
+          try {
+            Invoke-WebRequest -Method Head -Uri $assetUrl -MaximumRetryCount 0 -ErrorAction Stop | Out-Null
+            $assetPath = Join-Path $env:RUNNER_TEMP $assetName
+            Invoke-WebRequest -Uri $assetUrl -OutFile $assetPath -ErrorAction Stop
+            $sha = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash.ToLowerInvariant()
+            "hit=true" >> $env:GITHUB_OUTPUT
+            "asset_name=$assetName" >> $env:GITHUB_OUTPUT
+            "asset_sha256=$sha" >> $env:GITHUB_OUTPUT
+          } catch {
+            "hit=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Setup Rust
+        if: steps.reuse-windows.outputs.hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build PaddleOCR Sidecar
+        if: steps.reuse-windows.outputs.hit != 'true'
+        id: build
+        uses: ./.github/actions/build-paddle-ocr
+        with:
+          python-version: "3.12"
+          pyi-mode: "onedir"
+          package-windows-asset: "true"
+          windows-asset-name: "squigit-ocr-win-x64.zip"
+
+      - name: Run OCR Version Smoke Check (Windows)
+        if: steps.reuse-windows.outputs.hit != 'true'
+        shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ needs.resolve-release-meta.outputs.version }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ocrVersion = & packaging/binaries/paddle-ocr-x86_64-pc-windows-msvc/squigit-ocr.exe --version
+          $ocrVersion = ($ocrVersion | Select-Object -Last 1).Trim()
+          Write-Host "Detected OCR version: $ocrVersion"
+          if ($ocrVersion -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Invalid OCR version output: $ocrVersion"
+          }
+          if ($ocrVersion -ne $env:EXPECTED_VERSION) {
+            throw "OCR version mismatch: built=$ocrVersion expected=$env:EXPECTED_VERSION"
+          }
+
+      - name: Generate PNG Smoke Image (Windows)
+        if: steps.reuse-windows.outputs.hit != 'true'
+        shell: pwsh
+        run: |
+          & sidecars/paddle-ocr/venv/Scripts/python.exe sidecars/paddle-ocr/scripts/gen_test_image.py `
+            --output $env:TEMP/ocr-smoke.png `
+            --text "SQUIGIT Windows-x64 OCR SMOKE"
+
+      - name: Run Sidecar CLI and Print JSON (Windows)
+        if: steps.reuse-windows.outputs.hit != 'true'
+        shell: pwsh
+        run: |
+          & packaging/binaries/paddle-ocr-x86_64-pc-windows-msvc/squigit-ocr.exe $env:TEMP/ocr-smoke.png | Tee-Object -FilePath $env:TEMP/ocr-smoke-output.json
+
+      - name: Validate OCR JSON Payload (Windows)
+        if: steps.reuse-windows.outputs.hit != 'true'
+        shell: pwsh
+        run: |
+          $code = @"
+          import json
+          import os
+          from pathlib import Path
+
+          out = Path(os.environ["TEMP"]) / "ocr-smoke-output.json"
+          payload = json.loads(out.read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list):
+              raise SystemExit(f"OCR payload type {type(payload).__name__}, expected list")
+          if not payload:
+              raise SystemExit("OCR payload list is empty")
+
+          text_values = [str(item.get("text", "")).strip() for item in payload if isinstance(item, dict)]
+          merged = " | ".join(t for t in text_values if t)
+          upper = merged.upper()
+          for token in ("SQUIGIT", "OCR", "SMOKE"):
+              if token not in upper:
+                  raise SystemExit(f"Expected token '{token}' in OCR text, got: {merged!r}")
+
+          print(f"Detected entries: {len(payload)}")
+          print(f"Detected text: {merged}")
+          "@
+          & sidecars/paddle-ocr/venv/Scripts/python.exe -c $code
+
+      - name: Upload OCR Windows Asset to GitHub Release
+        if: steps.reuse-windows.outputs.hit != 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.resolve-release-meta.outputs.release_tag }}
+          name: OCR v${{ needs.resolve-release-meta.outputs.version }}
+          files: ${{ steps.build.outputs.asset-path }}
+          overwrite_files: true
+          repository: squigit-org/squigit
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export Winget Release Metadata
+        id: meta
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
+          CACHE_HIT: ${{ steps.reuse-windows.outputs.hit }}
+          CACHED_SHA256: ${{ steps.reuse-windows.outputs.asset_sha256 }}
+          BUILT_SHA256: ${{ steps.build.outputs.asset-sha256 }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $assetName = "squigit-ocr-win-x64.zip"
+          $sha = if ($env:CACHE_HIT -eq "true") { $env:CACHED_SHA256 } else { $env:BUILT_SHA256 }
+          $assetUrl = "https://github.com/squigit-org/squigit/releases/download/$env:RELEASE_TAG/$assetName"
+          "asset_url=$assetUrl" >> $env:GITHUB_OUTPUT
+          "sha256=$sha" >> $env:GITHUB_OUTPUT
+
+  build-release-ocr-linux:
+    name: Build OCR Linux x64 + Release Package Assets
+    if: needs.resolve-channel-scope.outputs.run_apt == 'true' || needs.resolve-channel-scope.outputs.run_dnf == 'true'
+    needs:
+      - resolve-channel-scope
+      - resolve-release-meta
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ needs.resolve-release-meta.outputs.version }}
+      release_tag: ${{ needs.resolve-release-meta.outputs.release_tag }}
+      deb_name: ${{ steps.meta.outputs.deb_name }}
+      deb_sha256: ${{ steps.meta.outputs.deb_sha256 }}
+      deb_asset_url: ${{ steps.meta.outputs.deb_asset_url }}
+      rpm_name: ${{ steps.meta.outputs.rpm_name }}
+      rpm_sha256: ${{ steps.meta.outputs.rpm_sha256 }}
+      rpm_asset_url: ${{ steps.meta.outputs.rpm_asset_url }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Restore Linux Package Build Cache
+        id: linux-pkg-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ runner.temp }}/linux-package-cache/ocr
+          key: linux-package-cache-ocr-${{ github.sha }}-${{ needs.resolve-release-meta.outputs.release_tag }}
+
+      - name: Reuse Existing Linux OCR Packages
+        id: reuse-linux
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
+          VERSION: ${{ needs.resolve-release-meta.outputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "workflow_dispatch detected: forcing Linux package rebuild (skip existing release asset reuse)."
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+            echo "cache_hit=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CACHE_DIR="${RUNNER_TEMP}/linux-package-cache/ocr"
+          DEB_NAME="squigit-ocr_${VERSION}_amd64.deb"
+          RPM_NAME="squigit-ocr-${VERSION}-1.x86_64.rpm"
+          DEB_ASSET_URL="https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/${DEB_NAME}"
+          RPM_ASSET_URL="https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/${RPM_NAME}"
+
+          if curl --fail --silent --show-error --location --head --max-time 30 "${DEB_ASSET_URL}" >/dev/null \
+            && curl --fail --silent --show-error --location --head --max-time 30 "${RPM_ASSET_URL}" >/dev/null; then
+            DEB_PATH="${RUNNER_TEMP}/${DEB_NAME}"
+            RPM_PATH="${RUNNER_TEMP}/${RPM_NAME}"
+            curl --fail --silent --show-error --location "${DEB_ASSET_URL}" -o "${DEB_PATH}"
+            curl --fail --silent --show-error --location "${RPM_ASSET_URL}" -o "${RPM_PATH}"
+
+            DEB_SHA256="$(sha256sum "${DEB_PATH}" | awk '{print $1}')"
+            RPM_SHA256="$(sha256sum "${RPM_PATH}" | awk '{print $1}')"
+
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+            echo "cache_hit=false" >> "$GITHUB_OUTPUT"
+            echo "deb_name=${DEB_NAME}" >> "$GITHUB_OUTPUT"
+            echo "deb_sha256=${DEB_SHA256}" >> "$GITHUB_OUTPUT"
+            echo "rpm_name=${RPM_NAME}" >> "$GITHUB_OUTPUT"
+            echo "rpm_sha256=${RPM_SHA256}" >> "$GITHUB_OUTPUT"
+            echo "deb_path=${DEB_PATH}" >> "$GITHUB_OUTPUT"
+            echo "rpm_path=${RPM_PATH}" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+            cached_deb="${CACHE_DIR}/${DEB_NAME}"
+            cached_rpm="${CACHE_DIR}/${RPM_NAME}"
+            if [ -f "${cached_deb}" ] && [ -f "${cached_rpm}" ]; then
+              DEB_PATH="${RUNNER_TEMP}/${DEB_NAME}"
+              RPM_PATH="${RUNNER_TEMP}/${RPM_NAME}"
+              cp "${cached_deb}" "${DEB_PATH}"
+              cp "${cached_rpm}" "${RPM_PATH}"
+
+              DEB_SHA256="$(sha256sum "${DEB_PATH}" | awk '{print $1}')"
+              RPM_SHA256="$(sha256sum "${RPM_PATH}" | awk '{print $1}')"
+
+              echo "cache_hit=true" >> "$GITHUB_OUTPUT"
+              echo "deb_name=${DEB_NAME}" >> "$GITHUB_OUTPUT"
+              echo "deb_sha256=${DEB_SHA256}" >> "$GITHUB_OUTPUT"
+              echo "rpm_name=${RPM_NAME}" >> "$GITHUB_OUTPUT"
+              echo "rpm_sha256=${RPM_SHA256}" >> "$GITHUB_OUTPUT"
+              echo "deb_path=${DEB_PATH}" >> "$GITHUB_OUTPUT"
+              echo "rpm_path=${RPM_PATH}" >> "$GITHUB_OUTPUT"
+            else
+              echo "cache_hit=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Setup Rust
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux Packaging Toolchain
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y rpm createrepo-c dpkg-dev apt-utils gnupg2
+
+      - name: Build PaddleOCR Sidecar (Linux onedir)
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        uses: ./.github/actions/build-paddle-ocr
+        with:
+          python-version: "3.12"
+          pyi-mode: "onedir"
+
+      - name: Validate Onedir Runtime Layout
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x packaging/binaries/paddle-ocr-x86_64-unknown-linux-gnu/squigit-ocr
+          test -d packaging/binaries/paddle-ocr-x86_64-unknown-linux-gnu/_internal
+
+      - name: Build Linux Package Files (.deb/.rpm)
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        id: pkg
+        uses: ./.github/actions/build-linux-packages
+        with:
+          package-name: squigit-ocr
+          package-version: ${{ needs.resolve-release-meta.outputs.version }}
+          runtime-dir: packaging/binaries/paddle-ocr-x86_64-unknown-linux-gnu
+          binary-name: squigit-ocr
+          deb-control-template: ${{ github.workspace }}/packaging/debian/squigit-ocr.control
+          rpm-spec-template: ${{ github.workspace }}/packaging/rpm/squigit-ocr.spec
+          summary: Standalone CLI OCR engine for Squigit
+          description-line-1: A headless, offline optical character recognition pipeline designed for Squigit.
+          description-line-2: Includes onedir runtime payload with local dependencies for Linux x86_64.
+
+      - name: Sign Linux RPM Package Asset
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        shell: bash
+        env:
+          RPM_PATH: ${{ steps.pkg.outputs.rpm_path }}
+          GPG_PRIVATE_KEY: ${{ secrets.LINUX_PACKAGES_GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.LINUX_PACKAGES_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+
+          export GNUPGHOME="${RUNNER_TEMP}/linux-rpm-sign-gnupg"
+          rm -rf "${GNUPGHOME}"
+          mkdir -p "${GNUPGHOME}"
+          chmod 700 "${GNUPGHOME}"
+
+          printf '%s' "${GPG_PRIVATE_KEY}" | gpg --batch --import
+          gpg_key_fpr="$(gpg --batch --with-colons --list-secret-keys | awk -F: '/^fpr:/ {print $10; exit}')"
+          if [ -z "${gpg_key_fpr}" ]; then
+            echo "Failed to resolve imported GPG key fingerprint" >&2
+            exit 1
+          fi
+          pubkey_path="${RUNNER_TEMP}/linux-rpm-signing-key.asc"
+          gpg --batch --yes --armor --output "${pubkey_path}" --export "${gpg_key_fpr}"
+          rpm --import "${pubkey_path}"
+
+          escaped_passphrase="$(printf '%s' "${GPG_PASSPHRASE}" | sed "s/'/'\"'\"'/g")"
+          cat > "${HOME}/.rpmmacros" <<RPMMACROS
+          %_signature gpg
+          %_gpg_path ${GNUPGHOME}
+          %_gpg_name ${gpg_key_fpr}
+          %_gpgbin /usr/bin/gpg
+          %__gpg /usr/bin/gpg
+          %__gpg_sign_cmd %{__gpg} --batch --yes --no-armor --pinentry-mode loopback --passphrase '${escaped_passphrase}' --detach-sign --output %{__signature_filename} %{__plaintext_filename}
+          RPMMACROS
+
+          rpmsign --addsign "${RPM_PATH}"
+          rpm --checksig --verbose "${RPM_PATH}"
+          rm -f "${HOME}/.rpmmacros" "${pubkey_path}"
+
+      - name: Recalculate Linux Package Checksums
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        id: pkg-sha
+        shell: bash
+        env:
+          DEB_PATH: ${{ steps.pkg.outputs.deb_path }}
+          RPM_PATH: ${{ steps.pkg.outputs.rpm_path }}
+        run: |
+          set -euo pipefail
+          echo "deb_sha256=$(sha256sum "${DEB_PATH}" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "rpm_sha256=$(sha256sum "${RPM_PATH}" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve Linux Package Asset Paths
+        if: steps.reuse-linux.outputs.hit != 'true'
+        id: pkg-paths
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.reuse-linux.outputs.cache_hit }}
+          CACHED_DEB_PATH: ${{ steps.reuse-linux.outputs.deb_path }}
+          CACHED_RPM_PATH: ${{ steps.reuse-linux.outputs.rpm_path }}
+          CACHED_DEB_NAME: ${{ steps.reuse-linux.outputs.deb_name }}
+          CACHED_RPM_NAME: ${{ steps.reuse-linux.outputs.rpm_name }}
+          CACHED_DEB_SHA256: ${{ steps.reuse-linux.outputs.deb_sha256 }}
+          CACHED_RPM_SHA256: ${{ steps.reuse-linux.outputs.rpm_sha256 }}
+          BUILT_DEB_PATH: ${{ steps.pkg.outputs.deb_path }}
+          BUILT_RPM_PATH: ${{ steps.pkg.outputs.rpm_path }}
+          BUILT_DEB_NAME: ${{ steps.pkg.outputs.deb_name }}
+          BUILT_RPM_NAME: ${{ steps.pkg.outputs.rpm_name }}
+          BUILT_DEB_SHA256: ${{ steps.pkg-sha.outputs.deb_sha256 }}
+          BUILT_RPM_SHA256: ${{ steps.pkg-sha.outputs.rpm_sha256 }}
+        run: |
+          set -euo pipefail
+
+          if [ "${CACHE_HIT}" = "true" ]; then
+            echo "deb_path=${CACHED_DEB_PATH}" >> "$GITHUB_OUTPUT"
+            echo "rpm_path=${CACHED_RPM_PATH}" >> "$GITHUB_OUTPUT"
+            echo "deb_name=${CACHED_DEB_NAME}" >> "$GITHUB_OUTPUT"
+            echo "rpm_name=${CACHED_RPM_NAME}" >> "$GITHUB_OUTPUT"
+            echo "deb_sha256=${CACHED_DEB_SHA256}" >> "$GITHUB_OUTPUT"
+            echo "rpm_sha256=${CACHED_RPM_SHA256}" >> "$GITHUB_OUTPUT"
+          else
+            echo "deb_path=${BUILT_DEB_PATH}" >> "$GITHUB_OUTPUT"
+            echo "rpm_path=${BUILT_RPM_PATH}" >> "$GITHUB_OUTPUT"
+            echo "deb_name=${BUILT_DEB_NAME}" >> "$GITHUB_OUTPUT"
+            echo "rpm_name=${BUILT_RPM_NAME}" >> "$GITHUB_OUTPUT"
+            echo "deb_sha256=${BUILT_DEB_SHA256}" >> "$GITHUB_OUTPUT"
+            echo "rpm_sha256=${BUILT_RPM_SHA256}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Populate Linux Package Build Cache
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        shell: bash
+        env:
+          CACHE_DIR: ${{ runner.temp }}/linux-package-cache/ocr
+          DEB_PATH: ${{ steps.pkg-paths.outputs.deb_path }}
+          RPM_PATH: ${{ steps.pkg-paths.outputs.rpm_path }}
+          DEB_NAME: ${{ steps.pkg-paths.outputs.deb_name }}
+          RPM_NAME: ${{ steps.pkg-paths.outputs.rpm_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${CACHE_DIR}"
+          cp "${DEB_PATH}" "${CACHE_DIR}/${DEB_NAME}"
+          cp "${RPM_PATH}" "${CACHE_DIR}/${RPM_NAME}"
+
+      - name: Save Linux Package Build Cache
+        if: steps.reuse-linux.outputs.hit != 'true' && steps.reuse-linux.outputs.cache_hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/linux-package-cache/ocr
+          key: linux-package-cache-ocr-${{ github.sha }}-${{ needs.resolve-release-meta.outputs.release_tag }}
+
+      - name: Upload Linux Package Assets to GitHub Release
+        if: steps.reuse-linux.outputs.hit != 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.resolve-release-meta.outputs.release_tag }}
+          name: OCR v${{ needs.resolve-release-meta.outputs.version }}
+          files: |
+            ${{ steps.pkg-paths.outputs.deb_path }}
+            ${{ steps.pkg-paths.outputs.rpm_path }}
+          overwrite_files: true
+          repository: squigit-org/squigit
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export Linux Release Metadata
+        id: meta
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
+          CACHE_HIT: ${{ steps.reuse-linux.outputs.hit }}
+          CACHED_DEB_NAME: ${{ steps.reuse-linux.outputs.deb_name }}
+          CACHED_DEB_SHA256: ${{ steps.reuse-linux.outputs.deb_sha256 }}
+          CACHED_RPM_NAME: ${{ steps.reuse-linux.outputs.rpm_name }}
+          CACHED_RPM_SHA256: ${{ steps.reuse-linux.outputs.rpm_sha256 }}
+          BUILT_DEB_NAME: ${{ steps.pkg-paths.outputs.deb_name }}
+          BUILT_DEB_SHA256: ${{ steps.pkg-paths.outputs.deb_sha256 }}
+          BUILT_RPM_NAME: ${{ steps.pkg-paths.outputs.rpm_name }}
+          BUILT_RPM_SHA256: ${{ steps.pkg-paths.outputs.rpm_sha256 }}
+        run: |
+          set -euo pipefail
+
+          if [ "${CACHE_HIT}" = "true" ]; then
+            DEB_NAME="${CACHED_DEB_NAME}"
+            DEB_SHA256="${CACHED_DEB_SHA256}"
+            RPM_NAME="${CACHED_RPM_NAME}"
+            RPM_SHA256="${CACHED_RPM_SHA256}"
+          else
+            DEB_NAME="${BUILT_DEB_NAME}"
+            DEB_SHA256="${BUILT_DEB_SHA256}"
+            RPM_NAME="${BUILT_RPM_NAME}"
+            RPM_SHA256="${BUILT_RPM_SHA256}"
+          fi
+
+          echo "deb_name=${DEB_NAME}" >> "$GITHUB_OUTPUT"
+          echo "deb_sha256=${DEB_SHA256}" >> "$GITHUB_OUTPUT"
+          echo "rpm_name=${RPM_NAME}" >> "$GITHUB_OUTPUT"
+          echo "rpm_sha256=${RPM_SHA256}" >> "$GITHUB_OUTPUT"
+          echo "deb_asset_url=https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/${DEB_NAME}" >> "$GITHUB_OUTPUT"
+          echo "rpm_asset_url=https://github.com/squigit-org/squigit/releases/download/${RELEASE_TAG}/${RPM_NAME}" >> "$GITHUB_OUTPUT"
+
+  build-phase-complete:
+    name: Build Phase Complete
+    if: always()
+    needs:
+      - resolve-channel-scope
+      - build-release-ocr
+      - build-release-ocr-windows
+      - build-release-ocr-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate selected build results
+        shell: bash
+        env:
+          RUN_HOMEBREW: ${{ needs.resolve-channel-scope.outputs.run_homebrew }}
+          RUN_WINGET: ${{ needs.resolve-channel-scope.outputs.run_winget }}
+          RUN_APT: ${{ needs.resolve-channel-scope.outputs.run_apt }}
+          RUN_DNF: ${{ needs.resolve-channel-scope.outputs.run_dnf }}
+          MAC_RESULT: ${{ needs.build-release-ocr.result }}
+          WIN_RESULT: ${{ needs.build-release-ocr-windows.result }}
+          LINUX_RESULT: ${{ needs.build-release-ocr-linux.result }}
+        run: |
+          set -euo pipefail
+
+          failed=0
+
+          if [ "${RUN_HOMEBREW}" = "true" ] && [ "${MAC_RESULT}" != "success" ]; then
+            echo "Homebrew lane selected, but macOS build result is '${MAC_RESULT}'." >&2
+            failed=1
+          fi
+
+          if [ "${RUN_WINGET}" = "true" ] && [ "${WIN_RESULT}" != "success" ]; then
+            echo "Winget lane selected, but Windows build result is '${WIN_RESULT}'." >&2
+            failed=1
+          fi
+
+          if { [ "${RUN_APT}" = "true" ] || [ "${RUN_DNF}" = "true" ]; } && [ "${LINUX_RESULT}" != "success" ]; then
+            echo "APT/DNF lane selected, but Linux build result is '${LINUX_RESULT}'." >&2
+            failed=1
+          fi
+
+          if [ "${failed}" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo "Selected OCR builds completed successfully."
+
+  publish-linux-packages-ocr:
+    name: Publish Signed Linux Package Metadata
+    if: always() && (needs.resolve-channel-scope.outputs.run_apt == 'true' || needs.resolve-channel-scope.outputs.run_dnf == 'true')
+    needs:
+      - resolve-channel-scope
+      - resolve-release-meta
+      - build-phase-complete
+      - build-release-ocr-linux
+    runs-on: ubuntu-latest
+    concurrency:
+      group: squigit-packages-publish
+      cancel-in-progress: false
+    outputs:
+      packages_sha: ${{ steps.publish.outputs.packages-sha }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Install Metadata Publishing Toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y rpm createrepo-c dpkg-dev apt-utils gnupg2
+
+      - name: Download Linux Package Assets
+        id: assets
+        shell: bash
+        env:
+          DEB_ASSET_URL: ${{ needs.build-release-ocr-linux.outputs.deb_asset_url }}
+          DEB_NAME: ${{ needs.build-release-ocr-linux.outputs.deb_name }}
+          DEB_SHA256: ${{ needs.build-release-ocr-linux.outputs.deb_sha256 }}
+          RPM_ASSET_URL: ${{ needs.build-release-ocr-linux.outputs.rpm_asset_url }}
+          RPM_NAME: ${{ needs.build-release-ocr-linux.outputs.rpm_name }}
+          RPM_SHA256: ${{ needs.build-release-ocr-linux.outputs.rpm_sha256 }}
+        run: |
+          set -euo pipefail
+
+          asset_dir="${RUNNER_TEMP}/linux-release-assets"
+          rm -rf "${asset_dir}"
+          mkdir -p "${asset_dir}"
+
+          for entry in \
+            "${DEB_ASSET_URL}|${DEB_NAME}" \
+            "${RPM_ASSET_URL}|${RPM_NAME}"; do
+            url="${entry%%|*}"
+            name="${entry##*|}"
+            for attempt in $(seq 1 12); do
+              if curl --fail --silent --show-error --location --head --max-time 30 "${url}" >/dev/null; then
+                break
+              fi
+              if [ "${attempt}" -eq 12 ]; then
+                echo "Release asset did not propagate in time: ${url}" >&2
+                exit 1
+              fi
+              sleep 10
+            done
+            curl --fail --silent --show-error --location "${url}" -o "${asset_dir}/${name}"
+          done
+
+          echo "${DEB_SHA256}  ${asset_dir}/${DEB_NAME}" | sha256sum -c -
+          echo "${RPM_SHA256}  ${asset_dir}/${RPM_NAME}" | sha256sum -c -
+
+          echo "deb_path=${asset_dir}/${DEB_NAME}" >> "$GITHUB_OUTPUT"
+          echo "rpm_path=${asset_dir}/${RPM_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Signed APT/DNF Metadata
+        id: publish
+        uses: ./.github/actions/publish-linux-packages-repo
+        with:
+          packages-token: ${{ secrets.DISTRIBUTION_GITHUB_TOKEN }}
+          packages-repo: squigit-org/squigit-packages
+          package-name: squigit-ocr
+          package-version: ${{ needs.resolve-release-meta.outputs.version }}
+          source-release-repo: squigit-org/squigit
+          source-release-tag: ${{ needs.resolve-release-meta.outputs.release_tag }}
+          deb-path: ${{ steps.assets.outputs.deb_path }}
+          rpm-path: ${{ steps.assets.outputs.rpm_path }}
+          gpg-private-key: ${{ secrets.LINUX_PACKAGES_GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.LINUX_PACKAGES_GPG_PASSPHRASE }}
+          pages-base-url: https://squigit-org.github.io/squigit-packages
+          publish-dnf-repo: ${{ needs.resolve-channel-scope.outputs.run_dnf }}
+          apt-suite: stable
+
+  test-apt-ocr:
+    name: End-user APT Install Smoke
+    if: always() && needs.resolve-channel-scope.outputs.run_apt == 'true'
+    needs:
+      - resolve-channel-scope
+      - resolve-release-meta
+      - publish-linux-packages-ocr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Configure Squigit APT Repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO_BASE="https://github.com/squigit-org/squigit-packages/raw/${{ needs.publish-linux-packages-ocr.outputs.packages_sha || 'main' }}"
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL "${REPO_BASE}/keys/squigit-packages.asc" | gpg --dearmor | sudo tee /etc/apt/keyrings/squigit-packages.gpg >/dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/squigit-packages.gpg] ${REPO_BASE}/apt stable ocr" | sudo tee /etc/apt/sources.list.d/squigit-packages.list >/dev/null
+
+      - name: Refresh APT Cache (with retries)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if sudo apt-get update && apt-cache policy squigit-ocr | awk '/Candidate:/ {print $2}' | grep -vq '(none)'; then
+              exit 0
+            fi
+            if [ "${attempt}" -eq 12 ]; then
+              echo "APT metadata did not propagate in time for squigit-ocr" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Install squigit-ocr
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y squigit-ocr
+
+      - name: Validate Installed OCR Version
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.resolve-release-meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          OCR_VERSION="$(squigit-ocr --version | tr -d '\r' | tail -n 1)"
+          echo "Installed OCR version: ${OCR_VERSION}"
+          if ! [[ "${OCR_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Installed OCR version is not semver: ${OCR_VERSION}"
+            exit 1
+          fi
+          if [ "${OCR_VERSION}" != "${EXPECTED_VERSION}" ]; then
+            echo "Installed OCR version mismatch: installed=${OCR_VERSION}, expected=${EXPECTED_VERSION}"
+            exit 1
+          fi
+
+      - name: Install OCR Smoke Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pillow
+
+      - name: Run Installed OCR Smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 sidecars/paddle-ocr/scripts/gen_test_image.py --output /tmp/ocr-smoke.png --text "SQUIGIT Linux-x64 OCR SMOKE"
+          squigit-ocr /tmp/ocr-smoke.png | tee /tmp/ocr-smoke-output.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/ocr-smoke-output.json").read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list) or not payload:
+              raise SystemExit("OCR payload missing or empty")
+          merged = " | ".join(str(item.get("text", "")).strip() for item in payload if isinstance(item, dict))
+          upper = merged.upper()
+          for token in ("SQUIGIT", "OCR", "SMOKE"):
+              if token not in upper:
+                  raise SystemExit(f"Missing token {token!r} from OCR payload: {merged!r}")
+          print(merged)
+          PY
+
+  test-dnf-ocr:
+    name: End-user DNF Install Smoke
+    if: always() && needs.resolve-channel-scope.outputs.run_dnf == 'true'
+    needs:
+      - resolve-channel-scope
+      - resolve-release-meta
+      - publish-linux-packages-ocr
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Install DNF Test Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          dnf install -y ca-certificates curl dnf-plugins-core python3 python3-pip gnupg2
+
+      - name: Configure Squigit DNF Repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO_BASE="https://github.com/squigit-org/squigit-packages/raw/${{ needs.publish-linux-packages-ocr.outputs.packages_sha || 'main' }}"
+          cat > /etc/yum.repos.d/squigit.repo <<'EOF'
+          [squigit-ocr]
+          name=Squigit OCR Packages
+          baseurl=__REPO_BASE__/rpm/ocr
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=__REPO_BASE__/keys/squigit-packages.asc
+
+          EOF
+          sed -i "s|__REPO_BASE__|${REPO_BASE}|g" /etc/yum.repos.d/squigit.repo
+
+      - name: Refresh DNF Cache (with retries)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if dnf makecache --refresh; then
+              exit 0
+            fi
+            if [ "${attempt}" -eq 12 ]; then
+              echo "DNF metadata did not propagate in time for squigit-ocr" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Install squigit-ocr
+        shell: bash
+        run: |
+          set -euo pipefail
+          dnf install -y squigit-ocr
+
+      - name: Validate Installed OCR Version
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.resolve-release-meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          OCR_VERSION="$(squigit-ocr --version | tr -d '\r' | tail -n 1)"
+          echo "Installed OCR version: ${OCR_VERSION}"
+          if ! [[ "${OCR_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Installed OCR version is not semver: ${OCR_VERSION}"
+            exit 1
+          fi
+          if [ "${OCR_VERSION}" != "${EXPECTED_VERSION}" ]; then
+            echo "Installed OCR version mismatch: installed=${OCR_VERSION}, expected=${EXPECTED_VERSION}"
+            exit 1
+          fi
+
+      - name: Run Installed OCR Smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pillow
+          python3 sidecars/paddle-ocr/scripts/gen_test_image.py --output /tmp/ocr-smoke.png --text "SQUIGIT Fedora-x64 OCR SMOKE"
+          squigit-ocr /tmp/ocr-smoke.png | tee /tmp/ocr-smoke-output.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/ocr-smoke-output.json").read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list) or not payload:
+              raise SystemExit("OCR payload missing or empty")
+          merged = " | ".join(str(item.get("text", "")).strip() for item in payload if isinstance(item, dict))
+          upper = merged.upper()
+          for token in ("SQUIGIT", "OCR", "SMOKE"):
+              if token not in upper:
+                  raise SystemExit(f"Missing token {token!r} from OCR payload: {merged!r}")
+          print(merged)
+          PY
+
+  update-homebrew-tap-ocr:
+    name: Update Homebrew Tap Formula
+    if: always() && needs.resolve-channel-scope.outputs.run_homebrew == 'true'
+    needs:
+      - resolve-channel-scope
+      - resolve-release-meta
+      - build-phase-complete
+      - build-release-ocr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Sync OCR Formula to Tap
+        uses: ./.github/actions/update-homebrew-tap-formula
+        with:
+          tap-token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          tap-repo: squigit-org/homebrew-tap
+          version: ${{ needs.resolve-release-meta.outputs.version }}
+          asset-url: ${{ needs.build-release-ocr.outputs.asset_url }}
+          sha256: ${{ needs.build-release-ocr.outputs.sha256 }}
+          template-formula-path: ${{ github.workspace }}/packaging/homebrew/squigit-ocr.rb
+          formula-file: squigit-ocr.rb
+          commit-message: Update squigit-ocr to v${{ needs.resolve-release-meta.outputs.version }}
+
+  test-homebrew-ocr:
+    name: End-user Homebrew Install Smoke
+    if: always() && needs.resolve-channel-scope.outputs.run_homebrew == 'true'
+    needs:
+      - resolve-channel-scope
+      - resolve-release-meta
+      - build-phase-complete
+      - update-homebrew-tap-ocr
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Smoke Image Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pillow
+
+      - name: Tap and Install squigit-ocr
+        uses: ./.github/actions/homebrew-install-with-retry
+        with:
+          tap: squigit-org/tap
+          formula: squigit-ocr
+          initial-wait-seconds: "60"
+          attempts: "6"
+          sleep-seconds: "20"
+          brew-curl-retries: "5"
+
+      - name: Run Built-in Formula Test
+        shell: bash
+        run: brew test squigit-ocr
+
+      - name: Validate Installed OCR Version
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.resolve-release-meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          OCR_VERSION="$(squigit-ocr --version | tr -d '\r' | tail -n 1)"
+          echo "Installed OCR version: ${OCR_VERSION}"
+          if ! [[ "${OCR_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Installed OCR version is not semver: ${OCR_VERSION}"
+            exit 1
+          fi
+          if [ "${OCR_VERSION}" != "${EXPECTED_VERSION}" ]; then
+            echo "Installed OCR version mismatch: installed=${OCR_VERSION}, expected=${EXPECTED_VERSION}"
+            exit 1
+          fi
+
+      - name: Generate OCR Smoke Image
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 sidecars/paddle-ocr/scripts/gen_test_image.py \
+            --output /tmp/ocr-smoke.png \
+            --text "SQUIGIT macOS-ARM OCR SMOKE"
+
+      - name: Run Installed OCR CLI and Print JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          squigit-ocr /tmp/ocr-smoke.png | tee /tmp/ocr-smoke-output.json
+
+      - name: Validate Installed OCR JSON Payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          out = Path("/tmp/ocr-smoke-output.json")
+          payload = json.loads(out.read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list):
+              raise SystemExit(f"OCR payload type {type(payload).__name__}, expected list")
+          if not payload:
+              raise SystemExit("OCR payload list is empty")
+
+          text_values = [str(item.get("text", "")).strip() for item in payload if isinstance(item, dict)]
+          merged = " | ".join(t for t in text_values if t)
+          upper = merged.upper()
+          for token in ("SQUIGIT", "OCR", "CLI", "VALIDATION"):
+              if token not in upper:
+                  raise SystemExit(f"Expected token '{token}' in OCR text, got: {merged!r}")
+
+          print(f"Detected entries: {len(payload)}")
+          print(f"Detected text: {merged}")
+          PY
+
+  publish-winget-ocr:
+    name: Publish Winget Manifest
+    if: >-
+      needs['resolve-channel-scope'].outputs.run_winget == 'true' &&
+      needs['build-phase-complete'].result == 'success' &&
+      needs['build-release-ocr-windows'].result == 'success' &&
+      needs['validate-winget-manifest-ocr'].result == 'success'
+    needs:
+      - resolve-channel-scope
+      - build-phase-complete
+      - build-release-ocr-windows
+      - validate-winget-manifest-ocr
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Generate Winget Manifest
+        id: manifest
+        uses: ./.github/actions/generate-winget-portable-manifest
+        with:
+          package-identifier: SquigitOrg.SquigitOCR
+          package-version: ${{ needs.build-release-ocr-windows.outputs.version }}
+          package-name: Squigit OCR
+          publisher: Squigit Org
+          short-description: Standalone headless OCR CLI engine for Squigit
+          installer-url: ${{ needs.build-release-ocr-windows.outputs.asset_url }}
+          installer-sha256: ${{ needs.build-release-ocr-windows.outputs.sha256 }}
+          command-alias: squigit-ocr
+          nested-installer-path: squigit-ocr.exe
+          output-dir: ${{ github.workspace }}/target/winget-manifest-ocr
+
+      - name: Upload Winget Manifest
+        uses: actions/upload-artifact@v7
+        with:
+          name: winget-manifest-ocr
+          path: ${{ steps.manifest.outputs.manifest-dir }}
+
+      - name: Submit Winget Update PR (optional)
+        if: github.event_name == 'workflow_dispatch' && inputs.submit_winget_pr
+        shell: pwsh
+        env:
+          PACKAGE_IDENTIFIER: SquigitOrg.SquigitOCR
+          PACKAGE_VERSION: ${{ needs.build-release-ocr-windows.outputs.version }}
+          INSTALLER_URL: ${{ needs.build-release-ocr-windows.outputs.asset_url }}
+          MANIFEST_DIR: ${{ steps.manifest.outputs.manifest-dir }}
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_CREATE_GITHUB_TOKEN)) {
+            Write-Host "WINGET_CREATE_GITHUB_TOKEN is empty; skipping wingetcreate --submit."
+            exit 0
+          }
+
+          $packageRoot = ($env:PACKAGE_IDENTIFIER -replace '\.', '/')
+          $manifestApiPath = "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/$($env:PACKAGE_IDENTIFIER.Substring(0, 1).ToLowerInvariant())/$packageRoot"
+          $headers = @{
+            Accept = "application/vnd.github+json"
+            "User-Agent" = "squigit-github-actions"
+          }
+
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          $manifestLookup = Invoke-WebRequest -Uri $manifestApiPath -Headers $headers -SkipHttpErrorCheck
+
+          if ($manifestLookup.StatusCode -eq 404) {
+            Write-Host "No existing winget-pkgs manifest found for $env:PACKAGE_IDENTIFIER. Submitting generated manifest as first publication."
+            .\wingetcreate.exe submit $env:MANIFEST_DIR
+          } elseif ($manifestLookup.StatusCode -eq 200) {
+            Write-Host "Existing winget-pkgs manifest found for $env:PACKAGE_IDENTIFIER. Submitting update."
+            .\wingetcreate.exe update $env:PACKAGE_IDENTIFIER -u $env:INSTALLER_URL -v $env:PACKAGE_VERSION --submit
+          } else {
+            throw "Unexpected response while checking winget-pkgs manifest path ($($manifestLookup.StatusCode)): $manifestApiPath"
+          }
+
+      - name: Publish Notes
+        shell: pwsh
+        run: |
+          Write-Host "Prepared Winget manifest for squigit-ocr"
+          Write-Host "version=${{ needs.build-release-ocr-windows.outputs.version }}"
+          Write-Host "asset_url=${{ needs.build-release-ocr-windows.outputs.asset_url }}"
+          Write-Host "sha256=${{ needs.build-release-ocr-windows.outputs.sha256 }}"
+          Write-Host "Set submit_winget_pr=true on workflow_dispatch and configure WINGET_CREATE_GITHUB_TOKEN to open/update winget-pkgs PRs."
+          Write-Host "This workflow auto-detects first publication vs update and will submit the generated manifest accordingly."
+
+  validate-winget-manifest-ocr:
+    name: Validate Winget Manifest
+    if: always() && needs['resolve-channel-scope'].outputs.run_winget == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-phase-complete
+      - build-release-ocr-windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Generate Winget Manifest (OCR Validate)
+        id: manifest
+        uses: ./.github/actions/generate-winget-portable-manifest
+        with:
+          package-identifier: SquigitOrg.SquigitOCR
+          package-version: ${{ needs.build-release-ocr-windows.outputs.version }}
+          package-name: Squigit OCR
+          publisher: Squigit Org
+          short-description: Standalone headless OCR CLI engine for Squigit
+          installer-url: ${{ needs.build-release-ocr-windows.outputs.asset_url }}
+          installer-sha256: ${{ needs.build-release-ocr-windows.outputs.sha256 }}
+          command-alias: squigit-ocr
+          nested-installer-path: squigit-ocr.exe
+          output-dir: ${{ github.workspace }}/target/winget-manifest-ocr-validate
+
+      - name: Validate Manifest with Winget CLI
+        shell: pwsh
+        env:
+          MANIFEST_DIR: ${{ steps.manifest.outputs.manifest-dir }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          winget --version
+
+          $help = winget --help | Out-String
+          if ($help -notmatch "(?m)^\s*validate\s") {
+            throw "winget validate command is unavailable on this runner image."
+          }
+
+          & winget validate --manifest "$env:MANIFEST_DIR" --verbose
+          if ($LASTEXITCODE -ne 0) {
+            throw "winget validate failed with exit code $LASTEXITCODE"
+          }
+
+  test-winget-ocr:
+    name: End-user Winget Install Smoke
+    if: always() && needs['resolve-channel-scope'].outputs.run_winget == 'true'
+    needs:
+      - resolve-channel-scope
+      - build-phase-complete
+      - build-release-ocr-windows
+      - publish-winget-ocr
+      - validate-winget-manifest-ocr
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Smoke Image Dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pillow
+
+      - name: Install via Winget
+        id: install-winget
+        shell: pwsh
+        env:
+          PACKAGE_ID: SquigitOrg.SquigitOCR
+          ASSET_URL: ${{ needs.build-release-ocr-windows.outputs.asset_url }}
+        run: |
+          $ErrorActionPreference = "Continue"
+
+          winget uninstall --id $env:PACKAGE_ID --scope user --silent --disable-interactivity --accept-source-agreements
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "No previous $env:PACKAGE_ID install found (winget uninstall exit code: $LASTEXITCODE)."
+          }
+
+          # True end-user path: install from public Winget source by package ID.
+          winget install --id $env:PACKAGE_ID --exact --source winget --scope user --silent --disable-interactivity --accept-source-agreements --accept-package-agreements
+          if ($LASTEXITCODE -eq 0) {
+            "install_mode=winget-source" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          Write-Host "Public source install failed (exit code: $LASTEXITCODE). Falling back to direct asset extraction for pre-publication CI."
+          $fallbackDir = Join-Path $env:RUNNER_TEMP "squigit-ocr-fallback"
+          if (Test-Path -LiteralPath $fallbackDir) {
+            Remove-Item -LiteralPath $fallbackDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $fallbackDir -Force | Out-Null
+          $zipPath = Join-Path $fallbackDir "squigit-ocr-win-x64.zip"
+          Invoke-WebRequest $env:ASSET_URL -OutFile $zipPath -ErrorAction Stop
+          Expand-Archive -LiteralPath $zipPath -DestinationPath $fallbackDir -Force -ErrorAction Stop
+
+          $fallbackExe = Join-Path $fallbackDir "squigit-ocr.exe"
+          if (-not (Test-Path -LiteralPath $fallbackExe)) {
+            throw "Fallback OCR executable not found after extraction: $fallbackExe"
+          }
+
+          "install_mode=fallback-zip" >> $env:GITHUB_OUTPUT
+          "fallback_exe=$fallbackExe" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Resolve Installed OCR Executable
+        id: locate-ocr
+        shell: pwsh
+        env:
+          FALLBACK_EXE: ${{ steps.install-winget.outputs.fallback_exe }}
+        run: |
+          if (-not [string]::IsNullOrWhiteSpace($env:FALLBACK_EXE)) {
+            "ocr_exe=$env:FALLBACK_EXE" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          $cmd = Get-Command squigit-ocr -ErrorAction SilentlyContinue
+          if ($cmd) {
+            $ocrExe = $cmd.Source
+          } else {
+            $root = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
+            $candidate = Get-ChildItem -Path $root -Recurse -Filter squigit-ocr.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $candidate) {
+              throw "Installed squigit-ocr executable was not found."
+            }
+            $ocrExe = $candidate.FullName
+          }
+          "ocr_exe=$ocrExe" >> $env:GITHUB_OUTPUT
+
+      - name: Validate Installed OCR Version
+        shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ needs.build-release-ocr-windows.outputs.version }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ocrVersion = & "${{ steps.locate-ocr.outputs.ocr_exe }}" --version
+          $ocrVersion = ($ocrVersion | Select-Object -Last 1).Trim()
+          Write-Host "Installed OCR version: $ocrVersion"
+          if ($ocrVersion -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Installed OCR version is not semver: $ocrVersion"
+          }
+          if ($ocrVersion -ne $env:EXPECTED_VERSION) {
+            throw "Installed OCR version mismatch: installed=$ocrVersion expected=$env:EXPECTED_VERSION"
+          }
+
+      - name: Generate OCR Smoke Image
+        shell: pwsh
+        run: |
+          python sidecars/paddle-ocr/scripts/gen_test_image.py --output $env:TEMP/ocr-smoke.png --text "SQUIGIT Windows-x64 OCR SMOKE"
+
+      - name: Run Installed OCR CLI and Print JSON
+        shell: pwsh
+        run: |
+          & "${{ steps.locate-ocr.outputs.ocr_exe }}" $env:TEMP/ocr-smoke.png | Tee-Object -FilePath $env:TEMP/ocr-smoke-output.json
+
+      - name: Validate Installed OCR JSON Payload
+        shell: pwsh
+        run: |
+          $code = @"
+          import json
+          import os
+          from pathlib import Path
+
+          out = Path(os.environ["TEMP"]) / "ocr-smoke-output.json"
+          payload = json.loads(out.read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list):
+              raise SystemExit(f"OCR payload type {type(payload).__name__}, expected list")
+          if not payload:
+              raise SystemExit("OCR payload list is empty")
+
+          text_values = [str(item.get("text", "")).strip() for item in payload if isinstance(item, dict)]
+          merged = " | ".join(t for t in text_values if t)
+          upper = merged.upper()
+          for token in ("SQUIGIT", "OCR", "SMOKE"):
+              if token not in upper:
+                  raise SystemExit(f"Expected token '{token}' in OCR text, got: {merged!r}")
+
+          print(f"Detected entries: {len(payload)}")
+          print(f"Detected text: {merged}")
+          "@
+          python -c $code

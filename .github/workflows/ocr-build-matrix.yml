@@ -1,0 +1,154 @@
+name: "OCR Build Matrix"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ocr:
+    name: OCR ${{ matrix.os_name }}
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            os_name: Windows-x64
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            os_name: Ubuntu-x64
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            os_name: Fedora-x64
+            target: x86_64-unknown-linux-gnu
+            container: "fedora:latest"
+          - os: macos-latest
+            os_name: macOS-ARM
+            target: aarch64-apple-darwin
+
+    steps:
+      - name: Pre-setup Fedora Container
+        if: matrix.os_name == 'Fedora-x64'
+        run: |
+          dnf install -y git curl tar gzip gcc-c++ make python3 python3-pip perl-open perl-FindBin findutils patch
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - uses: actions/checkout@v6
+
+      - name: Build OCR Baseline (onefile)
+        uses: ./.github/actions/build-paddle-ocr
+        with:
+          python-version: "3.12"
+          pyi-mode: "onefile"
+
+      - name: Clean OCR build folders only
+        if: runner.os != 'Windows'
+        run: |
+          rm -rf sidecars/paddle-ocr/build sidecars/paddle-ocr/dist
+
+      - name: Clean OCR build folders only (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force sidecars/paddle-ocr/build, sidecars/paddle-ocr/dist -ErrorAction SilentlyContinue
+
+      - name: Build OCR Candidate (onedir)
+        uses: ./.github/actions/build-paddle-ocr
+        with:
+          python-version: "3.12"
+          pyi-mode: "onedir"
+
+      - name: Generate PNG smoke image (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sidecars/paddle-ocr/venv/bin/python sidecars/paddle-ocr/scripts/gen_test_image.py \
+            --output /tmp/ocr-smoke.png \
+            --text "SQUIGIT ${{ matrix.os_name }} OCR SMOKE"
+
+      - name: Generate PNG smoke image (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & sidecars/paddle-ocr/venv/Scripts/python.exe sidecars/paddle-ocr/scripts/gen_test_image.py `
+            --output $env:TEMP/ocr-smoke.png `
+            --text "SQUIGIT ${{ matrix.os_name }} OCR SMOKE"
+
+      - name: Run sidecar CLI and print JSON (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x packaging/binaries/paddle-ocr-${{ matrix.target }}/squigit-ocr || true
+          packaging/binaries/paddle-ocr-${{ matrix.target }}/squigit-ocr /tmp/ocr-smoke.png | tee /tmp/ocr-smoke-output.json
+
+      - name: Run sidecar CLI and print JSON (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & packaging/binaries/paddle-ocr-${{ matrix.target }}/squigit-ocr.exe $env:TEMP/ocr-smoke.png | Tee-Object -FilePath $env:TEMP/ocr-smoke-output.json
+
+      - name: Validate OCR JSON payload (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sidecars/paddle-ocr/venv/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          out = Path("/tmp/ocr-smoke-output.json")
+          payload = json.loads(out.read_text(encoding="utf-8").strip())
+          if isinstance(payload, dict) and "error" in payload:
+              raise SystemExit(f"OCR returned error: {payload['error']}")
+          if not isinstance(payload, list):
+              raise SystemExit(f"OCR payload type {type(payload).__name__}, expected list")
+          if not payload:
+              raise SystemExit("OCR payload list is empty")
+          text_values = [str(item.get("text", "")).strip() for item in payload if isinstance(item, dict)]
+          merged = " | ".join(t for t in text_values if t)
+          print(f"Detected entries: {len(payload)}")
+          print(f"Detected text: {merged}")
+          PY
+
+      - name: Validate OCR JSON payload (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $code = @"
+          import json
+          import os
+          from pathlib import Path
+          out = Path(os.environ['TEMP']) / 'ocr-smoke-output.json'
+          payload = json.loads(out.read_text(encoding='utf-8').strip())
+          if isinstance(payload, dict) and 'error' in payload:
+              raise SystemExit(f'OCR returned error: {payload["error"]}')
+          if not isinstance(payload, list):
+              raise SystemExit(f'OCR payload type {type(payload).__name__}, expected list')
+          if not payload:
+              raise SystemExit('OCR payload list is empty')
+          text_values = [str(item.get('text', '')).strip() for item in payload if isinstance(item, dict)]
+          merged = ' | '.join(t for t in text_values if t)
+          print(f'Detected entries: {len(payload)}')
+          print(f'Detected text: {merged}')
+          "@
+          & sidecars/paddle-ocr/venv/Scripts/python.exe -c $code
+
+      - name: Upload OCR smoke artifacts (Unix)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ocr-smoke-artifacts-${{ matrix.os_name }}
+          path: |
+            /tmp/ocr-smoke.png
+            /tmp/ocr-smoke-output.json
+
+      - name: Upload OCR smoke artifacts (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ocr-smoke-artifacts-${{ matrix.os_name }}
+          path: |
+            ${{ runner.temp }}/ocr-smoke.png
+            ${{ runner.temp }}/ocr-smoke-output.json
