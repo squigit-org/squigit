@@ -1,0 +1,345 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
+use squigit_auth::auth::{
+    begin_google_auth_flow, complete_google_auth_flow, google_auth_status_page_url_for,
+    AuthAccountPolicy, AuthFlowSettings, LoopbackAuthPage, LoopbackAuthServer,
+};
+use squigit_auth::{AuthSuccessData, ProfileError};
+use squigit_storage::{Profile, ProfileStore};
+use std::env;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+use std::sync::Arc;
+use std::time::Instant;
+
+const CONFIG_DIR_ENV: &str = "SQUIGIT_CONFIG_DIR";
+
+fn main() {
+    if let Err(error) = run() {
+        eprintln!("{error}");
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), String> {
+    let config_dir = isolated_config_dir()?;
+    let store =
+        ProfileStore::with_base_dir(config_dir.clone()).map_err(|error| error.to_string())?;
+    let mut args = env::args().skip(1);
+    let Some(action) = args.next() else {
+        return Err(
+            "usage: cargo run -p squigit-auth --example live_auth_harness -- <login|signup|logout|profiles|remove>"
+                .to_string(),
+        );
+    };
+
+    match action.as_str() {
+        "login" | "signup" => {
+            if args.next().is_some() {
+                return Err(format!("{action} does not accept arguments"));
+            }
+            let policy = if action == "login" {
+                AuthAccountPolicy::ExistingOnly
+            } else {
+                AuthAccountPolicy::NewOnly
+            };
+            let profile = run_google_auth(&store, policy)?;
+            println!("Signed in as {} ({})", profile.email, profile.id);
+            println!("Config: {}", config_dir.display());
+        }
+        "logout" => {
+            if args.next().is_some() {
+                return Err("logout does not accept arguments".to_string());
+            }
+            logout(&store)?;
+            println!("Logged out. Temporary profiles were preserved.");
+            println!("Config: {}", config_dir.display());
+        }
+        "profiles" => {
+            if args.next().is_some() {
+                return Err("profiles does not accept arguments".to_string());
+            }
+            print_profiles(&store)?;
+            println!("\nConfig: {}", config_dir.display());
+        }
+        "remove" => {
+            let profile_id = args
+                .next()
+                .ok_or_else(|| "remove requires <profile-id>".to_string())?;
+            if args.next().is_some() {
+                return Err("remove accepts exactly one <profile-id>".to_string());
+            }
+            let removed = remove_profile(&store, &profile_id)?;
+            println!("Removed {} ({}).", removed.email, removed.id);
+            println!("Config: {}", config_dir.display());
+        }
+        other => return Err(format!("unknown live auth action: {other}")),
+    }
+
+    Ok(())
+}
+
+fn isolated_config_dir() -> Result<PathBuf, String> {
+    let path = env::var_os(CONFIG_DIR_ENV)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .ok_or_else(|| {
+            format!("{CONFIG_DIR_ENV} is required so the live harness cannot use app data")
+        })?;
+    if !path.is_absolute() {
+        return Err(format!("{CONFIG_DIR_ENV} must be an absolute path"));
+    }
+    if squigit_storage::paths::is_default_app_config_dir(&path) {
+        return Err(format!(
+            "{CONFIG_DIR_ENV} must not be the installed application config directory"
+        ));
+    }
+    Ok(path)
+}
+
+fn run_google_auth(
+    store: &ProfileStore,
+    policy: AuthAccountPolicy,
+) -> Result<AuthSuccessData, String> {
+    let loopback = LoopbackAuthServer::bind().map_err(|error| error.to_string())?;
+    let mut settings = AuthFlowSettings::new(Arc::new(|url| {
+        open_system_browser(url).map_err(ProfileError::Auth)
+    }));
+    settings.redirect_uri = loopback.redirect_uri().to_string();
+    settings.account_policy = policy;
+
+    println!("[auth] Redirecting to your browser...");
+    let attempt = begin_google_auth_flow(&settings).map_err(|error| error.to_string())?;
+    (settings.open_browser)(attempt.auth_url()).map_err(|error| error.to_string())?;
+    let started_at = Instant::now();
+    let callback = loop {
+        if started_at.elapsed() > settings.timeout {
+            return Err("Authentication timed out".to_string());
+        }
+
+        if let Some(callback) = loopback.recv_timeout().map_err(|error| error.to_string())? {
+            break callback;
+        }
+    };
+
+    let result = complete_google_auth_flow(store, &settings, attempt, callback.callback_url())
+        .map_err(|error| error.to_string());
+    let page = match &result {
+        Ok(_) => LoopbackAuthPage::Success,
+        Err(_) => LoopbackAuthPage::Invalid,
+    };
+    let status_url = google_auth_status_page_url_for(&settings.status_page_url, page);
+    if let Err(error) = callback.redirect(&status_url) {
+        eprintln!("[auth] Failed to redirect loopback auth response: {error}");
+    }
+
+    result
+}
+
+fn logout(store: &ProfileStore) -> Result<(), String> {
+    store
+        .clear_active_profile_id()
+        .map_err(|error| error.to_string())
+}
+
+fn remove_profile(store: &ProfileStore, profile_id: &str) -> Result<Profile, String> {
+    let profile = resolve_profile(store, profile_id)?;
+    let active_id = store
+        .get_active_profile_id()
+        .map_err(|error| error.to_string())?;
+    if active_id.as_deref() == Some(profile.id.as_str()) {
+        return Err(
+            "Cannot remove the active profile. Log out or add another account first.".to_string(),
+        );
+    }
+
+    store
+        .delete_profile(&profile.id)
+        .map_err(|error| error.to_string())?;
+    Ok(profile)
+}
+
+fn resolve_profile(store: &ProfileStore, profile_id: &str) -> Result<Profile, String> {
+    let profile_id = profile_id.trim();
+    if profile_id.is_empty() {
+        return Err("remove requires a non-empty <profile-id>".to_string());
+    }
+
+    if let Some(profile) = store
+        .get_profile(profile_id)
+        .map_err(|error| error.to_string())?
+    {
+        return Ok(profile);
+    }
+
+    Err(format!("No temporary profile found for '{profile_id}'."))
+}
+
+fn print_profiles(store: &ProfileStore) -> Result<(), String> {
+    let profiles = store.list_profiles().map_err(|error| error.to_string())?;
+    let active_id = store
+        .get_active_profile_id()
+        .map_err(|error| error.to_string())?;
+
+    println!("Temporary Auth Profiles");
+    if profiles.is_empty() {
+        println!("\n  No temporary profiles found.");
+        return Ok(());
+    }
+
+    let rows = profiles
+        .iter()
+        .map(|profile| {
+            let status = if active_id.as_deref() == Some(profile.id.as_str()) {
+                "active"
+            } else {
+                "inactive"
+            };
+            (
+                status,
+                profile.id.as_str(),
+                profile.email.as_str(),
+                profile.name.as_str(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let status_width = rows.iter().fold("Status".len(), |width, row| {
+        width.max(row.0.chars().count())
+    });
+    let id_width = rows
+        .iter()
+        .fold("ID".len(), |width, row| width.max(row.1.chars().count()));
+    let email_width = rows
+        .iter()
+        .fold("Email".len(), |width, row| width.max(row.2.chars().count()));
+    let name_width = rows
+        .iter()
+        .fold("Name".len(), |width, row| width.max(row.3.chars().count()));
+
+    println!(
+        "\n{:^status_width$}  {:^id_width$}  {:^email_width$}  {:^name_width$}",
+        "Status", "ID", "Email", "Name"
+    );
+    for (status, id, email, name) in rows {
+        println!(
+            "{status:<status_width$}  {id:<id_width$}  {email:<email_width$}  {name:<name_width$}"
+        );
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn open_system_browser(url: &str) -> Result<(), String> {
+    let mut command = Command::new("xdg-open");
+    command
+        .arg(url)
+        .env_remove("LD_LIBRARY_PATH")
+        .env_remove("ELECTRON_RUN_AS_NODE")
+        .env_remove("GIO_EXTRA_MODULES");
+    spawn_browser(command)
+}
+
+#[cfg(target_os = "macos")]
+fn open_system_browser(url: &str) -> Result<(), String> {
+    let mut command = Command::new("open");
+    command.arg(url);
+    spawn_browser(command)
+}
+
+#[cfg(target_os = "windows")]
+fn open_system_browser(url: &str) -> Result<(), String> {
+    let mut command = Command::new("rundll32");
+    command.args(["url.dll,FileProtocolHandler", url]);
+    spawn_browser(command)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+fn open_system_browser(_url: &str) -> Result<(), String> {
+    Err("Opening the OAuth browser is unsupported on this operating system".to_string())
+}
+
+fn spawn_browser(mut command: Command) -> Result<(), String> {
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| format!("Failed to open the system browser: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_profile(subject: &str, email: &str, name: &str) -> Profile {
+        Profile::new_google(
+            "https://accounts.google.com",
+            subject,
+            email,
+            name,
+            None,
+            None,
+        )
+    }
+
+    fn store_with_profiles() -> (tempfile::TempDir, ProfileStore, Profile, Profile) {
+        let directory = tempfile::tempdir().unwrap();
+        let store = ProfileStore::with_base_dir(directory.path().to_path_buf()).unwrap();
+        let first = test_profile("subject-1", "first@example.com", "First User");
+        let second = test_profile("subject-2", "second@example.com", "Second User");
+        store.upsert_profile(&first).unwrap();
+        store.upsert_profile(&second).unwrap();
+        store.set_active_profile_id(&second.id).unwrap();
+        (directory, store, first, second)
+    }
+
+    #[test]
+    fn logout_clears_only_the_active_profile() {
+        let (_directory, store, first, second) = store_with_profiles();
+
+        logout(&store).unwrap();
+
+        assert!(store.get_active_profile_id().unwrap().is_none());
+        assert!(store.get_profile(&first.id).unwrap().is_some());
+        assert!(store.get_profile(&second.id).unwrap().is_some());
+    }
+
+    #[test]
+    fn profile_resolution_accepts_id_only() {
+        let (_directory, store, first, _second) = store_with_profiles();
+
+        assert_eq!(resolve_profile(&store, &first.id).unwrap().id, first.id);
+        assert!(resolve_profile(&store, "FIRST@EXAMPLE.COM").is_err());
+    }
+
+    #[test]
+    fn removal_rejects_active_and_preserves_it_when_removing_inactive() {
+        let (_directory, store, first, second) = store_with_profiles();
+
+        assert!(remove_profile(&store, &second.id).is_err());
+        let removed = remove_profile(&store, &first.id).unwrap();
+
+        assert_eq!(removed.id, first.id);
+        assert!(store.get_profile(&first.id).unwrap().is_none());
+        assert_eq!(
+            store.get_active_profile_id().unwrap().as_deref(),
+            Some(second.id.as_str())
+        );
+    }
+
+    #[test]
+    fn removal_preserves_the_final_profile_invariant() {
+        let directory = tempfile::tempdir().unwrap();
+        let store = ProfileStore::with_base_dir(directory.path().to_path_buf()).unwrap();
+        let profile = test_profile("subject-only", "only@example.com", "Only User");
+        store.upsert_profile(&profile).unwrap();
+        logout(&store).unwrap();
+
+        let error = remove_profile(&store, &profile.id).unwrap_err();
+
+        assert!(error.contains("Cannot delete the last profile"));
+        assert!(store.get_profile(&profile.id).unwrap().is_some());
+    }
+}

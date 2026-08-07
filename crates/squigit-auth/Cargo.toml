@@ -1,0 +1,41 @@
+[package]
+name = "squigit-auth"
+version = "0.1.0"
+edition.workspace = true
+build = "build.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+dirs = "6.0"
+chrono = { version = "0.4", features = ["serde"] }
+blake3 = "1.5"
+ed25519-dalek = { version = "3.0.0", features = ["pkcs8", "pem", "rand_core"] }
+squigit-storage = { path = "../squigit-storage" }
+reqwest = { version = "0.13.4", features = ["blocking", "json", "rustls-tls"] }
+tiny_http = "0.12"
+url = "2.5"
+aes-gcm = "0.11.0"
+hkdf = "0.13.0"
+sha2 = "0.11.0"
+hmac = "0.13.0"
+rand = "0.10.2"
+base64 = "0.23.1"
+hex = "0.4"
+keyring = "4.1.0"
+zeroize = { version = "1.8", features = ["derive"] }
+signal-hook = "0.4.4"
+image = "0.25"
+jsonwebtoken = { version = "11.0.0", default-features = false, features = ["rust_crypto"] }
+
+[[example]]
+name = "live_apis_harness"
+path = "examples/live_apis_harness.rs"
+
+[dev-dependencies]
+rpassword = "7"
+squigit-brain = { path = "../squigit-brain" }
+tempfile = "3.12"
+serial_test = "4.0.1"
+tokio = { version = "1.37", features = ["full"] }
