@@ -1,0 +1,113 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
+//! Thread storage manager and thread-local persisted state.
+
+use std::fs;
+use std::path::Path;
+use std::path::PathBuf;
+
+use crate::error::{Result, StorageError};
+
+mod index;
+mod lifecycle;
+mod ocr;
+mod paths;
+mod ris;
+pub mod types;
+
+#[cfg(test)]
+mod tests;
+
+pub use types::{
+    default_ocr_annotations, AttachmentManifest, AttachmentManifestEntry, ContextWindow,
+    MessageAttachment, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion,
+    ReverseImageSearchCache, ThreadData, ThreadMessage, ThreadMetadata, WorkspaceMetadata,
+    DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
+};
+
+pub(crate) fn atomic_write(path: &Path, contents: &[u8]) -> Result<()> {
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("data");
+    let temporary = path.with_file_name(format!(".{file_name}.tmp-{}", uuid::Uuid::new_v4()));
+    fs::write(&temporary, contents)?;
+    fs::rename(temporary, path)?;
+    Ok(())
+}
+
+/// Main storage manager for threads and content-addressed objects.
+pub struct ThreadStorage {
+    /// Base directory for all thread storage.
+    pub(crate) base_dir: PathBuf,
+    /// Directory for content-addressed objects.
+    pub(crate) objects_dir: PathBuf,
+    /// Path to the thread index file.
+    pub(crate) index_path: PathBuf,
+}
+
+impl ThreadStorage {
+    pub fn with_config_root(config_root: PathBuf) -> Result<Self> {
+        let base_dir = config_root.join("threads");
+        let objects_dir = config_root.join("objects");
+        let index_path = base_dir.join("index.json");
+        fs::create_dir_all(&base_dir)?;
+        fs::create_dir_all(&objects_dir)?;
+        Ok(Self {
+            base_dir,
+            objects_dir,
+            index_path,
+        })
+    }
+
+    /// Create a new storage manager with a custom thread base directory.
+    ///
+    /// This is the primary constructor for thread storage.
+    /// Use this with the global threads directory.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use squigit_storage::ThreadStorage;
+    /// use std::path::PathBuf;
+    ///
+    /// let threads_dir = PathBuf::from("/path/to/squigit/threads");
+    /// let storage = ThreadStorage::with_base_dir(threads_dir).unwrap();
+    /// ```
+    pub fn with_base_dir(base_dir: PathBuf) -> Result<Self> {
+        let objects_dir = crate::paths::base_config_dir()
+            .ok_or(StorageError::NoDataDir)?
+            .join("objects");
+        let index_path = base_dir.join("index.json");
+
+        fs::create_dir_all(&base_dir)?;
+        fs::create_dir_all(&objects_dir)?;
+
+        Ok(Self {
+            base_dir,
+            objects_dir,
+            index_path,
+        })
+    }
+
+    /// Create a new storage manager using the default global thread location.
+    pub fn new() -> Result<Self> {
+        let config_root = crate::paths::base_config_dir().ok_or(StorageError::NoDataDir)?;
+        Self::with_config_root(config_root)
+    }
+
+    /// Get the base storage directory path.
+    pub fn base_dir(&self) -> &PathBuf {
+        &self.base_dir
+    }
+
+    /// Get the objects directory path.
+    pub fn objects_dir(&self) -> &PathBuf {
+        &self.objects_dir
+    }
+
+    pub(super) fn thread_dir(&self, thread_id: &str) -> PathBuf {
+        self.base_dir.join(thread_id)
+    }
+}
