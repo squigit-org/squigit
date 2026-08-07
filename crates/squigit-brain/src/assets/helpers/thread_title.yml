@@ -1,0 +1,9 @@
+generate_title: |
+  Create a concise 2-4 word title for the provided thread context.
+  The context may be a conversation summary or an image.
+  Rules:
+  - No punctuation
+  - No generic prefixes such as "Image of", "Screenshot of", or "Summary of"
+  - Capture the specific topic (e.g., "Rust Compiler Error", "Youtube Feed", "React Component Code")
+  - Conversation title case
+  - Return ONLY the title text, nothing else
