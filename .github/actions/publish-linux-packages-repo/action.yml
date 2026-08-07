@@ -1,0 +1,88 @@
+name: "Publish Linux Package Repositories"
+description: "Updates squigit-packages APT/DNF repos with signed metadata and latest packages"
+inputs:
+  packages-token:
+    description: "GitHub token with write access to squigit-packages"
+    required: true
+  packages-repo:
+    description: "Package repository repo slug"
+    required: false
+    default: "squigit-org/squigit-packages"
+  packages-branch:
+    description: "Branch to update in package repository repo"
+    required: false
+    default: "main"
+  package-name:
+    description: "Package name (e.g. squigit-ocr)"
+    required: true
+  package-version:
+    description: "Package version"
+    required: true
+  source-release-repo:
+    description: "Source releases repository slug hosting package assets"
+    required: false
+    default: "squigit-org/squigit"
+  source-release-tag:
+    description: "Source release tag hosting package assets"
+    required: true
+  deb-path:
+    description: "Absolute path to .deb package"
+    required: true
+  rpm-path:
+    description: "Absolute path to .rpm package"
+    required: true
+  gpg-private-key:
+    description: "Armored GPG private key"
+    required: true
+  gpg-passphrase:
+    description: "Passphrase for the GPG private key"
+    required: true
+  publish-dnf-repo:
+    description: "Whether to regenerate the published DNF repo metadata"
+    required: false
+    default: "true"
+  pages-base-url:
+    description: "Public GitHub Pages base URL for squigit-packages"
+    required: false
+    default: "https://squigit-org.github.io/squigit-packages"
+  apt-suite:
+    description: "APT suite name"
+    required: false
+    default: "stable"
+outputs:
+  repo-url:
+    description: "Published package repo URL"
+    value: ${{ steps.publish.outputs.repo_url }}
+  apt-source:
+    description: "APT source line for docs"
+    value: ${{ steps.publish.outputs.apt_source }}
+  dnf-repo-url:
+    description: "DNF .repo file URL"
+    value: ${{ steps.publish.outputs.dnf_repo_url }}
+  packages-sha:
+    description: "Commit SHA of the updated packages repository"
+    value: ${{ steps.publish.outputs.packages_sha }}
+runs:
+  using: "composite"
+  steps:
+    - name: Publish package repositories
+      id: publish
+      shell: bash
+      env:
+        PACKAGES_TOKEN: ${{ inputs.packages-token }}
+        PACKAGES_REPO: ${{ inputs.packages-repo }}
+        PACKAGES_BRANCH: ${{ inputs.packages-branch }}
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        PACKAGE_VERSION: ${{ inputs.package-version }}
+        SOURCE_RELEASE_REPO: ${{ inputs.source-release-repo }}
+        SOURCE_RELEASE_TAG: ${{ inputs.source-release-tag }}
+        DEB_PATH: ${{ inputs.deb-path }}
+        RPM_PATH: ${{ inputs.rpm-path }}
+        GPG_PRIVATE_KEY: ${{ inputs.gpg-private-key }}
+        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        PUBLISH_DNF_REPO: ${{ inputs.publish-dnf-repo }}
+        PAGES_BASE_URL: ${{ inputs.pages-base-url }}
+        APT_SUITE: ${{ inputs.apt-suite }}
+      run: |
+        set -euo pipefail
+        "${{ github.action_path }}/publish.sh"
