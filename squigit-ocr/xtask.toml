@@ -1,0 +1,45 @@
+schema = 2
+
+[context]
+kind = "component"
+name = "squigit-ocr"
+display_name = "Squigit OCR"
+category = "apps"
+order = 10
+
+[requirements]
+node = false
+rust = false
+python = true
+cmake = false
+qt = false
+
+[version]
+scheme = "semver"
+files = ["src/__init__.py", "CHANGELOG.md"]
+include_root = true
+source = { path = "src/__init__.py", format = "regex", pattern = '(?m)^__version__\s*=\s*"(?P<version>[^"]+)"' }
+
+[release]
+tag = "ocr-v{version}"
+
+[tests]
+root = "tests"
+include = ["tests/test_*.py", "tests/**/test_*.py"]
+
+[operations]
+dev = { enabled = false, handler = "none", description = "Development mode is not enabled for the bundled Squigit OCR." }
+doctor = { enabled = true, handler = "squigit-ocr", description = "Check Squigit OCR sources" }
+build = { enabled = true, handler = "squigit-ocr", requires_commit_sha = false, description = "Build the Squigit OCR" }
+test = { enabled = true, handler = "squigit-ocr", description = "Run Squigit OCR test suites" }
+clean = { enabled = true, handler = "squigit-ocr", description = "Remove Squigit OCR artifacts" }
+bump = { enabled = true, handler = "squigit-ocr", description = "Prepare a SemVer update" }
+release = { enabled = true, handler = "ocr-release", description = "Prepare the OCR release" }
+
+[ui.menu]
+title = "Squigit OCR xtask"
+usage = "cargo xtask <command> [options]"
+
+[ui.prompts.build]
+title = "Squigit OCR Build"
+question = "Calculate the packaged payload size? [y/N]"
