@@ -1,0 +1,254 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::provider::gemini::fallback::{is_candidate_retryable_error, is_transport_error};
+use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
+use crate::provider::gemini::transport::types::{
+    GeminiContent, GeminiFileData, GeminiPart, GeminiRequest, GeminiResponseChunk,
+};
+use crate::runtime::BrainRuntimeState;
+use squigit_storage::ThreadStorage;
+use std::time::Duration;
+
+fn extract_generated_text(body: &str) -> Result<String, String> {
+    let chunk: GeminiResponseChunk = serde_json::from_str(body).map_err(|error| {
+        format!(
+            "Failed to parse Gemini response: {error} - Body: {}",
+            &body[..body.len().min(500)]
+        )
+    })?;
+
+    if let Some(block_reason) = chunk
+        .prompt_feedback
+        .as_ref()
+        .and_then(|feedback| feedback.block_reason.as_deref())
+    {
+        return Err(format!("Gemini safety failure: {block_reason}"));
+    }
+
+    if let Some(candidates) = chunk.candidates {
+        if let Some(first) = candidates.first() {
+            if let Some(finish_reason) = first.finish_reason.as_deref() {
+                if matches!(
+                    finish_reason,
+                    "SAFETY" | "BLOCKLIST" | "PROHIBITED_CONTENT" | "SPII" | "IMAGE_SAFETY"
+                ) {
+                    return Err(format!("Gemini safety failure: {finish_reason}"));
+                }
+            }
+            if let Some(parts) = first
+                .content
+                .as_ref()
+                .and_then(|content| content.parts.as_ref())
+            {
+                if let Some(text) = parts.iter().find_map(|part| part.text.as_deref()) {
+                    let trimmed = text.trim();
+                    if !trimmed.is_empty() {
+                        return Ok(trimmed.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    Err("Gemini returned an empty response.".to_string())
+}
+
+async fn generate_with_candidate(
+    client: &reqwest::Client,
+    api_key: &str,
+    model: &str,
+    request_body: &GeminiRequest,
+) -> Result<String, String> {
+    const MAX_TRANSPORT_RETRIES: usize = 2;
+
+    let model_id = model.strip_prefix("models/").unwrap_or(model);
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent"
+    );
+    let mut transport_retries = 0usize;
+
+    loop {
+        let response = match client
+            .post(&url)
+            .header("x-goog-api-key", api_key)
+            .json(request_body)
+            .send()
+            .await
+        {
+            Ok(response) => response,
+            Err(_) => {
+                let message = "Failed to send request to Gemini".to_string();
+                if is_transport_error(&message) && transport_retries < MAX_TRANSPORT_RETRIES {
+                    transport_retries += 1;
+                    tokio::time::sleep(Duration::from_millis(750 * transport_retries as u64)).await;
+                    continue;
+                }
+                return Err(message);
+            }
+        };
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("Gemini API Error ({status}): {error_text}"));
+        }
+
+        let body = match response.text().await {
+            Ok(body) => body,
+            Err(error) => {
+                let message = format!("Failed to read response: {error}");
+                if is_transport_error(&message) && transport_retries < MAX_TRANSPORT_RETRIES {
+                    transport_retries += 1;
+                    tokio::time::sleep(Duration::from_millis(750 * transport_retries as u64)).await;
+                    continue;
+                }
+                return Err(message);
+            }
+        };
+
+        return extract_generated_text(&body);
+    }
+}
+
+async fn generate_with_candidates(
+    api_key: &str,
+    model_candidates: &[String],
+    request_body: &GeminiRequest,
+) -> Result<String, String> {
+    if model_candidates.is_empty() {
+        return Err("At least one model candidate is required.".to_string());
+    }
+
+    let client = reqwest::Client::new();
+    let mut last_error = "All model candidates failed.".to_string();
+
+    for (index, model) in model_candidates.iter().enumerate() {
+        match generate_with_candidate(&client, api_key, model, request_body).await {
+            Ok(text) => return Ok(text),
+            Err(error) => {
+                let has_next = index + 1 < model_candidates.len();
+                let may_switch = has_next && is_candidate_retryable_error(&error);
+                last_error = error;
+                if !may_switch {
+                    return Err(last_error);
+                }
+            }
+        }
+    }
+
+    Err(last_error)
+}
+
+async fn generate_thread_title(
+    api_key: String,
+    model_candidates: Vec<String>,
+    mut context_parts: Vec<GeminiPart>,
+) -> Result<String, String> {
+    use crate::context::builder::get_title_prompt;
+
+    context_parts.push(GeminiPart {
+        text: Some(get_title_prompt().map_err(|error| error.to_string())?),
+        ..Default::default()
+    });
+    let request_body = GeminiRequest {
+        system_instruction: None,
+        contents: vec![GeminiContent {
+            role: "user".to_string(),
+            parts: context_parts,
+        }],
+        generation_config: None,
+        tools: None,
+        tool_config: None,
+    };
+
+    write_request_log(
+        &GeminiRequestLogContext {
+            kind: "title_generation",
+            channel_id: None,
+            thread_id: None,
+            iteration: None,
+        },
+        &request_body,
+    );
+
+    generate_with_candidates(&api_key, &model_candidates, &request_body).await
+}
+
+/// Generate a thread title from an image using the supplied micro-task candidate plan.
+pub async fn generate_thread_title_from_image(
+    api_key: String,
+    model_candidates: Vec<String>,
+    image_uri: String,
+    image_mime_type: String,
+) -> Result<String, String> {
+    generate_thread_title(
+        api_key,
+        model_candidates,
+        vec![GeminiPart {
+            file_data: Some(GeminiFileData {
+                mime_type: image_mime_type,
+                file_uri: image_uri,
+            }),
+            ..Default::default()
+        }],
+    )
+    .await
+}
+
+async fn generate_thread_title_from_context(
+    api_key: String,
+    model_candidates: Vec<String>,
+    compacted_context: String,
+) -> Result<String, String> {
+    generate_thread_title(
+        api_key,
+        model_candidates,
+        vec![GeminiPart {
+            text: Some(format!("Thread context:\n{compacted_context}")),
+            ..Default::default()
+        }],
+    )
+    .await
+}
+
+/// Suggest a title from the latest compacted context, or the refreshed thread image.
+pub async fn suggest_thread_title(
+    runtime: &BrainRuntimeState,
+    thread_id: String,
+    model_candidates: Vec<String>,
+) -> Result<String, String> {
+    let storage = ThreadStorage::new().map_err(|error| error.to_string())?;
+    let thread = storage
+        .load_thread(&thread_id)
+        .map_err(|error| error.to_string())?;
+    let api_key = crate::provider::gemini::attachments::load_active_api_key().await?;
+
+    if let Some(compacted_context) = thread
+        .context_window
+        .compacted_context
+        .filter(|context| !context.trim().is_empty())
+    {
+        return generate_thread_title_from_context(api_key, model_candidates, compacted_context)
+            .await;
+    }
+
+    let image_path = storage
+        .get_image_path(&thread.metadata.image_hash)
+        .map_err(|error| error.to_string())?;
+    let file_ref = crate::provider::gemini::attachments::ensure_file_uploaded(
+        runtime,
+        &api_key,
+        &image_path,
+        None,
+    )
+    .await?;
+
+    generate_thread_title_from_image(
+        api_key,
+        model_candidates,
+        file_ref.file_uri,
+        file_ref.mime_type,
+    )
+    .await
+}
