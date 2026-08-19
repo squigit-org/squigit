@@ -1,0 +1,87 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum NetworkStatus {
+    Online,
+    Offline,
+    Poor,
+}
+
+#[derive(Clone, Debug)]
+pub struct NetworkState {
+    pub status: NetworkStatus,
+    pub latency_ms: u64,
+}
+
+impl Default for NetworkState {
+    fn default() -> Self {
+        Self {
+            status: NetworkStatus::Online,
+            latency_ms: 0,
+        }
+    }
+}
+
+pub struct PeerNetworkMonitor {
+    state: Arc<Mutex<NetworkState>>,
+}
+
+impl Default for PeerNetworkMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PeerNetworkMonitor {
+    pub fn new() -> Self {
+        Self {
+            state: Arc::new(Mutex::new(NetworkState::default())),
+        }
+    }
+
+    pub fn get_state(&self) -> NetworkState {
+        self.state.lock().unwrap().clone()
+    }
+
+    pub fn start_monitor(&self) {
+        let state = self.state.clone();
+
+        std::thread::spawn(move || {
+            loop {
+                let start = Instant::now();
+                // 8.8.8.8:53 is Google DNS, very reliable.
+                // Connect timeout of 2s.
+                // This is a "TCP Ping".
+                let addr = std::net::SocketAddr::from(([8, 8, 8, 8], 53));
+                let status = match std::net::TcpStream::connect_timeout(
+                    &addr,
+                    std::time::Duration::from_secs(2),
+                ) {
+                    Ok(_) => {
+                        let latency = start.elapsed().as_millis() as u64;
+                        let status = if latency > 300 {
+                            NetworkStatus::Poor
+                        } else {
+                            NetworkStatus::Online
+                        };
+                        NetworkState {
+                            status,
+                            latency_ms: latency,
+                        }
+                    }
+                    Err(_) => NetworkState {
+                        status: NetworkStatus::Offline,
+                        latency_ms: 9999,
+                    },
+                };
+
+                *state.lock().unwrap() = status;
+                std::thread::sleep(Duration::from_secs(2));
+            }
+        });
+    }
+}
