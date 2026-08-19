@@ -19,10 +19,8 @@
 /.cargo/ @a7mddra
 /xtask/ @a7mddra
 
-# Rust crates.
+# Rust crates and applications.
 /crates/ @a7mddra
 /squigit-rs/ @a7mddra
-
-# Native sidecars and runtime helpers.
-/sidecars/paddle-ocr/ @a7mddra
-/sidecars/qt-capture/ @a7mddra
+/squigit-cli/ @a7mddra
+/squigit-ocr/ @a7mddra
