@@ -566,7 +566,7 @@ crates/squigit-auth/src/auth/google.rs
 crates/squigit-auth/src/security/crypto.rs
 crates/squigit-storage/src/profile/store.rs
 crates/squigit-storage/src/profile/types.rs
-crates/napi-bridge/src/profile.rs
+backend/src/profile.rs
 squigit-org.github.io/site/login/popup-google-auth/index.html
 squigit-org.github.io/src/features/auth-popup/main.tsx
 squigit-org.github.io/vite.config.ts
