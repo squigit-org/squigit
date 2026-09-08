@@ -14,7 +14,6 @@ struct OcrModelDef {
     name: &'static str,
     lang: &'static str,
     test_image: &'static str,
-    download_url: &'static str,
 }
 
 const MODELS: &[OcrModelDef] = &[
@@ -23,42 +22,36 @@ const MODELS: &[OcrModelDef] = &[
         name: "PP-OCR-V5 English",
         lang: "en",
         test_image: "test-en.png",
-        download_url: "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/en_PP-OCRv5_mobile_rec_infer.tar",
     },
     OcrModelDef {
         id: "pp-ocr-v5-latin",
         name: "PP-OCR-V5 Latin",
         lang: "la",
         test_image: "test-latin.png",
-        download_url: "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/latin_PP-OCRv5_mobile_rec_infer.tar",
     },
     OcrModelDef {
         id: "pp-ocr-v5-cyrillic",
         name: "PP-OCR-V5 Cyrillic",
         lang: "ru",
         test_image: "test-cyrillic.png",
-        download_url: "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/cyrillic_PP-OCRv5_mobile_rec_infer.tar",
     },
     OcrModelDef {
         id: "pp-ocr-v5-korean",
         name: "PP-OCR-V5 Korean",
         lang: "ko",
         test_image: "test-korean.png",
-        download_url: "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/korean_PP-OCRv5_mobile_rec_infer.tar",
     },
     OcrModelDef {
         id: "pp-ocr-v5-cjk",
         name: "PP-OCR-V5 CJK",
         lang: "ch",
         test_image: "test-cjk.png",
-        download_url: "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_server_rec_infer.tar",
     },
     OcrModelDef {
         id: "pp-ocr-v5-devanagari",
         name: "PP-OCR-V5 Devanagari",
         lang: "hi",
         test_image: "test-devanagari.png",
-        download_url: "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/devanagari_PP-OCRv5_mobile_rec_infer.tar",
     },
 ];
 
@@ -345,7 +338,7 @@ async fn download(model_specifier: &str) -> Result<(), String> {
     }
 
     manager
-        .download_and_extract(model.download_url, model.id, |progress| {
+        .download_and_extract(model.id, |progress| {
             if progress.total > 0 {
                 eprint!(
                     "\r  [{}] {}% ({}/{} bytes)    ",

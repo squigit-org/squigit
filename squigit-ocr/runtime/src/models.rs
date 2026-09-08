@@ -92,6 +92,8 @@ pub enum ModelError {
     Extraction(String),
     #[error("Unsupported OCR model id: {0}")]
     UnsupportedModelId(String),
+    #[error("OCR model download preflight failed: {0}")]
+    Preflight(String),
     #[error("Download cancelled")]
     Cancelled,
 }
@@ -105,6 +107,34 @@ pub struct DownloadProgressPayload {
     pub loaded: u64,
     pub total: u64,
     pub status: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ModelDownloadJobSnapshot {
+    pub id: String,
+    pub status: String,
+    pub progress: u8,
+    pub loaded: u64,
+    pub total: u64,
+    pub error: Option<String>,
+}
+
+impl ModelDownloadJobSnapshot {
+    fn checking(id: String) -> Self {
+        Self {
+            id,
+            status: "checking_internet".to_string(),
+            progress: 0,
+            loaded: 0,
+            total: 0,
+            error: None,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct OfficialModelSnapshot {
+    id: String,
 }
 
 fn canonical_ocr_model_id(model_id: &str) -> &str {
@@ -136,27 +166,28 @@ fn hf_repo_for_model_id(model_id: &str) -> Option<&'static str> {
     ocr_model_definition(model_id).map(|model| model.hf_repo)
 }
 
-fn build_archive_candidates(primary_url: &str, model_id: &str) -> Vec<String> {
-    let mut urls = Vec::new();
-    let primary = primary_url.trim();
-    if !primary.is_empty() {
-        urls.push(primary.to_string());
-    }
-
-    if let Some(model) = ocr_model_definition(model_id) {
-        let bos = model.download_url.to_string();
-        if !urls.contains(&bos) {
-            urls.push(bos);
-        }
-    }
-
-    urls
+fn build_archive_candidates(model_id: &str) -> Vec<String> {
+    ocr_model_definition(model_id)
+        .map(|model| vec![model.download_url.to_string()])
+        .unwrap_or_default()
 }
 
+fn is_active_download_status(status: &str) -> bool {
+    status.starts_with("checking_") || matches!(status, "downloading" | "paused" | "extracting")
+}
+
+fn terminal_progress_bar(progress: u8) -> String {
+    const WIDTH: usize = 32;
+    let filled = usize::from(progress).saturating_mul(WIDTH) / 100;
+    format!("{}{}", "█".repeat(filled), "░".repeat(WIDTH - filled))
+}
+
+#[derive(Clone)]
 pub struct ModelManager {
     models_dir: PathBuf,
     cancellation_tokens: Arc<Mutex<HashMap<String, CancellationToken>>>,
     network_monitor: Arc<PeerNetworkMonitor>,
+    download_jobs: Arc<Mutex<HashMap<String, ModelDownloadJobSnapshot>>>,
 }
 
 impl ModelManager {
@@ -173,6 +204,7 @@ impl ModelManager {
             models_dir,
             cancellation_tokens: Arc::new(Mutex::new(HashMap::new())),
             network_monitor,
+            download_jobs: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -227,13 +259,215 @@ impl ModelManager {
         Ok(models)
     }
 
-    pub fn cancel_download(&self, model_id: &str) {
+    pub fn download_jobs_snapshot(&self) -> Vec<ModelDownloadJobSnapshot> {
+        let Ok(jobs) = self.download_jobs.lock() else {
+            return Vec::new();
+        };
+        let mut snapshots = jobs.values().cloned().collect::<Vec<_>>();
+        snapshots.sort_by(|left, right| left.id.cmp(&right.id));
+        snapshots
+    }
+
+    pub fn start_download(&self, model_id: &str) -> Result<()> {
+        let canonical_id = supported_ocr_model_id(model_id)
+            .ok_or_else(|| ModelError::UnsupportedModelId(model_id.to_string()))?
+            .to_string();
+        {
+            let mut jobs = self.download_jobs.lock().map_err(|_| {
+                ModelError::Preflight("model download state is unavailable".to_string())
+            })?;
+            if jobs
+                .get(&canonical_id)
+                .is_some_and(|job| is_active_download_status(&job.status))
+            {
+                return Ok(());
+            }
+            jobs.insert(
+                canonical_id.clone(),
+                ModelDownloadJobSnapshot::checking(canonical_id.clone()),
+            );
+        }
+        self.cancel_active_transfer(&canonical_id);
+        let cancel_token = CancellationToken::new();
+        if let Ok(mut tokens) = self.cancellation_tokens.lock() {
+            tokens.insert(canonical_id.clone(), cancel_token.clone());
+        }
+        eprintln!(
+            "[ocr-runtime:models] {} preflight 1/3: checking internet availability",
+            canonical_id
+        );
+
+        let worker_manager = self.clone();
+        let worker_id = canonical_id.clone();
+        let worker = tokio::spawn(async move {
+            worker_manager
+                .run_managed_download(worker_id, cancel_token)
+                .await;
+        });
+        let watcher_manager = self.clone();
+        tokio::spawn(async move {
+            let Err(error) = worker.await else {
+                return;
+            };
+            let message = format!("model download worker crashed: {error}");
+            eprintln!("[ocr-runtime:models] {canonical_id} failed\n{message}");
+            watcher_manager.set_download_failure(&canonical_id, message);
+        });
+        Ok(())
+    }
+
+    async fn run_managed_download(&self, model_id: String, cancel_token: CancellationToken) {
+        let progress_manager = self.clone();
+        let result = self
+            .download_and_extract_with_token(&model_id, cancel_token, move |payload| {
+                progress_manager.record_download_progress(payload);
+            })
+            .await;
+        if let Ok(mut tokens) = self.cancellation_tokens.lock() {
+            tokens.remove(&model_id);
+        }
+        match result {
+            Ok(path) => {
+                self.record_download_progress(DownloadProgressPayload {
+                    id: model_id.clone(),
+                    progress: 100,
+                    loaded: 0,
+                    total: 0,
+                    status: "downloaded".to_string(),
+                });
+                eprintln!(
+                    "[ocr-runtime:models] {} installed at {}",
+                    model_id,
+                    path.display()
+                );
+            }
+            Err(ModelError::Cancelled) => {
+                self.record_download_progress(DownloadProgressPayload {
+                    id: model_id,
+                    progress: 0,
+                    loaded: 0,
+                    total: 0,
+                    status: "cancelled".to_string(),
+                });
+            }
+            Err(error) => {
+                let message = error.to_string();
+                eprintln!("[ocr-runtime:models] {model_id} failed\n{message}");
+                self.set_download_failure(&model_id, message);
+            }
+        }
+    }
+
+    fn set_download_failure(&self, model_id: &str, error: String) {
+        if let Ok(mut jobs) = self.download_jobs.lock() {
+            let job = jobs
+                .entry(model_id.to_string())
+                .or_insert_with(|| ModelDownloadJobSnapshot::checking(model_id.to_string()));
+            job.status = "failed".to_string();
+            job.error = Some(error);
+        }
+    }
+
+    fn record_download_progress(&self, payload: DownloadProgressPayload) {
+        let previous = if let Ok(mut jobs) = self.download_jobs.lock() {
+            if jobs
+                .get(&payload.id)
+                .is_some_and(|job| job.status == "cancelled")
+                && payload.status != "cancelled"
+            {
+                return;
+            }
+            let previous = jobs.get(&payload.id).cloned();
+            jobs.insert(
+                payload.id.clone(),
+                ModelDownloadJobSnapshot {
+                    id: payload.id.clone(),
+                    status: payload.status.clone(),
+                    progress: payload.progress,
+                    loaded: payload.loaded,
+                    total: payload.total,
+                    error: None,
+                },
+            );
+            previous
+        } else {
+            None
+        };
+
+        let status_changed = previous
+            .as_ref()
+            .is_none_or(|job| job.status != payload.status);
+        let progress_changed = previous
+            .as_ref()
+            .is_none_or(|job| job.progress != payload.progress);
+        if status_changed {
+            match payload.status.as_str() {
+                "internet_available" => {
+                    eprintln!("[ocr-runtime:models] {} preflight 1/3: passed", payload.id)
+                }
+                "checking_installation" => eprintln!(
+                    "[ocr-runtime:models] {} preflight 2/3: checking user model path",
+                    payload.id
+                ),
+                "model_not_installed" => eprintln!(
+                    "[ocr-runtime:models] {} preflight 2/3: passed (not installed)",
+                    payload.id
+                ),
+                "already_installed" => eprintln!(
+                    "[ocr-runtime:models] {} preflight 2/3: already installed",
+                    payload.id
+                ),
+                "checking_availability" => eprintln!(
+                    "[ocr-runtime:models] {} preflight 3/3: reading PaddlePaddle model snapshot",
+                    payload.id
+                ),
+                "model_available" => {
+                    eprintln!("[ocr-runtime:models] {} preflight 3/3: passed", payload.id)
+                }
+                "extracting" => {
+                    eprintln!("[ocr-runtime:models] {} extracting", payload.id)
+                }
+                "cancelled" => {
+                    eprintln!("[ocr-runtime:models] {} cancelled", payload.id)
+                }
+                _ => {}
+            }
+        }
+        if payload.status == "downloading" && progress_changed {
+            let first = previous
+                .as_ref()
+                .filter(|job| job.status == "downloading" && job.progress < payload.progress)
+                .map_or(payload.progress, |job| job.progress.saturating_add(1));
+            for progress in first..=payload.progress {
+                eprintln!(
+                    "[ocr-runtime:models] {} [{}] {:3}%",
+                    payload.id,
+                    terminal_progress_bar(progress),
+                    progress
+                );
+            }
+        }
+    }
+
+    fn cancel_active_transfer(&self, model_id: &str) {
         let canonical_id = canonical_ocr_model_id(model_id).to_string();
         if let Ok(mut tokens) = self.cancellation_tokens.lock() {
             if let Some(token) = tokens.remove(&canonical_id) {
                 token.cancel();
             }
         }
+    }
+
+    pub fn cancel_download(&self, model_id: &str) {
+        let canonical_id = canonical_ocr_model_id(model_id).to_string();
+        self.cancel_active_transfer(&canonical_id);
+        if let Ok(mut jobs) = self.download_jobs.lock() {
+            if let Some(job) = jobs.get_mut(&canonical_id) {
+                job.status = "cancelled".to_string();
+                job.progress = 0;
+            }
+        }
+        eprintln!("[ocr-runtime:models] {canonical_id} cancel requested");
     }
 
     pub fn trash_downloaded_model(&self, model_id: &str) -> Result<()> {
@@ -244,6 +478,9 @@ impl ModelManager {
         let temp_file_path = self.get_temp_file_path(canonical_id);
         if temp_file_path.exists() {
             fs::remove_file(&temp_file_path)?;
+        }
+        if let Ok(mut jobs) = self.download_jobs.lock() {
+            jobs.remove(canonical_id);
         }
 
         let model_dir = self.get_model_dir(canonical_id);
@@ -260,36 +497,138 @@ impl ModelManager {
         Ok(())
     }
 
-    pub async fn download_and_extract<F>(
-        &self,
-        url: &str,
-        model_id: &str,
-        mut on_progress: F,
-    ) -> Result<PathBuf>
+    pub async fn download_and_extract<F>(&self, model_id: &str, on_progress: F) -> Result<PathBuf>
     where
         F: FnMut(DownloadProgressPayload) + Send,
     {
         let canonical_id = supported_ocr_model_id(model_id)
             .ok_or_else(|| ModelError::UnsupportedModelId(model_id.to_string()))?
             .to_string();
-        let target_dir = self.get_model_dir(&canonical_id);
-
-        if self.is_model_installed(&canonical_id) {
-            return Ok(target_dir);
-        }
-
-        self.cancel_download(&canonical_id);
-
+        self.cancel_active_transfer(&canonical_id);
         let cancel_token = CancellationToken::new();
         if let Ok(mut tokens) = self.cancellation_tokens.lock() {
             tokens.insert(canonical_id.clone(), cancel_token.clone());
         }
+        let result = self
+            .download_and_extract_with_token(model_id, cancel_token, on_progress)
+            .await;
+        if let Ok(mut tokens) = self.cancellation_tokens.lock() {
+            tokens.remove(&canonical_id);
+        }
+        result
+    }
 
-        let temp_file_path = self.get_temp_file_path(&canonical_id);
+    async fn download_and_extract_with_token<F>(
+        &self,
+        model_id: &str,
+        cancel_token: CancellationToken,
+        mut on_progress: F,
+    ) -> Result<PathBuf>
+    where
+        F: FnMut(DownloadProgressPayload) + Send,
+    {
+        let model = ocr_model_definition(model_id)
+            .ok_or_else(|| ModelError::UnsupportedModelId(model_id.to_string()))?;
+        let canonical_id = model.id.to_string();
+        let target_dir = self.get_model_dir(&canonical_id);
         let client = reqwest::Client::builder()
             .user_agent("squigit-ocr-model-downloader/1.0")
+            .timeout(std::time::Duration::from_secs(20))
             .build()?;
-        let archive_candidates = build_archive_candidates(url, &canonical_id);
+
+        if cancel_token.is_cancelled() {
+            return Err(ModelError::Cancelled);
+        }
+
+        on_progress(DownloadProgressPayload {
+            id: canonical_id.clone(),
+            progress: 0,
+            loaded: 0,
+            total: 0,
+            status: "checking_internet".to_string(),
+        });
+        tokio::select! {
+            _ = cancel_token.cancelled() => return Err(ModelError::Cancelled),
+            response = client.get("https://huggingface.co").send() => response,
+        }
+        .map_err(|error| ModelError::Preflight(format!("internet is unavailable: {error}")))?
+        .error_for_status()
+        .map_err(|error| ModelError::Preflight(format!("internet check failed: {error}")))?;
+        on_progress(DownloadProgressPayload {
+            id: canonical_id.clone(),
+            progress: 0,
+            loaded: 0,
+            total: 0,
+            status: "internet_available".to_string(),
+        });
+
+        on_progress(DownloadProgressPayload {
+            id: canonical_id.clone(),
+            progress: 0,
+            loaded: 0,
+            total: 0,
+            status: "checking_installation".to_string(),
+        });
+
+        if self.is_model_installed(&canonical_id) {
+            on_progress(DownloadProgressPayload {
+                id: canonical_id.clone(),
+                progress: 100,
+                loaded: 0,
+                total: 0,
+                status: "already_installed".to_string(),
+            });
+            if let Ok(mut tokens) = self.cancellation_tokens.lock() {
+                tokens.remove(&canonical_id);
+            }
+            return Ok(target_dir);
+        }
+        on_progress(DownloadProgressPayload {
+            id: canonical_id.clone(),
+            progress: 0,
+            loaded: 0,
+            total: 0,
+            status: "model_not_installed".to_string(),
+        });
+
+        on_progress(DownloadProgressPayload {
+            id: canonical_id.clone(),
+            progress: 0,
+            loaded: 0,
+            total: 0,
+            status: "checking_availability".to_string(),
+        });
+        let official_request = client.get("https://huggingface.co/api/models").query(&[
+            ("author", "PaddlePaddle"),
+            ("search", "PP-OCRv5"),
+            ("limit", "100"),
+        ]);
+        let official_models = tokio::select! {
+            _ = cancel_token.cancelled() => return Err(ModelError::Cancelled),
+            response = official_request.send() => response,
+        }?
+        .error_for_status()?
+        .json::<Vec<OfficialModelSnapshot>>()
+        .await?;
+        if !official_models
+            .iter()
+            .any(|entry| entry.id == model.hf_repo)
+        {
+            return Err(ModelError::Preflight(format!(
+                "target model {} is not present in the official PaddlePaddle snapshot",
+                model.hf_repo
+            )));
+        }
+        on_progress(DownloadProgressPayload {
+            id: canonical_id.clone(),
+            progress: 0,
+            loaded: 0,
+            total: 0,
+            status: "model_available".to_string(),
+        });
+
+        let temp_file_path = self.get_temp_file_path(&canonical_id);
+        let archive_candidates = build_archive_candidates(&canonical_id);
         let mut selected_archive_url: Option<String> = None;
 
         for candidate_url in archive_candidates {
@@ -308,9 +647,7 @@ impl ModelManager {
                 let metadata = fs::metadata(&temp_file_path).ok();
                 let current_bytes = metadata.map(|m| m.len()).unwrap_or(0);
 
-                let status_str = if current_bytes == 0 {
-                    "checking"
-                } else if net_state.status == NetworkStatus::Offline {
+                let status_str = if net_state.status == NetworkStatus::Offline {
                     // Hint only: do not hard-stop retries on DNS/firewall-restricted networks.
                     "paused"
                 } else {
@@ -794,15 +1131,11 @@ mod tests {
     }
 
     #[test]
-    fn archive_candidates_keep_primary_and_official_fallback() {
-        let candidates =
-            build_archive_candidates("https://example.invalid/custom.tar", "pp-ocr-v5-cyrillic");
+    fn archive_candidates_use_the_official_model_url() {
+        let candidates = build_archive_candidates("pp-ocr-v5-cyrillic");
         assert_eq!(
             candidates.first().map(String::as_str),
-            Some("https://example.invalid/custom.tar")
+            Some("https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/cyrillic_PP-OCRv5_mobile_rec_infer.tar")
         );
-        assert!(candidates
-            .iter()
-            .any(|candidate| candidate.contains("cyrillic_PP-OCRv5_mobile_rec_infer.tar")));
     }
 }
