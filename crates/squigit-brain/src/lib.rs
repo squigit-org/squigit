@@ -18,4 +18,7 @@ pub use provider::gemini::attachments::{
 pub use provider::gemini::models::{
     discover_provider_models, GoogleModelDescriptor, ModelDiscoveryQueues,
 };
-pub use service::{AnalyzeImageRequest, BrainService, PromptThreadRequest, StreamThreadRequest};
+pub use service::{
+    AnalyzeImageRequest, BrainService, ImageThreadCredentialSnapshot, PromptThreadRequest,
+    StreamThreadRequest,
+};

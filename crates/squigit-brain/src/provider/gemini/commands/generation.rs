@@ -141,7 +141,7 @@ async fn generate_with_candidates(
 }
 
 async fn generate_thread_title(
-    api_key: String,
+    api_key: &str,
     model_candidates: Vec<String>,
     mut context_parts: Vec<GeminiPart>,
 ) -> Result<String, String> {
@@ -172,12 +172,12 @@ async fn generate_thread_title(
         &request_body,
     );
 
-    generate_with_candidates(&api_key, &model_candidates, &request_body).await
+    generate_with_candidates(api_key, &model_candidates, &request_body).await
 }
 
 /// Generate a thread title from an image using the supplied micro-task candidate plan.
 pub async fn generate_thread_title_from_image(
-    api_key: String,
+    api_key: &str,
     model_candidates: Vec<String>,
     image_uri: String,
     image_mime_type: String,
@@ -197,7 +197,7 @@ pub async fn generate_thread_title_from_image(
 }
 
 async fn generate_thread_title_from_context(
-    api_key: String,
+    api_key: &str,
     model_candidates: Vec<String>,
     compacted_context: String,
 ) -> Result<String, String> {
@@ -229,7 +229,7 @@ pub async fn suggest_thread_title(
         .compacted_context
         .filter(|context| !context.trim().is_empty())
     {
-        return generate_thread_title_from_context(api_key, model_candidates, compacted_context)
+        return generate_thread_title_from_context(&api_key, model_candidates, compacted_context)
             .await;
     }
 
@@ -245,7 +245,7 @@ pub async fn suggest_thread_title(
     .await?;
 
     generate_thread_title_from_image(
-        api_key,
+        &api_key,
         model_candidates,
         file_ref.file_uri,
         file_ref.mime_type,

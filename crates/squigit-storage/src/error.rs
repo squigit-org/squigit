@@ -52,13 +52,21 @@ pub enum StorageError {
     #[error("Workspace not found: {0}")]
     WorkspaceNotFound(String),
 
+    /// Workspace names must contain at least one non-whitespace character.
+    #[error("Invalid workspace name")]
+    InvalidWorkspaceName,
+
     /// Workspace path is invalid or too broad to use as an AI sandbox.
     #[error("Invalid workspace path: {0}")]
     InvalidWorkspacePath(String),
 
-    /// Workspace path is already registered.
-    #[error("Workspace path is already in use: {0}")]
-    WorkspacePathAlreadyExists(String),
+    /// The recents workspace is managed by Squigit and cannot be changed.
+    #[error("The Recents workspace cannot be modified")]
+    CannotModifyRecentsWorkspace,
+
+    /// A workspace ordering request did not contain every workspace exactly once.
+    #[error("Invalid workspace ordering")]
+    InvalidWorkspaceOrdering,
 
     /// Invalid thread fork point.
     #[error("Invalid thread fork point: {0}")]

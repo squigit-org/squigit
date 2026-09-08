@@ -11,7 +11,6 @@ use crate::{ProfileError, Result};
 
 use super::AuthFlowSettings;
 
-const EMBEDDED_SECRETS_JSON: &str = include_str!(env!("SQUIGIT_GOOGLE_CREDENTIALS_EMBEDDED_FILE"));
 static AUTH_MISSING_CREDENTIALS_LOG_ONCE: Once = Once::new();
 
 #[derive(Clone, Debug)]
@@ -37,7 +36,21 @@ pub(super) struct OAuthConfig {
 }
 
 fn missing_credentials_message() -> String {
-    "Google authentication is not configured in this build. The app can run normally, but sign-in is disabled.\n\nTo enable Google auth, provide credentials using one of:\n- copy crates/squigit-auth/assets/oauth/credentials.example.json to crates/squigit-auth/assets/oauth/credentials.json (gitignored)\n- SQUIGIT_GOOGLE_CREDENTIALS_PATH=<absolute path to credentials.json>\n- SQUIGIT_GOOGLE_CREDENTIALS_JSON=<raw credentials json>".to_string()
+    "Google authentication credentials were not provided. In release mode, credentials must be supplied explicitly (e.g. via squigit-rs runtime secrets, CredentialsSource::RawJson, or SQUIGIT_GOOGLE_CREDENTIALS_JSON / SQUIGIT_GOOGLE_CREDENTIALS_PATH).".to_string()
+}
+
+#[cfg(debug_assertions)]
+fn dev_asset_credentials_path() -> Option<PathBuf> {
+    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let path = manifest_dir
+        .join("assets")
+        .join("oauth")
+        .join("credentials.json");
+    if path.is_file() {
+        Some(path)
+    } else {
+        None
+    }
 }
 
 fn load_google_credentials_raw(source: &CredentialsSource) -> Result<String> {
@@ -63,7 +76,23 @@ fn load_google_credentials_raw(source: &CredentialsSource) -> Result<String> {
                 }
             }
 
-            Ok(EMBEDDED_SECRETS_JSON.to_string())
+            #[cfg(debug_assertions)]
+            {
+                if let Some(path) = dev_asset_credentials_path() {
+                    if let Ok(contents) = fs::read_to_string(&path) {
+                        let trimmed = contents.trim();
+                        if !trimmed.is_empty() {
+                            return Ok(trimmed.to_string());
+                        }
+                    }
+                }
+            }
+
+            let message = missing_credentials_message();
+            AUTH_MISSING_CREDENTIALS_LOG_ONCE.call_once(|| {
+                eprintln!("[auth] {}", message.replace('\n', "\n[auth] "));
+            });
+            Err(ProfileError::MissingCredentials(message))
         }
     }
 }

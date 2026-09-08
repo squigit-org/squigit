@@ -34,6 +34,7 @@ pub mod profiles;
 pub mod rules;
 mod secure_file;
 pub mod threads;
+pub mod version;
 
 pub use cas::{
     AttachmentFileType, DocumentConversion, ObjectFileContext, ObjectManifest, ObjectManifestLock,
@@ -50,4 +51,7 @@ pub use threads::{
     AttachmentManifest, AttachmentManifestEntry, ContextWindow, MessageAttachment,
     OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion, ThreadData, ThreadMessage,
     ThreadMetadata, ThreadStorage, WorkspaceMetadata, DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
+};
+pub use version::{
+    ProductVersion, VersionFile, VersionStore, VersionStoreGuard, VersionType, VERSION_FILE_NAME,
 };

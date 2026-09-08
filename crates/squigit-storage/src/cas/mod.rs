@@ -242,7 +242,7 @@ impl ThreadStorage {
                 .filter(|value| !value.is_empty())
                 .map(str::to_string)
                 .or_else(|| manifest.file_context.image_tone.clone())
-                .unwrap_or_else(|| "d".to_string());
+                .unwrap_or_else(|| "dark".to_string());
             manifest.file_context.image_tone = Some(tone);
         }
         self.save_object_manifest(hash, &manifest)?;

@@ -87,6 +87,16 @@ impl AuthFlowSettings {
     pub fn redirect_uri_for_client_id(&self, _client_id: &str) -> String {
         self.redirect_uri.clone()
     }
+
+    pub fn with_credentials_source(mut self, source: CredentialsSource) -> Self {
+        self.credentials_source = source;
+        self
+    }
+
+    pub fn with_credentials_json(mut self, json: impl Into<String>) -> Self {
+        self.credentials_source = CredentialsSource::RawJson(json.into());
+        self
+    }
 }
 
 pub fn google_auth_status_page_url() -> String {

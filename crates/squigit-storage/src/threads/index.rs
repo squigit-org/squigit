@@ -1,6 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -16,9 +17,9 @@ pub(super) struct ThreadIndex {
 }
 
 impl ThreadIndex {
-    fn with_device_workspace() -> Self {
+    fn with_recents_workspace() -> Self {
         Self {
-            workspaces: vec![WorkspaceMetadata::device_default()],
+            workspaces: vec![WorkspaceMetadata::recents_default()],
         }
     }
 }
@@ -119,37 +120,13 @@ fn canonical_workspace_path(path: &Path) -> Result<std::path::PathBuf> {
 impl ThreadStorage {
     pub(super) fn read_index(&self) -> Result<ThreadIndex> {
         if !self.index_path.exists() {
-            let index = ThreadIndex::with_device_workspace();
+            let index = ThreadIndex::with_recents_workspace();
             self.write_index(&index)?;
             return Ok(index);
         }
 
         let index_json = fs::read_to_string(&self.index_path)?;
-        let mut index = serde_json::from_str::<ThreadIndex>(&index_json)?;
-        let mut changed = false;
-        if !index
-            .workspaces
-            .iter()
-            .any(|workspace| workspace.path.is_none())
-        {
-            index.workspaces.push(WorkspaceMetadata::device_default());
-            changed = true;
-        }
-        if let Some(default_index) = index
-            .workspaces
-            .iter()
-            .position(|workspace| workspace.path.is_none())
-        {
-            if default_index + 1 != index.workspaces.len() {
-                let default_workspace = index.workspaces.remove(default_index);
-                index.workspaces.push(default_workspace);
-                changed = true;
-            }
-        }
-        if changed {
-            self.write_index(&index)?;
-        }
-        Ok(index)
+        serde_json::from_str::<ThreadIndex>(&index_json).map_err(Into::into)
     }
 
     fn write_index(&self, index: &ThreadIndex) -> Result<()> {
@@ -157,33 +134,114 @@ impl ThreadStorage {
         super::atomic_write(&self.index_path, json.as_bytes())
     }
 
-    pub fn create_workspace(&self, path: &str) -> Result<WorkspaceMetadata> {
-        let requested_path = Path::new(path);
-        let canonical = canonical_workspace_path(requested_path)?;
-        let canonical_text = canonical.to_string_lossy().into_owned();
-        let name = canonical
-            .file_name()
-            .and_then(|value| value.to_str())
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| StorageError::InvalidWorkspacePath(path.to_string()))?
-            .to_string();
-
-        let mut index = self.read_index()?;
-        let duplicate = index.workspaces.iter().any(|workspace| {
-            workspace.path.as_deref().is_some_and(|registered| {
-                fs::canonicalize(registered)
-                    .map(|registered| registered == canonical)
-                    .unwrap_or(false)
-            })
-        });
-        if duplicate {
-            return Err(StorageError::WorkspacePathAlreadyExists(canonical_text));
+    fn validate_workspace_input(
+        name: &str,
+        directories: &[String],
+    ) -> Result<(String, Vec<String>)> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(StorageError::InvalidWorkspaceName);
         }
+        if directories.is_empty() {
+            return Err(StorageError::InvalidWorkspacePath(String::new()));
+        }
+        let directories = directories
+            .iter()
+            .map(|path| canonical_workspace_path(Path::new(path)))
+            .collect::<Result<Vec<_>>>()?;
+        Ok((
+            name.to_string(),
+            directories
+                .into_iter()
+                .map(|path| path.to_string_lossy().into_owned())
+                .collect(),
+        ))
+    }
 
-        let workspace = WorkspaceMetadata::new(name, Some(canonical_text));
-        index.workspaces.insert(0, workspace.clone());
+    pub fn create_workspace(
+        &self,
+        name: &str,
+        directories: &[String],
+    ) -> Result<WorkspaceMetadata> {
+        let (name, directories) = Self::validate_workspace_input(name, directories)?;
+        let workspace = WorkspaceMetadata::new(name, directories);
+        let mut index = self.read_index()?;
+        let recents_index = index
+            .workspaces
+            .iter()
+            .position(|item| item.is_recents)
+            .unwrap_or(index.workspaces.len());
+        index.workspaces.insert(recents_index, workspace.clone());
         self.write_index(&index)?;
         Ok(workspace)
+    }
+
+    pub fn create_empty_workspace(&self, name: &str) -> Result<WorkspaceMetadata> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(StorageError::InvalidWorkspaceName);
+        }
+        let workspace = WorkspaceMetadata::new(name.to_string(), Vec::new());
+        let mut index = self.read_index()?;
+        let recents_index = index
+            .workspaces
+            .iter()
+            .position(|item| item.is_recents)
+            .unwrap_or(index.workspaces.len());
+        index.workspaces.insert(recents_index, workspace.clone());
+        self.write_index(&index)?;
+        Ok(workspace)
+    }
+
+    pub fn update_workspace(
+        &self,
+        workspace_id: &str,
+        name: &str,
+        directories: &[String],
+    ) -> Result<WorkspaceMetadata> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(StorageError::InvalidWorkspaceName);
+        }
+        let mut index = self.read_index()?;
+        let workspace = index
+            .workspaces
+            .iter_mut()
+            .find(|workspace| workspace.id == workspace_id)
+            .ok_or_else(|| StorageError::WorkspaceNotFound(workspace_id.to_string()))?;
+        if workspace.is_recents {
+            return Err(StorageError::CannotModifyRecentsWorkspace);
+        }
+        let directories = if directories.is_empty() && workspace.directories.is_empty() {
+            Vec::new()
+        } else {
+            Self::validate_workspace_input(name, directories)?.1
+        };
+        workspace.name = name.to_string();
+        workspace.directories = directories;
+        let updated = workspace.clone();
+        self.write_index(&index)?;
+        Ok(updated)
+    }
+
+    pub fn delete_workspace(&self, workspace_id: &str) -> Result<()> {
+        let mut index = self.read_index()?;
+        let workspace_index = index
+            .workspaces
+            .iter()
+            .position(|workspace| workspace.id == workspace_id)
+            .ok_or_else(|| StorageError::WorkspaceNotFound(workspace_id.to_string()))?;
+        if index.workspaces[workspace_index].is_recents {
+            return Err(StorageError::CannotModifyRecentsWorkspace);
+        }
+        let removed = index.workspaces.remove(workspace_index);
+        let recents = index
+            .workspaces
+            .iter_mut()
+            .find(|workspace| workspace.is_recents)
+            .ok_or_else(|| StorageError::WorkspaceNotFound("recents".to_string()))?;
+        recents.threads.extend(removed.threads);
+        self.write_index(&index)
     }
 
     pub(super) fn get_index_metadata(&self, thread_id: &str) -> Result<ThreadMetadata> {
@@ -218,8 +276,8 @@ impl ThreadStorage {
             let workspace_index = index
                 .workspaces
                 .iter()
-                .position(|workspace| workspace.path.is_none())
-                .ok_or_else(|| StorageError::WorkspaceNotFound("default".to_string()))?;
+                .position(|workspace| workspace.is_recents)
+                .ok_or_else(|| StorageError::WorkspaceNotFound("recents".to_string()))?;
             let workspace = index
                 .workspaces
                 .get_mut(workspace_index)
@@ -253,10 +311,16 @@ impl ThreadStorage {
         self.write_index(&index)
     }
 
-    pub(super) fn remove_from_index(&self, thread_id: &str) -> Result<()> {
+    pub(super) fn remove_many_from_index(&self, thread_ids: &[String]) -> Result<()> {
+        let removed = thread_ids
+            .iter()
+            .map(String::as_str)
+            .collect::<HashSet<_>>();
         let mut index = self.read_index()?;
         for workspace in &mut index.workspaces {
-            workspace.threads.remove(thread_id);
+            workspace
+                .threads
+                .retain(|thread_id, _| !removed.contains(thread_id.as_str()));
         }
         self.write_index(&index)
     }

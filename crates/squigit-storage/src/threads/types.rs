@@ -49,38 +49,46 @@ impl ThreadMetadata {
     }
 }
 
-/// A workspace groups threads under one AI sandbox path.
+/// A workspace groups threads and the directories its AI sandbox can read.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkspaceMetadata {
     /// Unique identifier for the workspace.
     pub id: String,
     /// Workspace name displayed in the sidebar.
     pub name: String,
-    /// AI sandbox path. The device workspace has no path.
-    pub path: Option<String>,
+    /// When the workspace was created.
+    pub created_at: DateTime<Utc>,
+    /// Whether this is Squigit's built-in recents workspace.
+    pub is_recents: bool,
+    /// Directories available to threads in this workspace.
+    pub directories: Vec<String>,
     /// Thread metadata keyed by thread ID.
     pub threads: BTreeMap<String, ThreadMetadata>,
 }
 
 impl WorkspaceMetadata {
     /// Create a workspace with a generated ID.
-    pub fn new(name: String, path: Option<String>) -> Self {
+    pub fn new(name: String, directories: Vec<String>) -> Self {
         Self {
             id: format!("workspace-{}", Uuid::new_v4()),
             name,
-            path,
+            created_at: Utc::now(),
+            is_recents: false,
+            directories,
             threads: BTreeMap::new(),
         }
     }
 
-    /// Create the pathless workspace representing the current device.
-    pub fn device_default() -> Self {
-        #[cfg(target_os = "macos")]
-        let name = "This Mac";
-        #[cfg(not(target_os = "macos"))]
-        let name = "This PC";
-
-        Self::new(name.to_string(), None)
+    /// Create the built-in workspace containing threads not assigned elsewhere.
+    pub fn recents_default() -> Self {
+        Self {
+            id: "recents".to_string(),
+            name: "Recents".to_string(),
+            created_at: Utc::now(),
+            is_recents: true,
+            directories: Vec::new(),
+            threads: BTreeMap::new(),
+        }
     }
 }
 

@@ -131,10 +131,7 @@ pub fn search_local_threads(
     let mut threads = storage.list_threads().map_err(|e| e.to_string())?;
     threads.sort_by_key(|thread| std::cmp::Reverse(thread.updated_at));
 
-    for metadata in threads
-        .into_iter()
-        
-    {
+    for metadata in threads.into_iter() {
         let thread = match storage.load_thread(&metadata.id) {
             Ok(thread) => thread,
             Err(_) => continue,

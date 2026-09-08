@@ -4,8 +4,8 @@
 use rand::Rng;
 use squigit_auth::{
     check_reveal_authorization, encrypt_and_save_api_key, get_api_key_status,
-    get_decrypted_api_key, object_remote_id, reveal_api_key, validate_api_key,
-    ApiKeyProvider, RevealAuthResult, RevealShell,
+    get_decrypted_api_key, object_remote_id, reveal_api_key, validate_api_key, ApiKeyProvider,
+    RevealAuthResult, RevealShell,
 };
 use squigit_brain::{
     AttachmentPreparationStatus, BrainService, ModelDiscoveryQueues, PrepareAttachmentRequest,
@@ -93,9 +93,7 @@ fn run_reveal() -> Result<(), String> {
         ProfileStore::with_base_dir(config_dir.clone()).map_err(|error| error.to_string())?;
     let profile = active_profile(&store)?;
 
-    match check_reveal_authorization(&store, RevealShell::Cli)
-        .map_err(|error| error.to_string())?
-    {
+    match check_reveal_authorization(&store, RevealShell::Cli).map_err(|error| error.to_string())? {
         RevealAuthResult::Authorized => {
             println!("Grace period active, skipping PIN.");
         }

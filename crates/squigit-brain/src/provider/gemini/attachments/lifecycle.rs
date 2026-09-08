@@ -88,6 +88,7 @@ pub struct PrepareSubmissionAttachmentsResult {
 pub(crate) struct AttachmentPreparationJob {
     pub(crate) cancellation: CancellationToken,
     pub(crate) work_key: Option<String>,
+    pub(crate) staged: Option<(String, String, AttachmentFileType)>,
 }
 
 #[derive(Clone)]
@@ -420,6 +421,7 @@ async fn register_job(
         AttachmentPreparationJob {
             cancellation: cancellation.clone(),
             work_key: None,
+            staged: None,
         },
     );
     Ok(cancellation)
@@ -557,6 +559,9 @@ pub(crate) async fn prepare_attachment(
             };
         }
     };
+    if let Some(job) = runtime.attachment_jobs.lock().await.get_mut(&job_id) {
+        job.staged = Some((hash.clone(), cas_path.clone(), file_type.clone()));
+    }
     if job_cancel.is_cancelled() {
         finish_job(runtime, &job_id).await;
         return cancelled_prepare_result(job_id, Some(hash), Some(cas_path), Some(file_type));
@@ -655,6 +660,25 @@ pub(crate) async fn cancel_attachment(runtime: &BrainRuntimeState, job_id: &str)
     if let Some(work_key) = job.work_key {
         detach_job_from_work(runtime, job_id, &work_key).await;
     }
+}
+
+pub(crate) async fn attachment_preparation_snapshot(
+    runtime: &BrainRuntimeState,
+    job_id: &str,
+) -> Option<PrepareAttachmentResult> {
+    let jobs = runtime.attachment_jobs.lock().await;
+    let job = jobs.get(job_id)?;
+    let (attachment_hash, cas_path, file_type) = job.staged.clone()?;
+    Some(PrepareAttachmentResult {
+        job_id: job_id.to_string(),
+        attachment_hash: Some(attachment_hash),
+        cas_path: Some(cas_path),
+        file_type: Some(file_type),
+        status: AttachmentPreparationStatus::Pending,
+        disposition: Some("staged".to_string()),
+        error_code: None,
+        error_message: None,
+    })
 }
 
 pub(crate) async fn cancel_all_attachment_jobs(runtime: &BrainRuntimeState) {
@@ -1051,6 +1075,7 @@ mod tests {
             AttachmentPreparationJob {
                 cancellation: job_cancel.clone(),
                 work_key: None,
+                staged: None,
             },
         );
         let preflight_cancel = CancellationToken::new();

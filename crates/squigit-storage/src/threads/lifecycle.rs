@@ -359,9 +359,21 @@ impl ThreadStorage {
         self.update_index_in_workspace(&thread.metadata, workspace_id)
     }
 
-    pub fn set_thread_workspace(&self, thread_id: &str, workspace_id: &str) -> Result<()> {
+    pub fn set_thread_workspace(&self, thread_id: &str, workspace_id: Option<&str>) -> Result<()> {
         let metadata = self.get_index_metadata(thread_id)?;
-        self.update_index_in_workspace(&metadata, workspace_id)
+        match workspace_id {
+            Some(workspace_id) => self.update_index_in_workspace(&metadata, workspace_id),
+            None => {
+                let recents_id = self
+                    .read_index()?
+                    .workspaces
+                    .into_iter()
+                    .find(|workspace| workspace.is_recents)
+                    .map(|workspace| workspace.id)
+                    .ok_or_else(|| StorageError::WorkspaceNotFound("recents".to_string()))?;
+                self.update_index_in_workspace(&metadata, &recents_id)
+            }
+        }
     }
 
     pub fn load_thread(&self, thread_id: &str) -> Result<ThreadData> {
@@ -452,15 +464,32 @@ impl ThreadStorage {
     }
 
     pub fn delete_thread(&self, thread_id: &str) -> Result<()> {
-        let thread_dir = self.thread_dir(thread_id);
-        if thread_dir.exists() {
-            fs::remove_dir_all(&thread_dir)?;
+        self.delete_threads(&[thread_id.to_string()])
+    }
+
+    pub fn delete_threads(&self, thread_ids: &[String]) -> Result<()> {
+        for thread_id in thread_ids {
+            let thread_dir = self.thread_dir(thread_id);
+            if thread_dir.exists() {
+                fs::remove_dir_all(&thread_dir)?;
+            }
         }
-        self.remove_from_index(thread_id)?;
-        Ok(())
+        self.remove_many_from_index(thread_ids)
     }
 
     pub fn fork_thread(&self, thread_id: &str, message_index: usize) -> Result<ThreadMetadata> {
+        self.fork_thread_at(thread_id, Some(message_index))
+    }
+
+    pub fn fork_thread_latest(&self, thread_id: &str) -> Result<ThreadMetadata> {
+        self.fork_thread_at(thread_id, None)
+    }
+
+    fn fork_thread_at(
+        &self,
+        thread_id: &str,
+        message_index: Option<usize>,
+    ) -> Result<ThreadMetadata> {
         let source_dir = self.thread_dir(thread_id);
         if !source_dir.exists() {
             return Err(StorageError::ThreadNotFound(thread_id.to_string()));
@@ -468,14 +497,21 @@ impl ThreadStorage {
 
         let source_workspace_id = self.get_thread_workspace_id(thread_id)?;
         let source_thread = self.load_thread(thread_id)?;
-        let retained_len = message_index.checked_add(1).ok_or_else(|| {
-            StorageError::InvalidThreadFork(format!("message index {message_index} is too large"))
-        })?;
-        if retained_len > source_thread.messages.len() {
-            return Err(StorageError::InvalidThreadFork(format!(
-                "message index {message_index} is outside thread {thread_id}"
-            )));
-        }
+        let retained_len = if let Some(message_index) = message_index {
+            let retained_len = message_index.checked_add(1).ok_or_else(|| {
+                StorageError::InvalidThreadFork(format!(
+                    "message index {message_index} is too large"
+                ))
+            })?;
+            if retained_len > source_thread.messages.len() {
+                return Err(StorageError::InvalidThreadFork(format!(
+                    "message index {message_index} is outside thread {thread_id}"
+                )));
+            }
+            retained_len
+        } else {
+            source_thread.messages.len()
+        };
 
         let mut metadata = ThreadMetadata::new(
             format!("forked {}", source_thread.metadata.title),

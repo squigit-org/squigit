@@ -89,6 +89,28 @@ pub(crate) struct EnsuredFile {
     pub(crate) disposition: RemoteDisposition,
 }
 
+pub(crate) async fn capture_image_thread_credential() -> Result<Option<ActiveCredential>, String> {
+    tokio::task::spawn_blocking(|| {
+        let store = ProfileStore::new().map_err(|error| error.to_string())?;
+        let Some(profile_id) = store
+            .get_active_profile_id()
+            .map_err(|error| error.to_string())?
+        else {
+            return Ok(None);
+        };
+        let Some(credential) =
+            get_decrypted_api_key(&store, ApiKeyProvider::GoogleAiStudio, &profile_id)
+                .map_err(|error| error.to_string())?
+        else {
+            return Ok(None);
+        };
+
+        Ok(Some(ActiveCredential::new(credential)))
+    })
+    .await
+    .map_err(|error| format!("credential lookup task failed: {error}"))?
+}
+
 pub(crate) async fn load_active_credential() -> Result<ActiveCredential, String> {
     tokio::task::spawn_blocking(|| {
         let store = ProfileStore::new().map_err(|error| error.to_string())?;

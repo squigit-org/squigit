@@ -12,12 +12,14 @@ mod upload;
 
 pub use cache::ensure_file_uploaded;
 pub(crate) use cache::{
-    ensure_file_uploaded_for_credential, load_active_api_key, ActiveCredential,
+    capture_image_thread_credential, ensure_file_uploaded_for_credential, load_active_api_key,
+    ActiveCredential,
 };
 pub(crate) use lifecycle::{
-    cancel_all_attachment_jobs, cancel_attachment, cancel_preflight, consume_attachment_preflight,
-    prepare_attachment, prepare_submission_attachments, AttachmentPreflightLease,
-    AttachmentPreparationJob, SharedAttachmentWork,
+    attachment_preparation_snapshot, cancel_all_attachment_jobs, cancel_attachment,
+    cancel_preflight, consume_attachment_preflight, prepare_attachment,
+    prepare_submission_attachments, AttachmentPreflightLease, AttachmentPreparationJob,
+    SharedAttachmentWork,
 };
 pub use lifecycle::{
     AttachmentPreparationError, AttachmentPreparationStatus, PrepareAttachmentRequest,
