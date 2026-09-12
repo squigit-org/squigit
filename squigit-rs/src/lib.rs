@@ -7,6 +7,7 @@ pub use squigit_harness as harness;
 pub use squigit_ocr as ocr;
 pub use squigit_storage as storage;
 
+pub mod cli;
 pub mod explorer;
 pub mod file_index;
 pub mod profile;
