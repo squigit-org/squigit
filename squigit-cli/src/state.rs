@@ -81,7 +81,6 @@ pub struct MenuItem {
 pub enum PromptAction {
     Analyze,
     Rename,
-    Scan,
     ConfigureKey { provider: String },
     ConfirmDelete,
 }
@@ -133,7 +132,8 @@ pub struct AppState {
 impl AppState {
     pub fn load(cwd: PathBuf, color: bool, enter_guest: bool) -> Result<Self, String> {
         let settings = squigit::settings::load_settings()?;
-        let profiles = squigit::profile::get_profile_snapshot().map_err(|error| error.to_string())?;
+        let profiles =
+            squigit::profile::get_profile_snapshot().map_err(|error| error.to_string())?;
         let profile_label = profiles
             .active_profile
             .as_ref()
@@ -335,7 +335,8 @@ impl AppState {
 
     pub fn refresh_account(&mut self) -> Result<(), String> {
         let settings = squigit::settings::load_settings()?;
-        let profiles = squigit::profile::get_profile_snapshot().map_err(|error| error.to_string())?;
+        let profiles =
+            squigit::profile::get_profile_snapshot().map_err(|error| error.to_string())?;
         self.profile_id = settings.active_profile_id;
         self.profile_label = profiles
             .active_profile

@@ -122,20 +122,22 @@ impl App {
 
     fn submit_home(&mut self) -> Option<Control> {
         if self.state.busy.is_some() {
-            self.state
-                .set_notice(NoticeKind::Warning, "Wait for the current task or run /stop");
+            self.state.set_notice(
+                NoticeKind::Warning,
+                "Wait for the current task or run /stop",
+            );
             return None;
         }
 
         if let Some(suggestion) = self.state.suggestions.get(self.state.selected).cloned() {
             match suggestion {
-                Suggestion::File { path, .. } if active_mention(&self.state.input, self.state.cursor).is_some() => {
+                Suggestion::File { path, .. }
+                    if active_mention(&self.state.input, self.state.cursor).is_some() =>
+                {
                     self.insert_file_mention(path);
                     return None;
                 }
-                Suggestion::Command { command, name, .. }
-                    if self.state.input.trim() == name =>
-                {
+                Suggestion::Command { command, name, .. } if self.state.input.trim() == name => {
                     self.state.clear_composer();
                     return self.execute_command(command, String::new());
                 }
@@ -420,10 +422,6 @@ impl App {
                 tasks::generate_title(&self.sender, thread_id);
             }
             PromptAction::Rename => self.rename_thread(value),
-            PromptAction::Scan if value.is_empty() => self
-                .state
-                .set_notice(NoticeKind::Error, "An OCR model ID is required"),
-            PromptAction::Scan => self.start_scan(value),
             PromptAction::ConfigureKey { provider } => {
                 let Some(profile_id) = self.state.profile_id.clone() else {
                     self.guest_key_error();
@@ -453,8 +451,7 @@ impl App {
                         Ok(()) => {
                             self.state.current_thread = None;
                             self.state.return_home();
-                            self.state
-                                .set_notice(NoticeKind::Success, "Thread deleted");
+                            self.state.set_notice(NoticeKind::Success, "Thread deleted");
                         }
                         Err(error) => self.state.set_notice(NoticeKind::Error, error),
                     }
@@ -609,9 +606,7 @@ impl App {
                 items.push(back_item());
                 self.state.open_menu("Switch profile", items);
             }
-            Err(error) => self
-                .state
-                .set_notice(NoticeKind::Error, error.to_string()),
+            Err(error) => self.state.set_notice(NoticeKind::Error, error.to_string()),
         }
     }
 
@@ -956,10 +951,8 @@ impl App {
                             .and_then(|thread| thread.ocr_job_id.as_ref())
                             .is_some()
                         {
-                            self.state.busy = Some(format!(
-                                "scanning image with {}",
-                                self.state.ocr_language
-                            ));
+                            self.state.busy =
+                                Some(format!("scanning image with {}", self.state.ocr_language));
                         }
                     }
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),

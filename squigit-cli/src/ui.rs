@@ -63,9 +63,10 @@ fn draw_auth(frame: &mut Frame<'_>, state: &AppState) {
 }
 
 fn draw_shell(frame: &mut Frame<'_>, state: &AppState) {
-    let update_height = state.update_notice.as_ref().map_or(0, |notice| {
-        notice.lines().count().min(4) as u16 + 2
-    });
+    let update_height = state
+        .update_notice
+        .as_ref()
+        .map_or(0, |notice| notice.lines().count().min(4) as u16 + 2);
     let footer_height = 1;
     let rows = Layout::default()
         .direction(Direction::Vertical)
@@ -352,7 +353,11 @@ fn draw_reveal(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
             Line::from(vec![Span::styled("> ", accent(state)), Span::raw(input)]),
         ])
         .alignment(Alignment::Center)
-        .block(Block::default().title(" Human check ").borders(Borders::ALL)),
+        .block(
+            Block::default()
+                .title(" Human check ")
+                .borders(Borders::ALL),
+        ),
         modal,
     );
     frame.set_cursor_position(Position::new(
