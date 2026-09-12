@@ -38,6 +38,7 @@ pub type Result<T> = std::result::Result<T, UpdateError>;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UpdateProduct {
     App,
+    Cli,
     Ocr,
 }
 
@@ -45,6 +46,7 @@ impl UpdateProduct {
     pub fn key(self) -> &'static str {
         match self {
             Self::App => "app",
+            Self::Cli => "cli",
             Self::Ocr => "ocr",
         }
     }
@@ -52,6 +54,7 @@ impl UpdateProduct {
     pub fn display_name(self) -> &'static str {
         match self {
             Self::App => "Squigit",
+            Self::Cli => "Squigit CLI",
             Self::Ocr => "Squigit OCR",
         }
     }
@@ -60,6 +63,7 @@ impl UpdateProduct {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UpdateShell {
     App,
+    Cli,
 }
 
 #[derive(Clone, Debug)]
@@ -118,19 +122,54 @@ impl RemoteProductVersion {
 }
 
 pub async fn refresh_version_file(context: UpdateRefreshContext) -> Result<RefreshOutcome> {
+    refresh_version_file_with_cli(context, None).await
+}
+
+/// Refresh the shared version file from the CLI without probing another
+/// `squigit` executable on PATH.
+pub async fn refresh_cli_version_file(cli_version: String) -> Result<RefreshOutcome> {
+    refresh_version_file_with_cli(UpdateRefreshContext::default(), Some(cli_version)).await
+}
+
+async fn refresh_version_file_with_cli(
+    context: UpdateRefreshContext,
+    cli_version: Option<String>,
+) -> Result<RefreshOutcome> {
     let store = VersionStore::new()?;
     let lock_store = store.clone();
     let guard = tokio::task::spawn_blocking(move || lock_store.lock())
         .await
         .map_err(|error| UpdateError::LockTask(error.to_string()))??;
 
-    let app_version = non_empty(context.app_version);
+    let cached = guard.load()?;
+    let app_version = non_empty(context.app_version).or_else(|| {
+        cached
+            .as_ref()
+            .and_then(|file| file.app.current_version.clone())
+    });
     let _ocr_resource_dir = context.ocr_resource_dir;
+    let explicit_cli_version = non_empty(cli_version);
+    let cli_version_future = async {
+        match explicit_cli_version {
+            Some(version) => Some(version),
+            None => discover_cli_version().await,
+        }
+    };
     let (remote_result, cli_version, ocr_version) = tokio::join!(
         fetch_remote_versions(),
-        discover_cli_version(),
+        cli_version_future,
         discover_ocr_version(),
     );
+    let cli_version = cli_version.or_else(|| {
+        cached
+            .as_ref()
+            .and_then(|file| file.cli.current_version.clone())
+    });
+    let ocr_version = ocr_version.or_else(|| {
+        cached
+            .as_ref()
+            .and_then(|file| file.ocr.current_version.clone())
+    });
 
     let remote_result = remote_result.and_then(|remote| {
         validate_remote_file(&remote)?;
@@ -151,7 +190,7 @@ pub async fn refresh_version_file(context: UpdateRefreshContext) -> Result<Refre
             })
         }
         Err(network_error) => {
-            let Some(mut cached) = guard.load()? else {
+            let Some(mut cached) = cached else {
                 return Err(network_error);
             };
             cached.app.current_version = app_version;
@@ -173,6 +212,7 @@ pub fn decide_update(shell: UpdateShell) -> Result<Option<PendingUpdate>> {
 
     let (shell_product, shell_version) = match shell {
         UpdateShell::App => (UpdateProduct::App, &file.app),
+        UpdateShell::Cli => (UpdateProduct::Cli, &file.cli),
     };
 
     match product_is_outdated(shell_version)? {
@@ -344,4 +384,3 @@ fn non_empty(value: Option<String>) -> Option<String> {
         (!value.is_empty()).then(|| value.to_string())
     })
 }
-
