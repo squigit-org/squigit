@@ -15,11 +15,10 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::{ByokErrorCode, ProfileError, Result};
 
-use super::{validate_api_key, ApiKeyProvider};
 use super::vault::{
-    OsSecretVault, SecretVault, VaultKey, CAS_BINDING_KEY_ACCOUNT,
-    RECORD_ENCRYPTION_MASTER_ACCOUNT,
+    OsSecretVault, SecretVault, VaultKey, CAS_BINDING_KEY_ACCOUNT, RECORD_ENCRYPTION_MASTER_ACCOUNT,
 };
+use super::{validate_api_key, ApiKeyProvider};
 
 const RECORD_KEY_DOMAIN: &str = "squigit/byok/v1/record-key";
 const RECORD_AAD_DOMAIN: &str = "squigit/byok/v1/record-aad";
@@ -206,8 +205,8 @@ fn encrypt_record(
     OsRng.fill_bytes(&mut nonce_bytes);
 
     let record_key = derive_record_key(master, &salt, profile_id, provider)?;
-    let cipher = Aes256Gcm::new_from_slice(&record_key[..])
-        .expect("HKDF-SHA256 produces an AES-256 key");
+    let cipher =
+        Aes256Gcm::new_from_slice(&record_key[..]).expect("HKDF-SHA256 produces an AES-256 key");
     let nonce = Nonce::from(nonce_bytes);
     let ciphertext = cipher
         .encrypt(
@@ -270,8 +269,8 @@ fn decrypt_record(
     }
 
     let record_key = derive_record_key(master, &salt, profile_id, provider)?;
-    let cipher = Aes256Gcm::new_from_slice(&record_key[..])
-        .expect("HKDF-SHA256 produces an AES-256 key");
+    let cipher =
+        Aes256Gcm::new_from_slice(&record_key[..]).expect("HKDF-SHA256 produces an AES-256 key");
     let nonce = Nonce::from(
         <[u8; 12]>::try_from(nonce.as_slice())
             .expect("encrypted record nonces are validated as 12 bytes"),

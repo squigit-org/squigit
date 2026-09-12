@@ -10,9 +10,8 @@ use chrono::{DateTime, Utc};
 use fs2::FileExt;
 
 use super::types::{
-    EncryptedKeyRecord, KeyFile, LastLogin, Profile, ProfileAuth, ProfileIdentity,
-    ProfileSnapshot, AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, GOOGLE_PROVIDER,
-    KEY_FILE_SCHEMA_VERSION,
+    EncryptedKeyRecord, KeyFile, LastLogin, Profile, ProfileAuth, ProfileIdentity, ProfileSnapshot,
+    AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, GOOGLE_PROVIDER, KEY_FILE_SCHEMA_VERSION,
 };
 use crate::error::{Result, StorageError};
 

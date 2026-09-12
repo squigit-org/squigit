@@ -124,5 +124,4 @@ impl ThreadStorage {
         }
         Ok(annotations)
     }
-
 }

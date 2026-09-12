@@ -56,7 +56,6 @@ impl ActiveCredential {
         .await
         .map_err(|error| format!("remote credential task failed: {error}"))?
     }
-
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
