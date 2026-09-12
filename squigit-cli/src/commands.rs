@@ -4,6 +4,7 @@
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SlashCommand {
     Model,
+    Settings,
     Analyze,
     Resume,
     Rename,
@@ -20,7 +21,6 @@ pub enum SlashCommand {
     Stop,
     Clear,
     Personality,
-    InstallOcr,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -34,7 +34,12 @@ pub const COMMANDS: &[CommandSpec] = &[
     CommandSpec::new(
         SlashCommand::Model,
         "/model",
-        "choose model, effort, and OCR language",
+        "choose session model, effort, and scan language",
+    ),
+    CommandSpec::new(
+        SlashCommand::Settings,
+        "/settings",
+        "edit defaults in config.toml and download OCR models",
     ),
     CommandSpec::new(
         SlashCommand::Analyze,
@@ -107,11 +112,6 @@ pub const COMMANDS: &[CommandSpec] = &[
         SlashCommand::Personality,
         "/personality",
         "edit Squigit's communication style",
-    ),
-    CommandSpec::new(
-        SlashCommand::InstallOcr,
-        "/install_ocr",
-        "install the Squigit OCR engine",
     ),
 ];
 

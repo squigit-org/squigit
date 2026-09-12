@@ -98,7 +98,7 @@ fn draw_shell(frame: &mut Frame<'_>, state: &AppState) {
         View::Auth => unreachable!(),
     }
     frame.render_widget(
-        Paragraph::new("Enter select/send | Esc back/quit | F1 OCR | Ctrl+C quit")
+        Paragraph::new("Enter select/send | Esc back/quit | Alt+O OCR | Ctrl+C quit")
             .alignment(Alignment::Center)
             .style(muted(state)),
         rows[3],
@@ -157,15 +157,10 @@ fn draw_home(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
     if !state.suggestions.is_empty() {
         draw_suggestions(frame, chunks[1], state);
     }
-    let attachment_suffix = if state.attachments.is_empty() {
-        String::new()
-    } else {
-        format!(" | {} attachment(s)", state.attachments.len())
-    };
     frame.render_widget(
-        Paragraph::new(format!("> {}", state.input)).block(
+        Paragraph::new(composer_line(state)).block(
             Block::default()
-                .title(format!(" Ask anything{attachment_suffix} "))
+                .title(" Ask anything ")
                 .borders(Borders::ALL),
         ),
         chunks[2],
@@ -173,7 +168,7 @@ fn draw_home(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
     let cursor_width = state.input[..state.cursor].chars().count() as u16;
     let cursor_x = chunks[2]
         .x
-        .saturating_add(2)
+        .saturating_add(3)
         .saturating_add(cursor_width)
         .min(chunks[2].right().saturating_sub(2));
     frame.set_cursor_position(Position::new(cursor_x, chunks[2].y + 1));
@@ -269,14 +264,11 @@ fn draw_menu(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
     }
     let mut prior_section = "";
     let items = state.menu_items.iter().map(|item| {
-        let section = if !item.section.is_empty() && item.section != prior_section {
+        let new_section = !item.section.is_empty() && item.section != prior_section;
+        if new_section {
             prior_section = &item.section;
-            format!("{}: ", item.section)
-        } else {
-            String::new()
-        };
-        ListItem::new(Line::from(vec![
-            Span::styled(section, muted(state)),
+        }
+        let item_line = Line::from(vec![
             Span::styled(item.label.clone(), accent(state)),
             Span::styled(
                 if item.detail.is_empty() {
@@ -286,7 +278,15 @@ fn draw_menu(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
                 },
                 muted(state),
             ),
-        ]))
+        ]);
+        if new_section {
+            ListItem::new(vec![
+                Line::styled(format!("{}:", item.section), muted(state)),
+                item_line,
+            ])
+        } else {
+            ListItem::new(item_line)
+        }
     });
     let mut selection = ListState::default().with_selected(Some(state.selected));
     frame.render_stateful_widget(
@@ -373,11 +373,31 @@ fn draw_ocr(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
             .wrap(Wrap { trim: false })
             .block(
                 Block::default()
-                    .title(" OCR text | Esc to return ")
+                    .title(format!(" {} | Esc to choose another run ", state.ocr_title))
                     .borders(Borders::ALL),
             ),
         area,
     );
+}
+
+fn composer_line(state: &AppState) -> Line<'static> {
+    let resolution = squigit::cli::resolve_composer_mentions(&state.input, &state.cwd);
+    let mut spans = vec![Span::styled("> ".to_string(), accent(state))];
+    let mut cursor = 0;
+    for mention in resolution.mentions {
+        if mention.start > cursor {
+            spans.push(Span::raw(state.input[cursor..mention.start].to_string()));
+        }
+        spans.push(Span::styled(
+            state.input[mention.start..mention.end].to_string(),
+            color(state, Color::Magenta).add_modifier(Modifier::BOLD),
+        ));
+        cursor = mention.end;
+    }
+    if cursor < state.input.len() {
+        spans.push(Span::raw(state.input[cursor..].to_string()));
+    }
+    Line::from(spans)
 }
 
 fn centered_rect(width_percent: u16, height: u16, area: Rect) -> Rect {

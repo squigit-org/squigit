@@ -113,12 +113,28 @@ async fn run() -> Result<(), String> {
         std::env::set_var("SQUIGIT_CONFIG_DIR", config_root);
     }
 
+    if arguments.install_ocr {
+        println!("Installing Squigit OCR. The package manager may ask for your password.");
+        squigit::services::install_ocr_engine()?;
+        println!("Squigit OCR installation completed.");
+        return Ok(());
+    }
+    if arguments.update_ocr {
+        let command = squigit::services::ocr_update_command()
+            .ok_or_else(|| "Squigit OCR updates are not supported on this system".to_string())?;
+        println!("Updating Squigit OCR with: {command}");
+        squigit::services::update_ocr_engine()?;
+        println!("Squigit OCR update completed.");
+        return Ok(());
+    }
+
     let install_script_error = squigit::services::ensure_ocr_install_script().err();
     let cwd = std::env::current_dir()
         .map_err(|error| format!("could not read the current directory: {error}"))?
         .canonicalize()
         .map_err(|error| format!("could not resolve the current directory: {error}"))?;
     let color = !arguments.no_color && std::env::var_os("NO_COLOR").is_none();
+    std::env::set_var("SQUIGIT_TUI_ACTIVE", "1");
     let mut app = App::load(cwd, color, arguments.image.is_some())?;
     if let Some(error) = install_script_error {
         app.state.set_notice(

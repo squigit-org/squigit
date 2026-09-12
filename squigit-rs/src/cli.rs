@@ -54,7 +54,7 @@ pub struct CliSubmissionRequest {
 
 #[derive(Clone, Debug)]
 pub struct CliSubmissionResult {
-    pub log_path: PathBuf,
+    pub log_path: Option<PathBuf>,
     pub canonical_message: String,
     pub brain_message: String,
     pub attachment_hashes: Vec<String>,
@@ -475,15 +475,13 @@ fn find_composer_mentions(input: &str, directory: &Path) -> Vec<CliComposerMenti
     mentions
 }
 
-fn write_boundary_log(timestamp: &str, envelope: &serde_json::Value) -> Result<PathBuf, String> {
-    let logs_dir = std::env::var_os("SQUIGIT_LOG_DIR")
-        .map(PathBuf::from)
-        .map(Ok)
-        .unwrap_or_else(|| {
-            crate::storage::paths::base_config_dir()
-                .ok_or_else(|| "Could not locate Squigit's config directory".to_string())
-                .map(|directory| directory.join("logs"))
-        })?;
+fn write_boundary_log(
+    timestamp: &str,
+    envelope: &serde_json::Value,
+) -> Result<Option<PathBuf>, String> {
+    let Some(logs_dir) = std::env::var_os("SQUIGIT_LOG_DIR").map(PathBuf::from) else {
+        return Ok(None);
+    };
     std::fs::create_dir_all(&logs_dir).map_err(|error| error.to_string())?;
     let file_name = timestamp
         .chars()
@@ -498,7 +496,7 @@ fn write_boundary_log(timestamp: &str, envelope: &serde_json::Value) -> Result<P
     let path = logs_dir.join(format!("{file_name}.log"));
     let rendered = serde_json::to_string_pretty(envelope).map_err(|error| error.to_string())?;
     std::fs::write(&path, format!("{rendered}\n")).map_err(|error| error.to_string())?;
-    Ok(path)
+    Ok(Some(path))
 }
 
 fn format_ocr_regions(regions: &[OcrRegion]) -> String {

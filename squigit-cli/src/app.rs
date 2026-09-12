@@ -3,8 +3,8 @@
 
 use crate::commands::{parse_command, SlashCommand};
 use crate::state::{
-    active_mention, AppState, CurrentThread, MenuAction, MenuItem, NoticeKind, PromptAction,
-    RevealState, Suggestion, View,
+    active_mention, AppState, CurrentThread, CurrentThreadKind, MenuAction, MenuItem, NoticeKind,
+    PromptAction, RevealState, Suggestion, View,
 };
 use crate::tasks::{self, TaskEvent};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -62,8 +62,8 @@ impl App {
             self.escape();
             return None;
         }
-        if key.code == KeyCode::F(1) {
-            self.show_ocr();
+        if key.modifiers.contains(KeyModifiers::ALT) && key.code == KeyCode::Char('o') {
+            self.open_ocr_runs();
             return None;
         }
 
@@ -106,7 +106,7 @@ impl App {
                 self.state.cursor = self.state.input.len();
                 self.state.refresh_suggestions();
             }
-            KeyCode::Backspace => self.state.backspace_input(),
+            KeyCode::Backspace => self.backspace_composer(),
             KeyCode::Char(character)
                 if !key
                     .modifiers
@@ -163,24 +163,31 @@ impl App {
                 }
             };
         }
-        if input.is_empty() && self.state.attachments.is_empty() {
+        if input.is_empty() {
             return None;
         }
 
-        let paths = self.state.attachments.clone();
+        let resolution = squigit::cli::resolve_composer_mentions(&input, &self.state.cwd);
         let thread_id = self
             .state
             .current_thread
             .as_ref()
             .map(|thread| thread.id.clone());
+        let is_sidechat = self
+            .state
+            .current_thread
+            .as_ref()
+            .is_some_and(|thread| thread.kind == CurrentThreadKind::SideChat);
         self.state
             .set_notice(NoticeKind::Info, format!("You: {input}"));
         self.state.busy = Some("thinking".to_string());
         tasks::submit(
             &self.sender,
+            resolution.markdown,
             input,
-            paths,
+            resolution.attachment_paths,
             thread_id,
+            is_sidechat,
             self.state.model.clone(),
             self.state.effort.clone(),
         );
@@ -196,24 +203,58 @@ impl App {
             .find(|(_, character)| character.is_whitespace())
             .map(|(index, character)| index + character.len_utf8())
             .unwrap_or(0);
-        match squigit::cli::attachment_mention(&path) {
-            Ok(mention) => {
-                self.state
-                    .input
-                    .replace_range(token_start..self.state.cursor, &format!("{mention} "));
-                self.state.cursor = token_start + mention.len() + 1;
-                if !self.state.attachments.contains(&path) {
-                    self.state.attachments.push(path);
-                }
-                self.state.refresh_suggestions();
-            }
-            Err(error) => self.state.set_notice(NoticeKind::Error, error),
+        let visible_path = path
+            .strip_prefix(&self.state.cwd)
+            .unwrap_or(&path)
+            .to_string_lossy();
+        let mention = if visible_path.contains(char::is_whitespace) {
+            format!("@<{visible_path}>")
+        } else {
+            format!("@{visible_path}")
+        };
+        self.state
+            .input
+            .replace_range(token_start..self.state.cursor, &format!("{mention} "));
+        self.state.cursor = token_start + mention.len() + 1;
+        self.state.refresh_suggestions();
+    }
+
+    fn backspace_composer(&mut self) {
+        let resolution =
+            squigit::cli::resolve_composer_mentions(&self.state.input, &self.state.cwd);
+        if let Some(mention) = resolution.mentions.iter().find(|mention| {
+            mention.end == self.state.cursor
+                || (mention.end + 1 == self.state.cursor
+                    && self.state.input.as_bytes().get(mention.end) == Some(&b' '))
+        }) {
+            self.state.input.drain(mention.start..self.state.cursor);
+            self.state.cursor = mention.start;
+            self.state.refresh_suggestions();
+            return;
         }
+        self.state.backspace_input();
     }
 
     fn execute_command(&mut self, command: SlashCommand, arguments: String) -> Option<Control> {
+        if self
+            .state
+            .current_thread
+            .as_ref()
+            .is_some_and(|thread| thread.kind == CurrentThreadKind::SideChat)
+            && matches!(
+                command,
+                SlashCommand::Scan | SlashCommand::Lens | SlashCommand::Translate
+            )
+        {
+            self.state.set_notice(
+                NoticeKind::Error,
+                "This command needs an image thread. Run /analyze or /resume an image thread.",
+            );
+            return None;
+        }
         match command {
             SlashCommand::Model => self.open_model_menu(),
+            SlashCommand::Settings => self.open_settings_menu(),
             SlashCommand::Analyze if arguments.is_empty() => self.state.open_prompt(
                 "Analyze image",
                 "Enter one image path",
@@ -231,7 +272,9 @@ impl App {
             SlashCommand::Rename => self.rename_thread(arguments),
             SlashCommand::Delete => self.open_delete_prompt(),
             SlashCommand::Fork => self.fork_thread(),
-            SlashCommand::Scan if arguments.is_empty() => self.open_scan_menu(),
+            SlashCommand::Scan if arguments.is_empty() => {
+                self.start_scan(self.state.ocr_language.clone())
+            }
             SlashCommand::Scan => self.start_scan(arguments),
             SlashCommand::Lens => self.start_lens(),
             SlashCommand::Translate => self.translate(),
@@ -251,10 +294,6 @@ impl App {
                 Ok(path) => return Some(Control::EditPersonality(path)),
                 Err(error) => self.state.set_notice(NoticeKind::Error, error),
             },
-            SlashCommand::InstallOcr => {
-                self.state.busy = Some("installing Squigit OCR".to_string());
-                tasks::install_ocr(&self.sender);
-            }
         }
         None
     }
@@ -275,10 +314,11 @@ impl App {
 
     fn activate_menu(&mut self, action: MenuAction) {
         match action {
-            MenuAction::ResumeThread { id, title } => {
+            MenuAction::ResumeThread { id, title, kind } => {
                 self.state.current_thread = Some(CurrentThread {
                     id,
                     title: title.clone(),
+                    kind,
                     ocr_job_id: None,
                 });
                 self.state.return_home();
@@ -296,28 +336,46 @@ impl App {
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }
             }
-            MenuAction::SetModel { id } => {
+            MenuAction::SetSessionModel { id } => {
+                self.state.model = id;
+                self.open_model_menu();
+            }
+            MenuAction::SetSessionEffort { effort } => {
+                self.state.effort = effort;
+                self.open_model_menu();
+            }
+            MenuAction::SetSessionOcrModel { id } => {
+                self.state.ocr_language = id;
+                self.open_model_menu();
+            }
+            MenuAction::SetDefaultModel { id } => {
                 self.update_config(ConfigUpdate {
                     model: Some(id),
                     ..Default::default()
                 });
-                self.open_model_menu();
+                self.open_settings_menu();
             }
-            MenuAction::SetEffort { effort } => {
+            MenuAction::SetDefaultEffort { effort } => {
                 self.update_config(ConfigUpdate {
                     effort: Some(effort),
                     ..Default::default()
                 });
-                self.open_model_menu();
+                self.open_settings_menu();
             }
-            MenuAction::SetOcrModel { id } => {
+            MenuAction::SetDefaultOcrModel { id } => {
                 self.update_config(ConfigUpdate {
                     ocr_language: Some(id),
                     ..Default::default()
                 });
-                self.open_model_menu();
+                self.open_settings_menu();
             }
-            MenuAction::StartScan { id } => self.start_scan(id),
+            MenuAction::SetDefaultOcrEnabled { enabled } => {
+                self.update_config(ConfigUpdate {
+                    ocr_enabled: Some(enabled),
+                    ..Default::default()
+                });
+                self.open_settings_menu();
+            }
             MenuAction::DownloadOcrModel { id } => {
                 match squigit::settings::download_ocr_model(&id) {
                     Ok(_) => self.state.set_notice(
@@ -326,7 +384,7 @@ impl App {
                     ),
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }
-                self.open_model_menu();
+                self.open_settings_menu();
             }
             MenuAction::CancelOcrModel { id } => {
                 match squigit::settings::cancel_ocr_model_download(&id) {
@@ -336,7 +394,7 @@ impl App {
                     ),
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }
-                self.open_stop_menu();
+                self.open_settings_menu();
             }
             MenuAction::ConfigureKey { provider } => self.state.open_prompt(
                 format!("Configure {}", provider_label(&provider)),
@@ -380,6 +438,11 @@ impl App {
                 self.state.return_home();
                 tasks::cancel_ocr_job(&self.sender, id);
             }
+            MenuAction::ShowOcrRun { model_name, text } => {
+                self.state.ocr_title = model_name;
+                self.state.ocr_text = text;
+                self.state.view = View::Ocr;
+            }
             MenuAction::Back => self.state.return_home(),
         }
     }
@@ -417,6 +480,16 @@ impl App {
                 let Some(thread_id) = self.current_thread_id() else {
                     return;
                 };
+                if self
+                    .state
+                    .current_thread
+                    .as_ref()
+                    .is_some_and(|thread| thread.kind == CurrentThreadKind::SideChat)
+                {
+                    self.state
+                        .set_notice(NoticeKind::Info, "Enter a title to rename this chat thread");
+                    return;
+                }
                 self.state.return_home();
                 self.state.busy = Some("generating a title".to_string());
                 tasks::generate_title(&self.sender, thread_id);
@@ -446,8 +519,14 @@ impl App {
                 self.state.prompt_input.clear();
             }
             PromptAction::ConfirmDelete if value == "DELETE" => {
-                if let Some(thread_id) = self.current_thread_id() {
-                    match squigit::explorer::delete_thread(thread_id) {
+                if let Some(thread) = self.state.current_thread.clone() {
+                    let result = match thread.kind {
+                        CurrentThreadKind::Image => squigit::explorer::delete_thread(thread.id),
+                        CurrentThreadKind::SideChat => {
+                            squigit::explorer::delete_sidechat(thread.id)
+                        }
+                    };
+                    match result {
                         Ok(()) => {
                             self.state.current_thread = None;
                             self.state.return_home();
@@ -514,7 +593,7 @@ impl App {
                 } else {
                     model.id.to_string()
                 },
-                action: MenuAction::SetModel {
+                action: MenuAction::SetSessionModel {
                     id: model.id.to_string(),
                 },
             })
@@ -530,15 +609,85 @@ impl App {
                     } else {
                         String::new()
                     },
-                    action: MenuAction::SetEffort {
+                    action: MenuAction::SetSessionEffort {
                         effort: (*effort).to_string(),
                     },
                 }),
         );
         if let Ok(snapshot) = squigit::settings::load_ocr_models() {
+            items.extend(snapshot.models.into_iter().filter_map(|model| {
+                if model.state != "downloaded" {
+                    return None;
+                }
+                let active = (self.state.ocr_language == model.id).then_some("active");
+                Some(MenuItem {
+                    section: "Installed OCR models".to_string(),
+                    label: model.name,
+                    detail: active.unwrap_or(&model.state).to_string(),
+                    action: MenuAction::SetSessionOcrModel { id: model.id },
+                })
+            }));
+        }
+        items.push(back_item());
+        self.state.open_menu("Session models", items);
+    }
+
+    fn open_settings_menu(&mut self) {
+        let config = match squigit::settings::load_config() {
+            Ok(config) => config,
+            Err(error) => {
+                self.state.set_notice(NoticeKind::Error, error);
+                return;
+            }
+        };
+        let mut items = squigit::brain::provider::gemini::models::SELECTABLE_MODELS
+            .iter()
+            .map(|model| MenuItem {
+                section: "Default AI model".to_string(),
+                label: model.name.to_string(),
+                detail: if config.model == model.id {
+                    "active".to_string()
+                } else {
+                    model.id.to_string()
+                },
+                action: MenuAction::SetDefaultModel {
+                    id: model.id.to_string(),
+                },
+            })
+            .collect::<Vec<_>>();
+        items.extend(
+            squigit::brain::provider::gemini::models::MODEL_EFFORTS
+                .iter()
+                .map(|effort| MenuItem {
+                    section: "Default reasoning effort".to_string(),
+                    label: (*effort).to_string(),
+                    detail: if config.effort == *effort {
+                        "active".to_string()
+                    } else {
+                        String::new()
+                    },
+                    action: MenuAction::SetDefaultEffort {
+                        effort: (*effort).to_string(),
+                    },
+                }),
+        );
+        items.push(MenuItem {
+            section: "OCR for new image threads".to_string(),
+            label: if config.ocr_enabled {
+                "Disable OCR"
+            } else {
+                "Enable OCR"
+            }
+            .to_string(),
+            detail: if config.ocr_enabled { "on" } else { "off" }.to_string(),
+            action: MenuAction::SetDefaultOcrEnabled {
+                enabled: !config.ocr_enabled,
+            },
+        });
+        if let Ok(snapshot) = squigit::settings::load_ocr_models() {
             items.extend(snapshot.models.into_iter().map(|model| {
                 let action = if model.state == "downloaded" {
-                    MenuAction::SetOcrModel {
+                    MenuAction::SetDefaultOcrModel {
                         id: model.id.clone(),
                     }
                 } else if matches!(model.state.as_str(), "queued" | "downloading" | "retrying") {
@@ -550,16 +699,21 @@ impl App {
                         id: model.id.clone(),
                     }
                 };
-                let active = (self.state.ocr_language == model.id).then_some("active");
+                let detail = if config.ocr_language == model.id {
+                    format!("active, {}", model.state)
+                } else {
+                    model.state
+                };
                 MenuItem {
-                    section: "OCR language and downloads".to_string(),
+                    section: "Default OCR model and downloads".to_string(),
                     label: model.name,
-                    detail: active.unwrap_or(&model.state).to_string(),
+                    detail,
                     action,
                 }
             }));
         }
-        self.state.open_menu("Models", items);
+        items.push(back_item());
+        self.state.open_menu("Settings", items);
     }
 
     fn open_resume_menu(&mut self) {
@@ -575,6 +729,12 @@ impl App {
                             action: MenuAction::ResumeThread {
                                 id: thread.id,
                                 title: thread.title,
+                                kind: match thread.kind {
+                                    squigit::cli::CliThreadKind::Image => CurrentThreadKind::Image,
+                                    squigit::cli::CliThreadKind::SideChat => {
+                                        CurrentThreadKind::SideChat
+                                    }
+                                },
                             },
                         })
                     })
@@ -607,30 +767,6 @@ impl App {
                 self.state.open_menu("Switch profile", items);
             }
             Err(error) => self.state.set_notice(NoticeKind::Error, error.to_string()),
-        }
-    }
-
-    fn open_scan_menu(&mut self) {
-        if self.state.current_thread.is_none() {
-            self.no_thread_error();
-            return;
-        }
-        match squigit::settings::load_ocr_models() {
-            Ok(snapshot) => {
-                let items = snapshot
-                    .models
-                    .into_iter()
-                    .filter(|model| model.state == "downloaded")
-                    .map(|model| MenuItem {
-                        section: "Installed OCR models".to_string(),
-                        label: model.name,
-                        detail: model.id.clone(),
-                        action: MenuAction::StartScan { id: model.id },
-                    })
-                    .collect();
-                self.state.open_menu("Scan image", items);
-            }
-            Err(error) => self.state.set_notice(NoticeKind::Error, error),
         }
     }
 
@@ -776,45 +912,72 @@ impl App {
     }
 
     fn rename_thread(&mut self, title: String) {
-        let Some(thread_id) = self.current_thread_id() else {
+        let Some(thread) = self.state.current_thread.clone() else {
+            self.no_thread_error();
             return;
         };
-        match squigit::explorer::rename_thread(thread_id, title) {
-            Ok(thread) => {
+        let result = match thread.kind {
+            CurrentThreadKind::Image => {
+                squigit::explorer::rename_thread(thread.id, title).map(|thread| thread.title)
+            }
+            CurrentThreadKind::SideChat => {
+                squigit::explorer::rename_sidechat(thread.id, title).map(|thread| thread.title)
+            }
+        };
+        match result {
+            Ok(title) => {
                 if let Some(current) = self.state.current_thread.as_mut() {
-                    current.title = thread.title.clone();
+                    current.title = title.clone();
                 }
                 self.state.return_home();
                 self.state
-                    .set_notice(NoticeKind::Success, format!("Renamed to {}", thread.title));
+                    .set_notice(NoticeKind::Success, format!("Renamed to {title}"));
             }
             Err(error) => self.state.set_notice(NoticeKind::Error, error),
         }
     }
 
     fn fork_thread(&mut self) {
-        let Some(thread_id) = self.current_thread_id() else {
+        let Some(thread) = self.state.current_thread.clone() else {
+            self.no_thread_error();
             return;
         };
-        match squigit::explorer::fork_thread(thread_id) {
-            Ok(Some(thread)) => {
-                self.state.current_thread = Some(CurrentThread {
-                    id: thread.id,
-                    title: thread.title.clone(),
-                    ocr_job_id: None,
-                });
-                self.state
-                    .set_notice(NoticeKind::Success, format!("Forked {}", thread.title));
-            }
-            Ok(None) => self
-                .state
-                .set_notice(NoticeKind::Error, "Thread fork returned no thread"),
-            Err(error) => self.state.set_notice(NoticeKind::Error, error),
+        match thread.kind {
+            CurrentThreadKind::Image => match squigit::explorer::fork_thread(thread.id) {
+                Ok(Some(thread)) => {
+                    self.state.current_thread = Some(CurrentThread {
+                        id: thread.id,
+                        title: thread.title.clone(),
+                        kind: CurrentThreadKind::Image,
+                        ocr_job_id: None,
+                    });
+                    self.state
+                        .set_notice(NoticeKind::Success, format!("Forked {}", thread.title));
+                }
+                Ok(None) => self
+                    .state
+                    .set_notice(NoticeKind::Error, "Thread fork returned no thread"),
+                Err(error) => self.state.set_notice(NoticeKind::Error, error),
+            },
+            CurrentThreadKind::SideChat => match squigit::explorer::fork_sidechat(thread.id) {
+                Ok(thread) => {
+                    let title = thread.title;
+                    self.state.current_thread = Some(CurrentThread {
+                        id: thread.id,
+                        title: title.clone(),
+                        kind: CurrentThreadKind::SideChat,
+                        ocr_job_id: None,
+                    });
+                    self.state
+                        .set_notice(NoticeKind::Success, format!("Forked {title}"));
+                }
+                Err(error) => self.state.set_notice(NoticeKind::Error, error),
+            },
         }
     }
 
     fn start_scan(&mut self, model_id: String) {
-        let Some(thread_id) = self.current_thread_id() else {
+        let Some(thread_id) = self.image_thread_id() else {
             return;
         };
         match squigit::settings::ocr_available() {
@@ -822,7 +985,7 @@ impl App {
                 self.state.return_home();
                 self.state.set_notice(
                     NoticeKind::Error,
-                    "OCR engine is not installed. Run /install_ocr.",
+                    "OCR engine is not installed. Exit and run squigit --install-ocr.",
                 );
                 return;
             }
@@ -845,7 +1008,7 @@ impl App {
     }
 
     fn start_lens(&mut self) {
-        let Some(thread_id) = self.current_thread_id() else {
+        let Some(thread_id) = self.image_thread_id() else {
             return;
         };
         self.state.busy = Some("searching Google Lens".to_string());
@@ -853,7 +1016,7 @@ impl App {
     }
 
     fn translate(&mut self) {
-        let Some(thread_id) = self.current_thread_id() else {
+        let Some(thread_id) = self.image_thread_id() else {
             return;
         };
         let result = squigit::thread::lens::translate_thread_image_url(&thread_id)
@@ -881,13 +1044,9 @@ impl App {
 
     fn update_config(&mut self, update: ConfigUpdate) {
         match squigit::settings::update_config(update) {
-            Ok(config) => {
-                self.state.model = config.model;
-                self.state.effort = config.effort;
-                self.state.ocr_enabled = config.ocr_enabled;
-                self.state.ocr_language = config.ocr_language;
+            Ok(_) => {
                 self.state
-                    .set_notice(NoticeKind::Success, "Default model settings updated");
+                    .set_notice(NoticeKind::Success, "Saved defaults in config.toml");
             }
             Err(error) => self.state.set_notice(NoticeKind::Error, error),
         }
@@ -896,22 +1055,27 @@ impl App {
     fn handle_task(&mut self, event: TaskEvent) {
         match event {
             TaskEvent::Update(Ok(Some(update))) => {
-                let install = match update.product {
-                    squigit::update::UpdateProduct::Cli => {
-                        "Run npm install -g @a7mddra/squigit to update."
-                    }
-                    squigit::update::UpdateProduct::Ocr => {
-                        "Run /install_ocr to update the OCR engine."
-                    }
-                    squigit::update::UpdateProduct::App => "Update from the Squigit desktop app.",
+                let (instruction, release_url) = match update.product {
+                    squigit::update::UpdateProduct::Cli => (
+                        "Run npm install -g @a7mddra/squigit to update.",
+                        "https://github.com/squigit-org/distribution/blob/main/releases/squigit-cli.md",
+                    ),
+                    squigit::update::UpdateProduct::Ocr => (
+                        "Exit and run squigit --update-ocr.",
+                        "https://github.com/squigit-org/distribution/blob/main/releases/squigit-ocr.md",
+                    ),
+                    squigit::update::UpdateProduct::App => (
+                        "Update from the Squigit desktop app.",
+                        "https://github.com/squigit-org/distribution/blob/main/releases/squigit.md",
+                    ),
                 };
                 self.state.update_notice = Some(format!(
-                    "{} update available: {} -> {}\n{}\n{}",
+                    "{} update available: {} -> {}\n{}\nRelease notes: {}",
                     update.product_name,
                     update.current_version,
                     update.latest_version,
-                    install,
-                    update.content
+                    instruction,
+                    release_url,
                 ));
             }
             TaskEvent::Update(Ok(None)) => {}
@@ -938,6 +1102,7 @@ impl App {
                         self.state.current_thread = Some(CurrentThread {
                             id: creation.thread_id.clone(),
                             title: "New thread".to_string(),
+                            kind: CurrentThreadKind::Image,
                             ocr_job_id: creation.ocr_job_id,
                         });
                         self.state.set_notice(
@@ -961,10 +1126,22 @@ impl App {
             TaskEvent::Submission(result) => {
                 self.state.busy = None;
                 match result {
-                    Ok(result) => self.state.set_notice(
-                        NoticeKind::Success,
-                        format!("log saved in {}", result.log_path.display()),
-                    ),
+                    Ok(outcome) => {
+                        if let Some(created) = outcome.created_sidechat {
+                            self.state.current_thread = Some(CurrentThread {
+                                id: created.sidechat_id,
+                                title: created.title,
+                                kind: CurrentThreadKind::SideChat,
+                                ocr_job_id: None,
+                            });
+                        }
+                        let message = outcome
+                            .result
+                            .log_path
+                            .map(|path| format!("Development log saved in {}", path.display()))
+                            .unwrap_or_else(|| "Message accepted".to_string());
+                        self.state.set_notice(NoticeKind::Success, message);
+                    }
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }
             }
@@ -987,15 +1164,6 @@ impl App {
                     Ok(url) => self
                         .state
                         .set_notice(NoticeKind::Success, format!("Opened Google Lens: {url}")),
-                    Err(error) => self.state.set_notice(NoticeKind::Error, error),
-                }
-            }
-            TaskEvent::InstalledOcr(result) => {
-                self.state.busy = None;
-                match result {
-                    Ok(()) => self
-                        .state
-                        .set_notice(NoticeKind::Success, "Squigit OCR installed"),
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }
             }
@@ -1030,23 +1198,10 @@ impl App {
                 if let Some(thread) = self.state.current_thread.as_mut() {
                     thread.ocr_job_id = None;
                 }
-                if let Some(thread_id) = self
-                    .state
-                    .current_thread
-                    .as_ref()
-                    .map(|thread| thread.id.clone())
-                {
-                    match squigit::cli::load_ocr_text(&thread_id, Some(&job.model_id)) {
-                        Ok(text) => {
-                            self.state.ocr_text = text;
-                            self.state.set_notice(
-                                NoticeKind::Success,
-                                "OCR complete. Press F1 to show recognized text.",
-                            );
-                        }
-                        Err(error) => self.state.set_notice(NoticeKind::Error, error),
-                    }
-                }
+                self.state.set_notice(
+                    NoticeKind::Success,
+                    "OCR complete. Press Alt+O to choose a recognized-text run.",
+                );
             }
             "failed" => {
                 self.state.busy = None;
@@ -1057,7 +1212,7 @@ impl App {
                 let tip = if error.to_ascii_lowercase().contains("not found")
                     || error.to_ascii_lowercase().contains("missing")
                 {
-                    " Run /install_ocr."
+                    " Exit and run squigit --install-ocr."
                 } else {
                     ""
                 };
@@ -1078,7 +1233,7 @@ impl App {
         let Some(current) = self.state.current_thread.as_mut() else {
             return;
         };
-        if current.title != "New thread" {
+        if current.kind != CurrentThreadKind::Image || current.title != "New thread" {
             return;
         }
         let Ok(jobs) = squigit::thread::get_thread_jobs_snapshot() else {
@@ -1095,25 +1250,32 @@ impl App {
         }
     }
 
-    fn show_ocr(&mut self) {
-        if self.state.ocr_text.is_empty() {
-            let Some(thread_id) = self.current_thread_id() else {
-                return;
-            };
-            match squigit::cli::load_ocr_text(&thread_id, None) {
-                Ok(text) if !text.trim().is_empty() => self.state.ocr_text = text,
-                Ok(_) => {
-                    self.state
-                        .set_notice(NoticeKind::Info, "No OCR text is available yet");
-                    return;
-                }
-                Err(error) => {
-                    self.state.set_notice(NoticeKind::Error, error);
-                    return;
-                }
+    fn open_ocr_runs(&mut self) {
+        let Some(thread_id) = self.image_thread_id() else {
+            return;
+        };
+        match squigit::cli::list_ocr_runs(&thread_id) {
+            Ok(runs) if runs.is_empty() => self
+                .state
+                .set_notice(NoticeKind::Info, "No OCR text is available yet"),
+            Ok(runs) => {
+                let mut items = runs
+                    .into_iter()
+                    .map(|run| MenuItem {
+                        section: "Recognized text runs".to_string(),
+                        label: run.model_name.clone(),
+                        detail: run.scanned_at,
+                        action: MenuAction::ShowOcrRun {
+                            model_name: run.model_name,
+                            text: run.text,
+                        },
+                    })
+                    .collect::<Vec<_>>();
+                items.push(back_item());
+                self.state.open_menu("OCR text", items);
             }
+            Err(error) => self.state.set_notice(NoticeKind::Error, error),
         }
-        self.state.view = View::Ocr;
     }
 
     fn current_thread_id(&mut self) -> Option<String> {
@@ -1126,10 +1288,27 @@ impl App {
         }
     }
 
+    fn image_thread_id(&mut self) -> Option<String> {
+        match &self.state.current_thread {
+            Some(thread) if thread.kind == CurrentThreadKind::Image => Some(thread.id.clone()),
+            Some(_) => {
+                self.state.set_notice(
+                    NoticeKind::Error,
+                    "This action needs an image thread. Run /analyze or /resume an image thread.",
+                );
+                None
+            }
+            None => {
+                self.no_thread_error();
+                None
+            }
+        }
+    }
+
     fn no_thread_error(&mut self) {
         self.state.set_notice(
             NoticeKind::Error,
-            "No image thread is active. Run /analyze or /resume.",
+            "No thread is active. Send a message, run /analyze, or run /resume.",
         );
     }
 
@@ -1158,6 +1337,10 @@ impl App {
     }
 
     fn escape(&mut self) {
+        if self.state.view == View::Ocr {
+            self.open_ocr_runs();
+            return;
+        }
         if self
             .state
             .busy

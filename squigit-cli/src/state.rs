@@ -35,7 +35,14 @@ pub struct Notice {
 pub struct CurrentThread {
     pub id: String,
     pub title: String,
+    pub kind: CurrentThreadKind,
     pub ocr_job_id: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CurrentThreadKind {
+    Image,
+    SideChat,
 }
 
 #[derive(Clone, Debug)]
@@ -53,19 +60,58 @@ pub enum Suggestion {
 
 #[derive(Clone, Debug)]
 pub enum MenuAction {
-    ResumeThread { id: String, title: String },
-    SwitchProfile { id: String },
-    SetModel { id: String },
-    SetEffort { effort: String },
-    SetOcrModel { id: String },
-    StartScan { id: String },
-    DownloadOcrModel { id: String },
-    CancelOcrModel { id: String },
-    ConfigureKey { provider: String },
-    DeleteKey { provider: String },
-    RevealKey { provider: String },
+    ResumeThread {
+        id: String,
+        title: String,
+        kind: CurrentThreadKind,
+    },
+    SwitchProfile {
+        id: String,
+    },
+    SetSessionModel {
+        id: String,
+    },
+    SetSessionEffort {
+        effort: String,
+    },
+    SetSessionOcrModel {
+        id: String,
+    },
+    SetDefaultModel {
+        id: String,
+    },
+    SetDefaultEffort {
+        effort: String,
+    },
+    SetDefaultOcrModel {
+        id: String,
+    },
+    SetDefaultOcrEnabled {
+        enabled: bool,
+    },
+    DownloadOcrModel {
+        id: String,
+    },
+    CancelOcrModel {
+        id: String,
+    },
+    ConfigureKey {
+        provider: String,
+    },
+    DeleteKey {
+        provider: String,
+    },
+    RevealKey {
+        provider: String,
+    },
     CancelAttachmentJobs,
-    CancelOcrJob { id: String },
+    CancelOcrJob {
+        id: String,
+    },
+    ShowOcrRun {
+        model_name: String,
+        text: String,
+    },
     Back,
 }
 
@@ -109,7 +155,6 @@ pub struct AppState {
     pub cursor: usize,
     pub suggestions: Vec<Suggestion>,
     pub selected: usize,
-    pub attachments: Vec<PathBuf>,
     pub menu_title: String,
     pub menu_items: Vec<MenuItem>,
     pub prompt_title: String,
@@ -124,6 +169,7 @@ pub struct AppState {
     pub spinner_index: usize,
     pub update_notice: Option<String>,
     pub ocr_text: String,
+    pub ocr_title: String,
     pub color: bool,
     pub quit: bool,
     pub file_index: Option<FileSearchIndex>,
@@ -173,7 +219,6 @@ impl AppState {
             cursor: 0,
             suggestions: Vec::new(),
             selected: 0,
-            attachments: Vec::new(),
             menu_title: String::new(),
             menu_items: Vec::new(),
             prompt_title: String::new(),
@@ -188,6 +233,7 @@ impl AppState {
             spinner_index: 0,
             update_notice: None,
             ocr_text: String::new(),
+            ocr_title: String::new(),
             color,
             quit: false,
             file_index,
@@ -266,6 +312,7 @@ impl AppState {
         self.suggestions = if self.input.starts_with('/') {
             matching_commands(&self.input)
                 .into_iter()
+                .filter(|candidate| self.command_allowed(candidate.command))
                 .map(|candidate| Suggestion::Command {
                     command: candidate.command,
                     name: candidate.name.to_string(),
@@ -297,7 +344,6 @@ impl AppState {
         self.input.clear();
         self.cursor = 0;
         self.suggestions.clear();
-        self.attachments.clear();
         self.selected = 0;
     }
 
@@ -349,6 +395,18 @@ impl AppState {
         self.gemini_configured = settings.google_ai_studio.configured;
         self.imgbb_configured = settings.imgbb.configured;
         Ok(())
+    }
+
+    fn command_allowed(&self, command: SlashCommand) -> bool {
+        let is_sidechat = self
+            .current_thread
+            .as_ref()
+            .is_some_and(|thread| thread.kind == CurrentThreadKind::SideChat);
+        !is_sidechat
+            || !matches!(
+                command,
+                SlashCommand::Scan | SlashCommand::Lens | SlashCommand::Translate
+            )
     }
 }
 

@@ -8,6 +8,8 @@ pub struct CliArgs {
     pub home: Option<PathBuf>,
     pub image: Option<PathBuf>,
     pub no_color: bool,
+    pub install_ocr: bool,
+    pub update_ocr: bool,
     pub help: bool,
     pub version: bool,
 }
@@ -21,6 +23,8 @@ impl CliArgs {
                 "-h" | "--help" => parsed.help = true,
                 "-V" | "--version" => parsed.version = true,
                 "--no-color" => parsed.no_color = true,
+                "--install-ocr" => parsed.install_ocr = true,
+                "--update-ocr" => parsed.update_ocr = true,
                 "--home" => {
                     let value = arguments
                         .next()
@@ -41,6 +45,12 @@ impl CliArgs {
                 }
                 value => parsed.set_image(value.to_string())?,
             }
+        }
+        if parsed.install_ocr && parsed.update_ocr {
+            return Err("choose either --install-ocr or --update-ocr".to_string());
+        }
+        if parsed.image.is_some() && (parsed.install_ocr || parsed.update_ocr) {
+            return Err("OCR maintenance flags do not accept an image path".to_string());
         }
         Ok(parsed)
     }
@@ -72,10 +82,17 @@ Arguments:
 Options:
       --home PATH  Use PATH as the Squigit config root
       --no-color   Disable ANSI colors
+      --install-ocr Install Squigit OCR, show progress, and exit
+      --update-ocr  Update Squigit OCR, show progress, and exit
   -h, --help       Print help
   -V, --version    Print version
 
 Environment:
   SQUIGIT_HOME       Config root used by the CLI
   SQUIGIT_CONFIG_DIR Shared config root used by every Squigit shell
-  NO_COLOR           Disable ANSI colors";
+  NO_COLOR           Disable ANSI colors
+
+Examples:
+  SQUIGIT_HOME=\"$HOME/.squigit-dev\" squigit
+  squigit --home \"$HOME/.squigit-dev\"
+  squigit --install-ocr";
