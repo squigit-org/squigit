@@ -14,7 +14,11 @@ fsindex = "0.3.1"
 image = "0.25"
 mime_guess = "2.0"
 nucleo-matcher = "0.3.1"
+<<<<<<< HEAD
 squigit-ocr = { path = "../crates/squigit-ocr/runtime" }
+=======
+squigit-ocr = { path = "../squigit-ocr/runtime" }
+>>>>>>> 156508b (refactor: rename ocr-runtime crate and references to squigit-ocr)
 reqwest = { version = "0.11", features = ["json", "multipart", "rustls-tls"] }
 regex = "1.12.3"
 serde = { version = "1.0", features = ["derive"] }

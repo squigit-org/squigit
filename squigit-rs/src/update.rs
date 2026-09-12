@@ -331,8 +331,8 @@ fn read_ocr_version(resource_dir: Option<&Path>) -> Option<String> {
         .and_then(|path| path.parent().map(Path::to_path_buf))
         .unwrap_or_default();
     let resource_dir = resource_dir.unwrap_or(&fallback_resource_dir);
-    let (sidecar_path, _) = ocr_runtime::sidecar::resolve_sidecar_path(resource_dir);
-    ocr_runtime::sidecar::read_sidecar_version(&sidecar_path).ok()
+    let (sidecar_path, _) = squigit_ocr::sidecar::resolve_sidecar_path(resource_dir);
+    squigit_ocr::sidecar::read_sidecar_version(&sidecar_path).ok()
 }
 
 fn extract_semver(raw: &str) -> Option<String> {

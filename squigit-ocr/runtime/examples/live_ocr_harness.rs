@@ -1,8 +1,8 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use ocr_runtime::models::ModelManager;
-use ocr_runtime::ocr::{OcrRequest, OcrRuntime};
+use squigit_ocr::models::ModelManager;
+use squigit_ocr::ocr::{OcrRequest, OcrRuntime};
 use std::env;
 use std::path::{Path, PathBuf};
 

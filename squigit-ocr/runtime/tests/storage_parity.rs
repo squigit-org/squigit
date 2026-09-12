@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use ocr_runtime::ocr::{boxes_to_storage_regions, persist_boxes_to_thread_storage, OcrBox};
+use squigit_ocr::ocr::{boxes_to_storage_regions, persist_boxes_to_thread_storage, OcrBox};
 use squigit_storage::{OcrAnnotationEntry, ThreadData, ThreadMetadata, ThreadStorage};
 
 #[test]

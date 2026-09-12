@@ -10,7 +10,7 @@ use crate::brain::provider::gemini::models::{
     DEFAULT_MODEL_EFFORT, MODEL_EFFORTS, PRIMARY_FAST_MODEL, SELECTABLE_MODELS,
 };
 use crate::storage::{paths::base_config_dir, rules, ProfileStore, VersionStore};
-use ocr_runtime::models::{DEFAULT_OCR_MODEL_ID, OCR_MODELS};
+use squigit_ocr::models::{DEFAULT_OCR_MODEL_ID, OCR_MODELS};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -681,8 +681,8 @@ pub struct HelpDiagnostics {
 fn read_ocr_version() -> SettingsResult<Option<String>> {
     let current_exe = std::env::current_exe().map_err(|error| error.to_string())?;
     let resource_dir = current_exe.parent().unwrap_or(Path::new(""));
-    let (sidecar_path, _) = ocr_runtime::sidecar::resolve_sidecar_path(resource_dir);
-    Ok(ocr_runtime::sidecar::read_sidecar_version(&sidecar_path).ok())
+    let (sidecar_path, _) = squigit_ocr::sidecar::resolve_sidecar_path(resource_dir);
+    Ok(squigit_ocr::sidecar::read_sidecar_version(&sidecar_path).ok())
 }
 
 pub fn ocr_available() -> SettingsResult<bool> {

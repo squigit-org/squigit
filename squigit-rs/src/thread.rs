@@ -812,8 +812,8 @@ pub mod lens {
 }
 
 pub mod ocr {
-    use ocr_runtime::models::DEFAULT_OCR_MODEL_ID;
-    use ocr_runtime::ocr::{persist_boxes_to_thread_storage, OcrRequest};
+    use squigit_ocr::models::DEFAULT_OCR_MODEL_ID;
+    use squigit_ocr::ocr::{persist_boxes_to_thread_storage, OcrRequest};
     use serde::Serialize;
     use std::collections::BTreeMap;
     use std::path::{Path, PathBuf};
@@ -914,7 +914,7 @@ pub mod ocr {
     fn sidecar_request(image_path: String, model_id: &str) -> ThreadResult<OcrRequest> {
         let current_exe = std::env::current_exe().map_err(|error| error.to_string())?;
         let resource_dir = current_exe.parent().unwrap_or(Path::new(""));
-        let (sidecar_path, runtime_dir) = ocr_runtime::sidecar::resolve_sidecar_path(resource_dir);
+        let (sidecar_path, runtime_dir) = squigit_ocr::sidecar::resolve_sidecar_path(resource_dir);
         let rec_model_dir_override = (model_id != DEFAULT_OCR_MODEL_ID)
             .then(|| ocr_models().map(|models| models.get_model_dir(model_id)))
             .transpose()?;

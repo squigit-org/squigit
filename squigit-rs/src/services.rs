@@ -1,12 +1,12 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use ocr_runtime::{models::ModelManager, ocr::OcrRuntime};
+use squigit_ocr::{models::ModelManager, ocr::OcrRuntime};
 use squigit_brain::BrainService;
 use std::sync::OnceLock;
 
 static BRAIN_SERVICE: OnceLock<BrainService> = OnceLock::new();
-static OCR_RUNTIME: OnceLock<OcrRuntime> = OnceLock::new();
+static squigit_ocr: OnceLock<OcrRuntime> = OnceLock::new();
 static OCR_MODEL_MANAGER: OnceLock<ModelManager> = OnceLock::new();
 
 pub fn brain() -> &'static BrainService {
@@ -14,7 +14,7 @@ pub fn brain() -> &'static BrainService {
 }
 
 pub(crate) fn ocr() -> &'static OcrRuntime {
-    OCR_RUNTIME.get_or_init(OcrRuntime::new)
+    squigit_ocr.get_or_init(OcrRuntime::new)
 }
 
 pub(crate) fn ocr_models() -> Result<&'static ModelManager, String> {

@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-pub use ocr_runtime as ocr;
+pub use squigit_ocr as ocr;
 pub use squigit_auth as auth;
 pub use squigit_brain as brain;
 pub use squigit_harness as harness;
