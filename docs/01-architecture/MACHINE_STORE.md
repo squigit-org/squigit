@@ -6,17 +6,13 @@ Squigit has one machine-wide store shared by every shell. Electron and the CLI a
 {squigit application root}/
 ├── auth.json
 ├── config.toml
-├── First Run
-├── history.jsonl
+├── install-ocr.sh
 ├── keys.json
 ├── keys.lock
 ├── profiles.json
 ├── RULES.md
 ├── version.json
-├── Chromium/
-│   ├── Local Storage/leveldb/
-│   ├── Cookies
-│   └── caches…
+├── version.lock
 ├── models/pp-ocr-{model_id}/
 ├── objects/{hash_prefix}/{blake3_hash}/
 │   ├── manifest.json
@@ -31,6 +27,4 @@ Squigit has one machine-wide store shared by every shell. Electron and the CLI a
         └── ocr_annotations.json
 ```
 
-Rust's `StorePaths` is the only shared-path resolver. TypeScript never constructs thread, account, object, or model paths. Electron sets `sessionData` to `Chromium/` before readiness so Chromium cannot own or clear Squigit's `Local Storage/`.
-
-TBD: explain the purpose of each file after the sqlite3 migration.
+TBD: explain the purpose of each file.

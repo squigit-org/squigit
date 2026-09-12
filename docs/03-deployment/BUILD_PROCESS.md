@@ -1,3 +1,3 @@
 # Build Process
 
-TBD: explain how to build the project, including dependencies, build commands, and any matrayoshka nesting that occurs during the build process.
+TBD: explain how to build the project, including dependencies, and build commands.

@@ -1,3 +1,3 @@
 # Release and Update Strategy
 
-TBD: explain the ocr distribution, the squigit-cli rlease, and the .node executable for the desktop application.
+TBD: explain the ocr distribution, the squigit-cli rlease, and the facade for the desktop application.

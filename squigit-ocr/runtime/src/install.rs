@@ -1,13 +1,6 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-//! OCR engine installer scripts (squigit-tools).
-//!
-//! Lives in squigit-ocr so the same commands stay reusable when squigit-cli
-//! learns to install the engine. Shells are embedded strings; the tools
-//! pipeline materialises them next to hotkey-trigger.sh via
-//! [`ensure_install_script`].
-
 use std::path::PathBuf;
 
 #[cfg(target_os = "windows")]

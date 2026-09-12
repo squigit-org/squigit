@@ -124,4 +124,4 @@ Same-user malware, compromised OS sessions, process-memory inspection, input cap
 
 ## Other Cryptography
 
-Google OAuth uses PKCE and validates provider identity before creating a local profile. OTA artifacts use the separately documented Ed25519 verification key and release process; OTA keys are not reused for BYOK.
+Google OAuth uses PKCE and validates provider identity before creating a local profile.
