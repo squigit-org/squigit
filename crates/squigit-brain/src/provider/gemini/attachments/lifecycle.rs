@@ -1,0 +1,908 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
+use base64::{engine::general_purpose, Engine as _};
+use futures_util::future::join_all;
+use rand::RngCore;
+use serde::{Deserialize, Serialize};
+use squigit_harness::{
+    find_prepared_office_document, is_office_document_extension, is_supported_document_extension,
+    prepare_document, remember_prepared_office_document, PrepareDocumentInput,
+};
+use squigit_storage::{AttachmentFileType, ThreadStorage};
+use std::collections::HashSet;
+use std::path::Path;
+use std::time::Duration;
+use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
+
+use crate::runtime::BrainRuntimeState;
+
+use super::cache::{
+    ensure_file_uploaded_for_credential, load_active_credential, ActiveCredential, EnsuredFile,
+};
+const CONNECTIVITY_RETRY_DELAY: Duration = Duration::from_secs(5);
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AttachmentPreparationStatus {
+    Pending,
+    Ready,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AttachmentPreparationError {
+    pub code: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrepareAttachmentRequest {
+    pub job_id: String,
+    pub source_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrepareAttachmentResult {
+    pub job_id: String,
+    pub attachment_hash: Option<String>,
+    pub cas_path: Option<String>,
+    pub file_type: Option<AttachmentFileType>,
+    pub status: AttachmentPreparationStatus,
+    pub disposition: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrepareSubmissionAttachmentsRequest {
+    pub preflight_id: String,
+    pub thread_id: String,
+    pub user_message_id: String,
+    pub attachment_hashes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubmissionAttachmentResult {
+    pub attachment_hash: String,
+    pub file_type: Option<AttachmentFileType>,
+    pub status: AttachmentPreparationStatus,
+    pub disposition: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrepareSubmissionAttachmentsResult {
+    pub preflight_token: Option<String>,
+    pub results: Vec<SubmissionAttachmentResult>,
+}
+
+#[derive(Clone)]
+pub(crate) struct AttachmentPreparationJob {
+    pub(crate) cancellation: CancellationToken,
+    pub(crate) work_key: Option<String>,
+    pub(crate) staged: Option<(String, String, AttachmentFileType)>,
+}
+
+#[derive(Clone)]
+pub(crate) struct SharedAttachmentWork {
+    pub(crate) cancellation: CancellationToken,
+    pub(crate) subscribers: HashSet<String>,
+    pub(crate) result: watch::Receiver<Option<Result<EnsuredFile, String>>>,
+}
+
+fn preparation_error(error: impl Into<String>) -> AttachmentPreparationError {
+    let message = error.into();
+    let lower = message.to_ascii_lowercase();
+    AttachmentPreparationError {
+        code: if message == "CANCELLED" {
+            "cancelled"
+        } else if lower.contains("profile") || lower.contains("key") {
+            "credential-unavailable"
+        } else if lower.contains("upload") || lower.contains("gemini") {
+            "remote-preparation-failed"
+        } else {
+            "attachment-preparation-failed"
+        }
+        .to_string(),
+        message,
+    }
+}
+
+fn is_transient_remote_error(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    lower.starts_with("transient:")
+        || lower.contains("temporarily failed")
+        || lower.contains("timed out")
+        || lower.contains("connection")
+}
+
+fn cancelled_prepare_result(
+    job_id: String,
+    hash: Option<String>,
+    path: Option<String>,
+    file_type: Option<AttachmentFileType>,
+) -> PrepareAttachmentResult {
+    let error = preparation_error("CANCELLED");
+    PrepareAttachmentResult {
+        job_id,
+        attachment_hash: hash,
+        cas_path: path,
+        file_type,
+        status: AttachmentPreparationStatus::Cancelled,
+        disposition: None,
+        error_code: Some(error.code),
+        error_message: Some(error.message),
+    }
+}
+
+enum InspectedAttachmentSource {
+    Existing {
+        hash: String,
+        cas_path: std::path::PathBuf,
+    },
+    Raw {
+        hash: String,
+        bytes: Vec<u8>,
+        extension: String,
+    },
+}
+
+fn normalize_document_source(
+    source: InspectedAttachmentSource,
+) -> Result<InspectedAttachmentSource, String> {
+    let (bytes, extension) = match source {
+        existing @ InspectedAttachmentSource::Existing { .. } => return Ok(existing),
+        InspectedAttachmentSource::Raw {
+            bytes, extension, ..
+        } => (bytes, extension),
+    };
+
+    if !is_supported_document_extension(&extension) {
+        let hash = blake3::hash(&bytes).to_hex().to_string();
+        return Ok(InspectedAttachmentSource::Raw {
+            hash,
+            bytes,
+            extension,
+        });
+    }
+
+    let prepared = prepare_document(PrepareDocumentInput { bytes, extension })?;
+    if prepared.warning_count > 0 {
+        log::warn!(
+            "Office conversion completed with {} warning(s)",
+            prepared.warning_count
+        );
+    }
+    let hash = blake3::hash(&prepared.pdf_bytes).to_hex().to_string();
+    Ok(InspectedAttachmentSource::Raw {
+        hash,
+        bytes: prepared.pdf_bytes,
+        extension: "pdf".to_string(),
+    })
+}
+
+fn inspect_attachment_source(source_path: &str) -> Result<InspectedAttachmentSource, String> {
+    if let Ok(resolved) = super::paths::resolve_attachment_path_internal(source_path) {
+        let hash = resolved
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .ok_or_else(|| "CAS attachment has no object hash".to_string())?
+            .to_ascii_lowercase();
+        return Ok(InspectedAttachmentSource::Existing {
+            hash,
+            cas_path: resolved,
+        });
+    }
+
+    let raw_path = source_path.strip_prefix("file://").unwrap_or(source_path);
+    let resolved = Path::new(raw_path)
+        .canonicalize()
+        .map_err(|error| format!("Attachment source path is unavailable: {error}"))?;
+    let bytes = std::fs::read(&resolved).map_err(|error| error.to_string())?;
+    let hash = blake3::hash(&bytes).to_hex().to_string();
+    let extension = resolved
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    Ok(InspectedAttachmentSource::Raw {
+        hash,
+        bytes,
+        extension,
+    })
+}
+
+fn commit_attachment_source(
+    source: InspectedAttachmentSource,
+) -> Result<(String, String, AttachmentFileType), String> {
+    let storage = ThreadStorage::new().map_err(|error| error.to_string())?;
+    let (hash, cas_path) = match source {
+        InspectedAttachmentSource::Existing { hash, cas_path } => (hash, cas_path),
+        InspectedAttachmentSource::Raw {
+            hash,
+            bytes,
+            extension,
+        } => {
+            let staged = storage
+                .store_file(&bytes, &extension, None)
+                .map_err(|error| error.to_string())?;
+            if staged.hash != hash {
+                return Err("Attachment content changed while staging".to_string());
+            }
+            (hash, Path::new(&staged.path).to_path_buf())
+        }
+    };
+    let manifest = storage
+        .load_object_manifest(&hash)
+        .map_err(|error| error.to_string())?;
+    if manifest.file_context.file_type == AttachmentFileType::DocumentUpload
+        && cas_path.extension().and_then(|value| value.to_str()) != Some("pdf")
+    {
+        return Err(
+            "Stored document attachments must be normalized PDF objects; reattach the source file"
+                .to_string(),
+        );
+    }
+    Ok((
+        hash,
+        cas_path.to_string_lossy().to_string(),
+        manifest.file_context.file_type,
+    ))
+}
+
+async fn stage_attachment(
+    runtime: &BrainRuntimeState,
+    source_path: String,
+    cancellation: &CancellationToken,
+) -> Result<(String, String, AttachmentFileType), String> {
+    let inspected = tokio::select! {
+        result = tokio::task::spawn_blocking(move || inspect_attachment_source(&source_path)) => {
+            result
+                .map_err(|error| format!("Attachment staging task failed: {error}"))??
+        }
+        _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+    };
+    let hash = match &inspected {
+        InspectedAttachmentSource::Existing { hash, .. }
+        | InspectedAttachmentSource::Raw { hash, .. } => hash.clone(),
+    };
+    let source_lock = runtime
+        .object_manifest_lock(&format!("attachment-source:{hash}"))
+        .await;
+    let _source_guard = tokio::select! {
+        guard = source_lock.lock() => guard,
+        _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+    };
+
+    let office_source = match &inspected {
+        InspectedAttachmentSource::Raw {
+            hash, extension, ..
+        } if is_office_document_extension(extension) => Some((hash.clone(), extension.clone())),
+        _ => None,
+    };
+    let mut conversion_to_record = None;
+    let inspected = if let Some((source_hash, source_extension)) = office_source {
+        let lookup_hash = source_hash.clone();
+        let lookup_extension = source_extension.clone();
+        let cached_result = tokio::select! {
+            result = tokio::task::spawn_blocking(move || {
+                find_prepared_office_document(&lookup_hash, &lookup_extension)
+            }) => {
+                result
+                    .map_err(|error| format!("Office conversion cache task failed: {error}"))?
+            }
+            _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+        };
+        let cached = match cached_result {
+            Ok(cached) => cached,
+            Err(error) => {
+                log::warn!("Office conversion cache lookup failed; converting again: {error}");
+                None
+            }
+        };
+        if let Some(cached) = cached {
+            InspectedAttachmentSource::Existing {
+                hash: cached.pdf_hash,
+                cas_path: Path::new(&cached.cas_path).to_path_buf(),
+            }
+        } else {
+            let permit = tokio::select! {
+                permit = runtime.office_conversion_slots.clone().acquire_owned() => {
+                    permit.map_err(|_| "Office conversion worker is unavailable".to_string())?
+                }
+                _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+            };
+            let conversion = tokio::task::spawn_blocking(move || {
+                let _permit = permit;
+                normalize_document_source(inspected)
+            });
+            let converted = tokio::select! {
+                result = conversion => {
+                    result
+                        .map_err(|error| format!("Office conversion task failed: {error}"))??
+                }
+                _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+            };
+            conversion_to_record = Some((source_hash, source_extension));
+            converted
+        }
+    } else {
+        normalize_document_source(inspected)?
+    };
+
+    if cancellation.is_cancelled() {
+        return Err("CANCELLED".to_string());
+    }
+
+    let final_hash = match &inspected {
+        InspectedAttachmentSource::Existing { hash, .. }
+        | InspectedAttachmentSource::Raw { hash, .. } => hash.clone(),
+    };
+    let object_lock = runtime.object_manifest_lock(&final_hash).await;
+    let _object_guard = tokio::select! {
+        guard = object_lock.lock() => guard,
+        _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+    };
+    if cancellation.is_cancelled() {
+        return Err("CANCELLED".to_string());
+    }
+
+    let committed = tokio::task::spawn_blocking(move || {
+        let committed = commit_attachment_source(inspected)?;
+        if let Some((source_hash, source_extension)) = conversion_to_record {
+            if let Err(error) =
+                remember_prepared_office_document(&source_hash, &source_extension, &committed.0)
+            {
+                log::warn!("Office conversion cache write failed; the PDF remains usable: {error}");
+            }
+        }
+        Ok::<_, String>(committed)
+    })
+    .await
+    .map_err(|error| format!("Attachment staging task failed: {error}"))??;
+    if cancellation.is_cancelled() {
+        Err("CANCELLED".to_string())
+    } else {
+        Ok(committed)
+    }
+}
+
+async fn register_job(
+    runtime: &BrainRuntimeState,
+    job_id: &str,
+) -> Result<CancellationToken, String> {
+    if job_id.trim().is_empty() {
+        return Err("Attachment preparation job ID cannot be empty".to_string());
+    }
+    let cancellation = CancellationToken::new();
+    let mut jobs = runtime.attachment_jobs.lock().await;
+    if jobs.contains_key(job_id) {
+        return Err(format!(
+            "Attachment preparation job already exists: {job_id}"
+        ));
+    }
+    jobs.insert(
+        job_id.to_string(),
+        AttachmentPreparationJob {
+            cancellation: cancellation.clone(),
+            work_key: None,
+            staged: None,
+        },
+    );
+    Ok(cancellation)
+}
+
+async fn detach_job_from_work(runtime: &BrainRuntimeState, job_id: &str, work_key: &str) {
+    let mut work = runtime.attachment_work.lock().await;
+    let should_remove = if let Some(shared) = work.get_mut(work_key) {
+        shared.subscribers.remove(job_id);
+        if shared.subscribers.is_empty() {
+            shared.cancellation.cancel();
+            true
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+    if should_remove {
+        work.remove(work_key);
+    }
+    if let Some(job) = runtime.attachment_jobs.lock().await.get_mut(job_id) {
+        if job.work_key.as_deref() == Some(work_key) {
+            job.work_key = None;
+        }
+    }
+}
+
+async fn finish_job(runtime: &BrainRuntimeState, job_id: &str) {
+    let job = runtime.attachment_jobs.lock().await.remove(job_id);
+    if let Some(work_key) = job.and_then(|job| job.work_key) {
+        detach_job_from_work(runtime, job_id, &work_key).await;
+    }
+}
+
+async fn run_shared_upload(
+    runtime: &BrainRuntimeState,
+    job_id: &str,
+    hash: &str,
+    cas_path: &str,
+    credential: ActiveCredential,
+    job_cancel: &CancellationToken,
+) -> Result<EnsuredFile, String> {
+    let work_key = credential.object_remote_id(hash).await?;
+    let mut receiver = {
+        let mut work = runtime.attachment_work.lock().await;
+        if let Some(shared) = work.get_mut(&work_key) {
+            shared.subscribers.insert(job_id.to_string());
+            shared.result.clone()
+        } else {
+            let cancellation = CancellationToken::new();
+            let (sender, receiver) = watch::channel(None);
+            let mut subscribers = HashSet::new();
+            subscribers.insert(job_id.to_string());
+            work.insert(
+                work_key.clone(),
+                SharedAttachmentWork {
+                    cancellation: cancellation.clone(),
+                    subscribers,
+                    result: receiver.clone(),
+                },
+            );
+            let runtime = runtime.clone();
+            let cas_path = cas_path.to_string();
+            tokio::spawn(async move {
+                let result = ensure_file_uploaded_for_credential(
+                    &runtime,
+                    &credential,
+                    &cas_path,
+                    &cancellation,
+                )
+                .await;
+                let _ = sender.send(Some(result));
+            });
+            receiver
+        }
+    };
+    if let Some(job) = runtime.attachment_jobs.lock().await.get_mut(job_id) {
+        job.work_key = Some(work_key.clone());
+    }
+
+    let result = loop {
+        if let Some(result) = receiver.borrow().clone() {
+            break result;
+        }
+        tokio::select! {
+            changed = receiver.changed() => {
+                if changed.is_err() && receiver.borrow().is_none() {
+                    break Err("Attachment preparation work stopped unexpectedly".to_string());
+                }
+            }
+            _ = job_cancel.cancelled() => break Err("CANCELLED".to_string()),
+        }
+    };
+    detach_job_from_work(runtime, job_id, &work_key).await;
+    result
+}
+
+pub(crate) async fn prepare_attachment(
+    runtime: &BrainRuntimeState,
+    request: PrepareAttachmentRequest,
+) -> PrepareAttachmentResult {
+    let job_id = request.job_id;
+    let job_cancel = match register_job(runtime, &job_id).await {
+        Ok(token) => token,
+        Err(error) => {
+            let error = preparation_error(error);
+            return PrepareAttachmentResult {
+                job_id,
+                attachment_hash: None,
+                cas_path: None,
+                file_type: None,
+                status: AttachmentPreparationStatus::Failed,
+                disposition: None,
+                error_code: Some(error.code),
+                error_message: Some(error.message),
+            };
+        }
+    };
+    let staged = stage_attachment(runtime, request.source_path.clone(), &job_cancel).await;
+    let (hash, cas_path, file_type) = match staged {
+        Ok(value) => value,
+        Err(error) => {
+            finish_job(runtime, &job_id).await;
+            let error = preparation_error(error);
+            return PrepareAttachmentResult {
+                job_id,
+                attachment_hash: None,
+                cas_path: None,
+                file_type: None,
+                status: AttachmentPreparationStatus::Failed,
+                disposition: None,
+                error_code: Some(error.code),
+                error_message: Some(error.message),
+            };
+        }
+    };
+    if let Some(job) = runtime.attachment_jobs.lock().await.get_mut(&job_id) {
+        job.staged = Some((hash.clone(), cas_path.clone(), file_type.clone()));
+    }
+    if job_cancel.is_cancelled() {
+        finish_job(runtime, &job_id).await;
+        return cancelled_prepare_result(job_id, Some(hash), Some(cas_path), Some(file_type));
+    }
+
+    if file_type == AttachmentFileType::TextLocal {
+        finish_job(runtime, &job_id).await;
+        return PrepareAttachmentResult {
+            job_id,
+            attachment_hash: Some(hash),
+            cas_path: Some(cas_path),
+            file_type: Some(file_type),
+            status: AttachmentPreparationStatus::Ready,
+            disposition: Some("local-only".to_string()),
+            error_code: None,
+            error_message: None,
+        };
+    }
+
+    let outcome = loop {
+        if job_cancel.is_cancelled() {
+            break Err("CANCELLED".to_string());
+        }
+        let credential = match load_active_credential().await {
+            Ok(credential) => credential,
+            Err(error) => break Err(error),
+        };
+        let prepared = run_shared_upload(
+            runtime,
+            &job_id,
+            &hash,
+            &cas_path,
+            credential.clone(),
+            &job_cancel,
+        )
+        .await;
+        let prepared = match prepared {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                if error == "CANCELLED" {
+                    break Err(error);
+                }
+                match load_active_credential().await {
+                    Ok(latest) if !latest.matches(&credential) => continue,
+                    Ok(_) => break Err(error),
+                    Err(identity_error) => break Err(identity_error),
+                }
+            }
+        };
+        let latest = match load_active_credential().await {
+            Ok(credential) => credential,
+            Err(error) => break Err(error),
+        };
+        if latest.matches(&credential) {
+            break Ok(prepared);
+        }
+    };
+    finish_job(runtime, &job_id).await;
+
+    match outcome {
+        Ok(prepared) => PrepareAttachmentResult {
+            job_id,
+            attachment_hash: Some(hash),
+            cas_path: Some(cas_path),
+            file_type: Some(file_type),
+            status: AttachmentPreparationStatus::Ready,
+            disposition: Some(prepared.disposition.as_str().to_string()),
+            error_code: None,
+            error_message: None,
+        },
+        Err(error) if error == "CANCELLED" => {
+            cancelled_prepare_result(job_id, Some(hash), Some(cas_path), Some(file_type))
+        }
+        Err(error) => {
+            let error = preparation_error(error);
+            PrepareAttachmentResult {
+                job_id,
+                attachment_hash: Some(hash),
+                cas_path: Some(cas_path),
+                file_type: Some(file_type),
+                status: AttachmentPreparationStatus::Failed,
+                disposition: None,
+                error_code: Some(error.code),
+                error_message: Some(error.message),
+            }
+        }
+    }
+}
+
+pub(crate) async fn cancel_attachment(runtime: &BrainRuntimeState, job_id: &str) {
+    let job = runtime.attachment_jobs.lock().await.remove(job_id);
+    let Some(job) = job else {
+        return;
+    };
+    job.cancellation.cancel();
+    if let Some(work_key) = job.work_key {
+        detach_job_from_work(runtime, job_id, &work_key).await;
+    }
+}
+
+pub(crate) async fn attachment_preparation_snapshot(
+    runtime: &BrainRuntimeState,
+    job_id: &str,
+) -> Option<PrepareAttachmentResult> {
+    let jobs = runtime.attachment_jobs.lock().await;
+    let job = jobs.get(job_id)?;
+    let (attachment_hash, cas_path, file_type) = job.staged.clone()?;
+    Some(PrepareAttachmentResult {
+        job_id: job_id.to_string(),
+        attachment_hash: Some(attachment_hash),
+        cas_path: Some(cas_path),
+        file_type: Some(file_type),
+        status: AttachmentPreparationStatus::Pending,
+        disposition: Some("staged".to_string()),
+        error_code: None,
+        error_message: None,
+    })
+}
+
+pub(crate) async fn cancel_all_attachment_jobs(runtime: &BrainRuntimeState) {
+    let jobs = runtime
+        .attachment_jobs
+        .lock()
+        .await
+        .drain()
+        .map(|(_, job)| job)
+        .collect::<Vec<_>>();
+    for job in jobs {
+        job.cancellation.cancel();
+    }
+    let work = runtime
+        .attachment_work
+        .lock()
+        .await
+        .drain()
+        .map(|(_, work)| work)
+        .collect::<Vec<_>>();
+    for work in work {
+        work.cancellation.cancel();
+    }
+    cancel_preflight(runtime).await;
+}
+
+async fn wait_for_connectivity(
+    credential: &ActiveCredential,
+    cancellation: &CancellationToken,
+) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    loop {
+        if !load_active_credential().await?.matches(credential) {
+            return Err("KEY_CHANGED".to_string());
+        }
+        let response = tokio::select! {
+            result = client
+                .get("https://generativelanguage.googleapis.com/v1beta/models")
+                .header("x-goog-api-key", credential.api_key())
+                .send() => result,
+            _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+        };
+        match response {
+            Ok(response) if response.status().is_success() => return Ok(()),
+            Ok(response) if !response.status().is_server_error() => {
+                if !load_active_credential().await?.matches(credential) {
+                    return Err("KEY_CHANGED".to_string());
+                }
+                return Err(format!(
+                    "Gemini connectivity check failed ({})",
+                    response.status()
+                ));
+            }
+            Ok(_) | Err(_) => {
+                if !load_active_credential().await?.matches(credential) {
+                    return Err("KEY_CHANGED".to_string());
+                }
+                tokio::select! {
+                    _ = tokio::time::sleep(CONNECTIVITY_RETRY_DELAY) => {}
+                    _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+                }
+            }
+        }
+    }
+}
+
+fn submission_failure(
+    hash: String,
+    file_type: Option<AttachmentFileType>,
+    error: String,
+) -> SubmissionAttachmentResult {
+    let status = if error == "CANCELLED" {
+        AttachmentPreparationStatus::Cancelled
+    } else {
+        AttachmentPreparationStatus::Failed
+    };
+    let error = preparation_error(error);
+    SubmissionAttachmentResult {
+        attachment_hash: hash,
+        file_type,
+        status,
+        disposition: None,
+        error_code: Some(error.code),
+        error_message: Some(error.message),
+    }
+}
+
+fn new_preflight_token() -> String {
+    let mut bytes = [0u8; 32];
+    rand::rngs::OsRng.fill_bytes(&mut bytes);
+    format!(
+        "attachment_preflight_{}",
+        general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+    )
+}
+
+pub(crate) async fn prepare_submission_attachments(
+    runtime: &BrainRuntimeState,
+    request: PrepareSubmissionAttachmentsRequest,
+) -> PrepareSubmissionAttachmentsResult {
+    let cancellation = CancellationToken::new();
+    {
+        let mut preflights = runtime.attachment_preflights.lock().await;
+        if preflights.contains_key(&request.preflight_id) {
+            return PrepareSubmissionAttachmentsResult {
+                preflight_token: None,
+                results: request
+                    .attachment_hashes
+                    .into_iter()
+                    .map(|hash| {
+                        submission_failure(
+                            hash,
+                            None,
+                            "Attachment preflight ID is already active".to_string(),
+                        )
+                    })
+                    .collect(),
+            };
+        }
+        preflights.insert(request.preflight_id.clone(), cancellation.clone());
+    }
+
+    let result = prepare_submission_attachments_inner(runtime, &request, &cancellation).await;
+    runtime
+        .attachment_preflights
+        .lock()
+        .await
+        .remove(&request.preflight_id);
+    result
+}
+
+async fn prepare_submission_attachments_inner(
+    runtime: &BrainRuntimeState,
+    request: &PrepareSubmissionAttachmentsRequest,
+    cancellation: &CancellationToken,
+) -> PrepareSubmissionAttachmentsResult {
+    let fail_all = |error: String| PrepareSubmissionAttachmentsResult {
+        results: request
+            .attachment_hashes
+            .iter()
+            .cloned()
+            .map(|hash| submission_failure(hash, None, error.clone()))
+            .collect(),
+        preflight_token: None,
+    };
+    if request
+        .attachment_hashes
+        .iter()
+        .any(|hash| hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()))
+    {
+        return fail_all("Preflight contains an invalid attachment hash".to_string());
+    }
+
+    loop {
+        let credential = match load_active_credential().await {
+            Ok(credential) => credential,
+            Err(error) => return fail_all(error),
+        };
+        if let Err(error) = wait_for_connectivity(&credential, cancellation).await {
+            if error == "KEY_CHANGED" {
+                continue;
+            }
+            return fail_all(error);
+        }
+
+        let futures = request.attachment_hashes.iter().map(|hash| {
+            let credential = credential.clone();
+            async move {
+                let storage = ThreadStorage::new().map_err(|error| error.to_string())?;
+                let manifest = storage
+                    .load_object_manifest(hash)
+                    .map_err(|error| error.to_string())?;
+                let file_type = manifest.file_context.file_type;
+                if file_type == AttachmentFileType::TextLocal {
+                    return Ok(SubmissionAttachmentResult {
+                        attachment_hash: hash.clone(),
+                        file_type: Some(file_type),
+                        status: AttachmentPreparationStatus::Ready,
+                        disposition: Some("local-only".to_string()),
+                        error_code: None,
+                        error_message: None,
+                    });
+                }
+                let path = storage
+                    .find_object_blob(hash)
+                    .map_err(|error| error.to_string())?;
+                match ensure_file_uploaded_for_credential(
+                    runtime,
+                    &credential,
+                    &path.to_string_lossy(),
+                    cancellation,
+                )
+                .await
+                {
+                    Ok(ensured) => Ok(SubmissionAttachmentResult {
+                        attachment_hash: hash.clone(),
+                        file_type: Some(file_type),
+                        status: AttachmentPreparationStatus::Ready,
+                        disposition: Some(ensured.disposition.as_str().to_string()),
+                        error_code: None,
+                        error_message: None,
+                    }),
+                    Err(error) => Ok(submission_failure(hash.clone(), Some(file_type), error)),
+                }
+            }
+        });
+        let settled = join_all(futures).await;
+        let mut attachments = Vec::with_capacity(settled.len());
+        for (index, settled) in settled.into_iter().enumerate() {
+            match settled {
+                Ok(result) => attachments.push(result),
+                Err(error) => attachments.push(submission_failure(
+                    request.attachment_hashes[index].clone(),
+                    None,
+                    error,
+                )),
+            }
+        }
+        let latest = match load_active_credential().await {
+            Ok(credential) => credential,
+            Err(error) => return fail_all(error),
+        };
+        if !latest.matches(&credential) {
+            continue;
+        }
+        if attachments.iter().any(|result| {
+            result
+                .error_message
+                .as_deref()
+                .is_some_and(is_transient_remote_error)
+        }) {
+            tokio::select! {
+                _ = tokio::time::sleep(CONNECTIVITY_RETRY_DELAY) => continue,
+                _ = cancellation.cancelled() => return fail_all("CANCELLED".to_string()),
+            }
+        }
+        if attachments
+            .iter()
+            .any(|result| result.status != AttachmentPreparationStatus::Ready)
+        {
+            return PrepareSubmissionAttachmentsResult {
+                preflight_token: None,
+                results: attachments,
+            };
+        }
+        return PrepareSubmissionAttachmentsResult {
+            preflight_token: Some(new_preflight_token()),
+            results: attachments,
+        };
+    }
+}
+
+pub(crate) async fn cancel_preflight(runtime: &BrainRuntimeState) {
+    let mut controls = runtime.attachment_preflights.lock().await;
+    for (_, control) in controls.drain() {
+        control.cancel();
+    }
+}
