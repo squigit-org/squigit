@@ -28,6 +28,13 @@ pub struct CliThreadEntry {
     pub id: String,
     pub title: String,
     pub updated_at: String,
+    pub kind: CliThreadKind,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CliThreadKind {
+    Image,
+    SideChat,
 }
 
 #[derive(Clone, Debug)]
@@ -53,6 +60,28 @@ pub struct CliSubmissionResult {
     pub attachment_hashes: Vec<String>,
 }
 
+#[derive(Clone, Debug)]
+pub struct CliComposerMention {
+    pub start: usize,
+    pub end: usize,
+    pub path: PathBuf,
+}
+
+#[derive(Clone, Debug)]
+pub struct CliComposerResolution {
+    pub markdown: String,
+    pub attachment_paths: Vec<PathBuf>,
+    pub mentions: Vec<CliComposerMention>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CliOcrRun {
+    pub model_id: String,
+    pub model_name: String,
+    pub scanned_at: String,
+    pub text: String,
+}
+
 struct PreparedAttachment {
     source_path: PathBuf,
     cas_path: String,
@@ -69,6 +98,30 @@ pub fn attachment_mention(path: &Path) -> Result<String, String> {
         .unwrap_or("attachment")
         .replace(['[', ']', '\n', '\r'], " ");
     Ok(format!("[{label}](<file://{}>)", normalized_path(&path)))
+}
+
+pub fn resolve_composer_mentions(input: &str, directory: &Path) -> CliComposerResolution {
+    let mentions = find_composer_mentions(input, directory);
+    let mut markdown = String::with_capacity(input.len());
+    let mut cursor = 0;
+    let mut attachment_paths = Vec::with_capacity(mentions.len());
+    for mention in &mentions {
+        markdown.push_str(&input[cursor..mention.start]);
+        markdown.push_str(
+            &attachment_mention(&mention.path)
+                .unwrap_or_else(|_| input[mention.start..mention.end].to_string()),
+        );
+        cursor = mention.end;
+        if !attachment_paths.contains(&mention.path) {
+            attachment_paths.push(mention.path.clone());
+        }
+    }
+    markdown.push_str(&input[cursor..]);
+    CliComposerResolution {
+        markdown,
+        attachment_paths,
+        mentions,
+    }
 }
 
 pub fn resume_sections_for_directory(directory: &Path) -> Result<Vec<CliResumeSection>, String> {
@@ -93,6 +146,7 @@ pub fn resume_sections_for_directory(directory: &Path) -> Result<Vec<CliResumeSe
                 id: thread.id,
                 title: thread.title,
                 updated_at: thread.updated_at,
+                kind: CliThreadKind::Image,
             })
             .collect::<Vec<_>>();
         if !threads.is_empty() {
@@ -111,12 +165,29 @@ pub fn resume_sections_for_directory(directory: &Path) -> Result<Vec<CliResumeSe
             id: thread.id,
             title: thread.title,
             updated_at: thread.updated_at,
+            kind: CliThreadKind::Image,
         })
         .collect::<Vec<_>>();
     if !recents.is_empty() {
         sections.push(CliResumeSection {
             title: "Recents".to_string(),
             threads: recents,
+        });
+    }
+
+    let sidechats = explorer::list_sidechat_threads()?
+        .into_iter()
+        .map(|thread| CliThreadEntry {
+            id: thread.id,
+            title: thread.title,
+            updated_at: thread.updated_at,
+            kind: CliThreadKind::SideChat,
+        })
+        .collect::<Vec<_>>();
+    if !sidechats.is_empty() {
+        sections.push(CliResumeSection {
+            title: "Chats".to_string(),
+            threads: sidechats,
         });
     }
 
@@ -293,21 +364,38 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
 }
 
 pub fn load_ocr_text(thread_id: &str, model_id: Option<&str>) -> Result<String, String> {
+    let runs = list_ocr_runs(thread_id)?;
+    Ok(model_id
+        .and_then(|model_id| runs.iter().find(|run| run.model_id == model_id))
+        .or_else(|| runs.first())
+        .map(|run| run.text.clone())
+        .unwrap_or_default())
+}
+
+pub fn list_ocr_runs(thread_id: &str) -> Result<Vec<CliOcrRun>, String> {
     let snapshot = crate::thread::ocr::load_ocr_thread(thread_id)?;
-    let regions = model_id
-        .and_then(|model_id| snapshot.ocr_data.get(model_id))
-        .or_else(|| {
-            snapshot.ocr_data.values().max_by_key(|entry| match entry {
-                OcrAnnotationEntry::Model(model) => model.scanned_at,
-                OcrAnnotationEntry::EmptyState(_) => None,
-            })
+    let mut runs = snapshot
+        .ocr_data
+        .into_iter()
+        .filter_map(|(model_id, entry)| match entry {
+            OcrAnnotationEntry::Model(model) => Some(CliOcrRun {
+                model_name: squigit_ocr::models::OCR_MODELS
+                    .iter()
+                    .find(|candidate| candidate.id == model_id)
+                    .map(|candidate| candidate.name.to_string())
+                    .unwrap_or_else(|| model_id.clone()),
+                model_id,
+                scanned_at: model
+                    .scanned_at
+                    .map(|value| value.to_rfc3339())
+                    .unwrap_or_else(|| "unknown time".to_string()),
+                text: format_ocr_regions(&model.ocr_data),
+            }),
+            OcrAnnotationEntry::EmptyState(_) => None,
         })
-        .map(|entry| match entry {
-            OcrAnnotationEntry::EmptyState(regions) => regions.clone(),
-            OcrAnnotationEntry::Model(model) => model.ocr_data.clone(),
-        })
-        .unwrap_or_default();
-    Ok(format_ocr_regions(&regions))
+        .collect::<Vec<_>>();
+    runs.sort_by(|left, right| right.scanned_at.cmp(&left.scanned_at));
+    Ok(runs)
 }
 
 pub fn persona_path() -> Result<PathBuf, String> {
@@ -330,10 +418,72 @@ fn normalized_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
+fn find_composer_mentions(input: &str, directory: &Path) -> Vec<CliComposerMention> {
+    let mut mentions = Vec::new();
+    let mut cursor = 0;
+    while let Some(relative_start) = input[cursor..].find('@') {
+        let start = cursor + relative_start;
+        let starts_at_boundary = start == 0
+            || input[..start]
+                .chars()
+                .next_back()
+                .is_some_and(char::is_whitespace);
+        if !starts_at_boundary {
+            cursor = start + 1;
+            continue;
+        }
+
+        let tail = &input[start + 1..];
+        let (value, end) = if let Some(quoted) = tail.strip_prefix('<') {
+            let Some(close) = quoted.find('>') else {
+                cursor = start + 1;
+                continue;
+            };
+            (&quoted[..close], start + 1 + close + 2)
+        } else {
+            let length = tail.find(char::is_whitespace).unwrap_or(tail.len());
+            (&tail[..length], start + 1 + length)
+        };
+        if value.is_empty() {
+            cursor = start + 1;
+            continue;
+        }
+        let candidate = Path::new(value);
+        let candidate = if candidate.is_absolute() {
+            candidate.to_path_buf()
+        } else {
+            directory.join(candidate)
+        };
+        let Ok(path) = std::fs::canonicalize(candidate) else {
+            cursor = end;
+            continue;
+        };
+        let supported = path.is_file()
+            && path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| {
+                    SUPPORTED_FILE_EXTENSIONS
+                        .iter()
+                        .any(|supported| extension.eq_ignore_ascii_case(supported))
+                });
+        if supported {
+            mentions.push(CliComposerMention { start, end, path });
+        }
+        cursor = end;
+    }
+    mentions
+}
+
 fn write_boundary_log(timestamp: &str, envelope: &serde_json::Value) -> Result<PathBuf, String> {
-    let logs_dir = crate::storage::paths::base_config_dir()
-        .ok_or_else(|| "Could not locate Squigit's config directory".to_string())?
-        .join("logs");
+    let logs_dir = std::env::var_os("SQUIGIT_LOG_DIR")
+        .map(PathBuf::from)
+        .map(Ok)
+        .unwrap_or_else(|| {
+            crate::storage::paths::base_config_dir()
+                .ok_or_else(|| "Could not locate Squigit's config directory".to_string())
+                .map(|directory| directory.join("logs"))
+        })?;
     std::fs::create_dir_all(&logs_dir).map_err(|error| error.to_string())?;
     let file_name = timestamp
         .chars()
