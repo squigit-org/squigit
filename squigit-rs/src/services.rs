@@ -40,3 +40,8 @@ pub fn ocr_install_script_path() -> std::path::PathBuf {
 pub fn ensure_ocr_install_script() -> Result<std::path::PathBuf, String> {
     squigit_ocr::install::ensure_install_script()
 }
+
+/// Run the shared Squigit OCR installer and wait for it to finish.
+pub fn install_ocr_engine() -> Result<(), String> {
+    squigit_ocr::install::install_engine()
+}
