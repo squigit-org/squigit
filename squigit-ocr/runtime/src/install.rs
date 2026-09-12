@@ -96,3 +96,28 @@ pub fn ensure_install_script() -> Result<PathBuf, String> {
     }
     Ok(path)
 }
+
+/// Run the generated installer and wait for it to finish.
+pub fn install_engine() -> Result<(), String> {
+    let path = ensure_install_script()?;
+
+    #[cfg(target_os = "windows")]
+    let status = std::process::Command::new("powershell.exe")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
+        .arg(&path)
+        .status();
+
+    #[cfg(not(target_os = "windows"))]
+    let status = std::process::Command::new(&path).status();
+
+    let status = status
+        .map_err(|error| format!("Failed to start OCR installer {}: {error}", path.display()))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "OCR installer {} exited with {status}",
+            path.display()
+        ))
+    }
+}
