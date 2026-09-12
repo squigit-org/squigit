@@ -8,10 +8,9 @@ mod paths;
 mod types;
 mod upload;
 
-pub use cache::ensure_file_uploaded;
 pub(crate) use cache::{
-    capture_image_thread_credential, ensure_file_uploaded_for_credential, load_active_api_key,
-    ActiveCredential,
+    capture_image_thread_credential, ensure_file_uploaded, ensure_file_uploaded_for_credential,
+    load_active_api_key, ActiveCredential,
 };
 pub(crate) use lifecycle::{
     attachment_preparation_snapshot, cancel_all_attachment_jobs, cancel_attachment,
