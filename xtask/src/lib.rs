@@ -126,12 +126,13 @@ fn inspect_source_tree(root: &Path) -> Result<(), String> {
                     display_path(root, path)
                 ));
             }
-            for forbidden in [
-                "desktop/.vscode",
-                "/home/a7md/@squigit/desktop",
-                "../desktop",
-            ] {
-                if content.contains(forbidden) {
+            let forbidden_paths = [
+                ["desktop", ".vscode"].join("/"),
+                ["", "home", "a7md", "@squigit", "desktop"].join("/"),
+                ["..", "desktop"].join("/"),
+            ];
+            for forbidden in forbidden_paths {
+                if content.contains(&forbidden) {
                     problems.push(format!(
                         "private source reference {forbidden:?}: {}",
                         display_path(root, path)
