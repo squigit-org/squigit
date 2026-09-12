@@ -1,0 +1,25 @@
+[package]
+name = "squigit-ocr"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "OCR execution, installation, and model management for Squigit"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+flate2 = "1.1.9"
+futures-util = "0.3"
+reqwest = { version = "0.11", features = ["json", "rustls-tls", "stream"] }
+tar = "0.4.44"
+tokio = { version = "1.37", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
+dirs = "6.0"
+which = "6.0"
+semver = "1.0"
+squigit-storage = { version = "0.1.0", path = "../../crates/squigit-storage" }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
