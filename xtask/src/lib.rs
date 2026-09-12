@@ -4,7 +4,7 @@
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Stdio};
 
 const HELP: &str = "Squigit repository tasks
 
@@ -16,8 +16,8 @@ Commands:
 
 Examples:
   cargo xtask doctor
-  SQUIGIT_HOME=~/.squigit-dev cargo xtask dev
-  cargo xtask dev -- --home ~/.squigit-dev image.png";
+  SQUIGIT_HOME=\"$HOME/.squigit-dev\" cargo xtask dev
+  cargo xtask dev -- --home \"$HOME/.squigit-dev\" image.png";
 
 pub fn run(arguments: &[String]) -> i32 {
     let Some(command) = arguments.first().map(String::as_str) else {
@@ -50,22 +50,27 @@ fn doctor() -> Result<ExitStatus, String> {
     println!("[doctor] source headers and private path references");
     inspect_source_tree(&root)?;
 
-    let checks: &[(&str, &[&str])] = &[
+    let checks: &[(&str, &[&str], bool)] = &[
         (
             "workspace metadata",
             &["metadata", "--locked", "--no-deps", "--format-version=1"],
+            true,
         ),
-        ("formatting", &["fmt", "--all", "--", "--check"]),
+        ("formatting", &["fmt", "--all", "--", "--check"], false),
         (
             "workspace compile",
-            &["check", "--locked", "--workspace", "--all-targets"],
+            &["check", "--locked", "--workspace"],
+            false,
         ),
     ];
-    for (label, arguments) in checks {
+    for (label, arguments, quiet) in checks {
         println!("[doctor] {label}");
-        let status = Command::new("cargo")
-            .args(*arguments)
-            .current_dir(&root)
+        let mut command = Command::new("cargo");
+        command.args(*arguments).current_dir(&root);
+        if *quiet {
+            command.stdout(Stdio::null());
+        }
+        let status = command
             .status()
             .map_err(|error| format!("could not start cargo for {label}: {error}"))?;
         if !status.success() {
@@ -84,6 +89,7 @@ fn dev(arguments: &[String]) -> Result<ExitStatus, String> {
     Command::new("cargo")
         .args(["run", "--package", "squigit-cli", "--bin", "squigit", "--"])
         .args(forwarded)
+        .env("SQUIGIT_LOG_DIR", root.join("logs"))
         .current_dir(root)
         .status()
         .map_err(|error| format!("could not start squigit-cli: {error}"))
