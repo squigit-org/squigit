@@ -239,6 +239,35 @@ pub fn list_sidechat_threads() -> ExplorerResult<Vec<ExplorerSideChatThread>> {
     Ok(sidechats.into_iter().map(Into::into).collect())
 }
 
+pub fn rename_sidechat(
+    sidechat_id: String,
+    title: String,
+) -> ExplorerResult<ExplorerSideChatThread> {
+    let storage = active_storage()?;
+    let mut sidechat = storage
+        .load_sidechat(&sidechat_id)
+        .map_err(|error| error.to_string())?;
+    sidechat.metadata.title = title;
+    sidechat.metadata.updated_at = Utc::now();
+    storage
+        .update_sidechat_metadata(&sidechat.metadata)
+        .map_err(|error| error.to_string())?;
+    Ok(sidechat.metadata.into())
+}
+
+pub fn delete_sidechat(sidechat_id: String) -> ExplorerResult<()> {
+    active_storage()?
+        .delete_sidechat(&sidechat_id)
+        .map_err(|error| error.to_string())
+}
+
+pub fn fork_sidechat(sidechat_id: String) -> ExplorerResult<ExplorerSideChatThread> {
+    active_storage()?
+        .fork_sidechat_latest(&sidechat_id)
+        .map(Into::into)
+        .map_err(|error| error.to_string())
+}
+
 pub fn group_threads(first_id: String, second_id: String) -> ExplorerResult<ExplorerWorkspace> {
     active_storage()?
         .group_threads(&first_id, &second_id)
