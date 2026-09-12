@@ -1,0 +1,17 @@
+[package]
+name = "squigit-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Terminal interface for Squigit"
+
+[[bin]]
+name = "squigit"
+path = "src/main.rs"
+
+[dependencies]
+crossterm = "0.28"
+ratatui = "0.29"
+squigit-rs = { version = "0.1.0", path = "../squigit-rs" }
+tokio = { version = "1.37", features = ["macros", "rt-multi-thread", "sync", "time"] }
