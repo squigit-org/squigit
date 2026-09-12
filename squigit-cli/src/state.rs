@@ -58,6 +58,7 @@ pub enum MenuAction {
     SetModel { id: String },
     SetEffort { effort: String },
     SetOcrModel { id: String },
+    StartScan { id: String },
     DownloadOcrModel { id: String },
     CancelOcrModel { id: String },
     ConfigureKey { provider: String },
