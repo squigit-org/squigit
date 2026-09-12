@@ -20,28 +20,37 @@ pub(crate) fn write_request_log(context: &GeminiRequestLogContext<'_>, request: 
     let rendered = match serde_json::to_string_pretty(request) {
         Ok(value) => value,
         Err(error) => {
-            eprintln!("[SquigitBrain] Failed to render Gemini request log: {error}");
+            if std::env::var_os("SQUIGIT_TUI_ACTIVE").is_none() {
+                eprintln!("[SquigitBrain] Failed to render Gemini request log: {error}");
+            }
             return;
         }
     };
 
     if let Err(error) = std::fs::write(&path, format!("{rendered}\n")) {
-        eprintln!(
-            "[SquigitBrain] Failed to write Gemini request log {}: {}",
-            path.display(),
-            error
-        );
+        if std::env::var_os("SQUIGIT_TUI_ACTIVE").is_none() {
+            eprintln!(
+                "[SquigitBrain] Failed to write Gemini request log {}: {}",
+                path.display(),
+                error
+            );
+        }
     }
 }
 
 fn build_log_path(context: &GeminiRequestLogContext<'_>) -> Option<PathBuf> {
-    let logs_dir = squigit_storage::paths::base_config_dir()?.join("logs");
+    let logs_dir = std::env::var_os("SQUIGIT_LOG_DIR")
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| squigit_storage::paths::base_config_dir().map(|path| path.join("logs")))?;
     if let Err(error) = std::fs::create_dir_all(&logs_dir) {
-        eprintln!(
-            "[SquigitBrain] Failed to create logs directory {}: {}",
-            logs_dir.display(),
-            error
-        );
+        if std::env::var_os("SQUIGIT_TUI_ACTIVE").is_none() {
+            eprintln!(
+                "[SquigitBrain] Failed to create logs directory {}: {}",
+                logs_dir.display(),
+                error
+            );
+        }
         return None;
     }
     let timestamp = chrono::Local::now().format("%Y%m%d-%H%M%S-%3f");

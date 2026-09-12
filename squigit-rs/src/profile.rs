@@ -18,6 +18,14 @@ use squigit_auth::CredentialsSource;
 use squigit_storage::{Profile, ProfileSnapshot, ProfileStore};
 use thiserror::Error;
 
+macro_rules! profile_log {
+    ($($argument:tt)*) => {
+        if std::env::var_os("SQUIGIT_TUI_ACTIVE").is_none() {
+            eprintln!($($argument)*);
+        }
+    };
+}
+
 pub type Result<T> = std::result::Result<T, ProfileError>;
 
 #[derive(Debug, Error)]
@@ -152,7 +160,7 @@ fn run_google_auth(cancelled: Arc<AtomicBool>) -> Result<ProfileSnapshot> {
     };
     let status_url = google_auth_status_page_url_for(&settings.status_page_url, page);
     if let Err(error) = callback.redirect(&status_url) {
-        eprintln!("[profile] Failed to redirect the Google auth response: {error}");
+        profile_log!("[profile] Failed to redirect the Google auth response: {error}");
     }
 
     result?;
@@ -313,10 +321,10 @@ fn schedule_avatar_hydration(profile: &Profile) {
             match ProfileStore::new() {
                 Ok(store) => {
                     if let Err(error) = hydrate_avatar(&store, &url, Some(&profile_id)) {
-                        eprintln!("[profile] Avatar hydration stopped: {error}");
+                        profile_log!("[profile] Avatar hydration stopped: {error}");
                     }
                 }
-                Err(error) => eprintln!("[profile] Could not open avatar storage: {error}"),
+                Err(error) => profile_log!("[profile] Could not open avatar storage: {error}"),
             }
             if let Ok(mut hydrations) = avatar_hydrations().lock() {
                 hydrations.remove(&thread_key);
@@ -327,6 +335,6 @@ fn schedule_avatar_hydration(profile: &Profile) {
         if let Ok(mut hydrations) = avatar_hydrations().lock() {
             hydrations.remove(&hydration_key);
         }
-        eprintln!("[profile] Could not start avatar hydration: {error}");
+        profile_log!("[profile] Could not start avatar hydration: {error}");
     }
 }

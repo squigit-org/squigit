@@ -364,17 +364,24 @@ fn read_text_attachment(path: &str, label: &str) -> (TextAttachmentResult, Strin
 }
 
 fn write_text_first_message_log(ui_message: &str, output: &TextFirstMessage) {
-    let Some(logs_dir) = squigit_storage::paths::base_config_dir()
-        .map(|config_root| config_root.join("logs")) else {
+    let Some(logs_dir) = std::env::var_os("SQUIGIT_LOG_DIR")
+        .filter(|path| !path.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            squigit_storage::paths::base_config_dir().map(|config_root| config_root.join("logs"))
+        })
+    else {
         return;
     };
 
     if let Err(error) = std::fs::create_dir_all(&logs_dir) {
-        eprintln!(
-            "[SquigitHarness] Failed to create logs directory {}: {}",
-            logs_dir.display(),
-            error
-        );
+        if std::env::var_os("SQUIGIT_TUI_ACTIVE").is_none() {
+            eprintln!(
+                "[SquigitHarness] Failed to create logs directory {}: {}",
+                logs_dir.display(),
+                error
+            );
+        }
         return;
     }
 
@@ -416,11 +423,13 @@ fn write_text_first_message_log(ui_message: &str, output: &TextFirstMessage) {
     );
 
     if let Err(error) = std::fs::write(&path, rendered) {
-        eprintln!(
-            "[SquigitHarness] Failed to write harness log {}: {}",
-            path.display(),
-            error
-        );
+        if std::env::var_os("SQUIGIT_TUI_ACTIVE").is_none() {
+            eprintln!(
+                "[SquigitHarness] Failed to write harness log {}: {}",
+                path.display(),
+                error
+            );
+        }
     }
 }
 

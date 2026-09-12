@@ -17,6 +17,14 @@ use tokio_util::sync::CancellationToken;
 
 use crate::network::{NetworkStatus, PeerNetworkMonitor};
 
+macro_rules! model_log {
+    ($($argument:tt)*) => {
+        if std::env::var_os("SQUIGIT_TUI_ACTIVE").is_none() {
+            eprintln!($($argument)*);
+        }
+    };
+}
+
 pub const DEFAULT_OCR_MODEL_ID: &str = "pp-ocr-v5-en";
 
 #[derive(Clone, Copy, Debug)]
@@ -288,7 +296,7 @@ impl ModelManager {
         if let Ok(mut tokens) = self.cancellation_tokens.lock() {
             tokens.insert(canonical_id.clone(), cancel_token.clone());
         }
-        eprintln!(
+        model_log!(
             "[squigit-ocr:models] {} preflight 1/3: checking internet availability",
             canonical_id
         );
@@ -306,7 +314,7 @@ impl ModelManager {
                 return;
             };
             let message = format!("model download worker crashed: {error}");
-            eprintln!("[squigit-ocr:models] {canonical_id} failed\n{message}");
+            model_log!("[squigit-ocr:models] {canonical_id} failed\n{message}");
             watcher_manager.set_download_failure(&canonical_id, message);
         });
         Ok(())
@@ -331,7 +339,7 @@ impl ModelManager {
                     total: 0,
                     status: "downloaded".to_string(),
                 });
-                eprintln!(
+                model_log!(
                     "[squigit-ocr:models] {} installed at {}",
                     model_id,
                     path.display()
@@ -348,7 +356,7 @@ impl ModelManager {
             }
             Err(error) => {
                 let message = error.to_string();
-                eprintln!("[squigit-ocr:models] {model_id} failed\n{message}");
+                model_log!("[squigit-ocr:models] {model_id} failed\n{message}");
                 self.set_download_failure(&model_id, message);
             }
         }
@@ -399,32 +407,32 @@ impl ModelManager {
         if status_changed {
             match payload.status.as_str() {
                 "internet_available" => {
-                    eprintln!("[squigit-ocr:models] {} preflight 1/3: passed", payload.id)
+                    model_log!("[squigit-ocr:models] {} preflight 1/3: passed", payload.id)
                 }
-                "checking_installation" => eprintln!(
+                "checking_installation" => model_log!(
                     "[squigit-ocr:models] {} preflight 2/3: checking user model path",
                     payload.id
                 ),
-                "model_not_installed" => eprintln!(
+                "model_not_installed" => model_log!(
                     "[squigit-ocr:models] {} preflight 2/3: passed (not installed)",
                     payload.id
                 ),
-                "already_installed" => eprintln!(
+                "already_installed" => model_log!(
                     "[squigit-ocr:models] {} preflight 2/3: already installed",
                     payload.id
                 ),
-                "checking_availability" => eprintln!(
+                "checking_availability" => model_log!(
                     "[squigit-ocr:models] {} preflight 3/3: reading PaddlePaddle model snapshot",
                     payload.id
                 ),
                 "model_available" => {
-                    eprintln!("[squigit-ocr:models] {} preflight 3/3: passed", payload.id)
+                    model_log!("[squigit-ocr:models] {} preflight 3/3: passed", payload.id)
                 }
                 "extracting" => {
-                    eprintln!("[squigit-ocr:models] {} extracting", payload.id)
+                    model_log!("[squigit-ocr:models] {} extracting", payload.id)
                 }
                 "cancelled" => {
-                    eprintln!("[squigit-ocr:models] {} cancelled", payload.id)
+                    model_log!("[squigit-ocr:models] {} cancelled", payload.id)
                 }
                 _ => {}
             }
@@ -435,7 +443,7 @@ impl ModelManager {
                 .filter(|job| job.status == "downloading" && job.progress < payload.progress)
                 .map_or(payload.progress, |job| job.progress.saturating_add(1));
             for progress in first..=payload.progress {
-                eprintln!(
+                model_log!(
                     "[squigit-ocr:models] {} [{}] {:3}%",
                     payload.id,
                     terminal_progress_bar(progress),
@@ -463,7 +471,7 @@ impl ModelManager {
                 job.progress = 0;
             }
         }
-        eprintln!("[squigit-ocr:models] {canonical_id} cancel requested");
+        model_log!("[squigit-ocr:models] {canonical_id} cancel requested");
     }
 
     pub fn trash_downloaded_model(&self, model_id: &str) -> Result<()> {
@@ -661,9 +669,11 @@ impl ModelManager {
                     }
                     Err(e) => {
                         attempts = attempts.saturating_add(1);
-                        println!(
+                        model_log!(
                             "Download attempt failed ({}, try {}/3): {}",
-                            candidate_url, attempts, e
+                            candidate_url,
+                            attempts,
+                            e
                         );
 
                         on_progress(DownloadProgressPayload {
@@ -693,7 +703,7 @@ impl ModelManager {
                 tokens.remove(&canonical_id);
             }
 
-            println!("Extracting model {}...", canonical_id);
+            model_log!("Extracting model {}...", canonical_id);
             return self
                 .perform_extraction(
                     &chosen_url,
@@ -705,7 +715,7 @@ impl ModelManager {
                 .await;
         }
 
-        println!(
+        model_log!(
             "Archive download failed for {}. Falling back to direct model file download...",
             canonical_id
         );
@@ -841,9 +851,10 @@ impl ModelManager {
                     total: REQUIRED_FILES.len() as u64,
                     status: "extracting".to_string(),
                 });
-                println!(
+                model_log!(
                     "Model {} installed successfully at {:?} (direct file fallback)",
-                    model_id, target_dir
+                    model_id,
+                    target_dir
                 );
                 return Ok(target_dir.to_path_buf());
             }
@@ -896,7 +907,7 @@ impl ModelManager {
                 (total_size, can_resume)
             }
             Ok(head_resp) => {
-                println!(
+                model_log!(
                     "HEAD {} returned {}; continuing without resume metadata",
                     url,
                     head_resp.status()
@@ -904,7 +915,7 @@ impl ModelManager {
                 (0, false)
             }
             Err(err) => {
-                println!("HEAD {} failed ({}); continuing with direct GET", url, err);
+                model_log!("HEAD {} failed ({}); continuing with direct GET", url, err);
                 (0, false)
             }
         };
@@ -1051,9 +1062,10 @@ impl ModelManager {
         }
 
         fs::remove_file(temp_file_path)?;
-        println!(
+        model_log!(
             "Model {} installed successfully at {:?}",
-            model_id, target_dir
+            model_id,
+            target_dir
         );
         Ok(target_dir.to_path_buf())
     }
