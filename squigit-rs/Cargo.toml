@@ -1,0 +1,32 @@
+[package]
+name = "squigit-rs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Public Rust facade for Squigit application services"
+
+[lib]
+name = "squigit"
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+fsindex = "0.3.1"
+image = "0.25"
+mime_guess = "2.0"
+nucleo-matcher = "0.3.1"
+reqwest = { version = "0.11", features = ["json", "multipart", "rustls-tls"] }
+regex = "1.12.3"
+semver = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+squigit-auth = { version = "0.1.0", path = "../crates/squigit-auth" }
+squigit-brain = { version = "0.1.0", path = "../crates/squigit-brain" }
+squigit-harness = { version = "0.1.0", path = "../crates/squigit-harness" }
+squigit-ocr = { version = "0.1.0", path = "../squigit-ocr/runtime" }
+squigit-storage = { version = "0.1.0", path = "../crates/squigit-storage" }
+thiserror = "2.0"
+tokio = { version = "1.37", features = ["fs", "macros", "rt", "sync", "time"] }
+toml = "0.8"
+url = "2.5"
+webbrowser = "1.2.1"
