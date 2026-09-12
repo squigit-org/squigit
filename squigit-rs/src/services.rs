@@ -45,3 +45,11 @@ pub fn ensure_ocr_install_script() -> Result<std::path::PathBuf, String> {
 pub fn install_ocr_engine() -> Result<(), String> {
     squigit_ocr::install::install_engine()
 }
+
+pub fn ocr_update_command() -> Option<String> {
+    squigit_ocr::install::update_command()
+}
+
+pub fn update_ocr_engine() -> Result<(), String> {
+    squigit_ocr::install::update_engine()
+}
