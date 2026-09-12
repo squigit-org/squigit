@@ -31,9 +31,10 @@ impl CliArgs {
                     parsed.home = Some(PathBuf::from(value));
                 }
                 "--" => {
-                    for value in arguments {
+                    while let Some(value) = arguments.next() {
                         parsed.set_image(value)?;
                     }
+                    break;
                 }
                 value if value.starts_with('-') => {
                     return Err(format!("unknown option: {value}"));
