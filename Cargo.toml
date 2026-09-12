@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/*",
+    "squigit-cli",
     "squigit-ocr/runtime",
     "squigit-rs",
     "xtask",
