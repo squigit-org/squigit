@@ -15,9 +15,10 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::{ByokErrorCode, ProfileError, Result};
 
-use super::{
-    validate_api_key, ApiKeyProvider, OsSecretVault, SecretVault, VaultKey,
-    CAS_BINDING_KEY_ACCOUNT, RECORD_ENCRYPTION_MASTER_ACCOUNT,
+use super::{validate_api_key, ApiKeyProvider};
+use super::vault::{
+    OsSecretVault, SecretVault, VaultKey, CAS_BINDING_KEY_ACCOUNT,
+    RECORD_ENCRYPTION_MASTER_ACCOUNT,
 };
 
 const RECORD_KEY_DOMAIN: &str = "squigit/byok/v1/record-key";
