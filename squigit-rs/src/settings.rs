@@ -10,8 +10,8 @@ use crate::brain::provider::gemini::models::{
     DEFAULT_MODEL_EFFORT, MODEL_EFFORTS, PRIMARY_FAST_MODEL, SELECTABLE_MODELS,
 };
 use crate::storage::{paths::base_config_dir, rules, ProfileStore, VersionStore};
-use squigit_ocr::models::{DEFAULT_OCR_MODEL_ID, OCR_MODELS};
 use serde::{Deserialize, Serialize};
+use squigit_ocr::models::{DEFAULT_OCR_MODEL_ID, OCR_MODELS};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -505,8 +505,7 @@ pub fn reveal_api_key(
     captcha_passed: bool,
 ) -> SettingsResult<Option<String>> {
     let store = ProfileStore::new().map_err(|error| error.to_string())?;
-    let authorization = check_reveal_authorization(&store)
-        .map_err(|error| error.to_string())?;
+    let authorization = check_reveal_authorization(&store).map_err(|error| error.to_string())?;
     if authorization != RevealAuthResult::Authorized && !captcha_passed {
         return Err("captcha-required".to_string());
     }
@@ -690,4 +689,3 @@ pub fn load_help_diagnostics() -> SettingsResult<HelpDiagnostics> {
         os: os_diagnostics(),
     })
 }
-

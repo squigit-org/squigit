@@ -330,4 +330,3 @@ fn schedule_avatar_hydration(profile: &Profile) {
         eprintln!("[profile] Could not start avatar hydration: {error}");
     }
 }
-

@@ -414,4 +414,3 @@ fn start_watcher(inner: &Arc<FileSearchIndexInner>) {
         }
     });
 }
-

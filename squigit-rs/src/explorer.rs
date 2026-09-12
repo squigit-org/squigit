@@ -594,4 +594,3 @@ pub fn get_jobs_snapshot() -> ExplorerResult<Vec<ExplorerJobSnapshot>> {
         }))
         .collect())
 }
-
