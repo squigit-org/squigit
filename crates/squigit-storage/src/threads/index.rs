@@ -282,6 +282,15 @@ impl ThreadStorage {
         Ok(self.read_index()?.sidechat_threads.into_values().collect())
     }
 
+    pub(super) fn remove_sidechat_from_index(&self, sidechat_id: &str) -> Result<()> {
+        let _guard = CATALOG_WRITE_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut index = self.read_index()?;
+        index.sidechat_threads.remove(sidechat_id);
+        self.write_index(&index)
+    }
+
     pub(super) fn update_index_in_workspace(
         &self,
         metadata: &ThreadMetadata,

@@ -321,6 +321,32 @@ impl ThreadStorage {
         self.update_sidechat_index(metadata)
     }
 
+    pub fn delete_sidechat(&self, sidechat_id: &str) -> Result<()> {
+        let thread_dir = self.thread_dir(sidechat_id);
+        if thread_dir.exists() {
+            fs::remove_dir_all(thread_dir)?;
+        }
+        self.remove_sidechat_from_index(sidechat_id)
+    }
+
+    pub fn fork_sidechat_latest(&self, sidechat_id: &str) -> Result<SideChatMetadata> {
+        let source_dir = self.thread_dir(sidechat_id);
+        if !source_dir.exists() {
+            return Err(StorageError::ThreadNotFound(sidechat_id.to_string()));
+        }
+
+        let source = self.load_sidechat(sidechat_id)?;
+        let metadata = SideChatMetadata::new(format!("forked {}", source.metadata.title));
+        let destination_dir = self.thread_dir(&metadata.id);
+        copy_dir_all(&source_dir, &destination_dir)?;
+
+        let mut forked = source;
+        forked.metadata = metadata.clone();
+        forked.attachment_manifest.clear();
+        self.save_sidechat(&forked)?;
+        Ok(metadata)
+    }
+
     pub fn set_thread_workspace(&self, thread_id: &str, workspace_id: Option<&str>) -> Result<()> {
         let metadata = self.get_index_metadata(thread_id)?;
         self.update_index_in_workspace(&metadata, workspace_id)
@@ -462,5 +488,4 @@ impl ThreadStorage {
         self.update_index(metadata)?;
         Ok(())
     }
-
 }
