@@ -3,7 +3,7 @@
 
 use aes_gcm::{
     aead::{Aead, KeyInit, Payload},
-    Aes256Gcm, Key, Nonce,
+    Aes256Gcm, Nonce,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use hkdf::Hkdf;
@@ -206,10 +206,12 @@ fn encrypt_record(
     OsRng.fill_bytes(&mut nonce_bytes);
 
     let record_key = derive_record_key(master, &salt, profile_id, provider)?;
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&record_key[..]));
+    let cipher = Aes256Gcm::new_from_slice(&record_key[..])
+        .expect("HKDF-SHA256 produces an AES-256 key");
+    let nonce = Nonce::from(nonce_bytes);
     let ciphertext = cipher
         .encrypt(
-            Nonce::from_slice(&nonce_bytes),
+            &nonce,
             Payload {
                 msg: plaintext.expose().as_bytes(),
                 aad: &record_aad(profile_id, provider),
@@ -268,10 +270,15 @@ fn decrypt_record(
     }
 
     let record_key = derive_record_key(master, &salt, profile_id, provider)?;
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&record_key[..]));
+    let cipher = Aes256Gcm::new_from_slice(&record_key[..])
+        .expect("HKDF-SHA256 produces an AES-256 key");
+    let nonce = Nonce::from(
+        <[u8; 12]>::try_from(nonce.as_slice())
+            .expect("encrypted record nonces are validated as 12 bytes"),
+    );
     let plaintext = cipher
         .decrypt(
-            Nonce::from_slice(&nonce),
+            &nonce,
             Payload {
                 msg: &ciphertext,
                 aad: &record_aad(profile_id, provider),
