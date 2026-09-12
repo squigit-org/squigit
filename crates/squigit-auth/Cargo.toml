@@ -1,0 +1,28 @@
+[package]
+name = "squigit-auth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "OAuth profiles and encrypted provider credentials for Squigit"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+squigit-storage = { version = "0.1.0", path = "../squigit-storage" }
+reqwest = { version = "0.11", features = ["blocking", "json", "rustls-tls"] }
+tiny_http = "0.12"
+url = "2.5"
+aes-gcm = "0.10"
+hkdf = "0.12"
+sha2 = "0.10"
+hmac = "0.12"
+rand = "0.8"
+base64 = "0.22.1"
+hex = "0.4"
+keyring = "4.1.0"
+zeroize = { version = "1.8", features = ["derive"] }
+image = "0.25"
+jsonwebtoken = { version = "10.4.0", default-features = false, features = ["rust_crypto"] }
