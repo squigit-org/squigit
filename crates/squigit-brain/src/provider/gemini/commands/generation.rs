@@ -223,7 +223,7 @@ pub async fn generate_thread_title_from_text(
 }
 
 /// Suggest a title from the latest compacted context, or the refreshed thread image.
-pub async fn suggest_thread_title(
+pub(crate) async fn suggest_thread_title(
     runtime: &BrainRuntimeState,
     thread_id: String,
     model_candidates: Vec<String>,

@@ -306,7 +306,7 @@ pub(crate) async fn ensure_file_uploaded_for_credential(
     })
 }
 
-pub async fn ensure_file_uploaded(
+pub(crate) async fn ensure_file_uploaded(
     runtime: &BrainRuntimeState,
     api_key: &str,
     cas_path: &str,
