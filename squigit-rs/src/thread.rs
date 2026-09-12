@@ -51,11 +51,11 @@ struct PendingImageThreadCredential {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BrainJobSnapshot {
-    pub(crate) job_id: String,
-    pub(crate) thread_id: String,
-    pub(crate) status: String,
-    phase: String,
-    error: Option<String>,
+    pub job_id: String,
+    pub thread_id: String,
+    pub status: String,
+    pub phase: String,
+    pub error: Option<String>,
 }
 
 impl From<&BrainJobRecord> for BrainJobSnapshot {
@@ -263,9 +263,7 @@ async fn run_brain_job(
             .ensure_thread_image_uploaded_with_snapshot(&credential, image_path)
             .await?;
         update_brain_job(&jobs, sequence, "running", "generating-title", None);
-        let model_candidates = brain()
-            .build_model_attempt_plan(model, effort)
-            .await?;
+        let model_candidates = brain().build_model_attempt_plan(model, effort).await?;
         let title = brain()
             .suggest_thread_title_from_file_with_snapshot(&credential, uploaded, model_candidates)
             .await?;
@@ -534,9 +532,9 @@ pub mod lens {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct ReverseImageSearchOutcome {
-        imgbb_url: String,
-        google_lens_url: String,
-        opened_url: String,
+        pub imgbb_url: String,
+        pub google_lens_url: String,
+        pub opened_url: String,
     }
 
     fn required_text<'a>(text: &'a str, message: &str) -> ThreadResult<&'a str> {
@@ -897,9 +895,9 @@ pub mod lens {
 }
 
 pub mod ocr {
+    use serde::Serialize;
     use squigit_ocr::models::DEFAULT_OCR_MODEL_ID;
     use squigit_ocr::ocr::{persist_boxes_to_thread_storage, OcrRequest};
-    use serde::Serialize;
     use std::collections::BTreeMap;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -913,12 +911,12 @@ pub mod ocr {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct OcrThreadSnapshot {
-        thread_id: String,
-        thread_title: String,
-        image_path: String,
-        image_hash: String,
-        image_tone: Option<String>,
-        ocr_data: crate::storage::OcrAnnotations,
+        pub thread_id: String,
+        pub thread_title: String,
+        pub image_path: String,
+        pub image_hash: String,
+        pub image_tone: Option<String>,
+        pub ocr_data: crate::storage::OcrAnnotations,
     }
 
     #[derive(Clone)]
@@ -934,12 +932,12 @@ pub mod ocr {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct OcrJobSnapshot {
-        pub(crate) job_id: String,
-        pub(crate) thread_id: String,
-        model_id: String,
-        pub(crate) status: String,
-        has_output: bool,
-        error: Option<String>,
+        pub job_id: String,
+        pub thread_id: String,
+        pub model_id: String,
+        pub status: String,
+        pub has_output: bool,
+        pub error: Option<String>,
     }
 
     impl From<&OcrJobRecord> for OcrJobSnapshot {
@@ -1174,4 +1172,3 @@ pub mod ocr {
         Ok(())
     }
 }
-
