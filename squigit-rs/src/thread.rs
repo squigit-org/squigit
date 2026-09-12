@@ -443,6 +443,35 @@ pub async fn create_sidechat_thread(
     Ok(SideChatCreation { sidechat_id, title })
 }
 
+pub fn append_sidechat_message(
+    sidechat_id: &str,
+    message_markdown: String,
+    attachment_hashes: Vec<String>,
+) -> ThreadResult<()> {
+    let _index_guard = thread_index_lock()
+        .lock()
+        .map_err(|_| "Thread index is unavailable".to_string())?;
+    let storage = active_storage()?;
+    let mut sidechat = storage
+        .load_sidechat(sidechat_id)
+        .map_err(|error| error.to_string())?;
+    let attachments = attachment_hashes
+        .into_iter()
+        .map(|attachment_hash| MessageAttachment {
+            attachment_hash,
+            source_path: None,
+        })
+        .collect();
+    sidechat.messages.push(ThreadMessage::user_with_attachments(
+        message_markdown,
+        attachments,
+    ));
+    sidechat.metadata.updated_at = Utc::now();
+    storage
+        .save_sidechat(&sidechat)
+        .map_err(|error| error.to_string())
+}
+
 pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<BrainJobSnapshot>> {
     if let Some(jobs) = BRAIN_JOBS.get() {
         Ok(lock_brain_jobs(jobs)?
