@@ -219,7 +219,8 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
             resolved_text_attachment_paths: resolved_text_paths,
         })?;
 
-    let profile = profile::get_profile_snapshot()?
+    let profile = profile::get_profile_snapshot()
+        .map_err(|error| error.to_string())?
         .profiles
         .into_iter()
         .find(|profile| profile.id == profile_id);
