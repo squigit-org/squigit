@@ -1,0 +1,12 @@
+[package]
+name = "squigit-harness"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Attachment preparation and text expansion for Squigit"
+
+[dependencies]
+regex = "1.12.3"
+squigit-storage = { version = "0.1.0", path = "../squigit-storage" }
+office2pdf = "=0.6.5"
