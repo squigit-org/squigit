@@ -244,11 +244,20 @@ pub fn resume_sections_for_directory(directory: &Path) -> Result<Vec<CliResumeSe
 
 pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissionResult, String> {
     let settings_snapshot = settings::load_settings()?;
-    let profile_id = settings_snapshot
-        .active_profile_id
-        .ok_or_else(|| "Login is required before sending a message. Run /login.".to_string())?;
+    let contributor_mode = crate::auth::session_api_keys_active();
+    let profile_id = settings_snapshot.active_profile_id.ok_or_else(|| {
+        if contributor_mode {
+            "Gemini is unavailable. Set GEMINI_API_KEY in the shell or repo .env.".to_string()
+        } else {
+            "Login is required before sending a message. Run /login.".to_string()
+        }
+    })?;
     if !settings_snapshot.google_ai_studio.configured {
-        return Err("API key missing. Run /configure to add a Gemini API key.".to_string());
+        return Err(if contributor_mode {
+            "Gemini is unavailable. Set GEMINI_API_KEY in the shell or repo .env.".to_string()
+        } else {
+            "API key missing. Run /configure to add a Gemini API key.".to_string()
+        });
     }
     if request.message.trim().is_empty() && request.attachment_paths.is_empty() {
         return Err("The composer is empty.".to_string());

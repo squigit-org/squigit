@@ -1320,10 +1320,12 @@ impl App {
 
     fn guest_key_error(&mut self) {
         self.state.return_home();
-        self.state.set_notice(
-            NoticeKind::Error,
-            "API keys are unavailable in guest mode. Run /login.",
-        );
+        let message = if self.state.demo_mode {
+            "API keys are unavailable in demo guest mode. Set them in the shell or repo .env."
+        } else {
+            "API keys are unavailable in guest mode. Run /login."
+        };
+        self.state.set_notice(NoticeKind::Error, message);
     }
 
     fn select_previous(&mut self, length: usize) {

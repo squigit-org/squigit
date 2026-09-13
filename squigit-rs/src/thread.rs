@@ -484,7 +484,7 @@ pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<BrainJobSnapshot>> {
 }
 
 pub mod lens {
-    use crate::auth::{get_decrypted_api_key, ApiKeyProvider};
+    use crate::auth::{get_decrypted_api_key, session_api_keys_active, ApiKeyProvider};
     use crate::storage::{
         OcrAnnotationEntry, ProfileStore, ReverseImageSearchCache, ThreadStorage,
     };
@@ -727,11 +727,23 @@ pub mod lens {
                         .get_active_profile_id()
                         .map_err(|error| error.to_string())?
                         .ok_or_else(|| {
-                            "An active profile is required for reverse image search".to_string()
+                            if session_api_keys_active() {
+                                "ImgBB is unavailable. Set IMGBB_API_KEY in the shell or repo .env."
+                                    .to_string()
+                            } else {
+                                "An active profile is required for reverse image search".to_string()
+                            }
                         })?;
                     get_decrypted_api_key(&profiles, ApiKeyProvider::ImgBb, &profile_id)
                         .map_err(|error| error.to_string())?
-                        .ok_or_else(|| "ImgBB key is not configured".to_string())
+                        .ok_or_else(|| {
+                            if session_api_keys_active() {
+                                "ImgBB is unavailable. Set IMGBB_API_KEY in the shell or repo .env."
+                                    .to_string()
+                            } else {
+                                "ImgBB key is not configured".to_string()
+                            }
+                        })
                 })
                 .await
                 .map_err(|error| error.to_string())??;
