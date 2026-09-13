@@ -6,7 +6,9 @@
 use crate::brain::{
     AttachmentPreparationStatus, PrepareAttachmentRequest, PrepareSubmissionAttachmentsRequest,
 };
-use crate::storage::{AttachmentFileType, OcrAnnotationEntry, OcrRegion};
+use crate::storage::{
+    AttachmentFileType, OcrAnnotationEntry, OcrRegion, Profile, ProfileStore, GOOGLE_ISSUER,
+};
 use crate::{explorer, profile, services, settings};
 use chrono::{SecondsFormat, Utc};
 use serde_json::json;
@@ -22,6 +24,52 @@ pub const SUPPORTED_FILE_EXTENSIONS: &[&str] = &[
     "jsx", "tsx", "sh", "bash", "zsh", "fish", "py", "rs", "go", "java", "c", "cpp", "h", "hpp",
     "sql", "log",
 ];
+
+const CONTRIBUTOR_EMAIL: &str = "contributor@squigit.app";
+const CONTRIBUTOR_SUBJECT: &str = "squigit-cli-contributor";
+
+/// Configure an isolated contributor session without persisting API keys.
+///
+/// When at least one key is present, the deterministic contributor profile is
+/// created and activated. With no keys, the profile store enters guest mode so
+/// local and OCR-only workflows remain available.
+pub fn initialize_contributor_mode(
+    gemini_api_key: Option<&str>,
+    imgbb_api_key: Option<&str>,
+) -> Result<bool, String> {
+    let gemini_api_key = nonempty_secret(gemini_api_key);
+    let imgbb_api_key = nonempty_secret(imgbb_api_key);
+    crate::auth::set_session_api_keys(gemini_api_key, imgbb_api_key)
+        .map_err(|error| error.to_string())?;
+
+    let store = ProfileStore::new().map_err(|error| error.to_string())?;
+    if gemini_api_key.is_none() && imgbb_api_key.is_none() {
+        store
+            .clear_active_profile_id()
+            .map_err(|error| error.to_string())?;
+        return Ok(false);
+    }
+
+    let profile = Profile::new_google(
+        GOOGLE_ISSUER,
+        CONTRIBUTOR_SUBJECT,
+        CONTRIBUTOR_EMAIL,
+        "Contributor",
+        None,
+        None,
+    );
+    store
+        .upsert_profile(&profile)
+        .map_err(|error| error.to_string())?;
+    store
+        .set_active_profile_id(&profile.id)
+        .map_err(|error| error.to_string())?;
+    Ok(true)
+}
+
+fn nonempty_secret(value: Option<&str>) -> Option<&str> {
+    value.map(str::trim).filter(|value| !value.is_empty())
+}
 
 #[derive(Clone, Debug)]
 pub struct CliThreadEntry {
