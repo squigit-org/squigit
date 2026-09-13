@@ -98,7 +98,9 @@ def smoke_cli(executable: Path, image_path: Path, env: dict[str, str]) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Smoke test the packaged OCR executable.")
+    parser = argparse.ArgumentParser(
+        description="Smoke test the packaged OCR executable."
+    )
     parser.add_argument(
         "--executable", required=True, help="Path to the Squigit OCR executable"
     )

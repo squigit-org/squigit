@@ -212,9 +212,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Squigit PaddleOCR executable (CLI mode)."
     )
-    parser.add_argument(
-        "--version", action="version", version=__version__
-    )
+    parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("image_path", help="Path to image file.")
     parser.add_argument("--lang", default="en", help="Language hint (default: en).")
     parser.add_argument(
