@@ -28,6 +28,54 @@ pub(crate) struct GeminiContent {
 #[derive(Debug, Serialize)]
 pub(crate) struct GeminiRequest {
     pub(crate) contents: Vec<GeminiContent>,
+    #[serde(rename = "systemInstruction")]
+    pub(crate) system_instruction: GeminiSystemInstruction,
+    #[serde(rename = "generationConfig")]
+    pub(crate) generation_config: GeminiGenerationConfig,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub(crate) struct GeminiSystemInstruction {
+    pub(crate) parts: Vec<GeminiPart>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub(crate) struct GeminiGenerationConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) temperature: Option<f32>,
+    #[serde(rename = "responseMimeType", skip_serializing_if = "Option::is_none")]
+    pub(crate) response_mime_type: Option<String>,
+    #[serde(rename = "responseSchema", skip_serializing_if = "Option::is_none")]
+    pub(crate) response_schema: Option<GeminiResponseSchema>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub(crate) struct GeminiResponseSchema {
+    #[serde(rename = "type")]
+    pub(crate) schema_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) properties: Option<std::collections::HashMap<String, GeminiResponseSchema>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) required: Option<Vec<String>>,
+}
+
+impl GeminiResponseSchema {
+    pub(crate) fn title_schema() -> Self {
+        let mut properties = std::collections::HashMap::new();
+        properties.insert(
+            "title".to_string(),
+            GeminiResponseSchema {
+                schema_type: "STRING".to_string(),
+                properties: None,
+                required: None,
+            },
+        );
+        Self {
+            schema_type: "OBJECT".to_string(),
+            properties: Some(properties),
+            required: Some(vec!["title".to_string()]),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]

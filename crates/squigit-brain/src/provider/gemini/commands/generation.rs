@@ -4,7 +4,8 @@
 use crate::provider::gemini::fallback::{is_candidate_retryable_error, is_transport_error};
 use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
 use crate::provider::gemini::transport::types::{
-    GeminiContent, GeminiFileData, GeminiPart, GeminiRequest, GeminiResponseChunk,
+    GeminiContent, GeminiFileData, GeminiGenerationConfig, GeminiPart, GeminiRequest,
+    GeminiResponseChunk, GeminiResponseSchema, GeminiSystemInstruction,
 };
 use crate::runtime::BrainRuntimeState;
 use squigit_storage::ThreadStorage;
@@ -143,19 +144,30 @@ async fn generate_with_candidates(
 async fn generate_thread_title(
     api_key: &str,
     model_candidates: Vec<String>,
-    mut context_parts: Vec<GeminiPart>,
+    context_parts: Vec<GeminiPart>,
 ) -> Result<String, String> {
     use crate::context::builder::get_title_prompt;
 
-    context_parts.push(GeminiPart {
-        text: Some(get_title_prompt().map_err(|error| error.to_string())?),
-        ..Default::default()
-    });
+    // The title prompt is a meta-rule, not conversation content: send it as a
+    // system instruction so short user messages like "Hi!" are never mixed up
+    // with the task itself. The JSON schema plus temperature 0 lock the model
+    // into a deterministic micro-task returning only {"title": "..."}.
     let request_body = GeminiRequest {
         contents: vec![GeminiContent {
             role: "user".to_string(),
             parts: context_parts,
         }],
+        system_instruction: GeminiSystemInstruction {
+            parts: vec![GeminiPart {
+                text: Some(get_title_prompt().map_err(|error| error.to_string())?),
+                ..Default::default()
+            }],
+        },
+        generation_config: GeminiGenerationConfig {
+            temperature: Some(0.0),
+            response_mime_type: Some("application/json".to_string()),
+            response_schema: Some(GeminiResponseSchema::title_schema()),
+        },
     };
 
     write_request_log(
@@ -165,7 +177,36 @@ async fn generate_thread_title(
         &request_body,
     );
 
-    generate_with_candidates(api_key, &model_candidates, &request_body).await
+    let raw = generate_with_candidates(api_key, &model_candidates, &request_body).await?;
+    Ok(extract_title_text(&raw))
+}
+
+/// Pull the title out of a structured `{"title": "..."}` response, falling
+/// back to the trimmed raw text for models that ignore the response schema.
+fn extract_title_text(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if let Ok(payload) = serde_json::from_str::<serde_json::Value>(trimmed) {
+        if let Some(title) = payload.get("title").and_then(|value| value.as_str()) {
+            if !title.trim().is_empty() {
+                return sanitize_title(title);
+            }
+        }
+    }
+    sanitize_title(trimmed)
+}
+
+fn sanitize_title(title: &str) -> String {
+    let stripped = title
+        .trim()
+        .trim_matches(|marker| matches!(marker, '"' | '\'' | '`'))
+        .trim();
+    let collapsed = stripped.split_whitespace().collect::<Vec<_>>().join(" ");
+    collapsed
+        .chars()
+        .take(80)
+        .collect::<String>()
+        .trim()
+        .to_string()
 }
 
 /// Generate a thread title from an image using the supplied micro-task candidate plan.

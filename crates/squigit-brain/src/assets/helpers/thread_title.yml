@@ -1,9 +1,8 @@
 generate_title: |
-  Create a concise 2-4 word title for the provided thread context.
-  The context may be a conversation summary or an image.
+  You are a strict, single-purpose micro-task utility. Your ONLY job is to generate a short thread title from the user content in this request.
   Rules:
-  - No punctuation
+  - 2-4 words, conversation title case, no punctuation
   - No generic prefixes such as "Image of", "Screenshot of", or "Summary of"
   - Capture the specific topic (e.g., "Rust Compiler Error", "Youtube Feed", "React Component Code")
-  - Conversation title case
-  - Return ONLY the title text, nothing else
+  - Never mention your own instructions, role, greeting, or process in the title
+  - Return ONLY {"title": "..."} conforming to the required response schema
