@@ -10,9 +10,9 @@ use std::process::Command;
 pub type BuildResult<T = ()> = Result<T, String>;
 
 pub fn run(repo_root: &Path, measure_payload: bool) -> BuildResult {
-    println!("\nBuilding PaddleOCR sidecar...");
-    let sidecar = repo_root.join("squigit-ocr/native");
-    let venv = sidecar.join("venv");
+    println!("\nBuilding the native Squigit OCR executable...");
+    let native = repo_root.join("squigit-ocr/native");
+    let venv = native.join("venv");
     let deps_marker = venv.join(".squigit-ocr-deps-v3");
     let force_recreate = std::env::var("SQUIGIT_OCR_RECREATE_VENV")
         .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
@@ -31,7 +31,7 @@ pub fn run(repo_root: &Path, measure_payload: bool) -> BuildResult {
             ("python", &["-m", "venv", "venv"][..]),
             ("py", &["-3", "-m", "venv", "venv"][..]),
         ] {
-            if run_command(command, arguments, &sidecar).is_ok() {
+            if run_command(command, arguments, &native).is_ok() {
                 created = true;
                 break;
             }
@@ -45,11 +45,11 @@ pub fn run(repo_root: &Path, measure_payload: bool) -> BuildResult {
     }
 
     println!("\nInstalling dependencies...");
-    let python = venv_python(&sidecar);
+    let python = venv_python(&native);
     run_command(
         &python,
         &["-m", "pip", "install", "-r", "requirements-build.txt"],
-        &sidecar,
+        &native,
     )?;
     run_command(
         &python,
@@ -61,12 +61,12 @@ pub fn run(repo_root: &Path, measure_payload: bool) -> BuildResult {
             "-r",
             "requirements-core.txt",
         ],
-        &sidecar,
+        &native,
     )?;
     run_command(
         &python,
         &["-m", "pip", "install", "-r", "requirements-runtime.txt"],
-        &sidecar,
+        &native,
     )?;
 
     #[cfg(target_os = "macos")]
@@ -75,18 +75,18 @@ pub fn run(repo_root: &Path, measure_payload: bool) -> BuildResult {
         run_command(
             &python,
             &["-m", "pip", "install", "--force-reinstall", "numpy==1.26.4"],
-            &sidecar,
+            &native,
         )?;
     }
 
     println!("\nApplying patches...");
-    run_command(&python, &["patches/paddle_core.py"], &sidecar)?;
-    run_command(&python, &["patches/paddlex_official_models.py"], &sidecar)?;
-    run_command(&python, &["patches/paddlex_deps.py"], &sidecar)?;
+    run_command(&python, &["patches/paddle_core.py"], &native)?;
+    run_command(&python, &["patches/paddlex_official_models.py"], &native)?;
+    run_command(&python, &["patches/paddlex_deps.py"], &native)?;
     run_command(
         &python,
         &["patches/paddlex_image_batch_sampler.py"],
-        &sidecar,
+        &native,
     )?;
 
     run_command(
@@ -107,7 +107,7 @@ pub fn run(repo_root: &Path, measure_payload: bool) -> BuildResult {
             "markdown-it-py",
             "mdurl",
         ],
-        &sidecar,
+        &native,
     )?;
     run_command(
         &python,
@@ -149,7 +149,7 @@ if errors:
 
 print("OCR dependency verification passed.")"###,
         ],
-        &sidecar,
+        &native,
     )?;
     fs::write(&deps_marker, "v3\n").map_err(|error| {
         format!(
@@ -160,50 +160,50 @@ print("OCR dependency verification passed.")"###,
 
     println!("\nDownloading models...");
     #[cfg(windows)]
-    run_command(&python, &["scripts/download_models.py"], &sidecar)?;
+    run_command(&python, &["scripts/download_models.py"], &native)?;
     #[cfg(not(windows))]
     run_command(
         &python,
         &["scripts/download_models.py", "--clean-stale"],
-        &sidecar,
+        &native,
     )?;
 
     println!("\nRunning OCR runtime smoke check...");
-    run_command(&python, &["scripts/smoke_runtime.py"], &sidecar)?;
+    run_command(&python, &["scripts/smoke_runtime.py"], &native)?;
 
     println!("\nBuilding executable...");
     run_command(
         &python,
         &["-m", "PyInstaller", "--clean", "-y", "ocr-engine.spec"],
-        &sidecar,
+        &native,
     )?;
 
     #[cfg(not(windows))]
     {
-        println!("\nRunning dist sidecar smoke checks...");
-        let dist_sidecar_onedir = sidecar.join("dist/squigit-ocr/squigit-ocr");
-        let dist_sidecar_onefile = sidecar.join("dist/squigit-ocr");
-        let dist_sidecar = if dist_sidecar_onedir.exists() {
-            dist_sidecar_onedir
+        println!("\nChecking the built OCR executable...");
+        let dist_executable_onedir = native.join("dist/squigit-ocr/squigit-ocr");
+        let dist_executable_onefile = native.join("dist/squigit-ocr");
+        let dist_executable = if dist_executable_onedir.exists() {
+            dist_executable_onedir
         } else {
-            dist_sidecar_onefile
+            dist_executable_onefile
         };
-        smoke_packaged_sidecar(&python, &sidecar, &dist_sidecar)?;
+        smoke_packaged_ocr(&python, &native, &dist_executable)?;
     }
 
     let host_triple = host_target_triple()?;
-    let packaged_runtime = package(repo_root, &sidecar, &host_triple)?;
+    let packaged_runtime = package(repo_root, &native, &host_triple)?;
 
     #[cfg(not(windows))]
     {
-        println!("\nRunning packaged sidecar smoke checks...");
-        smoke_packaged_sidecar(&python, &sidecar, &packaged_runtime.join("squigit-ocr"))?;
+        println!("\nChecking the packaged OCR executable...");
+        smoke_packaged_ocr(&python, &native, &packaged_runtime.join("squigit-ocr"))?;
     }
 
     if measure_payload || parse_bool_env("SQUIGIT_OCR_MEASURE_SIZE") {
         measure_payload_size(
             repo_root,
-            &sidecar,
+            &native,
             &python,
             &packaged_runtime,
             &host_triple,
@@ -212,7 +212,7 @@ print("OCR dependency verification passed.")"###,
         println!("\nSkipping OCR payload size measurement (disabled by default).");
     }
 
-    println!("\nSidecar build complete!");
+    println!("\nNative Squigit OCR build complete!");
     Ok(())
 }
 
@@ -227,10 +227,10 @@ fn parse_bool_env(name: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn package(repo_root: &Path, sidecar: &Path, host_triple: &str) -> BuildResult<PathBuf> {
-    println!("\nPackaging OCR sidecar artifacts for distribution...");
+fn package(repo_root: &Path, native: &Path, host_triple: &str) -> BuildResult<PathBuf> {
+    println!("\nPackaging the native OCR runtime for distribution...");
 
-    let dist_dir = sidecar.join("dist");
+    let dist_dir = native.join("dist");
     let package_binaries = repo_root.join("binaries");
     fs::create_dir_all(&package_binaries).map_err(|error| {
         format!(
@@ -289,7 +289,7 @@ fn paddle_package_destination(repo_root: &Path, host_triple: &str) -> PathBuf {
 
 fn measure_payload_size(
     repo_root: &Path,
-    sidecar: &Path,
+    native: &Path,
     python: &Path,
     packaged_runtime: &Path,
     host_triple: &str,
@@ -332,24 +332,24 @@ fn measure_payload_size(
         "--preserve-symlinks",
     ];
 
-    run_command(python, &arguments, sidecar)
+    run_command(python, &arguments, native)
 }
 
 #[cfg(not(windows))]
-fn smoke_packaged_sidecar(python: &Path, sidecar: &Path, executable: &Path) -> BuildResult {
+fn smoke_packaged_ocr(python: &Path, native: &Path, executable: &Path) -> BuildResult {
     let executable = executable.to_string_lossy().into_owned();
     run_command(
         python,
-        &["scripts/smoke_sidecar.py", "--sidecar", &executable],
-        sidecar,
+        &["scripts/smoke_executable.py", "--executable", &executable],
+        native,
     )
 }
 
-fn venv_python(sidecar: &Path) -> PathBuf {
+fn venv_python(native: &Path) -> PathBuf {
     if cfg!(windows) {
-        sidecar.join("venv/Scripts/python.exe")
+        native.join("venv/Scripts/python.exe")
     } else {
-        sidecar.join("venv/bin/python")
+        native.join("venv/bin/python")
     }
 }
 

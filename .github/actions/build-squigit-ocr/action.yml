@@ -2,7 +2,7 @@ name: "Build Squigit OCR CLI"
 description: "Builds the Python-based Squigit OCR standalone executable"
 inputs:
   python-version:
-    description: "Python version used to build the OCR sidecar"
+    description: "Python version used to build the native OCR executable"
     required: false
     default: "3.13"
   pyi-mode:

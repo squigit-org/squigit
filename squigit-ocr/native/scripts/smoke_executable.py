@@ -22,7 +22,7 @@ def _read_json_output(stdout: str, stderr: str, mode: str) -> list:
         ) from exc
 
     if isinstance(payload, dict) and "error" in payload:
-        raise RuntimeError(f"{mode}: sidecar returned error: {payload['error']}")
+        raise RuntimeError(f"{mode}: OCR executable returned error: {payload['error']}")
     if not isinstance(payload, list):
         raise RuntimeError(
             f"{mode}: expected list payload, got {type(payload).__name__}"
@@ -58,9 +58,9 @@ def _prepend_env_path(env: dict[str, str], key: str, value: str, sep: str) -> No
     env[key] = f"{value}{sep}{current}" if current else value
 
 
-def _sidecar_env(sidecar: Path) -> dict[str, str]:
+def _runtime_env(executable: Path) -> dict[str, str]:
     env = os.environ.copy()
-    runtime_dir = sidecar.parent
+    runtime_dir = executable.parent
     candidates = [
         runtime_dir / "_internal" / "paddle" / "libs",
         runtime_dir / "paddle" / "libs",
@@ -81,9 +81,9 @@ def _sidecar_env(sidecar: Path) -> dict[str, str]:
     return env
 
 
-def smoke_cli(sidecar: Path, image_path: Path, env: dict[str, str]) -> None:
+def smoke_cli(executable: Path, image_path: Path, env: dict[str, str]) -> None:
     proc = subprocess.run(
-        [str(sidecar), str(image_path)],
+        [str(executable), str(image_path)],
         capture_output=True,
         text=True,
         timeout=240,
@@ -98,24 +98,24 @@ def smoke_cli(sidecar: Path, image_path: Path, env: dict[str, str]) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Smoke test packaged OCR sidecar.")
+    parser = argparse.ArgumentParser(description="Smoke test the packaged OCR executable.")
     parser.add_argument(
-        "--sidecar", required=True, help="Path to ocr-engine executable"
+        "--executable", required=True, help="Path to the Squigit OCR executable"
     )
     args = parser.parse_args()
 
-    sidecar = Path(args.sidecar).resolve()
-    if not sidecar.exists():
-        raise SystemExit(f"Sidecar executable not found: {sidecar}")
+    executable = Path(args.executable).resolve()
+    if not executable.exists():
+        raise SystemExit(f"OCR executable not found: {executable}")
 
     with tempfile.TemporaryDirectory(prefix="ocr-smoke-") as tmpdir:
         tmp = Path(tmpdir)
         normal_image = tmp / "normal.ppm"
-        env = _sidecar_env(sidecar)
+        env = _runtime_env(executable)
         _write_ppm_image(normal_image, width=960, height=240, mode="normal")
-        smoke_cli(sidecar, normal_image, env)
+        smoke_cli(executable, normal_image, env)
 
-    print("OCR sidecar smoke passed.")
+    print("OCR executable smoke passed.")
     return 0
 
 
@@ -123,5 +123,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:
-        print(f"OCR sidecar smoke failed: {exc}", file=sys.stderr)
+        print(f"OCR executable smoke failed: {exc}", file=sys.stderr)
         raise

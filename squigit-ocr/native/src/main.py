@@ -18,7 +18,7 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_WAIT_POLICY"] = "PASSIVE"
 
-# Keep sidecar stderr focused on actionable OCR failures.
+# Keep executable stderr focused on actionable OCR failures.
 warnings.filterwarnings(
     "ignore",
     message=r".*urllib3 .* doesn't match a supported version!.*",
@@ -64,7 +64,7 @@ def _get_frozen_paddle_lib_dir() -> str | None:
 
 def _bootstrap_frozen_loader_env() -> None:
     """
-    Re-exec frozen sidecar with loader env pointing to bundled Paddle libs.
+    Re-exec the frozen runtime with loader env pointing to bundled Paddle libs.
     """
     if os.name == "nt":
         return
@@ -210,7 +210,7 @@ def process_path(image_path: str, args: argparse.Namespace) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Squigit PaddleOCR sidecar (CLI mode)."
+        description="Squigit PaddleOCR executable (CLI mode)."
     )
     parser.add_argument(
         "--version", action="version", version=__version__

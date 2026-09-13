@@ -6,7 +6,7 @@ Patch paddlex/utils/deps.py to relax OCR extra checks for trimmed runtime builds
 
 PaddleX `ocr` pipelines allow `ocr-core` as an alternative, but `ocr-core` requires
 `opencv-contrib-python` and `pypdfium2` even when running image-only OCR. In our
-shipping sidecar we provide `opencv-python-headless` and do not support PDF OCR,
+shipping executable we provide `opencv-python-headless` and do not support PDF OCR,
 so this patch adjusts only the extra-check map to avoid false dependency failures.
 """
 
