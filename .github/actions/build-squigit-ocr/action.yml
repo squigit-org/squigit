@@ -16,7 +16,7 @@ inputs:
   windows-runtime-dir:
     description: "OCR runtime directory to zip when create-windows-archive=true"
     required: false
-    default: "packaging/binaries/squigit-ocr-x86_64-pc-windows-msvc"
+    default: "binaries/paddle-ocr-x86_64-pc-windows-msvc"
   windows-asset-name:
     description: "ZIP filename to produce when create-windows-archive=true"
     required: false
@@ -44,7 +44,7 @@ runs:
       env:
         SQUIGIT_OCR_PYI_MODE: ${{ inputs.pyi-mode }}
       run: |
-        cargo xtask build ocr
+        cargo xtask build --ocr
 
     - name: Create Windows OCR Archive
       if: runner.os == 'Windows' && inputs.create-windows-archive == 'true'

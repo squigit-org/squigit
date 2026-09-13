@@ -14,7 +14,7 @@ dist/
 __pycache__/
 *.py[cod]
 *$py.class
-squigit-ocr/models/
+squigit-ocr/native/models/
 
 # -----------------------------------------------------------------------------
 # Build Artifacts
