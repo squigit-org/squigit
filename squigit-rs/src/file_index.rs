@@ -103,6 +103,18 @@ impl FileSearchIndex {
         Ok(Self { inner })
     }
 
+    pub fn len(&self) -> usize {
+        self.inner
+            .entries
+            .read()
+            .map(|entries| entries.len())
+            .unwrap_or_default()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn search(&self, query: &str, limit: usize) -> Vec<FileSearchMatch> {
         if limit == 0 {
             return Vec::new();
