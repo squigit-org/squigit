@@ -4,6 +4,7 @@ Run repository workflows from the workspace root through `cargo xtask`. The task
 
 ```text
 cargo xtask dev [--demo] [-- <squigit arguments>]
+cargo xtask fmt [--all]
 cargo xtask doctor
 cargo xtask test [-- <cargo test arguments>]
 cargo xtask clean (--target | --paddlex | --all)
@@ -46,6 +47,26 @@ cargo xtask dev --demo
 Demo mode reads `GEMINI_API_KEY` and `IMGBB_API_KEY` from the process environment, then from the ignored root `.env`. Both keys are optional. With neither key, the CLI supports guest and OCR workflows. With either key, it activates the process-only `contributor@squigit.app` profile. Authentication and persisted credential-management commands remain unavailable.
 
 Unless `SQUIGIT_HOME`, `SQUIGIT_CONFIG_DIR`, or `--home` selects another location, demo state is stored in the ignored repository directory `squigit-demo/`.
+
+## Formatting
+
+Format files changed in the current Git worktree with:
+
+```bash
+cargo xtask fmt
+```
+
+The default scope combines staged changes, unstaged changes, and nonignored untracked files. Deleted files are skipped. This keeps routine formatting focused on the work being prepared for a commit.
+
+Format every recognized tracked or nonignored source file in the repository with:
+
+```bash
+cargo xtask fmt --all
+```
+
+Rust uses rustfmt. Python uses a pinned Ruff environment stored under the Cargo target directory. Markdown, YAML, JSON, JavaScript, TypeScript, CSS, HTML, and GraphQL use the pinned Prettier version invoked through `npx`. Python 3 is required when the selected files include Python; Node.js with `npx` is required when they include a Prettier format. The formatter dependencies download on first use and are reused afterward.
+
+Ignored credentials, demo state, logs, build output, Python environments, downloaded models, and generated distribution payloads are outside both formatting scopes.
 
 ## Repository validation
 
@@ -160,16 +181,16 @@ The requested version must be greater than the target's current local version. W
 
 The Rust packages have independent versions:
 
-| Command target | Package |
-|---|---|
-| `--storage` | `squigit-storage` |
-| `--auth` | `squigit-auth` |
-| `--harness` | `squigit-harness` |
-| `--brain` | `squigit-brain` |
-| `--squigit` | `squigit-rs`, whose library crate name is `squigit` |
-| `--cli` | `squigit-cli` |
-| `--ocr --crate` | The Rust `squigit-ocr` package. |
-| `--ocr --engine` | The native OCR product. |
+| Command target   | Package                                             |
+| ---------------- | --------------------------------------------------- |
+| `--storage`      | `squigit-storage`                                   |
+| `--auth`         | `squigit-auth`                                      |
+| `--harness`      | `squigit-harness`                                   |
+| `--brain`        | `squigit-brain`                                     |
+| `--squigit`      | `squigit-rs`, whose library crate name is `squigit` |
+| `--cli`          | `squigit-cli`                                       |
+| `--ocr --crate`  | The Rust `squigit-ocr` package.                     |
+| `--ocr --engine` | The native OCR product.                             |
 
 Examples:
 
@@ -311,7 +332,7 @@ Release the native OCR product with:
 cargo xtask release --ocr
 ```
 
-The command reads the native OCR engine version, verifies it is newer than the latest `ocr-v<VERSION>` release in `squigit-org/distribution`, and dispatches that repository's `ocr-release.yml` with the exact public-source commit SHA. A full release enables Homebrew, Winget, APT, and DNF lanes and requests the Winget submission.
+The command reads the native OCR engine version and verifies it is newer than the latest `ocr-v<VERSION>` release in `squigit-org/distribution`. After confirmation, it creates an immutable `ocr-v<VERSION>` tag at the displayed source commit, pushes that tag to the public source repository, and passes the tag to the distribution workflow. A matching remote tag is reused only when it resolves to the same commit. A full release enables Homebrew, Winget, APT, and DNF lanes and requests the Winget submission.
 
 The distribution workflow calls this repository's four-platform OCR build matrix, obtains the measured runtime archives, publishes the distribution release, updates package-manager metadata, and runs its installed-product checks. Xtask reports the workflow URL and waits for its final result. Native Paddle compilation does not run on the maintainer's machine during release.
 
@@ -323,7 +344,7 @@ Release the CLI product with:
 cargo xtask release --cli
 ```
 
-The command reads the `squigit-cli` version, verifies it is newer than the latest CLI release in `squigit-org/distribution`, and dispatches that repository's CLI release workflow with the exact public-source commit SHA. It reports the workflow URL and waits for completion.
+The command reads the `squigit-cli` version and verifies it is newer than the latest CLI release in `squigit-org/distribution`. After confirmation, it creates an immutable `cli-v<VERSION>` tag at the displayed source commit, pushes that tag to the public source repository, and passes the tag to the CLI release workflow. A matching remote tag is reused only when it resolves to the same commit. Xtask reports the workflow URL and waits for completion.
 
 The product release verifies that the packaged CLI resolves `squigit-rs` and its transitive libraries from crates.io. Local path dependencies remain available for workspace development but are not the dependency source used for a shipped product.
 

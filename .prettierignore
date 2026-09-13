@@ -1,0 +1,32 @@
+# Dependencies and tool environments
+**/node_modules/
+**/.venv/
+**/venv/
+
+# Rust and native OCR build output
+/target/
+/binaries/
+/_internal/
+/squigit-ocr/native/build/
+/squigit-ocr/native/dist/
+/squigit-ocr/native/models/
+
+# Local application state and logs
+/squigit-demo/
+/logs/
+*.log
+
+# Credentials and local environment files
+**/credentials.json
+*.key
+*.key.pub
+.env
+.env.*
+!.env.example
+
+# Editor and generated files
+/.vscode/
+/.idea/
+*.generated*
+*.min.css
+*.min.js

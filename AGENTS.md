@@ -38,6 +38,8 @@ Use the root task runner instead of inventing one-off build commands:
 ```bash
 cargo xtask dev
 cargo xtask dev --demo
+cargo xtask fmt
+cargo xtask fmt --all
 cargo xtask doctor
 cargo xtask build --cli
 cargo xtask build --ocr
