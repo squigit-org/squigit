@@ -62,11 +62,13 @@ jobs:
         run: |
           set -euo pipefail
           squigit-ocr/native/venv/bin/python - <<'PY'
+          import os
           from pathlib import Path
           from PIL import Image, ImageDraw
 
           source = Image.new("RGB", (240, 60), "white")
-          ImageDraw.Draw(source).text((10, 20), "SQUIGIT OCR SMOKE", fill="black")
+          text = f"SQUIGIT {os.environ['OCR_OS_NAME']} OCR SMOKE"
+          ImageDraw.Draw(source).text((10, 20), text, fill="black")
           image = source.resize((960, 240), Image.Resampling.NEAREST)
           image.save(Path("/tmp/ocr-smoke.png"))
           PY
@@ -81,7 +83,8 @@ jobs:
           from PIL import Image, ImageDraw
 
           source = Image.new('RGB', (240, 60), 'white')
-          ImageDraw.Draw(source).text((10, 20), 'SQUIGIT OCR SMOKE', fill='black')
+          text = f"SQUIGIT {os.environ['OCR_OS_NAME']} OCR SMOKE"
+          ImageDraw.Draw(source).text((10, 20), text, fill='black')
           image = source.resize((960, 240), Image.Resampling.NEAREST)
           image.save(Path(os.environ['TEMP']) / 'ocr-smoke.png')
           "@

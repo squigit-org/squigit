@@ -187,7 +187,7 @@ fn visit_files(root: &Path, callback: &mut impl FnMut(&Path)) -> Result<(), Stri
         if path.is_dir() {
             if !matches!(
                 path.file_name().and_then(OsStr::to_str),
-                Some("target" | ".git")
+                Some("target" | ".git" | "venv" | "build" | "dist" | "models" | "__pycache__")
             ) {
                 visit_files(&path, callback)?;
             }
