@@ -9,6 +9,10 @@ inputs:
     description: "PyInstaller mode: onedir (default) or onefile (baseline measurement)"
     required: false
     default: "onedir"
+  measure-runtime:
+    description: "Run the runtime-size measurement after packaging"
+    required: false
+    default: "false"
   create-windows-archive:
     description: "When true on Windows, zip the OCR runtime directory and expose artifact outputs"
     required: false
@@ -43,6 +47,7 @@ runs:
       shell: bash
       env:
         SQUIGIT_OCR_PYI_MODE: ${{ inputs.pyi-mode }}
+        SQUIGIT_OCR_MEASURE_SIZE: ${{ inputs.measure-runtime }}
       run: |
         cargo xtask build --ocr
 

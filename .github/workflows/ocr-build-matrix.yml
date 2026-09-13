@@ -1,7 +1,14 @@
 name: "OCR Build Matrix"
+run-name: OCR Runtime Build ${{ inputs.request_id || github.run_id }}
 
 on:
   workflow_dispatch:
+    inputs:
+      request_id:
+        description: "Optional caller correlation ID"
+        required: false
+        default: ""
+        type: string
 
 jobs:
   build-ocr:
@@ -65,10 +72,14 @@ jobs:
           Remove-Item -Recurse -Force squigit-ocr/native/build, squigit-ocr/native/dist -ErrorAction SilentlyContinue
 
       - name: Build OCR candidate (onedir)
+        id: final-build
         uses: ./.github/actions/build-squigit-ocr
         with:
           python-version: "3.12"
           pyi-mode: "onedir"
+          measure-runtime: "true"
+          create-windows-archive: "true"
+          windows-asset-name: "squigit-ocr-win-x64.zip"
 
       - name: Generate PNG smoke image (Unix)
         if: runner.os != 'Windows'
@@ -165,20 +176,46 @@ jobs:
           "@
           & squigit-ocr/native/venv/Scripts/python.exe -c $code
 
-      - name: Upload smoke-test image and OCR output (Unix)
+      - name: Create runtime archive (Unix)
+        id: unix-archive
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          RUNTIME_DIR: binaries/paddle-ocr-${{ matrix.target }}
+          PLATFORM: ${{ matrix.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/ocr-artifacts
+
+          case "${PLATFORM}" in
+            macos-arm) asset_name="squigit-ocr-mac-aarch64.tar.gz" ;;
+            ubuntu-x64) asset_name="squigit-ocr-ubuntu-x64.tar.gz" ;;
+            fedora-x64) asset_name="squigit-ocr-fedora-x64.tar.gz" ;;
+            *) echo "Unsupported Unix OCR platform: ${PLATFORM}" >&2; exit 1 ;;
+          esac
+
+          asset_path="target/ocr-artifacts/${asset_name}"
+          tar -czf "${asset_path}" -C "${RUNTIME_DIR}" .
+          echo "asset_path=${PWD}/${asset_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload packaged OCR runtime (Unix)
         if: runner.os != 'Windows'
         uses: actions/upload-artifact@v7
         with:
-          name: ocr-smoke-artifacts-${{ matrix.slug }}
+          name: squigit-ocr-runtime-${{ matrix.slug }}
+          compression-level: 0
+          if-no-files-found: error
           path: |
-            /tmp/ocr-smoke.png
-            /tmp/ocr-smoke-output.json
+            ${{ steps.unix-archive.outputs.asset_path }}
+            target/ocr-size/ocr-size-${{ matrix.target }}.json
 
-      - name: Upload smoke-test image and OCR output (Windows)
+      - name: Upload packaged OCR runtime (Windows)
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v7
         with:
-          name: ocr-smoke-artifacts-${{ matrix.slug }}
+          name: squigit-ocr-runtime-${{ matrix.slug }}
+          compression-level: 0
+          if-no-files-found: error
           path: |
-            ${{ runner.temp }}/ocr-smoke.png
-            ${{ runner.temp }}/ocr-smoke-output.json
+            ${{ steps.final-build.outputs.asset-path }}
+            target/ocr-size/ocr-size-${{ matrix.target }}.json
