@@ -29,18 +29,22 @@ def macos_openmp_binaries():
     if sys.platform != "darwin":
         return []
 
-    prefixes = [
-        Path("/opt/homebrew/opt/gcc"),
-        Path("/usr/local/opt/gcc"),
-    ]
-    try:
-        brew_prefix = subprocess.check_output(
-            ["brew", "--prefix", "gcc"], text=True
-        ).strip()
+    prefixes = []
+    for opt_dir in (Path("/opt/homebrew/opt"), Path("/usr/local/opt")):
+        prefixes.append(opt_dir / "gcc")
+        prefixes.extend(sorted(opt_dir.glob("gcc@*"), reverse=True))
+
+    for formula in ("gcc", "gcc@15", "gcc@14", "gcc@13"):
+        try:
+            brew_prefix = subprocess.check_output(
+                ["brew", "--prefix", formula],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            ).strip()
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            continue
         if brew_prefix:
             prefixes.insert(0, Path(brew_prefix))
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        pass
 
     for prefix in prefixes:
         candidates = [prefix / "lib/gcc/current/libgomp.1.dylib"]
@@ -48,10 +52,10 @@ def macos_openmp_binaries():
         for candidate in candidates:
             if candidate.is_file():
                 print(f"Bundling macOS OpenMP runtime: {candidate}")
-                return [(str(candidate), "paddle/libs")]
+                return [(str(candidate), ".")]
 
     raise FileNotFoundError(
-        "Paddle requires libgomp.1.dylib on macOS; install Homebrew GCC before packaging"
+        "Paddle requires libgomp.1.dylib, but no installed Homebrew GCC runtime was found"
     )
 
 metadata_datas = []
