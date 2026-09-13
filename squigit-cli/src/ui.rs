@@ -143,7 +143,7 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
 
 fn draw_home(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
     let suggestions_height = state.suggestions.len().min(12) as u16;
-    let status_height = status_lines(state).len().max(1).min(8) as u16;
+    let status_height = status_lines(state).len().clamp(1, 8) as u16;
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([

@@ -235,7 +235,7 @@ pub fn list_sidechat_threads() -> ExplorerResult<Vec<ExplorerSideChatThread>> {
     let mut sidechats = active_storage()?
         .list_sidechat_threads()
         .map_err(|error| error.to_string())?;
-    sidechats.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+    sidechats.sort_by_key(|sidechat| std::cmp::Reverse(sidechat.created_at));
     Ok(sidechats.into_iter().map(Into::into).collect())
 }
 
@@ -395,7 +395,7 @@ fn search_plan(query: &str) -> SearchPlan {
     let mut seen = HashSet::new();
     let mut tokens = query
         .split_whitespace()
-        .map(|part| part.trim_start_matches(|character| character == '-' || character == '+'))
+        .map(|part| part.trim_start_matches(['-', '+']))
         .map(|part| {
             part.to_lowercase()
                 .chars()
@@ -460,29 +460,33 @@ fn snippet(content: &str, match_index: usize, query_length: usize) -> String {
     value
 }
 
+struct ThreadSearchContext<'a> {
+    workspace: Option<&'a WorkspaceMetadata>,
+    thread: &'a ThreadMetadata,
+    plan: &'a SearchPlan,
+    query_length: usize,
+}
+
 fn push_search_result(
     results: &mut Vec<ThreadSearchResult>,
-    workspace: Option<&WorkspaceMetadata>,
-    thread: &ThreadMetadata,
+    context: &ThreadSearchContext<'_>,
     result_kind: &str,
     result_index: usize,
     content: &str,
-    plan: &SearchPlan,
-    query_length: usize,
     score_bonus: u32,
 ) {
-    let Some((match_index, score)) = matching_index(content, plan) else {
+    let Some((match_index, score)) = matching_index(content, context.plan) else {
         return;
     };
     results.push(ThreadSearchResult {
-        thread_id: thread.id.clone(),
-        thread_title: thread.title.clone(),
-        thread_created_at: thread.created_at.to_rfc3339(),
-        thread_updated_at: thread.updated_at.to_rfc3339(),
-        workspace_title: workspace.map(|workspace| workspace.name.clone()),
+        thread_id: context.thread.id.clone(),
+        thread_title: context.thread.title.clone(),
+        thread_created_at: context.thread.created_at.to_rfc3339(),
+        thread_updated_at: context.thread.updated_at.to_rfc3339(),
+        workspace_title: context.workspace.map(|workspace| workspace.name.clone()),
         result_kind: result_kind.to_string(),
         result_index: result_index.min(u32::MAX as usize) as u32,
-        snippet: snippet(content, match_index, query_length),
+        snippet: snippet(content, match_index, context.query_length),
         score: score.saturating_add(score_bonus),
     });
 }
@@ -511,17 +515,13 @@ pub fn search_threads(query: String, limit: u32) -> ExplorerResult<Vec<ThreadSea
         })
         .chain(unassigned.iter().map(|thread| (None, thread)));
     for (workspace, thread) in entries {
-        push_search_result(
-            &mut results,
+        let context = ThreadSearchContext {
             workspace,
             thread,
-            "title",
-            0,
-            &thread.title,
-            &plan,
-            query.len(),
-            60,
-        );
+            plan: &plan,
+            query_length: query.len(),
+        };
+        push_search_result(&mut results, &context, "title", 0, &thread.title, 60);
         let messages = match storage.load_messages(&thread.id) {
             Ok(messages) => messages,
             Err(_) => continue,
@@ -529,13 +529,10 @@ pub fn search_threads(query: String, limit: u32) -> ExplorerResult<Vec<ThreadSea
         for (message_index, message) in messages.iter().enumerate() {
             push_search_result(
                 &mut results,
-                workspace,
-                thread,
+                &context,
                 "message",
                 message_index,
                 message.content(),
-                &plan,
-                query.len(),
                 20,
             );
         }
@@ -547,17 +544,7 @@ pub fn search_threads(query: String, limit: u32) -> ExplorerResult<Vec<ThreadSea
                     OcrAnnotationEntry::Model(model) => model.ocr_data,
                 };
                 for region in regions {
-                    push_search_result(
-                        &mut results,
-                        workspace,
-                        thread,
-                        "ocr",
-                        ocr_index,
-                        &region.text,
-                        &plan,
-                        query.len(),
-                        10,
-                    );
+                    push_search_result(&mut results, &context, "ocr", ocr_index, &region.text, 10);
                     ocr_index += 1;
                 }
             }

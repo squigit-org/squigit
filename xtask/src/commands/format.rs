@@ -208,7 +208,7 @@ fn ruff_binary(root: &Path) -> Result<PathBuf, String> {
 
     let (host_python, prefix) = find_python(root)?;
     println!("[fmt] installing Ruff {RUFF_VERSION} in the Cargo target directory");
-    let mut create = Command::new(&host_python);
+    let mut create = Command::new(host_python);
     create
         .args(&prefix)
         .args(["-m", "venv"])

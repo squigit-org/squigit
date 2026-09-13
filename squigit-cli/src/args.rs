@@ -35,7 +35,7 @@ impl CliArgs {
                     parsed.home = Some(PathBuf::from(value));
                 }
                 "--" => {
-                    while let Some(value) = arguments.next() {
+                    for value in arguments.by_ref() {
                         parsed.set_image(value)?;
                     }
                     break;

@@ -188,13 +188,15 @@ impl App {
         self.state.busy = Some("thinking".to_string());
         tasks::submit(
             &self.sender,
-            resolution.markdown,
-            input,
-            resolution.attachment_paths,
-            thread_id,
-            is_sidechat,
-            self.state.model.clone(),
-            self.state.effort.clone(),
+            tasks::SubmissionTask {
+                message_markdown: resolution.markdown,
+                human_text: input,
+                attachment_paths: resolution.attachment_paths,
+                thread_id,
+                is_sidechat,
+                model: self.state.model.clone(),
+                effort: self.state.effort.clone(),
+            },
         );
         self.state.clear_composer();
         None

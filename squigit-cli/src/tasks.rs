@@ -12,6 +12,16 @@ pub struct SubmissionOutcome {
     pub created_sidechat: Option<squigit::thread::SideChatCreation>,
 }
 
+pub(crate) struct SubmissionTask {
+    pub(crate) message_markdown: String,
+    pub(crate) human_text: String,
+    pub(crate) attachment_paths: Vec<PathBuf>,
+    pub(crate) thread_id: Option<String>,
+    pub(crate) is_sidechat: bool,
+    pub(crate) model: String,
+    pub(crate) effort: String,
+}
+
 pub enum TaskEvent {
     Update(Result<Option<PendingUpdate>, String>),
     Login(Result<(), String>),
@@ -70,41 +80,32 @@ pub fn analyze(sender: &UnboundedSender<TaskEvent>, source_path: PathBuf) {
     });
 }
 
-pub fn submit(
-    sender: &UnboundedSender<TaskEvent>,
-    message_markdown: String,
-    human_text: String,
-    attachment_paths: Vec<PathBuf>,
-    thread_id: Option<String>,
-    is_sidechat: bool,
-    model: String,
-    effort: String,
-) {
+pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
     let sender = sender.clone();
     tokio::spawn(async move {
         let result = async {
             let submission = squigit::cli::submit_message(CliSubmissionRequest {
-                message: message_markdown,
-                attachment_paths,
-                thread_id: thread_id.clone(),
-                model,
-                effort,
+                message: task.message_markdown,
+                attachment_paths: task.attachment_paths,
+                thread_id: task.thread_id.clone(),
+                model: task.model,
+                effort: task.effort,
             })
             .await?;
             let created_sidechat =
-                if let Some(sidechat_id) = thread_id.as_ref().filter(|_| is_sidechat) {
+                if let Some(sidechat_id) = task.thread_id.as_ref().filter(|_| task.is_sidechat) {
                     squigit::thread::append_sidechat_message(
                         sidechat_id,
                         submission.canonical_message.clone(),
                         submission.attachment_hashes.clone(),
                     )?;
                     None
-                } else if thread_id.is_none() {
+                } else if task.thread_id.is_none() {
                     Some(
                         squigit::thread::create_sidechat_thread(
                             submission.canonical_message.clone(),
                             submission.attachment_hashes.clone(),
-                            Some(human_text),
+                            Some(task.human_text),
                         )
                         .await?,
                     )
