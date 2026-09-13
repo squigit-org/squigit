@@ -39,6 +39,18 @@ struct ProductRelease {
 }
 
 pub fn run(arguments: ReleaseArgs) -> Result<(), String> {
+    // Fast auth preflight before the expensive doctor/test steps so a missing
+    // credential fails in milliseconds instead of after a minute of compiles.
+    match arguments.target {
+        ReleaseTarget::Facade => {
+            if !arguments.dry_run {
+                Registry::new()?.validate_publish_token()?;
+            }
+        }
+        ReleaseTarget::Ocr | ReleaseTarget::Cli => {
+            validate_gh_auth()?;
+        }
+    }
     let root = process::workspace_root()?;
     let git = guard_git(&root)?;
     println!("[release] repository doctor");
@@ -170,7 +182,6 @@ fn release_facade(root: &Path, git: &GitContext, dry_run: bool, yes: bool) -> Re
         println!("\nDry run complete. No crates were published.");
         return Ok(());
     }
-    registry.validate_publish_token()?;
     if !confirm(yes)? {
         println!("Release cancelled.");
         return Ok(());
@@ -421,7 +432,7 @@ fn release_product(
     dry_run: bool,
     yes: bool,
 ) -> Result<(), String> {
-    validate_gh_auth()?;
+    // GitHub auth was already checked up front in `run`.
     let (label, version, tag_prefix, workflow) = match target {
         ReleaseTarget::Ocr => (
             "Native OCR",

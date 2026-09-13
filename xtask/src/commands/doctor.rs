@@ -9,6 +9,10 @@ use std::process::{Command, Stdio};
 
 pub fn run() -> Result<(), String> {
     let root = process::workspace_root()?;
+    if crate::cache::should_skip(&root, "doctor")? {
+        println!("[doctor] cached: clean tree at HEAD already validated");
+        return Ok(());
+    }
     println!("[doctor] source headers and private path references");
     inspect_source_tree(&root)?;
 
@@ -44,6 +48,7 @@ pub fn run() -> Result<(), String> {
         process::run(&mut command, label)?;
     }
     println!("[doctor] repository is healthy");
+    crate::cache::mark_ok(&root, "doctor")?;
     Ok(())
 }
 

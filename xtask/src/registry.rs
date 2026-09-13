@@ -162,17 +162,19 @@ impl Registry {
     }
 
     pub fn validate_publish_token(&self) -> Result<(), String> {
-        let token = cargo_registry_token()?.ok_or_else(|| {
+        // crates.io forbids API-token auth on `GET /api/v1/me` (it is
+        // website/session-only and always answers 403 to tokens, even valid
+        // `cio...` publish tokens). There is also no other read-only endpoint
+        // that validates a publish-scoped token, so a network probe here can
+        // only produce false negatives. Check presence only and let the real
+        // `cargo publish` be the ground truth for validity/scopes.
+        if cargo_registry_token()?.is_some() {
+            return Ok(());
+        }
+        Err(
             "crates.io authentication is missing; run `cargo login` or set CARGO_REGISTRY_TOKEN"
-                .to_string()
-        })?;
-        self.client
-            .get(format!("{CRATES_API}/me"))
-            .header("Authorization", token)
-            .send()
-            .and_then(reqwest::blocking::Response::error_for_status)
-            .map_err(|error| format!("crates.io authentication failed: {error}"))?;
-        Ok(())
+                .to_string(),
+        )
     }
 }
 
