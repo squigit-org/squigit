@@ -160,9 +160,13 @@ print("OCR dependency verification passed.")"###,
 
     println!("\nDownloading models...");
     #[cfg(windows)]
-    run_command(&python, &["download_models.py"], &sidecar)?;
+    run_command(&python, &["scripts/download_models.py"], &sidecar)?;
     #[cfg(not(windows))]
-    run_command(&python, &["download_models.py", "--clean-stale"], &sidecar)?;
+    run_command(
+        &python,
+        &["scripts/download_models.py", "--clean-stale"],
+        &sidecar,
+    )?;
 
     println!("\nRunning OCR runtime smoke check...");
     run_command(&python, &["scripts/smoke_runtime.py"], &sidecar)?;
