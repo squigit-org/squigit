@@ -34,6 +34,7 @@ type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Default)]
 struct SessionApiKeys {
+    active: bool,
     google_ai_studio: Option<SecretString>,
     imgbb: Option<SecretString>,
 }
@@ -157,10 +158,16 @@ pub fn set_session_api_keys(google_ai_studio: Option<&str>, imgbb: Option<&str>)
         .write()
         .map_err(|_| ProfileError::Auth("Process-only API-key state is unavailable.".into()))?;
     *keys = SessionApiKeys {
+        active: true,
         google_ai_studio,
         imgbb,
     };
     Ok(())
+}
+
+/// Return whether process-only credentials replace the persistent key store.
+pub fn session_api_keys_active() -> bool {
+    session_api_keys().read().is_ok_and(|keys| keys.active)
 }
 
 /// Return the character width of a process-only credential, when configured.
@@ -468,11 +475,13 @@ pub fn get_decrypted_api_key(
     provider: ApiKeyProvider,
     profile_id: &str,
 ) -> Result<Option<DecryptedApiKey>> {
-    if let Some(api_key) = session_api_key(provider) {
-        let runtime_digest = session_runtime_digest(provider, &api_key);
-        return Ok(Some(DecryptedApiKey {
-            api_key,
-            runtime_digest,
+    if session_api_keys_active() {
+        return Ok(session_api_key(provider).map(|api_key| {
+            let runtime_digest = session_runtime_digest(provider, &api_key);
+            DecryptedApiKey {
+                api_key,
+                runtime_digest,
+            }
         }));
     }
     get_decrypted_api_key_with_vault(store, provider, profile_id, &OsSecretVault)
@@ -521,8 +530,8 @@ pub fn get_api_key_status(
     provider: ApiKeyProvider,
     profile_id: &str,
 ) -> Result<bool> {
-    if session_api_key_width(provider).is_some() {
-        return Ok(true);
+    if session_api_keys_active() {
+        return Ok(session_api_key_width(provider).is_some());
     }
     Ok(store
         .load_encrypted_key_record(profile_id, provider.storage_key_name())?
