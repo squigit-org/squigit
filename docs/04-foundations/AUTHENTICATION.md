@@ -549,7 +549,7 @@ After the domain change:
 - Google redirects to loopback.
 - The loopback response is a `302` to `https://squigit.app/login/popup-google-auth/#success`.
 - The final browser tab URL contains no OAuth `code` or `state`.
-- `auth.json` contains schema 3 login metadata and no tokens.
+- `auth.json` contains schema 1 login metadata and no tokens.
 - `profiles.json` contains the expected `issuer` and `subject`.
 - Sign out clears only active auth state.
 - Switching profiles does not change `last_login`.

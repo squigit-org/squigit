@@ -1,6 +1,6 @@
 # Cryptography Foundation
 
-Status: **BYOK schema 1 implemented; OTA signing remains independently versioned**
+Status: **BYOK schema 1 implemented**
 
 This document defines Squigit's cryptographic ownership, formats, failure rules, and threat boundaries.
 
@@ -63,11 +63,11 @@ ciphertext = AES-256-GCM(
 )
 ```
 
-`keys.json` stores canonical unpadded base64url for the salt, nonce, and combined ciphertext-plus-tag. Strict types reject unknown fields, unknown algorithms, noncanonical encodings, incorrect decoded lengths, and any schema other than 3. Moving a record to another profile or provider, or changing authenticated metadata, causes decryption failure.
+`keys.json` stores canonical unpadded base64url for the salt, nonce, and combined ciphertext-plus-tag. Strict types reject unknown fields, unknown algorithms, noncanonical encodings, incorrect decoded lengths, and any schema other than 1. Moving a record to another profile or provider, or changing authenticated metadata, causes decryption failure.
 
 A populated store with a missing encryption master never receives a replacement. On the first save, newly created vault values are read back before the file is written. Any failure before the durable file transaction completes triggers deletion of only the vault values created by that transaction.
 
-Saving an empty credential is invalid. Deletion is explicit. Deleting the final credential durably writes the empty schema-3 store before deleting `record-encryption-master-v1`; if vault deletion fails, the encrypted file is restored. `cas-binding-key-v1` remains.
+Saving an empty credential is invalid. Deletion is explicit. Deleting the final credential durably writes the empty schema-1 store before deleting `record-encryption-master-v1`; if vault deletion fails, the encrypted file is restored. `cas-binding-key-v1` remains.
 
 ## CAS Binding
 

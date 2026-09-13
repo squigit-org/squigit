@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub const OBJECT_MANIFEST_SCHEMA_VERSION: u32 = 4;
+pub const OBJECT_MANIFEST_SCHEMA_VERSION: u32 = 1;
 
 /// Persistent pointer from one immutable source document to its generated PDF object.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
