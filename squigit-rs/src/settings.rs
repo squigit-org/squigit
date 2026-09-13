@@ -3,8 +3,8 @@
 
 use crate::auth::{
     check_reveal_authorization, delete_api_key as delete_stored_api_key, encrypt_and_save_api_key,
-    get_api_key_status, reveal_api_key as reveal_stored_api_key, validate_api_key, ApiKeyProvider,
-    RevealAuthResult,
+    get_api_key_status, reveal_api_key as reveal_stored_api_key, session_api_key_width,
+    validate_api_key, ApiKeyProvider, RevealAuthResult,
 };
 use crate::brain::provider::gemini::models::{
     DEFAULT_MODEL_EFFORT, MODEL_EFFORTS, PRIMARY_FAST_MODEL, SELECTABLE_MODELS,
@@ -413,12 +413,16 @@ fn credential_state(
             width: None,
         });
     };
+    let session_width = session_api_key_width(provider);
     Ok(CredentialState {
         configured: get_api_key_status(store, provider, profile_id)
             .map_err(|error| error.to_string())?,
-        width: store
-            .get_key_width(profile_id, provider.storage_key_name())
-            .map_err(|error| error.to_string())?,
+        width: match session_width {
+            Some(width) => Some(width),
+            None => store
+                .get_key_width(profile_id, provider.storage_key_name())
+                .map_err(|error| error.to_string())?,
+        },
     })
 }
 

@@ -9,6 +9,7 @@ pub use auth::{AuthFlowSettings, BrowserOpener, CredentialsSource, GoogleAuthAtt
 pub use error::{ByokErrorCode, ProfileError, Result};
 pub use security::{
     check_reveal_authorization, delete_api_key, encrypt_and_save_api_key, get_api_key_status,
-    get_decrypted_api_key, object_remote_id, reveal_api_key, validate_api_key, ApiKeyProvider,
-    CredentialDigest, DecryptedApiKey, RevealAuthResult, SecretString,
+    get_decrypted_api_key, object_remote_id, reveal_api_key, session_api_key_width,
+    set_session_api_keys, validate_api_key, ApiKeyProvider, CredentialDigest, DecryptedApiKey,
+    RevealAuthResult, SecretString,
 };

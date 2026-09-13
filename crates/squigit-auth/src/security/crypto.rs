@@ -11,6 +11,7 @@ use hmac::{Hmac, Mac};
 use rand::{rngs::OsRng, RngCore};
 use sha2::Sha256;
 use squigit_storage::{EncryptedKeyRecord, ProfileStore, RecordCipher, RecordKdf};
+use std::sync::{OnceLock, RwLock};
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::{ByokErrorCode, ProfileError, Result};
@@ -24,10 +25,33 @@ const RECORD_KEY_DOMAIN: &str = "squigit/byok/v1/record-key";
 const RECORD_AAD_DOMAIN: &str = "squigit/byok/v1/record-aad";
 const RUNTIME_CREDENTIAL_DOMAIN: &str = "squigit/cas/v1/runtime-credential";
 const OBJECT_REMOTE_DOMAIN: &str = "squigit/cas/v1/object-remote";
+const SESSION_CREDENTIAL_DOMAIN: &str = "squigit/session/v1/runtime-credential";
+const SESSION_OBJECT_REMOTE_DOMAIN: &str = "squigit/session/v1/object-remote";
 const AES_256_GCM: &str = "aes-256-gcm";
 const HKDF_SHA256: &str = "hkdf-sha256";
 
 type HmacSha256 = Hmac<Sha256>;
+
+#[derive(Default)]
+struct SessionApiKeys {
+    google_ai_studio: Option<SecretString>,
+    imgbb: Option<SecretString>,
+}
+
+impl SessionApiKeys {
+    fn get(&self, provider: ApiKeyProvider) -> Option<&SecretString> {
+        match provider {
+            ApiKeyProvider::GoogleAiStudio => self.google_ai_studio.as_ref(),
+            ApiKeyProvider::ImgBb => self.imgbb.as_ref(),
+        }
+    }
+}
+
+static SESSION_API_KEYS: OnceLock<RwLock<SessionApiKeys>> = OnceLock::new();
+
+fn session_api_keys() -> &'static RwLock<SessionApiKeys> {
+    SESSION_API_KEYS.get_or_init(|| RwLock::new(SessionApiKeys::default()))
+}
 
 pub struct SecretString(Zeroizing<String>);
 
@@ -116,6 +140,42 @@ fn canonicalize_api_key(provider: ApiKeyProvider, plaintext: &str) -> Result<Sec
     }
     validate_api_key(provider, canonical)?;
     Ok(SecretString::new(canonical.to_owned()))
+}
+
+/// Replace the process-only API keys used by developer shells.
+///
+/// These credentials are validated and zeroized in memory. They are never
+/// written to the profile key store or the operating-system vault.
+pub fn set_session_api_keys(google_ai_studio: Option<&str>, imgbb: Option<&str>) -> Result<()> {
+    let google_ai_studio = google_ai_studio
+        .map(|value| canonicalize_api_key(ApiKeyProvider::GoogleAiStudio, value))
+        .transpose()?;
+    let imgbb = imgbb
+        .map(|value| canonicalize_api_key(ApiKeyProvider::ImgBb, value))
+        .transpose()?;
+    let mut keys = session_api_keys()
+        .write()
+        .map_err(|_| ProfileError::Auth("Process-only API-key state is unavailable.".into()))?;
+    *keys = SessionApiKeys {
+        google_ai_studio,
+        imgbb,
+    };
+    Ok(())
+}
+
+/// Return the character width of a process-only credential, when configured.
+pub fn session_api_key_width(provider: ApiKeyProvider) -> Option<u32> {
+    session_api_keys().read().ok().and_then(|keys| {
+        keys.get(provider)
+            .map(|key| key.expose().chars().count() as u32)
+    })
+}
+
+fn session_api_key(provider: ApiKeyProvider) -> Option<SecretString> {
+    session_api_keys().read().ok().and_then(|keys| {
+        keys.get(provider)
+            .map(|key| SecretString::new(key.expose().to_owned()))
+    })
 }
 
 fn random_vault_key() -> [u8; 32] {
@@ -332,6 +392,37 @@ fn runtime_digest(
     )
 }
 
+fn session_runtime_digest(provider: ApiKeyProvider, api_key: &SecretString) -> CredentialDigest {
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(SESSION_CREDENTIAL_DOMAIN.as_bytes())
+        .expect("HMAC-SHA256 accepts the session credential domain");
+    mac.update(&frame(&[provider.storage_key_name(), api_key.expose()]));
+    let mut digest = [0u8; 32];
+    digest.copy_from_slice(&mac.finalize().into_bytes());
+    CredentialDigest(Zeroizing::new(digest))
+}
+
+fn is_session_api_key(provider: ApiKeyProvider, api_key: &SecretString) -> bool {
+    session_api_key(provider).is_some_and(|session_key| {
+        session_runtime_digest(provider, &session_key)
+            .matches(&session_runtime_digest(provider, api_key))
+    })
+}
+
+fn session_object_remote_id(
+    provider: ApiKeyProvider,
+    lowercase_object_hash: &str,
+    api_key: &SecretString,
+) -> String {
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(api_key.expose().as_bytes())
+        .expect("HMAC-SHA256 accepts API keys of any length");
+    mac.update(&frame(&[
+        SESSION_OBJECT_REMOTE_DOMAIN,
+        provider.storage_key_name(),
+        lowercase_object_hash,
+    ]));
+    hex::encode(mac.finalize().into_bytes())
+}
+
 pub fn object_remote_id(
     provider: ApiKeyProvider,
     lowercase_object_hash: &str,
@@ -345,6 +436,13 @@ pub fn object_remote_id(
         return Err(ProfileError::byok(
             ByokErrorCode::MalformedKeyStore,
             "The CAS object hash is not canonical lowercase hexadecimal.",
+        ));
+    }
+    if is_session_api_key(provider, api_key) {
+        return Ok(session_object_remote_id(
+            provider,
+            lowercase_object_hash,
+            api_key,
         ));
     }
     let vault = OsSecretVault;
@@ -370,6 +468,13 @@ pub fn get_decrypted_api_key(
     provider: ApiKeyProvider,
     profile_id: &str,
 ) -> Result<Option<DecryptedApiKey>> {
+    if let Some(api_key) = session_api_key(provider) {
+        let runtime_digest = session_runtime_digest(provider, &api_key);
+        return Ok(Some(DecryptedApiKey {
+            api_key,
+            runtime_digest,
+        }));
+    }
     get_decrypted_api_key_with_vault(store, provider, profile_id, &OsSecretVault)
 }
 
@@ -416,6 +521,9 @@ pub fn get_api_key_status(
     provider: ApiKeyProvider,
     profile_id: &str,
 ) -> Result<bool> {
+    if session_api_key_width(provider).is_some() {
+        return Ok(true);
+    }
     Ok(store
         .load_encrypted_key_record(profile_id, provider.storage_key_name())?
         .is_some())
