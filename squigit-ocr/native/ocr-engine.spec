@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
@@ -24,6 +25,35 @@ def safe_copy_metadata(dist_name):
         print(f"[warn] metadata not found for {dist_name}: {exc}")
         return []
 
+def macos_openmp_binaries():
+    if sys.platform != "darwin":
+        return []
+
+    prefixes = [
+        Path("/opt/homebrew/opt/gcc"),
+        Path("/usr/local/opt/gcc"),
+    ]
+    try:
+        brew_prefix = subprocess.check_output(
+            ["brew", "--prefix", "gcc"], text=True
+        ).strip()
+        if brew_prefix:
+            prefixes.insert(0, Path(brew_prefix))
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pass
+
+    for prefix in prefixes:
+        candidates = [prefix / "lib/gcc/current/libgomp.1.dylib"]
+        candidates.extend(prefix.glob("lib/gcc/*/libgomp.1.dylib"))
+        for candidate in candidates:
+            if candidate.is_file():
+                print(f"Bundling macOS OpenMP runtime: {candidate}")
+                return [(str(candidate), "paddle/libs")]
+
+    raise FileNotFoundError(
+        "Paddle requires libgomp.1.dylib on macOS; install Homebrew GCC before packaging"
+    )
+
 metadata_datas = []
 for dist_name in [
     "paddlepaddle",
@@ -42,11 +72,12 @@ for dist_name in [
     metadata_datas += safe_copy_metadata(dist_name)
 
 cython_datas = collect_data_files("Cython")
+native_binaries = macos_openmp_binaries()
 
 a = Analysis(
     ['src/main.py'],
     pathex=[],
-    binaries=[],
+    binaries=native_binaries,
     datas=[
         (f'{site_packages}/paddle/libs', 'paddle/libs'),
         (f'{site_packages}/paddleocr', 'paddleocr'),
