@@ -177,7 +177,6 @@ jobs:
           & squigit-ocr/native/venv/Scripts/python.exe -c $code
 
       - name: Create runtime archive (Unix)
-        id: unix-archive
         if: runner.os != 'Windows'
         shell: bash
         env:
@@ -185,7 +184,7 @@ jobs:
           PLATFORM: ${{ matrix.slug }}
         run: |
           set -euo pipefail
-          mkdir -p target/ocr-artifacts
+          mkdir -p target/ocr-transfer
 
           case "${PLATFORM}" in
             macos-arm) asset_name="squigit-ocr-mac-aarch64.tar.gz" ;;
@@ -194,28 +193,22 @@ jobs:
             *) echo "Unsupported Unix OCR platform: ${PLATFORM}" >&2; exit 1 ;;
           esac
 
-          asset_path="target/ocr-artifacts/${asset_name}"
+          asset_path="target/ocr-transfer/${asset_name}"
           tar -czf "${asset_path}" -C "${RUNTIME_DIR}" .
-          echo "asset_path=${PWD}/${asset_path}" >> "$GITHUB_OUTPUT"
+          cp "target/ocr-size/ocr-size-${OCR_TARGET}.json" target/ocr-transfer/
 
-      - name: Upload packaged OCR runtime (Unix)
-        if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v7
-        with:
-          name: squigit-ocr-runtime-${{ matrix.slug }}
-          compression-level: 0
-          if-no-files-found: error
-          path: |
-            ${{ steps.unix-archive.outputs.asset_path }}
-            target/ocr-size/ocr-size-${{ matrix.target }}.json
-
-      - name: Upload packaged OCR runtime (Windows)
+      - name: Stage runtime archive (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path target/ocr-transfer -Force | Out-Null
+          Copy-Item -LiteralPath "${{ steps.final-build.outputs.asset-path }}" -Destination target/ocr-transfer/
+          Copy-Item -LiteralPath "target/ocr-size/ocr-size-$env:OCR_TARGET.json" -Destination target/ocr-transfer/
+
+      - name: Upload packaged OCR runtime
         uses: actions/upload-artifact@v7
         with:
           name: squigit-ocr-runtime-${{ matrix.slug }}
           compression-level: 0
           if-no-files-found: error
-          path: |
-            ${{ steps.final-build.outputs.asset-path }}
-            target/ocr-size/ocr-size-${{ matrix.target }}.json
+          path: target/ocr-transfer/
