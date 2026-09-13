@@ -9,6 +9,11 @@ on:
         required: false
         default: ""
         type: string
+      ocr_version:
+        description: "Native OCR version expected from the built executable"
+        required: false
+        default: "0.1.1"
+        type: string
 
 jobs:
   build-ocr:
@@ -80,6 +85,33 @@ jobs:
           measure-runtime: "true"
           create-windows-archive: "true"
           windows-asset-name: "squigit-ocr-win-x64.zip"
+
+      - name: Validate native OCR version (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ inputs.ocr_version }}
+        run: |
+          set -euo pipefail
+          executable="binaries/paddle-ocr-${OCR_TARGET}/squigit-ocr"
+          chmod +x "${executable}" || true
+          actual_version="$("${executable}" --version | tr -d '\r' | tail -n 1)"
+          if [ "${actual_version}" != "${EXPECTED_VERSION}" ]; then
+            echo "OCR version mismatch: built=${actual_version} expected=${EXPECTED_VERSION}" >&2
+            exit 1
+          fi
+
+      - name: Validate native OCR version (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ inputs.ocr_version }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $actualVersion = (& "binaries/paddle-ocr-$env:OCR_TARGET/squigit-ocr.exe" --version | Select-Object -Last 1).Trim()
+          if ($actualVersion -ne $env:EXPECTED_VERSION) {
+            throw "OCR version mismatch: built=$actualVersion expected=$env:EXPECTED_VERSION"
+          }
 
       - name: Generate PNG smoke image (Unix)
         if: runner.os != 'Windows'
