@@ -20,6 +20,7 @@ pub use types::{
 };
 
 const OBJECT_MANIFEST_FILE: &str = "manifest.json";
+const CACHE_DIR: &str = "cache";
 const DOCUMENT_CONVERSIONS_DIR: &str = "document-conversions";
 const OBJECT_MANIFEST_LOCK_FILE: &str = "manifest.lock";
 
@@ -256,6 +257,7 @@ impl ThreadStorage {
         let prefix = source_hash.get(..2).ok_or(StorageError::InvalidHash)?;
         let config_root = self.objects_dir.parent().ok_or(StorageError::NoDataDir)?;
         Ok(config_root
+            .join(CACHE_DIR)
             .join(DOCUMENT_CONVERSIONS_DIR)
             .join(prefix)
             .join(format!("{source_hash}.{source_extension}.json")))

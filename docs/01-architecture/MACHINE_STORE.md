@@ -33,11 +33,12 @@ Files are created as their corresponding features are used, so a new installatio
 ├── version.json
 ├── version.lock
 ├── logs/
+├── cache/
+│   └── document-conversions/
+│       └── {hash_prefix}/
+│           └── {source_hash}.{docx|xlsx|pptx}.json
 ├── models/
 │   └── {model_id}/
-├── document-conversions/
-│   └── {hash_prefix}/
-│       └── {source_hash}.{docx|xlsx|pptx}.json
 ├── objects/
 │   └── {hash_prefix}/
 │       └── {blake3_hash}/
@@ -65,6 +66,12 @@ Files are created as their corresponding features are used, so a new installatio
 - `logs/` receives harness and Gemini request-boundary logs when logging is enabled. Repository development sessions redirect these logs to the repository `logs/` directory.
 - `models/` contains OCR recognition models downloaded independently from the installed OCR executable.
 
+## Cache
+
+`cache/` is the machine store's dedicated location for disposable data. Its contents must be safe to remove and regenerate, and it must never contain the only copy of user-authored state. Future temporary or derived machine data belongs here rather than in new top-level application-root directories.
+
+`cache/document-conversions/` stores Office conversion receipts. Each receipt maps the BLAKE3 hash and extension of a `.docx`, `.xlsx`, or `.pptx` source to the CAS hash of the generated PDF and identifies the conversion recipe. A missing or obsolete receipt causes Squigit to convert the source again.
+
 ## Thread catalog
 
 `threads/index.json` is the catalog for three collections:
@@ -87,7 +94,7 @@ Every attachment is stored by BLAKE3 hash. The first two hash characters form th
 - credential-bound Gemini remote files and their expiry state;
 - the optional ImgBB/Google Lens reverse-image-search result.
 
-`manifest.lock` protects object-manifest updates across processes. Office conversions are cached separately as receipts that bind a source hash and extension to the generated PDF hash and conversion recipe.
+`manifest.lock` protects object-manifest updates across processes. Office conversions are indexed by the disposable receipts under `cache/document-conversions/`.
 
 ## Persistence rules
 
