@@ -195,3 +195,4 @@ This source repository owns OCR compilation and smoke validation. The separate `
 - Do not add tests unless the founder asks for them. Use the verification scope requested for the current task.
 - Do not introduce warning suppressions, placeholder methods, legacy formats, or broad compatibility layers to hide incomplete refactors.
 - Make focused incremental commits and leave unrelated worktree changes untouched.
+- Never bump crate versions unprompted. When a change touches published crate sources, tell the founder a bump is needed and propose the exact crates and versions — then wait for approval before running `cargo xtask bump`. A session may still grow into a larger refactor that changes what the correct bump is.
