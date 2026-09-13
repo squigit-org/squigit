@@ -588,7 +588,7 @@ fn encrypt_and_save_api_key_with_vault<V: SecretVault>(
                     {
                         return Err(ProfileError::byok(
                             ByokErrorCode::CasBindingKeyMissing,
-                            "CAS remotes exist but their OS-vault binding key is missing. Reset remote metadata explicitly before creating a replacement.",
+                            "CAS remotes exist but their OS-vault binding key is missing. Restore the vault entry or remove the affected object metadata before saving credentials.",
                         ));
                     }
                     created_binding = true;
