@@ -6884,7 +6884,15 @@ checksum = "9440ea3e5aeabb0ac63af70daf835274065238cdd0cec83418f417eae38bacee"
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.0.0"
+dependencies = [
+ "flate2",
+ "reqwest",
+ "semver",
+ "serde_json",
+ "tar",
+ "toml_edit 0.22.27",
+]
 
 [[package]]
 name = "xxhash-rust"
