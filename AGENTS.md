@@ -18,6 +18,67 @@ squigit-cli
         -> squigit-ocr
 ```
 
+```text
+squigit-desktop (private)
+     -> backend/
+    │   ├── build.rs
+    │   ├── Cargo.toml
+    │   ├── index.d.ts
+    │   ├── index.js
+    │   ├── package.json
+    │   ├── runtime/
+    │   │   ├── build.rs
+    │   │   ├── Cargo.toml
+    │   │   ├── assets/
+    │   │   │   └── secrets/
+    │   │   │       ├── credentials.example.json
+    │   │   │       └── pub.example.pem
+    │   │   └── src/
+    │   │       ├── compositor.rs
+    │   │       ├── lib.rs
+    │   │       ├── media.rs
+    │   │       ├── platform.rs
+    │   │       ├── secrets.rs
+    │   │       ├── compositor/
+    │   │       │   ├── kwin.rs
+    │   │       │   ├── mutter.rs
+    │   │       │   ├── window.rs
+    │   │       │   ├── kwin/
+    │   │       │   └── mutter/
+    │   │       ├── media/
+    │   │       │   ├── clipboard.rs
+    │   │       │   └── dialog_alert.rs
+    │   │       └── platform/
+    │   │           ├── ibus_warning.rs
+    │   │           ├── machine_info.rs
+    │   │           └── system_theme.rs
+    │   └── src/
+    │       ├── auth.rs
+    │       ├── host.rs
+    │       ├── lib.rs
+    │       ├── shell.rs
+    │       ├── types.rs
+    │       ├── auth/
+    │       │   ├── api_keys.rs
+    │       │   └── profile.rs
+    │       ├── host/
+    │       │   ├── file_index.rs
+    │       │   ├── media.rs
+    │       │   ├── platform.rs
+    │       │   ├── update.rs
+    │       │   └── urls.rs
+    │       └── shell/
+    │           ├── composer.rs
+    │           ├── explorer.rs
+    │           ├── settings.rs
+    │           └── thread.rs
+    └── squigit/
+        └── src/
+            └── electron/
+                └── preload/
+                    └── napi.ts
+```
+
 The workspace components have these responsibilities:
 
 - `squigit-rs/` is the public product facade shared by the CLI and the desktop N-API backend. Preserve backend-facing types, serialized field names, and service behavior when changing it.
@@ -108,7 +169,6 @@ This source repository owns OCR compilation and smoke validation. The separate `
 - Keep the facade as the only shell-facing Rust API. Add a facade operation when the CLI and GUI need implementation-crate behavior.
 - Keep secrets out of Git and command output. Review staged paths before every credential-related commit.
 - Add `// Copyright 2026 a7mddra` and `// SPDX-License-Identifier: Apache-2.0` to every new Rust source file.
-- Do not add tests unless the user asks for them. Use the verification scope requested for the current task.
+- Do not add tests unless the founder asks for them. Use the verification scope requested for the current task.
 - Do not introduce warning suppressions, placeholder methods, legacy formats, or broad compatibility layers to hide incomplete refactors.
-- Never use sub-agents in this repository.
 - Make focused incremental commits and leave unrelated worktree changes untouched.
