@@ -15,8 +15,9 @@ use squigit_auth::auth::{
     hydrate_avatar, AuthFlowSettings, LoopbackAuthPage, LoopbackAuthServer,
 };
 use squigit_auth::CredentialsSource;
-use squigit_storage::{Profile, ProfileSnapshot, ProfileStore};
 use thiserror::Error;
+
+use crate::storage::{self, Profile, ProfileSnapshot, ProfileStore, StorageError};
 
 macro_rules! profile_log {
     ($($argument:tt)*) => {
@@ -49,7 +50,7 @@ pub enum ProfileError {
     Auth(#[from] squigit_auth::ProfileError),
 
     #[error(transparent)]
-    Storage(#[from] squigit_storage::StorageError),
+    Storage(#[from] StorageError),
 }
 
 impl ProfileError {
@@ -94,7 +95,7 @@ fn profile_snapshot(store: &ProfileStore) -> Result<ProfileSnapshot> {
 /// `active_profile == None` is Guest mode. Missing avatars are hydrated in the
 /// background and never delay this response.
 pub fn get_profile_snapshot() -> Result<ProfileSnapshot> {
-    let store = ProfileStore::new()?;
+    let store = storage::profile_store()?;
     profile_snapshot(&store)
 }
 
@@ -151,7 +152,7 @@ fn run_google_auth(cancelled: Arc<AtomicBool>) -> Result<ProfileSnapshot> {
         return Err(ProfileError::AuthenticationCancelled);
     }
 
-    let store = ProfileStore::new()?;
+    let store = storage::profile_store()?;
     let result = complete_google_auth_flow(&store, &settings, attempt, callback.callback_url());
     let page = if result.is_ok() {
         LoopbackAuthPage::Success
@@ -253,7 +254,7 @@ pub fn cancel_google_auth() -> Result<()> {
 
 /// Delete an inactive profile and return the canonical state.
 pub fn delete_profile(profile_id: &str) -> Result<ProfileSnapshot> {
-    let store = ProfileStore::new()?;
+    let store = storage::profile_store()?;
     if store.get_active_profile_id()?.as_deref() == Some(profile_id) {
         return Err(ProfileError::ActiveProfileDeletion);
     }
@@ -264,7 +265,7 @@ pub fn delete_profile(profile_id: &str) -> Result<ProfileSnapshot> {
 
 /// Activate a stored profile and return the canonical state.
 pub fn switch_profile(profile_id: &str) -> Result<ProfileSnapshot> {
-    let store = ProfileStore::new()?;
+    let store = storage::profile_store()?;
     store.set_active_profile_id(profile_id)?;
     store.invalidate_last_trusted_reveal()?;
     profile_snapshot(&store)
@@ -272,7 +273,7 @@ pub fn switch_profile(profile_id: &str) -> Result<ProfileSnapshot> {
 
 /// Enter Guest mode while keeping saved profiles available for later use.
 pub fn logout() -> Result<ProfileSnapshot> {
-    let store = ProfileStore::new()?;
+    let store = storage::profile_store()?;
     if store.get_active_profile_id()?.is_some() {
         store.clear_active_profile_id()?;
         store.invalidate_last_trusted_reveal()?;
@@ -318,7 +319,7 @@ fn schedule_avatar_hydration(profile: &Profile) {
     let spawn_result = std::thread::Builder::new()
         .name(format!("profile-avatar-{}", profile_id))
         .spawn(move || {
-            match ProfileStore::new() {
+            match storage::profile_store() {
                 Ok(store) => {
                     if let Err(error) = hydrate_avatar(&store, &url, Some(&profile_id)) {
                         profile_log!("[profile] Avatar hydration stopped: {error}");

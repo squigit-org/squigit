@@ -10,9 +10,9 @@ use std::time::Duration;
 use chrono::{NaiveDate, Utc};
 use semver::Version;
 use serde::Deserialize;
-use squigit_storage::{ProductVersion, VersionFile, VersionStore, VersionType};
 use thiserror::Error;
 
+use crate::storage::{self, ProductVersion, StorageError, VersionFile, VersionType};
 use crate::urls::SQUIGIT_RELEASES_URL;
 
 const UPDATE_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
@@ -28,7 +28,7 @@ pub enum UpdateError {
     #[error("Invalid SemVer format: {0}")]
     InvalidSemVer(String),
     #[error("Version storage failed: {0}")]
-    Storage(#[from] squigit_storage::StorageError),
+    Storage(#[from] StorageError),
     #[error("Version-store lock task failed: {0}")]
     LockTask(String),
 }
@@ -135,7 +135,7 @@ async fn refresh_version_file_with_cli(
     context: UpdateRefreshContext,
     cli_version: Option<String>,
 ) -> Result<RefreshOutcome> {
-    let store = VersionStore::new()?;
+    let store = storage::version_store()?;
     let lock_store = store.clone();
     let guard = tokio::task::spawn_blocking(move || lock_store.lock())
         .await
@@ -205,7 +205,7 @@ async fn refresh_version_file_with_cli(
 }
 
 pub fn decide_update(shell: UpdateShell) -> Result<Option<PendingUpdate>> {
-    let store = VersionStore::new()?;
+    let store = storage::version_store()?;
     let Some(file) = store.load()? else {
         return Ok(None);
     };

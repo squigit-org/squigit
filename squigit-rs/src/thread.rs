@@ -3,8 +3,8 @@
 
 use crate::brain::ImageThreadCredentialSnapshot;
 use crate::storage::{
-    MessageAttachment, SideChatData, SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata,
-    ThreadStorage, DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE,
+    self, MessageAttachment, SideChatData, SideChatMetadata, ThreadData, ThreadMessage,
+    ThreadMetadata, ThreadStorage, DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE,
 };
 use chrono::Utc;
 use serde::Serialize;
@@ -80,7 +80,7 @@ static THREAD_INDEX_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 const IMAGE_THREAD_CREATION_TTL: Duration = Duration::from_secs(10 * 60);
 
 pub(super) fn active_storage() -> ThreadResult<ThreadStorage> {
-    ThreadStorage::new().map_err(|error| error.to_string())
+    storage::thread_store().map_err(|error| error.to_string())
 }
 
 fn brain_jobs() -> &'static Arc<Mutex<BTreeMap<u64, BrainJobRecord>>> {
@@ -485,9 +485,7 @@ pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<BrainJobSnapshot>> {
 
 pub mod lens {
     use crate::auth::{get_decrypted_api_key, session_api_keys_active, ApiKeyProvider};
-    use crate::storage::{
-        OcrAnnotationEntry, ProfileStore, ReverseImageSearchCache, ThreadStorage,
-    };
+    use crate::storage::{self, OcrAnnotationEntry, ReverseImageSearchCache, ThreadStorage};
     use image::{imageops, GenericImageView};
     use serde::{Deserialize, Serialize};
     use std::{
@@ -722,7 +720,7 @@ pub mod lens {
             Some(cache) => cache,
             None => {
                 let credential = tokio::task::spawn_blocking(|| {
-                    let profiles = ProfileStore::new().map_err(|error| error.to_string())?;
+                    let profiles = storage::profile_store().map_err(|error| error.to_string())?;
                     let profile_id = profiles
                         .get_active_profile_id()
                         .map_err(|error| error.to_string())?

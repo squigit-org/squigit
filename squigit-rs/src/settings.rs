@@ -9,7 +9,7 @@ use crate::auth::{
 use crate::brain::provider::gemini::models::{
     DEFAULT_MODEL_EFFORT, MODEL_EFFORTS, PRIMARY_FAST_MODEL, SELECTABLE_MODELS,
 };
-use crate::storage::{paths::base_config_dir, rules, ProfileStore, VersionStore};
+use crate::storage::{self, ProfileStore};
 use serde::{Deserialize, Serialize};
 use squigit_ocr::models::{DEFAULT_OCR_MODEL_ID, OCR_MODELS};
 use std::fs;
@@ -81,8 +81,7 @@ impl Default for DesktopConfig {
 }
 
 fn config_path() -> SettingsResult<PathBuf> {
-    base_config_dir()
-        .map(|directory| directory.join(CONFIG_FILE_NAME))
+    storage::config_path(CONFIG_FILE_NAME)
         .ok_or_else(|| "Could not locate Squigit's config directory".to_string())
 }
 
@@ -428,7 +427,7 @@ fn credential_state(
 }
 
 pub fn load_settings() -> SettingsResult<SettingsSnapshot> {
-    let store = ProfileStore::new().map_err(|error| error.to_string())?;
+    let store = storage::profile_store().map_err(|error| error.to_string())?;
     let active_profile_id = store
         .get_active_profile_id()
         .map_err(|error| error.to_string())?;
@@ -446,20 +445,11 @@ pub fn load_settings() -> SettingsResult<SettingsSnapshot> {
 }
 
 pub fn load_persona() -> SettingsResult<String> {
-    let path = rules::rules_path()
-        .ok_or_else(|| "Could not locate Squigit's RULES.md path".to_string())?;
-    match fs::read_to_string(path) {
-        Ok(content) => Ok(content),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
-        Err(error) => Err(error.to_string()),
-    }
+    storage::load_rules()
 }
 
 pub fn save_persona(content: &str) -> SettingsResult<()> {
-    if rules::rules_path().is_none() {
-        return Err("Could not locate Squigit's RULES.md path".to_string());
-    }
-    rules::save_rules(content)
+    storage::save_rules(content)
 }
 
 pub fn import_persona(source_path: &str) -> SettingsResult<String> {
@@ -488,7 +478,7 @@ pub fn validate_api_key_format(provider_name: &str, plaintext: &str) -> Settings
 }
 
 pub fn set_api_key(profile_id: &str, provider_name: &str, plaintext: &str) -> SettingsResult<()> {
-    let store = ProfileStore::new().map_err(|error| error.to_string())?;
+    let store = storage::profile_store().map_err(|error| error.to_string())?;
     encrypt_and_save_api_key(
         &store,
         profile_id,
@@ -499,7 +489,7 @@ pub fn set_api_key(profile_id: &str, provider_name: &str, plaintext: &str) -> Se
 }
 
 pub fn delete_api_key(profile_id: &str, provider_name: &str) -> SettingsResult<bool> {
-    let store = ProfileStore::new().map_err(|error| error.to_string())?;
+    let store = storage::profile_store().map_err(|error| error.to_string())?;
     delete_stored_api_key(&store, profile_id, provider(provider_name)?)
         .map_err(|error| error.to_string())
 }
@@ -509,7 +499,7 @@ pub fn reveal_api_key(
     provider_name: &str,
     captcha_passed: bool,
 ) -> SettingsResult<Option<String>> {
-    let store = ProfileStore::new().map_err(|error| error.to_string())?;
+    let store = storage::profile_store().map_err(|error| error.to_string())?;
     let authorization = check_reveal_authorization(&store).map_err(|error| error.to_string())?;
     if authorization != RevealAuthResult::Authorized && !captcha_passed {
         return Err("captcha-required".to_string());
@@ -629,7 +619,7 @@ pub fn ocr_available() -> SettingsResult<bool> {
 }
 
 fn current_squigit_version() -> SettingsResult<Option<String>> {
-    Ok(VersionStore::new()
+    Ok(storage::version_store()
         .map_err(|error| error.to_string())?
         .load()
         .map_err(|error| error.to_string())?

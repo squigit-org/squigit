@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::storage::{
-    OcrAnnotationEntry, SideChatMetadata, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
+    self, OcrAnnotationEntry, SideChatMetadata, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
 };
 use chrono::Utc;
 use regex::{Regex, RegexBuilder};
@@ -111,7 +111,7 @@ pub struct ThreadSearchResult {
 }
 
 fn active_storage() -> ExplorerResult<ThreadStorage> {
-    ThreadStorage::new().map_err(|error| error.to_string())
+    storage::thread_store().map_err(|error| error.to_string())
 }
 
 #[derive(Clone, Copy)]

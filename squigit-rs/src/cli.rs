@@ -7,7 +7,7 @@ use crate::brain::{
     AttachmentPreparationStatus, PrepareAttachmentRequest, PrepareSubmissionAttachmentsRequest,
 };
 use crate::storage::{
-    AttachmentFileType, OcrAnnotationEntry, OcrRegion, Profile, ProfileStore, GOOGLE_ISSUER,
+    self, AttachmentFileType, OcrAnnotationEntry, OcrRegion, Profile, GOOGLE_ISSUER,
 };
 use crate::{explorer, profile, services, settings};
 use chrono::{SecondsFormat, Utc};
@@ -42,7 +42,7 @@ pub fn initialize_contributor_mode(
     crate::auth::set_session_api_keys(gemini_api_key, imgbb_api_key)
         .map_err(|error| error.to_string())?;
 
-    let store = ProfileStore::new().map_err(|error| error.to_string())?;
+    let store = storage::profile_store().map_err(|error| error.to_string())?;
     if gemini_api_key.is_none() && imgbb_api_key.is_none() {
         store
             .clear_active_profile_id()
@@ -456,8 +456,7 @@ pub fn list_ocr_runs(thread_id: &str) -> Result<Vec<CliOcrRun>, String> {
 }
 
 pub fn persona_path() -> Result<PathBuf, String> {
-    crate::storage::rules::rules_path()
-        .ok_or_else(|| "Could not locate Squigit's RULES.md path".to_string())
+    storage::rules_path().ok_or_else(|| "Could not locate Squigit's RULES.md path".to_string())
 }
 
 pub fn open_external(value: &str) -> Result<(), String> {
