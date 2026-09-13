@@ -23,7 +23,7 @@ serde_json = "1.0"
 squigit-auth = { version = "0.1.0", path = "../crates/squigit-auth" }
 squigit-brain = { version = "0.1.0", path = "../crates/squigit-brain" }
 squigit-harness = { version = "0.1.0", path = "../crates/squigit-harness" }
-squigit-ocr = { version = "0.1.0", path = "../squigit-ocr/runtime" }
+squigit-ocr = { version = "0.1.0", path = "../squigit-ocr" }
 squigit-storage = { version = "0.1.0", path = "../crates/squigit-storage" }
 thiserror = "2.0"
 tokio = { version = "1.37", features = ["fs", "macros", "rt", "sync", "time"] }

@@ -106,7 +106,7 @@ fn inspect_source_tree(root: &Path) -> Result<(), String> {
     let roots = [
         root.join("crates"),
         root.join("squigit-cli"),
-        root.join("squigit-ocr/runtime"),
+        root.join("squigit-ocr"),
         root.join("squigit-rs"),
         root.join("xtask"),
     ];

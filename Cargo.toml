@@ -2,7 +2,7 @@
 members = [
     "crates/*",
     "squigit-cli",
-    "squigit-ocr/runtime",
+    "squigit-ocr",
     "squigit-rs",
     "xtask",
 ]
