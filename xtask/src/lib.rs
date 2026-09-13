@@ -6,15 +6,21 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 
+#[path = "../../squigit-ocr/build.rs"]
+mod ocr_build;
+
 const HELP: &str = "Squigit repository tasks
 
 Usage: cargo xtask <COMMAND> [ARGS]
 
 Commands:
+  build   Build one product with --cli or --ocr
   doctor  Validate source hygiene, formatting, and the complete Rust workspace
   dev     Start the Squigit terminal interface; remaining arguments are forwarded
 
 Examples:
+  cargo xtask build --cli
+  cargo xtask build --ocr
   cargo xtask doctor
   SQUIGIT_HOME=\"$HOME/.squigit-dev\" cargo xtask dev
   cargo xtask dev -- --home \"$HOME/.squigit-dev\" image.png";
@@ -25,6 +31,7 @@ pub fn run(arguments: &[String]) -> i32 {
         return 0;
     };
     let result = match command {
+        "build" => build(&arguments[1..]),
         "doctor" => doctor(),
         "dev" => dev(&arguments[1..]),
         "help" | "-h" | "--help" => {
@@ -42,6 +49,23 @@ pub fn run(arguments: &[String]) -> i32 {
             eprintln!("xtask: {error}");
             1
         }
+    }
+}
+
+fn build(arguments: &[String]) -> Result<ExitStatus, String> {
+    let root = workspace_root()?;
+    match arguments {
+        [product] if product == "--cli" => Command::new("cargo")
+            .args(["build", "--release", "--package", "squigit-cli"])
+            .current_dir(root)
+            .status()
+            .map_err(|error| format!("could not start the Squigit CLI build: {error}")),
+        [product] if product == "--ocr" => {
+            ocr_build::run(&root, false)?;
+            successful_status()
+        }
+        [] => Err("build requires exactly one product flag: --cli or --ocr".to_string()),
+        _ => Err("build accepts exactly one product flag: --cli or --ocr".to_string()),
     }
 }
 
