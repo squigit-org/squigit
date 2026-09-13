@@ -1,6 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,12 +17,13 @@ Usage: cargo xtask <COMMAND> [ARGS]
 Commands:
   build   Build one product with --cli or --ocr
   doctor  Validate source hygiene, formatting, and the complete Rust workspace
-  dev     Start the Squigit terminal interface; remaining arguments are forwarded
+  dev     Start the Squigit terminal interface; use --demo for contributor mode
 
 Examples:
   cargo xtask build --cli
   cargo xtask build --ocr
   cargo xtask doctor
+  cargo xtask dev --demo
   SQUIGIT_HOME=\"$HOME/.squigit-dev\" cargo xtask dev
   cargo xtask dev -- --home \"$HOME/.squigit-dev\" image.png";
 
@@ -91,6 +93,9 @@ fn doctor() -> Result<ExitStatus, String> {
         println!("[doctor] {label}");
         let mut command = Command::new("cargo");
         command.args(*arguments).current_dir(&root);
+        if *label == "workspace compile" {
+            command.env("SQUIGIT_CLI_DEMO", "1");
+        }
         if *quiet {
             command.stdout(Stdio::null());
         }
@@ -107,16 +112,102 @@ fn doctor() -> Result<ExitStatus, String> {
 
 fn dev(arguments: &[String]) -> Result<ExitStatus, String> {
     let root = workspace_root()?;
-    let forwarded = arguments
-        .strip_prefix(&["--".to_string()])
-        .unwrap_or(arguments);
-    Command::new("cargo")
+    let (demo, forwarded) = parse_dev_arguments(arguments);
+    let mut command = Command::new("cargo");
+    command
         .args(["run", "--package", "squigit-cli", "--bin", "squigit", "--"])
         .args(forwarded)
         .env("SQUIGIT_LOG_DIR", root.join("logs"))
-        .current_dir(root)
+        .current_dir(&root);
+
+    if demo {
+        command.env("SQUIGIT_CLI_DEMO", "1");
+        if environment_value("SQUIGIT_HOME").is_none()
+            && environment_value("SQUIGIT_CONFIG_DIR").is_none()
+        {
+            command.env("SQUIGIT_CONFIG_DIR", root.join("squigit-demo"));
+        }
+        for (name, value) in demo_secrets(&root)? {
+            command.env(name, value);
+        }
+    }
+
+    command
         .status()
         .map_err(|error| format!("could not start squigit-cli: {error}"))
+}
+
+fn parse_dev_arguments(arguments: &[String]) -> (bool, Vec<String>) {
+    let mut demo = false;
+    let mut separator_seen = false;
+    let mut forwarded = Vec::new();
+    for argument in arguments {
+        if !separator_seen && argument == "--" {
+            separator_seen = true;
+        } else if !separator_seen && argument == "--demo" {
+            demo = true;
+        } else {
+            forwarded.push(argument.clone());
+        }
+    }
+    (demo, forwarded)
+}
+
+fn demo_secrets(root: &Path) -> Result<Vec<(&'static str, String)>, String> {
+    let dotenv = read_dotenv(&root.join(".env"))?;
+    let mut values = Vec::new();
+    for name in ["GEMINI_API_KEY", "IMGBB_API_KEY"] {
+        if let Some(value) = environment_value(name).or_else(|| dotenv.get(name).cloned()) {
+            values.push((name, value));
+        }
+    }
+    Ok(values)
+}
+
+fn environment_value(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
+fn read_dotenv(path: &Path) -> Result<HashMap<String, String>, String> {
+    let content = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(HashMap::new()),
+        Err(error) => return Err(format!("could not read {}: {error}", path.display())),
+    };
+    let mut values = HashMap::new();
+    for (index, raw_line) in content.lines().enumerate() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let line = line.strip_prefix("export ").unwrap_or(line).trim();
+        let Some((name, value)) = line.split_once('=') else {
+            return Err(format!("invalid .env assignment on line {}", index + 1));
+        };
+        let name = name.trim();
+        if !matches!(name, "GEMINI_API_KEY" | "IMGBB_API_KEY") {
+            continue;
+        }
+        let value = unquote_dotenv_value(value.trim());
+        if !value.is_empty() {
+            values.insert(name.to_string(), value.to_string());
+        }
+    }
+    Ok(values)
+}
+
+fn unquote_dotenv_value(value: &str) -> &str {
+    if value.len() >= 2 {
+        let first = value.as_bytes()[0];
+        let last = value.as_bytes()[value.len() - 1];
+        if matches!((first, last), (b'\'', b'\'') | (b'"', b'"')) {
+            return &value[1..value.len() - 1];
+        }
+    }
+    value
 }
 
 fn workspace_root() -> Result<PathBuf, String> {
