@@ -201,13 +201,7 @@ print("OCR dependency verification passed.")"###,
     }
 
     if measure_payload || parse_bool_env("SQUIGIT_OCR_MEASURE_SIZE") {
-        measure_payload_size(
-            repo_root,
-            &native,
-            &python,
-            &packaged_runtime,
-            &host_triple,
-        )?;
+        measure_payload_size(repo_root, &native, &python, &packaged_runtime, &host_triple)?;
     } else {
         println!("\nSkipping OCR payload size measurement (disabled by default).");
     }
