@@ -367,9 +367,6 @@ fn write_text_first_message_log(ui_message: &str, output: &TextFirstMessage) {
     let Some(logs_dir) = std::env::var_os("SQUIGIT_LOG_DIR")
         .filter(|path| !path.is_empty())
         .map(std::path::PathBuf::from)
-        .or_else(|| {
-            squigit_storage::paths::base_config_dir().map(|config_root| config_root.join("logs"))
-        })
     else {
         return;
     };

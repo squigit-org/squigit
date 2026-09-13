@@ -41,8 +41,7 @@ pub(crate) fn write_request_log(context: &GeminiRequestLogContext<'_>, request: 
 fn build_log_path(context: &GeminiRequestLogContext<'_>) -> Option<PathBuf> {
     let logs_dir = std::env::var_os("SQUIGIT_LOG_DIR")
         .filter(|path| !path.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| squigit_storage::paths::base_config_dir().map(|path| path.join("logs")))?;
+        .map(PathBuf::from)?;
     if let Err(error) = std::fs::create_dir_all(&logs_dir) {
         if std::env::var_os("SQUIGIT_TUI_ACTIVE").is_none() {
             eprintln!(
