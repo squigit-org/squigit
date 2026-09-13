@@ -24,9 +24,14 @@ pub struct App {
 }
 
 impl App {
-    pub fn load(cwd: PathBuf, color: bool, enter_guest: bool) -> Result<Self, String> {
+    pub fn load(
+        cwd: PathBuf,
+        color: bool,
+        demo_mode: bool,
+        enter_guest: bool,
+    ) -> Result<Self, String> {
         let (sender, receiver) = unbounded_channel();
-        let state = AppState::load(cwd, color, enter_guest)?;
+        let state = AppState::load(cwd, color, demo_mode, enter_guest)?;
         let app = Self {
             state,
             sender,
@@ -236,20 +241,21 @@ impl App {
     }
 
     fn execute_command(&mut self, command: SlashCommand, arguments: String) -> Option<Control> {
-        if self
-            .state
-            .current_thread
-            .as_ref()
-            .is_some_and(|thread| thread.kind == CurrentThreadKind::SideChat)
-            && matches!(
-                command,
-                SlashCommand::Scan | SlashCommand::Lens | SlashCommand::Translate
-            )
-        {
-            self.state.set_notice(
-                NoticeKind::Error,
-                "This command needs an image thread. Run /analyze or /resume an image thread.",
-            );
+        if !self.state.command_allowed(command) {
+            let message = if self.state.demo_mode
+                && matches!(
+                    command,
+                    SlashCommand::Login
+                        | SlashCommand::Logout
+                        | SlashCommand::Switch
+                        | SlashCommand::Configure
+                        | SlashCommand::Reveal
+                ) {
+                "Authentication and stored API-key commands are disabled in contributor demo mode."
+            } else {
+                "This command needs an image thread. Run /analyze or /resume an image thread."
+            };
+            self.state.set_notice(NoticeKind::Error, message);
             return None;
         }
         match command {

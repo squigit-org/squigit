@@ -4,6 +4,7 @@
 mod app;
 mod args;
 mod commands;
+mod secrets;
 mod state;
 mod tasks;
 mod ui;
@@ -128,6 +129,9 @@ async fn run() -> Result<(), String> {
         return Ok(());
     }
 
+    let demo = secrets::demo_enabled();
+    secrets::initialize(demo)?;
+
     let install_script_error = squigit::services::ensure_ocr_install_script().err();
     let cwd = std::env::current_dir()
         .map_err(|error| format!("could not read the current directory: {error}"))?
@@ -135,7 +139,7 @@ async fn run() -> Result<(), String> {
         .map_err(|error| format!("could not resolve the current directory: {error}"))?;
     let color = !arguments.no_color && std::env::var_os("NO_COLOR").is_none();
     std::env::set_var("SQUIGIT_TUI_ACTIVE", "1");
-    let mut app = App::load(cwd, color, arguments.image.is_some())?;
+    let mut app = App::load(cwd, color, demo, arguments.image.is_some() || demo)?;
     if let Some(error) = install_script_error {
         app.state.set_notice(
             NoticeKind::Warning,

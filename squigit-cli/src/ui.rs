@@ -186,13 +186,23 @@ fn draw_status(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
 
 fn status_lines(state: &AppState) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
-    if state.profile_id.is_some() && !state.gemini_configured {
+    if state.demo_mode && state.profile_id.is_some() && !state.gemini_configured {
+        lines.push(Line::styled(
+            "[demo] Gemini is unavailable. Set GEMINI_API_KEY in the shell or repo .env.",
+            warning(state),
+        ));
+    } else if state.profile_id.is_some() && !state.gemini_configured {
         lines.push(Line::styled(
             "[!] API key missing. Run /configure to add a Gemini API key.",
             warning(state),
         ));
     }
-    if state.profile_id.is_none() {
+    if state.demo_mode && state.profile_id.is_none() {
+        lines.push(Line::styled(
+            "[demo guest] No API keys loaded. Local and OCR features remain available.",
+            muted(state),
+        ));
+    } else if state.profile_id.is_none() {
         lines.push(Line::styled(
             "[guest] AI and API-key controls require /login.",
             muted(state),

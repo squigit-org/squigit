@@ -141,6 +141,7 @@ pub struct RevealState {
 pub struct AppState {
     pub version: &'static str,
     pub cwd: PathBuf,
+    pub demo_mode: bool,
     pub profile_id: Option<String>,
     pub profile_label: String,
     pub model: String,
@@ -176,7 +177,12 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn load(cwd: PathBuf, color: bool, enter_guest: bool) -> Result<Self, String> {
+    pub fn load(
+        cwd: PathBuf,
+        color: bool,
+        demo_mode: bool,
+        enter_guest: bool,
+    ) -> Result<Self, String> {
         let settings = squigit::settings::load_settings()?;
         let profiles =
             squigit::profile::get_profile_snapshot().map_err(|error| error.to_string())?;
@@ -205,6 +211,7 @@ impl AppState {
         Ok(Self {
             version: env!("CARGO_PKG_VERSION"),
             cwd,
+            demo_mode,
             profile_id: settings.active_profile_id,
             profile_label,
             model: settings.config.model,
@@ -397,7 +404,19 @@ impl AppState {
         Ok(())
     }
 
-    fn command_allowed(&self, command: SlashCommand) -> bool {
+    pub fn command_allowed(&self, command: SlashCommand) -> bool {
+        if self.demo_mode
+            && matches!(
+                command,
+                SlashCommand::Login
+                    | SlashCommand::Logout
+                    | SlashCommand::Switch
+                    | SlashCommand::Configure
+                    | SlashCommand::Reveal
+            )
+        {
+            return false;
+        }
         let is_sidechat = self
             .current_thread
             .as_ref()

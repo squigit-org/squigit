@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Terminal interface for Squigit"
+build = "build.rs"
 
 [[bin]]
 name = "squigit"
