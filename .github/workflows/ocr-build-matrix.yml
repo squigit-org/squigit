@@ -2,36 +2,50 @@ name: "OCR Build Matrix"
 
 on:
   workflow_dispatch:
-    inputs:
-      platform:
-        description: "Operating system to build and smoke-check"
-        required: true
-        type: choice
-        default: ubuntu-x64
-        options:
-          - ubuntu-x64
-          - fedora-x64
-          - windows-x64
-          - macos-arm
 
 jobs:
   build-ocr:
-    name: OCR ${{ inputs.platform }}
-    runs-on: ${{ inputs.platform == 'windows-x64' && 'windows-latest' || inputs.platform == 'macos-arm' && 'macos-latest' || 'ubuntu-latest' }}
-    container: ${{ inputs.platform == 'fedora-x64' && 'fedora:latest' || '' }}
+    name: OCR ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu x64
+            slug: ubuntu-x64
+            runner: ubuntu-latest
+            container: ""
+            target: x86_64-unknown-linux-gnu
+          - name: Fedora x64
+            slug: fedora-x64
+            runner: ubuntu-latest
+            container: fedora:latest
+            target: x86_64-unknown-linux-gnu
+          - name: macOS ARM
+            slug: macos-arm
+            runner: macos-15
+            container: ""
+            target: aarch64-apple-darwin
+          - name: Windows x64
+            slug: windows-x64
+            runner: windows-latest
+            container: ""
+            target: x86_64-pc-windows-msvc
     env:
-      OCR_OS_NAME: ${{ inputs.platform == 'windows-x64' && 'Windows-x64' || inputs.platform == 'fedora-x64' && 'Fedora-x64' || inputs.platform == 'macos-arm' && 'macOS-ARM' || 'Ubuntu-x64' }}
-      OCR_TARGET: ${{ inputs.platform == 'windows-x64' && 'x86_64-pc-windows-msvc' || inputs.platform == 'macos-arm' && 'aarch64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
+      OCR_OS_NAME: ${{ matrix.name }}
+      OCR_TARGET: ${{ matrix.target }}
 
     steps:
       - name: Pre-setup Fedora container
-        if: inputs.platform == 'fedora-x64'
+        if: matrix.slug == 'fedora-x64'
         run: |
           dnf install -y git curl tar gzip gcc-c++ make python3 python3-pip perl-open perl-FindBin findutils patch
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Build OCR baseline (onefile)
         uses: ./.github/actions/build-squigit-ocr
@@ -40,12 +54,12 @@ jobs:
           pyi-mode: "onefile"
 
       - name: Clean OCR build folders only
-        if: inputs.platform != 'windows-x64'
+        if: runner.os != 'Windows'
         run: |
           rm -rf squigit-ocr/native/build squigit-ocr/native/dist
 
       - name: Clean OCR build folders only (Windows)
-        if: inputs.platform == 'windows-x64'
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Remove-Item -Recurse -Force squigit-ocr/native/build, squigit-ocr/native/dist -ErrorAction SilentlyContinue
@@ -57,7 +71,7 @@ jobs:
           pyi-mode: "onedir"
 
       - name: Generate PNG smoke image (Unix)
-        if: inputs.platform != 'windows-x64'
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
@@ -74,7 +88,7 @@ jobs:
           PY
 
       - name: Generate PNG smoke image (Windows)
-        if: inputs.platform == 'windows-x64'
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $code = @"
@@ -90,22 +104,22 @@ jobs:
           "@
           & squigit-ocr/native/venv/Scripts/python.exe -c $code
 
-      - name: Run sidecar CLI and print JSON (Unix)
-        if: inputs.platform != 'windows-x64'
+      - name: Run OCR executable and print JSON (Unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           chmod +x "binaries/paddle-ocr-$OCR_TARGET/squigit-ocr" || true
           "binaries/paddle-ocr-$OCR_TARGET/squigit-ocr" /tmp/ocr-smoke.png | tee /tmp/ocr-smoke-output.json
 
-      - name: Run sidecar CLI and print JSON (Windows)
-        if: inputs.platform == 'windows-x64'
+      - name: Run OCR executable and print JSON (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           & "binaries/paddle-ocr-$env:OCR_TARGET/squigit-ocr.exe" "$env:TEMP/ocr-smoke.png" | Tee-Object -FilePath "$env:TEMP/ocr-smoke-output.json"
 
       - name: Validate OCR JSON payload (Unix)
-        if: inputs.platform != 'windows-x64'
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
@@ -128,7 +142,7 @@ jobs:
           PY
 
       - name: Validate OCR JSON payload (Windows)
-        if: inputs.platform == 'windows-x64'
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $code = @"
@@ -151,20 +165,20 @@ jobs:
           "@
           & squigit-ocr/native/venv/Scripts/python.exe -c $code
 
-      - name: Upload OCR smoke artifacts (Unix)
-        if: inputs.platform != 'windows-x64'
+      - name: Upload smoke-test image and OCR output (Unix)
+        if: runner.os != 'Windows'
         uses: actions/upload-artifact@v7
         with:
-          name: ocr-smoke-artifacts-${{ inputs.platform }}
+          name: ocr-smoke-artifacts-${{ matrix.slug }}
           path: |
             /tmp/ocr-smoke.png
             /tmp/ocr-smoke-output.json
 
-      - name: Upload OCR smoke artifacts (Windows)
-        if: inputs.platform == 'windows-x64'
+      - name: Upload smoke-test image and OCR output (Windows)
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v7
         with:
-          name: ocr-smoke-artifacts-${{ inputs.platform }}
+          name: ocr-smoke-artifacts-${{ matrix.slug }}
           path: |
             ${{ runner.temp }}/ocr-smoke.png
             ${{ runner.temp }}/ocr-smoke-output.json
