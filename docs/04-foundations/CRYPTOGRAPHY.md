@@ -8,10 +8,10 @@ This document defines Squigit's cryptographic ownership, formats, failure rules,
 
 Rust owns BYOK cryptography and provider credential use. Under OS-vault service `org.squigit.byok`, it stores two independent random 32-byte secrets:
 
-| Vault account | Purpose | Lifetime |
-| --- | --- | --- |
-| `record-encryption-master-v1` | Derive per-record AES keys | Deleted after explicit deletion of the final credential |
-| `cas-binding-key-v1` | Derive runtime credential digests and per-object remote IDs | Retained across credential changes and encryption-master replacement |
+| Vault account                 | Purpose                                                     | Lifetime                                                             |
+| ----------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| `record-encryption-master-v1` | Derive per-record AES keys                                  | Deleted after explicit deletion of the final credential              |
+| `cas-binding-key-v1`          | Derive runtime credential digests and per-object remote IDs | Retained across credential changes and encryption-master replacement |
 
 Both values come from the operating-system CSPRNG. The vault maps to macOS Keychain, Windows Credential Manager, and Linux Secret Service. A locked, denied, unavailable, or missing vault fails closed. No predictable metadata, filesystem file, environment variable, renderer storage, or plaintext fallback replaces either secret.
 
@@ -63,7 +63,7 @@ ciphertext = AES-256-GCM(
 )
 ```
 
-`keys.json` stores canonical unpadded base64url for the salt, nonce, and combined ciphertext-plus-tag. Strict types reject unknown fields, unknown algorithms, noncanonical encodings, incorrect decoded lengths, and any schema other than 1. Moving a record to another profile or provider, or changing authenticated metadata, causes decryption failure.
+`keys.json` stores the credential's character width and canonical unpadded base64url for the salt, nonce, and combined ciphertext-plus-tag. Encrypted records and provider maps reject unknown fields, unknown algorithms, noncanonical encodings, and incorrect decoded lengths. The root file rejects schemas other than 1. Moving a record to another profile or provider, or changing authenticated metadata, causes decryption failure.
 
 A populated store with a missing encryption master never receives a replacement. On the first save, newly created vault values are read back before the file is written. Any failure before the durable file transaction completes triggers deletion of only the vault values created by that transaction.
 
@@ -104,7 +104,11 @@ The persisted ID is exactly 64 lowercase hexadecimal characters with no prefix. 
 
 This makes identity stable for A → B → A while preventing an attacker with only filesystem data from verifying API-key guesses. Different objects receive different persisted IDs for the same credential.
 
-Loss of `cas-binding-key-v1` makes existing bindings unrecoverable. Squigit will not silently replace it while manifests contain remotes. An explicit remote-cache security reset clears remote metadata before generating a replacement.
+Loss of `cas-binding-key-v1` makes existing bindings unrecoverable. Squigit will not silently replace it while manifests contain remotes because doing so would orphan their credential association. There is currently no public remote-cache reset operation; saving a credential fails until the original vault key is restored or the affected local object data is deliberately removed.
+
+## Contributor Session Keys
+
+Contributor demo mode can replace the persistent key store with process-only Gemini and ImgBB keys. These values are validated, held in zeroizing memory, and never written to `keys.json` or the OS vault. Session credential comparisons and object-remote IDs use separate `squigit/session/v1/...` domains so they cannot be confused with persistent vault-bound identities.
 
 ## Filesystem and Memory Rules
 

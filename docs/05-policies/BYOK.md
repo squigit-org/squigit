@@ -1,12 +1,14 @@
 # Bring Your Own Key (BYOK)
 
-Squigit is a local-first BYOK desktop application. You supply credentials for Google AI Studio and, optionally, ImgBB. Squigit does not proxy provider requests, resell access, or send credentials to Squigit-operated servers.
+Squigit is a local-first BYOK application with desktop and terminal interfaces. You supply credentials for Google AI Studio and, optionally, ImgBB. Squigit does not proxy provider requests, resell access, or send credentials to Squigit-operated servers.
 
 ## What Handles Plaintext
 
-An API key is plaintext only while you type or explicitly reveal it, and inside the native process while Squigit constructs an authorized provider request. The selected provider necessarily receives the key. Squigit servers do not.
+Persisted API keys are plaintext only while you enter or explicitly reveal them and inside the native process while Squigit constructs an authorized provider request. The selected provider necessarily receives the key. Squigit-operated servers do not.
 
-Normal renderer state and IPC flows carry configured status, profile IDs, and provider names—not stored plaintext credentials. Reveal is a separate, user-authorized capability whose temporary renderer value is cleared after 30 seconds, on hide, blur, settings close, profile change, window blur, or document visibility loss.
+In the desktop shell, normal renderer state and IPC flows carry configured status, credential width, profile IDs, and provider names. Reveal is a separate, user-authorized capability whose temporary renderer value is cleared after 30 seconds, on hide, blur, settings close, profile change, window blur, or document visibility loss.
+
+Contributor CLI demo mode is a separate process-only path. It can read `GEMINI_API_KEY` and `IMGBB_API_KEY` from the environment or ignored `.env`, holds them in zeroizing memory, and never writes them to `keys.json` or the OS vault.
 
 ## Storage
 
@@ -50,7 +52,7 @@ This guarantee does not cover same-user malware, a compromised OS session or vau
 
 ## Supported Providers
 
-| Provider | Purpose | Credential setup |
-| --- | --- | --- |
-| Google AI Studio | Gemini models and Files API | [Google AI Studio](https://aistudio.google.com/app/apikey) |
-| ImgBB | Optional image hosting for reverse image search | [ImgBB API](https://api.imgbb.com/) |
+| Provider         | Purpose                                         | Credential setup                                           |
+| ---------------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| Google AI Studio | Gemini models and Files API                     | [Google AI Studio](https://aistudio.google.com/app/apikey) |
+| ImgBB            | Optional image hosting for reverse image search | [ImgBB API](https://api.imgbb.com/)                        |

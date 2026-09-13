@@ -316,7 +316,7 @@ squigit-storage + squigit-auth + squigit-harness + squigit-brain + squigit-ocr
     -> squigit-rs
 ```
 
-Before each upload, xtask verifies the package contents, normalized manifest, archive size, license and repository metadata, and registry-resolvable internal dependencies. It runs Cargo's publish dry run with verification enabled. It does not use `--no-verify`.
+Before confirmation, xtask runs `cargo package --locked --no-verify` for each pending crate and enforces crates.io's 10 MiB archive limit. Repository doctor has already checked publish metadata and internal path/version pairs, and release validates that every pending package requirement accepts the exact local dependency version. Immediately before each upload, xtask runs `cargo publish --dry-run --locked` with Cargo verification enabled.
 
 After publishing a package, xtask waits until that exact version is visible through crates.io before continuing to a dependent package. If an upload times out, xtask queries the registry before reporting failure because the upload may already have succeeded.
 
@@ -346,9 +346,7 @@ cargo xtask release --cli
 
 The command reads the `squigit-cli` version and verifies it is newer than the latest CLI release in `squigit-org/distribution`. After confirmation, it creates an immutable `cli-v<VERSION>` tag at the displayed source commit, pushes that tag to the public source repository, and passes the tag to the CLI release workflow. A matching remote tag is reused only when it resolves to the same commit. Xtask reports the workflow URL and waits for completion.
 
-The product release verifies that the packaged CLI resolves `squigit-rs` and its transitive libraries from crates.io. Local path dependencies remain available for workspace development but are not the dependency source used for a shipped product.
-
-The CLI release command refuses to dispatch until every required facade package version is available from crates.io and the distribution repository exposes the expected CLI workflow contract.
+Before dispatch, xtask verifies that the current versions of `squigit-rs` and all five implementation crates exist on crates.io. It also requires the distribution repository to expose the expected CLI workflow contract. Building the shipped CLI from the immutable source tag and resolving its release dependency graph are responsibilities of that distribution workflow.
 
 ## Release authentication
 

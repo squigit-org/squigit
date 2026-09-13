@@ -1,8 +1,8 @@
 # Privacy Policy
 
-**Last Updated:** August 6, 2026
+**Last Updated:** September 13, 2026
 
-Squigit is an open-source, local-first desktop application. We believe your data belongs to you. This Privacy Policy explains how we handle your information, specifically regarding our use of Google APIs and third-party integrations.
+Squigit is open-source, local-first software with desktop and terminal interfaces. This Privacy Policy explains how the products handle information when using Google APIs and third-party integrations.
 
 ## Google API Services User Data Policy
 
@@ -12,7 +12,7 @@ Squigit's use and transfer of information received from Google APIs to any other
 
 When you sign in using Google OAuth, Squigit requests access to your basic profile information (Name, Email, and Avatar).
 
-- **Purpose:** This data is used **exclusively** to create a local profile on your machine to personalize the application interface (e.g., displaying your avatar and name).
+- **Purpose:** This data is used **exclusively** to create a local profile on your machine and display account identity in a Squigit interface.
 - **Data Storage:** This information is stored locally on your device. It is **never** transmitted to, stored on, or processed by any servers controlled by the Squigit developers.
 
 ## Local-First & Zero-Trust Architecture
@@ -20,8 +20,9 @@ When you sign in using Google OAuth, Squigit requests access to your basic profi
 Because Squigit analyzes your screen and text, your privacy is our highest priority:
 
 - **No Telemetry or Backend:** Squigit has no backend database or central server. Your conversations, images, and history never leave your local machine unless you explicitly trigger an AI feature.
+- **Local OCR:** OCR execution and installed recognition models run on your machine. Model downloads contact their configured public model hosts, but OCR images are not uploaded by the OCR runtime.
 - **Encrypted API Keys:** Squigit operates on a Bring Your Own Key (BYOK) model. API keys are encrypted locally with AES-256-GCM under random master-key material held by your operating-system vault. Squigit-operated servers never receive them. The native app and the selected provider necessarily handle plaintext during an authorized request.
-- **Stateless API Requests:** When you use AI features, requests are sent directly from your machine to your chosen provider (Google or ImgBB). There is no middleman server intercepting or logging your prompts and completions.
+- **Direct Provider Requests:** Gemini prompts, attachments, and generated responses travel directly between your device and Google. ImgBB receives an image only when you explicitly use the Google Lens feature, which needs a public image URL. No Squigit-operated middleman server intercepts or logs these requests.
 
 ## Third-Party Integrations & Google Lens Feature
 

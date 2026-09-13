@@ -36,7 +36,7 @@ This Code of Conduct applies within all project spaces, and also applies when an
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project team responsible for enforcement at **[INSERT YOUR CONTACT EMAIL HERE]**. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior should be reported privately to [a7mddra@gmail.com](mailto:a7mddra@gmail.com). Do not disclose sensitive reports in a public issue. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
@@ -70,7 +70,7 @@ Community leaders will follow these Community Impact Guidelines in determining t
 
 ## Attribution
 
-This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 2.1, available at [[https://www.contributor-covenant.org/version/2/1/code_of_conduct.html](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html)][v2.1][v2.1].
+This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 2.1, available from the [Contributor Covenant website][v2.1].
 
-[homepage]: https://www.google.com/search?q=%5Bhttps://www.contributor-covenant.org%5D(https://www.contributor-covenant.org)
-[v2.1]: https://www.google.com/search?q=%5Bhttps://www.contributor-covenant.org/version/2/1/code_of_conduct.html%5D(https://www.contributor-covenant.org/version/2/1/code_of_conduct.html)
+[homepage]: https://www.contributor-covenant.org/
+[v2.1]: https://www.contributor-covenant.org/version/2/1/code_of_conduct.html

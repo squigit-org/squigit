@@ -1,133 +1,98 @@
 # Authentication Foundation
 
-Status: **schema 1, Google OIDC PKCE, desktop loopback flow**
+Status: **schema 1, Google OIDC with PKCE, shared loopback flow**
 
-This document is the reference for Squigit authentication. It explains what happens without requiring a reader to inspect the code first.
+Squigit uses Google sign-in to prove an identity and stores that identity as a local profile. The desktop and CLI reach authentication through `squigit-rs`; provider logic lives in `squigit-auth`, and persistence lives in `squigit-storage`.
 
-## Mental Model
+## Identity model
 
-Squigit uses Google sign-in to prove a user identity, then turns that identity into a local Squigit profile.
-
-Google is not the account database for local app data. The durable local account key is:
+Google is the identity provider, not the database for local Squigit data. A profile is keyed by:
 
 ```text
 provider + canonical issuer + subject
 ```
 
-For Google, that is:
+For Google:
 
 ```text
 google + https://accounts.google.com + <Google sub>
 ```
 
-The profile id is a filesystem-safe hash of that identity:
+The filesystem-safe profile ID is:
 
 ```text
 ggl-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx
 ```
 
-Each hexadecimal group is eight characters from the first 32 lowercase hexadecimal characters of
-`BLAKE3(canonical_iss + "\0" + sub)`.
-
-Email, name, and avatar are display attributes. They can change and are never used as the stable account key.
-
-## System Pieces
-
-### Native Auth Crate
-
-`crates/squigit-auth/` owns local authentication behavior: OAuth flow state, provider validation, profile value creation, avatar hydration policy, API key validation, encryption/decryption, and OTA verification.
-
-Important files:
-
-- `src/auth/callback_server.rs`: auth settings, localhost loopback server, hosted status page URL selection, and HTTP 302 redirect response.
-- `src/auth/credentials.rs`: Google OAuth credential loading and validation.
-- `src/auth/google.rs`: PKCE generation, Google authorization URL construction, callback validation, token exchange, ID token validation, profile creation/update, avatar hydration.
-- `src/security/api_keys.rs`, `src/security/crypto.rs`, and `src/security/vault.rs`: profile-scoped BYOK validation, OS-vault custody, record encryption, and credential-bound CAS identities.
-- `build.rs`: embeds OAuth credentials into the Rust build when configured.
-
-`crates/squigit-storage/src/profiles/` owns profile types and the persisted profile/auth/key storage contract: `auth.json`, `profiles.json`, `keys.json`, active profile state, profile CRUD, schema validation, and atomic writes.
-
-### Hosted Auth Status Page
-
-The hosted page lives in:
+The four hexadecimal groups come from the first 32 lowercase characters of:
 
 ```text
-squigit-org.github.io/site/login/popup-google-auth/index.html
-squigit-org.github.io/src/features/auth-popup/main.tsx
-squigit-org.github.io/src/features/auth-popup/styles.css
+BLAKE3(canonical_issuer + "\0" + subject)
 ```
 
-The Vite website build uses `site/` as its root and registers this route as the `authPopup` entry in `squigit-org.github.io/vite.config.ts`. The source path is `site/login/popup-google-auth/index.html`; the served URL remains:
+Email, name, and avatar are mutable display attributes. They do not identify the account.
 
-```text
-/login/popup-google-auth/
-```
+## Ownership
 
-In the current desktop flow, the hosted page is status UI only. It receives one of these fragments:
+`crates/squigit-auth/` owns:
 
-```text
-#success
-#invalid
-#unavailable
-```
+- Google OAuth credential parsing and validation;
+- PKCE, state, nonce, authorization URL, and token exchange;
+- JWKS and ID-token validation;
+- profile values and avatar hydration;
+- API-key validation, encryption, reveal authorization, and vault access;
+- credential-bound CAS remote identities.
 
-It does not need OAuth `code`, `state`, ID tokens, access tokens, refresh tokens, or profile data.
+`crates/squigit-storage/src/profiles/` owns the schema-1 `auth.json` and `keys.json` formats, `profiles.json`, advisory key-store locking, private permissions, and atomic persistence.
 
-The page also supports a direct web callback shape. If it receives `?code&state`, it renders the success state and its "Open Squigit" button builds an `org.squigit.app:/oauth2redirect/google` deep link from the current query string. If it receives `?error`, it renders the invalid state. The desktop loopback flow does not use that branch.
+`squigit-rs/src/profile.rs` is the shell-facing service. It injects host credentials, owns one active login attempt, opens the browser, runs the loopback exchange, exposes profile snapshots, and applies the product rules for login, cancellation, switching, logout, and deletion.
 
-## PKCE
+Product hosts supply OAuth application credentials through the facade:
 
-Squigit is a desktop public client. A public client cannot keep a meaningful OAuth client secret because the app binary runs on user machines.
+- The CLI build script embeds `squigit-cli/secrets/credentials.json` into the compiled CLI and the CLI passes that JSON to `set_google_credentials_json` at startup.
+- The desktop runtime injects its credential JSON through the same facade API.
+- Contributor demo mode does not configure OAuth and hides authentication commands.
 
-PKCE protects the authorization code flow:
+There is no auth-crate build script, OTA verification module, or embedded credential asset in `squigit-auth`.
 
-1. Squigit generates a high-entropy `code_verifier`.
-2. Squigit derives `code_challenge = BASE64URL(SHA256(code_verifier))`.
-3. The browser authorization request sends only the `code_challenge`.
-4. The token exchange sends the original `code_verifier`.
-5. Google issues tokens only if the verifier matches the earlier challenge.
+## OAuth flow
 
-This prevents a stolen authorization code from being exchanged without the verifier generated inside the app process.
+Squigit is a desktop public client. It cannot keep an OAuth client secret confidential because the executable runs on the user's machine. PKCE protects the authorization-code exchange:
 
-Squigit records `pkce_method: "S256"` in `auth.json` as metadata for the last successful login.
+1. The facade binds a one-shot HTTP server to `127.0.0.1` on an available port.
+2. Auth generates high-entropy state, nonce, and `code_verifier` values.
+3. It sends `BASE64URL(SHA256(code_verifier))` as the S256 code challenge.
+4. The user's default browser opens the Google authorization URL.
+5. Google redirects to the exact loopback origin used for that attempt.
+6. Squigit accepts only the expected loopback host and path, verifies state, and exchanges the code with the original verifier.
+7. Squigit validates the ID token before changing local state.
+8. The loopback response redirects the browser to the hosted status page with `#success` or `#invalid`.
 
-## State And Nonce
+The facade allows one login attempt at a time. Cancellation marks the active attempt, and the attempt also observes its configured timeout. State, nonce, authorization code, verifier, access token, and raw ID token remain process-only.
 
-`state` binds the loopback callback to the active browser attempt. A callback with the wrong state is rejected.
+If a desktop-client credential contains `client_secret`, token exchange begins with the public-client PKCE fields. Auth retries with the supplied secret only when Google rejects the first exchange with a client-secret-related error. The embedded value is not treated as a protected secret.
 
-`nonce` binds the ID token to the active OIDC attempt. A validly signed ID token with the wrong nonce is rejected.
+## ID-token validation
 
-Both values are generated per sign-in attempt and are not stored after completion.
+Before writing profile state, Squigit checks:
 
-## Google ID Token Validation
+- algorithm `RS256`;
+- a key ID present in Google's JWKS;
+- signature validity;
+- issuer `https://accounts.google.com` or `accounts.google.com`;
+- audience equal to the configured client ID;
+- required `exp`, `iss`, `aud`, and `sub` claims;
+- nonce equality with the active attempt;
+- a nonempty subject;
+- an email-verification claim that is not explicitly false.
 
-Squigit validates the ID token locally before writing profile state.
+The stored issuer is canonicalized to `https://accounts.google.com`. Missing email, name, or picture claims can be completed from Google UserInfo when an access token is available. A UserInfo response is accepted only when its subject matches the validated ID token.
 
-Validation checks:
+The access token and ID token are never persisted.
 
-- JWT header algorithm must be `RS256`.
-- JWT key id must exist in Google's JWKS.
-- Signature must verify against Google's JWKS.
-- Issuer must be `https://accounts.google.com` or `accounts.google.com`.
-- Audience must match the configured Google client id.
-- Required claims must include `exp`, `iss`, `aud`, and `sub`.
-- `nonce` must match the current attempt.
-- `sub` must be present and non-empty.
-- `email_verified` must not be explicitly false.
+## OAuth credential sources
 
-After validation, Squigit canonicalizes Google's issuer to:
-
-```text
-https://accounts.google.com
-```
-
-Display claims come from the ID token when present. If email, name, or picture is missing and an access token was returned, Squigit calls OIDC UserInfo as a transient fallback. UserInfo is accepted only if its `sub` matches the validated ID token `sub`.
-
-The Google access token and ID token are not persisted.
-
-## OAuth Credentials
-
-`credentials.rs` accepts Google credentials in either wrapper shape:
+The accepted JSON wrapper contains either `installed` or `web`:
 
 ```json
 {
@@ -140,51 +105,22 @@ The Google access token and ID token are not persisted.
 }
 ```
 
-Runtime credential source order:
+`CredentialsSource` has two variants:
 
-1. `CredentialsSource::RawJson`
-2. `CredentialsSource::File`
-3. `CredentialsSource::Auto`, which checks:
-   - `SQUIGIT_GOOGLE_CREDENTIALS_JSON`
-   - `SQUIGIT_GOOGLE_CREDENTIALS_PATH`
-   - embedded build-time credentials
+- `RawJson`, used by product hosts that already loaded or embedded the credential document;
+- `Auto`, which reads `SQUIGIT_GOOGLE_CREDENTIALS_JSON`, then the path in `SQUIGIT_GOOGLE_CREDENTIALS_PATH`.
 
-Build-time embedding is handled by `crates/squigit-auth/build.rs`.
+Empty documents, missing `installed`/`web` objects, and placeholder client IDs are rejected. Production CLI builds require `squigit-cli/secrets/credentials.json`. `cargo xtask dev --demo` replaces the embedded file with an empty build-time placeholder and never enables login.
 
-Build-time credential source order:
+The OAuth client should be configured as a Google Desktop application with loopback redirects.
 
-1. `SQUIGIT_GOOGLE_CREDENTIALS_JSON`
-2. `SQUIGIT_GOOGLE_CREDENTIALS_PATH`
-3. `crates/squigit-auth/assets/oauth/credentials.json`
+## Local profile files
 
-`credentials.example.json` intentionally contains placeholders and is rejected by `is_placeholder_config`.
+All paths below are relative to the shared application root described in [Machine Store Architecture](../01-architecture/MACHINE_STORE.md).
 
-The current product should use a Google OAuth **Desktop app** client. The Google client must allow loopback redirect URIs. The local auth flow uses a dynamic `127.0.0.1` port for each attempt.
+### `auth.json`
 
-If Google credentials include a `client_secret`, Squigit stores it only as part of the local credentials configuration. The token exchange first uses public-client PKCE fields. If Google refuses and the error mentions `client_secret`, Squigit retries with the configured secret. Do not treat this secret as a strong desktop-app secret.
-
-## Local Storage Contract
-
-`ProfileStore::new()` lives in `squigit-storage` and uses the app config directory from `squigit-storage`.
-
-Root files:
-
-```text
-{base_dir}/auth.json
-{base_dir}/profiles.json
-{base_dir}/keys.json
-{base_dir}/threads/
-```
-
-Storage owns filenames, paths, JSON read/write, and atomic writes. Auth creates values and passes them to typed storage APIs.
-
-Writes are atomic: JSON is written to a temp file, synced, and renamed into place.
-
-### auth.json
-
-`auth.json` stores active auth state and the last successful provider login proof. It is not an OAuth token vault.
-
-Example:
+`auth.json` records local active-profile state and the last successful provider proof. It is not a token store.
 
 ```json
 {
@@ -198,11 +134,7 @@ Example:
     "subject": "<google-sub>",
     "authenticated_at": "2026-07-15T23:18:21.732394903Z",
     "audience": "<google-client-id>",
-    "scope": [
-      "https://www.googleapis.com/auth/userinfo.email",
-      "openid",
-      "https://www.googleapis.com/auth/userinfo.profile"
-    ],
+    "scope": ["openid", "profile", "email"],
     "pkce_method": "S256",
     "id_token_issued_at": "2026-07-15T23:18:16Z",
     "id_token_expires_at": "2026-07-16T00:18:16Z"
@@ -210,23 +142,11 @@ Example:
 }
 ```
 
-Fields:
+Local profile switching does not update `last_login`. Logout writes schema-1 defaults with both `active_profile_id` and `last_login` set to `null`.
 
-- `schema`: local auth schema version. Current value is `1`.
-- `auth_mode`: current value is `google_oidc_pkce`.
-- `active_profile_id`: local profile id selected for the app.
-- `last_login`: metadata from the last successful Google authentication. This is not updated by local profile switching.
-- `audience`: Google OAuth client id.
-- `scope`: scopes granted by Google during the token exchange.
-- `id_token_issued_at` and `id_token_expires_at`: timestamps copied from the validated ID token.
+### `profiles.json`
 
-If `auth.json` has an unsupported schema or auth mode, `ProfileStore` rejects it and the renderer logs guidance to reset the local config. The current code does not migrate legacy auth files.
-
-### profiles.json
-
-`profiles.json` stores profile metadata keyed by local profile id.
-
-Example:
+`profiles.json` maps canonical profile IDs to identity and display metadata:
 
 ```json
 {
@@ -247,30 +167,21 @@ Example:
 }
 ```
 
-Rules:
+On reauthentication, `created_at` is preserved, display metadata is refreshed, a usable cached avatar is retained when no replacement is available, and `last_used_at` advances. Missing cached avatars are hydrated in background threads when profile snapshots are loaded.
 
-- The map key and nested `id` must be the same canonical
-  `ggl-xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx` value derived from `identity`.
-- `identity` is the stable account key.
-- `name`, `email`, `avatar_base64`, and `avatar_url` are display data.
-- `created_at` is preserved when a profile is re-authenticated.
-- `last_used_at` updates when a profile is used, switched to, or logged into.
-- Profiles are listed newest-first in storage APIs and sorted by name in the renderer.
-- Old profile ID formats are rejected and are not migrated.
+### `keys.json`
 
-### keys.json
-
-`keys.json` stores profile-scoped BYOK credentials. Google OAuth tokens do not belong here. Schema 1 is a clean replacement; older formats are rejected and are not migrated.
-
-Shape:
+`keys.json` stores profile-scoped BYOK records, not Google OAuth tokens:
 
 ```json
 {
   "schema": 1,
+  "last_trusted_reveal": null,
   "profiles": {
     "<profile-id>": {
       "google-ai-studio": {
         "cipher": "aes-256-gcm",
+        "width": 39,
         "kdf": "hkdf-sha256",
         "salt": "<32-byte-base64url-no-pad>",
         "nonce": "<12-byte-base64url-no-pad>",
@@ -281,295 +192,110 @@ Shape:
 }
 ```
 
-Each record uses AES-256-GCM and a key derived with HKDF-SHA256 from the random `record-encryption-master-v1` value held by the OS vault. Profile and provider placement are authenticated. The file stores no plaintext-derived fingerprint, credential revision, or master-key marker.
+The record fields are strict. The root file validates schema and typed profile records. Cryptographic details are defined in [Cryptography Foundation](CRYPTOGRAPHY.md).
 
-`squigit-auth` owns key validation, encryption, decryption, vault access, and CAS credential bindings. `squigit-storage` owns strict persistence, locking, permissions, and atomic replacement.
+## Profile operations
 
-Deleting a profile explicitly removes that profile's keys from `keys.json`. Deleting the final credential also removes the record-encryption master but retains the independent CAS binding key.
+Successful authentication creates or refreshes the profile, activates it, records the last-login proof, invalidates reveal grace, and returns a complete profile snapshot.
 
-Future database migrations should stay isolated in `squigit-storage`: `profiles.json` can become profile rows and `keys.json` can become encrypted-key rows while auth continues to use typed storage methods. `auth.json` remains a separate JSON file unless a later refactor explicitly changes that contract.
+Switching requires an existing profile, updates `active_profile_id`, advances `last_used_at`, invalidates reveal grace, and leaves `last_login` unchanged.
 
-## Profile Operations
+Logout enters Guest mode. It clears active and last-login state while preserving profiles, encrypted keys, threads, objects, and settings.
 
-### Create Or Refresh Profile
+Profile deletion has two guards:
 
-Successful Google authentication creates or updates the profile for the validated issuer and subject.
+- the facade refuses to delete the active profile;
+- storage refuses to delete the final remaining profile.
 
-If the profile already exists:
+Deleting an eligible inactive profile removes its metadata, profile directory when present, and encrypted key records. It also invalidates reveal grace. The user must switch or log out before deleting the profile that was active.
 
-- `created_at` is preserved.
-- avatar cache is preserved when the new profile data does not include a replacement.
-- `last_used_at` is updated.
-- `auth.json.last_login` is replaced with the new login metadata.
-- `auth.json.active_profile_id` is set to the authenticated profile.
+## Contributor demo mode
 
-### Switch Profile
+`cargo xtask dev --demo` initializes process-only API-key state from `GEMINI_API_KEY` and `IMGBB_API_KEY`. The command reads the process environment first and then the ignored root `.env`.
 
-Switching profile calls `set_active_profile_id`.
+Both keys are optional. With no key, the CLI runs as Guest for local and OCR workflows. With either key, it creates and activates the deterministic local `contributor@squigit.app` profile. The supplied keys are validated and held in zeroizing process memory; they are not written to `keys.json` or the OS vault. Authentication and persistent credential-management commands remain hidden.
 
-It:
+Demo data defaults to the ignored `squigit-demo/` root. `--home`, `SQUIGIT_HOME`, or `SQUIGIT_CONFIG_DIR` can select another isolated root.
 
-- requires the target profile to exist;
-- updates `auth.json.active_profile_id`;
-- touches `last_used_at`;
-- loads profile-scoped BYOK keys in the renderer;
-- does not update `last_login`.
+## Hosted status page
 
-### Sign Out
-
-Sign out calls `clear_active_profile_id`.
-
-It resets `auth.json` to schema 1 defaults:
-
-```json
-{
-  "schema": 1,
-  "auth_mode": "google_oidc_pkce",
-  "active_profile_id": null,
-  "last_login": null
-}
-```
-
-It preserves `profiles.json`, `keys.json`, threads, and local data.
-
-### Delete Profile
-
-Deleting a profile:
-
-- refuses to delete the last remaining profile;
-- removes the profile from `profiles.json`;
-- removes the profile directory if present;
-- removes profile-scoped keys from `keys.json`;
-- changes `active_profile_id` to the newest remaining profile if needed;
-- clears `last_login` if it belonged to the deleted profile.
-
-## Hosted Status Page Behavior
-
-The hosted status page uses the URL hash to choose copy and icon:
-
-- `#success`: Google login was accepted, Rust finished local auth, and the browser can show the success page.
-- `#invalid`: the callback reached Squigit but local auth failed.
-- `#unavailable`: no meaningful status was provided.
-
-In the current desktop loopback flow, Squigit's local server redirects to the hosted page after local auth work is done. Therefore the hosted page should normally see only hash fragments, not OAuth query parameters.
-
-The page also has direct callback behavior for a web redirect shape: `?code&state` renders success and can open Squigit through `org.squigit.app:/oauth2redirect/google`; `?error` renders invalid.
-
-The page has a strict CSP in `index.html`:
+The status page is maintained in the `squigit-org.github.io` repository:
 
 ```text
-default-src 'none';
-script-src 'self';
-style-src 'self' 'unsafe-inline';
-font-src 'self' data:;
-img-src 'self' data:;
-connect-src 'self' ws: http:;
-base-uri 'none';
-form-action 'none';
-frame-ancestors 'none'
+site/login/popup-google-auth/index.html
+src/features/auth-popup/main.tsx
+src/features/auth-popup/styles.css
 ```
 
-The page is safe to host on GitHub Pages, Vercel, Next.js, or another static route as long as the path and hash behavior remain available.
-
-## Security Properties
-
-What is persisted:
-
-- local profile identity metadata;
-- active profile id;
-- last login metadata;
-- profile display data;
-- encrypted BYOK keys.
-
-What is not persisted:
-
-- Google authorization code;
-- Google access token;
-- Google refresh token;
-- raw Google ID token;
-- PKCE verifier;
-- OIDC nonce;
-- OAuth state.
-
-The hosted status page receives no code because Rust consumes the callback first and redirects with only a hash fragment.
-
-The loopback redirect response includes:
+The loopback flow redirects it with one of these fragments:
 
 ```text
-Cache-Control: no-store
-Referrer-Policy: no-referrer
-Connection: close
+#success
+#invalid
+#unavailable
 ```
 
-The local loopback server is one-shot for the active auth attempt and accepts only its expected callback path.
+It does not receive the authorization code, state, ID token, access token, refresh token, or profile data from the loopback flow. The page also contains a separate direct-web-callback branch for `?code&state` and `?error`; Squigit's current native flow does not use that branch.
 
-## Domain Migration: Moving To squigit.app
+The loopback redirect response includes `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, and `Connection: close`.
 
-Goal: keep the same UX and flow, but replace GitHub Pages fallback URLs with the final `squigit.app` URL.
+## Future domain migration to `squigit.app`
 
-### Current Domain Selection
+The `squigit.app` domain has not been purchased or deployed. The following work remains a future migration plan.
 
-`callback_server.rs` currently has:
+### Prepared application behavior
+
+Auth currently defines:
 
 ```text
-SQUIGIT_APP_STATUS_PAGE_URL = https://squigit.app/login/popup-google-auth/
-GITHUB_PAGES_STATUS_PAGE_URL = https://squigit-org.github.io/login/popup-google-auth/
+https://squigit.app/login/popup-google-auth/
+https://squigit-org.github.io/login/popup-google-auth/
 ```
 
-At runtime, `google_auth_status_page_url()` does a HEAD probe to:
+At runtime it sends a two-second HEAD probe to `https://squigit.app/`. A response below HTTP 500 selects the future domain; connection failure or a server error selects GitHub Pages. Once the domain is owned and serves the expected route, existing clients can prefer it without changing the loopback OAuth redirect.
 
-```text
-https://squigit.app/
-```
+### Hosting work
 
-If the response is below HTTP 500, Squigit uses the `.app` status page. Otherwise it falls back to GitHub Pages.
+1. Purchase `squigit.app`.
+2. Point its DNS at the selected host and enable HTTPS.
+3. Serve `/login/popup-google-auth/` with the current hash states and strict CSP.
+4. If GitHub Pages remains the host, configure the custom domain and publish a `CNAME` containing `squigit.app`.
+5. If the site moves to Vercel or Next.js, preserve the route as a static client page and keep its hash behavior independent of server auth state.
+6. Keep the GitHub Pages URL available during migration for older clients and fallback behavior.
 
-This means that once `squigit.app` is live and serving HTTPS, the desktop app should automatically prefer:
+### Google configuration
 
-```text
-https://squigit.app/login/popup-google-auth/#success
-```
+The native OAuth redirect remains the dynamic `http://127.0.0.1:<port>` loopback origin. The hosted status page is not Google's redirect URI in this flow.
 
-without changing the OAuth redirect URI, because OAuth still redirects to localhost first.
+After purchasing the domain:
 
-### GitHub Pages Roadmap
+1. Add or verify `squigit.app` as an authorized domain when required by the Google consent configuration.
+2. Keep the OAuth client type as Desktop application.
+3. Preserve the `openid profile email` scopes and the app's JWKS, issuer, audience, nonce, and state validation.
+4. If Google issues a new client ID, update each product host's credential JSON and rebuild that product.
 
-If the existing website remains on GitHub Pages:
+### Migration verification
 
-1. Buy `squigit.app`.
-2. In the DNS provider, configure the records GitHub Pages requires for an apex domain and/or `www`.
-3. In the `squigit-org.github.io` repository settings, set the Pages custom domain to `squigit.app`.
-4. Enable "Enforce HTTPS" after DNS validation completes.
-5. Commit a `CNAME` file at the Pages publish root containing:
+- `https://squigit.app/` responds successfully over HTTPS.
+- `/login/popup-google-auth/#success`, `#invalid`, and `#unavailable` render correctly.
+- The loopback callback still receives and consumes Google's code locally.
+- The final browser URL contains only the hosted status fragment.
+- `auth.json` contains schema-1 login metadata and no tokens.
+- Existing GitHub Pages fallback behavior still works while it remains supported.
 
-   ```text
-   squigit.app
-   ```
+After the future domain is stable, a later cleanup can remove the direct callback/deep-link branch and GitHub Pages fallback. That cleanup should be a deliberate protocol change, not part of the domain launch itself.
 
-6. Deploy the site.
-7. Verify:
-
-   ```text
-   https://squigit.app/
-   https://squigit.app/login/popup-google-auth/#success
-   https://squigit.app/login/popup-google-auth/#invalid
-   https://squigit.app/login/popup-google-auth/#unavailable
-   ```
-
-8. Start a desktop Google login and verify the final browser tab URL is:
-
-   ```text
-   https://squigit.app/login/popup-google-auth/#success
-   ```
-
-### Vercel Or Next.js Roadmap
-
-If the landing page moves to Vercel or Next.js:
-
-1. Add `squigit.app` to the hosting project.
-2. Configure DNS records requested by the host.
-3. Ensure the route exists exactly at:
-
-   ```text
-   /login/popup-google-auth/
-   ```
-
-4. Preserve hash-only status behavior:
-
-   ```text
-   #success
-   #invalid
-   #unavailable
-   ```
-
-5. Ensure this route can be served as a static/client route without server-only auth state.
-6. Keep the page CSP strict.
-7. Verify direct loads of all four hash states.
-8. Verify the desktop auth flow.
-
-### Google Cloud Roadmap
-
-The desktop OAuth callback remains loopback:
-
-```text
-http://127.0.0.1:<dynamic_port>
-```
-
-Do not change the desktop app OAuth flow to a hosted web redirect unless the native flow is intentionally redesigned.
-
-When `squigit.app` is purchased:
-
-1. In the Google Cloud OAuth consent screen, add/verify `squigit.app` as an authorized domain if required by the consent configuration.
-2. Update app homepage, privacy policy, and terms URLs to the final domain.
-3. Keep the OAuth client type as Desktop app for the current architecture.
-4. Ensure the credentials used by Squigit still contain:
-
-   ```json
-   {
-     "installed": {
-       "client_id": "...apps.googleusercontent.com",
-       "auth_uri": "https://accounts.google.com/o/oauth2/v2/auth",
-       "token_uri": "https://oauth2.googleapis.com/token"
-     }
-   }
-   ```
-
-5. If a new OAuth client id is created, update the credentials source and rebuild the app so `build.rs` embeds the new credentials.
-
-### Code Change Roadmap
-
-Minimum code change after `squigit.app` is live:
-
-- No code change is required if the final route remains `/login/popup-google-auth/` and `https://squigit.app/` responds below HTTP 500.
-
-Recommended code cleanup after the domain is stable:
-
-1. Replace the runtime HEAD probe with an explicit configuration value:
-
-   ```text
-   SQUIGIT_AUTH_STATUS_URL=https://squigit.app/login/popup-google-auth/
-   ```
-
-   or a build-time constant.
-
-2. Remove `GITHUB_PAGES_STATUS_PAGE_URL` fallback from production builds.
-3. Keep a development override for local or preview status-page testing.
-4. Remove the direct web-callback branch from `src/features/auth-popup/main.tsx` if no web redirect flow uses it.
-5. Remove `appCallbackUrl = 'org.squigit.app:/oauth2redirect/google'` from the hosted popup when the direct web-callback branch is removed.
-6. Remove renderer `auth-success` and `auth-failure` listeners if no active host emits those events.
-7. Decide whether `credentials.rs` should continue accepting both `installed` and `web`; for the current desktop client, `installed` is the expected production shape.
-
-### Migration Verification Checklist
-
-After the domain change:
-
-- `https://squigit.app/` returns a non-5xx response.
-- `https://squigit.app/login/popup-google-auth/#success` renders the status page.
-- The desktop app opens Google sign-in normally.
-- Google redirects to loopback.
-- The loopback response is a `302` to `https://squigit.app/login/popup-google-auth/#success`.
-- The final browser tab URL contains no OAuth `code` or `state`.
-- `auth.json` contains schema 1 login metadata and no tokens.
-- `profiles.json` contains the expected `issuer` and `subject`.
-- Sign out clears only active auth state.
-- Switching profiles does not change `last_login`.
-- Deleting a non-last profile removes profile metadata and profile-scoped keys.
-
-## Reference Map For Agents
-
-Read these files before changing auth:
+## Source map
 
 ```text
 crates/squigit-auth/src/auth/callback_server.rs
 crates/squigit-auth/src/auth/credentials.rs
 crates/squigit-auth/src/auth/google.rs
-crates/squigit-auth/src/security/crypto.rs
-crates/squigit-storage/src/profile/store.rs
-crates/squigit-storage/src/profile/types.rs
-backend/src/profile.rs
-squigit-org.github.io/site/login/popup-google-auth/index.html
-squigit-org.github.io/src/features/auth-popup/main.tsx
-squigit-org.github.io/vite.config.ts
+crates/squigit-auth/src/security/
+crates/squigit-storage/src/profiles/store.rs
+crates/squigit-storage/src/profiles/types.rs
+squigit-rs/src/profile.rs
+squigit-rs/src/cli.rs
+squigit-cli/build.rs
+squigit-cli/src/secrets.rs
 ```
-
-Do not infer auth behavior from the hosted page alone. The security boundary is in the native loopback callback and Rust token exchange.

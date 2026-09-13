@@ -1,12 +1,12 @@
 # Terms of Service
 
-**Last Updated:** August 6, 2026
+**Last Updated:** September 13, 2026
 
 By downloading, installing, and using Squigit, you agree to the following terms.
 
 ## 1. Bring Your Own Key (BYOK) Model
 
-Squigit operates as a direct client application. We do not resell API access or provide built-in AI generation capabilities.
+Squigit desktop and CLI operate as direct client applications. We do not resell, fund, or proxy AI access. The products provide AI features by sending authorized requests directly to credentials and accounts supplied by the user.
 
 - You are required to provide your own API keys (e.g., from Google AI Studio or ImgBB) to utilize cloud-based features.
 - You are solely responsible for managing these keys, including any costs, quotas, or billing limits incurred directly with those third-party providers. Squigit takes no responsibility for unexpected API charges.

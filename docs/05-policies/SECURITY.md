@@ -8,11 +8,9 @@ This project provides security updates for the **latest release** only. We recom
 
 **Please do NOT report security vulnerabilities through public GitHub issues.**
 
-If you believe you have found a security issue, please report it responsibly:
+If you believe you have found a security issue, email [a7mddra@gmail.com](mailto:a7mddra@gmail.com). Include the affected product and version, reproduction steps, impact, and any suggested mitigation. Do not include credentials or unrelated personal data.
 
-- **Email**: [Your dedicated security contact email]
-- **Expect a response** within 48 hours to acknowledge your report.
-- **We will work with you** to understand, validate, and address the vulnerability. You can expect updates on the progress toward a fix and public disclosure.
+We aim to acknowledge a report within 48 hours and will work with the reporter on validation, remediation, and coordinated disclosure.
 
 We appreciate your efforts to disclose your findings responsibly and will make every effort to acknowledge your contributions.
 
@@ -24,14 +22,16 @@ We appreciate your efforts to disclose your findings responsibly and will make e
 
 Squigit is built with security in mind from the ground up:
 
-- **No Hardcoded Secrets**: We use GitHub Secrets and CI-based credential injection. Attempting to build the application without the required `google-credentials.json` file will result in a build failure.
-- **Authentication**: We implement the OAuth 2.0 Desktop application flow for authorization. For a successful build, we recommend either providing your own secrets or using the official repository's CI pipeline, which handles automatic injection.
+- **Production CLI credentials:** A normal CLI build requires the ignored `squigit-cli/secrets/credentials.json` file. Its build script embeds the OAuth application configuration into the executable and rejects missing or placeholder credentials.
+- **Contributor mode:** `cargo xtask dev --demo` builds without production OAuth credentials. It disables authentication and accepts optional process-only Gemini and ImgBB keys from the environment or ignored `.env`.
+- **Authentication:** Product hosts inject Google OAuth application credentials through `squigit-rs`. The shared auth crate implements the OAuth 2.0 Desktop application flow with PKCE and a loopback callback.
+- **Secret handling:** Credentials, `.env`, demo state, build output, and generated release payloads are ignored and excluded from repository formatting and publication inputs.
 
 ### For End Users
 
 Your privacy and data security are paramount. The application operates on a strict **local-first, zero-trust principle**:
 
-- **No Data Collection**: Squigit has no backend database or central server. Your API keys, images, and conversation history never leave your local machine. **We cannot see your data.**
+- **No Squigit data service:** Squigit has no backend database or central application server. Profiles, settings, conversation history, OCR annotations, and attachment metadata are stored locally. Cloud features send only their required data directly to their provider.
 - **Bring Your Own Key (BYOK)**: API keys are stored in a strict local AES-256-GCM envelope whose random master key lives in the operating-system vault. Stealing the encrypted file and CAS manifests alone does not reveal keys or provide an offline guessing oracle.
 - **Secure Authentication**: The Google sign-in process happens entirely in your default web browser. The application itself never handles your password or email credentials.
 - **End-to-End AI Chat**: Your conversations with AI providers are direct. Messages flow `you → provider → you`. We do not intercept, log, or have access to your prompts or completions.
@@ -47,8 +47,10 @@ To enable the Google Lens integration, the selected screenshot must be accessibl
 
 ---
 
-## Platform-Specific Security Notes
+## Platform-specific security notes
 
-- **macOS**: As an open-source application not notarized by an official Apple Developer account, the first launch will likely be blocked by **Gatekeeper**. You must explicitly allow the application to run in **System Settings > Privacy & Security**.
-- **Windows**: Windows Defender SmartScreen may flag the installer or application as "unrecognized." You must click "More info" and select "Run anyway" to proceed. The installer is built with the trusted NSIS framework.
-- **Linux**: You may need to grant execute permissions to the application binary (e.g., `chmod +x squigit`).
+- **macOS:** Gatekeeper can warn about or block an unsigned or unnotarized binary. Follow the instructions attached to the specific distribution release rather than bypassing a warning from an unknown source.
+- **Windows:** SmartScreen can warn about an unsigned or low-reputation executable. Verify the publisher, release source, and checksum before continuing.
+- **Linux:** Prefer the published APT, DNF, or Homebrew package where available. For a standalone executable, verify the release source and checksum before granting execute permission.
+
+Packaging and signing state can differ between the desktop, CLI, and native OCR products. The [distribution repository](https://github.com/squigit-org/distribution) owns release artifacts and package-manager metadata.
