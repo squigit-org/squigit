@@ -19,7 +19,8 @@ HF_BASE_URLS = (
     "https://hf-mirror.com",
 )
 SCRIPT_DIR = Path(__file__).parent.resolve()
-MODELS_DIR = SCRIPT_DIR / "models"
+NATIVE_DIR = SCRIPT_DIR.parent
+MODELS_DIR = NATIVE_DIR / "models"
 
 MODELS = [
     "PP-OCRv5_mobile_det_infer.tar",
