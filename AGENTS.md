@@ -112,6 +112,29 @@ cargo xtask build --ocr
 
 `SQUIGIT_HOME=/path cargo xtask dev` and `squigit --home /path` select a CLI config root. `SQUIGIT_CONFIG_DIR` is the lower-level shared override honored by the Rust crates.
 
+## Facade release workflow
+
+Facade changes (anything under `squigit-rs/`, `crates/`, or `squigit-ocr/src/`) reach the desktop only through crates.io. The desktop N-API backend (`backend/Cargo.toml` in the private repository) is the single external consumer: `squigit = { package = "squigit-rs", version = "x.y.z" }`. Never give the desktop a path dependency into this repository.
+
+The end-to-end sequence for a facade change is:
+
+```bash
+cargo xtask bump --squigit <VERSION>   # required when any published crate source changed
+git add <files> && git commit -m "..." # release requires a clean tree
+git push origin main                   # release requires HEAD == origin/main
+cargo xtask release --facade --yes
+# then, in the desktop repo: bump the version requirement in
+# backend/Cargo.toml, update the lockfile, and verify the bridge:
+cargo update -p squigit-rs --precise <VERSION>
+cargo check -p squigit-backend --locked
+```
+
+Notes:
+
+- `cargo xtask release --facade` validates crates.io auth first (presence of the `cargo login` token or `CARGO_REGISTRY_TOKEN`; validity itself is proven by the real `cargo publish`, because crates.io forbids token auth on read-only probes). Doctor and tests run after the auth preflight.
+- Doctor/test results are cached per commit in the ignored `.xtask-cache/` directory: a clean tree at an already-validated `HEAD` skips re-running. Dirty trees always re-run and never poison the cache.
+- Release is idempotent across retries: already-published versions are detected via crates.io and skipped, so a rate-limit (`429`) or network failure only needs a rerun of the same command. Never bump versions to work around a failed publish; retry the same versions.
+
 ## CLI credentials and contributor mode
 
 Production CLI builds embed Google OAuth application credentials from `squigit-cli/secrets/credentials.json`. That file is ignored and must never be printed, inspected in logs, staged, or committed. `squigit-cli/secrets/credentials.example.json` documents the expected shape and contains placeholders only. The CLI build script copies the private JSON into Cargo `OUT_DIR`; runtime startup registers it through the facade before authentication begins.
