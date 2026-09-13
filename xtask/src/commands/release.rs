@@ -164,17 +164,13 @@ fn release_facade(root: &Path, git: &GitContext, dry_run: bool, yes: bool) -> Re
     }
 
     validate_release_dependencies(root, &releases)?;
-    for release in releases.iter().filter(|release| release.pending) {
-        prepare_package(root, release)?;
-    }
-    if !dry_run {
-        registry.validate_publish_token()?;
-    }
     print_facade_plan(git, &releases);
     if dry_run {
+        prepare_registry_ready_packages(root, &releases)?;
         println!("\nDry run complete. No crates were published.");
         return Ok(());
     }
+    registry.validate_publish_token()?;
     if !confirm(yes)? {
         println!("Release cancelled.");
         return Ok(());
@@ -182,6 +178,7 @@ fn release_facade(root: &Path, git: &GitContext, dry_run: bool, yes: bool) -> Re
 
     for release in releases.iter().filter(|release| release.pending) {
         let package = workspace::spec(release.id);
+        prepare_package(root, release)?;
         println!("\n[release] verifying {} {}", package.name, release.local);
         process::run(
             Command::new("cargo")
@@ -227,6 +224,40 @@ fn release_facade(root: &Path, git: &GitContext, dry_run: bool, yes: bool) -> Re
     println!("\nFacade release complete:");
     for release in releases.iter().filter(|release| release.pending) {
         println!("  {} {}", workspace::spec(release.id).name, release.local);
+    }
+    Ok(())
+}
+
+fn prepare_registry_ready_packages(root: &Path, releases: &[CrateRelease]) -> Result<(), String> {
+    let by_id: HashMap<PackageId, &CrateRelease> = releases
+        .iter()
+        .map(|release| (release.id, release))
+        .collect();
+
+    for release in releases.iter().filter(|release| release.pending) {
+        let unavailable = workspace::internal_dependency_ids(release.id)
+            .iter()
+            .filter_map(|dependency_id| by_id.get(dependency_id))
+            .filter(|dependency| dependency.state.exact.is_none())
+            .map(|dependency| {
+                format!(
+                    "{} {}",
+                    workspace::spec(dependency.id).name,
+                    dependency.local
+                )
+            })
+            .collect::<Vec<_>>();
+        if unavailable.is_empty() {
+            prepare_package(root, release)?;
+        } else {
+            let package = workspace::spec(release.id);
+            println!(
+                "[release] deferring package preparation for {} {} until crates.io exposes {}",
+                package.name,
+                release.local,
+                unavailable.join(", ")
+            );
+        }
     }
     Ok(())
 }

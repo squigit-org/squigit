@@ -250,7 +250,7 @@ Every release requires:
 - Successful doctor and Rust test commands.
 - Valid authentication for the destination service.
 
-`--dry-run` performs local validation, registry and GitHub reads, package preparation, and an action summary without publishing, tagging, pushing, or dispatching workflows:
+`--dry-run` performs local validation, registry and GitHub reads, package preparation for crates whose exact dependencies are already available from crates.io, and an action summary without publishing, tagging, pushing, or dispatching workflows. During a first release, it reports downstream package preparation as deferred until the preceding crates are published:
 
 ```bash
 cargo xtask release --facade --dry-run
@@ -316,7 +316,7 @@ squigit-storage + squigit-auth + squigit-harness + squigit-brain + squigit-ocr
     -> squigit-rs
 ```
 
-Before confirmation, xtask runs `cargo package --locked --no-verify` for each pending crate and enforces crates.io's 10 MiB archive limit. Repository doctor has already checked publish metadata and internal path/version pairs, and release validates that every pending package requirement accepts the exact local dependency version. Immediately before each upload, xtask runs `cargo publish --dry-run --locked` with Cargo verification enabled.
+Repository doctor checks publish metadata and internal path/version pairs, and release validates that every pending package requirement accepts the exact local dependency version. After confirmation, xtask processes pending crates in dependency order. For each crate it runs `cargo package --locked --no-verify`, enforces crates.io's 10 MiB archive limit, runs `cargo publish --dry-run --locked` with Cargo verification enabled, publishes the crate, and waits for crates.io before preparing the next dependent crate.
 
 After publishing a package, xtask waits until that exact version is visible through crates.io before continuing to a dependent package. If an upload times out, xtask queries the registry before reporting failure because the upload may already have succeeded.
 
