@@ -591,6 +591,48 @@ pub async fn suggest_thread_title(thread_id: String) -> ExplorerResult<String> {
     Ok(title)
 }
 
+pub async fn suggest_sidechat_title(sidechat_id: String) -> ExplorerResult<String> {
+    let source_id = sidechat_id.clone();
+    let title_source = tokio::task::spawn_blocking(move || {
+        let storage = active_storage()?;
+        let sidechat = storage
+            .load_sidechat(&source_id)
+            .map_err(|error| error.to_string())?;
+        sidechat
+            .messages
+            .first()
+            .map(|message| message.content().trim().to_string())
+            .filter(|content| !content.is_empty())
+            .ok_or_else(|| "This sidechat has no text to suggest a title from".to_string())
+    })
+    .await
+    .map_err(|error| format!("Settings load task failed: {error}"))??;
+    let config = tokio::task::spawn_blocking(settings::load_config)
+        .await
+        .map_err(|error| format!("Settings load task failed: {error}"))??;
+    let candidates = brain()
+        .build_model_attempt_plan(config.model, config.effort)
+        .await?;
+    let title = brain()
+        .suggest_thread_title_from_text(title_source, candidates)
+        .await?;
+    let persisted_title = title.clone();
+    tokio::task::spawn_blocking(move || {
+        let storage = active_storage()?;
+        let mut sidechat = storage
+            .load_sidechat(&sidechat_id)
+            .map_err(|error| error.to_string())?;
+        sidechat.metadata.title = persisted_title;
+        sidechat.metadata.updated_at = Utc::now();
+        storage
+            .update_sidechat_metadata(&sidechat.metadata)
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())??;
+    Ok(title)
+}
+
 pub fn get_jobs_snapshot() -> ExplorerResult<Vec<ExplorerJobSnapshot>> {
     let brain_jobs = thread::get_thread_jobs_snapshot()?;
     let ocr_jobs = thread::ocr::get_ocr_jobs_snapshot()?;

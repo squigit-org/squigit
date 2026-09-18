@@ -130,6 +130,14 @@ pub fn generate_title(sender: &UnboundedSender<TaskEvent>, thread_id: String) {
     });
 }
 
+pub fn generate_sidechat_title(sender: &UnboundedSender<TaskEvent>, sidechat_id: String) {
+    let sender = sender.clone();
+    tokio::spawn(async move {
+        let result = squigit::explorer::suggest_sidechat_title(sidechat_id).await;
+        let _ = sender.send(TaskEvent::GeneratedTitle(result));
+    });
+}
+
 pub fn lens(sender: &UnboundedSender<TaskEvent>, thread_id: String) {
     let sender = sender.clone();
     tokio::spawn(async move {

@@ -488,19 +488,18 @@ impl App {
                 let Some(thread_id) = self.current_thread_id() else {
                     return;
                 };
-                if self
+                let is_sidechat = self
                     .state
                     .current_thread
                     .as_ref()
-                    .is_some_and(|thread| thread.kind == CurrentThreadKind::SideChat)
-                {
-                    self.state
-                        .set_notice(NoticeKind::Info, "Enter a title to rename this chat thread");
-                    return;
-                }
+                    .is_some_and(|thread| thread.kind == CurrentThreadKind::SideChat);
                 self.state.return_home();
                 self.state.busy = Some("generating a title".to_string());
-                tasks::generate_title(&self.sender, thread_id);
+                if is_sidechat {
+                    tasks::generate_sidechat_title(&self.sender, thread_id);
+                } else {
+                    tasks::generate_title(&self.sender, thread_id);
+                }
             }
             PromptAction::Rename => self.rename_thread(value),
             PromptAction::ConfigureKey { provider } => {
