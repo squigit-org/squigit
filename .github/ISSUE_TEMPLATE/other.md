@@ -6,20 +6,11 @@ labels: ""
 assignees: ""
 ---
 
-<!-- squigit:template other v1 -->
-Edit only the text between field markers. Keep headings and markers unchanged.
-
-## Summary (required)
-<!-- squigit:field summary required -->
+## Summary *
 Summarize your feedback in one line.
-<!-- squigit:end summary -->
 
-## Details (required)
-<!-- squigit:field details required -->
+## Details *
 Describe your feedback.
-<!-- squigit:end details -->
 
-## Additional context (optional)
-<!-- squigit:field context optional -->
-
-<!-- squigit:end context -->
+## Additional context
+Add anything else you would like us to know.

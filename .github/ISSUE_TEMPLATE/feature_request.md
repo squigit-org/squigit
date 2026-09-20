@@ -6,25 +6,14 @@ labels: "enhancement"
 assignees: ""
 ---
 
-<!-- squigit:template feature_request v1 -->
-Edit only the text between field markers. Keep headings and markers unchanged.
-
-## Summary (required)
-<!-- squigit:field summary required -->
+## Summary *
 Summarize the feature in one line.
-<!-- squigit:end summary -->
 
-## Problem (required)
-<!-- squigit:field problem required -->
+## Problem *
 Describe the problem this feature would solve.
-<!-- squigit:end problem -->
 
-## Proposed solution (required)
-<!-- squigit:field proposal required -->
+## Proposed solution *
 Describe how the feature should work.
-<!-- squigit:end proposal -->
 
-## Additional context (optional)
-<!-- squigit:field context optional -->
-
-<!-- squigit:end context -->
+## Additional context
+Add anything else that could help us understand the request.

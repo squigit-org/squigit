@@ -6,30 +6,17 @@ labels: "bug"
 assignees: ""
 ---
 
-<!-- squigit:template bad_result v1 -->
-Edit only the text between field markers. Keep headings and markers unchanged.
-
-## Summary (required)
-<!-- squigit:field summary required -->
+## Summary *
 Summarize the result in one line.
-<!-- squigit:end summary -->
 
-## Input and model (required)
-<!-- squigit:field input required -->
+## Input and model *
 Describe your input and the model used.
-<!-- squigit:end input -->
 
-## Actual result (required)
-<!-- squigit:field actual required -->
+## Actual result *
 Describe or paste the result.
-<!-- squigit:end actual -->
 
-## Expected result (required)
-<!-- squigit:field expected required -->
+## Expected result *
 Describe the result you expected.
-<!-- squigit:end expected -->
 
-## Additional context (optional)
-<!-- squigit:field context optional -->
-
-<!-- squigit:end context -->
+## Additional context
+Add anything else that could help us improve the result.
