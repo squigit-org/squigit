@@ -7,7 +7,7 @@ use crate::auth::{
     session_api_keys_active, validate_api_key, ApiKeyProvider, RevealAuthResult,
 };
 use crate::brain::provider::gemini::models::{
-    DEFAULT_MODEL_EFFORT, MODEL_EFFORTS, PRIMARY_FAST_MODEL, SELECTABLE_MODELS,
+    valid_model_id, DEFAULT_MODEL_EFFORT, MODEL_EFFORTS, PRIMARY_FAST_MODEL,
 };
 use crate::storage::{self, ProfileStore};
 use serde::{Deserialize, Serialize};
@@ -164,7 +164,7 @@ fn normalize_root_config(table: &toml::Table) -> (SquigitConfig, bool) {
     let model = table
         .get("model")
         .and_then(|v| v.as_str())
-        .filter(|id| SELECTABLE_MODELS.iter().any(|m| m.id == *id))
+        .filter(|id| valid_model_id(id))
         .map(|s| s.to_string())
         .unwrap_or_else(|| {
             modified = true;
@@ -243,7 +243,7 @@ pub fn update_config(updates: ConfigUpdate) -> SettingsResult<SquigitConfig> {
 
     let next_model = updates
         .model
-        .filter(|id| SELECTABLE_MODELS.iter().any(|m| m.id == id))
+        .filter(|id| valid_model_id(id))
         .unwrap_or(current.model);
     let next_effort = updates
         .effort

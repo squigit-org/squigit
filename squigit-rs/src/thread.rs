@@ -34,6 +34,109 @@ pub struct SideChatCreation {
     pub title: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversationAttachmentSnapshot {
+    pub attachment_hash: String,
+    pub name: String,
+    pub path: String,
+    pub file_type: crate::storage::AttachmentFileType,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversationMessageSnapshot {
+    pub id: String,
+    pub role: String,
+    pub content: String,
+    pub created_at: chrono::DateTime<Utc>,
+    pub attachments: Vec<ConversationAttachmentSnapshot>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversationSnapshot {
+    pub kind: String,
+    pub id: String,
+    pub messages: Vec<ConversationMessageSnapshot>,
+}
+
+pub fn load_conversation(kind: &str, id: &str) -> ThreadResult<ConversationSnapshot> {
+    let storage = active_storage()?;
+    let (messages, manifest) = match kind {
+        "thread" => {
+            let data = storage.load_thread(id).map_err(|error| error.to_string())?;
+            (data.messages, data.attachment_manifest)
+        }
+        "sidechat" => {
+            let data = storage
+                .load_sidechat(id)
+                .map_err(|error| error.to_string())?;
+            (data.messages, data.attachment_manifest)
+        }
+        _ => return Err("Unknown conversation kind".to_string()),
+    };
+    let messages = messages
+        .into_iter()
+        .map(|message| match message {
+            ThreadMessage::User {
+                id,
+                content,
+                timestamp,
+                attachments,
+            } => {
+                let attachments = attachments
+                    .into_iter()
+                    .map(|attachment| {
+                        let path = storage
+                            .find_object_blob(&attachment.attachment_hash)
+                            .map_err(|error| error.to_string())?;
+                        let entry = manifest
+                            .iter()
+                            .find(|entry| entry.attachment_hash == attachment.attachment_hash);
+                        let file_type =
+                            entry.map(|entry| entry.file_type.clone()).ok_or_else(|| {
+                                "Message attachment is missing from the manifest".to_string()
+                            })?;
+                        Ok(ConversationAttachmentSnapshot {
+                            attachment_hash: attachment.attachment_hash.clone(),
+                            name: entry
+                                .map(|entry| entry.display_name.clone())
+                                .unwrap_or_default(),
+                            path: path.to_string_lossy().to_string(),
+                            file_type,
+                        })
+                    })
+                    .collect::<ThreadResult<Vec<_>>>()?;
+                Ok(ConversationMessageSnapshot {
+                    id,
+                    role: "user".to_string(),
+                    content,
+                    created_at: timestamp,
+                    attachments,
+                })
+            }
+            ThreadMessage::Assistant {
+                id,
+                content,
+                timestamp,
+                ..
+            } => Ok(ConversationMessageSnapshot {
+                id,
+                role: "assistant".to_string(),
+                content,
+                created_at: timestamp,
+                attachments: Vec::new(),
+            }),
+        })
+        .collect::<ThreadResult<Vec<_>>>()?;
+    Ok(ConversationSnapshot {
+        kind: kind.to_string(),
+        id: id.to_string(),
+        messages,
+    })
+}
+
 #[derive(Clone)]
 struct BrainJobRecord {
     job_id: String,

@@ -131,6 +131,7 @@ async fn run() -> Result<(), String> {
 
     let demo = secrets::demo_enabled();
     secrets::initialize(demo)?;
+    squigit::brain::guide::install()?;
 
     let install_script_error = squigit::services::ensure_ocr_install_script().err();
     let cwd = std::env::current_dir()

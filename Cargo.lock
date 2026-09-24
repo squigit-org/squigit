@@ -4948,8 +4948,10 @@ dependencies = [
  "blake3",
  "chrono",
  "futures-util",
+ "lazy_static",
  "log",
  "rand 0.8.8",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
@@ -4959,6 +4961,8 @@ dependencies = [
  "squigit-storage",
  "tokio",
  "tokio-util",
+ "url",
+ "uuid",
 ]
 
 [[package]]
