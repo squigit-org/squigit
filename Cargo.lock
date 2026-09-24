@@ -4917,7 +4917,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-auth"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
@@ -4942,7 +4942,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-brain"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "blake3",
@@ -4967,7 +4967,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "crossterm",
  "ratatui",
@@ -4977,7 +4977,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-harness"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "office2pdf",
  "regex",
@@ -4986,7 +4986,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-ocr"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dirs",
  "flate2",
@@ -5006,7 +5006,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-rs"
-version = "0.1.3"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "fsindex",
@@ -5032,7 +5032,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-storage"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "blake3",
