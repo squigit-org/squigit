@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod attachments;
+pub(crate) mod chat_transport;
 pub mod commands;
 pub(crate) mod fallback;
 pub mod models;

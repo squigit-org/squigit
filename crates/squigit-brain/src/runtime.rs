@@ -18,6 +18,8 @@ pub(crate) struct BrainRuntimeState {
     pub(crate) attachment_jobs: Arc<Mutex<HashMap<String, AttachmentPreparationJob>>>,
     pub(crate) attachment_work: Arc<Mutex<HashMap<String, SharedAttachmentWork>>>,
     pub(crate) attachment_preflights: Arc<Mutex<HashMap<String, CancellationToken>>>,
+    pub(crate) chat_runs: Arc<Mutex<HashMap<String, CancellationToken>>>,
+    pub(crate) conversation_locks: Arc<Mutex<HashMap<String, Arc<Mutex<()>>>>>,
     pub(crate) office_conversion_slots: Arc<Semaphore>,
 }
 
@@ -29,6 +31,8 @@ impl BrainRuntimeState {
             attachment_jobs: Arc::new(Mutex::new(HashMap::new())),
             attachment_work: Arc::new(Mutex::new(HashMap::new())),
             attachment_preflights: Arc::new(Mutex::new(HashMap::new())),
+            chat_runs: Arc::new(Mutex::new(HashMap::new())),
+            conversation_locks: Arc::new(Mutex::new(HashMap::new())),
             office_conversion_slots: Arc::new(Semaphore::new(1)),
         }
     }
@@ -37,6 +41,14 @@ impl BrainRuntimeState {
         let mut locks = self.object_manifest_locks.lock().await;
         locks
             .entry(hash.to_string())
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone()
+    }
+
+    pub(crate) async fn conversation_lock(&self, id: &str) -> Arc<Mutex<()>> {
+        let mut locks = self.conversation_locks.lock().await;
+        locks
+            .entry(id.to_string())
             .or_insert_with(|| Arc::new(Mutex::new(())))
             .clone()
     }

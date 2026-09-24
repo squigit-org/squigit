@@ -167,7 +167,9 @@ async fn generate_thread_title(
             temperature: Some(0.0),
             response_mime_type: Some("application/json".to_string()),
             response_schema: Some(GeminiResponseSchema::title_schema()),
+            thinking_config: None,
         },
+        tools: None,
     };
 
     write_request_log(

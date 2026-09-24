@@ -1,6 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chat::{ChatEvent, ChatEventSink, ChatRequest};
 use crate::provider::gemini::attachments::{
     GeminiFileRef, PrepareAttachmentRequest, PrepareAttachmentResult,
     PrepareSubmissionAttachmentsRequest, PrepareSubmissionAttachmentsResult,
@@ -26,6 +27,44 @@ impl BrainService {
         Self {
             runtime: BrainRuntimeState::new(),
         }
+    }
+
+    pub async fn start_chat_stream(
+        &self,
+        request: ChatRequest,
+        emit: ChatEventSink,
+    ) -> Result<String, String> {
+        let id = format!("chat-{}", uuid::Uuid::new_v4());
+        let cancellation = tokio_util::sync::CancellationToken::new();
+        self.runtime
+            .chat_runs
+            .lock()
+            .await
+            .insert(id.clone(), cancellation.clone());
+        let runtime = self.runtime.clone();
+        let task_id = id.clone();
+        tokio::spawn(async move {
+            let result = crate::chat::run_chat(&runtime, &request, &cancellation, &emit).await;
+            match result {
+                Ok(content) => emit(ChatEvent::Complete { content }),
+                Err(error) if error == "CANCELLED" => emit(ChatEvent::Cancelled),
+                Err(message) => emit(ChatEvent::Error { message }),
+            }
+            runtime.chat_runs.lock().await.remove(&task_id);
+        });
+        Ok(id)
+    }
+
+    pub async fn cancel_chat_stream(&self, id: &str) {
+        if let Some(cancellation) = self.runtime.chat_runs.lock().await.get(id) {
+            cancellation.cancel();
+        }
+    }
+
+    pub async fn list_available_models(
+        &self,
+    ) -> Result<Vec<crate::provider::gemini::models::AvailableModel>, String> {
+        crate::provider::gemini::models::list_available_models().await
     }
 
     pub async fn prepare_attachment(

@@ -32,6 +32,8 @@ pub(crate) struct GeminiRequest {
     pub(crate) system_instruction: GeminiSystemInstruction,
     #[serde(rename = "generationConfig")]
     pub(crate) generation_config: GeminiGenerationConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) tools: Option<Vec<serde_json::Value>>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -47,6 +49,14 @@ pub(crate) struct GeminiGenerationConfig {
     pub(crate) response_mime_type: Option<String>,
     #[serde(rename = "responseSchema", skip_serializing_if = "Option::is_none")]
     pub(crate) response_schema: Option<GeminiResponseSchema>,
+    #[serde(rename = "thinkingConfig", skip_serializing_if = "Option::is_none")]
+    pub(crate) thinking_config: Option<GeminiThinkingConfig>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub(crate) struct GeminiThinkingConfig {
+    #[serde(rename = "thinkingLevel")]
+    pub(crate) thinking_level: String,
 }
 
 #[derive(Debug, Serialize, Clone)]
