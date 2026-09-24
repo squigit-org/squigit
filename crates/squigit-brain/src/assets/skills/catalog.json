@@ -1,0 +1,98 @@
+[
+  {
+    "id": "visual-evidence",
+    "purpose": "Ground any answer in visible evidence, uncertainty, and the user's question"
+  },
+  {
+    "id": "ocr-and-small-text",
+    "purpose": "Handle cropped, blurry, multilingual, or uncertain screen text"
+  },
+  {
+    "id": "interface-navigation",
+    "purpose": "Explain visible controls and guide a user through an unfamiliar app"
+  },
+  {
+    "id": "design-review",
+    "purpose": "Critique layout, typography, interaction states, and visual hierarchy"
+  },
+  {
+    "id": "accessibility",
+    "purpose": "Assess readable contrast, keyboard access, labels, and reduced motion"
+  },
+  {
+    "id": "bug-triage",
+    "purpose": "Diagnose visible errors without assuming an unseen environment"
+  },
+  {
+    "id": "windows-diagnostics",
+    "purpose": "Guide Windows settings, apps, PowerShell, and update troubleshooting"
+  },
+  {
+    "id": "macos-diagnostics",
+    "purpose": "Guide macOS settings, Finder, Terminal, and permission troubleshooting"
+  },
+  {
+    "id": "linux-diagnostics",
+    "purpose": "Guide Linux shell, desktop, packages, and permissions across distributions"
+  },
+  {
+    "id": "browser-diagnostics",
+    "purpose": "Reason about tabs, site errors, browser settings, and developer tools"
+  },
+  {
+    "id": "network-diagnostics",
+    "purpose": "Distinguish connectivity, DNS, TLS, proxy, and service errors"
+  },
+  {
+    "id": "security-signals",
+    "purpose": "Assess visible phishing and privacy signals without false certainty"
+  },
+  {
+    "id": "code-explanation",
+    "purpose": "Explain or review a visible code snippet, diff, or build output"
+  },
+  {
+    "id": "math-reasoning",
+    "purpose": "Solve visible mathematics and render clear equations"
+  },
+  {
+    "id": "science-diagrams",
+    "purpose": "Explain plots, lab figures, mechanisms, and technical diagrams"
+  },
+  {
+    "id": "document-analysis",
+    "purpose": "Summarize or compare visible documents and attached pages"
+  },
+  {
+    "id": "tables-and-spreadsheets",
+    "purpose": "Interpret table cells, formulas, filters, and spreadsheet errors"
+  },
+  {
+    "id": "charts-and-dashboards",
+    "purpose": "Read axes, units, legends, trends, and anomalies"
+  },
+  {
+    "id": "study-questions",
+    "purpose": "Teach a visible quiz or homework problem with reasoning"
+  },
+  {
+    "id": "product-research",
+    "purpose": "Assess a listing or comparison with current sourced claims"
+  },
+  {
+    "id": "news-and-claims",
+    "purpose": "Check time-sensitive headlines and social claims against current sources"
+  },
+  {
+    "id": "maps-and-places",
+    "purpose": "Read visible maps, routes, labels, and location context"
+  },
+  {
+    "id": "messages-and-email",
+    "purpose": "Summarize visible conversations and draft a reply when asked"
+  },
+  {
+    "id": "media-frames",
+    "purpose": "Explain a video frame, stream, thumbnail, or media player state"
+  }
+]

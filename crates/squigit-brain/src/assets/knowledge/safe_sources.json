@@ -1,0 +1,214 @@
+{
+  "reviewed_at": "2026-09-25",
+  "safe_sources": [
+    {
+      "category": "official_technology",
+      "sites": [
+        {
+          "name": "Google Developers",
+          "domain": "developers.google.com"
+        },
+        {
+          "name": "Google AI for Developers",
+          "domain": "ai.google.dev"
+        },
+        {
+          "name": "Google Help",
+          "domain": "support.google.com"
+        },
+        {
+          "name": "Microsoft Learn",
+          "domain": "learn.microsoft.com"
+        },
+        {
+          "name": "Microsoft Support",
+          "domain": "support.microsoft.com"
+        },
+        {
+          "name": "Apple Support",
+          "domain": "support.apple.com"
+        },
+        {
+          "name": "Apple Developer",
+          "domain": "developer.apple.com"
+        },
+        {
+          "name": "Mozilla Support",
+          "domain": "support.mozilla.org"
+        },
+        {
+          "name": "MDN Web Docs",
+          "domain": "developer.mozilla.org"
+        },
+        {
+          "name": "Rust Documentation",
+          "domain": "doc.rust-lang.org"
+        },
+        {
+          "name": "Rust Blog",
+          "domain": "blog.rust-lang.org",
+          "rss": "https://blog.rust-lang.org/feed.xml"
+        },
+        {
+          "name": "Python Documentation",
+          "domain": "docs.python.org"
+        },
+        {
+          "name": "GitHub Docs",
+          "domain": "docs.github.com"
+        },
+        {
+          "name": "Android Developers",
+          "domain": "developer.android.com"
+        },
+        {
+          "name": "Ubuntu Documentation",
+          "domain": "documentation.ubuntu.com"
+        },
+        {
+          "name": "Fedora Documentation",
+          "domain": "docs.fedoraproject.org"
+        },
+        {
+          "name": "Debian Documentation",
+          "domain": "debian.org"
+        },
+        {
+          "name": "ArchWiki",
+          "domain": "wiki.archlinux.org"
+        }
+      ]
+    },
+    {
+      "category": "official_security",
+      "sites": [
+        {
+          "name": "CISA",
+          "domain": "cisa.gov"
+        },
+        {
+          "name": "NIST National Vulnerability Database",
+          "domain": "nvd.nist.gov"
+        },
+        {
+          "name": "NIST Computer Security Resource Center",
+          "domain": "csrc.nist.gov"
+        },
+        {
+          "name": "CERT Coordination Center",
+          "domain": "kb.cert.org"
+        }
+      ]
+    },
+    {
+      "category": "official_science_health",
+      "sites": [
+        {
+          "name": "NASA",
+          "domain": "nasa.gov",
+          "rss": "https://www.nasa.gov/news-release/feed/"
+        },
+        {
+          "name": "NOAA",
+          "domain": "noaa.gov"
+        },
+        {
+          "name": "NOAA National Ocean Service",
+          "domain": "oceanservice.noaa.gov",
+          "rss": "https://oceanservice.noaa.gov/rss/nosnews.xml"
+        },
+        {
+          "name": "US National Weather Service",
+          "domain": "weather.gov"
+        },
+        {
+          "name": "European Space Agency",
+          "domain": "esa.int",
+          "rss": "https://www.esa.int/rssfeed/Our_Activities/Space_Science"
+        },
+        {
+          "name": "National Institutes of Health",
+          "domain": "nih.gov"
+        },
+        {
+          "name": "PubMed",
+          "domain": "pubmed.ncbi.nlm.nih.gov"
+        },
+        {
+          "name": "US Centers for Disease Control and Prevention",
+          "domain": "cdc.gov"
+        },
+        {
+          "name": "World Health Organization",
+          "domain": "who.int"
+        },
+        {
+          "name": "European Centre for Disease Prevention and Control",
+          "domain": "ecdc.europa.eu"
+        }
+      ]
+    },
+    {
+      "category": "reported_news",
+      "sites": [
+        {
+          "name": "Reuters",
+          "domain": "reuters.com"
+        },
+        {
+          "name": "Associated Press",
+          "domain": "apnews.com"
+        },
+        {
+          "name": "BBC News",
+          "domain": "bbc.com",
+          "rss": "https://feeds.bbci.co.uk/news/rss.xml"
+        },
+        {
+          "name": "The Register",
+          "domain": "theregister.com",
+          "rss": "https://www.theregister.com/headlines.rss"
+        },
+        {
+          "name": "Ars Technica",
+          "domain": "arstechnica.com",
+          "rss": "https://arstechnica.com/feed/"
+        }
+      ]
+    },
+    {
+      "category": "science_reporting",
+      "sites": [
+        {
+          "name": "Phys.org",
+          "domain": "phys.org",
+          "rss": "https://phys.org/rss-feed/"
+        },
+        {
+          "name": "ScienceDaily",
+          "domain": "sciencedaily.com",
+          "rss": "https://www.sciencedaily.com/rss/all.xml"
+        }
+      ]
+    },
+    {
+      "category": "community_reference",
+      "sites": [
+        {
+          "name": "Wikipedia",
+          "domain": "wikipedia.org"
+        },
+        {
+          "name": "Hacker News",
+          "domain": "news.ycombinator.com",
+          "rss": "https://news.ycombinator.com/rss"
+        },
+        {
+          "name": "Lobsters",
+          "domain": "lobste.rs",
+          "rss": "https://lobste.rs/rss"
+        }
+      ]
+    }
+  ]
+}
