@@ -250,14 +250,37 @@ impl ThreadStorage {
         Ok(())
     }
 
+    fn prepared_thread(&self, thread: &ThreadData) -> Result<ThreadData> {
+        let mut persisted = thread.clone();
+        let original_name = persisted
+            .attachment_manifest
+            .iter()
+            .find(|entry| entry.attachment_hash == persisted.metadata.image_hash)
+            .map(|entry| entry.display_name.clone())
+            .unwrap_or_else(|| "screenshot".to_string());
+        persisted.attachment_manifest = vec![self.attachment_manifest_entry(
+            &persisted.metadata.image_hash,
+            &original_name,
+            persisted.metadata.created_at,
+        )?];
+        let messages = persisted.messages.clone();
+        for message in &messages {
+            self.apply_user_message_attachments(&mut persisted, message)?;
+        }
+        validate_message_ids(&persisted.messages)?;
+        Ok(persisted)
+    }
+
     pub fn save_thread(&self, thread: &ThreadData) -> Result<()> {
-        self.save_thread_files(thread)?;
-        self.update_index(&thread.metadata)
+        let persisted = self.prepared_thread(thread)?;
+        self.save_thread_files(&persisted)?;
+        self.update_index(&persisted.metadata)
     }
 
     pub fn save_thread_in_workspace(&self, thread: &ThreadData, workspace_id: &str) -> Result<()> {
-        self.save_thread_files(thread)?;
-        self.update_index_in_workspace(&thread.metadata, Some(workspace_id))
+        let persisted = self.prepared_thread(thread)?;
+        self.save_thread_files(&persisted)?;
+        self.update_index_in_workspace(&persisted.metadata, Some(workspace_id))
     }
 
     fn save_sidechat_files(&self, sidechat: &SideChatData) -> Result<()> {
@@ -281,6 +304,7 @@ impl ThreadStorage {
     pub fn save_sidechat(&self, sidechat: &SideChatData) -> Result<()> {
         validate_message_ids(&sidechat.messages)?;
         let mut persisted = sidechat.clone();
+        persisted.attachment_manifest.clear();
         let messages = persisted.messages.clone();
         for message in &messages {
             self.apply_user_message_attachments_to_manifest(
