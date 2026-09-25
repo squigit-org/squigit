@@ -135,6 +135,15 @@ Notes:
 - Doctor/test results are cached per commit in the ignored `.xtask-cache/` directory: a clean tree at an already-validated `HEAD` skips re-running. Dirty trees always re-run and never poison the cache.
 - Release is idempotent across retries: already-published versions are detected via crates.io and skipped, so a rate-limit (`429`) or network failure only needs a rerun of the same command. Never bump versions to work around a failed publish; retry the same versions.
 
+### Versioning law (strict)
+
+- A crate `version` is independent from its dependency requirements. Bumping `squigit-storage 0.1.0 -> 0.2.0` never means bumping dependents to `0.2.0`. Example: if `office2pdf` goes `0.6.5 -> 0.7.0`, this workspace goes `0.2.0 -> 0.2.1`, never `0.7.0`. Never align versions across the workspace for uniformity.
+- Only bump crates with a functional source change under their own directory (`.rs`, assets, `src/`). A `Cargo.toml` requirement rewrite performed by `cargo xtask bump` is not a functional change.
+- Dependency-floor-only crates (manifest requirement rewritten by xtask, no source change) get a `patch` bump only: `0.1.0 -> 0.1.1`. Functional breaking/feature crates get `minor` on `0.x`: `0.1.x -> 0.2.0`.
+- `cargo xtask bump` prints `Choose and apply new versions before release` for dependents. That is a requirement to republish updated metadata, not permission to copy the dependency version. Pick the smallest increment per rule above.
+- `squigit-cli` is not in the facade (`LIBRARY_IDS` is storage/auth/harness/ocr/brain/squigit). Do not bump `--cli` for a facade release unless the CLI itself changed.
+- crates.io publishes are immutable: a published number can never be deleted, overwritten, or reused. `yank` only hides it and breaks dependents. A wrong bump cannot be undone, only moved forward.
+
 ## CLI credentials and contributor mode
 
 Production CLI builds embed Google OAuth application credentials from `squigit-cli/secrets/credentials.json`. That file is ignored and must never be printed, inspected in logs, staged, or committed. `squigit-cli/secrets/credentials.example.json` documents the expected shape and contains placeholders only. The CLI build script copies the private JSON into Cargo `OUT_DIR`; runtime startup registers it through the facade before authentication begins.
