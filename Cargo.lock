@@ -4942,7 +4942,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-brain"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "blake3",
@@ -5006,7 +5006,7 @@ dependencies = [
 
 [[package]]
 name = "squigit-rs"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "fsindex",
