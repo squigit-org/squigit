@@ -483,6 +483,110 @@ pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<BrainJobSnapshot>> {
     }
 }
 
+pub mod mock {
+    use std::thread;
+    use std::time::Duration;
+
+    pub const MOCK_RESPONSE: &str = r##"# A closer look at your screenshot
+
+The interface is using a **quiet visual hierarchy**: one primary surface, restrained borders, and a single accent color for interactive elements. The strongest part is that the eye lands on the content before it notices the chrome.
+
+> The useful design rule here is simple: reduce decoration until spacing, type, and state can do the work.
+
+## What is working
+
+- [x] The main action remains obvious without becoming loud.
+- [x] Secondary controls are discoverable on hover.
+- [x] Content width stays readable on a wide screen.
+- [ ] The smallest metadata could use a little more contrast.
+
+| Area | Observation | Recommendation |
+| --- | --- | --- |
+| Layout | Strong left-to-right scan path | Keep the reading column under `76ch` |
+| Color | Accent is used sparingly | Reserve it for links, citations, and active controls |
+| Density | Comfortable overall | Tighten only repeated rows, not prose |
+| Motion | State changes feel calm | Use short, continuous streaming updates |
+
+The spacing also follows a useful rhythm. If the base unit is $s = 4\text{px}$, most gaps can be described by
+
+$$
+S_n = n \cdot s, \qquad n \in \{1, 2, 3, 4, 6, 8\}.
+$$
+
+That small scale is enough to create consistency without making the page feel mechanically uniform.
+
+## A lightweight React shape
+
+<squigitcode language="typescript">
+type StreamState = {
+  content: string;
+  final: boolean;
+};
+
+export function appendChunk(
+  state: StreamState,
+  chunk: string,
+): StreamState {
+  return {
+    content: state.content + chunk,
+    final: false,
+  };
+}
+</squigitcode>
+
+The renderer should receive the entire accumulated string on every update. That lets an unfinished table, formula, or emphasis marker settle naturally as more text arrives.
+
+<squigitcode language="rust">
+fn next_chunk(chars: &[char], cursor: usize, size: usize) -> String {
+    chars[cursor..(cursor + size).min(chars.len())]
+        .iter()
+        .collect()
+}
+</squigitcode>
+
+### Interaction details
+
+1. Keep the assistant surface transparent so it reads as part of the page.
+2. Give the user message a contained surface that mirrors the composer.
+3. Preserve the scroll position while the reader is reviewing older content.
+4. Follow the stream only while the viewport is already near the bottom.
+
+::: tip
+For perceived speed, the first meaningful words matter more than making every chunk the same size.
+:::
+
+Inline code such as `monaco.editor.colorize()` can stay visually distinct without adding a heavy editor frame. The same idea applies to links: [Markstream React](https://github.com/Simon-He95/markstream-vue/tree/main/packages/markstream-react) should look interactive before hover.
+
+For the streaming behavior and parser contract, compare the official React playground <squigitcitation url="https://github.com/Simon-He95/markstream-vue/tree/main/playground-react19" body="The official React 19 playground demonstrates incremental content updates, rich Markdown, and live rendering states.">1</squigitcitation> with the package guide <squigitcitation url="https://markstream.simonhe.me/guide/react-quick-start" body="The quick-start documents NodeRenderer, streaming content, final state, and required styles.">2</squigitcitation>.
+
+Finally, the layout should remain comfortable for mixed-direction content too: **واجهة هادئة، واضحة، وسريعة**. The result is a chat that feels native to the screenshot tool instead of looking like a separate web page embedded inside it.
+"##;
+
+    const CHUNK_SIZES: [usize; 8] = [2, 5, 3, 7, 4, 6, 3, 5];
+    const CHUNK_DELAYS_MS: [u64; 8] = [14, 18, 24, 16, 30, 21, 34, 17];
+
+    pub fn stream_mock_response(
+        on_chunk: impl Fn(String) + Send + 'static,
+        on_complete: impl Fn() + Send + 'static,
+    ) {
+        let content = MOCK_RESPONSE.chars().collect::<Vec<_>>();
+        thread::spawn(move || {
+            let mut cursor = 0;
+            let mut turn = 0;
+            while cursor < content.len() {
+                let end = (cursor + CHUNK_SIZES[turn % CHUNK_SIZES.len()]).min(content.len());
+                on_chunk(content[cursor..end].iter().collect::<String>());
+                cursor = end;
+                thread::sleep(Duration::from_millis(
+                    CHUNK_DELAYS_MS[turn % CHUNK_DELAYS_MS.len()],
+                ));
+                turn += 1;
+            }
+            on_complete();
+        });
+    }
+}
+
 pub mod lens {
     use crate::auth::{get_decrypted_api_key, session_api_keys_active, ApiKeyProvider};
     use crate::storage::{self, OcrAnnotationEntry, ReverseImageSearchCache, ThreadStorage};

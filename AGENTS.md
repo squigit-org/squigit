@@ -112,11 +112,15 @@ cargo xtask build --ocr
 
 `SQUIGIT_HOME=/path cargo xtask dev` and `squigit --home /path` select a CLI config root. `SQUIGIT_CONFIG_DIR` is the lower-level shared override honored by the Rust crates.
 
-## Facade release workflow
+## Facade development vs release workflow
 
-Facade changes (anything under `squigit-rs/`, `crates/`, or `squigit-ocr/src/`) reach the desktop only through crates.io. The desktop N-API backend (`backend/Cargo.toml` in the private repository) is the single external consumer: `squigit = { package = "squigit-rs", version = "x.y.z" }`. Never give the desktop a path dependency into this repository.
+Inside this repository, the facade and implementation crates relate by `path + version`: `squigit-rs` depends on the sibling crates via `{ path = "../crates/...", version = "x.y.z" }`, the sibling crates relate to each other the same way, and `squigit-cli` depends on the facade via `{ path = "../squigit-rs", version = "x.y.z" }`. Cargo uses the local paths for development and the declared versions when a crate is published, so editing `crates/`, `squigit-ocr/src/`, or `squigit-rs/` is visible immediately with no publish step.
 
-The end-to-end sequence for a facade change is:
+Production facade changes (anything under `squigit-rs/`, `crates/`, or `squigit-ocr/src/`) reach the desktop only through crates.io. The desktop N-API backend (`backend/Cargo.toml` in the private repository) is the single external consumer: `squigit = { package = "squigit-rs", version = "x.y.z" }`. Never commit a path dependency from the desktop into this repository.
+
+The only sanctioned local path link is the desktop's own untracked `.cargo/dev.toml` (`[patch.crates-io] squigit-rs = { path = "../squigit/squigit-rs" }`), which lives in the desktop repo and is never committed. It needs no changes here; only keep the local facade version semver-compatible with the desktop's requirement so the patch resolves. Never reference private desktop paths from tracked source here.
+
+The end-to-end sequence for a production facade change is:
 
 ```bash
 cargo xtask bump --squigit <VERSION>   # required when any published crate source changed
