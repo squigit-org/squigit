@@ -19,6 +19,7 @@ pub enum Control {
 
 pub struct App {
     pub state: AppState,
+    available_models: Vec<squigit::brain::provider::gemini::models::AvailableModel>,
     sender: UnboundedSender<TaskEvent>,
     receiver: UnboundedReceiver<TaskEvent>,
 }
@@ -34,10 +35,12 @@ impl App {
         let state = AppState::load(cwd, color, demo_mode, enter_guest)?;
         let app = Self {
             state,
+            available_models: Vec::new(),
             sender,
             receiver,
         };
         tasks::refresh_updates(&app.sender);
+        tasks::refresh_models(&app.sender);
         Ok(app)
     }
 
@@ -590,19 +593,59 @@ impl App {
     }
 
     fn open_model_menu(&mut self) {
-        let mut items = squigit::brain::provider::gemini::models::SELECTABLE_MODELS
-            .iter()
-            .map(|model| MenuItem {
+        self.available_models.clear();
+        tasks::refresh_models(&self.sender);
+        self.show_model_menu();
+    }
+
+    fn model_menu_options(&self) -> Vec<(String, String)> {
+        use squigit::brain::provider::gemini::models::{
+            canonical_model_label, PRIMARY_FAST_MODEL, PRIMARY_REASONING_MODEL,
+        };
+        let mut options = vec![
+            (
+                PRIMARY_FAST_MODEL.to_string(),
+                "Auto · Gemini Flash".to_string(),
+            ),
+            (
+                PRIMARY_REASONING_MODEL.to_string(),
+                "Auto · Gemini Pro".to_string(),
+            ),
+        ];
+        options.extend(
+            self.available_models
+                .iter()
+                .map(|model| (model.id.clone(), model.name.clone())),
+        );
+        let configured = squigit::settings::load_config()
+            .ok()
+            .map(|config| config.model);
+        for id in [Some(self.state.model.clone()), configured]
+            .into_iter()
+            .flatten()
+        {
+            if !options.iter().any(|(candidate, _)| *candidate == id) {
+                if let Some(label) = canonical_model_label(&id) {
+                    options.push((id, label));
+                }
+            }
+        }
+        options
+    }
+
+    fn show_model_menu(&mut self) {
+        let mut items = self
+            .model_menu_options()
+            .into_iter()
+            .map(|(id, name)| MenuItem {
                 section: "AI model".to_string(),
-                label: model.name.to_string(),
-                detail: if self.state.model == model.id {
+                label: name,
+                detail: if self.state.model == id {
                     "active".to_string()
                 } else {
-                    model.id.to_string()
+                    String::new()
                 },
-                action: MenuAction::SetSessionModel {
-                    id: model.id.to_string(),
-                },
+                action: MenuAction::SetSessionModel { id },
             })
             .collect::<Vec<_>>();
         items.extend(
@@ -640,6 +683,12 @@ impl App {
     }
 
     fn open_settings_menu(&mut self) {
+        self.available_models.clear();
+        tasks::refresh_models(&self.sender);
+        self.show_settings_menu();
+    }
+
+    fn show_settings_menu(&mut self) {
         let config = match squigit::settings::load_config() {
             Ok(config) => config,
             Err(error) => {
@@ -647,19 +696,18 @@ impl App {
                 return;
             }
         };
-        let mut items = squigit::brain::provider::gemini::models::SELECTABLE_MODELS
-            .iter()
-            .map(|model| MenuItem {
+        let mut items = self
+            .model_menu_options()
+            .into_iter()
+            .map(|(id, name)| MenuItem {
                 section: "Default AI model".to_string(),
-                label: model.name.to_string(),
-                detail: if config.model == model.id {
+                label: name,
+                detail: if config.model == id {
                     "active".to_string()
                 } else {
-                    model.id.to_string()
+                    String::new()
                 },
-                action: MenuAction::SetDefaultModel {
-                    id: model.id.to_string(),
-                },
+                action: MenuAction::SetDefaultModel { id },
             })
             .collect::<Vec<_>>();
         items.extend(
@@ -1061,6 +1109,29 @@ impl App {
 
     fn handle_task(&mut self, event: TaskEvent) {
         match event {
+            TaskEvent::Models(result) => match result {
+                Ok(models) => {
+                    self.available_models = models;
+                    if matches!(self.state.view, View::Menu) {
+                        match self.state.menu_title.as_str() {
+                            "Session models" => self.show_model_menu(),
+                            "Settings" => self.show_settings_menu(),
+                            _ => {}
+                        }
+                    }
+                }
+                Err(error)
+                    if matches!(self.state.view, View::Menu)
+                        && matches!(
+                            self.state.menu_title.as_str(),
+                            "Session models" | "Settings"
+                        ) =>
+                {
+                    self.state
+                        .set_notice(NoticeKind::Warning, format!("Model list: {error}"));
+                }
+                Err(_) => {}
+            },
             TaskEvent::Update(Ok(Some(update))) => {
                 let (instruction, release_url) = match update.product {
                     squigit::update::UpdateProduct::Cli => (

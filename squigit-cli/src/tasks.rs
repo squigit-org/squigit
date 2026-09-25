@@ -24,12 +24,21 @@ pub(crate) struct SubmissionTask {
 
 pub enum TaskEvent {
     Update(Result<Option<PendingUpdate>, String>),
+    Models(Result<Vec<squigit::brain::provider::gemini::models::AvailableModel>, String>),
     Login(Result<(), String>),
     Analyze(Result<ImageThreadCreation, String>),
     Submission(Result<SubmissionOutcome, String>),
     GeneratedTitle(Result<String, String>),
     Lens(Result<String, String>),
     Cancelled(Result<String, String>),
+}
+
+pub fn refresh_models(sender: &UnboundedSender<TaskEvent>) {
+    let sender = sender.clone();
+    tokio::spawn(async move {
+        let result = squigit::services::brain().list_available_models().await;
+        let _ = sender.send(TaskEvent::Models(result));
+    });
 }
 
 pub fn refresh_updates(sender: &UnboundedSender<TaskEvent>) {

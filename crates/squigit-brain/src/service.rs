@@ -179,7 +179,7 @@ impl BrainService {
         model_id: String,
         effort: String,
     ) -> Result<Vec<String>, String> {
-        crate::provider::gemini::models::build_attempt_plan(&model_id, &effort)
+        crate::provider::gemini::models::build_attempt_plan(&model_id, &effort).await
     }
 }
 

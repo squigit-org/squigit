@@ -18,7 +18,9 @@ use crate::provider::gemini::attachments::{
     ensure_file_uploaded_for_credential, load_active_credential, ActiveCredential, GeminiFileRef,
 };
 use crate::provider::gemini::chat_transport::{generate_content, stream_content};
-use crate::provider::gemini::models::{build_attempt_plan, BOOTSTRAP_LITE_MODEL};
+use crate::provider::gemini::models::{
+    build_attempt_plan, invalidate_model_catalog, BOOTSTRAP_LITE_MODEL,
+};
 use crate::provider::gemini::transport::types::{
     GeminiContent, GeminiFileData, GeminiGenerationConfig, GeminiPart, GeminiRequest,
     GeminiSystemInstruction, GeminiThinkingConfig,
@@ -673,7 +675,7 @@ pub(crate) async fn run_chat(
     }
     let system = system_prompt(request, &working, &guide_path)?;
     let contents = history_contents(request, &working, file_parts, extra_context);
-    let models = build_attempt_plan(&request.model_id, &request.effort)?;
+    let models = build_attempt_plan(&request.model_id, &request.effort).await?;
     let force_search = request.force_web_search || image_opening || fallback_search_needed;
     let mut search_context = String::new();
     let mut search_citations = Vec::<CitationSource>::new();
@@ -700,7 +702,10 @@ pub(crate) async fn run_chat(
                         if error.starts_with("Gemini API error (4")
                             && !error.starts_with("Gemini API error (429") =>
                     {
-                        break
+                        if error.starts_with("Gemini API error (404") {
+                            invalidate_model_catalog().await;
+                        }
+                        break;
                     }
                     Err(_) if retry < 2 => {
                         let delay = if retry == 0 { 15 } else { 30 };
@@ -763,6 +768,9 @@ pub(crate) async fn run_chat(
                         && (error.contains("Gemini API error (400")
                             || error.contains("Gemini API error (404")) =>
                 {
+                    if error.contains("Gemini API error (404") {
+                        invalidate_model_catalog().await;
+                    }
                     native_search = false;
                     if fallback_search_needed {
                         match fallback_web_search(request, &final_contents, &credential, cancel)
@@ -795,6 +803,9 @@ pub(crate) async fn run_chat(
                 }
                 Err(error) => {
                     last_error = error;
+                    if last_error.starts_with("Gemini API error (404") {
+                        invalidate_model_catalog().await;
+                    }
                     if last_error.starts_with("Gemini API error (4")
                         && !last_error.starts_with("Gemini API error (429")
                     {
