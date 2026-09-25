@@ -35,6 +35,33 @@ pub struct AvailableModel {
     pub provider: String,
 }
 
+fn is_selectable_chat_model(id: &str) -> bool {
+    let lower = id.to_ascii_lowercase();
+    if !lower.starts_with("models/gemini-") {
+        return false;
+    }
+    if !(lower.contains("flash") || lower.contains("pro")) {
+        return false;
+    }
+    for banned in [
+        "lite",
+        "transcrib",
+        "computer",
+        "omni",
+        "image",
+        "embedding",
+        "tts",
+        "audio",
+        "video",
+        "music",
+    ] {
+        if lower.contains(banned) {
+            return false;
+        }
+    }
+    true
+}
+
 pub async fn list_available_models() -> Result<Vec<AvailableModel>, String> {
     let credential = super::attachments::load_active_credential().await?;
     let client = reqwest::Client::builder()
@@ -75,10 +102,10 @@ pub async fn list_available_models() -> Result<Vec<AvailableModel>, String> {
                     let supported = item
                         .get("supportedGenerationMethods")
                         .and_then(serde_json::Value::as_array)?;
-                    if !id.starts_with("models/gemini-")
-                        || !supported
-                            .iter()
-                            .any(|method| method.as_str() == Some("generateContent"))
+                    if !supported
+                        .iter()
+                        .any(|method| method.as_str() == Some("generateContent"))
+                        || !is_selectable_chat_model(id)
                     {
                         return None;
                     }
