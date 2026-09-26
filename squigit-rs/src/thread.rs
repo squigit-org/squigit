@@ -3,9 +3,9 @@
 
 use crate::brain::ImageThreadCredentialSnapshot;
 use crate::storage::{
-    self, AttachmentFileType, ManifestMention, MessageAttachment, SideChatData, SideChatMetadata,
-    ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, DEFAULT_SIDE_CHAT_TITLE,
-    DEFAULT_THREAD_TITLE,
+    self, AssistantError, AttachmentFileType, ManifestMention, MessageAttachment, SideChatData,
+    SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage,
+    DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -503,16 +503,32 @@ pub fn append_message(
 pub fn append_assistant_message(
     conversation_id: &str,
     content: String,
+    error: Option<AssistantError>,
 ) -> ThreadResult<ThreadMessage> {
     let _index_guard = thread_index_lock()
         .lock()
         .map_err(|_| "Thread index is unavailable".to_string())?;
     let storage = active_storage()?;
-    let message = ThreadMessage::assistant(content);
+    let message = match error {
+        Some(error) => ThreadMessage::assistant_error(content, error),
+        None => ThreadMessage::assistant(content),
+    };
     storage
         .push_message(conversation_id, message.clone(), &[])
         .map_err(|error| error.to_string())?;
     Ok(message)
+}
+
+/// Remove one message and every message after it from any conversation.
+pub fn remove_messages_from(conversation_id: &str, from_message_id: &str) -> ThreadResult<()> {
+    let _index_guard = thread_index_lock()
+        .lock()
+        .map_err(|_| "Thread index is unavailable".to_string())?;
+    let storage = active_storage()?;
+    storage
+        .truncate_messages(conversation_id, from_message_id)
+        .map_err(|error| error.to_string())?;
+    Ok(())
 }
 
 /// One manifest entry with its on-disk blob location for shell display.
@@ -589,6 +605,8 @@ pub mod simulator {
     use std::thread;
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+    use crate::storage::AssistantError;
+
     use super::ThreadResult;
 
     /// Thinking-time range in milliseconds. The GUI randomizes inside this
@@ -601,6 +619,7 @@ pub mod simulator {
         content: &'static str,
         weight: u32,
         web: bool,
+        error: Option<(&'static str, &'static str)>,
     }
 
     struct PickerState {
@@ -693,6 +712,7 @@ Finally, the layout should remain comfortable for mixed-direction content too: *
 "##,
             weight: 1,
             web: false,
+            error: None,
         },
         SimulatedResponse {
             content: r##"Here is a lean, production-ready `AGENTS.md` template designed for CLI agents like OpenAI Codex and Claude Code.
@@ -750,6 +770,7 @@ npm run doctor
 "##,
             weight: 1,
             web: false,
+            error: None,
         },
         SimulatedResponse {
             content: r##"You are correct that Thibault Sottiaux ([@thsottiaux](https://x.com/thsottiaux)) is widely recognized for his work and resets at OpenAI.
@@ -762,6 +783,7 @@ Sources: [crn.com](https://vertexaisearch.cloud.google.com/grounding-api-redirec
 "##,
             weight: 1,
             web: true,
+            error: None,
         },
         SimulatedResponse {
             content: r##"Based on the provided document, **Cursor Origin** is described as an upcoming, AI-native Git hosting platform and code forge from the creators of the Cursor Editor.
@@ -776,6 +798,7 @@ Note: live web search is currently unavailable, so these details could not be in
 "##,
             weight: 1,
             web: false,
+            error: None,
         },
         SimulatedResponse {
             content: r##"Solving $x^2 - 5x + 6 = 0$ by factoring.
@@ -797,30 +820,42 @@ Both satisfy the equation, so the solution set is $\{2, 3\}$.
 "##,
             weight: 1,
             web: false,
+            error: None,
         },
         SimulatedResponse {
             content: r##"You're absolutely right, and my apologies — I don't know your operating system, so I covered the common cases instead of guessing. Tell me which OS you're on and I'll give you the exact command.
 "##,
             weight: 4,
             web: false,
+            error: None,
         },
         SimulatedResponse {
             content: r##"Yes, you're good to go! codex-cli 0.147.0 is installed and responding properly on your path.
 "##,
             weight: 4,
             web: false,
+            error: None,
         },
         SimulatedResponse {
             content: r##"Understood. I've saved that with the thread, so we'll keep the context next time. What do you want to dig into next?
 "##,
             weight: 4,
             web: false,
+            error: None,
         },
         SimulatedResponse {
             content: r##"Done — noted. Say the word when you want me to take the next step.
 "##,
             weight: 4,
             web: false,
+            error: None,
+        },
+        SimulatedResponse {
+            content: r##"The model is under high demand right now, so this turn failed before producing a response. Open the message menu and hit Regenerate response to retry.
+"##,
+            weight: 1,
+            web: false,
+            error: Some(("high-demand", "Model under high demand")),
         },
     ];
 
@@ -901,20 +936,37 @@ Both satisfy the equation, so the solution set is $\{2, 3\}$.
         }
     }
 
+    /// A picked response body plus its optional machine-readable failure.
+    /// Callers persist the error alongside the content so reloads and shared
+    /// threads keep the failure visible.
+    pub struct SimulatedPick {
+        pub content: &'static str,
+        pub error_kind: Option<&'static str>,
+        pub error_message: Option<&'static str>,
+    }
+
     /// Draw one response. Forced web search always serves the web-grounded
     /// entry; otherwise a weighted shuffle-bag draw that never repeats the
     /// previous turn, exhausts every entry, then refills and loops again.
-    pub fn pick_simulated_response(force_web_search: bool) -> &'static str {
+    pub fn pick_simulated_response(force_web_search: bool) -> SimulatedPick {
         let mut picker = lock_picker();
         if force_web_search {
             if let Some(index) = web_index() {
                 picker.bag.retain(|candidate| *candidate != index);
                 picker.last = Some(index);
-                return RESPONSES[index].content;
+                return pick_at(index);
             }
         }
-        let index = draw_from_bag(&mut picker);
-        RESPONSES[index].content
+        pick_at(draw_from_bag(&mut picker))
+    }
+
+    fn pick_at(index: usize) -> SimulatedPick {
+        let response = &RESPONSES[index];
+        SimulatedPick {
+            content: response.content,
+            error_kind: response.error.map(|entry| entry.0),
+            error_message: response.error.map(|entry| entry.1),
+        }
     }
 
     /// Random thinking delay in milliseconds inside the configured range.
@@ -949,9 +1001,17 @@ Both satisfy the equation, so the solution set is $\{2, 3\}$.
     /// Full simulated assistant turn for shells without a TypeScript side:
     /// draw a response, wait a random thinking delay, persist the message.
     pub async fn run_simulated_assistant_turn(conversation_id: &str) -> ThreadResult<String> {
-        let content = pick_simulated_response(false).to_string();
+        let pick = pick_simulated_response(false);
+        let content = pick.content.to_string();
         tokio::time::sleep(Duration::from_millis(random_think_ms())).await;
-        super::append_assistant_message(conversation_id, content.clone())?;
+        let error = match (pick.error_kind, pick.error_message) {
+            (Some(kind), Some(message)) => Some(AssistantError {
+                kind: kind.to_string(),
+                message: message.to_string(),
+            }),
+            _ => None,
+        };
+        super::append_assistant_message(conversation_id, content.clone(), error)?;
         Ok(content)
     }
 }

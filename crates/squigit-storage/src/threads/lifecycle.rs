@@ -358,6 +358,26 @@ impl ThreadStorage {
         }
     }
 
+    /// Remove one message and every message after it from any conversation
+    /// by id alone. Returns the number of removed messages. Manifest entries
+    /// are intentionally left untouched: mentions stay part of the context.
+    pub fn truncate_messages(&self, conversation_id: &str, from_message_id: &str) -> Result<usize> {
+        let mut conversation = self.load_conversation(conversation_id)?;
+        let position = conversation
+            .messages()
+            .iter()
+            .position(|message| message.id() == from_message_id)
+            .ok_or_else(|| {
+                StorageError::InvalidThreadMessage(format!(
+                    "message {from_message_id} was not found"
+                ))
+            })?;
+        let removed = conversation.messages().len() - position;
+        conversation.messages_mut().truncate(position);
+        self.save_conversation(&conversation)?;
+        Ok(removed)
+    }
+
     /// Append one message to any conversation by id alone and merge its
     /// attachment mentions into the manifest. Mentions never populate
     /// `file_brief`: unknown hashes are skipped, existing briefs are

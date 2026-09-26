@@ -124,7 +124,19 @@ pub enum ThreadMessage {
         timestamp: DateTime<Utc>,
         citations: Vec<CitationSource>,
         tool_steps: Vec<ToolStep>,
+        #[serde(default)]
+        error: Option<AssistantError>,
     },
+}
+
+/// Machine-readable failure attached to an assistant turn (stopped, quota,
+/// overload, transport errors). Persisted so reloads and shared threads keep
+/// the failure visible next to the content that describes it.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantError {
+    pub kind: String,
+    pub message: String,
 }
 
 /// Structured citation source metadata persisted with a message.
@@ -183,6 +195,19 @@ impl ThreadMessage {
             timestamp: Utc::now(),
             citations: Vec::new(),
             tool_steps: Vec::new(),
+            error: None,
+        }
+    }
+
+    /// Create a new assistant message carrying a machine-readable failure.
+    pub fn assistant_error(content: String, error: AssistantError) -> Self {
+        Self::Assistant {
+            id: Self::new_id(),
+            content,
+            timestamp: Utc::now(),
+            citations: Vec::new(),
+            tool_steps: Vec::new(),
+            error: Some(error),
         }
     }
 
