@@ -16,27 +16,9 @@ use super::paths::{
 };
 use super::{
     default_ocr_annotations, AttachmentManifest, AttachmentManifestEntry, ContextWindow,
-    Conversation, ManifestMention, OcrAnnotations, SideChatData, SideChatMetadata, ThreadData,
-    ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
+    Conversation, ForkedFrom, ManifestMention, OcrAnnotations, SideChatData, SideChatMetadata,
+    ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
 };
-
-fn copy_dir_all(source: &Path, destination: &Path) -> Result<()> {
-    fs::create_dir_all(destination)?;
-
-    for entry in fs::read_dir(source)? {
-        let entry = entry?;
-        let file_type = entry.file_type()?;
-        let destination_path = destination.join(entry.file_name());
-
-        if file_type.is_dir() {
-            copy_dir_all(&entry.path(), &destination_path)?;
-        } else {
-            fs::copy(entry.path(), destination_path)?;
-        }
-    }
-
-    Ok(())
-}
 
 fn normalize_hash(value: &str) -> Option<String> {
     let trimmed = value.trim();
@@ -93,6 +75,58 @@ fn sort_attachment_manifest(manifest: &mut AttachmentManifest, initial_hash: &st
                 .then_with(|| left.attachment_hash.cmp(&right.attachment_hash)),
         }
     });
+}
+
+fn manifest_through_messages(
+    source: &AttachmentManifest,
+    messages: &[ThreadMessage],
+    initial_hash: &str,
+    created_at: DateTime<Utc>,
+) -> AttachmentManifest {
+    let mut mentions = BTreeMap::<String, (DateTime<Utc>, Option<String>)>::new();
+    for message in messages {
+        let ThreadMessage::User {
+            content,
+            timestamp,
+            attachments,
+            ..
+        } = message
+        else {
+            continue;
+        };
+        let names = attachment_display_names(content);
+        for attachment in attachments {
+            let mention = mentions
+                .entry(attachment.attachment_hash.clone())
+                .or_insert((*timestamp, None));
+            if mention.0 <= *timestamp {
+                mention.0 = *timestamp;
+                if let Some(name) = names.get(&attachment.attachment_hash) {
+                    mention.1 = Some(name.clone());
+                }
+            }
+        }
+    }
+
+    let mut retained = source
+        .iter()
+        .filter_map(|entry| {
+            let mention = mentions.get(&entry.attachment_hash);
+            if entry.attachment_hash != initial_hash && mention.is_none() {
+                return None;
+            }
+            let mut entry = entry.clone();
+            entry.last_mention_at = mention
+                .map(|(timestamp, _)| *timestamp)
+                .unwrap_or(created_at);
+            if let Some((_, Some(name))) = mention {
+                entry.display_name = name.clone();
+            }
+            Some(entry)
+        })
+        .collect::<AttachmentManifest>();
+    sort_attachment_manifest(&mut retained, initial_hash);
+    retained
 }
 
 fn validate_message_ids(messages: &[ThreadMessage]) -> Result<()> {
@@ -462,20 +496,12 @@ impl ThreadStorage {
     }
 
     pub fn fork_sidechat_latest(&self, sidechat_id: &str) -> Result<SideChatMetadata> {
-        let source_dir = self.thread_dir(sidechat_id);
-        if !source_dir.exists() {
-            return Err(StorageError::ThreadNotFound(sidechat_id.to_string()));
-        }
-
-        let source = self.load_sidechat(sidechat_id)?;
-        let metadata = SideChatMetadata::new(format!("forked {}", source.metadata.title));
-        let destination_dir = self.thread_dir(&metadata.id);
-        copy_dir_all(&source_dir, &destination_dir)?;
-
-        let mut forked = source;
-        forked.metadata = metadata.clone();
-        self.save_sidechat(&forked)?;
-        Ok(metadata)
+        self.create_sidechat_fork(sidechat_id, |_, metadata| {
+            let mut forked = self.load_sidechat(sidechat_id)?;
+            forked.metadata = metadata.clone();
+            validate_message_ids(&forked.messages)?;
+            self.save_sidechat_files(&forked)
+        })
     }
 
     pub fn set_thread_workspace(&self, thread_id: &str, workspace_id: Option<&str>) -> Result<()> {
@@ -578,26 +604,60 @@ impl ThreadStorage {
     }
 
     pub fn fork_thread_latest(&self, thread_id: &str) -> Result<ThreadMetadata> {
-        let source_dir = self.thread_dir(thread_id);
-        if !source_dir.exists() {
-            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
-        }
+        self.create_fork(thread_id, |_, metadata| {
+            let mut forked_thread = self.load_thread(thread_id)?;
+            forked_thread.metadata = metadata.clone();
+            self.save_thread_files(&forked_thread)
+        })
+    }
 
-        let source_workspace_id = self.get_thread_workspace_id(thread_id)?;
-        let source_thread = self.load_thread(thread_id)?;
-        let mut metadata = ThreadMetadata::new(
-            format!("forked {}", source_thread.metadata.title),
-            source_thread.metadata.image_hash.clone(),
-        );
-        metadata.pinned_at = None;
-        let destination_dir = self.thread_dir(&metadata.id);
-        copy_dir_all(&source_dir, &destination_dir)?;
+    pub fn fork_thread_at_message(
+        &self,
+        thread_id: &str,
+        message_id: &str,
+    ) -> Result<ThreadMetadata> {
+        self.create_fork(thread_id, |source, metadata| {
+            let mut forked_thread = self.load_thread(thread_id)?;
+            let position = forked_thread
+                .messages
+                .iter()
+                .position(|message| message.id() == message_id)
+                .ok_or_else(|| {
+                    StorageError::InvalidThreadMessage(format!(
+                        "message `{message_id}` was not found in thread `{thread_id}`"
+                    ))
+                })?;
+            if !matches!(
+                &forked_thread.messages[position],
+                ThreadMessage::Assistant { .. }
+            ) {
+                return Err(StorageError::InvalidThreadMessage(format!(
+                    "message `{message_id}` is not an assistant message"
+                )));
+            }
 
-        let mut forked_thread = source_thread;
-        forked_thread.metadata = metadata.clone();
-        self.save_thread_files(&forked_thread)?;
-        self.update_index_in_workspace(&metadata, source_workspace_id.as_deref())?;
-        Ok(metadata)
+            let initial_hash = source.image_hash.clone();
+            let created_at = source.created_at;
+            forked_thread.messages.truncate(position + 1);
+            if let Some(ThreadMessage::Assistant { forked_from, .. }) =
+                forked_thread.messages.last_mut()
+            {
+                *forked_from = Some(ForkedFrom {
+                    thread_id: thread_id.to_string(),
+                    title: source.title.clone(),
+                });
+            }
+            forked_thread.attachment_manifest = manifest_through_messages(
+                &forked_thread.attachment_manifest,
+                &forked_thread.messages,
+                &initial_hash,
+                created_at,
+            );
+            forked_thread.context_window = ContextWindow::default();
+            forked_thread.metadata = metadata.clone();
+            validate_message_ids(&forked_thread.messages)?;
+            self.save_thread_files(&forked_thread)
+        })
     }
 
     pub fn update_thread_metadata(&self, metadata: &ThreadMetadata) -> Result<()> {

@@ -372,6 +372,23 @@ pub fn fork_thread(thread_id: String) -> ExplorerResult<Option<ExplorerThread>> 
     }))
 }
 
+pub fn fork_thread_at_message(
+    thread_id: String,
+    message_id: String,
+) -> ExplorerResult<ExplorerThread> {
+    let storage = active_storage()?;
+    let metadata = storage
+        .fork_thread_at_message(&thread_id, &message_id)
+        .map_err(|error| error.to_string())?;
+    let workspace_id = storage
+        .get_thread_workspace_id(&metadata.id)
+        .map_err(|error| error.to_string())?;
+    Ok(ExplorerThread {
+        workspace_id,
+        ..metadata.into()
+    })
+}
+
 enum SearchPlan {
     Regex(Option<Regex>),
     Tokens(Vec<String>),

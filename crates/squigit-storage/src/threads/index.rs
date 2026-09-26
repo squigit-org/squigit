@@ -21,6 +21,47 @@ pub(super) struct ThreadIndex {
     pub(super) unassigned_threads: BTreeMap<String, ThreadMetadata>,
     #[serde(default)]
     pub(super) sidechat_threads: BTreeMap<String, SideChatMetadata>,
+    fork_families: BTreeMap<String, ForkFamilyState>,
+    sidechat_fork_families: BTreeMap<String, ForkFamilyState>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ForkFamilyState {
+    base_title: String,
+    last_version: u32,
+}
+
+fn next_fork_version(
+    families: &mut BTreeMap<String, ForkFamilyState>,
+    family_id: &str,
+    source_title: &str,
+    source_version: u32,
+) -> Result<(String, u32)> {
+    let family = if source_version == 1 {
+        families
+            .entry(family_id.to_string())
+            .or_insert_with(|| ForkFamilyState {
+                base_title: source_title.to_string(),
+                last_version: 1,
+            })
+    } else {
+        families.get_mut(family_id).ok_or_else(|| {
+            StorageError::InvalidThreadMessage(format!(
+                "fork family `{family_id}` is missing from the thread index"
+            ))
+        })?
+    };
+    if family.last_version < source_version {
+        return Err(StorageError::InvalidThreadMessage(format!(
+            "fork family `{family_id}` is behind version `{source_version}`"
+        )));
+    }
+    let version = family.last_version.checked_add(1).ok_or_else(|| {
+        StorageError::InvalidThreadMessage(format!(
+            "fork family `{family_id}` has no more available versions"
+        ))
+    })?;
+    Ok((family.base_title.clone(), version))
 }
 
 fn canonical_workspace_path(path: &Path) -> Result<std::path::PathBuf> {
@@ -117,6 +158,121 @@ fn canonical_workspace_path(path: &Path) -> Result<std::path::PathBuf> {
 }
 
 impl ThreadStorage {
+    pub(super) fn create_fork<F>(&self, source_id: &str, build: F) -> Result<ThreadMetadata>
+    where
+        F: FnOnce(&ThreadMetadata, &ThreadMetadata) -> Result<()>,
+    {
+        let _guard = CATALOG_WRITE_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut index = self.read_index()?;
+        let source = index.unassigned_threads.get(source_id).cloned();
+        let (source, workspace_id) = if let Some(source) = source {
+            (source, None)
+        } else {
+            index
+                .workspaces
+                .iter()
+                .find_map(|workspace| {
+                    workspace
+                        .threads
+                        .get(source_id)
+                        .map(|source| (source.clone(), Some(workspace.id.clone())))
+                })
+                .ok_or_else(|| StorageError::ThreadNotFound(source_id.to_string()))?
+        };
+        let family_id = source.fork_family_id.clone();
+        let (base_title, version) = next_fork_version(
+            &mut index.fork_families,
+            &family_id,
+            &source.title,
+            source.fork_version,
+        )?;
+        let mut metadata = ThreadMetadata::new(
+            format!("{base_title} ({version})"),
+            source.image_hash.clone(),
+        );
+        metadata.fork_family_id = family_id.clone();
+        metadata.fork_version = version;
+
+        let destination_dir = self.thread_dir(&metadata.id);
+        if let Err(error) = build(&source, &metadata) {
+            let _ = fs::remove_dir_all(&destination_dir);
+            return Err(error);
+        }
+        index
+            .fork_families
+            .get_mut(&family_id)
+            .unwrap()
+            .last_version = version;
+        if let Some(workspace_id) = workspace_id {
+            index
+                .workspaces
+                .iter_mut()
+                .find(|workspace| workspace.id == workspace_id)
+                .unwrap()
+                .threads
+                .insert(metadata.id.clone(), metadata.clone());
+        } else {
+            index
+                .unassigned_threads
+                .insert(metadata.id.clone(), metadata.clone());
+        }
+        if let Err(error) = self.write_index(&index) {
+            let _ = fs::remove_dir_all(&destination_dir);
+            return Err(error);
+        }
+        Ok(metadata)
+    }
+
+    pub(super) fn create_sidechat_fork<F>(
+        &self,
+        source_id: &str,
+        build: F,
+    ) -> Result<SideChatMetadata>
+    where
+        F: FnOnce(&SideChatMetadata, &SideChatMetadata) -> Result<()>,
+    {
+        let _guard = CATALOG_WRITE_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut index = self.read_index()?;
+        let source = index
+            .sidechat_threads
+            .get(source_id)
+            .cloned()
+            .ok_or_else(|| StorageError::ThreadNotFound(source_id.to_string()))?;
+        let family_id = source.fork_family_id.clone();
+        let (base_title, version) = next_fork_version(
+            &mut index.sidechat_fork_families,
+            &family_id,
+            &source.title,
+            source.fork_version,
+        )?;
+        let mut metadata = SideChatMetadata::new(format!("{base_title} ({version})"));
+        metadata.fork_family_id = family_id.clone();
+        metadata.fork_version = version;
+
+        let destination_dir = self.thread_dir(&metadata.id);
+        if let Err(error) = build(&source, &metadata) {
+            let _ = fs::remove_dir_all(&destination_dir);
+            return Err(error);
+        }
+        index
+            .sidechat_fork_families
+            .get_mut(&family_id)
+            .unwrap()
+            .last_version = version;
+        index
+            .sidechat_threads
+            .insert(metadata.id.clone(), metadata.clone());
+        if let Err(error) = self.write_index(&index) {
+            let _ = fs::remove_dir_all(&destination_dir);
+            return Err(error);
+        }
+        Ok(metadata)
+    }
+
     pub(super) fn read_index(&self) -> Result<ThreadIndex> {
         if !self.index_path.exists() {
             return Ok(ThreadIndex::default());

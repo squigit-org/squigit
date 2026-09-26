@@ -34,15 +34,20 @@ pub struct ThreadMetadata {
     pub image_hash: String,
     /// When the thread was pinned, or `None` when it is not pinned.
     pub pinned_at: Option<DateTime<Utc>>,
+    pub fork_family_id: String,
+    pub fork_version: u32,
 }
 
 impl ThreadMetadata {
     /// Create new thread metadata with a generated ID.
     pub fn new(title: String, image_hash: String) -> Self {
         let now = Utc::now();
+        let id = new_thread_id();
 
         Self {
-            id: new_thread_id(),
+            fork_family_id: id.clone(),
+            fork_version: 1,
+            id,
             title,
             created_at: now,
             updated_at: now,
@@ -59,13 +64,18 @@ pub struct SideChatMetadata {
     pub title: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub fork_family_id: String,
+    pub fork_version: u32,
 }
 
 impl SideChatMetadata {
     pub fn new(title: String) -> Self {
         let now = Utc::now();
+        let id = new_thread_id();
         Self {
-            id: new_thread_id(),
+            fork_family_id: id.clone(),
+            fork_version: 1,
+            id,
             title,
             created_at: now,
             updated_at: now,
@@ -108,6 +118,12 @@ pub struct MessageAttachment {
     pub source_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ForkedFrom {
+    pub thread_id: String,
+    pub title: String,
+}
+
 /// A persisted message with a strict role-specific JSON shape.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "role", rename_all = "lowercase")]
@@ -128,6 +144,7 @@ pub enum ThreadMessage {
         tool_steps: Vec<ToolStep>,
         #[serde(default)]
         error: Option<AssistantError>,
+        forked_from: Option<ForkedFrom>,
     },
 }
 
@@ -209,6 +226,7 @@ impl ThreadMessage {
             citations: Vec::new(),
             tool_steps: Vec::new(),
             error: None,
+            forked_from: None,
         }
     }
 
@@ -221,6 +239,7 @@ impl ThreadMessage {
             citations: Vec::new(),
             tool_steps: Vec::new(),
             error: Some(error),
+            forked_from: None,
         }
     }
 
