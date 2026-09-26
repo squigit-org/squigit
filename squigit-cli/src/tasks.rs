@@ -109,14 +109,16 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                         sidechat_id,
                         submission.canonical_message.clone(),
                         inputs,
+                        None,
                     )?;
                     simulated_target = Some(sidechat_id.clone());
                     None
                 } else if task.thread_id.is_none() {
                     let created = squigit::thread::create_sidechat_thread(
                         submission.canonical_message.clone(),
-                        submission.attachment_hashes.clone(),
+                        inputs,
                         Some(task.human_text),
+                        None,
                     )
                     .await?;
                     simulated_target = Some(created.sidechat_id.clone());
@@ -126,6 +128,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                         &thread_id,
                         submission.canonical_message.clone(),
                         inputs,
+                        None,
                     )?;
                     simulated_target = Some(thread_id);
                     None

@@ -380,8 +380,9 @@ pub async fn create_image_thread(
 
 pub async fn create_sidechat_thread(
     message_markdown: String,
-    attachment_hashes: Vec<String>,
+    attachment_inputs: Vec<MessageAttachmentInput>,
     human_text: Option<String>,
+    message_context: Option<serde_json::Value>,
 ) -> ThreadResult<SideChatCreation> {
     let human_text = human_text
         .map(|value| value.trim().to_string())
@@ -392,15 +393,23 @@ pub async fn create_sidechat_thread(
             .map_err(|_| "Thread index is unavailable".to_string())?;
         let storage = active_storage()?;
         let metadata = SideChatMetadata::new(DEFAULT_SIDE_CHAT_TITLE.to_string());
-        let attachments = attachment_hashes
-            .into_iter()
-            .map(|attachment_hash| MessageAttachment {
-                attachment_hash,
-                source_path: None,
-            })
-            .collect();
-        let message = ThreadMessage::user_with_attachments(message_markdown, attachments);
-        let sidechat = SideChatData::new(metadata.clone(), message);
+        let attachments = message_attachments(attachment_inputs.clone());
+        let message = ThreadMessage::user_with_attachments(message_markdown, attachments)
+            .with_message_context(message_context);
+        let mut sidechat = SideChatData::new(metadata.clone(), message);
+        for input in attachment_inputs {
+            let mut entry = storage
+                .attachment_manifest_entry(
+                    &input.attachment_hash,
+                    input.display_name.as_deref().unwrap_or("attachment"),
+                    Utc::now(),
+                )
+                .map_err(|error| error.to_string())?;
+            if let Some(file_type) = input.file_type {
+                entry.file_type = file_type;
+            }
+            sidechat.attachment_manifest.push(entry);
+        }
         storage
             .save_sidechat(&sidechat)
             .map_err(|error| error.to_string())?;
@@ -483,6 +492,7 @@ pub fn append_message(
     conversation_id: &str,
     message_markdown: String,
     attachments: Vec<MessageAttachmentInput>,
+    message_context: Option<serde_json::Value>,
 ) -> ThreadResult<ThreadMessage> {
     let _index_guard = thread_index_lock()
         .lock()
@@ -491,7 +501,8 @@ pub fn append_message(
     let message = ThreadMessage::user_with_attachments(
         message_markdown,
         message_attachments(attachments.clone()),
-    );
+    )
+    .with_message_context(message_context);
     let mentions = manifest_mentions(&attachments);
     storage
         .push_message(conversation_id, message.clone(), &mentions)
@@ -563,6 +574,9 @@ fn conversation_snapshot(
                 AttachmentFileType::TextLocal => "text-local".to_string(),
                 AttachmentFileType::ImageUpload => "image-upload".to_string(),
                 AttachmentFileType::DocumentUpload => "document-upload".to_string(),
+                AttachmentFileType::TerminalMention => "terminal-mention".to_string(),
+                AttachmentFileType::ThreadMention => "thread-mention".to_string(),
+                AttachmentFileType::ForwardedMessages => "forwarded-messages".to_string(),
             },
             blob_path: storage
                 .find_object_blob(&entry.attachment_hash)

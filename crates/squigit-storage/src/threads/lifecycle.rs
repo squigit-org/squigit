@@ -194,7 +194,11 @@ impl ThreadStorage {
                 .find(|entry| entry.attachment_hash == hash)
             {
                 existing.display_name = fresh.display_name;
-                existing.file_type = fresh.file_type;
+                if matches!(existing.file_type, AttachmentFileType::TextLocal)
+                    || !matches!(fresh.file_type, AttachmentFileType::TextLocal)
+                {
+                    existing.file_type = fresh.file_type;
+                }
                 existing.file_brief = fresh.file_brief;
                 if existing.last_mention_at < *timestamp {
                     existing.last_mention_at = *timestamp;
@@ -205,19 +209,6 @@ impl ThreadStorage {
         }
 
         sort_attachment_manifest(manifest, initial_hash);
-        Ok(())
-    }
-
-    fn apply_user_message_attachments(
-        &self,
-        thread: &mut ThreadData,
-        message: &ThreadMessage,
-    ) -> Result<()> {
-        self.apply_user_message_attachments_to_manifest(
-            &mut thread.attachment_manifest,
-            &thread.metadata.image_hash,
-            message,
-        )?;
         Ok(())
     }
 
@@ -483,7 +474,6 @@ impl ThreadStorage {
 
         let mut forked = source;
         forked.metadata = metadata.clone();
-        forked.attachment_manifest.clear();
         self.save_sidechat(&forked)?;
         Ok(metadata)
     }
@@ -605,18 +595,6 @@ impl ThreadStorage {
 
         let mut forked_thread = source_thread;
         forked_thread.metadata = metadata.clone();
-        let initial_hash = forked_thread.metadata.image_hash.clone();
-        let initial = forked_thread
-            .attachment_manifest
-            .iter()
-            .find(|entry| entry.attachment_hash == initial_hash)
-            .cloned()
-            .ok_or(StorageError::ImageNotFound(initial_hash))?;
-        forked_thread.attachment_manifest = vec![initial];
-        let retained_messages = forked_thread.messages.clone();
-        for message in &retained_messages {
-            self.apply_user_message_attachments(&mut forked_thread, message)?;
-        }
         self.save_thread_files(&forked_thread)?;
         self.update_index_in_workspace(&metadata, source_workspace_id.as_deref())?;
         Ok(metadata)

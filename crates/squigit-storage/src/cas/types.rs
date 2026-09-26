@@ -23,6 +23,9 @@ pub enum AttachmentFileType {
     TextLocal,
     ImageUpload,
     DocumentUpload,
+    TerminalMention,
+    ThreadMention,
+    ForwardedMessages,
 }
 
 /// Content-derived metadata shared by every thread that references an object.

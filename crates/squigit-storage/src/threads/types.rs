@@ -117,6 +117,8 @@ pub enum ThreadMessage {
         content: String,
         timestamp: DateTime<Utc>,
         attachments: Vec<MessageAttachment>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        message_context: Option<serde_json::Value>,
     },
     Assistant {
         id: String,
@@ -184,7 +186,18 @@ impl ThreadMessage {
             content,
             timestamp: Utc::now(),
             attachments,
+            message_context: None,
         }
+    }
+
+    pub fn with_message_context(mut self, context: Option<serde_json::Value>) -> Self {
+        if let Self::User {
+            message_context, ..
+        } = &mut self
+        {
+            *message_context = context;
+        }
+        self
     }
 
     /// Create a new assistant message with empty citations and tool steps.
