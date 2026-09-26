@@ -175,6 +175,17 @@ impl ThreadMessage {
         }
     }
 
+    /// Create a new assistant message with empty citations and tool steps.
+    pub fn assistant(content: String) -> Self {
+        Self::Assistant {
+            id: Self::new_id(),
+            content,
+            timestamp: Utc::now(),
+            citations: Vec::new(),
+            tool_steps: Vec::new(),
+        }
+    }
+
     pub fn id(&self) -> &str {
         match self {
             Self::User { id, .. } | Self::Assistant { id, .. } => id,
@@ -257,6 +268,18 @@ pub struct AttachmentManifestEntry {
     pub last_mention_at: DateTime<Utc>,
 }
 
+/// One attachment mention to merge into a thread manifest on message append.
+/// There is deliberately no `file_brief` field: mentions never populate
+/// briefs, so existing briefs are preserved and new entries keep `None`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ManifestMention {
+    pub attachment_hash: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub file_type: Option<crate::cas::AttachmentFileType>,
+}
+
 pub type AttachmentManifest = Vec<AttachmentManifestEntry>;
 
 /// Complete thread data including messages and OCR.
@@ -315,6 +338,67 @@ impl SideChatData {
             messages: vec![first_message],
             context_window: ContextWindow::default(),
             attachment_manifest: Vec::new(),
+        }
+    }
+}
+
+/// One persisted conversation of either kind, resolved from the conversation
+/// id alone. Shells treat threads and sidechats as one DNA for message turns;
+/// the variant only matters where behavior truly diverges (creation, indexes,
+/// OCR), which stays behind kind-specific APIs.
+#[derive(Debug, Clone)]
+pub enum Conversation {
+    Thread(ThreadData),
+    Sidechat(SideChatData),
+}
+
+impl Conversation {
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Thread(thread) => &thread.metadata.id,
+            Self::Sidechat(sidechat) => &sidechat.metadata.id,
+        }
+    }
+
+    pub fn messages(&self) -> &[ThreadMessage] {
+        match self {
+            Self::Thread(thread) => &thread.messages,
+            Self::Sidechat(sidechat) => &sidechat.messages,
+        }
+    }
+
+    pub fn messages_mut(&mut self) -> &mut Vec<ThreadMessage> {
+        match self {
+            Self::Thread(thread) => &mut thread.messages,
+            Self::Sidechat(sidechat) => &mut sidechat.messages,
+        }
+    }
+
+    pub fn manifest(&self) -> &AttachmentManifest {
+        match self {
+            Self::Thread(thread) => &thread.attachment_manifest,
+            Self::Sidechat(sidechat) => &sidechat.attachment_manifest,
+        }
+    }
+
+    pub fn manifest_mut(&mut self) -> &mut AttachmentManifest {
+        match self {
+            Self::Thread(thread) => &mut thread.attachment_manifest,
+            Self::Sidechat(sidechat) => &mut sidechat.attachment_manifest,
+        }
+    }
+
+    pub fn initial_hash(&self) -> &str {
+        match self {
+            Self::Thread(thread) => thread.metadata.image_hash.as_str(),
+            Self::Sidechat(_) => "",
+        }
+    }
+
+    pub fn touch_updated_at(&mut self, timestamp: DateTime<Utc>) {
+        match self {
+            Self::Thread(thread) => thread.metadata.updated_at = timestamp,
+            Self::Sidechat(sidechat) => sidechat.metadata.updated_at = timestamp,
         }
     }
 }

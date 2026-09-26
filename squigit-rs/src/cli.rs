@@ -98,6 +98,14 @@ pub struct CliSubmissionRequest {
     pub thread_id: Option<String>,
     pub model: String,
     pub effort: String,
+    pub persist_boundary_log: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct CliAttachmentDescriptor {
+    pub hash: String,
+    pub display_name: String,
+    pub file_type: AttachmentFileType,
 }
 
 #[derive(Clone, Debug)]
@@ -106,6 +114,7 @@ pub struct CliSubmissionResult {
     pub canonical_message: String,
     pub brain_message: String,
     pub attachment_hashes: Vec<String>,
+    pub attachment_descriptors: Vec<CliAttachmentDescriptor>,
 }
 
 #[derive(Clone, Debug)]
@@ -303,6 +312,19 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
         .iter()
         .map(|attachment| attachment.hash.clone())
         .collect::<Vec<_>>();
+    let attachment_descriptors = prepared
+        .iter()
+        .map(|attachment| CliAttachmentDescriptor {
+            hash: attachment.hash.clone(),
+            display_name: attachment
+                .source_path
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("attachment")
+                .to_string(),
+            file_type: attachment.file_type.clone(),
+        })
+        .collect::<Vec<_>>();
     let boundary_id = request
         .thread_id
         .clone()
@@ -410,13 +432,18 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
         "preflightResults": preflight.results,
         "harnessResults": harness_json,
     });
-    let log_path = write_boundary_log(&timestamp, &envelope)?;
+    let log_path = if request.persist_boundary_log {
+        write_boundary_log(&timestamp, &envelope)?
+    } else {
+        None
+    };
 
     Ok(CliSubmissionResult {
         log_path,
         canonical_message,
         brain_message: harness.message_text,
         attachment_hashes,
+        attachment_descriptors,
     })
 }
 

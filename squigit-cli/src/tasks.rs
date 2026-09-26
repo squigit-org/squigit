@@ -1,15 +1,15 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit::cli::{CliSubmissionRequest, CliSubmissionResult};
-use squigit::thread::ImageThreadCreation;
+use squigit::cli::CliSubmissionRequest;
+use squigit::thread::{ImageThreadCreation, MessageAttachmentInput};
 use squigit::update::{PendingUpdate, UpdateShell};
 use std::path::PathBuf;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub struct SubmissionOutcome {
-    pub result: CliSubmissionResult,
     pub created_sidechat: Option<squigit::thread::SideChatCreation>,
+    pub assistant_text: Option<String>,
 }
 
 pub(crate) struct SubmissionTask {
@@ -90,31 +90,58 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                 thread_id: task.thread_id.clone(),
                 model: task.model,
                 effort: task.effort,
+                persist_boundary_log: false,
             })
             .await?;
+            let inputs = submission
+                .attachment_descriptors
+                .iter()
+                .map(|descriptor| MessageAttachmentInput {
+                    attachment_hash: descriptor.hash.clone(),
+                    display_name: Some(descriptor.display_name.clone()),
+                    file_type: Some(descriptor.file_type.clone()),
+                })
+                .collect::<Vec<_>>();
+            let simulated_target: Option<String>;
             let created_sidechat =
                 if let Some(sidechat_id) = task.thread_id.as_ref().filter(|_| task.is_sidechat) {
-                    squigit::thread::append_sidechat_message(
+                    squigit::thread::append_message(
                         sidechat_id,
                         submission.canonical_message.clone(),
-                        submission.attachment_hashes.clone(),
+                        inputs,
                     )?;
+                    simulated_target = Some(sidechat_id.clone());
                     None
                 } else if task.thread_id.is_none() {
-                    Some(
-                        squigit::thread::create_sidechat_thread(
-                            submission.canonical_message.clone(),
-                            submission.attachment_hashes.clone(),
-                            Some(task.human_text),
-                        )
-                        .await?,
+                    let created = squigit::thread::create_sidechat_thread(
+                        submission.canonical_message.clone(),
+                        submission.attachment_hashes.clone(),
+                        Some(task.human_text),
                     )
-                } else {
+                    .await?;
+                    simulated_target = Some(created.sidechat_id.clone());
+                    Some(created)
+                } else if let Some(thread_id) = task.thread_id.clone() {
+                    squigit::thread::append_message(
+                        &thread_id,
+                        submission.canonical_message.clone(),
+                        inputs,
+                    )?;
+                    simulated_target = Some(thread_id);
                     None
+                } else {
+                    return Err("Thread id is missing".to_string());
                 };
+            let assistant_text = match simulated_target {
+                Some(conversation_id) => Some(
+                    squigit::thread::simulator::run_simulated_assistant_turn(&conversation_id)
+                        .await?,
+                ),
+                None => None,
+            };
             Ok(SubmissionOutcome {
-                result: submission,
                 created_sidechat,
+                assistant_text,
             })
         }
         .await;

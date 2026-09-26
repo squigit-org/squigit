@@ -1142,12 +1142,12 @@ impl App {
                                 ocr_job_id: None,
                             });
                         }
-                        let message = outcome
-                            .result
-                            .log_path
-                            .map(|path| format!("Development log saved in {}", path.display()))
-                            .unwrap_or_else(|| "Message accepted".to_string());
-                        self.state.set_notice(NoticeKind::Success, message);
+                        if let Some(assistant_text) = outcome.assistant_text {
+                            self.state.set_notice(NoticeKind::Info, assistant_text);
+                        } else {
+                            self.state
+                                .set_notice(NoticeKind::Success, "Message accepted");
+                        }
                     }
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }

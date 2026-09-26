@@ -3,11 +3,12 @@
 
 use crate::brain::ImageThreadCredentialSnapshot;
 use crate::storage::{
-    self, MessageAttachment, SideChatData, SideChatMetadata, ThreadData, ThreadMessage,
-    ThreadMetadata, ThreadStorage, DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE,
+    self, AttachmentFileType, ManifestMention, MessageAttachment, SideChatData, SideChatMetadata,
+    ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, DEFAULT_SIDE_CHAT_TITLE,
+    DEFAULT_THREAD_TITLE,
 };
 use chrono::Utc;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -18,6 +19,18 @@ use crate::services::brain;
 use crate::settings;
 
 pub type ThreadResult<T> = std::result::Result<T, String>;
+
+/// One attachment mention supplied by a shell when appending a message.
+/// Shells that know display names and file types pass them; otherwise the
+/// manifest touch falls back to the CAS blob filename and keeps `None` briefs.
+#[derive(Clone, Debug, Deserialize)]
+pub struct MessageAttachmentInput {
+    pub attachment_hash: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub file_type: Option<AttachmentFileType>,
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -443,33 +456,117 @@ pub async fn create_sidechat_thread(
     Ok(SideChatCreation { sidechat_id, title })
 }
 
-pub fn append_sidechat_message(
-    sidechat_id: &str,
+fn message_attachments(inputs: Vec<MessageAttachmentInput>) -> Vec<MessageAttachment> {
+    inputs
+        .into_iter()
+        .map(|input| MessageAttachment {
+            attachment_hash: input.attachment_hash,
+            source_path: None,
+        })
+        .collect()
+}
+
+fn manifest_mentions(inputs: &[MessageAttachmentInput]) -> Vec<ManifestMention> {
+    inputs
+        .iter()
+        .map(|input| ManifestMention {
+            attachment_hash: input.attachment_hash.clone(),
+            display_name: input.display_name.clone(),
+            file_type: input.file_type.clone(),
+        })
+        .collect()
+}
+
+/// Append a user message to any conversation by id alone, persisting it to
+/// messages.json and merging its attachment mentions into the manifest.
+pub fn append_message(
+    conversation_id: &str,
     message_markdown: String,
-    attachment_hashes: Vec<String>,
-) -> ThreadResult<()> {
+    attachments: Vec<MessageAttachmentInput>,
+) -> ThreadResult<ThreadMessage> {
     let _index_guard = thread_index_lock()
         .lock()
         .map_err(|_| "Thread index is unavailable".to_string())?;
     let storage = active_storage()?;
-    let mut sidechat = storage
-        .load_sidechat(sidechat_id)
+    let message = ThreadMessage::user_with_attachments(
+        message_markdown,
+        message_attachments(attachments.clone()),
+    );
+    let mentions = manifest_mentions(&attachments);
+    storage
+        .push_message(conversation_id, message.clone(), &mentions)
         .map_err(|error| error.to_string())?;
-    let attachments = attachment_hashes
-        .into_iter()
-        .map(|attachment_hash| MessageAttachment {
-            attachment_hash,
-            source_path: None,
+    Ok(message)
+}
+
+/// Append an assistant message to any conversation by id alone.
+pub fn append_assistant_message(
+    conversation_id: &str,
+    content: String,
+) -> ThreadResult<ThreadMessage> {
+    let _index_guard = thread_index_lock()
+        .lock()
+        .map_err(|_| "Thread index is unavailable".to_string())?;
+    let storage = active_storage()?;
+    let message = ThreadMessage::assistant(content);
+    storage
+        .push_message(conversation_id, message.clone(), &[])
+        .map_err(|error| error.to_string())?;
+    Ok(message)
+}
+
+/// One manifest entry with its on-disk blob location for shell display.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversationAttachment {
+    pub attachment_hash: String,
+    pub display_name: String,
+    pub file_type: String,
+    pub blob_path: Option<String>,
+}
+
+/// Persisted conversation state for one thread or sidechat.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversationSnapshot {
+    pub messages: Vec<ThreadMessage>,
+    pub manifest: Vec<ConversationAttachment>,
+}
+
+fn conversation_snapshot(
+    storage: &ThreadStorage,
+    conversation: &storage::Conversation,
+) -> ConversationSnapshot {
+    let attachments = conversation
+        .manifest()
+        .iter()
+        .map(|entry| ConversationAttachment {
+            attachment_hash: entry.attachment_hash.clone(),
+            display_name: entry.display_name.clone(),
+            file_type: match entry.file_type {
+                AttachmentFileType::TextLocal => "text-local".to_string(),
+                AttachmentFileType::ImageUpload => "image-upload".to_string(),
+                AttachmentFileType::DocumentUpload => "document-upload".to_string(),
+            },
+            blob_path: storage
+                .find_object_blob(&entry.attachment_hash)
+                .ok()
+                .and_then(|path| path.to_str().map(str::to_string)),
         })
         .collect();
-    sidechat.messages.push(ThreadMessage::user_with_attachments(
-        message_markdown,
-        attachments,
-    ));
-    sidechat.metadata.updated_at = Utc::now();
-    storage
-        .save_sidechat(&sidechat)
-        .map_err(|error| error.to_string())
+    ConversationSnapshot {
+        messages: conversation.messages().to_vec(),
+        manifest: attachments,
+    }
+}
+
+/// Load the persisted conversation of any thread or sidechat by id alone.
+pub fn load_conversation(conversation_id: &str) -> ThreadResult<ConversationSnapshot> {
+    let storage = active_storage()?;
+    let conversation = storage
+        .load_conversation(conversation_id)
+        .map_err(|error| error.to_string())?;
+    Ok(conversation_snapshot(&storage, &conversation))
 }
 
 pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<BrainJobSnapshot>> {
@@ -483,11 +580,44 @@ pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<BrainJobSnapshot>> {
     }
 }
 
-pub mod mock {
+/// TEMPORARY DEV API SIMULATOR — remove the whole module when the real API
+/// lands. Shells must treat everything in here as throwaway: the hardcoded
+/// corpus, the weighted shuffle-bag picker, and the thinking-time constants.
+/// Permanent behavior lives in the sibling `append_*` / `load_*` functions.
+pub mod simulator {
+    use std::sync::Mutex;
     use std::thread;
-    use std::time::Duration;
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-    pub const MOCK_RESPONSE: &str = r##"# A closer look at your screenshot
+    use super::ThreadResult;
+
+    /// Thinking-time range in milliseconds. The GUI randomizes inside this
+    /// range from TypeScript so tuning needs no backend rebuild; the CLI path
+    /// below draws from the same range directly.
+    pub const THINK_MIN_MS: u64 = 1000;
+    pub const THINK_MAX_MS: u64 = 2500;
+
+    struct SimulatedResponse {
+        content: &'static str,
+        weight: u32,
+        web: bool,
+    }
+
+    struct PickerState {
+        bag: Vec<usize>,
+        last: Option<usize>,
+        rng: u64,
+    }
+
+    static PICKER: Mutex<PickerState> = Mutex::new(PickerState {
+        bag: Vec::new(),
+        last: None,
+        rng: 0,
+    });
+
+    const RESPONSES: &[SimulatedResponse] = &[
+        SimulatedResponse {
+            content: r##"# A closer look at your screenshot
 
 The interface is using a **quiet visual hierarchy**: one primary surface, restrained borders, and a single accent color for interactive elements. The strongest part is that the eye lands on the content before it notices the chrome.
 
@@ -560,16 +690,246 @@ Inline code such as `monaco.editor.colorize()` can stay visually distinct withou
 For the streaming behavior and parser contract, compare the official React playground <squigitcitation url="https://github.com/Simon-He95/markstream-vue/tree/main/playground-react19" body="The official React 19 playground demonstrates incremental content updates, rich Markdown, and live rendering states.">1</squigitcitation> with the package guide <squigitcitation url="https://markstream.simonhe.me/guide/react-quick-start" body="The quick-start documents NodeRenderer, streaming content, final state, and required styles.">2</squigitcitation>.
 
 Finally, the layout should remain comfortable for mixed-direction content too: **واجهة هادئة، واضحة، وسريعة**. The result is a chat that feels native to the screenshot tool instead of looking like a separate web page embedded inside it.
-"##;
+"##,
+            weight: 1,
+            web: false,
+        },
+        SimulatedResponse {
+            content: r##"Here is a lean, production-ready `AGENTS.md` template designed for CLI agents like OpenAI Codex and Claude Code.
+
+While Codex natively reads `AGENTS.md`, Claude Code natively prioritizes `CLAUDE.md`. The common convention is to keep your root rules in `AGENTS.md` and symlink it so both tools share one source of truth:
+
+<squigitcode language="bash">
+ln -s AGENTS.md CLAUDE.md
+</squigitcode>
+
+---
+
+### `AGENTS.md` Template
+
+<squigitcode language="markdown">
+# AGENTS.md
+
+## Project & Stack
+- **Summary**: One-line description of the project and primary goal.
+- **Stack**: Language + Version, Framework, Database/ORM, Package Manager.
+
+---
+
+## Exact Commands
+
+Never guess scripts or flags. Use these verified commands:
+
+- **Install**: `pnpm install --frozen-lockfile`
+- **Lint & Fix**: `pnpm lint:fix && pnpm format`
+- **Type Check**: `pnpm typecheck`
+- **Single Test**: `pnpm test -- path/to/test.ts`
+- **Build**: `pnpm build`
+</squigitcode>
+
+---
+
+### Guardrails & Boundaries
+
+- **Never edit generated files directly**: `schema.prisma`, `*.d.ts`, `dist/`, `migrations/`.
+- **Never modify lockfiles manually**: let the package manager handle updates.
+- **Never hardcode secrets or credentials**: use `.env.example` as the reference.
+
+### Agent Workflow
+
+When tackling any task:
+
+1. **Inspect First**: read the relevant code and tests before modifying anything.
+2. **Minimal Edit**: apply the smallest complete change that solves the issue.
+3. **Verify Locally**: run the targeted test, then typecheck and lint.
+
+```bash
+cargo xtask doctor
+npm run doctor
+```
+"##,
+            weight: 1,
+            web: false,
+        },
+        SimulatedResponse {
+            content: r##"You are correct that Thibault Sottiaux ([@thsottiaux](https://x.com/thsottiaux)) is widely recognized for his work and resets at OpenAI.
+
+However, based on the latest information, **Dario Amodei** ([@DarioAmodei](https://x.com/DarioAmodei)) is indeed the CEO and a co-founder of Anthropic, making him the most iconic public figure for Anthropic on X. While he has had notable public interactions with Sam Altman, his primary and foundational role is with Anthropic.
+
+Andrej Karpathy ([@karpathy](https://x.com/karpathy)), while a prominent AI researcher, is not considered the main iconic guy for Anthropic in the same way its CEO and co-founder is.
+
+Sources: [crn.com](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE41eNikawiwmv0XewqyK-HSZ3JDyQfK7H1mjiqV1zQC8dohbXM0vMG6leThYM63sTdlNQtDkeh910IP5X_paaUh6xajDmkLR1FE5rJHirMCf_rOnOHsV_pq2f0iO0GZjEzOHo-K28rFaebvy1vadzE0_XpW8VgkG-7nERJANZpF888DPDYHPkonXZskUDUArZKEYfWhHmeffusk1dWk39mzw==), [gizmodo.com](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE6JpXXRtsuZWRB-tIoHHO6qyZj00r9ioEpz05Up9jmA2cyR-Pdwg01mYkc9AgUrmv-By_FG_6t2ad3TdYZCHcwBgCkUnzsEtdbN0IF-bHZLd-gwLAOS7-vrj32jKtgEcf_8xqV5sZ5rTeBcqe5qIFGPKQIIHNOrjPICbQba6c_XOvP3qvkvgjYg1nKJRsuhilqksD0jo0yaer4__WdUi9ZP-sqQGINjnr7T1TY2i63X88=), [time.com](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEIsjhyNtsjKcduYDYS01xErwHN5CLeL7QwIDZiKHZSI_YHFRznM99JBHtiLdH9yJvtB8EK6mOcN9kV7EOGl3I1wSIhKQZI-usDAyJnGy22F0Yx0cSgw_OLKe5PLrcfYVjw1VVZzza9nFvmz_Z2gWUa8QA=)
+"##,
+            weight: 1,
+            web: true,
+        },
+        SimulatedResponse {
+            content: r##"Based on the provided document, **Cursor Origin** is described as an upcoming, AI-native Git hosting platform and code forge from the creators of the Cursor Editor.
+
+Key details from the document:
+
+- **Purpose:** built specifically to handle high-throughput, automated workloads and parallel commits generated by AI agents, rather than traditional human-oriented workflows.
+- **Integrations:** extensible via APIs and the Model Context Protocol (MCP) to connect editing, code reviews, and repository hosting.
+- **Availability:** listed as being in a waitlist-only preview, with general availability targeted for Fall 2026 following an announcement in June 2026.
+
+Note: live web search is currently unavailable, so these details could not be independently verified beyond the provided document.
+"##,
+            weight: 1,
+            web: false,
+        },
+        SimulatedResponse {
+            content: r##"Solving $x^2 - 5x + 6 = 0$ by factoring.
+
+We need two numbers that multiply to $6$ and add to $-5$: those are $-2$ and $-3$.
+
+$$
+x^2 - 5x + 6 = (x - 2)(x - 3) = 0
+$$
+
+So $x = 2$ or $x = 3$.
+
+Quick check:
+
+- For $x = 2$: $4 - 10 + 6 = 0$.
+- For $x = 3$: $9 - 15 + 6 = 0$.
+
+Both satisfy the equation, so the solution set is $\{2, 3\}$.
+"##,
+            weight: 1,
+            web: false,
+        },
+        SimulatedResponse {
+            content: r##"You're absolutely right, and my apologies — I don't know your operating system, so I covered the common cases instead of guessing. Tell me which OS you're on and I'll give you the exact command.
+"##,
+            weight: 4,
+            web: false,
+        },
+        SimulatedResponse {
+            content: r##"Yes, you're good to go! codex-cli 0.147.0 is installed and responding properly on your path.
+"##,
+            weight: 4,
+            web: false,
+        },
+        SimulatedResponse {
+            content: r##"Understood. I've saved that with the thread, so we'll keep the context next time. What do you want to dig into next?
+"##,
+            weight: 4,
+            web: false,
+        },
+        SimulatedResponse {
+            content: r##"Done — noted. Say the word when you want me to take the next step.
+"##,
+            weight: 4,
+            web: false,
+        },
+    ];
 
     const CHUNK_SIZES: [usize; 8] = [2, 5, 3, 7, 4, 6, 3, 5];
     const CHUNK_DELAYS_MS: [u64; 8] = [14, 18, 24, 16, 30, 21, 34, 17];
 
-    pub fn stream_mock_response(
+    fn seed_rng() -> u64 {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_nanos() as u64)
+            .unwrap_or(0x9E37_79B9_7F4A_7C15);
+        nanos ^ (std::process::id() as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9) | 1
+    }
+
+    fn next_rand(rng: &mut u64) -> u64 {
+        *rng ^= *rng >> 12;
+        *rng ^= *rng << 25;
+        *rng ^= *rng >> 27;
+        rng.wrapping_mul(0x2545_F491_4F6C_DD1D)
+    }
+
+    fn refill_bag(state: &mut PickerState) {
+        let mut bag = Vec::new();
+        for (index, response) in RESPONSES.iter().enumerate() {
+            for _ in 0..response.weight {
+                bag.push(index);
+            }
+        }
+        if state.rng == 0 {
+            state.rng = seed_rng();
+        }
+        for position in (1..bag.len()).rev() {
+            let other = (next_rand(&mut state.rng) as usize) % (position + 1);
+            bag.swap(position, other);
+        }
+        if let (Some(&first), Some(&last)) = (bag.first(), state.last.as_ref()) {
+            if first == last && bag.len() > 1 {
+                if let Some(swap) = bag.iter().position(|candidate| *candidate != last) {
+                    bag.swap(0, swap);
+                }
+            }
+        }
+        state.bag = bag;
+    }
+
+    fn lock_picker() -> std::sync::MutexGuard<'static, PickerState> {
+        PICKER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn web_index() -> Option<usize> {
+        RESPONSES.iter().position(|response| response.web)
+    }
+
+    fn draw_from_bag(state: &mut PickerState) -> usize {
+        loop {
+            if state.bag.is_empty() {
+                refill_bag(state);
+            }
+            let index = state
+                .bag
+                .pop()
+                .expect("refilled picker bag must not be empty");
+            if Some(index) != state.last {
+                state.last = Some(index);
+                return index;
+            }
+            if state
+                .bag
+                .iter()
+                .all(|candidate| Some(*candidate) == state.last)
+            {
+                return index;
+            }
+            let slot = (next_rand(&mut state.rng) as usize) % (state.bag.len() + 1);
+            state.bag.insert(slot.min(state.bag.len()), index);
+        }
+    }
+
+    /// Draw one response. Forced web search always serves the web-grounded
+    /// entry; otherwise a weighted shuffle-bag draw that never repeats the
+    /// previous turn, exhausts every entry, then refills and loops again.
+    pub fn pick_simulated_response(force_web_search: bool) -> &'static str {
+        let mut picker = lock_picker();
+        if force_web_search {
+            if let Some(index) = web_index() {
+                picker.bag.retain(|candidate| *candidate != index);
+                picker.last = Some(index);
+                return RESPONSES[index].content;
+            }
+        }
+        let index = draw_from_bag(&mut picker);
+        RESPONSES[index].content
+    }
+
+    /// Random thinking delay in milliseconds inside the configured range.
+    pub fn random_think_ms() -> u64 {
+        let mut rng = seed_rng();
+        THINK_MIN_MS + next_rand(&mut rng) % (THINK_MAX_MS - THINK_MIN_MS + 1)
+    }
+
+    /// Stream one response body in small chunks on a worker thread.
+    pub fn stream_simulated_content(
+        content: &str,
         on_chunk: impl Fn(String) + Send + 'static,
         on_complete: impl Fn() + Send + 'static,
     ) {
-        let content = MOCK_RESPONSE.chars().collect::<Vec<_>>();
+        let content = content.chars().collect::<Vec<_>>();
         thread::spawn(move || {
             let mut cursor = 0;
             let mut turn = 0;
@@ -584,6 +944,15 @@ Finally, the layout should remain comfortable for mixed-direction content too: *
             }
             on_complete();
         });
+    }
+
+    /// Full simulated assistant turn for shells without a TypeScript side:
+    /// draw a response, wait a random thinking delay, persist the message.
+    pub async fn run_simulated_assistant_turn(conversation_id: &str) -> ThreadResult<String> {
+        let content = pick_simulated_response(false).to_string();
+        tokio::time::sleep(Duration::from_millis(random_think_ms())).await;
+        super::append_assistant_message(conversation_id, content.clone())?;
+        Ok(content)
     }
 }
 

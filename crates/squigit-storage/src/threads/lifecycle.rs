@@ -16,8 +16,8 @@ use super::paths::{
 };
 use super::{
     default_ocr_annotations, AttachmentManifest, AttachmentManifestEntry, ContextWindow,
-    OcrAnnotations, SideChatData, SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata,
-    ThreadStorage, WorkspaceMetadata,
+    Conversation, ManifestMention, OcrAnnotations, SideChatData, SideChatMetadata, ThreadData,
+    ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
 };
 
 fn copy_dir_all(source: &Path, destination: &Path) -> Result<()> {
@@ -44,10 +44,13 @@ fn normalize_hash(value: &str) -> Option<String> {
         return Some(trimmed.to_ascii_lowercase());
     }
 
-    Path::new(trimmed)
+    let stem = Path::new(trimmed)
         .file_stem()
-        .and_then(|value| value.to_str())
-        .and_then(normalize_hash)
+        .and_then(|value| value.to_str())?;
+    if stem == trimmed {
+        return None;
+    }
+    normalize_hash(stem)
 }
 
 fn attachment_display_names(content: &str) -> BTreeMap<String, String> {
@@ -258,6 +261,124 @@ impl ThreadStorage {
     pub fn save_thread_in_workspace(&self, thread: &ThreadData, workspace_id: &str) -> Result<()> {
         self.save_thread_files(thread)?;
         self.update_index_in_workspace(&thread.metadata, Some(workspace_id))
+    }
+
+    fn push_message_timestamp(message: &ThreadMessage) -> Result<DateTime<Utc>> {
+        match message {
+            ThreadMessage::User { id, timestamp, .. }
+            | ThreadMessage::Assistant { id, timestamp, .. } => {
+                if !ThreadMessage::is_valid_id(id) {
+                    return Err(StorageError::InvalidThreadMessage(format!(
+                        "message has an invalid id: {id}"
+                    )));
+                }
+                Ok(*timestamp)
+            }
+        }
+    }
+
+    fn touch_manifest_mention(
+        &self,
+        manifest: &mut AttachmentManifest,
+        initial_hash: &str,
+        mention: &ManifestMention,
+        timestamp: DateTime<Utc>,
+    ) -> Result<()> {
+        let Some(hash) = normalize_hash(&mention.attachment_hash) else {
+            return Ok(());
+        };
+        let blob_path = match self.find_object_blob(&hash) {
+            Ok(path) => path,
+            Err(_) => return Ok(()),
+        };
+        let display_name = mention
+            .display_name
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| {
+                blob_path
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    .unwrap_or("attachment")
+                    .to_string()
+            });
+        if let Some(existing) = manifest
+            .iter_mut()
+            .find(|entry| entry.attachment_hash == hash)
+        {
+            existing.display_name = display_name;
+            if let Some(file_type) = &mention.file_type {
+                existing.file_type = file_type.clone();
+            }
+            if existing.last_mention_at < timestamp {
+                existing.last_mention_at = timestamp;
+            }
+        } else {
+            manifest.push(AttachmentManifestEntry {
+                attachment_hash: hash,
+                display_name,
+                file_type: mention
+                    .file_type
+                    .clone()
+                    .unwrap_or(AttachmentFileType::ImageUpload),
+                file_brief: None,
+                last_mention_at: timestamp,
+            });
+        }
+        sort_attachment_manifest(manifest, initial_hash);
+        Ok(())
+    }
+
+    /// Load one conversation of either kind by id alone. Image threads
+    /// resolve through the thread index first; sidechats fall back through
+    /// their own index. Only a miss in both fails; every other error
+    /// propagates without falling back.
+    pub fn load_conversation(&self, conversation_id: &str) -> Result<Conversation> {
+        match self.load_thread(conversation_id) {
+            Ok(thread) => Ok(Conversation::Thread(thread)),
+            Err(StorageError::ThreadNotFound(_)) => self
+                .load_sidechat(conversation_id)
+                .map(Conversation::Sidechat),
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Persist a conversation without re-deriving manifests from CAS briefs,
+    /// so mention handling stays brief-safe for both kinds.
+    pub fn save_conversation(&self, conversation: &Conversation) -> Result<()> {
+        match conversation {
+            Conversation::Thread(thread) => self.save_thread(thread),
+            Conversation::Sidechat(sidechat) => {
+                validate_message_ids(&sidechat.messages)?;
+                self.save_sidechat_files(sidechat)?;
+                self.update_sidechat_index(&sidechat.metadata)
+            }
+        }
+    }
+
+    /// Append one message to any conversation by id alone and merge its
+    /// attachment mentions into the manifest. Mentions never populate
+    /// `file_brief`: unknown hashes are skipped, existing briefs are
+    /// preserved, new entries keep `None`.
+    pub fn push_message(
+        &self,
+        conversation_id: &str,
+        message: ThreadMessage,
+        mentions: &[ManifestMention],
+    ) -> Result<()> {
+        let mut conversation = self.load_conversation(conversation_id)?;
+        let timestamp = Self::push_message_timestamp(&message)?;
+        let initial_hash = conversation.initial_hash().to_string();
+        conversation.messages_mut().push(message);
+        let manifest = conversation.manifest_mut();
+        for mention in mentions {
+            self.touch_manifest_mention(manifest, &initial_hash, mention, timestamp)?;
+        }
+        conversation.touch_updated_at(Utc::now());
+        validate_message_ids(conversation.messages())?;
+        self.save_conversation(&conversation)
     }
 
     fn save_sidechat_files(&self, sidechat: &SideChatData) -> Result<()> {

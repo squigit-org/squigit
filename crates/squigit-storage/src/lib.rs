@@ -48,10 +48,10 @@ pub use profiles::{
     GOOGLE_PROFILE_ID_PREFIX, GOOGLE_PROVIDER, KEY_FILE_SCHEMA_VERSION,
 };
 pub use threads::{
-    AttachmentManifest, AttachmentManifestEntry, ContextWindow, MessageAttachment,
-    OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion, SideChatData,
-    SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
-    DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
+    AttachmentManifest, AttachmentManifestEntry, ContextWindow, Conversation, ManifestMention,
+    MessageAttachment, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion,
+    SideChatData, SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage,
+    WorkspaceMetadata, DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
 };
 pub use version::{
     ProductVersion, VersionFile, VersionStore, VersionStoreGuard, VersionType, VERSION_FILE_NAME,
