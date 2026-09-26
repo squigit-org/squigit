@@ -47,6 +47,34 @@ pub struct SideChatCreation {
     pub title: String,
 }
 
+pub struct ConversationFork {
+    pub id: String,
+    pub title: String,
+}
+
+pub fn fork_thread_at_message(thread_id: &str, message_id: &str) -> ThreadResult<ConversationFork> {
+    let metadata = active_storage()?
+        .fork_thread_at_message(thread_id, message_id)
+        .map_err(|error| error.to_string())?;
+    Ok(ConversationFork {
+        id: metadata.id,
+        title: metadata.title,
+    })
+}
+
+pub fn fork_sidechat_at_message(
+    sidechat_id: &str,
+    message_id: &str,
+) -> ThreadResult<ConversationFork> {
+    let metadata = active_storage()?
+        .fork_sidechat_at_message(sidechat_id, message_id)
+        .map_err(|error| error.to_string())?;
+    Ok(ConversationFork {
+        id: metadata.id,
+        title: metadata.title,
+    })
+}
+
 #[derive(Clone)]
 struct BrainJobRecord {
     job_id: String,

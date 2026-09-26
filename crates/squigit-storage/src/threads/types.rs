@@ -119,8 +119,16 @@ pub struct MessageAttachment {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ForkSourceKind {
+    Thread,
+    Sidechat,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ForkedFrom {
-    pub thread_id: String,
+    pub kind: ForkSourceKind,
+    pub conversation_id: String,
     pub title: String,
 }
 

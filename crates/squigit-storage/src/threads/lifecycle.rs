@@ -16,8 +16,8 @@ use super::paths::{
 };
 use super::{
     default_ocr_annotations, AttachmentManifest, AttachmentManifestEntry, ContextWindow,
-    Conversation, ForkedFrom, ManifestMention, OcrAnnotations, SideChatData, SideChatMetadata,
-    ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
+    Conversation, ForkSourceKind, ForkedFrom, ManifestMention, OcrAnnotations, SideChatData,
+    SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
 };
 
 fn normalize_hash(value: &str) -> Option<String> {
@@ -504,6 +504,49 @@ impl ThreadStorage {
         })
     }
 
+    pub fn fork_sidechat_at_message(
+        &self,
+        sidechat_id: &str,
+        message_id: &str,
+    ) -> Result<SideChatMetadata> {
+        self.create_sidechat_fork(sidechat_id, |source, metadata| {
+            let mut forked = self.load_sidechat(sidechat_id)?;
+            let position = forked
+                .messages
+                .iter()
+                .position(|message| message.id() == message_id)
+                .ok_or_else(|| {
+                    StorageError::InvalidThreadMessage(format!(
+                        "message `{message_id}` was not found in side chat `{sidechat_id}`"
+                    ))
+                })?;
+            if !matches!(&forked.messages[position], ThreadMessage::Assistant { .. }) {
+                return Err(StorageError::InvalidThreadMessage(format!(
+                    "message `{message_id}` is not an assistant message"
+                )));
+            }
+
+            forked.messages.truncate(position + 1);
+            if let Some(ThreadMessage::Assistant { forked_from, .. }) = forked.messages.last_mut() {
+                *forked_from = Some(ForkedFrom {
+                    kind: ForkSourceKind::Sidechat,
+                    conversation_id: sidechat_id.to_string(),
+                    title: source.title.clone(),
+                });
+            }
+            forked.attachment_manifest = manifest_through_messages(
+                &forked.attachment_manifest,
+                &forked.messages,
+                "",
+                source.created_at,
+            );
+            forked.context_window = ContextWindow::default();
+            forked.metadata = metadata.clone();
+            validate_message_ids(&forked.messages)?;
+            self.save_sidechat_files(&forked)
+        })
+    }
+
     pub fn set_thread_workspace(&self, thread_id: &str, workspace_id: Option<&str>) -> Result<()> {
         let metadata = self.get_index_metadata(thread_id)?;
         self.update_index_in_workspace(&metadata, workspace_id)
@@ -643,7 +686,8 @@ impl ThreadStorage {
                 forked_thread.messages.last_mut()
             {
                 *forked_from = Some(ForkedFrom {
-                    thread_id: thread_id.to_string(),
+                    kind: ForkSourceKind::Thread,
+                    conversation_id: thread_id.to_string(),
                     title: source.title.clone(),
                 });
             }
