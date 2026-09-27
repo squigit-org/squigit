@@ -25,15 +25,15 @@ pub type Result<T> = std::result::Result<T, UrlError>;
 pub fn resolve(identifier: &str) -> Result<String> {
     match identifier.trim() {
         "license" => Ok(format!("{REPOSITORY_URL}/blob/main/LICENSE")),
-        "terms" => Ok(format!("{WEBSITE_URL}/legal/terms.html")),
-        "privacy" => Ok(format!("{WEBSITE_URL}/legal/privacy.html")),
+        "terms" => Ok(format!("{WEBSITE_URL}/legal/terms/")),
+        "privacy" => Ok(format!("{WEBSITE_URL}/legal/privacy/")),
         "app-download" => Ok(format!("{WEBSITE_URL}/#download")),
         "docs" => Ok(format!("{REPOSITORY_URL}/blob/main/docs/")),
         "byok-policy" => Ok(format!(
-            "{REPOSITORY_URL}/blob/main/docs/07-policies/BYOK.md"
+            "{REPOSITORY_URL}/blob/main/docs/05-policies/BYOK.md"
         )),
         "security-policy" => Ok(format!(
-            "{REPOSITORY_URL}/blob/main/docs/07-policies/SECURITY.md"
+            "{REPOSITORY_URL}/blob/main/docs/05-policies/SECURITY.md"
         )),
         "repository" => Ok(REPOSITORY_URL.to_string()),
         "feedback-templates" => Ok(format!("{RAW_REPOSITORY_URL}/.github/ISSUE_TEMPLATE")),
