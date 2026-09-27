@@ -199,10 +199,7 @@ impl AppState {
         let file_index = FileSearchIndex::new(
             &cwd,
             FileIndexOptions {
-                extensions: squigit::cli::SUPPORTED_FILE_EXTENSIONS
-                    .iter()
-                    .map(|extension| (*extension).to_string())
-                    .collect(),
+                include_hidden: true,
                 ..FileIndexOptions::default()
             },
         )

@@ -18,13 +18,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static CLI_OPERATION_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
-pub const SUPPORTED_FILE_EXTENSIONS: &[&str] = &[
-    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "pdf", "docx", "xlsx", "pptx", "txt", "md",
-    "csv", "json", "xml", "yaml", "yml", "toml", "ini", "cfg", "conf", "html", "css", "js", "ts",
-    "jsx", "tsx", "sh", "bash", "zsh", "fish", "py", "rs", "go", "java", "c", "cpp", "h", "hpp",
-    "sql", "log",
-];
-
 const CONTRIBUTOR_EMAIL: &str = "contributor@squigit.app";
 const CONTRIBUTOR_SUBJECT: &str = "squigit-cli-contributor";
 
@@ -541,16 +534,7 @@ fn find_composer_mentions(input: &str, directory: &Path) -> Vec<CliComposerMenti
             cursor = end;
             continue;
         };
-        let supported = path.is_file()
-            && path
-                .extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| {
-                    SUPPORTED_FILE_EXTENSIONS
-                        .iter()
-                        .any(|supported| extension.eq_ignore_ascii_case(supported))
-                });
-        if supported {
+        if path.is_file() {
             mentions.push(CliComposerMention { start, end, path });
         }
         cursor = end;

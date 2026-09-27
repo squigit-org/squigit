@@ -11,12 +11,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 static HARNESS_LOG_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
-const TEXT_EXTENSIONS: &[&str] = &[
-    "txt", "md", "csv", "json", "xml", "yaml", "yml", "toml", "ini", "cfg", "conf", "html", "css",
-    "js", "ts", "jsx", "tsx", "sh", "bash", "zsh", "fish", "py", "rs", "go", "java", "c", "cpp",
-    "h", "hpp", "sql", "log",
-];
-
 const OFFICE_DOCUMENT_EXTENSIONS: &[&str] = &["docx", "xlsx", "pptx"];
 const SUPPORTED_DOCUMENT_EXTENSIONS: &[&str] = &["pdf", "docx", "xlsx", "pptx"];
 const DOCUMENT_CONVERSION_RECIPE: &str = "office2pdf-0.6.5-default";
@@ -269,10 +263,6 @@ pub fn remember_prepared_office_document(
         .map_err(|error| error.to_string())
 }
 
-fn is_text_path(path: &str) -> bool {
-    TEXT_EXTENSIONS.contains(&extension(path).as_str())
-}
-
 fn display_name(label: &str, path: &str) -> String {
     let label = label.trim();
     if !label.is_empty() {
@@ -458,7 +448,7 @@ pub fn prepare_text_first_message(
     let mut output = input.message_text;
 
     for mention in mentions {
-        if !allowed_paths.contains(&mention.path) || !is_text_path(&mention.path) {
+        if !allowed_paths.contains(&mention.path) {
             continue;
         }
 
