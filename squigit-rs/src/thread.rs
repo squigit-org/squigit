@@ -708,7 +708,7 @@ That small scale is enough to create consistency without making the page feel me
 
 ## A lightweight React shape
 
-<squigitcode language="typescript">
+```typescript
 type StreamState = {
   content: string;
   final: boolean;
@@ -723,17 +723,17 @@ export function appendChunk(
     final: false,
   };
 }
-</squigitcode>
+```
 
 The renderer should receive the entire accumulated string on every update. That lets an unfinished table, formula, or emphasis marker settle naturally as more text arrives.
 
-<squigitcode language="rust">
+```rust
 fn next_chunk(chars: &[char], cursor: usize, size: usize) -> String {
     chars[cursor..(cursor + size).min(chars.len())]
         .iter()
         .collect()
 }
-</squigitcode>
+```
 
 ### Interaction details
 
@@ -761,15 +761,15 @@ Finally, the layout should remain comfortable for mixed-direction content too: *
 
 While Codex natively reads `AGENTS.md`, Claude Code natively prioritizes `CLAUDE.md`. The common convention is to keep your root rules in `AGENTS.md` and symlink it so both tools share one source of truth:
 
-<squigitcode language="bash">
+```bash
 ln -s AGENTS.md CLAUDE.md
-</squigitcode>
+```
 
 ---
 
 ### `AGENTS.md` Template
 
-<squigitcode language="markdown">
+```markdown
 # AGENTS.md
 
 ## Project & Stack
@@ -787,7 +787,7 @@ Never guess scripts or flags. Use these verified commands:
 - **Type Check**: `pnpm typecheck`
 - **Single Test**: `pnpm test -- path/to/test.ts`
 - **Build**: `pnpm build`
-</squigitcode>
+```
 
 ---
 
