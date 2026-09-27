@@ -865,28 +865,28 @@ Both satisfy the equation, so the solution set is $\{2, 3\}$.
             error: None,
         },
         SimulatedResponse {
-            content: r##"You're absolutely right, and my apologies — I don't know your operating system, so I covered the common cases instead of guessing. Tell me which OS you're on and I'll give you the exact command.
+            content: r##"You're absolutely right, and my apologies — I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, so I covered the common cases instead of guessing. Tell me which OS you're on and I'll give you the exact command.
 "##,
             weight: 4,
             web: false,
             error: None,
         },
         SimulatedResponse {
-            content: r##"Yes, you're good to go! codex-cli 0.147.0 is installed and responding properly on your path.
+            content: r##"Yes, you're good to go! codex-cli 0.147.0 is installed and responding properly on your path I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system.
 "##,
             weight: 4,
             web: false,
             error: None,
         },
         SimulatedResponse {
-            content: r##"Understood. I've saved that with the thread, so we'll keep the context next time. What do you want to dig into next?
+            content: r##"Understood. I've saved that with the thread, so we'll keep the context next time. What do you want to dig into next?  I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system.
 "##,
             weight: 4,
             web: false,
             error: None,
         },
         SimulatedResponse {
-            content: r##"Done — noted. Say the word when you want me to take the next step.
+            content: r##"Done — noted. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step.
 "##,
             weight: 4,
             web: false,
