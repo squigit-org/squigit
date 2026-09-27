@@ -5,10 +5,10 @@
 
 use thiserror::Error;
 
-// Public policies served
-const LICENSE_URL: &str = "https://github.com/squigit-org/squigit/blob/main/LICENSE";
-const TERMS_OF_SERVICE_URL: &str = "https://squigit-org.github.io/legal/terms.html";
-const PRIVACY_POLICY_URL: &str = "https://squigit-org.github.io/legal/privacy.html";
+const WEBSITE_URL: &str = "https://squigit-org.github.io";
+const REPOSITORY_URL: &str = "https://github.com/squigit-org/squigit";
+const RAW_REPOSITORY_URL: &str = "https://raw.githubusercontent.com/squigit-org/squigit/main";
+const SUPPORT_EMAIL_URL: &str = "mailto:support@squigit.com";
 
 // Shared release metadata served to all Squigit shells.
 pub(crate) const SQUIGIT_RELEASES_URL: &str =
@@ -24,9 +24,20 @@ pub type Result<T> = std::result::Result<T, UrlError>;
 
 pub fn resolve(identifier: &str) -> Result<String> {
     match identifier.trim() {
-        "license" => Ok(LICENSE_URL.to_string()),
-        "terms" => Ok(TERMS_OF_SERVICE_URL.to_string()),
-        "privacy" => Ok(PRIVACY_POLICY_URL.to_string()),
+        "license" => Ok(format!("{REPOSITORY_URL}/blob/main/LICENSE")),
+        "terms" => Ok(format!("{WEBSITE_URL}/legal/terms.html")),
+        "privacy" => Ok(format!("{WEBSITE_URL}/legal/privacy.html")),
+        "app-download" => Ok(format!("{WEBSITE_URL}/#download")),
+        "docs" => Ok(format!("{REPOSITORY_URL}/blob/main/docs/")),
+        "byok-policy" => Ok(format!(
+            "{REPOSITORY_URL}/blob/main/docs/07-policies/BYOK.md"
+        )),
+        "security-policy" => Ok(format!(
+            "{REPOSITORY_URL}/blob/main/docs/07-policies/SECURITY.md"
+        )),
+        "repository" => Ok(REPOSITORY_URL.to_string()),
+        "feedback-templates" => Ok(format!("{RAW_REPOSITORY_URL}/.github/ISSUE_TEMPLATE")),
+        "support-email" => Ok(SUPPORT_EMAIL_URL.to_string()),
         identifier => Err(UrlError::UnknownIdentifier(identifier.to_string())),
     }
 }
