@@ -16,16 +16,20 @@ pub struct DocumentConversion {
     pub recipe: String,
 }
 
+/// Persistent pointer from one immutable source image to its model-facing rendition object.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ImageRendition {
+    pub source_hash: String,
+    pub rendition_hash: String,
+    pub recipe: String,
+}
+
 /// How an object is exposed to the model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum AttachmentFileType {
-    TextLocal,
     ImageUpload,
     DocumentUpload,
-    TerminalMention,
-    ThreadMention,
-    ForwardedMessages,
 }
 
 /// Content-derived metadata shared by every thread that references an object.

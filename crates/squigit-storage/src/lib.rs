@@ -17,16 +17,19 @@
 //! // Store an image
 //! let image_bytes = std::fs::read("screenshot.png").unwrap();
 //! let stored = storage.store_image(&image_bytes, None).unwrap();
+//! let original = storage.store_image_blob(&image_bytes, "png").unwrap();
 //! println!("Image hash: {}", stored.hash);
 //! println!("Image path: {}", stored.path);
 //!
 //! // Create a thread
-//! let metadata = ThreadMetadata::new("My Analysis".to_string(), stored.hash);
+//! let original_hash = blake3::hash(&image_bytes).to_hex().to_string();
+//! let metadata = ThreadMetadata::new("My Analysis".to_string(), stored.hash, original_hash, original.name);
 //! let initial = storage.attachment_manifest_entry(&metadata.image_hash, "squigitshot.png", chrono::Utc::now()).unwrap();
 //! let thread = ThreadData::new(metadata, initial);
 //! storage.save_thread(&thread).unwrap();
 //! ```
 
+pub mod blob_storage;
 pub mod cas;
 pub mod error;
 pub mod paths;
@@ -36,9 +39,11 @@ mod secure_file;
 pub mod threads;
 pub mod version;
 
+pub use blob_storage::StoredBlob;
 pub use cas::{
-    AttachmentFileType, DocumentConversion, ObjectFileContext, ObjectManifest, ObjectManifestLock,
-    ObjectRemote, ReverseImageSearchCache, StoredImage, OBJECT_MANIFEST_SCHEMA_VERSION,
+    AttachmentFileType, DocumentConversion, ImageRendition, ObjectFileContext, ObjectManifest,
+    ObjectManifestLock, ObjectRemote, ReverseImageSearchCache, StoredImage,
+    OBJECT_MANIFEST_SCHEMA_VERSION,
 };
 pub use error::{Result, StorageError};
 pub use profiles::{
@@ -49,10 +54,11 @@ pub use profiles::{
 };
 pub use threads::{
     AssistantError, AttachmentManifest, AttachmentManifestEntry, ContextWindow, Conversation,
-    ForkSourceKind, ForkedFrom, ManifestMention, MessageAttachment, OcrAnnotationEntry,
-    OcrAnnotations, OcrModelAnnotation, OcrRegion, SideChatData, SideChatMetadata, ThreadData,
-    ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata, DEFAULT_SIDE_CHAT_TITLE,
-    DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
+    ForkSourceKind, ForkedFrom, GroundingTool, ManifestMention, MessageAttachment,
+    MessageGrounding, MessageTextCitation, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation,
+    OcrRegion, SideChatData, SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata,
+    ThreadStorage, WorkspaceMetadata, DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE,
+    EMPTY_STATE_ASSET_ID,
 };
 pub use version::{
     ProductVersion, VersionFile, VersionStore, VersionStoreGuard, VersionType, VERSION_FILE_NAME,

@@ -24,9 +24,9 @@ pub enum StorageError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
-    /// A locally parsed text attachment must contain valid UTF-8.
-    #[error("Text attachment is not valid UTF-8: {0}")]
-    InvalidUtf8(#[from] std::str::Utf8Error),
+    /// CAS only stores uploadable images and PDFs.
+    #[error("Unsupported attachment type: {0}. Only images and PDFs are uploaded; text files are cited by path.")]
+    UnsupportedAttachment(String),
 
     /// Empty image provided.
     #[error("Empty image data")]
@@ -39,6 +39,10 @@ pub enum StorageError {
     /// A persisted Office-to-PDF conversion receipt is invalid.
     #[error("Invalid document conversion: {0}")]
     InvalidDocumentConversion(String),
+
+    /// A persisted image rendition receipt is invalid.
+    #[error("Invalid image rendition: {0}")]
+    InvalidImageRendition(String),
 
     /// Image not found.
     #[error("Image not found: {0}")]
@@ -63,6 +67,10 @@ pub enum StorageError {
     /// Persisted message IDs must use the `msg-<UUID>` contract.
     #[error("Invalid thread message: {0}")]
     InvalidThreadMessage(String),
+
+    /// Blobs must be UUID-named files inside `blob_storage`.
+    #[error("Invalid blob: {0}")]
+    InvalidBlob(String),
 
     /// Profile with the given ID was not found.
     #[error("Profile not found: {0}")]

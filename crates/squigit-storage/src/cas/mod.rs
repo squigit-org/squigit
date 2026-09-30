@@ -15,13 +15,14 @@ use crate::threads::ThreadStorage;
 mod types;
 
 pub use types::{
-    AttachmentFileType, DocumentConversion, ObjectFileContext, ObjectManifest, ObjectRemote,
-    ReverseImageSearchCache, StoredImage, OBJECT_MANIFEST_SCHEMA_VERSION,
+    AttachmentFileType, DocumentConversion, ImageRendition, ObjectFileContext, ObjectManifest,
+    ObjectRemote, ReverseImageSearchCache, StoredImage, OBJECT_MANIFEST_SCHEMA_VERSION,
 };
 
 const OBJECT_MANIFEST_FILE: &str = "manifest.json";
 const CACHE_DIR: &str = "cache";
 const DOCUMENT_CONVERSIONS_DIR: &str = "document-conversions";
+const IMAGE_RENDITIONS_DIR: &str = "image-renditions";
 const OBJECT_MANIFEST_LOCK_FILE: &str = "manifest.lock";
 
 pub struct ObjectManifestLock {
@@ -54,11 +55,13 @@ fn validate_hash(hash: &str) -> Result<()> {
     }
 }
 
-fn classify_extension(extension: &str) -> AttachmentFileType {
+fn classify_extension(extension: &str) -> Result<AttachmentFileType> {
     match extension {
-        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg" => AttachmentFileType::ImageUpload,
-        "pdf" => AttachmentFileType::DocumentUpload,
-        _ => AttachmentFileType::TextLocal,
+        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg" => {
+            Ok(AttachmentFileType::ImageUpload)
+        }
+        "pdf" => Ok(AttachmentFileType::DocumentUpload),
+        _ => Err(StorageError::UnsupportedAttachment(extension.to_string())),
     }
 }
 
@@ -190,16 +193,10 @@ impl ThreadStorage {
         let new_file_context = if manifest_path.exists() {
             None
         } else {
-            let file_type = classify_extension(&extension);
-            let file_brief = if file_type == AttachmentFileType::TextLocal {
-                Some(std::str::from_utf8(bytes)?.to_string())
-            } else {
-                None
-            };
             Some(ObjectFileContext {
-                file_type,
+                file_type: classify_extension(&extension)?,
                 image_tone: None,
-                file_brief,
+                file_brief: None,
             })
         };
         fs::create_dir_all(&object_dir)?;
@@ -301,6 +298,48 @@ impl ThreadStorage {
             .ok_or_else(|| StorageError::InvalidDocumentConversion("invalid path".to_string()))?;
         fs::create_dir_all(parent)?;
         atomic_write(&path, serde_json::to_vec_pretty(conversion)?.as_slice())
+    }
+
+    fn image_rendition_path(&self, source_hash: &str) -> Result<PathBuf> {
+        validate_hash(source_hash)?;
+        let prefix = source_hash.get(..2).ok_or(StorageError::InvalidHash)?;
+        let config_root = self.objects_dir.parent().ok_or(StorageError::NoDataDir)?;
+        Ok(config_root
+            .join(CACHE_DIR)
+            .join(IMAGE_RENDITIONS_DIR)
+            .join(prefix)
+            .join(format!("{source_hash}.json")))
+    }
+
+    pub fn load_image_rendition(&self, source_hash: &str) -> Result<Option<ImageRendition>> {
+        let path = self.image_rendition_path(source_hash)?;
+        if !path.exists() {
+            return Ok(None);
+        }
+        let rendition = serde_json::from_slice::<ImageRendition>(&fs::read(path)?)?;
+        validate_hash(&rendition.rendition_hash)?;
+        if !rendition.source_hash.eq_ignore_ascii_case(source_hash) {
+            return Err(StorageError::InvalidImageRendition(
+                "rendition receipt does not match its source identity".to_string(),
+            ));
+        }
+        Ok(Some(rendition))
+    }
+
+    pub fn save_image_rendition(&self, rendition: &ImageRendition) -> Result<()> {
+        validate_hash(&rendition.source_hash)?;
+        validate_hash(&rendition.rendition_hash)?;
+        if rendition.recipe.trim().is_empty() {
+            return Err(StorageError::InvalidImageRendition(
+                "rendition recipe cannot be empty".to_string(),
+            ));
+        }
+        let path = self.image_rendition_path(&rendition.source_hash)?;
+        let parent = path
+            .parent()
+            .ok_or_else(|| StorageError::InvalidImageRendition("invalid path".to_string()))?;
+        fs::create_dir_all(parent)?;
+        atomic_write(&path, serde_json::to_vec_pretty(rendition)?.as_slice())
     }
 
     pub fn object_manifest_path(&self, hash: &str) -> Result<PathBuf> {

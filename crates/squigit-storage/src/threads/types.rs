@@ -30,8 +30,12 @@ pub struct ThreadMetadata {
     pub created_at: DateTime<Utc>,
     /// When the thread was last updated.
     pub updated_at: DateTime<Utc>,
-    /// BLAKE3 hash of the associated image.
+    /// BLAKE3 hash of the model-facing image rendition in CAS.
     pub image_hash: String,
+    /// BLAKE3 hash of the lossless source image used to group gallery entries.
+    pub original_image_hash: String,
+    /// File name of the original lossless image in blob storage.
+    pub image_blob: String,
     /// When the thread was pinned, or `None` when it is not pinned.
     pub pinned_at: Option<DateTime<Utc>>,
     pub fork_family_id: String,
@@ -40,7 +44,12 @@ pub struct ThreadMetadata {
 
 impl ThreadMetadata {
     /// Create new thread metadata with a generated ID.
-    pub fn new(title: String, image_hash: String) -> Self {
+    pub fn new(
+        title: String,
+        image_hash: String,
+        original_image_hash: String,
+        image_blob: String,
+    ) -> Self {
         let now = Utc::now();
         let id = new_thread_id();
 
@@ -52,6 +61,8 @@ impl ThreadMetadata {
             created_at: now,
             updated_at: now,
             image_hash,
+            original_image_hash,
+            image_blob,
             pinned_at: None,
         }
     }
@@ -118,6 +129,13 @@ pub struct MessageAttachment {
     pub source_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MessageTextCitation {
+    pub path: String,
+    pub display_name: String,
+    pub kind: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ForkSourceKind {
@@ -141,6 +159,8 @@ pub enum ThreadMessage {
         content: String,
         timestamp: DateTime<Utc>,
         attachments: Vec<MessageAttachment>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        text_citations: Vec<MessageTextCitation>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         message_context: Option<serde_json::Value>,
     },
@@ -149,7 +169,8 @@ pub enum ThreadMessage {
         content: String,
         timestamp: DateTime<Utc>,
         citations: Vec<CitationSource>,
-        tool_steps: Vec<ToolStep>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        grounding: Option<MessageGrounding>,
         #[serde(default)]
         error: Option<AssistantError>,
         forked_from: Option<ForkedFrom>,
@@ -178,19 +199,23 @@ pub struct CitationSource {
     pub favicon_base64: Option<String>,
 }
 
-/// Tool-step metadata persisted with a message.
+/// Grounding details persisted with an assistant message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ToolStep {
+#[serde(rename_all = "camelCase")]
+pub struct MessageGrounding {
+    pub started_at_ms: u64,
+    pub duration_ms: Option<u64>,
+    pub tools: Vec<GroundingTool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GroundingTool {
     pub id: String,
-    pub name: String,
-    pub status: String,
-    #[serde(default)]
-    pub args: serde_json::Value,
-    #[serde(default)]
-    pub message: Option<String>,
-    #[serde(default, rename = "startedAtMs")]
-    pub started_at_ms: Option<u64>,
-    #[serde(default, rename = "endedAtMs")]
+    pub kind: String,
+    pub content: String,
+    pub started_at_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ended_at_ms: Option<u64>,
 }
 
@@ -211,8 +236,16 @@ impl ThreadMessage {
             content,
             timestamp: Utc::now(),
             attachments,
+            text_citations: Vec::new(),
             message_context: None,
         }
+    }
+
+    pub fn with_text_citations(mut self, citations: Vec<MessageTextCitation>) -> Self {
+        if let Self::User { text_citations, .. } = &mut self {
+            *text_citations = citations;
+        }
+        self
     }
 
     pub fn with_message_context(mut self, context: Option<serde_json::Value>) -> Self {
@@ -225,14 +258,14 @@ impl ThreadMessage {
         self
     }
 
-    /// Create a new assistant message with empty citations and tool steps.
+    /// Create a new assistant message with empty citations.
     pub fn assistant(content: String) -> Self {
         Self::Assistant {
             id: Self::new_id(),
             content,
             timestamp: Utc::now(),
             citations: Vec::new(),
-            tool_steps: Vec::new(),
+            grounding: None,
             error: None,
             forked_from: None,
         }
@@ -245,10 +278,17 @@ impl ThreadMessage {
             content,
             timestamp: Utc::now(),
             citations: Vec::new(),
-            tool_steps: Vec::new(),
+            grounding: None,
             error: Some(error),
             forked_from: None,
         }
+    }
+
+    pub fn with_grounding(mut self, details: Option<MessageGrounding>) -> Self {
+        if let Self::Assistant { grounding, .. } = &mut self {
+            *grounding = details;
+        }
+        self
     }
 
     pub fn id(&self) -> &str {

@@ -191,6 +191,8 @@ impl ThreadStorage {
         let mut metadata = ThreadMetadata::new(
             format!("{base_title} ({version})"),
             source.image_hash.clone(),
+            source.original_image_hash.clone(),
+            source.image_blob.clone(),
         );
         metadata.fork_family_id = family_id.clone();
         metadata.fork_version = version;

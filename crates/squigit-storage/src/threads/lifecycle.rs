@@ -174,16 +174,7 @@ impl ThreadStorage {
     ) -> Result<AttachmentManifestEntry> {
         let hash = normalize_hash(attachment_hash).ok_or(StorageError::InvalidHash)?;
         self.find_object_blob(&hash)?;
-        let mut object_manifest = self.load_object_manifest(&hash)?;
-
-        if object_manifest.file_context.file_type == AttachmentFileType::TextLocal
-            && object_manifest.file_context.file_brief.is_none()
-        {
-            let bytes = fs::read(self.find_object_blob(&hash)?)?;
-            object_manifest.file_context.file_brief =
-                Some(std::str::from_utf8(&bytes)?.to_string());
-            self.save_object_manifest(&hash, &object_manifest)?;
-        }
+        let object_manifest = self.load_object_manifest(&hash)?;
 
         Ok(AttachmentManifestEntry {
             attachment_hash: hash,
@@ -228,11 +219,7 @@ impl ThreadStorage {
                 .find(|entry| entry.attachment_hash == hash)
             {
                 existing.display_name = fresh.display_name;
-                if matches!(existing.file_type, AttachmentFileType::TextLocal)
-                    || !matches!(fresh.file_type, AttachmentFileType::TextLocal)
-                {
-                    existing.file_type = fresh.file_type;
-                }
+                existing.file_type = fresh.file_type;
                 existing.file_brief = fresh.file_brief;
                 if existing.last_mention_at < *timestamp {
                     existing.last_mention_at = *timestamp;
