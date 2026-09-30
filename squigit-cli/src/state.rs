@@ -80,6 +80,7 @@ pub enum MenuAction {
     SetDefaultModel {
         id: String,
     },
+    RefreshModels,
     SetDefaultEffort {
         effort: String,
     },
@@ -392,8 +393,6 @@ impl AppState {
             .active_profile
             .map(|profile| profile.email)
             .unwrap_or_else(|| "guest".to_string());
-        self.model = settings.config.model;
-        self.effort = settings.config.effort;
         self.ocr_enabled = settings.config.ocr_enabled;
         self.ocr_language = settings.config.ocr_language;
         self.gemini_configured = settings.google_ai_studio.configured;

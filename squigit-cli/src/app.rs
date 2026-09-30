@@ -8,6 +8,7 @@ use crate::state::{
 };
 use crate::tasks::{self, TaskEvent};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use squigit::brain::provider::gemini::models::AvailableModel;
 use squigit::settings::ConfigUpdate;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -21,6 +22,9 @@ pub struct App {
     pub state: AppState,
     sender: UnboundedSender<TaskEvent>,
     receiver: UnboundedReceiver<TaskEvent>,
+    available_models: Option<Vec<AvailableModel>>,
+    models_loading: bool,
+    model_request_id: u64,
 }
 
 impl App {
@@ -32,12 +36,16 @@ impl App {
     ) -> Result<Self, String> {
         let (sender, receiver) = unbounded_channel();
         let state = AppState::load(cwd, color, demo_mode, enter_guest)?;
-        let app = Self {
+        let mut app = Self {
             state,
             sender,
             receiver,
+            available_models: None,
+            models_loading: false,
+            model_request_id: 0,
         };
         tasks::refresh_updates(&app.sender);
+        app.request_models();
         Ok(app)
     }
 
@@ -169,6 +177,14 @@ impl App {
             };
         }
         if input.is_empty() {
+            return None;
+        }
+        if self.state.model.is_empty() {
+            self.request_models();
+            self.state.set_notice(
+                NoticeKind::Warning,
+                "Waiting for Gemini models. Open /model to retry if loading fails.",
+            );
             return None;
         }
 
@@ -336,7 +352,7 @@ impl App {
             MenuAction::SwitchProfile { id } => {
                 match squigit::profile::switch_profile(&id).map_err(|error| error.to_string()) {
                     Ok(_) => {
-                        let _ = self.state.refresh_account();
+                        self.refresh_account();
                         self.state.return_home();
                         self.state
                             .set_notice(NoticeKind::Success, "Active profile changed");
@@ -362,6 +378,15 @@ impl App {
                     ..Default::default()
                 });
                 self.open_settings_menu();
+            }
+            MenuAction::RefreshModels => {
+                self.available_models = None;
+                self.request_models();
+                match self.state.menu_title.as_str() {
+                    "Session models" => self.show_model_menu(),
+                    "Settings" => self.show_settings_menu(),
+                    _ => {}
+                }
             }
             MenuAction::SetDefaultEffort { effort } => {
                 self.update_config(ConfigUpdate {
@@ -424,7 +449,7 @@ impl App {
                         .set_notice(NoticeKind::Info, "No API key was stored"),
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }
-                let _ = self.state.refresh_account();
+                self.refresh_account();
                 self.open_configure_menu();
             }
             MenuAction::RevealKey { provider } => {
@@ -516,7 +541,7 @@ impl App {
                     .and_then(|()| squigit::settings::set_api_key(&profile_id, &provider, &value))
                 {
                     Ok(()) => {
-                        let _ = self.state.refresh_account();
+                        self.refresh_account();
                         self.state.return_home();
                         self.state
                             .set_notice(NoticeKind::Success, "API key saved securely");
@@ -589,28 +614,61 @@ impl App {
         None
     }
 
+    fn request_models(&mut self) {
+        if self.available_models.is_some() || self.models_loading {
+            return;
+        }
+        self.models_loading = true;
+        self.model_request_id += 1;
+        tasks::load_models(&self.sender, self.model_request_id);
+    }
+
+    fn invalidate_models(&mut self) {
+        self.available_models = None;
+        self.models_loading = false;
+        self.model_request_id += 1;
+    }
+
+    fn refresh_account(&mut self) {
+        if self.state.refresh_account().is_ok() {
+            self.invalidate_models();
+            self.request_models();
+        }
+    }
+
     fn open_model_menu(&mut self) {
-        let mut items = squigit::brain::provider::gemini::models::SELECTABLE_MODELS
-            .iter()
-            .map(|model| MenuItem {
-                section: "AI model".to_string(),
-                label: model.name.to_string(),
-                detail: if self.state.model == model.id {
-                    "active".to_string()
-                } else {
-                    model.id.to_string()
-                },
-                action: MenuAction::SetSessionModel {
-                    id: model.id.to_string(),
-                },
+        self.request_models();
+        self.show_model_menu();
+    }
+
+    fn show_model_menu(&mut self) {
+        let mut items = self
+            .available_models
+            .as_ref()
+            .map(|models| {
+                models
+                    .iter()
+                    .map(|model| MenuItem {
+                        section: "AI model".to_string(),
+                        label: model.name.clone(),
+                        detail: if self.state.model == model.id {
+                            "active".to_string()
+                        } else {
+                            model.id.clone()
+                        },
+                        action: MenuAction::SetSessionModel {
+                            id: model.id.clone(),
+                        },
+                    })
+                    .collect::<Vec<_>>()
             })
-            .collect::<Vec<_>>();
+            .unwrap_or_else(|| vec![self.model_loading_item("AI model")]);
         items.extend(
             squigit::brain::provider::gemini::models::MODEL_EFFORTS
                 .iter()
                 .map(|effort| MenuItem {
                     section: "Reasoning effort".to_string(),
-                    label: (*effort).to_string(),
+                    label: format_effort_label(effort),
                     detail: if self.state.effort == *effort {
                         "active".to_string()
                     } else {
@@ -640,6 +698,25 @@ impl App {
     }
 
     fn open_settings_menu(&mut self) {
+        self.request_models();
+        self.show_settings_menu();
+    }
+
+    fn model_loading_item(&self, section: &str) -> MenuItem {
+        MenuItem {
+            section: section.to_string(),
+            label: if self.models_loading {
+                "Loading Gemini models..."
+            } else {
+                "Retry Gemini model listing"
+            }
+            .to_string(),
+            detail: String::new(),
+            action: MenuAction::RefreshModels,
+        }
+    }
+
+    fn show_settings_menu(&mut self) {
         let config = match squigit::settings::load_config() {
             Ok(config) => config,
             Err(error) => {
@@ -647,27 +724,33 @@ impl App {
                 return;
             }
         };
-        let mut items = squigit::brain::provider::gemini::models::SELECTABLE_MODELS
-            .iter()
-            .map(|model| MenuItem {
-                section: "Default AI model".to_string(),
-                label: model.name.to_string(),
-                detail: if config.model == model.id {
-                    "active".to_string()
-                } else {
-                    model.id.to_string()
-                },
-                action: MenuAction::SetDefaultModel {
-                    id: model.id.to_string(),
-                },
+        let mut items = self
+            .available_models
+            .as_ref()
+            .map(|models| {
+                models
+                    .iter()
+                    .map(|model| MenuItem {
+                        section: "Default AI model".to_string(),
+                        label: model.name.clone(),
+                        detail: if config.model == model.id {
+                            "active".to_string()
+                        } else {
+                            model.id.clone()
+                        },
+                        action: MenuAction::SetDefaultModel {
+                            id: model.id.clone(),
+                        },
+                    })
+                    .collect::<Vec<_>>()
             })
-            .collect::<Vec<_>>();
+            .unwrap_or_else(|| vec![self.model_loading_item("Default AI model")]);
         items.extend(
             squigit::brain::provider::gemini::models::MODEL_EFFORTS
                 .iter()
                 .map(|effort| MenuItem {
                     section: "Default reasoning effort".to_string(),
-                    label: (*effort).to_string(),
+                    label: format_effort_label(effort),
                     detail: if config.effort == *effort {
                         "active".to_string()
                     } else {
@@ -1039,7 +1122,7 @@ impl App {
     fn logout(&mut self) {
         match squigit::profile::logout().map_err(|error| error.to_string()) {
             Ok(_) => {
-                let _ = self.state.refresh_account();
+                self.refresh_account();
                 self.state.set_notice(
                     NoticeKind::Success,
                     "Logged out. Local and OCR features remain available.",
@@ -1061,6 +1144,54 @@ impl App {
 
     fn handle_task(&mut self, event: TaskEvent) {
         match event {
+            TaskEvent::Models { request_id, result } => {
+                if request_id != self.model_request_id {
+                    return;
+                }
+                self.models_loading = false;
+                match result {
+                    Ok(models) => {
+                        if let Some(default_model) = models.first() {
+                            let default_id = default_model.id.clone();
+                            match squigit::settings::load_config() {
+                                Ok(config)
+                                    if !models.iter().any(|model| model.id == config.model) =>
+                                {
+                                    if let Err(error) =
+                                        squigit::settings::update_config(ConfigUpdate {
+                                            model: Some(default_id.clone()),
+                                            ..Default::default()
+                                        })
+                                    {
+                                        self.state.set_notice(NoticeKind::Warning, error);
+                                    }
+                                }
+                                Err(error) => self.state.set_notice(NoticeKind::Warning, error),
+                                _ => {}
+                            }
+                        }
+                        if !models.iter().any(|model| model.id == self.state.model) {
+                            if let Some(default_model) = models.first() {
+                                self.state.model = default_model.id.clone();
+                            }
+                        }
+                        self.available_models = Some(models);
+                    }
+                    Err(error) => {
+                        self.available_models = None;
+                        if self.state.model.is_empty() {
+                            self.state.set_notice(NoticeKind::Warning, error);
+                        }
+                    }
+                }
+                if self.state.view == View::Menu {
+                    match self.state.menu_title.as_str() {
+                        "Session models" => self.show_model_menu(),
+                        "Settings" => self.show_settings_menu(),
+                        _ => {}
+                    }
+                }
+            }
             TaskEvent::Update(Ok(Some(update))) => {
                 let (instruction, release_url) = match update.product {
                     squigit::update::UpdateProduct::Cli => (
@@ -1093,7 +1224,7 @@ impl App {
                 self.state.busy = None;
                 match result {
                     Ok(()) => {
-                        let _ = self.state.refresh_account();
+                        self.refresh_account();
                         self.state.set_notice(
                             NoticeKind::Success,
                             format!("Logged in as {}", self.state.profile_label),
@@ -1379,6 +1510,17 @@ impl App {
             _ => self.state.return_home(),
         }
     }
+}
+
+fn format_effort_label(effort: &str) -> String {
+    match effort {
+        "instant" => "Instant",
+        "medium" => "Medium",
+        "high" => "High",
+        "xhigh" => "Extra High",
+        other => other,
+    }
+    .to_string()
 }
 
 fn back_item() -> MenuItem {

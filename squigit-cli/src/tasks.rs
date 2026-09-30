@@ -1,6 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
+use squigit::brain::provider::gemini::models::AvailableModel;
 use squigit::cli::CliSubmissionRequest;
 use squigit::thread::{ImageThreadCreation, MessageAttachmentInput};
 use squigit::update::{PendingUpdate, UpdateShell};
@@ -23,6 +24,10 @@ pub(crate) struct SubmissionTask {
 }
 
 pub enum TaskEvent {
+    Models {
+        request_id: u64,
+        result: Result<Vec<AvailableModel>, String>,
+    },
     Update(Result<Option<PendingUpdate>, String>),
     Login(Result<(), String>),
     Analyze(Result<ImageThreadCreation, String>),
@@ -30,6 +35,14 @@ pub enum TaskEvent {
     GeneratedTitle(Result<String, String>),
     Lens(Result<String, String>),
     Cancelled(Result<String, String>),
+}
+
+pub fn load_models(sender: &UnboundedSender<TaskEvent>, request_id: u64) {
+    let sender = sender.clone();
+    tokio::spawn(async move {
+        let result = squigit::brain::provider::gemini::models::list_available_models().await;
+        let _ = sender.send(TaskEvent::Models { request_id, result });
+    });
 }
 
 pub fn refresh_updates(sender: &UnboundedSender<TaskEvent>) {
@@ -66,6 +79,7 @@ pub fn analyze(sender: &UnboundedSender<TaskEvent>, source_path: PathBuf) {
                 creation_id.clone(),
                 source_path.to_string_lossy().into_owned(),
                 None,
+                None,
             )
             .await;
             let release = squigit::thread::cancel_image_thread_creation(&creation_id);
@@ -98,6 +112,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                 .iter()
                 .map(|descriptor| MessageAttachmentInput {
                     attachment_hash: descriptor.hash.clone(),
+                    source_path: Some(descriptor.source_path.clone()),
                     display_name: Some(descriptor.display_name.clone()),
                     file_type: Some(descriptor.file_type.clone()),
                 })
@@ -109,6 +124,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                         sidechat_id,
                         submission.canonical_message.clone(),
                         inputs,
+                        submission.text_citations.clone(),
                         None,
                     )?;
                     simulated_target = Some(sidechat_id.clone());
@@ -117,6 +133,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                     let created = squigit::thread::create_sidechat_thread(
                         submission.canonical_message.clone(),
                         inputs,
+                        submission.text_citations.clone(),
                         Some(task.human_text),
                         None,
                     )
@@ -128,6 +145,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                         &thread_id,
                         submission.canonical_message.clone(),
                         inputs,
+                        submission.text_citations.clone(),
                         None,
                     )?;
                     simulated_target = Some(thread_id);

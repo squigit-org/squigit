@@ -10,9 +10,9 @@ description = "Public Rust facade for Squigit application services"
 name = "squigit"
 
 [dependencies]
+blake3 = "1.5"
 chrono = { version = "0.4", features = ["serde"] }
 fsindex = "0.3.1"
-image = "0.25"
 mime_guess = "2.0"
 nucleo-matcher = "0.3.1"
 reqwest = { version = "0.11", features = ["json", "multipart", "rustls-tls"] }

@@ -78,15 +78,16 @@ pub struct GalleryImage {
 /// Return stored thread images grouped for gallery presentation.
 pub fn list_gallery(offset: u32, limit: u32) -> Result<Vec<GalleryImage>> {
     let storage = thread_store()?;
-    let mut grouped: HashMap<String, Vec<GalleryThread>> = HashMap::new();
+    let mut grouped: HashMap<String, (String, Vec<GalleryThread>)> = HashMap::new();
 
     for thread in storage.list_threads()? {
-        if thread.image_hash.is_empty() || thread.image_hash == EMPTY_STATE_ASSET_ID {
+        if thread.original_image_hash.is_empty() || thread.image_hash == EMPTY_STATE_ASSET_ID {
             continue;
         }
         grouped
-            .entry(thread.image_hash)
-            .or_default()
+            .entry(thread.original_image_hash)
+            .or_insert_with(|| (thread.image_blob, Vec::new()))
+            .1
             .push(GalleryThread {
                 thread_id: thread.id,
                 title: thread.title,
@@ -96,10 +97,14 @@ pub fn list_gallery(offset: u32, limit: u32) -> Result<Vec<GalleryImage>> {
 
     let mut images = grouped
         .into_iter()
-        .filter_map(|(hash, mut threads)| {
+        .filter_map(|(hash, (image_blob, mut threads))| {
             threads.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
             let updated_at = threads.first()?.updated_at.clone();
-            let path = storage.get_image_path(&hash).ok()?;
+            let path = storage
+                .blob_path(&image_blob)
+                .ok()?
+                .to_string_lossy()
+                .to_string();
             Some(GalleryImage {
                 hash,
                 path,

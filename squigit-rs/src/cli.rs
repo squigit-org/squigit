@@ -5,14 +5,16 @@
 
 use crate::brain::{
     AttachmentPreparationStatus, PrepareAttachmentRequest, PrepareSubmissionAttachmentsRequest,
+    SubmissionAttachmentInput,
 };
 use crate::storage::{
-    self, AttachmentFileType, OcrAnnotationEntry, OcrRegion, Profile, GOOGLE_ISSUER,
+    self, AttachmentFileType, MessageTextCitation, OcrAnnotationEntry, OcrRegion, Profile,
+    GOOGLE_ISSUER,
 };
 use crate::{explorer, profile, services, settings};
 use chrono::{SecondsFormat, Utc};
 use serde_json::json;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -97,6 +99,7 @@ pub struct CliSubmissionRequest {
 #[derive(Clone, Debug)]
 pub struct CliAttachmentDescriptor {
     pub hash: String,
+    pub source_path: String,
     pub display_name: String,
     pub file_type: AttachmentFileType,
 }
@@ -105,9 +108,9 @@ pub struct CliAttachmentDescriptor {
 pub struct CliSubmissionResult {
     pub log_path: Option<PathBuf>,
     pub canonical_message: String,
-    pub brain_message: String,
     pub attachment_hashes: Vec<String>,
     pub attachment_descriptors: Vec<CliAttachmentDescriptor>,
+    pub text_citations: Vec<MessageTextCitation>,
 }
 
 #[derive(Clone, Debug)]
@@ -266,8 +269,23 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
     }
 
     let sequence = CLI_OPERATION_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let mut canonical_message = request.message.trim().to_string();
     let mut prepared = Vec::with_capacity(request.attachment_paths.len());
+    let mut text_citations = Vec::new();
     for (index, source_path) in request.attachment_paths.iter().enumerate() {
+        if !is_uploadable_attachment(source_path) {
+            if source_path.is_file() {
+                text_citations.push(MessageTextCitation {
+                    path: normalized_path(source_path),
+                    display_name: attachment_display_name(source_path),
+                    kind: "text-local".to_string(),
+                });
+            } else if !source_path.exists() {
+                canonical_message =
+                    strip_attachment_mention(&canonical_message, &normalized_path(source_path));
+            }
+            continue;
+        }
         let result = services::brain()
             .prepare_attachment(PrepareAttachmentRequest {
                 job_id: format!("cli-prepare-{sequence}-{index}"),
@@ -293,7 +311,6 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
         });
     }
 
-    let mut canonical_message = request.message.trim().to_string();
     for attachment in &prepared {
         canonical_message = canonical_message.replace(
             &normalized_path(&attachment.source_path),
@@ -301,23 +318,6 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
         );
     }
 
-    let attachment_hashes = prepared
-        .iter()
-        .map(|attachment| attachment.hash.clone())
-        .collect::<Vec<_>>();
-    let attachment_descriptors = prepared
-        .iter()
-        .map(|attachment| CliAttachmentDescriptor {
-            hash: attachment.hash.clone(),
-            display_name: attachment
-                .source_path
-                .file_name()
-                .and_then(|value| value.to_str())
-                .unwrap_or("attachment")
-                .to_string(),
-            file_type: attachment.file_type.clone(),
-        })
-        .collect::<Vec<_>>();
     let boundary_id = request
         .thread_id
         .clone()
@@ -329,38 +329,66 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
             preflight_id: preflight_id.clone(),
             thread_id: boundary_id.clone(),
             user_message_id: user_message_id.clone(),
-            attachment_hashes: attachment_hashes.clone(),
+            attachments: prepared
+                .iter()
+                .map(|attachment| SubmissionAttachmentInput {
+                    attachment_hash: attachment.hash.clone(),
+                    source_path: Some(attachment.source_path.to_string_lossy().into_owned()),
+                })
+                .collect(),
         })
         .await;
-    if let Some(failed) = preflight
-        .results
-        .iter()
-        .find(|result| result.status != AttachmentPreparationStatus::Ready)
-    {
+    if let Some(failed) = preflight.results.iter().find(|result| {
+        result.status != AttachmentPreparationStatus::Ready
+            && result.status != AttachmentPreparationStatus::Missing
+    }) {
         return Err(failed
             .error_message
             .clone()
             .unwrap_or_else(|| format!("Attachment {} failed preflight", failed.attachment_hash)));
     }
-    if !attachment_hashes.is_empty() && preflight.preflight_token.is_none() {
+    if !prepared.is_empty() && preflight.preflight_token.is_none() {
         return Err("Attachment preflight completed without a token.".to_string());
     }
 
-    let text_paths = prepared
+    let mut refreshed = Vec::with_capacity(prepared.len());
+    for (mut attachment, result) in prepared.into_iter().zip(&preflight.results) {
+        let old_path = attachment.cas_path.clone();
+        if result.status == AttachmentPreparationStatus::Missing {
+            canonical_message = strip_attachment_mention(&canonical_message, &old_path);
+            continue;
+        }
+        let new_path = result
+            .cas_path
+            .as_ref()
+            .ok_or_else(|| "Attachment preflight returned no CAS path".to_string())?;
+        canonical_message = canonical_message.replace(&old_path, new_path);
+        attachment.cas_path = new_path.clone();
+        attachment.hash = result.attachment_hash.clone();
+        attachment.file_type = result
+            .file_type
+            .clone()
+            .ok_or_else(|| "Attachment preflight returned no file type".to_string())?;
+        refreshed.push(attachment);
+    }
+    let prepared = refreshed;
+    canonical_message = canonical_message.trim().to_string();
+    if canonical_message.is_empty() && prepared.is_empty() {
+        return Err("The composer is empty after missing attachments were removed.".to_string());
+    }
+    let attachment_hashes = prepared
         .iter()
-        .filter(|attachment| attachment.file_type == AttachmentFileType::TextLocal)
-        .map(|attachment| attachment.cas_path.clone())
+        .map(|attachment| attachment.hash.clone())
         .collect::<Vec<_>>();
-    let resolved_text_paths = text_paths
+    let attachment_descriptors = prepared
         .iter()
-        .map(|path| (path.clone(), path.clone()))
-        .collect::<HashMap<_, _>>();
-    let harness =
-        crate::harness::prepare_text_first_message(crate::harness::PrepareTextFirstMessageInput {
-            message_text: canonical_message.clone(),
-            text_attachment_paths: text_paths,
-            resolved_text_attachment_paths: resolved_text_paths,
-        })?;
+        .map(|attachment| CliAttachmentDescriptor {
+            hash: attachment.hash.clone(),
+            source_path: attachment.source_path.to_string_lossy().into_owned(),
+            display_name: attachment_display_name(&attachment.source_path),
+            file_type: attachment.file_type.clone(),
+        })
+        .collect::<Vec<_>>();
 
     let profile = profile::get_profile_snapshot()
         .map_err(|error| error.to_string())?
@@ -378,21 +406,6 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
                 "casPath": attachment.cas_path,
                 "attachmentHash": attachment.hash,
                 "status": "ready",
-            })
-        })
-        .collect::<Vec<_>>();
-    let harness_json = harness
-        .attachments
-        .iter()
-        .map(|attachment| {
-            json!({
-                "path": attachment.path,
-                "displayName": attachment.display_name,
-                "extension": attachment.extension,
-                "charCount": attachment.char_count,
-                "ok": attachment.ok,
-                "errorCode": attachment.error_code,
-                "errorMessage": attachment.error_message,
             })
         })
         .collect::<Vec<_>>();
@@ -418,12 +431,12 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
             "forceWebSearch": false,
         },
         "brainInput": {
-            "userMessage": harness.message_text,
+            "userMessage": canonical_message,
             "attachmentPreflightToken": preflight.preflight_token,
         },
         "attachments": attachments_json,
+        "textCitations": text_citations,
         "preflightResults": preflight.results,
-        "harnessResults": harness_json,
     });
     let log_path = if request.persist_boundary_log {
         write_boundary_log(&timestamp, &envelope)?
@@ -434,9 +447,9 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
     Ok(CliSubmissionResult {
         log_path,
         canonical_message,
-        brain_message: harness.message_text,
         attachment_hashes,
         attachment_descriptors,
+        text_citations,
     })
 }
 
@@ -492,6 +505,35 @@ pub fn open_external(value: &str) -> Result<(), String> {
 
 fn normalized_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
+}
+
+fn attachment_display_name(path: &Path) -> String {
+    path.file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("attachment")
+        .to_string()
+}
+
+fn is_uploadable_attachment(path: &Path) -> bool {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default();
+    crate::brain::provider::gemini::attachments::mime_from_extension(extension)
+        .starts_with("image/")
+        || crate::harness::is_supported_document_extension(extension)
+}
+
+fn strip_attachment_mention(message: &str, path: &str) -> String {
+    let destination = format!("](<file://{path}>)");
+    let mut message = message.to_string();
+    while let Some(end) = message.find(&destination) {
+        let Some(start) = message[..end].rfind('[') else {
+            break;
+        };
+        message.replace_range(start..end + destination.len(), "");
+    }
+    message
 }
 
 fn find_composer_mentions(input: &str, directory: &Path) -> Vec<CliComposerMention> {

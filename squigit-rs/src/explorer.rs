@@ -10,7 +10,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 
 use crate::services::brain;
-use crate::{settings, thread};
+use crate::thread;
 
 pub type ExplorerResult<T> = std::result::Result<T, String>;
 
@@ -565,15 +565,7 @@ pub fn search_threads(query: String, limit: u32) -> ExplorerResult<Vec<ThreadSea
 }
 
 pub async fn suggest_thread_title(thread_id: String) -> ExplorerResult<String> {
-    let config = tokio::task::spawn_blocking(settings::load_config)
-        .await
-        .map_err(|error| format!("Settings load task failed: {error}"))??;
-    let candidates = brain()
-        .build_model_attempt_plan(config.model, config.effort)
-        .await?;
-    let title = brain()
-        .suggest_thread_title(thread_id.clone(), candidates)
-        .await?;
+    let title = brain().suggest_thread_title(thread_id.clone()).await?;
     let persisted_title = title.clone();
     tokio::task::spawn_blocking(move || {
         let storage = active_storage()?;
@@ -607,15 +599,7 @@ pub async fn suggest_sidechat_title(sidechat_id: String) -> ExplorerResult<Strin
     })
     .await
     .map_err(|error| format!("Settings load task failed: {error}"))??;
-    let config = tokio::task::spawn_blocking(settings::load_config)
-        .await
-        .map_err(|error| format!("Settings load task failed: {error}"))??;
-    let candidates = brain()
-        .build_model_attempt_plan(config.model, config.effort)
-        .await?;
-    let title = brain()
-        .suggest_thread_title_from_text(title_source, candidates)
-        .await?;
+    let title = brain().suggest_thread_title_from_text(title_source).await?;
     let persisted_title = title.clone();
     tokio::task::spawn_blocking(move || {
         let storage = active_storage()?;

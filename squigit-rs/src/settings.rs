@@ -6,9 +6,7 @@ use crate::auth::{
     get_api_key_status, reveal_api_key as reveal_stored_api_key, session_api_key_width,
     session_api_keys_active, validate_api_key, ApiKeyProvider, RevealAuthResult,
 };
-use crate::brain::provider::gemini::models::{
-    DEFAULT_MODEL_EFFORT, MODEL_EFFORTS, PRIMARY_FAST_MODEL, SELECTABLE_MODELS,
-};
+use crate::brain::provider::gemini::models::{valid_model_id, DEFAULT_MODEL_EFFORT, MODEL_EFFORTS};
 use crate::storage::{self, ProfileStore};
 use serde::{Deserialize, Serialize};
 use squigit_ocr::models::{DEFAULT_OCR_MODEL_ID, OCR_MODELS};
@@ -46,7 +44,7 @@ pub struct ConfigUpdate {
 impl Default for SquigitConfig {
     fn default() -> Self {
         Self {
-            model: PRIMARY_FAST_MODEL.to_string(),
+            model: String::new(),
             effort: DEFAULT_MODEL_EFFORT.to_string(),
             ocr_enabled: true,
             ocr_language: DEFAULT_OCR_MODEL_ID.to_string(),
@@ -164,7 +162,7 @@ fn normalize_root_config(table: &toml::Table) -> (SquigitConfig, bool) {
     let model = table
         .get("model")
         .and_then(|v| v.as_str())
-        .filter(|id| SELECTABLE_MODELS.iter().any(|m| m.id == *id))
+        .filter(|id| valid_model_id(id) || id.is_empty())
         .map(|s| s.to_string())
         .unwrap_or_else(|| {
             modified = true;
@@ -243,7 +241,7 @@ pub fn update_config(updates: ConfigUpdate) -> SettingsResult<SquigitConfig> {
 
     let next_model = updates
         .model
-        .filter(|id| SELECTABLE_MODELS.iter().any(|m| m.id == id))
+        .filter(|id| valid_model_id(id))
         .unwrap_or(current.model);
     let next_effort = updates
         .effort

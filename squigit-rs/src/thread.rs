@@ -3,9 +3,9 @@
 
 use crate::brain::ImageThreadCredentialSnapshot;
 use crate::storage::{
-    self, AssistantError, AttachmentFileType, ManifestMention, MessageAttachment, SideChatData,
-    SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage,
-    DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE,
+    self, AssistantError, AttachmentFileType, ManifestMention, MessageAttachment, MessageGrounding,
+    MessageTextCitation, SideChatData, SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata,
+    ThreadStorage, DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -26,6 +26,7 @@ pub type ThreadResult<T> = std::result::Result<T, String>;
 #[derive(Clone, Debug, Deserialize)]
 pub struct MessageAttachmentInput {
     pub attachment_hash: String,
+    pub source_path: Option<String>,
     #[serde(default)]
     pub display_name: Option<String>,
     #[serde(default)]
@@ -212,8 +213,32 @@ fn is_supported_image(path: &Path) -> bool {
         })
 }
 
+fn prepared_rendition(
+    storage: &ThreadStorage,
+    rendition_path: &str,
+) -> ThreadResult<crate::harness::images::StoredImageObject> {
+    let hash = Path::new(rendition_path)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "The image rendition is not a CAS object".to_string())?;
+    let cas_path = storage
+        .find_object_blob(hash)
+        .map_err(|error| error.to_string())?;
+    if std::fs::canonicalize(&cas_path).ok() != std::fs::canonicalize(rendition_path).ok() {
+        return Err("The image rendition is not a CAS object".to_string());
+    }
+    Ok(crate::harness::images::StoredImageObject {
+        tone: storage
+            .get_image_tone(hash)
+            .unwrap_or_else(|| "dark".to_string()),
+        hash: hash.to_string(),
+        cas_path: cas_path.to_string_lossy().to_string(),
+    })
+}
+
 fn create_thread_on_disk(
     source_path: &str,
+    rendition_path: Option<&str>,
     workspace_id: Option<&str>,
 ) -> ThreadResult<(String, String)> {
     let source = Path::new(source_path);
@@ -223,20 +248,48 @@ fn create_thread_on_disk(
     if !is_supported_image(source) {
         return Err("Thread creation requires a supported image file".to_string());
     }
-    let image_tone = lens::detect_image_tone_from_path(source)?;
+    let storage = active_storage()?;
+    let bytes = std::fs::read(source).map_err(|error| error.to_string())?;
+    let original_image_hash = blake3::hash(&bytes).to_hex().to_string();
+    let (rendition, image_blob) = match rendition_path {
+        Some(rendition_path) => (
+            prepared_rendition(&storage, rendition_path)?,
+            storage
+                .blob_name(source)
+                .ok_or_else(|| "Captured images must be stored in blob storage".to_string())?,
+        ),
+        None => {
+            let rendition = crate::harness::images::store_image_rendition(&bytes)?;
+            let image_blob = match storage.blob_name(source) {
+                Some(name) => name,
+                None => {
+                    let extension = source
+                        .extension()
+                        .and_then(|value| value.to_str())
+                        .unwrap_or("png");
+                    storage
+                        .store_image_blob(&bytes, extension)
+                        .map_err(|error| error.to_string())?
+                        .name
+                }
+            };
+            (rendition, image_blob)
+        }
+    };
 
     let _index_guard = thread_index_lock()
         .lock()
         .map_err(|_| "Thread index is unavailable".to_string())?;
-    let storage = active_storage()?;
-    let stored = storage
-        .store_image_from_path(source_path, image_tone)
-        .map_err(|error| error.to_string())?;
     let display_name = source
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("pasted-image.png");
-    let metadata = ThreadMetadata::new(DEFAULT_THREAD_TITLE.to_string(), stored.hash);
+    let metadata = ThreadMetadata::new(
+        DEFAULT_THREAD_TITLE.to_string(),
+        rendition.hash.clone(),
+        original_image_hash,
+        image_blob,
+    );
     let initial_attachment = storage
         .attachment_manifest_entry(&metadata.image_hash, display_name, Utc::now())
         .map_err(|error| error.to_string())?;
@@ -249,7 +302,7 @@ fn create_thread_on_disk(
             .save_thread(&thread)
             .map_err(|error| error.to_string())?,
     }
-    Ok((metadata.id, stored.path))
+    Ok((metadata.id, rendition.cas_path))
 }
 
 fn update_brain_job(
@@ -294,8 +347,6 @@ async fn run_brain_job(
     jobs: Arc<Mutex<BTreeMap<u64, BrainJobRecord>>>,
     thread_id: String,
     image_path: String,
-    model: String,
-    effort: String,
     credential: ImageThreadCredentialSnapshot,
 ) {
     update_brain_job(&jobs, sequence, "running", "uploading", None);
@@ -304,9 +355,8 @@ async fn run_brain_job(
             .ensure_thread_image_uploaded_with_snapshot(&credential, image_path)
             .await?;
         update_brain_job(&jobs, sequence, "running", "generating-title", None);
-        let model_candidates = brain().build_model_attempt_plan(model, effort).await?;
         let title = brain()
-            .suggest_thread_title_from_file_with_snapshot(&credential, uploaded, model_candidates)
+            .suggest_thread_title_from_file_with_snapshot(&credential, uploaded)
             .await?;
         let title_thread_id = thread_id.clone();
         tokio::task::spawn_blocking(move || persist_generated_title(&title_thread_id, &title))
@@ -325,8 +375,6 @@ async fn run_brain_job(
 fn start_brain_job(
     thread_id: String,
     image_path: String,
-    model: String,
-    effort: String,
     credential: ImageThreadCredentialSnapshot,
 ) -> ThreadResult<String> {
     let sequence = NEXT_BRAIN_JOB_ID.fetch_add(1, Ordering::Relaxed);
@@ -345,16 +393,7 @@ fn start_brain_job(
     let worker_jobs = Arc::clone(jobs);
     let crash_jobs = Arc::clone(jobs);
     let worker = tokio::spawn(async move {
-        run_brain_job(
-            sequence,
-            worker_jobs,
-            thread_id,
-            image_path,
-            model,
-            effort,
-            credential,
-        )
-        .await;
+        run_brain_job(sequence, worker_jobs, thread_id, image_path, credential).await;
     });
     tokio::spawn(async move {
         if let Err(error) = worker.await {
@@ -373,27 +412,24 @@ fn start_brain_job(
 pub async fn create_image_thread(
     creation_id: String,
     source_path: String,
+    rendition_path: Option<String>,
     workspace_id: Option<String>,
 ) -> ThreadResult<ImageThreadCreation> {
     let credential = take_image_thread_credential(&creation_id)?;
     let config = settings::load_config()?;
     let creation_workspace_id = workspace_id.clone();
     let (thread_id, image_path) = tokio::task::spawn_blocking(move || {
-        create_thread_on_disk(&source_path, creation_workspace_id.as_deref())
+        create_thread_on_disk(
+            &source_path,
+            rendition_path.as_deref(),
+            creation_workspace_id.as_deref(),
+        )
     })
     .await
     .map_err(|error| format!("Thread creation task failed: {error}"))??;
 
     let brain_job_id = credential
-        .map(|credential| {
-            start_brain_job(
-                thread_id.clone(),
-                image_path,
-                config.model,
-                config.effort,
-                credential,
-            )
-        })
+        .map(|credential| start_brain_job(thread_id.clone(), image_path, credential))
         .transpose()?;
     let ocr_job_id = config
         .ocr_enabled
@@ -409,6 +445,7 @@ pub async fn create_image_thread(
 pub async fn create_sidechat_thread(
     message_markdown: String,
     attachment_inputs: Vec<MessageAttachmentInput>,
+    text_citations: Vec<MessageTextCitation>,
     human_text: Option<String>,
     message_context: Option<serde_json::Value>,
 ) -> ThreadResult<SideChatCreation> {
@@ -423,6 +460,7 @@ pub async fn create_sidechat_thread(
         let metadata = SideChatMetadata::new(DEFAULT_SIDE_CHAT_TITLE.to_string());
         let attachments = message_attachments(attachment_inputs.clone());
         let message = ThreadMessage::user_with_attachments(message_markdown, attachments)
+            .with_text_citations(text_citations)
             .with_message_context(message_context);
         let mut sidechat = SideChatData::new(metadata.clone(), message);
         for input in attachment_inputs {
@@ -453,16 +491,8 @@ pub async fn create_sidechat_thread(
         });
     };
 
-    let generated_title = async {
-        let config = settings::load_config()?;
-        let candidates = brain()
-            .build_model_attempt_plan(config.model, config.effort)
-            .await?;
-        brain()
-            .suggest_thread_title_from_text(title_source, candidates)
-            .await
-    }
-    .await;
+    let generated_title =
+        async { brain().suggest_thread_title_from_text(title_source).await }.await;
 
     let title = match generated_title {
         Ok(title) if !title.trim().is_empty() => {
@@ -498,7 +528,7 @@ fn message_attachments(inputs: Vec<MessageAttachmentInput>) -> Vec<MessageAttach
         .into_iter()
         .map(|input| MessageAttachment {
             attachment_hash: input.attachment_hash,
-            source_path: None,
+            source_path: input.source_path,
         })
         .collect()
 }
@@ -520,6 +550,7 @@ pub fn append_message(
     conversation_id: &str,
     message_markdown: String,
     attachments: Vec<MessageAttachmentInput>,
+    text_citations: Vec<MessageTextCitation>,
     message_context: Option<serde_json::Value>,
 ) -> ThreadResult<ThreadMessage> {
     let _index_guard = thread_index_lock()
@@ -530,6 +561,7 @@ pub fn append_message(
         message_markdown,
         message_attachments(attachments.clone()),
     )
+    .with_text_citations(text_citations)
     .with_message_context(message_context);
     let mentions = manifest_mentions(&attachments);
     storage
@@ -543,6 +575,7 @@ pub fn append_assistant_message(
     conversation_id: &str,
     content: String,
     error: Option<AssistantError>,
+    grounding: Option<MessageGrounding>,
 ) -> ThreadResult<ThreadMessage> {
     let _index_guard = thread_index_lock()
         .lock()
@@ -551,7 +584,8 @@ pub fn append_assistant_message(
     let message = match error {
         Some(error) => ThreadMessage::assistant_error(content, error),
         None => ThreadMessage::assistant(content),
-    };
+    }
+    .with_grounding(grounding);
     storage
         .push_message(conversation_id, message.clone(), &[])
         .map_err(|error| error.to_string())?;
@@ -599,12 +633,8 @@ fn conversation_snapshot(
             attachment_hash: entry.attachment_hash.clone(),
             display_name: entry.display_name.clone(),
             file_type: match entry.file_type {
-                AttachmentFileType::TextLocal => "text-local".to_string(),
                 AttachmentFileType::ImageUpload => "image-upload".to_string(),
                 AttachmentFileType::DocumentUpload => "document-upload".to_string(),
-                AttachmentFileType::TerminalMention => "terminal-mention".to_string(),
-                AttachmentFileType::ThreadMention => "thread-mention".to_string(),
-                AttachmentFileType::ForwardedMessages => "forwarded-messages".to_string(),
             },
             blob_path: storage
                 .find_object_blob(&entry.attachment_hash)
@@ -1053,7 +1083,7 @@ Both satisfy the equation, so the solution set is $\{2, 3\}$.
             }),
             _ => None,
         };
-        super::append_assistant_message(conversation_id, content.clone(), error)?;
+        super::append_assistant_message(conversation_id, content.clone(), error, None)?;
         Ok(content)
     }
 }
@@ -1061,7 +1091,6 @@ Both satisfy the equation, so the solution set is $\{2, 3\}$.
 pub mod lens {
     use crate::auth::{get_decrypted_api_key, session_api_keys_active, ApiKeyProvider};
     use crate::storage::{self, OcrAnnotationEntry, ReverseImageSearchCache, ThreadStorage};
-    use image::{imageops, GenericImageView};
     use serde::{Deserialize, Serialize};
     use std::{
         collections::HashMap,
@@ -1219,6 +1248,17 @@ pub mod lens {
         (cache.imgbb_url, cache.google_lens_url)
     }
 
+    pub fn is_thread_image_hosted(thread_id: &str) -> ThreadResult<bool> {
+        let storage = active_storage()?;
+        let thread = storage
+            .load_thread(thread_id)
+            .map_err(|error| error.to_string())?;
+        storage
+            .get_reverse_image_search_cache(&thread.metadata.image_hash)
+            .map(|cache| cache.is_some())
+            .map_err(|error| error.to_string())
+    }
+
     #[derive(Deserialize)]
     struct ImgBbUploadResponse {
         success: bool,
@@ -1358,154 +1398,6 @@ pub mod lens {
         finish_reverse_search(thread_id, search_id)?;
         result
     }
-
-    struct Lcg(u64);
-
-    impl Lcg {
-        #[inline]
-        fn next(&mut self) -> u64 {
-            self.0 = self
-                .0
-                .wrapping_mul(6_364_136_223_846_793_005)
-                .wrapping_add(1_442_695_040_888_963_407);
-            self.0
-        }
-
-        #[inline]
-        fn range(&mut self, lo: u32, hi: u32) -> u32 {
-            if hi <= lo + 1 {
-                return lo;
-            }
-            lo + (self.next() as u32 % (hi - lo))
-        }
-    }
-
-    pub fn detect_image_tone_from_bytes(bytes: &[u8]) -> Option<String> {
-        let img = image::load_from_memory(bytes).ok()?;
-        let (width, height) = img.dimensions();
-
-        if width == 0 || height == 0 {
-            return Some("dark".to_string());
-        }
-
-        let max_dim = 256;
-        let thumb = img.thumbnail(max_dim, max_dim);
-        let blurred = imageops::blur(&thumb, 1.5);
-
-        let (w, h) = blurred.dimensions();
-        if w == 0 || h == 0 {
-            return Some("dark".to_string());
-        }
-
-        let srgb_to_linear = |c: u8| -> f32 {
-            let f = c as f32 / 255.0;
-            if f <= 0.04045 {
-                f / 12.92
-            } else {
-                ((f + 0.055) / 1.055).powf(2.4)
-            }
-        };
-
-        let get_luminance = |r: u8, g: u8, b: u8| -> f32 {
-            0.2126 * srgb_to_linear(r) + 0.7152 * srgb_to_linear(g) + 0.0722 * srgb_to_linear(b)
-        };
-
-        let mut sum_lum = 0.0;
-        let mut count = 0;
-        for pixel in blurred.pixels() {
-            if pixel[3] > 128 {
-                sum_lum += get_luminance(pixel[0], pixel[1], pixel[2]);
-                count += 1;
-            }
-        }
-
-        if count == 0 {
-            return Some("light".to_string());
-        }
-
-        let global_mean = sum_lum / count as f32;
-        if global_mean <= 0.05 {
-            return Some("dark".to_string());
-        }
-        if global_mean >= 0.75 {
-            return Some("light".to_string());
-        }
-
-        let mut rng = Lcg(0xDEAD_BEEF_CAFE_1337);
-        let grid_size = 12;
-        let spc = 8;
-
-        let thresh = 0.179;
-        let mut dark_score = 0.0;
-        let mut light_score = 0.0;
-
-        for gy in 0..grid_size {
-            for gx in 0..grid_size {
-                let cx0 = gx * w / grid_size;
-                let cx1 = ((gx + 1) * w / grid_size).max(cx0 + 1);
-                let cy0 = gy * h / grid_size;
-                let cy1 = ((gy + 1) * h / grid_size).max(cy0 + 1);
-
-                for _ in 0..spc {
-                    let x = rng.range(cx0, cx1).min(w.saturating_sub(1));
-                    let y = rng.range(cy0, cy1).min(h.saturating_sub(1));
-
-                    if blurred.get_pixel(x, y)[3] < 128 {
-                        continue;
-                    }
-
-                    let mut local_dark = 0;
-                    let mut local_light = 0;
-                    let mut valid_neighbors = 0;
-
-                    for dy in -1..=1 {
-                        for dx in -1..=1 {
-                            let nx = (x as i32 + dx) as u32;
-                            let ny = (y as i32 + dy) as u32;
-                            if nx < w && ny < h {
-                                let px = blurred.get_pixel(nx, ny);
-                                if px[3] > 128 {
-                                    let l = get_luminance(px[0], px[1], px[2]);
-                                    if l < thresh {
-                                        local_dark += 1;
-                                    } else {
-                                        local_light += 1;
-                                    }
-                                    valid_neighbors += 1;
-                                }
-                            }
-                        }
-                    }
-
-                    if valid_neighbors > 0 {
-                        let confidence =
-                            (local_dark as f32 - local_light as f32).abs() / valid_neighbors as f32;
-                        let is_node_dark = local_dark >= local_light;
-
-                        if is_node_dark {
-                            dark_score += 1.0 + confidence;
-                        } else {
-                            light_score += 1.0 + confidence;
-                        }
-                    }
-                }
-            }
-        }
-
-        if dark_score >= light_score {
-            Some("dark".to_string())
-        } else {
-            Some("light".to_string())
-        }
-    }
-
-    pub fn detect_image_tone_from_path(path: &Path) -> ThreadResult<Option<String>> {
-        let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
-        if bytes.is_empty() {
-            return Err("Image file is empty".to_string());
-        }
-        Ok(detect_image_tone_from_bytes(&bytes))
-    }
 }
 
 pub mod ocr {
@@ -1596,8 +1488,10 @@ pub mod ocr {
             .load_thread(thread_id)
             .map_err(|error| error.to_string())?;
         let image_path = storage
-            .get_image_path(&thread.metadata.image_hash)
-            .map_err(|error| error.to_string())?;
+            .blob_path(&thread.metadata.image_blob)
+            .map_err(|error| error.to_string())?
+            .to_string_lossy()
+            .to_string();
         Ok(OcrThreadSnapshot {
             thread_id: thread_id.to_string(),
             thread_title: thread.metadata.title,
@@ -1626,8 +1520,10 @@ pub mod ocr {
             .load_thread(thread_id)
             .map_err(|error| error.to_string())?;
         let image_path = storage
-            .get_image_path(&thread.metadata.image_hash)
-            .map_err(|error| error.to_string())?;
+            .blob_path(&thread.metadata.image_blob)
+            .map_err(|error| error.to_string())?
+            .to_string_lossy()
+            .to_string();
         let request = sidecar_request(image_path, model_id)?;
         let result = ocr()
             .run(request)
