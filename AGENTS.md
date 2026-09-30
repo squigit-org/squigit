@@ -84,7 +84,7 @@ The workspace components have these responsibilities:
 - `squigit-rs/` is the public product facade shared by the CLI and the desktop N-API backend. Preserve backend-facing types, serialized field names, and service behavior when changing it.
 - `crates/squigit-storage/` owns config roots, profiles, encrypted key records, CAS objects, workspaces, image threads, side-chat threads, OCR annotations, version records, and their serialized schemas.
 - `crates/squigit-auth/` owns Google OAuth, API-key validation, encryption, OS-vault binding, reveal authorization, and process-only contributor credentials.
-- `crates/squigit-harness/` converts supported documents and expands canonical text attachments before model submission.
+- `crates/squigit-harness/` converts supported documents and owns the model file tools (`read_file`, `grep_search`, `list_directory`). Text citations stay as source paths in the message; the model reads them through these tools, scoped to the paths cited in the conversation.
 - `crates/squigit-brain/` owns Gemini model planning, title generation, attachment preparation, upload reuse, and submission preflight.
 - `squigit-ocr/src/` is the publishable Rust library for installed-executable discovery, OCR execution, model management, downloads, and annotation persistence.
 - `squigit-cli/` is the Ratatui product. It must keep the same persisted threads, attachments, profiles, settings, and OCR data that the GUI understands.

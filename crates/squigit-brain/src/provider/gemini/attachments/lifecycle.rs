@@ -28,6 +28,7 @@ const CONNECTIVITY_RETRY_DELAY: Duration = Duration::from_secs(5);
 pub enum AttachmentPreparationStatus {
     Pending,
     Ready,
+    Missing,
     Failed,
     Cancelled,
 }
@@ -61,12 +62,20 @@ pub struct PrepareSubmissionAttachmentsRequest {
     pub preflight_id: String,
     pub thread_id: String,
     pub user_message_id: String,
-    pub attachment_hashes: Vec<String>,
+    pub attachments: Vec<SubmissionAttachmentInput>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubmissionAttachmentInput {
+    pub attachment_hash: String,
+    pub source_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubmissionAttachmentResult {
+    pub original_attachment_hash: String,
     pub attachment_hash: String,
+    pub cas_path: Option<String>,
     pub file_type: Option<AttachmentFileType>,
     pub status: AttachmentPreparationStatus,
     pub disposition: Option<String>,
@@ -199,16 +208,33 @@ fn inspect_attachment_source(source_path: &str) -> Result<InspectedAttachmentSou
     }
 
     let raw_path = source_path.strip_prefix("file://").unwrap_or(source_path);
-    let resolved = Path::new(raw_path)
-        .canonicalize()
-        .map_err(|error| format!("Attachment source path is unavailable: {error}"))?;
-    let bytes = std::fs::read(&resolved).map_err(|error| error.to_string())?;
-    let hash = blake3::hash(&bytes).to_hex().to_string();
+    let resolved = Path::new(raw_path).canonicalize().map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            "SOURCE_MISSING".to_string()
+        } else {
+            format!("Attachment source path is unavailable: {error}")
+        }
+    })?;
     let extension = resolved
         .extension()
         .and_then(|value| value.to_str())
         .unwrap_or("")
         .to_ascii_lowercase();
+    if !super::mime_from_extension(&extension).starts_with("image/")
+        && !is_supported_document_extension(&extension)
+    {
+        return Err(format!(
+            "Unsupported attachment type: {extension}. Only images, PDFs, and Office documents are uploaded; text files are cited by path."
+        ));
+    }
+    let bytes = std::fs::read(&resolved).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            "SOURCE_MISSING".to_string()
+        } else {
+            error.to_string()
+        }
+    })?;
+    let hash = blake3::hash(&bytes).to_hex().to_string();
     Ok(InspectedAttachmentSource::Raw {
         hash,
         bytes,
@@ -276,6 +302,35 @@ async fn stage_attachment(
     let _source_guard = tokio::select! {
         guard = source_lock.lock() => guard,
         _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+    };
+
+    let inspected = match inspected {
+        InspectedAttachmentSource::Raw {
+            bytes, extension, ..
+        } if !is_supported_document_extension(&extension) => {
+            let permit = tokio::select! {
+                permit = runtime.image_rendition_slots.clone().acquire_owned() => {
+                    permit.map_err(|_| "Image rendition worker is unavailable".to_string())?
+                }
+                _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+            };
+            let rendition = tokio::task::spawn_blocking(move || {
+                let _permit = permit;
+                squigit_harness::images::store_image_rendition(&bytes)
+            });
+            let rendition = tokio::select! {
+                result = rendition => {
+                    result
+                        .map_err(|error| format!("Image rendition task failed: {error}"))??
+                }
+                _ = cancellation.cancelled() => return Err("CANCELLED".to_string()),
+            };
+            InspectedAttachmentSource::Existing {
+                hash: rendition.hash,
+                cas_path: rendition.cas_path.into(),
+            }
+        }
+        other => other,
     };
 
     let office_source = match &inspected {
@@ -536,20 +591,6 @@ pub(crate) async fn prepare_attachment(
         return cancelled_prepare_result(job_id, Some(hash), Some(cas_path), Some(file_type));
     }
 
-    if file_type == AttachmentFileType::TextLocal {
-        finish_job(runtime, &job_id).await;
-        return PrepareAttachmentResult {
-            job_id,
-            attachment_hash: Some(hash),
-            cas_path: Some(cas_path),
-            file_type: Some(file_type),
-            status: AttachmentPreparationStatus::Ready,
-            disposition: Some("local-only".to_string()),
-            error_code: None,
-            error_message: None,
-        };
-    }
-
     let outcome = loop {
         if job_cancel.is_cancelled() {
             break Err("CANCELLED".to_string());
@@ -726,12 +767,27 @@ fn submission_failure(
     };
     let error = preparation_error(error);
     SubmissionAttachmentResult {
+        original_attachment_hash: hash.clone(),
         attachment_hash: hash,
+        cas_path: None,
         file_type,
         status,
         disposition: None,
         error_code: Some(error.code),
         error_message: Some(error.message),
+    }
+}
+
+fn submission_missing(hash: String) -> SubmissionAttachmentResult {
+    SubmissionAttachmentResult {
+        original_attachment_hash: hash.clone(),
+        attachment_hash: hash,
+        cas_path: None,
+        file_type: None,
+        status: AttachmentPreparationStatus::Missing,
+        disposition: None,
+        error_code: None,
+        error_message: None,
     }
 }
 
@@ -755,11 +811,11 @@ pub(crate) async fn prepare_submission_attachments(
             return PrepareSubmissionAttachmentsResult {
                 preflight_token: None,
                 results: request
-                    .attachment_hashes
+                    .attachments
                     .into_iter()
-                    .map(|hash| {
+                    .map(|attachment| {
                         submission_failure(
-                            hash,
+                            attachment.attachment_hash,
                             None,
                             "Attachment preflight ID is already active".to_string(),
                         )
@@ -786,18 +842,18 @@ async fn prepare_submission_attachments_inner(
 ) -> PrepareSubmissionAttachmentsResult {
     let fail_all = |error: String| PrepareSubmissionAttachmentsResult {
         results: request
-            .attachment_hashes
+            .attachments
             .iter()
-            .cloned()
-            .map(|hash| submission_failure(hash, None, error.clone()))
+            .map(|attachment| {
+                submission_failure(attachment.attachment_hash.clone(), None, error.clone())
+            })
             .collect(),
         preflight_token: None,
     };
-    if request
-        .attachment_hashes
-        .iter()
-        .any(|hash| hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()))
-    {
+    if request.attachments.iter().any(|attachment| {
+        let hash = &attachment.attachment_hash;
+        hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit())
+    }) {
         return fail_all("Preflight contains an invalid attachment hash".to_string());
     }
 
@@ -813,44 +869,58 @@ async fn prepare_submission_attachments_inner(
             return fail_all(error);
         }
 
-        let futures = request.attachment_hashes.iter().map(|hash| {
+        let futures = request.attachments.iter().map(|attachment| {
             let credential = credential.clone();
             async move {
+                let original_hash = &attachment.attachment_hash;
+                let staged = if let Some(source_path) = &attachment.source_path {
+                    match stage_attachment(runtime, source_path.clone(), cancellation).await {
+                        Ok(staged) => Some(staged),
+                        Err(error) if error == "SOURCE_MISSING" => {
+                            return Ok(submission_missing(original_hash.clone()));
+                        }
+                        Err(error) => {
+                            return Ok(submission_failure(original_hash.clone(), None, error));
+                        }
+                    }
+                } else {
+                    None
+                };
+                let hash = staged
+                    .as_ref()
+                    .map(|value| value.0.clone())
+                    .unwrap_or_else(|| original_hash.clone());
                 let storage = ThreadStorage::new().map_err(|error| error.to_string())?;
                 let manifest = storage
-                    .load_object_manifest(hash)
+                    .load_object_manifest(&hash)
                     .map_err(|error| error.to_string())?;
                 let file_type = manifest.file_context.file_type;
-                if file_type == AttachmentFileType::TextLocal {
-                    return Ok(SubmissionAttachmentResult {
-                        attachment_hash: hash.clone(),
-                        file_type: Some(file_type),
-                        status: AttachmentPreparationStatus::Ready,
-                        disposition: Some("local-only".to_string()),
-                        error_code: None,
-                        error_message: None,
-                    });
-                }
-                let path = storage
-                    .find_object_blob(hash)
-                    .map_err(|error| error.to_string())?;
-                match ensure_file_uploaded_for_credential(
-                    runtime,
-                    &credential,
-                    &path.to_string_lossy(),
-                    cancellation,
-                )
-                .await
+                let path = match staged {
+                    Some((_, path, _)) => path,
+                    None => storage
+                        .find_object_blob(&hash)
+                        .map_err(|error| error.to_string())?
+                        .to_string_lossy()
+                        .to_string(),
+                };
+                match ensure_file_uploaded_for_credential(runtime, &credential, &path, cancellation)
+                    .await
                 {
                     Ok(ensured) => Ok(SubmissionAttachmentResult {
+                        original_attachment_hash: original_hash.clone(),
                         attachment_hash: hash.clone(),
+                        cas_path: Some(path),
                         file_type: Some(file_type),
                         status: AttachmentPreparationStatus::Ready,
                         disposition: Some(ensured.disposition.as_str().to_string()),
                         error_code: None,
                         error_message: None,
                     }),
-                    Err(error) => Ok(submission_failure(hash.clone(), Some(file_type), error)),
+                    Err(error) => Ok(submission_failure(
+                        original_hash.clone(),
+                        Some(file_type),
+                        error,
+                    )),
                 }
             }
         });
@@ -860,7 +930,7 @@ async fn prepare_submission_attachments_inner(
             match settled {
                 Ok(result) => attachments.push(result),
                 Err(error) => attachments.push(submission_failure(
-                    request.attachment_hashes[index].clone(),
+                    request.attachments[index].attachment_hash.clone(),
                     None,
                     error,
                 )),
@@ -884,10 +954,10 @@ async fn prepare_submission_attachments_inner(
                 _ = cancellation.cancelled() => return fail_all("CANCELLED".to_string()),
             }
         }
-        if attachments
-            .iter()
-            .any(|result| result.status != AttachmentPreparationStatus::Ready)
-        {
+        if attachments.iter().any(|result| {
+            result.status == AttachmentPreparationStatus::Failed
+                || result.status == AttachmentPreparationStatus::Cancelled
+        }) {
             return PrepareSubmissionAttachmentsResult {
                 preflight_token: None,
                 results: attachments,

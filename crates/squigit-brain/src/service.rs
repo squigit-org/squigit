@@ -61,29 +61,16 @@ impl BrainService {
             .await
     }
 
-    pub async fn suggest_thread_title(
-        &self,
-        thread_id: String,
-        model_candidates: Vec<String>,
-    ) -> Result<String, String> {
+    pub async fn suggest_thread_title(&self, thread_id: String) -> Result<String, String> {
         crate::provider::gemini::commands::generation::suggest_thread_title(
             &self.runtime,
             thread_id,
-            model_candidates,
         )
         .await
     }
 
-    pub async fn suggest_thread_title_from_text(
-        &self,
-        text: String,
-        model_candidates: Vec<String>,
-    ) -> Result<String, String> {
-        crate::provider::gemini::commands::generation::generate_thread_title_from_text(
-            model_candidates,
-            text,
-        )
-        .await
+    pub async fn suggest_thread_title_from_text(&self, text: String) -> Result<String, String> {
+        crate::provider::gemini::commands::generation::generate_thread_title_from_text(text).await
     }
 
     /// Capture the active Google credential for a complete background lifecycle.
@@ -124,11 +111,9 @@ impl BrainService {
         &self,
         snapshot: &ImageThreadCredentialSnapshot,
         file: GeminiFileRef,
-        model_candidates: Vec<String>,
     ) -> Result<String, String> {
         crate::provider::gemini::commands::generation::generate_thread_title_from_image(
             snapshot.credential.api_key(),
-            model_candidates,
             file.file_uri,
             file.mime_type,
         )
@@ -140,7 +125,7 @@ impl BrainService {
         model_id: String,
         effort: String,
     ) -> Result<Vec<String>, String> {
-        crate::provider::gemini::models::build_attempt_plan(&model_id, &effort)
+        crate::provider::gemini::models::build_attempt_plan(&model_id, &effort).await
     }
 }
 

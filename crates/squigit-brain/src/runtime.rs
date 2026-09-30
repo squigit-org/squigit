@@ -19,6 +19,7 @@ pub(crate) struct BrainRuntimeState {
     pub(crate) attachment_work: Arc<Mutex<HashMap<String, SharedAttachmentWork>>>,
     pub(crate) attachment_preflights: Arc<Mutex<HashMap<String, CancellationToken>>>,
     pub(crate) office_conversion_slots: Arc<Semaphore>,
+    pub(crate) image_rendition_slots: Arc<Semaphore>,
 }
 
 impl BrainRuntimeState {
@@ -30,6 +31,11 @@ impl BrainRuntimeState {
             attachment_work: Arc::new(Mutex::new(HashMap::new())),
             attachment_preflights: Arc::new(Mutex::new(HashMap::new())),
             office_conversion_slots: Arc::new(Semaphore::new(1)),
+            image_rendition_slots: Arc::new(Semaphore::new(
+                std::thread::available_parallelism()
+                    .map(|count| count.get().min(4))
+                    .unwrap_or(2),
+            )),
         }
     }
 

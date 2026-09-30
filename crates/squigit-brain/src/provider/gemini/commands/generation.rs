@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::provider::gemini::fallback::{is_candidate_retryable_error, is_transport_error};
+use crate::provider::gemini::models::build_micro_task_attempt_plan;
 use crate::provider::gemini::request_log::{write_request_log, GeminiRequestLogContext};
 use crate::provider::gemini::transport::types::{
     GeminiContent, GeminiFileData, GeminiGenerationConfig, GeminiPart, GeminiRequest,
@@ -117,10 +118,6 @@ async fn generate_with_candidates(
     model_candidates: &[String],
     request_body: &GeminiRequest,
 ) -> Result<String, String> {
-    if model_candidates.is_empty() {
-        return Err("At least one model candidate is required.".to_string());
-    }
-
     let client = reqwest::Client::new();
     let mut last_error = "All model candidates failed.".to_string();
 
@@ -143,7 +140,6 @@ async fn generate_with_candidates(
 
 async fn generate_thread_title(
     api_key: &str,
-    model_candidates: Vec<String>,
     context_parts: Vec<GeminiPart>,
 ) -> Result<String, String> {
     use crate::context::builder::get_title_prompt;
@@ -177,6 +173,7 @@ async fn generate_thread_title(
         &request_body,
     );
 
+    let model_candidates = build_micro_task_attempt_plan().await;
     let raw = generate_with_candidates(api_key, &model_candidates, &request_body).await?;
     Ok(extract_title_text(&raw))
 }
@@ -209,16 +206,14 @@ fn sanitize_title(title: &str) -> String {
         .to_string()
 }
 
-/// Generate a thread title from an image using the supplied micro-task candidate plan.
+/// Generate a thread title from an image with the micro-task model.
 pub async fn generate_thread_title_from_image(
     api_key: &str,
-    model_candidates: Vec<String>,
     image_uri: String,
     image_mime_type: String,
 ) -> Result<String, String> {
     generate_thread_title(
         api_key,
-        model_candidates,
         vec![GeminiPart {
             file_data: Some(GeminiFileData {
                 mime_type: image_mime_type,
@@ -232,12 +227,10 @@ pub async fn generate_thread_title_from_image(
 
 async fn generate_thread_title_from_context(
     api_key: &str,
-    model_candidates: Vec<String>,
     compacted_context: String,
 ) -> Result<String, String> {
     generate_thread_title(
         api_key,
-        model_candidates,
         vec![GeminiPart {
             text: Some(format!("Thread context:\n{compacted_context}")),
             ..Default::default()
@@ -247,14 +240,10 @@ async fn generate_thread_title_from_context(
 }
 
 /// Generate a concise thread title from user-authored text.
-pub async fn generate_thread_title_from_text(
-    model_candidates: Vec<String>,
-    text: String,
-) -> Result<String, String> {
+pub async fn generate_thread_title_from_text(text: String) -> Result<String, String> {
     let api_key = crate::provider::gemini::attachments::load_active_api_key().await?;
     generate_thread_title(
         &api_key,
-        model_candidates,
         vec![GeminiPart {
             text: Some(format!("First user message:\n{text}")),
             ..Default::default()
@@ -267,7 +256,6 @@ pub async fn generate_thread_title_from_text(
 pub(crate) async fn suggest_thread_title(
     runtime: &BrainRuntimeState,
     thread_id: String,
-    model_candidates: Vec<String>,
 ) -> Result<String, String> {
     let storage = ThreadStorage::new().map_err(|error| error.to_string())?;
     let thread = storage
@@ -280,8 +268,7 @@ pub(crate) async fn suggest_thread_title(
         .compacted_context
         .filter(|context| !context.trim().is_empty())
     {
-        return generate_thread_title_from_context(&api_key, model_candidates, compacted_context)
-            .await;
+        return generate_thread_title_from_context(&api_key, compacted_context).await;
     }
 
     let image_path = storage
@@ -295,11 +282,5 @@ pub(crate) async fn suggest_thread_title(
     )
     .await?;
 
-    generate_thread_title_from_image(
-        &api_key,
-        model_candidates,
-        file_ref.file_uri,
-        file_ref.mime_type,
-    )
-    .await
+    generate_thread_title_from_image(&api_key, file_ref.file_uri, file_ref.mime_type).await
 }

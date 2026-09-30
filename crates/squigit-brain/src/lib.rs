@@ -9,6 +9,6 @@ pub mod service;
 pub use provider::gemini::attachments::{
     AttachmentPreparationStatus, PrepareAttachmentRequest, PrepareAttachmentResult,
     PrepareSubmissionAttachmentsRequest, PrepareSubmissionAttachmentsResult,
-    SubmissionAttachmentResult,
+    SubmissionAttachmentInput, SubmissionAttachmentResult,
 };
 pub use service::{BrainService, ImageThreadCredentialSnapshot};

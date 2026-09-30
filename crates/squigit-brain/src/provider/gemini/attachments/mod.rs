@@ -10,7 +10,7 @@ mod upload;
 
 pub(crate) use cache::{
     capture_image_thread_credential, ensure_file_uploaded, ensure_file_uploaded_for_credential,
-    load_active_api_key, ActiveCredential,
+    load_active_api_key, load_active_credential, ActiveCredential,
 };
 pub(crate) use lifecycle::{
     attachment_preparation_snapshot, cancel_all_attachment_jobs, cancel_attachment,
@@ -20,7 +20,7 @@ pub(crate) use lifecycle::{
 pub use lifecycle::{
     AttachmentPreparationStatus, PrepareAttachmentRequest, PrepareAttachmentResult,
     PrepareSubmissionAttachmentsRequest, PrepareSubmissionAttachmentsResult,
-    SubmissionAttachmentResult,
+    SubmissionAttachmentInput, SubmissionAttachmentResult,
 };
 pub use mime::mime_from_extension;
 pub use types::GeminiFileRef;

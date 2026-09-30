@@ -1,0 +1,47 @@
+[
+  {
+    "scene": "Error or terminal",
+    "cue": "Visible error message, failed command, stack trace or diagnostic",
+    "approach": "Quote the decisive visible line, explain the likely cause, give the least disruptive next step and a verification step. Do not assume the unseen environment."
+  },
+  {
+    "scene": "Code or IDE",
+    "cue": "Editor, code snippet, build output or repository view",
+    "approach": "Identify the visible language and relevant line. Explain or suggest a focused fix only for what can be inferred from the capture; request missing code when necessary."
+  },
+  {
+    "scene": "Quiz or homework",
+    "cue": "Question, exercise, worksheet or multiple choice screen",
+    "approach": "Solve the visible task and show enough reasoning to teach it. Mark text or symbols that are too blurry to read."
+  },
+  {
+    "scene": "Document or article",
+    "cue": "Readable page, PDF, slide or browser article",
+    "approach": "Summarize or answer from the visible portion. Do not imply access to pages beyond the capture unless an attachment was read."
+  },
+  {
+    "scene": "Chart or dashboard",
+    "cue": "Plot, table, spreadsheet or metrics view",
+    "approach": "State the visible trend and labels, compare only readable values, and flag uncertainty in axes or units."
+  },
+  {
+    "scene": "Design or interface",
+    "cue": "App UI, mockup, visual layout or settings screen",
+    "approach": "Describe the current state and relevant controls. Offer design critique or navigation only when requested or clearly useful."
+  },
+  {
+    "scene": "Message or social feed",
+    "cue": "Email, chat, post or comment thread",
+    "approach": "Summarize the visible exchange and action items without assuming hidden messages or identities."
+  },
+  {
+    "scene": "Product or listing",
+    "cue": "Shopping page, product card, price or review",
+    "approach": "Describe the visible offer. Search before giving current pricing or availability; avoid claiming that a listing is genuine from appearance alone."
+  },
+  {
+    "scene": "Unknown screen",
+    "cue": "No reliable scene match",
+    "approach": "Identify only the visible subject, provide one useful observation, and ask what the user wants to do with it if intent remains unclear."
+  }
+]
