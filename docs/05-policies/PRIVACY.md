@@ -22,7 +22,7 @@ Because Squigit analyzes your screen and text, your privacy is our highest prior
 - **No Telemetry or Backend:** Squigit has no backend database or central server. Your conversations, images, and history never leave your local machine unless you explicitly trigger an AI feature.
 - **Local OCR:** OCR execution and installed recognition models run on your machine. Model downloads contact their configured public model hosts, but OCR images are not uploaded by the OCR runtime.
 - **Encrypted API Keys:** Squigit operates on a Bring Your Own Key (BYOK) model. API keys are encrypted locally with AES-256-GCM under random master-key material held by your operating-system vault. Squigit-operated servers never receive them. The native app and the selected provider necessarily handle plaintext during an authorized request.
-- **Direct Provider Requests:** Gemini prompts, attachments, and generated responses travel directly between your device and Google. ImgBB receives an image only when you explicitly use the Google Lens feature, which needs a public image URL. No Squigit-operated middleman server intercepts or logs these requests.
+- **Direct Provider Requests:** Prompts, attached images, and generated responses travel between your device, OpenRouter, and the AI providers it routes requests to. ImgBB receives an image only when you explicitly use the Google Lens feature, which needs a public image URL. No Squigit-operated middleman server intercepts or logs these requests.
 
 ## Third-Party Integrations & Google Lens Feature
 

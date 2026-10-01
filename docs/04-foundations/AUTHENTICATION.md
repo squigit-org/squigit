@@ -175,11 +175,11 @@ On reauthentication, `created_at` is preserved, display metadata is refreshed, a
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "last_trusted_reveal": null,
   "profiles": {
     "<profile-id>": {
-      "google-ai-studio": {
+      "openrouter": {
         "cipher": "aes-256-gcm",
         "width": 39,
         "kdf": "hkdf-sha256",
@@ -211,7 +211,7 @@ Deleting an eligible inactive profile removes its metadata, profile directory wh
 
 ## Contributor demo mode
 
-`cargo xtask dev --demo` initializes process-only API-key state from `GEMINI_API_KEY` and `IMGBB_API_KEY`. The command reads the process environment first and then the ignored root `.env`.
+`cargo xtask dev --demo` initializes process-only API-key state from `OPENROUTER_API_KEY` and `IMGBB_API_KEY`. The command reads the process environment first and then the ignored root `.env`.
 
 Both keys are optional. With no key, the CLI runs as Guest for local and OCR workflows. With either key, it creates and activates the deterministic local `contributor@squigit.app` profile. The supplied keys are validated and held in zeroizing process memory; they are not written to `keys.json` or the OS vault. Authentication and persistent credential-management commands remain hidden.
 

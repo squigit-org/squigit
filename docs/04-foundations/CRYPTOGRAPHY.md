@@ -1,19 +1,14 @@
 # Cryptography Foundation
 
-Status: **BYOK schema 1 implemented**
+Status: **BYOK schema 2 implemented**
 
 This document defines Squigit's cryptographic ownership, formats, failure rules, and threat boundaries.
 
 ## BYOK Key Inventory
 
-Rust owns BYOK cryptography and provider credential use. Under OS-vault service `org.squigit.byok`, it stores two independent random 32-byte secrets:
+Rust owns BYOK cryptography and provider credential use. The OS-vault service `org.squigit.byok` stores one random 32-byte secret, `record-encryption-master-v1`, for deriving per-record AES keys. Explicit deletion of the final stored credential deletes this secret after the empty key store has been durably written.
 
-| Vault account                 | Purpose                                                     | Lifetime                                                             |
-| ----------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------- |
-| `record-encryption-master-v1` | Derive per-record AES keys                                  | Deleted after explicit deletion of the final credential              |
-| `cas-binding-key-v1`          | Derive runtime credential digests and per-object remote IDs | Retained across credential changes and encryption-master replacement |
-
-Both values come from the operating-system CSPRNG. The vault maps to macOS Keychain, Windows Credential Manager, and Linux Secret Service. A locked, denied, unavailable, or missing vault fails closed. No predictable metadata, filesystem file, environment variable, renderer storage, or plaintext fallback replaces either secret.
+The secret comes from the operating-system CSPRNG. The vault maps to macOS Keychain, Windows Credential Manager, and Linux Secret Service. A locked, denied, unavailable, or missing vault fails closed. No plaintext fallback replaces the encryption master.
 
 ## Framing
 
@@ -63,52 +58,21 @@ ciphertext = AES-256-GCM(
 )
 ```
 
-`keys.json` stores the credential's character width and canonical unpadded base64url for the salt, nonce, and combined ciphertext-plus-tag. Encrypted records and provider maps reject unknown fields, unknown algorithms, noncanonical encodings, and incorrect decoded lengths. The root file rejects schemas other than 1. Moving a record to another profile or provider, or changing authenticated metadata, causes decryption failure.
+`keys.json` stores the credential's character width and canonical unpadded base64url for the salt, nonce, and combined ciphertext-plus-tag. Encrypted records and provider maps reject unknown fields, unknown algorithms, noncanonical encodings, and incorrect decoded lengths. The root file rejects schemas other than 2. Moving a record to another profile or provider, or changing authenticated metadata, causes decryption failure.
 
-A populated store with a missing encryption master never receives a replacement. On the first save, newly created vault values are read back before the file is written. Any failure before the durable file transaction completes triggers deletion of only the vault values created by that transaction.
+A populated store with a missing encryption master never receives a replacement. On the first save, a newly created vault value are read back before the file is written. Any failure before the durable file transaction completes triggers deletion of only the vault value created by that transaction.
 
-Saving an empty credential is invalid. Deletion is explicit. Deleting the final credential durably writes the empty schema-1 store before deleting `record-encryption-master-v1`; if vault deletion fails, the encrypted file is restored. `cas-binding-key-v1` remains.
+Saving an empty credential is invalid. Deletion is explicit. Deleting the final credential durably writes the empty schema-2 store before deleting `record-encryption-master-v1`; if vault deletion fails, the encrypted file is restored.
 
-## CAS Binding
+## Credential Pinning
 
-Runtime comparison uses:
+Jobs retain the decrypted credential captured at submission. Changing the active profile or saved key does not change a running job's credential. Secret wrappers redact `Debug` and zero their memory on drop.
 
-```text
-HMAC-SHA256(
-  cas-binding-key-v1,
-  frame(
-    "squigit/cas/v1/runtime-credential",
-    provider,
-    canonical-api-key
-  )
-)
-```
-
-The persisted object-remote ID uses:
-
-```text
-lowercase-hex(
-  HMAC-SHA256(
-    cas-binding-key-v1,
-    frame(
-      "squigit/cas/v1/object-remote",
-      provider,
-      lowercase-object-hash,
-      canonical-api-key
-    )
-  )
-)
-```
-
-The persisted ID is exactly 64 lowercase hexadecimal characters with no prefix. It contains no profile, revision, timestamp, nonce, ciphertext, save-time value, or plaintext-derived unkeyed fingerprint.
-
-This makes identity stable for A → B → A while preventing an attacker with only filesystem data from verifying API-key guesses. Different objects receive different persisted IDs for the same credential.
-
-Loss of `cas-binding-key-v1` makes existing bindings unrecoverable. Squigit will not silently replace it while manifests contain remotes because doing so would orphan their credential association. There is currently no public remote-cache reset operation; saving a credential fails until the original vault key is restored or the affected local object data is deliberately removed.
+Credential comparisons use an in-memory HMAC digest with an explicitly framed provider and canonical API key. This digest is never serialized. Local CAS objects have no provider credentials, remote IDs, cloud URIs, or expiry fields.
 
 ## Contributor Session Keys
 
-Contributor demo mode can replace the persistent key store with process-only Gemini and ImgBB keys. These values are validated, held in zeroizing memory, and never written to `keys.json` or the OS vault. Session credential comparisons and object-remote IDs use separate `squigit/session/v1/...` domains so they cannot be confused with persistent vault-bound identities.
+Contributor demo mode can use process-only OpenRouter and ImgBB keys. These values are validated, held in zeroizing memory, and never written to `keys.json` or the OS vault. Persistent credentials retain their encrypted storage format; the process-only mode supplies credentials directly to the same job pinning path.
 
 ## Filesystem and Memory Rules
 
@@ -118,11 +82,11 @@ Contributor demo mode can replace the persistent key store with process-only Gem
 - Symlinks and nonregular metadata targets are rejected.
 - Temporary files are created with final permissions, flushed, and durably replaced. Parent directories are synchronized on Unix; Windows replacement uses `MoveFileExW` with replace-existing and write-through flags.
 - Secret wrappers zero memory on drop and redact `Debug`.
-- Credentials, ciphertext, vault keys, credential digests, object-remote IDs, and credential-bearing URLs are excluded from production logs.
+- Credentials, ciphertext, vault keys, credential digests, and credential-bearing URLs are excluded from production logs.
 
 ## Threat Boundary
 
-Stealing `keys.json` and CAS manifests without the vault secrets cannot recover API keys or verify guesses. Configuration, file metadata, and provider resource names remain visible.
+Stealing `keys.json` and CAS manifests without the vault secrets cannot recover API keys or verify guesses. Configuration, file metadata, and local identifiers remain visible.
 
 Same-user malware, compromised OS sessions, process-memory inspection, input capture, malicious accessibility/UI automation, and compromised provider accounts are outside this guarantee.
 

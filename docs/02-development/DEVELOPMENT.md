@@ -33,7 +33,7 @@ cargo xtask dev -- --home "$HOME/.squigit-dev" image.png
 SQUIGIT_HOME="$HOME/.squigit-dev" cargo xtask dev
 ```
 
-Development boundary logs are written under the repository `logs/` directory. An installed CLI does not create these logs unless `SQUIGIT_LOG_DIR` is explicitly set.
+API diagnostics stay in memory and appear in desktop DevTools. No API disk logs are created.
 
 ### Contributor demo mode
 
@@ -44,7 +44,7 @@ cp .env.example .env
 cargo xtask dev --demo
 ```
 
-Demo mode reads `GEMINI_API_KEY` and `IMGBB_API_KEY` from the process environment, then from the ignored root `.env`. Both keys are optional. With neither key, the CLI supports guest and OCR workflows. With either key, it activates the process-only `contributor@squigit.app` profile. Authentication and persisted credential-management commands remain unavailable.
+Demo mode reads `OPENROUTER_API_KEY` and `IMGBB_API_KEY` from the process environment, then from the ignored root `.env`. Both keys are optional. With neither key, the CLI supports guest and OCR workflows. With either key, it activates the process-only `contributor@squigit.app` profile. Authentication and persisted credential-management commands remain unavailable.
 
 Unless `SQUIGIT_HOME`, `SQUIGIT_CONFIG_DIR`, or `--home` selects another location, demo state is stored in the ignored repository directory `squigit-demo/`.
 

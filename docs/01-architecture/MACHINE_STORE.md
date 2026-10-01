@@ -63,7 +63,7 @@ Files are created as their corresponding features are used, so a new installatio
 - `RULES.md` stores the user's shared persona instructions.
 - `version.json` caches app, CLI, and OCR release information. `version.lock` serializes version-cache updates.
 - `install-ocr.sh` or `install-ocr.ps1` is generated for the current platform from the native OCR installer recipe.
-- `logs/` receives harness and Gemini request-boundary logs when logging is enabled. Repository development sessions redirect these logs to the repository `logs/` directory.
+- API diagnostics remain in memory and appear in desktop DevTools; no API disk logs are created.
 - `models/` contains OCR recognition models downloaded independently from the installed OCR executable.
 
 ## Cache
@@ -86,12 +86,12 @@ Image threads and side chats both use `threads/{thread_id}/`. They share message
 
 ## Content-addressable objects
 
-Every attachment is stored by BLAKE3 hash. The first two hash characters form the directory prefix. The object directory contains the immutable source bytes and a schema-1 manifest describing:
+Every attachment is stored by BLAKE3 hash. The first two hash characters form the directory prefix. The object directory contains the immutable source bytes and a schema-2 manifest describing:
 
-- whether the object is local text, an image upload, or a document upload;
+- the local image or document type;
 - cached text content for local-text objects;
 - the image tone when applicable;
-- credential-bound Gemini remote files and their expiry state;
+- local image rendition metadata;
 - the optional ImgBB/Google Lens reverse-image-search result.
 
 `manifest.lock` protects object-manifest updates across processes. Office conversions are indexed by the disposable receipts under `cache/document-conversions/`.
