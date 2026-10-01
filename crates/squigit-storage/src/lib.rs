@@ -42,8 +42,7 @@ pub mod version;
 pub use blob_storage::StoredBlob;
 pub use cas::{
     AttachmentFileType, DocumentConversion, ImageRendition, ObjectFileContext, ObjectManifest,
-    ObjectManifestLock, ObjectRemote, ReverseImageSearchCache, StoredImage,
-    OBJECT_MANIFEST_SCHEMA_VERSION,
+    ObjectManifestLock, ReverseImageSearchCache, StoredImage, OBJECT_MANIFEST_SCHEMA_VERSION,
 };
 pub use error::{Result, StorageError};
 pub use profiles::{
@@ -54,11 +53,11 @@ pub use profiles::{
 };
 pub use threads::{
     AssistantError, AttachmentManifest, AttachmentManifestEntry, ContextWindow, Conversation,
-    ForkSourceKind, ForkedFrom, GroundingTool, ManifestMention, MessageAttachment,
-    MessageGrounding, MessageTextCitation, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation,
-    OcrRegion, SideChatData, SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata,
-    ThreadStorage, WorkspaceMetadata, DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE,
-    EMPTY_STATE_ASSET_ID,
+    ForkSourceKind, ForkedFrom, GroundingImage, GroundingResource, GroundingTool, ManifestMention,
+    MessageAttachment, MessageGrounding, MessageTextCitation, OcrAnnotationEntry, OcrAnnotations,
+    OcrModelAnnotation, OcrRegion, SideChatData, SideChatMetadata, ThreadData, ThreadMessage,
+    ThreadMetadata, ThreadStorage, WorkspaceMetadata, DEFAULT_SIDE_CHAT_TITLE,
+    DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
 };
 pub use version::{
     ProductVersion, VersionFile, VersionStore, VersionStoreGuard, VersionType, VERSION_FILE_NAME,

@@ -203,6 +203,8 @@ pub struct CitationSource {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageGrounding {
+    pub selected_model: String,
+    pub actual_model: Option<String>,
     pub started_at_ms: u64,
     pub duration_ms: Option<u64>,
     pub tools: Vec<GroundingTool>,
@@ -214,9 +216,26 @@ pub struct GroundingTool {
     pub id: String,
     pub kind: String,
     pub content: String,
+    pub resource: Option<GroundingResource>,
     pub started_at_ms: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ended_at_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GroundingResource {
+    pub path: String,
+    pub display_name: String,
+    pub is_folder: bool,
+    pub image: Option<GroundingImage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GroundingImage {
+    pub path: String,
+    pub attachment_hash: String,
 }
 
 impl ThreadMessage {

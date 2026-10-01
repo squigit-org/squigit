@@ -8,7 +8,6 @@ use crate::{ByokErrorCode, ProfileError, Result};
 
 pub(crate) const VAULT_SERVICE: &str = "org.squigit.byok";
 pub(crate) const RECORD_ENCRYPTION_MASTER_ACCOUNT: &str = "record-encryption-master-v1";
-pub(crate) const CAS_BINDING_KEY_ACCOUNT: &str = "cas-binding-key-v1";
 pub(crate) const VAULT_KEY_LENGTH: usize = 32;
 
 pub(crate) struct VaultKey(Zeroizing<[u8; VAULT_KEY_LENGTH]>);

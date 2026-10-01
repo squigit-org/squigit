@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 pub const AUTH_SCHEMA_VERSION: u32 = 1;
-pub const KEY_FILE_SCHEMA_VERSION: u32 = 1;
+pub const KEY_FILE_SCHEMA_VERSION: u32 = 2;
 pub const AUTH_MODE_GOOGLE_OIDC_PKCE: &str = "google_oidc_pkce";
 pub const GOOGLE_PROVIDER: &str = "google";
 pub const GOOGLE_PROFILE_ID_PREFIX: &str = "ggl";
@@ -91,7 +91,7 @@ pub struct EncryptedKeyRecord {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ProfileKeyRecords {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub google_ai_studio: Option<EncryptedKeyRecord>,
+    pub open_router: Option<EncryptedKeyRecord>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imgbb: Option<EncryptedKeyRecord>,
 }
@@ -99,7 +99,7 @@ pub struct ProfileKeyRecords {
 impl ProfileKeyRecords {
     pub fn get(&self, provider: &str) -> Option<&EncryptedKeyRecord> {
         match provider {
-            "google-ai-studio" => self.google_ai_studio.as_ref(),
+            "openrouter" => self.open_router.as_ref(),
             "imgbb" => self.imgbb.as_ref(),
             _ => None,
         }
@@ -111,7 +111,7 @@ impl ProfileKeyRecords {
         record: EncryptedKeyRecord,
     ) -> std::result::Result<Option<EncryptedKeyRecord>, &'static str> {
         match provider {
-            "google-ai-studio" => Ok(self.google_ai_studio.replace(record)),
+            "openrouter" => Ok(self.open_router.replace(record)),
             "imgbb" => Ok(self.imgbb.replace(record)),
             _ => Err("unsupported API-key provider"),
         }
@@ -119,14 +119,14 @@ impl ProfileKeyRecords {
 
     pub fn remove(&mut self, provider: &str) -> Option<EncryptedKeyRecord> {
         match provider {
-            "google-ai-studio" => self.google_ai_studio.take(),
+            "openrouter" => self.open_router.take(),
             "imgbb" => self.imgbb.take(),
             _ => None,
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.google_ai_studio.is_none() && self.imgbb.is_none()
+        self.open_router.is_none() && self.imgbb.is_none()
     }
 }
 

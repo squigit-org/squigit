@@ -6,6 +6,9 @@ use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
+use std::sync::Mutex;
+
+static ATTACHMENT_MANIFEST_LOCK: Mutex<()> = Mutex::new(());
 
 use crate::cas::AttachmentFileType;
 use crate::error::{Result, StorageError};
@@ -211,7 +214,16 @@ impl ThreadStorage {
                 .and_then(|value| value.to_str())
                 .unwrap_or("attachment")
                 .to_string();
-            let display_name = names.get(&hash).cloned().unwrap_or(fallback_name);
+            let display_name = names
+                .get(&hash)
+                .cloned()
+                .or_else(|| {
+                    manifest
+                        .iter()
+                        .find(|entry| entry.attachment_hash == hash)
+                        .map(|entry| entry.display_name.clone())
+                })
+                .unwrap_or(fallback_name);
             let fresh = self.attachment_manifest_entry(&hash, &display_name, *timestamp)?;
 
             if let Some(existing) = manifest
@@ -231,6 +243,42 @@ impl ThreadStorage {
 
         sort_attachment_manifest(manifest, initial_hash);
         Ok(())
+    }
+
+    fn save_attachment_manifest(
+        &self,
+        directory: &Path,
+        manifest: &AttachmentManifest,
+    ) -> Result<()> {
+        let _guard = ATTACHMENT_MANIFEST_LOCK.lock().map_err(|_| {
+            StorageError::KeyStore("Attachment manifest is unavailable".to_string())
+        })?;
+        let mut manifest = manifest.clone();
+        self.populate_attachment_briefs(&mut manifest);
+        super::atomic_write(
+            &attachment_manifest_path(directory),
+            serde_json::to_string_pretty(&manifest)?.as_bytes(),
+        )
+    }
+
+    fn populate_attachment_briefs(&self, manifest: &mut AttachmentManifest) {
+        for entry in manifest {
+            if let Ok(object) = self.load_object_manifest(&entry.attachment_hash) {
+                if object.file_context.file_brief.is_some() {
+                    entry.file_brief = object.file_context.file_brief;
+                }
+            }
+        }
+    }
+
+    pub fn refresh_attachment_briefs(&self, conversation_id: &str) -> Result<()> {
+        let _guard = ATTACHMENT_MANIFEST_LOCK.lock().map_err(|_| {
+            StorageError::KeyStore("Attachment manifest is unavailable".to_string())
+        })?;
+        let path = attachment_manifest_path(&self.thread_dir(conversation_id));
+        let mut manifest: AttachmentManifest = serde_json::from_str(&fs::read_to_string(&path)?)?;
+        self.populate_attachment_briefs(&mut manifest);
+        super::atomic_write(&path, serde_json::to_string_pretty(&manifest)?.as_bytes())
     }
 
     fn save_thread_files(&self, thread: &ThreadData) -> Result<()> {
@@ -258,10 +306,7 @@ impl ThreadStorage {
             &messages_path(&thread_dir),
             serde_json::to_string_pretty(&thread.messages)?.as_bytes(),
         )?;
-        super::atomic_write(
-            &attachment_manifest_path(&thread_dir),
-            serde_json::to_string_pretty(&thread.attachment_manifest)?.as_bytes(),
-        )?;
+        self.save_attachment_manifest(&thread_dir, &thread.attachment_manifest)?;
         Ok(())
     }
 
@@ -334,7 +379,7 @@ impl ThreadStorage {
                 file_type: mention
                     .file_type
                     .clone()
-                    .unwrap_or(AttachmentFileType::ImageUpload),
+                    .unwrap_or(AttachmentFileType::Image),
                 file_brief: None,
                 last_mention_at: timestamp,
             });
@@ -424,10 +469,7 @@ impl ThreadStorage {
             &messages_path(&thread_dir),
             serde_json::to_string_pretty(&sidechat.messages)?.as_bytes(),
         )?;
-        super::atomic_write(
-            &attachment_manifest_path(&thread_dir),
-            serde_json::to_string_pretty(&sidechat.attachment_manifest)?.as_bytes(),
-        )?;
+        self.save_attachment_manifest(&thread_dir, &sidechat.attachment_manifest)?;
         Ok(())
     }
 

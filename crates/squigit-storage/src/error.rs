@@ -24,8 +24,8 @@ pub enum StorageError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
-    /// CAS only stores uploadable images and PDFs.
-    #[error("Unsupported attachment type: {0}. Only images and PDFs are uploaded; text files are cited by path.")]
+    /// CAS stores local images and supported documents.
+    #[error("Unsupported attachment type: {0}. Images and supported documents are stored locally; text files are cited by path.")]
     UnsupportedAttachment(String),
 
     /// Empty image provided.

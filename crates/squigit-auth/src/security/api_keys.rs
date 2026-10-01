@@ -7,41 +7,40 @@ use crate::{ProfileError, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ApiKeyProvider {
-    GoogleAiStudio,
+    OpenRouter,
     ImgBb,
 }
 
 impl ApiKeyProvider {
     pub fn display_name(self) -> &'static str {
         match self {
-            Self::GoogleAiStudio => "Google AI Studio",
+            Self::OpenRouter => "OpenRouter",
             Self::ImgBb => "ImgBB",
         }
     }
 
     pub fn storage_key_name(self) -> &'static str {
         match self {
-            Self::GoogleAiStudio => "google-ai-studio",
+            Self::OpenRouter => "openrouter",
             Self::ImgBb => "imgbb",
         }
     }
 
     pub fn is_valid_key(self, key: &str) -> bool {
         match self {
-            Self::GoogleAiStudio => {
-                let is_standard = key.starts_with("AIzaSy") && key.len() == 39;
-                let is_prefixed = key.starts_with("AQ.") && key.len() >= 50 && key.len() <= 60;
-                is_standard || is_prefixed
-            }
+            Self::OpenRouter => key.strip_prefix("sk-or-v1-").is_some_and(|suffix| {
+                !suffix.is_empty()
+                    && suffix
+                        .bytes()
+                        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+            }),
             Self::ImgBb => key.len() == 32,
         }
     }
 
     pub fn validation_hint(self) -> &'static str {
         match self {
-            Self::GoogleAiStudio => {
-                "Expected a key that starts with 'AIzaSy' (39 chars) or 'AQ.' (50-60 chars)."
-            }
+            Self::OpenRouter => "Expected an OpenRouter key starting with sk-or-v1-.",
             Self::ImgBb => "Expected a 32-character API key.",
         }
     }
@@ -52,7 +51,7 @@ impl FromStr for ApiKeyProvider {
 
     fn from_str(value: &str) -> Result<Self> {
         match value {
-            "google-ai-studio" => Ok(Self::GoogleAiStudio),
+            "openrouter" => Ok(Self::OpenRouter),
             "imgbb" => Ok(Self::ImgBb),
             other => Err(ProfileError::InvalidProvider(other.to_owned())),
         }

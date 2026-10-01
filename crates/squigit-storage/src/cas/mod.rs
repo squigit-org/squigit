@@ -16,7 +16,7 @@ mod types;
 
 pub use types::{
     AttachmentFileType, DocumentConversion, ImageRendition, ObjectFileContext, ObjectManifest,
-    ObjectRemote, ReverseImageSearchCache, StoredImage, OBJECT_MANIFEST_SCHEMA_VERSION,
+    ReverseImageSearchCache, StoredImage, OBJECT_MANIFEST_SCHEMA_VERSION,
 };
 
 const OBJECT_MANIFEST_FILE: &str = "manifest.json";
@@ -57,10 +57,8 @@ fn validate_hash(hash: &str) -> Result<()> {
 
 fn classify_extension(extension: &str) -> Result<AttachmentFileType> {
     match extension {
-        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg" => {
-            Ok(AttachmentFileType::ImageUpload)
-        }
-        "pdf" => Ok(AttachmentFileType::DocumentUpload),
+        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg" => Ok(AttachmentFileType::Image),
+        "pdf" => Ok(AttachmentFileType::Document),
         _ => Err(StorageError::UnsupportedAttachment(extension.to_string())),
     }
 }
@@ -214,7 +212,7 @@ impl ThreadStorage {
             ObjectManifest::new(new_file_context.expect("new object context must exist"))
         };
 
-        if manifest.file_context.file_type == AttachmentFileType::ImageUpload {
+        if manifest.file_context.file_type == AttachmentFileType::Image {
             let tone = explicit_tone
                 .as_deref()
                 .map(str::trim)
@@ -404,36 +402,6 @@ impl ThreadStorage {
         Ok(ObjectManifestLock { file })
     }
 
-    pub fn has_object_remotes(&self) -> Result<bool> {
-        if !self.objects_dir.exists() {
-            return Ok(false);
-        }
-        for prefix in fs::read_dir(&self.objects_dir)? {
-            let prefix = prefix?.path();
-            if !prefix.is_dir() {
-                continue;
-            }
-            for object in fs::read_dir(prefix)? {
-                let object = object?.path();
-                let Some(hash) = object.file_name().and_then(|value| value.to_str()) else {
-                    continue;
-                };
-                if validate_hash(hash).is_err() {
-                    continue;
-                }
-                let manifest_path = object.join(OBJECT_MANIFEST_FILE);
-                if !manifest_path.exists() {
-                    continue;
-                }
-                if !self.load_object_manifest(hash)?.object_remotes.is_empty() {
-                    return Ok(true);
-                }
-            }
-        }
-        Ok(false)
-    }
-
-    /// Get the canonical blob path by hash.
     pub fn get_image_path(&self, hash: &str) -> Result<String> {
         self.find_object_blob(hash)
             .map(|path| path.to_string_lossy().to_string())

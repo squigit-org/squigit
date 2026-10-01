@@ -16,17 +16,12 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::{ByokErrorCode, ProfileError, Result};
 
-use super::vault::{
-    OsSecretVault, SecretVault, VaultKey, CAS_BINDING_KEY_ACCOUNT, RECORD_ENCRYPTION_MASTER_ACCOUNT,
-};
+use super::vault::{OsSecretVault, SecretVault, VaultKey, RECORD_ENCRYPTION_MASTER_ACCOUNT};
 use super::{validate_api_key, ApiKeyProvider};
 
 const RECORD_KEY_DOMAIN: &str = "squigit/byok/v1/record-key";
 const RECORD_AAD_DOMAIN: &str = "squigit/byok/v1/record-aad";
-const RUNTIME_CREDENTIAL_DOMAIN: &str = "squigit/cas/v1/runtime-credential";
-const OBJECT_REMOTE_DOMAIN: &str = "squigit/cas/v1/object-remote";
 const SESSION_CREDENTIAL_DOMAIN: &str = "squigit/session/v1/runtime-credential";
-const SESSION_OBJECT_REMOTE_DOMAIN: &str = "squigit/session/v1/object-remote";
 const AES_256_GCM: &str = "aes-256-gcm";
 const HKDF_SHA256: &str = "hkdf-sha256";
 
@@ -35,14 +30,14 @@ type HmacSha256 = Hmac<Sha256>;
 #[derive(Default)]
 struct SessionApiKeys {
     active: bool,
-    google_ai_studio: Option<SecretString>,
+    open_router: Option<SecretString>,
     imgbb: Option<SecretString>,
 }
 
 impl SessionApiKeys {
     fn get(&self, provider: ApiKeyProvider) -> Option<&SecretString> {
         match provider {
-            ApiKeyProvider::GoogleAiStudio => self.google_ai_studio.as_ref(),
+            ApiKeyProvider::OpenRouter => self.open_router.as_ref(),
             ApiKeyProvider::ImgBb => self.imgbb.as_ref(),
         }
     }
@@ -147,9 +142,9 @@ fn canonicalize_api_key(provider: ApiKeyProvider, plaintext: &str) -> Result<Sec
 ///
 /// These credentials are validated and zeroized in memory. They are never
 /// written to the profile key store or the operating-system vault.
-pub fn set_session_api_keys(google_ai_studio: Option<&str>, imgbb: Option<&str>) -> Result<()> {
-    let google_ai_studio = google_ai_studio
-        .map(|value| canonicalize_api_key(ApiKeyProvider::GoogleAiStudio, value))
+pub fn set_session_api_keys(open_router: Option<&str>, imgbb: Option<&str>) -> Result<()> {
+    let open_router = open_router
+        .map(|value| canonicalize_api_key(ApiKeyProvider::OpenRouter, value))
         .transpose()?;
     let imgbb = imgbb
         .map(|value| canonicalize_api_key(ApiKeyProvider::ImgBb, value))
@@ -159,7 +154,7 @@ pub fn set_session_api_keys(google_ai_studio: Option<&str>, imgbb: Option<&str>)
         .map_err(|_| ProfileError::Auth("Process-only API-key state is unavailable.".into()))?;
     *keys = SessionApiKeys {
         active: true,
-        google_ai_studio,
+        open_router,
         imgbb,
     };
     Ok(())
@@ -375,30 +370,6 @@ fn decrypt_record(
     Ok(secret)
 }
 
-fn hmac_digest(key: &VaultKey, fields: &[&str]) -> CredentialDigest {
-    let mut mac = <HmacSha256 as Mac>::new_from_slice(key.expose())
-        .expect("HMAC-SHA256 accepts a 32-byte key");
-    mac.update(&frame(fields));
-    let mut digest = [0u8; 32];
-    digest.copy_from_slice(&mac.finalize().into_bytes());
-    CredentialDigest(Zeroizing::new(digest))
-}
-
-fn runtime_digest(
-    binding_key: &VaultKey,
-    provider: ApiKeyProvider,
-    api_key: &SecretString,
-) -> CredentialDigest {
-    hmac_digest(
-        binding_key,
-        &[
-            RUNTIME_CREDENTIAL_DOMAIN,
-            provider.storage_key_name(),
-            api_key.expose(),
-        ],
-    )
-}
-
 fn session_runtime_digest(provider: ApiKeyProvider, api_key: &SecretString) -> CredentialDigest {
     let mut mac = <HmacSha256 as Mac>::new_from_slice(SESSION_CREDENTIAL_DOMAIN.as_bytes())
         .expect("HMAC-SHA256 accepts the session credential domain");
@@ -406,68 +377,6 @@ fn session_runtime_digest(provider: ApiKeyProvider, api_key: &SecretString) -> C
     let mut digest = [0u8; 32];
     digest.copy_from_slice(&mac.finalize().into_bytes());
     CredentialDigest(Zeroizing::new(digest))
-}
-
-fn is_session_api_key(provider: ApiKeyProvider, api_key: &SecretString) -> bool {
-    session_api_key(provider).is_some_and(|session_key| {
-        session_runtime_digest(provider, &session_key)
-            .matches(&session_runtime_digest(provider, api_key))
-    })
-}
-
-fn session_object_remote_id(
-    provider: ApiKeyProvider,
-    lowercase_object_hash: &str,
-    api_key: &SecretString,
-) -> String {
-    let mut mac = <HmacSha256 as Mac>::new_from_slice(api_key.expose().as_bytes())
-        .expect("HMAC-SHA256 accepts API keys of any length");
-    mac.update(&frame(&[
-        SESSION_OBJECT_REMOTE_DOMAIN,
-        provider.storage_key_name(),
-        lowercase_object_hash,
-    ]));
-    hex::encode(mac.finalize().into_bytes())
-}
-
-pub fn object_remote_id(
-    provider: ApiKeyProvider,
-    lowercase_object_hash: &str,
-    api_key: &SecretString,
-) -> Result<String> {
-    if lowercase_object_hash.len() != 64
-        || !lowercase_object_hash
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    {
-        return Err(ProfileError::byok(
-            ByokErrorCode::MalformedKeyStore,
-            "The CAS object hash is not canonical lowercase hexadecimal.",
-        ));
-    }
-    if is_session_api_key(provider, api_key) {
-        return Ok(session_object_remote_id(
-            provider,
-            lowercase_object_hash,
-            api_key,
-        ));
-    }
-    let vault = OsSecretVault;
-    let binding_key = required_vault_key(
-        &vault,
-        CAS_BINDING_KEY_ACCOUNT,
-        ByokErrorCode::CasBindingKeyMissing,
-    )?;
-    let digest = hmac_digest(
-        &binding_key,
-        &[
-            OBJECT_REMOTE_DOMAIN,
-            provider.storage_key_name(),
-            lowercase_object_hash,
-            api_key.expose(),
-        ],
-    );
-    Ok(hex::encode(&digest.0[..]))
 }
 
 pub fn get_decrypted_api_key(
@@ -502,13 +411,8 @@ fn get_decrypted_api_key_with_vault<V: SecretVault>(
         RECORD_ENCRYPTION_MASTER_ACCOUNT,
         ByokErrorCode::MasterKeyMissing,
     )?;
-    let binding_key = required_vault_key(
-        vault,
-        CAS_BINDING_KEY_ACCOUNT,
-        ByokErrorCode::CasBindingKeyMissing,
-    )?;
     let api_key = decrypt_record(&master, profile_id, provider, &record)?;
-    let runtime_digest = runtime_digest(&binding_key, provider, &api_key);
+    let runtime_digest = session_runtime_digest(provider, &api_key);
     Ok(Some(DecryptedApiKey {
         api_key,
         runtime_digest,
@@ -563,7 +467,6 @@ fn encrypt_and_save_api_key_with_vault<V: SecretVault>(
         let mut keys = transaction.load()?;
         let store_was_empty = keys.profiles.is_empty();
         let mut created_master = false;
-        let mut created_binding = false;
 
         let result = (|| {
             let master = match vault.get(RECORD_ENCRYPTION_MASTER_ACCOUNT)? {
@@ -580,38 +483,17 @@ fn encrypt_and_save_api_key_with_vault<V: SecretVault>(
                 }
             };
 
-            let _binding_key = match vault.get(CAS_BINDING_KEY_ACCOUNT)? {
-                Some(key) => key,
-                None => {
-                    if squigit_storage::ThreadStorage::with_config_root(store.base_dir().clone())?
-                        .has_object_remotes()?
-                    {
-                        return Err(ProfileError::byok(
-                            ByokErrorCode::CasBindingKeyMissing,
-                            "CAS remotes exist but their OS-vault binding key is missing. Restore the vault entry or remove the affected object metadata before saving credentials.",
-                        ));
-                    }
-                    created_binding = true;
-                    create_and_verify_vault_key(vault, CAS_BINDING_KEY_ACCOUNT)?
-                }
-            };
-
             let record = encrypt_record(&master, profile_id, provider, &plaintext)?;
             keys.profiles
                 .entry(profile_id.to_owned())
                 .or_default()
                 .insert(provider.storage_key_name(), record)
-                .map_err(|message| {
-                    ProfileError::byok(ByokErrorCode::MalformedKeyStore, message)
-                })?;
+                .map_err(|message| ProfileError::byok(ByokErrorCode::MalformedKeyStore, message))?;
             transaction.save(&keys)?;
             Ok(())
         })();
 
         if result.is_err() {
-            if created_binding {
-                let _ = vault.delete(CAS_BINDING_KEY_ACCOUNT);
-            }
             if created_master {
                 let _ = vault.delete(RECORD_ENCRYPTION_MASTER_ACCOUNT);
             }
