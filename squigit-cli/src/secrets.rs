@@ -16,9 +16,9 @@ pub fn initialize(demo: bool) -> Result<(), String> {
         return Ok(());
     }
 
-    let gemini = environment_secret("GEMINI_API_KEY");
+    let openrouter = environment_secret("OPENROUTER_API_KEY");
     let imgbb = environment_secret("IMGBB_API_KEY");
-    squigit::cli::initialize_contributor_mode(gemini.as_deref(), imgbb.as_deref())?;
+    squigit::cli::initialize_contributor_mode(openrouter.as_deref(), imgbb.as_deref())?;
     Ok(())
 }
 

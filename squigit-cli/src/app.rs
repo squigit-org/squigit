@@ -8,7 +8,7 @@ use crate::state::{
 };
 use crate::tasks::{self, TaskEvent};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use squigit::brain::provider::gemini::models::AvailableModel;
+use squigit::brain::provider::models::AvailableModel;
 use squigit::settings::ConfigUpdate;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -183,7 +183,7 @@ impl App {
             self.request_models();
             self.state.set_notice(
                 NoticeKind::Warning,
-                "Waiting for Gemini models. Open /model to retry if loading fails.",
+                "Waiting for OpenRouter models. Open /model to retry if loading fails.",
             );
             return None;
         }
@@ -461,10 +461,10 @@ impl App {
                 });
                 self.state.view = View::Reveal;
             }
-            MenuAction::CancelAttachmentJobs => {
-                self.state.busy = Some("stopping attachment jobs".to_string());
+            MenuAction::CancelBrainJobs => {
+                self.state.busy = Some("stopping responses".to_string());
                 self.state.return_home();
-                tasks::cancel_attachment_jobs(&self.sender);
+                tasks::cancel_brain_jobs(&self.sender);
             }
             MenuAction::CancelOcrJob { id } => {
                 self.state.busy = Some("stopping OCR".to_string());
@@ -532,22 +532,8 @@ impl App {
                     self.guest_key_error();
                     return;
                 };
-                match squigit::settings::validate_api_key_format(&provider, &value)
-                    .and_then(|valid| {
-                        valid
-                            .then_some(())
-                            .ok_or_else(|| "The API key format is invalid".to_string())
-                    })
-                    .and_then(|()| squigit::settings::set_api_key(&profile_id, &provider, &value))
-                {
-                    Ok(()) => {
-                        self.refresh_account();
-                        self.state.return_home();
-                        self.state
-                            .set_notice(NoticeKind::Success, "API key saved securely");
-                    }
-                    Err(error) => self.state.set_notice(NoticeKind::Error, error),
-                }
+                self.state.busy = Some("validating OpenRouter key".to_string());
+                tasks::save_key(&self.sender, profile_id, provider, value);
                 self.state.prompt_input.clear();
             }
             PromptAction::ConfirmDelete if value == "DELETE" => {
@@ -664,7 +650,7 @@ impl App {
             })
             .unwrap_or_else(|| vec![self.model_loading_item("AI model")]);
         items.extend(
-            squigit::brain::provider::gemini::models::MODEL_EFFORTS
+            squigit::brain::provider::models::MODEL_EFFORTS
                 .iter()
                 .map(|effort| MenuItem {
                     section: "Reasoning effort".to_string(),
@@ -706,9 +692,9 @@ impl App {
         MenuItem {
             section: section.to_string(),
             label: if self.models_loading {
-                "Loading Gemini models..."
+                "Loading OpenRouter models..."
             } else {
-                "Retry Gemini model listing"
+                "Retry OpenRouter model listing"
             }
             .to_string(),
             detail: String::new(),
@@ -746,7 +732,7 @@ impl App {
             })
             .unwrap_or_else(|| vec![self.model_loading_item("Default AI model")]);
         items.extend(
-            squigit::brain::provider::gemini::models::MODEL_EFFORTS
+            squigit::brain::provider::models::MODEL_EFFORTS
                 .iter()
                 .map(|effort| MenuItem {
                     section: "Default reasoning effort".to_string(),
@@ -868,10 +854,10 @@ impl App {
         let mut items = vec![
             MenuItem {
                 section: "API keys".to_string(),
-                label: "Set Gemini API key".to_string(),
-                detail: configured_label(self.state.gemini_configured),
+                label: "Set OpenRouter API key".to_string(),
+                detail: configured_label(self.state.openrouter_configured),
                 action: MenuAction::ConfigureKey {
-                    provider: "google-ai-studio".to_string(),
+                    provider: "openrouter".to_string(),
                 },
             },
             MenuItem {
@@ -883,13 +869,13 @@ impl App {
                 },
             },
         ];
-        if self.state.gemini_configured {
+        if self.state.openrouter_configured {
             items.push(MenuItem {
                 section: "Delete".to_string(),
-                label: "Delete Gemini API key".to_string(),
+                label: "Delete OpenRouter API key".to_string(),
                 detail: String::new(),
                 action: MenuAction::DeleteKey {
-                    provider: "google-ai-studio".to_string(),
+                    provider: "openrouter".to_string(),
                 },
             });
         }
@@ -913,13 +899,13 @@ impl App {
             return;
         }
         let mut items = Vec::new();
-        if self.state.gemini_configured {
+        if self.state.openrouter_configured {
             items.push(MenuItem {
                 section: "Reveal".to_string(),
-                label: "Gemini API key".to_string(),
+                label: "OpenRouter API key".to_string(),
                 detail: "requires PIN".to_string(),
                 action: MenuAction::RevealKey {
-                    provider: "google-ai-studio".to_string(),
+                    provider: "openrouter".to_string(),
                 },
             });
         }
@@ -940,9 +926,9 @@ impl App {
     fn open_stop_menu(&mut self) {
         let mut items = vec![MenuItem {
             section: "Attachments".to_string(),
-            label: "Cancel all preparation and upload jobs".to_string(),
+            label: "Cancel all response jobs".to_string(),
             detail: String::new(),
-            action: MenuAction::CancelAttachmentJobs,
+            action: MenuAction::CancelBrainJobs,
         }];
         if let Ok(snapshot) = squigit::settings::load_ocr_models() {
             items.extend(
@@ -1261,6 +1247,22 @@ impl App {
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }
             }
+            TaskEvent::Response {
+                conversation_id,
+                result,
+            } => {
+                if self
+                    .state
+                    .current_thread
+                    .as_ref()
+                    .is_some_and(|thread| thread.id == conversation_id)
+                {
+                    match result {
+                        Ok(content) => self.state.set_notice(NoticeKind::Info, content),
+                        Err(error) => self.state.set_notice(NoticeKind::Error, error),
+                    }
+                }
+            }
             TaskEvent::Submission(result) => {
                 self.state.busy = None;
                 match result {
@@ -1302,6 +1304,18 @@ impl App {
                     Ok(url) => self
                         .state
                         .set_notice(NoticeKind::Success, format!("Opened Google Lens: {url}")),
+                    Err(error) => self.state.set_notice(NoticeKind::Error, error),
+                }
+            }
+            TaskEvent::KeySaved(result) => {
+                self.state.busy = None;
+                match result {
+                    Ok(()) => {
+                        self.refresh_account();
+                        self.state.return_home();
+                        self.state
+                            .set_notice(NoticeKind::Success, "API key saved securely");
+                    }
                     Err(error) => self.state.set_notice(NoticeKind::Error, error),
                 }
             }
@@ -1481,6 +1495,22 @@ impl App {
             self.open_ocr_runs();
             return;
         }
+        if let Some(thread) = self.state.current_thread.as_ref() {
+            if let Ok(jobs) = squigit::thread::get_thread_jobs_snapshot() {
+                let running = jobs
+                    .iter()
+                    .filter(|job| job.thread_id == thread.id && !job.is_terminal())
+                    .collect::<Vec<_>>();
+                if !running.is_empty() {
+                    for job in running {
+                        squigit::thread::cancel_brain_job(&job.job_id);
+                    }
+                    self.state
+                        .set_notice(NoticeKind::Info, "Stopped the running AI jobs.");
+                    return;
+                }
+            }
+        }
         if self
             .state
             .busy
@@ -1534,7 +1564,7 @@ fn back_item() -> MenuItem {
 
 fn provider_label(provider: &str) -> &str {
     match provider {
-        "google-ai-studio" => "Gemini",
+        "openrouter" => "OpenRouter",
         "imgbb" => "ImgBB",
         other => other,
     }

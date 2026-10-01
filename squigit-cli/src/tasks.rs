@@ -1,7 +1,7 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use squigit::brain::provider::gemini::models::AvailableModel;
+use squigit::brain::provider::models::AvailableModel;
 use squigit::cli::CliSubmissionRequest;
 use squigit::thread::{ImageThreadCreation, MessageAttachmentInput};
 use squigit::update::{PendingUpdate, UpdateShell};
@@ -32,15 +32,20 @@ pub enum TaskEvent {
     Login(Result<(), String>),
     Analyze(Result<ImageThreadCreation, String>),
     Submission(Result<SubmissionOutcome, String>),
+    Response {
+        conversation_id: String,
+        result: Result<String, String>,
+    },
     GeneratedTitle(Result<String, String>),
     Lens(Result<String, String>),
     Cancelled(Result<String, String>),
+    KeySaved(Result<(), String>),
 }
 
 pub fn load_models(sender: &UnboundedSender<TaskEvent>, request_id: u64) {
     let sender = sender.clone();
     tokio::spawn(async move {
-        let result = squigit::brain::provider::gemini::models::list_available_models().await;
+        let result = squigit::brain::provider::models::list_available_models().await;
         let _ = sender.send(TaskEvent::Models { request_id, result });
     });
 }
@@ -90,7 +95,21 @@ pub fn analyze(sender: &UnboundedSender<TaskEvent>, source_path: PathBuf) {
             }
         }
         .await;
+        let response_job = result.as_ref().ok().and_then(|creation| {
+            creation
+                .brain_job_id
+                .as_ref()
+                .map(|job| (creation.thread_id.clone(), job.clone()))
+        });
         let _ = sender.send(TaskEvent::Analyze(result));
+        if let Some((conversation_id, job_id)) = response_job {
+            let result =
+                squigit::thread::await_conversation_response(&conversation_id, &job_id).await;
+            let _ = sender.send(TaskEvent::Response {
+                conversation_id,
+                result,
+            });
+        }
     });
 }
 
@@ -102,9 +121,8 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                 message: task.message_markdown,
                 attachment_paths: task.attachment_paths,
                 thread_id: task.thread_id.clone(),
-                model: task.model,
-                effort: task.effort,
-                persist_boundary_log: false,
+                model: task.model.clone(),
+                effort: task.effort.clone(),
             })
             .await?;
             let inputs = submission
@@ -117,7 +135,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                     file_type: Some(descriptor.file_type.clone()),
                 })
                 .collect::<Vec<_>>();
-            let simulated_target: Option<String>;
+            let conversation_target: Option<String>;
             let created_sidechat =
                 if let Some(sidechat_id) = task.thread_id.as_ref().filter(|_| task.is_sidechat) {
                     squigit::thread::append_message(
@@ -127,10 +145,11 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                         submission.text_citations.clone(),
                         None,
                     )?;
-                    simulated_target = Some(sidechat_id.clone());
+                    conversation_target = Some(sidechat_id.clone());
                     None
                 } else if task.thread_id.is_none() {
                     let created = squigit::thread::create_sidechat_thread(
+                        task.model.clone(),
                         submission.canonical_message.clone(),
                         inputs,
                         submission.text_citations.clone(),
@@ -138,7 +157,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                         None,
                     )
                     .await?;
-                    simulated_target = Some(created.sidechat_id.clone());
+                    conversation_target = Some(created.sidechat_id.clone());
                     Some(created)
                 } else if let Some(thread_id) = task.thread_id.clone() {
                     squigit::thread::append_message(
@@ -148,15 +167,19 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                         submission.text_citations.clone(),
                         None,
                     )?;
-                    simulated_target = Some(thread_id);
+                    conversation_target = Some(thread_id);
                     None
                 } else {
                     return Err("Thread id is missing".to_string());
                 };
-            let assistant_text = match simulated_target {
+            let assistant_text = match conversation_target {
                 Some(conversation_id) => Some(
-                    squigit::thread::simulator::run_simulated_assistant_turn(&conversation_id)
-                        .await?,
+                    squigit::thread::generate_conversation_response(
+                        &conversation_id,
+                        task.model,
+                        task.effort,
+                    )
+                    .await?,
                 ),
                 None => None,
             };
@@ -196,15 +219,26 @@ pub fn lens(sender: &UnboundedSender<TaskEvent>, thread_id: String) {
     });
 }
 
-pub fn cancel_attachment_jobs(sender: &UnboundedSender<TaskEvent>) {
+pub fn save_key(
+    sender: &UnboundedSender<TaskEvent>,
+    profile_id: String,
+    provider: String,
+    value: String,
+) {
     let sender = sender.clone();
     tokio::spawn(async move {
-        let result = squigit::services::brain()
-            .cancel_all_attachment_jobs()
-            .await
-            .map(|()| "Attachment jobs cancelled".to_string());
-        let _ = sender.send(TaskEvent::Cancelled(result));
+        let secret = squigit::auth::SecretString::new(value);
+        let result = squigit::settings::set_api_key(&profile_id, &provider, secret.expose()).await;
+        let _ = sender.send(TaskEvent::KeySaved(result));
     });
+}
+pub fn cancel_brain_jobs(sender: &UnboundedSender<TaskEvent>) {
+    for job in squigit::services::brain().jobs_snapshot() {
+        if !job.is_terminal() {
+            squigit::services::brain().cancel_job(&job.job_id);
+        }
+    }
+    let _ = sender.send(TaskEvent::Cancelled(Ok("Responses stopped".to_string())));
 }
 
 pub fn cancel_ocr_job(sender: &UnboundedSender<TaskEvent>, job_id: String) {

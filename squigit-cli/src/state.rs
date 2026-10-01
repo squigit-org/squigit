@@ -105,7 +105,7 @@ pub enum MenuAction {
     RevealKey {
         provider: String,
     },
-    CancelAttachmentJobs,
+    CancelBrainJobs,
     CancelOcrJob {
         id: String,
     },
@@ -149,7 +149,7 @@ pub struct AppState {
     pub effort: String,
     pub ocr_language: String,
     pub ocr_enabled: bool,
-    pub gemini_configured: bool,
+    pub openrouter_configured: bool,
     pub imgbb_configured: bool,
     pub view: View,
     pub auth_selection: usize,
@@ -216,7 +216,7 @@ impl AppState {
             effort: settings.config.effort,
             ocr_language: settings.config.ocr_language,
             ocr_enabled: settings.config.ocr_enabled,
-            gemini_configured: settings.google_ai_studio.configured,
+            openrouter_configured: settings.open_router.configured,
             imgbb_configured: settings.imgbb.configured,
             view,
             auth_selection: 0,
@@ -395,7 +395,7 @@ impl AppState {
             .unwrap_or_else(|| "guest".to_string());
         self.ocr_enabled = settings.config.ocr_enabled;
         self.ocr_language = settings.config.ocr_language;
-        self.gemini_configured = settings.google_ai_studio.configured;
+        self.openrouter_configured = settings.open_router.configured;
         self.imgbb_configured = settings.imgbb.configured;
         Ok(())
     }

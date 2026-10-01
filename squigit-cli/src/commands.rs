@@ -91,7 +91,7 @@ pub const COMMANDS: &[CommandSpec] = &[
     CommandSpec::new(
         SlashCommand::Configure,
         "/configure",
-        "configure Gemini and ImgBB API keys",
+        "configure OpenRouter and ImgBB API keys",
     ),
     CommandSpec::new(
         SlashCommand::Reveal,

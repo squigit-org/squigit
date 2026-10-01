@@ -3,22 +3,13 @@
 
 //! Native terminal-facing workflows built from the same services as the GUI.
 
-use crate::brain::{
-    AttachmentPreparationStatus, PrepareAttachmentRequest, PrepareSubmissionAttachmentsRequest,
-    SubmissionAttachmentInput,
-};
 use crate::storage::{
     self, AttachmentFileType, MessageTextCitation, OcrAnnotationEntry, OcrRegion, Profile,
     GOOGLE_ISSUER,
 };
-use crate::{explorer, profile, services, settings};
-use chrono::{SecondsFormat, Utc};
-use serde_json::json;
+use crate::{explorer, settings};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
-
-static CLI_OPERATION_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 const CONTRIBUTOR_EMAIL: &str = "contributor@squigit.app";
 const CONTRIBUTOR_SUBJECT: &str = "squigit-cli-contributor";
@@ -29,16 +20,16 @@ const CONTRIBUTOR_SUBJECT: &str = "squigit-cli-contributor";
 /// created and activated. With no keys, the profile store enters guest mode so
 /// local and OCR-only workflows remain available.
 pub fn initialize_contributor_mode(
-    gemini_api_key: Option<&str>,
+    openrouter_api_key: Option<&str>,
     imgbb_api_key: Option<&str>,
 ) -> Result<bool, String> {
-    let gemini_api_key = nonempty_secret(gemini_api_key);
+    let openrouter_api_key = nonempty_secret(openrouter_api_key);
     let imgbb_api_key = nonempty_secret(imgbb_api_key);
-    crate::auth::set_session_api_keys(gemini_api_key, imgbb_api_key)
+    crate::auth::set_session_api_keys(openrouter_api_key, imgbb_api_key)
         .map_err(|error| error.to_string())?;
 
     let store = storage::profile_store().map_err(|error| error.to_string())?;
-    if gemini_api_key.is_none() && imgbb_api_key.is_none() {
+    if openrouter_api_key.is_none() && imgbb_api_key.is_none() {
         store
             .clear_active_profile_id()
             .map_err(|error| error.to_string())?;
@@ -93,7 +84,6 @@ pub struct CliSubmissionRequest {
     pub thread_id: Option<String>,
     pub model: String,
     pub effort: String,
-    pub persist_boundary_log: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -106,7 +96,6 @@ pub struct CliAttachmentDescriptor {
 
 #[derive(Clone, Debug)]
 pub struct CliSubmissionResult {
-    pub log_path: Option<PathBuf>,
     pub canonical_message: String,
     pub attachment_hashes: Vec<String>,
     pub attachment_descriptors: Vec<CliAttachmentDescriptor>,
@@ -135,7 +124,7 @@ pub struct CliOcrRun {
     pub text: String,
 }
 
-struct PreparedAttachment {
+struct LocalAttachment {
     source_path: PathBuf,
     cas_path: String,
     hash: String,
@@ -250,30 +239,34 @@ pub fn resume_sections_for_directory(directory: &Path) -> Result<Vec<CliResumeSe
 pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissionResult, String> {
     let settings_snapshot = settings::load_settings()?;
     let contributor_mode = crate::auth::session_api_keys_active();
-    let profile_id = settings_snapshot.active_profile_id.ok_or_else(|| {
+    let _profile_id = settings_snapshot.active_profile_id.ok_or_else(|| {
         if contributor_mode {
-            "Gemini is unavailable. Set GEMINI_API_KEY in the shell or repo .env.".to_string()
+            "OpenRouter is unavailable. Set OPENROUTER_API_KEY in the shell or repo .env."
+                .to_string()
         } else {
             "Login is required before sending a message. Run /login.".to_string()
         }
     })?;
-    if !settings_snapshot.google_ai_studio.configured {
+    if !settings_snapshot.open_router.configured {
         return Err(if contributor_mode {
-            "Gemini is unavailable. Set GEMINI_API_KEY in the shell or repo .env.".to_string()
+            "OpenRouter is unavailable. Set OPENROUTER_API_KEY in the shell or repo .env."
+                .to_string()
         } else {
-            "API key missing. Run /configure to add a Gemini API key.".to_string()
+            "API key missing. Run /configure to add an OpenRouter API key.".to_string()
         });
     }
     if request.message.trim().is_empty() && request.attachment_paths.is_empty() {
         return Err("The composer is empty.".to_string());
     }
 
-    let sequence = CLI_OPERATION_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let mut canonical_message = request.message.trim().to_string();
     let mut prepared = Vec::with_capacity(request.attachment_paths.len());
     let mut text_citations = Vec::new();
-    for (index, source_path) in request.attachment_paths.iter().enumerate() {
-        if !is_uploadable_attachment(source_path) {
+    for source_path in &request.attachment_paths {
+        if crate::brain::provider::images::is_disabled_document(&source_path.to_string_lossy()) {
+            return Err("PDF and Office attachments are temporarily unavailable".to_string());
+        }
+        if !crate::thread::is_supported_image(source_path) {
             if source_path.is_file() {
                 text_citations.push(MessageTextCitation {
                     path: normalized_path(source_path),
@@ -286,28 +279,14 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
             }
             continue;
         }
-        let result = services::brain()
-            .prepare_attachment(PrepareAttachmentRequest {
-                job_id: format!("cli-prepare-{sequence}-{index}"),
-                source_path: source_path.to_string_lossy().into_owned(),
-            })
-            .await;
-        if result.status != AttachmentPreparationStatus::Ready {
-            return Err(result
-                .error_message
-                .unwrap_or_else(|| format!("Could not prepare {}", source_path.display())));
-        }
-        prepared.push(PreparedAttachment {
+        let stored = crate::harness::images::store_image_rendition(
+            &std::fs::read(source_path).map_err(|error| error.to_string())?,
+        )?;
+        prepared.push(LocalAttachment {
             source_path: source_path.clone(),
-            cas_path: result
-                .cas_path
-                .ok_or_else(|| "Attachment preparation returned no CAS path".to_string())?,
-            hash: result
-                .attachment_hash
-                .ok_or_else(|| "Attachment preparation returned no object hash".to_string())?,
-            file_type: result
-                .file_type
-                .ok_or_else(|| "Attachment preparation returned no file type".to_string())?,
+            cas_path: stored.cas_path,
+            hash: stored.hash,
+            file_type: AttachmentFileType::Image,
         });
     }
 
@@ -318,60 +297,6 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
         );
     }
 
-    let boundary_id = request
-        .thread_id
-        .clone()
-        .unwrap_or_else(|| "cli-session".to_string());
-    let user_message_id = format!("message-{sequence}");
-    let preflight_id = format!("preflight-{sequence}");
-    let preflight = services::brain()
-        .prepare_submission_attachments(PrepareSubmissionAttachmentsRequest {
-            preflight_id: preflight_id.clone(),
-            thread_id: boundary_id.clone(),
-            user_message_id: user_message_id.clone(),
-            attachments: prepared
-                .iter()
-                .map(|attachment| SubmissionAttachmentInput {
-                    attachment_hash: attachment.hash.clone(),
-                    source_path: Some(attachment.source_path.to_string_lossy().into_owned()),
-                })
-                .collect(),
-        })
-        .await;
-    if let Some(failed) = preflight.results.iter().find(|result| {
-        result.status != AttachmentPreparationStatus::Ready
-            && result.status != AttachmentPreparationStatus::Missing
-    }) {
-        return Err(failed
-            .error_message
-            .clone()
-            .unwrap_or_else(|| format!("Attachment {} failed preflight", failed.attachment_hash)));
-    }
-    if !prepared.is_empty() && preflight.preflight_token.is_none() {
-        return Err("Attachment preflight completed without a token.".to_string());
-    }
-
-    let mut refreshed = Vec::with_capacity(prepared.len());
-    for (mut attachment, result) in prepared.into_iter().zip(&preflight.results) {
-        let old_path = attachment.cas_path.clone();
-        if result.status == AttachmentPreparationStatus::Missing {
-            canonical_message = strip_attachment_mention(&canonical_message, &old_path);
-            continue;
-        }
-        let new_path = result
-            .cas_path
-            .as_ref()
-            .ok_or_else(|| "Attachment preflight returned no CAS path".to_string())?;
-        canonical_message = canonical_message.replace(&old_path, new_path);
-        attachment.cas_path = new_path.clone();
-        attachment.hash = result.attachment_hash.clone();
-        attachment.file_type = result
-            .file_type
-            .clone()
-            .ok_or_else(|| "Attachment preflight returned no file type".to_string())?;
-        refreshed.push(attachment);
-    }
-    let prepared = refreshed;
     canonical_message = canonical_message.trim().to_string();
     if canonical_message.is_empty() && prepared.is_empty() {
         return Err("The composer is empty after missing attachments were removed.".to_string());
@@ -390,62 +315,7 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
         })
         .collect::<Vec<_>>();
 
-    let profile = profile::get_profile_snapshot()
-        .map_err(|error| error.to_string())?
-        .profiles
-        .into_iter()
-        .find(|profile| profile.id == profile_id);
-    let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
-    let attachments_json = prepared
-        .iter()
-        .map(|attachment| {
-            json!({
-                "name": attachment.source_path.file_name().and_then(|value| value.to_str()),
-                "fileType": attachment.file_type,
-                "sourcePath": attachment.source_path,
-                "casPath": attachment.cas_path,
-                "attachmentHash": attachment.hash,
-                "status": "ready",
-            })
-        })
-        .collect::<Vec<_>>();
-    let envelope = json!({
-        "timestamp": timestamp,
-        "profile": {
-            "id": profile_id,
-            "email": profile.as_ref().map(|profile| profile.email.as_str()),
-        },
-        "destination": {
-            "kind": if request.thread_id.is_some() { "thread" } else { "cli-session" },
-            "threadId": request.thread_id,
-        },
-        "ids": {
-            "threadId": boundary_id,
-            "userMessageId": user_message_id,
-            "preflightId": preflight_id,
-        },
-        "composer": {
-            "messageMarkdown": canonical_message,
-            "modelId": request.model,
-            "effort": request.effort,
-            "forceWebSearch": false,
-        },
-        "brainInput": {
-            "userMessage": canonical_message,
-            "attachmentPreflightToken": preflight.preflight_token,
-        },
-        "attachments": attachments_json,
-        "textCitations": text_citations,
-        "preflightResults": preflight.results,
-    });
-    let log_path = if request.persist_boundary_log {
-        write_boundary_log(&timestamp, &envelope)?
-    } else {
-        None
-    };
-
     Ok(CliSubmissionResult {
-        log_path,
         canonical_message,
         attachment_hashes,
         attachment_descriptors,
@@ -514,16 +384,6 @@ fn attachment_display_name(path: &Path) -> String {
         .to_string()
 }
 
-fn is_uploadable_attachment(path: &Path) -> bool {
-    let extension = path
-        .extension()
-        .and_then(|value| value.to_str())
-        .unwrap_or_default();
-    crate::brain::provider::gemini::attachments::mime_from_extension(extension)
-        .starts_with("image/")
-        || crate::harness::is_supported_document_extension(extension)
-}
-
 fn strip_attachment_mention(message: &str, path: &str) -> String {
     let destination = format!("](<file://{path}>)");
     let mut message = message.to_string();
@@ -582,30 +442,6 @@ fn find_composer_mentions(input: &str, directory: &Path) -> Vec<CliComposerMenti
         cursor = end;
     }
     mentions
-}
-
-fn write_boundary_log(
-    timestamp: &str,
-    envelope: &serde_json::Value,
-) -> Result<Option<PathBuf>, String> {
-    let Some(logs_dir) = std::env::var_os("SQUIGIT_LOG_DIR").map(PathBuf::from) else {
-        return Ok(None);
-    };
-    std::fs::create_dir_all(&logs_dir).map_err(|error| error.to_string())?;
-    let file_name = timestamp
-        .chars()
-        .map(|character| {
-            if character.is_ascii_digit() || matches!(character, 'T' | 'Z' | '-') {
-                character
-            } else {
-                '-'
-            }
-        })
-        .collect::<String>();
-    let path = logs_dir.join(format!("{file_name}.log"));
-    let rendered = serde_json::to_string_pretty(envelope).map_err(|error| error.to_string())?;
-    std::fs::write(&path, format!("{rendered}\n")).map_err(|error| error.to_string())?;
-    Ok(Some(path))
 }
 
 fn format_ocr_regions(regions: &[OcrRegion]) -> String {
