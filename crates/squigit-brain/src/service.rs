@@ -1,14 +1,12 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::provider::gemini::attachments::{
-    GeminiFileRef, PrepareAttachmentRequest, PrepareAttachmentResult,
-    PrepareSubmissionAttachmentsRequest, PrepareSubmissionAttachmentsResult,
-};
 use crate::runtime::BrainRuntimeState;
 
+#[derive(Clone)]
 pub struct ImageThreadCredentialSnapshot {
-    credential: crate::provider::gemini::attachments::ActiveCredential,
+    credential: crate::provider::credentials::ActiveCredential,
+    selected_model: String,
 }
 
 impl std::fmt::Debug for ImageThreadCredentialSnapshot {
@@ -28,96 +26,201 @@ impl BrainService {
         }
     }
 
-    pub async fn prepare_attachment(
+    pub fn start_conversation(
         &self,
-        request: PrepareAttachmentRequest,
-    ) -> PrepareAttachmentResult {
-        crate::provider::gemini::attachments::prepare_attachment(&self.runtime, request).await
+        job_id: String,
+        request: crate::ConversationRequest,
+    ) -> Result<String, String> {
+        self.start_conversation_with_snapshot(job_id, request, None)
     }
 
-    pub async fn attachment_preparation_snapshot(
+    pub fn start_conversation_with_snapshot(
         &self,
-        job_id: &str,
-    ) -> Option<PrepareAttachmentResult> {
-        crate::provider::gemini::attachments::attachment_preparation_snapshot(&self.runtime, job_id)
-            .await
+        job_id: String,
+        request: crate::ConversationRequest,
+        credential: Option<ImageThreadCredentialSnapshot>,
+    ) -> Result<String, String> {
+        let thread_id = request.conversation.id().to_string();
+        let manifest = request.conversation.manifest().clone();
+        let job =
+            self.runtime
+                .worker
+                .register(job_id.clone(), thread_id.clone(), "conversation")?;
+        job.update(|snapshot| snapshot.grounding.selected_model = request.model.clone());
+        if !crate::provider::models::valid_model_id(&request.model)
+            || !crate::provider::models::MODEL_EFFORTS.contains(&request.effort.as_str())
+        {
+            job.finish(Err(crate::provider::errors::ProviderError::new(
+                "invalid-model",
+            )));
+            return Ok(job_id);
+        }
+        let credential = match credential
+            .map(|snapshot| snapshot.credential)
+            .map(Ok)
+            .unwrap_or_else(crate::provider::credentials::load_current)
+        {
+            Ok(credential) => credential,
+            Err(error) => {
+                job.finish(Err(crate::provider::errors::ProviderError::local(&error)));
+                return Ok(job_id);
+            }
+        };
+        let runtime = self.runtime.clone();
+        tokio::spawn(async move {
+            let result = tokio::select! {
+                result = async {
+                    crate::provider::summaries::start(&runtime, credential.clone(), thread_id, manifest, request.model.clone());
+                    crate::provider::conversation::run(&runtime, &job, &credential, request).await
+                } => result,
+                _ = job.cancellation.cancelled() => Err(crate::provider::errors::ProviderError::new("stopped")),
+            };
+            job.finish(result);
+        });
+        Ok(job_id)
     }
 
-    pub async fn cancel_attachment(&self, job_id: String) -> Result<(), String> {
-        crate::provider::gemini::attachments::cancel_attachment(&self.runtime, &job_id).await;
-        Ok(())
+    pub fn job_snapshot(&self, job_id: &str) -> Option<crate::JobSnapshot> {
+        self.runtime.worker.snapshot(job_id)
+    }
+    pub fn jobs_snapshot(&self) -> Vec<crate::JobSnapshot> {
+        self.runtime.worker.snapshots()
+    }
+    pub fn cancel_job(&self, job_id: &str) {
+        self.runtime.worker.cancel(job_id);
     }
 
-    pub async fn cancel_all_attachment_jobs(&self) -> Result<(), String> {
-        crate::provider::gemini::attachments::cancel_all_attachment_jobs(&self.runtime).await;
-        Ok(())
-    }
-
-    pub async fn prepare_submission_attachments(
+    async fn title(
         &self,
-        request: PrepareSubmissionAttachmentsRequest,
-    ) -> PrepareSubmissionAttachmentsResult {
-        crate::provider::gemini::attachments::prepare_submission_attachments(&self.runtime, request)
-            .await
+        thread_id: String,
+        input: crate::provider::titles::TitleInput,
+        credential: Option<crate::provider::credentials::ActiveCredential>,
+        selected_model: String,
+    ) -> Result<String, String> {
+        let job = self
+            .runtime
+            .worker
+            .register(crate::jobs::new_job_id(), thread_id, "title")?;
+        job.update(|snapshot| snapshot.grounding.selected_model = selected_model.clone());
+        let loaded = match credential {
+            Some(credential) => Ok(credential),
+            None => tokio::task::spawn_blocking(crate::provider::credentials::load_current)
+                .await
+                .map_err(|error| error.to_string())
+                .and_then(|credential| credential),
+        };
+        let credential = match loaded {
+            Ok(credential) => credential,
+            Err(error) => {
+                let error = crate::provider::errors::ProviderError::local(&error);
+                job.finish(Err(error.clone()));
+                return Err(error.user_error().message);
+            }
+        };
+        let result = tokio::select! {
+            result = async {
+                crate::provider::titles::run(&self.runtime, &job, &credential, input, &selected_model).await
+            } => result,
+            _ = job.cancellation.cancelled() => Err(crate::provider::errors::ProviderError::new("stopped")),
+        };
+        job.finish(result.clone());
+        result.map_err(|error| error.user_error().message)
     }
 
-    pub async fn suggest_thread_title(&self, thread_id: String) -> Result<String, String> {
-        crate::provider::gemini::commands::generation::suggest_thread_title(
-            &self.runtime,
-            thread_id,
+    pub async fn suggest_thread_title(
+        &self,
+        thread_id: String,
+        selected_model: String,
+    ) -> Result<String, String> {
+        let storage = squigit_storage::ThreadStorage::new().map_err(|error| error.to_string())?;
+        let conversation = storage
+            .load_conversation(&thread_id)
+            .map_err(|error| error.to_string())?;
+        let selected_model = conversation
+            .messages()
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                squigit_storage::ThreadMessage::Assistant {
+                    grounding: Some(grounding),
+                    ..
+                } if crate::provider::models::valid_model_id(&grounding.selected_model) => {
+                    Some(grounding.selected_model.clone())
+                }
+                _ => None,
+            })
+            .unwrap_or(selected_model);
+        let input = if conversation.messages().is_empty() {
+            crate::provider::titles::TitleInput::Image(
+                storage
+                    .get_image_path(conversation.initial_hash())
+                    .map_err(|error| error.to_string())?,
+            )
+        } else {
+            crate::provider::titles::TitleInput::Text(
+                serde_json::to_string(conversation.messages())
+                    .map_err(|error| error.to_string())?,
+            )
+        };
+        self.title(thread_id, input, None, selected_model).await
+    }
+
+    pub async fn suggest_thread_title_from_text(
+        &self,
+        text: String,
+        selected_model: String,
+    ) -> Result<String, String> {
+        self.title(
+            String::new(),
+            crate::provider::titles::TitleInput::Text(text),
+            None,
+            selected_model,
         )
         .await
     }
 
-    pub async fn suggest_thread_title_from_text(&self, text: String) -> Result<String, String> {
-        crate::provider::gemini::commands::generation::generate_thread_title_from_text(text).await
+    pub async fn initial_thread_title(
+        &self,
+        thread_id: String,
+        image_path: String,
+        snapshot: ImageThreadCredentialSnapshot,
+    ) -> Result<String, String> {
+        self.title(
+            thread_id,
+            crate::provider::titles::TitleInput::Image(image_path),
+            Some(snapshot.credential),
+            snapshot.selected_model,
+        )
+        .await
     }
 
-    /// Capture the active Google credential for a complete background lifecycle.
-    /// The secret remains opaque to callers and is zeroized with the snapshot.
+    pub async fn initial_sidechat_title(
+        &self,
+        thread_id: String,
+        text: String,
+        snapshot: ImageThreadCredentialSnapshot,
+    ) -> Result<String, String> {
+        self.title(
+            thread_id,
+            crate::provider::titles::TitleInput::Text(text),
+            Some(snapshot.credential),
+            snapshot.selected_model,
+        )
+        .await
+    }
+
     pub async fn capture_image_thread_credential(
         &self,
+        selected_model: String,
     ) -> Result<Option<ImageThreadCredentialSnapshot>, String> {
         Ok(
-            crate::provider::gemini::attachments::capture_image_thread_credential()
+            crate::provider::credentials::capture_image_thread_credential()
                 .await?
-                .map(|credential| ImageThreadCredentialSnapshot { credential }),
+                .map(|credential| ImageThreadCredentialSnapshot {
+                    credential,
+                    selected_model,
+                }),
         )
-    }
-
-    /// Ensure one canonical CAS image has a valid Gemini Files remote using
-    /// exactly the credential captured when the background lifecycle began.
-    pub async fn ensure_thread_image_uploaded_with_snapshot(
-        &self,
-        snapshot: &ImageThreadCredentialSnapshot,
-        image_path: String,
-    ) -> Result<GeminiFileRef, String> {
-        let cancel_token = tokio_util::sync::CancellationToken::new();
-        Ok(
-            crate::provider::gemini::attachments::ensure_file_uploaded_for_credential(
-                &self.runtime,
-                &snapshot.credential,
-                &image_path,
-                &cancel_token,
-            )
-            .await?
-            .file_ref,
-        )
-    }
-
-    /// Generate an initial title using the same credential snapshot that
-    /// resolved or uploaded the Gemini file.
-    pub async fn suggest_thread_title_from_file_with_snapshot(
-        &self,
-        snapshot: &ImageThreadCredentialSnapshot,
-        file: GeminiFileRef,
-    ) -> Result<String, String> {
-        crate::provider::gemini::commands::generation::generate_thread_title_from_image(
-            snapshot.credential.api_key(),
-            file.file_uri,
-            file.mime_type,
-        )
-        .await
     }
 
     pub async fn build_model_attempt_plan(
@@ -125,7 +228,7 @@ impl BrainService {
         model_id: String,
         effort: String,
     ) -> Result<Vec<String>, String> {
-        crate::provider::gemini::models::build_attempt_plan(&model_id, &effort).await
+        crate::provider::models::build_attempt_plan(&model_id, &effort).await
     }
 }
 

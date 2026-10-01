@@ -1,4 +1,14 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod gemini;
+pub(crate) mod conversation;
+pub(crate) mod credentials;
+pub(crate) mod errors;
+pub mod images;
+pub mod models;
+pub(crate) mod request_log;
+pub(crate) mod stream;
+pub(crate) mod summaries;
+pub(crate) mod titles;
+pub(crate) mod tools;
+pub(crate) mod transport;

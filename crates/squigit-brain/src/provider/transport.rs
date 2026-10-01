@@ -1,0 +1,352 @@
+// Copyright 2026 a7mddra
+// SPDX-License-Identifier: Apache-2.0
+
+use super::credentials::ActiveCredential;
+use super::errors::ProviderError;
+use super::models::Candidate;
+use crate::jobs::JobControl;
+use crate::runtime::BrainRuntimeState;
+use serde_json::{json, Value};
+use std::time::Duration;
+
+pub(crate) struct RequestSpec {
+    pub(crate) input: Vec<Value>,
+    pub(crate) system_instruction: String,
+    pub(crate) tools: Vec<Value>,
+    pub(crate) schema: Option<Value>,
+    pub(crate) effort: Option<String>,
+    pub(crate) free: bool,
+}
+pub(crate) fn text(text: impl Into<String>) -> Value {
+    json!({"type":"text", "text":text.into()})
+}
+
+pub(crate) async fn execute(
+    runtime: &BrainRuntimeState,
+    job: &JobControl,
+    credential: &ActiveCredential,
+    candidates: &[Candidate],
+    spec: RequestSpec,
+    scope: Option<&super::tools::ConversationTools>,
+) -> Result<String, ProviderError> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(180))
+        .build()
+        .map_err(|error| ProviderError::local(&error.to_string()))?;
+    if candidates.is_empty() {
+        return Err(ProviderError::new("model-unavailable"));
+    }
+    let original = {
+        let mut messages = vec![json!({"role":"system", "content":spec.system_instruction})];
+        messages.extend(spec.input.clone());
+        messages
+    };
+    let mut messages = original.clone();
+    let mut model_index = 0;
+    let mut bound_model: Option<String> = None;
+    let mut rounds = 0;
+    let mut calls = 0;
+    loop {
+        if rounds >= 24 {
+            return Err(ProviderError::new("invalid-request"));
+        }
+        let candidate = &candidates[model_index];
+        let model = bound_model.as_deref().unwrap_or(&candidate.id);
+        let output_budget = candidate.output_budget(spec.schema.is_some());
+        let mut body = json!({"model":model, "messages":messages, "stream":spec.schema.is_none(), "max_tokens":output_budget, "provider":{"require_parameters":true}});
+        if spec.effort.as_deref() == Some("instant") {
+            body["reasoning"] = if spec.free {
+                json!({"exclude":true})
+            } else {
+                candidate.instant_reasoning()
+            };
+        } else if let Some(reasoning) = candidate.reasoning(spec.effort.as_deref(), output_budget) {
+            body["reasoning"] = reasoning;
+        } else if spec.effort.as_deref() != Some("xhigh") {
+            body["reasoning"] = json!({"exclude":true});
+        }
+        if !spec.tools.is_empty() {
+            body["tools"] = json!(spec.tools);
+            body["tool_choice"] = json!("auto");
+        }
+        if let Some(schema) = &spec.schema {
+            body["response_format"] = json!({"type":"json_schema", "json_schema":{"name":"utility_result", "strict":true, "schema":schema}});
+        }
+        job.update(|snapshot| {
+            if snapshot.phase == "retrying" {
+                snapshot.phase = "thinking".to_string();
+                snapshot.target = None;
+            }
+            snapshot.status = "running".to_string();
+            snapshot.actual_model = Some(model.to_string());
+            snapshot.grounding.actual_model = Some(model.to_string());
+            snapshot.next_model = None;
+            snapshot.attempt += 1;
+            snapshot.retry_after_ms = None;
+        });
+        let slots = if spec.schema.is_some() {
+            runtime.worker.micro_slots.clone()
+        } else {
+            runtime.worker.main_slots.clone()
+        };
+        let permit = tokio::select! {
+            permit = slots.acquire_owned() => permit.map_err(|_| ProviderError::new("unexpected"))?,
+            _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+        };
+        let grounding_checkpoint = job.grounding_tool_count();
+        let result = tokio::select! {
+            result = send(&client, credential, &body, job, spec.effort.as_deref() == Some("xhigh")) => result,
+            _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+        };
+        drop(permit);
+        let response = match result {
+            Ok(response) => response,
+            Err(mut error) => {
+                job.update(|snapshot| snapshot.grounding.tools.truncate(grounding_checkpoint));
+                if let Some(actual) = error
+                    .details
+                    .pointer("/response/model")
+                    .and_then(Value::as_str)
+                    .or_else(|| {
+                        error
+                            .details
+                            .pointer("/response/error/metadata/model")
+                            .and_then(Value::as_str)
+                    })
+                {
+                    job.update(|snapshot| {
+                        snapshot.actual_model = Some(actual.to_string());
+                        snapshot.grounding.actual_model = Some(actual.to_string());
+                    });
+                }
+                if spec.free && error.kind == "rate-limit" {
+                    let remaining = tokio::select! {
+                        remaining = free_daily_remaining(&client, credential) => remaining,
+                        _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+                    };
+                    if let Some(0) = remaining {
+                        error.kind = "quota";
+                        error.retryable = false;
+                        error.details["freeDailyRemaining"] = json!(0);
+                    }
+                }
+                if !error.retryable {
+                    return Err(error);
+                }
+                let delay = error.retry_after.unwrap_or(30).max(1);
+                let next_index = if spec.free {
+                    (model_index + 1) % candidates.len()
+                } else {
+                    model_index
+                };
+                job.update(|snapshot| {
+                    snapshot.status = "retrying".to_string();
+                    snapshot.phase = "retrying".to_string();
+                    snapshot.next_model = Some(candidates[next_index].id.clone());
+                    snapshot.retry_after_ms = Some(delay.saturating_mul(1000));
+                });
+                job.report_error(&error);
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_secs(delay)) => {},
+                    _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+                }
+                if next_index != model_index {
+                    model_index = next_index;
+                    messages = original.clone();
+                    bound_model = None;
+                    rounds = 0;
+                    calls = 0;
+                    job.update(|snapshot| snapshot.grounding.tools.clear());
+                }
+                continue;
+            }
+        };
+        rounds += 1;
+        if let Some(model) = response["model"].as_str() {
+            bound_model = Some(model.to_string());
+            job.update(|snapshot| {
+                snapshot.actual_model = Some(model.to_string());
+                snapshot.grounding.actual_model = Some(model.to_string());
+            });
+        }
+        let choice = response.pointer("/choices/0").ok_or_else(|| {
+            ProviderError::new("empty-output")
+                .with_details(json!({"httpStatus":200,"response":response}))
+        })?;
+        let message = &choice["message"];
+        let function_calls = message["tool_calls"]
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        if function_calls.is_empty() {
+            if choice["finish_reason"] == "length" {
+                return Err(ProviderError::new("output-budget")
+                    .with_details(json!({"httpStatus":200,"response":response})));
+            }
+            if choice["finish_reason"] == "content_filter"
+                || message.get("refusal").is_some_and(|v| !v.is_null())
+            {
+                return Err(ProviderError::new("content-blocked")
+                    .with_details(json!({"httpStatus":200,"response":response})));
+            }
+            let content = message["content"]
+                .as_str()
+                .map(str::to_string)
+                .unwrap_or_else(|| {
+                    message["content"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|part| part["text"].as_str())
+                        .collect::<Vec<_>>()
+                        .join("")
+                });
+            if content.trim().is_empty() {
+                return Err(ProviderError::new("empty-output")
+                    .with_details(json!({"httpStatus":200,"response":response})));
+            }
+            return Ok(content);
+        }
+        let tools = scope.ok_or_else(|| ProviderError::new("invalid-request"))?;
+        let mut assistant =
+            json!({"role":"assistant", "content":message["content"], "tool_calls":function_calls});
+        for key in ["reasoning", "reasoning_details"] {
+            if let Some(value) = message.get(key) {
+                assistant[key] = value.clone();
+            }
+        }
+        messages.push(assistant);
+        let mut internal_images = Vec::new();
+        let mut ids = std::collections::HashSet::new();
+        for call in function_calls {
+            calls += 1;
+            if calls > 32
+                || call["id"].as_str().filter(|id| !id.is_empty()).is_none()
+                || !ids.insert(call["id"].clone())
+            {
+                return Err(ProviderError::new("invalid-request"));
+            }
+            let arguments = call
+                .pointer("/function/arguments")
+                .and_then(Value::as_str)
+                .ok_or_else(|| ProviderError::new("invalid-request"))?;
+            let arguments: Value = serde_json::from_str(arguments).map_err(|error| ProviderError::new("invalid-request").with_details(json!({"message":"Malformed tool arguments", "tool":call["function"]["name"], "parseError":error.to_string()})))?;
+            if !arguments.is_object() {
+                return Err(ProviderError::new("invalid-request"));
+            }
+            let (ack, images) = tokio::select! {
+                result = super::tools::execute(job, tools, call, &arguments) => result,
+                _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+            };
+            messages.push(ack);
+            internal_images.extend(images);
+        }
+        if !internal_images.is_empty() {
+            messages.push(json!({"role":"user", "content":internal_images}));
+        }
+    }
+}
+
+async fn free_daily_remaining(
+    client: &reqwest::Client,
+    credential: &ActiveCredential,
+) -> Option<u64> {
+    let response = client
+        .get("https://openrouter.ai/api/v1/key")
+        .bearer_auth(credential.api_key())
+        .timeout(Duration::from_secs(10))
+        .send()
+        .await
+        .ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+    let body: Value = response.json().await.ok()?;
+    body.pointer("/data/free_model_daily_requests/remaining")
+        .and_then(Value::as_u64)
+}
+async fn send(
+    client: &reqwest::Client,
+    credential: &ActiveCredential,
+    body: &Value,
+    job: &JobControl,
+    show_reasoning: bool,
+) -> Result<Value, ProviderError> {
+    let response = client
+        .post("https://openrouter.ai/api/v1/chat/completions")
+        .bearer_auth(credential.api_key())
+        .header("X-Title", "Squigit")
+        .header("X-OpenRouter-Metadata", "enabled")
+        .json(body)
+        .send()
+        .await
+        .map_err(|error| {
+            ProviderError::new("network").with_details(json!({"message":error.to_string()}))
+        })?;
+    let status = response.status();
+    let retry_header = response
+        .headers()
+        .get("retry-after")
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string);
+    let retry_after = retry_header.as_deref().and_then(|value| {
+        value.parse::<u64>().ok().or_else(|| {
+            chrono::DateTime::parse_from_rfc2822(value)
+                .ok()
+                .map(|date| {
+                    date.timestamp()
+                        .saturating_sub(chrono::Utc::now().timestamp())
+                        .max(0) as u64
+                })
+        })
+    });
+    let event_stream = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with("text/event-stream"));
+    if status.is_success() && event_stream {
+        return super::stream::collect(response, job, credential, show_reasoning)
+            .await
+            .map_err(|mut error| {
+                error.retry_after = retry_after;
+                error.details["retryAfter"] = json!(retry_header);
+                if error.kind == "payment" && retry_after.is_none() {
+                    error.retryable = false;
+                }
+                error
+            });
+    }
+    let raw = response.text().await.map_err(|error| {
+        ProviderError::new("network")
+            .with_details(json!({"httpStatus":status.as_u16(), "message":error.to_string()}))
+    })?;
+    // Providers occasionally echo secrets in their error metadata. Diagnostics never retain those values.
+    let raw = raw.replace(credential.api_key(), "[REDACTED]");
+    let response = serde_json::from_str::<Value>(&raw).unwrap_or_else(|_| Value::String(raw));
+    if !status.is_success()
+        || response.get("error").is_some()
+        || response.pointer("/choices/0/error").is_some()
+        || response
+            .pointer("/choices/0/finish_reason")
+            .is_some_and(|value| value == "error")
+    {
+        let mut error = ProviderError::response(status.as_u16(), &response);
+        error.retry_after = retry_after;
+        error.details["retryAfter"] = json!(retry_header);
+        if error.kind == "payment" && retry_after.is_none() {
+            error.retryable = false;
+        }
+        return Err(error);
+    }
+    if show_reasoning {
+        if let Some(message) = response.pointer("/choices/0/message") {
+            let public = super::stream::reasoning_text(message);
+            if !public.trim().is_empty() {
+                job.tool("thinking", public, crate::jobs::now_ms(), None);
+                job.phase("finalizing", None);
+            }
+        }
+    }
+    Ok(response)
+}
