@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use crate::services::brain;
@@ -76,44 +76,11 @@ pub fn fork_sidechat_at_message(
     })
 }
 
-#[derive(Clone)]
-struct BrainJobRecord {
-    job_id: String,
-    thread_id: String,
-    status: String,
-    phase: String,
-    error: Option<String>,
-}
-
 struct PendingImageThreadCredential {
     credential: Option<ImageThreadCredentialSnapshot>,
     captured_at: Instant,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BrainJobSnapshot {
-    pub job_id: String,
-    pub thread_id: String,
-    pub status: String,
-    pub phase: String,
-    pub error: Option<String>,
-}
-
-impl From<&BrainJobRecord> for BrainJobSnapshot {
-    fn from(job: &BrainJobRecord) -> Self {
-        Self {
-            job_id: job.job_id.clone(),
-            thread_id: job.thread_id.clone(),
-            status: job.status.clone(),
-            phase: job.phase.clone(),
-            error: job.error.clone(),
-        }
-    }
-}
-
-static BRAIN_JOBS: OnceLock<Arc<Mutex<BTreeMap<u64, BrainJobRecord>>>> = OnceLock::new();
-static NEXT_BRAIN_JOB_ID: AtomicU64 = AtomicU64::new(1);
 static PENDING_IMAGE_THREAD_CREDENTIALS: OnceLock<
     Mutex<BTreeMap<String, PendingImageThreadCredential>>,
 > = OnceLock::new();
@@ -125,20 +92,9 @@ pub(super) fn active_storage() -> ThreadResult<ThreadStorage> {
     storage::thread_store().map_err(|error| error.to_string())
 }
 
-fn brain_jobs() -> &'static Arc<Mutex<BTreeMap<u64, BrainJobRecord>>> {
-    BRAIN_JOBS.get_or_init(|| Arc::new(Mutex::new(BTreeMap::new())))
-}
-
 fn pending_image_thread_credentials(
 ) -> &'static Mutex<BTreeMap<String, PendingImageThreadCredential>> {
     PENDING_IMAGE_THREAD_CREDENTIALS.get_or_init(|| Mutex::new(BTreeMap::new()))
-}
-
-fn lock_brain_jobs(
-    jobs: &Mutex<BTreeMap<u64, BrainJobRecord>>,
-) -> ThreadResult<std::sync::MutexGuard<'_, BTreeMap<u64, BrainJobRecord>>> {
-    jobs.lock()
-        .map_err(|_| "Thread job state is unavailable".to_string())
 }
 
 fn thread_index_lock() -> &'static Mutex<()> {
@@ -153,7 +109,9 @@ fn lock_pending_image_thread_credentials(
 }
 
 pub async fn prepare_image_thread_creation() -> ThreadResult<String> {
-    let credential = brain().capture_image_thread_credential().await?;
+    let credential = brain()
+        .capture_image_thread_credential(settings::load_config()?.model)
+        .await?;
     let sequence = NEXT_IMAGE_THREAD_CREATION_ID.fetch_add(1, Ordering::Relaxed);
     let creation_id = format!("image-thread-creation-{sequence}");
     let now = Instant::now();
@@ -201,7 +159,7 @@ fn take_image_thread_credential(
     Ok(entry.credential)
 }
 
-fn is_supported_image(path: &Path) -> bool {
+pub(crate) fn is_supported_image(path: &Path) -> bool {
     path.extension()
         .and_then(|extension| extension.to_str())
         .map(str::to_ascii_lowercase)
@@ -305,22 +263,6 @@ fn create_thread_on_disk(
     Ok((metadata.id, rendition.cas_path))
 }
 
-fn update_brain_job(
-    jobs: &Mutex<BTreeMap<u64, BrainJobRecord>>,
-    sequence: u64,
-    status: &str,
-    phase: &str,
-    error: Option<String>,
-) {
-    if let Ok(mut records) = lock_brain_jobs(jobs) {
-        if let Some(job) = records.get_mut(&sequence) {
-            job.status = status.to_string();
-            job.phase = phase.to_string();
-            job.error = error;
-        }
-    }
-}
-
 fn persist_generated_title(thread_id: &str, title: &str) -> ThreadResult<()> {
     let title = title.trim();
     if title.is_empty() {
@@ -342,73 +284,6 @@ fn persist_generated_title(thread_id: &str, title: &str) -> ThreadResult<()> {
         .map_err(|error| error.to_string())
 }
 
-async fn run_brain_job(
-    sequence: u64,
-    jobs: Arc<Mutex<BTreeMap<u64, BrainJobRecord>>>,
-    thread_id: String,
-    image_path: String,
-    credential: ImageThreadCredentialSnapshot,
-) {
-    update_brain_job(&jobs, sequence, "running", "uploading", None);
-    let result = async {
-        let uploaded = brain()
-            .ensure_thread_image_uploaded_with_snapshot(&credential, image_path)
-            .await?;
-        update_brain_job(&jobs, sequence, "running", "generating-title", None);
-        let title = brain()
-            .suggest_thread_title_from_file_with_snapshot(&credential, uploaded)
-            .await?;
-        let title_thread_id = thread_id.clone();
-        tokio::task::spawn_blocking(move || persist_generated_title(&title_thread_id, &title))
-            .await
-            .map_err(|error| format!("Thread title save task failed: {error}"))??;
-        Ok::<(), String>(())
-    }
-    .await;
-
-    match result {
-        Ok(()) => update_brain_job(&jobs, sequence, "completed", "completed", None),
-        Err(error) => update_brain_job(&jobs, sequence, "failed", "failed", Some(error)),
-    }
-}
-
-fn start_brain_job(
-    thread_id: String,
-    image_path: String,
-    credential: ImageThreadCredentialSnapshot,
-) -> ThreadResult<String> {
-    let sequence = NEXT_BRAIN_JOB_ID.fetch_add(1, Ordering::Relaxed);
-    let job_id = format!("brain-{sequence}");
-    let jobs = brain_jobs();
-    lock_brain_jobs(jobs)?.insert(
-        sequence,
-        BrainJobRecord {
-            job_id: job_id.clone(),
-            thread_id: thread_id.clone(),
-            status: "queued".to_string(),
-            phase: "stored".to_string(),
-            error: None,
-        },
-    );
-    let worker_jobs = Arc::clone(jobs);
-    let crash_jobs = Arc::clone(jobs);
-    let worker = tokio::spawn(async move {
-        run_brain_job(sequence, worker_jobs, thread_id, image_path, credential).await;
-    });
-    tokio::spawn(async move {
-        if let Err(error) = worker.await {
-            update_brain_job(
-                &crash_jobs,
-                sequence,
-                "failed",
-                "failed",
-                Some(format!("Thread job worker crashed: {error}")),
-            );
-        }
-    });
-    Ok(job_id)
-}
-
 pub async fn create_image_thread(
     creation_id: String,
     source_path: String,
@@ -428,9 +303,28 @@ pub async fn create_image_thread(
     .await
     .map_err(|error| format!("Thread creation task failed: {error}"))??;
 
-    let brain_job_id = credential
-        .map(|credential| start_brain_job(thread_id.clone(), image_path, credential))
-        .transpose()?;
+    let brain_job_id = if let Some(credential) = credential {
+        let main_credential = credential.clone();
+        let title_id = thread_id.clone();
+        tokio::spawn(async move {
+            if let Ok(title) = brain()
+                .initial_thread_title(title_id.clone(), image_path, credential)
+                .await
+            {
+                let _ =
+                    tokio::task::spawn_blocking(move || persist_generated_title(&title_id, &title))
+                        .await;
+            }
+        });
+        Some(start_conversation_response_with_snapshot(
+            &thread_id,
+            config.model.clone(),
+            config.effort.clone(),
+            Some(main_credential),
+        )?)
+    } else {
+        None
+    };
     let ocr_job_id = config
         .ocr_enabled
         .then(|| ocr::start_ocr_thread_job(&thread_id, &config.ocr_language))
@@ -443,12 +337,17 @@ pub async fn create_image_thread(
 }
 
 pub async fn create_sidechat_thread(
+    selected_model: String,
     message_markdown: String,
     attachment_inputs: Vec<MessageAttachmentInput>,
     text_citations: Vec<MessageTextCitation>,
     human_text: Option<String>,
     message_context: Option<serde_json::Value>,
 ) -> ThreadResult<SideChatCreation> {
+    let credential = brain()
+        .capture_image_thread_credential(selected_model)
+        .await?;
+    validate_message_inputs(&message_markdown, &attachment_inputs, &text_citations)?;
     let human_text = human_text
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
@@ -484,43 +383,99 @@ pub async fn create_sidechat_thread(
     .await
     .map_err(|error| format!("SideChat creation task failed: {error}"))??;
 
-    let Some(title_source) = human_text else {
-        return Ok(SideChatCreation {
-            sidechat_id,
-            title: initial_title,
+    if let (Some(title_source), Some(credential)) = (human_text, credential) {
+        let metadata_id = sidechat_id.clone();
+        tokio::spawn(async move {
+            if let Ok(title) = brain()
+                .initial_sidechat_title(metadata_id.clone(), title_source, credential)
+                .await
+            {
+                let _ = tokio::task::spawn_blocking(move || {
+                    let _index_guard = thread_index_lock()
+                        .lock()
+                        .map_err(|_| "Thread index is unavailable".to_string())?;
+                    let storage = active_storage()?;
+                    let mut sidechat = storage
+                        .load_sidechat(&metadata_id)
+                        .map_err(|error| error.to_string())?;
+                    if sidechat.metadata.title != DEFAULT_SIDE_CHAT_TITLE {
+                        return Ok::<_, String>(());
+                    }
+                    sidechat.metadata.title = title;
+                    sidechat.metadata.updated_at = Utc::now();
+                    storage
+                        .update_sidechat_metadata(&sidechat.metadata)
+                        .map_err(|error| error.to_string())
+                })
+                .await;
+            }
         });
-    };
+    }
+    Ok(SideChatCreation {
+        sidechat_id,
+        title: initial_title,
+    })
+}
 
-    let generated_title =
-        async { brain().suggest_thread_title_from_text(title_source).await }.await;
-
-    let title = match generated_title {
-        Ok(title) if !title.trim().is_empty() => {
-            let persisted_title = title.trim().to_string();
-            let metadata_id = sidechat_id.clone();
-            let next_title = persisted_title.clone();
-            tokio::task::spawn_blocking(move || {
-                let _index_guard = thread_index_lock()
-                    .lock()
-                    .map_err(|_| "Thread index is unavailable".to_string())?;
-                let storage = active_storage()?;
-                let mut sidechat = storage
-                    .load_sidechat(&metadata_id)
-                    .map_err(|error| error.to_string())?;
-                sidechat.metadata.title = next_title;
-                sidechat.metadata.updated_at = Utc::now();
-                storage
-                    .update_sidechat_metadata(&sidechat.metadata)
-                    .map_err(|error| error.to_string())
-            })
-            .await
-            .map_err(|error| format!("SideChat title save task failed: {error}"))??;
-            persisted_title
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalImage {
+    pub attachment_hash: String,
+    pub cas_path: String,
+}
+pub fn add_local_image(source_path: &str) -> ThreadResult<LocalImage> {
+    if !is_supported_image(Path::new(source_path)) {
+        return Err("Only supported images can be added here. PDF and Office attachments are temporarily unavailable.".to_string());
+    }
+    let stored = crate::harness::images::store_image_rendition(
+        &std::fs::read(source_path).map_err(|error| error.to_string())?,
+    )?;
+    Ok(LocalImage {
+        attachment_hash: stored.hash,
+        cas_path: stored.cas_path,
+    })
+}
+fn validate_message_inputs(
+    message: &str,
+    inputs: &[MessageAttachmentInput],
+    citations: &[MessageTextCitation],
+) -> ThreadResult<()> {
+    let storage = active_storage()?;
+    if crate::harness::tools::cited_paths(message)
+        .iter()
+        .any(|path| crate::brain::provider::images::is_disabled_document(&path.to_string_lossy()))
+    {
+        return Err("PDF and Office attachments are temporarily unavailable".to_string());
+    }
+    for input in inputs {
+        if input
+            .file_type
+            .as_ref()
+            .is_some_and(|kind| *kind != AttachmentFileType::Image)
+            || input
+                .source_path
+                .as_deref()
+                .is_some_and(crate::brain::provider::images::is_disabled_document)
+            || storage
+                .load_object_manifest(&input.attachment_hash)
+                .map_err(|error| error.to_string())?
+                .file_context
+                .file_type
+                != AttachmentFileType::Image
+        {
+            return Err("PDF and Office attachments are temporarily unavailable".to_string());
         }
-        _ => initial_title,
-    };
-
-    Ok(SideChatCreation { sidechat_id, title })
+        storage
+            .find_object_blob(&input.attachment_hash)
+            .map_err(|error| error.to_string())?;
+    }
+    if citations
+        .iter()
+        .any(|citation| crate::brain::provider::images::is_disabled_document(&citation.path))
+    {
+        return Err("PDF and Office attachments are temporarily unavailable".to_string());
+    }
+    Ok(())
 }
 
 fn message_attachments(inputs: Vec<MessageAttachmentInput>) -> Vec<MessageAttachment> {
@@ -553,9 +508,17 @@ pub fn append_message(
     text_citations: Vec<MessageTextCitation>,
     message_context: Option<serde_json::Value>,
 ) -> ThreadResult<ThreadMessage> {
+    validate_message_inputs(&message_markdown, &attachments, &text_citations)?;
     let _index_guard = thread_index_lock()
         .lock()
         .map_err(|_| "Thread index is unavailable".to_string())?;
+    if brain().jobs_snapshot().iter().any(|job| {
+        job.thread_id == conversation_id && job.task == "conversation" && !job.is_terminal()
+    }) {
+        return Err(
+            "Wait for the current response or stop it before sending another message.".to_string(),
+        );
+    }
     let storage = active_storage()?;
     let message = ThreadMessage::user_with_attachments(
         message_markdown,
@@ -633,8 +596,8 @@ fn conversation_snapshot(
             attachment_hash: entry.attachment_hash.clone(),
             display_name: entry.display_name.clone(),
             file_type: match entry.file_type {
-                AttachmentFileType::ImageUpload => "image-upload".to_string(),
-                AttachmentFileType::DocumentUpload => "document-upload".to_string(),
+                AttachmentFileType::Image => "image".to_string(),
+                AttachmentFileType::Document => "document".to_string(),
             },
             blob_path: storage
                 .find_object_blob(&entry.attachment_hash)
@@ -657,434 +620,107 @@ pub fn load_conversation(conversation_id: &str) -> ThreadResult<ConversationSnap
     Ok(conversation_snapshot(&storage, &conversation))
 }
 
-pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<BrainJobSnapshot>> {
-    if let Some(jobs) = BRAIN_JOBS.get() {
-        Ok(lock_brain_jobs(jobs)?
-            .values()
-            .map(BrainJobSnapshot::from)
-            .collect())
-    } else {
-        Ok(Vec::new())
+pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<crate::brain::JobSnapshot>> {
+    Ok(brain().jobs_snapshot())
+}
+
+pub fn get_conversation_job(job_id: &str) -> Option<crate::brain::JobSnapshot> {
+    brain().job_snapshot(job_id)
+}
+
+pub fn cancel_brain_job(job_id: &str) {
+    brain().cancel_job(job_id);
+}
+
+pub fn cancel_title_jobs(conversation_id: &str) {
+    for job in brain().jobs_snapshot() {
+        if job.thread_id == conversation_id && job.task == "title" && !job.is_terminal() {
+            brain().cancel_job(&job.job_id);
+        }
     }
 }
 
-/// TEMPORARY DEV API SIMULATOR — remove the whole module when the real API
-/// lands. Shells must treat everything in here as throwaway: the hardcoded
-/// corpus, the weighted shuffle-bag picker, and the thinking-time constants.
-/// Permanent behavior lives in the sibling `append_*` / `load_*` functions.
-pub mod simulator {
-    use std::sync::Mutex;
-    use std::thread;
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+pub fn start_conversation_response(
+    conversation_id: &str,
+    model: String,
+    effort: String,
+) -> ThreadResult<String> {
+    start_conversation_response_with_snapshot(conversation_id, model, effort, None)
+}
 
-    use crate::storage::AssistantError;
-
-    use super::ThreadResult;
-
-    /// Thinking-time range in milliseconds. The GUI randomizes inside this
-    /// range from TypeScript so tuning needs no backend rebuild; the CLI path
-    /// below draws from the same range directly.
-    pub const THINK_MIN_MS: u64 = 1000;
-    pub const THINK_MAX_MS: u64 = 2500;
-
-    struct SimulatedResponse {
-        content: &'static str,
-        weight: u32,
-        web: bool,
-        error: Option<(&'static str, &'static str)>,
-    }
-
-    struct PickerState {
-        bag: Vec<usize>,
-        last: Option<usize>,
-        rng: u64,
-    }
-
-    static PICKER: Mutex<PickerState> = Mutex::new(PickerState {
-        bag: Vec::new(),
-        last: None,
-        rng: 0,
+fn start_conversation_response_with_snapshot(
+    conversation_id: &str,
+    model: String,
+    effort: String,
+    credential: Option<ImageThreadCredentialSnapshot>,
+) -> ThreadResult<String> {
+    let conversation = active_storage()?
+        .load_conversation(conversation_id)
+        .map_err(|error| error.to_string())?;
+    let profile = crate::profile::get_profile_snapshot()
+        .map_err(|error| error.to_string())?
+        .active_profile;
+    let identity = serde_json::json!({
+        "name": profile.as_ref().map(|profile| &profile.name),
+        "email": profile.as_ref().map(|profile| &profile.email),
+        "machine": crate::machine::get_machine_info(),
+        "local_time": chrono::Local::now().to_rfc3339(),
+        "persona": settings::load_persona()?,
     });
-
-    const RESPONSES: &[SimulatedResponse] = &[
-        SimulatedResponse {
-            content: r##"# A closer look at your screenshot
-
-The interface is using a **quiet visual hierarchy**: one primary surface, restrained borders, and a single accent color for interactive elements. The strongest part is that the eye lands on the content before it notices the chrome.
-
-> The useful design rule here is simple: reduce decoration until spacing, type, and state can do the work.
-
-## What is working
-
-- [x] The main action remains obvious without becoming loud.
-- [x] Secondary controls are discoverable on hover.
-- [x] Content width stays readable on a wide screen.
-- [ ] The smallest metadata could use a little more contrast.
-
-| Area | Observation | Recommendation |
-| --- | --- | --- |
-| Layout | Strong left-to-right scan path | Keep the reading column under `76ch` |
-| Color | Accent is used sparingly | Reserve it for links, citations, and active controls |
-| Density | Comfortable overall | Tighten only repeated rows, not prose |
-| Motion | State changes feel calm | Use short, continuous streaming updates |
-
-The spacing also follows a useful rhythm. If the base unit is $s = 4\text{px}$, most gaps can be described by
-
-$$
-S_n = n \cdot s, \qquad n \in \{1, 2, 3, 4, 6, 8\}.
-$$
-
-That small scale is enough to create consistency without making the page feel mechanically uniform.
-
-## A lightweight React shape
-
-```typescript
-type StreamState = {
-  content: string;
-  final: boolean;
-};
-
-export function appendChunk(
-  state: StreamState,
-  chunk: string,
-): StreamState {
-  return {
-    content: state.content + chunk,
-    final: false,
-  };
+    let job_id = format!(
+        "conversation-{}-{}",
+        conversation_id,
+        NEXT_IMAGE_THREAD_CREATION_ID.fetch_add(1, Ordering::Relaxed)
+    );
+    brain().start_conversation_with_snapshot(
+        job_id,
+        crate::brain::ConversationRequest {
+            conversation,
+            model,
+            effort,
+            user_identity: identity,
+        },
+        credential,
+    )
 }
-```
 
-The renderer should receive the entire accumulated string on every update. That lets an unfinished table, formula, or emphasis marker settle naturally as more text arrives.
-
-```rust
-fn next_chunk(chars: &[char], cursor: usize, size: usize) -> String {
-    chars[cursor..(cursor + size).min(chars.len())]
-        .iter()
-        .collect()
+pub async fn generate_conversation_response(
+    conversation_id: &str,
+    model: String,
+    effort: String,
+) -> ThreadResult<String> {
+    let job_id = start_conversation_response(conversation_id, model, effort)?;
+    await_conversation_response(conversation_id, &job_id).await
 }
-```
 
-### Interaction details
-
-1. Keep the assistant surface transparent so it reads as part of the page.
-2. Give the user message a contained surface that mirrors the composer.
-3. Preserve the scroll position while the reader is reviewing older content.
-4. Follow the stream only while the viewport is already near the bottom.
-
-::: tip
-For perceived speed, the first meaningful words matter more than making every chunk the same size.
-:::
-
-Inline code such as `monaco.editor.colorize()` can stay visually distinct without adding a heavy editor frame. The same idea applies to links: [Markstream React](https://github.com/Simon-He95/markstream-vue/tree/main/packages/markstream-react) should look interactive before hover.
-
-For the streaming behavior and parser contract, compare the official React playground <squigitcitation url="https://github.com/Simon-He95/markstream-vue/tree/main/playground-react19" body="The official React 19 playground demonstrates incremental content updates, rich Markdown, and live rendering states.">1</squigitcitation> with the package guide <squigitcitation url="https://markstream.simonhe.me/guide/react-quick-start" body="The quick-start documents NodeRenderer, streaming content, final state, and required styles.">2</squigitcitation>.
-
-Finally, the layout should remain comfortable for mixed-direction content too: **واجهة هادئة، واضحة، وسريعة**. The result is a chat that feels native to the screenshot tool instead of looking like a separate web page embedded inside it.
-"##,
-            weight: 1,
-            web: false,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"Here is a lean, production-ready `AGENTS.md` template designed for CLI agents like OpenAI Codex and Claude Code.
-
-While Codex natively reads `AGENTS.md`, Claude Code natively prioritizes `CLAUDE.md`. The common convention is to keep your root rules in `AGENTS.md` and symlink it so both tools share one source of truth:
-
-```bash
-ln -s AGENTS.md CLAUDE.md
-```
-
----
-
-### `AGENTS.md` Template
-
-```markdown
-# AGENTS.md
-
-## Project & Stack
-- **Summary**: One-line description of the project and primary goal.
-- **Stack**: Language + Version, Framework, Database/ORM, Package Manager.
-
----
-
-## Exact Commands
-
-Never guess scripts or flags. Use these verified commands:
-
-- **Install**: `pnpm install --frozen-lockfile`
-- **Lint & Fix**: `pnpm lint:fix && pnpm format`
-- **Type Check**: `pnpm typecheck`
-- **Single Test**: `pnpm test -- path/to/test.ts`
-- **Build**: `pnpm build`
-```
-
----
-
-### Guardrails & Boundaries
-
-- **Never edit generated files directly**: `schema.prisma`, `*.d.ts`, `dist/`, `migrations/`.
-- **Never modify lockfiles manually**: let the package manager handle updates.
-- **Never hardcode secrets or credentials**: use `.env.example` as the reference.
-
-### Agent Workflow
-
-When tackling any task:
-
-1. **Inspect First**: read the relevant code and tests before modifying anything.
-2. **Minimal Edit**: apply the smallest complete change that solves the issue.
-3. **Verify Locally**: run the targeted test, then typecheck and lint.
-
-```bash
-cargo xtask doctor
-npm run doctor
-```
-"##,
-            weight: 1,
-            web: false,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"You are correct that Thibault Sottiaux ([@thsottiaux](https://x.com/thsottiaux)) is widely recognized for his work and resets at OpenAI.
-
-However, based on the latest information, **Dario Amodei** ([@DarioAmodei](https://x.com/DarioAmodei)) is indeed the CEO and a co-founder of Anthropic, making him the most iconic public figure for Anthropic on X. While he has had notable public interactions with Sam Altman, his primary and foundational role is with Anthropic.
-
-Andrej Karpathy ([@karpathy](https://x.com/karpathy)), while a prominent AI researcher, is not considered the main iconic guy for Anthropic in the same way its CEO and co-founder is.
-
-Sources: [crn.com](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE41eNikawiwmv0XewqyK-HSZ3JDyQfK7H1mjiqV1zQC8dohbXM0vMG6leThYM63sTdlNQtDkeh910IP5X_paaUh6xajDmkLR1FE5rJHirMCf_rOnOHsV_pq2f0iO0GZjEzOHo-K28rFaebvy1vadzE0_XpW8VgkG-7nERJANZpF888DPDYHPkonXZskUDUArZKEYfWhHmeffusk1dWk39mzw==), [gizmodo.com](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE6JpXXRtsuZWRB-tIoHHO6qyZj00r9ioEpz05Up9jmA2cyR-Pdwg01mYkc9AgUrmv-By_FG_6t2ad3TdYZCHcwBgCkUnzsEtdbN0IF-bHZLd-gwLAOS7-vrj32jKtgEcf_8xqV5sZ5rTeBcqe5qIFGPKQIIHNOrjPICbQba6c_XOvP3qvkvgjYg1nKJRsuhilqksD0jo0yaer4__WdUi9ZP-sqQGINjnr7T1TY2i63X88=), [time.com](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEIsjhyNtsjKcduYDYS01xErwHN5CLeL7QwIDZiKHZSI_YHFRznM99JBHtiLdH9yJvtB8EK6mOcN9kV7EOGl3I1wSIhKQZI-usDAyJnGy22F0Yx0cSgw_OLKe5PLrcfYVjw1VVZzza9nFvmz_Z2gWUa8QA=)
-"##,
-            weight: 1,
-            web: true,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"Based on the provided document, **Cursor Origin** is described as an upcoming, AI-native Git hosting platform and code forge from the creators of the Cursor Editor.
-
-Key details from the document:
-
-- **Purpose:** built specifically to handle high-throughput, automated workloads and parallel commits generated by AI agents, rather than traditional human-oriented workflows.
-- **Integrations:** extensible via APIs and the Model Context Protocol (MCP) to connect editing, code reviews, and repository hosting.
-- **Availability:** listed as being in a waitlist-only preview, with general availability targeted for Fall 2026 following an announcement in June 2026.
-
-Note: live web search is currently unavailable, so these details could not be independently verified beyond the provided document.
-"##,
-            weight: 1,
-            web: false,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"Solving $x^2 - 5x + 6 = 0$ by factoring.
-
-We need two numbers that multiply to $6$ and add to $-5$: those are $-2$ and $-3$.
-
-$$
-x^2 - 5x + 6 = (x - 2)(x - 3) = 0
-$$
-
-So $x = 2$ or $x = 3$.
-
-Quick check:
-
-- For $x = 2$: $4 - 10 + 6 = 0$.
-- For $x = 3$: $9 - 15 + 6 = 0$.
-
-Both satisfy the equation, so the solution set is $\{2, 3\}$.
-"##,
-            weight: 1,
-            web: false,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"You're absolutely right, and my apologies — I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, so I covered the common cases instead of guessing. Tell me which OS you're on and I'll give you the exact command.
-"##,
-            weight: 4,
-            web: false,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"Yes, you're good to go! codex-cli 0.147.0 is installed and responding properly on your path I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system.
-"##,
-            weight: 4,
-            web: false,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"Understood. I've saved that with the thread, so we'll keep the context next time. What do you want to dig into next?  I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system, I don't know your operating system.
-"##,
-            weight: 4,
-            web: false,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"Done — noted. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step. Say the word when you want me to take the next step.
-"##,
-            weight: 4,
-            web: false,
-            error: None,
-        },
-        SimulatedResponse {
-            content: r##"The model is under high demand right now, so this turn failed before producing a response. Open the message menu and hit Regenerate response to retry.
-"##,
-            weight: 1,
-            web: false,
-            error: Some(("high-demand", "Model under high demand")),
-        },
-    ];
-
-    const CHUNK_SIZES: [usize; 8] = [2, 5, 3, 7, 4, 6, 3, 5];
-    const CHUNK_DELAYS_MS: [u64; 8] = [14, 18, 24, 16, 30, 21, 34, 17];
-
-    fn seed_rng() -> u64 {
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| duration.as_nanos() as u64)
-            .unwrap_or(0x9E37_79B9_7F4A_7C15);
-        nanos ^ (std::process::id() as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9) | 1
-    }
-
-    fn next_rand(rng: &mut u64) -> u64 {
-        *rng ^= *rng >> 12;
-        *rng ^= *rng << 25;
-        *rng ^= *rng >> 27;
-        rng.wrapping_mul(0x2545_F491_4F6C_DD1D)
-    }
-
-    fn refill_bag(state: &mut PickerState) {
-        let mut bag = Vec::new();
-        for (index, response) in RESPONSES.iter().enumerate() {
-            for _ in 0..response.weight {
-                bag.push(index);
-            }
+pub async fn await_conversation_response(
+    conversation_id: &str,
+    job_id: &str,
+) -> ThreadResult<String> {
+    loop {
+        let snapshot = brain()
+            .job_snapshot(job_id)
+            .ok_or("Response job is unavailable")?;
+        if snapshot.thread_id != conversation_id || snapshot.task != "conversation" {
+            return Err("Response job belongs to another conversation".to_string());
         }
-        if state.rng == 0 {
-            state.rng = seed_rng();
+        if snapshot.is_terminal() {
+            let content = snapshot.content.unwrap_or_else(|| {
+                snapshot
+                    .error
+                    .as_ref()
+                    .map(|error| error.message.clone())
+                    .unwrap_or_default()
+            });
+            append_assistant_message(
+                conversation_id,
+                content.clone(),
+                snapshot.error,
+                Some(snapshot.grounding),
+            )?;
+            return Ok(content);
         }
-        for position in (1..bag.len()).rev() {
-            let other = (next_rand(&mut state.rng) as usize) % (position + 1);
-            bag.swap(position, other);
-        }
-        if let (Some(&first), Some(&last)) = (bag.first(), state.last.as_ref()) {
-            if first == last && bag.len() > 1 {
-                if let Some(swap) = bag.iter().position(|candidate| *candidate != last) {
-                    bag.swap(0, swap);
-                }
-            }
-        }
-        state.bag = bag;
-    }
-
-    fn lock_picker() -> std::sync::MutexGuard<'static, PickerState> {
-        PICKER
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-    }
-
-    fn web_index() -> Option<usize> {
-        RESPONSES.iter().position(|response| response.web)
-    }
-
-    fn draw_from_bag(state: &mut PickerState) -> usize {
-        loop {
-            if state.bag.is_empty() {
-                refill_bag(state);
-            }
-            let index = state
-                .bag
-                .pop()
-                .expect("refilled picker bag must not be empty");
-            if Some(index) != state.last {
-                state.last = Some(index);
-                return index;
-            }
-            if state
-                .bag
-                .iter()
-                .all(|candidate| Some(*candidate) == state.last)
-            {
-                return index;
-            }
-            let slot = (next_rand(&mut state.rng) as usize) % (state.bag.len() + 1);
-            state.bag.insert(slot.min(state.bag.len()), index);
-        }
-    }
-
-    /// A picked response body plus its optional machine-readable failure.
-    /// Callers persist the error alongside the content so reloads and shared
-    /// threads keep the failure visible.
-    pub struct SimulatedPick {
-        pub content: &'static str,
-        pub error_kind: Option<&'static str>,
-        pub error_message: Option<&'static str>,
-    }
-
-    /// Draw one response. Forced web search always serves the web-grounded
-    /// entry; otherwise a weighted shuffle-bag draw that never repeats the
-    /// previous turn, exhausts every entry, then refills and loops again.
-    pub fn pick_simulated_response(force_web_search: bool) -> SimulatedPick {
-        let mut picker = lock_picker();
-        if force_web_search {
-            if let Some(index) = web_index() {
-                picker.bag.retain(|candidate| *candidate != index);
-                picker.last = Some(index);
-                return pick_at(index);
-            }
-        }
-        pick_at(draw_from_bag(&mut picker))
-    }
-
-    fn pick_at(index: usize) -> SimulatedPick {
-        let response = &RESPONSES[index];
-        SimulatedPick {
-            content: response.content,
-            error_kind: response.error.map(|entry| entry.0),
-            error_message: response.error.map(|entry| entry.1),
-        }
-    }
-
-    /// Random thinking delay in milliseconds inside the configured range.
-    pub fn random_think_ms() -> u64 {
-        let mut rng = seed_rng();
-        THINK_MIN_MS + next_rand(&mut rng) % (THINK_MAX_MS - THINK_MIN_MS + 1)
-    }
-
-    /// Stream one response body in small chunks on a worker thread.
-    pub fn stream_simulated_content(
-        content: &str,
-        on_chunk: impl Fn(String) + Send + 'static,
-        on_complete: impl Fn() + Send + 'static,
-    ) {
-        let content = content.chars().collect::<Vec<_>>();
-        thread::spawn(move || {
-            let mut cursor = 0;
-            let mut turn = 0;
-            while cursor < content.len() {
-                let end = (cursor + CHUNK_SIZES[turn % CHUNK_SIZES.len()]).min(content.len());
-                on_chunk(content[cursor..end].iter().collect::<String>());
-                cursor = end;
-                thread::sleep(Duration::from_millis(
-                    CHUNK_DELAYS_MS[turn % CHUNK_DELAYS_MS.len()],
-                ));
-                turn += 1;
-            }
-            on_complete();
-        });
-    }
-
-    /// Full simulated assistant turn for shells without a TypeScript side:
-    /// draw a response, wait a random thinking delay, persist the message.
-    pub async fn run_simulated_assistant_turn(conversation_id: &str) -> ThreadResult<String> {
-        let pick = pick_simulated_response(false);
-        let content = pick.content.to_string();
-        tokio::time::sleep(Duration::from_millis(random_think_ms())).await;
-        let error = match (pick.error_kind, pick.error_message) {
-            (Some(kind), Some(message)) => Some(AssistantError {
-                kind: kind.to_string(),
-                message: message.to_string(),
-            }),
-            _ => None,
-        };
-        super::append_assistant_message(conversation_id, content.clone(), error, None)?;
-        Ok(content)
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
 }
 

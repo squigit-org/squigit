@@ -6,7 +6,9 @@ use crate::auth::{
     get_api_key_status, reveal_api_key as reveal_stored_api_key, session_api_key_width,
     session_api_keys_active, validate_api_key, ApiKeyProvider, RevealAuthResult,
 };
-use crate::brain::provider::gemini::models::{valid_model_id, DEFAULT_MODEL_EFFORT, MODEL_EFFORTS};
+use crate::brain::provider::models::{
+    valid_model_id, DEFAULT_MODEL_EFFORT, DEFAULT_MODEL_ID, MODEL_EFFORTS,
+};
 use crate::storage::{self, ProfileStore};
 use serde::{Deserialize, Serialize};
 use squigit_ocr::models::{DEFAULT_OCR_MODEL_ID, OCR_MODELS};
@@ -44,7 +46,7 @@ pub struct ConfigUpdate {
 impl Default for SquigitConfig {
     fn default() -> Self {
         Self {
-            model: String::new(),
+            model: DEFAULT_MODEL_ID.to_string(),
             effort: DEFAULT_MODEL_EFFORT.to_string(),
             ocr_enabled: true,
             ocr_language: DEFAULT_OCR_MODEL_ID.to_string(),
@@ -85,6 +87,7 @@ fn config_path() -> SettingsResult<PathBuf> {
 
 fn default_config_table() -> toml::Table {
     let mut table = toml::Table::new();
+    table.insert("schema".to_string(), toml::Value::Integer(2));
     let root_defaults = SquigitConfig::default();
     table.insert(
         "model".to_string(),
@@ -144,15 +147,21 @@ fn read_raw_config() -> SettingsResult<toml::Table> {
         Err(err) => return Err(err.to_string()),
     };
 
-    match toml::from_str::<toml::Table>(&content) {
-        Ok(table) => Ok(table),
-        Err(_) => {
-            // Auto repair corrupt or invalid TOML with default values
-            let defaults = default_config_table();
-            write_raw_config(&defaults)?;
-            Ok(defaults)
-        }
+    let table = toml::from_str::<toml::Table>(&content).map_err(|error| error.to_string())?;
+    if table.get("schema").and_then(toml::Value::as_integer) != Some(2) {
+        return Err(
+            "Unsupported development settings schema. Select a fresh development data root."
+                .to_string(),
+        );
     }
+    if !table
+        .get("model")
+        .and_then(toml::Value::as_str)
+        .is_some_and(valid_model_id)
+    {
+        return Err("Unsupported model selection in settings".to_string());
+    }
+    Ok(table)
 }
 
 fn normalize_root_config(table: &toml::Table) -> (SquigitConfig, bool) {
@@ -395,7 +404,7 @@ pub struct SettingsSnapshot {
     pub active_profile_id: Option<String>,
     pub config: SquigitConfig,
     pub persona: String,
-    pub google_ai_studio: CredentialState,
+    pub open_router: CredentialState,
     pub imgbb: CredentialState,
 }
 
@@ -430,10 +439,10 @@ pub fn load_settings() -> SettingsResult<SettingsSnapshot> {
         .get_active_profile_id()
         .map_err(|error| error.to_string())?;
     Ok(SettingsSnapshot {
-        google_ai_studio: credential_state(
+        open_router: credential_state(
             &store,
             active_profile_id.as_deref(),
-            ApiKeyProvider::GoogleAiStudio,
+            ApiKeyProvider::OpenRouter,
         )?,
         imgbb: credential_state(&store, active_profile_id.as_deref(), ApiKeyProvider::ImgBb)?,
         active_profile_id,
@@ -475,15 +484,48 @@ pub fn validate_api_key_format(provider_name: &str, plaintext: &str) -> Settings
     Ok(validate_api_key(provider(provider_name)?, plaintext.trim()).is_ok())
 }
 
-pub fn set_api_key(profile_id: &str, provider_name: &str, plaintext: &str) -> SettingsResult<()> {
-    let store = storage::profile_store().map_err(|error| error.to_string())?;
-    encrypt_and_save_api_key(
-        &store,
-        profile_id,
-        provider(provider_name)?,
-        plaintext.trim(),
-    )
-    .map_err(|error| error.to_string())
+pub async fn set_api_key(
+    profile_id: &str,
+    provider_name: &str,
+    plaintext: &str,
+) -> SettingsResult<()> {
+    let selected_provider = provider(provider_name)?;
+    validate_api_key(selected_provider, plaintext.trim()).map_err(|error| error.to_string())?;
+    let secret = crate::auth::SecretString::new(plaintext.trim().to_string());
+    if selected_provider == ApiKeyProvider::OpenRouter {
+        let response = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(20))
+            .build()
+            .map_err(|error| error.to_string())?
+            .get("https://openrouter.ai/api/v1/key")
+            .bearer_auth(secret.expose())
+            .send()
+            .await
+            .map_err(|error| error.to_string())?;
+        let status = response.status();
+        let body: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|_| "OpenRouter returned an invalid key validation response".to_string())?;
+        if !status.is_success() || body.get("error").is_some() || !body["data"].is_object() {
+            let message = body
+                .pointer("/error/message")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("OpenRouter rejected this key")
+                .replace(secret.expose(), "[REDACTED]");
+            return Err(format!(
+                "OpenRouter key validation failed ({status}): {message}"
+            ));
+        }
+    }
+    let profile_id = profile_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let store = storage::profile_store().map_err(|error| error.to_string())?;
+        encrypt_and_save_api_key(&store, &profile_id, selected_provider, secret.expose())
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 pub fn delete_api_key(profile_id: &str, provider_name: &str) -> SettingsResult<bool> {

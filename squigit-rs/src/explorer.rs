@@ -96,6 +96,7 @@ pub struct ExplorerJobSnapshot {
     pub thread_id: String,
     pub kind: String,
     pub status: String,
+    pub diagnostics: Vec<serde_json::Value>,
 }
 
 pub struct ThreadSearchResult {
@@ -565,7 +566,9 @@ pub fn search_threads(query: String, limit: u32) -> ExplorerResult<Vec<ThreadSea
 }
 
 pub async fn suggest_thread_title(thread_id: String) -> ExplorerResult<String> {
-    let title = brain().suggest_thread_title(thread_id.clone()).await?;
+    let title = brain()
+        .suggest_thread_title(thread_id.clone(), crate::settings::load_config()?.model)
+        .await?;
     let persisted_title = title.clone();
     tokio::task::spawn_blocking(move || {
         let storage = active_storage()?;
@@ -584,22 +587,9 @@ pub async fn suggest_thread_title(thread_id: String) -> ExplorerResult<String> {
 }
 
 pub async fn suggest_sidechat_title(sidechat_id: String) -> ExplorerResult<String> {
-    let source_id = sidechat_id.clone();
-    let title_source = tokio::task::spawn_blocking(move || {
-        let storage = active_storage()?;
-        let sidechat = storage
-            .load_sidechat(&source_id)
-            .map_err(|error| error.to_string())?;
-        sidechat
-            .messages
-            .first()
-            .map(|message| message.content().trim().to_string())
-            .filter(|content| !content.is_empty())
-            .ok_or_else(|| "This sidechat has no text to suggest a title from".to_string())
-    })
-    .await
-    .map_err(|error| format!("Settings load task failed: {error}"))??;
-    let title = brain().suggest_thread_title_from_text(title_source).await?;
+    let title = brain()
+        .suggest_thread_title(sidechat_id.clone(), crate::settings::load_config()?.model)
+        .await?;
     let persisted_title = title.clone();
     tokio::task::spawn_blocking(move || {
         let storage = active_storage()?;
@@ -625,14 +615,25 @@ pub fn get_jobs_snapshot() -> ExplorerResult<Vec<ExplorerJobSnapshot>> {
         .map(|job| ExplorerJobSnapshot {
             job_id: job.job_id,
             thread_id: job.thread_id,
-            kind: "brain".to_string(),
-            status: job.status,
+            kind: if job.task == "title" {
+                "title"
+            } else {
+                "brain"
+            }
+            .to_string(),
+            status: if job.status == "retrying" {
+                "running".to_string()
+            } else {
+                job.status
+            },
+            diagnostics: job.diagnostics,
         })
         .chain(ocr_jobs.into_iter().map(|job| ExplorerJobSnapshot {
             job_id: job.job_id,
             thread_id: job.thread_id,
             kind: "ocr".to_string(),
             status: job.status,
+            diagnostics: Vec::new(),
         }))
         .collect())
 }
