@@ -13,7 +13,6 @@ pub fn run(demo: bool, forwarded: &[String]) -> Result<(), String> {
     command
         .args(["run", "--package", "squigit-cli", "--bin", "squigit", "--"])
         .args(forwarded)
-        .env("SQUIGIT_LOG_DIR", root.join("logs"))
         .current_dir(&root);
 
     if demo {
@@ -33,7 +32,7 @@ pub fn run(demo: bool, forwarded: &[String]) -> Result<(), String> {
 fn demo_secrets(root: &Path) -> Result<Vec<(&'static str, String)>, String> {
     let dotenv = read_dotenv(&root.join(".env"))?;
     let mut values = Vec::new();
-    for name in ["GEMINI_API_KEY", "IMGBB_API_KEY"] {
+    for name in ["OPENROUTER_API_KEY", "IMGBB_API_KEY"] {
         if let Some(value) = environment_value(name).or_else(|| dotenv.get(name).cloned()) {
             values.push((name, value));
         }
@@ -65,7 +64,7 @@ fn read_dotenv(path: &Path) -> Result<HashMap<String, String>, String> {
             return Err(format!("invalid .env assignment on line {}", index + 1));
         };
         let name = name.trim();
-        if !matches!(name, "GEMINI_API_KEY" | "IMGBB_API_KEY") {
+        if !matches!(name, "OPENROUTER_API_KEY" | "IMGBB_API_KEY") {
             continue;
         }
         let value = unquote(value.trim());
