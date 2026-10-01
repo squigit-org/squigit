@@ -17,6 +17,14 @@ const MEDIA_SIGNATURES: &[&[u8]] = &[
 ];
 
 pub(crate) fn decode(path: &Path, bytes: &[u8]) -> Result<String, String> {
+    if path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(crate::is_supported_document_extension)
+        || bytes.starts_with(b"PK\x03\x04")
+    {
+        return Err("PDF and Office files are temporarily unavailable to text tools".to_string());
+    }
     if bytes.starts_with(b"\xff\xfe\x00\x00") || bytes.starts_with(b"\x00\x00\xfe\xff") {
         return Err(format!(
             "{} uses UTF-32 text encoding, which cannot be read.",

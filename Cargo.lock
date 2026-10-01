@@ -5019,6 +5019,7 @@ name = "squigit-harness"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "dirs",
  "fast_image_resize",
  "globset",
  "ignore",

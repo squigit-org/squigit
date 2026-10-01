@@ -118,7 +118,7 @@ pub fn find_prepared_office_document(
         Ok(manifest) => manifest,
         Err(_) => return Ok(None),
     };
-    if manifest.file_context.file_type != AttachmentFileType::DocumentUpload {
+    if manifest.file_context.file_type != AttachmentFileType::Document {
         return Ok(None);
     }
     Ok(Some(PreparedDocumentObject {
@@ -147,7 +147,7 @@ pub fn remember_prepared_office_document(
     let manifest = storage
         .load_object_manifest(pdf_hash)
         .map_err(|error| error.to_string())?;
-    if manifest.file_context.file_type != AttachmentFileType::DocumentUpload {
+    if manifest.file_context.file_type != AttachmentFileType::Document {
         return Err("Prepared Office document is not classified as a document upload".to_string());
     }
     storage

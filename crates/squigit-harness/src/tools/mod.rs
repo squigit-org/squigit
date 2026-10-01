@@ -10,7 +10,7 @@ mod text;
 use serde::Serialize;
 use serde_json::{json, Value};
 
-pub use scope::ToolScope;
+pub use scope::{cited_paths, ToolScope};
 
 pub const READ_FILE: &str = "read_file";
 pub const GREP_SEARCH: &str = "grep_search";
@@ -54,13 +54,13 @@ pub fn function_declarations() -> Value {
     json!([
         {
             "name": READ_FILE,
-            "description": "Reads a text file the user shared in this conversation: a cited source file, a terminal selection, forwarded messages, a cited thread, or a file inside a cited folder. Returns lines prefixed with `L<number>: `. Read only what you need: pass start_line and end_line for a targeted range, or around_line to get the enclosing function or block around a line from an error or stack trace. Without a range, the first 300 lines are returned. Each call returns at most 1000 lines and 32 KB, and lines longer than 1000 characters are shortened. When more content remains, the footer names the start_line to continue from. Use grep_search first to locate content in large files, and call this tool in parallel to read several files.",
+            "description": "Reads a text file or actual image pixels from a path the user requested in ordinary text or shared in this conversation. Files inside a requested folder are available without attachment or @mention. Image pixels follow the matching tool acknowledgements. Text returns lines prefixed with L<number>: . Use start_line/end_line for a targeted range, or around_line for an enclosing block. Text reads return up to 1000 lines and 32 KB. Use grep_search to locate relevant text. PDF and Office reads are temporarily unavailable.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Absolute path of a file the user shared, exactly as it appears in their message, or of a file inside a folder they shared."
+                        "description": "Absolute path of a requested file or an image/text file discovered inside an authorized folder. Use the paths from Local file access or list_directory."
                     },
                     "start_line": {
                         "type": "integer",
@@ -125,14 +125,17 @@ pub fn function_declarations() -> Value {
         },
         {
             "name": LIST_DIRECTORY,
-            "description": "Lists the files and folders inside a folder the user shared, or inside one of its subfolders. Folder names end with `/`. Hidden entries and entries excluded by .gitignore are omitted. Use it to discover file paths before calling read_file or grep_search.",
+            "description": "Lists a folder requested in ordinary text or shared in this conversation, including its subfolders. Use the authorized absolute paths in Local file access. Hidden entries and .gitignore exclusions are omitted. To find the newest/last image, set sort_by to modified, include_pattern to an image glob, and limit to 1; then call read_file on the returned image path. Modified timestamps are Unix seconds and entries are newest first.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "dir_path": {
                         "type": "string",
-                        "description": "Absolute path of a shared folder or of a folder inside it."
+                        "description": "Absolute path of an authorized folder or one of its subfolders."
                     },
+                    "sort_by": { "type":"string", "enum":["name","modified"], "description":"Sort by name or modification time, newest first." },
+                    "include_pattern": { "type":"string", "description":"Optional file glob, such as *.{png,jpg,jpeg,webp,gif,bmp,avif,svg}." },
+                    "limit": { "type":"integer", "minimum":1, "maximum":200, "description":"Maximum entries to return. Defaults to 200." },
                     "depth": {
                         "type": "integer",
                         "minimum": 1,
