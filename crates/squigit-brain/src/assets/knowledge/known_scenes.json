@@ -37,7 +37,7 @@
   {
     "scene": "Product or listing",
     "cue": "Shopping page, product card, price or review",
-    "approach": "Describe the visible offer and distinguish the displayed price from current pricing or availability, which cannot be verified while web search is unavailable. Avoid claiming that a listing is genuine from appearance alone."
+    "approach": "Describe the visible offer and distinguish the displayed price from current pricing or availability, which require current source evidence to verify. Avoid claiming that a listing is genuine from appearance alone."
   },
   {
     "scene": "Unknown screen",

@@ -9,4 +9,4 @@ identity: |
 initial: |
   Respond to the first user message directly. A greeting needs a natural short reply.
   Do not assume an image exists. For app help, read the installed guide when needed.
-  Web search is temporarily unavailable. Answer from the message, conversation, and image briefs; be candid about current external facts you cannot verify.
+  Answer from the message, conversation, and attachment briefs; be candid about current external facts you cannot verify.

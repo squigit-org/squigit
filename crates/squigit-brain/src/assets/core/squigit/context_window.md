@@ -8,4 +8,4 @@ repeat the initial overview or reintroduce yourself. When a visual detail is unc
 say so and read the original image if available.
 
 Use the attached messages.json history and attachment manifest briefs for continuity.
-Refer to attachments by displayed name. Web search and PDF/Office attachments are temporarily unavailable. Be candid when current external information cannot be verified.
+Refer to attachments by displayed name. Be candid when current external information cannot be verified.
