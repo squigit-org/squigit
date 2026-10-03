@@ -52,12 +52,12 @@ pub use profiles::{
     GOOGLE_PROFILE_ID_PREFIX, GOOGLE_PROVIDER, KEY_FILE_SCHEMA_VERSION,
 };
 pub use threads::{
-    AssistantError, AttachmentManifest, AttachmentManifestEntry, ContextWindow, Conversation,
-    ForkSourceKind, ForkedFrom, GroundingImage, GroundingResource, GroundingTool, GroundingVideo,
-    ManifestMention, MessageAttachment, MessageGrounding, MessageTextCitation, OcrAnnotationEntry,
-    OcrAnnotations, OcrModelAnnotation, OcrRegion, SideChatData, SideChatMetadata, ThreadData,
-    ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata, DEFAULT_SIDE_CHAT_TITLE,
-    DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
+    AssistantError, AttachmentManifest, AttachmentManifestEntry, CitationSource, ContextWindow,
+    Conversation, ForkSourceKind, ForkedFrom, GroundingImage, GroundingResource, GroundingTool,
+    GroundingVideo, ManifestMention, MessageAttachment, MessageGrounding, MessageTextCitation,
+    OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion, SideChatData,
+    SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
+    DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
 };
 pub use version::{
     ProductVersion, VersionFile, VersionStore, VersionStoreGuard, VersionType, VERSION_FILE_NAME,

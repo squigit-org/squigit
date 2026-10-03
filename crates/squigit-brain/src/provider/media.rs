@@ -46,6 +46,7 @@ pub(crate) fn source_resource(hash: &str, name: &str, path: &str) -> GroundingRe
             attachment_hash: hash.into(),
         }),
         video: None,
+        source: None,
     }
 }
 pub(crate) async fn viewed(

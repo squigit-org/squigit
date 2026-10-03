@@ -230,6 +230,7 @@ pub struct GroundingResource {
     pub is_folder: bool,
     pub image: Option<GroundingImage>,
     pub video: Option<GroundingVideo>,
+    pub source: Option<CitationSource>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::Serialize;
-use squigit_storage::{AssistantError, GroundingResource, GroundingTool, MessageGrounding};
+use squigit_storage::{
+    AssistantError, CitationSource, GroundingResource, GroundingTool, MessageGrounding,
+};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::Semaphore;
@@ -27,6 +29,7 @@ pub struct JobSnapshot {
     pub error: Option<AssistantError>,
     pub diagnostics: Vec<serde_json::Value>,
     pub grounding: MessageGrounding,
+    pub citations: Vec<CitationSource>,
 }
 
 impl JobSnapshot {
@@ -125,6 +128,7 @@ impl JobWorker {
                     content: None,
                     error: None,
                     diagnostics: Vec::new(),
+                    citations: Vec::new(),
                     grounding: MessageGrounding {
                         selected_model: String::new(),
                         actual_model: None,

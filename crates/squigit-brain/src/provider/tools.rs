@@ -153,6 +153,7 @@ pub(crate) async fn execute(
                 is_folder: canonical.is_dir(),
                 image: None,
                 video: None,
+                source: None,
             });
         }
 
