@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod images;
+pub mod parser;
 pub mod tools;
 
 use office2pdf::config::{ConvertOptions, Format};
@@ -9,7 +10,7 @@ use squigit_storage::{AttachmentFileType, DocumentConversion, ThreadStorage};
 
 const OFFICE_DOCUMENT_EXTENSIONS: &[&str] = &["docx", "xlsx", "pptx"];
 const SUPPORTED_DOCUMENT_EXTENSIONS: &[&str] = &["pdf", "docx", "xlsx", "pptx"];
-const DOCUMENT_CONVERSION_RECIPE: &str = "office2pdf-0.6.5-default";
+const DOCUMENT_CONVERSION_RECIPE: &str = "office2pdf-0.8.0-default";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrepareDocumentInput {

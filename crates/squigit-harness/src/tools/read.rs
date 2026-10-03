@@ -30,7 +30,9 @@ pub(super) fn run(args: &Value, scope: &ToolScope) -> Result<ToolOutcome, String
         .and_then(|extension| extension.to_str())
         .is_some_and(crate::is_supported_document_extension)
     {
-        return Err("PDF and Office reads are temporarily unavailable".to_string());
+        return Err(
+            "Use parse_pdf with a path and page range to read PDF or Office documents".to_string(),
+        );
     }
     let start_line = line_arg(args, "start_line")?;
     let end_line = line_arg(args, "end_line")?;
