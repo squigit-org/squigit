@@ -213,12 +213,12 @@ fn create_thread_on_disk(
         Some(rendition_path) => (
             prepared_rendition(&storage, rendition_path)?,
             storage
-                .blob_name(source)
+                .image_blob_name(source)
                 .ok_or_else(|| "Captured images must be stored in blob storage".to_string())?,
         ),
         None => {
             let rendition = crate::harness::images::store_image_rendition(&bytes)?;
-            let image_blob = match storage.blob_name(source) {
+            let image_blob = match storage.image_blob_name(source) {
                 Some(name) => name,
                 None => {
                     let extension = source
@@ -419,61 +419,95 @@ pub async fn create_sidechat_thread(
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LocalImage {
+pub struct LocalAttachment {
     pub attachment_hash: String,
     pub cas_path: String,
+    pub file_type: AttachmentFileType,
+    pub preview_path: Option<String>,
 }
-pub fn add_local_image(source_path: &str) -> ThreadResult<LocalImage> {
-    if !is_supported_image(Path::new(source_path)) {
-        return Err("Only supported images can be added here. PDF and Office attachments are temporarily unavailable.".to_string());
+pub fn add_local_attachment(source_path: &str) -> ThreadResult<LocalAttachment> {
+    let storage = active_storage()?;
+    if is_supported_image(Path::new(source_path)) {
+        let stored = crate::harness::images::store_image_rendition(
+            &std::fs::read(source_path).map_err(|error| error.to_string())?,
+        )?;
+        return Ok(LocalAttachment {
+            attachment_hash: stored.hash,
+            cas_path: stored.cas_path,
+            file_type: AttachmentFileType::Image,
+            preview_path: None,
+        });
     }
-    let stored = crate::harness::images::store_image_rendition(
-        &std::fs::read(source_path).map_err(|error| error.to_string())?,
-    )?;
-    Ok(LocalImage {
-        attachment_hash: stored.hash,
-        cas_path: stored.cas_path,
+    let stored = storage
+        .store_file_from_path(source_path, None)
+        .map_err(|e| e.to_string())?;
+    let file_type = storage
+        .load_object_manifest(&stored.hash)
+        .map_err(|e| e.to_string())?
+        .file_context
+        .file_type;
+    let parsed = crate::harness::parser::media::prepare(
+        &stored.hash,
+        &crate::harness::parser::ParseControl::default(),
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(LocalAttachment {
+        attachment_hash: stored.hash.clone(),
+        cas_path: stored.path,
+        file_type: file_type.clone(),
+        preview_path: if file_type == AttachmentFileType::Document {
+            Some(
+                crate::harness::parser::media::document_path(&stored.hash)
+                    .map_err(|e| e.to_string())?
+                    .to_string_lossy()
+                    .into_owned(),
+            )
+        } else {
+            parsed
+                .poster
+                .map(|path| path.to_string_lossy().into_owned())
+        },
     })
 }
+pub fn document_preview_path(path: &str) -> ThreadResult<String> {
+    let stored = active_storage()?
+        .store_file_from_path(path, None)
+        .map_err(|e| e.to_string())?;
+    crate::harness::parser::media::document_path(&stored.hash)
+        .map(|path| path.to_string_lossy().into_owned())
+        .map_err(|e| e.to_string())
+}
+pub fn media_playback_path(path: &str) -> ThreadResult<String> {
+    let stored = active_storage()?
+        .store_file_from_path(path, None)
+        .map_err(|e| e.to_string())?;
+    crate::harness::parser::media::playback(
+        &stored.hash,
+        &crate::harness::parser::ParseControl::default(),
+    )
+    .map(|path| path.to_string_lossy().into_owned())
+    .map_err(|error| error.to_string())
+}
 fn validate_message_inputs(
-    message: &str,
+    _message: &str,
     inputs: &[MessageAttachmentInput],
-    citations: &[MessageTextCitation],
+    _citations: &[MessageTextCitation],
 ) -> ThreadResult<()> {
     let storage = active_storage()?;
-    if crate::harness::tools::cited_paths(message)
-        .iter()
-        .any(|path| crate::brain::provider::images::is_disabled_document(&path.to_string_lossy()))
-    {
-        return Err("PDF and Office attachments are temporarily unavailable".to_string());
-    }
     for input in inputs {
+        let object = storage
+            .load_object_manifest(&input.attachment_hash)
+            .map_err(|e| e.to_string())?;
         if input
             .file_type
             .as_ref()
-            .is_some_and(|kind| *kind != AttachmentFileType::Image)
-            || input
-                .source_path
-                .as_deref()
-                .is_some_and(crate::brain::provider::images::is_disabled_document)
-            || storage
-                .load_object_manifest(&input.attachment_hash)
-                .map_err(|error| error.to_string())?
-                .file_context
-                .file_type
-                != AttachmentFileType::Image
+            .is_some_and(|kind| kind != &object.file_context.file_type)
         {
-            return Err("PDF and Office attachments are temporarily unavailable".to_string());
+            return Err("Attachment type does not match its stored object".into());
         }
         storage
             .find_object_blob(&input.attachment_hash)
-            .map_err(|error| error.to_string())?;
-    }
-    if citations
-        .iter()
-        .any(|citation| crate::brain::provider::images::is_disabled_document(&citation.path))
-    {
-        return Err("PDF and Office attachments are temporarily unavailable".to_string());
+            .map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -575,6 +609,7 @@ pub struct ConversationAttachment {
     pub display_name: String,
     pub file_type: String,
     pub blob_path: Option<String>,
+    pub preview_path: Option<String>,
 }
 
 /// Persisted conversation state for one thread or sidechat.
@@ -598,7 +633,13 @@ fn conversation_snapshot(
             file_type: match entry.file_type {
                 AttachmentFileType::Image => "image".to_string(),
                 AttachmentFileType::Document => "document".to_string(),
+                AttachmentFileType::Video => "video".to_string(),
+                AttachmentFileType::Audio => "audio".to_string(),
             },
+            preview_path: crate::harness::parser::media::load_index(&entry.attachment_hash)
+                .ok()
+                .flatten()
+                .and_then(|index| index.poster.map(|p| p.to_string_lossy().into_owned())),
             blob_path: storage
                 .find_object_blob(&entry.attachment_hash)
                 .ok()
@@ -1124,7 +1165,7 @@ pub mod ocr {
             .load_thread(thread_id)
             .map_err(|error| error.to_string())?;
         let image_path = storage
-            .blob_path(&thread.metadata.image_blob)
+            .image_blob_path(&thread.metadata.image_blob)
             .map_err(|error| error.to_string())?
             .to_string_lossy()
             .to_string();
@@ -1156,7 +1197,7 @@ pub mod ocr {
             .load_thread(thread_id)
             .map_err(|error| error.to_string())?;
         let image_path = storage
-            .blob_path(&thread.metadata.image_blob)
+            .image_blob_path(&thread.metadata.image_blob)
             .map_err(|error| error.to_string())?
             .to_string_lossy()
             .to_string();

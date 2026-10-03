@@ -263,10 +263,54 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
     let mut prepared = Vec::with_capacity(request.attachment_paths.len());
     let mut text_citations = Vec::new();
     for source_path in &request.attachment_paths {
-        if crate::brain::provider::images::is_disabled_document(&source_path.to_string_lossy()) {
-            return Err("PDF and Office attachments are temporarily unavailable".to_string());
-        }
-        if !crate::thread::is_supported_image(source_path) {
+        if !crate::thread::is_supported_image(source_path)
+            && !source_path
+                .extension()
+                .and_then(|v| v.to_str())
+                .is_some_and(|ext| {
+                    matches!(
+                        ext.to_ascii_lowercase().as_str(),
+                        "pdf"
+                            | "docx"
+                            | "xlsx"
+                            | "pptx"
+                            | "mp4"
+                            | "m4v"
+                            | "mov"
+                            | "webm"
+                            | "mkv"
+                            | "avi"
+                            | "mpeg"
+                            | "mpg"
+                            | "wmv"
+                            | "flv"
+                            | "ogv"
+                            | "3gp"
+                            | "mts"
+                            | "m2ts"
+                            | "vob"
+                            | "mxf"
+                            | "asf"
+                            | "dv"
+                            | "f4v"
+                            | "rm"
+                            | "rmvb"
+                            | "nut"
+                            | "qt"
+                            | "m2v"
+                            | "mp3"
+                            | "wav"
+                            | "m4a"
+                            | "aac"
+                            | "ogg"
+                            | "opus"
+                            | "flac"
+                            | "aiff"
+                            | "aif"
+                            | "wma"
+                    )
+                })
+        {
             if source_path.is_file() {
                 text_citations.push(MessageTextCitation {
                     path: normalized_path(source_path),
@@ -279,14 +323,12 @@ pub async fn submit_message(request: CliSubmissionRequest) -> Result<CliSubmissi
             }
             continue;
         }
-        let stored = crate::harness::images::store_image_rendition(
-            &std::fs::read(source_path).map_err(|error| error.to_string())?,
-        )?;
+        let stored = crate::thread::add_local_attachment(&source_path.to_string_lossy())?;
         prepared.push(LocalAttachment {
             source_path: source_path.clone(),
             cas_path: stored.cas_path,
-            hash: stored.hash,
-            file_type: AttachmentFileType::Image,
+            hash: stored.attachment_hash,
+            file_type: stored.file_type,
         });
     }
 

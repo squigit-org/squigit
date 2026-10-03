@@ -101,7 +101,7 @@ pub fn list_gallery(offset: u32, limit: u32) -> Result<Vec<GalleryImage>> {
             threads.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
             let updated_at = threads.first()?.updated_at.clone();
             let path = storage
-                .blob_path(&image_blob)
+                .image_blob_path(&image_blob)
                 .ok()?
                 .to_string_lossy()
                 .to_string();
