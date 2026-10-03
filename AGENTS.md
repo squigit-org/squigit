@@ -84,8 +84,8 @@ The workspace components have these responsibilities:
 - `squigit-rs/` is the public product facade shared by the CLI and the desktop N-API backend. Preserve backend-facing types, serialized field names, and service behavior when changing it.
 - `crates/squigit-storage/` owns config roots, profiles, encrypted key records, CAS objects, workspaces, image threads, side-chat threads, OCR annotations, version records, and their serialized schemas.
 - `crates/squigit-auth/` owns Google OAuth, API-key validation, encryption, OS-vault binding, reveal authorization, and process-only contributor credentials.
-- `crates/squigit-harness/` converts supported documents and owns the model file tools (`read_file`, `grep_search`, `list_directory`). Access is scoped to the user's ordinary-text file/folder requests and shared citations. Conversation image reads use the existing local rendition pipeline; PDF and Office reads remain temporarily disabled.
-- `crates/squigit-brain/` owns OpenRouter model discovery and routing, conversation jobs, reasoning, title generation, image briefs, and local image recall.
+- `crates/squigit-harness/` owns local PDF/Office conversion, video frame collages, audio extraction, and the model file tools. Access is scoped to the user's ordinary-text file/folder requests and shared citations. PDF/Office reads use `parse_pdf`, video reads use `parse_video`, and image reads use the existing local rendition pipeline. Originals live in CAS; parsed artifacts and collage briefs live in the source-keyed blob-storage cache.
+- `crates/squigit-brain/` owns OpenRouter model discovery and routing, conversation jobs, reasoning, title generation, image/collage briefs, local media recall, and capability-aware video/audio requests.
 - `squigit-ocr/src/` is the publishable Rust library for installed-executable discovery, OCR execution, model management, downloads, and annotation persistence.
 - `squigit-cli/` is the Ratatui product. It must keep the same persisted threads, attachments, profiles, settings, and OCR data that the GUI understands.
 - `xtask/` is the repository command surface for development, validation, and product builds.
