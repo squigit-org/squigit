@@ -320,6 +320,7 @@ pub async fn create_image_thread(
             &thread_id,
             config.model.clone(),
             config.effort.clone(),
+            true,
             Some(main_credential),
         )?)
     } else {
@@ -571,6 +572,7 @@ pub fn append_message(
 pub fn append_assistant_message(
     conversation_id: &str,
     content: String,
+    citations: Vec<crate::storage::CitationSource>,
     error: Option<AssistantError>,
     grounding: Option<MessageGrounding>,
 ) -> ThreadResult<ThreadMessage> {
@@ -578,11 +580,17 @@ pub fn append_assistant_message(
         .lock()
         .map_err(|_| "Thread index is unavailable".to_string())?;
     let storage = active_storage()?;
-    let message = match error {
+    let mut message = match error {
         Some(error) => ThreadMessage::assistant_error(content, error),
         None => ThreadMessage::assistant(content),
     }
     .with_grounding(grounding);
+    if let ThreadMessage::Assistant {
+        citations: sources, ..
+    } = &mut message
+    {
+        *sources = citations;
+    }
     storage
         .push_message(conversation_id, message.clone(), &[])
         .map_err(|error| error.to_string())?;
@@ -685,14 +693,22 @@ pub fn start_conversation_response(
     conversation_id: &str,
     model: String,
     effort: String,
+    force_web_search: bool,
 ) -> ThreadResult<String> {
-    start_conversation_response_with_snapshot(conversation_id, model, effort, None)
+    start_conversation_response_with_snapshot(
+        conversation_id,
+        model,
+        effort,
+        force_web_search,
+        None,
+    )
 }
 
 fn start_conversation_response_with_snapshot(
     conversation_id: &str,
     model: String,
     effort: String,
+    force_web_search: bool,
     credential: Option<ImageThreadCredentialSnapshot>,
 ) -> ThreadResult<String> {
     let conversation = active_storage()?
@@ -720,6 +736,7 @@ fn start_conversation_response_with_snapshot(
             model,
             effort,
             user_identity: identity,
+            force_web_search,
         },
         credential,
     )
@@ -729,8 +746,9 @@ pub async fn generate_conversation_response(
     conversation_id: &str,
     model: String,
     effort: String,
+    force_web_search: bool,
 ) -> ThreadResult<String> {
-    let job_id = start_conversation_response(conversation_id, model, effort)?;
+    let job_id = start_conversation_response(conversation_id, model, effort, force_web_search)?;
     await_conversation_response(conversation_id, &job_id).await
 }
 
@@ -756,6 +774,7 @@ pub async fn await_conversation_response(
             append_assistant_message(
                 conversation_id,
                 content.clone(),
+                snapshot.citations,
                 snapshot.error,
                 Some(snapshot.grounding),
             )?;

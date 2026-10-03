@@ -17,6 +17,7 @@ pub(crate) struct RequestSpec {
     pub(crate) effort: Option<String>,
     pub(crate) free: bool,
     pub(crate) utility: bool,
+    pub(crate) force_web_search: bool,
 }
 pub(crate) fn text(text: impl Into<String>) -> Value {
     json!({"type":"text", "text":text.into()})
@@ -48,6 +49,7 @@ pub(crate) async fn execute(
     let mut rounds = 0;
     let mut calls = 0;
     let mut media_ready = false;
+    let mut searched = false;
     let mut audio_disabled = spec.free.then_some(super::media::FREE_AUDIO_REASON);
     loop {
         if rounds >= 24 {
@@ -91,6 +93,8 @@ pub(crate) async fn execute(
             };
         } else if let Some(reasoning) = candidate.reasoning(spec.effort.as_deref(), output_budget) {
             body["reasoning"] = reasoning;
+        } else if spec.utility {
+            body["reasoning"] = candidate.instant_reasoning();
         } else if spec.effort.as_deref() != Some("xhigh") {
             body["reasoning"] = json!({"exclude":true});
         }
@@ -102,6 +106,11 @@ pub(crate) async fn execute(
                     || tool["function"]["name"] != "transcribe_audio")
                 .collect::<Vec<_>>());
             body["tool_choice"] = json!("auto");
+        }
+        if !spec.free && !spec.utility && spec.force_web_search && !searched {
+            body["plugins"] = json!([{"id":"web"}]);
+            body["web_search_options"] =
+                json!({"search_context_size":super::web::context_size(spec.effort.as_deref())});
         }
         if let Some(schema) = &spec.schema {
             body["response_format"] = json!({"type":"json_schema", "json_schema":{"name":"utility_result", "strict":true, "schema":schema}});
@@ -128,6 +137,12 @@ pub(crate) async fn execute(
             _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
         };
         let grounding_checkpoint = job.grounding_tool_count();
+        let native_search = if body.get("plugins").is_some() {
+            job.phase("browsing", None);
+            Some(job.begin_tool("web_search", "Browsing the web".into(), None))
+        } else {
+            None
+        };
         let result = tokio::select! {
             result = send(&client, credential, &body, job, spec.effort.as_deref() == Some("xhigh")) => result,
             _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
@@ -180,6 +195,7 @@ pub(crate) async fn execute(
                     bound_model = None;
                     rounds = 0;
                     calls = 0;
+                    searched = false;
                     job.update(|snapshot| {
                         snapshot.phase = "thinking".into();
                         snapshot.target = None;
@@ -237,6 +253,7 @@ pub(crate) async fn execute(
                     bound_model = None;
                     rounds = 0;
                     calls = 0;
+                    searched = false;
                     job.update(|snapshot| {
                         snapshot
                             .grounding
@@ -247,6 +264,14 @@ pub(crate) async fn execute(
                 continue;
             }
         };
+        if let Some(step) = native_search {
+            job.finish_tool(&step, "Browsed the web".into());
+            searched = true;
+        }
+        tokio::select! {
+            _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+            _ = super::web::native_sources(job, &response) => {},
+        }
         super::media::finish_uploads(job);
         rounds += 1;
         if let Some(model) = response["model"].as_str() {
@@ -295,7 +320,14 @@ pub(crate) async fn execute(
             if !spec.utility {
                 job.phase("finalizing", None);
             }
-            return Ok(content);
+            return if spec.utility {
+                Ok(content)
+            } else {
+                super::web::finalize(
+                    runtime, job, credential, candidate, spec.free, content, message,
+                )
+                .await
+            };
         }
         let tools = scope.ok_or_else(|| ProviderError::new("invalid-request"))?;
         let mut assistant =
@@ -320,14 +352,24 @@ pub(crate) async fn execute(
                 .pointer("/function/arguments")
                 .and_then(Value::as_str)
                 .ok_or_else(|| ProviderError::new("invalid-request"))?;
-            let arguments: Value = serde_json::from_str(arguments).map_err(|error| ProviderError::new("invalid-request").with_details(json!({"message":"Malformed tool arguments", "tool":call["function"]["name"], "parseError":error.to_string()})))?;
+            let mut arguments: Value = serde_json::from_str(arguments).map_err(|error| ProviderError::new("invalid-request").with_details(json!({"message":"Malformed tool arguments", "tool":call["function"]["name"], "parseError":error.to_string()})))?;
             if !arguments.is_object() {
                 return Err(ProviderError::new("invalid-request"));
+            }
+            if call["function"]["name"] == groundweb::TOOL_NAME
+                && !searched
+                && arguments["urls"].as_array().is_none_or(Vec::is_empty)
+                && !tools.pasted_urls.is_empty()
+            {
+                arguments["urls"] = json!(tools.pasted_urls);
             }
             let (ack, images) = tokio::select! {
                 result = super::tools::execute(runtime, job, credential, candidate, &mut audio_disabled, tools, call, &arguments) => result,
                 _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
             };
+            if call["function"]["name"] == groundweb::TOOL_NAME {
+                searched = true;
+            }
             messages.push(ack);
             internal_images.extend(images);
         }
@@ -355,7 +397,7 @@ async fn free_daily_remaining(
     body.pointer("/data/free_model_daily_requests/remaining")
         .and_then(Value::as_u64)
 }
-async fn send(
+pub(crate) async fn send(
     client: &reqwest::Client,
     credential: &ActiveCredential,
     body: &Value,

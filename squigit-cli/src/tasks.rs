@@ -178,6 +178,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                         &conversation_id,
                         task.model,
                         task.effort,
+                        false,
                     )
                     .await?,
                 ),

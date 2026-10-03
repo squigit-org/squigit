@@ -12,9 +12,14 @@ pub(crate) struct ConversationTools {
     pub(crate) manifest: AttachmentManifest,
     pub(crate) image_sources: BTreeMap<String, String>,
     pub(crate) uploads: Vec<String>,
+    pub(crate) free_web: bool,
+    pub(crate) pasted_urls: Vec<String>,
 }
 pub(crate) fn declarations(scope: &ConversationTools, audio_enabled: bool) -> Vec<Value> {
     let mut tools = Vec::new();
+    if scope.free_web {
+        tools.push(groundweb::tool_definition());
+    }
     if !scope.scope.is_empty() {
         for declaration in squigit_harness::tools::function_declarations()
             .as_array()
@@ -45,6 +50,17 @@ pub(crate) async fn execute(
     call: &Value,
     args: &Value,
 ) -> (Value, Vec<Value>) {
+    if call.pointer("/function/name").and_then(Value::as_str) == Some(groundweb::TOOL_NAME) {
+        let result = if tools.free_web {
+            super::web::search(job, args).await
+        } else {
+            Err("This local search tool is unavailable for the selected model".into())
+        };
+        return (
+            json!({"role":"tool", "tool_call_id":call["id"], "content":json!({"ok":result.is_ok(),"output":result.unwrap_or_else(|error|error)}).to_string()}),
+            Vec::new(),
+        );
+    }
     let started = now_ms();
     let name = call
         .pointer("/function/name")

@@ -114,6 +114,41 @@ impl Completion {
         let delta = &choice["delta"];
         let content = delta["content"].as_str().unwrap_or("");
         let tool_calls = delta["tool_calls"].as_array();
+        for annotation in [
+            &delta["annotations"],
+            &choice["message"]["annotations"],
+            &choice["annotations"],
+        ]
+        .into_iter()
+        .filter_map(Value::as_array)
+        .flatten()
+        {
+            if self.message.get("annotations").is_none() {
+                self.message["annotations"] = json!([]);
+            }
+            let annotations = self.message["annotations"].as_array_mut().unwrap();
+            let existing = annotation["index"].as_u64().and_then(|index| {
+                annotations.iter_mut().find(|existing| {
+                    existing["index"].as_u64() == Some(index)
+                        && existing["type"] == annotation["type"]
+                })
+            });
+            if let Some(existing) = existing {
+                if let Some(fields) = annotation.as_object() {
+                    for (key, value) in fields {
+                        if let (Some(current), Some(update)) =
+                            (existing[key].as_object_mut(), value.as_object())
+                        {
+                            current.extend(update.clone());
+                        } else if !value.is_null() {
+                            existing[key] = value.clone();
+                        }
+                    }
+                }
+            } else if !annotations.contains(annotation) {
+                annotations.push(annotation.clone());
+            }
+        }
         if !content.is_empty() {
             append(&mut self.message, "content", content);
             job.phase("thinking", None);

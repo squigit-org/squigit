@@ -14,3 +14,4 @@ pub(crate) mod summaries;
 pub(crate) mod titles;
 pub(crate) mod tools;
 pub(crate) mod transport;
+pub(crate) mod web;
