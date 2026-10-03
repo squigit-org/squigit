@@ -170,6 +170,12 @@ impl JobWorker {
                     record.cancellation.cancel();
                     record.snapshot.status = "cancelled".to_string();
                     record.snapshot.error = Some(ProviderError::new("stopped").user_error());
+                    for tool in &mut record.snapshot.grounding.tools {
+                        if tool.ended_at_ms.is_none() {
+                            tool.content = format!("Stopped: {}", tool.content);
+                            tool.ended_at_ms = Some(now_ms());
+                        }
+                    }
                     record.snapshot.next_model = None;
                     record.snapshot.retry_after_ms = None;
                     record.snapshot.grounding.duration_ms =
@@ -181,6 +187,10 @@ impl JobWorker {
 }
 
 impl JobControl {
+    pub(crate) fn snapshot(&self) -> Option<JobSnapshot> {
+        self.worker.snapshot(&self.id)
+    }
+
     pub(crate) fn grounding_tool_count(&self) -> usize {
         self.worker
             .snapshot(&self.id)
@@ -219,6 +229,57 @@ impl JobControl {
         });
     }
 
+    pub(crate) fn begin_tool(
+        &self,
+        kind: &str,
+        content: String,
+        resource: Option<GroundingResource>,
+    ) -> String {
+        let id = new_job_id();
+        self.update(|snapshot| {
+            snapshot.grounding.tools.push(GroundingTool {
+                id: id.clone(),
+                kind: kind.into(),
+                content,
+                resource,
+                started_at_ms: now_ms(),
+                ended_at_ms: None,
+            })
+        });
+        id
+    }
+    pub(crate) fn finish_tool(&self, id: &str, content: String) {
+        self.update(|snapshot| {
+            if let Some(tool) = snapshot
+                .grounding
+                .tools
+                .iter_mut()
+                .find(|tool| tool.id == id)
+            {
+                tool.content = content;
+                tool.ended_at_ms = Some(now_ms());
+            }
+        });
+    }
+    pub(crate) fn parse_control(&self) -> squigit_harness::parser::ParseControl {
+        let worker = self.worker.clone();
+        let id = self.id.clone();
+        let cancellation = self.cancellation.clone();
+        squigit_harness::parser::ParseControl::with_progress(move |text| {
+            if cancellation.is_cancelled() {
+                return;
+            }
+            if let Ok(mut records) = worker.records.lock() {
+                if let Some(record) = records.get_mut(&id) {
+                    if !record.snapshot.is_terminal() {
+                        record.snapshot.phase = "parsing".into();
+                        record.snapshot.target = Some(text);
+                    }
+                }
+            }
+        })
+    }
+
     pub(crate) fn tool(
         &self,
         kind: &str,
@@ -247,6 +308,14 @@ impl JobControl {
         self.update(|snapshot| {
             snapshot.grounding.duration_ms =
                 Some(now_ms().saturating_sub(snapshot.grounding.started_at_ms));
+            for tool in &mut snapshot.grounding.tools {
+                if tool.ended_at_ms.is_none() {
+                    if result.is_err() {
+                        tool.content = format!("Interrupted: {}", tool.content);
+                    }
+                    tool.ended_at_ms = Some(now_ms());
+                }
+            }
             snapshot.phase = "finalizing".to_string();
             snapshot.retry_after_ms = None;
             snapshot.next_model = None;

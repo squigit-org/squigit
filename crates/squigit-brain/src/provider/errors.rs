@@ -129,7 +129,7 @@ impl ProviderError {
             "quota" => "Your OpenRouter daily free usage limit has been reached. Try again after it resets.",
             "overloaded" => "The model is busy right now. Please try again in a moment.",
             "authentication" => "Your OpenRouter key needs attention. Update it in Settings and try again.",
-            "payment" => "Your OpenRouter account needs available credits or a higher spending limit for this model. You can also choose Free.",
+            "payment" => "Your OpenRouter account needs available credits or a higher spending limit for this model.",
             "permission" => "Your OpenRouter key doesn't have access to this request. Check its permissions in Settings.",
             "invalid-model" => "Choose a model in Settings before sending a message.",
             "model-unavailable" => "No compatible model is currently available for this request. Please try again later.",
@@ -139,5 +139,15 @@ impl ProviderError {
             "empty-output" => "The model returned no answer. Please try again.",
             _ => "An unexpected error occurred. Please try again.",
         }.to_string() }
+    }
+}
+
+impl std::fmt::Display for ProviderError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(
+            self.details["message"]
+                .as_str()
+                .unwrap_or(&self.user_error().message),
+        )
     }
 }

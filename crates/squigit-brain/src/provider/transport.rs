@@ -16,6 +16,7 @@ pub(crate) struct RequestSpec {
     pub(crate) schema: Option<Value>,
     pub(crate) effort: Option<String>,
     pub(crate) free: bool,
+    pub(crate) utility: bool,
 }
 pub(crate) fn text(text: impl Into<String>) -> Value {
     json!({"type":"text", "text":text.into()})
@@ -46,13 +47,41 @@ pub(crate) async fn execute(
     let mut bound_model: Option<String> = None;
     let mut rounds = 0;
     let mut calls = 0;
+    let mut media_ready = false;
+    let mut audio_disabled = spec.free.then_some(super::media::FREE_AUDIO_REASON);
     loop {
         if rounds >= 24 {
             return Err(ProviderError::new("invalid-request"));
         }
         let candidate = &candidates[model_index];
+        if !media_ready {
+            if let Some(tools) = scope {
+                let content = super::media::initial_inputs(
+                    runtime,
+                    job,
+                    credential,
+                    candidate,
+                    tools,
+                    spec.free,
+                    &mut audio_disabled,
+                )
+                .await?;
+                if !content.is_empty() {
+                    let message = messages
+                        .iter_mut()
+                        .rev()
+                        .find(|message| message["role"] == "user")
+                        .ok_or_else(|| ProviderError::new("invalid-request"))?;
+                    message["content"]
+                        .as_array_mut()
+                        .ok_or_else(|| ProviderError::new("invalid-request"))?
+                        .extend(content);
+                }
+            }
+            media_ready = true;
+        }
         let model = bound_model.as_deref().unwrap_or(&candidate.id);
-        let output_budget = candidate.output_budget(spec.schema.is_some());
+        let output_budget = candidate.output_budget(spec.utility);
         let mut body = json!({"model":model, "messages":messages, "stream":spec.schema.is_none(), "max_tokens":output_budget, "provider":{"require_parameters":true}});
         if spec.effort.as_deref() == Some("instant") {
             body["reasoning"] = if spec.free {
@@ -66,14 +95,19 @@ pub(crate) async fn execute(
             body["reasoning"] = json!({"exclude":true});
         }
         if !spec.tools.is_empty() {
-            body["tools"] = json!(spec.tools);
+            body["tools"] = json!(spec
+                .tools
+                .iter()
+                .filter(|tool| audio_disabled.is_none()
+                    || tool["function"]["name"] != "transcribe_audio")
+                .collect::<Vec<_>>());
             body["tool_choice"] = json!("auto");
         }
         if let Some(schema) = &spec.schema {
             body["response_format"] = json!({"type":"json_schema", "json_schema":{"name":"utility_result", "strict":true, "schema":schema}});
         }
         job.update(|snapshot| {
-            if snapshot.phase == "retrying" {
+            if !spec.utility || snapshot.phase == "retrying" {
                 snapshot.phase = "thinking".to_string();
                 snapshot.target = None;
             }
@@ -84,7 +118,7 @@ pub(crate) async fn execute(
             snapshot.attempt += 1;
             snapshot.retry_after_ms = None;
         });
-        let slots = if spec.schema.is_some() {
+        let slots = if spec.utility {
             runtime.worker.micro_slots.clone()
         } else {
             runtime.worker.main_slots.clone()
@@ -119,6 +153,52 @@ pub(crate) async fn execute(
                         snapshot.grounding.actual_model = Some(actual.to_string());
                     });
                 }
+                let has_audio = messages.iter().any(|message| {
+                    message["content"].as_array().is_some_and(|parts| {
+                        parts.iter().any(|part| {
+                            matches!(part["type"].as_str(), Some("input_audio" | "video_url"))
+                        })
+                    })
+                });
+                if scope.is_some()
+                    && audio_disabled.is_none()
+                    && has_audio
+                    && matches!(
+                        error.kind,
+                        "payment"
+                            | "permission"
+                            | "invalid-request"
+                            | "model-unavailable"
+                            | "unexpected"
+                            | "empty-output"
+                    )
+                {
+                    job.report_error(&error);
+                    audio_disabled = Some(super::media::audio_failure_reason(&error));
+                    messages = original.clone();
+                    media_ready = false;
+                    bound_model = None;
+                    rounds = 0;
+                    calls = 0;
+                    job.update(|snapshot| {
+                        snapshot.phase = "thinking".into();
+                        snapshot.target = None;
+                        snapshot
+                            .grounding
+                            .tools
+                            .retain(|tool| tool.kind != "thinking");
+                        for tool in &mut snapshot.grounding.tools {
+                            if tool.ended_at_ms.is_none()
+                                && matches!(tool.kind.as_str(), "upload_audio" | "upload_video")
+                            {
+                                tool.content =
+                                    "Audio omitted; continuing with available content".into();
+                                tool.ended_at_ms = Some(crate::jobs::now_ms());
+                            }
+                        }
+                    });
+                    continue;
+                }
                 if spec.free && error.kind == "rate-limit" {
                     let remaining = tokio::select! {
                         remaining = free_daily_remaining(&client, credential) => remaining,
@@ -152,15 +232,22 @@ pub(crate) async fn execute(
                 }
                 if next_index != model_index {
                     model_index = next_index;
+                    media_ready = false;
                     messages = original.clone();
                     bound_model = None;
                     rounds = 0;
                     calls = 0;
-                    job.update(|snapshot| snapshot.grounding.tools.clear());
+                    job.update(|snapshot| {
+                        snapshot
+                            .grounding
+                            .tools
+                            .retain(|tool| tool.kind != "thinking")
+                    });
                 }
                 continue;
             }
         };
+        super::media::finish_uploads(job);
         rounds += 1;
         if let Some(model) = response["model"].as_str() {
             bound_model = Some(model.to_string());
@@ -205,6 +292,9 @@ pub(crate) async fn execute(
                 return Err(ProviderError::new("empty-output")
                     .with_details(json!({"httpStatus":200,"response":response})));
             }
+            if !spec.utility {
+                job.phase("finalizing", None);
+            }
             return Ok(content);
         }
         let tools = scope.ok_or_else(|| ProviderError::new("invalid-request"))?;
@@ -235,7 +325,7 @@ pub(crate) async fn execute(
                 return Err(ProviderError::new("invalid-request"));
             }
             let (ack, images) = tokio::select! {
-                result = super::tools::execute(job, tools, call, &arguments) => result,
+                result = super::tools::execute(runtime, job, credential, candidate, &mut audio_disabled, tools, call, &arguments) => result,
                 _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
             };
             messages.push(ack);
@@ -344,7 +434,7 @@ async fn send(
             let public = super::stream::reasoning_text(message);
             if !public.trim().is_empty() {
                 job.tool("thinking", public, crate::jobs::now_ms(), None);
-                job.phase("finalizing", None);
+                job.phase("thinking", None);
             }
         }
     }

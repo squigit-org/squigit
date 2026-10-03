@@ -11,8 +11,9 @@ pub(crate) struct ConversationTools {
     pub(crate) scope: ToolScope,
     pub(crate) manifest: AttachmentManifest,
     pub(crate) image_sources: BTreeMap<String, String>,
+    pub(crate) uploads: Vec<String>,
 }
-pub(crate) fn declarations(scope: &ConversationTools) -> Vec<Value> {
+pub(crate) fn declarations(scope: &ConversationTools, audio_enabled: bool) -> Vec<Value> {
     let mut tools = Vec::new();
     if !scope.scope.is_empty() {
         for declaration in squigit_harness::tools::function_declarations()
@@ -23,11 +24,23 @@ pub(crate) fn declarations(scope: &ConversationTools) -> Vec<Value> {
             tools.push(json!({"type":"function", "function":declaration}));
         }
     }
-    tools.push(json!({"type":"function", "function":{"name":"recall_attachment", "description":"Read an image shared in this conversation when its brief is insufficient. Select the matching image by its brief, then use its attachment_hash from attachment_manifest.json. This supplies its actual pixels. Use this only for an image listed in the manifest; an empty manifest means no images have been shared.", "parameters":{"type":"object","properties":{"attachment_hash":{"type":"string"}},"required":["attachment_hash"],"additionalProperties":false}}}));
+    tools.push(json!({"type":"function", "function":{"name":"recall_attachment", "description":"View an image shared in this conversation by its path in attachment_manifest.json. For documents use parse_pdf; for video use parse_video. This supplies actual pixels, not just a brief.", "parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"],"additionalProperties":false}}}));
+    for (name, description, properties, required) in [
+        ("parse_pdf", "Load the local document parser. Read an inclusive PDF/Office page range (1-based), with best-effort text and WebP collages of at most six pages. Use source paths from attachment_manifest.json or the authorized file scope; output paths are managed locally.", json!({"path":{"type":"string"},"from":{"type":"integer","minimum":1},"to":{"type":"integer","minimum":1}}), json!(["path","from","to"])),
+        ("parse_video", "Load the local video parser. Inspect a selected time range with sampled frame collages and available audio. All times are milliseconds: from inclusive, to exclusive, jump is the sampling interval. Choose jump to match the question; at most 300 frames per call. Use an authorized source path.", json!({"path":{"type":"string"},"from":{"type":"integer","minimum":0},"to":{"type":"integer","minimum":1},"jump":{"type":"integer","minimum":1}}), json!(["path","from","to","jump"])),
+        ("transcribe_audio", "Listen to an authorized audio file or a video's audio. Uses native audio when supported, otherwise waits for a transcript. Audio failure must not be interpreted as speech.", json!({"path":{"type":"string"}}), json!(["path"])),
+    ] {
+        if name == "transcribe_audio" && !audio_enabled { continue; }
+        tools.push(json!({"type":"function","function":{"name":name,"description":description,"parameters":{"type":"object","properties":properties,"required":required,"additionalProperties":false}}}));
+    }
     tools
 }
 pub(crate) async fn execute(
+    runtime: &crate::runtime::BrainRuntimeState,
     job: &JobControl,
+    credential: &super::credentials::ActiveCredential,
+    candidate: &super::models::Candidate,
+    audio_disabled: &mut Option<&'static str>,
     tools: &ConversationTools,
     call: &Value,
     args: &Value,
@@ -41,45 +54,67 @@ pub(crate) async fn execute(
     let mut resource = None;
     let mut images = Vec::new();
     let result: Result<String, String> = async {
+        if name == "transcribe_audio" {
+            if let Some(reason) = audio_disabled {
+                images.push(super::media::omitted_audio(reason, false));
+                return Ok("Audio was omitted; answer using the available content.".into());
+            }
+        }
+        if matches!(name, "parse_pdf" | "parse_video" | "transcribe_audio") {
+            let path = args["path"].as_str().ok_or("Missing source path")?;
+            let (hash, _original) = super::media::resolve_path(job, tools, path).await?;
+            display_name = tools.manifest.iter().find(|entry| entry.attachment_hash == hash).map(|entry| entry.display_name.clone())
+                .or_else(|| std::path::Path::new(path).file_name().map(|s| s.to_string_lossy().into_owned()));
+            let label = if name == "parse_video" { "a video" } else { display_name.as_deref().unwrap_or("media") };
+            let step = job.begin_tool(name, format!("Loaded a tool, parsing {label}"), None);
+            let result: Result<String, String> = async {
+                if name == "transcribe_audio" {
+                    let source = hash.clone();
+                    let index = super::media::blocking(job, move |control| squigit_harness::parser::media::prepare(&source, &control)).await.map_err(|e| e.to_string())?;
+                    let audio = index.audio.as_ref().ok_or("No audio track was found")?;
+                    images.extend(super::media::audio_inputs(runtime, job, credential, candidate, audio_disabled, &hash, audio, index.duration_ms.unwrap_or(0), false).await.map_err(|e| e.to_string())?);
+                    return Ok("Audio handling results follow the tool acknowledgements; use the available content.".into());
+                }
+                let from = args["from"].as_u64().ok_or("from must be a non-negative integer")?;
+                let to = args["to"].as_u64().ok_or("to must be a positive integer")?;
+                let parsed = if name == "parse_pdf" {
+                    let from = u32::try_from(from).map_err(|_| "Page number is too large")?;
+                    let to = u32::try_from(to).map_err(|_| "Page number is too large")?;
+                    let hash = hash.clone();
+                    super::media::blocking(job, move |control| squigit_harness::parser::media::parse_pdf(&hash, from, to, &control)).await
+                } else {
+                    let jump = args["jump"].as_u64().filter(|v| *v > 0).ok_or("jump must be a positive integer")?;
+                    let hash = hash.clone();
+                    super::media::blocking(job, move |control| squigit_harness::parser::media::parse_video(&hash, from, to, jump, &control)).await
+                    .map(|output| vec![output])
+                }.map_err(|e| e.to_string())?;
+                let storage = ThreadStorage::new().map_err(|e| e.to_string())?;
+                let snapshot = job.snapshot().ok_or("Job is unavailable")?;
+                let entry = storage.register_read_attachment(&snapshot.thread_id, &hash, display_name.as_deref().unwrap_or("media")).map_err(|e| e.to_string())?;
+                super::summaries::start(runtime, credential.clone(), snapshot.thread_id.clone(), vec![entry], snapshot.grounding.selected_model);
+                let mut selections = Vec::new();
+                for output in &parsed {
+                    images.extend(super::media::parsed_inputs(job, output, path, display_name.as_deref().unwrap_or("media"), usize::MAX).await.map_err(|e| e.to_string())?);
+                    if let Some(audio) = &output.manifest.audio {
+                        images.extend(super::media::audio_inputs(runtime, job, credential, candidate, audio_disabled, &hash, &output.output_dir.join(audio), to - from, true).await.map_err(|e| e.to_string())?);
+                    }
+                    selections.push(json!({"selection":output.manifest.selection,"warnings":output.manifest.warnings}));
+                }
+                Ok(json!({"parsed":selections,"note":"Cached collages are reused, possibly including neighboring pages. Selected collages, extracted text, and available audio follow matching tool acknowledgements."}).to_string())
+            }.await;
+            job.finish_tool(&step, format!("{} {label}", if result.is_ok() { "Parsed" } else { "Couldn't parse" }));
+            return result;
+        }
         if name == "recall_attachment" {
-            let hash = args["attachment_hash"]
-                .as_str()
-                .ok_or("Missing attachment ID")?;
-            let entry = tools
-                .manifest
-                .iter()
-                .find(|entry| entry.attachment_hash == hash)
+            let requested = args["path"].as_str().ok_or("Missing attachment path")?;
+            let storage = ThreadStorage::new().map_err(|error| error.to_string())?;
+            let entry = tools.manifest.iter().find(|entry| storage.find_object_blob(&entry.attachment_hash).is_ok_and(|path| path == std::path::Path::new(requested)))
                 .ok_or("Attachment was not shared in this conversation")?;
             display_name = Some(entry.display_name.clone());
-            job.phase("recalling", display_name.clone());
-            let image = super::images::from_hash(hash).await?;
-            let image_path = ThreadStorage::new()
-                .and_then(|storage| storage.find_object_blob(hash))
-                .map_err(|error| error.to_string())?
-                .to_string_lossy()
-                .to_string();
-            resource = Some(GroundingResource {
-                path: tools
-                    .image_sources
-                    .get(hash)
-                    .cloned()
-                    .unwrap_or_else(|| image_path.clone()),
-                display_name: entry.display_name.clone(),
-                is_folder: false,
-                image: Some(GroundingImage {
-                    path: image_path,
-                    attachment_hash: hash.to_string(),
-                }),
-            });
-            images.push(super::transport::text(format!(
-                "Recalled image: {} (attachment_id: {hash})",
-                entry.display_name
-            )));
-            images.push(image);
-            return Ok(format!(
-                "Loaded {}. Its pixels follow the tool acknowledgements.",
-                entry.display_name
-            ));
+            let path = storage.find_object_blob(&entry.attachment_hash).map_err(|error| error.to_string())?;
+            if entry.file_type != squigit_storage::AttachmentFileType::Image { return Err("Use parse_pdf or parse_video to recall a page/time range; transcribe_audio for audio.".into()); }
+            images.extend(super::media::viewed(job, &path, requested, &entry.display_name, &entry.attachment_hash).await.map_err(|e| e.to_string())?);
+            return Ok("Loaded the recalled image. Its pixels follow the tool acknowledgements.".into());
         }
         if !TOOL_NAMES.contains(&name) {
             return Err("This tool is unavailable".to_string());
@@ -117,11 +152,10 @@ pub(crate) async fn execute(
                 display_name: display_name.clone().unwrap_or_else(|| path.to_string()),
                 is_folder: canonical.is_dir(),
                 image: None,
+                video: None,
             });
         }
-        if super::images::is_disabled_document(path) {
-            return Err("PDF and Office reads are temporarily unavailable".to_string());
-        }
+
         if name == "read_file"
             && std::path::Path::new(path)
                 .extension()
@@ -188,24 +222,29 @@ pub(crate) async fn execute(
     }
     .await;
     let ok = result.is_ok();
-    job.tool(
+    if !matches!(
         name,
-        format!(
-            "{} {}",
-            if !ok {
-                "Couldn't read"
-            } else if name == "grep_search" {
-                "Searched"
-            } else if name == "recall_attachment" {
-                "Recalled"
-            } else {
-                "Read"
-            },
-            display_name.as_deref().unwrap_or("shared files")
-        ),
-        started,
-        resource,
-    );
+        "parse_pdf" | "parse_video" | "transcribe_audio" | "recall_attachment"
+    ) {
+        job.tool(
+            name,
+            format!(
+                "{} {}",
+                if !ok {
+                    "Couldn't read"
+                } else if name == "grep_search" {
+                    "Searched"
+                } else if name == "recall_attachment" {
+                    "Recalled"
+                } else {
+                    "Read"
+                },
+                display_name.as_deref().unwrap_or("shared files")
+            ),
+            started,
+            resource,
+        );
+    }
     let content = match result {
         Ok(output) => json!({"output":output}),
         Err(error) => json!({"error":error}),

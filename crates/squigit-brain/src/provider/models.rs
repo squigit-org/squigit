@@ -126,6 +126,12 @@ impl Candidate {
             .as_array()
             .is_some_and(|items| items.iter().any(|item| item.as_str() == Some(parameter)))
     }
+    pub(crate) fn supports_input(&self, modality: &str) -> bool {
+        self.metadata
+            .pointer("/architecture/input_modalities")
+            .and_then(Value::as_array)
+            .is_some_and(|items| items.iter().any(|item| item.as_str() == Some(modality)))
+    }
     fn vision_chat(&self) -> bool {
         let architecture = &self.metadata["architecture"];
         architecture["input_modalities"]
