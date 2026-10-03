@@ -71,7 +71,7 @@ impl Completion {
                 None,
             );
             self.reasoning_started_at = now_ms();
-            job.phase("finalizing", None);
+            job.phase("thinking", None);
         }
         self.published_reasoning = public;
     }
@@ -116,7 +116,7 @@ impl Completion {
         let tool_calls = delta["tool_calls"].as_array();
         if !content.is_empty() {
             append(&mut self.message, "content", content);
-            job.phase("finalizing", None);
+            job.phase("thinking", None);
         }
         if let Some(refusal) = delta["refusal"].as_str() {
             append(&mut self.message, "refusal", refusal);
