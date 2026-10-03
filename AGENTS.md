@@ -85,7 +85,7 @@ The workspace components have these responsibilities:
 - `crates/squigit-storage/` owns config roots, profiles, encrypted key records, CAS objects, workspaces, image threads, side-chat threads, OCR annotations, version records, and their serialized schemas.
 - `crates/squigit-auth/` owns Google OAuth, API-key validation, encryption, OS-vault binding, reveal authorization, and process-only contributor credentials.
 - `crates/squigit-harness/` owns local PDF/Office conversion, video frame collages, audio extraction, and the model file tools. Access is scoped to the user's ordinary-text file/folder requests and shared citations. PDF/Office reads use `parse_pdf`, video reads use `parse_video`, and image reads use the existing local rendition pipeline. Originals live in CAS; parsed artifacts and collage briefs live in the source-keyed blob-storage cache.
-- `crates/squigit-brain/` owns OpenRouter model discovery and routing, conversation jobs, reasoning, title generation, image/collage briefs, local media recall, and capability-aware video/audio requests.
+- `crates/squigit-brain/` owns OpenRouter model discovery and routing, conversation jobs, reasoning, title generation, image/collage briefs, local media recall, capability-aware video/audio requests, and search policy. Free conversations call Groundweb for retrieval; named models use OpenRouter search controls. Source metadata and inline citations stay under the conversation job and persist with the assistant message.
 - `squigit-ocr/src/` is the publishable Rust library for installed-executable discovery, OCR execution, model management, downloads, and annotation persistence.
 - `squigit-cli/` is the Ratatui product. It must keep the same persisted threads, attachments, profiles, settings, and OCR data that the GUI understands.
 - `xtask/` is the repository command surface for development, validation, and product builds.
@@ -118,7 +118,9 @@ Inside this repository, the facade and implementation crates relate by `path + v
 
 Production facade changes (anything under `squigit-rs/`, `crates/`, or `squigit-ocr/src/`) reach the desktop only through crates.io. The desktop N-API backend (`backend/Cargo.toml` in the private repository) is the single external consumer: `squigit = { package = "squigit-rs", version = "x.y.z" }`. Never commit a path dependency from the desktop into this repository.
 
-The only sanctioned local path link is the desktop's own untracked `.cargo/dev.toml` (`[patch.crates-io] squigit-rs = { path = "../squigit/squigit-rs" }`), which lives in the desktop repo and is never committed. It needs no changes here; only keep the local facade version semver-compatible with the desktop's requirement so the patch resolves. Never reference private desktop paths from tracked source here.
+The desktop's untracked `.cargo/dev.toml` patches `squigit-rs` to the local facade. Keep the local facade version semver-compatible with the desktop's requirement so the patch resolves. Never reference private desktop paths from tracked source here.
+
+Groundweb is a versioned crates.io dependency of `squigit-brain` (currently `0.1.1`), including in local facade builds. Optional machine-local Cargo configuration in `.cargo/dev.toml` uses a separate lockfile under `.cargo/dev/`; `cargo xtask dev` and `cargo xtask doctor` read it when present. Keep real overlays and development lockfiles ignored through `.git/info/exclude`. Do not add a Groundweb path override for routine development.
 
 The end-to-end sequence for a production facade change is:
 

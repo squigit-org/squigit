@@ -10,6 +10,9 @@ use std::process::Command;
 pub fn run(demo: bool, forwarded: &[String]) -> Result<(), String> {
     let root = process::workspace_root()?;
     let mut command = Command::new("cargo");
+    if root.join(".cargo/dev.toml").is_file() {
+        command.arg("--config").arg(root.join(".cargo/dev.toml"));
+    }
     command
         .args(["run", "--package", "squigit-cli", "--bin", "squigit", "--"])
         .args(forwarded)

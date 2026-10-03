@@ -1,0 +1,4 @@
+# Optional local Cargo configuration. Groundweb remains versioned on crates.io.
+# cargo xtask dev/doctor use this overlay when it exists.
+[resolver]
+lockfile-path = ".cargo/dev/Cargo.lock"

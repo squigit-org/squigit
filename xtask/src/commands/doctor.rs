@@ -38,6 +38,9 @@ pub fn run() -> Result<(), String> {
     for (label, arguments, quiet) in checks {
         println!("[doctor] {label}");
         let mut command = Command::new("cargo");
+        if root.join(".cargo/dev.toml").is_file() {
+            command.arg("--config").arg(root.join(".cargo/dev.toml"));
+        }
         command.args(*arguments).current_dir(&root);
         if *label == "workspace compile" {
             command.env("SQUIGIT_CLI_DEMO", "1");
