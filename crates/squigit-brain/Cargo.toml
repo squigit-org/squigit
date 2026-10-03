@@ -22,5 +22,8 @@ squigit-auth = { version = "0.1.0", path = "../squigit-auth" }
 squigit-harness = { version = "0.1.0", path = "../squigit-harness" }
 chrono = "0.4"
 log = "0.4"
+groundweb = "0.1.1"
+pulldown-cmark = "0.13"
+url = "2"
 fs2 = "0.4"
 tempfile = "3"
