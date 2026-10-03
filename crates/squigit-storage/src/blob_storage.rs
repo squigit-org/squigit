@@ -13,6 +13,21 @@ pub struct StoredBlob {
     pub path: String,
 }
 
+#[derive(Clone, Copy)]
+enum BlobKind {
+    Image,
+    Text,
+}
+
+impl BlobKind {
+    fn directory(self) -> &'static str {
+        match self {
+            Self::Image => "images",
+            Self::Text => "text",
+        }
+    }
+}
+
 fn invalid_blob(message: &str) -> StorageError {
     StorageError::InvalidBlob(message.to_string())
 }
@@ -54,45 +69,77 @@ impl ThreadStorage {
             .join("blob_storage"))
     }
 
-    pub fn blob_path(&self, name: &str) -> Result<PathBuf> {
-        validate_blob_name(name)?;
-        Ok(self.blob_storage_dir()?.join(name))
+    pub fn media_cache_dir(&self, source_hash: &str) -> Result<PathBuf> {
+        self.object_dir(source_hash)?;
+        let path = self.blob_storage_dir()?.join("media").join(source_hash);
+        fs::create_dir_all(&path)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            for directory in [
+                self.blob_storage_dir()?,
+                self.blob_storage_dir()?.join("media"),
+                path.clone(),
+            ] {
+                fs::set_permissions(directory, fs::Permissions::from_mode(0o700))?;
+            }
+        }
+        Ok(path)
     }
 
-    pub fn blob_name(&self, path: &Path) -> Option<String> {
-        let directory = self.blob_storage_dir().ok()?;
+    fn blob_directory(&self, kind: BlobKind) -> Result<PathBuf> {
+        Ok(self.blob_storage_dir()?.join(kind.directory()))
+    }
+
+    fn blob_path(&self, kind: BlobKind, name: &str) -> Result<PathBuf> {
+        validate_blob_name(name)?;
+        Ok(self.blob_directory(kind)?.join(name))
+    }
+
+    fn blob_name(&self, kind: BlobKind, path: &Path) -> Option<String> {
+        let directory = self.blob_directory(kind).ok()?;
         let name = path.file_name()?.to_str()?;
         (path.parent() == Some(directory.as_path()) && validate_blob_name(name).is_ok())
             .then(|| name.to_string())
     }
 
+    pub fn image_blob_path(&self, name: &str) -> Result<PathBuf> {
+        self.blob_path(BlobKind::Image, name)
+    }
+
+    pub fn image_blob_name(&self, path: &Path) -> Option<String> {
+        self.blob_name(BlobKind::Image, path)
+    }
+
     pub fn new_text_blob_path(&self, extension: &str) -> Result<PathBuf> {
         let extension = normalized_extension(extension)?;
         let id = uuid::Uuid::new_v4();
-        Ok(self.blob_storage_dir()?.join(format!("{id}.{extension}")))
+        self.blob_path(BlobKind::Text, &format!("{id}.{extension}"))
     }
 
     pub fn store_text_blob(&self, path: &Path, content: &str) -> Result<StoredBlob> {
-        let name = self
-            .blob_name(path)
-            .ok_or_else(|| invalid_blob("Text blobs must be UUID files inside blob_storage"))?;
-        self.write_blob(&name, content.as_bytes())
+        let name = self.blob_name(BlobKind::Text, path).ok_or_else(|| {
+            invalid_blob("Text blobs must be UUID files inside blob_storage/text")
+        })?;
+        self.write_blob(BlobKind::Text, &name, content.as_bytes())
     }
 
     pub fn store_image_blob(&self, bytes: &[u8], extension: &str) -> Result<StoredBlob> {
         let extension = normalized_extension(extension)?;
         let name = format!("{}.{extension}", uuid::Uuid::new_v4());
-        self.write_blob(&name, bytes)
+        self.write_blob(BlobKind::Image, &name, bytes)
     }
 
-    fn write_blob(&self, name: &str, bytes: &[u8]) -> Result<StoredBlob> {
-        let path = self.blob_path(name)?;
-        let directory = self.blob_storage_dir()?;
+    fn write_blob(&self, kind: BlobKind, name: &str, bytes: &[u8]) -> Result<StoredBlob> {
+        let path = self.blob_path(kind, name)?;
+        let directory = self.blob_directory(kind)?;
         fs::create_dir_all(&directory)?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
+            for directory in [self.blob_storage_dir()?, directory] {
+                fs::set_permissions(directory, fs::Permissions::from_mode(0o700))?;
+            }
         }
         let mut options = OpenOptions::new();
         options.write(true).create(true).truncate(true);

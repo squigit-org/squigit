@@ -18,9 +18,9 @@ pub mod types;
 pub use types::{
     default_ocr_annotations, AssistantError, AttachmentManifest, AttachmentManifestEntry,
     ContextWindow, Conversation, ForkSourceKind, ForkedFrom, GroundingImage, GroundingResource,
-    GroundingTool, ManifestMention, MessageAttachment, MessageGrounding, MessageTextCitation,
-    OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion, SideChatData,
-    SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, WorkspaceMetadata,
+    GroundingTool, GroundingVideo, ManifestMention, MessageAttachment, MessageGrounding,
+    MessageTextCitation, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion,
+    SideChatData, SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, WorkspaceMetadata,
     DEFAULT_SIDE_CHAT_TITLE, DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
 };
 

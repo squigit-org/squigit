@@ -53,10 +53,10 @@ pub use profiles::{
 };
 pub use threads::{
     AssistantError, AttachmentManifest, AttachmentManifestEntry, ContextWindow, Conversation,
-    ForkSourceKind, ForkedFrom, GroundingImage, GroundingResource, GroundingTool, ManifestMention,
-    MessageAttachment, MessageGrounding, MessageTextCitation, OcrAnnotationEntry, OcrAnnotations,
-    OcrModelAnnotation, OcrRegion, SideChatData, SideChatMetadata, ThreadData, ThreadMessage,
-    ThreadMetadata, ThreadStorage, WorkspaceMetadata, DEFAULT_SIDE_CHAT_TITLE,
+    ForkSourceKind, ForkedFrom, GroundingImage, GroundingResource, GroundingTool, GroundingVideo,
+    ManifestMention, MessageAttachment, MessageGrounding, MessageTextCitation, OcrAnnotationEntry,
+    OcrAnnotations, OcrModelAnnotation, OcrRegion, SideChatData, SideChatMetadata, ThreadData,
+    ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata, DEFAULT_SIDE_CHAT_TITLE,
     DEFAULT_THREAD_TITLE, EMPTY_STATE_ASSET_ID,
 };
 pub use version::{

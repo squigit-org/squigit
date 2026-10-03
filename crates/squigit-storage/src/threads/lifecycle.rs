@@ -10,7 +10,6 @@ use std::sync::Mutex;
 
 static ATTACHMENT_MANIFEST_LOCK: Mutex<()> = Mutex::new(());
 
-use crate::cas::AttachmentFileType;
 use crate::error::{Result, StorageError};
 
 use super::ocr::{ensure_empty_state_asset, retain_supported_ocr_annotations_ids};
@@ -271,6 +270,30 @@ impl ThreadStorage {
         }
     }
 
+    pub fn register_read_attachment(
+        &self,
+        conversation_id: &str,
+        hash: &str,
+        name: &str,
+    ) -> Result<AttachmentManifestEntry> {
+        let entry = self.attachment_manifest_entry(hash, name, Utc::now())?;
+        let path = attachment_manifest_path(&self.thread_dir(conversation_id));
+        let _guard = ATTACHMENT_MANIFEST_LOCK
+            .lock()
+            .map_err(|_| StorageError::KeyStore("Attachment manifest is unavailable".into()))?;
+        let mut manifest: AttachmentManifest = serde_json::from_str(&fs::read_to_string(&path)?)?;
+        if let Some(existing) = manifest
+            .iter_mut()
+            .find(|item| item.attachment_hash == entry.attachment_hash)
+        {
+            *existing = entry.clone();
+        } else {
+            manifest.push(entry.clone());
+        }
+        super::atomic_write(&path, serde_json::to_string_pretty(&manifest)?.as_bytes())?;
+        Ok(entry)
+    }
+
     pub fn refresh_attachment_briefs(&self, conversation_id: &str) -> Result<()> {
         let _guard = ATTACHMENT_MANIFEST_LOCK.lock().map_err(|_| {
             StorageError::KeyStore("Attachment manifest is unavailable".to_string())
@@ -374,12 +397,12 @@ impl ThreadStorage {
             }
         } else {
             manifest.push(AttachmentManifestEntry {
-                attachment_hash: hash,
+                attachment_hash: hash.clone(),
                 display_name,
                 file_type: mention
                     .file_type
                     .clone()
-                    .unwrap_or(AttachmentFileType::Image),
+                    .unwrap_or(self.load_object_manifest(&hash)?.file_context.file_type),
                 file_brief: None,
                 last_mention_at: timestamp,
             });

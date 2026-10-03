@@ -58,7 +58,13 @@ fn validate_hash(hash: &str) -> Result<()> {
 fn classify_extension(extension: &str) -> Result<AttachmentFileType> {
     match extension {
         "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg" => Ok(AttachmentFileType::Image),
-        "pdf" => Ok(AttachmentFileType::Document),
+        "pdf" | "docx" | "xlsx" | "pptx" => Ok(AttachmentFileType::Document),
+        "mp4" | "m4v" | "mov" | "webm" | "mkv" | "avi" | "mpeg" | "mpg" | "wmv" | "flv" | "ogv"
+        | "3gp" | "mts" | "m2ts" | "vob" | "mxf" | "asf" | "dv" | "f4v" | "rm" | "rmvb" | "nut"
+        | "qt" | "m2v" => Ok(AttachmentFileType::Video),
+        "mp3" | "wav" | "m4a" | "aac" | "ogg" | "opus" | "flac" | "aiff" | "aif" | "wma" => {
+            Ok(AttachmentFileType::Audio)
+        }
         _ => Err(StorageError::UnsupportedAttachment(extension.to_string())),
     }
 }
@@ -149,21 +155,74 @@ impl ThreadStorage {
         self.store_object(bytes, &hash, "png", explicit_tone)
     }
 
-    /// Store an image from a file path.
-    pub fn store_image_from_path(
+    pub fn store_file_from_path(
         &self,
         path: &str,
         explicit_tone: Option<String>,
     ) -> Result<StoredImage> {
-        let mut file = File::open(path)?;
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
-        let extension = Path::new(path)
-            .extension()
-            .and_then(|value| value.to_str())
-            .unwrap_or("png");
-        let hash = blake3::hash(&buffer).to_hex().to_string();
-        self.store_object(&buffer, &hash, extension, explicit_tone)
+        let extension = normalize_extension(
+            Path::new(path)
+                .extension()
+                .and_then(|v| v.to_str())
+                .unwrap_or("bin"),
+        );
+        let file_type = classify_extension(&extension)?;
+        let mut source = File::open(path)?;
+        if !source.metadata()?.is_file() {
+            return Err(StorageError::UnsupportedAttachment(
+                "expected a file".into(),
+            ));
+        }
+        fs::create_dir_all(&self.objects_dir)?;
+        ensure_private_directory(&self.objects_dir)?;
+        let mut temporary = tempfile::NamedTempFile::new_in(&self.objects_dir)?;
+        let mut hasher = blake3::Hasher::new();
+        let mut buffer = [0u8; 64 * 1024];
+        loop {
+            let count = source.read(&mut buffer)?;
+            if count == 0 {
+                break;
+            }
+            hasher.update(&buffer[..count]);
+            temporary.write_all(&buffer[..count])?;
+        }
+        temporary.as_file().sync_all()?;
+        let hash = hasher.finalize().to_hex().to_string();
+        let _lock = self.lock_object_manifest(&hash)?;
+        let object_dir = self.object_dir(&hash)?;
+        let file_path = match self.find_object_blob(&hash) {
+            Ok(existing) => existing,
+            Err(_) => {
+                let destination = object_dir.join(format!("{hash}.{extension}"));
+                reject_symlink_or_non_regular(&destination)?;
+                temporary
+                    .persist_noclobber(&destination)
+                    .map_err(|e| e.error)?;
+                set_private_file_permissions(&destination)?;
+                crate::secure_file::sync_parent(&object_dir)?;
+                destination
+            }
+        };
+        let manifest = if self.object_manifest_path(&hash)?.try_exists()? {
+            self.load_object_manifest(&hash)?
+        } else {
+            let manifest = ObjectManifest::new(ObjectFileContext {
+                file_type: file_type.clone(),
+                image_tone: if file_type == AttachmentFileType::Image {
+                    explicit_tone.or_else(|| Some("dark".into()))
+                } else {
+                    None
+                },
+                file_brief: None,
+            });
+            self.save_object_manifest(&hash, &manifest)?;
+            manifest
+        };
+        Ok(StoredImage {
+            hash,
+            path: file_path.to_string_lossy().into_owned(),
+            tone: manifest.file_context.image_tone,
+        })
     }
 
     /// Store a generic file using content-addressable storage, preserving the extension.

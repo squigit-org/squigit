@@ -25,7 +25,7 @@ pub enum StorageError {
     Json(#[from] serde_json::Error),
 
     /// CAS stores local images and supported documents.
-    #[error("Unsupported attachment type: {0}. Images and supported documents are stored locally; text files are cited by path.")]
+    #[error("Unsupported attachment type: {0}. Images, documents, video, and audio are stored locally; text files are cited by path.")]
     UnsupportedAttachment(String),
 
     /// Empty image provided.
@@ -68,7 +68,7 @@ pub enum StorageError {
     #[error("Invalid thread message: {0}")]
     InvalidThreadMessage(String),
 
-    /// Blobs must be UUID-named files inside `blob_storage`.
+    /// Blobs must be UUID-named files inside their `blob_storage` category.
     #[error("Invalid blob: {0}")]
     InvalidBlob(String),
 

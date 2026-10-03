@@ -229,6 +229,15 @@ pub struct GroundingResource {
     pub display_name: String,
     pub is_folder: bool,
     pub image: Option<GroundingImage>,
+    pub video: Option<GroundingVideo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GroundingVideo {
+    pub group_id: String,
+    pub from_ms: u64,
+    pub to_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

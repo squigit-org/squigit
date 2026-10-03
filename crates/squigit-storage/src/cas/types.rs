@@ -29,6 +29,8 @@ pub struct ImageRendition {
 pub enum AttachmentFileType {
     Image,
     Document,
+    Video,
+    Audio,
 }
 
 /// Content-derived metadata shared by every thread that references an object.
