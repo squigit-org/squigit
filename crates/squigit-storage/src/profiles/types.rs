@@ -4,11 +4,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
-pub const AUTH_SCHEMA_VERSION: u32 = 1;
-pub const KEY_FILE_SCHEMA_VERSION: u32 = 2;
-pub const AUTH_MODE_GOOGLE_OIDC_PKCE: &str = "google_oidc_pkce";
 pub const GOOGLE_PROVIDER: &str = "google";
 pub const GOOGLE_PROFILE_ID_PREFIX: &str = "ggl";
 pub const GOOGLE_ISSUER: &str = "https://accounts.google.com";
@@ -87,67 +83,6 @@ pub struct EncryptedKeyRecord {
     pub ciphertext: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case", deny_unknown_fields)]
-pub struct ProfileKeyRecords {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub open_router: Option<EncryptedKeyRecord>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub imgbb: Option<EncryptedKeyRecord>,
-}
-
-impl ProfileKeyRecords {
-    pub fn get(&self, provider: &str) -> Option<&EncryptedKeyRecord> {
-        match provider {
-            "openrouter" => self.open_router.as_ref(),
-            "imgbb" => self.imgbb.as_ref(),
-            _ => None,
-        }
-    }
-
-    pub fn insert(
-        &mut self,
-        provider: &str,
-        record: EncryptedKeyRecord,
-    ) -> std::result::Result<Option<EncryptedKeyRecord>, &'static str> {
-        match provider {
-            "openrouter" => Ok(self.open_router.replace(record)),
-            "imgbb" => Ok(self.imgbb.replace(record)),
-            _ => Err("unsupported API-key provider"),
-        }
-    }
-
-    pub fn remove(&mut self, provider: &str) -> Option<EncryptedKeyRecord> {
-        match provider {
-            "openrouter" => self.open_router.take(),
-            "imgbb" => self.imgbb.take(),
-            _ => None,
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.open_router.is_none() && self.imgbb.is_none()
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct KeyFile {
-    pub schema: u32,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub last_trusted_reveal: Option<DateTime<Utc>>,
-    pub profiles: BTreeMap<String, ProfileKeyRecords>,
-}
-
-impl Default for KeyFile {
-    fn default() -> Self {
-        Self {
-            schema: KEY_FILE_SCHEMA_VERSION,
-            last_trusted_reveal: None,
-            profiles: BTreeMap::new(),
-        }
-    }
-}
-
 /// Stable federated identity metadata for a local profile.
 ///
 /// Email, name, and avatar are mutable display attributes; identity is not.
@@ -168,11 +103,11 @@ impl ProfileIdentity {
     }
 }
 
-/// Profile metadata stored in profiles.json.
+/// Federated identity metadata.
 ///
 /// Each profile represents a Google-authenticated user account,
 /// containing identity information and serving as a container
-/// for threads and BYOK keys.
+/// for BYOK keys.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Profile {
     /// Filesystem-safe stable ID derived from provider issuer and subject.
@@ -276,32 +211,6 @@ impl Profile {
     /// Update the last_used_at timestamp to now.
     pub fn touch(&mut self) {
         self.last_used_at = Utc::now();
-    }
-}
-
-/// Authentication state stored in auth.json.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProfileAuth {
-    pub schema: u32,
-
-    pub auth_mode: String,
-
-    /// ID of the currently active profile, if any.
-    pub active_profile_id: Option<String>,
-
-    /// Last successful provider authentication proof. This is not updated by
-    /// local profile switching.
-    pub last_login: Option<LastLogin>,
-}
-
-impl Default for ProfileAuth {
-    fn default() -> Self {
-        Self {
-            schema: AUTH_SCHEMA_VERSION,
-            auth_mode: AUTH_MODE_GOOGLE_OIDC_PKCE.to_string(),
-            active_profile_id: None,
-            last_login: None,
-        }
     }
 }
 

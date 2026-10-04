@@ -24,6 +24,12 @@ pub enum StorageError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
+    #[error("SQLite error: {0}")]
+    Sqlite(#[from] rusqlite::Error),
+
+    #[error("Unsupported app.db schema version: {0}")]
+    DatabaseSchema(u32),
+
     /// CAS stores local images and supported documents.
     #[error("Unsupported attachment type: {0}. Images, documents, video, and audio are stored locally; text files are cited by path.")]
     UnsupportedAttachment(String),

@@ -31,6 +31,7 @@
 
 pub mod blob_storage;
 pub mod cas;
+mod database;
 pub mod error;
 pub mod paths;
 pub mod profiles;
@@ -46,10 +47,9 @@ pub use cas::{
 };
 pub use error::{Result, StorageError};
 pub use profiles::{
-    canonical_google_issuer, EncryptedKeyRecord, KeyFile, KeyStoreTransaction, LastLogin, Profile,
-    ProfileAuth, ProfileIdentity, ProfileKeyRecords, ProfileSnapshot, ProfileStore, RecordCipher,
-    RecordKdf, AUTH_MODE_GOOGLE_OIDC_PKCE, AUTH_SCHEMA_VERSION, GOOGLE_ISSUER,
-    GOOGLE_PROFILE_ID_PREFIX, GOOGLE_PROVIDER, KEY_FILE_SCHEMA_VERSION,
+    canonical_google_issuer, EncryptedKeyRecord, KeyStoreTransaction, LastLogin, Profile,
+    ProfileIdentity, ProfileSnapshot, ProfileStore, RecordCipher, RecordKdf, GOOGLE_ISSUER,
+    GOOGLE_PROFILE_ID_PREFIX, GOOGLE_PROVIDER,
 };
 pub use threads::{
     AssistantError, AttachmentManifest, AttachmentManifestEntry, CitationSource, ContextWindow,

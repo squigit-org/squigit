@@ -463,43 +463,35 @@ fn encrypt_and_save_api_key_with_vault<V: SecretVault>(
     }
     let plaintext = canonicalize_api_key(provider, plaintext)?;
 
-    store.with_key_store_transaction(|transaction| {
-        let mut keys = transaction.load()?;
-        let store_was_empty = keys.profiles.is_empty();
-        let mut created_master = false;
-
-        let result = (|| {
-            let master = match vault.get(RECORD_ENCRYPTION_MASTER_ACCOUNT)? {
-                Some(key) => key,
-                None if store_was_empty => {
-                    created_master = true;
-                    create_and_verify_vault_key(vault, RECORD_ENCRYPTION_MASTER_ACCOUNT)?
-                }
-                None => {
-                    return Err(ProfileError::byok(
-                        ByokErrorCode::MasterKeyMissing,
-                        "A populated key store is missing its OS-vault encryption master.",
-                    ));
-                }
-            };
-
-            let record = encrypt_record(&master, profile_id, provider, &plaintext)?;
-            keys.profiles
-                .entry(profile_id.to_owned())
-                .or_default()
-                .insert(provider.storage_key_name(), record)
-                .map_err(|message| ProfileError::byok(ByokErrorCode::MalformedKeyStore, message))?;
-            transaction.save(&keys)?;
-            Ok(())
-        })();
-
-        if result.is_err() {
-            if created_master {
-                let _ = vault.delete(RECORD_ENCRYPTION_MASTER_ACCOUNT);
+    let mut created_master = false;
+    let result = store.with_key_store_transaction(|transaction| {
+        let store_was_empty = transaction.is_empty()?;
+        let master = match vault.get(RECORD_ENCRYPTION_MASTER_ACCOUNT)? {
+            Some(key) => key,
+            None if store_was_empty => {
+                created_master = true;
+                create_and_verify_vault_key(vault, RECORD_ENCRYPTION_MASTER_ACCOUNT)?
             }
-        }
-        result
-    })
+            None => {
+                return Err(ProfileError::byok(
+                    ByokErrorCode::MasterKeyMissing,
+                    "A populated key store is missing its OS-vault encryption master.",
+                ));
+            }
+        };
+        let record = encrypt_record(&master, profile_id, provider, &plaintext)?;
+        transaction.set(profile_id, provider.storage_key_name(), &record)?;
+        Ok(())
+    });
+    if result.is_err() && created_master {
+        let _ = store.with_key_store_transaction::<_, ProfileError>(|transaction| {
+            if transaction.is_empty()? {
+                vault.delete(RECORD_ENCRYPTION_MASTER_ACCOUNT)?;
+            }
+            Ok(())
+        });
+    }
+    result
 }
 
 pub fn delete_api_key(
@@ -516,29 +508,28 @@ fn delete_api_key_with_vault<V: SecretVault>(
     provider: ApiKeyProvider,
     vault: &V,
 ) -> Result<bool> {
-    store.with_key_store_transaction(|transaction| {
-        let previous = transaction.load()?;
-        let mut keys = previous.clone();
-        let mut changed = false;
-        let mut remove_profile = false;
-        if let Some(profile_keys) = keys.profiles.get_mut(profile_id) {
-            changed = profile_keys.remove(provider.storage_key_name()).is_some();
-            remove_profile = profile_keys.is_empty();
-        }
-        if remove_profile {
-            keys.profiles.remove(profile_id);
-        }
-        if !changed {
+    let mut deleted_master = None;
+    let result = store.with_key_store_transaction(|transaction| {
+        if !transaction.delete(profile_id, provider.storage_key_name())? {
             return Ok(false);
         }
-
-        transaction.save(&keys)?;
-        if keys.profiles.is_empty() {
-            if let Err(error) = vault.delete(RECORD_ENCRYPTION_MASTER_ACCOUNT) {
-                transaction.save(&previous)?;
-                return Err(error);
-            }
+        if transaction.is_empty()? {
+            deleted_master = vault.get(RECORD_ENCRYPTION_MASTER_ACCOUNT)?;
+            vault.delete(RECORD_ENCRYPTION_MASTER_ACCOUNT)?;
         }
         Ok(true)
-    })
+    });
+    if result.is_err() {
+        if let Some(master) = deleted_master {
+            store.with_key_store_transaction::<_, ProfileError>(|transaction| {
+                if !transaction.is_empty()?
+                    && vault.get(RECORD_ENCRYPTION_MASTER_ACCOUNT)?.is_none()
+                {
+                    vault.set(RECORD_ENCRYPTION_MASTER_ACCOUNT, master.expose())?;
+                }
+                Ok(())
+            })?;
+        }
+    }
+    result
 }
