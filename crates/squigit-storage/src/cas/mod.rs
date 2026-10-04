@@ -160,6 +160,7 @@ impl ThreadStorage {
         path: &str,
         explicit_tone: Option<String>,
     ) -> Result<StoredImage> {
+        let _store_guard = self.lock_object_store()?;
         let extension = normalize_extension(
             Path::new(path)
                 .extension()
@@ -189,6 +190,7 @@ impl ThreadStorage {
         temporary.as_file().sync_all()?;
         let hash = hasher.finalize().to_hex().to_string();
         let _lock = self.lock_object_manifest(&hash)?;
+        _lock.file.set_modified(std::time::SystemTime::now())?;
         let object_dir = self.object_dir(&hash)?;
         let file_path = match self.find_object_blob(&hash) {
             Ok(existing) => existing,
@@ -243,6 +245,9 @@ impl ThreadStorage {
         extension: &str,
         explicit_tone: Option<String>,
     ) -> Result<StoredImage> {
+        let _store_guard = self.lock_object_store()?;
+        let _lock = self.lock_object_manifest(hash)?;
+        _lock.file.set_modified(std::time::SystemTime::now())?;
         let extension = normalize_extension(extension);
         let object_dir = self.object_dir(hash)?;
         let existing_path = self.find_object_blob(hash).ok();

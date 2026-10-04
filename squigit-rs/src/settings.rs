@@ -25,6 +25,18 @@ const CONFIG_FILE_NAME: &str = "config.toml";
 const VALID_THEMES: &[&str] = &["system", "dark", "light"];
 const VALID_CAPTURE_TYPES: &[&str] = &["traditional", "squiggle"];
 
+pub fn cache_size(protected_hashes: Vec<String>) -> SettingsResult<u64> {
+    storage::thread_store()
+        .and_then(|storage| storage.cache_size(&protected_hashes))
+        .map_err(|error| error.to_string())
+}
+
+pub fn clear_cache(protected_hashes: Vec<String>) -> SettingsResult<u64> {
+    storage::thread_store()
+        .and_then(|storage| storage.clear_cache(&protected_hashes))
+        .map_err(|error| error.to_string())
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SquigitConfig {

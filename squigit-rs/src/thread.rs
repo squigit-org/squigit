@@ -429,6 +429,9 @@ pub struct LocalAttachment {
 }
 pub fn add_local_attachment(source_path: &str) -> ThreadResult<LocalAttachment> {
     let storage = active_storage()?;
+    let _guard = storage
+        .lock_object_store()
+        .map_err(|error| error.to_string())?;
     if is_supported_image(Path::new(source_path)) {
         let stored = crate::harness::images::store_image_rendition(
             &std::fs::read(source_path).map_err(|error| error.to_string())?,
@@ -472,7 +475,11 @@ pub fn add_local_attachment(source_path: &str) -> ThreadResult<LocalAttachment> 
     })
 }
 pub fn document_preview_path(path: &str) -> ThreadResult<String> {
-    let stored = active_storage()?
+    let storage = active_storage()?;
+    let _guard = storage
+        .lock_object_store()
+        .map_err(|error| error.to_string())?;
+    let stored = storage
         .store_file_from_path(path, None)
         .map_err(|e| e.to_string())?;
     crate::harness::parser::media::document_path(&stored.hash)
@@ -480,7 +487,11 @@ pub fn document_preview_path(path: &str) -> ThreadResult<String> {
         .map_err(|e| e.to_string())
 }
 pub fn media_playback_path(path: &str) -> ThreadResult<String> {
-    let stored = active_storage()?
+    let storage = active_storage()?;
+    let _guard = storage
+        .lock_object_store()
+        .map_err(|error| error.to_string())?;
+    let stored = storage
         .store_file_from_path(path, None)
         .map_err(|e| e.to_string())?;
     crate::harness::parser::media::playback(

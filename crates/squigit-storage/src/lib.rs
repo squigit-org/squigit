@@ -34,6 +34,7 @@ pub mod cas;
 mod database;
 pub mod error;
 pub mod history;
+mod maintenance;
 pub mod paths;
 pub mod profiles;
 pub mod rules;
@@ -48,6 +49,7 @@ pub use cas::{
 };
 pub use error::{Result, StorageError};
 pub use history::{HistoryEntry, HistoryInterface, HistoryStore};
+pub use maintenance::ObjectStoreGuard;
 pub use profiles::{
     canonical_google_issuer, EncryptedKeyRecord, KeyStoreTransaction, LastLogin, Profile,
     ProfileIdentity, ProfileSnapshot, ProfileStore, RecordCipher, RecordKdf, GOOGLE_ISSUER,
