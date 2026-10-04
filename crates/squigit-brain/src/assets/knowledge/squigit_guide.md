@@ -12,6 +12,8 @@ The global Capture shortcut is shown in **Settings → Keyboard Shortcuts**. On 
 
 Use **Open Side Chat** on Home for a quick text question. Its first message starts the conversation and supplies the title. Side Chat has no original image, but the composer can attach files or images. To discuss an entire screenshot from the start, create an image thread from Home instead.
 
+In a desktop image thread, `/btw <prompt>` opens a new Side Chat tab with the current thread attached and sends the required question or prompt there. It lets you ask a side question about the latest topic without adding a message to the original thread. This command appears only in image thread composers.
+
 ## Composer and attachments
 
 Type in the composer and send. The **+** menu offers **Add photos or files**, **Keep Progress** for another capture, and mentions. Images and text files are supported. Images are stored locally when added; they are sent to OpenRouter only when needed for a response or a brief. PDF/Office and video attachments use local parsing and collage recall. Free mode uses local web retrieval; named models use OpenRouter search. The Web search composer preference requires browsing on the next turn. The model picker offers Anthropic, OpenAI, Google families and Free. Free uses compatible free vision models. Instant answers directly, Medium responds naturally, High adds useful depth, and Extra High also shows available provider reasoning. Stop interrupts a response, including a retry wait.
