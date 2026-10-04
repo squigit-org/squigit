@@ -11,10 +11,12 @@ use crate::error::{Result, StorageError};
 
 mod index;
 mod lifecycle;
+mod navigation;
 mod ocr;
 mod pagination;
 mod records;
 pub mod types;
+pub use navigation::{StoredMessageNavigation, StoredMessagePreview};
 pub use pagination::{StoredMessagePage, StoredThreadPage, StoredWorkspacePage};
 
 pub use types::{

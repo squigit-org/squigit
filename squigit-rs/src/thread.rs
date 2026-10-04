@@ -730,6 +730,69 @@ pub struct ConversationMetadata {
     pub kind: String,
 }
 
+#[derive(Serialize)]
+pub struct ConversationNavigationEntry {
+    pub id: String,
+    pub position: u32,
+}
+
+#[derive(Serialize)]
+pub struct ConversationNavigation {
+    pub count: usize,
+    pub prompts: Vec<ConversationNavigationEntry>,
+}
+
+#[derive(Serialize)]
+pub struct ConversationMessagePreview {
+    pub prompt: String,
+    pub reply: Option<String>,
+}
+
+pub fn load_conversation_navigation(conversation_id: &str) -> ThreadResult<ConversationNavigation> {
+    let prompts = active_storage()?
+        .message_navigation(conversation_id)
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .map(|prompt| ConversationNavigationEntry {
+            id: prompt.id,
+            position: prompt.position,
+        })
+        .collect::<Vec<_>>();
+    Ok(ConversationNavigation {
+        count: prompts.len(),
+        prompts,
+    })
+}
+
+pub fn load_conversation_message_preview(
+    conversation_id: &str,
+    message_id: &str,
+) -> ThreadResult<Option<ConversationMessagePreview>> {
+    Ok(active_storage()?
+        .message_preview(conversation_id, message_id)
+        .map_err(|error| error.to_string())?
+        .map(|preview| ConversationMessagePreview {
+            prompt: preview.prompt,
+            reply: preview.reply,
+        }))
+}
+
+pub fn load_conversation_message_path(
+    conversation_id: &str,
+    message_id: &str,
+    before: u32,
+) -> ThreadResult<ConversationPage> {
+    let storage = active_storage()?;
+    let page = storage
+        .message_path(conversation_id, message_id, before)
+        .map_err(|error| error.to_string())?;
+    Ok(ConversationPage {
+        messages: page.messages,
+        manifest: manifest_snapshot(&storage, &page.manifest),
+        before: page.before,
+    })
+}
+
 pub fn load_conversation_metadata(conversation_id: &str) -> ThreadResult<ConversationMetadata> {
     let (title, kind) = active_storage()?
         .load_conversation_metadata(conversation_id)
