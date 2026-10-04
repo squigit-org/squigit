@@ -30,6 +30,9 @@ pub enum StorageError {
     #[error("Unsupported app.db schema version: {0}")]
     DatabaseSchema(u32),
 
+    #[error("{0}")]
+    InvalidHistory(String),
+
     /// CAS stores local images and supported documents.
     #[error("Unsupported attachment type: {0}. Images, documents, video, and audio are stored locally; text files are cited by path.")]
     UnsupportedAttachment(String),

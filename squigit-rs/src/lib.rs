@@ -9,6 +9,7 @@ pub use squigit_ocr as ocr;
 pub mod cli;
 pub mod explorer;
 pub mod file_index;
+pub mod history;
 pub mod machine;
 pub mod profile;
 #[doc(hidden)]

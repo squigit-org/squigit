@@ -13,7 +13,7 @@ use super::{
     ForkedFrom, ManifestMention, SideChatData, SideChatMetadata, ThreadData, ThreadMessage,
     ThreadMetadata, ThreadStorage,
 };
-use crate::{Result, StorageError};
+use crate::{HistoryInterface, HistoryStore, Result, StorageError};
 
 fn normalize_hash(value: &str) -> Option<String> {
     let trimmed = value.trim();
@@ -379,6 +379,22 @@ impl ThreadStorage {
     }
 
     pub fn save_sidechat(&self, sidechat: &SideChatData) -> Result<()> {
+        self.save_sidechat_with_interface(sidechat, None)
+    }
+
+    pub fn save_sidechat_with_history(
+        &self,
+        sidechat: &SideChatData,
+        interface: HistoryInterface,
+    ) -> Result<()> {
+        self.save_sidechat_with_interface(sidechat, Some(interface))
+    }
+
+    fn save_sidechat_with_interface(
+        &self,
+        sidechat: &SideChatData,
+        interface: Option<HistoryInterface>,
+    ) -> Result<()> {
         validate_message_ids(&sidechat.messages)?;
         let mut persisted = sidechat.clone();
         for message in &sidechat.messages {
@@ -390,6 +406,13 @@ impl ThreadStorage {
         }
         self.database.write(|connection| {
             self.save_sidechat_on(connection, &persisted)?;
+            if let Some(interface) = interface {
+                let message = sidechat.messages.last().ok_or_else(|| {
+                    StorageError::InvalidHistory("Composer message is missing".into())
+                })?;
+                HistoryStore::with_base_dir(self.base_dir.clone())?
+                    .append_message(interface, message)?;
+            }
             Ok(())
         })
     }
@@ -441,6 +464,7 @@ impl ThreadStorage {
         id: &str,
         message: ThreadMessage,
         mentions: &[ManifestMention],
+        interface: Option<HistoryInterface>,
     ) -> Result<()> {
         self.database.write(|connection| {
             let mut conversation = self.load_conversation_on(connection, id)?;
@@ -466,7 +490,31 @@ impl ThreadStorage {
                 "UPDATE conversations SET updated_at = ?1 WHERE id = ?2",
                 params![Utc::now(), id],
             )?;
+            if let Some(interface) = interface {
+                HistoryStore::with_base_dir(self.base_dir.clone())?
+                    .append_message(interface, &message)?;
+            }
             Ok(())
+        })
+    }
+
+    pub fn load_history_message(
+        &self,
+        message_id: &str,
+    ) -> Result<Option<(ThreadMessage, AttachmentManifest)>> {
+        self.database.read(|connection| {
+            let Some((conversation_id, message)) = records::message_by_id(connection, message_id)?
+            else {
+                return Ok(None);
+            };
+            let mut manifest = records::attachments(connection, &conversation_id)?;
+            manifest.retain(|entry| {
+                message
+                    .attachments()
+                    .iter()
+                    .any(|attachment| attachment.attachment_hash == entry.attachment_hash)
+            });
+            Ok(Some((message, manifest)))
         })
     }
 
@@ -607,6 +655,9 @@ impl ThreadStorage {
                 validate_message_ids(&thread.messages)?;
             }
             thread.metadata = metadata.clone();
+            for message in &mut thread.messages {
+                message.renew_id();
+            }
             self.save_thread_on(connection, &thread)?;
             index::set_workspace(connection, &metadata.id, workspace_id.as_deref())?;
             Ok(metadata)
@@ -654,6 +705,9 @@ impl ThreadStorage {
                 sidechat.context_window = ContextWindow::default();
             }
             sidechat.metadata = metadata.clone();
+            for message in &mut sidechat.messages {
+                message.renew_id();
+            }
             self.save_sidechat_on(connection, &sidechat)?;
             Ok(metadata)
         })

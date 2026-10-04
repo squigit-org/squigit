@@ -33,6 +33,7 @@ pub mod blob_storage;
 pub mod cas;
 mod database;
 pub mod error;
+pub mod history;
 pub mod paths;
 pub mod profiles;
 pub mod rules;
@@ -46,6 +47,7 @@ pub use cas::{
     ObjectManifestLock, ReverseImageSearchCache, StoredImage, OBJECT_MANIFEST_SCHEMA_VERSION,
 };
 pub use error::{Result, StorageError};
+pub use history::{HistoryEntry, HistoryInterface, HistoryStore};
 pub use profiles::{
     canonical_google_issuer, EncryptedKeyRecord, KeyStoreTransaction, LastLogin, Profile,
     ProfileIdentity, ProfileSnapshot, ProfileStore, RecordCipher, RecordKdf, GOOGLE_ISSUER,

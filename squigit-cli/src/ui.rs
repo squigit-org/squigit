@@ -144,12 +144,13 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
 fn draw_home(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
     let suggestions_height = state.suggestions.len().min(12) as u16;
     let status_height = status_lines(state).len().clamp(1, 8) as u16;
+    let composer_height = state.input.split('\n').count().clamp(1, 6) as u16 + 2;
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(status_height),
             Constraint::Length(suggestions_height),
-            Constraint::Length(3),
+            Constraint::Length(composer_height),
         ])
         .split(area);
 
@@ -157,21 +158,36 @@ fn draw_home(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
     if !state.suggestions.is_empty() {
         draw_suggestions(frame, chunks[1], state);
     }
+    let before_cursor = &state.input[..state.cursor];
+    let cursor_line = before_cursor.bytes().filter(|byte| *byte == b'\n').count() as u16;
+    let current_line = before_cursor.rsplit('\n').next().unwrap_or("");
+    let cursor_width = Line::from(current_line).width().min(u16::MAX as usize) as u16;
+    let vertical_scroll = cursor_line.saturating_sub(chunks[2].height.saturating_sub(3));
+    let horizontal_scroll = cursor_width.saturating_sub(chunks[2].width.saturating_sub(5));
+    let lines = state
+        .input
+        .split('\n')
+        .map(|line| composer_line(state, line))
+        .collect::<Vec<_>>();
     frame.render_widget(
-        Paragraph::new(composer_line(state)).block(
-            Block::default()
-                .title(" Ask anything ")
-                .borders(Borders::ALL),
-        ),
+        Paragraph::new(Text::from(lines))
+            .scroll((vertical_scroll, horizontal_scroll))
+            .block(
+                Block::default()
+                    .title(" Ask anything ")
+                    .borders(Borders::ALL),
+            ),
         chunks[2],
     );
-    let cursor_width = state.input[..state.cursor].chars().count() as u16;
     let cursor_x = chunks[2]
         .x
         .saturating_add(3)
-        .saturating_add(cursor_width)
+        .saturating_add(cursor_width.saturating_sub(horizontal_scroll))
         .min(chunks[2].right().saturating_sub(2));
-    frame.set_cursor_position(Position::new(cursor_x, chunks[2].y + 1));
+    frame.set_cursor_position(Position::new(
+        cursor_x,
+        chunks[2].y + 1 + cursor_line.saturating_sub(vertical_scroll),
+    ));
 }
 
 fn draw_status(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
@@ -390,22 +406,22 @@ fn draw_ocr(frame: &mut Frame<'_>, area: Rect, state: &AppState) {
     );
 }
 
-fn composer_line(state: &AppState) -> Line<'static> {
-    let resolution = squigit::cli::resolve_composer_mentions(&state.input, &state.cwd);
+fn composer_line(state: &AppState, input: &str) -> Line<'static> {
+    let resolution = squigit::cli::resolve_composer_mentions(input, &state.cwd);
     let mut spans = vec![Span::styled("> ".to_string(), accent(state))];
     let mut cursor = 0;
     for mention in resolution.mentions {
         if mention.start > cursor {
-            spans.push(Span::raw(state.input[cursor..mention.start].to_string()));
+            spans.push(Span::raw(input[cursor..mention.start].to_string()));
         }
         spans.push(Span::styled(
-            state.input[mention.start..mention.end].to_string(),
+            input[mention.start..mention.end].to_string(),
             color(state, Color::Magenta).add_modifier(Modifier::BOLD),
         ));
         cursor = mention.end;
     }
-    if cursor < state.input.len() {
-        spans.push(Span::raw(state.input[cursor..].to_string()));
+    if cursor < input.len() {
+        spans.push(Span::raw(input[cursor..].to_string()));
     }
     Line::from(spans)
 }

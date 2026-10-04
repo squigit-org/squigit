@@ -139,6 +139,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
             let created_sidechat =
                 if let Some(sidechat_id) = task.thread_id.as_ref().filter(|_| task.is_sidechat) {
                     squigit::thread::append_message(
+                        squigit::history::HistoryInterface::Cli,
                         sidechat_id,
                         submission.canonical_message.clone(),
                         inputs,
@@ -149,6 +150,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                     None
                 } else if task.thread_id.is_none() {
                     let created = squigit::thread::create_sidechat_thread(
+                        squigit::history::HistoryInterface::Cli,
                         task.model.clone(),
                         submission.canonical_message.clone(),
                         inputs,
@@ -161,6 +163,7 @@ pub fn submit(sender: &UnboundedSender<TaskEvent>, task: SubmissionTask) {
                     Some(created)
                 } else if let Some(thread_id) = task.thread_id.clone() {
                     squigit::thread::append_message(
+                        squigit::history::HistoryInterface::Cli,
                         &thread_id,
                         submission.canonical_message.clone(),
                         inputs,

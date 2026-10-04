@@ -338,6 +338,7 @@ pub async fn create_image_thread(
 }
 
 pub async fn create_sidechat_thread(
+    interface: crate::history::HistoryInterface,
     selected_model: String,
     message_markdown: String,
     attachment_inputs: Vec<MessageAttachmentInput>,
@@ -362,7 +363,7 @@ pub async fn create_sidechat_thread(
         let message = ThreadMessage::user_with_attachments(message_markdown, attachments)
             .with_text_citations(text_citations)
             .with_message_context(message_context);
-        let mut sidechat = SideChatData::new(metadata.clone(), message);
+        let mut sidechat = SideChatData::new(metadata.clone(), message.clone());
         for input in attachment_inputs {
             let mut entry = storage
                 .attachment_manifest_entry(
@@ -377,7 +378,7 @@ pub async fn create_sidechat_thread(
             sidechat.attachment_manifest.push(entry);
         }
         storage
-            .save_sidechat(&sidechat)
+            .save_sidechat_with_history(&sidechat, interface)
             .map_err(|error| error.to_string())?;
         Ok::<_, String>((metadata.id, metadata.title))
     })
@@ -537,6 +538,7 @@ fn manifest_mentions(inputs: &[MessageAttachmentInput]) -> Vec<ManifestMention> 
 /// Append a user message to any conversation by id alone, persisting it to
 /// storage and merging its attachment mentions into the manifest.
 pub fn append_message(
+    interface: crate::history::HistoryInterface,
     conversation_id: &str,
     message_markdown: String,
     attachments: Vec<MessageAttachmentInput>,
@@ -563,7 +565,7 @@ pub fn append_message(
     .with_message_context(message_context);
     let mentions = manifest_mentions(&attachments);
     storage
-        .push_message(conversation_id, message.clone(), &mentions)
+        .push_message(conversation_id, message.clone(), &mentions, Some(interface))
         .map_err(|error| error.to_string())?;
     Ok(message)
 }
@@ -592,7 +594,7 @@ pub fn append_assistant_message(
         *sources = citations;
     }
     storage
-        .push_message(conversation_id, message.clone(), &[])
+        .push_message(conversation_id, message.clone(), &[], None)
         .map_err(|error| error.to_string())?;
     Ok(message)
 }
@@ -632,8 +634,17 @@ fn conversation_snapshot(
     storage: &ThreadStorage,
     conversation: &storage::Conversation,
 ) -> ConversationSnapshot {
-    let attachments = conversation
-        .manifest()
+    ConversationSnapshot {
+        messages: conversation.messages().to_vec(),
+        manifest: manifest_snapshot(storage, conversation.manifest()),
+    }
+}
+
+fn manifest_snapshot(
+    storage: &ThreadStorage,
+    manifest: &storage::AttachmentManifest,
+) -> Vec<ConversationAttachment> {
+    manifest
         .iter()
         .map(|entry| ConversationAttachment {
             attachment_hash: entry.attachment_hash.clone(),
@@ -653,11 +664,18 @@ fn conversation_snapshot(
                 .ok()
                 .and_then(|path| path.to_str().map(str::to_string)),
         })
-        .collect();
-    ConversationSnapshot {
-        messages: conversation.messages().to_vec(),
-        manifest: attachments,
-    }
+        .collect()
+}
+
+pub fn load_history_message(message_id: &str) -> ThreadResult<Option<ConversationSnapshot>> {
+    let storage = active_storage()?;
+    Ok(storage
+        .load_history_message(message_id)
+        .map_err(|error| error.to_string())?
+        .map(|(message, manifest)| ConversationSnapshot {
+            messages: vec![message],
+            manifest: manifest_snapshot(&storage, &manifest),
+        }))
 }
 
 /// Load the persisted conversation of any thread or sidechat by id alone.

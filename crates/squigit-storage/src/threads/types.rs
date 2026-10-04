@@ -253,6 +253,12 @@ impl ThreadMessage {
         format!("msg-{}", Uuid::new_v4())
     }
 
+    pub(super) fn renew_id(&mut self) {
+        match self {
+            Self::User { id, .. } | Self::Assistant { id, .. } => *id = Self::new_id(),
+        }
+    }
+
     pub fn is_valid_id(id: &str) -> bool {
         id.strip_prefix("msg-")
             .is_some_and(|uuid| Uuid::parse_str(uuid).is_ok())

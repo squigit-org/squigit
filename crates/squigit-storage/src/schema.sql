@@ -83,6 +83,8 @@ CREATE TABLE messages (
     UNIQUE (conversation_id, position)
 ) STRICT;
 
+CREATE UNIQUE INDEX messages_id ON messages(id);
+
 CREATE TABLE conversation_context (
     conversation_id TEXT PRIMARY KEY NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     tokens_used INTEGER NOT NULL CHECK (tokens_used >= 0),

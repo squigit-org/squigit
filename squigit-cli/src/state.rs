@@ -155,6 +155,10 @@ pub struct AppState {
     pub auth_selection: usize,
     pub input: String,
     pub cursor: usize,
+    pub history_entries: Vec<squigit::history::HistoryEntry>,
+    pub history_index: Option<usize>,
+    pub history_browsing: bool,
+    pub history_edited: bool,
     pub suggestions: Vec<Suggestion>,
     pub selected: usize,
     pub menu_title: String,
@@ -222,6 +226,10 @@ impl AppState {
             auth_selection: 0,
             input: String::new(),
             cursor: 0,
+            history_entries: Vec::new(),
+            history_index: None,
+            history_browsing: false,
+            history_edited: false,
             suggestions: Vec::new(),
             selected: 0,
             menu_title: String::new(),
@@ -313,7 +321,48 @@ impl AppState {
         self.refresh_suggestions();
     }
 
+    pub fn move_cursor_vertical(&mut self, up: bool) {
+        let line_start = self.input[..self.cursor]
+            .rfind('\n')
+            .map_or(0, |index| index + 1);
+        let column = self.input[line_start..self.cursor].chars().count();
+        let target = if up {
+            if line_start == 0 {
+                return;
+            }
+            let end = line_start - 1;
+            let start = self.input[..end].rfind('\n').map_or(0, |index| index + 1);
+            start..end
+        } else {
+            let Some(end) = self.input[self.cursor..].find('\n') else {
+                return;
+            };
+            let start = self.cursor + end + 1;
+            let end = self.input[start..]
+                .find('\n')
+                .map_or(self.input.len(), |index| start + index);
+            start..end
+        };
+        self.cursor = target.start
+            + self.input[target.clone()]
+                .char_indices()
+                .nth(column)
+                .map_or(target.len(), |(index, _)| index);
+        self.refresh_suggestions();
+    }
+
+    pub fn end_history_navigation(&mut self) {
+        self.history_edited =
+            !self.input.is_empty() && (self.history_browsing || self.history_edited);
+        self.history_browsing = false;
+        self.history_index = None;
+        self.history_entries.clear();
+    }
+
     pub fn refresh_suggestions(&mut self) {
+        if self.input.is_empty() && !self.history_browsing {
+            self.history_edited = false;
+        }
         self.suggestions = if self.input.starts_with('/') {
             matching_commands(&self.input)
                 .into_iter()
@@ -346,10 +395,12 @@ impl AppState {
     }
 
     pub fn clear_composer(&mut self) {
+        self.end_history_navigation();
         self.input.clear();
         self.cursor = 0;
         self.suggestions.clear();
         self.selected = 0;
+        self.history_edited = false;
     }
 
     pub fn open_menu(&mut self, title: impl Into<String>, items: Vec<MenuItem>) {

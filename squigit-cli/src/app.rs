@@ -106,9 +106,34 @@ impl App {
     }
 
     fn handle_home_key(&mut self, key: KeyEvent) -> Option<Control> {
+        if matches!(key.code, KeyCode::Up | KeyCode::Down)
+            && key.modifiers.is_empty()
+            && self.navigate_composer_history(key.code == KeyCode::Up)
+        {
+            return None;
+        }
+        if matches!(
+            key.code,
+            KeyCode::Char(_)
+                | KeyCode::Backspace
+                | KeyCode::Delete
+                | KeyCode::Left
+                | KeyCode::Right
+                | KeyCode::Home
+                | KeyCode::End
+                | KeyCode::Enter
+        ) {
+            self.state.end_history_navigation();
+        }
         match key.code {
-            KeyCode::Up => self.select_previous(self.state.suggestions.len()),
-            KeyCode::Down => self.select_next(self.state.suggestions.len()),
+            KeyCode::Up if !self.state.history_edited && !self.state.suggestions.is_empty() => {
+                self.select_previous(self.state.suggestions.len())
+            }
+            KeyCode::Down if !self.state.history_edited && !self.state.suggestions.is_empty() => {
+                self.select_next(self.state.suggestions.len())
+            }
+            KeyCode::Up => self.state.move_cursor_vertical(true),
+            KeyCode::Down => self.state.move_cursor_vertical(false),
             KeyCode::Left => self.state.move_cursor_left(),
             KeyCode::Right => self.state.move_cursor_right(),
             KeyCode::Home => {
@@ -120,6 +145,14 @@ impl App {
                 self.state.refresh_suggestions();
             }
             KeyCode::Backspace => self.backspace_composer(),
+            KeyCode::Delete => {
+                if let Some(character) = self.state.input[self.state.cursor..].chars().next() {
+                    self.state
+                        .input
+                        .drain(self.state.cursor..self.state.cursor + character.len_utf8());
+                    self.state.refresh_suggestions();
+                }
+            }
             KeyCode::Char(character)
                 if !key
                     .modifiers
@@ -127,10 +160,81 @@ impl App {
             {
                 self.state.insert_input(character)
             }
+            KeyCode::Enter if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                self.state.insert_input('\n')
+            }
             KeyCode::Enter => return self.submit_home(),
             _ => {}
         }
         None
+    }
+
+    fn navigate_composer_history(&mut self, up: bool) -> bool {
+        if !self.state.history_browsing && !self.state.input.is_empty() {
+            return false;
+        }
+        if !self.state.history_browsing {
+            if !up {
+                return true;
+            }
+            match squigit::history::list(squigit::history::HistoryInterface::Cli) {
+                Ok(entries) => self.state.history_entries = entries,
+                Err(error) => {
+                    self.state.set_notice(NoticeKind::Error, error);
+                    return true;
+                }
+            }
+            self.state.history_browsing = true;
+        }
+        let mut index = match (up, self.state.history_index) {
+            (true, Some(0)) => return true,
+            (true, Some(index)) => index as isize - 1,
+            (true, None) => self.state.history_entries.len() as isize - 1,
+            (false, Some(index)) => index as isize + 1,
+            (false, None) => return true,
+        };
+        while index >= 0 && (index as usize) < self.state.history_entries.len() {
+            let entry = &self.state.history_entries[index as usize];
+            let text = match entry {
+                squigit::history::HistoryEntry::Command { command, .. } => Some(command.clone()),
+                squigit::history::HistoryEntry::Message { message, .. } => {
+                    match squigit::cli::load_history_prompt(message) {
+                        Ok(text) => text,
+                        Err(error) => {
+                            self.state.set_notice(NoticeKind::Error, error);
+                            return true;
+                        }
+                    }
+                }
+            };
+            if let Some(text) = text {
+                self.state.set_input(text);
+                self.state.history_index = Some(index as usize);
+                self.state.history_edited = false;
+                return true;
+            }
+            index += if up { -1 } else { 1 };
+        }
+        if !up || self.state.history_index.is_none() {
+            self.state.clear_composer();
+        }
+        true
+    }
+
+    fn execute_composer_command(
+        &mut self,
+        command: SlashCommand,
+        arguments: String,
+        raw: String,
+    ) -> Option<Control> {
+        if let Err(error) =
+            squigit::history::record_command(squigit::history::HistoryInterface::Cli, raw)
+        {
+            self.state.set_notice(NoticeKind::Error, error);
+            return None;
+        }
+        self.state.clear_composer();
+        self.execute_command(command, arguments)
     }
 
     fn submit_home(&mut self) -> Option<Control> {
@@ -151,8 +255,11 @@ impl App {
                     return None;
                 }
                 Suggestion::Command { command, name, .. } if self.state.input.trim() == name => {
-                    self.state.clear_composer();
-                    return self.execute_command(command, String::new());
+                    return self.execute_composer_command(
+                        command,
+                        String::new(),
+                        self.state.input.trim().to_string(),
+                    );
                 }
                 Suggestion::Command { name, .. } if self.state.input.starts_with('/') => {
                     self.state.set_input(name);
@@ -164,10 +271,12 @@ impl App {
 
         let input = self.state.input.trim().to_string();
         if input.starts_with('/') {
-            self.state.clear_composer();
             return match parse_command(&input) {
-                Some((command, arguments)) => self.execute_command(command, arguments.to_string()),
+                Some((command, arguments)) => {
+                    self.execute_composer_command(command, arguments.to_string(), input.clone())
+                }
                 None => {
+                    self.state.clear_composer();
                     self.state.set_notice(
                         NoticeKind::Error,
                         format!("Unknown command: {input}. Type / to list commands."),

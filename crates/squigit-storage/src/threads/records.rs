@@ -138,6 +138,18 @@ pub(super) fn messages(connection: &Connection, id: &str) -> Result<Vec<ThreadMe
     Ok(messages)
 }
 
+pub(super) fn message_by_id(
+    connection: &Connection,
+    message_id: &str,
+) -> Result<Option<(String, ThreadMessage)>> {
+    Ok(connection.query_row(
+        "SELECT role, id, content, timestamp, attachments_json, text_citations_json, message_context_json, citations_json,
+         grounding_json, error_json, forked_from_json, conversation_id FROM messages WHERE id = ?1 AND role = 'user'",
+        [message_id],
+        |row| Ok((row.get(11)?, message(row)?)),
+    ).optional()?)
+}
+
 pub(super) fn insert_message(
     connection: &Connection,
     id: &str,

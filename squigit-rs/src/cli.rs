@@ -5,7 +5,7 @@
 
 use crate::storage::{
     self, AttachmentFileType, MessageTextCitation, OcrAnnotationEntry, OcrRegion, Profile,
-    GOOGLE_ISSUER,
+    ThreadMessage, GOOGLE_ISSUER,
 };
 use crate::{explorer, settings};
 use std::collections::HashSet;
@@ -140,6 +140,49 @@ pub fn attachment_mention(path: &Path) -> Result<String, String> {
         .unwrap_or("attachment")
         .replace(['[', ']', '\n', '\r'], " ");
     Ok(format!("[{label}](<file://{}>)", normalized_path(&path)))
+}
+
+pub fn load_history_prompt(message_id: &str) -> Result<Option<String>, String> {
+    let Some(snapshot) = crate::thread::load_history_message(message_id)? else {
+        return Ok(None);
+    };
+    let Some(message) = snapshot.messages.first() else {
+        return Ok(None);
+    };
+    let mut paths = snapshot
+        .manifest
+        .iter()
+        .filter_map(|entry| entry.blob_path.as_deref())
+        .collect::<HashSet<_>>();
+    if let ThreadMessage::User { text_citations, .. } = message {
+        paths.extend(text_citations.iter().map(|citation| citation.path.as_str()));
+    }
+    let links = regex::Regex::new(r"\[[^\]\n]+\]\((<[^>\n]+>|[^)\n]+)\)")
+        .map_err(|error| error.to_string())?;
+    let mut mentioned = HashSet::new();
+    let mut text = links
+        .replace_all(message.content(), |captures: &regex::Captures<'_>| {
+            let destination = captures
+                .get(1)
+                .map_or("", |value| value.as_str())
+                .trim_matches(['<', '>']);
+            let path = destination.strip_prefix("file://").unwrap_or(destination);
+            if paths.contains(path) {
+                mentioned.insert(path.to_string());
+                format!("@<{path}>")
+            } else {
+                captures[0].to_string()
+            }
+        })
+        .into_owned();
+    for entry in &snapshot.manifest {
+        if let Some(path) = &entry.blob_path {
+            if !mentioned.contains(path) {
+                text.push_str(&format!(" @<{path}>"));
+            }
+        }
+    }
+    Ok(Some(text))
 }
 
 pub fn resolve_composer_mentions(input: &str, directory: &Path) -> CliComposerResolution {
