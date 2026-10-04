@@ -43,6 +43,7 @@ pub struct ExplorerWorkspace {
     pub id: String,
     pub name: String,
     pub created_at: String,
+    pub updated_at: String,
     pub directories: Vec<String>,
     pub total_thread_count: u32,
     pub threads: Vec<ExplorerThread>,
@@ -50,10 +51,14 @@ pub struct ExplorerWorkspace {
 
 impl From<WorkspaceMetadata> for ExplorerWorkspace {
     fn from(workspace: WorkspaceMetadata) -> Self {
+        let updated_at = latest_workspace_activity(&workspace)
+            .unwrap_or(workspace.created_at)
+            .to_rfc3339();
         Self {
             id: workspace.id.clone(),
             name: workspace.name,
             created_at: workspace.created_at.to_rfc3339(),
+            updated_at,
             directories: workspace.directories,
             total_thread_count: workspace.threads.len().min(u32::MAX as usize) as u32,
             threads: workspace
@@ -71,6 +76,88 @@ impl From<WorkspaceMetadata> for ExplorerWorkspace {
 pub struct UnassignedThreadsPage {
     pub threads: Vec<ExplorerThread>,
     pub total: u32,
+}
+
+pub struct WorkspacesPage {
+    pub workspaces: Vec<ExplorerWorkspace>,
+    pub total: u32,
+}
+
+pub fn list_thread_page(
+    workspace_id: Option<String>,
+    offset: u32,
+    limit: u32,
+    ordering: String,
+    order: Vec<String>,
+) -> ExplorerResult<UnassignedThreadsPage> {
+    let page = active_storage()?
+        .thread_page(workspace_id.as_deref(), offset, limit, &ordering, &order)
+        .map_err(|error| error.to_string())?;
+    Ok(UnassignedThreadsPage {
+        total: page.total,
+        threads: page
+            .threads
+            .into_iter()
+            .map(|thread| ExplorerThread {
+                workspace_id: workspace_id.clone(),
+                ..thread.into()
+            })
+            .collect(),
+    })
+}
+
+pub fn list_workspace_page(
+    offset: u32,
+    limit: u32,
+    workspace_ordering: String,
+    thread_ordering: String,
+    order: std::collections::BTreeMap<String, Vec<String>>,
+) -> ExplorerResult<WorkspacesPage> {
+    let storage = active_storage()?;
+    let workspace_order = order
+        .get("workspacesOrder")
+        .into_iter()
+        .flatten()
+        .filter_map(|key| key.strip_prefix("workspace:").map(str::to_string))
+        .collect::<Vec<_>>();
+    let page = storage
+        .workspace_page(offset, limit, &workspace_ordering, &workspace_order)
+        .map_err(|error| error.to_string())?;
+    let mut workspaces = Vec::new();
+    for (workspace, total_thread_count, updated_at) in page.workspaces {
+        let thread_order = order
+            .get(&format!("workspace:{}", workspace.id))
+            .into_iter()
+            .flatten()
+            .filter_map(|key| key.strip_prefix("thread:").map(str::to_string))
+            .collect::<Vec<_>>();
+        let threads = storage
+            .thread_page(Some(&workspace.id), 0, 20, &thread_ordering, &thread_order)
+            .map_err(|error| error.to_string())?
+            .threads
+            .into_iter()
+            .map(|thread| ExplorerThread {
+                workspace_id: Some(workspace.id.clone()),
+                ..thread.into()
+            })
+            .collect();
+        workspaces.push(ExplorerWorkspace {
+            threads,
+            total_thread_count,
+            updated_at: updated_at.to_rfc3339(),
+            ..workspace.into()
+        });
+    }
+    Ok(WorkspacesPage {
+        workspaces,
+        total: page.total,
+    })
+}
+
+pub fn existing_thread_ids(ids: Vec<String>) -> ExplorerResult<Vec<String>> {
+    active_storage()?
+        .existing_thread_ids(&ids)
+        .map_err(|error| error.to_string())
 }
 
 pub struct ExplorerSideChatThread {

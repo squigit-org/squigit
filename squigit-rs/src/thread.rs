@@ -689,6 +689,30 @@ pub fn load_conversation(conversation_id: &str) -> ThreadResult<ConversationSnap
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ConversationPage {
+    pub messages: Vec<ThreadMessage>,
+    pub manifest: Vec<ConversationAttachment>,
+    pub before: Option<u32>,
+}
+
+pub fn load_conversation_page(
+    conversation_id: &str,
+    before: Option<u32>,
+    limit: u32,
+) -> ThreadResult<ConversationPage> {
+    let storage = active_storage()?;
+    let page = storage
+        .message_page(conversation_id, before, limit)
+        .map_err(|error| error.to_string())?;
+    Ok(ConversationPage {
+        messages: page.messages,
+        manifest: manifest_snapshot(&storage, &page.manifest),
+        before: page.before,
+    })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConversationMetadata {
     pub id: String,
     pub title: String,

@@ -12,8 +12,10 @@ use crate::error::{Result, StorageError};
 mod index;
 mod lifecycle;
 mod ocr;
+mod pagination;
 mod records;
 pub mod types;
+pub use pagination::{StoredMessagePage, StoredThreadPage, StoredWorkspacePage};
 
 pub use types::{
     default_ocr_annotations, AssistantError, AttachmentManifest, AttachmentManifestEntry,
