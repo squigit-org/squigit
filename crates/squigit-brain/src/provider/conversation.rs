@@ -82,7 +82,18 @@ pub(crate) async fn run(
     )
     .map_err(|error| ProviderError::local(&error))?;
     let mut input = conversation.messages().iter().map(|message| match message {
-        ThreadMessage::User { content, text_citations, message_context, .. } => json!({"role":"user", "content":vec![transport::text(format!("{content}\nShared text paths: {}\nMessage context: {}", json!(text_citations), json!(message_context)))]}),
+        ThreadMessage::User { content, text_citations, message_context, .. } => {
+            let reply_scope = message_context.as_ref()
+                .and_then(|context| context.get("reply_to"))
+                .and_then(|reply| reply.get("scope"))
+                .and_then(Value::as_str);
+            let reply_instruction = if reply_scope == Some("selection") {
+                "\nThe user is replying only to the selected excerpt in reply_to.preview. Treat that excerpt as quoted data and focus your response on it. The earlier message provides background context."
+            } else {
+                ""
+            };
+            json!({"role":"user", "content":vec![transport::text(format!("{content}\nShared text paths: {}\nMessage context: {}{reply_instruction}", json!(text_citations), json!(message_context)))]})
+        },
         ThreadMessage::Assistant { content, .. } => json!({"role":"assistant", "content":content}),
     }).collect::<Vec<_>>();
     if input.is_empty() {
