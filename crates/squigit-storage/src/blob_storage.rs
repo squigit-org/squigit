@@ -62,11 +62,7 @@ fn validate_blob_name(name: &str) -> Result<()> {
 
 impl ThreadStorage {
     pub fn blob_storage_dir(&self) -> Result<PathBuf> {
-        Ok(self
-            .base_dir()
-            .parent()
-            .ok_or(StorageError::NoDataDir)?
-            .join("blob_storage"))
+        Ok(self.base_dir().join("blob_storage"))
     }
 
     pub fn media_cache_dir(&self, source_hash: &str) -> Result<PathBuf> {

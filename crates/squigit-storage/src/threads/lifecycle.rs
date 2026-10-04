@@ -3,24 +3,17 @@
 
 use chrono::{DateTime, Utc};
 use regex::Regex;
+use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
 use std::path::Path;
-use std::sync::Mutex;
 
-static ATTACHMENT_MANIFEST_LOCK: Mutex<()> = Mutex::new(());
-
-use crate::error::{Result, StorageError};
-
-use super::ocr::{ensure_empty_state_asset, retain_supported_ocr_annotations_ids};
-use super::paths::{
-    attachment_manifest_path, context_window_path, messages_path, ocr_annotations_path,
-};
+use super::{index, ocr, records};
 use super::{
-    default_ocr_annotations, AttachmentManifest, AttachmentManifestEntry, ContextWindow,
-    Conversation, ForkSourceKind, ForkedFrom, ManifestMention, OcrAnnotations, SideChatData,
-    SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
+    AttachmentManifest, AttachmentManifestEntry, ContextWindow, Conversation, ForkSourceKind,
+    ForkedFrom, ManifestMention, SideChatData, SideChatMetadata, ThreadData, ThreadMessage,
+    ThreadMetadata, ThreadStorage,
 };
+use crate::{Result, StorageError};
 
 fn normalize_hash(value: &str) -> Option<String> {
     let trimmed = value.trim();
@@ -244,115 +237,12 @@ impl ThreadStorage {
         Ok(())
     }
 
-    fn save_attachment_manifest(
-        &self,
-        directory: &Path,
-        manifest: &AttachmentManifest,
-    ) -> Result<()> {
-        let _guard = ATTACHMENT_MANIFEST_LOCK.lock().map_err(|_| {
-            StorageError::KeyStore("Attachment manifest is unavailable".to_string())
-        })?;
-        let mut manifest = manifest.clone();
-        self.populate_attachment_briefs(&mut manifest);
-        super::atomic_write(
-            &attachment_manifest_path(directory),
-            serde_json::to_string_pretty(&manifest)?.as_bytes(),
-        )
-    }
-
     fn populate_attachment_briefs(&self, manifest: &mut AttachmentManifest) {
         for entry in manifest {
             if let Ok(object) = self.load_object_manifest(&entry.attachment_hash) {
                 if object.file_context.file_brief.is_some() {
                     entry.file_brief = object.file_context.file_brief;
                 }
-            }
-        }
-    }
-
-    pub fn register_read_attachment(
-        &self,
-        conversation_id: &str,
-        hash: &str,
-        name: &str,
-    ) -> Result<AttachmentManifestEntry> {
-        let entry = self.attachment_manifest_entry(hash, name, Utc::now())?;
-        let path = attachment_manifest_path(&self.thread_dir(conversation_id));
-        let _guard = ATTACHMENT_MANIFEST_LOCK
-            .lock()
-            .map_err(|_| StorageError::KeyStore("Attachment manifest is unavailable".into()))?;
-        let mut manifest: AttachmentManifest = serde_json::from_str(&fs::read_to_string(&path)?)?;
-        if let Some(existing) = manifest
-            .iter_mut()
-            .find(|item| item.attachment_hash == entry.attachment_hash)
-        {
-            *existing = entry.clone();
-        } else {
-            manifest.push(entry.clone());
-        }
-        super::atomic_write(&path, serde_json::to_string_pretty(&manifest)?.as_bytes())?;
-        Ok(entry)
-    }
-
-    pub fn refresh_attachment_briefs(&self, conversation_id: &str) -> Result<()> {
-        let _guard = ATTACHMENT_MANIFEST_LOCK.lock().map_err(|_| {
-            StorageError::KeyStore("Attachment manifest is unavailable".to_string())
-        })?;
-        let path = attachment_manifest_path(&self.thread_dir(conversation_id));
-        let mut manifest: AttachmentManifest = serde_json::from_str(&fs::read_to_string(&path)?)?;
-        self.populate_attachment_briefs(&mut manifest);
-        super::atomic_write(&path, serde_json::to_string_pretty(&manifest)?.as_bytes())
-    }
-
-    fn save_thread_files(&self, thread: &ThreadData) -> Result<()> {
-        let thread_dir = self.thread_dir(&thread.metadata.id);
-        fs::create_dir_all(&thread_dir)?;
-
-        let ocr_path = ocr_annotations_path(&thread_dir);
-        let mut ocr_data = thread.ocr_data.clone();
-        ensure_empty_state_asset(&mut ocr_data);
-        retain_supported_ocr_annotations_ids(&mut ocr_data);
-        super::atomic_write(
-            &ocr_path,
-            serde_json::to_string_pretty(&ocr_data)?.as_bytes(),
-        )?;
-
-        let context_path = context_window_path(&thread_dir);
-        if !context_path.exists() {
-            super::atomic_write(
-                &context_path,
-                serde_json::to_string_pretty(&thread.context_window)?.as_bytes(),
-            )?;
-        }
-
-        super::atomic_write(
-            &messages_path(&thread_dir),
-            serde_json::to_string_pretty(&thread.messages)?.as_bytes(),
-        )?;
-        self.save_attachment_manifest(&thread_dir, &thread.attachment_manifest)?;
-        Ok(())
-    }
-
-    pub fn save_thread(&self, thread: &ThreadData) -> Result<()> {
-        self.save_thread_files(thread)?;
-        self.update_index(&thread.metadata)
-    }
-
-    pub fn save_thread_in_workspace(&self, thread: &ThreadData, workspace_id: &str) -> Result<()> {
-        self.save_thread_files(thread)?;
-        self.update_index_in_workspace(&thread.metadata, Some(workspace_id))
-    }
-
-    fn push_message_timestamp(message: &ThreadMessage) -> Result<DateTime<Utc>> {
-        match message {
-            ThreadMessage::User { id, timestamp, .. }
-            | ThreadMessage::Assistant { id, timestamp, .. } => {
-                if !ThreadMessage::is_valid_id(id) {
-                    return Err(StorageError::InvalidThreadMessage(format!(
-                        "message has an invalid id: {id}"
-                    )));
-                }
-                Ok(*timestamp)
             }
         }
     }
@@ -411,356 +301,395 @@ impl ThreadStorage {
         Ok(())
     }
 
-    /// Load one conversation of either kind by id alone. Image threads
-    /// resolve through the thread index first; sidechats fall back through
-    /// their own index. Only a miss in both fails; every other error
-    /// propagates without falling back.
-    pub fn load_conversation(&self, conversation_id: &str) -> Result<Conversation> {
-        match self.load_thread(conversation_id) {
-            Ok(thread) => Ok(Conversation::Thread(thread)),
-            Err(StorageError::ThreadNotFound(_)) => self
-                .load_sidechat(conversation_id)
+    fn load_thread_on(&self, connection: &Connection, id: &str) -> Result<ThreadData> {
+        let metadata = records::get_thread(connection, id)?;
+        let image_tone = self.get_image_tone(&metadata.image_hash);
+        let reverse_image_search = self.get_reverse_image_search_cache(&metadata.image_hash)?;
+        Ok(ThreadData {
+            metadata,
+            messages: records::messages(connection, id)?,
+            ocr_data: ocr::annotations(connection, id)?,
+            context_window: records::context(connection, id)?,
+            attachment_manifest: records::attachments(connection, id)?,
+            image_tone,
+            reverse_image_search,
+        })
+    }
+
+    fn load_sidechat_on(&self, connection: &Connection, id: &str) -> Result<SideChatData> {
+        Ok(SideChatData {
+            metadata: records::get_sidechat(connection, id)?,
+            messages: records::messages(connection, id)?,
+            context_window: records::context(connection, id)?,
+            attachment_manifest: records::attachments(connection, id)?,
+        })
+    }
+
+    fn load_conversation_on(&self, connection: &Connection, id: &str) -> Result<Conversation> {
+        match records::conversation_kind(connection, id)?.as_str() {
+            "thread" => self
+                .load_thread_on(connection, id)
+                .map(Conversation::Thread),
+            "sidechat" => self
+                .load_sidechat_on(connection, id)
                 .map(Conversation::Sidechat),
-            Err(error) => Err(error),
+            _ => Err(StorageError::ThreadNotFound(id.into())),
         }
     }
 
-    /// Persist a conversation without re-deriving manifests from CAS briefs,
-    /// so mention handling stays brief-safe for both kinds.
-    pub fn save_conversation(&self, conversation: &Conversation) -> Result<()> {
-        match conversation {
-            Conversation::Thread(thread) => self.save_thread(thread),
-            Conversation::Sidechat(sidechat) => {
-                validate_message_ids(&sidechat.messages)?;
-                self.save_sidechat_files(sidechat)?;
-                self.update_sidechat_index(&sidechat.metadata)
-            }
-        }
-    }
-
-    /// Remove one message and every message after it from any conversation
-    /// by id alone. Returns the number of removed messages. Manifest entries
-    /// are intentionally left untouched: mentions stay part of the context.
-    pub fn truncate_messages(&self, conversation_id: &str, from_message_id: &str) -> Result<usize> {
-        let mut conversation = self.load_conversation(conversation_id)?;
-        let position = conversation
-            .messages()
-            .iter()
-            .position(|message| message.id() == from_message_id)
-            .ok_or_else(|| {
-                StorageError::InvalidThreadMessage(format!(
-                    "message {from_message_id} was not found"
-                ))
-            })?;
-        let removed = conversation.messages().len() - position;
-        conversation.messages_mut().truncate(position);
-        self.save_conversation(&conversation)?;
-        Ok(removed)
-    }
-
-    /// Append one message to any conversation by id alone and merge its
-    /// attachment mentions into the manifest. Mentions never populate
-    /// `file_brief`: unknown hashes are skipped, existing briefs are
-    /// preserved, new entries keep `None`.
-    pub fn push_message(
+    fn put_manifest(
         &self,
-        conversation_id: &str,
-        message: ThreadMessage,
-        mentions: &[ManifestMention],
+        connection: &Connection,
+        id: &str,
+        manifest: &AttachmentManifest,
     ) -> Result<()> {
-        let mut conversation = self.load_conversation(conversation_id)?;
-        let timestamp = Self::push_message_timestamp(&message)?;
-        let initial_hash = conversation.initial_hash().to_string();
-        conversation.messages_mut().push(message);
-        let manifest = conversation.manifest_mut();
-        for mention in mentions {
-            self.touch_manifest_mention(manifest, &initial_hash, mention, timestamp)?;
-        }
-        conversation.touch_updated_at(Utc::now());
-        validate_message_ids(conversation.messages())?;
-        self.save_conversation(&conversation)
+        let mut manifest = manifest.clone();
+        self.populate_attachment_briefs(&mut manifest);
+        records::put_attachments(connection, id, &manifest)
     }
 
-    fn save_sidechat_files(&self, sidechat: &SideChatData) -> Result<()> {
-        let thread_dir = self.thread_dir(&sidechat.metadata.id);
-        fs::create_dir_all(&thread_dir)?;
-        super::atomic_write(
-            &context_window_path(&thread_dir),
-            serde_json::to_string_pretty(&sidechat.context_window)?.as_bytes(),
-        )?;
-        super::atomic_write(
-            &messages_path(&thread_dir),
-            serde_json::to_string_pretty(&sidechat.messages)?.as_bytes(),
-        )?;
-        self.save_attachment_manifest(&thread_dir, &sidechat.attachment_manifest)?;
-        Ok(())
+    fn save_thread_on(&self, connection: &Connection, thread: &ThreadData) -> Result<()> {
+        records::put_thread(connection, &thread.metadata)?;
+        let id = &thread.metadata.id;
+        ocr::put_annotations(connection, id, &thread.ocr_data)?;
+        records::put_context(connection, id, &thread.context_window, true)?;
+        records::put_messages(connection, id, &thread.messages)?;
+        self.put_manifest(connection, id, &thread.attachment_manifest)
+    }
+
+    fn save_sidechat_on(&self, connection: &Connection, sidechat: &SideChatData) -> Result<()> {
+        validate_message_ids(&sidechat.messages)?;
+        records::put_sidechat(connection, &sidechat.metadata)?;
+        let id = &sidechat.metadata.id;
+        records::put_context(connection, id, &sidechat.context_window, false)?;
+        records::put_messages(connection, id, &sidechat.messages)?;
+        self.put_manifest(connection, id, &sidechat.attachment_manifest)
+    }
+
+    pub fn save_thread(&self, thread: &ThreadData) -> Result<()> {
+        self.database
+            .write(|connection| self.save_thread_on(connection, thread))
+    }
+
+    pub fn save_thread_in_workspace(&self, thread: &ThreadData, workspace_id: &str) -> Result<()> {
+        self.database.write(|connection| {
+            self.save_thread_on(connection, thread)?;
+            index::set_workspace(connection, &thread.metadata.id, Some(workspace_id))
+        })
     }
 
     pub fn save_sidechat(&self, sidechat: &SideChatData) -> Result<()> {
         validate_message_ids(&sidechat.messages)?;
         let mut persisted = sidechat.clone();
-        let messages = persisted.messages.clone();
-        for message in &messages {
+        for message in &sidechat.messages {
             self.apply_user_message_attachments_to_manifest(
                 &mut persisted.attachment_manifest,
                 "",
                 message,
             )?;
         }
-        self.save_sidechat_files(&persisted)?;
-        self.update_sidechat_index(&persisted.metadata)
-    }
-
-    pub fn load_sidechat(&self, sidechat_id: &str) -> Result<SideChatData> {
-        let thread_dir = self.thread_dir(sidechat_id);
-        if !thread_dir.exists() {
-            return Err(StorageError::ThreadNotFound(sidechat_id.to_string()));
-        }
-        let metadata = self.get_sidechat_metadata(sidechat_id)?;
-        let messages = self.load_messages(sidechat_id)?;
-        let context_window = serde_json::from_str::<ContextWindow>(&fs::read_to_string(
-            context_window_path(&thread_dir),
-        )?)?;
-        let attachment_manifest = serde_json::from_str::<AttachmentManifest>(&fs::read_to_string(
-            attachment_manifest_path(&thread_dir),
-        )?)?;
-        Ok(SideChatData {
-            metadata,
-            messages,
-            context_window,
-            attachment_manifest,
+        self.database.write(|connection| {
+            self.save_sidechat_on(connection, &persisted)?;
+            Ok(())
         })
     }
 
-    pub fn update_sidechat_metadata(&self, metadata: &SideChatMetadata) -> Result<()> {
-        if !self.thread_dir(&metadata.id).exists() {
-            return Err(StorageError::ThreadNotFound(metadata.id.clone()));
-        }
-        self.update_sidechat_index(metadata)
-    }
-
-    pub fn delete_sidechat(&self, sidechat_id: &str) -> Result<()> {
-        let thread_dir = self.thread_dir(sidechat_id);
-        if thread_dir.exists() {
-            fs::remove_dir_all(thread_dir)?;
-        }
-        self.remove_sidechat_from_index(sidechat_id)
-    }
-
-    pub fn fork_sidechat_latest(&self, sidechat_id: &str) -> Result<SideChatMetadata> {
-        self.create_sidechat_fork(sidechat_id, |_, metadata| {
-            let mut forked = self.load_sidechat(sidechat_id)?;
-            forked.metadata = metadata.clone();
-            validate_message_ids(&forked.messages)?;
-            self.save_sidechat_files(&forked)
+    pub fn save_conversation(&self, conversation: &Conversation) -> Result<()> {
+        self.database.write(|connection| match conversation {
+            Conversation::Thread(thread) => self.save_thread_on(connection, thread),
+            Conversation::Sidechat(sidechat) => self.save_sidechat_on(connection, sidechat),
         })
     }
 
-    pub fn fork_sidechat_at_message(
+    pub fn load_thread(&self, id: &str) -> Result<ThreadData> {
+        self.database
+            .read(|connection| self.load_thread_on(connection, id))
+    }
+
+    pub fn load_sidechat(&self, id: &str) -> Result<SideChatData> {
+        self.database
+            .read(|connection| self.load_sidechat_on(connection, id))
+    }
+
+    pub fn load_conversation(&self, id: &str) -> Result<Conversation> {
+        self.database
+            .read(|connection| self.load_conversation_on(connection, id))
+    }
+
+    pub fn load_conversation_metadata(&self, id: &str) -> Result<(String, String)> {
+        self.database.read(|connection| {
+            connection
+                .query_row(
+                    "SELECT title, kind FROM conversations WHERE id = ?1",
+                    [id],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .optional()?
+                .ok_or_else(|| StorageError::ThreadNotFound(id.into()))
+        })
+    }
+
+    pub fn load_messages(&self, id: &str) -> Result<Vec<ThreadMessage>> {
+        self.database.read(|connection| {
+            records::conversation_kind(connection, id)?;
+            records::messages(connection, id)
+        })
+    }
+
+    pub fn push_message(
         &self,
-        sidechat_id: &str,
-        message_id: &str,
-    ) -> Result<SideChatMetadata> {
-        self.create_sidechat_fork(sidechat_id, |source, metadata| {
-            let mut forked = self.load_sidechat(sidechat_id)?;
-            let position = forked
-                .messages
-                .iter()
-                .position(|message| message.id() == message_id)
-                .ok_or_else(|| {
-                    StorageError::InvalidThreadMessage(format!(
-                        "message `{message_id}` was not found in side chat `{sidechat_id}`"
-                    ))
-                })?;
-            if !matches!(&forked.messages[position], ThreadMessage::Assistant { .. }) {
-                return Err(StorageError::InvalidThreadMessage(format!(
-                    "message `{message_id}` is not an assistant message"
-                )));
+        id: &str,
+        message: ThreadMessage,
+        mentions: &[ManifestMention],
+    ) -> Result<()> {
+        self.database.write(|connection| {
+            let mut conversation = self.load_conversation_on(connection, id)?;
+            let timestamp = match &message {
+                ThreadMessage::User { timestamp, .. }
+                | ThreadMessage::Assistant { timestamp, .. } => *timestamp,
+            };
+            let position = conversation.messages().len();
+            conversation.messages_mut().push(message.clone());
+            validate_message_ids(conversation.messages())?;
+            let initial_hash = conversation.initial_hash().to_string();
+            for mention in mentions {
+                self.touch_manifest_mention(
+                    conversation.manifest_mut(),
+                    &initial_hash,
+                    mention,
+                    timestamp,
+                )?;
             }
-
-            forked.messages.truncate(position + 1);
-            if let Some(ThreadMessage::Assistant { forked_from, .. }) = forked.messages.last_mut() {
-                *forked_from = Some(ForkedFrom {
-                    kind: ForkSourceKind::Sidechat,
-                    conversation_id: sidechat_id.to_string(),
-                    title: source.title.clone(),
-                });
-            }
-            forked.attachment_manifest = manifest_through_messages(
-                &forked.attachment_manifest,
-                &forked.messages,
-                "",
-                source.created_at,
-            );
-            forked.context_window = ContextWindow::default();
-            forked.metadata = metadata.clone();
-            validate_message_ids(&forked.messages)?;
-            self.save_sidechat_files(&forked)
-        })
-    }
-
-    pub fn set_thread_workspace(&self, thread_id: &str, workspace_id: Option<&str>) -> Result<()> {
-        let metadata = self.get_index_metadata(thread_id)?;
-        self.update_index_in_workspace(&metadata, workspace_id)
-    }
-
-    pub fn load_thread(&self, thread_id: &str) -> Result<ThreadData> {
-        let thread_dir = self.thread_dir(thread_id);
-        if !thread_dir.exists() {
-            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
-        }
-
-        let metadata = self.get_index_metadata(thread_id)?;
-        let ocr_path = ocr_annotations_path(&thread_dir);
-        let mut annotations_changed = false;
-        let mut ocr_data: OcrAnnotations = if ocr_path.exists() {
-            serde_json::from_str(&fs::read_to_string(&ocr_path)?)?
-        } else {
-            default_ocr_annotations()
-        };
-        annotations_changed |= ensure_empty_state_asset(&mut ocr_data);
-        annotations_changed |= retain_supported_ocr_annotations_ids(&mut ocr_data);
-        if annotations_changed {
-            super::atomic_write(
-                &ocr_path,
-                serde_json::to_string_pretty(&ocr_data)?.as_bytes(),
+            records::insert_message(connection, id, position, &message)?;
+            self.put_manifest(connection, id, conversation.manifest())?;
+            connection.execute(
+                "UPDATE conversations SET updated_at = ?1 WHERE id = ?2",
+                params![Utc::now(), id],
             )?;
-        }
-
-        let messages = self.load_messages(thread_id)?;
-        let context_window = if context_window_path(&thread_dir).exists() {
-            serde_json::from_str::<ContextWindow>(&fs::read_to_string(context_window_path(
-                &thread_dir,
-            ))?)?
-        } else {
-            ContextWindow::default()
-        };
-        let attachment_manifest = serde_json::from_str::<AttachmentManifest>(&fs::read_to_string(
-            attachment_manifest_path(&thread_dir),
-        )?)?;
-        let image_tone = self.get_image_tone(&metadata.image_hash);
-        let reverse_image_search = self.get_reverse_image_search_cache(&metadata.image_hash)?;
-
-        Ok(ThreadData {
-            metadata,
-            messages,
-            ocr_data,
-            context_window,
-            reverse_image_search,
-            attachment_manifest,
-            image_tone,
+            Ok(())
         })
     }
 
-    pub fn load_messages(&self, thread_id: &str) -> Result<Vec<ThreadMessage>> {
-        let thread_dir = self.thread_dir(thread_id);
-        if !thread_dir.exists() {
-            return Err(StorageError::ThreadNotFound(thread_id.to_string()));
-        }
-
-        let path = messages_path(&thread_dir);
-        if !path.exists() {
-            return Ok(Vec::new());
-        }
-
-        Ok(serde_json::from_str::<Vec<ThreadMessage>>(
-            &fs::read_to_string(path)?,
-        )?)
-    }
-
-    pub fn list_threads(&self) -> Result<Vec<ThreadMetadata>> {
-        let index = self.read_index()?;
-        let mut threads = index
-            .workspaces
-            .into_iter()
-            .flat_map(|workspace| workspace.threads.into_values())
-            .chain(index.unassigned_threads.into_values())
-            .collect::<Vec<_>>();
-        threads.sort_by_key(|thread| std::cmp::Reverse(thread.updated_at));
-        Ok(threads)
-    }
-
-    pub fn list_workspaces(&self) -> Result<Vec<WorkspaceMetadata>> {
-        Ok(self.read_index()?.workspaces)
-    }
-
-    pub fn delete_thread(&self, thread_id: &str) -> Result<()> {
-        self.delete_threads(&[thread_id.to_string()])
-    }
-
-    pub fn delete_threads(&self, thread_ids: &[String]) -> Result<()> {
-        for thread_id in thread_ids {
-            let thread_dir = self.thread_dir(thread_id);
-            if thread_dir.exists() {
-                fs::remove_dir_all(&thread_dir)?;
-            }
-        }
-        self.remove_many_from_index(thread_ids)
-    }
-
-    pub fn fork_thread_latest(&self, thread_id: &str) -> Result<ThreadMetadata> {
-        self.create_fork(thread_id, |_, metadata| {
-            let mut forked_thread = self.load_thread(thread_id)?;
-            forked_thread.metadata = metadata.clone();
-            self.save_thread_files(&forked_thread)
-        })
-    }
-
-    pub fn fork_thread_at_message(
-        &self,
-        thread_id: &str,
-        message_id: &str,
-    ) -> Result<ThreadMetadata> {
-        self.create_fork(thread_id, |source, metadata| {
-            let mut forked_thread = self.load_thread(thread_id)?;
-            let position = forked_thread
-                .messages
+    pub fn truncate_messages(&self, id: &str, from_message_id: &str) -> Result<usize> {
+        self.database.write(|connection| {
+            records::conversation_kind(connection, id)?;
+            let messages = records::messages(connection, id)?;
+            let position = messages
                 .iter()
-                .position(|message| message.id() == message_id)
+                .position(|message| message.id() == from_message_id)
                 .ok_or_else(|| {
                     StorageError::InvalidThreadMessage(format!(
-                        "message `{message_id}` was not found in thread `{thread_id}`"
+                        "message {from_message_id} was not found"
                     ))
                 })?;
-            if !matches!(
-                &forked_thread.messages[position],
-                ThreadMessage::Assistant { .. }
-            ) {
-                return Err(StorageError::InvalidThreadMessage(format!(
-                    "message `{message_id}` is not an assistant message"
-                )));
-            }
+            connection.execute(
+                "DELETE FROM messages WHERE conversation_id = ?1 AND position >= ?2",
+                params![id, position as i64],
+            )?;
+            Ok(messages.len() - position)
+        })
+    }
 
-            let initial_hash = source.image_hash.clone();
-            let created_at = source.created_at;
-            forked_thread.messages.truncate(position + 1);
-            if let Some(ThreadMessage::Assistant { forked_from, .. }) =
-                forked_thread.messages.last_mut()
+    pub fn register_read_attachment(
+        &self,
+        id: &str,
+        hash: &str,
+        name: &str,
+    ) -> Result<AttachmentManifestEntry> {
+        let entry = self.attachment_manifest_entry(hash, name, Utc::now())?;
+        self.database.write(|connection| {
+            records::conversation_kind(connection, id)?;
+            let mut manifest = records::attachments(connection, id)?;
+            if let Some(existing) = manifest
+                .iter_mut()
+                .find(|item| item.attachment_hash == entry.attachment_hash)
             {
-                *forked_from = Some(ForkedFrom {
-                    kind: ForkSourceKind::Thread,
-                    conversation_id: thread_id.to_string(),
-                    title: source.title.clone(),
-                });
+                *existing = entry.clone();
+            } else {
+                manifest.push(entry.clone());
             }
-            forked_thread.attachment_manifest = manifest_through_messages(
-                &forked_thread.attachment_manifest,
-                &forked_thread.messages,
-                &initial_hash,
-                created_at,
-            );
-            forked_thread.context_window = ContextWindow::default();
-            forked_thread.metadata = metadata.clone();
-            validate_message_ids(&forked_thread.messages)?;
-            self.save_thread_files(&forked_thread)
+            records::put_attachments(connection, id, &manifest)?;
+            Ok(entry)
+        })
+    }
+
+    pub fn refresh_attachment_briefs(&self, id: &str) -> Result<()> {
+        self.database.write(|connection| {
+            records::conversation_kind(connection, id)?;
+            self.put_manifest(connection, id, &records::attachments(connection, id)?)
         })
     }
 
     pub fn update_thread_metadata(&self, metadata: &ThreadMetadata) -> Result<()> {
-        if !self.thread_dir(&metadata.id).exists() {
-            return Err(StorageError::ThreadNotFound(metadata.id.clone()));
-        }
-        self.update_index(metadata)?;
-        Ok(())
+        self.database.write(|connection| {
+            records::get_thread(connection, &metadata.id)?;
+            records::put_thread(connection, metadata)
+        })
     }
+
+    pub fn update_sidechat_metadata(&self, metadata: &SideChatMetadata) -> Result<()> {
+        self.database.write(|connection| {
+            records::get_sidechat(connection, &metadata.id)?;
+            records::put_sidechat(connection, metadata)
+        })
+    }
+
+    pub fn set_thread_workspace(&self, id: &str, workspace_id: Option<&str>) -> Result<()> {
+        self.database.write(|connection| {
+            records::get_thread(connection, id)?;
+            index::set_workspace(connection, id, workspace_id)
+        })
+    }
+
+    pub fn delete_thread(&self, id: &str) -> Result<()> {
+        self.delete_threads(&[id.into()])
+    }
+
+    pub fn delete_threads(&self, ids: &[String]) -> Result<()> {
+        self.database.write(|connection| {
+            for id in ids {
+                connection.execute(
+                    "DELETE FROM conversations WHERE id = ?1 AND kind = 'thread'",
+                    [id],
+                )?;
+            }
+            Ok(())
+        })
+    }
+
+    pub fn delete_sidechat(&self, id: &str) -> Result<()> {
+        self.database.write(|connection| {
+            connection.execute(
+                "DELETE FROM conversations WHERE id = ?1 AND kind = 'sidechat'",
+                [id],
+            )?;
+            Ok(())
+        })
+    }
+
+    fn fork_thread(&self, id: &str, message_id: Option<&str>) -> Result<ThreadMetadata> {
+        self.database.write(|connection| {
+            let mut thread = self.load_thread_on(connection, id)?;
+            let source = thread.metadata.clone();
+            let workspace_id = index::workspace_id(connection, id)?;
+            let (title, version) = index::next_fork_version(
+                connection,
+                "thread",
+                &source.fork_family_id,
+                &source.title,
+                source.fork_version,
+            )?;
+            let mut metadata = ThreadMetadata::new(
+                format!("{title} ({version})"),
+                source.image_hash.clone(),
+                source.original_image_hash.clone(),
+                source.image_blob.clone(),
+            );
+            metadata.fork_family_id = source.fork_family_id;
+            metadata.fork_version = version;
+            if let Some(message_id) = message_id {
+                truncate_fork(
+                    &mut thread.messages,
+                    message_id,
+                    ForkedFrom {
+                        kind: ForkSourceKind::Thread,
+                        conversation_id: id.into(),
+                        title: source.title,
+                    },
+                )?;
+                thread.attachment_manifest = manifest_through_messages(
+                    &thread.attachment_manifest,
+                    &thread.messages,
+                    &source.image_hash,
+                    source.created_at,
+                );
+                thread.context_window = ContextWindow::default();
+                validate_message_ids(&thread.messages)?;
+            }
+            thread.metadata = metadata.clone();
+            self.save_thread_on(connection, &thread)?;
+            index::set_workspace(connection, &metadata.id, workspace_id.as_deref())?;
+            Ok(metadata)
+        })
+    }
+
+    pub fn fork_thread_latest(&self, id: &str) -> Result<ThreadMetadata> {
+        self.fork_thread(id, None)
+    }
+
+    pub fn fork_thread_at_message(&self, id: &str, message_id: &str) -> Result<ThreadMetadata> {
+        self.fork_thread(id, Some(message_id))
+    }
+
+    fn fork_sidechat(&self, id: &str, message_id: Option<&str>) -> Result<SideChatMetadata> {
+        self.database.write(|connection| {
+            let mut sidechat = self.load_sidechat_on(connection, id)?;
+            let source = sidechat.metadata.clone();
+            let (title, version) = index::next_fork_version(
+                connection,
+                "sidechat",
+                &source.fork_family_id,
+                &source.title,
+                source.fork_version,
+            )?;
+            let mut metadata = SideChatMetadata::new(format!("{title} ({version})"));
+            metadata.fork_family_id = source.fork_family_id;
+            metadata.fork_version = version;
+            if let Some(message_id) = message_id {
+                truncate_fork(
+                    &mut sidechat.messages,
+                    message_id,
+                    ForkedFrom {
+                        kind: ForkSourceKind::Sidechat,
+                        conversation_id: id.into(),
+                        title: source.title,
+                    },
+                )?;
+                sidechat.attachment_manifest = manifest_through_messages(
+                    &sidechat.attachment_manifest,
+                    &sidechat.messages,
+                    "",
+                    source.created_at,
+                );
+                sidechat.context_window = ContextWindow::default();
+            }
+            sidechat.metadata = metadata.clone();
+            self.save_sidechat_on(connection, &sidechat)?;
+            Ok(metadata)
+        })
+    }
+
+    pub fn fork_sidechat_latest(&self, id: &str) -> Result<SideChatMetadata> {
+        self.fork_sidechat(id, None)
+    }
+
+    pub fn fork_sidechat_at_message(&self, id: &str, message_id: &str) -> Result<SideChatMetadata> {
+        self.fork_sidechat(id, Some(message_id))
+    }
+}
+
+fn truncate_fork(
+    messages: &mut Vec<ThreadMessage>,
+    message_id: &str,
+    source: ForkedFrom,
+) -> Result<()> {
+    let position = messages
+        .iter()
+        .position(|message| message.id() == message_id)
+        .ok_or_else(|| {
+            StorageError::InvalidThreadMessage(format!(
+                "message `{message_id}` was not found in `{}`",
+                source.conversation_id
+            ))
+        })?;
+    if !matches!(&messages[position], ThreadMessage::Assistant { .. }) {
+        return Err(StorageError::InvalidThreadMessage(format!(
+            "message `{message_id}` is not an assistant message"
+        )));
+    }
+    messages.truncate(position + 1);
+    if let Some(ThreadMessage::Assistant { forked_from, .. }) = messages.last_mut() {
+        *forked_from = Some(source);
+    }
+    Ok(())
 }

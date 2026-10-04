@@ -1,68 +1,15 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
-use std::sync::Mutex;
 
-// Serialize catalog read/modify/write operations across addon worker threads.
-static CATALOG_WRITE_LOCK: Mutex<()> = Mutex::new(());
+use rusqlite::{params, Connection, OptionalExtension};
 
-use serde::{Deserialize, Serialize};
-
-use crate::error::{Result, StorageError};
-
+use super::records::{self, SIDECHAT_COLUMNS, THREAD_COLUMNS};
 use super::{SideChatMetadata, ThreadMetadata, ThreadStorage, WorkspaceMetadata};
-
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub(super) struct ThreadIndex {
-    pub(super) workspaces: Vec<WorkspaceMetadata>,
-    pub(super) unassigned_threads: BTreeMap<String, ThreadMetadata>,
-    #[serde(default)]
-    pub(super) sidechat_threads: BTreeMap<String, SideChatMetadata>,
-    fork_families: BTreeMap<String, ForkFamilyState>,
-    sidechat_fork_families: BTreeMap<String, ForkFamilyState>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ForkFamilyState {
-    base_title: String,
-    last_version: u32,
-}
-
-fn next_fork_version(
-    families: &mut BTreeMap<String, ForkFamilyState>,
-    family_id: &str,
-    source_title: &str,
-    source_version: u32,
-) -> Result<(String, u32)> {
-    let family = if source_version == 1 {
-        families
-            .entry(family_id.to_string())
-            .or_insert_with(|| ForkFamilyState {
-                base_title: source_title.to_string(),
-                last_version: 1,
-            })
-    } else {
-        families.get_mut(family_id).ok_or_else(|| {
-            StorageError::InvalidThreadMessage(format!(
-                "fork family `{family_id}` is missing from the thread index"
-            ))
-        })?
-    };
-    if family.last_version < source_version {
-        return Err(StorageError::InvalidThreadMessage(format!(
-            "fork family `{family_id}` is behind version `{source_version}`"
-        )));
-    }
-    let version = family.last_version.checked_add(1).ok_or_else(|| {
-        StorageError::InvalidThreadMessage(format!(
-            "fork family `{family_id}` has no more available versions"
-        ))
-    })?;
-    Ok((family.base_title.clone(), version))
-}
+use crate::{Result, StorageError};
 
 fn canonical_workspace_path(path: &Path) -> Result<std::path::PathBuf> {
     if !path.is_dir() {
@@ -157,138 +104,126 @@ fn canonical_workspace_path(path: &Path) -> Result<std::path::PathBuf> {
     Ok(canonical)
 }
 
-impl ThreadStorage {
-    pub(super) fn create_fork<F>(&self, source_id: &str, build: F) -> Result<ThreadMetadata>
-    where
-        F: FnOnce(&ThreadMetadata, &ThreadMetadata) -> Result<()>,
-    {
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        let source = index.unassigned_threads.get(source_id).cloned();
-        let (source, workspace_id) = if let Some(source) = source {
-            (source, None)
-        } else {
-            index
-                .workspaces
-                .iter()
-                .find_map(|workspace| {
-                    workspace
-                        .threads
-                        .get(source_id)
-                        .map(|source| (source.clone(), Some(workspace.id.clone())))
+pub(super) fn next_fork_version(
+    connection: &Connection,
+    kind: &str,
+    family_id: &str,
+    title: &str,
+    source_version: u32,
+) -> Result<(String, u32)> {
+    if source_version == 1 {
+        connection.execute("INSERT INTO fork_families (kind, id, base_title, last_version) VALUES (?1, ?2, ?3, 1) ON CONFLICT (kind, id) DO NOTHING", params![kind, family_id, title])?;
+    }
+    let (base_title, last_version): (String, u32) = connection
+        .query_row(
+            "SELECT base_title, last_version FROM fork_families WHERE kind = ?1 AND id = ?2",
+            params![kind, family_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?
+        .ok_or_else(|| {
+            StorageError::InvalidThreadMessage(format!("fork family `{family_id}` is missing"))
+        })?;
+    if last_version < source_version {
+        return Err(StorageError::InvalidThreadMessage(format!(
+            "fork family `{family_id}` is behind version `{source_version}`"
+        )));
+    }
+    let version = last_version.checked_add(1).ok_or_else(|| {
+        StorageError::InvalidThreadMessage(format!(
+            "fork family `{family_id}` has no more available versions"
+        ))
+    })?;
+    connection.execute(
+        "UPDATE fork_families SET last_version = ?1 WHERE kind = ?2 AND id = ?3",
+        params![version, kind, family_id],
+    )?;
+    Ok((base_title, version))
+}
+
+pub(super) fn set_workspace(
+    connection: &Connection,
+    thread_id: &str,
+    workspace_id: Option<&str>,
+) -> Result<()> {
+    if let Some(id) = workspace_id {
+        if !connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM workspaces WHERE id = ?1)",
+            [id],
+            |row| row.get::<_, bool>(0),
+        )? {
+            return Err(StorageError::WorkspaceNotFound(id.into()));
+        }
+    }
+    connection.execute(
+        "UPDATE conversations SET workspace_id = ?1 WHERE id = ?2 AND kind = 'thread'",
+        params![workspace_id, thread_id],
+    )?;
+    Ok(())
+}
+
+pub(super) fn workspace_id(connection: &Connection, thread_id: &str) -> Result<Option<String>> {
+    connection
+        .query_row(
+            "SELECT workspace_id FROM conversations WHERE id = ?1 AND kind = 'thread'",
+            [thread_id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .ok_or_else(|| StorageError::ThreadNotFound(thread_id.into()))
+}
+
+fn put_directories(connection: &Connection, id: &str, directories: &[String]) -> Result<()> {
+    connection.execute(
+        "DELETE FROM workspace_directories WHERE workspace_id = ?1",
+        [id],
+    )?;
+    for (position, path) in directories.iter().enumerate() {
+        connection.execute(
+            "INSERT INTO workspace_directories (workspace_id, position, path) VALUES (?1, ?2, ?3)",
+            params![id, position as i64, path],
+        )?;
+    }
+    Ok(())
+}
+
+fn put_workspace(connection: &Connection, workspace: &WorkspaceMetadata) -> Result<()> {
+    connection.execute("INSERT INTO workspaces (id, name, created_at, position) VALUES (?1, ?2, ?3, (SELECT coalesce(max(position), -1) + 1 FROM workspaces))", params![workspace.id, workspace.name, workspace.created_at])?;
+    put_directories(connection, &workspace.id, &workspace.directories)
+}
+
+fn get_workspace(connection: &Connection, id: &str) -> Result<WorkspaceMetadata> {
+    let mut workspace = connection
+        .query_row(
+            "SELECT id, name, created_at FROM workspaces WHERE id = ?1",
+            [id],
+            |row| {
+                Ok(WorkspaceMetadata {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    created_at: row.get(2)?,
+                    directories: Vec::new(),
+                    threads: BTreeMap::new(),
                 })
-                .ok_or_else(|| StorageError::ThreadNotFound(source_id.to_string()))?
-        };
-        let family_id = source.fork_family_id.clone();
-        let (base_title, version) = next_fork_version(
-            &mut index.fork_families,
-            &family_id,
-            &source.title,
-            source.fork_version,
-        )?;
-        let mut metadata = ThreadMetadata::new(
-            format!("{base_title} ({version})"),
-            source.image_hash.clone(),
-            source.original_image_hash.clone(),
-            source.image_blob.clone(),
-        );
-        metadata.fork_family_id = family_id.clone();
-        metadata.fork_version = version;
-
-        let destination_dir = self.thread_dir(&metadata.id);
-        if let Err(error) = build(&source, &metadata) {
-            let _ = fs::remove_dir_all(&destination_dir);
-            return Err(error);
-        }
-        index
-            .fork_families
-            .get_mut(&family_id)
-            .unwrap()
-            .last_version = version;
-        if let Some(workspace_id) = workspace_id {
-            index
-                .workspaces
-                .iter_mut()
-                .find(|workspace| workspace.id == workspace_id)
-                .unwrap()
-                .threads
-                .insert(metadata.id.clone(), metadata.clone());
-        } else {
-            index
-                .unassigned_threads
-                .insert(metadata.id.clone(), metadata.clone());
-        }
-        if let Err(error) = self.write_index(&index) {
-            let _ = fs::remove_dir_all(&destination_dir);
-            return Err(error);
-        }
-        Ok(metadata)
+            },
+        )
+        .optional()?
+        .ok_or_else(|| StorageError::WorkspaceNotFound(id.into()))?;
+    let mut directories = connection.prepare(
+        "SELECT path FROM workspace_directories WHERE workspace_id = ?1 ORDER BY position",
+    )?;
+    workspace.directories = directories
+        .query_map([id], |row| row.get(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut threads = connection.prepare(&format!("SELECT {THREAD_COLUMNS} FROM conversations WHERE workspace_id = ?1 AND kind = 'thread' ORDER BY id"))?;
+    for thread in threads.query_map([id], records::thread_metadata)? {
+        let thread = thread?;
+        workspace.threads.insert(thread.id.clone(), thread);
     }
+    Ok(workspace)
+}
 
-    pub(super) fn create_sidechat_fork<F>(
-        &self,
-        source_id: &str,
-        build: F,
-    ) -> Result<SideChatMetadata>
-    where
-        F: FnOnce(&SideChatMetadata, &SideChatMetadata) -> Result<()>,
-    {
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        let source = index
-            .sidechat_threads
-            .get(source_id)
-            .cloned()
-            .ok_or_else(|| StorageError::ThreadNotFound(source_id.to_string()))?;
-        let family_id = source.fork_family_id.clone();
-        let (base_title, version) = next_fork_version(
-            &mut index.sidechat_fork_families,
-            &family_id,
-            &source.title,
-            source.fork_version,
-        )?;
-        let mut metadata = SideChatMetadata::new(format!("{base_title} ({version})"));
-        metadata.fork_family_id = family_id.clone();
-        metadata.fork_version = version;
-
-        let destination_dir = self.thread_dir(&metadata.id);
-        if let Err(error) = build(&source, &metadata) {
-            let _ = fs::remove_dir_all(&destination_dir);
-            return Err(error);
-        }
-        index
-            .sidechat_fork_families
-            .get_mut(&family_id)
-            .unwrap()
-            .last_version = version;
-        index
-            .sidechat_threads
-            .insert(metadata.id.clone(), metadata.clone());
-        if let Err(error) = self.write_index(&index) {
-            let _ = fs::remove_dir_all(&destination_dir);
-            return Err(error);
-        }
-        Ok(metadata)
-    }
-
-    pub(super) fn read_index(&self) -> Result<ThreadIndex> {
-        if !self.index_path.exists() {
-            return Ok(ThreadIndex::default());
-        }
-
-        let index_json = fs::read_to_string(&self.index_path)?;
-        serde_json::from_str::<ThreadIndex>(&index_json).map_err(Into::into)
-    }
-
-    fn write_index(&self, index: &ThreadIndex) -> Result<()> {
-        let json = serde_json::to_string_pretty(index)?;
-        super::atomic_write(&self.index_path, json.as_bytes())
-    }
-
+impl ThreadStorage {
     fn validate_workspace_input(
         name: &str,
         directories: &[String],
@@ -302,7 +237,7 @@ impl ThreadStorage {
             .map(|path| canonical_workspace_path(Path::new(path)))
             .collect::<Result<Vec<_>>>()?;
         Ok((
-            name.to_string(),
+            name.into(),
             directories
                 .into_iter()
                 .map(|path| path.to_string_lossy().into_owned())
@@ -317,18 +252,15 @@ impl ThreadStorage {
     ) -> Result<WorkspaceMetadata> {
         let (name, directories) = Self::validate_workspace_input(name, directories)?;
         let workspace = WorkspaceMetadata::new(name, directories);
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        index.workspaces.push(workspace.clone());
-        self.write_index(&index)?;
-        Ok(workspace)
+        self.database.write(|connection| {
+            put_workspace(connection, &workspace)?;
+            Ok(workspace)
+        })
     }
 
     pub fn update_workspace(
         &self,
-        workspace_id: &str,
+        id: &str,
         name: &str,
         directories: &[String],
     ) -> Result<WorkspaceMetadata> {
@@ -336,213 +268,86 @@ impl ThreadStorage {
         if name.is_empty() {
             return Err(StorageError::InvalidWorkspaceName);
         }
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        let workspace = index
-            .workspaces
-            .iter_mut()
-            .find(|workspace| workspace.id == workspace_id)
-            .ok_or_else(|| StorageError::WorkspaceNotFound(workspace_id.to_string()))?;
-        let directories = Self::validate_workspace_input(name, directories)?.1;
-        workspace.name = name.to_string();
-        workspace.directories = directories;
-        let updated = workspace.clone();
-        self.write_index(&index)?;
-        Ok(updated)
+        self.database.write(|connection| {
+            let mut workspace = get_workspace(connection, id)?;
+            let directories = Self::validate_workspace_input(name, directories)?.1;
+            workspace.name = name.into();
+            workspace.directories = directories;
+            connection.execute(
+                "UPDATE workspaces SET name = ?1 WHERE id = ?2",
+                params![name, id],
+            )?;
+            put_directories(connection, id, &workspace.directories)?;
+            Ok(workspace)
+        })
     }
 
-    pub fn delete_workspace(&self, workspace_id: &str) -> Result<()> {
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        let workspace_index = index
-            .workspaces
-            .iter()
-            .position(|workspace| workspace.id == workspace_id)
-            .ok_or_else(|| StorageError::WorkspaceNotFound(workspace_id.to_string()))?;
-        let removed = index.workspaces.remove(workspace_index);
-        index.unassigned_threads.extend(removed.threads);
-        self.write_index(&index)
+    pub fn delete_workspace(&self, id: &str) -> Result<()> {
+        self.database.write(|connection| {
+            if connection.execute("DELETE FROM workspaces WHERE id = ?1", [id])? == 0 {
+                return Err(StorageError::WorkspaceNotFound(id.into()));
+            }
+            Ok(())
+        })
     }
 
-    pub(super) fn get_index_metadata(&self, thread_id: &str) -> Result<ThreadMetadata> {
-        let index = self.read_index()?;
-        index
-            .unassigned_threads
-            .get(thread_id)
-            .cloned()
-            .or_else(|| {
-                index
-                    .workspaces
-                    .iter()
-                    .find_map(|workspace| workspace.threads.get(thread_id).cloned())
-            })
-            .ok_or_else(|| StorageError::ThreadNotFound(thread_id.to_string()))
+    pub fn get_thread_workspace_id(&self, id: &str) -> Result<Option<String>> {
+        self.database
+            .read(|connection| workspace_id(connection, id))
     }
 
-    pub fn get_thread_workspace_id(&self, thread_id: &str) -> Result<Option<String>> {
-        let index = self.read_index()?;
-        if index.unassigned_threads.contains_key(thread_id) {
-            return Ok(None);
-        }
-        index
-            .workspaces
-            .iter()
-            .find(|workspace| workspace.threads.contains_key(thread_id))
-            .map(|workspace| Some(workspace.id.clone()))
-            .ok_or_else(|| StorageError::ThreadNotFound(thread_id.to_string()))
-    }
-
-    pub(super) fn update_index(&self, metadata: &ThreadMetadata) -> Result<()> {
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        if let Some(workspace) = index
-            .workspaces
-            .iter_mut()
-            .find(|workspace| workspace.threads.contains_key(&metadata.id))
-        {
-            workspace
-                .threads
-                .insert(metadata.id.clone(), metadata.clone());
-        } else {
-            index
-                .unassigned_threads
-                .insert(metadata.id.clone(), metadata.clone());
-        }
-        self.write_index(&index)
-    }
-
-    pub(super) fn get_sidechat_metadata(&self, sidechat_id: &str) -> Result<SideChatMetadata> {
-        self.read_index()?
-            .sidechat_threads
-            .get(sidechat_id)
-            .cloned()
-            .ok_or_else(|| StorageError::ThreadNotFound(sidechat_id.to_string()))
-    }
-
-    pub(super) fn update_sidechat_index(&self, metadata: &SideChatMetadata) -> Result<()> {
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        index
-            .sidechat_threads
-            .insert(metadata.id.clone(), metadata.clone());
-        self.write_index(&index)
+    pub fn list_workspaces(&self) -> Result<Vec<WorkspaceMetadata>> {
+        self.database.read(|connection| {
+            let mut statement =
+                connection.prepare("SELECT id FROM workspaces ORDER BY position")?;
+            let ids = statement
+                .query_map([], |row| row.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            ids.iter().map(|id| get_workspace(connection, id)).collect()
+        })
     }
 
     pub fn list_sidechat_threads(&self) -> Result<Vec<SideChatMetadata>> {
-        Ok(self.read_index()?.sidechat_threads.into_values().collect())
+        self.database.read(|connection| {
+            let mut statement = connection.prepare(&format!(
+                "SELECT {SIDECHAT_COLUMNS} FROM conversations WHERE kind = 'sidechat' ORDER BY id"
+            ))?;
+            let threads = statement
+                .query_map([], records::sidechat_metadata)?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(threads)
+        })
     }
 
-    pub(super) fn remove_sidechat_from_index(&self, sidechat_id: &str) -> Result<()> {
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        index.sidechat_threads.remove(sidechat_id);
-        self.write_index(&index)
-    }
-
-    pub(super) fn update_index_in_workspace(
-        &self,
-        metadata: &ThreadMetadata,
-        workspace_id: Option<&str>,
-    ) -> Result<()> {
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        if let Some(id) = workspace_id {
-            if !index.workspaces.iter().any(|workspace| workspace.id == id) {
-                return Err(StorageError::WorkspaceNotFound(id.to_string()));
-            }
-        }
-        let metadata = index
-            .unassigned_threads
-            .get(&metadata.id)
-            .or_else(|| {
-                index
-                    .workspaces
-                    .iter()
-                    .find_map(|workspace| workspace.threads.get(&metadata.id))
-            })
-            .cloned()
-            .unwrap_or_else(|| metadata.clone());
-        index.unassigned_threads.remove(&metadata.id);
-        for workspace in &mut index.workspaces {
-            workspace.threads.remove(&metadata.id);
-        }
-        if let Some(id) = workspace_id {
-            let workspace = index
-                .workspaces
-                .iter_mut()
-                .find(|workspace| workspace.id == id)
-                .unwrap();
-            workspace
-                .threads
-                .insert(metadata.id.clone(), metadata.clone());
-        } else {
-            index
-                .unassigned_threads
-                .insert(metadata.id.clone(), metadata.clone());
-        }
-        self.write_index(&index)
-    }
-
-    /// Group two unassigned threads in one catalog write.
-    pub fn group_threads(&self, first_id: &str, second_id: &str) -> Result<WorkspaceMetadata> {
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        if first_id == second_id
-            || !index.unassigned_threads.contains_key(first_id)
-            || !index.unassigned_threads.contains_key(second_id)
-        {
-            return Err(StorageError::ThreadNotFound(second_id.to_string()));
-        }
-        let mut workspace = WorkspaceMetadata::new("New workspace".to_string(), Vec::new());
-        for id in [first_id, second_id] {
-            workspace
-                .threads
-                .insert(id.to_string(), index.unassigned_threads.remove(id).unwrap());
-        }
-        index.workspaces.push(workspace.clone());
-        self.write_index(&index)?;
-        Ok(workspace)
+    pub fn list_threads(&self) -> Result<Vec<ThreadMetadata>> {
+        self.database.read(|connection| {
+            let mut statement = connection.prepare(&format!("SELECT {THREAD_COLUMNS} FROM conversations WHERE kind = 'thread' ORDER BY (workspace_id IS NULL), (SELECT position FROM workspaces WHERE id = workspace_id), id"))?;
+            let mut threads = statement.query_map([], records::thread_metadata)?.collect::<rusqlite::Result<Vec<_>>>()?;
+            threads.sort_by_key(|thread| std::cmp::Reverse(thread.updated_at));
+            Ok(threads)
+        })
     }
 
     pub fn list_unassigned_threads(&self) -> Result<Vec<ThreadMetadata>> {
-        Ok(self
-            .read_index()?
-            .unassigned_threads
-            .into_values()
-            .collect())
+        self.database.read(|connection| {
+            let mut statement = connection.prepare(&format!("SELECT {THREAD_COLUMNS} FROM conversations WHERE kind = 'thread' AND workspace_id IS NULL ORDER BY id"))?;
+            let threads = statement.query_map([], records::thread_metadata)?.collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(threads)
+        })
     }
 
-    pub(super) fn remove_many_from_index(&self, thread_ids: &[String]) -> Result<()> {
-        let removed = thread_ids
-            .iter()
-            .map(String::as_str)
-            .collect::<HashSet<_>>();
-        let _guard = CATALOG_WRITE_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut index = self.read_index()?;
-        index
-            .unassigned_threads
-            .retain(|id, _| !removed.contains(id.as_str()));
-        for workspace in &mut index.workspaces {
-            workspace
-                .threads
-                .retain(|id, _| !removed.contains(id.as_str()));
-        }
-        self.write_index(&index)
+    pub fn group_threads(&self, first_id: &str, second_id: &str) -> Result<WorkspaceMetadata> {
+        self.database.write(|connection| {
+            let eligible = |id| connection.query_row("SELECT EXISTS(SELECT 1 FROM conversations WHERE id = ?1 AND kind = 'thread' AND workspace_id IS NULL)", [id], |row| row.get::<_, bool>(0));
+            if first_id == second_id || !eligible(first_id)? || !eligible(second_id)? { return Err(StorageError::ThreadNotFound(second_id.into())); }
+            let mut workspace = WorkspaceMetadata::new("New workspace".into(), Vec::new());
+            put_workspace(connection, &workspace)?;
+            for id in [first_id, second_id] {
+                let thread = records::get_thread(connection, id)?;
+                set_workspace(connection, id, Some(&workspace.id))?;
+                workspace.threads.insert(id.into(), thread);
+            }
+            Ok(workspace)
+        })
     }
 }

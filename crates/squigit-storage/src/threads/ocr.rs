@@ -1,15 +1,14 @@
 // Copyright 2026 a7mddra
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fs;
-
-use crate::error::{Result, StorageError};
-
-use super::paths::ocr_annotations_path;
+use super::records;
 use super::{
     default_ocr_annotations, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion,
-    ThreadStorage, EMPTY_STATE_ASSET_ID,
+    ThreadStorage,
 };
+use crate::database::json_column;
+use crate::{Result, StorageError};
+use rusqlite::{params, Connection};
 
 fn is_supported_ocr_model_id(model_id: &str) -> bool {
     matches!(
@@ -34,94 +33,81 @@ fn canonicalize_ocr_annotations_id(model_id: &str) -> Option<&str> {
     None
 }
 
-pub(super) fn retain_supported_ocr_annotations_ids(annotations: &mut OcrAnnotations) -> bool {
-    let unsupported_keys: Vec<String> = annotations
-        .keys()
-        .filter(|key| key.as_str() != EMPTY_STATE_ASSET_ID && !is_supported_ocr_model_id(key))
-        .cloned()
-        .collect();
-
-    for key in &unsupported_keys {
-        annotations.remove(key);
+pub(super) fn annotations(connection: &Connection, id: &str) -> Result<OcrAnnotations> {
+    let mut result = default_ocr_annotations();
+    let mut statement = connection.prepare(
+        "SELECT model_id, scanned_at, regions_json FROM ocr_results WHERE conversation_id = ?1",
+    )?;
+    for entry in statement.query_map([id], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            OcrModelAnnotation {
+                scanned_at: row.get(1)?,
+                ocr_data: json_column(row, 2)?,
+            },
+        ))
+    })? {
+        let (model, data) = entry?;
+        if is_supported_ocr_model_id(&model) {
+            result.insert(model, OcrAnnotationEntry::Model(data));
+        }
     }
-
-    !unsupported_keys.is_empty()
+    Ok(result)
 }
 
-pub(super) fn ensure_empty_state_asset(annotations: &mut OcrAnnotations) -> bool {
-    if matches!(
-        annotations.get(EMPTY_STATE_ASSET_ID),
-        Some(OcrAnnotationEntry::EmptyState(_))
-    ) {
-        return false;
+pub(super) fn put_annotations(
+    connection: &Connection,
+    id: &str,
+    annotations: &OcrAnnotations,
+) -> Result<()> {
+    connection.execute("DELETE FROM ocr_results WHERE conversation_id = ?1", [id])?;
+    for (model_id, annotation) in annotations {
+        if !is_supported_ocr_model_id(model_id) {
+            continue;
+        }
+        if let OcrAnnotationEntry::Model(model) = annotation {
+            put_model(connection, id, model_id, model)?;
+        }
     }
+    Ok(())
+}
 
-    annotations.insert(
-        EMPTY_STATE_ASSET_ID.to_string(),
-        OcrAnnotationEntry::EmptyState(Vec::new()),
-    );
-    true
+fn put_model(
+    connection: &Connection,
+    id: &str,
+    model_id: &str,
+    model: &OcrModelAnnotation,
+) -> Result<()> {
+    connection.execute("INSERT INTO ocr_results (conversation_id, model_id, scanned_at, regions_json) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (conversation_id, model_id) DO UPDATE SET scanned_at = excluded.scanned_at, regions_json = excluded.regions_json",
+        params![id, model_id, model.scanned_at, serde_json::to_string(&model.ocr_data)?])?;
+    Ok(())
 }
 
 impl ThreadStorage {
-    /// Save OCR data for a specific model into the thread's OCR annotations.
     pub fn save_ocr_data(
         &self,
         thread_id: &str,
         model_id: &str,
         ocr_data: &[OcrRegion],
     ) -> Result<()> {
-        let thread_dir = self.thread_dir(thread_id);
-        fs::create_dir_all(&thread_dir)?;
-        let canonical_model_id = canonicalize_ocr_annotations_id(model_id)
-            .ok_or_else(|| StorageError::InvalidOcrModel(model_id.to_string()))?;
-
-        let ocr_path = ocr_annotations_path(&thread_dir);
-        let mut annotations: OcrAnnotations = if ocr_path.exists() {
-            let json = fs::read_to_string(&ocr_path)?;
-            serde_json::from_str(&json)?
-        } else {
-            default_ocr_annotations()
-        };
-        ensure_empty_state_asset(&mut annotations);
-        retain_supported_ocr_annotations_ids(&mut annotations);
-
-        annotations.insert(
-            canonical_model_id.to_string(),
-            OcrAnnotationEntry::Model(OcrModelAnnotation {
-                scanned_at: Some(chrono::Utc::now()),
-                ocr_data: ocr_data.to_vec(),
-            }),
-        );
-
-        super::atomic_write(
-            &ocr_path,
-            serde_json::to_string_pretty(&annotations)?.as_bytes(),
-        )?;
-        Ok(())
+        let model_id = canonicalize_ocr_annotations_id(model_id)
+            .ok_or_else(|| StorageError::InvalidOcrModel(model_id.into()))?;
+        self.database.write(|connection| {
+            records::get_thread(connection, thread_id)?;
+            put_model(
+                connection,
+                thread_id,
+                model_id,
+                &OcrModelAnnotation {
+                    scanned_at: Some(chrono::Utc::now()),
+                    ocr_data: ocr_data.to_vec(),
+                },
+            )
+        })
     }
 
-    /// Get the entire OCR annotations for a thread.
     pub fn get_ocr_annotations(&self, thread_id: &str) -> Result<OcrAnnotations> {
-        let thread_dir = self.thread_dir(thread_id);
-        let ocr_path = ocr_annotations_path(&thread_dir);
-
-        if !ocr_path.exists() {
-            return Ok(default_ocr_annotations());
-        }
-
-        let json = fs::read_to_string(&ocr_path)?;
-        let mut annotations: OcrAnnotations = serde_json::from_str(&json)?;
-        let mut annotations_changed = ensure_empty_state_asset(&mut annotations);
-        if retain_supported_ocr_annotations_ids(&mut annotations) {
-            annotations_changed = true;
-        }
-        if annotations_changed {
-            super::atomic_write(
-                &ocr_path,
-                serde_json::to_string_pretty(&annotations)?.as_bytes(),
-            )?;
-        }
-        Ok(annotations)
+        self.database
+            .read(|connection| annotations(connection, thread_id))
     }
 }

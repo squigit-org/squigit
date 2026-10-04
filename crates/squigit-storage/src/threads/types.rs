@@ -433,7 +433,7 @@ pub struct ThreadData {
     /// Reverse image search cache for the core thread image.
     #[serde(default)]
     pub reverse_image_search: Option<crate::cas::ReverseImageSearchCache>,
-    /// Per-thread attachment context persisted in attachment_manifest.json.
+    /// Per-thread attachment context.
     pub attachment_manifest: AttachmentManifest,
     /// Image tone resolved from the initial object's manifest.
     pub image_tone: Option<String>,
@@ -454,7 +454,7 @@ impl ThreadData {
     }
 }
 
-/// A SideChat thread uses the common message/context/attachment files without OCR state.
+/// A SideChat thread uses common message/context/attachment records without OCR state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SideChatData {
     pub metadata: SideChatMetadata,

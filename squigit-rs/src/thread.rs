@@ -535,7 +535,7 @@ fn manifest_mentions(inputs: &[MessageAttachmentInput]) -> Vec<ManifestMention> 
 }
 
 /// Append a user message to any conversation by id alone, persisting it to
-/// messages.json and merging its attachment mentions into the manifest.
+/// storage and merging its attachment mentions into the manifest.
 pub fn append_message(
     conversation_id: &str,
     message_markdown: String,
@@ -667,6 +667,52 @@ pub fn load_conversation(conversation_id: &str) -> ThreadResult<ConversationSnap
         .load_conversation(conversation_id)
         .map_err(|error| error.to_string())?;
     Ok(conversation_snapshot(&storage, &conversation))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversationMetadata {
+    pub id: String,
+    pub title: String,
+    pub kind: String,
+}
+
+pub fn load_conversation_metadata(conversation_id: &str) -> ThreadResult<ConversationMetadata> {
+    let (title, kind) = active_storage()?
+        .load_conversation_metadata(conversation_id)
+        .map_err(|error| error.to_string())?;
+    Ok(ConversationMetadata {
+        id: conversation_id.into(),
+        title,
+        kind,
+    })
+}
+
+pub fn export_conversation_citation(
+    conversation_id: &str,
+    title: String,
+    kind: String,
+) -> ThreadResult<String> {
+    let storage = active_storage()?;
+    let conversation = storage
+        .load_conversation(conversation_id)
+        .map_err(|error| error.to_string())?;
+    let content = serde_json::to_string_pretty(&serde_json::json!({
+        "type": "thread_mention",
+        "thread_id": conversation_id,
+        "title": title,
+        "kind": kind,
+        "messages": conversation.messages(),
+        "attachment_manifest": conversation.manifest(),
+    }))
+    .map_err(|error| error.to_string())?;
+    let path = storage
+        .new_text_blob_path("json")
+        .map_err(|error| error.to_string())?;
+    storage
+        .store_text_blob(&path, &content)
+        .map(|blob| blob.path)
+        .map_err(|error| error.to_string())
 }
 
 pub fn get_thread_jobs_snapshot() -> ThreadResult<Vec<crate::brain::JobSnapshot>> {
