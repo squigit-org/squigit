@@ -18,7 +18,7 @@ shared: |
   image is needed beyond its brief, call recall_attachment with its path from the
   manifest. The tool supplies the saved pixels; do not ask the user to upload that image again.
 conversation: |
-  The full conversation history and attachment_manifest.json are supplied with this prompt.
+  The full conversation history and attachment manifest are supplied with this prompt.
   Use the conversation for continuity: follow the latest user direction, do not repeat a prior
   overview unless asked, and resolve pronouns and follow-ups against the history.
   Use the manifest briefs (display name, file type, brief, last mention) to refer back to

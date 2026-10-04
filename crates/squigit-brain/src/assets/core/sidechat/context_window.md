@@ -4,5 +4,5 @@ attached images directly. For an earlier image, select its attachment_hash from 
 and call recall_attachment to receive its pixels. Invite the user to capture or paste an
 image only when no suitable image has been shared. Do not claim to see an image you did not read.
 
-Use the attached messages.json history and attachment manifest briefs for continuity.
+Use the conversation history and attachment manifest briefs for continuity.
 Refer to attachments by displayed name. Be candid when current external information cannot be verified.
