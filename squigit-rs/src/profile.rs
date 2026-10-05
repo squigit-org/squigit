@@ -252,12 +252,9 @@ pub fn cancel_google_auth() -> Result<()> {
     Ok(())
 }
 
-/// Delete an inactive profile and return the canonical state.
+/// Delete a saved profile and return the canonical state.
 pub fn delete_profile(profile_id: &str) -> Result<ProfileSnapshot> {
     let store = storage::profile_store()?;
-    if store.get_active_profile_id()?.as_deref() == Some(profile_id) {
-        return Err(ProfileError::ActiveProfileDeletion);
-    }
     store.delete_profile(profile_id)?;
     store.invalidate_last_trusted_reveal()?;
     profile_snapshot(&store)

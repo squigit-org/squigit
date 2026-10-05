@@ -338,19 +338,18 @@ impl ProfileStore {
                 if get_profile(connection, profile_id)?.is_none() {
                     return Err(StorageError::ProfileNotFound(profile_id.into()));
                 }
-                let count: u32 =
-                    connection.query_row("SELECT count(*) FROM profiles", [], |row| row.get(0))?;
-                if count <= 1 {
-                    return Err(StorageError::CannotDeleteLastProfile);
-                }
+                let deleting_active = state.active_profile_id.as_deref() == Some(profile_id);
                 connection.execute("DELETE FROM profiles WHERE id = ?1", [profile_id])?;
-                let snapshot = profile_snapshot(connection, state.active_profile_id.clone())?;
-                if snapshot.active_profile_id.is_none() {
-                    state.active_profile_id = snapshot
-                        .profiles
-                        .iter()
-                        .max_by_key(|profile| profile.last_used_at)
-                        .map(|profile| profile.id.clone());
+                if deleting_active {
+                    let snapshot = profile_snapshot(connection, None)?;
+                    state.active_profile_id =
+                        snapshot.profiles.first().map(|profile| profile.id.clone());
+                    if let Some(next_id) = state.active_profile_id.as_deref() {
+                        connection.execute(
+                            "UPDATE profiles SET last_used_at = ?1 WHERE id = ?2",
+                            params![Utc::now(), next_id],
+                        )?;
+                    }
                 }
                 if state
                     .last_login
