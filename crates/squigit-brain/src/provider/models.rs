@@ -3,7 +3,8 @@
 
 use super::errors::ProviderError;
 use serde_json::{json, Value};
-use std::sync::OnceLock;
+use std::collections::BTreeMap;
+use std::sync::{Mutex as SyncMutex, OnceLock};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
@@ -276,6 +277,19 @@ struct Catalog {
     models: Vec<Candidate>,
 }
 static CATALOG: OnceLock<Mutex<Option<Catalog>>> = OnceLock::new();
+type ModelHealth = BTreeMap<(bool, String), (Instant, bool)>;
+static MODEL_HEALTH: OnceLock<SyncMutex<ModelHealth>> = OnceLock::new();
+
+pub(crate) fn record_outcome(id: &str, micro: bool, succeeded: bool) {
+    if let Ok(mut health) = MODEL_HEALTH
+        .get_or_init(|| SyncMutex::new(BTreeMap::new()))
+        .lock()
+    {
+        health.retain(|_, (updated, _)| updated.elapsed() < Duration::from_secs(900));
+        health.insert((micro, id.to_string()), (Instant::now(), succeeded));
+    }
+}
+
 async fn catalog(refresh: bool) -> Result<Vec<Candidate>, ProviderError> {
     let mut cache = CATALOG.get_or_init(|| Mutex::new(None)).lock().await;
     if let Some(catalog) = cache
@@ -347,8 +361,9 @@ async fn catalog(refresh: bool) -> Result<Vec<Candidate>, ProviderError> {
                     let latency = endpoints
                         .iter()
                         .filter_map(|endpoint| {
-                            endpoint["latency_last_30m"]
-                                .as_f64()
+                            endpoint
+                                .pointer("/latency_last_30m/p50")
+                                .and_then(Value::as_f64)
                                 .filter(|n| n.is_finite() && *n > 0.0)
                         })
                         .reduce(f64::min);
@@ -427,26 +442,42 @@ pub(crate) async fn job_candidates(
                         }
                 })
                 .collect::<Vec<_>>();
-            pool.sort_by(|a, b| {
-                match (a.availability, b.availability) {
-                    (Some(a), Some(b)) => b.total_cmp(&a),
-                    (Some(_), None) => std::cmp::Ordering::Less,
-                    (None, Some(_)) => std::cmp::Ordering::Greater,
-                    _ => std::cmp::Ordering::Equal,
+            let health = MODEL_HEALTH
+                .get_or_init(|| SyncMutex::new(BTreeMap::new()))
+                .lock()
+                .map(|health| health.clone())
+                .unwrap_or_default();
+            let health_rank = |model: &Candidate| match health.get(&(micro, model.id.clone())) {
+                Some((updated, true)) if updated.elapsed() < Duration::from_secs(900) => {
+                    (0, std::cmp::Reverse(Some(*updated)))
                 }
-                .then_with(|| match (a.latency, b.latency) {
-                    (Some(a), Some(b)) => a.total_cmp(&b),
-                    (Some(_), None) => std::cmp::Ordering::Less,
-                    (None, Some(_)) => std::cmp::Ordering::Greater,
-                    _ => std::cmp::Ordering::Equal,
-                })
-                .then_with(|| a.lightweight_score().total_cmp(&b.lightweight_score()))
-                .then_with(|| {
-                    b.metadata["created"]
-                        .as_u64()
-                        .cmp(&a.metadata["created"].as_u64())
-                })
-                .then_with(|| a.id.cmp(&b.id))
+                Some((updated, false)) if updated.elapsed() < Duration::from_secs(300) => {
+                    (2, std::cmp::Reverse(None))
+                }
+                _ => (1, std::cmp::Reverse(None)),
+            };
+            pool.sort_by(|a, b| {
+                health_rank(a)
+                    .cmp(&health_rank(b))
+                    .then_with(|| match (a.availability, b.availability) {
+                        (Some(a), Some(b)) => b.total_cmp(&a),
+                        (Some(_), None) => std::cmp::Ordering::Less,
+                        (None, Some(_)) => std::cmp::Ordering::Greater,
+                        _ => std::cmp::Ordering::Equal,
+                    })
+                    .then_with(|| match (a.latency, b.latency) {
+                        (Some(a), Some(b)) => a.total_cmp(&b),
+                        (Some(_), None) => std::cmp::Ordering::Less,
+                        (None, Some(_)) => std::cmp::Ordering::Greater,
+                        _ => std::cmp::Ordering::Equal,
+                    })
+                    .then_with(|| a.lightweight_score().total_cmp(&b.lightweight_score()))
+                    .then_with(|| {
+                        b.metadata["created"]
+                            .as_u64()
+                            .cmp(&a.metadata["created"].as_u64())
+                    })
+                    .then_with(|| a.id.cmp(&b.id))
             });
             if pool.is_empty() {
                 return Err(ProviderError::new("model-unavailable").with_details(

@@ -246,6 +246,9 @@ pub(crate) async fn execute(
                 if !error.retryable && !unavailable {
                     return Err(error);
                 }
+                if spec.free {
+                    super::models::record_outcome(&candidate.id, spec.utility, false);
+                }
                 if unavailable {
                     unavailable_models[model_index] = true;
                 }
@@ -301,6 +304,9 @@ pub(crate) async fn execute(
             }
         };
         consecutive_retries = 0;
+        if spec.free {
+            super::models::record_outcome(&candidate.id, spec.utility, true);
+        }
         if let Some(step) = native_search {
             job.finish_tool(&step, "Browsed the web".into());
             searched = true;
