@@ -43,6 +43,12 @@ pub enum ProfileError {
     #[error("The active profile cannot be deleted")]
     ActiveProfileDeletion,
 
+    #[error("Profile not found")]
+    ProfileNotFound,
+
+    #[error("Profile name cannot be empty")]
+    EmptyProfileName,
+
     #[error("Authentication task failed: {0}")]
     AuthenticationTask(String),
 
@@ -60,6 +66,8 @@ impl ProfileError {
             Self::AuthenticationCancelled => "authentication-cancelled",
             Self::AuthenticationTimedOut => "authentication-timed-out",
             Self::ActiveProfileDeletion => "active-profile-deletion",
+            Self::ProfileNotFound => "profile-not-found",
+            Self::EmptyProfileName => "invalid-profile-name",
             Self::AuthenticationTask(_) => "authentication-task-failed",
             Self::Auth(_) => "authentication-failed",
             Self::Storage(_) => "profile-storage-failed",
@@ -259,12 +267,26 @@ pub fn delete_profile(profile_id: &str) -> Result<ProfileSnapshot> {
     store.invalidate_last_trusted_reveal()?;
     profile_snapshot(&store)
 }
-
 /// Activate a stored profile and return the canonical state.
 pub fn switch_profile(profile_id: &str) -> Result<ProfileSnapshot> {
     let store = storage::profile_store()?;
     store.set_active_profile_id(profile_id)?;
     store.invalidate_last_trusted_reveal()?;
+    profile_snapshot(&store)
+}
+
+/// Rename a saved profile's display name and return the canonical state.
+pub fn rename_profile(profile_id: &str, name: &str) -> Result<ProfileSnapshot> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(ProfileError::EmptyProfileName);
+    }
+    let store = storage::profile_store()?;
+    let mut profile = store
+        .get_profile(profile_id)?
+        .ok_or(ProfileError::ProfileNotFound)?;
+    profile.name = name.to_string();
+    store.upsert_profile(&profile)?;
     profile_snapshot(&store)
 }
 
