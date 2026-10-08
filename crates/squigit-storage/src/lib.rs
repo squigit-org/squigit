@@ -40,6 +40,7 @@ pub mod profiles;
 pub mod rules;
 mod secure_file;
 pub mod threads;
+pub mod usage;
 pub mod version;
 
 pub use blob_storage::StoredBlob;
@@ -49,6 +50,7 @@ pub use cas::{
 };
 pub use error::{Result, StorageError};
 pub use history::{HistoryEntry, HistoryInterface, HistoryStore};
+pub use usage::{UsageAnalytics, UsageBucket, UsageRequest, UsageStore};
 pub use maintenance::ObjectStoreGuard;
 pub use profiles::{
     canonical_google_issuer, EncryptedKeyRecord, KeyStoreTransaction, LastLogin, Profile,
@@ -57,7 +59,7 @@ pub use profiles::{
 };
 pub use threads::{
     AssistantError, AttachmentManifest, AttachmentManifestEntry, CitationSource, ContextWindow,
-    Conversation, ForkSourceKind, ForkedFrom, GroundingImage, GroundingResource, GroundingTool,
+    Conversation, ConversationMemoryEntry, ForkSourceKind, ForkedFrom, GroundingImage, GroundingResource, GroundingTool,
     GroundingVideo, ManifestMention, MessageAttachment, MessageGrounding, MessageTextCitation,
     OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation, OcrRegion, SideChatData,
     SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata, ThreadStorage, WorkspaceMetadata,

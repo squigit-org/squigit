@@ -19,3 +19,4 @@ pub mod storage;
 pub mod thread;
 pub mod update;
 pub mod urls;
+pub mod usage;

@@ -112,4 +112,38 @@ CREATE TABLE ocr_results (
     PRIMARY KEY (conversation_id, model_id)
 ) STRICT;
 
+CREATE TABLE usage_messages (
+    message_id TEXT PRIMARY KEY NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    conversation_id TEXT NOT NULL,
+    timestamp_ms INTEGER NOT NULL,
+    model TEXT NOT NULL
+) STRICT;
+
+CREATE INDEX usage_messages_profile_date ON usage_messages(profile_id, timestamp_ms);
+
+CREATE TABLE usage_requests (
+    id TEXT PRIMARY KEY NOT NULL,
+    generation_id TEXT UNIQUE,
+    profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    conversation_id TEXT NOT NULL,
+    task TEXT NOT NULL,
+    timestamp_ms INTEGER NOT NULL,
+    model TEXT NOT NULL,
+    cost_usd REAL CHECK (cost_usd >= 0)
+) STRICT;
+
+CREATE INDEX usage_requests_profile_date ON usage_requests(profile_id, timestamp_ms);
+
+CREATE TABLE usage_tools (
+    id TEXT PRIMARY KEY NOT NULL,
+    profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    conversation_id TEXT NOT NULL,
+    timestamp_ms INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    calls INTEGER NOT NULL CHECK (calls > 0)
+) STRICT;
+
+CREATE INDEX usage_tools_profile_date ON usage_tools(profile_id, timestamp_ms);
+
 PRAGMA user_version = 1;
