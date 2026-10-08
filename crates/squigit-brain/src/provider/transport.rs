@@ -18,6 +18,7 @@ pub(crate) struct RequestSpec {
     pub(crate) free: bool,
     pub(crate) utility: bool,
     pub(crate) force_web_search: bool,
+    pub(crate) message_id: Option<String>,
 }
 pub(crate) fn text(text: impl Into<String>) -> Value {
     json!({"type":"text", "text":text.into()})
@@ -45,6 +46,7 @@ pub(crate) async fn execute(
     };
     let mut messages = original.clone();
     let mut model_index = 0;
+    let mut unavailable_models = vec![false; candidates.len()];
     let mut bound_model: Option<String> = None;
     let mut rounds = 0;
     let mut calls = 0;
@@ -105,7 +107,6 @@ pub(crate) async fn execute(
                 .filter(|tool| audio_disabled.is_none()
                     || tool["function"]["name"] != "transcribe_audio")
                 .collect::<Vec<_>>());
-            body["tool_choice"] = json!("auto");
         }
         if !spec.free && !spec.utility && spec.force_web_search && !searched {
             body["plugins"] = json!([{"id":"web"}]);
@@ -226,14 +227,28 @@ pub(crate) async fn execute(
                         error.details["freeDailyRemaining"] = json!(0);
                     }
                 }
-                if !error.retryable {
+                let unavailable = spec.free && error.kind == "model-unavailable";
+                if !error.retryable && !unavailable {
                     return Err(error);
                 }
-                let delay = error.retry_after.unwrap_or(30).max(1);
+                if unavailable {
+                    unavailable_models[model_index] = true;
+                }
                 let next_index = if spec.free {
-                    (model_index + 1) % candidates.len()
+                    let next = (1..=candidates.len())
+                        .map(|offset| (model_index + offset) % candidates.len())
+                        .find(|index| !unavailable_models[*index]);
+                    let Some(next) = next else {
+                        return Err(error);
+                    };
+                    next
                 } else {
                     model_index
+                };
+                let delay = if unavailable {
+                    0
+                } else {
+                    error.retry_after.unwrap_or(30).max(1)
                 };
                 job.update(|snapshot| {
                     snapshot.status = "retrying".to_string();
@@ -242,9 +257,11 @@ pub(crate) async fn execute(
                     snapshot.retry_after_ms = Some(delay.saturating_mul(1000));
                 });
                 job.report_error(&error);
-                tokio::select! {
-                    _ = tokio::time::sleep(Duration::from_secs(delay)) => {},
-                    _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+                if delay > 0 {
+                    tokio::select! {
+                        _ = tokio::time::sleep(Duration::from_secs(delay)) => {},
+                        _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+                    }
                 }
                 if next_index != model_index {
                     model_index = next_index;
@@ -268,14 +285,53 @@ pub(crate) async fn execute(
             job.finish_tool(&step, "Browsed the web".into());
             searched = true;
         }
+        let native_calls = response
+            .pointer("/usage/server_tool_use/web_search_requests")
+            .and_then(Value::as_u64)
+            .map(|calls| calls.min(u32::MAX as u64) as u32)
+            .unwrap_or_else(|| {
+                u32::from(
+                    response
+                        .pointer("/choices/0/message/annotations")
+                        .and_then(Value::as_array)
+                        .is_some_and(|items| {
+                            items.iter().any(|item| item["type"] == "url_citation")
+                        }),
+                )
+            });
+        super::usage::tool(credential, job, "web_search", native_calls).await;
         tokio::select! {
             _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
             _ = super::web::native_sources(job, &response) => {},
         }
         super::media::finish_uploads(job);
         rounds += 1;
-        if let Some(model) = response["model"].as_str() {
-            bound_model = Some(model.to_string());
+        if let Some(model) = response["model"]
+            .as_str()
+            .map(str::to_string)
+            .or_else(|| job.snapshot().and_then(|snapshot| snapshot.actual_model))
+        {
+            bound_model = Some(model.clone());
+            if let (Some(message_id), Some(snapshot)) = (&spec.message_id, job.snapshot()) {
+                let profile_id = credential.profile_id.clone();
+                let conversation_id = snapshot.thread_id;
+                let message_id = message_id.clone();
+                let model = model.to_string();
+                let updated = tokio::task::spawn_blocking(move || {
+                    squigit_storage::UsageStore::new()?.record_message(
+                        &profile_id,
+                        &conversation_id,
+                        &message_id,
+                        &model,
+                    )
+                })
+                .await;
+                match updated {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) => job.report_error(&ProviderError::local(&error.to_string())),
+                    Err(error) => job.report_error(&ProviderError::local(&error.to_string())),
+                }
+            }
             job.update(|snapshot| {
                 snapshot.actual_model = Some(model.to_string());
                 snapshot.grounding.actual_model = Some(model.to_string());
@@ -416,6 +472,24 @@ pub(crate) async fn send(
             ProviderError::new("network").with_details(json!({"message":error.to_string()}))
         })?;
     let status = response.status();
+    let generation_id = response
+        .headers()
+        .get("x-generation-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string);
+    let mut usage = if status.is_success() {
+        Some(
+            super::usage::RequestUsage::begin(
+                credential,
+                job,
+                body["model"].as_str().unwrap_or(""),
+                generation_id,
+            )
+            .await,
+        )
+    } else {
+        None
+    };
     let retry_header = response
         .headers()
         .get("retry-after")
@@ -438,16 +512,22 @@ pub(crate) async fn send(
         .and_then(|value| value.to_str().ok())
         .is_some_and(|value| value.starts_with("text/event-stream"));
     if status.is_success() && event_stream {
-        return super::stream::collect(response, job, credential, show_reasoning)
-            .await
-            .map_err(|mut error| {
-                error.retry_after = retry_after;
-                error.details["retryAfter"] = json!(retry_header);
-                if error.kind == "payment" && retry_after.is_none() {
-                    error.retryable = false;
-                }
-                error
-            });
+        return super::stream::collect(
+            response,
+            job,
+            credential,
+            show_reasoning,
+            usage.as_mut().unwrap(),
+        )
+        .await
+        .map_err(|mut error| {
+            error.retry_after = retry_after;
+            error.details["retryAfter"] = json!(retry_header);
+            if error.kind == "payment" && retry_after.is_none() {
+                error.retryable = false;
+            }
+            error
+        });
     }
     let raw = response.text().await.map_err(|error| {
         ProviderError::new("network")
@@ -456,6 +536,9 @@ pub(crate) async fn send(
     // Providers occasionally echo secrets in their error metadata. Diagnostics never retain those values.
     let raw = raw.replace(credential.api_key(), "[REDACTED]");
     let response = serde_json::from_str::<Value>(&raw).unwrap_or_else(|_| Value::String(raw));
+    if let Some(usage) = &mut usage {
+        usage.record(&response, job).await;
+    }
     if !status.is_success()
         || response.get("error").is_some()
         || response.pointer("/choices/0/error").is_some()

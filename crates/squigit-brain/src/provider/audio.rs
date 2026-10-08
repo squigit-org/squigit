@@ -191,6 +191,16 @@ async fn paid(
     let result = match response {
         Ok(response) => {
             let status = response.status().as_u16();
+            let generation_id = response
+                .headers()
+                .get("x-generation-id")
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_string);
+            let mut usage = if (200..300).contains(&status) {
+                Some(super::usage::RequestUsage::begin(credential, job, model, generation_id).await)
+            } else {
+                None
+            };
             let delay = response
                 .headers()
                 .get("retry-after")
@@ -202,6 +212,9 @@ async fn paid(
                 .map_err(|e| ProviderError::local(&e.to_string()))?
                 .replace(credential.api_key(), "[REDACTED]");
             let body: Value = serde_json::from_str(&bytes).unwrap_or(json!({"raw":bytes}));
+            if let Some(usage) = &mut usage {
+                usage.record(&body, job).await;
+            }
             if status != 200 || body.get("error").is_some() {
                 let mut error = ProviderError::response(status, &body);
                 error.retry_after = delay;

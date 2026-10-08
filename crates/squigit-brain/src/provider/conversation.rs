@@ -32,6 +32,14 @@ pub(crate) async fn run(
     let image_thread = matches!(conversation, Conversation::Thread(_));
     let mut manifest = conversation.manifest().clone();
     let storage = ThreadStorage::new().map_err(|error| ProviderError::local(&error.to_string()))?;
+    let message_id = conversation
+        .messages()
+        .iter()
+        .rev()
+        .find_map(|message| match message {
+            ThreadMessage::User { id, .. } => Some(id.clone()),
+            _ => None,
+        });
     for entry in &mut manifest {
         if let Ok(object) = storage.load_object_manifest(&entry.attachment_hash) {
             entry.file_brief = object.file_context.file_brief;
@@ -155,6 +163,7 @@ pub(crate) async fn run(
             free: selection.is_free(),
             utility: false,
             force_web_search,
+            message_id,
         },
         Some(&tools),
     )

@@ -53,6 +53,13 @@ impl ProviderError {
                     || error.pointer("/metadata/provider_name").is_none()))
         {
             "quota"
+        } else if status == 403
+            && error
+                .pointer("/metadata/failed_routing_step")
+                .and_then(Value::as_str)
+                == Some("Gate Free Endpoints by Agentic Harness")
+        {
+            "model-unavailable"
         } else {
             match code {
                 "authentication" | "invalid_api_key" => "authentication",

@@ -879,12 +879,20 @@ fn start_conversation_response_with_snapshot(
     let profile = crate::profile::get_profile_snapshot()
         .map_err(|error| error.to_string())?
         .active_profile;
+    let personalization = settings::load_config().map_err(|error| error.to_string())?;
     let identity = serde_json::json!({
         "name": profile.as_ref().map(|profile| &profile.name),
         "email": profile.as_ref().map(|profile| &profile.email),
         "machine": crate::machine::get_machine_info(),
         "local_time": chrono::Local::now().to_rfc3339(),
         "persona": settings::load_persona()?,
+        "memory_proactive": personalization.memory_proactive,
+        "personalization": {
+            "warmth": personalization.warmth,
+            "enthusiasm": personalization.enthusiasm,
+            "headersLists": personalization.headers_lists,
+            "emoji": personalization.emoji,
+        },
     });
     let job_id = format!(
         "conversation-{}-{}",

@@ -256,12 +256,13 @@ fn append(value: &mut Value, key: &str, fragment: &str) {
     }
 }
 
-fn consume_event(
+async fn consume_event(
     data: &mut String,
     completion: &mut Completion,
     job: &JobControl,
     credential: &ActiveCredential,
     show_reasoning: bool,
+    usage: &mut super::usage::RequestUsage,
 ) -> Result<bool, ProviderError> {
     if data.is_empty() {
         return Ok(false);
@@ -274,6 +275,7 @@ fn consume_event(
     let chunk: Value = serde_json::from_str(&redacted).map_err(|error| {
         ProviderError::new("invalid-output").with_details(json!({"httpStatus":200,"message":"Malformed provider stream event","parseError":error.to_string(),"response":redacted}))
     })?;
+    usage.record(&chunk, job).await;
     completion.push(chunk, job, credential, show_reasoning)?;
     Ok(false)
 }
@@ -283,6 +285,7 @@ pub(crate) async fn collect(
     job: &JobControl,
     credential: &ActiveCredential,
     show_reasoning: bool,
+    usage: &mut super::usage::RequestUsage,
 ) -> Result<Value, ProviderError> {
     let mut completion = Completion::new();
     let mut buffer = Vec::new();
@@ -303,7 +306,16 @@ pub(crate) async fn collect(
                 ProviderError::new("invalid-output").with_details(json!({"httpStatus":200,"message":"Invalid provider stream encoding","parseError":error.to_string()}))
             })?.trim_end_matches('\r').trim_start_matches('\u{feff}');
             if line.is_empty() {
-                if consume_event(&mut data, &mut completion, job, credential, show_reasoning)? {
+                if consume_event(
+                    &mut data,
+                    &mut completion,
+                    job,
+                    credential,
+                    show_reasoning,
+                    usage,
+                )
+                .await?
+                {
                     return completion.finish(job, credential, show_reasoning);
                 }
             } else if let Some(value) = line.strip_prefix("data:") {
@@ -326,6 +338,14 @@ pub(crate) async fn collect(
             data.push_str(value.strip_prefix(' ').unwrap_or(value));
         }
     }
-    consume_event(&mut data, &mut completion, job, credential, show_reasoning)?;
+    consume_event(
+        &mut data,
+        &mut completion,
+        job,
+        credential,
+        show_reasoning,
+        usage,
+    )
+    .await?;
     completion.finish(job, credential, show_reasoning)
 }

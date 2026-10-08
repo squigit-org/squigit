@@ -8,6 +8,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub(crate) struct ActiveCredential {
     credential: Arc<DecryptedApiKey>,
+    pub(crate) profile_id: String,
 }
 
 impl std::fmt::Debug for ActiveCredential {
@@ -17,9 +18,10 @@ impl std::fmt::Debug for ActiveCredential {
 }
 
 impl ActiveCredential {
-    pub(crate) fn new(credential: DecryptedApiKey) -> Self {
+    pub(crate) fn new(credential: DecryptedApiKey, profile_id: String) -> Self {
         Self {
             credential: Arc::new(credential),
+            profile_id,
         }
     }
 
@@ -44,7 +46,7 @@ pub(crate) async fn capture_image_thread_credential() -> Result<Option<ActiveCre
             return Ok(None);
         };
 
-        Ok(Some(ActiveCredential::new(credential)))
+        Ok(Some(ActiveCredential::new(credential, profile_id)))
     })
     .await
     .map_err(|error| format!("credential lookup task failed: {error}"))?
@@ -58,6 +60,6 @@ pub(crate) fn load_current() -> Result<ActiveCredential, String> {
         .ok_or("No active profile")?;
     get_decrypted_api_key(&store, ApiKeyProvider::OpenRouter, &profile_id)
         .map_err(|error| error.to_string())?
-        .map(ActiveCredential::new)
+        .map(|credential| ActiveCredential::new(credential, profile_id))
         .ok_or_else(|| "The active profile has no OpenRouter key".to_string())
 }

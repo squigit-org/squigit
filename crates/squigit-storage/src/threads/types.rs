@@ -42,6 +42,17 @@ pub struct ThreadMetadata {
     pub fork_version: u32,
 }
 
+/// Compact conversation row for the conversation-memory matrix.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationMemoryEntry {
+    pub id: String,
+    pub title: String,
+    pub kind: String,
+    pub updated_at: DateTime<Utc>,
+    pub message_count: u64,
+    pub preview: String,
+}
+
 impl ThreadMetadata {
     /// Create new thread metadata with a generated ID.
     pub fn new(

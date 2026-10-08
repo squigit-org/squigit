@@ -44,6 +44,11 @@ pub struct SquigitConfig {
     pub effort: String,
     pub ocr_enabled: bool,
     pub ocr_language: String,
+    pub warmth: String,
+    pub enthusiasm: String,
+    pub headers_lists: String,
+    pub emoji: String,
+    pub memory_proactive: bool,
 }
 
 #[derive(Default, Deserialize)]
@@ -53,7 +58,14 @@ pub struct ConfigUpdate {
     pub effort: Option<String>,
     pub ocr_enabled: Option<bool>,
     pub ocr_language: Option<String>,
+    pub warmth: Option<String>,
+    pub enthusiasm: Option<String>,
+    pub headers_lists: Option<String>,
+    pub emoji: Option<String>,
+    pub memory_proactive: Option<bool>,
 }
+
+pub const PERSONALIZATION_LEVELS: &[&str] = &["more", "default", "less"];
 
 impl Default for SquigitConfig {
     fn default() -> Self {
@@ -62,6 +74,11 @@ impl Default for SquigitConfig {
             effort: DEFAULT_MODEL_EFFORT.to_string(),
             ocr_enabled: true,
             ocr_language: DEFAULT_OCR_MODEL_ID.to_string(),
+            warmth: "more".to_string(),
+            enthusiasm: "default".to_string(),
+            headers_lists: "default".to_string(),
+            emoji: "default".to_string(),
+            memory_proactive: true,
         }
     }
 }
@@ -99,7 +116,7 @@ fn config_path() -> SettingsResult<PathBuf> {
 
 fn default_config_table() -> toml::Table {
     let mut table = toml::Table::new();
-    table.insert("schema".to_string(), toml::Value::Integer(2));
+    table.insert("schema".to_string(), toml::Value::Integer(1));
     let root_defaults = SquigitConfig::default();
     table.insert(
         "model".to_string(),
@@ -116,6 +133,26 @@ fn default_config_table() -> toml::Table {
     table.insert(
         "ocr_language".to_string(),
         toml::Value::String(root_defaults.ocr_language),
+    );
+    table.insert(
+        "warmth".to_string(),
+        toml::Value::String(root_defaults.warmth),
+    );
+    table.insert(
+        "enthusiasm".to_string(),
+        toml::Value::String(root_defaults.enthusiasm),
+    );
+    table.insert(
+        "headers_lists".to_string(),
+        toml::Value::String(root_defaults.headers_lists),
+    );
+    table.insert(
+        "emoji".to_string(),
+        toml::Value::String(root_defaults.emoji),
+    );
+    table.insert(
+        "memory_proactive".to_string(),
+        toml::Value::Boolean(root_defaults.memory_proactive),
     );
 
     let mut desktop = toml::Table::new();
@@ -160,7 +197,7 @@ fn read_raw_config() -> SettingsResult<toml::Table> {
     };
 
     let table = toml::from_str::<toml::Table>(&content).map_err(|error| error.to_string())?;
-    if table.get("schema").and_then(toml::Value::as_integer) != Some(2) {
+    if table.get("schema").and_then(toml::Value::as_integer) != Some(1) {
         return Err(
             "Unsupported development settings schema. Select a fresh development data root."
                 .to_string(),
@@ -218,12 +255,43 @@ fn normalize_root_config(table: &toml::Table) -> (SquigitConfig, bool) {
             defaults.ocr_language
         });
 
+    let mut personalization_modified = false;
+    let mut personalization_level = |key: &str, fallback: &str| {
+        table
+            .get(key)
+            .and_then(|v| v.as_str())
+            .filter(|level| PERSONALIZATION_LEVELS.contains(level))
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| {
+                personalization_modified = true;
+                fallback.to_string()
+            })
+    };
+    let warmth = personalization_level("warmth", &defaults.warmth);
+    let enthusiasm = personalization_level("enthusiasm", &defaults.enthusiasm);
+    let headers_lists =
+        personalization_level("headers_lists", &defaults.headers_lists);
+    let emoji = personalization_level("emoji", &defaults.emoji);
+    let memory_proactive = table
+        .get("memory_proactive")
+        .and_then(|v| v.as_bool())
+        .unwrap_or_else(|| {
+            modified = true;
+            defaults.memory_proactive
+        });
+    modified |= personalization_modified;
+
     (
         SquigitConfig {
             model,
             effort,
             ocr_enabled,
             ocr_language,
+            warmth,
+            enthusiasm,
+            headers_lists,
+            emoji,
+            memory_proactive,
         },
         modified,
     )
@@ -250,6 +318,26 @@ pub fn load_config() -> SettingsResult<SquigitConfig> {
             "ocr_language".to_string(),
             toml::Value::String(config.ocr_language.clone()),
         );
+        table.insert(
+            "warmth".to_string(),
+            toml::Value::String(config.warmth.clone()),
+        );
+        table.insert(
+            "enthusiasm".to_string(),
+            toml::Value::String(config.enthusiasm.clone()),
+        );
+        table.insert(
+            "headers_lists".to_string(),
+            toml::Value::String(config.headers_lists.clone()),
+        );
+        table.insert(
+            "emoji".to_string(),
+            toml::Value::String(config.emoji.clone()),
+        );
+        table.insert(
+            "memory_proactive".to_string(),
+            toml::Value::Boolean(config.memory_proactive),
+        );
         write_raw_config(&table)?;
     }
 
@@ -273,12 +361,27 @@ pub fn update_config(updates: ConfigUpdate) -> SettingsResult<SquigitConfig> {
         .ocr_language
         .filter(|id| OCR_MODELS.iter().any(|m| m.id == id))
         .unwrap_or(current.ocr_language);
+    let next_personalization = |update: Option<String>, current: String| {
+        update
+            .filter(|level| PERSONALIZATION_LEVELS.contains(&level.as_str()))
+            .unwrap_or(current)
+    };
 
     let next = SquigitConfig {
         model: next_model,
         effort: next_effort,
         ocr_enabled: next_ocr_enabled,
         ocr_language: next_ocr_language,
+        warmth: next_personalization(updates.warmth, current.warmth),
+        enthusiasm: next_personalization(updates.enthusiasm, current.enthusiasm),
+        headers_lists: next_personalization(
+            updates.headers_lists,
+            current.headers_lists,
+        ),
+        emoji: next_personalization(updates.emoji, current.emoji),
+        memory_proactive: updates
+            .memory_proactive
+            .unwrap_or(current.memory_proactive),
     };
 
     table.insert("model".to_string(), toml::Value::String(next.model.clone()));
@@ -293,6 +396,26 @@ pub fn update_config(updates: ConfigUpdate) -> SettingsResult<SquigitConfig> {
     table.insert(
         "ocr_language".to_string(),
         toml::Value::String(next.ocr_language.clone()),
+    );
+    table.insert(
+        "warmth".to_string(),
+        toml::Value::String(next.warmth.clone()),
+    );
+    table.insert(
+        "enthusiasm".to_string(),
+        toml::Value::String(next.enthusiasm.clone()),
+    );
+    table.insert(
+        "headers_lists".to_string(),
+        toml::Value::String(next.headers_lists.clone()),
+    );
+    table.insert(
+        "emoji".to_string(),
+        toml::Value::String(next.emoji.clone()),
+    );
+    table.insert(
+        "memory_proactive".to_string(),
+        toml::Value::Boolean(next.memory_proactive),
     );
     write_raw_config(&table)?;
 

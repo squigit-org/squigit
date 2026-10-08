@@ -21,7 +21,7 @@ pub use pagination::{StoredMessagePage, StoredThreadPage, StoredWorkspacePage};
 
 pub use types::{
     default_ocr_annotations, AssistantError, AttachmentManifest, AttachmentManifestEntry,
-    CitationSource, ContextWindow, Conversation, ForkSourceKind, ForkedFrom, GroundingImage,
+    CitationSource, ContextWindow, Conversation, ConversationMemoryEntry, ForkSourceKind, ForkedFrom, GroundingImage,
     GroundingResource, GroundingTool, GroundingVideo, ManifestMention, MessageAttachment,
     MessageGrounding, MessageTextCitation, OcrAnnotationEntry, OcrAnnotations, OcrModelAnnotation,
     OcrRegion, SideChatData, SideChatMetadata, ThreadData, ThreadMessage, ThreadMetadata,

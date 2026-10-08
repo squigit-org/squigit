@@ -8,7 +8,9 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension};
 
 use super::records::{self, SIDECHAT_COLUMNS, THREAD_COLUMNS};
-use super::{SideChatMetadata, ThreadMetadata, ThreadStorage, WorkspaceMetadata};
+use super::{
+    ConversationMemoryEntry, SideChatMetadata, ThreadMetadata, ThreadStorage, WorkspaceMetadata,
+};
 use crate::{Result, StorageError};
 
 fn canonical_workspace_path(path: &Path) -> Result<std::path::PathBuf> {
@@ -333,6 +335,87 @@ impl ThreadStorage {
             let mut statement = connection.prepare(&format!("SELECT {THREAD_COLUMNS} FROM conversations WHERE kind = 'thread' AND workspace_id IS NULL ORDER BY id"))?;
             let threads = statement.query_map([], records::thread_metadata)?.collect::<rusqlite::Result<Vec<_>>>()?;
             Ok(threads)
+        })
+    }
+
+    fn memory_entries(
+        connection: &Connection,
+        condition: &str,
+        pattern: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<ConversationMemoryEntry>> {
+        let mut statement = connection.prepare(&format!(
+            "SELECT c.id, c.title, c.kind, c.updated_at, COUNT(m.id) FROM conversations c
+             LEFT JOIN messages m ON m.conversation_id = c.id
+             {condition}
+             GROUP BY c.id ORDER BY c.updated_at DESC LIMIT ?1"
+        ))?;
+        let limit = limit.min(50) as i64;
+        let like = pattern.unwrap_or("%");
+        let rows = statement.query_map(params![limit, like], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, chrono::DateTime<chrono::Utc>>(3)?,
+                row.get::<_, i64>(4)?,
+            ))
+        })?;
+        let mut entries = Vec::new();
+        for (id, title, kind, updated_at, message_count) in
+            rows.collect::<rusqlite::Result<Vec<_>>>()?
+        {
+            let preview: Option<String> = connection
+                .query_row(
+                    "SELECT substr(content, 1, 200) FROM messages WHERE conversation_id = ?1 AND role = 'user' ORDER BY position DESC LIMIT 1",
+                    [&id],
+                    |row| row.get(0),
+                )
+                .optional()?
+                .flatten();
+            entries.push(ConversationMemoryEntry {
+                id,
+                title,
+                kind,
+                updated_at,
+                message_count: message_count.max(0) as u64,
+                preview: preview.unwrap_or_default(),
+            });
+        }
+        Ok(entries)
+    }
+
+    pub fn recent_conversations(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<ConversationMemoryEntry>> {
+        self.database.read(|connection| {
+            Self::memory_entries(
+                connection,
+                "WHERE (c.title LIKE ?2 ESCAPE '\\')",
+                None,
+                limit,
+            )
+        })
+    }
+
+    pub fn search_conversations(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<ConversationMemoryEntry>> {
+        let escaped = query
+            .replace('\\', "\\\\")
+            .replace('%', "\\%")
+            .replace('_', "\\_");
+        let pattern = format!("%{escaped}%");
+        self.database.read(|connection| {
+            Self::memory_entries(
+                connection,
+                "WHERE (c.title LIKE ?2 ESCAPE '\\' OR EXISTS (SELECT 1 FROM messages m2 WHERE m2.conversation_id = c.id AND m2.content LIKE ?2 ESCAPE '\\'))",
+                Some(&pattern),
+                limit,
+            )
         })
     }
 

@@ -251,7 +251,7 @@ async fn run(
         let raw = transport::execute(runtime, job, credential, &candidates, RequestSpec {
             input:vec![json!({"role":"user","content":content})],
             system_instruction:config["summarize_files"].as_str().ok_or_else(|| ProviderError::new("unexpected"))?.into(),
-            tools:Vec::new(), effort:None, free:selection.is_free(), utility:true, force_web_search:false,
+            tools:Vec::new(), effort:None, free:selection.is_free(), utility:true, force_web_search:false, message_id:None,
             schema:Some(json!({"type":"object","properties":{"files":{"type":"array","items":{"type":"object","properties":{"attachment_id":{"type":"string"},"brief":{"type":"string"}},"required":["attachment_id","brief"],"additionalProperties":false}}},"required":["files"],"additionalProperties":false})),
         },None).await?;
         let invalid = || ProviderError::new("invalid-output").with_details(json!({"output":raw}));

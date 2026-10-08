@@ -118,7 +118,6 @@ pub(crate) struct Candidate {
     metadata: Value,
     latency: Option<f64>,
     availability: Option<f64>,
-    automatic_tools: bool,
 }
 impl Candidate {
     fn supports(&self, parameter: &str) -> bool {
@@ -321,7 +320,6 @@ async fn catalog(refresh: bool) -> Result<Vec<Candidate>, ProviderError> {
                 metadata: item.clone(),
                 latency: None,
                 availability: None,
-                automatic_tools: false,
             })
         })
         .collect::<Vec<_>>();
@@ -333,7 +331,7 @@ async fn catalog(refresh: bool) -> Result<Vec<Candidate>, ProviderError> {
             let client = client.clone();
             let id = m.id.clone();
             async move {
-                let capabilities = async {
+                let metrics = async {
                     let response = client
                         .get(format!(
                             "https://openrouter.ai/api/v1/models/{id}/endpoints"
@@ -346,9 +344,6 @@ async fn catalog(refresh: bool) -> Result<Vec<Candidate>, ProviderError> {
                     }
                     let body: Value = response.json().await.ok()?;
                     let endpoints = body.pointer("/data/endpoints")?.as_array()?;
-                    let automatic_tools = endpoints.iter().any(|endpoint| {
-                        endpoint.pointer("/supports_tool_choice/auto") == Some(&json!(true))
-                    });
                     let latency = endpoints
                         .iter()
                         .filter_map(|endpoint| {
@@ -365,18 +360,17 @@ async fn catalog(refresh: bool) -> Result<Vec<Candidate>, ProviderError> {
                                 .filter(|value| value.is_finite())
                         })
                         .reduce(f64::max);
-                    Some((latency, availability, automatic_tools))
+                    Some((latency, availability))
                 }
                 .await;
-                (index, capabilities)
+                (index, metrics)
             }
         });
-    let capabilities = futures_util::future::join_all(futures).await;
-    for (index, capabilities) in capabilities {
-        if let Some((latency, availability, automatic_tools)) = capabilities {
+    let metrics = futures_util::future::join_all(futures).await;
+    for (index, metrics) in metrics {
+        if let Some((latency, availability)) = metrics {
             models[index].latency = latency;
             models[index].availability = availability;
-            models[index].automatic_tools = automatic_tools;
         }
     }
     *cache = Some(Catalog {
@@ -419,7 +413,7 @@ pub(crate) async fn job_candidates(
                 .into_iter()
                 .filter(|model| {
                     eligible_free(model)
-                        && (!needs_tools || (model.supports("tools") && model.automatic_tools))
+                        && (!needs_tools || model.supports("tools"))
                         && if micro {
                             model.supports("structured_outputs")
                         } else {
