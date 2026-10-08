@@ -51,6 +51,7 @@ pub(crate) async fn execute(
     let mut rounds = 0;
     let mut calls = 0;
     let mut media_ready = false;
+    let mut prepared_images: Option<Vec<Value>> = None;
     let mut searched = false;
     let mut audio_disabled = spec.free.then_some(super::media::FREE_AUDIO_REASON);
     loop {
@@ -60,16 +61,29 @@ pub(crate) async fn execute(
         let candidate = &candidates[model_index];
         if !media_ready {
             if let Some(tools) = scope {
-                let content = super::media::initial_inputs(
-                    runtime,
-                    job,
-                    credential,
-                    candidate,
-                    tools,
-                    spec.free,
-                    &mut audio_disabled,
-                )
-                .await?;
+                let content = if let Some(content) = &prepared_images {
+                    content.clone()
+                } else {
+                    let content = super::media::initial_inputs(
+                        runtime,
+                        job,
+                        credential,
+                        candidate,
+                        tools,
+                        spec.free,
+                        &mut audio_disabled,
+                    )
+                    .await?;
+                    if tools.uploads.iter().all(|hash| {
+                        tools.manifest.iter().any(|entry| {
+                            &entry.attachment_hash == hash
+                                && entry.file_type == squigit_storage::AttachmentFileType::Image
+                        })
+                    }) {
+                        prepared_images = Some(content.clone());
+                    }
+                    content
+                };
                 if !content.is_empty() {
                     let message = messages
                         .iter_mut()
