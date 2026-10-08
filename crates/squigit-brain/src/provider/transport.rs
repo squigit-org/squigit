@@ -52,6 +52,7 @@ pub(crate) async fn execute(
     let mut calls = 0;
     let mut media_ready = false;
     let mut prepared_images: Option<Vec<Value>> = None;
+    let mut consecutive_retries = 0_u64;
     let mut searched = false;
     let mut audio_disabled = spec.free.then_some(super::media::FREE_AUDIO_REASON);
     loop {
@@ -262,7 +263,11 @@ pub(crate) async fn execute(
                 let delay = if unavailable {
                     0
                 } else {
-                    error.retry_after.unwrap_or(30).max(1)
+                    consecutive_retries = consecutive_retries.saturating_add(1);
+                    error
+                        .retry_after
+                        .unwrap_or(10 * consecutive_retries.min(3))
+                        .max(1)
                 };
                 job.update(|snapshot| {
                     snapshot.status = "retrying".to_string();
@@ -295,6 +300,7 @@ pub(crate) async fn execute(
                 continue;
             }
         };
+        consecutive_retries = 0;
         if let Some(step) = native_search {
             job.finish_tool(&step, "Browsed the web".into());
             searched = true;
