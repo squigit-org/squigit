@@ -275,6 +275,7 @@ fn ensure_pages(
             page += 1;
         }
         let output = cached_pdf(&index.source_hash, path.to_path_buf(), first, page, control)?;
+        control.check()?;
         index.selections.push(output);
         atomic_json(
             &cache_dir(&index.source_hash)?
@@ -349,6 +350,7 @@ pub fn parse_video(
     let root = cache_dir(hash)?.join(RECIPE);
     let _lock = lock(&root, control)?;
     let output = cached_video(hash, from, to, jump, control)?;
+    control.check()?;
     let duration_ms = match output.manifest.selection {
         Selection::Time { duration_ms, .. } => duration_ms,
         _ => 0,

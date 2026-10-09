@@ -74,6 +74,7 @@ pub fn parse(request: PdfRequest, control: &crate::parser::ParseControl) -> Resu
             None
         }
     };
+    control.check()?;
     let pdf =
         Pdf::new(bytes).map_err(|error| Error::Parse(format!("Cannot open PDF: {error:?}")))?;
     let total_pages = u32::try_from(pdf.pages().len())
@@ -103,6 +104,7 @@ pub fn parse(request: PdfRequest, control: &crate::parser::ParseControl) -> Resu
             request.to.min(first + 5)
         ))?;
         let page_text = extract_page_text(text_document.as_ref(), number, &mut warnings);
+        control.check()?;
         text.push_str(&format!("--- Page {number} ---\n{}\n\n", page_text.trim()));
         let (width, height) = page.render_dimensions();
         if !width.is_finite() || !height.is_finite() || width <= 0.0 || height <= 0.0 {
@@ -122,6 +124,7 @@ pub fn parse(request: PdfRequest, control: &crate::parser::ParseControl) -> Resu
             hayro::render(page, &cache, &settings, &render_settings)
         }))
         .map_err(|_| Error::Parse(format!("Page {number} could not be rendered")))?;
+        control.check()?;
         let rgba = RgbaImage::from_raw(
             u32::from(pixmap.width()),
             u32::from(pixmap.height()),
@@ -138,8 +141,10 @@ pub fn parse(request: PdfRequest, control: &crate::parser::ParseControl) -> Resu
             },
         )?;
     }
+    control.check()?;
     fs::write(directory.path().join("text.txt"), text)?;
     let images = collages.finish(directory.path())?;
+    control.check()?;
     directory.finish(Manifest {
         schema: 1,
         source: path,

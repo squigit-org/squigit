@@ -70,7 +70,7 @@ impl BrainService {
         tokio::spawn(async move {
             let result = tokio::select! {
                 result = async {
-                    crate::provider::summaries::start(&runtime, credential.clone(), thread_id, manifest, request.model.clone());
+                    crate::provider::summaries::start(&runtime, &job, credential.clone(), thread_id, manifest, request.model.clone());
                     crate::provider::conversation::run(&runtime, &job, &credential, request).await
                 } => result,
                 _ = job.cancellation.cancelled() => Err(crate::provider::errors::ProviderError::new("stopped")),

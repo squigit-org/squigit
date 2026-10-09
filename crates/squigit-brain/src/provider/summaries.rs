@@ -36,6 +36,7 @@ impl Drop for SummaryClaim {
 
 pub(crate) fn start(
     runtime: &BrainRuntimeState,
+    parent: &JobControl,
     credential: ActiveCredential,
     thread_id: String,
     manifest: Vec<AttachmentManifestEntry>,
@@ -102,7 +103,7 @@ pub(crate) fn start(
     };
     let Ok(job) = runtime
         .worker
-        .register(new_job_id(), thread_id.clone(), "summarize_files")
+        .register_child(new_job_id(), parent, "summarize_files")
     else {
         return;
     };

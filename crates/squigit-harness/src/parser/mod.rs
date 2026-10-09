@@ -104,6 +104,7 @@ pub fn parse_video(request: VideoRequest, control: &ParseControl) -> Result<Pars
 #[derive(Clone, Default)]
 pub struct ParseControl {
     cancelled: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    cancellation: Option<std::sync::Arc<dyn Fn() -> bool + Send + Sync>>,
     progress: Option<std::sync::Arc<dyn Fn(String) + Send + Sync>>,
 }
 impl ParseControl {
@@ -117,8 +118,20 @@ impl ParseControl {
         self.cancelled
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
+    pub fn with_cancellation(
+        mut self,
+        cancellation: impl Fn() -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.cancellation = Some(std::sync::Arc::new(cancellation));
+        self
+    }
     pub fn check(&self) -> Result<()> {
-        if self.cancelled.load(std::sync::atomic::Ordering::Relaxed) {
+        if self.cancelled.load(std::sync::atomic::Ordering::Relaxed)
+            || self
+                .cancellation
+                .as_ref()
+                .is_some_and(|cancelled| cancelled())
+        {
             Err(Error::Cancelled)
         } else {
             Ok(())

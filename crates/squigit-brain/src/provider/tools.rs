@@ -53,7 +53,10 @@ pub(crate) async fn execute(
     args: &Value,
 ) -> (Value, Vec<Value>) {
     if let Some(name) = call.pointer("/function/name").and_then(Value::as_str) {
-        if declarations(tools, audio_disabled.is_none()).iter().any(|declaration| declaration["function"]["name"] == name) {
+        if declarations(tools, audio_disabled.is_none())
+            .iter()
+            .any(|declaration| declaration["function"]["name"] == name)
+        {
             super::usage::tool(credential, job, name, 1).await;
         }
     }
@@ -114,7 +117,7 @@ pub(crate) async fn execute(
                 let storage = ThreadStorage::new().map_err(|e| e.to_string())?;
                 let snapshot = job.snapshot().ok_or("Job is unavailable")?;
                 let entry = storage.register_read_attachment(&snapshot.thread_id, &hash, display_name.as_deref().unwrap_or("media")).map_err(|e| e.to_string())?;
-                super::summaries::start(runtime, credential.clone(), snapshot.thread_id.clone(), vec![entry], snapshot.grounding.selected_model);
+                super::summaries::start(runtime, job, credential.clone(), snapshot.thread_id.clone(), vec![entry], snapshot.grounding.selected_model);
                 let mut selections = Vec::new();
                 for output in &parsed {
                     images.extend(super::media::parsed_inputs(job, output, path, display_name.as_deref().unwrap_or("media"), usize::MAX).await.map_err(|e| e.to_string())?);

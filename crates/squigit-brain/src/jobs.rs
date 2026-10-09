@@ -41,6 +41,7 @@ impl JobSnapshot {
 struct JobRecord {
     snapshot: JobSnapshot,
     cancellation: CancellationToken,
+    parent_id: Option<String>,
 }
 
 #[derive(Clone)]
@@ -79,6 +80,29 @@ impl JobWorker {
         thread_id: String,
         task: &str,
     ) -> Result<JobControl, String> {
+        self.register_job(id, thread_id, task, None)
+    }
+
+    pub(crate) fn register_child(
+        &self,
+        id: String,
+        parent: &JobControl,
+        task: &str,
+    ) -> Result<JobControl, String> {
+        let thread_id = parent
+            .snapshot()
+            .ok_or("Response job is unavailable")?
+            .thread_id;
+        self.register_job(id, thread_id, task, Some(parent.id.clone()))
+    }
+
+    fn register_job(
+        &self,
+        id: String,
+        thread_id: String,
+        task: &str,
+        parent_id: Option<String>,
+    ) -> Result<JobControl, String> {
         let mut records = self
             .records
             .lock()
@@ -110,7 +134,17 @@ impl JobWorker {
                 }
             }
         }
-        let cancellation = CancellationToken::new();
+        let cancellation = if let Some(parent_id) = &parent_id {
+            let parent = records
+                .get(parent_id)
+                .ok_or("Response job is unavailable")?;
+            if parent.snapshot.is_terminal() || parent.cancellation.is_cancelled() {
+                return Err("Response stopped before its helper could start".into());
+            }
+            parent.cancellation.child_token()
+        } else {
+            CancellationToken::new()
+        };
         records.insert(
             id.clone(),
             JobRecord {
@@ -138,6 +172,7 @@ impl JobWorker {
                     },
                 },
                 cancellation: cancellation.clone(),
+                parent_id,
             },
         );
         Ok(JobControl {
@@ -169,9 +204,24 @@ impl JobWorker {
 
     pub(crate) fn cancel(&self, id: &str) {
         if let Ok(mut records) = self.records.lock() {
-            if let Some(record) = records.get_mut(id) {
+            let mut cancelled = vec![id.to_string()];
+            let mut cursor = 0;
+            while cursor < cancelled.len() {
+                let parent_id = &cancelled[cursor];
+                let children = records
+                    .iter()
+                    .filter(|(_, record)| record.parent_id.as_ref() == Some(parent_id))
+                    .map(|(id, _)| id.clone())
+                    .collect::<Vec<_>>();
+                cancelled.extend(children);
+                cursor += 1;
+            }
+            for id in cancelled {
+                let Some(record) = records.get_mut(&id) else {
+                    continue;
+                };
+                record.cancellation.cancel();
                 if !record.snapshot.is_terminal() {
-                    record.cancellation.cancel();
                     record.snapshot.status = "cancelled".to_string();
                     record.snapshot.error = Some(ProviderError::new("stopped").user_error());
                     for tool in &mut record.snapshot.grounding.tools {
@@ -269,6 +319,7 @@ impl JobControl {
         let worker = self.worker.clone();
         let id = self.id.clone();
         let cancellation = self.cancellation.clone();
+        let parser_cancellation = self.cancellation.clone();
         squigit_harness::parser::ParseControl::with_progress(move |text| {
             if cancellation.is_cancelled() {
                 return;
@@ -282,6 +333,7 @@ impl JobControl {
                 }
             }
         })
+        .with_cancellation(move || parser_cancellation.is_cancelled())
     }
 
     pub(crate) fn tool(
@@ -344,6 +396,11 @@ impl JobControl {
 
 impl Drop for JobControl {
     fn drop(&mut self) {
-        self.worker.cancel(&self.id);
+        if self
+            .snapshot()
+            .is_some_and(|snapshot| !snapshot.is_terminal())
+        {
+            self.worker.cancel(&self.id);
+        }
     }
 }
