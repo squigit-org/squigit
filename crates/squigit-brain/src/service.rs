@@ -90,6 +90,22 @@ impl BrainService {
         self.runtime.worker.cancel(job_id);
     }
 
+    pub fn steer_conversation(
+        &self,
+        job_id: &str,
+        request: crate::SteerRequest,
+    ) -> Result<String, String> {
+        self.runtime.worker.steer(job_id, request)
+    }
+
+    pub fn can_steer_conversation(&self, job_id: &str) -> bool {
+        self.runtime.worker.can_steer(job_id)
+    }
+
+    pub fn complete_response_delivery(&self, job_id: &str) {
+        self.runtime.worker.complete_delivery(job_id);
+    }
+
     async fn title(
         &self,
         thread_id: String,

@@ -7,6 +7,7 @@ use squigit_harness::tools::{ToolScope, TOOL_NAMES};
 use squigit_storage::{AttachmentManifest, GroundingImage, GroundingResource, ThreadStorage};
 use std::collections::BTreeMap;
 
+#[derive(Clone)]
 pub(crate) struct ConversationTools {
     pub(crate) scope: ToolScope,
     pub(crate) manifest: AttachmentManifest,

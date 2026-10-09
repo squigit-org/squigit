@@ -561,12 +561,60 @@ pub fn append_message(
         .lock()
         .map_err(|_| "Thread index is unavailable".to_string())?;
     if brain().jobs_snapshot().iter().any(|job| {
-        job.thread_id == conversation_id && job.task == "conversation" && !job.is_terminal()
+        job.thread_id == conversation_id
+            && matches!(job.task.as_str(), "conversation" | "steer")
+            && !job.is_terminal()
     }) {
         return Err(
             "Wait for the current response or stop it before sending another message.".to_string(),
         );
     }
+    persist_user_message(
+        interface,
+        conversation_id,
+        message_markdown,
+        attachments,
+        text_citations,
+        message_context,
+    )
+}
+
+pub fn append_steer_message(
+    interface: crate::history::HistoryInterface,
+    job_id: &str,
+    message_markdown: String,
+    attachments: Vec<MessageAttachmentInput>,
+    text_citations: Vec<MessageTextCitation>,
+    message_context: Option<serde_json::Value>,
+) -> ThreadResult<ThreadMessage> {
+    validate_message_inputs(&message_markdown, &attachments, &text_citations)?;
+    let _index_guard = thread_index_lock()
+        .lock()
+        .map_err(|_| "Thread index is unavailable".to_string())?;
+    if !brain().can_steer_conversation(job_id) {
+        return Err("This response can no longer be steered".into());
+    }
+    let snapshot = brain()
+        .job_snapshot(job_id)
+        .ok_or("Response job is unavailable")?;
+    persist_user_message(
+        interface,
+        &snapshot.thread_id,
+        message_markdown,
+        attachments,
+        text_citations,
+        message_context,
+    )
+}
+
+fn persist_user_message(
+    interface: crate::history::HistoryInterface,
+    conversation_id: &str,
+    message_markdown: String,
+    attachments: Vec<MessageAttachmentInput>,
+    text_citations: Vec<MessageTextCitation>,
+    message_context: Option<serde_json::Value>,
+) -> ThreadResult<ThreadMessage> {
     let storage = active_storage()?;
     let message = ThreadMessage::user_with_attachments(
         message_markdown,
@@ -843,6 +891,31 @@ pub fn cancel_brain_job(job_id: &str) {
     brain().cancel_job(job_id);
 }
 
+pub fn steer_conversation_response(
+    job_id: &str,
+    visible_content: String,
+    force_web_search: bool,
+) -> ThreadResult<String> {
+    let snapshot = brain()
+        .job_snapshot(job_id)
+        .ok_or("Response job is unavailable")?;
+    let conversation = active_storage()?
+        .load_conversation(&snapshot.thread_id)
+        .map_err(|error| error.to_string())?;
+    brain().steer_conversation(
+        job_id,
+        crate::brain::SteerRequest {
+            conversation,
+            visible_content,
+            force_web_search,
+        },
+    )
+}
+
+pub fn complete_response_delivery(job_id: &str) {
+    brain().complete_response_delivery(job_id);
+}
+
 pub fn cancel_title_jobs(conversation_id: &str) {
     for job in brain().jobs_snapshot() {
         if job.thread_id == conversation_id && job.task == "title" && !job.is_terminal() {
@@ -930,7 +1003,9 @@ pub async fn await_conversation_response(
         let snapshot = brain()
             .job_snapshot(job_id)
             .ok_or("Response job is unavailable")?;
-        if snapshot.thread_id != conversation_id || snapshot.task != "conversation" {
+        if snapshot.thread_id != conversation_id
+            || !matches!(snapshot.task.as_str(), "conversation" | "steer")
+        {
             return Err("Response job belongs to another conversation".to_string());
         }
         if snapshot.is_terminal() {
@@ -948,6 +1023,7 @@ pub async fn await_conversation_response(
                 snapshot.error,
                 Some(snapshot.grounding),
             )?;
+            complete_response_delivery(job_id);
             return Ok(content);
         }
         tokio::time::sleep(Duration::from_millis(100)).await;

@@ -29,7 +29,7 @@ pub(crate) async fn execute(
     job: &JobControl,
     credential: &ActiveCredential,
     candidates: &[Candidate],
-    spec: RequestSpec,
+    mut spec: RequestSpec,
     scope: Option<&super::tools::ConversationTools>,
 ) -> Result<String, ProviderError> {
     let client = reqwest::Client::builder()
@@ -39,7 +39,8 @@ pub(crate) async fn execute(
     if candidates.is_empty() {
         return Err(ProviderError::new("model-unavailable"));
     }
-    let original = {
+    let mut scope = scope.cloned();
+    let mut original = {
         let mut messages = vec![json!({"role":"system", "content":spec.system_instruction})];
         messages.extend(spec.input.clone());
         messages
@@ -56,12 +57,32 @@ pub(crate) async fn execute(
     let mut searched = false;
     let mut audio_disabled = spec.free.then_some(super::media::FREE_AUDIO_REASON);
     loop {
+        for steer in job.take_steers() {
+            spec.force_web_search = steer.force_web_search;
+            let tools = scope
+                .as_mut()
+                .ok_or_else(|| ProviderError::new("invalid-request"))?;
+            spec.message_id = steer.apply(&mut messages, tools)?;
+            spec.tools = super::tools::declarations(tools, !spec.free);
+            if !spec.free && !spec.force_web_search {
+                spec.tools.push(super::web::native_tool(
+                    spec.effort.as_deref().unwrap_or("medium"),
+                ));
+            }
+            original = messages.clone();
+            media_ready = false;
+            prepared_images = None;
+            rounds = 0;
+            calls = 0;
+            searched = false;
+            consecutive_retries = 0;
+        }
         if rounds >= 24 {
             return Err(ProviderError::new("invalid-request"));
         }
         let candidate = &candidates[model_index];
         if !media_ready {
-            if let Some(tools) = scope {
+            if let Some(tools) = &scope {
                 let content = if let Some(content) = &prepared_images {
                     content.clone()
                 } else {
@@ -160,8 +181,10 @@ pub(crate) async fn execute(
             None
         };
         let result = tokio::select! {
-            result = send(&client, credential, &body, job, spec.effort.as_deref() == Some("xhigh")) => result,
+            biased;
             _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+            _ = job.steering.notified(), if scope.is_some() => continue,
+            result = send(&client, credential, &body, job, spec.effort.as_deref() == Some("xhigh")) => result,
         };
         drop(permit);
         let response = match result {
@@ -282,6 +305,7 @@ pub(crate) async fn execute(
                 if delay > 0 {
                     tokio::select! {
                         _ = tokio::time::sleep(Duration::from_secs(delay)) => {},
+                        _ = job.steering.notified(), if scope.is_some() => continue,
                         _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
                     }
                 }
@@ -363,6 +387,9 @@ pub(crate) async fn execute(
                 snapshot.grounding.actual_model = Some(model.to_string());
             });
         }
+        if job.has_steers() {
+            continue;
+        }
         let choice = response.pointer("/choices/0").ok_or_else(|| {
             ProviderError::new("empty-output")
                 .with_details(json!({"httpStatus":200,"response":response}))
@@ -402,16 +429,31 @@ pub(crate) async fn execute(
             if !spec.utility {
                 job.phase("finalizing", None);
             }
-            return if spec.utility {
-                Ok(content)
-            } else {
-                super::web::finalize(
+            if spec.utility {
+                return Ok(content);
+            }
+            let content = tokio::select! {
+                biased;
+                _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+                _ = job.steering.notified() => continue,
+                result = super::web::finalize(
                     runtime, job, credential, candidate, spec.free, content, message,
-                )
-                .await
+                ) => result?,
             };
+            if !job.publish_response(content.clone()) {
+                continue;
+            }
+            tokio::select! {
+                biased;
+                _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
+                _ = job.steering.notified() => continue,
+                _ = job.delivered.cancelled() => return Ok(content),
+                _ = tokio::time::sleep(Duration::from_secs(900)) => return Ok(content),
+            }
         }
-        let tools = scope.ok_or_else(|| ProviderError::new("invalid-request"))?;
+        let tools = scope
+            .as_ref()
+            .ok_or_else(|| ProviderError::new("invalid-request"))?;
         let mut assistant =
             json!({"role":"assistant", "content":message["content"], "tool_calls":function_calls});
         for key in ["reasoning", "reasoning_details"] {
@@ -446,7 +488,13 @@ pub(crate) async fn execute(
                 arguments["urls"] = json!(tools.pasted_urls);
             }
             let (ack, images) = tokio::select! {
-                result = super::tools::execute(runtime, job, credential, candidate, &mut audio_disabled, tools, call, &arguments) => result,
+                result = async {
+                    if job.has_steers() {
+                        (json!({"role":"tool", "tool_call_id":call["id"], "content":"Not executed because the user supplied a newer instruction."}), Vec::new())
+                    } else {
+                        super::tools::execute(runtime, job, credential, candidate, &mut audio_disabled, tools, call, &arguments).await
+                    }
+                } => result,
                 _ = job.cancellation.cancelled() => return Err(ProviderError::new("stopped")),
             };
             if call["function"]["name"] == groundweb::TOOL_NAME {

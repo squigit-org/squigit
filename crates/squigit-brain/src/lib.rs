@@ -6,6 +6,8 @@ mod jobs;
 pub mod provider;
 mod runtime;
 pub mod service;
+mod steer;
 pub use jobs::JobSnapshot;
 pub use provider::conversation::ConversationRequest;
 pub use service::{BrainService, ImageThreadCredentialSnapshot};
+pub use steer::SteerRequest;
